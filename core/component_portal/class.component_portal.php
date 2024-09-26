@@ -219,7 +219,7 @@ class component_portal extends component_relation_common {
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $options) : object {
+	public static function update_dato_version( object $options ) : object {
 
 		// options
 			$update_version	= $options->update_version ?? null;
@@ -383,9 +383,15 @@ class component_portal extends component_relation_common {
 	/**
 	* GET_VALOR
 	* V5 diffusion compatibility
+	* @param ?string $lang=DEDALO_DATA_LANG
+	* @param $format='string'
+	* @param $fields_separator=', '
+	* @param $records_separator='<br>'
+	* @param $ar_related_terms=false
+	* @param $data_to_be_used='valor'
 	* @return mixed $valor
 	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
+	public function get_valor( ?string $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
 
 		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
@@ -404,6 +410,10 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_VALOR_EXPORT
+	* @param $valor=null
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $quotes=null
+	* @param $add_id=null
 	* @return mixed $valor;
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
@@ -429,7 +439,8 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	*
+	* @param string|null $lang=DEDALO_DATA_LANG
+	* @param object|null $option_obj=null
 	* @return string|null $diffusion_value
 	*/
 	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
@@ -589,7 +600,7 @@ class component_portal extends component_relation_common {
 
 	/**
 	* GET_LEGACY_POLITICAL_MAP (LEGACY METHOD - DEPRECATED) !
-	* Legacy method used by diffusion cost humà
+	* Legacy method used by diffusion in mdcat2949: Cost humà
 	* Return an array of political map models of each country
 	* This is a legacy function for compatibility with old publication tables
 	* and is NOT a future way of work
@@ -662,7 +673,7 @@ class component_portal extends component_relation_common {
 	* @param string $section_tipo
 	* @return array $path
 	*/
-	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+	public function get_order_path( string $component_tipo, string $section_tipo ) : array {
 
 		$path = [];
 

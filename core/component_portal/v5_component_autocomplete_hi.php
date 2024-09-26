@@ -9,6 +9,12 @@
 	/**
 	* GET VALOR
 	* Get resolved string representation of current thesaurus value
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $format='string'
+	* @param $fields_separator=', '
+	* @param $records_separator='<br>'
+	* @param $ar_related_terms=false
+	* @param $data_to_be_used='valor'
 	*/
 	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
@@ -65,6 +71,10 @@
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
+	* @param $valor=null
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $quotes=null
+	* @param $add_id=null
 	* @return string $valor
 	*/
 	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
@@ -110,11 +120,13 @@
 	*	    }
 	*	}
 	*
+	* @param string|null $lang=DEDALO_DATA_LANG
+	* @param object|null $option_obj=null
 	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function ( ?string$lang=DEDALO_DATA_LANG, object $option_obj=null ) : ?string {
+	$_get_diffusion_value = function ( ?string$lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = null;
 
