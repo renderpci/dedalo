@@ -20,7 +20,7 @@ declare(strict_types=1);
 *
 * @return string $msg
 */
-function dump(mixed $val, string $var_name=null, array $arguments=null) : string {
+function dump(mixed $val=null, ?string $var_name=null, ?array $arguments=null) : string {
 
 	// ignore dump in CLI mode
 		if (php_sapi_name()==='cli' && SHOW_DEBUG===false) {
@@ -764,7 +764,7 @@ function get_dir_files(string $dir, array $ext, ?callable $processor=null) : arr
 * This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret)
 * @return int|date
 */
-function get_last_modification_date(string $path, array $allowedExtensions=null, array $ar_exclude=['/acc/','/backups/']) {
+function get_last_modification_date(string $path, ?array $allowedExtensions=null, array $ar_exclude=['/acc/','/backups/']) {
 
 	// file does not exists case
 		if (!file_exists($path)) {
@@ -1176,10 +1176,10 @@ function fix_cascade_config_var(string $var_name, mixed $var_default_value) : mi
 
 /**
 * VERIFY_DEDALO_PREFIX_TIPOS
-* @param string $tipo = null
+* @param string|null $tipo = null
 * @return bool
 */
-function verify_dedalo_prefix_tipos(string $tipo=null) : bool {
+function verify_dedalo_prefix_tipos(?string $tipo=null) : bool {
 
 	return true; // Temporary until the dynamic hierarchy prefixes are evaluated.
 
@@ -2059,35 +2059,38 @@ function check_basic_system() : object {
 /**
 * ARRAY_FIND
 * Equivalent of JAVASCRIPT find
-* @param array $ar_value = null
+* @param array|null $ar_value = null
 * @param callable $n
 * @return mixed
 * Return null when nothing is found
 */
-function array_find(array $ar_value=null, callable $fn) : mixed {
+if (!function_exists('array_find')) {
+	// < 8.4
+	function array_find(?array $ar_value, callable $fn) : mixed {
 
-	if (is_array($ar_value)) {
-		// foreach ($ar_value as $x) {
-		$ar_value_length = sizeof($ar_value);
-		for ($i=0; $i < $ar_value_length ; $i++) {
+		if (is_array($ar_value)) {
+			// foreach ($ar_value as $x) {
+			$ar_value_length = sizeof($ar_value);
+			for ($i=0; $i < $ar_value_length ; $i++) {
 
-			// error case
-				if (!isset($ar_value[$i])) {
-					dump($ar_value, ' ar_value ++ '.to_string());
-					$db = debug_backtrace();
-					dump($db, ' db ++ '.to_string());
-					// throw new Exception("Error Processing Request", 1);
-					continue;
-				}
+				// error case
+					if (!isset($ar_value[$i])) {
+						dump($ar_value, ' ar_value ++ '.to_string());
+						$db = debug_backtrace();
+						dump($db, ' db ++ '.to_string());
+						// throw new Exception("Error Processing Request", 1);
+						continue;
+					}
 
-			$x = $ar_value[$i];
-			if (call_user_func($fn, $x)===true)
-			return $x;
+				$x = $ar_value[$i];
+				if (call_user_func($fn, $x)===true)
+				return $x;
+			}
 		}
-	}
 
-	return null;
-}//end find
+		return null;
+	}//end find
+}
 
 
 
@@ -2466,6 +2469,11 @@ function get_backtrace_sequence() : array  {
 		}
 		if (isset($name_function)) {
 			$ar_name[] = $name_function;
+		}
+
+		// skip empty
+		if (empty($ar_name)) {
+			continue;
 		}
 
 		$seq[] = implode(':', $ar_name);

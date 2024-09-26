@@ -142,6 +142,6 @@ class logger{};
 function custom_postprocessing_image(){};
 // function logged_user_id() : ?int {};
 function logged_user_is_developer() {};
-function array_find(array $ar_value=null, callable $fn);
+function array_find(?array $ar_value=null, callable $fn);
 class Socrata(){function post(){}};
 $options = new stdClass();

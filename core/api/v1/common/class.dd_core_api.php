@@ -305,7 +305,7 @@ final class dd_core_api {
 								if (isset($session_key) && isset($_SESSION['dedalo']['config']['sqo'][$session_key])) {
 
 									// request_config
-										$request_config = array_find($current_context->request_config, function($el){
+										$request_config = array_find($current_context->request_config ?? [], function($el){
 											return $el->api_engine==='dedalo';
 										});
 										if (is_object($request_config)) {
@@ -324,7 +324,7 @@ final class dd_core_api {
 									$current_context->section_id	= $section_id; // set section_id in context
 
 									// request_config
-										$request_config = array_find($current_context->request_config, function($el){
+										$request_config = array_find($current_context->request_config ?? [], function($el){
 											return $el->api_engine==='dedalo';
 										});
 										if (is_object($request_config)) {
