@@ -113,7 +113,7 @@ class component_section_id extends component_common {
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj
 			if(isset($this->column_obj)){
