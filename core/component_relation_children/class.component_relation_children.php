@@ -23,10 +23,10 @@ class component_relation_children extends component_relation_common {
 	/**
 	* GET_VALOR
 	* Get value . Default is get dato . overwrite in every different specific component
-	* @param string $lang = DEDALO_DATA_LANG
+	* @param string|null $lang = DEDALO_DATA_LANG
 	* @return string|null $valor
 	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
+	public function get_valor( ?string $lang=DEDALO_DATA_LANG ) : ?string {
 
 		$dato = $this->get_dato();
 
@@ -92,6 +92,8 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* REMOVE_ME_AS_YOUR_CHILD
+	* @param string $section_tipo
+	* @param string|int $section_id
 	* @return bool
 	*/
 	public function remove_me_as_your_child( string $section_tipo, string|int $section_id ) : bool {
@@ -181,9 +183,7 @@ class component_relation_children extends component_relation_common {
 	*
 	* @return array $ar_children_recursive
 	*/
-	public static function get_children(
-		string|int $section_id, string $section_tipo, ?string $component_tipo=null, bool $recursive=true, bool $is_recursion=false
-		) : array {
+	public static function get_children( string|int $section_id, string $section_tipo, ?string $component_tipo=null, bool $recursive=true, bool $is_recursion=false ) : array {
 
 		static $locators_resolved = array();
 
