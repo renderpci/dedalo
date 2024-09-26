@@ -31,9 +31,9 @@ class locator extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data = null
+	* @param object|null $data = null
 	*/
-	public function __construct( object $data=null ) {
+	public function __construct( ?object $data=null ) {
 
 		// null case
 			if (is_null($data)) {
