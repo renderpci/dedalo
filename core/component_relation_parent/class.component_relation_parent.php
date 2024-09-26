@@ -276,12 +276,12 @@ class component_relation_parent extends component_relation_common {
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @param string|null $lang = DEDALO_DATA_LANG
-	* @param object $option_obj = null
+	* @param object|null $option_obj = null
 	* @return string $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=DEDALO_DATA_LANG, object $option_obj=null) : ?string {
+	public function get_diffusion_value(?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null) : ?string {
 
 		$resolve_value = isset($option_obj->resolve_value)
 			? $option_obj->resolve_value
@@ -455,12 +455,12 @@ class component_relation_parent extends component_relation_common {
 	* 	remove|add
 	* @param string $children_section_tipo
 	* @param int|string $children_section_id
-	* @param string $component_relation_children_tipo = null
+	* @param string|null $component_relation_children_tipo = null
 	*
 	* @return bool $result
 	*/
 	private function update_children(
-		string $action, string $children_section_tipo, int|string $children_section_id, string $component_relation_children_tipo=null
+		string $action, string $children_section_tipo, int|string $children_section_id, ?string $component_relation_children_tipo=null
 		) : bool {
 
 		// default bool 	result
@@ -555,10 +555,13 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* ADD_PARENT
-	* 	Alias of update_children with specific action 'add'
+	* Alias of update_children with specific action 'add'
+	* @param string $children_section_tipo
+	* @param $children_section_id
+	* @param string|null $component_relation_children_tipo = null
 	* @return bool
 	*/
-	public function add_parent(string $children_section_tipo, $children_section_id, string $component_relation_children_tipo=null) : bool {
+	public function add_parent(string $children_section_tipo, $children_section_id, ?string $component_relation_children_tipo=null) : bool {
 
 		$action = 'add';
 
@@ -570,9 +573,12 @@ class component_relation_parent extends component_relation_common {
 	/**
 	* REMOVE_PARENT
 	* 	Alias of update_children with specific action 'remove'
+	* @param string $children_section_tipo
+	* @param $children_section_id
+	* @param string|null $component_relation_children_tipo = null
 	* @return bool
 	*/
-	public function remove_parent(string $children_section_tipo, $children_section_id, string $component_relation_children_tipo=null) : bool {
+	public function remove_parent(string $children_section_tipo, $children_section_id, ?string $component_relation_children_tipo=null) : bool {
 
 		$action = 'remove';
 
@@ -674,7 +680,7 @@ class component_relation_parent extends component_relation_common {
 	* @return array $parents
 	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
-	public static function get_parents(int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null, object $options=null) : array {
+	public static function get_parents(int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null, ?object $options=null) : array {
 		$start_time=start_time();
 
 		// options
