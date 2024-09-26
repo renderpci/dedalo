@@ -20,6 +20,7 @@ class component_relation_index extends component_relation_common {
 	protected $default_target_section		= ['all'];
 	public $target_section;
 
+
 	/**
 	* GET_DATO
 	* Resolve indexation references data
@@ -68,7 +69,7 @@ class component_relation_index extends component_relation_common {
 	* @param int|null $custom_limit = null
 	* @return array|null $dato
 	*/
-	public function get_dato_paginated(?int $custom_limit=null) : array {
+	public function get_dato_paginated( ?int $custom_limit=null ) : array {
 
 		// pagination
 			$limit			= $custom_limit ?? $this->pagination->limit;
@@ -182,9 +183,10 @@ class component_relation_index extends component_relation_common {
 	* the result include the total as sum of all.
 	* @param array $group_by
 	*  as ['section_tipo']
+	* @param array|null $filter_locators = null
 	* @return object $count_data_group_by
 	*/
-	public function count_data_group_by(array $group_by, array $filter_locators=null) : object {
+	public function count_data_group_by( array $group_by, ?array $filter_locators=null ) : object {
 
 		// reference_locator
 			$filter_by_locators = !empty($filter_locators)
@@ -302,7 +304,7 @@ class component_relation_index extends component_relation_common {
 	* @param locator $locator
 	* @return object $datum
 	*/
-	public function get_section_datum_from_locator(locator $locator) : object {
+	public function get_section_datum_from_locator( locator $locator ) : object {
 
 		// cache
 			$solved_section_datum_tipo = [];
@@ -410,7 +412,7 @@ class component_relation_index extends component_relation_common {
 	* @param string $lang = DEDALO_DATA_LANG
 	* @return string|null $valor
 	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
+	public function get_valor( ?string $lang=DEDALO_DATA_LANG ) : ?string {
 
 		$dato = $this->get_dato();
 
@@ -457,7 +459,7 @@ class component_relation_index extends component_relation_common {
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$dato = $this->get_dato();
 
@@ -585,7 +587,7 @@ class component_relation_index extends component_relation_common {
 	* @param object $query_object
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object {
+	public static function resolve_query_object_sql( object $query_object ) : object {
 
 		$with_references = false;
 
@@ -641,7 +643,7 @@ class component_relation_index extends component_relation_common {
 	* This is used as intermediate search to get indexations from another
 	* sections to current section
 	* @param string $section_tipo
-	* @param string $relation_type
+	* @param string relation_type = null
 	* @return array $references
 	*/
 	public static function get_references_to_section( string $section_tipo, string $relation_type=null ) : array {
@@ -695,7 +697,7 @@ class component_relation_index extends component_relation_common {
 	* @param string $cache_key
 	* @return array $referenced_locators
 	*/
-	public static function get_referended_locators_with_cache(object $locator, string $cache_key) : array {
+	public static function get_referended_locators_with_cache( object $locator, string $cache_key ) : array {
 
 		// cache
 			static $referended_locators_cache;
