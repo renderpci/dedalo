@@ -17,20 +17,12 @@ class area_common extends common  {
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
-	* @param string|null $model = null
-	* @param string|null $tipo = null
+	* @param string $model
+	* @param string $tipo
 	* @param string $mode = 'list'
 	* @return object $area_instance
 	*/
-	public static function get_instance(string $model=null, string $tipo=null, string $mode='list') : object {
-
-		if (empty($model)) {
-			throw new Exception("Error: on construct area : model is mandatory", 1);
-		}
-
-		if (empty($tipo)) {
-			throw new Exception("Error: on construct area : tipo is mandatory", 1);
-		}
+	public static function get_instance( string $model, string $tipo, string $mode='list' ) : object {
 
 		$area_instance = new $model($tipo, $mode);
 
