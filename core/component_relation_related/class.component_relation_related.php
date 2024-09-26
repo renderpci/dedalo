@@ -377,7 +377,7 @@ class component_relation_related extends component_relation_common {
 	/**
 	* GET_REFERENCES
 	* Get bidirectional / multi-directional references to current term
-	* @param string $type_rel = null
+	* @param string|null $type_rel = null
 	* @return array $ar_result
 	* array of objects as
 	* [{
@@ -386,7 +386,7 @@ class component_relation_related extends component_relation_common {
 	*	from_component_tipo: rsc85741
 	* }]
 	*/
-	public function get_references( string $type_rel=null ) : array {
+	public function get_references( ?string $type_rel=null ) : array {
 
 		$locator = new locator();
 			$locator->set_section_tipo($this->section_tipo);
