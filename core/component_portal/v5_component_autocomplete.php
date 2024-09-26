@@ -9,9 +9,15 @@
 	/**
 	* GET VALOR
 	* Get resolved string representation of current value (expected id_matrix of section or array)
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $format='string'
+	* @param $fields_separator=' | '
+	* @param $records_separator='<br>'
+	* @param $ar_related_terms=false
+	* @param $data_to_be_used='valor'
 	* @return array|string $this->valor
 	*/
-	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=' | ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
+	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=' | ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -162,9 +168,13 @@
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
+	* @param $valor=null
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $quotes=null
+	* @param $add_id=null
 	* @return string $valor_export
 	*/
-	$_get_valor_export = function ($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -186,11 +196,13 @@
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param $lang=null
+	* @param $option_obj=null
 	* @return string $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function($lang=null, $option_obj=null) : string {
+	$_get_diffusion_value = function( $lang=null, $option_obj=null ) : string {
 			// global $_get_valor;
 
 		// force recalculate for each lang

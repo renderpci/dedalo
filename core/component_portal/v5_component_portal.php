@@ -9,6 +9,12 @@
 	/**
 	* GET VALOR
 	* Get resolved string representation of current values (locators)
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $format='string'
+	* @param $fields_separator=', '
+	* @param $records_separator='<br>'
+	* @param $ar_related_terms=false
+	* @param $data_to_be_used='valor'
 	* @return string|null $valor
 	*/
 	$_get_valor = function( $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
@@ -176,6 +182,10 @@
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
+	* @param $valor=null
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $quotes='"'
+	* @param $add_id=false
 	* @return array $valor_export
 	*/
 	$_get_valor_export = function( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
@@ -262,11 +272,13 @@
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param $lang=null
+	* @param object|null $option_obj=null
 	* @return string|array|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function( $lang=null , ?object $option_obj=null) { //  ?string
+	$_get_diffusion_value = function( $lang=null, ?object $option_obj=null ) { //  ?string
 
 		$diffusion_value = null;
 

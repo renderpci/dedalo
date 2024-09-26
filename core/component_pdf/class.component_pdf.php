@@ -123,72 +123,15 @@ class component_pdf extends component_media_common implements component_media_in
 
 
 	/**
-	* GET_GRID_VALUE (USE MEDIA_COMMON->get_grid_value INSTEAD !)
-	* Get the value of the components. By default will be get_dato().
-	* overwrite in every different specific component
-	* Some the text components can set the value with the dato directly
-	* the relation components need to process the locator to resolve the value
-	* @param object|null $ddo = null
-	*
-	* @return dd_grid_cell_object $grid_cell_object
-	*/
-		// public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
-
-		// 	// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
-		// 		$column_obj = isset($this->column_obj)
-		// 			? $this->column_obj
-		// 			: (object)[
-		// 				'id' => $this->section_tipo.'_'.$this->tipo
-		// 			  ];
-
-		// 	// current_url. get from dato
-		// 		$dato = $this->get_dato();
-		// 		if(isset($dato)){
-		// 			$element_quality = ($this->mode==='edit')
-		// 				? $this->get_default_quality()
-		// 				: $this->get_thumb_quality();
-
-		// 			$current_url = $this->get_url(
-		// 				$element_quality, // string quality
-		// 				false, // bool test_file
-		// 				true,  // bool absolute
-		// 				false // bool default_add
-		// 			);
-		// 		}else{
-		// 			$current_url = '';
-		// 		}
-
-		// 	// label
-		// 		$label = $this->get_label();
-
-		// 	// class_list
-		// 		$class_list = isset($ddo)
-		// 			? ($ddo->class_list ?? null)
-		// 			: null;
-
-		// 	// value
-		// 		$grid_cell_object = new dd_grid_cell_object();
-		// 			$grid_cell_object->set_type('column');
-		// 			$grid_cell_object->set_label($label);
-		// 			$grid_cell_object->set_ar_columns_obj([$column_obj]);
-		// 			$grid_cell_object->set_cell_type('text');
-		// 			if(isset($class_list)){
-		// 				$grid_cell_object->set_class_list($class_list);
-		// 			}
-		// 			$grid_cell_object->set_value([$current_url]);
-
-
-		// 	return $grid_cell_object;
-		// }//end get_grid_value
-
-
-
-	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
+	* @param $valor=null
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $quotes=null
+	* @param $add_id=null
 	* @return string|null $valor
 	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) : ?string {
 
 		if (empty($valor)) {
 			$this->get_dato(); // Get dato from DB
@@ -223,106 +166,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return $related_component_text_area_tipo;
 	}//end get_related_component_text_area_tipo
-
-
-
-	/**
-	* REMOVE_COMPONENT_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
-	* Is triggered wen section tha contain media elements is deleted
-	* @see section:remove_section_media_files
-	*/
-		// public function remove_component_media_files(array $ar_quality=[]) : bool {
-
-		// 	$date=date("Y-m-d_Hi");
-
-		// 	#
-		// 	# PDF remove
-		// 	$ar_quality = DEDALO_PDF_AR_QUALITY;
-		// 	foreach ($ar_quality as $current_quality) {
-		// 		# media_path
-		// 		$media_path = $this->get_media_filepath($current_quality);
-
-		// 		if (!file_exists($media_path)) continue; # Skip
-
-		// 		# move / rename file
-		// 		#$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $current_quality . '/deleted';
-		// 		$folder_path_del 	= $this->get_media_path_dir()  . 'deleted';
-
-		// 		# delete folder exists ?
-		// 		if( !is_dir($folder_path_del) ) {
-		// 		$create_dir 	= mkdir($folder_path_del, 0777,true);
-		// 		if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
-		// 		}
-
-		// 		$id 			= $this->get_id();
-		// 		$media_path_moved 	= $folder_path_del . "/$id" . '_deleted_' . $date . '.' . DEDALO_PDF_EXTENSION;
-		// 		if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-
-		// 		if(SHOW_DEBUG===true) {
-		// 			$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
-		// 			error_log($msg);
-		// 		}
-		// 	}//end foreach
-
-
-		// 	return true;
-		// }//end remove_component_media_files
-
-
-
-	/**
-	* RESTORE_COMPONENT_MEDIA_FILES (! Moved to media common)
-	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
-	* Is triggered when tool_time_machine recover a section
-	* @see tool_time_machine::recover_section_from_time_machine
-	* @return bool
-	*/
-		// public function restore_component_media_files() : bool {
-
-		// 	// element restore
-		// 	$ar_quality	= $this->get_ar_quality();
-		// 	$extension	= $this->get_extension();
-		// 	foreach ($ar_quality as $current_quality) {
-
-		// 		// media_path
-		// 		$media_path	= $this->get_media_path_dir($current_quality) . '/deleted';
-		// 		$id			= $this->get_id();
-
-		// 		$file_pattern	= $media_path .'/'. $id .'_*.'. $extension;
-		// 		$ar_files		= glob($file_pattern);
-		// 		if (empty($ar_files)) {
-		// 			debug_log(__METHOD__
-		// 				." No files to restore were found for id:$id. Nothing was restored (1) "
-		// 				, logger::WARNING
-		// 			);
-		// 			continue; // Skip
-		// 		}
-
-		// 		natsort($ar_files);	# sort the files from newest to oldest
-		// 		$last_file_path	= end($ar_files);
-		// 		$new_file_path	= $this->get_media_filepath($current_quality);
-
-		// 		// move file
-		// 		if( !rename($last_file_path, $new_file_path) ) {
-		// 			// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-		// 			debug_log(__METHOD__
-		// 				. " Error on move files to restore folder. Permission denied . Nothing was restored (2) " . PHP_EOL
-		// 				. 'last_file_path: '. $last_file_path . PHP_EOL
-		// 				. 'new_file_path: '. $new_file_path
-		// 				, logger::ERROR
-		// 			);
-		// 		}
-
-		// 		debug_log(__METHOD__
-		// 			." Moved file $last_file_path to $new_file_path "
-		// 			, logger::WARNING
-		// 		);
-		// 	}//end foreach
-
-
-		// 	return true;
-		// }//end restore_component_media_files
 
 
 
@@ -553,7 +396,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @return object $response
 	* @test true
 	*/
-	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
+	public function build_version( string $quality, bool $async=true, bool $save=true ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -715,7 +558,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param $folder_path string
 	* @return object $response
 	*/
-	public function rename_old_files(string $file_name, string $folder_path) : object {
+	public function rename_old_files( string $file_name, string $folder_path ) : object {
 
 		// response
 			$response = new stdClass();
@@ -760,7 +603,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param object $options
 	* @return object $response
 	*/
-	public function get_text_from_pdf(object $options) : object {
+	public function get_text_from_pdf( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -940,7 +783,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param object $options
 	* @return object $response
 	*/
-	public function process_ocr_file(object $options) : object {
+	public function process_ocr_file( object $options ) : object {
 
 		$response = new stdClass();
 
@@ -1029,7 +872,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* This cries out for a C-implementation to be included in PHP core
 	* @return bool
 	*/
-	public static function valid_utf8(string $string) : bool {
+	public static function valid_utf8( string $string ) : bool {
 		$len = strlen($string);
 
 		if (!function_exists('valid_1byte')) {
@@ -1097,7 +940,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param bool $control = false
 	* @param string $string
 	*/
-	public static function utf8_clean(string $string='', bool $control=false) : string {
+	public static function utf8_clean( string $string='', bool $control=false ) : string {
 
 		$string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
 
@@ -1114,7 +957,7 @@ class component_pdf extends component_media_common implements component_media_in
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $options) : object {
+	public static function update_dato_version( object $options ) : object {
 
 		// options
 			$update_version	= $options->update_version ?? '';
@@ -1297,10 +1140,10 @@ class component_pdf extends component_media_common implements component_media_in
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
-	* @param object $options=null
+	* @param object|null $options=null
 	* @return bool
 	*/
-	public function regenerate_component( object $options=null ) : bool {
+	public function regenerate_component( ?object $options=null ) : bool {
 
 		// Options
 			$first_page					= $options->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
@@ -1362,9 +1205,6 @@ class component_pdf extends component_media_common implements component_media_in
 						$this->section_tipo,
 						false
 					);
-					// current value
-					// $component_text_area_dato	= $component_text_area->get_dato();
-					// $component_text_area_value	= $component_text_area_dato[0] ?? null;
 
 					// extract text only if text area value is empty
 					// if (empty($component_text_area_value)) {
@@ -1416,7 +1256,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param object|null $options = null
 	* @return bool
 	*/
-	public function create_alternative_version(string $quality, string $extension, ?object $options=null) : bool {
+	public function create_alternative_version( string $quality, string $extension, ?object $options=null ) : bool {
 
 		// options
 			$page = $options->page ?? 0;
@@ -1478,9 +1318,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return true;
 	}//end create_alternative_version
-
-
-
 
 
 
