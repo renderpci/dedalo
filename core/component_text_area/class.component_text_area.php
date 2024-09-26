@@ -133,10 +133,10 @@ class component_text_area extends component_common {
 	* GET_GRID_VALUE
 	* Get the value of the components.
 	* If the mode is "indexation_list", create the fragments of the indexation
-	* @param object $ddo = null
+	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -2443,11 +2443,11 @@ class component_text_area extends component_common {
 	* By default, list value is equivalent to dato. Override in other cases.
 	* Note that empty array or string are returned as null
 	* A param '$options' is added only to allow future granular control of the output
-	* @param object $options = null
+	* @param object|null $options = null
 	* 	Optional way to modify result. Avoid using it if it is not essential
 	* @return array|null $list_value
 	*/
-	public function get_list_value(object $options=null) : ?array {
+	public function get_list_value(?object $options=null) : ?array {
 
 		// force change lang when is set in related component (rsc36 case)
 			$original_lang = $this->get_original_lang();
@@ -2505,10 +2505,10 @@ class component_text_area extends component_common {
 	* GET_FALLBACK_LIST_VALUE
 	* Used by component_text_area and component_html_text to
 	* generate fallback versions of current empty values
-	* @param object $options = null
+	* @param object|null $options = null
 	* @return array|null $list_value
 	*/
-	public function get_fallback_list_value(object $options=null) : ?array {
+	public function get_fallback_list_value(?object $options=null) : ?array {
 
 		// options
 			$max_chars = $options->max_chars ?? 700;
@@ -2559,10 +2559,10 @@ class component_text_area extends component_common {
 	* GET_FALLBACK_edit_VALUE
 	* Used by component_text_area and component_html_text to
 	* generate fallback versions of current empty values
-	* @param object $options = null
+	* @param object|null $options = null
 	* @return array|null $list_value
 	*/
-	public function get_fallback_edit_value(object $options=null) : ?array {
+	public function get_fallback_edit_value(?object $options=null) : ?array {
 
 		// options
 			$max_chars = $options->max_chars ?? 700;
