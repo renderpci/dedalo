@@ -57,11 +57,11 @@ class component_relation_common extends component_common {
 	* @param string $tipo = null
 	* @param string|null $section_id = null
 	* @param string $mode = 'list'
-	* @param string $lang = null
-	* @param string $section_tipo = null
+	* @param string|null $lang = null
+	* @param string|null $section_tipo = null
 	* @return void
 	*/
-	protected function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( ?string $tipo=null, $section_id=null, string $mode='list', ?string $lang=null, ?string $section_tipo=null, bool $cache=true ) {
 
 		// lang. translatable conditioned
 			$translatable = RecordObj_dd::get_translatable($tipo);
@@ -253,7 +253,7 @@ class component_relation_common extends component_common {
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// ddo customs: set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -642,9 +642,10 @@ class component_relation_common extends component_common {
 	* Set raw dato overwrite existing dato.
 	* Usually, dato is built element by element, adding one locator to existing dato, but sometimes we need
 	* to insert complete array of locators at once. Use this method in this cases
+	* @param $dato
 	* @return bool
 	*/
-	public function set_dato($dato) : bool {
+	public function set_dato( $dato ) : bool {
 
 		$safe_dato = [];
 
@@ -823,9 +824,13 @@ class component_relation_common extends component_common {
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
+	* @param $valor=null
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $quotes=null
+	* @param $add_id=null
 	* @return string $valor
 	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
 		if (empty($valor)) {
 			// if not already received 'valor', force component load 'dato' from DB
@@ -1103,17 +1108,10 @@ class component_relation_common extends component_common {
 	* @param bool $show_parents = false
 	* @param array|null $ar_components_related
 	* @param bool $include_self = true
-	*
 	* @return array|null $ar_value
 	* 	Sample: ['pepe','lope']
 	*/
-	public static function get_locator_value(
-		object $locator,
-		string $lang=DEDALO_DATA_LANG,
-		bool $show_parents=false,
-		?array $ar_components_related=null, // array|bool
-		bool $include_self=true
-		) : ?array {
+	public static function get_locator_value( object $locator, string $lang=DEDALO_DATA_LANG, bool $show_parents=false, ?array $ar_components_related=null,	bool $include_self=true	) : ?array {
 
 		// locator
 			if (empty($locator) || !is_object($locator)) {
@@ -1144,7 +1142,6 @@ class component_relation_common extends component_common {
 					true, // bool mark
 					DEDALO_DATA_LANG_DEFAULT // string main_lang
 				);
-				// dump($current_value , ' $current_value  ++ '.to_string("$component_tipo - $lang"));
 
 				$value[] = $current_value;
 			}//end foreach ($ar_components_related as $component_tipo)
@@ -1207,11 +1204,11 @@ class component_relation_common extends component_common {
 	* Calculate parents and removes references to current section
 	* @param string $section_tipo
 	* @param int $section_id
-	* @param array $filter
+	* @param array|null $filter
 	* 	Is array of locators. Default is bool false
 	* @return object $response
 	*/
-	public static function remove_parent_references(string $section_tipo, $section_id, array $filter=null) : object {
+	public static function remove_parent_references( string $section_tipo, $section_id, ?array $filter=null ) : object {
 
 		// response
 			$response = new stdClass();
@@ -1535,11 +1532,13 @@ class component_relation_common extends component_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang=null
+	* @param object|null $option_obj=null
 	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$dato = $this->get_dato();
 
@@ -1578,9 +1577,10 @@ class component_relation_common extends component_common {
 	/**
 	* GET_DIFFUSION_RESOLVE_VALUE
 	* Alias of static diffusion_sql::resolve_value
+	* @param object|null $option_obj=null
 	* @return mixed
 	*/
-	public function get_diffusion_resolve_value(object $option_obj=null) : mixed {
+	public function get_diffusion_resolve_value( ?object $option_obj=null ) : mixed {
 
 		$args_list = func_get_args();
 		if (count($args_list)>1) {
@@ -1668,7 +1668,7 @@ class component_relation_common extends component_common {
 	* @param object options
 	* @return bool
 	*/
-	public function set_dato_external(object $options) : bool {
+	public function set_dato_external( object $options ) : bool {
 		$start_time=start_time();
 
 		// options
@@ -2054,7 +2054,7 @@ class component_relation_common extends component_common {
 	* @param array $filter_by_list
 	* @return array $filter_fields_data
 	*/
-	public static function get_filter_list_data(array $filter_by_list) : array {
+	public static function get_filter_list_data( array $filter_by_list ) : array {
 
 		$filter_list_data = [];
 		foreach ($filter_by_list as $current_obj_value) {
@@ -2095,9 +2095,14 @@ class component_relation_common extends component_common {
 
 	/**
 	* PARSE_STATS_VALUES
+	* @param string $tipo
+	* @param string $section_tipo
+	* @param object $properties
+	* @param string $lang=DEDALO_DATA_LANG
+	* @param string $selector='valor_list'
 	* @return array $ar_clean
 	*/
-	public static function parse_stats_values(string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list') : array {
+	public static function parse_stats_values( string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list' ) : array {
 
 		// Search
 			if (isset($properties->stats_look_at)) {
@@ -2201,7 +2206,7 @@ class component_relation_common extends component_common {
 	* @param array $ar_terms
 	* @return array $filter
 	*/
-	public static function get_hierarchy_terms_filter(array $ar_terms) : array {
+	public static function get_hierarchy_terms_filter( array $ar_terms ) : array {
 
 		$filter = [];
 
@@ -2379,7 +2384,7 @@ class component_relation_common extends component_common {
 	* @param string|null $retrieved_section_tipo = null
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrieved_section_tipo=null) : array {
+	public static function get_request_config_section_tipo( array $ar_section_tipo_sources, $retrieved_section_tipo=null ) : array {
 		$start_time=start_time();
 
 		$ar_section_tipo = [];
@@ -2571,7 +2576,7 @@ class component_relation_common extends component_common {
 	* @param mixed $section_id
 	* @return array $ar_fixed_filter
 	*/
-	public static function get_fixed_filter(array $ar_fixed, string $section_tipo, mixed $section_id) : array {
+	public static function get_fixed_filter( array $ar_fixed, string $section_tipo, mixed $section_id ) : array {
 
 		$ar_fixed_filter = [];
 
@@ -2908,7 +2913,7 @@ class component_relation_common extends component_common {
 	* 	like: 'hierarchy36' or 'hierarchy36_ts1'
 	* @return object $response
 	*/
-	public function conform_import_data(string $import_value, string $column_name) : object {
+	public function conform_import_data( string $import_value, string $column_name ) : object {
 
 		// Response
 			$response = new stdClass();
@@ -3176,12 +3181,13 @@ class component_relation_common extends component_common {
 
 
 
-	/*
+	/**
 	* GET_CALCULATION_DATA
+	* @param object|null $options=null
 	* @return $data
 	* get the data of the component for do a calculation
 	*/
-	public function get_calculation_data($options=null) : mixed {
+	public function get_calculation_data( ?object $options=null ) : mixed {
 
 		$ar_data		= [];
 		$ddo_map		= $options->ddo_map ?? new dd_object();
