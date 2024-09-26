@@ -655,59 +655,6 @@ class component_relation_parent extends component_relation_common {
 		}
 
 		return $parents;
-
-		/*
-			# Calculate current target component_relation_children_tipo from structure
-			$from_component_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
-
-			#$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $from_component_tipo);
-
-			#
-			# Look in children properties different possible sources
-			$RecordObj 								= new RecordObj_dd($from_component_tipo);
-			$my_component_children_tipo_properties = $RecordObj->get_properties(true);
-
-			# hierarchy_sections
-			$hierarchy_types 	= isset($my_component_children_tipo_properties->source->hierarchy_types) 	 ? $my_component_children_tipo_properties->source->hierarchy_types : null;
-			$hierarchy_sections = isset($my_component_children_tipo_properties->source->hierarchy_sections) ? $my_component_children_tipo_properties->source->hierarchy_sections : null;
-			# Resolve hierarchy_sections for speed
-			if (!empty($hierarchy_types)) {
-				$hierarchy_sections = component_relation_common::get_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
-			}
-			#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string());
-
-			if (empty($hierarchy_sections)) {
-				# Only from current section component children
-				$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $from_component_tipo);
-			}else{
-				# Look component children across all related sections
-				$model_name = 'component_relation_children';
-				$parents 	 = [];
-				$ar_resolved = [];
-				foreach ($hierarchy_sections as $children_section_tipo) {
-					# Resolve children component tipo from children_section_tipo
-					$ar_children_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(	$children_section_tipo,
-																											[$model_name],
-																											true, # from_cache
-																											true, # resolve_virtual
-																											true, # recursive
-																											true, # search_exact
-																											false); # ar_tipo_exclude_elements
-					$children_component_tipo = reset($ar_children_component_tipo);
-					if (in_array($children_component_tipo, $ar_resolved)) {
-						continue;
-					}
-
-						#dump($children_component_tipo, ' children_component_tipo ++ '.to_string($children_section_tipo));
-					$parents = array_merge($parents, component_relation_parent::get_parents($this->parent, $this->section_tipo, $children_component_tipo));
-					#dump($parents, ' parents ++ children_component_tipo - '." parent:$this->parent, section_tipo:$this->section_tipo, children_component_tipo:$children_component_tipo ".to_string());
-					debug_log(__METHOD__." parent:$this->parent, section_tipo:$this->section_tipo, children_component_tipo:$children_component_tipo ".to_string($parents), logger::DEBUG);
-					$ar_resolved[] = $children_component_tipo;
-				}
-			}
-
-			return (array)$parents;
-		*/
 	}//end get_my_parents
 
 
@@ -1026,42 +973,6 @@ class component_relation_parent extends component_relation_common {
 
 		return $parents_recursive;
 	}//end get_parents_recursive
-
-
-
-	// DES
-		// /**
-		// * GET_PARENT_RECURSIVE2
-		// * @return array $parents
-		// */
-		// public static function get_parent_recursive2__UNUSED($section_id, $section_tipo) {
-
-		// 	# Sólo test de momento
-
-		// 	$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
-
-		// 	$strQuery = 'SELECT section_id FROM '.$matrix_table.' WHERE section_tipo = \''.$section_tipo.'\' AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.DEDALO_RELATION_TYPE_CHILDREN_TIPO.'"}]\' LIMIT 1;';
-		// 	$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-
-		// 	$parents = array();
-		// 	while ($rows = pg_fetch_assoc($result)) {
-		// 		$current_section_id = $rows['section_id'];
-
-		// 		$locator = new locator();
-		// 			$locator->set_section_tipo($section_tipo);
-		// 			$locator->set_section_id($current_section_id);
-		// 			$locator->set_component_tipo('hierarchy49');
-
-		// 		# Add current
-		// 		$parents[] = $locator;
-
-		// 		# Recursion
-		// 		$parents = array_merge($parents, self::get_parent_recursive2($current_section_id, $section_tipo));
-		// 	}
-
-		// 	return $parents;
-		// }//end get_parent_recursive2
-
 
 
 	/**
