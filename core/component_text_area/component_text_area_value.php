@@ -229,26 +229,6 @@ declare(strict_types=1);
 
 					// button_tool_transcription
 
-						// tool_transcription_context. Use the processes section here because component_text_area do not have 'tool_transcription' tool
-							// $transcription_section = section::get_instance(
-							// 	$section_id, // string|null section_id
-							// 	'oh81' // string section_tool tipo
-							// );
-							// $transcription_section_context	= $transcription_section->get_structure_context( 1 );
-							// $transcription_section_tools	= $transcription_section_context->tools ?? [];
-							// $tool_transcription_context		= array_find($transcription_section_tools, function($el){
-							// 	return $el->name==='tool_transcription';
-							// });
-							// $transcription_section_properties = $transcription_section->get_properties();
-							// // add to tool context from section tool properties
-							// $tool_transcription_context->tool_config = $transcription_section_properties->tool_config->tool_transcription;
-							// $tool_transcription_context->tool_config->ddo_map = array_map(function($el){
-							// 	if (!isset($el->model)) {
-							// 		$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
-							// 	}
-							// 	return $el;
-							// }, $tool_transcription_context->tool_config->ddo_map);
-
 						// tool_transcription_context. Using related component av context (17-01-2024)
 							$component_av_tipo	= $this->get_related_component_av_tipo(); // 'rsc35';
 							$component_av_model	= RecordObj_dd::get_modelo_name_by_tipo($component_av_tipo,true);

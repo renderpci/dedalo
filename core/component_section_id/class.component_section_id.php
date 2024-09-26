@@ -113,7 +113,7 @@ class component_section_id extends component_common {
 	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
 
 		// column_obj
 			if(isset($this->column_obj)){
@@ -224,24 +224,6 @@ class component_section_id extends component_common {
 			case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
 				$ar_parts	= explode($sequence_separator, $q);
-				// $ar_result	= [];
-				// $first		= reset($ar_parts);
-				// $last		= end($ar_parts);
-				// foreach ($ar_parts as $key => $value) {
-				// 	$value = (int)$value;
-				// 	if ($value<1) continue;
-				// 	$query_object_current = clone $query_object;
-				// 		$query_object_current->q		= 'sequence from '.$first.' to '.$last;
-				// 		$query_object_current->operator	= '=';
-				// 		$query_object_current->q_parsed	= $value;
-				// 	$ar_result[] = $query_object_current;
-				// }
-				// // Return an subquery instead object
-				// $cop = '$or';
-				// $new_object = new stdClass();
-				// 	$new_object->{$cop} = $ar_result;
-				// $query_object = $new_object;
-
 				$operator = 'IN';
 				$q_clean  = array_map(function($el){
 					return (int)$el;

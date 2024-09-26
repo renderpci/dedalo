@@ -27,41 +27,6 @@ class component_relation_related extends component_relation_common {
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
-	// SQL query stored for debug only
-	// static $get_inverse_related_query; // (!) Not used
-
-
-
-	/**
-	* __CONSTRUCT
-	*
-	*/
-		// protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
-
-		// 	# relation_type
-		// 	# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-
-		// 	# Build the component normally
-		// 	parent::__construct($tipo, $parent, $mode, $lang, $section_tipo, $cache);
-
-		// 	// #
-		// 	// # RELATION CONFIG . Set current component relation_type and relation_type_rel based on properties config
-		// 	// $properties = $this->get_properties();
-		// 	// switch (true) {
-		// 	// 	case (isset($properties->config_relation->relation_type) && isset($properties->config_relation->relation_type_rel)):
-		// 	// 		$this->relation_type 	 = $properties->config_relation->relation_type;
-		// 	// 		$this->relation_type_rel = $properties->config_relation->relation_type_rel;
-		// 	// 		break;
-
-		// 	// 	default:
-		// 	// 		$this->relation_type 	 = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
-		// 	// 		$this->relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-		// 	// 		debug_log(__METHOD__." Using default values for config component $this->tipo . Please, config structure 'properties' for proper control about component behavior".to_string(), logger::ERROR);
-		// 	// 		break;
-		// 	// }
-		// }//end __construct
-
-
 
 	/**
 	* GET_VALOR
@@ -79,14 +44,6 @@ class component_relation_related extends component_relation_common {
 
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain specific 'valor' form component
 		if ($ar_related_terms===false) {
-			// $ar_related_terms = $this->RecordObj_dd->get_relaciones();
-			// $ar_componets_related = array();
-			// foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $model => $component_tipo) {
-			// 	$model_name = RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
-			// 	if ($model_name!=='section'){
-			// 		$ar_componets_related[] = $component_tipo;
-			// 	}
-			// }
 			$ar_componets_related =($ar_related_terms===false)
 				? array_map(function($el){
 					return $el->tipo;
@@ -377,7 +334,7 @@ class component_relation_related extends component_relation_common {
 	/**
 	* GET_REFERENCES
 	* Get bidirectional / multi-directional references to current term
-	* @param string $type_rel = null
+	* @param string|null $type_rel = null
 	* @return array $ar_result
 	* array of objects as
 	* [{
@@ -386,7 +343,7 @@ class component_relation_related extends component_relation_common {
 	*	from_component_tipo: rsc85741
 	* }]
 	*/
-	public function get_references( string $type_rel=null ) : array {
+	public function get_references( ?string $type_rel=null ) : array {
 
 		$locator = new locator();
 			$locator->set_section_tipo($this->section_tipo);
@@ -451,39 +408,6 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* GET_SEARCH_FIELDS DEPRECATED
-	*/
-		// public function get_search_fields($search_tipo) {
-		// 	//chenk the recursion
-		//
-		// 	$current_tipo = $search_tipo;
-		// 	$ar_target_section_tipo = common::get_ar_related_by_model('section',$current_tipo);
-		// 	$target_section_tipo    = reset($ar_target_section_tipo);
-		// 	$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($current_tipo, true, true);
-		//
-		// 	$search_fields = array();
-		// 	foreach ($ar_terminos_relacionados as $key => $c_tipo) {
-		// 		$model_name = RecordObj_dd::get_model_name_by_tipo($c_tipo,true);
-		// 		if ($model_name==='section') continue;
-		//
-		// 		$field = new stdClass();
-		// 			$field->section_tipo 	= $target_section_tipo;
-		// 			$field->component_tipo 	= $c_tipo;
-		//
-		// 		# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc..
-		// 		if(in_array($model_name, component_relation_common::get_components_with_relations())) {
-		// 			$field->search 	= $this->get_search_fields($c_tipo);
-		// 		}
-		//
-		// 		$search_fields[] = $field;
-		// 	}
-		//
-		// 	return $search_fields;
-		// }//end get_search_fields
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
@@ -499,8 +423,6 @@ class component_relation_related extends component_relation_common {
 		$diffusion_value = null;
 
 		$separator = '<br>';
-
-		// $dato_with_references = $this->get_dato_with_references();
 
 		// lang empty case. Apply default
 			if (empty($lang)) {
