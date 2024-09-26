@@ -261,11 +261,12 @@ class dd_cache {
 	/**
 	* DELETE_CACHE_FILES
 	* Remove existing cache files in DEDALO_CACHE_MANAGER['files_path']
-	* @param array $cache_files = null
+	* @param array|null $cache_files = null
 	* 	If null, all files with default prefix will be deleted
+	* @param string|null $prefix = null
 	* @return bool
 	*/
-	public static function delete_cache_files( array $cache_files=null, string $prefix=null ) : bool {
+	public static function delete_cache_files( ?array $cache_files=null, ?string $prefix=null ) : bool {
 
 		// check base_path
 			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
