@@ -46,6 +46,8 @@ class relation_list extends common {
 			$sections			= sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
 			$inverse_sections	= $sections->get_dato();
 
+
+
 		return $inverse_sections;
 	}//end get_inverse_references
 
@@ -384,9 +386,9 @@ class relation_list extends common {
 
 		$diffusion_value = null;
 
-		// Propiedades of diffusion element that references this component
-		// (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
-		// 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
+		// properties of diffusion element that references this component
+			// (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
+			// This is useful to change the 'data_to_be_used' param of target component (indirectly)
 			$diffusion_properties = $this->get_diffusion_properties();
 
 		// data_to_be_used
@@ -429,7 +431,7 @@ class relation_list extends common {
 				// see sample at: qdp341, mdcat4338
 				$ar_values = [];
 
-				$custom_map				= $diffusion_properties->process_dato_arguments->custom_map;
+				$custom_map = $diffusion_properties->process_dato_arguments->custom_map;
 				$ar_inverse_references	= $this->get_inverse_references($sqo);
 
 				// foreach ($ar_inverse_references as $current_locator) {
@@ -440,31 +442,32 @@ class relation_list extends common {
 						'from_section_id'	=> $section_dato->section_id
 					];
 
-					if (!isset($current_locator->from_section_tipo) || !isset($current_locator->from_section_id)) {
-						debug_log(__METHOD__
-							. " Error: Invalid locator. Expected from_section_tipo and from_section_id " . PHP_EOL
-							. ' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT) . PHP_EOL
-							. ' custom_map: ' . json_encode($custom_map, JSON_PRETTY_PRINT) . PHP_EOL
-							. ' sqo: ' . json_encode($sqo, JSON_PRETTY_PRINT)
-							, logger::ERROR
-						);
-						throw new Exception("Error Processing Request", 1);
-					}
+					// check valid locator
+						if (!isset($current_locator->from_section_tipo) || !isset($current_locator->from_section_id)) {
+							debug_log(__METHOD__
+								. " Error: Invalid locator. Expected from_section_tipo and from_section_id " . PHP_EOL
+								. ' current_locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT) . PHP_EOL
+								. ' custom_map: ' . json_encode($custom_map, JSON_PRETTY_PRINT) . PHP_EOL
+								. ' sqo: ' . json_encode($sqo, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+							throw new Exception("Error Processing Request", 1);
+						}
 
 					$custom_locator = new locator();
 						$custom_locator->set_section_tipo($current_locator->from_section_tipo);
 						$custom_locator->set_section_id($current_locator->from_section_id);
 
 					// Check target is publishable
-					$current_is_publicable = diffusion::get_is_publicable($custom_locator);
-					if ($current_is_publicable!==true) {
-						debug_log(__METHOD__
-							." + Skipped locator not publishable: " . PHP_EOL
-							. json_encode($custom_locator, JSON_PRETTY_PRINT)
-							, logger::DEBUG
-						);
-						continue;
-					}
+						$current_is_publicable = diffusion::get_is_publicable($custom_locator);
+						if ($current_is_publicable!==true) {
+							debug_log(__METHOD__
+								." + Skipped locator not publishable: " . PHP_EOL
+								. json_encode($custom_locator, JSON_PRETTY_PRINT)
+								, logger::DEBUG
+							);
+							continue;
+						}
 
 					// custom_map reference
 						// [
@@ -598,33 +601,32 @@ class relation_list extends common {
 										continue;
 									}
 
-								// reference
-									// "type": "dd151",
-									// "section_id": "7",
-									// "section_tipo": "technique1",
-									// "from_component_tipo": "qdp168",
-									// "from_section_tipo": "qdp1",
-									// "from_section_id": "2"
+							// reference
+								// "type": "dd151",
+								// "section_id": "7",
+								// "section_tipo": "technique1",
+								// "from_component_tipo": "qdp168",
+								// "from_section_tipo": "qdp1",
+								// "from_section_id": "2"
 
-								$custom_locator = new locator();
-									$custom_locator->set_section_tipo($current_locator->from_section_tipo);
-									$custom_locator->set_section_id($current_locator->from_section_id);
+							$custom_locator = new locator();
+								$custom_locator->set_section_tipo($current_locator->from_section_tipo);
+								$custom_locator->set_section_id($current_locator->from_section_id);
 
-								$current_dato = [$custom_locator];
+							$current_dato = [$custom_locator];
 
-								$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
-									$process_dato_arguments->lang = $lang;
+							$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
+								$process_dato_arguments->lang = $lang;
 
-								$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
+							$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
 
-								$value_obj->{$map_key} = $current_value;
-							}//end foreach ($map_item as $map_key => $map_obj)
+							$value_obj->{$map_key} = $current_value;
+						}//end foreach ($map_item as $map_key => $map_obj)
 
-							if (!in_array($value_obj, $ar_values) && $is_related===false) {
-								$ar_values[] = $value_obj;
-							}else if(!in_array($related_value_obj, $ar_values) && $is_related===true){
-								$ar_values[] = $related_value_obj;
-							}
+						if (!in_array($value_obj, $ar_values) && $is_related===false) {
+							$ar_values[] = $value_obj;
+						}else if(!in_array($related_value_obj, $ar_values) && $is_related===true){
+							$ar_values[] = $related_value_obj;
 						}
 
 					}//end foreach ($custom_map as $map_item)
