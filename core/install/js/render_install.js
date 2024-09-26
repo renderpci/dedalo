@@ -573,7 +573,6 @@ const render_config_block = function(self) {
 
 
 
-
 /**
 * RENDER_CONFIG_OPTIONS
 * Creates contents nodes with options of install
@@ -685,20 +684,6 @@ const render_config_options = function(self) {
 			self.node.content_data.set_root_password_block.classList.remove('hide')
 			self.node.content_data.config_block.config_block_options.remove();
 		})//end mouse_up event
-
-
-	// to install hierarchies. (!) Moved to area_development widget
-		// const install_hierarchies_button = ui.create_dom_element({
-		// 	element_type	: 'button',
-		// 	class_name		: 'primary install_button',
-		// 	inner_html		: get_label.to_install_hierarchies || 'To install hierarchies',
-		// 	parent			: fragment
-		// })
-		// install_hierarchies_button.addEventListener('mouseup', async function() {
-		// 	// show the install_db
-		// 	self.node.content_data.login_block.classList.remove('hide')
-		// 	self.node.content_data.config_block.config_block_options.remove();
-		// })//end mouse_up event
 
 
 	return fragment;

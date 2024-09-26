@@ -20,8 +20,8 @@
 				$permissions,
 				false // bool add_rqo
 			);
-
 	}//end if($options->get_context===true)
+
 
 
 // data
@@ -30,14 +30,12 @@
 	if($options->get_data===true && $permissions>0){
 
 		$value = new stdClass();
-			// $value->dedalo_application_langs = DEDALO_APPLICATION_LANGS;
 
 		// data item
 			$item  = $this->get_data_item($value);
 
 		$data[] = $item;
-
-	}// end if $permissions > 0
+	}//end if $permissions>0
 
 
 

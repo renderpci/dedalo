@@ -283,8 +283,8 @@ class install extends common {
 			}
 			$pw_check = true;
 			if(empty($pw) || $pw==='mypassword'){
-				$config_check = false;
-				$pw_check = false;
+				$config_check	= false;
+				$pw_check		= false;
 			}
 			$information_check = true;
 			if(empty($information) || $information==='Dédalo install version'){
