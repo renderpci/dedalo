@@ -21,14 +21,21 @@ class component_publication extends component_relation_common {
 
 	/**
 	* __CONSTRUCT
+	* @param string $tipo = null
+	* @param string|null $section_id = null
+	* @param string $mode = 'list'
+	* @param string|null $lang = DEDALO_DATA_NOLAN
+	* @param string|null $section_tipo = null
+	* @param bool $cache = true
+	* @return void
 	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( ?string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
 		// Force always DEDALO_DATA_NOLAN
 		$this->lang = DEDALO_DATA_NOLAN;
 
 		// construct the component normally
-		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
+		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
 
 
@@ -84,7 +91,7 @@ class component_publication extends component_relation_common {
 				if (!empty($dato)) {
 
 					# Always run list of values
-					$ar_list_of_values	= $this->get_ar_list_of_values($lang); # Importante: Buscamos el valor en el idioma actual
+					$ar_list_of_values	= $this->get_ar_list_of_values($lang); # Important: We are searching for the value in the current language.
 					$component_locator  = reset($dato);
 					foreach ($ar_list_of_values->result as $key => $item) {
 
