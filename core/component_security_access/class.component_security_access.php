@@ -270,19 +270,6 @@ class component_security_access extends component_common {
 			$datalist[] = $item;
 		}
 
-		// duplicates check
-			// $ar_clean = [];
-			// foreach ($datalist as $area) {
-			// 	$key = $area->tipo .'_'. $area->parent; // .'_' .$area->section_tipo
-			// 	if (isset($ar_clean[$key])) {
-			// 		debug_log(__METHOD__." Duplicate item ".to_string($area), logger::ERROR);
-			// 	}else{
-			// 		$ar_clean[$key] = $area;
-			// 	}
-			// }
-			// $datalist = array_values($ar_clean);
-			// dump($datalist, ' datalist ++ '.to_string($section_tipo));
-
 
 		return $datalist;
 	}//end get_element_datalist
@@ -293,7 +280,7 @@ class component_security_access extends component_common {
 	* GET_CHILDREN_RECURSIVE_SECURITY_ACCES
 	* Custom recursive children resolve
 	* @param string $tipo
-	* @param array | null $ar_tipo_to_be_exclude
+	* @param array|null $ar_tipo_to_be_exclude
 	* @return array $element_datalist
 	*/
 	private static function get_children_recursive_security_acces(string $tipo, ?array $ar_tipo_to_be_exclude=null) : array {
@@ -618,52 +605,6 @@ class component_security_access extends component_common {
 			}
 			// current DDBB dato
 			$component_security_access_dato	= $component_security_access->get_dato() ?? [];
-
-		// Iterate sections (normally like ts1,ts2)
-			// $new_values = [];
-			// $ar_section_tipo_length = sizeof($ar_section_tipo);
-			// for ($i=0; $i < $ar_section_tipo_length; $i++) {
-
-			// 	$current_section_tipo = $ar_section_tipo[$i];
-
-			// 	// current section
-			// 		// sample data:
-			// 			// {
-			// 			//     "tipo": "test28",
-			// 			//     "value": 1,
-			// 			//     "section_tipo": "test3"
-			// 			// }
-			// 		$new_values[] = (object)[
-			// 			'tipo'			=> $current_section_tipo,
-			// 			'section_tipo'	=> $current_section_tipo,
-			// 			'value'			=> (int)$permissions
-			// 		];
-
-			// 	// Components inside section
-			// 		$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
-			// 		$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
-			// 			$real_section, // section_tipo
-			// 			['component','button','section_group','relation_list','time_machine_list'], // ar_model_name_required
-			// 			true, // from_cache
-			// 			false, // resolve_virtual
-			// 			true, // recursive
-			// 			false // search_exact
-			// 		);
-			// 		foreach ($ar_children as $children_tipo) {
-
-			// 			// new element case
-			// 			$new_values[] = (object)[
-			// 				'tipo'			=> $children_tipo,
-			// 				'section_tipo'	=> $current_section_tipo,
-			// 				'value'			=> (int)$permissions
-			// 			];
-			// 			debug_log(__METHOD__.
-			// 				" Added item $children_tipo to section $current_section_tipo".to_string(),
-			// 				logger::DEBUG
-			// 			);
-			// 		}
-			// }//end foreach ($ar_section_tipo as $current_section_tipo)
-
 
 		// Iterate sections (normally like ts1,ts2) Generator version
 			$values_list_generator = function() use($ar_section_tipo, $permissions) {
