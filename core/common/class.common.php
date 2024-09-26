@@ -246,10 +246,11 @@ abstract class common {
 	/**
 	* GET_PERMISSIONS
 	* Do not use this method directly to resolve component permissions
-	* @param string $tipo
+	* @param string|null $parent_tipo = null
+	* @param string|null $tipo = null
 	* @return int $permissions
 	*/
-	public static function get_permissions( string $parent_tipo=null, string $tipo=null ) : int {
+	public static function get_permissions( ?string $parent_tipo=null, ?string $tipo=null ) : int {
 
 		// no logged case
 			if(login::is_logged()!==true) {
@@ -642,9 +643,11 @@ abstract class common {
 
 	/**
 	* GET_MAIN_LANG
+	* @param string|null $section_tipo = null
+	* @param mixed $section_id = null
 	* @return string $main_lang
 	*/
-	public static function get_main_lang( string $section_tipo, $section_id=null ) : string {
+	public static function get_main_lang( ?string $section_tipo, mixed $section_id=null ) : string {
 
 		// Always fixed lang of languages as English (section tipo = lg1)
 		if ($section_tipo===DEDALO_LANGS_SECTION_TIPO) {
@@ -1309,8 +1312,7 @@ abstract class common {
 
 	/**
 	* GET_JSON
-	* @param object $request_options
-	* 	Optional. Default is false
+	* @param object|null $options
 	* @return object $json
 	*	Object with data and context (configurable) like:
 	* {
@@ -1318,7 +1320,7 @@ abstract class common {
 	* 	data : [...]
 	* }
 	*/
-	public function get_json(object $options=null) : object {
+	public function get_json( object $options=null ) : object {
 
 		$json_cache = false; // experimental. Set false in production (!)
 
@@ -1917,12 +1919,13 @@ abstract class common {
 	* ex: if the caller is a portal that call to toponymy section it will need the context and data of the pointer section and the components that will be showed or searched.
 	* This method use the data of the caller (ar_locators) to get only the data to be used, ex: only the first records of the section to show in list mode.
 	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
-	* @param string $from_parent = null
+	* @param string|null $from_parent = null
 	* @param array $ar_locators = []
+	* @param object|null $subdatum_options = null
 	* @return object $subdatum
 	* 	Object with two properties: context, data
 	*/
-	public function get_subdatum(string $from_parent=null, array $ar_locators=[], object $subdatum_options=null) : object {
+	public function get_subdatum( ?string $from_parent=null, array $ar_locators=[], ?object $subdatum_options=null ) : object {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -4197,11 +4200,10 @@ abstract class common {
 	* Used to resolve component lang before construct it
 	* @param string $tipo
 	* @param string|null $data_lang
-	*
 	* @return string lang
 	* 	code like 'lg-spa'
 	*/
-	public static function get_element_lang(string $tipo, string $data_lang=null) : string {
+	public static function get_element_lang( string $tipo, ?string $data_lang=null ) : string {
 
 		if (empty($data_lang)) {
 			$data_lang = DEDALO_DATA_LANG;
