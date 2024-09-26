@@ -289,20 +289,6 @@
 								if (!empty($current_value)) {
 									$ar_diffusion_value[] = implode($fields_separator, (array)$current_value);
 								}
-
-							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-							// $ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
-							// $ar_terms = [];
-							// foreach ($ar_parents as $parent_locator) {
-							// 	$term = ts_object::get_term_by_locator( $parent_locator, $lang, $from_cache=true );
-							// 	if (!empty($term)) {
-							// 		$ar_terms[] = $term;
-							// 	}
-							// }
-							// if (!empty($ar_terms)) {
-							// 	// $diffusion_value .= $fields_separator . implode($fields_separator, $ar_terms);
-							// 	$ar_diffusion_value = array_merge($ar_diffusion_value, $ar_terms);
-							// }
 						}
 
 					$diffusion_value = implode($records_separator, $ar_diffusion_value);
