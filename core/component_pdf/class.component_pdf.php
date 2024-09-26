@@ -395,14 +395,14 @@ class component_pdf extends component_media_common implements component_media_in
 	* 	3 - component_media_common::add_file
 	* 	4 - component:process_uploaded_file
 	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object $file_data
+	* @param object|null $file_data
 	*	Data from trigger upload file
 	* {
 	* 	original_file_name : string like 'Homogenous categories.doc',
 	* 	full_file_name : string like 'rsc37_rsc176_18.doc',
 	* 	full_file_path : string like '/../dedalo/media/pdf/original/0/rsc37_rsc176_18.doc'
 	* }
-	* @param object $process_options
+	* @param object|null $process_options
 	* optional parameters to process the file
 	* {
 	* 	ocr : true // true||false  process the file with the OCR engine
@@ -410,14 +410,15 @@ class component_pdf extends component_media_common implements component_media_in
 	* }
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// check vars
-			if (empty($file_data->original_file_name) ||
+			if (empty($file_data) ||
+				empty($file_data->original_file_name) ||
 				empty($file_data->full_file_path) ||
 				empty($file_data->full_file_name)
 			) {
