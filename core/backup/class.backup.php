@@ -359,11 +359,11 @@ abstract class backup {
 	* Copy is made using psql daemon
 	* @param string $table
 	* @param string $path_file
-	* @param string $tld = null
+	* @param string|null $tld = null
 	*
 	* @return string $res
 	*/
-	public static function copy_from_file(string $table, string $path_file, string $tld=null) : string {
+	public static function copy_from_file( string $table, string $path_file, ?string $tld=null ) : string {
 
 		$res='';
 
@@ -458,11 +458,11 @@ abstract class backup {
 	* When export structure is done, two versions are created: full and partial. Full contain all tld and sequences of dedalo *_dd tables
 	* and partial the same except jer_dd and matrix_descriptors_dd
 	* @see trigger.db_utils
-	* @param string $db_name like 'dedalo4_development_str.custom'. If null, default is used
+	* @param string|null $db_name like 'dedalo4_development_str.custom'. If null, default is used
 	* @param bool $exclude_tables default true
 	* @return string $res_html table of results
 	*/
-	public static function export_structure(string $db_name=null, bool $exclude_tables=true) : object {
+	public static function export_structure( ?string $db_name=null, bool $exclude_tables=true ) : object {
 
 		// response
 			$response = new stdClass();
@@ -732,7 +732,7 @@ abstract class backup {
 	* @see trigger.db_utils
 	* @param string db_name default 'dedalo4_development_str.custom'
 	* @param bool $check_server = true
-	* @param array $dedalo_prefix_tipos = null
+	* @param array|null $dedalo_prefix_tipos = null
 	* @return object $response
 	* {
 	* 	result: bool,
@@ -740,7 +740,7 @@ abstract class backup {
 	* 	errors: array
 	* }
 	*/
-	public static function import_structure(string $db_name='dedalo4_development_str.custom', bool $check_server=true, array $dedalo_prefix_tipos=null) : object {
+	public static function import_structure( string $db_name='dedalo4_development_str.custom', bool $check_server=true, ?array $dedalo_prefix_tipos=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1319,11 +1319,11 @@ abstract class backup {
 	* Calculate the list of files needed to update the Ontology
 	* using main files and main tld plus the given $ar_tld
 	* If no value if provided, the whole DEDALO_PREFIX_TIPOS will be used
-	* @param array $ar_tld = null
+	* @param array|null $ar_tld = null
 	* @return array $ar_files
 	*	Array of objects
 	*/
-	public static function get_ontology_file_list(array $ar_tld=null) : array {
+	public static function get_ontology_file_list( ?array $ar_tld=null ) : array {
 
 		// cache results
 			static $ar_files;
