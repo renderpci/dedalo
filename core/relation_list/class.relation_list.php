@@ -432,7 +432,15 @@ class relation_list extends common {
 				$ar_values = [];
 
 				$custom_map = $diffusion_properties->process_dato_arguments->custom_map;
-				$ar_inverse_references	= $this->get_inverse_references($sqo);
+
+				// ar_inverse_references
+				// $ar_inverse_references = $this->get_inverse_references($sqo);
+				$ar_inverse_references = array_map(function($row){
+					return (object)[
+						'section_tipo'	=> $row->section_tipo,
+						'section_id'	=> $row->section_id
+					];
+				}, $this->get_inverse_references($sqo));
 
 				// foreach ($ar_inverse_references as $current_locator) {
 				foreach ($ar_inverse_references as $section_dato) {
@@ -512,94 +520,120 @@ class relation_list extends common {
 						// }
 						// ]
 					foreach ((array)$custom_map as $map_item) {
-						// error_log( json_encode($map_item, JSON_PRETTY_PRINT));
 
 						// match current locator section tipo with defined maps section_tipo. If not exist, ignore it
-						if ($map_item->section_tipo===$current_locator->from_section_tipo) {
+						if ($map_item->section_tipo!==$current_locator->from_section_tipo) {
+							continue;
+						}
 
-							$value_obj = new stdClass();
-								$value_obj->section_tipo	= $current_locator->from_section_tipo;
-								$value_obj->section_id		= $current_locator->from_section_id;
+						$value_obj = new stdClass();
+							$value_obj->section_tipo	= $current_locator->from_section_tipo;
+							$value_obj->section_id		= $current_locator->from_section_id;
 
-							$related_value_obj = new stdClass();
+						$related_value_obj = new stdClass();
 
-							$is_related = false;
+						$is_related = false;
 
-							// iterate object map_item
-							foreach ($map_item as $map_key => $map_obj) {
+						// iterate object map_item
+						foreach ($map_item as $map_key => $map_obj) {
 
-								// section_tipo
-									if ($map_key==='section_tipo') {
-										continue;
-									}
+							// section_tipo
+								if ($map_key==='section_tipo') {
+									continue;
+								}
 
-								// table
-									if ($map_key==='table') {
-										$value_obj->table			= $map_obj;
-										$related_value_obj->table	= $map_obj;
-										continue;
-									}
+							// table
+								if ($map_key==='table') {
+									$value_obj->table			= $map_obj;
+									$related_value_obj->table	= $map_obj;
+									continue;
+								}
 
-								// related case (@see mdcat4338 properties)
-									if(isset($map_obj->related)) {
+							// related case (@see mdcat4338 properties)
+								if(isset($map_obj->related)) {
 
-										$related = new relation_list(
-											$map_obj->related->target_component_tipo, //string tipo
-											$current_locator->from_section_id, // mixed section_id
-											$current_locator->from_section_tipo, // string section_tipo
-											'edit'
-										);
+									$deep_relation_list = new relation_list(
+										$map_obj->related->target_component_tipo, //string tipo
+										$current_locator->from_section_id, // mixed section_id
+										$current_locator->from_section_tipo, // string section_tipo
+										'edit'
+									);
+									$current_dato = $deep_relation_list->get_diffusion_dato();
 
-										$current_dato = $related->get_inverse_references($sqo);
-										$filtered_result = [];
-										foreach ((array)$current_dato as $current_dato_value) {
-											// filter_section
-											if (!in_array($current_dato_value->from_section_tipo, (array)$map_obj->related->filter_section)) {
-												continue;
-											}
-											$filtered_result[] = $current_dato_value; // add locator
+									// sqo . Common used to get inverse locators
+									$deep_sqo = (object)[
+										'section_tipo'			=> ['all'],
+										'mode'					=> 'related',
+										'limit'					=> false,
+										'offset'				=> 0,
+										'filter_by_locators'	=> [
+											(object)[
+												'section_tipo'	=> $deep_relation_list->section_tipo,
+												'section_id'	=> $deep_relation_list->section_id
+											]
+										]
+									];
+
+								// inverse_references
+									// return all records found
+									$current_dato = array_map(function($row){
+										return (object)[
+											'section_tipo'	=> $row->section_tipo,
+											'section_id'	=> $row->section_id
+										];
+									}, $deep_relation_list->get_inverse_references($deep_sqo));
+
+									$filtered_result = [];
+									foreach ((array)$current_dato as $current_dato_value) {
+										// filter_section
+										// if (!in_array($current_dato_value->from_section_tipo, (array)$map_obj->related->filter_section)) {
+										if (!in_array($current_dato_value->section_tipo, (array)$map_obj->related->filter_section)) {
+											continue;
 										}
 
-										if (!empty($filtered_result)) {
-											foreach ($filtered_result as $filtered_value) {
+										$filtered_result[] = $current_dato_value; // add row
+									}
 
-												$filtered_custom_locator = new locator();
-													$filtered_custom_locator->set_section_tipo($filtered_value->from_section_tipo);
-													$filtered_custom_locator->set_section_id($filtered_value->from_section_id);
+									if (!empty($filtered_result)) {
+										foreach ($filtered_result as $filtered_value) {
 
-												// Check target is publicable
-													$filtered_current_is_publicable = diffusion::get_is_publicable($filtered_custom_locator);
-													if ($filtered_current_is_publicable!==true) {
-														debug_log(__METHOD__
-															." + Skipped locator not publicable: ". PHP_EOL
-															.' filtered_custom_locator:' . to_string($filtered_custom_locator)
-															, logger::DEBUG
-														);
-														continue;
-													}
+											$filtered_custom_locator = new locator();
+												$filtered_custom_locator->set_section_tipo($filtered_value->section_tipo);
+												$filtered_custom_locator->set_section_id($filtered_value->section_id);
 
-												// current_value
-													$current_dato			= [$filtered_custom_locator];
-													$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
-														$process_dato_arguments->lang = $lang;
-													$current_value = diffusion_sql::resolve_value(
-														$process_dato_arguments, // mixed options
-														$current_dato, // mixed dato
-														' | ' // string default_separator
+											// Check target is publicable
+												$filtered_current_is_publicable = diffusion::get_is_publicable($filtered_custom_locator);
+												if ($filtered_current_is_publicable!==true) {
+													debug_log(__METHOD__
+														." + Skipped locator not publicable: ". PHP_EOL
+														.' filtered_custom_locator:' . to_string($filtered_custom_locator)
+														, logger::DEBUG
 													);
-
-												if ($is_related===false) {
-													$related_value_obj->section_tipo	= $filtered_value->from_section_tipo;
-													$related_value_obj->section_id		= $filtered_value->from_section_id;
+													continue;
 												}
 
-												$related_value_obj->{$map_key}	= $current_value;
+											// current_value
+												$current_dato			= [$filtered_custom_locator];
+												$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
+													$process_dato_arguments->lang = $lang;
+												$current_value = diffusion_sql::resolve_value(
+													$process_dato_arguments, // mixed options
+													$current_dato, // mixed dato
+													' | ' // string default_separator
+												);
 
-											}//end foreach ($filtered_result as $filtered_value)
-										}
-										$is_related = true;
-										continue;
+											if ($is_related===false) {
+												$related_value_obj->section_tipo	= $filtered_value->section_tipo;
+												$related_value_obj->section_id		= $filtered_value->section_id;
+											}
+
+											$related_value_obj->{$map_key}	= $current_value;
+
+										}//end foreach ($filtered_result as $filtered_value)
 									}
+									$is_related = true;
+									continue;
+								}
 
 							// reference
 								// "type": "dd151",
