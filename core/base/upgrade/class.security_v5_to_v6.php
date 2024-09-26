@@ -342,11 +342,11 @@ class security_v5_to_v6 {
 
 	/**
 	* CONVERT_TABLE_DATA
-	* @param array $ar_tables = null
+	* @param array|null $ar_tables = null
 	* @return bool
 	* 	true
 	*/
-	public static function convert_table_data(array $ar_tables=null) : bool {
+	public static function convert_table_data( ?array $ar_tables=null ) : bool {
 
 		if ($ar_tables===null) {
 			// default
