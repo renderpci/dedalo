@@ -280,7 +280,7 @@ class component_security_access extends component_common {
 	* GET_CHILDREN_RECURSIVE_SECURITY_ACCES
 	* Custom recursive children resolve
 	* @param string $tipo
-	* @param array | null $ar_tipo_to_be_exclude
+	* @param array|null $ar_tipo_to_be_exclude
 	* @return array $element_datalist
 	*/
 	private static function get_children_recursive_security_acces(string $tipo, ?array $ar_tipo_to_be_exclude=null) : array {
