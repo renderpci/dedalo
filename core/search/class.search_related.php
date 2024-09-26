@@ -196,7 +196,8 @@ class search_related extends search {
 				debug_log(__METHOD__
 					. " Calculated referenced_locators step 1 (total: $total_records)" . PHP_EOL
 					. ' reference_locator: ' . to_string($filter_locators) . PHP_EOL
-					. ' time: ' . $time_ms .' ms'
+					. ' time: ' . $time_ms .' ms' . PHP_EOL
+					.' backtrace_sequence: ' . to_string( array_reverse(get_backtrace_sequence()) )
 					, logger::DEBUG
 				);
 			}
