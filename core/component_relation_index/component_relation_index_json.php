@@ -12,42 +12,6 @@
 	$properties		= $this->get_properties() ?? new stdClass();
 
 
-
-// context
-	// if($options->get_context===true && $permissions>0){
-
-	// 	switch ($options->context_type) {
-	// 		case 'simple':
-	// 			// Component structure context_simple (tipo, relations, properties, etc.)
-	// 			$context[] = $this->get_structure_context_simple($permissions, $add_rqo=true);
-	// 			break;
-
-	// 		default:
-	// 			// Component structure context (tipo, relations, properties, etc.)
-	// 				$current_context = $this->get_structure_context($permissions, $add_rqo=true);
-	// 				// // add records_mode to properties, if not already defined
-	// 				// if (!isset($current_context->properties->source->records_mode)) {
-	// 				// 	if (!property_exists($current_context, 'properties')) {
-	// 				// 		$current_context->properties = new stdClass();
-	// 				// 	}
-	// 				// 	if (!property_exists($current_context->properties, 'source')) {
-	// 				// 		$current_context->properties->source = new stdClass();
-	// 				// 	}
-	// 				// 	$current_context->properties->source->records_mode = 'list';
-	// 				// }
-	// 				$context[] = $current_context;
-
-	// 			// subcontext from element layout_map items (from_parent, parent_grouper)
-	// 				$ar_subcontext = $this->get_ar_subcontext($tipo, $tipo);
-	// 				foreach ($ar_subcontext as $current_context) {
-	// 					$context[] = $current_context;
-	// 				}
-	// 			break;
-	// 	}
-	// }//end if($options->get_context===true)
-
-
-
 // data
 	$context	= [];
 	$data		= [];
@@ -158,50 +122,6 @@
 							}
 						}
 				}
-
-			// des
-				// if (!empty($ar_section_tipo)) {
-				// 	foreach ($ar_section_tipo as $current_section_tipo) {
-
-				// 		$section = section::get_instance(null, $current_section_tipo, 'list');
-
-				// 		$section_options = new stdClass();
-				// 				$section_options->get_context	= true;
-				// 				$section_options->get_data 	 	= false;
-				// 			$section_json = $section->get_json($section_options);
-
-				// 		$context = array_merge($context, $section_json->context);
-				// 	}
-				// }
-
-
-				// subcontext data from layout_map items
-					// $ar_subdata = $this->get_ar_subdata($value);
-
-				// $subdatum = $this->get_subdatum($tipo, $value);
-
-				// $ar_subcontext	= $subdatum->context;
-				// foreach ($ar_subcontext as $current_context) {
-				// 	$context[] = $current_context;
-				// }
-
-				// $ar_subdata		= $subdatum->data;
-
-
-				// // subdata add
-				// 	if ($mode==='list') {
-				// 		foreach ($ar_subdata as $current_data) {
-
-				// 			$current_data->parent_tipo			= $tipo;
-				// 			$current_data->parent_section_id	= $section_id;
-
-				// 			$data[] = $current_data;
-				// 		}
-				// 	}else{
-				// 		foreach ($ar_subdata as $current_data) {
-				// 			$data[] =$current_data;
-				// 		}
-				// 	}
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 
