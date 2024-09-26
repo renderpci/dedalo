@@ -52,12 +52,6 @@ class component_relation_index extends component_relation_common {
 		// fix resolved dato
 			parent::set_dato($new_data);
 
-		// Set as loaded. Already set on set parent::set_dato
-			// $this->bl_loaded_matrix_data = true;
-
-		// @experimental. Already set on set parent::set_dato
-			// $this->dato_resolved = $this->dato;
-
 
 		return $this->dato;
 	}//end get_dato
@@ -544,49 +538,13 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* ADD_LOCATOR
-	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
-	* NOTE: This method updates component 'dato' but NOT save
-	* @param object $locator
-	* @return bool
-	*/
-		// public function add_locator( object $locator ) : bool {
-
-		// 	$locator = clone($locator);
-
-		// 	# Verify exists locator type
-		// 	if (!property_exists($locator,'type')) {
-		// 		$locator->type = $this->relation_type;
-		// 	}
-
-		// 	# Verify exists locator from_component_tipo
-		// 	if (!property_exists($locator,'from_component_tipo')) {
-		// 		$locator->from_component_tipo = $this->tipo;
-		// 	}
-
-		// 	if ($locator->type!=$this->relation_type) {
-		// 		debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
-		// 		return false;
-		// 	}
-
-		// 	# Add current locator to component dato
-		// 	if (!$add_locator = $this->add_locator_to_dato($locator)) {
-		// 		return false;
-		// 	}
-
-		// 	return true;
-		// }//end add_locator
-
-
-
-	/**
 	* REMOVE_LOCATOR
 	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
 	* NOTE: This method updates component 'dato' and save
 	* @param object $locator
 	* @return bool
 	*/
-	public function remove_locator(object $locator) : bool {
+	public function remove_locator( object $locator ) : bool {
 
 		$locator = clone($locator);
 
