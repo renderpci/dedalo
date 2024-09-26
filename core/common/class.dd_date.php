@@ -40,11 +40,11 @@ class dd_date extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data = null
+	* @param object|null $data = null
 	* @param bool $constrain = false
 	* @return object dd_date
 	*/
-	public function __construct( object $data=null, bool $constrain=false ) {
+	public function __construct( ?object $data=null, bool $constrain=false ) {
 
 		// null case
 			if (is_null($data)) {
@@ -766,13 +766,13 @@ class dd_date extends stdClass {
 	/**
 	* GET_TIMESTAMP_NOW_FOR_DB
 	* Build current time ready to save to SQL as timestamp field
-	* @param array $offset
+	* @param array|null $offset
 	* @return string $timestamp
 	* 	current time formatted for saved to SQL timestamp field
 	*	like 2013-01-22 22:33:29 ('Y-m-d H:i:s')
 	*	DateTime is available for PHP >=5.3.0
 	*/
-	public static function get_timestamp_now_for_db( $offset=null ) : string {
+	public static function get_timestamp_now_for_db( ?array $offset=null ) : string {
 
 		$date = new DateTime();
 
