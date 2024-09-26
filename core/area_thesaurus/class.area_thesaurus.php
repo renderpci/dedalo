@@ -54,14 +54,14 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_HIERARCHY_SECTIONS
-	* @param array $hierarchy_types_filter = null
-	* @param array $hierarchy_sections_filter = null
+	* @param array|null $hierarchy_types_filter = null
+	* @param array|null $hierarchy_sections_filter = null
 	* @param bool $terms_are_model = false
 	* 	This param comes from rqo->source->build_options->terms_are_model sent by the client from
 	* 	area_thesaurus when building and self.thesaurus_view_mode==='model'
 	* @return array $ar_items
 	*/
-	public function get_hierarchy_sections(array $hierarchy_types_filter=null, array $hierarchy_sections_filter=null, bool $terms_are_model=false) : array {
+	public function get_hierarchy_sections( ?array $hierarchy_types_filter=null, ?array $hierarchy_sections_filter=null, bool $terms_are_model=false ) : array {
 
 		$hierarchy_target_section_tipo	= $terms_are_model ? DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO : DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 		$hierarchy_children_tipo		= $terms_are_model ? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO 		: DEDALO_HIERARCHY_CHILDREN_TIPO;
