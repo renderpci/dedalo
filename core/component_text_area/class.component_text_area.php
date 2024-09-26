@@ -419,22 +419,6 @@ class component_text_area extends component_common {
 
 
 
-	/**
-	* GET DATO DEFAULT
-	* Overwrite common_function
-	* @return string|null $dato
-	*/
-		// public function get_dato_default_lang() : ?string {
-
-		// 	$dato = parent::get_dato_default_lang();
-		// 	$dato = !empty($dato)
-		// 		? TR::add_tag_img_on_the_fly($dato)
-		// 		: $dato;
-
-		// 	return $dato;
-		// }//end get_dato_default_lang
-
-
 
 	/**
 	* GET_VALOR_EXPORT
@@ -444,117 +428,10 @@ class component_text_area extends component_common {
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		$valor_export = $this->get_valor($lang);
-		#$valor_export = br2nl($valor_export);
-		#dump($valor_export, ' valor_export ++ '."$this->tipo - $this->parent".to_string());
-
-		#$valor_export = strip_tags($valor_export);
-		#$valor_export = htmlspecialchars_decode($valor_export);
-		#$valor_export = html_entity_decode($valor_export);
 
 		return $valor_export;
 	}//end get_valor_export
 
-
-
-	/**
-	* DECODE DATO HTML
-	* (!) Removed 22-05-2023 because no one calls here
-	* @param string $string_value
-	* @return string
-	*/
-		// public static function decode_dato_html(string $string_value) : string {
-
-		// 	return !empty($string_value)
-		// 		? htmlspecialchars_decode($string_value)
-		// 		: $string_value;
-		// }//end decode_dato_html
-
-
-
-	/**
-	* UPDATE ALL LANGS TAGS STATE
-	* (!) Removed 22-05-2023 because no one calls here
-	* Actualiza el estado de las etiquetas:
-	* Revisa el texto completo, comparando fragmento a fragmento, y si detecta que algún fragmento ha cambiado
-	* cambia sus etiquetas a estado 'r'
-	* @return $ar_changed_tags (key by lang)
-	*/
-		// protected function update_all_langs_tags_state() {
-		// 	return true;
-		// 	// die(__METHOD__." EN PROCESO");
-		// 	/*
-		// 	$ar_changed_tags 	= array();
-		// 	$ar_changed_records = array();
-
-		// 	if (!$this->id) return $ar_changed_tags;
-
-		// 	# Previous dato
-		// 	# re-creamos este objeto para obtener el dato previo a las modificaciones
-		// 	$previous_obj 		= new component_text_area($this->id, $this->tipo);
-		// 	$previous_raw_text	= $previous_obj->get_dato();
-
-		// 	# Current dato
-		// 	$current_text 		= $this->dato;
-		// 	# Clean current dato
-		// 	$current_raw_text 	= TR::limpiezaPOSTtr($current_text);
-
-		// 	# Search tags
-		// 	$matches 		= $this->get_ar_relation_tags();
-		// 	$key 	 		= 0;
-		// 	if (empty($matches[$key])) {
-		// 		return $ar_changed_tags ;
-		// 	}
-
-		// 	# Eliminamos duplicados (las etiquetas in/out se devuelven igual, como [index-n-1],[index-n-1])
-		// 	$ar_tags = array_unique($matches[$key]);
-
-		// 	# iterate all tags comparing fragments
-		// 	if(is_array($ar_tags)) foreach ($ar_tags as $tag) {
-
-		// 		# Source fragment
-		// 		$source_fragment_text = component_text_area::get_fragment_text_from_tag( $tag_id, $tag_type, $previous_raw_text )[0];
-		// 		# Target fragment
-		// 		$target_fragment_text = component_text_area::get_fragment_text_from_tag( $tag_id, $tag_type, $current_raw_text )[0];
-
-		// 		if ($source_fragment_text != $target_fragment_text) {
-		// 			$ar_changed_tags[] = $tag;
-		// 		}
-
-		// 	}
-		// 	$ar_final['changed_tags']	= $ar_changed_tags;
-
-		// 	# Ya tenemos calculadas las etiquetas de los fragmentos que han cambiado
-		// 	if (count($ar_changed_tags)===0) {
-		// 		# no hay etiquetas a cambiar
-		// 		$ar_final['changed_records'] = NULL;
-		// 	}else{
-		// 		# Recorremos los registros del resto de idiomas actualizando el estado de las etiquetas coincidentes a 'r' (para revisar)
-		// 		$arguments=array();
-		// 		$arguments['parent']	= $this->get_parent();
-		// 		$arguments['tipo']		= $this->get_tipo();
-		// 		$matrix_table 			= common::get_matrix_table_from_tipo($this->get_section_tipo());
-		// 		$RecordObj_matrix		= new RecordObj_matrix($matrix_table,NULL);
-		// 		$ar_result				= $RecordObj_matrix->search($arguments);
-
-		// 		foreach ($ar_result as $id_matrix) {
-
-		// 			$component_text_area= new component_text_area($id_matrix, $this->get_tipo() );
-		// 			$current_lang 		= $component_text_area->get_lang();
-		// 			if ($current_lang != $this->lang) {
-
-		// 				$text_raw 			= $component_text_area->get_dato();
-		// 				$text_raw_updated 	= self::change_tag_state( $ar_changed_tags, $state='r', $text_raw );
-		// 				$component_text_area->set_dato($text_raw_updated);
-		// 				$component_text_area->Save(false);	# Important: arg 'false' is mandatory for avoid infinite loop
-		// 				$ar_changed_records[] = $id_matrix;
-		// 			}
-		// 		}
-		// 		$ar_final['changed_records']= $ar_changed_records;
-		// 	}
-
-		// 	return $ar_final;
-		// 	*/
-		// }//end update_all_langs_tags_state
 
 
 
@@ -609,61 +486,6 @@ class component_text_area extends component_common {
 
 		return $text_raw_updated;
 	}//end change_tag_state
-
-
-
-	/**
-	* GET AR REALATION TAGS
-	* We look for occurrences of the indexIn tag pattern (defined in class TR)
-	* @return array $matches
-	* 	Returns an array with all occurrences, of the type: 'indexIn' formatted
-	* 	sample:
-	*
-	*	pattern: /([index-([a-z])-([0-9]{1,6})])/
-	*	result :
-	*	[0] => Array
-	*		(
-	*			[0] => [index-n-5]
-	*			[1] => [index-n-4]
-	*			[2] => [index-n-3]
-	*		)
-	*	[1] => Array
-	*		(
-	*			[0] => [index-n-5]
-	*			[1] => [index-n-4]
-	*			[2] => [index-n-3]
-	*		)
-	*	[2] => Array
-	*		(
-	*			[0] => n
-	*			[1] => n
-	*			[2] => n
-	*		)
-	*	[3] => Array
-	*		(
-	*			[0] => 5
-	*			[1] => 4
-	*			[2] => 3
-	*		)
-	*/
-		// public function get_ar_relation_tags() : ?array {
-
-		// 	// Get raw dato from Database - We get the raw data from the database
-		// 	$dato = $this->get_dato();
-		// 	if (empty($dato)) {
-		// 		return null;
-		// 	}
-
-		// 	$matches = null;
-
-		// 	// We look for occurrences of the indexIn tag pattern (defined in class TR)
-		// 	$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=true);
-
-		// 	// Search math pattern tags
-		// 	preg_match_all($pattern,  $dato,  $matches, PREG_PATTERN_ORDER);
-
-		// 	return $matches;
-		// }//end get_ar_relation_tags
 
 
 
@@ -800,121 +622,6 @@ class component_text_area extends component_common {
 
 		return $text;
 	}//end get_plain_text
-
-
-
-
-	/**
-	* CLEAN_RAW_TEXT_FOR_PREVIEW
-	* (!) Removed 22-05-2023 because no one calls here
-	* Used when we have a raw text from database and we want show a preview for tool time machine list for example
-	* @return string $text
-	*/
-		// public static function clean_raw_text_for_preview(string $raw_text) : string {
-
-		// 	$text = $raw_text;
-
-		// 	# Clean fragment_text
-		// 	if(!empty($text)) {
-		// 		$text	= TR::deleteMarks($text);
-		// 		$text	= html_entity_decode($text);
-		// 	}
-
-		// 	return $text;
-		// }//end clean_raw_text_for_preview
-
-
-
-	/**
-	* GET_FRAGMENTS_TEXT_BY_TC
-	* (!) Removed 22-05-2023 because no one calls here
-	* Explode text by timecode such as [TC_00:00:23.235_TC]
-	* @param string $raw_text (String transcription complete as raw text with all tags)
-	* @return array $ar_fragments
-	*/
-		// public static function get_fragments_text_by_tc(string $raw_text) : array {
-
-		// 	// explode by TC pattern
-		// 	$pattern_tc = TR::get_mark_pattern(
-		// 		'tc_full',
-		// 		true // bool standalone
-		// 	);
-		// 	$ar_fragments = preg_split($pattern_tc, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-
-		// 	return $ar_fragments;
-		// }//end get_fragments_text_by_tc
-
-
-
-	/**
-	* GET FRAGMENT TEXT FROM REL LOCATOR
-	* (!) Removed 22-05-2023 because no one calls here
-	* Resolves the tag from rel_locator and calls component_text_area::get_fragment_text_from_tag($tag, $raw_text)
-	* to return the searched fragment
-	* Note: A fragment can be called, both from a relation locator and from an indexing one.
-	* @param $rel_locator (Object like '{rel_locator:{section_id : "55"}, {section_id : "oh1"},{component_tipo:"oh25"} }')
-	*
-	* @see static component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $raw_text)
-	* 	Used by section_records/rows/rows.php to display the fragment in listings
-	* @return array|null $fragment
-	*/
-		// public static function get_fragment_text_from_rel_locator(object $rel_locator, int $key=0) : ?array {
-
-		// 	// # INDEXATION TAG
-		// 	// if ( preg_match("/dd.{1,32}\.[0-9]{1,32}\.[0-9]{1,32}\.dd.{1,32}\.[0-9]{1,32}/", $rel_locator) ) {
-		// 	// 	$tag_obj = component_common::get_locator_as_obj($rel_locator);
-		// 	// }
-		// 	// # RELATION TAG
-		// 	// else if ( preg_match("/[0-9]{1,32}\.dd.{1,32}\.[0-9]{1,32}/", $rel_locator) ) {
-		// 	// 	$tag_obj = component_common::get_locator_relation_as_obj($rel_locator);
-		// 	// }
-		// 	// # INVALID LOCATOR
-		// 	// else{
-
-		// 	if (empty($rel_locator)) {
-		// 		debug_log(__METHOD__." rel_locator $rel_locator is not valid! ".to_string(), logger::ERROR);
-		// 		if(SHOW_DEBUG===true) {
-		// 			dump($rel_locator, '$rel_locator');
-		// 		}
-		// 		return null;
-		// 	}
-
-		// 	$section_tipo	= $rel_locator->section_tipo;
-		// 	$section_id		= $rel_locator->section_id;
-		// 	$component_tipo	= $rel_locator->component_tipo;
-		// 	$tag_id			= $rel_locator->tag_id;
-
-		// 	switch ($rel_locator->type) {
-		// 		case DEDALO_RELATION_TYPE_INDEX_TIPO:
-		// 			$tag_type = 'index';
-		// 			break;
-		// 		case DEDALO_RELATION_TYPE_STRUCT_TIPO:
-		// 			$tag_type = 'struct';
-		// 			break;
-		// 		default:
-		// 			debug_log(__METHOD__." Making fallback to index because rel_locator->type is NOT DEFINED in locator ".to_string($rel_locator), logger::ERROR);
-		// 			$tag_type = 'index';
-		// 			break;
-		// 	}
-
-		// 	$component_text_area = component_common::get_instance(
-		// 		'component_text_area',
-		// 		$component_tipo,
-		// 		$section_id,
-		// 		'edit', // string mode
-		// 		DEDALO_DATA_LANG, // string lang
-		// 		$section_tipo
-		// 	);
-		// 	$dato					= $component_text_area->get_dato();
-		// 	$raw_text				= $dato[$key] ?? ''; // Note that key is zero by default
-		// 	$fragment_text_from_tag	= component_text_area::get_fragment_text_from_tag(
-		// 		$tag_id,
-		// 		$tag_type,
-		// 		$raw_text
-		// 	);
-
-		// 	return $fragment_text_from_tag;
-		// }//end get_fragment_text_from_rel_locator
 
 
 
@@ -1204,62 +911,6 @@ class component_text_area extends component_common {
 
 
 	/**
-	* PLACE_BROKEN_TAG_IN_APPROXIMATE_POSITION (DES)
-	* @return string $raw_text
-	*/
-		// public function place_broken_tag_in_approximate_position DEPRECATED(string $raw_text, string $tag_in, string $tag_out, string $tag_id, string $source_lang) : string {
-
-		// 	$blank_space = " ";
-
-		// 	# Search existing tag in original lang
-		// 	# source_lang is user selected as source lang of current text in edit mode
-		// 	if ($this->lang===$source_lang) {
-		// 		// Lang is the original. No references exists..
-		// 		$raw_text = $tag_in ." Deleted tag $tag_id ". $tag_out . $blank_space . $raw_text;
-
-		// 	}else{
-		// 		// Lang is different. Check the source lang for additional data
-		// 		$component 		= component_common::get_instance(get_class($this),
-		// 														 $this->tipo,
-		// 														 $this->parent,
-		// 														 $this->mode,
-		// 														 $source_lang,
-		// 														 $this->section_tipo);
-		// 		$source_raw_text = $component->get_dato();
-
-		// 		# INDEX IN
-		// 		$pattern = TR::get_mark_pattern('structIn',$standalone=false, $tag_id); //$mark, $standalone=true, $id=false, $data=false, $state=false
-		// 		preg_match($pattern,  $source_raw_text,  $matches_indexIn, PREG_OFFSET_CAPTURE);
-		// 		if (empty($matches_indexIn[0][0])) {
-		// 			// No. tag not found in original lan. Not exists the same tag in the original lang ...
-		// 			$raw_text = $tag_in . " Deleted tag $tag_id (tag not exists in original lang $source_lang) " . $tag_out . $blank_space . $raw_text;
-
-		// 		}else{
-		// 			// Yes. Founded current broken tag in the original lang. Lets go..
-		// 			# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
-		// 			# Override tag_in and out calculated with real full data locator
-		// 			$tag_in_full = $matches_indexIn[0][0];
-		// 			preg_match("/data:(.*):data/", $tag_in_full, $output_array);
-		// 			$data_locator = $output_array[1];
-		// 			if (!empty($output_array[1])) {
-		// 				$tag_in  = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_in);
-		// 				$tag_out = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_out);
-		// 			}
-
-		// 			$raw_text = $tag_in ." Deleted tag " . $tag_id . " (tag found in original lang $source_lang) ". $tag_out . $blank_space . $raw_text;
-
-
-		// 		}//end if (empty($matches_indexIn[0][0]))
-
-		// 	}//end if ($this->lang===$source_lang)
-
-
-		// 	return $raw_text;
-		// }//end place_broken_tag_in_approximate_position
-
-
-
-	/**
 	* GET_RELATED_COMPONENT_AV_TIPO
 	* Search in struct for related component_av tipo
 	* @return string|null $related_component_av_tipo
@@ -1431,7 +1082,6 @@ class component_text_area extends component_common {
 				$indextaion_obj->label	= $term;
 			$ar_indextaion_obj[] = $indextaion_obj;
 		}//end foreach ($tags_data as $key => $current_tag_data)
-		#dump($ar_indexation_terms, ' ar_indexation_terms ++ '.to_string());
 
 		if ($format==='text') {
 			$ar_terms = implode($separator, $ar_indexation_terms);	//json_encode($ar_indexation_terms);
@@ -1556,110 +1206,6 @@ class component_text_area extends component_common {
 
 		return $ar_annotations;
 	}//end get_component_indexations_terms
-
-
-
-	/**
-	* GET_DIFFUSION_OBJ (DEPRECATED)
-	* @param object $properties
-	* @return object $diffusion_obj
-	*/
-		// public function get_diffusion_obj(object $properties) : object {
-
-		// 	$diffusion_obj = parent::get_diffusion_obj( $properties );
-		// 	/*
-		// 	$diffusion_obj->component_name		= get_class($this);
-		// 	$diffusion_obj->parent 				= $this->get_parent();
-		// 	$diffusion_obj->tipo 				= $this->get_tipo();
-		// 	$diffusion_obj->lang 				= $this->get_lang();
-		// 	$diffusion_obj->label 				= $this->get_label();
-		// 	$diffusion_obj->columns['valor']	= $this->get_valor();
-		// 	*/
-
-		// 	$section_tipo = $this->section_tipo;
-
-		// 	if(isset($properties['rel_locator'])) {
-
-		// 		$rel_locator_obj	= $properties['rel_locator'];
-		// 		#$rel_locator		= component_common::build_locator_from_obj( $rel_locator_obj );
-		// 		$fragment_info		= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
-		// 		$texto				= $this->get_dato()[0];
-
-		// 		# FRAGMENT
-		// 		$diffusion_obj->columns['fragment']	= $fragment_info[0];
-
-		// 		# RELATED
-		// 		$current_related_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($rel_locator_obj->component_tipo, $model_name='component_', $relation_type='termino_relacionado');
-
-		// 		# No related term is present
-		// 		if(empty($current_related_tipo[0])) return $diffusion_obj;
-
-		// 		$current_related_tipo = $current_related_tipo[0];
-		// 		$related_model_name  = RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
-
-		// 		switch ($related_model_name) {
-
-		// 			case 'component_av':
-
-		// 				// TC
-		// 				$tag_in_pos		= $fragment_info[1];
-		// 				$tag_out_pos	= $fragment_info[2];
-
-		// 				$tc_in = OptimizeTC::optimize_tc_in(
-		// 					$texto, // string text
-		// 					null, // string|null indexIN
-		// 					(int)$tag_in_pos, // int|null start_position
-		// 					0 // int in_margin
-		// 				);
-		// 				$tc_out = OptimizeTC::optimize_tc_out(
-		// 					$texto, // string text
-		// 					null, // string|null indexOUT
-		// 					(int)$tag_out_pos, // int|null end_position
-		// 					100 // int in_margin
-		// 				);
-		// 				$tcin_secs		= OptimizeTC::TC2seg($tc_in);
-		// 				$tcout_secs		= OptimizeTC::TC2seg($tc_out);
-		// 				$duracion_secs	= $tcout_secs - $tcin_secs;
-		// 				$duracion_tc	= OptimizeTC::seg2tc($duracion_secs);
-
-		// 				$diffusion_obj->columns['related_tipo']	= $current_related_tipo;
-		// 				$diffusion_obj->columns['related']		= $related_model_name;
-		// 				$diffusion_obj->columns['tc_in']		= $tc_in;
-		// 				$diffusion_obj->columns['tc_out']		= $tc_out;
-		// 				$diffusion_obj->columns['duracion_tc']	= $duracion_tc;
-		// 				$diffusion_obj->columns['tcin_secs']	= $tcin_secs;
-		// 				$diffusion_obj->columns['tcout_secs']	= $tcout_secs;
-
-		// 				#$component_av   = new component_av($current_related_tipo, $this->get_parent(), 'edit');
-		// 				$component_av   = component_common::get_instance(
-		// 					$related_model_name,
-		// 					$current_related_tipo,
-		// 					$this->get_parent(),
-		// 					'list',
-		// 					DEDALO_DATA_LANG,
-		// 					$section_tipo
-		// 				);
-		// 				$video_id 		= $component_av->get_video_id();
-
-		// 				$diffusion_obj->columns['video_id']	= $video_id;
-		// 				#$diffusion_obj->columns['video_url']	= $duracion_tc;
-		// 				break;
-
-		// 			case 'component_image':
-
-		// 				break;
-
-		// 			case 'component_geolocation':
-
-		// 				break;
-
-		// 			default:
-		// 				throw new Exception("Error Processing Request. Current related $related_model_name is not valid. Please configure textarea for this media ", 1);
-		// 		}
-		// 	}
-
-		// 	return $diffusion_obj;
-		// }//end get_diffusion_obj
 
 
 
@@ -1823,49 +1369,6 @@ class component_text_area extends component_common {
 
 		return (string)$diffusion_value_with_images;
 	}//end get_diffusion_value_with_images
-
-
-
-	/**
-	* GET_DESCRIPTORS
-	* Return all descriptors associated to index tag of current raw text or fragment
-	* looking for index in tags inside
-	* @return array $ar_descriptors
-	*/
-		// public static function get_descriptors_DES( $raw_text, $section_tipo, $section_id, $component_tipo, $type='index' ) {
-
-		// 	$ar_descriptors = array();
-
-		// 	# Search index in locators
-		// 	# INDEX IN
-		// 	#$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
-		// 	$pattern = TR::get_mark_pattern($type.'In', $standalone=true);
-		// 	preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
-		// 	$total_indexIn = 0;
-		// 	if (!empty($matches_indexIn[0])) {
-		// 		$total_indexIn = count($matches_indexIn[0]);
-		// 	}
-
-		// 	if ($total_indexIn===0) {
-		// 		return $ar_descriptors;
-		// 	}
-
-		// 	$full_tag = $matches_indexIn[0][0];
-		// 	$tag_id_key = 4;
-		// 	foreach ($matches_indexIn[$tag_id_key] as $key => $tag_id) {
-
-		// 		if ($type==="struct") {
-		// 			$ar_index = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
-		// 		}else{
-		// 			$ar_index = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
-		// 		}
-
-		// 		$ar_descriptors[$full_tag] = $ar_index;
-		// 	}
-
-
-		// 	return (array)$ar_descriptors;
-		// }//end get_descriptors
 
 
 	/**
@@ -2156,48 +1659,6 @@ class component_text_area extends component_common {
 
 
 	/**
-	* PERSON_USED
-	* (!) Method to disappear. Used in v5 to precalculate
-	* if some person is used in current section
-	* @param object $locator
-	* @return array $ar_section_id
-	*/
-		// public static function person_used(object $locator) : array {
-
-		// 	$ar_section_id = array();
-
-		// 	// Search in all transcriptions looking tags from this person
-		// 	$section_id   = $locator->section_id;
-		// 	$section_tipo = $locator->section_tipo;
-
-		// 	// Like '%''section_id'':''137'',''section_tipo'':''rsc194''%'::text
-		// 	$search_string = "''section_id'':''$section_id'',''section_tipo'':''$section_tipo''";
-
-		// 	$matrix_table = common::get_matrix_table_from_tipo(DEDALO_SECTION_RESOURCES_AV_TIPO);
-
-		// 	$strQuery = "
-		// 	SELECT a.section_id, a.section_tipo
-		// 	FROM \"$matrix_table\" a
-		// 	WHERE
-		// 	 -- audiovisual resource section
-		// 	 a.section_tipo = 'rsc167'
-		// 	 AND
-		// 	 -- search pseudo locator in all langs
-		// 	 a.datos#>>'{components, rsc36, dato}' ILIKE '%".$search_string."%'::text;
-		// 	";
-
-		// 	$result = JSON_RecordObj_matrix::search_free($strQuery);
-		// 	$n_rows = pg_num_rows($result);
-		// 	while ($rows = pg_fetch_assoc($result)) {
-		// 		$ar_section_id[] = $rows['section_id'];
-		// 	}
-
-		// 	return (array)$ar_section_id;
-		// }//end person_used
-
-
-
-	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
 	* Note that the first action is always load dato to avoid save empty content
@@ -2256,13 +1717,6 @@ class component_text_area extends component_common {
 	public function build_geolocation_data(bool $geojson=false) : array {
 
 		$ar_elements = [];
-
-		// current component_text_area dato. (!) Its not necessary, only compute component_geolocation
-			// $dato = $this->get_dato();
-			// // empty dato case
-			// 	if (empty($dato)) {
-			// 		return [];
-			// 	}
 
 		// find data in related component_geolocation
 			$component_geolocation_model = 'component_geolocation';
@@ -2374,126 +1828,6 @@ class component_text_area extends component_common {
 
 
 	/**
-	* BUILD_GEOLOCATION_DATA DES
-	* @param array|null $raw_data
-	* @param bool $geojson = false
-	* @return array $ar_elements
-	*/
-		// public static function build_geolocation_data(?array $raw_data, bool $geojson=false, string $component_tipo) : array {
-
-		// 	// empty raw_data case
-		// 		if (empty($raw_data)) {
-		// 			return [];
-		// 		}
-
-		// 	// Test data
-		// 		// $request_raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-		// 		// $request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
-		// 		// $request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
-
-		// 		// $raw_text = str_replace("'", '"', $raw_text);
-
-		// 		// [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
-		// 		// "(\[geo-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\])";
-
-		// 	// only first element of the data
-		// 	$raw_text = reset($raw_data);
-
-		// 	// des
-		// 		// $response = new stdClass();
-		// 		// 	$response->result = false;
-		// 		// 	$response->msg 	  = 'Error. Request build_geolocation_data failed';
-
-		// 		// $pattern = TR::get_mark_pattern('geo',false);
-		// 		// $result  = free_node::pregMatchCapture($matchAll=true, $pattern, $options->raw_text, $offset=0);
-
-		// 	// split by pattern
-		// 	$pattern_geo_full = TR::get_mark_pattern('geo_full',$standalone=true);
-		// 	$result 		  = preg_split($pattern_geo_full, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-
-		// 	//  sample result
-		// 		// [0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
-		// 		//    [1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
-		// 		//    [2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
-		// 		//    [3] => &nbsp;Texto dos
-
-		// 	$format_text = function($text) {
-		// 		$text	= str_replace("&nbsp;"," ",$text);
-		// 		$text	= trim($text);
-		// 		return $text;
-		// 	};
-
-		// 	$ar_elements	= array();
-		// 	$pattern_geo	= TR::get_mark_pattern('geo',$standalone=true);
-		// 	$key_tag_id		= 4;
-		// 	$key_data		= 7;
-		// 	foreach ((array)$result as $key => $value) {
-		// 		if (strpos($value,'[geo-')===0) {
-
-		// 			$tag_string  = $value; // like '[geo-n-1--data:[1]:data]'
-		// 			$next_row_id = (int)($key+2);
-		// 			$text 		 = '';
-		// 			if (isset($result[$next_row_id]) && strpos($result[$next_row_id],'[geo-')!==0 && strpos($result[$next_row_id],'-')!==0 && strpos($result[$next_row_id],'{\'type')!==0) { // && strpos($result[$next_row_id],'{\'type')!==0 && trim($result[$next_row_id])!=='-'
-		// 				$text = $format_text( $result[$next_row_id] );
-		// 			}elseif (isset($result[$next_row_id+1]) && strpos($result[$next_row_id+1],'[geo-')!==0 && strpos($result[$next_row_id+1],'-')!==0 && strpos($result[$next_row_id+1],'{\'type')!==0) { // {\u0027type
-		// 				$text = $format_text( $result[$next_row_id+1] );
-		// 			}elseif (isset($result[$next_row_id+2]) && strpos($result[$next_row_id+2],'[geo-')!==0 && strpos($result[$next_row_id+2],'-')!==0 && strpos($result[$next_row_id+2],'{\'type')!==0) { // {\u0027type
-		// 				$text = $format_text( $result[$next_row_id+2] );
-		// 			}
-		// 			// JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
-		// 			if (!empty($text)) {
-		// 				$text = json_encode($text, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-		// 			}
-
-		// 			preg_match_all($pattern_geo, $value, $matches);
-		// 			$layer_id = (int)$matches[$key_tag_id][0];
-		// 			$geo_data = $matches[$key_data][0];
-
-		// 			# Skip empty values
-		// 			if (!empty($geo_data)) {
-
-		// 				$geo_data = str_replace('\'', '"', $geo_data);
-		// 				$geo_data = json_decode($geo_data);
-
-		// 				if ($geojson===true) {
-
-		// 					$layer_data = $geo_data;
-
-		// 				}else{
-
-		// 					$layer_data = array();
-		// 					if(!empty($geo_data->features)){
-		// 						foreach ((array)$geo_data->features as $key => $feature) {
-		// 							$lon = isset($feature->geometry->coordinates[0]) ? $feature->geometry->coordinates[0] : null;
-		// 							$lat = isset($feature->geometry->coordinates[1]) ? $feature->geometry->coordinates[1] : null;
-
-		// 							$object = new stdClass();
-		// 								$object->lon	= $lon;
-		// 								$object->lat	= $lat;
-		// 								$object->type	= $feature->geometry->type;
-		// 							$layer_data[] = $object;
-		// 						}
-		// 					}
-		// 				}
-
-
-		// 				$element = new stdClass();
-		// 					$element->layer_id 		= $layer_id;
-		// 					$element->text 			= $text;
-		// 					$element->layer_data	= $layer_data;
-
-		// 				$ar_elements[] = $element;
-		// 			}
-		// 		}
-		// 	}//end foreach ((array)$result as $key => $value)
-
-
-		// 	return $ar_elements;
-		// }//end build_geolocation_data
-
-
-
-	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object $query_object
@@ -2524,22 +1858,6 @@ class component_text_area extends component_common {
 		switch (true) {
 			# IS NULL
 			case ($q==='!*'):
-				// old
-					// $operator = 'IS NULL';
-					// $q_clean  = '';
-					// $query_object->operator = $operator;
-					// $query_object->q_parsed	= $q_clean;
-					// $query_object->unaccent = false;
-
-					// $clone = clone($query_object);
-					// 	$clone->operator = '~*';
-					// 	$clone->q_parsed = '\'.*""\'';
-
-					// $logical_operator = '$or';
-					// $new_query_json = new stdClass;
-					// 	$new_query_json->$logical_operator = [$query_object, $clone];
-					// # override
-					// $query_object = $new_query_json ;
 
 				$operator	= 'IS NULL';
 				$q_clean	= '';
@@ -2574,30 +1892,6 @@ class component_text_area extends component_common {
 						$clone->lang		= $lang;
 
 					$new_query_json->$logical_operator[] = $clone;
-
-				// langs check all
-					// $ar_query_object = [];
-					// $ar_all_langs 	 = common::get_ar_all_langs();
-					// $ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					// foreach ($ar_all_langs as $current_lang) {
-					// 	// Empty data is blank array []
-					// 	$clone = clone($query_object);
-					// 		$clone->operator = '=';
-					// 		$clone->q_parsed = '\'""\'';
-					// 		$clone->lang 	 = $current_lang;
-
-					// 	$ar_query_object[] = $clone;
-
-					// 	// legacy data (set as null instead [])
-					// 	$clone = clone($query_object);
-					// 		$clone->operator = 'IS NULL';
-					// 		$clone->lang 	 = $current_lang;
-
-					// 	$ar_query_object[] = $clone;
-					// }
-
-					// #$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
-					// $new_query_json->$logical_operator = $ar_query_object;
 
 				// override
 				$query_object = $new_query_json;
