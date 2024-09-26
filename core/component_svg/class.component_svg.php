@@ -294,7 +294,7 @@ class component_svg extends component_media_common implements component_media_in
 	* 	3 - component_media_common::add_file
 	* 	4 - component:process_uploaded_file
 	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object $file_data
+	* @param object|null $file_data
 	*	Data from trigger upload file
 	* Format:
 	* {
@@ -304,7 +304,7 @@ class component_svg extends component_media_common implements component_media_in
 	* }
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file(?object $file_data=null, ?object $process_options=null) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
