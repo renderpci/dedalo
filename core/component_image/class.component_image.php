@@ -24,7 +24,7 @@ class component_image extends component_media_common implements component_media_
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo, $section_id, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( string $tipo, mixed $section_id, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
 		// common constructor. Creates the component as normally do with parent class
 			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);
@@ -72,12 +72,13 @@ class component_image extends component_media_common implements component_media_
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string|null $diffusion_value
-	*
 	* @see class.diffusion_mysql.php
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
 	* @test true
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// external resolution check
 			$external_source = $this->get_external_source();
@@ -581,20 +582,27 @@ class component_image extends component_media_common implements component_media_
 	* 	3 - component_media_common::add_file
 	* 	4 - component:process_uploaded_file
 	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object $file_data
+	* @param object|null $file_data
 	*	Data from trigger upload file. Sample:
 	*   {
 	*	  "original_file_name": "my file 1.jpg",
 	*	  "full_file_name": "rsc29_rsc170_1.jpg",
 	*	  "full_file_path": "/full dedalo path/media/image/1.5MB/0/rsc29_rsc170_1.jpg"
 	*   }
+	* @param object|null $process_options = null
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// empty case
+			if (empty($file_data)) {
+				$response->msg .= 'Empty file data';
+				return $response;
+			}
 
 		// short vars
 			$original_file_name			= $file_data->original_file_name; // kike "my photo785.jpg"
@@ -1485,7 +1493,7 @@ class component_image extends component_media_common implements component_media_
 	* @param string|null $extension = null
 	* @return bool
 	*/
-	public function remove_component_media_files(array $ar_quality=[], string $extension=null ) : bool {
+	public function remove_component_media_files( array $ar_quality=[], ?string $extension=null ) : bool {
 
 		$result = parent::remove_component_media_files($ar_quality, $extension);
 
@@ -1745,10 +1753,10 @@ class component_image extends component_media_common implements component_media_
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
-	* @param object $options=null
+	* @param object|null $options=null
 	* @return bool
 	*/
-	public function regenerate_component( object $options=null ) : bool {
+	public function regenerate_component( ?object $options=null ) : bool {
 
 		// options
 			$delete_normalized_files = $options->delete_normalized_files ?? true;
@@ -1809,7 +1817,7 @@ class component_image extends component_media_common implements component_media_
 	* @param object|null $options = null
 	* @return bool
 	*/
-	public function create_alternative_version(string $quality, string $extension, ?object $options=null) : bool {
+	public function create_alternative_version( string $quality, string $extension, ?object $options=null ) : bool {
 
 		// options
 			$resize = $options->resize ?? null;
