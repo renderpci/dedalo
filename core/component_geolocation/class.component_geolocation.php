@@ -12,7 +12,7 @@ class component_geolocation extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
 
 
 		# Force always DEDALO_DATA_NOLAN
@@ -180,7 +180,7 @@ class component_geolocation extends component_common {
 	*
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-		// public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+		// public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// 	$dd_grid_cell_object = parent::get_grid_value($lang, $ddo);
 
