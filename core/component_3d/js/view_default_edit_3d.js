@@ -20,7 +20,7 @@
 export const view_default_edit_3d = function() {
 
 	return true
-}//end  view_default_edit_3d
+}//end view_default_edit_3d
 
 
 
@@ -48,11 +48,15 @@ view_default_edit_3d.render = async function(self, options) {
 			: null
 
 	// wrapper. ui build_edit returns component wrapper
-		const wrapper = ui.component.build_wrapper_edit(self, {
+		const wrapper_options = {
 			content_data	: content_data,
 			buttons			: buttons,
 			add_styles		: ['media_wrapper'] // common media classes
-		})
+		}
+		if (self.view==='line') {
+			wrapper_options.label = null // prevent to crate label node
+		}
+		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -113,7 +117,7 @@ const get_content_data_edit = function(self) {
 * @param object self
 * @return HTMLElement content_value
 */
-const get_content_value = (i, current_value, self) => {
+export const get_content_value = (i, current_value, self) => {
 
 	// short vars
 		const quality		= self.quality || self.context.features.quality
@@ -243,7 +247,7 @@ const get_content_value = (i, current_value, self) => {
 * @param object self
 * @return HTMLElement content_value
 */
-const get_content_value_read = (i, current_value, self) => {
+export const get_content_value_read = (i, current_value, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -293,7 +297,7 @@ const get_content_value_read = (i, current_value, self) => {
 * @param object self
 * @return HTMLElement quality_selector
 */
-const get_quality_selector = (content_value, self) => {
+export const get_quality_selector = (content_value, self) => {
 
 	// short vars
 		const data			= self.data || {}
@@ -347,7 +351,7 @@ const get_quality_selector = (content_value, self) => {
 * @param object instance
 * @return HTMLElement buttons_container
 */
-const get_buttons = (self) => {
+export const get_buttons = (self) => {
 
 	// short vars
 		const show_interface = self.show_interface
