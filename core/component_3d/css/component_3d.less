@@ -42,6 +42,7 @@
 					z-index: 10;
 					pointer-events: none;
 				}
+
 				.gui-wrapper {
 					position: absolute;
 					top: 0;
@@ -73,8 +74,6 @@
 					.hilite_mixin(-1px);
 				}
 			}
-
-
 		}
 	}
 
@@ -117,6 +116,23 @@
 
 	}
 
+	&.view_line {
+		display: inline-block;
+
+		>.content_data {
+			>.content_value {
+				margin-top: 1rem;
+			}
+		}
+
+
+		&.list {
+			height: var(--view_line_height); // 5rem;
+			width: 6rem;
+			min-width: 6rem;
+		}
+	}
+
 	&.view_viewer {
 		height: 100%;
 
@@ -131,6 +147,16 @@
 
 		>img {
 			height: 100%;
+		}
+	}
+
+	// with suffix _mini like 'component_av_mini'
+	&_mini {
+		display: inline-block;
+		vertical-align: middle;
+
+		img {
+			height: 2rem;
 		}
 	}
 
@@ -173,15 +199,5 @@
 			}
 		}
 	}//end &.viewer
-
-	// with suffix _mini like 'component_av_mini'
-	&_mini {
-		display: inline-block;
-		vertical-align: middle;
-
-		img {
-			height: 2rem;
-		}
-	}
 
 }//end .component_3d
