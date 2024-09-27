@@ -90,10 +90,9 @@ class component_inverse extends component_common {
 	* 	}]
 	* }
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
