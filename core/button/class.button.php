@@ -19,7 +19,7 @@ class button extends common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo, string $section_tipo, $section_id=null, string $mode='edit') {
+	protected function __construct( string $tipo, string $section_tipo, mixed $section_id=null, string $mode='edit' ) {
 
 		$this->tipo			= $tipo;
 		$this->section_tipo	= $section_tipo;
