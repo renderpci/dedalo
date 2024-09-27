@@ -34,7 +34,7 @@ class component_filter extends component_relation_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
 		// force lang value always
 			$this->lang = DEDALO_DATA_NOLAN;
@@ -459,10 +459,9 @@ class component_filter extends component_relation_common {
 	* Get the value of the component.
 	* component filter return a array of values
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -994,7 +993,7 @@ class component_filter extends component_relation_common {
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = null;
 
