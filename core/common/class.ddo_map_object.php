@@ -41,7 +41,7 @@ class ddo_map_object extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data
+	* @param object|null $data
 	*	optional . Default is null
 	*/
 	public function __construct( ?object $data=null ) {

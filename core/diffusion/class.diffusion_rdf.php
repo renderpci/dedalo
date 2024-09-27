@@ -26,9 +26,9 @@ class diffusion_rdf extends diffusion {
 
 	/**
 	* CONSTRUCT
-	* @param object $options = null
+	* @param object|null $options = null
 	*/
-	function __construct(object $options=null) {
+	function __construct( ?object $options=null ) {
 
 		parent::__construct($options);
 
@@ -55,10 +55,10 @@ class diffusion_rdf extends diffusion {
 	* Called from class diffusion to get the RDF portion of sections
 	* @see diffusion::get_diffusion_sections_from_diffusion_element
 	* @param string $diffusion_element_tipo
-	* @param string $class_name = null
+	* @param string|null $class_name = null
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
+	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
 
 		$ar_diffusion_sections = array();
 

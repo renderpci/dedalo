@@ -213,12 +213,12 @@ abstract class TR {
 	* ADD_TAG_IMG_ON_THE_FLY
 	* Convert Dédalo tags like index, tc, etc. to images
 	* @param string $text
-	* @param object $request_options = null
+	* @param object|null $request_options = null
 	* @return string $text
 	*/
-	public static function add_tag_img_on_the_fly(string $text, object $request_options=null) : string {
+	public static function add_tag_img_on_the_fly( string $text, ?object $request_options=null ) : string {
 
-		#$hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true,  $personEditable=true
+		// $hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true,  $personEditable=true
 
 		# Temporal (for catch old calls only)
 			if (is_bool($request_options)) {
@@ -398,10 +398,10 @@ abstract class TR {
 	/**
 	* DELETEMARKS
 	* clean text to translate/subtitles
-	* @param object $options
+	* @param object|null $options
 	* @return string $string
 	*/
-	public static function deleteMarks(string $string, object $options=null) : string {
+	public static function deleteMarks( string $string, ?object $options=null ) : string {
 
 		// options
 			$deleteTC			= $options->deleteTC ?? true;

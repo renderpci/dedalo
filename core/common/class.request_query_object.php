@@ -254,7 +254,7 @@ class request_query_object extends stdClass {
 	* __CONSTRUCT
 	* @param object|null $data = null
 	*/
-	public function __construct( object $data=null ) {
+	public function __construct( ?object $data=null ) {
 
 		if (is_null($data)) return;
 

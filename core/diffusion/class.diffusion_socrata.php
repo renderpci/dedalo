@@ -18,9 +18,9 @@ class diffusion_socrata extends diffusion  {
 
 	/**
 	* CONSTRUCT
-	* @param object $options . Default null
+	* @param object|null $options = null
 	*/
-	function __construct($options=null) {
+	function __construct( ?object $options=null ) {
 
 		parent::__construct($options);
 	}//end __construct
@@ -42,7 +42,7 @@ class diffusion_socrata extends diffusion  {
 	* }
 	* @return object $response
 	*/
-	public function update_record( object $options ) : object {
+	public function update_record( ?object $options ) : object {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
@@ -280,10 +280,10 @@ class diffusion_socrata extends diffusion  {
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
 	* @param string $diffusion_element_tipo
-	* @param string $class_name = null
+	* @param string|null $class_name = null
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name=null) : array {
+	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
 
 		$ar_diffusion_sections = [];
 

@@ -33,7 +33,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	/**
 	* CONSTRUCT
 	*/
-	public function __construct(string $matrix_table=null, int $id=null, string $parent=null, string $tipo=null, string $lang=null) {
+	public function __construct( ?string $matrix_table=null, ?int $id=null, ?string $parent=null, ?string $tipo=null, ?string $lang=null ) {
 
 		// matrix table check
 			if(empty($matrix_table)) {

@@ -28,14 +28,14 @@ class ts_object {
 
 	/**
 	* __CONSTRUCT
-	* @param int $section_id
+	* @param int|string $section_id
 	* @param string $section_tipo
-	* @param object $options
+	* @param object|null $options
 	*	Default null
 	* @param string $mode
 	*	Default 'edit'
 	*/
-	public function __construct( int|string $section_id, string $section_tipo, object $options=null, string $mode='edit' ) {
+	public function __construct( int|string $section_id, string $section_tipo, ?object $options=null, string $mode='edit' ) {
 
 		$this->section_id   = $section_id;
 		$this->section_tipo = $section_tipo;

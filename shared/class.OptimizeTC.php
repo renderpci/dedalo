@@ -508,9 +508,11 @@ abstract class OptimizeTC {
 	/**
 	* APLI_TC_OFFSET
 	* Returns a tc with the tc_offset (seconds) applied (added, or subtracted if negative)
+	* @param string $tc
+	* @param int|null $tc_offset = null
 	* @return string $tc_time_code
 	*/
-	public static function apli_tc_offset(string $tc, int $tc_offset=null) : string {
+	public static function apli_tc_offset( string $tc, ?int $tc_offset=null ) : string {
 
 		if(empty($tc_offset)) {
 			return $tc;

@@ -237,7 +237,7 @@ class lock_components {
 	* @param int|string|null $user_id
 	* @return object $response
 	*/
-	public static function force_unlock_all_components( $user_id=null ) : object {
+	public static function force_unlock_all_components( int|string|null $user_id=null ) : object {
 
 		$response = new stdClass();
 

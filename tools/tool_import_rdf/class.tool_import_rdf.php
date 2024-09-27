@@ -630,10 +630,10 @@ class tool_import_rdf extends tool_common {
 	* and returns the resultant locator
 	* @return object $locator
 	*/
-	public static function get_resource_match(string $section_tipo, string $component_tipo, string $value, $filter=null) : object {
+	public static function get_resource_match( string $section_tipo, string $component_tipo, string $value, ?string $filter=null ) : object {
 
-		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$name		= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
+		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$name			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
 		$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';

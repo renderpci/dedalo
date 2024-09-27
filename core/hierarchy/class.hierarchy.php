@@ -893,7 +893,7 @@ class hierarchy {
 	* ROW_TO_JSON_OBJ
 	* @return bool|null
 	*/
-	private static function row_to_json_obj(string $tipo, $parent, $dato=null, $lang='lg-spa', $section_tipo=null) {
+	private static function row_to_json_obj( string $tipo, $parent, $dato=null, $lang='lg-spa', ?string $section_tipo=null ) {
 
 		if(empty($dato)){
 			debug_log(__METHOD__

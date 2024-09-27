@@ -1276,10 +1276,10 @@ class login extends common {
 	* Save activity info into logger file
 	* @param string $msg
 	* @param string $login_label
-	* @param array $activity_datos = null
+	* @param array|null $activity_datos = null
 	* @return void
 	*/
-	public static function login_activity_report(string $msg, string $login_label, array $activity_datos=null) : void {
+	public static function login_activity_report( string $msg, string $login_label, ?array $activity_datos=null ) : void {
 
 		// data base
 			$data = [
