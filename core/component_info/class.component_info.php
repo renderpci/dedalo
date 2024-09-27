@@ -455,13 +455,14 @@ class component_info extends component_common {
 	}//end get_list_value
 
 
+
 	/**
 	* GET_CALCULATION_DATA
 	*  Get the data of the component for do a calculation
 	* @param object|null $options = null
 	* @return mixed $data
 	*/
-	public function get_calculation_data($options=null) : array {
+	public function get_calculation_data( ?object $options=null ) : array {
 
 		$data = [];
 
@@ -496,7 +497,7 @@ class component_info extends component_common {
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -623,14 +624,17 @@ class component_info extends component_common {
 	}//end get_grid_value
 
 
+
 	/**
 	* GET_GRID_FLAT_VALUE
-	* @return
+	* @param object|null $ddo = null
+	* @return dd_grid_cell_object
 	*/
-	public function get_grid_flat_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_flat_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		return $this->get_grid_value($ddo);
 	}//end get_grid_flat_value
+
 
 
 }//end class component_info
