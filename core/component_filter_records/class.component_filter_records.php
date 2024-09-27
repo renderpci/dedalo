@@ -78,7 +78,7 @@ class component_filter_records extends component_common {
 	*
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-		// public function get_grid_value( object $ddo=null) : dd_grid_cell_object {
+		// public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// 	$dd_grid_cell_object = parent::get_grid_value($lang, $ddo);
 
