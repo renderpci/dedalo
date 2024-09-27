@@ -22,14 +22,14 @@ class component_publication extends component_relation_common {
 	/**
 	* __CONSTRUCT
 	* @param string $tipo = null
-	* @param string|null $section_id = null
+	* @param mixed $section_id = null
 	* @param string $mode = 'list'
 	* @param string|null $lang = DEDALO_DATA_NOLAN
 	* @param string|null $section_tipo = null
 	* @param bool $cache = true
 	* @return void
 	*/
-	protected function __construct( ?string $tipo=null, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
 		// Force always DEDALO_DATA_NOLAN
 		$this->lang = DEDALO_DATA_NOLAN;
