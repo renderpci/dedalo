@@ -183,7 +183,7 @@ class tool_common {
 			}
 
 		// developer
-			$developer_data = array_find($tool_object->developer, function($el){
+			$developer_data = array_find($tool_object->developer ?? [], function($el){
 				return $el->lang===DEDALO_DATA_NOLAN;
 			});
 			$developer = is_object($developer_data) && !empty($developer_data->value)
@@ -1005,9 +1005,9 @@ class tool_common {
 				// tool config is an array with specific object for tipo and section_tipo
 				// (that need to match with the button_import definition and his section)
 				// find the definition that match with current section
-				$ar_tool_config = $tool_configuration->config->properties->tool_config;
+				$ar_tool_config = $tool_configuration->config->properties->tool_config ?? [];
 
-				$tool_config = array_find( $ar_tool_config, function($item) use($section_tipo, $tipo) {
+				$tool_config = array_find($ar_tool_config, function($item) use($section_tipo, $tipo) {
 					return $item->section_tipo === $section_tipo && $item->tipo === $tipo;
 				});
 

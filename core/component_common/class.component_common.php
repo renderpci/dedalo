@@ -2329,7 +2329,7 @@ abstract class component_common extends common {
 				$response->msg		= __METHOD__ . ' Error. Request failed';
 
 		// request config (mandatory)
-			$request_config = $this->request_config;
+			$request_config = $this->request_config ?? [];
 
 		// fix ddo_map (dd_core_api static var)
 			$dedalo_request_config = array_find($request_config, function($el){

@@ -1864,7 +1864,7 @@ final class dd_core_api {
 								$full_data = array_merge($full_data, $source_sections->get_dato());
 
 							// 2 get the data of his dataframe
-								$original_ddo = array_find($rqo->show->ddo_map, function($item){
+								$original_ddo = array_find($rqo->show->ddo_map ?? [], function($item){
 									return isset($item->has_dataframe) && $item->has_dataframe===true;
 								});
 								if (!is_object($original_ddo)) {

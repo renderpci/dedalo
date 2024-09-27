@@ -44,7 +44,7 @@ class tool_lang extends tool_common {
 				// });
 
 		// config JSON . Must be compatible with tool properties translator_engine data
-			$ar_translator_configs	= $config->config->translator_config->value;
+			$ar_translator_configs	= $config->config->translator_config->value ?? [];
 			$translator_name		= $translator;
 			// search current translator config in tool config (stored in database, section 'dd996' Tools configuration)
 			$translator_config = array_find($ar_translator_configs, function($item) use($translator_name) {

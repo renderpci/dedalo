@@ -309,7 +309,7 @@ class diffusion_section_stats extends diffusion {
 			$datos		= json_decode($row->datos);
 
 			// $what_key	= $datos->components->{$what_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
-			$what_key	= array_find($datos->relations, function($el) use($what_tipo){
+			$what_key	= array_find($datos->relations ?? [], function($el) use($what_tipo){
 				return isset($el->from_component_tipo) && $el->from_component_tipo===$what_tipo;
 			});
 			$where_key	= $datos->components->{$where_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
@@ -718,7 +718,7 @@ class diffusion_section_stats extends diffusion {
 				// who
 				if ($add_who_data===true) {
 					// user
-					$user = array_find($datos->relations, function($item){
+					$user = array_find($datos->relations ?? [], function($item){
 						return $item->from_component_tipo===USER_ACTIVITY_USER_TIPO && $item->section_tipo===DEDALO_SECTION_USERS_TIPO;
 					});
 					if (is_object($user)) {

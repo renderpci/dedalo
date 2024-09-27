@@ -359,7 +359,7 @@ class sum_dates extends widget_common {
 	*/
 	public function get_dato_parsed() : ?array  {
 
-		$data = $this->get_dato();
+		$data = $this->get_dato() ?? [];
 		$data_parsed = [];
 
 		$found_sum_intervals =  array_find( $data, function($item){

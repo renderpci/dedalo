@@ -103,7 +103,7 @@
 							return $el->tipo===$this->tipo;
 						});
 						if (is_object($found)) {
-							$found_request_config = array_find($found->request_config, function($el){
+							$found_request_config = array_find($found->request_config ?? [], function($el){
 								return $el->api_engine==='dedalo';
 							});
 							if (is_object($found_request_config)) {

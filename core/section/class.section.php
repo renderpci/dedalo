@@ -3986,7 +3986,7 @@ class section extends common {
 									// this change is important to maintain the data as is in time machine
 									// and prevent to save default data from components in edit mode inside the tool tm.
 										foreach ($element_json->context as $value) {
-											if(isset($value->request_config)){
+											if(isset($value->request_config) && is_array($value->request_config)){
 												// select the request config of dedalo api_engine
 												$new_request_config_object = array_find($value->request_config, function($el) {
 													return $el->api_engine==='dedalo';

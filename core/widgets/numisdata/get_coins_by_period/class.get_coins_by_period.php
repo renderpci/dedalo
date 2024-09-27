@@ -195,7 +195,7 @@ class get_coins_by_period extends widget_common {
 						$hierarchy_object->label		= $period_label;
 						$hierarchy_object->count		= null;
 
-						$model = array_find($section->datos->relations, function($el){
+						$model = array_find($section->datos->relations ?? [], function($el){
 							return $el->from_component_tipo === DEDALO_THESAURUS_RELATION_MODEL_TIPO;
 						});
 
@@ -287,7 +287,7 @@ class get_coins_by_period extends widget_common {
 					$target_section_id		= $current_section_data->section_id;
 					$target_section_tipo	= $current_section_data->section_tipo;
 
-					$relations = $current_section_data->datos->relations;
+					$relations = $current_section_data->datos->relations ?? [];
 					$duplicated_dato = array_find($relations, function($el) use($component_tipo_duplicated){
 						return $el->from_component_tipo === $component_tipo_duplicated;
 					});

@@ -28,7 +28,7 @@ class tags extends widget_common {
 
 			$input	= $current_ipo->input;
 			$output	= $current_ipo->output;
-			$source	= $input->source;
+			$source	= $input->source ?? [];
 
 			$transcription_source = array_find($source, function($item){
 				return ($item->var_name==='transcription');

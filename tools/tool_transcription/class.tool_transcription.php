@@ -183,7 +183,7 @@ class tool_transcription extends tool_common {
 				// });
 
 		// config JSON . Must be compatible with tool properties transcriber_engine data
-			$ar_transcriber_configs	= $config->config->transcriber_config->value;
+			$ar_transcriber_configs	= $config->config->transcriber_config->value ?? [];
 			$transcriber_name		= $transcriber_engine;
 			// search current transcriber config in tool config (stored in database, section 'dd996' Tools configuration)
 			$transcriber_config = array_find($ar_transcriber_configs, function($item) use($transcriber_name) {
@@ -305,7 +305,7 @@ class tool_transcription extends tool_common {
 				$config = tool_common::get_config($tool_name);
 
 		// config JSON . Must be compatible with tool properties transcriber_engine data
-			$ar_transcriber_configs	= $config->config->transcriber_config->value;
+			$ar_transcriber_configs	= $config->config->transcriber_config->value ?? [];
 			$transcriber_name		= $transcriber_engine;
 			// search current transcriber config in tool config (stored in database, section 'dd996' Tools configuration)
 			$transcriber_config = array_find($ar_transcriber_configs, function($item) use($transcriber_name) {

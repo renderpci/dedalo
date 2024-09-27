@@ -40,18 +40,18 @@ class tool_import_marc21 extends tool_common {
 			// files data. array of objects like: '[{"name":"_290000_rsc29_rsc170_290437.jpg","previewTemplate":{},"previewElement":{},"size":734061,"component_option":""}]'
 			$files_data					= $options->files_data ?? null;
 			// components_temp_data. array of objects like: '[{"section_id":"tmp","section_tipo":"rsc170","tipo":"rsc23","lang":"lg-eng","from_component_tipo":"rsc23","value":[],"parent_tipo":"rsc23","parent_section_id":"tmp","fallback_value":[null],"debug":{"exec_time":"0.740 ms"},"debug_model":"component_input_text","debug_label":"Title","debug_mode":"edit"}]'
-			$components_temp_data		= $options->components_temp_data ?? null;
+			$components_temp_data		= $options->components_temp_data ?? [];
 			// key_dir. string like: 'oh17_oh1' (contraction section_tipo + component tipo)
 			$key_dir					= $options->key_dir ?? null;
 
 			// main components to use Dédalo
-			$main = $config->config->main;
+			$main = $config->config->main ?? [];
 			// get definition field to set section_id
 			$field_to_section_id = array_find($main, function($el) {
 				return $el->name === 'field_to_section_id';
 			});
 			// map between Marc21 and Dédalo
-			$map = $config->config->map;
+			$map = $config->config->map ?? [];
 
 			// ddo_map
 			$ar_ddo_map = $tool_config->ddo_map;

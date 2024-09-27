@@ -320,7 +320,7 @@ class component_relation_index extends component_relation_common {
 			// final_request_config. Find request_config with api_engine dedalo
 			// this will be changed (ddo_map and section_tipo) on every subcontext resolution in the ar_subcontext loop
 			// this var is not used here, its used only to modify/update the component context->request_config
-			$final_request_config = array_find($this->context->request_config, function($el){
+			$final_request_config = array_find($this->context->request_config ?? [], function($el){
 				return $el->api_engine==='dedalo';
 			});
 
@@ -342,14 +342,14 @@ class component_relation_index extends component_relation_common {
 		$context = [];
 		foreach ($ar_subcontext as $current_context) {
 
-			if ($current_context->model ==='section'
-				&& $current_context->tipo === $current_section_tipo
+			if ($current_context->model==='section'
+				&& $current_context->tipo===$current_section_tipo
 				&& !in_array($current_section_tipo, $solved_section_datum_tipo)) {
 
 				// get the section request config (we will use his request config)
 				// if the locator has more than 1 section_tipo, will be stored the new request inside the request_config array
 				// select api_engine dedalo only config
-				$section_request_config = array_find($current_context->request_config, function($el){
+				$section_request_config = array_find($current_context->request_config ?? [], function($el){
 					return $el->api_engine==='dedalo';
 				});
 
