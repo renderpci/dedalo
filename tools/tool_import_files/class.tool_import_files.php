@@ -441,7 +441,7 @@ class tool_import_files extends tool_common {
 			$import_file_name_mode	= $tool_config->import_file_name_mode ?? null;
 
 		// ddo_map
-			$ar_ddo_map = $tool_config->ddo_map;
+			$ar_ddo_map = $tool_config->ddo_map ?? [];
 
 		// target component info
 			$target_ddo_component = array_find($ar_ddo_map, function($item){
@@ -978,20 +978,22 @@ class tool_import_files extends tool_common {
 
 	/**
 	* SET_COMPONENTS_DATA
-	* @return
+	* @param object $options
+	* @return void
 	*/
 	public static function set_components_data( object $options ) {
 
-		$ar_ddo_map						= $options->ar_ddo_map;
-		$section_tipo					= $options->section_tipo;
-		$section_id						= $options->section_id;
-		$target_section_id				= $options->target_section_id;
-		$input_components_section_tipo	= $options->input_components_section_tipo;
-		$target_ddo_component			= $options->target_ddo_component;
-		$file_data						= $options->file_data;
-		$current_file_name				= $options->current_file_name;
-		$target_component_model			= $options->target_component_model;
-		$components_temp_data			= $options->components_temp_data;
+		// options
+			$ar_ddo_map						= $options->ar_ddo_map;
+			$section_tipo					= $options->section_tipo;
+			$section_id						= $options->section_id;
+			$target_section_id				= $options->target_section_id;
+			$input_components_section_tipo	= $options->input_components_section_tipo;
+			$target_ddo_component			= $options->target_ddo_component;
+			$file_data						= $options->file_data;
+			$current_file_name				= $options->current_file_name;
+			$target_component_model			= $options->target_component_model;
+			$components_temp_data			= $options->components_temp_data ?? [];
 
 		// ar_ddo_map iterate. role based actions
 		// Create the ddo components with the data to store with the import

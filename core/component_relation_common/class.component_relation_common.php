@@ -335,14 +335,14 @@ class component_relation_common extends component_common {
 			if (get_called_class()==='component_relation_index' && empty($ddo_direct_children)) {
 
 				$datum		= $this->get_section_datum_from_locator($locator);
-				$context	= $datum->context;
+				$context	= $datum->context ?? [];
 
 				$section_context = array_find($context, function($el) use ($locator){
 					return $el->section_tipo === $locator->section_tipo;
 				}) ?? (object)['request_config'=>[]];
 
 				// get the correct rqo (use only the dedalo api_engine)
-				$dd_request_config = array_find($section_context->request_config, function($el){
+				$dd_request_config = array_find($section_context->request_config ?? [], function($el){
 					return $el->api_engine==='dedalo';
 				});
 
@@ -2692,13 +2692,13 @@ class component_relation_common extends component_common {
 						}
 
 						// get the first ddo to be resolve the ddo chain
-						$init_ddo = array_find($current_value->ddo_map, function($item) use ($section_tipo) {
+						$init_ddo = array_find($current_value->ddo_map ?? [], function($item) use ($section_tipo) {
 							return $item->parent === 'self' || $item->parent === $section_tipo;
 						});
 						// get the ddo that match with the q definition
 						$tipo_to_be_resolved = $current_value->q;
 
-						$resolve_ddo = array_find($current_value->ddo_map, function($item) use ($tipo_to_be_resolved) {
+						$resolve_ddo = array_find($current_value->ddo_map ?? [], function($item) use ($tipo_to_be_resolved) {
 							return $item->tipo === $tipo_to_be_resolved;
 						});
 
@@ -3190,7 +3190,7 @@ class component_relation_common extends component_common {
 	public function get_calculation_data( ?object $options=null ) : mixed {
 
 		$ar_data		= [];
-		$ddo_map		= $options->ddo_map ?? new dd_object();
+		$ddo_map		= $options->ddo_map ?? [];
 		$dato			= $this->get_dato();
 		$section_tipo	= $this->section_tipo;
 

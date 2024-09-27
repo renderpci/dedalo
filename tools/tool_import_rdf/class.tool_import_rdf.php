@@ -249,7 +249,7 @@ class tool_import_rdf extends tool_common {
 			// it will have a ddo_map to indicate the path to the resource.
 				if(isset($properties->ddo_map)){
 
-					$ar_ddo = $properties->ddo_map;
+					$ar_ddo = $properties->ddo_map ?? [];
 					// get the ddo has child of the current component.
 					$current_ddo = array_find($ar_ddo, function($item) use($current_tipo){
 						return $item->parent===$current_tipo;

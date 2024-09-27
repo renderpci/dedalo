@@ -205,7 +205,8 @@ final class dd_component_text_area_api {
 					// tags_persons
 						$tags_persons = [];
 						// related_sections
-						$obj_data_sections = array_find($related_sections->data, function($el){
+						$related_sections_data = $related_sections->data ?? [];
+						$obj_data_sections = array_find($related_sections_data, function($el){
 							return $el->typo==='sections';
 						}) ?? new stdClass();
 						$ar_related_sections = $obj_data_sections->value ?? [];

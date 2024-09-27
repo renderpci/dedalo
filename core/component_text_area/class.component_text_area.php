@@ -1285,7 +1285,7 @@ class component_text_area extends component_common {
 						$this->section_tipo,
 						false
 					);
-					$ar_reference_locators = $reference_tags_component->get_dato();
+					$ar_reference_locators = $reference_tags_component->get_dato() ?? [];
 
 					// get all references
 					$all_reference_tags		= null;

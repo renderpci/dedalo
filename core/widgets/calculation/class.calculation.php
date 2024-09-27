@@ -94,7 +94,7 @@ class calculation extends widget_common {
 			// output
 			foreach ($ipo->output as $data_map) {
 				$current_id = $data_map->id;
-				$found = array_find($result,function($item) use($current_id){
+				$found = array_find($result ?? [], function($item) use($current_id){
 					return $item->id===$current_id;
 				});
 				if (is_object($found)) {

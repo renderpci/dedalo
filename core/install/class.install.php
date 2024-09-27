@@ -2294,7 +2294,7 @@ class install extends common {
 			$section_tipo	= explode('.', $file_name)[0];
 			$tld			= preg_replace('/\d/', '', $section_tipo);
 
-			$current_hierarchy = array_find($hierarchies, function($el) use($tld){
+			$current_hierarchy = array_find($hierarchies ?? [], function($el) use($tld){
 				return strtolower($el->tld)===strtolower($tld);
 			}) ?? new stdClass();
 

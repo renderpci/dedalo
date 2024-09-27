@@ -2889,7 +2889,7 @@ abstract class common {
 				: (function() use($model, $mode, $properties) {
 					// from properties try
 					if (isset($properties->source) && isset($properties->source->request_config)) {
-						$found = array_find($properties->source->request_config, function($el){
+						$found = array_find($properties->source->request_config ?? [], function($el){
 							return isset($el->api_engine) && $el->api_engine==='dedalo';
 						});
 						if (is_object($found) && isset($found->sqo) && isset($found->sqo->limit)) {
@@ -5004,7 +5004,7 @@ abstract class common {
 			return null;
 		}
 
-		$request_config			= $properties->source->request_config;
+		$request_config			= $properties->source->request_config ?? [];
 		$request_config_item	= array_find($request_config, function($el){
 			return $el->api_engine==='dedalo';
 		});

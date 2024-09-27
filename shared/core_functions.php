@@ -2068,7 +2068,7 @@ function check_basic_system() : object {
 */
 if (!function_exists('array_find')) {
 	// < 8.4
-	function array_find(?array $ar_value, callable $fn) : mixed {
+	function array_find(array $ar_value, callable $fn) : mixed {
 
 		if (is_array($ar_value)) {
 			// foreach ($ar_value as $x) {

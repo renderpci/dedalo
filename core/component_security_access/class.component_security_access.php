@@ -106,7 +106,7 @@ class component_security_access extends component_common {
 				// filtered by user data case
 
 				$user_component_security_access	= security::get_user_security_access($user_id);
-				$user_dato						= $user_component_security_access->get_dato();
+				$user_dato						= $user_component_security_access->get_dato() ?? [];
 
 				$ar_auth_areas = [];
 				foreach ($ar_areas as $current_area) {

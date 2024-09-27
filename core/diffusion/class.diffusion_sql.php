@@ -1668,7 +1668,7 @@ class diffusion_sql extends diffusion  {
 
 				$current_record_data	= reset($ar_field_data['ar_fields']);
 				$first_lang_data		= reset($current_record_data);
-				$found_component_relation_parent = array_find($first_lang_data, function($item){
+				$found_component_relation_parent = array_find($first_lang_data ?? [], function($item){
 					return $item['related_model']==='component_relation_parent';
 				});
 				if (!empty($found_component_relation_parent)) {
@@ -2533,7 +2533,7 @@ class diffusion_sql extends diffusion  {
 
 						// extract values
 							foreach ($source_columns as $source_column) {
-								$found = array_find($current_values, function($element) use($source_column){
+								$found = array_find($current_values ?? [], function($element) use($source_column){
 									return ($element['field_name']===$source_column);
 								});
 								if ($found!==null) {

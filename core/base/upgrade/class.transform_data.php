@@ -67,7 +67,7 @@ class transform_data {
 		*	}
 	* @return object $response
 	*/
-	public static function add_portal_level(object $options) : object {
+	public static function add_portal_level( object $options ) : object {
 
 		// response
 			$response = new stdClass();
@@ -76,8 +76,8 @@ class transform_data {
 
 		// options
 			$tld				= $options->tld; // string like 'numisdata'
-			$original			= $options->original; // array of object
-			$new				= $options->new; // array of objects
+			$original			= $options->original ?? []; // array of object
+			$new				= $options->new ?? []; // array of objects
 			$delete_old_data	= $options->delete_old_data; // bool true by default
 
 		// check Ontology
