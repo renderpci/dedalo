@@ -26,11 +26,11 @@ class component_number extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
 		$this->lang = DEDALO_DATA_NOLAN;
 
-		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
+		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
 
 
@@ -542,11 +542,13 @@ class component_number extends component_common {
 	* GET_DIFFUSION_VALUE
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$dato				= parent::get_dato();
 		$value				= is_array($dato) ? reset($dato) : $dato;
