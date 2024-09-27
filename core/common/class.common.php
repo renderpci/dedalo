@@ -1320,7 +1320,7 @@ abstract class common {
 	* 	data : [...]
 	* }
 	*/
-	public function get_json( object $options=null ) : object {
+	public function get_json( ?object $options=null ) : object {
 
 		$json_cache = false; // experimental. Set false in production (!)
 
