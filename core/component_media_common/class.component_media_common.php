@@ -29,7 +29,7 @@ interface component_media_interface {
 	public function get_media_url_dir(string $quality);
 	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false);
 	public function get_thumb_url();
-	public function get_media_filepath(?string $quality=null, string $extension=null);
+	public function get_media_filepath(?string $quality=null, ?string $extension=null);
 	public function get_size(string $quality);
 	public function restore_component_media_files();
 	public function create_alternative_versions(?object $options=null);
@@ -124,7 +124,7 @@ class component_media_common extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo, $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
 
 		// lang. Force always DEDALO_DATA_NOLAN when is not translatable
 		// (note that PDF can be translatable)
@@ -215,11 +215,10 @@ class component_media_common extends component_common {
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $grid_cell_object
 	* @test true
 	*/
-	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$column_obj = isset($this->column_obj)
@@ -870,12 +869,12 @@ class component_media_common extends component_common {
 	/**
 	* PROCESS_UPLOADED_FILE
 	* Dummy method. Overwrite it in each component
-	* @param object $file_data
-	* @param object $process_options
+	* @param object|null $file_data
+	* @param object|null $process_options
 	* @return object $response
 	* @test true
 	*/
-	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= true;
@@ -1213,7 +1212,7 @@ class component_media_common extends component_common {
 	* @return object $response
 	* @test true
 	*/
-	public function delete_file(string $quality, string $extension=null) : object {
+	public function delete_file(string $quality, ?string $extension=null) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1292,7 +1291,7 @@ class component_media_common extends component_common {
 	* @return bool
 	* @test true
 	*/
-	public function remove_component_media_files(array $ar_quality=[], string $extension=null) : bool {
+	public function remove_component_media_files( array $ar_quality=[], ?string $extension=null ) : bool {
 
 		$result = false;
 
@@ -1740,11 +1739,11 @@ class component_media_common extends component_common {
 	*	}
 	* }
 	* @param string $quality
-	* @param string $extension = null
+	* @param string|null $extension = null
 	* @return object $dato_item
 	* @test true
 	*/
-	public function get_quality_file_info(string $quality, string $extension=null) : object {
+	public function get_quality_file_info( string $quality, ?string $extension=null ) : object {
 
 		// external source (link to image outside Dédalo media)
 			$external_source = $this->get_external_source();
@@ -2106,12 +2105,11 @@ class component_media_common extends component_common {
 	*	Check if file exists. If not use 0.jpg as output
 	* @param bool $absolute = false
 	* @param bool $default_add = true
-	*
 	* @return string|null $url
 	*	Return relative o absolute url
 	* @test true
 	*/
-	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false) : ?string {
+	public function get_url( ?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false ) : ?string {
 
 		// quality fallback to default
 			if(empty($quality)) {
@@ -2281,10 +2279,11 @@ class component_media_common extends component_common {
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
+	* @param object|null $options=null
 	* @return bool
 	* @test true
 	*/
-	public function regenerate_component(object $options = null) : bool {
+	public function regenerate_component( ?object $options=null ) : bool {
 
 		// Options
 			$delete_normalized_files = $options->delete_normalized_files ?? true;
@@ -2453,13 +2452,13 @@ class component_media_common extends component_common {
 	* Get full file path in local media
 	* @param string|null $quality = null
 	* 	Like 'original'
-	* @param string $extension = null
+	* @param string|null $extension = null
 	* 	Like 'avif'
 	* @return string $path
 	* 	complete absolute file path like '/Users/myuser/works/dedalo/media/images/dd152-1.jpg'
 	* @test true
 	*/
-	public function get_media_filepath(?string $quality=null, string $extension=null) : string {
+	public function get_media_filepath( ?string $quality=null, ?string $extension=null ) : string {
 
 		// quality fallback
 			if(empty($quality)) {
@@ -2883,10 +2882,10 @@ class component_media_common extends component_common {
 	* This method overwrites any existing file with same path
 	* @param string $quality
 	* @param string $extension
-	* @param object|null $options
+	* @param object|null $options = null
 	* @return bool
 	*/
-	public function create_alternative_version(string $quality, string $extension, ?object $options=null) : bool {
+	public function create_alternative_version( string $quality, string $extension, ?object $options=null ) : bool {
 
 		debug_log(__METHOD__
 			. " Use specific component method to overwrite this ! $quality - $extension"
@@ -2905,7 +2904,7 @@ class component_media_common extends component_common {
 	* @param object|null $options = null
 	* @return bool
 	*/
-	public function create_alternative_versions(?object $options=null) : bool {
+	public function create_alternative_versions( ?object $options=null ) : bool {
 
 		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
 		$ar_quality				= $this->get_ar_quality();
