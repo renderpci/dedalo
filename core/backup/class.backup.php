@@ -300,7 +300,7 @@ abstract class backup {
 	* @param string|null $tld
 	* @return string $res
 	*/
-	public static function copy_to_file(string $table, string $path_file, ?string $tld= null) : string {
+	public static function copy_to_file( string $table, string $path_file, ?string $tld=null ) : string {
 
 		$res = '';
 
