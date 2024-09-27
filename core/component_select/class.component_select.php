@@ -80,12 +80,11 @@ class component_select extends component_relation_common {
 	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @see class.diffusion_mysql.php
-	*
 	* @param string|null $lang = null
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_lang = $lang ?? DEDALO_DATA_LANG;
 		$diffusion_value = $this->get_valor(

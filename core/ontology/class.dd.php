@@ -34,7 +34,7 @@ class dd extends dd_elements {
 
 
 	# Constructor
-	function __construct(string $modo='tesauro_list', string $type='all', string $ts_lang=null) {
+	function __construct( string $modo='tesauro_list', string $type='all', ?string $ts_lang=null ) {
 
 		#self::$tabla_jerarquia			= 'jerarquia';
 		#self::$tabla_jerarquia_tipos	= 'jerarquia_tipos';
@@ -401,8 +401,6 @@ class dd extends dd_elements {
 
 		return $html;
 	}
-
-
 
 
 

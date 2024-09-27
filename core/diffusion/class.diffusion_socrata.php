@@ -30,7 +30,7 @@ class diffusion_socrata extends diffusion  {
 	/**
 	* UPDATE_RECORD
 	* Update one or any number of records ( array ) and references
-	* @param object $options
+	* @param object|null $options = null
 	* {
 	* 	section_tipo: string
 	* 	section_id: string|int

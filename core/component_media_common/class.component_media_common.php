@@ -311,12 +311,14 @@ class component_media_common extends component_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	* @test true
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// data
 			$dato = $this->get_dato();

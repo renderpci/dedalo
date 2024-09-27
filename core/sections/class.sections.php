@@ -103,6 +103,7 @@ class sections extends common {
 							null, // string|null section_id
 							$this->caller_tipo // string section_tipo
 						);
+						// request_config (is array)
 						$request_config = $section->build_request_config();
 
 						$found = array_find($request_config, function($el){

@@ -16,9 +16,9 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* CONSTRUCT
-	* @param object $options = null
+	* @param object|null $options = null
 	*/
-	function __construct(?object $options=null) {
+	function __construct( ?object $options=null ) {
 
 		parent::__construct($options);
 	}//end __construct
@@ -50,7 +50,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* For other successful queries, mysqli_query() will return true.
 	* @return object|resource|bool
 	*/
-	public static function exec_mysql_query(string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false) : mixed {
+	public static function exec_mysql_query( string $sql, ?string $table_name=null, $database_name=false, bool $multi_query=false ) : mixed {
 
 		// empty database_name case
 			if (empty($database_name)) {
@@ -486,7 +486,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* Creates a SQL sentence of field (column) based on type
 	* @return string $sql_query
 	*/
-	public static function build_field_insert_sql(string $field_name, string $field_type, $field_options=null , string $field_coment='', string $pref='field_') : string {
+	public static function build_field_insert_sql(string $field_name, string $field_type, $field_options=null, string $field_coment='', string $pref='field_') : string {
 
 		$sql_query = '';
 

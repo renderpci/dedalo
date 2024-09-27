@@ -30,13 +30,12 @@ class component_security_access extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component_common method
+	* @see class.diffusion_mysql.php
 	* @param string|null $lang = null
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		return 'There is no diffusion value for this component';
 	}//end get_diffusion_value
@@ -283,7 +282,7 @@ class component_security_access extends component_common {
 	* @param array|null $ar_tipo_to_be_exclude
 	* @return array $element_datalist
 	*/
-	private static function get_children_recursive_security_acces(string $tipo, ?array $ar_tipo_to_be_exclude=null) : array {
+	private static function get_children_recursive_security_acces( string $tipo, ?array $ar_tipo_to_be_exclude=null ) : array {
 
 		// static cache
 			// static $children_recursive_security_access_data;

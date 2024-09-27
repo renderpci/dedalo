@@ -3227,6 +3227,7 @@ class component_relation_common extends component_common {
 			$ar_data = array_merge($ar_data, $result_compnent_data);
 		}
 
+
 		return $ar_data;
 	}//end get_calculation_data
 

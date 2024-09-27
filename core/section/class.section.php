@@ -1837,7 +1837,7 @@ class section extends common {
 	* @param array|null $ar_exclude_models = null
 	* @return array $ar_recursive_children
 	*/
-	public static function get_ar_recursive_children(string $tipo, ?array $ar_exclude_models=null) : array {
+	public static function get_ar_recursive_children( string $tipo, ?array $ar_exclude_models=null ) : array {
 
 		# AR_EXCLUDE_MODELS
 		$default_ar_exclude_models = [
@@ -3525,7 +3525,7 @@ class section extends common {
 	* ex: if the time machine of the component is a portal that call to toponymy tm it will need the context and data of the pointer section and the components that will be showed or searched.
 	* This method use the data of the caller (ar_db_record) to get only the data to be used, ex: only the records of the component in time machine to show.
 	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
-	* @param string $from_parent = null
+	* @param string|null $from_parent = null
 	* @param array $ar_db_record = []
 	* 	Array of natrix_time_machine table found records
 	* @return object $subdatum

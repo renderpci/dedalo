@@ -110,10 +110,9 @@ class component_section_id extends component_common {
 	* The direct components can set the value with the dato directly
 	* The relation components will separate the locator in rows
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj
 			if(isset($this->column_obj)){

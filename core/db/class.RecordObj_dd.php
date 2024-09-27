@@ -253,7 +253,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* UPDATE_COUNTER
 	* @param string $tld
 	* @param int $current_value=false
-	*
 	* @return int|false $counter_dato_updated
 	* Actualiza el contador para el tld dado (ej. 'dd').
 	* El 'current_value' es opcional. Si no se recibe se calcula
@@ -281,7 +280,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_COUNTER_VALUE
 	* @param string $tld
-	*
 	* @return int $counter_value
 	*/
 	protected static function get_counter_value(string $tld) : int {

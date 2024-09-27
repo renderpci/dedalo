@@ -74,7 +74,7 @@ class component_select_lang extends component_relation_common {
 	* @param object|null $option_obj = null
 	* @return string $diffusion_value
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// Important: Pass lang as parameter to indicate in the resolution
 		// of the get_ar_list_of_values the desired language.

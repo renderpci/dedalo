@@ -275,13 +275,12 @@ class component_relation_parent extends component_relation_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @see class.diffusion_mysql.php
 	* @param string|null $lang = DEDALO_DATA_LANG
 	* @param object|null $option_obj = null
 	* @return string $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
 
 		$resolve_value = isset($option_obj->resolve_value)
 			? $option_obj->resolve_value

@@ -9,7 +9,7 @@
  * that is part of the Emilda Project (http://www.emilda.org). Christoffer
  * Landtman generously agreed to make the "php-marc" code available under the
  * GNU LGPL so it could be used as the basis of this PEAR package.
- * 
+ *
  * PHP version 5
  *
  * LICENSE: This program is free software; you can redistribute it and/or modify
@@ -39,7 +39,7 @@
 // {{{ class File_MARC_Record
 /**
  * Represents a single MARC record
- * 
+ *
  * A MARC record contains a leader and zero or more fields held within a
  * linked list structure. Fields are represented by {@link File_MARC_Data_Field}
  * objects.
@@ -76,7 +76,7 @@ class File_MARC_Record
 
     /**
      * XMLWriter for writing collections
-     * 
+     *
      * @var XMLWriter
      */
     protected $marcxml;
@@ -84,7 +84,7 @@ class File_MARC_Record
     /**
      * MARC instance for access to the XML header/footer methods
      * We need this so that we can properly wrap a collection of MARC records.
-     * 
+     *
      * @var File_MARC
      */
     protected $marc;
@@ -99,9 +99,9 @@ class File_MARC_Record
      *
      * @param File_MARC $marc MARC record from File_MARC or File_MARCXML
      *
-     * @return true 
+     * @return true
      */
-    function __construct($marc = null)
+    function __construct( $marc=null )
     {
         $this->fields = new File_MARC_List();
         $this->setLeader(str_repeat(' ', 24));
@@ -331,7 +331,7 @@ class File_MARC_Record
      *
      * @return {@link File_MARC_Data_Field}|{@link File_MARC_Control_Field} first field that matches the requested tag name
      */
-    function getField($spec = null, $pcre = null)
+    function getField( $spec=null, $pcre=null )
     {
         foreach ($this->fields as $field) {
             if (($pcre
@@ -359,7 +359,7 @@ class File_MARC_Record
      * @return File_MARC_List|array {@link File_MARC_Data_Field} or
      * {@link File_MARC_Control_Field} objects that match the requested tag name
      */
-    function getFields($spec = null, $pcre = null)
+    function getFields( $spec=null, $pcre=null )
     {
         if (!$spec) {
             return $this->fields;
@@ -387,7 +387,7 @@ class File_MARC_Record
      *
      * @return int         number of fields that were deleted
      */
-    function deleteFields($tag, $pcre = null)
+    function deleteFields( $tag, $pcre=null )
     {
         $cnt = 0;
         foreach ($this->getFields() as $field) {
@@ -624,7 +624,7 @@ class File_MARC_Record
             $this->marcxml->startElement("record");
             $this->marcxml->writeAttribute("xmlns", "http://www.loc.gov/MARC21/slim");
         }
-        
+
 
         // MARCXML schema has some strict requirements
         // We'll set reasonable defaults to avoid invalid MARCXML

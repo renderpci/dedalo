@@ -119,7 +119,6 @@ class component_3d extends component_media_common implements component_media_int
 
 
 
-
 	/**
 	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().

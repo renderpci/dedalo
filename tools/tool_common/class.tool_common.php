@@ -988,9 +988,9 @@ class tool_common {
 	* 	Normally, is get from tools cache file, else will be calculated
 	* @return object|null $tool_config
 	*/
-	public static function get_tool_configuration(object $options, ?object $tool_config=null) : ?object {
+	public static function get_tool_configuration( object $options, ?object $tool_config=null ) : ?object {
 
-		$tool_name 		= $options->tool_name;
+		$tool_name		= $options->tool_name;
 		$tipo			= $options->tipo;
 		$section_tipo	= $options->section_tipo;
 
