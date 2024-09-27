@@ -128,10 +128,9 @@ class component_av extends component_media_common implements component_media_int
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $grid_cell_object
 	*/
-	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj
 			$column_obj = isset($this->column_obj)
@@ -303,12 +302,12 @@ class component_av extends component_media_common implements component_media_int
 	* @param string|float $current_time
 	* 	A double-precision floating-point value indicating the current playback time in seconds.
 	* 	From HML5 video element command 'currentTime'
-	* @param string|null $quality
+	* @param string|null $target_quality = null
 	* 	Optional string like 'original'. if not defined, default is used
 	* @return bool $command_response
 	* 	FFMPEG terminal command response
 	*/
-	public function create_posterframe(string|float $current_time, string $target_quality=null) : bool {
+	public function create_posterframe( string|float $current_time, ?string $target_quality=null ) : bool {
 
 		// short vars
 			$quality				= $target_quality ?? $this->get_original_quality();
@@ -473,12 +472,12 @@ class component_av extends component_media_common implements component_media_int
 	/**
 	* GET_VIDEO SIZE
 	* Calculate the current quality file size in the more human readable unit (kilobytes, megabytes, et.)
-	* @param string $quality = null
-	* @param string $filename = null
+	* @param string|null $quality = null
+	* @param string|null $filename = null
 	* @return string
 	* 	Sample: '35.2 MB'
 	*/
-	public function get_video_size(string $quality=null, string $filename=null) : ?string {
+	public function get_video_size( ?string $quality=null, ?string $filename=null ) : ?string {
 
 		// empty filename case
 			if (empty($filename)) {
@@ -597,7 +596,7 @@ class component_av extends component_media_common implements component_media_int
 	* @param bool $remove_posterframe = true
 	* @return bool
 	*/
-	public function remove_component_media_files(array $ar_quality=[], string $extension=null, bool $remove_posterframe=true) : bool {
+	public function remove_component_media_files( array $ar_quality=[], ?string $extension=null, bool $remove_posterframe=true ) : bool {
 
 		// ar_quality
 			if (empty($ar_quality)) {
@@ -817,7 +816,7 @@ class component_av extends component_media_common implements component_media_int
 	* 	3 - component_media_common::add_file
 	* 	4 - component:process_uploaded_file
 	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object $file_data
+	* @param object|null $file_data
 	*	Data from trigger upload file
 	* 	Format:
 	* {
@@ -825,16 +824,18 @@ class component_av extends component_media_common implements component_media_int
 	*     "full_file_name": "test81_test65_2.mp4",
 	*     "full_file_path": "/mypath/media/av/original/test81_test65_2.mp4"
 	* }
+	* @param object|null $process_options = null
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// check vars
-			if (empty($file_data->original_file_name) ||
+			if (empty($file_data) ||
+				empty($file_data->original_file_name) ||
 				empty($file_data->full_file_path) ||
 				empty($file_data->full_file_name)
 			) {
@@ -1022,12 +1023,12 @@ class component_av extends component_media_common implements component_media_int
 	* @see component_av->remove_component_media_files
 	* @param string $quality
 	* 	Quality to delete as '1.5MB'
-	* @param string $extension=null
+	* @param string|null $extension=null
 	* 	Optional extension as 'avif'. On empty, all quality files will be deleted,
 	* 	else only the selected file in current quality will be deleted
 	* @return object $response
 	*/
-	public function delete_file(string $quality, string $extension=null) : object {
+	public function delete_file( string $quality, ?string $extension=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
