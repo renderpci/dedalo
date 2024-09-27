@@ -110,14 +110,14 @@ class section extends common {
 	/**
 	* GET_INSTANCE
 	* Cache section instances (singleton pattern)
-	* @param string|int|null $section_id = null
-	* @param string $tipo = null
+	* @param mixed $section_id = null
+	* @param string|null $tipo = null
 	* @param string|null $mode = 'list'
 	* @param bool $cache = true
-	*
+	* @param object|null $caller_dataframe = null
 	* @return object $section
 	*/
-	public static function get_instance($section_id=null, string $tipo=null, string $mode='list', bool $cache=true, object $caller_dataframe=null) : section {
+	public static function get_instance( mixed $section_id=null, ?string $tipo=null, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section {
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -203,11 +203,11 @@ class section extends common {
 	/**
 	* CONSTRUCT
 	* Extends parent abstract class common
-	* @param string|int|null $section_id = null
-	* @param string $tipo = null
+	* @param mixed $section_id = null
+	* @param string|null$tipo = null
 	* @param string|null $mode = 'edit'
 	*/
-	private function __construct($section_id=null, string $tipo=null, ?string $mode='edit') {
+	private function __construct( mixed $section_id=null, ?string $tipo=null, string $mode='list' ) {
 
 		// check tipo
 			if (empty($tipo)) {
@@ -825,10 +825,10 @@ class section extends common {
 	/**
 	* SAVE
 	* Create or update a section record in matrix
-	* @param object $save_options = null
+	* @param object|null $save_options = null
 	* @return int|string|null $section_id
 	*/
-	public function Save( object $save_options=null ) : int|string|null {
+	public function Save( ?object $save_options=null ) : int|string|null {
 		$start_time = start_time();
 
 		if(SHOW_DEBUG===true) {
@@ -3535,7 +3535,7 @@ class section extends common {
 	* 		data	: []
 	* 	}
 	*/
-	public function get_tm_subdatum(string $from_parent=null, array $ar_db_record=[]) : object {
+	public function get_tm_subdatum( ?string $from_parent=null, array $ar_db_record=[] ) : object {
 
 		// debug
 			// if(SHOW_DEBUG===true) {
