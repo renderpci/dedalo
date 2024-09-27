@@ -50,13 +50,13 @@ class component_date extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( string $tipo=null, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
 		// Force always DEDALO_DATA_NOLAN
 		$this->lang = DEDALO_DATA_NOLAN;
 
 		// We create the component normally
-		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
+		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 
 		if(SHOW_DEBUG===true) {
 			if ($this->RecordObj_dd->get_traducible()==='si') {
@@ -211,10 +211,9 @@ class component_date extends component_common {
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// ddo. set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -1285,15 +1284,14 @@ class component_date extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* * @see class.diffusion_mysql.php
 	* @param string|null $lang = null
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = null;
 
@@ -1403,7 +1401,7 @@ class component_date extends component_common {
 	* @param object|null $options = null
 	* @return mixed $data
 	*/
-	public function get_calculation_data($options=null) : mixed {
+	public function get_calculation_data( ?object $options=null ) : mixed {
 
 		$ar_data = [];
 
