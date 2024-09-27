@@ -15,15 +15,13 @@ class component_password extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(
-		string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true
-		) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
 		$this->lang = $lang===DEDALO_DATA_NOLAN
 			? $lang
 			: DEDALO_DATA_NOLAN;
 
-		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
+		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
 
 
@@ -109,7 +107,7 @@ class component_password extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		return $this->fake_value;
 	}//end get_diffusion_value
@@ -126,7 +124,7 @@ class component_password extends component_common {
 	*
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
