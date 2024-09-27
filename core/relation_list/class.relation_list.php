@@ -374,15 +374,10 @@ class relation_list extends common {
 	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @see class.diffusion_mysql.php
-	*
 	* @param string|null $lang = null
 	* @return array|string|null $diffusion_value
 	*/
-	public function get_diffusion_value(?string $lang=null) {
-
-		// dump(func_get_args(), 'func_get_args() ++ /////////////// '.to_string($this->tipo));
-		// dump($this, ' this ++ '.to_string());
-		// dump($this->tipo, ' this->tipo ++ '.to_string());
+	public function get_diffusion_value( ?string $lang=null ) {
 
 		$diffusion_value = null;
 

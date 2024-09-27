@@ -130,7 +130,7 @@ class component_svg extends component_media_common implements component_media_in
 	* @return string|null $image_url
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=true) : ?string {
+	public function get_url( ?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=true ) : ?string {
 
 		// quality fallback to default
 			if(empty($quality)) {
@@ -302,13 +302,20 @@ class component_svg extends component_media_common implements component_media_in
 	*     "full_file_name": "test81_test65_2.svg",
 	*     "full_file_path": "/mypath/media/svg/standard/test81_test65_2.svg"
 	* }
+	* @param object|null $process_options = null
 	* @return object $response
 	*/
-	public function process_uploaded_file(?object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// check file_data
+			if (empty($file_data)) {
+				$response->msg .= ' Empty file_data';
+				return $response;
+			}
 
 		// short vars
 			$original_file_name			= $file_data->original_file_name;	// kike "my file785.svg"

@@ -171,7 +171,8 @@ class component_dataframe extends component_portal {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	*
+	* @param string|null $lang = DEDALO_DATA_LANG
+	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*/
 	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {

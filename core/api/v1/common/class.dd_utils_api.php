@@ -470,7 +470,7 @@ final class dd_utils_api {
 			&& DEDALO_INSTALL_STATUS==='installed'
 			&& $action!=='install_hierarchies'
 		){
-			$response->msg		= 'Error. Request not valid, Dédalo was installed';
+			$response->msg = 'Error. Request not valid, Dédalo was installed';
 			return $response;
 		}
 

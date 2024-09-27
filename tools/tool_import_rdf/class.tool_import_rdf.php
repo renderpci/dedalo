@@ -356,7 +356,7 @@ class tool_import_rdf extends tool_common {
 							$set_start = 'set_'.$match_format->$start_format;
 							$start_date->$set_start($start_data_string);
 					}else{
-						$start_date= null;
+						$start_date = null;
 					}
 
 					if(isset($end_data)){

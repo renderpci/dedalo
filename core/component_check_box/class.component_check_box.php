@@ -77,10 +77,9 @@ class component_check_box extends component_relation_common {
 	*
 	* @param string|null $lang = null
 	* @param object|null $option_obj = null
-	*
 	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = $this->get_valor(
 			$lang ?? DEDALO_DATA_LANG,

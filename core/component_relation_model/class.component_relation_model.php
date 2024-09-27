@@ -83,14 +83,12 @@ class component_relation_model extends component_relation_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string|null $diffusion_value
-	*
+	* @see class.diffusion_mysql.php
 	* @param string|null $lang = null
 	* @param object|null $option_obj = null
-	*
-	* @see class.diffusion_mysql.php
+	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// lang empty case. Apply default
 			if (empty($lang)) {

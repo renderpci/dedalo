@@ -20,7 +20,7 @@ declare(strict_types=1);
 *
 * @return string $msg
 */
-function dump(mixed $val=null, ?string $var_name=null, ?array $arguments=null) : string {
+function dump( mixed $val=null, ?string $var_name=null, ?array $arguments=null ) : string {
 
 	// ignore dump in CLI mode
 		if (php_sapi_name()==='cli' && SHOW_DEBUG===false) {
@@ -648,8 +648,7 @@ function exec_time_unit_auto(float $start) : string {
 * @param mixed $var = null
 * @return string
 */
-// function to_string(mixed $var=null) : string {
-function to_string(mixed $var=null) : string {
+function to_string( mixed $var=null ) : string {
 
 	if(is_null($var)) {
 		return '';
@@ -711,7 +710,7 @@ function to_string(mixed $var=null) : string {
 * 	}
 * @return array $files
 */
-function get_dir_files(string $dir, array $ext, ?callable $processor=null) : array {
+function get_dir_files( string $dir, array $ext, ?callable $processor=null ) : array {
 
 	if (!is_dir($dir)) {
 		debug_log(__METHOD__
@@ -762,9 +761,12 @@ function get_dir_files(string $dir, array $ext, ?callable $processor=null) : arr
 * GET_LAST_MODIFICATION_DATE
 * Get last modified file date in all Dedalo files
 * This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret)
+* @param string $path
+* @param array|null $allowedExtensions = null
+* @param array $ar_exclude = ['/acc/','/backups/']
 * @return int|date
 */
-function get_last_modification_date(string $path, ?array $allowedExtensions=null, array $ar_exclude=['/acc/','/backups/']) {
+function get_last_modification_date( string $path, ?array $allowedExtensions=null, array $ar_exclude=['/acc/','/backups/'] ) {
 
 	// file does not exists case
 		if (!file_exists($path)) {
@@ -1179,7 +1181,7 @@ function fix_cascade_config_var(string $var_name, mixed $var_default_value) : mi
 * @param string|null $tipo = null
 * @return bool
 */
-function verify_dedalo_prefix_tipos(?string $tipo=null) : bool {
+function verify_dedalo_prefix_tipos( ?string $tipo=null ) : bool {
 
 	return true; // Temporary until the dynamic hierarchy prefixes are evaluated.
 

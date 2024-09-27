@@ -136,40 +136,6 @@ class dd_error {
 
 
 
-	/**
-	* WRAP_ERROR
-	*/
-		// public static function wrap_error($string_error, $show_option=true, $span_error_class=null) : string {
-
-		// 	$html = '';
-		// 	$html .= '<!DOCTYPE html>';
-		// 	$html .= '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">';
-		// 	$html .= '<head>';
-		// 	$html .= ' <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-		// 	$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/common/css/common.css" type="text/css" />';
-		// 	$html .= ' <link rel="stylesheet" href="'.DEDALO_CORE_URL.'/html_page/css/html_page.css" type="text/css" />';
-		// 	$html .= '</head>';
-		// 	$html .= '<body style="padding:20px">';
-
-		// 	$html .= " <span class='$span_error_class'>".$string_error."</span>";
-
-		// 	if($show_option) {
-		// 		$html .= '
-		// 				<div class="" style="padding:0px">
-		// 				<a href="'.DEDALO_CORE_URL.'/main/?home" style="padding:5px">Home</a>
-		// 				<a href="javascript:history.go(-1)" style="padding:5px">Back</a> Sorry, an error was found
-		// 				<img src="'.DEDALO_CORE_URL.'/themes/default/favicon.ico" style="position:relative;top:1px" />
-		// 				</div>';
-		// 	}
-
-		// 	$html .= '</body>';
-		// 	$html .= '</html>';
-
-		// 	return $html;
-		// }//end wrap_error
-
-
-
 }//end class dd_error
 
 

@@ -9,7 +9,7 @@
  * that is part of the Emilda Project (http://www.emilda.org). Christoffer
  * Landtman generously agreed to make the "php-marc" code available under the
  * GNU LGPL so it could be used as the basis of this PEAR package.
- * 
+ *
  * PHP version 5
  *
  * LICENSE: This program is free software; you can redistribute it and/or modify
@@ -75,7 +75,7 @@ class File_MARC_Field extends File_MARC_List
      * @param string $ind1      placeholder for first indicator
      * @param string $ind2      placeholder for second indicator
      */
-    function __construct($tag, $subfields = null, $ind1 = null, $ind2 = null) 
+    function __construct( $tag, $subfields=null, $ind1=null, $ind2=null )
     {
         $this->tag = $tag;
 
@@ -216,7 +216,7 @@ class File_MARC_Field extends File_MARC_List
      * Pretty print a MARC_Field object without tags, indicators, etc.
      *
      * @param array $exclude Subfields to exclude from formatted output
-     * 
+     *
      * @return string Returns the formatted field data
      */
 

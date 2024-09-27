@@ -241,6 +241,7 @@ class menu extends common {
 
 		$parent = $area->parent;
 
+
 		return $parent;
 	}//end get_my_parent
 

@@ -136,7 +136,7 @@ class component_text_area extends component_common {
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -1219,7 +1219,7 @@ class component_text_area extends component_common {
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		$dato = $this->get_dato(); // Important: use raw text (!)
 
@@ -2447,7 +2447,7 @@ class component_text_area extends component_common {
 	* 	Optional way to modify result. Avoid using it if it is not essential
 	* @return array|null $list_value
 	*/
-	public function get_list_value(?object $options=null) : ?array {
+	public function get_list_value( ?object $options=null ) : ?array {
 
 		// force change lang when is set in related component (rsc36 case)
 			$original_lang = $this->get_original_lang();
@@ -2508,7 +2508,7 @@ class component_text_area extends component_common {
 	* @param object|null $options = null
 	* @return array|null $list_value
 	*/
-	public function get_fallback_list_value(?object $options=null) : ?array {
+	public function get_fallback_list_value( ?object $options=null ) : ?array {
 
 		// options
 			$max_chars = $options->max_chars ?? 700;
@@ -2562,7 +2562,7 @@ class component_text_area extends component_common {
 	* @param object|null $options = null
 	* @return array|null $list_value
 	*/
-	public function get_fallback_edit_value(?object $options=null) : ?array {
+	public function get_fallback_edit_value( ?object $options=null ) : ?array {
 
 		// options
 			$max_chars = $options->max_chars ?? 700;
