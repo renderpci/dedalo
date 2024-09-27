@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 
 
@@ -213,20 +212,22 @@ const render_content_data = async function(self) {
 		})
 
 	// form init
-		self.caller.init_form({
-			submit_label	: get_label.registrar_herramientas || self.name,
-			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
-			body_response	: body_response,
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
-				source	: {
-					action : 'register_tools'
-				},
-				options	: {}
-			}
-		})
+		if (self.caller.init_form) {
+			self.caller.init_form({
+				submit_label	: get_label.registrar_herramientas || self.name,
+				confirm_text	: get_label.sure || 'Sure?',
+				body_info		: content_data,
+				body_response	: body_response,
+				trigger : {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'class_request',
+					source	: {
+						action : 'register_tools'
+					},
+					options	: {}
+				}
+			})
+		}
 
 	// add at end body_response
 		content_data.appendChild(body_response)

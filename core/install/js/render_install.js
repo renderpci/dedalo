@@ -1228,7 +1228,8 @@ export const render_hierarchies_import_block = function(options) {
 
 		const hierarchies_to_install = []
 		const hierarchy_typologies_length = hierarchy_typologies.length
-		for (var i = hierarchy_typologies_length - 1; i >= 0; i--) {
+		for (let i = hierarchy_typologies_length - 1; i >= 0; i--) {
+
 			const current_hierarchy_typology = hierarchy_typologies[i]
 
 			const found_hierarchies = hierarchies.filter(el => el.typology === current_hierarchy_typology.typology)
@@ -1237,7 +1238,8 @@ export const render_hierarchies_import_block = function(options) {
 				continue
 			}
 
-			const typology_label = ui.create_dom_element({
+			// typology_label
+			ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'typology_label',
 				inner_html		: current_hierarchy_typology.label,
@@ -1252,10 +1254,10 @@ export const render_hierarchies_import_block = function(options) {
 			})
 
 			const hierarchies_len = found_hierarchies.length
-			for (let i = hierarchies_len - 1; i >= 0; i--) {
+			for (let j = hierarchies_len - 1; j >= 0; j--) {
 
 				// hierarchy object
-					const current_hierarchy = found_hierarchies[i]
+					const current_hierarchy = found_hierarchies[j]
 					if(current_hierarchy.type==='model'){
 						continue
 					}
@@ -1310,8 +1312,9 @@ export const render_hierarchies_import_block = function(options) {
 					if(checked){
 						hierarchies_to_install.push(current_hierarchy.tld)
 					}
-			}//end for (let i = hierarchies_len - 1; i >= 0; i--)
-		}
+			}//end for (let j = hierarchies_len - 1; j >= 0; j--)
+		}//end for (let i = hierarchy_typologies_length - 1; i >= 0; i--)
+
 		const import_hierarchies_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary import_hierarchies_button',
