@@ -61,7 +61,7 @@ class component_relation_common extends component_common {
 	* @param string|null $section_tipo = null
 	* @return void
 	*/
-	protected function __construct( ?string $tipo=null, $section_id=null, string $mode='list', ?string $lang=null, ?string $section_tipo=null, bool $cache=true ) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
 
 		// lang. translatable conditioned
 			$translatable = RecordObj_dd::get_translatable($tipo);
