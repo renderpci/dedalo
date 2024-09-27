@@ -11,12 +11,12 @@ class component_json extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
 		// Force always DEDALO_DATA_NOLAN
 		$this->lang = DEDALO_DATA_NOLAN;
 
-		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
+		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
 
 
@@ -177,11 +177,12 @@ class component_json extends component_common {
 	* GET_DIFFUSION_VALUE
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang = null
+	* @param  object|null $option_obj = null
 	* @return string $diffusion_value
-	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// Default behavior is get value
 		$dato = $this->get_dato();
@@ -459,20 +460,27 @@ class component_json extends component_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* @param object $file_data
+	* @param object|null $file_data = null
 	* sample:
 	* {
 	*	"original_file_name": "my file name.json",
 	*	"full_file_name": "test3_test18_1.json",
 	*	"full_file_path": "/fake_path/component_json/test3_test18_1.json"
 	* }
+	* @param object|null $process_options = null
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// empty case
+			if (empty($file_data)) {
+				$response->msg .= 'Empty file data';
+				return $response;
+			}
 
 		// short vars
 			$original_file_name	= $file_data->original_file_name;	// like "my file name.json"
