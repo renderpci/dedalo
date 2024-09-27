@@ -128,17 +128,17 @@ abstract class component_common extends common {
 	* GET_INSTANCE
 	* Singleton pattern
 	* Creates a component instance
-	* @param string $component_name = null
-	* @param string $tipo = null
+	* @param string|null $component_name = null
+	* @param string|null $tipo = null
 	* @param mixed $section_id = null
 	* @param string $mode = 'edit'
 	* @param string $lang = DEDALO_DATA_LANG
-	* @param string $section_tipo = null
+	* @param string|null $section_tipo = null
 	* @param bool $cache = true
-	*
+	* @param object|null $caller_dataframe = null
 	* @return object|null $component
 	*/
-	final public static function get_instance(string $component_name=null, string $tipo=null, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true, object $caller_dataframe=null) : ?object {
+	final public static function get_instance( ?string $component_name=null, ?string $tipo=null, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, ?object $caller_dataframe=null ) : ?object {
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -426,13 +426,13 @@ abstract class component_common extends common {
 	/**
 	* __CONSTRUCT
 	* @param string $tipo = null
-	* @param string|int|null $section_id = null
+	* @param mixed $section_id = null
 	* @param string $mode = 'edit'
 	* @param string $lang = DEDALO_DATA_LANG
-	* @param string $section_tipo = null
+	* @param string|null $section_tipo = null
 	* @return void
 	*/
-	protected function __construct(string $tipo, $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, string $section_tipo=null, bool $cache=true) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
 
 		// uid
 			$this->uid = hrtime(true); // nanoseconds
@@ -1025,7 +1025,7 @@ abstract class component_common extends common {
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$fields_separator	= $ddo->fields_separator ?? null;
@@ -2630,7 +2630,7 @@ abstract class component_common extends common {
 	* GET_STATS_VALUE_RESOLVED
 	* @return array $ar_final
 	*/
-		// public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, object $stats_properties=null) : array {
+		// public static function get_stats_value_resolved(string $tipo, $current_stats_value, string $stats_model, ?object $stats_properties=null) : array {
 
 		// 	$caller_component = get_called_class();
 
@@ -2826,7 +2826,7 @@ abstract class component_common extends common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// Default behavior is get value
 			$diffusion_lang = $lang ?? DEDALO_DATA_LANG;
@@ -2851,10 +2851,10 @@ abstract class component_common extends common {
 	* This method is only usable for component_text_area and similar non relation components
 	* @see mdcat4091 for a use example (!)
 	* Added 10-10-2021 (Paco) to enable process build_geolocation_data_geojson on text area publication
-	* @param object $option_obj (from 'propiedades')
+	* @param object|null $option_obj (from 'propiedades')
 	* @return mixed
 	*/
-	public function get_diffusion_resolve_value(object $option_obj=null) : mixed {
+	public function get_diffusion_resolve_value( ?object $option_obj=null ) : mixed {
 
 		// example $option_obj
 			// {
@@ -3608,10 +3608,11 @@ abstract class component_common extends common {
 
 	/**
 	* GET_CALCULATION_DATA
+	* @param object|null $options = null
 	* @return $data
 	* get the data of the component for do a calculation
 	*/
-	public function get_calculation_data(?object $options=null) {
+	public function get_calculation_data( ?object $options=null ) {
 
 		$data = $this->get_value();
 
@@ -3966,7 +3967,7 @@ abstract class component_common extends common {
 	* @param int|null $custom_limit = null
 	* @return array $dato_paginated
 	*/
-	public function get_dato_paginated(?int $custom_limit=null) : array {
+	public function get_dato_paginated( ?int $custom_limit=null ) : array {
 
 		// dato full
 			$dato = $this->get_dato();
@@ -4004,9 +4005,10 @@ abstract class component_common extends common {
 
 	/**
 	* GET_STRUCTURE_BUTTONS
+	* @param int|null $permissions = null
 	* @return array
 	*/
-	public function get_structure_buttons(int $permissions=null) : array {
+	public function get_structure_buttons( ?int $permissions=null ) : array {
 
 
 		return [];
@@ -4018,7 +4020,7 @@ abstract class component_common extends common {
 	* GET_COMPONENT_TM_DATO
 	* @return array|null $tm_dato
 	*/
-	public static function get_component_tm_dato(string $tipo, string $section_tipo, int|string $matrix_id) : ?array {
+	public static function get_component_tm_dato( string $tipo, string $section_tipo, int|string $matrix_id ) : ?array {
 
 		// search query object
 			$sqo = json_decode('{
