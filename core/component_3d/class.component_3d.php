@@ -129,7 +129,7 @@ class component_3d extends component_media_common implements component_media_int
 	*
 	* @return grid_cell_object $value
 	*/
-	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj
 			$column_obj = isset($this->column_obj)
@@ -286,13 +286,13 @@ class component_3d extends component_media_common implements component_media_int
 	* @param float $current_time
 	* 	A double-precision floating-point value indicating the current playback time in seconds.
 	* 	From HML5 video element command 'currentTime'
-	* @param string|null $quality
-	* @param array|string $ar_target
+	* @param string|null $target_quality
+	* @param array|string|null $ar_target
 	* 	Optional array value with forced target destination path and file name
 	* @return bool $command_response
 	* 	FFMPEG terminal command response
 	*/
-	public function create_posterframe($current_time, string $target_quality=null, array $ar_target=null) : bool {
+	public function create_posterframe( $current_time, ?string $target_quality=null, array|string|null $ar_target=null ) : bool {
 
 		debug_log(__METHOD__
 			. " Sorry. This method is not implemented yet " . PHP_EOL
@@ -397,7 +397,7 @@ class component_3d extends component_media_common implements component_media_int
 	* @param bool $remove_posterframe=true
 	* @return bool $result
 	*/
-	public function remove_component_media_files(array $ar_quality=[], string $extension=null, bool $remove_posterframe=true) : bool {
+	public function remove_component_media_files( array $ar_quality=[], ?string $extension=null, bool $remove_posterframe=true ) : bool {
 
 		// files remove
 			$result = parent::remove_component_media_files($ar_quality);
@@ -508,7 +508,7 @@ class component_3d extends component_media_common implements component_media_int
 	* 	3 - component_media_common::add_file
 	* 	4 - component:process_uploaded_file
 	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object $file_data
+	* @param object|null $file_data
 	*	Data from trigger upload file
 	* Format:
 	* {
@@ -516,16 +516,18 @@ class component_3d extends component_media_common implements component_media_int
 	*     "full_file_name": "test81_test65_2.mp4",
 	*     "full_file_path": "/mypath/media/av/original/test81_test65_2.mp4"
 	* }
+	* @param object|null  $process_options=null
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// check vars
-			if (empty($file_data->original_file_name) ||
+			if (empty($file_data) ||
+				empty($file_data->original_file_name) ||
 				empty($file_data->full_file_path) ||
 				empty($file_data->full_file_name)
 			) {
@@ -614,12 +616,12 @@ class component_3d extends component_media_common implements component_media_int
 	* @see component_3d->remove_component_media_files
 	* @param string $quality
 	* 	Quality to delete as '1.5MB'
-	* @param string $extension=null
+	* @param string|null $extension=null
 	* 	Optional extension as 'avif'. On empty, all quality files will be deleted,
 	* 	else only the selected file in current quality will be deleted
 	* @return object $response
 	*/
-	public function delete_file(string $quality, string $extension=null) : object {
+	public function delete_file( string $quality, ?string $extension=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
