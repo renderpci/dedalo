@@ -142,10 +142,9 @@ class component_input_text extends component_common {
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $value
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			if(isset($this->column_obj)){
@@ -284,11 +283,12 @@ class component_input_text extends component_common {
 	* GET_DIFFUSION_VALUE
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
-	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// lang empty case. Apply default
 			if (empty($lang)) {
