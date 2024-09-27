@@ -1112,10 +1112,10 @@ class diffusion_mysql extends diffusion_sql  {
 	* @param string $database_name
 	* @param string $table_name
 	* @param string $section_tipo
-	* @param object $custom = null
+	* @param object|null $custom = null
 	* @return object $response
 	*/
-	public static function delete_sql_record($section_id, $database_name, $table_name, $section_tipo=null, object $custom=null) {
+	public static function delete_sql_record( $section_id, $database_name, $table_name, $section_tipo=null, ?object $custom=null ) {
 
 		$response = new stdClass();
 			$response->result 	= false;

@@ -33,18 +33,14 @@ class dd_iri extends stdClass {
 
 	/**
 	* __CONSTRUCT
-	* @param object $data
+	* @param object|null $data
 	*	optional . Default is null
+	* @return void
 	*/
-	public function __construct( $data=null ) {
+	public function __construct( ?object $data=null ) {
 
 		if (is_null($data)) return;
 
-		# Nothing to do on construct (for now)
-		if (!is_object($data)) {
-			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
-			return false;
-		}
 		foreach ($data as $key => $value) {
 			$method = 'set_'.$key;
 			$this->$method($value);

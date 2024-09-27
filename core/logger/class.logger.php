@@ -106,10 +106,10 @@ class logger {
 	/**
 	* MANAGE BACKENDS
 	* @param string $name
-	* @param logger_backend $obj_back = null
+	* @param logger_backend|null $obj_back = null
 	* @return object|null
 	*/
-	private static function manage_backends(string $name, logger_backend $obj_back=null) : ?object {
+	private static function manage_backends( string $name, ?logger_backend $obj_back=null ) : ?object {
 
 		static $backends;
 

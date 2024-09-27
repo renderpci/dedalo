@@ -38,7 +38,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	*
 	* @return JSON_RecordObj_matrix $instance
 	*/
-	public static function get_instance(string $matrix_table=null, int $section_id=null, string $section_tipo=null, bool $cache=false) : JSON_RecordObj_matrix {
+	public static function get_instance( ?string $matrix_table=null, ?int $section_id=null, ?string $section_tipo=null, bool $cache=false ) : JSON_RecordObj_matrix {
 
 		// cache
 			// $cache = false;
@@ -93,9 +93,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	/**
 	* CONSTRUCT
 	*/
-	public function __construct(string $matrix_table=null, int $section_id=null, string $section_tipo=null) {
-
-		#dump($section_id,"__construct JSON_RecordObj_matrix , matrix_table: $matrix_table");
+	public function __construct( ?string $matrix_table=null, ?int $section_id=null, ?string $section_tipo=null ) {
 
 		if(empty($matrix_table)) {
 			if(SHOW_DEBUG===true) {
@@ -266,7 +264,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	* @return int|null $id
 	* 	Matrix id from target table record
 	*/
-	public function Save( object $save_options=null ) : ?int {
+	public function Save( ?object $save_options=null ) : ?int {
 		$start_time = start_time();
 
 		// test_can_save

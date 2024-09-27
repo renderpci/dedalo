@@ -814,10 +814,10 @@ function get_last_modification_date( string $path, ?array $allowedExtensions=nul
 * GET_LAST_MODIFIED_FILE
 * @param string $path
 * @param array $allowed_extensions
-* @param function|null $fn_validate = null
+* @param callable|null $fn_validate = null
 * @return string|null $last_modified_file
 */
-function get_last_modified_file(string $path, array $allowed_extensions, $fn_validate=null) : ?string {
+function get_last_modified_file( string $path, array $allowed_extensions, ?callable $fn_validate=null ) : ?string {
 
 	// path validate
 		if (!is_dir($path)) {

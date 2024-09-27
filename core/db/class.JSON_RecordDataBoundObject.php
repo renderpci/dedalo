@@ -36,7 +36,7 @@ abstract class JSON_RecordDataBoundObject {
 
 
 	# __CONSTRUCT
-	public function __construct(int $id=null) {
+	public function __construct( ?int $id=null ) {
 
 		$this->strTableName 		= $this->defineTableName();
 		$this->strPrimaryKeyName	= $this->definePrimaryKeyName();
@@ -245,10 +245,10 @@ abstract class JSON_RecordDataBoundObject {
 	* @param object $save_options
 	* @return int|null
 	*/
-	public function Save( object $save_options=null ) : ?int {
+	public function Save( ?object $save_options=null ) : ?int {
 
 		// options
-			$new_record = $save_options->new_record;
+			$new_record = $save_options->new_record ?? false;
 
 		// section_tipo. Check valid section_tipo for safety
 			$section_tipo = safe_tipo( $this->section_tipo );
@@ -605,11 +605,11 @@ abstract class JSON_RecordDataBoundObject {
 	* SEARCH
 	* Generic search engine. You need array key-value with field,value
 	* Sample: $arguments['parent'] = 14 ...
-	* @param array $ar_arguments
-	* @param string $matrix_table
+	* @param array|null $ar_arguments
+	* @param string|null $matrix_table
 	* @return array $ar_records
 	*/
-	public function search(array $ar_arguments=null, string $matrix_table=null) : array {
+	public function search( ?array $ar_arguments=null, ?string $matrix_table=null ) : array {
 
 		# DEBUG INFO SHOWED IN FOOTER
 		if(SHOW_DEBUG===true) $start_time = start_time();

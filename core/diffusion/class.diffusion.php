@@ -342,10 +342,10 @@ abstract class diffusion  {
 	* Note: For better control, sections are related terms of diffusion_elements.
 	* This correspondence always must exists in diffusion map
 	* @param string $section_tipo
-	* @param array $ar_diffusion_map_elements = null
+	* @param array|null $ar_diffusion_map_elements = null
 	* @return bool $have_section_diffusion
 	*/
-	public static function have_section_diffusion(string $section_tipo, array $ar_diffusion_map_elements=null) : bool {
+	public static function have_section_diffusion( string $section_tipo, ?array $ar_diffusion_map_elements=null ) : bool {
 
 		// cache
 			$use_cache = true;

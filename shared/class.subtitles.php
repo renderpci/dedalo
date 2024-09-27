@@ -636,10 +636,10 @@ abstract class subtitles {
 	/**
 	* TRIM_TEXT
 	* Trim first and last return of type \n and \r
-	* @param string $string
+	* @param string|null $string
 	* @return string
 	*/
-	public static function trim_text(string $string=null) : string {
+	public static function trim_text( ?string $string=null ) : string {
 
 		if (empty($string)) {
 			return '';

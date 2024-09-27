@@ -19,10 +19,10 @@ class request_config_presets {
 	* @param string $section_tipo
 	* @param int $user_id
 	* @param string $mode
-	* @param string $view = null
+	* @param string|null $view = null
 	* @return array $result
 	*/
-	public static function search_request_config(string $tipo, string $section_tipo, int $user_id, string $mode, string $view=null) : array {
+	public static function search_request_config( string $tipo, string $section_tipo, int $user_id, string $mode, ?string $view=null ) : array {
 
 		// cache
 			$use_cache = true;

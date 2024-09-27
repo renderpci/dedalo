@@ -46,7 +46,7 @@ class tool_common {
 	* @param object|null $options = null
 	* @return object $json
 	*/
-	public function get_json(object $options=null) : object {
+	public function get_json( ?object $options=null ) : object {
 
 		// options
 			$get_context	= $options->get_context ?? true;
@@ -306,10 +306,12 @@ class tool_common {
 	* CREATE_TOOL_SIMPLE_CONTEXT
 	* Parse a tool context from a simple_tool_object
 	* @param object $tool_object (simple_tool_object from tool record JSON component dd1353)
-	* @param object $tool_config (from properties)
+	* @param object|null $tool_config = null (from properties)
+	* @param string|null $tipo = null
+	* @param string|null $section_tipo = null
 	* @return dd_object $tool_simple_context
 	*/
-	public static function create_tool_simple_context(object $tool_object, object $tool_config=null, string $tipo=null, string $section_tipo=null) : dd_object {
+	public static function create_tool_simple_context( object $tool_object, ?object $tool_config=null, ?string $tipo=null, ?string $section_tipo=null ) : dd_object {
 
 		// old way. (!) Unification with context in progress..
 			// label. (JSON list) Try match current lang else use the first lang value

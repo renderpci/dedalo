@@ -171,10 +171,10 @@ class dd_grid_cell_object {
 
 	/**
 	* __CONSTRUCT
-	* @param object $options
+	* @param object|null $options
 	* optional . Default is null
 	*/
-	public function __construct( $options=null ) {
+	public function __construct( ?object $options=null ) {
 
 		if (is_null($options)) {
 			return;

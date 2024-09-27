@@ -561,7 +561,7 @@ abstract class RecordDataBoundObject {
 	* @param string|null $matrix_table = null
 	* @return array $ar_records
 	*/
-	public function search(array $ar_arguments, string $matrix_table=null) : array {
+	public function search( array $ar_arguments, ?string $matrix_table=null ) : array {
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		// default value

@@ -37,7 +37,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct(string $terminoID=null, string $prefijo=null) {
+	function __construct( ?string $terminoID=null, ?string $prefijo=null ) {
 
 		if( !empty($terminoID) ) {
 			# CASO GENERAL
@@ -202,7 +202,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param string $descriptor_dato
 	* @return string $terminoID
 	*/
-	public function save_term_and_descriptor(string $descriptor_dato=null) : ?string {
+	public function save_term_and_descriptor( ?string $descriptor_dato=null ) : ?string {
 
 		if (empty($this->parent)) {
 			if(SHOW_DEBUG===true) {
@@ -315,7 +315,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param bool $fallback = false
 	* @return string|null $dato
 	*/
-	public static function get_descriptor_dato_by_tipo(string $terminoID, string $lang=null, string $tipo, bool $fallback=false) : ?string {
+	public static function get_descriptor_dato_by_tipo( string $terminoID, ?string $lang=null, string $tipo, bool $fallback=false ) : ?string {
 
 		# Verify : En casos como por ejemplo, al resolver el modelo de un término relacionado que no tiene modelo asignado, el terminoID estará vacío.
 		# Esto no es un error pero debemos evitar resolverlo.
@@ -359,7 +359,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param bool $fallback = true
 	* @return string|null $result
 	*/
-	public static function get_termino_by_tipo(string $terminoID, string $lang=null, bool $from_cache=false, bool $fallback=true) : ?string {
+	public static function get_termino_by_tipo( string $terminoID, ?string $lang=null, bool $from_cache=false, bool $fallback=true ) : ?string {
 
 		// cache
 			static $termino_by_tipo_cache = [];
@@ -693,10 +693,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param string|null $esdescriptor
 	* @param string|null $esmodelo
 	* @param string|null $order_by
-
 	* @return array $ar_childrens_of_this
 	*/
-	public function get_ar_childrens_of_this($esdescriptor='si', string $esmodelo=null, $order_by='norden', bool $use_cache=true) : array {
+	public function get_ar_childrens_of_this( $esdescriptor='si', ?string $esmodelo=null, $order_by='norden', bool $use_cache=true ) : array {
 
 		# COMPROBACIÓN
 		if(empty($this->terminoID))	{
@@ -819,7 +818,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	*/
-	public static function get_ar_recursive_childrens(string $terminoID, bool $is_recursion=false, array $ar_exclude_models=null, string $order_by=null, bool $use_cache=true) : array {
+	public static function get_ar_recursive_childrens( string $terminoID, bool $is_recursion=false, ?array $ar_exclude_models=null, ?string $order_by=null, bool $use_cache=true ) : array {
 
 		$ar_resolved=array();
 

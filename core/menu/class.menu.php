@@ -227,7 +227,7 @@ class menu extends common {
 	*	"label": "<mark>AREA DE PRUEBAS (TESTS) YYYY</mark>"
 	* }
 	*/
-	private static function get_my_parent($area, $skip_parents) {
+	private static function get_my_parent( object $area, array $skip_parents ) {
 
 		// find if the my parent is in skip parents
 		$current_parent = array_find($skip_parents, function($item) use ($area){

@@ -208,7 +208,7 @@ class relation_list extends common {
 
 	/**
 	* GET_JSON
-	* @param object $request_options
+	* @param object|null $request_options = null
 	* 	Optional. Default is false
 	* @return object $json
 	*	Object with data and context (configurable) like:
@@ -217,7 +217,7 @@ class relation_list extends common {
 	* 	data : [...]
 	* }
 	*/
-	public function get_json(object $request_options=null) : object {
+	public function get_json( ?object $request_options=null ) : object {
 
 		$path = DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php';
 

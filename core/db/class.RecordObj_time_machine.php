@@ -99,7 +99,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	* @param int $bulk_process_id = 0
 	* @return array $ar_id
 	*/
-	public static function get_ar_time_machine_of_this(string $tipo=null, int|string $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0, int $section_id_key=null, int $bulk_process_id=null) : array {
+	public static function get_ar_time_machine_of_this( ?string $tipo=null, int|string|null $parent=null, ?string $lang=null, ?string $section_tipo=null, int $limit=10, int $offset=0, ?int $section_id_key=null, ?int $bulk_process_id=null ) : array {
 
 		/// Temporal !!!
 		#$limit = 1000000;
