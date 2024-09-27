@@ -30,27 +30,35 @@ self.onmessage = function(e) {
 		const fn		= e.data.fn // function name
 		const params	= e.data.params // array of params to sent to the function
 
-	// eval catch for safe
-		if (fn==='eval') {
+	// check function
+		if (typeof self[fn]!=='function') {
+			// error
+			response.result	= false
+			response.error	= 'Invalid target function name! ' + fn
+			response.msg	= 'Task rejected'
+			console.error("Worker error:", response.error);
+			self.postMessage(response);
 			return
 		}
 
-	if (typeof self[e.data.fn]==='function') {
+	// fire function
+		let result
+		switch (fn) {
+			case 'get_children':
+				result = self.get_children(...params)
+				break;
+			case 'get_parents':
+				result = self.get_parents(...params)
+				break;
+			default:
+				response.error	= 'Invalid target function name! ' + fn
+				break;
+		}
 
-		const result = self[fn](...params)
-
+	// response OK
 		response.result	= result
 		response.msg	= 'Task done in ms: ' + performance.now()-t1 + ' ms'
 
-	}else{
-		// error
-		response.result	= false
-		response.error	= 'Invalid target function name! ' + e.data.fn
-		response.msg	= 'Task done in ms: ' + performance.now()-t1 + ' ms'
-		console.warn("Worker error:", response.error);
-	}
-
-	// console.log("__***Time performance.now()-t1 worker:", fn, response.result.length, performance.now()-t1);
 
 	self.postMessage(response);
 }//end onmessage
