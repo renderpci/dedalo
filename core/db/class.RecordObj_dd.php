@@ -315,7 +315,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param bool $fallback = false
 	* @return string|null $dato
 	*/
-	public static function get_descriptor_dato_by_tipo( string $terminoID, ?string $lang=null, string $tipo, bool $fallback=false ) : ?string {
+	public static function get_descriptor_dato_by_tipo( string $terminoID, ?string $lang=null, ?string $tipo=null, bool $fallback=false ) : ?string {
 
 		# Verify : En casos como por ejemplo, al resolver el modelo de un término relacionado que no tiene modelo asignado, el terminoID estará vacío.
 		# Esto no es un error pero debemos evitar resolverlo.
