@@ -458,9 +458,7 @@ class component_relation_parent extends component_relation_common {
 	*
 	* @return bool $result
 	*/
-	private function update_children(
-		string $action, string $children_section_tipo, int|string $children_section_id, ?string $component_relation_children_tipo=null
-		) : bool {
+	private function update_children( string $action, string $children_section_tipo, int|string $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
 
 		// default bool 	result
 			$result = false;
@@ -556,11 +554,11 @@ class component_relation_parent extends component_relation_common {
 	* ADD_PARENT
 	* Alias of update_children with specific action 'add'
 	* @param string $children_section_tipo
-	* @param $children_section_id
+	* @param mixed $children_section_id
 	* @param string|null $component_relation_children_tipo = null
 	* @return bool
 	*/
-	public function add_parent(string $children_section_tipo, $children_section_id, ?string $component_relation_children_tipo=null) : bool {
+	public function add_parent( string $children_section_tipo, mixed $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
 
 		$action = 'add';
 
@@ -573,11 +571,11 @@ class component_relation_parent extends component_relation_common {
 	* REMOVE_PARENT
 	* 	Alias of update_children with specific action 'remove'
 	* @param string $children_section_tipo
-	* @param $children_section_id
+	* @param mixed $children_section_id
 	* @param string|null $component_relation_children_tipo = null
 	* @return bool
 	*/
-	public function remove_parent(string $children_section_tipo, $children_section_id, ?string $component_relation_children_tipo=null) : bool {
+	public function remove_parent( string $children_section_tipo, mixed $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
 
 		$action = 'remove';
 
@@ -679,7 +677,7 @@ class component_relation_parent extends component_relation_common {
 	* @return array $parents
 	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
-	public static function get_parents(int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null, ?object $options=null) : array {
+	public static function get_parents( int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null, ?object $options=null ) : array {
 		$start_time=start_time();
 
 		// options
