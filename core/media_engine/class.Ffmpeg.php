@@ -1236,7 +1236,7 @@ final class Ffmpeg {
 	public static function get_audio_codec() : string {
 
 		// FFMPEG AUDIO CODEC TEST
-		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
+		$ffmpeg_info = shell_exec($ffmpeg_path .' -loglevel error -buildconf');
 		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
 			// Version >=3 with libfdk-aac installed
 			$acodec = 'libfdk_aac'; // Note uderscore '_'
