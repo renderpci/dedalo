@@ -1,7 +1,5 @@
 <?php
-// require_once( DEDALO_CONFIG_PATH .'/config.php');
-require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
-// require_once( DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
+require_once DEDALO_CORE_PATH . '/common/class.exec_.php';
 /**
 * Ffmpeg
 *
@@ -11,10 +9,13 @@ final class Ffmpeg {
 
 
 	protected $settings_path	= DEDALO_AV_FFMPEG_SETTINGS ;
-	protected $ar_settings		= array();					# array of settings files
+	protected $ar_settings		= []; // array of settings files
 
-	# supported quality's array
-	static protected $ar_supported_qualitys = array('1080','720','576','480','404','240','audio');
+	// supported quality's array. Defined quality settings for conversion
+	static protected $ar_supported_qualitys_settings = ['1080','720','576','480','404','240','audio'];
+
+	// audio_codec. Audio codec resolution
+	static protected $audio_codec;
 
 
 
@@ -61,7 +62,7 @@ final class Ffmpeg {
 	* @return string $setting
 	* 	like: '404_pal_16x9'
 	*/
-	public static function get_setting_name(string $file_path, string $quality) : string {
+	public static function get_setting_name( string $file_path, string $quality ) : string {
 
 		$beats = [$quality];
 
@@ -98,7 +99,7 @@ final class Ffmpeg {
 	* @return string $standard
 	* 	like 'ntsc' or 'pal'
 	*/
-	public static function get_media_standard(string $file_path) : string {
+	public static function get_media_standard( string $file_path ) : string {
 
 		// media_streams
 			$media_streams	= Ffmpeg::get_media_streams($file_path);
@@ -191,13 +192,13 @@ final class Ffmpeg {
 	* GET_QUALITY_FROM_SETTING
 	* @return string|null $quality
 	*/
-	public function get_quality_from_setting(string $setting) : ?string {
+	public function get_quality_from_setting( string $setting ) : ?string {
 
 		if($setting==='audio') {
 			return $setting;
 		}
 
-		$ar_quality = Ffmpeg::$ar_supported_qualitys;
+		$ar_quality = Ffmpeg::$ar_supported_qualitys_settings;
 		foreach($ar_quality as $quality) {
 
 			$pos = stripos($setting, $quality);
@@ -222,7 +223,7 @@ final class Ffmpeg {
 	* }
 	* @return object $response
 	*/
-	public static function build_av_alternate_command(object $options) : object {
+	public static function build_av_alternate_command( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -380,8 +381,8 @@ final class Ffmpeg {
 			$acodec = Ffmpeg::get_audio_codec();
 
 		// ffmpeg paths
-			$ffmpeg_path	= DEDALO_AV_FFMPEG_PATH;
-			$faststart_path	= DEDALO_AV_FASTSTART_PATH;
+			$ffmpeg_path	= Ffmpeg::get_ffmpeg_installed_path();
+			$faststart_path	= Ffmpeg::get_qt_faststart_installed_path();
 
 		// shell command
 		$command = '';
@@ -518,7 +519,7 @@ final class Ffmpeg {
 	* @param array $media_streams
 	* @return object|null $video_stream
 	*/
-	public static function find_video_stream(array $media_streams) : ?object {
+	public static function find_video_stream( array $media_streams ) : ?object {
 
 		// search by codec_type
 			$video_stream = array_find($media_streams, function($el){
@@ -555,7 +556,13 @@ final class Ffmpeg {
 	* @return string $aspect
 	* 	Like '16x9'
 	*/
-	public static function get_aspect_ratio(string $source_file) : string {
+	public static function get_aspect_ratio( string $source_file ) : string {
+
+		// cache
+			static $cache_aspect_ratio = [];
+			if (isset($cache_aspect_ratio[$source_file])) {
+				return $cache_aspect_ratio[$source_file];
+			}
 
 		// default value
 			$aspect = '16x9';
@@ -671,6 +678,9 @@ final class Ffmpeg {
 			}
 		}//end if (!empty($video_stream))
 
+		// cache
+			$cache_aspect_ratio[$source_file] = $aspect;
+
 		// debug
 			debug_log(__METHOD__
 				. " getting aspect_ratio : " . PHP_EOL
@@ -700,7 +710,7 @@ final class Ffmpeg {
 	* 	true: allow to create thumbnail
 	* 	false: disallow to create it (audio files)
 	*/
-	public function create_posterframe(object $options) : bool {
+	public function create_posterframe( object $options ) : bool {
 
 		// options
 			$timecode				= $options->timecode;
@@ -771,9 +781,12 @@ final class Ffmpeg {
 				return false;
 			}
 
+		// ffmpeg_path
+			$ffmpeg_path = Ffmpeg::get_ffmpeg_installed_path();
+
 		// commands shell
 			// command (use video track only)
-			$command = DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $posterframe_filepath";
+			$command = $ffmpeg_path . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $posterframe_filepath";
 			// exec command (return boolean)
 			$posterFrame_command_exc = exec_::exec_command($command);
 			// debug
@@ -791,85 +804,12 @@ final class Ffmpeg {
 
 
 	/**
-	* BUILD_FRAGMENT_OLD
-	* @return string $file_url
-	*/
-		// public function build_fragment_OLD(AVObj $AVObj, string $tcin, string $tcout, string $target_filename, int $watermark=0) : string {
-
-		// 	$ffmpeg_installed_path	= DEDALO_AV_FFMPEG_PATH;
-		// 	$reelID					= $AVObj->get_reelID();
-		// 	$source_file			= $AVObj->get_media_path_abs() . $reelID .'.'. $AVObj->get_extension();
-		// 	$target_filename_path	= $AVObj->get_media_path_abs() . 'fragments/' . $target_filename;
-
-		// 	$tcin_secs	= OptimizeTC::TC2seg($tcin);
-		// 	$tcout_secs	= OptimizeTC::TC2seg($tcout);
-		// 	$duration	= $tcout_secs - $tcin_secs;
-		// 	# duration is float like 538.521 and need to be converted to tc like 00:06:53.734
-		// 	$duration	= OptimizeTC::seg2tc($duration);
-
-		// 	debug_log(__METHOD__." ++ build_fragment duration ".$duration, logger::WARNING);
-
-		// 	$watermark_file = DEDALO_AV_WATERMARK_FILE;
-
-		// 		# fragments dir exists
-		// 		$fragments_folder = $AVObj->get_media_path_abs() . 'fragments';
-		// 		if( !is_dir($fragments_folder) ) {
-		// 			$create_dir = mkdir($fragments_folder, 0777);
-		// 			if(!$create_dir) {
-		// 				if(SHOW_DEBUG===true) {
-		// 					debug_log(__METHOD__." Error trying to create: $fragments_folder ".to_string(), logger::ERROR);
-		// 				}
-		// 				throw new Exception("Error on read or create directory for \"fragments\" folder. Permission denied ! ", 1);
-		// 			}
-		// 		}
-
-		// 		# fragments dir set permissions 0777
-		// 		$wantedPerms = 0777;
-		// 		$actualPerms = fileperms($fragments_folder);
-		// 		if($actualPerms < $wantedPerms) {
-		// 			$chmod = chmod($fragments_folder, $wantedPerms);
-		// 			if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"fragments\".  ") ;
-		// 		}
-
-		// 	if ($watermark==1) {
-
-		// 		$target_filename_path_temp = $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename;
-
-		// 		#$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path_temp";
-		// 		$command  = "nice -n 19 $ffmpeg_installed_path -ss $tcin  -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path_temp";
-
-		// 		$command .= " && nice -n 19 $ffmpeg_installed_path -i $target_filename_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_filename_path";
-
-		// 		# EXEC COMMAND
-		// 		#$command_exc = Exec::exec_command($command);
-		// 		$command_exc = shell_exec( $command );
-
-		// 	}else{
-
-		// 		# nice -n 19
-		// 		#$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path";
-		// 		$command = "$ffmpeg_installed_path -ss $tcin -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path";
-
-		// 		# EXEC COMMAND
-		// 		$command_exc = exec_::exec_command($command);
-
-		// 		error_log($command);
-		// 	}
-
-		// 	$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename;
-
-		// 	return $file_url;
-		// }//end build_fragment
-
-
-
-	/**
 	* BUILD_FRAGMENT
 	* Process a av fragment based on given time codes in and out
 	* @param object $options
 	* @return object $response
 	*/
-	public static function build_fragment(object $options) : object {
+	public static function build_fragment( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -903,8 +843,8 @@ final class Ffmpeg {
 		// target_file_path
 			$target_file_path = $fragments_dir_path . '/' . $target_filename;
 
-		// ffmpeg bin path
-			$ffmpeg_bin = DEDALO_AV_FFMPEG_PATH;
+		// ffmpeg_path
+			$ffmpeg_path = Ffmpeg::get_ffmpeg_installed_path();
 
 		// debug
 			debug_log(__METHOD__
@@ -929,12 +869,12 @@ final class Ffmpeg {
 				// temporal fragment file
 				$target_file_path_temp = $fragments_dir_path .'/temp_'. $target_filename;
 
-				$command  = "   nice -n 19 $ffmpeg_bin -ss $tc_in  -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path_temp ";
-				$command .= "&& nice -n 19 $ffmpeg_bin -i $target_file_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_file_path";
+				$command  = "   nice -n 19 $ffmpeg_path -ss $tc_in  -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path_temp ";
+				$command .= "&& nice -n 19 $ffmpeg_path -i $target_file_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_file_path";
 
 			}else{
 
-				$command = "$ffmpeg_bin -ss $tc_in -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path";
+				$command = "$ffmpeg_path -ss $tc_in -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path";
 			}
 
 		// exec command and wait to finish
@@ -981,13 +921,15 @@ final class Ffmpeg {
 	*  like: '/../dedalo/media/av/404/0/test94_test3_3.mp4'
 	* @return string|null $result
 	*/
-	public static function conform_header(string $source_file_path) : ?string {
+	public static function conform_header( string $source_file_path ) : ?string {
 
 		$result = null;
 
+		// ffmpeg_path
+			$ffmpeg_path	= Ffmpeg::get_ffmpeg_installed_path();
+			$faststart_path	= Ffmpeg::get_qt_faststart_installed_path();
+
 		// short vars
-			$ffmpeg_bin_path	= DEDALO_AV_FFMPEG_PATH;
-			$faststart_bin_path	= DEDALO_AV_FASTSTART_PATH;
 			// source_dir_path. Like /../dedalo/media/av/404/0
 			$source_dir_path	= dirname($source_file_path);
 			$path_info			= pathinfo($source_file_path);
@@ -1002,13 +944,13 @@ final class Ffmpeg {
 			$sentences = [];
 
 			// Copy file
-			$sentences[] = "$ffmpeg_bin_path -i $source_file_path -c:v copy -c:a copy $file_path_temp"; # && rm -f $file_path && mv $file_path_temp $file_path # -y
+			$sentences[] = "$ffmpeg_path -i $source_file_path -c:v copy -c:a copy $file_path_temp"; # && rm -f $file_path && mv $file_path_temp $file_path # -y
 
 			// Rename original to preserve the original file untouched
 			$sentences[] = "mv $source_file_path $file_path_untouched";
 
 			// faststart (build final file)
-			$sentences[] = "$faststart_bin_path $file_path_temp $target_file_path";
+			$sentences[] = "$faststart_path $file_path_temp $target_file_path";
 
 			// Remove temp file
 			$sentences[] = "rm -f $file_path_temp";
@@ -1046,9 +988,9 @@ final class Ffmpeg {
 			$output_file_path	= $options->output_file_path;
 			$uploaded_file_path	= $options->uploaded_file_path;
 
-		// short vars
-			$ffmpeg_installed_path			= DEDALO_AV_FFMPEG_PATH;
-			$qt_faststart_installed_path	= DEDALO_AV_FASTSTART_PATH;
+		// ffmpeg_path
+			$ffmpeg_path	= Ffmpeg::get_ffmpeg_installed_path();
+			$faststart_path	= Ffmpeg::get_qt_faststart_installed_path();
 
 		// command
 			$command  = '';
@@ -1062,10 +1004,10 @@ final class Ffmpeg {
 			$acodec = Ffmpeg::get_audio_codec();
 
 			// convert file
-			$command .= "$ffmpeg_installed_path -i $uploaded_file_path -acodec $acodec -ar 44100 -ab 240k -ac 2 $output_file_path ";
+			$command .= "$ffmpeg_path -i $uploaded_file_path -acodec $acodec -ar 44100 -ab 240k -ac 2 $output_file_path ";
 
 			// faststart
-			$command .= "&& $qt_faststart_installed_path $output_file_path $output_file_path ";
+			$command .= "&& $faststart_path $output_file_path $output_file_path ";
 
 		// exec
 			$result = shell_exec( $command );
@@ -1093,11 +1035,11 @@ final class Ffmpeg {
 	*/
 	public static function convert_to_dedalo_av( string $source_file, string $target_file, bool $async=true ) : ?string {
 
-		$ffmpeg_path		= DEDALO_AV_FFMPEG_PATH;
-		$qt_faststart_path	= DEDALO_AV_FASTSTART_PATH;
+		// ffmpeg_path
+			$ffmpeg_path	= Ffmpeg::get_ffmpeg_installed_path();
+			$faststart_path	= Ffmpeg::get_qt_faststart_installed_path();
 
-		#
-		# FFMPEG AUDIO CODEC TEST
+		// FFMPEG AUDIO CODEC TEST
 		$acodec = Ffmpeg::get_audio_codec();
 
 		$path_parts			= pathinfo($target_file);
@@ -1111,7 +1053,7 @@ final class Ffmpeg {
 		$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=-2:{$heigth}\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
 		$command .= "&& mv $temp_target_file $target_file ";
 		# Processed command only fast start
-		#$command = "nice $qt_faststart_path $source_file $target_file";
+		#$command = "nice $faststart_path $source_file $target_file";
 
 		debug_log(__METHOD__." command:".PHP_EOL. $command, logger::DEBUG);
 
@@ -1173,7 +1115,7 @@ final class Ffmpeg {
 	* @return dd_date|null $dd_date
 	* 	dd_date object
 	*/
-	public static function get_date_time_original(string $file) : ?dd_date {
+	public static function get_date_time_original( string $file ) : ?dd_date {
 
 		$attributes = Ffmpeg::get_media_attributes( $file );
 
@@ -1235,6 +1177,14 @@ final class Ffmpeg {
 	*/
 	public static function get_audio_codec() : string {
 
+		// cache
+		if (isset(Ffmpeg::$audio_codec)) {
+			return Ffmpeg::$audio_codec;
+		}
+
+		// ffmpeg_path
+			$ffmpeg_path = Ffmpeg::get_ffmpeg_installed_path();
+
 		// FFMPEG AUDIO CODEC TEST
 		$ffmpeg_info = shell_exec($ffmpeg_path .' -loglevel error -buildconf');
 		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
@@ -1247,6 +1197,9 @@ final class Ffmpeg {
 			// Default native ffmpeg >= 3
 			$acodec = 'aac';
 		}
+
+		// cache fix
+		Ffmpeg::$audio_codec = $acodec;
 
 		// debug
 			debug_log(__METHOD__
