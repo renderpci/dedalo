@@ -2,13 +2,33 @@
 declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestDox;
+// use PHPUnit\Framework\Attributes\TestDox;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
 final class core_functions_test extends TestCase {
+
+
+
+	/**
+	* TEST_USER_LOGIN
+	* @return void
+	*/
+	public function test_user_login() {
+
+		$user_id = TEST_USER_ID; // Defined in bootstrap
+
+		if (login::is_logged()===false) {
+			login_test::force_login($user_id);
+		}
+
+		$this->assertTrue(
+			login::is_logged()===true ,
+			'expected login true'
+		);
+	}//end test_user_login
 
 
 
@@ -36,6 +56,45 @@ final class core_functions_test extends TestCase {
 
 
 	/**
+	* TEST_print_cli
+	* @return void
+	*/
+	public function test_print_cli() {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$process_info = (object)[
+			'data' => 1,
+			'msg' => 'Test 1'
+		];
+		print_cli($process_info);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+		);
+	}//end test_print_cli
+
+
+	/**
+	* TEST_running_in_cli
+	* @return void
+	*/
+	public function test_running_in_cli() {
+
+		$result = running_in_cli();
+
+		$eq = true;
+		$this->assertTrue(
+			$result,
+			'expected true, but received is: '
+				. to_string( $eq )
+		);
+	}//end test_running_in_cli
+
+
+
+	/**
 	* TEST_get_user_id
 	* @return void
 	*/
@@ -49,12 +108,20 @@ final class core_functions_test extends TestCase {
 			'expected true, but received is: '
 				. to_string( $eq )
 		);
+
+		$eq = TEST_USER_ID===$result;
+		$this->assertTrue(
+			$eq,
+			'expected '.TEST_USER_ID.', but received is: '
+				. json_encode( $result ) . PHP_EOL
+				. json_encode($_SESSION['dedalo'])
+		);
 	}//end test_get_user_id
 
 
 
 	/**
-	* TEST_get_username
+	* TEST_logged_user_username
 	* @return void
 	*/
 	public function test_logged_user_username() {
@@ -67,7 +134,79 @@ final class core_functions_test extends TestCase {
 			'expected true, but received is: '
 				. to_string( $eq )
 		);
-	}//end test_get_username
+	}//end test_logged_user_username
+
+
+
+	/**
+	* TEST_logged_user_full_username
+	* @return void
+	*/
+	public function test_logged_user_full_username() {
+
+		$result = logged_user_username();
+
+		$eq = gettype($result)==='string' || gettype($result)==='NULL';
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq )
+		);
+	}//end test_logged_user_full_username
+
+
+
+	/**
+	* TEST_logged_user_is_developer
+	* @return void
+	*/
+	public function test_logged_user_is_developer() {
+
+		$result = logged_user_is_developer();
+
+		$eq = gettype($result)==='boolean';
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) . PHP_EOL
+				. json_encode($result)
+		);
+
+		$eq = $result===true;
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_logged_user_is_developer
+
+
+
+	/**
+	* TEST_logged_user_is_global_admin
+	* @return void
+	*/
+	public function test_logged_user_is_global_admin() {
+
+		$result = logged_user_is_global_admin();
+
+		$eq = gettype($result)==='boolean';
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) . PHP_EOL
+				. json_encode($result)
+		);
+
+		$eq = $result===true;
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_logged_user_is_global_admin
 
 
 
@@ -76,6 +215,8 @@ final class core_functions_test extends TestCase {
 	* @return void
 	*/
 	public function test_debug_log() {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 		$result = debug_log(__METHOD__
 			. " Test message " . PHP_EOL
@@ -89,6 +230,11 @@ final class core_functions_test extends TestCase {
 			'expected true, but received is: '
 				. to_string( $eq )
 		);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+		);
 	}//end test_debug_log
 
 
@@ -99,6 +245,7 @@ final class core_functions_test extends TestCase {
 	*/
 	public function test_curl_request() {
 
+		// local API
 		$api_url = defined('DEDALO_API_URL_UNIT_TEST')
 			? DEDALO_API_URL_UNIT_TEST
 			: 'https://localhost:8443/' .DEDALO_API_URL;
@@ -120,6 +267,47 @@ final class core_functions_test extends TestCase {
 		);
 
 		$eq = $response->code===200;
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) .PHP_EOL
+				. ' response code: ' . to_string( $response->code ) . PHP_EOL
+				. ' api_url: ' . $api_url . PHP_EOL
+				. ' response: ' . json_encode( $response, JSON_PRETTY_PRINT )
+		);
+
+		// remote API
+		$api_url = 'https://master.dedalo.dev/dedalo/core/api/v1/json/';
+
+		$response = curl_request((object)[
+			'url'				=> $api_url,
+			'post'				=> true,
+			'header'			=> false,
+			'httpheader'		=> ['Content-Type: application/json']
+		]);
+
+		$eq = $response->code===200;
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) .PHP_EOL
+				. ' response code: ' . to_string( $response->code ) . PHP_EOL
+				. ' api_url: ' . $api_url . PHP_EOL
+				. ' response: ' . json_encode( $response, JSON_PRETTY_PRINT )
+		);
+
+		// wrong URL
+		$api_url = 'https://localhost:8443/dedalo/core/api/v7/json/';
+
+		$response = curl_request((object)[
+			'url'				=> $api_url,
+			'post'				=> true,
+			'header'			=> false,
+			'httpheader'		=> ['Content-Type: application/json']
+		]);
+			dump($response, ' response ++ '.to_string());
+
+		$eq = $response->code===404;
 		$this->assertTrue(
 			$eq,
 			'expected true, but received is: '
@@ -171,6 +359,34 @@ final class core_functions_test extends TestCase {
 
 
 	/**
+	* TEST_exec_time_unit_auto
+	* @return void
+	*/
+	public function test_exec_time_unit_auto() {
+
+		$result = exec_time_unit_auto(
+			start_time()
+		);
+
+		$eq = gettype($result)==='string';
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq )
+		);
+
+		$eq = substr($result, strlen($result)-2)==='ms';
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_exec_time_unit_auto
+
+
+
+	/**
 	* TEST_to_string
 	* @return void
 	*/
@@ -195,7 +411,99 @@ final class core_functions_test extends TestCase {
 			'expected true, but received is: '
 				. to_string( $eq )
 		);
+
+		$value = (object)[
+			'a' => 1,
+			'b' => 2,
+			'c' => 3
+		];
+		$result = to_string(
+			$value
+		);
+
+		$eq = gettype($result)==='string';
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq )
+		);
+		$value = implode('', [
+			'{' . PHP_EOL,
+			'    "a": 1,' . PHP_EOL,
+			'    "b": 2,' . PHP_EOL,
+			'    "c": 3' . PHP_EOL,
+			'}'
+		]);
+
+		$eq = $result===$value;
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) . PHP_EOL
+				. json_encode($result) . PHP_EOL
+				. json_encode($value)
+		);
 	}//end test_to_string
+
+
+
+	/**
+	* TEST_get_dir_files
+	* @return void
+	*/
+	public function test_get_dir_files() {
+
+		$dir = DEDALO_BACKUP_PATH_ONTOLOGY . '/changes';
+		$ext = ['json'];
+
+		// full file names
+		$result = get_dir_files(
+			$dir,
+			$ext
+		);
+
+		$eq = gettype($result)==='array';
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) . PHP_EOL
+				. json_encode($result)
+		);
+
+		// basename only
+		$result = get_dir_files(
+			$dir,
+			$ext,
+			function($el) {
+				return basename($el);
+			}
+		);
+
+		if (!empty($result)) {
+
+			$eq = strpos($result[0], '/changes')===false;
+			$this->assertTrue(
+				$eq,
+				'expected true, but received is: '
+					. to_string( $eq ) . PHP_EOL
+					. json_encode($result)
+			);
+		}
+
+		// bad dir
+		$result = get_dir_files(
+			$dir . '/unexisting_dir',
+			$ext
+		);
+
+		$eq = empty($result);
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq ) . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_dir_files
 
 
 
@@ -364,7 +672,6 @@ final class core_functions_test extends TestCase {
 	}//end test_array_key_path
 
 
-
 	/**
 	* TEST_array_keys_recursive
 	* @return void
@@ -376,6 +683,7 @@ final class core_functions_test extends TestCase {
 			'c' => 2,
 			'a' => [
 				'd' => 3,
+
 				'e' => 4,
 				'f' => 5
 			]
@@ -1382,6 +1690,21 @@ final class core_functions_test extends TestCase {
 			'expected true, but received is: '
 				. to_string( $eq )
 		);
+
+		// null result
+		$result = array_find(
+			$array,
+			function($el) {
+				return $el->value===4;
+			}
+		);
+
+		$eq = $result===NULL;
+		$this->assertTrue(
+			$eq,
+			'expected true, but received is: '
+				. to_string( $eq )
+		);
 	}//end test_array_find
 
 
@@ -1763,6 +2086,24 @@ final class core_functions_test extends TestCase {
 				rmdir($directory);
 			}
 	}//end test_create_directory
+
+
+
+	/**
+	* TEST_get_backtrace_sequence
+	* @return void
+	*/
+	public function test_get_backtrace_sequence() {
+
+		$result = get_backtrace_sequence();
+
+		$eq = gettype($result)==='array';
+		$this->assertTrue(
+			$eq,
+			'expected array, but received type: '
+				. gettype( $result )
+		);
+	}//end test_get_backtrace_sequence
 
 
 
