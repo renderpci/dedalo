@@ -1805,6 +1805,9 @@ final class dd_utils_api {
 
 	/**
 	* CREATE_THUMBNAIL
+	* Used by tool_import_files to create temporal thumbnails in list
+	* of uploaded files
+	* @see dd_utils_api::upload
 	* @param object $options
 	* @return string $thumbnail_url
 	*/
@@ -1822,7 +1825,7 @@ final class dd_utils_api {
 			$filename		= $pathinfo['filename'];
 			$thumbnail_file	= $tmp_dir . '/thumbnail/' . $filename . '.jpg';
 
-		// convert based on type
+		// convert based on mime type
 			$mime		= mime_content_type($target_path);
 			$ar_mime	= explode('/', $mime);
 			$file_type	= $ar_mime[0] ?? null;
@@ -1830,15 +1833,15 @@ final class dd_utils_api {
 			switch (true) {
 
 				case ($mime==='application/pdf'):
-					$thumb_pdf_options = new stdClass();
-						$thumb_pdf_options->source_file	= $target_path;
-						$thumb_pdf_options->ar_layers	= [0];
-						$thumb_pdf_options->target_file	= $thumbnail_file;
-						$thumb_pdf_options->density		= 72;
-						$thumb_pdf_options->antialias	= true;
-						$thumb_pdf_options->quality		= 50;
-						$thumb_pdf_options->resize		= '12.5%';
-					ImageMagick::convert($thumb_pdf_options);
+					ImageMagick::convert((object)[
+						'source_file'	=> $target_path,
+						'ar_layers'		=> [0],
+						'target_file'	=> $thumbnail_file,
+						'density'		=> 72,
+						'antialias'		=> true,
+						'quality'		=> 50,
+						'resize'		=> '12.5%'
+					]);
 					break;
 
 				case ($file_type==='image'):
