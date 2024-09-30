@@ -1435,7 +1435,7 @@ final class dd_core_api {
 		// build element
 			switch (true) {
 				case $model==='section':
-					$element = section::get_instance(null, $section_tipo);
+					$element = section::get_instance(null, $section_tipo, $mode);
 					break;
 
 				// case $model==='section_tm':
