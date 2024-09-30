@@ -141,8 +141,7 @@ class tool_posterframe extends tool_common {
 			$posterframe_filepath = $component_image->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
 
 		// ffmpeg create_posterframe
-			$Ffmpeg = new Ffmpeg();
-			$Ffmpeg->create_posterframe((object)[
+			Ffmpeg::create_posterframe((object)[
 				'timecode'			=> $current_time,
 				'src_file'			=> $src_file, // av file
 				'quality'			=> $quality,
