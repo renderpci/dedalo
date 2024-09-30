@@ -10,7 +10,6 @@
 	import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {
 		render_search
 	} from './render_search.js'

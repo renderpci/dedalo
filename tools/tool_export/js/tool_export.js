@@ -58,7 +58,6 @@ export const tool_export = function () {
 	tool_export.prototype.calculate_component_path		= common.prototype.calculate_component_path
 	// drag
 	tool_export.prototype.on_dragstart					= on_dragstart
-	// tool_export.prototype.on_dragend					= on_dragend
 	tool_export.prototype.on_dragover					= on_dragover
 	tool_export.prototype.on_dragleave					= on_dragleave
 	tool_export.prototype.on_drop						= on_drop
@@ -345,6 +344,7 @@ tool_export.prototype.get_export_xsl = async function (options) {
 }//end get_export_xsl
 
 
+
 /**
 * EXPORT_TABLE_WITH_XLSX_LIB
 * Convert and export table to xlsx using the library xlsx.js
@@ -369,7 +369,6 @@ tool_export.prototype.export_table_with_xlsx_lib = async function( options ) {
 
 	// Export the workbook to Excel file
 	XLSX.writeFile(workbook, filename);
-
 }// end export_table_with_xlsx_lib
 
 

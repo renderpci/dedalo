@@ -9,8 +9,8 @@ final class Ffmpeg {
 
 	// ar_settings. Array of settings files
 	static protected $ar_settings;
-	// ar_supported_qualitys_settings. Supported quality's array. Defined quality settings for conversion (in PAL, NTSC, et.)
-	static protected $ar_supported_qualitys_settings = ['1080','720','576','480','404','240','audio'];
+	// ar_supported_quality_settings. Supported quality's array. Defined quality settings for conversion (in PAL, NTSC, et.)
+	static protected $ar_supported_quality_settings = ['1080','720','576','480','404','240','audio'];
 	// audio_codec. Audio codec resolution
 	static protected $audio_codec;
 
@@ -228,7 +228,7 @@ final class Ffmpeg {
 			return $setting;
 		}
 
-		$ar_quality = Ffmpeg::$ar_supported_qualitys_settings;
+		$ar_quality = Ffmpeg::$ar_supported_quality_settings;
 		foreach($ar_quality as $quality) {
 
 			$pos = stripos($setting, $quality);
@@ -1008,7 +1008,6 @@ final class Ffmpeg {
 	* 	A string containing the output from the executed command, false if the pipe cannot be established
 	* 	or null if an error occurs or the command produces no output.
 	*/
-	// public function convert_audio(AVObj $AVObj, string $uploaded_file_path) : ?string {
 	public static function convert_audio( object $options ) : ?string {
 
 		// options
@@ -1205,9 +1204,9 @@ final class Ffmpeg {
 	public static function get_audio_codec() : string {
 
 		// cache
-		if (isset(Ffmpeg::$audio_codec)) {
-			return Ffmpeg::$audio_codec;
-		}
+			if (isset(Ffmpeg::$audio_codec)) {
+				return Ffmpeg::$audio_codec;
+			}
 
 		// ffmpeg_path
 			$ffmpeg_path = Ffmpeg::get_ffmpeg_installed_path();
@@ -1226,7 +1225,7 @@ final class Ffmpeg {
 		}
 
 		// cache fix
-		Ffmpeg::$audio_codec = $acodec;
+			Ffmpeg::$audio_codec = $acodec;
 
 		// debug
 			debug_log(__METHOD__
