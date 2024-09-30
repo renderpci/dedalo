@@ -1,52 +1,82 @@
 <?php
-require_once DEDALO_CORE_PATH . '/common/class.exec_.php';
 /**
 * Ffmpeg
-*
+* Manages audiovisual processing actions using FFMPEG library
 */
 final class Ffmpeg {
 
 
 
-	protected $settings_path	= DEDALO_AV_FFMPEG_SETTINGS ;
-	protected $ar_settings		= []; // array of settings files
-
-	// supported quality's array. Defined quality settings for conversion
+	// ar_settings. Array of settings files
+	static protected $ar_settings;
+	// ar_supported_qualitys_settings. Supported quality's array. Defined quality settings for conversion (in PAL, NTSC, et.)
 	static protected $ar_supported_qualitys_settings = ['1080','720','576','480','404','240','audio'];
-
 	// audio_codec. Audio codec resolution
 	static protected $audio_codec;
 
 
 
+	/**
+	* GET_FFMPEG_INSTALLED_PATH
+	* @return string
+	*/
 	public static function get_ffmpeg_installed_path() : string {
 
 		return DEDALO_AV_FFMPEG_PATH;
-	}
+	}//end get_ffmpeg_installed_path
+
+
+
+	/**
+	* GET_QT_FASTSTART_INSTALLED_PATH
+	* @return string
+	*/
 	public static function get_qt_faststart_installed_path() : string {
 
 		return DEDALO_AV_FASTSTART_PATH;
-	}
+	}//end get_qt_faststart_installed_path
+
+
+
+	/**
+	* GET_SETTINGS_PATH
+	* @return string
+	*/
+	public static function get_settings_path() : string {
+
+		return DEDALO_AV_FFMPEG_SETTINGS;
+	}//end get_settings_path
 
 
 
 	/**
 	* GET_AR_SETTINGS
 	* Array list of setting files inside dir 'ffmpeg_settings'
-	* @return array|null $this->ar_settings
+	* @return array|null $ar_settings
 	*/
-	public function get_ar_settings() : ?array {
+	public static function get_ar_settings() : ?array {
 
-		if ($folder_content = opendir( $this->settings_path )) {
+		if (isset(Ffmpeg::$ar_settings)) {
+			return Ffmpeg::$ar_settings;
+		}
 
+		$settings_path = Ffmpeg::get_settings_path();
+		if ($folder_content = opendir( $settings_path )) {
+
+			$ar_settings = [];
 			while (false !== ($file_name = readdir($folder_content))) {
 				if ($file_name!=='.' && $file_name!=='..' && $file_name!=='.DS_Store' && $file_name!=='acc') {
-					$this->ar_settings[] = substr($file_name,0,-4);
+					$ar_settings[] = substr($file_name, 0, -4);
 				}
 			}
 			closedir($folder_content);
-			return 	$this->ar_settings;
+
+			// fix value
+			Ffmpeg::$ar_settings = $ar_settings;
+
+			return 	$ar_settings;
 		}
+
 
 		return null;
 	}//end get_ar_settings
@@ -192,7 +222,7 @@ final class Ffmpeg {
 	* GET_QUALITY_FROM_SETTING
 	* @return string|null $quality
 	*/
-	public function get_quality_from_setting( string $setting ) : ?string {
+	public static function get_quality_from_setting( string $setting ) : ?string {
 
 		if($setting==='audio') {
 			return $setting;
@@ -235,8 +265,7 @@ final class Ffmpeg {
 			$target_file_path	= $options->target_file_path;
 
 		// load ar_settings
-			$Ffmpeg			= new Ffmpeg();
-			$ar_settings	= $Ffmpeg->get_ar_settings();
+			$ar_settings = Ffmpeg::get_ar_settings();
 			// verify setting exists
 			if( !in_array($setting_name, $ar_settings) ) {
 				// die("Error: setting: '$setting_name' not exits! (build_av_alternate_command). Please contact with your admin to create");
@@ -357,9 +386,7 @@ final class Ffmpeg {
 			}
 
 		// sh_file
-			// $target_quality	= $this->get_quality_from_setting($setting_name);
-			// $sh_file			= $tmp_folder .'/'. $target_quality .'_'. $AVObj->get_name() . '.sh';
-			$sh_file			= $tmp_folder .'/'. pathinfo($target_file)['filename'] . '.sh';
+			$sh_file = $tmp_folder .'/'. pathinfo($target_file)['filename'] . '.sh';
 
 		// ffprobe get streams info
 			$media_streams		= Ffmpeg::get_media_streams( $src_file );
@@ -710,7 +737,7 @@ final class Ffmpeg {
 	* 	true: allow to create thumbnail
 	* 	false: disallow to create it (audio files)
 	*/
-	public function create_posterframe( object $options ) : bool {
+	public static function create_posterframe( object $options ) : bool {
 
 		// options
 			$timecode				= $options->timecode;
