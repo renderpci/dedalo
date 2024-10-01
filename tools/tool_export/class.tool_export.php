@@ -121,7 +121,6 @@ class tool_export extends tool_common {
 			$data_format		= $options->data_format;
 			$ar_ddo_to_export	= $options->ar_ddo_to_export;
 			$sqo				= $options->sqo;
-			$model				= $options->model;
 
 		// export options
 			// $tool_export	= new tool_export($section_tipo, $model, $data_format, $ar_ddo_to_export, $sqo);
