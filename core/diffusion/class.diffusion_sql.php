@@ -1533,7 +1533,7 @@ class diffusion_sql extends diffusion  {
 
 		// direct record save
 
-			// diffusion_section . Resolve diffusion section from section tipo
+			// diffusion_section. Resolve diffusion section from section tipo
 				if (in_array($section_tipo, (array)$ar_unconfigured_diffusion_section)) {
 					$response->result	= false;
 					$response->msg[]	= 'unconfigured_diffusion_section';
@@ -1557,7 +1557,6 @@ class diffusion_sql extends diffusion  {
 							, logger::DEBUG
 						);
 					}
-					// error_log(__METHOD__." WARNING: diffusion_section not found in correspondence with section_tipo: $section_tipo . Nothing is updated !!");
 					$ar_unconfigured_diffusion_section[] = $section_tipo;
 
 					$response->msg[] = " [2] misconfigured diffusion section for section_tipo: $section_tipo";
@@ -1571,7 +1570,6 @@ class diffusion_sql extends diffusion  {
 
 			// table fields reference only	(not needed because tables are already created)
 				#self::build_table_columns($diffusion_section, $database_name);
-				#dump(self::$ar_table, " data ".to_string( $database_name));
 
 			// table_data . Calculate table_data for current array of section_id (all langs)
 				$ar_result = array();
@@ -1591,20 +1589,15 @@ class diffusion_sql extends diffusion  {
 					$cd_options->diffusion_element_tipo  	= $diffusion_element_tipo;
 					$cd_options->component_publication_tipo = $component_publication_tipo;
 				$ar_field_data = self::build_table_columns_data( $cd_options ); // Trigger resolve
-				#$table_data = self::$ar_table_data[$database_name][$diffusion_section]; // Result is set and usable
 
 			// SAVE RECORD . Insert MYSQL record (array) deleting before old data
-				#if(isset(self::$ar_table_data[$database_name][$diffusion_section]) && !empty(self::$ar_table_data[$database_name][$diffusion_section])) {
 				if(!empty($ar_field_data)) {
 
 					$save_options = new stdClass();
-						#$save_options->record_data						= self::$ar_table_data[$database_name][$diffusion_section];		#dump($save_options, ' save_options ++ '.to_string());die();
 						$save_options->record_data						= $ar_field_data;
 						$save_options->record_data['diffusion_section']	= $diffusion_section;
 						$save_options->diffusion_element_tipo			= $diffusion_element_tipo;
 						$save_options->section_tipo						= $section_tipo;
-						#$save_options->record_data['database_name']	= self::$database_name;
-						#$save_options->record_data['table_name']		= $table_name; // overwrite default table name
 
 						// engine switch
 						$RecordObj_dd			= new RecordObj_dd($database_tipo);
@@ -1692,7 +1685,7 @@ class diffusion_sql extends diffusion  {
 						]);
 					}
 				}
-			}
+			}//end if (!empty($ar_field_data['ar_fields']))
 
 		// references. Resolve references until reach max_recursions level
 			$max_recursions = diffusion::get_resolve_levels();
@@ -1700,7 +1693,7 @@ class diffusion_sql extends diffusion  {
 			$max_recursions--;
 
 			if ($recursion_level >= $max_recursions) {
-				# Avoid infinite loops like Manolo's item to all references
+				// Avoid infinite loops like Manolo's item to all references
 				$resolve_references = false;
 				debug_log(__METHOD__
 					." (!) Stopped recursive resolve_references on level '$recursion_level' ".to_string($options)." ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
@@ -1739,12 +1732,9 @@ class diffusion_sql extends diffusion  {
 
 						// model
 							$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
-							if (!in_array($model_name, $ar_components_with_references)) continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
-
-						// autocomplete_hi case. Avoid more recursion after resolve component_autocomplete_hi data 2018-11-16
-							// if ($model_name==='component_autocomplete_hi') {
-							//  	$recursion_level = $max_recursions - 1;
-							// }
+							if (!in_array($model_name, $ar_components_with_references)) {
+								continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
+							}
 
 						// skip resolve components with dato external (portals)
 							$RecordObj_dd					= new RecordObj_dd($current_component_tipo);
@@ -1757,8 +1747,6 @@ class diffusion_sql extends diffusion  {
 								);
 								// continue; // (!) commented 06-11-2023 because MIB Catalog numisdata665 needs to follow external portal numisdata965 Orderer coins
 							}
-
-						// debug_log(__METHOD__." Solving recursive resolve_references on level '$recursion_level' tipo: '$current_component_tipo' model: '$model_name' label: '".RecordObj_dd::get_termino_by_tipo($current_component_tipo)."' ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);
 
 						// component's lang
 							$current_lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);
@@ -1801,9 +1789,6 @@ class diffusion_sql extends diffusion  {
 						dump($group_by_section_tipo, ' references to resolve (group_by_section_tipo) ++ '.to_string($resolved_static_key));
 					}
 
-				// Prevent infinite loops
-					// $ar_section_tipo_resolved  = array();
-
 				// resolve references recursion. Look inside portals of portals, etc..
 					$next_recursion_level = ($recursion_level + 1);
 
@@ -1839,21 +1824,8 @@ class diffusion_sql extends diffusion  {
 										'resolve_references'		=> true
 									]);
 							}
-
-							// if (!in_array($current_section_tipo, $ar_section_tipo_resolved)) {
-							// 	$ar_section_tipo_resolved[] = $current_section_tipo;
-							// }
 						}//end foreach ($group_by_section_tipo as $current_section_tipo => $current_ar_section_id)
-
-					#$ar_uniques = array_unique(array_keys($group_by_section_tipo));
-					#$ar_section_tipo_resolved = array_merge($ar_section_tipo_resolved, $ar_uniques);
-					#debug_log(__METHOD__." ar_section_tipo_resolved ".to_string($ar_section_tipo_resolved), logger::ERROR);
 			}//end if ($resolve_references===true)
-
-		// $this->ar_published_records = $ar_resolved_static;
-
-		// saves publication data
-			// diffusion::update_publication_data($section_tipo, $section_id);
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -3005,7 +2977,6 @@ class diffusion_sql extends diffusion  {
 			$response->msg    = '';
 
 		$ar_tables = self::get_diffusion_element_tables_map( $diffusion_element_tipo );
-			#dump($ar_tables, ' ar_tables ++ '.to_string($diffusion_element_tipo)); die();
 		foreach ((array)$ar_tables as $section_tipo => $value_obj) {
 
 			# All section records
@@ -3018,12 +2989,12 @@ class diffusion_sql extends diffusion  {
 					, logger::DEBUG
 				);
 
-				$current_options = new stdClass();
-					$current_options->section_tipo				= $section_tipo;
-					$current_options->section_id				= $current_record_section_id;
-					$current_options->diffusion_element_tipo	= $diffusion_element_tipo;
-
-				$result = $this->update_record($current_options);
+				// update_record
+				$result = $this->update_record((object)[
+					'section_tipo'				=> $section_tipo,
+					'section_id'				=> $current_record_section_id,
+					'diffusion_element_tipo'	=> $diffusion_element_tipo
+				]);
 
 				$response->msg .= isset($result->msg) ? "<br>".$result->msg : '';
 			}//end foreach ((array)$ar_all_records as $current_record_section_id) {
