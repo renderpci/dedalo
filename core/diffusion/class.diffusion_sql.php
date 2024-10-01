@@ -1836,7 +1836,7 @@ class diffusion_sql extends diffusion  {
 										'diffusion_element_tipo'	=> $diffusion_element_tipo,
 										'recursion_level'			=> $next_recursion_level,
 										'skip_tipos'				=> $skip_tipos,
-										'resolve_references'		=> false
+										'resolve_references'		=> true
 									]);
 							}
 
