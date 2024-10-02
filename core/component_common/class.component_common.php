@@ -3771,6 +3771,10 @@ abstract class component_common extends common {
 				break;
 
 			case 'update':
+				// safe format
+				if (!is_array($dato)) {
+					$dato = [$dato];
+				}
 				// check if the key exist in the $dato if the key exist change it directly, else create all positions with null value for coherence
 				if( isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato) ) {
 					$dato[$changed_data->key] = $changed_data->value;
