@@ -186,130 +186,69 @@ section.prototype.init = async function(options) {
 
 	// event subscriptions
 
-		// New and duplicate rebuild rqo and sqo
-			const navigate_to_new_section = async function(section_id){
-
-				const source = create_source(self, 'search')
-					source.section_id	= section_id
-					source.mode			= 'edit'
-
-				// get sqo after modification for proper navigation
-				const sqo = {
-					mode				: self.mode,
-					section_tipo		: [{tipo:self.section_tipo}],
-					filter_by_locators	: [],
-					filter 				: null,
-					limit				: 1,
-					offset				: 0
-				}
-
-				// rebuild sqo when is a separated window
-				// and session is not the main session
-				// in those cases, the section has a filter_by_locators
-				// and is necessary add the new locator.
-				if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
-					const old_locators = self.rqo.sqo.filter_by_locators
-					sqo.filter_by_locators.push(...old_locators)
-				}
-
-				// new section generated
-				sqo.filter_by_locators.push({
-					section_tipo	: self.section_tipo,
-					section_id		: section_id
-				})
-
-				sqo.offset = sqo.filter_by_locators.length - 1
-
-				// save pagination
-				// Updates local DB pagination values to preserve consistence
-				if (self.session_save===true) {
-					// list pagination
-					await data_manager.set_local_db_data(
-						{
-							id		: `${self.tipo}_list`,
-							value	: {
-								limit : (self.mode==='list' && self.rqo.sqo?.limit)
-									? self.rqo.sqo.limit
-									: 10,
-								offset : 0
-							}
-						},
-						'pagination'
-					)
-					// edit pagination
-					await data_manager.set_local_db_data(
-						{
-							id		: `${self.tipo}_edit`,
-							value	: {
-								limit	: 1,
-								offset	: sqo.offset
-							}
-						},
-						'pagination'
-					)
-				}
-
-				// launch event 'user_navigation' that page is watching
-				event_manager.publish('user_navigation', {
-					source	: source,
-					sqo		: sqo
-				})
-			}
-
 		// new_section_ event
-			self.events_tokens.push(
-				event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
-			)
-			async function fn_create_new_section() {
-
-				// data_manager. create
-				const rqo = {
-					action	: 'create',
-					source	: {
-						section_tipo : self.section_tipo
-					}
-				}
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				if (api_response.result && api_response.result>0) {
-					const section_id = api_response.result
-					navigate_to_new_section(section_id)
-				}
-			}//end fn_create_new_section
-
-		// duplicate_section_ event
-			self.events_tokens.push(
-				event_manager.subscribe('duplicate_section_' + self.id, fn_duplicate_section)
-			)
-			async function fn_duplicate_section( options ) {
+			const new_section_handler = async () => {
 
 				if (!confirm(get_label.sure || 'Sure?')) {
 					return false
 				}
 
-				// data_manager. create
-				const rqo = {
-					action	: 'duplicate',
-					source	: {
-						section_tipo	: options.section_tipo,
-						section_id		: options.section_id
-					}
+				// lock new section creation while a creation process is working
+				if (page_globals.creating_section) {
+					console.error('Error. Ignored new section event. Wait for the creation of the active section to finish.');
+					alert("Wait for the creation of the active section to finish.");
+					return
 				}
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				if (api_response.result && api_response.result>0) {
-					const section_id = api_response.result
-					navigate_to_new_section(section_id)
+				page_globals.creating_section = true
+
+				const new_section_id = await self.create_section()
+
+				// navigate to the new record
+				if (new_section_id) {
+					self.navigate_to_new_section(new_section_id)
 				}
-			}//end fn_duplicate_section
+
+				// unlock new section creation
+				page_globals.creating_section = false
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('new_section_' + self.id, new_section_handler)
+			)
+
+		// duplicate_section_ event
+			const duplicate_section_handler = async (options) => {
+
+				// options
+				const section_id = options.section_id
+
+				if (!confirm(get_label.sure || 'Sure?')) {
+					return false
+				}
+
+				// lock new section creation while a creation process is working
+				if (page_globals.creating_section) {
+					console.error('Error. Ignored new section event. Wait for the creation of the active section to finish.');
+					alert("Wait for the creation of the active section to finish.");
+					return
+				}
+				page_globals.creating_section = true
+
+				const new_section_id = await self.duplicate_section(section_id)
+
+				// navigate to the new record
+				if (new_section_id) {
+					self.navigate_to_new_section(new_section_id)
+				}
+
+				// unlock new section creation
+				page_globals.creating_section = false
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('duplicate_section_' + self.id, duplicate_section_handler)
+			)
 
 		// delete_section_ event. (!) Moved to self button delete in render_section_list
-			self.events_tokens.push(
-				event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
-			)
-			async function fn_delete_section(options) {
+			const delete_section_handler = async (options) => {
 
 				// options
 					const section_id	= options.section_id
@@ -326,13 +265,16 @@ section.prototype.init = async function(options) {
 						}
 
 				// delete_section
-					self.delete_record({
+					await self.render_delete_record_dialog({
 						section			: section,
 						section_id		: section_id,
 						section_tipo	: section_tipo,
 						sqo				: sqo
 					})
-			}//end fn_create_new_section
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('delete_section_' + self.id, delete_section_handler)
+			)
 
 		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
 			self.events_tokens.push(
@@ -999,6 +941,97 @@ section.prototype.load_section_tool_files = function() {
 
 
 /**
+* CREATE_SECTION
+* Creates a new section record calling API
+* @return int|string|null
+*/
+section.prototype.create_section = async function () {
+
+	const self = this
+
+	// source
+		const source = create_source(self, 'create')
+
+	// data_manager. delete
+		const rqo = {
+			action	: 'create',
+			source	: source
+		}
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+		// manage errors
+		const errors = api_response?.errors || []
+		if (errors.length>0) {
+			alert('Errors: \n' + errors.join('\n'));
+		}
+
+		if (api_response.result && api_response.result>0) {
+
+			const new_section_id = api_response.result
+
+			return new_section_id
+
+		}else{
+			console.error('api_response.errors:', api_response.errors);
+			console.error( api_response.msg || 'Error on create record!');
+		}
+
+
+	return null
+}//end create_section
+
+
+
+/**
+* DUPLICATE_SECTION
+* Creates a new section record and copies the current data into it
+* @param object options
+* @return int|string|null
+*/
+section.prototype.duplicate_section = async function (section_id) {
+
+	const self = this
+
+	// source
+		const source = create_source(self, 'duplicate')
+		// add section_id used as data source to clone
+		source.section_id
+
+	// data_manager. delete
+		const rqo = {
+			action	: 'duplicate',
+			source	: source
+		}
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+		// manage errors
+		const errors = api_response?.errors || []
+		if (errors.length>0) {
+			alert('Errors: \n' + errors.join('\n'));
+		}
+
+		if (api_response.result && api_response.result>0) {
+
+			const new_section_id = api_response.result
+
+			return new_section_id
+
+		}else{
+			console.error('api_response.errors:', api_response.errors);
+			console.error( api_response.msg || 'Error on create record!');
+		}
+
+
+	return null
+}//end duplicate_section
+
+
+
+/**
 * DELETE_SECTION
 * @param object options
 * {
@@ -1054,6 +1087,8 @@ section.prototype.delete_section = async function (options) {
 		}else{
 			console.error('api_response.errors:', api_response.errors);
 			console.error( api_response.msg || 'Error on delete records!');
+
+			return false
 		}
 
 
@@ -1171,6 +1206,88 @@ section.prototype.navigate = async function(options) {
 
 	return true
 }//end navigate
+
+
+
+/**
+* NAVIGATE_TO_NEW_SECTION
+* After a create or duplicate action, go to the new created record
+* @param int|string section_id
+* @return bool
+*/
+section.prototype.navigate_to_new_section = async function(section_id) {
+
+	const self = this
+
+	const source = create_source(self, 'search')
+		source.section_id	= section_id
+		source.mode			= 'edit'
+
+	// get sqo after modification for proper navigation
+	const sqo = {
+		mode				: self.mode,
+		section_tipo		: [{tipo:self.section_tipo}],
+		filter_by_locators	: [],
+		filter 				: null,
+		limit				: 1,
+		offset				: 0
+	}
+
+	// rebuild sqo when is a separated window
+	// and session is not the main session
+	// in those cases, the section has a filter_by_locators
+	// and is necessary add the new locator.
+	if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
+		const old_locators = self.rqo.sqo.filter_by_locators
+		sqo.filter_by_locators.push(...old_locators)
+	}
+
+	// new section generated
+	sqo.filter_by_locators.push({
+		section_tipo	: self.section_tipo,
+		section_id		: section_id
+	})
+
+	sqo.offset = sqo.filter_by_locators.length - 1
+
+	// save pagination
+	// Updates local DB pagination values to preserve consistence
+	if (self.session_save===true) {
+		// list pagination
+		await data_manager.set_local_db_data(
+			{
+				id		: `${self.tipo}_list`,
+				value	: {
+					limit : (self.mode==='list' && self.rqo.sqo?.limit)
+						? self.rqo.sqo.limit
+						: 10,
+					offset : 0
+				}
+			},
+			'pagination'
+		)
+		// edit pagination
+		await data_manager.set_local_db_data(
+			{
+				id		: `${self.tipo}_edit`,
+				value	: {
+					limit	: 1,
+					offset	: sqo.offset
+				}
+			},
+			'pagination'
+		)
+	}
+
+	// launch event 'user_navigation' that page is watching
+	event_manager.publish('user_navigation', {
+		source	: source,
+		sqo		: sqo
+	})
+
+
+	return true
+}//end navigate_to_new_section
 
 
 
