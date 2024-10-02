@@ -21,7 +21,7 @@ interface component_media_interface {
 	public function get_quality_files(string $quality);
 	public function get_normalized_name_from_files(string $quality);
 	public function get_uploaded_file(string $quality);
-	public function get_quality_file_info(string $quality, string $extension=null);
+	public function get_quality_file_info(string $quality, ?string $extension=null);
 	public function get_source_quality_to_build(string $target_quality);
 	public function get_original_extension(bool $exclude_converted=true);
 	public function get_original_file_path();
