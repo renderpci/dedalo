@@ -179,7 +179,7 @@ tool_qr.prototype.load_section = async function() {
 		await section.build(true)
 
 	// set total (use value.length safely here because limit = 0)
-		section.total = section.data.value.length
+		section.total = section.data.value?.length || 0
 
 
 	return section
