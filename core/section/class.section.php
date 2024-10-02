@@ -4326,7 +4326,6 @@ class section extends common {
 					}
 				}
 
-
 			// components
 				foreach ($source_dato->components as $current_tipo => $component_full_dato) {
 					// tipo filter
@@ -4341,7 +4340,7 @@ class section extends common {
 					// its OK. Add value
 					foreach ($component_full_dato->dato as $lang => $local_value) {
 
-						$component	= component_common::get_instance(
+						$component = component_common::get_instance(
 							$current_model,
 							$current_tipo,
 							$new_section_id,

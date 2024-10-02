@@ -644,7 +644,7 @@ component_portal.prototype.build = async function(autoload=false) {
 	// if show.interface is defined in properties used the definition, else use this default
 		switch (true) {
 
-			case (self.context.properties.source?.mode==='external'):
+			case (self.context.properties?.source?.mode==='external'):
 				self.show_interface.button_add			= false
 				self.show_interface.button_link			= false
 				self.show_interface.tools				= false
