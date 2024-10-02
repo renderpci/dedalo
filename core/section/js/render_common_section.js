@@ -23,12 +23,12 @@ export const render_common_section = function() {
 
 
 /**
-* DELETE_RECORD
+* RENDER_DELETE_RECORD_DIALOG
 * Delete selected record or Delete find records
 * @param object options
 * @return bool
 */
-render_common_section.prototype.delete_record = async (options) => {
+render_common_section.prototype.render_delete_record_dialog = async (options) => {
 
 	// options
 		const section		= options.section
@@ -184,7 +184,7 @@ render_common_section.prototype.delete_record = async (options) => {
 
 
 	return true
-}//end delete_record
+}//end render_delete_record_dialog
 
 
 

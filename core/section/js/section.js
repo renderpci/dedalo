@@ -99,7 +99,7 @@ export const section = function() {
 	section.prototype.list_header		= render_list_section.prototype.list_header
 	section.prototype.solved			= render_solved_section.prototype.solved
 
-	section.prototype.delete_record		= render_common_section.prototype.delete_record
+	section.prototype.render_delete_record_dialog = render_common_section.prototype.render_delete_record_dialog
 
 
 
