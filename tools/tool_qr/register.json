@@ -1,0 +1,176 @@
+{
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1601"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "inf": "created_date [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 30,
+              "hour": 10,
+              "time": 65076950541,
+              "year": 2024,
+              "month": 9,
+              "minute": 42,
+              "second": 21
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "inf": "modified_date [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 2,
+              "hour": 9,
+              "time": 65077206255,
+              "year": 2024,
+              "month": 10,
+              "minute": 44,
+              "second": 15
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "inf": "Descripción [component_text_area]",
+      "dato": {
+        "lg-eng": [
+          "<p>Creates QR codes for records. Used to print labels with item information for easy location in the warehouse</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "inf": "Etiqueta [component_input_text]",
+      "dato": {
+        "lg-eng": [
+          "QR"
+        ]
+      }
+    },
+    "dd1326": {
+      "inf": "Nombre de la herramienta [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "tool_qr"
+        ]
+      }
+    },
+    "dd1327": {
+      "inf": "Versión [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "1.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "inf": "Versión Dédalo mínima [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "6.2.8"
+        ]
+      }
+    },
+    "dd1335": {
+      "inf": "Propiedades [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "open_as": "window",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1350": {
+      "inf": "Afecta a tipos: [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            "tch1",
+            "numisdata4",
+            "rsc167"
+          ]
+        ]
+      }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
+        ]
+      }
+    }
+  },
+  "section_id": 30,
+  "created_date": "2024-09-30 10:42:21",
+  "section_tipo": "dd1340",
+  "modified_date": "2024-10-02 09:44:15",
+  "diffusion_info": null,
+  "created_by_userID": 1,
+  "section_real_tipo": "dd73",
+  "modified_by_userID": -1
+}
