@@ -384,8 +384,8 @@ export const render_column_remove = function(options) {
 		delete_button.addEventListener('click', function(e){
 			e.stopPropagation()
 
-			// delete_record
-				self.delete_record({
+			// delete section
+				self.render_delete_record_dialog({
 					section			: self,
 					section_id		: section_id,
 					section_tipo	: section_tipo,

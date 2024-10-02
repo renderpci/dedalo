@@ -354,7 +354,7 @@ const get_buttons = function(self) {
 							delete delete_sqo.offset
 
 							// delete_record
-							self.delete_record({
+							self.render_delete_record_dialog({
 								section			: self,
 								section_id		: null,
 								section_tipo	: self.section_tipo,
