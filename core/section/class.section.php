@@ -4230,9 +4230,9 @@ class section extends common {
 	/**
 	* DUPLICATE_CURRENT_SECTION
 	* Creates a new record cloning all data from current section
-	* @return int section_id
+	* @return int|string|null $section_id
 	*/
-	public function duplicate_current_section() {
+	public function duplicate_current_section() : int|string|null {
 
 		$section_tipo = $this->get_tipo();
 
@@ -4241,7 +4241,7 @@ class section extends common {
 			$new_section_id	= $new_section->Save();
 
 			if (empty($new_section_id) || (int)$new_section_id<1) {
-				return false;
+				return null;
 			}
 
 		// copy data
