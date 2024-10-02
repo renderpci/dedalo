@@ -100,11 +100,9 @@ component_text_area.prototype.init = async function(options) {
 	const self = this
 
 	// events subscribe
+
 		// create_fragment_ . User click over button 'create_fragment'
-			self.events_tokens.push(
-				event_manager.subscribe('create_fragment_' + self.id, fn_create_fragment)
-			)
-			function fn_create_fragment(options) {
+			const create_fragment_handler = (options) => {
 
 				// options
 					const key			= options.key
@@ -132,13 +130,14 @@ component_text_area.prototype.init = async function(options) {
 					}//end if (created!==false)
 
 				return true
-			}//end fn_create_fragment
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('create_fragment_' + self.id, create_fragment_handler)
+			)
 
 		// click_tag_index_. User click over image index tag
-			self.events_tokens.push(
-				event_manager.subscribe('click_tag_index_' + self.id_base, fn_click_tag_index)
-			)
-			function fn_click_tag_index(options) {
+			const click_tag_index_handler = (options) => {
+
 				if(SHOW_DEVELOPER===true) {
 					dd_console(`[component_text_area] click_tag_index ${self.id_base}`, 'DEBUG', options)
 				}
@@ -170,14 +169,14 @@ component_text_area.prototype.init = async function(options) {
 
 
 				return true
-			}//end fn_create_fragment
-
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('click_tag_index_' + self.id_base, click_tag_index_handler)
+			)
 
 		// click_reference_. User click over reference tag
-			self.events_tokens.push(
-				event_manager.subscribe('click_tag_reference_' + self.id_base, fn_click_reference)
-			)
-			function fn_click_reference(options) {
+			const click_tag_reference_handler = (options) => {
+
 				if(SHOW_DEVELOPER===true) {
 					dd_console(`[component_text_area] click_reference_ ${self.id_base}`, 'DEBUG', options)
 				}
@@ -207,12 +206,13 @@ component_text_area.prototype.init = async function(options) {
 
 
 				return true
-			}//end fn_create_fragment
-		// text_selection_
+			}
 			self.events_tokens.push(
-				event_manager.subscribe('text_selection_'+ self.id, fn_show_button_create_fragment)
+				event_manager.subscribe('click_tag_reference_' + self.id_base, click_tag_reference_handler)
 			)
-			function fn_show_button_create_fragment(options) {
+
+		// text_selection_
+			const text_selection_handler = (options) => {
 
 				// options
 					const selection	= options.selection
@@ -272,7 +272,10 @@ component_text_area.prototype.init = async function(options) {
 				}
 
 				return true
-			}//end fn_show_button_create_fragment
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('text_selection_'+ self.id, text_selection_handler)
+			)
 
 		// create_note_tag_ .
 			// (!) Removed 09-02-2023 because is already direct called from render note click event
@@ -281,20 +284,23 @@ component_text_area.prototype.init = async function(options) {
 			// )
 
 		// create_geo_tag_
+			const create_geo_tag_handler = (options) => {
+				self.create_geo_tag(options)
+			}
 			self.events_tokens.push(
-				event_manager.subscribe('create_geo_tag_'+ self.id_base, self.create_geo_tag)
+				event_manager.subscribe('create_geo_tag_'+ self.id_base, create_geo_tag_handler)
 			)
 
 		// build_tag_
+			const build_tag_handler = (options) => {
+				self.build_tag(options)
+			}
 			self.events_tokens.push(
-				event_manager.subscribe('build_tag_'+ self.id_base, self.build_tag)
+				event_manager.subscribe('build_tag_'+ self.id_base, build_tag_handler)
 			)
 
 		// deactivate_component. Save content on deactivate
-			self.events_tokens.push(
-				event_manager.subscribe('deactivate_component', fn_deactivate)
-			)
-			function fn_deactivate (component) {
+			const deactivate_component_handler = (component) => {
 				if ( component.id === self.id ) {
 					// (!) If self.data.changed_data has changed, save is fired automatically
 					// from ui.component.deactivate
@@ -318,6 +324,9 @@ component_text_area.prototype.init = async function(options) {
 					// }
 				}
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('deactivate_component', deactivate_component_handler)
+			)
 
 	// call the generic init method
 		const common_init = await component_common.prototype.init.call(self, options);
@@ -1562,9 +1571,10 @@ component_text_area.prototype.focus_first_input = function() {
 
 	}else{
 
-		event_manager.subscribe('editor_ready_' + self.id, function(service){
+		const editor_ready_handler = (service) => {
 			service.focus()
-		})
+		}
+		event_manager.subscribe('editor_ready_' + self.id, editor_ready_handler)
 	}
 
 
