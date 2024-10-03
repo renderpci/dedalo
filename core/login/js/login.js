@@ -196,6 +196,16 @@ export const quit = async function(options={}) {
 		// manage result
 			if (api_response.result===true) {
 
+				// reset some user preferences status from local database
+				[
+					'inspector_time_machine_list',
+					'inspector_component_history_block',
+					'inspector_relation_list'
+				]
+				.map(el => {
+					data_manager.delete_local_db_data(el, 'status')
+				})
+
 				// unregister serviceWorker
 				// Handle service worker unregistration if supported
 				// to allow update sw.js file and clean the cache
