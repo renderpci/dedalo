@@ -195,7 +195,7 @@ export const dd_request_idle_callback = function (callback) {
 
 	if (typeof window.requestIdleCallback === 'function') {
 		// Use requestIdleCallback to schedule work if available
-		requestIdleCallback(callback)
+		requestIdleCallback(callback, { timeout: 1000 })
 	} else {
 		// window.requestAnimationFrame(callback)
 		// Fallback for browsers without requestIdleCallback support like Safari
