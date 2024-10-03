@@ -180,12 +180,16 @@ const get_content_value = (i, current_value, self) => {
 				setTimeout(function(){
 					check_duplicates(self, input.value)
 				}, 100)
+
 				// check again on each component activation
-				event_manager.subscribe('activate_component', (el) => {
+				const activate_component_handler = (el) => {
 					if (el.id===self.id) {
 						check_duplicates(self, input.value)
 					}
-				})
+				}
+				self.events_tokens.push(
+					event_manager.subscribe('activate_component', activate_component_handler)
+				)
 			}
 
 	// button remove. Triggered by wrapper delegated events

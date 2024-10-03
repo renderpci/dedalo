@@ -430,10 +430,9 @@ const generate_qr = function(options) {
 			}
 
 		// Create QRCode Object
-			const create_code = () => {
-				new QRCode(container, qr_options);
-			}
-			dd_request_idle_callback(create_code)
+			dd_request_idle_callback(
+				() => new QRCode(container, qr_options)
+			)
 	})
 }//end generate_qr
 

@@ -277,11 +277,7 @@ section.prototype.init = async function(options) {
 			)
 
 		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
-			self.events_tokens.push(
-				event_manager.subscribe('toggle_search_panel_'+self.id, fn_toggle_search_panel)
-			)
-			async function fn_toggle_search_panel() {
-
+			const toggle_search_panel_handler = async () => {
 				if (!self.search_container || !self.filter) {
 					console.log('stop event no filter 1:', this);
 					return
@@ -298,13 +294,13 @@ section.prototype.init = async function(options) {
 					})
 				}
 				toggle_search_panel(self.filter)
-			}//end fn_toggle_search_panel
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('toggle_search_panel_'+self.id, toggle_search_panel_handler)
+			)
 
 		// render_ event
-			const render_token = event_manager.subscribe('render_'+self.id, fn_render)
-			self.events_tokens.push(render_token)
-			function fn_render() {
-
+			const render_handler = () => {
 				// menu label control
 					const update_menu = (menu) => {
 
@@ -389,7 +385,10 @@ section.prototype.init = async function(options) {
 							toggle_search_panel(self.filter)
 						}
 					})
-			}//end fn_render
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_'+self.id, render_handler)
+			)
 
 	// load additional files as css used by section_tool in self.config
 		if(self.config && self.config.source_model==='section_tool') {

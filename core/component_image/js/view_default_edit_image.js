@@ -60,9 +60,10 @@ view_default_edit_image.render = function(self, options) {
 		wrapper.content_data = content_data
 
 	// event
-		event_manager.subscribe('full_screen_'+self.id, () => {
+		const full_screen_handler = () => {
 			fit_image(self)
-		})
+		}
+		event_manager.subscribe('full_screen_'+self.id, full_screen_handler)
 
 
 	return wrapper
@@ -391,10 +392,7 @@ const render_image_node = function(self, file_info, content_value) {
 		}
 
 	// change event
-		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
-		self.events_tokens.push(image_change_event)
-		// object_node.dataset.image_change_event = image_change_event // string like 'event_167'
-		async function fn_img_quality_change (img_src) {
+		const image_quality_change_handler = async (img_src) => {
 
 			// as '/dedalo/media/image/3MB/0/rsc29_rsc170_2.jpg?t=1714996905397'
 			self.img_src = img_src
@@ -432,9 +430,10 @@ const render_image_node = function(self, file_info, content_value) {
 				// set the new source to the image node into the svg
 				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', new_url)
 			}
-
-			return true
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('image_quality_change_'+self.id, image_quality_change_handler)
+		)
 
 
 	return image_container

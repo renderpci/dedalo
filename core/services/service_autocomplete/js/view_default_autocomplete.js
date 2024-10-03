@@ -263,11 +263,14 @@ const get_content_data = function(self) {
 			self.service_autocomplete_keys(e)
 		}
 		// remove the event when the caller is deactivate to avoid conflicts between events
-		event_manager.subscribe('deactivate_component', function(component){
+		const deactivate_component_handler = (component) => {
 			if (component.id===self.caller.id) {
 				document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 			}
-		})
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('deactivate_component', deactivate_component_handler)
+		)
 
 	// fix main nodes pointers
 		self.search_input		= search_input

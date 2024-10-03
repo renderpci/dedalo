@@ -137,11 +137,7 @@ search.prototype.init = async function(options) {
 	// events subscription
 		// change_search_element. Update value, subscription to the changes: if the DOM input value was changed,
 		// observers DOM elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('change_search_element', fn_change_search_element)
-		)
-		async function fn_change_search_element(instance) {
-
+		const change_search_element_handler = async (instance) => {
 			// parse filter to DOM
 			self.parse_dom_to_json_filter({
 				mode : self.mode
@@ -162,6 +158,9 @@ search.prototype.init = async function(options) {
 				hilite		: hilite // bool
 			})
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('change_search_element', change_search_element_handler)
+		)
 
 	// permissions
 		self.permissions = 2

@@ -50,14 +50,15 @@ render_paginator.prototype.edit = async function(options) {
 		wrapper.content_data = content_data
 
 		if(SHOW_DEBUG===true) {
-			wrapper.addEventListener('click', function(e) {
+			const click_handler = (e) => {
 				if (e.altKey) {
 					e.stopPropagation()
 					e.preventDefault()
 					console.log('/// selected instance:', self);
 					return
 				}
-			})
+			}
+			wrapper.addEventListener('click', click_handler)
 		}
 
 
@@ -103,10 +104,11 @@ const get_content_data = async function(self) {
 			const update_offset_first = (value) => {
 				if(self.page_number>1) {
 					paginator_first.classList.remove('inactive')
-					paginator_first.addEventListener('mousedown', function(e) {
+					const mousedown_handler = (e) => {
 						e.stopPropagation()
 						self.paginate(value)
-					})
+					}
+					paginator_first.addEventListener('mousedown', mousedown_handler)
 				}else{
 					paginator_first.classList.add('inactive')
 				}
@@ -126,10 +128,11 @@ const get_content_data = async function(self) {
 			const update_offset_prev = (value) => {
 				if(self.prev_page_offset>=0) {
 					paginator_prev.classList.remove('inactive')
-					paginator_prev.addEventListener('mousedown', function(e) {
+					const mousedown_handler = (e) => {
 						e.stopPropagation()
 						self.paginate(value)
-					})
+					}
+					paginator_prev.addEventListener('mousedown', mousedown_handler)
 				}else{
 					paginator_prev.classList.add('inactive')
 				}
@@ -149,10 +152,11 @@ const get_content_data = async function(self) {
 			const update_offset_next = (value) => {
 				if(self.next_page_offset<self.total) {
 					paginator_next.classList.remove('inactive')
-					paginator_next.addEventListener('mousedown', function(e) {
+					const mousedown_handler = (e) => {
 						e.stopPropagation()
 						self.paginate(value)
-					})
+					}
+					paginator_next.addEventListener('mousedown', mousedown_handler)
 				}else{
 					paginator_next.classList.add('inactive')
 				}
@@ -172,10 +176,11 @@ const get_content_data = async function(self) {
 			const update_offset_last = (value) => {
 				if(self.page_number<self.total_pages) {
 					paginator_last.classList.remove('inactive')
-					paginator_last.addEventListener('mousedown', function(e) {
+					const mousedown_handler = (e) => {
 						e.stopPropagation()
 						self.paginate(value)
-					})
+					}
+					paginator_last.addEventListener('mousedown', mousedown_handler)
 				}else{
 					paginator_last.classList.add('inactive')
 				}
@@ -209,9 +214,11 @@ const get_content_data = async function(self) {
 					// placeholder	: 1,
 					parent			: paginator_info
 				})
+
+				// keyup event
 				// NOTE: this event could open/close filter because page has a global keyup listener
 				// see page.js add_events to prevent double fire
-				input_go_to_page.addEventListener('keyup', function(e) {
+				const keyup_handler = (e) => {
 					e.stopPropagation();
 					e.preventDefault()
 					if (e.key==='Enter' && input_go_to_page.value.length>0) {
@@ -225,20 +232,28 @@ const get_content_data = async function(self) {
 							}
 						}
 					}
-				})
-				input_go_to_page.addEventListener('blur', function(){
+				}
+				input_go_to_page.addEventListener('keyup', keyup_handler)
+
+				// blur event
+				const blur_handler = (e) => {
 					if (input_go_to_page.classList.contains('invalid')) {
 						input_go_to_page.classList.remove('invalid')
 					}
 					input_go_to_page.value = null
 					fit_input_go_to_page_to_value(input_go_to_page, self.page_number)
-				})
-				input_go_to_page.addEventListener('input', function(e) {
+				}
+				input_go_to_page.addEventListener('blur', blur_handler)
+
+				// input event
+				const input_handler = (e) => {
 					e.preventDefault()
 					if (e.key!=='Enter' ) {
 						fit_input_go_to_page_to_value(input_go_to_page, this.value)
 					}
-				})
+				}
+				input_go_to_page.addEventListener('input', input_handler)
+
 				// active_value
 				const update_page_number = (value) => {
 					input_go_to_page.placeholder = value
