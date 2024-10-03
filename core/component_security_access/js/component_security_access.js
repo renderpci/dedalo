@@ -340,7 +340,7 @@ component_security_access.prototype.update_parents_radio_butons = async function
 	const self = this
 
 	// parents (recursive)
-		const parents = self.get_parents(item)
+	const parents = await self.get_parents(item)
 
 
 	let diff_value = false
