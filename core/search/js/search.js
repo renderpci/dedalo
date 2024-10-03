@@ -946,6 +946,12 @@ search.prototype.update_state = async function(options) {
 			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo
 
+		// check valid sections
+			if (!self.target_section_tipo || !self.target_section_tipo.length) {
+				console.error('Empty target_section_tipo. Unable to update caller:', self.target_section_tipo);
+				return
+			}
+
 		// request_config_object.sqo update. Copy rqo.sqo pagination values to request_config_object
 			caller_instance.request_config_object.sqo.limit		= caller_instance.rqo.sqo.limit
 			caller_instance.request_config_object.sqo.offset	= caller_instance.rqo.sqo.offset
