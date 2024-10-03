@@ -1139,11 +1139,12 @@ const render_relation_list = function(self) {
 			default_state		: 'closed'
 		})
 		function expose() {
-			const load = () => {
-				load_relation_list(self)
-				relation_list_head.classList.add('up')
-			}
-			dd_request_idle_callback(load)
+			dd_request_idle_callback(
+				() => {
+					load_relation_list(self)
+					relation_list_head.classList.add('up')
+				}
+			)
 		}
 
 
@@ -1209,11 +1210,12 @@ export const render_time_machine_list = function(self) {
 			time_machine_list_head.classList.remove('up')
 		}
 		function expose() {
-			const load = () => {
-				load_time_machine_list(self)
-				time_machine_list_head.classList.add('up')
-			}
-			dd_request_idle_callback(load)
+			dd_request_idle_callback(
+				() => {
+					load_time_machine_list(self)
+					time_machine_list_head.classList.add('up')
+				}
+			)
 		}
 
 
@@ -1345,11 +1347,12 @@ const render_component_history = function(self) {
 			component_history_head.classList.remove('up')
 		}
 		function expose() {
-			const load = () => {
-				load_component_history(self, self.actived_component)
-				component_history_head.classList.add('up')
-			}
-			dd_request_idle_callback(load)
+			dd_request_idle_callback(
+				() => {
+					load_component_history(self, self.actived_component)
+					component_history_head.classList.add('up')
+				}
+			)
 		}
 
 

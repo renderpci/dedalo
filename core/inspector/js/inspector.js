@@ -72,43 +72,29 @@ inspector.prototype.init = async function(options) {
 	self.last_docu_type = null
 
 	// events
+
 		// render_ section
-			const fn_update_section_info = () => {
-				// section is inspector caller
-				const section = self.caller
-				// reset actived_component
-				self.actived_component = null
-				// update section info
-				render_section_info(self)
-				// time_machine_list load info
-				load_time_machine_list(self)
-				// component_history remove content id exists
-				load_component_history(self, null)
-				// selection info. Display current selected component label as 'Description'
-				self.selection_info_node.update_label(section)
-				// section_id (updates section id value in inspector paginator if changes)
-				if (section.section_id!==self.paginator_container.section_id.innerHTML) {
-					self.paginator_container.section_id.innerHTML = section.section_id ?? '';
-				}
-			}
 			const render_handler = () => {
-				dd_request_idle_callback(fn_update_section_info)
+				dd_request_idle_callback(
+					() => update_section_info(self)
+				)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('render_' + self.caller.id, render_handler)
 			)
+
 		// activate_component (when user focus it in DOM)
-			self.events_tokens.push(
-				event_manager.subscribe('activate_component', fn_activate_component)
-			)
-			function fn_activate_component(actived_component) {
+			const activate_component_handler = (actived_component) => {
+
 				self.actived_component = actived_component
 				// selection info. Display current selected component label as 'Description'
 				self.selection_info_node.update_label(actived_component)
 				// component_info. Render tipo, model, translatable, etc.
 				render_component_info(self, actived_component)
 				// component_history. Load component history changes list
-				load_component_history(self, actived_component)
+				dd_request_idle_callback(
+					() => load_component_history(self, self.actived_component)
+				)
 				// open ontology window if already open to preserve component selected coherence
 				if(SHOW_DEVELOPER===true) {
 					setTimeout(function(){
@@ -141,30 +127,50 @@ inspector.prototype.init = async function(options) {
 					}, 1)
 				}
 			}
-		// save. When selected component is saved, update component_history, time_machine_list and activity_info
 			self.events_tokens.push(
-				event_manager.subscribe('save', fn_save_component)
+				event_manager.subscribe('activate_component', activate_component_handler)
 			)
-			function fn_save_component(options) {
+
+		// save. When selected component is saved, update component_history, time_machine_list and activity_info
+			const save_handler = (options) => {
 				const instance = options.instance
 				if (self.actived_component && self.actived_component.id===instance.id) {
 					// component_history update changes list if saved is current selected
-					load_component_history(self, self.actived_component)
+					dd_request_idle_callback(
+						() => load_component_history(self, self.actived_component)
+					)
 				}
 				// time_machine_list update info on every component save
-				load_time_machine_list(self)
+				dd_request_idle_callback(
+					() => load_time_machine_list(self)
+				)
+
 				// activity_info. render notification bubbles on every component save action
 				load_activity_info(self, options)
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('save', save_handler)
+			)
+
 		// deactivate_component
+			const deactivate_component_handler = () => {
+				// note that transition between activate a component after deactivate other
+				// is not the desired scenario to update section info. Because this, we wait a while
+				// and check if is active some component before fire update_section_info
+				setTimeout(function(){
+					if (!page_globals.component_active) {
+						dd_request_idle_callback(
+							() => update_section_info(self)
+						)
+					}
+				}, 250)
+			}
 			self.events_tokens.push(
-				event_manager.subscribe('deactivate_component', fn_update_section_info)
+				event_manager.subscribe('deactivate_component', deactivate_component_handler)
 			)
+
 		// render_component_filter_ (published by render_edit_section_record)
-			self.events_tokens.push(
-				event_manager.subscribe('render_component_filter_' + self.section_tipo, fn_render_filter)
-			)
-			async function fn_render_filter(filter_instance) {
+			const render_component_filter_handler = async (filter_instance) => {
 				// fix rendered node
 				self.component_filter_node = await filter_instance.render()
 				// update project_container_body if it is already defined (pagination cases)
@@ -172,6 +178,9 @@ inspector.prototype.init = async function(options) {
 					update_project_container_body(self)
 				}
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_component_filter_' + self.section_tipo, render_component_filter_handler)
+			)
 
 	// status update
 		self.status = 'initialized'
@@ -200,6 +209,44 @@ inspector.prototype.build = async function() {
 
 	return true
 }//end build
+
+
+
+/**
+* UPDATE_SECTION_INFO
+* Updates section information in inspector
+* Fired by render_handler and deactivate_component_handler
+* @return void
+*/
+const update_section_info = (self) => {
+
+	// section is inspector caller
+	const section = self.caller
+
+	// reset actived_component
+	self.actived_component = null
+
+	// update section info
+	render_section_info(self)
+
+	// time_machine_list load info
+	dd_request_idle_callback(
+		() => load_time_machine_list(self)
+	)
+
+	// component_history remove content id exists
+	dd_request_idle_callback(
+		() => load_component_history(self, null)
+	)
+
+	// selection info. Display current selected component label as 'Description'
+	self.selection_info_node.update_label(section)
+
+	// section_id (updates section id value in inspector paginator if changes)
+	if (section.section_id!==self.paginator_container.section_id.innerHTML) {
+		self.paginator_container.section_id.innerHTML = section.section_id ?? '';
+	}
+}//end update_section_info
 
 
 
