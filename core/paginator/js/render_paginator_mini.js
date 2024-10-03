@@ -117,7 +117,7 @@ const get_content_data = async function(self) {
 		if (!total_pages || total_pages<2) {
 			const wrap_rows_paginator = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'content_data paginator display_none ' +total_pages
+				class_name		: 'content_data paginator display_none ' + total_pages
 			})
 			return wrap_rows_paginator
 		}

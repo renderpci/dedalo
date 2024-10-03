@@ -172,10 +172,10 @@ abstract class component_common extends common {
 
 				debug_log(__METHOD__
 					. ' Error Processing Request. Illegal component: ' .PHP_EOL
-					. ' component_name:' . to_string($component_name) .PHP_EOL
-					. ' tipo:' . to_string($tipo) .PHP_EOL
-					. ' section_tipo:' . to_string($section_tipo) .PHP_EOL
-					. ' section_id:' . to_string($section_id) .PHP_EOL
+					. ' component_name :' . to_string($component_name) .PHP_EOL
+					. ' tipo: ' . to_string($tipo) .PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) .PHP_EOL
+					. ' section_id: ' . to_string($section_id) .PHP_EOL
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
