@@ -408,12 +408,13 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 								// }
 
 							// user click edit button action close the modal box
-								const token = event_manager.subscribe('button_edit_click', fn_button_edit_click)
-								self.events_tokens.push(token)
-								function fn_button_edit_click() {
-									event_manager.unsubscribe('button_edit_click')
+								let token
+								const button_edit_click_handler = () => {
+									event_manager.unsubscribe(token)
 									modal.close()
 								}
+								token = event_manager.subscribe('button_edit_click', button_edit_click_handler)
+								self.events_tokens.push(token)
 						}
 						const token = event_manager.subscribe(event_id, fn_mosaic_show_alt)
 						self.events_tokens.push(token)

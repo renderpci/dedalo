@@ -64,12 +64,12 @@ tool_upload.prototype.init = async function(options) {
 		const common_init = await tool_common.prototype.init.call(this, options);
 
 	// events
-		self.events_tokens.push(
-			event_manager.subscribe('upload_file_done_' + self.id, fn_upload_manage)
-		)
-		function fn_upload_manage(options) {
-			return self.upload_done(options)
+		const upload_file_done_handler = (options) => {
+			self.upload_done(options)
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('upload_file_done_' + self.id, upload_file_done_handler)
+		)
 
 
 	return common_init

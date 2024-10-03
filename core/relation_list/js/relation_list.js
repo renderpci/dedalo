@@ -120,6 +120,7 @@ export const relation_list = function() {
 	this.request_config_object	= null
 	this.rqo					= null
 
+	this.events_tokens			= []
 
 	return true
 }//end relation_list

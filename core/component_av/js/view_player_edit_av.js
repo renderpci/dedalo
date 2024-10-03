@@ -161,7 +161,7 @@ export const get_content_data_player = function(options) {
 
 						// update_subtitles event
 						// (this event is fired, among others, by tool_transcription on update subtitles file)
-						const fn_update_subtitles = (options={}) => {
+						const updated_subtitles_file_handler = (options={}) => {
 
 							// options (non mandatory)
 								const lang	= options.lang || self.lang
@@ -200,7 +200,7 @@ export const get_content_data_player = function(options) {
 							}
 						}
 						self.events_tokens.push(
-							event_manager.subscribe('updated_subtitles_file_' + self.id, fn_update_subtitles)
+							event_manager.subscribe('updated_subtitles_file_' + self.id, updated_subtitles_file_handler)
 						)
 					}
 				}

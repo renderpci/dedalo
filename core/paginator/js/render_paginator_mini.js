@@ -65,19 +65,20 @@ render_paginator_mini.prototype.mini = async function(options) {
 const add_events = (wrapper, self) => {
 
 	// mousedown
-		wrapper.addEventListener('mousedown', function(e){
+		const mousedown_handler = (e) => {
 			e.stopPropagation()
-			//e.preventDefault()
-			// prevent buble event to container element
+			// prevent bubble event to container element
 			return false
-		})
+		}
+		wrapper.addEventListener('mousedown', mousedown_handler)
+
 	// click
-		wrapper.addEventListener('click', function(e){
+		const click_handler = (e) => {
 			e.stopPropagation()
-			//e.preventDefault()
-			// prevent buble event to container element
+			// prevent bubble event to container element
 			return false
-		})
+		}
+		wrapper.addEventListener('click', click_handler)
 
 
 	return true
@@ -137,10 +138,11 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number>1) {
-				paginator_first.addEventListener('mousedown', (e) =>{
+				const mousedown_handler = (e) => {
 					e.stopPropagation()
 					self.paginate(offset_first)
-				})
+				}
+				paginator_first.addEventListener('mousedown', mousedown_handler)
 			}else{
 				paginator_first.classList.add('inactive')
 			}
@@ -152,9 +154,11 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			if(prev_page_offset>=0) {
-				paginator_prev.addEventListener('mousedown',function(){
+				const mousedown_handler = (e) => {
+					e.stopPropagation()
 					self.paginate(offset_prev)
-				})
+				}
+				paginator_prev.addEventListener('mousedown', mousedown_handler)
 			}else{
 				paginator_prev.classList.add('inactive')
 			}
@@ -166,9 +170,11 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			if(next_page_offset<total) {
-				paginator_next.addEventListener('mousedown',function(){
+				const mousedown_handler = (e) => {
+					e.stopPropagation()
 					self.paginate(offset_next)
-				})
+				}
+				paginator_next.addEventListener('mousedown', mousedown_handler)
 			}else{
 				paginator_next.classList.add('inactive')
 			}
@@ -180,9 +186,11 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number<total_pages) {
-				paginator_last.addEventListener('mousedown',function(){
+				const mousedown_handler = (e) => {
+					e.stopPropagation()
 					self.paginate(offset_last)
-				})
+				}
+				paginator_last.addEventListener('mousedown', mousedown_handler)
 			}else{
 				paginator_last.classList.add('inactive')
 			}

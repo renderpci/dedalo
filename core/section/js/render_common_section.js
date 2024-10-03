@@ -229,14 +229,14 @@ export const render_relation_list = function(options) {
 		})
 
 	// relation_list events
-		const fn_relation_list_paginator = function(relation_list) {
+		const relation_list_paginator_handler = (relation_list) => {
 			relation_list_body.classList.add('loading')
 			load_relation_list(relation_list)
 			.then(function(){
 				relation_list_body.classList.remove('loading')
 			})
 		}
-		event_manager.subscribe('relation_list_paginator_'+section_tipo, fn_relation_list_paginator)
+		event_manager.subscribe('relation_list_paginator_'+section_tipo, relation_list_paginator_handler)
 
 	// track collapse toggle state of content
 		const load_relation_list = async function(instance) {

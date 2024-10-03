@@ -186,9 +186,8 @@ const get_value_element = (i, data, inputs_container, self) => {
 				parent			: li
 			})
 
-
 		// event update_widget_value
-			const fn_update_widget_value = function fn_update_widget_value(changed_data) {
+			const update_widget_value_handler = (changed_data) => {
 
 				const current_data = changed_data.find(el => el.id===data_map.id)
 
@@ -220,9 +219,10 @@ const get_value_element = (i, data, inputs_container, self) => {
 				label_after.textContent = (get_label[current_label_after] || current_label_after) + separator
 			}
 			self.events_tokens.push(
-				event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
+				event_manager.subscribe('update_widget_value_'+i+'_'+self.id, update_widget_value_handler)
 			)
 	}//end for loop
+
 
 	return li
 }//end input_element

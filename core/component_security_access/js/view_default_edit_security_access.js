@@ -373,10 +373,7 @@ const render_area_item = function(item, datalist, value, self) {
 				}
 			}//end fn_update_value
 			self.events_tokens.push(
-				event_manager.subscribe(
-					'update_item_value_' + self.id + '_' + tipo + '_' + section_tipo,
-					fn_update_value
-				)
+				event_manager.subscribe('update_item_value_' + self.id + '_' + tipo + '_' + section_tipo, fn_update_value)
 			)
 
 		// change event
@@ -649,22 +646,18 @@ const create_permissions_radio_group = function(self, item, permissions) {
 
 			// update value subscription
 			// If the DOM input value was changed, observers DOM elements will change self value with the observable value
-				self.events_tokens.push(
-					event_manager.subscribe(
-						'update_item_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
-						fn_update_value
-					)
-				)
-				function fn_update_value(changed_data) {
-					// console.log("-------------- - event update_value changed_data:", changed_data);
+				const update_item_value_handler = (changed_data) => {
 					// change the value of the current DOM element
 					if (changed_data===radio_value) {
 						radio_input.checked = true
 					}
 				}
+				self.events_tokens.push(
+					event_manager.subscribe('update_item_value_' + self.id +'_'+ item.tipo +'_'+ item.section_tipo, update_item_value_handler)
+				)
 
 			// change event
-				radio_input.addEventListener('change', async function() {
+				const change_handler = async () => {
 
 					const input_value = parseInt(radio_input.value)
 					// get the all parents of the item
@@ -689,8 +682,8 @@ const create_permissions_radio_group = function(self, item, permissions) {
 					// show_save_button
 						event_manager.publish('show_save_button_'+self.id)
 						// await self.save_changes()
-				})//end radio_input.addEventListener("change", async function(e)
-
+				}
+				radio_input.addEventListener('change', change_handler)
 
 			// radio_input_label
 				const radio_input_label = ui.create_dom_element({
@@ -771,14 +764,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 			}
 
 		// update_area_radio event. Update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
-			self.events_tokens.push(
-				event_manager.subscribe(
-					'update_area_radio_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
-					fn_update_value
-				)
-			)
-			function fn_update_value(changed_data) {
-				// console.log("-------------- - event update_value changed_data:", changed_data, radio_value);
+			const update_area_radio_handler = (changed_data) => {
 				// change the value of the current DOM element
 				if (changed_data===radio_value && !radio_input.checked) {
 					radio_input.checked = true
@@ -787,6 +773,9 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 					radio_input.checked = false
 				}
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('update_area_radio_' + self.id +'_'+ item.tipo +'_'+ item.section_tipo, update_area_radio_handler)
+			)
 
 		// change event
 			radio_input.addEventListener('change', async function() {

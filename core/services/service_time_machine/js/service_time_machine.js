@@ -209,7 +209,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			})
 
 			// event paginator_goto
-				const fn_paginator_goto = async function(offset) {
+				const paginator_goto_handler = async (offset) => {
 					// loading
 						const container = self.node.list_body
 									   || self.node.content_data
@@ -229,7 +229,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 						if (container) container.classList.remove('loading')
 				}
 				self.events_tokens.push(
-					event_manager.subscribe('paginator_goto_'+self.paginator.id , fn_paginator_goto)
+					event_manager.subscribe('paginator_goto_'+self.paginator.id , paginator_goto_handler)
 				)
 		}//end if (!self.paginator)
 

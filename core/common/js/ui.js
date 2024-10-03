@@ -1686,13 +1686,6 @@ export const ui = {
 			return false
 		}
 
-		function fn_render_target(instance_wrapper) {
-			const target_container = instance_wrapper.querySelector(container_selector)
-			if (target_container) {
-				target_container.appendChild(source_node)
-			}
-		}
-
 		if (target_instance.status==='rendered') {
 
 			if (target_instance.node===null) {
@@ -1716,9 +1709,16 @@ export const ui = {
 		}else{
 
 			// target_instance node not ready case
-			source_instance.events_tokens.push(
-				event_manager.subscribe('render_'+target_instance.id , fn_render_target)
-			)
+			let token
+			const render_handler = (instance_wrapper) => {
+				const target_container = instance_wrapper.querySelector(container_selector)
+				if (target_container) {
+					target_container.appendChild(source_node)
+				}
+				event_manager.unsubscribe(token)
+			}
+			token = event_manager.subscribe('render_'+target_instance.id, render_handler)
+			source_instance.events_tokens.push(token)
 		}
 
 
@@ -2072,7 +2072,8 @@ export const ui = {
 						const debug_div			= document.getElementById('debug')
 
 					// show hidden elements again on close
-						event_manager.subscribe('modal_close', () => {
+						const modal_close_handler = () => {
+
 							content_data_page.classList.remove('hide')
 							if(debug_div) {
 								debug_div.classList.remove('hide')
@@ -2083,7 +2084,8 @@ export const ui = {
 								top			: page_y_offset,
 								behavior	: 'auto'
 							})
-						})
+						}
+						event_manager.subscribe('modal_close', modal_close_handler)
 
 					modal_container._showModalBig();
 					break;

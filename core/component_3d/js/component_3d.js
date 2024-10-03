@@ -96,7 +96,10 @@ component_3d.prototype.upload_handler = async function() {
 		self.create_posterframe()
 	}else{
 		// wait for viewer is ready
-		event_manager.subscribe('viewer_ready_'+self.id, self.create_posterframe.bind(self))
+		const viewer_ready_handler = (viewer) => {
+			self.create_posterframe(viewer)
+		}
+		event_manager.subscribe('viewer_ready_'+self.id, viewer_ready_handler)
 	}
 }//end upload_handler
 

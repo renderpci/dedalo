@@ -7,6 +7,7 @@
 // imports
 	import {clone,object_to_url_vars,open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
@@ -131,11 +132,9 @@ component_portal.prototype.init = async function(options) {
 		self.request_config			= options.request_config || null
 
 	// events subscribe
+
 		// initiator_link. Observes user click over list record_
-			self.events_tokens.push(
-				event_manager.subscribe('initiator_link_' + self.id, fn_initiator_link)
-			)
-			async function fn_initiator_link(locator) {
+			const initiator_link_handler = async (locator) => {
 				// debug
 					if(SHOW_DEBUG===true) {
 						console.log('-> event fn_initiator_link locator:', locator);
@@ -149,13 +148,13 @@ component_portal.prototype.init = async function(options) {
 					if (self.modal) {
 						self.modal.close()
 					}
-			}//end fn_initiator_link
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('initiator_link_' + self.id, initiator_link_handler)
+			)
 
 		// link_term. Observes thesaurus tree link index button click
-			self.events_tokens.push(
-				event_manager.subscribe('link_term_' + self.id, fn_link_term)
-			)
-			function fn_link_term(locator) {
+			const link_term_handler = (locator) => {
 
 				switch (self.view) {
 					case 'indexation': {
@@ -216,28 +215,35 @@ component_portal.prototype.init = async function(options) {
 							return
 						}
 					})
-			}//end fn_initiator_link
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('link_term_' + self.id, link_term_handler)
+			)
 
 		// deactivate_component. Observes current component deactivation event
-			self.events_tokens.push(
-				event_manager.subscribe('deactivate_component', fn_deactivate_component)
-			)
-			function fn_deactivate_component(component) {
+			const deactivate_component_handler = (component) => {
 				if (component.id===self.id) {
 					if(SHOW_DEBUG===true) {
 						console.log('self.autocomplete_active:', self.autocomplete_active);
 					}
 					if(self.autocomplete_active===true){
-						self.autocomplete.destroy(
-							true, // bool delete_self
-							true, // bool delete_dependencies
-							true // bool remove_dom
+						dd_request_idle_callback(
+							() => {
+								self.autocomplete.destroy(
+									true, // bool delete_self
+									true, // bool delete_dependencies
+									true // bool remove_dom
+								)
+								self.autocomplete_active	= false
+								self.autocomplete			= null
+							}
 						)
-						self.autocomplete_active	= false
-						self.autocomplete			= null
 					}
 				}
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('deactivate_component', deactivate_component_handler)
+			)
 
 	// render_views
 		// Definition of the rendering views that could de used.
@@ -964,17 +970,17 @@ component_portal.prototype.update_pagination_values = function(action) {
 		self.paginator.total	= self.total
 
 	// paginator content data update (after self update to avoid artifacts (!))
-		self.events_tokens.push(
-			event_manager.subscribe('render_'+self.id, fn_refresh_paginator)
-		)
-		function fn_refresh_paginator() {
+		let token
+		const render_handler = () => {
 			// remove the event to prevent multiple equal events
-				event_manager.unsubscribe('render_'+self.id)
+			event_manager.unsubscribe(token)
 			// refresh paginator if already exists
-				if (self.paginator) {
-					self.paginator.refresh()
-				}
+			if (self.paginator) {
+				self.paginator.refresh()
+			}
 		}
+		token = event_manager.subscribe('render_'+self.id, render_handler)
+		self.events_tokens.push(token)
 
 
 	return true
