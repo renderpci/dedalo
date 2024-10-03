@@ -342,7 +342,6 @@ component_security_access.prototype.update_parents_radio_butons = async function
 	// parents (recursive)
 	const parents = await self.get_parents(item)
 
-
 	let diff_value = false
 	// set the data of the parents and change the DOM node with update_value event
 	const parents_length = parents.length
@@ -387,7 +386,7 @@ component_security_access.prototype.update_parents_radio_butons = async function
 				'update_area_radio_' + self.id + '_' + current_parent.tipo + '_' + current_parent.section_tipo,
 				value_to_propagete
 			)
-	}//end for
+	}//end for (let i = 0; i < parents_length; i++)
 
 
 	return diff_value

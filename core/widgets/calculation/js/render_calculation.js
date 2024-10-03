@@ -157,19 +157,19 @@ const get_value_element = (i, data, inputs_container, self) => {
 			const current_label_before = (value && data_map['label_before'+label_suffix])
 				? data_map['label_before'+label_suffix]
 				: ''
-			const label_before =  ui.create_dom_element({
-					element_type	: "label",
-					class_name		: 'before',
-					inner_html		: get_label[current_label_before] || current_label_before,
-					parent			: li
+			const label_before = ui.create_dom_element({
+				element_type	: "label",
+				class_name		: 'before',
+				inner_html		: get_label[current_label_before] || current_label_before,
+				parent			: li
 			})
 
 		// value
 			const element_value = ui.create_dom_element({
-				element_type 	: "span",
-				class_name 		: 'value',
-				inner_html 		: value,
-				parent 		 	: li
+				element_type	: "span",
+				class_name		: 'value',
+				inner_html		: value,
+				parent			: li
 			})
 
 		// label after

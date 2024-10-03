@@ -688,7 +688,6 @@ export const render_component_info = function(self, component) {
 
 	// values from caller (section)
 		const tipo			= component.tipo
-		// const label		= component.label
 		const model			= component.model
 		const mode			= component.mode
 		const view			= component.view || 'default'

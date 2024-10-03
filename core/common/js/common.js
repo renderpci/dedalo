@@ -685,7 +685,9 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 						// prevent destroy non destroyable instances (menu, etc.)
 							const current_instance = self.ar_instances[i]
 							if (!current_instance) {
-								console.log('Ignored non exiting instance:', i, current_instance);
+								if(SHOW_DEBUG===true) {
+									// console.log('Ignored destroy for non exiting instance:', i, current_instance);
+								}
 								continue;
 							}
 							if(typeof current_instance.destroyable!=='undefined' && current_instance.destroyable===false){
