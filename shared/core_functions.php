@@ -417,6 +417,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 * }
 */
 function curl_request(object $options) : object {
+	$start_time=start_time();
 
 	// options
 		$url			= $options->url; // mandatory
@@ -498,7 +499,8 @@ function curl_request(object $options) : object {
 				. ' httpcode: ' . $httpcode . PHP_EOL
 				. ' url: ' . $url . PHP_EOL
 				. ' msg: ' . $msg . PHP_EOL
-				. ' bt:  ' . to_string( debug_backtrace()[0] )
+				. ' bt:  ' . to_string( debug_backtrace()[0] ) . PHP_EOL
+				. ' time: ' . exec_time_unit_auto($start_time)
 				, $debug_level
 			);
 
