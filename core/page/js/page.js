@@ -156,6 +156,9 @@ page.prototype.init = async function(options) {
 	// events listeners. Add window/document general events
 		self.add_events()
 
+	// css. Update custom CSS based on environment
+		set_custom_css()
+
 	// set page instance as global to be available
 		window.dd_page = self
 
@@ -767,6 +770,36 @@ const update_css_file = function(sheet_name) {
 
 	return false
 }//end update_css_file
+
+
+
+/**
+* SET_CUSTOM_CSS
+* Set custom specific CSS based on operating system, browser, etc
+* @return void
+*/
+const set_custom_css = function () {
+
+	// browser specifics
+	{
+		const regex = /Windows/gm;
+		const found = regex.exec(navigator.userAgent)
+		if (found) {
+			// add to body @see general.less for affections
+			document.body.classList.add('os-windows')
+			return
+		}
+	}
+	{
+		const regex = /Macintosh/gm;
+		const found = regex.exec(navigator.userAgent)
+		if (found) {
+			// add to body @see general.less for affections
+			document.body.classList.add('os-macintosh')
+			return
+		}
+	}
+}//end set_custom_css
 
 
 /**
