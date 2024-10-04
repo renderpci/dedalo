@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {dd_console} from '../../common/js/utils/index.js'
 	import {common, create_source} from '../../common/js/common.js'
@@ -138,12 +139,13 @@ component_text_area.prototype.init = async function(options) {
 		// click_tag_index_. User click over image index tag
 			const click_tag_index_handler = (options) => {
 
-				if(SHOW_DEVELOPER===true) {
-					dd_console(`[component_text_area] click_tag_index ${self.id_base}`, 'DEBUG', options)
-				}
-
 				// options
 					const tag = options.tag // object
+
+				// debug
+					if(SHOW_DEVELOPER===true) {
+						dd_console(`[component_text_area] click_tag_index ${self.id_base}, tag: ${tag}`, 'DEBUG', options)
+					}
 
 				// short vars
 					const key			= 0; // key (only one editor is available but component could support multiple)
@@ -153,18 +155,20 @@ component_text_area.prototype.init = async function(options) {
 					self.tag = tag
 
 					ui.component.activate(self)
-					.then(function(response){
+					.then(function(){
 
 						// set_selection. Implies scroll to the tag into view (!)
 						text_editor.set_selection_from_tag(tag)
-						setTimeout(function(){
-							if (text_editor.editor && text_editor.editor.editing) {
-								// set focus to editor (if the event is fired by other components as portal indexation)
-								text_editor.editor.editing.view.focus()
-								// scroll to allow display the selection into the view
-								text_editor.scroll_to_selection()
+						dd_request_idle_callback(
+							() => {
+								if (text_editor.editor && text_editor.editor.editing) {
+									// set focus to editor (if the event is fired by other components as portal indexation)
+									text_editor.editor.editing.view.focus()
+									// scroll to allow display the selection into the view
+									text_editor.scroll_to_selection()
+								}
 							}
-						}, 10)
+						)
 					})
 
 
@@ -196,12 +200,14 @@ component_text_area.prototype.init = async function(options) {
 
 						// set_selection. Implies scroll to the tag into view (!)
 						text_editor.set_selection_from_tag(tag)
-						setTimeout(function(){
-							// set focus to editor (if the event is fired by other components as portal indexation)
-							text_editor.editor.editing.view.focus()
-							// scroll to allow display the selection into the view
-							text_editor.scroll_to_selection()
-						}, 10)
+						dd_request_idle_callback(
+							() => {
+								// set focus to editor (if the event is fired by other components as portal indexation)
+								text_editor.editor.editing.view.focus()
+								// scroll to allow display the selection into the view
+								text_editor.scroll_to_selection()
+							}
+						)
 					})
 
 
