@@ -1245,8 +1245,16 @@ export const load_time_machine_list = async function(self) {
 	// (!) Note that expose is called on each section pagination, whereby must be generated
 	// even if user close and re-open the time_machine_list inspector tab
 
+	// destroy previous service
+		if (self.service_time_machine) {
+			await self.service_time_machine.destroy(
+				true, // delete_self
+				true // delete_dependencies
+			)
+		}
+
 	// create and render a service_time_machine instance
-		const service_time_machine	= await get_instance({
+		const service_time_machine = await get_instance({
 			model			: 'service_time_machine',
 			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
@@ -1276,6 +1284,9 @@ export const load_time_machine_list = async function(self) {
 		})
 		await service_time_machine.build(true)
 		const time_machine_list_wrap = await service_time_machine.render()
+
+	// set new service_time_machine
+		self.service_time_machine = service_time_machine
 
 	// remove previous node if a pointer exists
 		if (container.time_machine_list_wrap) {

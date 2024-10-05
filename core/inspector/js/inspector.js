@@ -71,6 +71,9 @@ inspector.prototype.init = async function(options) {
 
 	self.last_docu_type = null
 
+	// fix active service_time_machine
+	self.service_time_machine
+
 	// events
 
 		// render_ section
