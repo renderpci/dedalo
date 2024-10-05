@@ -651,178 +651,23 @@ common.prototype.refresh = async function(options={}) {
 * @param bool remove_dom = false
 * 	On true, removes the instance DOM node
 * @return object result
-* @return promise
-* 	Resolve object result
 */
 common.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
 	const self		= this
 	const result	= {}
-		// console.warn(">>>>>> destroy :", self.tipo, self.caller.tipo, self.model, `delete_self: ${delete_self}, delete_dependencies: ${delete_dependencies}, remove_dom: ${remove_dom}` );
 
-
-	// destroy all associated instances
+	// delete_dependencies. Destroy all associated instances
 		if(delete_dependencies===true) {
+			result.delete_dependencies = await do_delete_dependencies(self)
+		}
 
-			const do_delete_dependencies = async function() {
-
-				if (!self.ar_instances) {
-					console.log("Undefined self.ar_instances:", self);
-					return false
-				}
-
-				const ar_instances_length = self.ar_instances.length
-
-				// debug
-					if(SHOW_DEBUG===true) {
-						if (ar_instances_length<1) {
-							// console.warn("[common.destroy.delete_dependencies] Ignored empty ar_instances as dependencies ", self);
-						}
-					}
-
-				// remove instances from self ar_instances
-					for (let i = ar_instances_length - 1; i >= 0; i--) {
-
-						// prevent destroy non destroyable instances (menu, etc.)
-							const current_instance = self.ar_instances[i]
-							if (!current_instance) {
-								if(SHOW_DEBUG===true) {
-									// console.log('Ignored destroy for non exiting instance:', i, current_instance);
-								}
-								continue;
-							}
-							if(typeof current_instance.destroyable!=='undefined' && current_instance.destroyable===false){
-								continue;
-							}
-
-						// remove from current element array of instances
-							const destroyed_elements = self.ar_instances.splice(i, 1)
-
-						// prevent destroy non destroyable instances (menu, etc.)
-							// if(destroyed_elements[0] && destroyed_elements[0].destroyable===false){
-							// 	continue;
-							// }
-
-						// destroy instance
-							if (typeof destroyed_elements[0].destroy==='function') {
-								await destroyed_elements[0].destroy(
-									true, // delete_self
-									true, // delete_dependencies
-									false // remove_dom
-								) // No wait here, only launch destroy order
-							}else{
-								console.warn("Ignored destroyed_elements[0] without property 'destroy':", self, destroyed_elements[0]);
-								console.warn("self.ar_instances:",self.ar_instances);
-							}
-					}
-
-				const result = (self.ar_instances.length===0) ? true : false
-
-				return result
-			}
-
-			result.delete_dependencies = await do_delete_dependencies()
-		}//end if(delete_dependencies===true)
-
-	// delete self instance
+	// delete_self. Destroy self instance
 		if(delete_self===true) {
+			result.delete_self = await do_delete_self(self)
+		}
 
-			const do_delete_self = async function() {
-
-				// delete events. Delete the registered events
-					// get the events that the instance was created
-					const events_tokens	= self.events_tokens
-					// remove all subscriptions
-					events_tokens.map(current_token => event_manager.unsubscribe(current_token))
-
-				// delete paginator
-					if(self.paginator){
-						await self.paginator.destroy(
-							true, // delete_self
-							true, // delete_dependencies
-							false // remove_dom
-						)
-						delete self.paginator
-					}
-
-				// destroy services
-					if (self.services) {
-						const services_length = self.services.length
-						for (let i = services_length - 1; i >= 0; i--) {
-							console.log("removed services:", i, services_length);
-							if (typeof self.services[i].destroy==='function') {
-								self.services[i].destroy(
-									true, // delete_self
-									true, // delete_dependencies
-									false // remove_dom
-								)
-							}
-							delete self.services[i]
-						}
-					}
-
-				// self.inspector destroy if exists
-					if (self.inspector) {
-						self.inspector.destroy(
-							true, // delete_self
-							true, // delete_dependencies
-							false // remove_dom
-						)
-						delete self.inspector
-					}
-
-				// self.filter destroy if exists
-					if (self.filter) {
-						self.filter.destroy(
-							true, // delete_self
-							true, // delete_dependencies
-							false // remove_dom
-						)
-						delete self.filter
-					}
-
-				// self.filter destroy if exists
-					// if (self.filter) {
-					// 	self.filter.destroy(true, true, false)
-					// }
-
-				// remove_dom optional
-					// if (remove_dom===true) {
-					// 	const remove_node = async () => {
-					// 		if(self.node){
-					// 			// remove DOM node if exists (wrapper)
-					// 			self.node.remove()
-					// 		}
-					// 		// reset instance node property value
-					// 		self.node = null
-					// 	}
-					// 	await remove_node()
-					// }
-
-				// delete_instance from instances register array
-					const instance_options = {
-						id				: self.id
-						// model		: self.model,
-						// tipo			: self.tipo,
-						// section_tipo	: self.section_tipo,
-						// section_id	: self.section_id,
-						// mode			: self.mode,
-						// lang			: self.lang
-					}
-					// time machine case
-					if (self.matrix_id) {
-						instance_options.matrix_id = self.matrix_id
-					}
-
-					const result = await delete_instance(instance_options)
-
-				return result
-			}//end function do_delete_self
-
-			result.delete_self = await do_delete_self()
-		}//end if(delete_self===true)
-
-	// remove_dom optional
+	// remove_dom. Remove element main DOM node (optional)
 		if (remove_dom===true) {
 			if(self.node && (self.node.nodeType===Node.ELEMENT_NODE || self.node.nodeType===Node.TEXT_NODE)) {
 				// remove DOM node if exists (wrapper)
@@ -839,13 +684,164 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 	// event publish
 		event_manager.publish('destroy_'+self.id)
 
-
 	// status update
 		self.status = 'destroyed'
 
 
 	return result
 }//end destroy
+
+
+
+/**
+* DO_DELETE_SELF
+* Exec the self instance deletion taking into account
+* paginator, services, inspector and filter
+* @return int
+* 	delete_instance from instances returns int 'deleted'
+*/
+const do_delete_self = async function (self) {
+
+	// delete events. Delete the instance registered events
+		const events_tokens	= self.events_tokens
+		// remove all subscriptions
+		const events_tokens_length = events_tokens.length
+		for (let i = events_tokens_length - 1; i >= 0; i--) {
+			event_manager.unsubscribe(events_tokens[i])
+		}
+
+	// destroy paginator
+		if(self.paginator){
+			await self.paginator.destroy(
+				true, // delete_self
+				true, // delete_dependencies
+				false // remove_dom
+			)
+			delete self.paginator
+		}
+
+	// destroy services
+		if (self.services) {
+			const services_length = self.services.length
+			for (let i = services_length - 1; i >= 0; i--) {
+				if(SHOW_DEBUG===true) {
+					console.log('removing services:', i, services_length);
+				}
+				if (typeof self.services[i].destroy==='function') {
+					await self.services[i].destroy(
+						true, // delete_self
+						true, // delete_dependencies
+						false // remove_dom
+					)
+				}
+				delete self.services[i]
+			}
+		}
+
+	// destroy inspector
+		if (self.inspector) {
+			await self.inspector.destroy(
+				true, // delete_self
+				true, // delete_dependencies
+				false // remove_dom
+			)
+			delete self.inspector
+		}
+
+	// destroy filter
+		if (self.filter) {
+			await self.filter.destroy(
+				true, // delete_self
+				true, // delete_dependencies
+				false // remove_dom
+			)
+			delete self.filter
+		}
+
+	// delete_instance from instances register array
+		const instance_options = {
+			id				: self.id
+			// model		: self.model,
+			// tipo			: self.tipo,
+			// section_tipo	: self.section_tipo,
+			// section_id	: self.section_id,
+			// mode			: self.mode,
+			// lang			: self.lang
+		}
+		// time machine case
+		if (self.matrix_id) {
+			instance_options.matrix_id = self.matrix_id
+		}
+
+	const result = await delete_instance(instance_options)
+
+
+	return result
+}//end do_delete_self
+
+
+
+/**
+* DO_DELETE_DEPENDENCIES
+* Remove instance dependencies added in the array 'self.ar_instances'
+* @return bool
+* 	if all instances are deleted, returns true, false if not
+*/
+const do_delete_dependencies = async function (self) {
+
+	if (!self.ar_instances) {
+		console.log("Undefined self.ar_instances:", self);
+		return false
+	}
+
+	// remove instances from self ar_instances
+		const ar_instances_length = self.ar_instances.length
+		for (let i = ar_instances_length - 1; i >= 0; i--) {
+
+			const current_instance = self.ar_instances[i]
+
+			// check instance
+				if (!current_instance) {
+					// if(SHOW_DEBUG===true) {
+					// 	console.error('Ignored destroy for non exiting instance:', i, current_instance);
+					// }
+					continue;
+				}
+
+			// prevent destroy non destroyable instances (menu, etc.)
+				const destroyable = current_instance.destroyable ?? true
+				if (destroyable===false) {
+					// if(SHOW_DEBUG===true) {
+					// 	console.error('Ignored non destroyable instance:', i, current_instance);
+					// }
+					continue;
+				}
+
+			// destroy instance
+				if (typeof current_instance.destroy==='function') {
+
+					await current_instance.destroy(
+						true, // delete_self
+						true, // delete_dependencies
+						false // remove_dom
+					)
+					// .then(()=>{
+						// remove from current element array of instances
+						if (self.ar_instances[i]) {
+							self.ar_instances.splice(i, 1)
+						}
+					// })
+				}else{
+					console.error("Ignored destroyed_elements[0] without property 'destroy':", self, destroyed_elements[0]);
+					console.warn("self.ar_instances:",self.ar_instances);
+				}
+		}
+
+	const result = (self.ar_instances.length===0) ? true : false
+
+
+	return result
+}//end do_delete_dependencies
 
 
 
