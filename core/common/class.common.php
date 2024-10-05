@@ -3487,16 +3487,31 @@ abstract class common {
 						case 'search':
 						default:
 							if ($model==='section') {
-								# case section list is defined
+								// case section list is defined
 								$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
 								if(isset($ar_terms[0])) {
-									# Use found related terms as new list
+									// Use found related terms as new list
 									$current_term = $ar_terms[0];
 									$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
 										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
 									);
+								}else{
+									// try with real section
+									$real_section_tipo = section::get_section_real_tipo_static($tipo);
+									if ($real_section_tipo!==$tipo) {
+										$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($real_section_tipo, 'section_list', 'children', true);
+										if(isset($ar_terms[0])) {
+											// Use found related terms as new list
+											$current_term = $ar_terms[0];
+											$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
+												$current_term, // string tipo
+												true, // bool cache
+												true // bool simple
+											);
+										}
+									}
 								}
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
@@ -3527,7 +3542,7 @@ abstract class common {
 										}
 									};
 
-									//fallback when the related term has not section defined
+									// fallback when the related term has not section defined
 									// it will use of the main component related
 									if($section_isset === false){
 										$ar_main_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
