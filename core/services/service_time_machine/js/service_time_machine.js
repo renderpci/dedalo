@@ -71,6 +71,8 @@ service_time_machine.prototype.init = async function(options) {
 
 	self.ar_instances	= [];
 
+	self.events_tokens	= [];
+
 	self.config			= options.config || {}
 
 	self.id_variant		= options.id_variant || self.model
