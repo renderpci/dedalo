@@ -642,16 +642,15 @@ common.prototype.refresh = async function(options={}) {
 
 /**
 * DESTROY
-* Delete all instances dependents of the section and all events that was created by the instances.
-* but it not delete the own section instance.
-*
+* Delete all dependent instances of the section and all events that was created by the instances,
+* but does not remove the section instance itself.
 * @param bool delete_self = true
 * 	On true, Delete self instance events, paginator, services, inspector, filter and instance
 * @param bool delete_dependencies = false
 * 	On true, Call to destroy all associated instances (ar_instances)
 * @param bool remove_dom = false
 * 	On true, removes the instance DOM node
-*
+* @return object result
 * @return promise
 * 	Resolve object result
 */
