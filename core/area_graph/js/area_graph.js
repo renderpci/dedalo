@@ -88,11 +88,9 @@ area_graph.prototype.init = async function(options) {
 		const common_init = await area_common.prototype.init.call(this, options);
 
 	// events subscription
+
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
-		self.events_tokens.push(
-			event_manager.subscribe('toggle_search_panel_'+self.id, fn_toggle_search_panel)
-		)
-		async function fn_toggle_search_panel() {
+		const toggle_search_panel_handler = async () => {
 
 			if (self.search_container.children.length===0) {
 				// await add_to_container(self.search_container, self.filter)
@@ -107,35 +105,38 @@ area_graph.prototype.init = async function(options) {
 			}
 			toggle_search_panel(self.filter)
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('toggle_search_panel_'+self.id, toggle_search_panel_handler)
+		)
 
 		// render event
-		self.events_tokens.push(
-			event_manager.subscribe('render_'+self.id, fn_render)
-		)
-		function fn_render() {
+		const render_handler = () => {
 			// open_search_panel. local DDBB table status
-				const status_id			= 'open_search_panel'
-				const collapsed_table	= 'status'
-				data_manager.get_local_db_data(status_id, collapsed_table, true)
-				.then(async function(ui_status){
-					// (!) Note that ui_status only exists when element is open
-					const is_open = typeof ui_status==='undefined' || ui_status.value===false
-						? false
-						: true
-					if (is_open===true && self.search_container.children.length===0) {
-						// add_to_container(self.search_container, self.filter)
-						await ui.load_item_with_spinner({
-							container	: self.search_container,
-							label		: 'filter',
-							callback	: async () => {
-								await self.filter.build()
-								return self.filter.render()
-							}
-						})
-						toggle_search_panel(self.filter)
-					}
-				})
+			const status_id			= 'open_search_panel'
+			const collapsed_table	= 'status'
+			data_manager.get_local_db_data(status_id, collapsed_table, true)
+			.then(async function(ui_status){
+				// (!) Note that ui_status only exists when element is open
+				const is_open = typeof ui_status==='undefined' || ui_status.value===false
+					? false
+					: true
+				if (is_open===true && self.search_container.children.length===0) {
+					// add_to_container(self.search_container, self.filter)
+					await ui.load_item_with_spinner({
+						container	: self.search_container,
+						label		: 'filter',
+						callback	: async () => {
+							await self.filter.build()
+							return self.filter.render()
+						}
+					})
+					toggle_search_panel(self.filter)
+				}
+			})
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('render_'+self.id, render_handler)
+		)
 
 	// linker
 		const url_vars = url_vars_to_object(window.location.search)

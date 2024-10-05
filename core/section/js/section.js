@@ -603,11 +603,15 @@ section.prototype.build = async function(autoload=false) {
 			// debug
 				if(SHOW_DEBUG===true) {
 
-					// fn_show_debug_info
-						const fn_show_debug_info = function() {
-							event_manager.unsubscribe(event_token)
+					let debug_token
 
-							const debug = document.getElementById("debug")
+					// fn_show_debug_info
+						const render_handler = () => {
+
+							// remove event subscription
+							event_manager.unsubscribe(debug_token)
+
+							const debug = document.getElementById('debug')
 							if (!debug) {
 								console.log('Ignored debug');
 								return
@@ -626,17 +630,12 @@ section.prototype.build = async function(autoload=false) {
 									parent			: debug
 								})
 								button_debug.tabIndex = -1;
-								button_debug.addEventListener("click", function(){
+								const click_handler = () => {
 
 									if (debug_container.hasChildNodes()) {
 										debug_container.classList.toggle('hide')
 										return
 									}
-
-									// clean
-										// while (debug_container.firstChild) {
-										// 	debug_container.removeChild(debug_container.firstChild)
-										// }
 
 									// collect debug data
 									load_data_debug(self, api_response, self.rqo)
@@ -656,7 +655,8 @@ section.prototype.build = async function(autoload=false) {
 												behavior	: 'smooth'
 											});
 									})
-								})
+								}
+								button_debug.addEventListener('click', click_handler)
 
 							// debug_container
 								const debug_container = ui.create_dom_element({
@@ -665,11 +665,11 @@ section.prototype.build = async function(autoload=false) {
 									parent			: debug
 								})
 
-							// show
+							// show debug node removing hide style
 								debug.classList.remove('hide')
 						}
-					const event_token = event_manager.subscribe('render_'+self.id, fn_show_debug_info)
-					self.events_tokens.push(event_token)
+					debug_token = event_manager.subscribe('render_'+self.id, render_handler)
+					self.events_tokens.push(debug_token)
 				}
 		}//end if (autoload===true)
 
@@ -699,32 +699,25 @@ section.prototype.build = async function(autoload=false) {
 			})
 
 			// event paginator_goto_
-				const fn_paginator_goto = async function(offset) {
+				const paginator_goto_handler = (offset) => {
 					self.update_pagination(offset)
 				}
 				self.events_tokens.push(
-					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+					event_manager.subscribe('paginator_goto_'+self.paginator.id, paginator_goto_handler)
 				)
-
 		}//end if (!self.paginator)
 
 	// inspector
 		if (self.inspector===null && self.mode==='edit' && self.permissions) {
-			// if (initiator && initiator.model==='component_portal') {
 
-			// 	self.inspector = null
-
-			// }else{
-
-				const current_inspector = new inspector()
-				current_inspector.init({
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					caller			: self
-				})
-				// fix section inspector
-				self.inspector = current_inspector
-			// }
+			const current_inspector = new inspector()
+			current_inspector.init({
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id,
+				caller			: self
+			})
+			// fix section inspector
+			self.inspector = current_inspector
 		}
 
 	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)

@@ -67,6 +67,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 
 				// relation_list
 					const relation_list = render_relation_list({
+						self			: section,
 						section_tipo	: section_tipo,
 						section_id		: section_id
 					})
@@ -200,6 +201,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 export const render_relation_list = function(options) {
 
 	// options
+		const self			= options.self
 		const section_tipo	= options.section_tipo
 		const section_id	= options.section_id
 
@@ -236,7 +238,9 @@ export const render_relation_list = function(options) {
 				relation_list_body.classList.remove('loading')
 			})
 		}
-		event_manager.subscribe('relation_list_paginator_'+section_tipo, relation_list_paginator_handler)
+		self.events_tokens.push(
+			event_manager.subscribe('relation_list_paginator_'+section_tipo, relation_list_paginator_handler)
+		)
 
 	// track collapse toggle state of content
 		const load_relation_list = async function(instance) {

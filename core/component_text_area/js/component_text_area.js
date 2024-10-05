@@ -1580,7 +1580,9 @@ component_text_area.prototype.focus_first_input = function() {
 		const editor_ready_handler = (service) => {
 			service.focus()
 		}
-		event_manager.subscribe('editor_ready_' + self.id, editor_ready_handler)
+		self.events_tokens.push(
+			event_manager.subscribe('editor_ready_' + self.id, editor_ready_handler)
+		)
 	}
 
 

@@ -157,8 +157,9 @@ const get_content_data = async function(self) {
 				content_data.classList.remove('loading')
 			}
 			button_save.addEventListener('click', save_handler)
+
 			// subscribe event show_save_button_
-			const fn_show_save_button = () => {
+			const show_save_button_handler = () => {
 				button_save.classList.remove('disable')
 				const label = self.node.querySelector('.label')
 				if (label && !label.querySelector('.warning_label_text')) {
@@ -175,7 +176,7 @@ const get_content_data = async function(self) {
 				set_before_unload(true)
 			}
 			self.events_tokens.push(
-				event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
+				event_manager.subscribe('show_save_button_'+self.id, show_save_button_handler)
 			)
 
 			// debug

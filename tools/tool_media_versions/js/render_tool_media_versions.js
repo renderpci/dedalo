@@ -686,13 +686,14 @@ const render_file_upload = function(quality, self) {
 					})
 
 			// event on refresh caller
-				const token = event_manager.subscribe('render_'+self.main_element.id, fn_refresh)
-				self.events_tokens.push(token)
-				function fn_refresh() {
+				let token
+				const render_handler = () => {
 					event_manager.unsubscribe(token)
 					self.main_element_quality = quality
 					self.refresh()
 				}
+				token = event_manager.subscribe('render_'+self.main_element.id, render_handler)
+				self.events_tokens.push(token)
 		})
 
 

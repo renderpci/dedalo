@@ -40,7 +40,8 @@ export const events_subscription = function(self) {
 
 	// update value
 		if (self.mode!=='tm') {
-			const fn_sync_data = function(options) {
+
+			const sync_data_handler = (options) => {
 
 				// options
 					const caller		= options.caller
@@ -92,7 +93,7 @@ export const events_subscription = function(self) {
 			const id_base_lang = self.id_base + '_' + self.lang
 
 			self.events_tokens.push(
-				event_manager.subscribe('sync_data_'+id_base_lang, fn_sync_data)
+				event_manager.subscribe('sync_data_'+id_base_lang, sync_data_handler)
 			)
 		}//end if (self.mode!=='tm')
 
