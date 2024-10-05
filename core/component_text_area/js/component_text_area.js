@@ -100,6 +100,9 @@ component_text_area.prototype.init = async function(options) {
 
 	const self = this
 
+	// call the generic init method
+		const common_init = await component_common.prototype.init.call(self, options);
+
 	// events subscribe
 
 		// create_fragment_ . User click over button 'create_fragment'
@@ -333,9 +336,6 @@ component_text_area.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('deactivate_component', deactivate_component_handler)
 			)
-
-	// call the generic init method
-		const common_init = await component_common.prototype.init.call(self, options);
 
 	// service_text_editor
 		self.service_text_editor = service_ckeditor
