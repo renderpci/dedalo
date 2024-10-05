@@ -395,10 +395,10 @@ const render_image_node = function(self, file_info, content_value) {
 		object_node.addEventListener('load', load_handler)
 
 	// change event
-		const image_quality_change_handler = async (img_src) => {
+		const image_quality_change_handler = async (url) => {
 
 			// as '/dedalo/media/image/3MB/0/rsc29_rsc170_2.jpg?t=1714996905397'
-			self.img_src = img_src
+			self.img_src = url
 
 			// svg document inside the object_node tag
 			const svg_doc = object_node.contentDocument;
@@ -422,7 +422,7 @@ const render_image_node = function(self, file_info, content_value) {
 				})
 
 				// update t var from image URL
-				const beats	= img_src.split('?')
+				const beats	= url.split('?')
 
 				// force to refresh image from svg
 				// await fetch(beats[0], { cache: 'reload' })
