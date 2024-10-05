@@ -215,12 +215,12 @@ view_note_text_area.render = async function(self, options) {
 						ui.component.activate(component)
 
 						// event subscription. Focus editor when ready
-						event_manager.subscribe(
-							'editor_ready_' + component.id,
-							function(service_text_editor){
-								// force focus component editor
-								service_text_editor.editor.editing.view.focus()
-							}
+						const editor_ready_handler = (service_text_editor) => {
+							// force focus component editor
+							service_text_editor.editor.editing.view.focus()
+						}
+						self.events_tokens.push(
+							event_manager.subscribe('editor_ready_' + component.id,	editor_ready_handler)
 						)
 
 						return node

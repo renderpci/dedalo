@@ -520,21 +520,21 @@ component_portal.prototype.build = async function(autoload=false) {
 					await self.paginator.build()
 
 					// paginator_goto_ event
-						const fn_paginator_goto = function(offset) {
+						const paginator_goto_handler = function(offset) {
 							// navigate
 							self.navigate({
 								callback : () => {
 									self.rqo.sqo.offset = offset
 								}
 							})
-						}//end fn_paginator_goto
+						}
 						self.events_tokens.push(
-							event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
-						)//end events push
+							event_manager.subscribe('paginator_goto_'+self.paginator.id, paginator_goto_handler)
+						)
 
 
 					// paginator_show_all_
-						const fn_paginator_show_all = function() {
+						const paginator_show_all_handler = function() {
 							// navigate
 							self.navigate({
 								callback : async () => {
@@ -543,13 +543,13 @@ component_portal.prototype.build = async function(autoload=false) {
 									self.rqo.sqo.limit	= self.request_config_object.sqo.limit	= 0 // (limit + 1000)
 								}
 							})
-						}//end fn_paginator_show_all
+						}
 						self.events_tokens.push(
-							event_manager.subscribe('paginator_show_all_'+self.paginator.id, fn_paginator_show_all)
-						)//end events push
+							event_manager.subscribe('paginator_show_all_'+self.paginator.id, paginator_show_all_handler)
+						)
 
 					// reset_paginator_
-						const fn_reset_paginator = function(limit) {
+						const reset_paginator_handler = function(limit) {
 							// navigate
 							self.navigate({
 								callback : async () => {
@@ -558,10 +558,10 @@ component_portal.prototype.build = async function(autoload=false) {
 									self.rqo.sqo.limit	= self.request_config_object.sqo.limit	= limit
 								}
 							})
-						}//end fn_reset_paginator
+						}
 						self.events_tokens.push(
-							event_manager.subscribe('reset_paginator_'+self.paginator.id, fn_reset_paginator)
-						)//end events push
+							event_manager.subscribe('reset_paginator_'+self.paginator.id, reset_paginator_handler)
+						)
 
 				}else{
 					// refresh existing

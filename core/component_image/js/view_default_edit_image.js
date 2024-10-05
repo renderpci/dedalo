@@ -63,7 +63,9 @@ view_default_edit_image.render = function(self, options) {
 		const full_screen_handler = () => {
 			fit_image(self)
 		}
-		event_manager.subscribe('full_screen_'+self.id, full_screen_handler)
+		self.events_tokens.push(
+			event_manager.subscribe('full_screen_'+self.id, full_screen_handler)
+		)
 
 
 	return wrapper

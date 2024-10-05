@@ -189,19 +189,22 @@ vector_editor.prototype.init_canvas = async function(self) {
 		this.render_tools_buttons(self);
 
 	// subscription to the full_screen change event
+		const full_screen_handler = () => {
+			this.update_canvas()
+		}
 		self.events_tokens.push(
-			event_manager.subscribe('full_screen_'+self.id,  this.update_canvas.bind(this))
+			event_manager.subscribe('full_screen_'+self.id,  full_screen_handler)
 		)
 
 	// when the image change his quality
 	// change the source of the image, load it and re-calculate his size.
-		self.events_tokens.push(
-			event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
-		)
-		function fn_img_quality_change(img_src) {
+		const image_quality_change_handler = (img_src) => {
 			image_definition.src = img_src
 			stage.setHref(image_definition.image_node, img_src);
-		}//end img_quality_change
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('image_quality_change_'+self.id, image_quality_change_handler)
+		)
 
 
 	return true
@@ -640,12 +643,12 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				})
 				buttons.push(layer_selector_button)
 
-				self.events_tokens.push(
-					event_manager.subscribe('active_layer_'+self.id, change_layer)
-				)
-				function change_layer(active_layer) {
+				const active_layer_handler = (active_layer) => {
 					layer_selector_button.innerHTML = active_layer.layer_id
 				}
+				self.events_tokens.push(
+					event_manager.subscribe('active_layer_'+self.id, active_layer_handler)
+				)
 
 			// pointer
 				const pointer = ui.create_dom_element({
@@ -1301,10 +1304,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 			}
 
 		// when we change the active layer, the other layers will be inactive
-			self.events_tokens.push(
-				event_manager.subscribe('active_layer_'+self.id, change_layer)
-			)
-			function change_layer(active_layer) {
+			const active_layer_handler = (active_layer) => {
 				if(layer.layer_id === active_layer.layer_id) {
 					layer_li.classList.add('active')
 					this.active_layer = active_layer
@@ -1314,7 +1314,10 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 						layer_li.classList.remove('active')
 					}
 				}
-			}//end change_layer
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('active_layer_'+self.id, active_layer_handler)
+			)
 
 		// layer_icon
 			const layer_icon = ui.create_dom_element({
