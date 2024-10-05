@@ -482,13 +482,7 @@ common.prototype.render = async function (options={}) {
 		self.status = 'rendered'
 
 	// event publish
-		if (!self.events_tokens) {
-			console.warn('WARNING (missing tokens array declaration) instance:', self);
-		}
-		const render_token = event_manager.publish('render_'+self.id, result_node)
-		if (self.events_tokens) {
-			self.events_tokens.push(render_token)
-		}
+		event_manager.publish('render_'+self.id, result_node)
 		// event_manager.publish('render_instance', self)
 
 	// activate_tooltips
