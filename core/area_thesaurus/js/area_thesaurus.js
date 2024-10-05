@@ -66,9 +66,6 @@ export const area_thesaurus = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	// area_thesaurus.prototype.init		= area_common.prototype.init
-	// area_thesaurus.prototype.build		= area_common.prototype.build
-	// area_thesaurus.prototype.render		= common.prototype.render
 	area_thesaurus.prototype.refresh		= common.prototype.refresh
 	area_thesaurus.prototype.destroy		= common.prototype.destroy
 	area_thesaurus.prototype.build_rqo_show	= common.prototype.build_rqo_show
