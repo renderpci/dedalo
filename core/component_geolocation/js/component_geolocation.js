@@ -80,6 +80,9 @@ component_geolocation.prototype.init = async function(options) {
 
 	const self = this
 
+	// call the generic common tool init
+		const common_init = await component_common.prototype.init.call(this, options);
+
 	// short vars
 		self.ar_layer_loaded	= null
 		self.map				= null
@@ -109,9 +112,6 @@ component_geolocation.prototype.init = async function(options) {
 			zoom	: 16,
 			alt		: 0
 		}]
-
-	// call the generic common tool init
-		const common_init = await component_common.prototype.init.call(this, options);
 
 	// load dependencies js/css. Set the self specific libraries and variables not defined by the generic init
 		// await self.load_libs()
