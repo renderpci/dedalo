@@ -1147,7 +1147,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 		// Options
 			$first_page					= $options->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
-			$transcription				= $options->transcription ?? false;
+			$transcription				= $options->transcription ?? true;
 			$ocr						= $options->ocr ?? false;
 			$ocr_lang					= $options->ocr_lang ?? null;
 			$delete_normalized_files	= $options->delete_normalized_files ?? true;
