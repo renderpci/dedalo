@@ -704,6 +704,7 @@ class component_pdf extends component_media_common implements component_media_in
 				. 'result: '.to_string($result)
 				, logger::ERROR
 			);
+			$response->errors[] = 'daemon engine response error: ' . $output;
 			return $response;
 		}
 
@@ -725,6 +726,7 @@ class component_pdf extends component_media_common implements component_media_in
 		# Test is valid utf8
 		$test_utf8 = self::valid_utf8($pdf_text);
 		if (!$test_utf8) {
+			$response->errors[] = 'current string is NOT utf8 valid';
 			debug_log(__METHOD__
 				." WARNING: Current string is NOT utf8 valid. Anyway continue ... "
 				, logger::WARNING
@@ -739,6 +741,7 @@ class component_pdf extends component_media_common implements component_media_in
 		if (!$pdf_text) {
 			$response->result	= 'error';
 			$response->msg		= "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
+			$response->errors[] = 'bad format encoding';
 			return $response;
 		}
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
@@ -746,6 +749,7 @@ class component_pdf extends component_media_common implements component_media_in
 		if (empty($pdf_text)) {
 			$response->result	= 'error';
 			$response->msg		= "Error Processing Request pdf_automatic_transcription: Empty text";
+			$response->errors[] = 'empty text';
 			return $response;
 		}
 
@@ -768,7 +772,9 @@ class component_pdf extends component_media_common implements component_media_in
 		}
 
 		$response->result	= (string)$pdf_text;
-		$response->msg		= "Ok Processing Request pdf_automatic_transcription: text processed";
+		$response->msg		= empty($response->errors)
+			? 'OK. Processing Request pdf_automatic_transcription: text processed'
+			: 'Warning: some errors were found';
 		$response->original	= trim($original_text);
 
 

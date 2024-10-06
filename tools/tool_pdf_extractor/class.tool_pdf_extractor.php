@@ -79,12 +79,15 @@ class tool_pdf_extractor extends tool_common {
 					. $e->getMessage()
 					, logger::ERROR
 				);
+				$response->errors[] = 'exception: ' . $e->getMessage();
 			}
 
 		// response
-			$response->result	= htmlentities($process_text_response->result);
-			$response->msg		= "OK Processing Request pdf_automatic_transcription: text processed";
-			// $response->original = trim($original_text);
+			$response->result = is_string($process_text_response->result)
+				? htmlentities($process_text_response->result)
+				: $process_text_response->result;
+			$response->msg = $process_text_response->msg;
+			$response->errors = array_merge($response->errors, (array)$process_text_response->errors);
 
 
 		return $response;
