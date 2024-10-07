@@ -200,7 +200,8 @@ export const quit = async function(options={}) {
 				[
 					'inspector_time_machine_list',
 					'inspector_component_history_block',
-					'inspector_relation_list'
+					'inspector_relation_list',
+					'open_search_panel'
 				]
 				.map(el => {
 					data_manager.delete_local_db_data(el, 'status')
