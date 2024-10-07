@@ -45,12 +45,6 @@
     },
     {
       "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
       "section_id": "-1",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
@@ -81,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 9,
-              "time": 65077206255,
+              "day": 7,
+              "hour": 10,
+              "time": 65077640160,
               "year": 2024,
               "month": 10,
-              "minute": 44,
-              "second": 15
+              "minute": 16,
+              "second": 0
             }
           }
         ]
@@ -121,7 +115,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.0"
+          "1.0.1"
         ]
       }
     },
@@ -144,15 +138,11 @@
         ]
       }
     },
-    "dd1350": {
-      "inf": "Afecta a tipos: [component_json]",
+    "dd1362": {
+      "inf": "Implementación [component_text_area]",
       "dato": {
         "lg-nolan": [
-          [
-            "tch1",
-            "numisdata4",
-            "rsc167"
-          ]
+          "<p>Use a button trigger to enable this tool (see tch350) in a section.</p><p>Sample of button config:</p><p>{</p><p>&nbsp;\"tool_config\": {</p><p>&nbsp; &nbsp;\"tool_qr\": {</p><p>&nbsp; &nbsp; &nbsp;\"ddo_map\": [</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"tch66\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"mosaic\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Identifying images 2\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_portal\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"tch1\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"tch1\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc29\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_image\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"tch66\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"label\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"tch63\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"typo\": \"ddo\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"view\": \"list\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Title\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"model\": \"component_input_text\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"parent\": \"tch1\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"tch1\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp; &nbsp;]</p><p>&nbsp; &nbsp;}</p><p>&nbsp;}</p><p>}</p>"
         ]
       }
     },
@@ -168,7 +158,7 @@
   "section_id": 30,
   "created_date": "2024-09-30 10:42:21",
   "section_tipo": "dd1340",
-  "modified_date": "2024-10-02 09:44:15",
+  "modified_date": "2024-10-07 10:16:00",
   "diffusion_info": null,
   "created_by_userID": 1,
   "section_real_tipo": "dd73",

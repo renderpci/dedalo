@@ -157,8 +157,16 @@ tool_qr.prototype.load_section = async function() {
 		const request_config = element_context.request_config
 		// request_config_dedalo item
 		const request_config_dedalo = request_config.find(el => el.api_engine==='dedalo')
+
 		// overwrite ddo_map
-		const ddo_map = element_context.properties?.tool_config?.tool_qr?.ddo_map || []
+		// The tool allows to get the tool_config from the section list or from a button
+		// Button way has the possibility of control user access by section. At now this
+		// will be the default source
+		const ddo_map_source = 'button_triger'
+		const ddo_map = ddo_map_source==='button_triger'
+			? self.tool_config.ddo_map || [] // from button properties
+			: element_context.properties?.tool_config?.tool_qr?.ddo_map || [] // from section_list properties
+
 		request_config_dedalo.show.ddo_map = ddo_map
 		// overwrite pagination
 		request_config_dedalo.sqo.limit = 0
