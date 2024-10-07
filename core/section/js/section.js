@@ -385,6 +385,10 @@ section.prototype.init = async function(options) {
 							toggle_search_panel(self.filter)
 						}
 					})
+
+				if(SHOW_DEBUG===true) {
+					console.log('section. event_manager.events.length:', event_manager.events.length);
+				}
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('render_'+self.id, render_handler)

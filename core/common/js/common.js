@@ -545,7 +545,8 @@ common.prototype.refresh = async function(options={}) {
 			console.warn("/// destroyed fail (expected status 'rendered') with actual status:", self.model, self.status);
 			return false
 		}
-		// destroy with params
+		// Note: this action takes a insignificant amount of time (0 to 3 ms),
+		// it is worth waiting until it is finished to make sure to destroy events safely
 		if (destroy===true) {
 			await self.destroy(
 				false, // bool delete_self
