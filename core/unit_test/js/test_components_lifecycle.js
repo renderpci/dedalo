@@ -5,8 +5,8 @@
 import {
 	elements
 } from './elements.js'
-import {instances, get_instance, delete_instance, get_all_instances} from '../../common/js/instances.js'
-import {clone} from '../../common/js/utils/util.js'
+import {get_instance, get_all_instances} from '../../common/js/instances.js'
+
 
 
 // vars
