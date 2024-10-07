@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 /**
-* CLASS TOOL_qr
+* CLASS TOOL_QR
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.
 *
 */
