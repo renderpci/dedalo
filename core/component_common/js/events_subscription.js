@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -18,23 +19,28 @@ export const events_subscription = function(self) {
 
 	// hilite (search mode)
 		if (self.mode==='search') {
-			const fn_hilite_element = function() {
+			const render_handler = () => {
 				// set instance as changed or not based on their value
 				const instance = self
 
-				setTimeout(function(){ // used timeout to allow css background transition occurs
-					const hilite = (
-						(instance.data.value && instance.data.value.length>0) ||
-						(instance.data.q_operator && instance.data.q_operator.length>0)
-					)
-					ui.hilite({
-						instance	: instance, // instance object
-						hilite		: hilite // bool
-					})
-				}, 150)
+				dd_request_idle_callback(
+					() => {
+						if (!instance.node) {
+							return
+						}
+						const hilite = (
+							(instance.data.value && instance.data.value.length>0) ||
+							(instance.data.q_operator && instance.data.q_operator.length>0)
+						)
+						ui.hilite({
+							instance	: instance, // instance object
+							hilite		: hilite // bool
+						})
+					}
+				)
 			}
 			self.events_tokens.push(
-				event_manager.subscribe('render_' + self.id, fn_hilite_element)
+				event_manager.subscribe('render_' + self.id, render_handler)
 			)
 		}//end if (self.mode==='search')
 
