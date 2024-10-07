@@ -5,7 +5,7 @@
 import {
 	elements
 } from './elements.js'
-import {get_instance} from '../../common/js/instances.js'
+import {instances, get_instance, delete_instance, get_all_instances} from '../../common/js/instances.js'
 import {clone} from '../../common/js/utils/util.js'
 
 
@@ -245,10 +245,14 @@ async function life_cycle_test(element, view) {
 					true // remove_dom . default false
 				)
 
+			const all_instances = get_all_instances()
+
 			// asserts
 				assert.equal(new_instance.status, 'destroyed')
 				assert.deepEqual(new_instance.ar_instances, [])
 				assert.deepEqual(new_instance.node, null)
+				assert.deepEqual(new_instance.events_tokens, [])
+				assert.deepEqual(all_instances, [])
 		});
 
 	});//end describe(element.model, function()
