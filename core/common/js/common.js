@@ -702,7 +702,10 @@ const do_delete_self = async function (self) {
 		// remove all subscriptions
 		const events_tokens_length = events_tokens.length
 		for (let i = events_tokens_length - 1; i >= 0; i--) {
-			event_manager.unsubscribe(events_tokens[i])
+			const unsubscribed = event_manager.unsubscribe(events_tokens[i])
+			if (unsubscribed) {
+				events_tokens.splice(i, 1)
+			}
 		}
 
 	// destroy paginator
