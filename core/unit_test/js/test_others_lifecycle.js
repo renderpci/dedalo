@@ -5,8 +5,8 @@
 // import {
 // 	elements
 // } from './elements.js'
-import {get_instance} from '../../common/js/instances.js'
-import {data_manager} from '../../common/js/data_manager.js'
+import {get_instance, get_all_instances} from '../../common/js/instances.js'
+
 
 
 // general values
@@ -154,9 +154,13 @@ describe("OTHERS LIFE-CYCLE", async function() {
 						true // remove_dom . default false
 					)
 
+				const all_instances = get_all_instances()
+
 				assert.equal(new_instance.status, expected)
 				assert.deepEqual(new_instance.ar_instances, [])
 				assert.deepEqual(new_instance.node, null)
+				assert.deepEqual(new_instance.events_tokens, [])
+				assert.deepEqual(all_instances, [])
 			});
 		});//end describe(element.model, function()
 	}//end for (let i = 0; i < elements.length; i++)
