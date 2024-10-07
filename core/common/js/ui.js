@@ -2785,7 +2785,7 @@ export const ui = {
 
 		// check wrapper node
 			if (!instance.node) {
-				console.log('Skip hilite! Invalid instance node. instance :', instance);
+				console.warn('Skip hilite! Invalid instance node. instance :', instance);
 				return
 			}
 
