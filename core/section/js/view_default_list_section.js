@@ -371,7 +371,14 @@ const get_buttons = function(self) {
 					inner_html		: current_button.label,
 					parent			: other_buttons_block
 				})
-				button_node.addEventListener('click', (e) => {
+				// icon
+				// section buttons option for custom button CSS classes.
+				// To define a button class, set ontology item properties such as "css": { "style": "import_files" }
+				if (current_button.properties?.css && current_button.properties?.css.style) {
+					button_node.classList.add(current_button.properties.css.style)
+				}
+				// click event
+				const click_handler = (e) => {
 					e.stopPropagation()
 
 					switch(current_button.model){
@@ -414,7 +421,8 @@ const get_buttons = function(self) {
 							event_manager.publish('click_' + current_button.model)
 							break;
 					}
-				})
+				}
+				button_node.addEventListener('click', click_handler)
 		}//end for (let i = 0; i < ar_buttons_length; i++)
 
 	// tools buttons
