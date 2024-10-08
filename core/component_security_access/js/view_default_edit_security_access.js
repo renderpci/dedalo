@@ -318,6 +318,8 @@ const render_area_item = function(item, datalist, value, self) {
 		const direct_children		= item.model==='section'
 			? datalist.filter(el => el.section_tipo===tipo && el.tipo!==tipo)
 			: datalist.filter(el => el.parent===tipo)
+		const direct_children_length = direct_children.length
+		const has_child_section		 = direct_children.find(el => el.tipo===el.section_tipo)
 
 	// item_value. get the current item value
 		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===tipo)
@@ -352,7 +354,7 @@ const render_area_item = function(item, datalist, value, self) {
 			}
 		}
 		// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
-			const fn_update_value = (changed_data) => {
+			const update_item_value_handler = (changed_data) => {
 				// change the value of the current DOM element
 				if (changed_data>=2) {
 					input_checkbox.checked			= true
@@ -364,9 +366,9 @@ const render_area_item = function(item, datalist, value, self) {
 					input_checkbox.checked			= false
 					input_checkbox.indeterminate	= false
 				}
-			}//end fn_update_value
+			}//end update_item_value_handler
 			self.events_tokens.push(
-				event_manager.subscribe('update_item_value_' + self.id + '_' + tipo + '_' + section_tipo, fn_update_value)
+				event_manager.subscribe('update_item_value_' + self.id + '_' + tipo + '_' + section_tipo, update_item_value_handler)
 			)
 
 		// change event
@@ -432,10 +434,22 @@ const render_area_item = function(item, datalist, value, self) {
 			input_checkbox.addEventListener('change', change_handler)
 
 	// label
-		const css_selected = self.selected_tipo===item.tipo ? ' selected' : ''
+			const css_selectors = ['area_label']
+			// add icon arrow when element has children
+			if (direct_children_length>0) {
+				css_selectors.push('icon_arrow')
+			}
+			// add selected when item matches a search (self.selected_tipo)
+			if (item.tipo===self.selected_tipo) {
+				css_selectors.push('selected')
+			}
+			// add when item has a child_section level
+			if (has_child_section) {
+				css_selectors.push('has_child_section')
+			}
 		const label = ui.create_dom_element({
 			element_type	: 'label',
-			class_name		: 'area_label' + (direct_children ? ' icon_arrow' : '') + css_selected,
+			class_name		: css_selectors.join(' '),
 			inner_html		: item.label,
 			parent			: li
 		})
@@ -448,7 +462,6 @@ const render_area_item = function(item, datalist, value, self) {
 		})
 
 	// with children case
-		const direct_children_length = direct_children.length
 		if (direct_children_length>0) {
 			// branch (ul container for children)
 				const branch = ui.create_dom_element({
@@ -660,10 +673,11 @@ const create_permissions_radio_group = function(self, item, permissions) {
 						self.update_value(item, input_value)
 
 					// parents_radio_butons. update the state of all parents, checking his children state
-						const callback = () => {
-							self.update_parents_radio_butons(item, input_value)
-						}
-						dd_request_idle_callback(callback)
+						dd_request_idle_callback(
+							() => {
+								self.update_parents_radio_butons(item, input_value)
+							}
+						)
 
 					// show_save_button
 						event_manager.publish('show_save_button_'+self.id)
@@ -769,7 +783,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 			)
 
 		// change event
-			radio_input.addEventListener('change', async function() {
+			const change_handler = () => {
 
 				const input_value = parseInt(radio_input.value)
 
@@ -802,15 +816,16 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 				}
 
 				// update_parents_radio_butons
-					const callback = () => {
-						self.update_parents_radio_butons(item, input_value)
-					}
-					dd_request_idle_callback(callback)
+					dd_request_idle_callback(
+						() => {
+							self.update_parents_radio_butons(item, input_value)
+						}
+					)
 
 				// show_save_button
 					event_manager.publish('show_save_button_'+self.id)
-					// await self.save_changes()
-			})//end radio_input.addEventListener("change", async function(e)
+			}
+			radio_input.addEventListener('change', change_handler)
 
 		// radio_input_label
 			const radio_input_label = ui.create_dom_element({
@@ -974,6 +989,8 @@ const render_area_item_read = function(item, datalist, value) {
 		const direct_children		= item.model==='section'
 			? datalist.filter(el => el.section_tipo===tipo && el.tipo!==tipo)
 			: datalist.filter(el => el.parent===tipo)
+		const direct_children_length = direct_children.length
+		const has_child_section		 = direct_children.find(el => el.tipo===el.section_tipo)
 
 	// item_value. get the current item value
 		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===tipo)
@@ -994,15 +1011,27 @@ const render_area_item_read = function(item, datalist, value) {
 		})
 
 	// label
+		const css_selectors = ['area_label']
+			// add icon arrow when element has children
+			if (direct_children_length>0) {
+				css_selectors.push('icon_arrow')
+			}
+			// add selected when item matches a search (self.selected_tipo)
+			if (item.tipo===self.selected_tipo) {
+				css_selectors.push('selected')
+			}
+			// add when item has a child_section level
+			if (has_child_section) {
+				css_selectors.push('has_child_section')
+			}
 		const label = ui.create_dom_element({
 			element_type	: 'label',
-			class_name		: 'area_label' + (direct_children ? ' icon_arrow' : ''),
+			class_name		: css_selectors.join(' '),
 			inner_html		: permissions_label + ' ' + item.label,
 			parent			: li
 		})
 
 	// with children case
-		const direct_children_length = direct_children.length
 		if (direct_children_length>0) {
 			// branch (ul container for children)
 				const branch = ui.create_dom_element({
@@ -1159,8 +1188,8 @@ const render_changes_files_selector = function (options) {
 			class_name		: 'changes_files_selector',
 			parent			: changes_container
 		})
-		changes_files_selector.addEventListener('change', async function(e){
-
+		// event change
+		const change_handler = (e) => {
 			// filename check
 				const filename = e.target.value
 				if(!filename || filename===''){
@@ -1189,7 +1218,8 @@ const render_changes_files_selector = function (options) {
 					return changes_data_node
 				}
 			})
-		})
+		}
+		changes_files_selector.addEventListener('change', change_handler)
 
 		// empty option
 		ui.create_dom_element({
@@ -1286,7 +1316,8 @@ const render_changes_data = function (options) {
 			// when the user click into the section label active all parent nodes and the section
 			// open all nodes and load the section to show all components.
 			// this event show the tree as if the user had clicked on the path items (open the tree nodes)
-			section_label.addEventListener('mouseup',async function(e){
+			const mouseup_handler = async (e) => {
+				e.stopPropagation()
 
 				const section_tipo = current_section.section.tipo
 
@@ -1341,7 +1372,8 @@ const render_changes_data = function (options) {
 					setTimeout(function() {
 						ul.style.minHeight = ''
 					}, 1500);
-			})
+			}
+			section_label.addEventListener('mouseup', mouseup_handler)
 
 		// children
 		// show the children additions
