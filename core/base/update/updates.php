@@ -7,6 +7,40 @@ $updates = new stdClass();
 
 
 
+$v=628; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 2;
+	$updates->$v->version_minor			= 8;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 7;
+
+	// DATABASE UPDATES
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_main_id_seq;
+				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
+			");
+		// Add the matrix_ontology table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
+				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
+			");
+
+
+
 $v=627; #####################################################################################
 $updates->$v = new stdClass();
 
