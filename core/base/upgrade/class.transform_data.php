@@ -612,6 +612,7 @@ class transform_data {
 			if (	!isset($datos->components->{$component_tipo})
 				 || !isset($datos->components->{$component_tipo}->dato)
 				 || !isset($datos->components->{$component_tipo}->dato->{$lang})
+				 || !is_array($datos->components->{$component_tipo}->dato->{$lang})
 				 || !isset($datos->components->{$component_tipo}->dato->{$lang}[0])
 				 || !isset($datos->components->{$component_tipo}->dato->{$lang}[0]->lib_data)
 				) {
