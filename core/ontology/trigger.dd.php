@@ -789,7 +789,7 @@ if(!empty($data) && $data->mode==='export_str') {
 		$response->msg		= '';
 
 	// dump all historic data first
-		$db_name				= 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+		$db_name				= 'dedalo_development_str_'.date("Y-m-d_Hi").'.custom';
 		$res_export_structure	= (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
 		if ($res_export_structure->result===false) {
 			$response->result	= false;
@@ -801,7 +801,7 @@ if(!empty($data) && $data->mode==='export_str') {
 			$response->msg		.= $res_export_structure->msg;
 		}
 
-	// dump official structure version 'dedalo4_development_str.custom' (partial backup)
+	// dump official structure version 'dedalo_development_str.custom' (partial backup)
 		$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
 		if ($res_export_structure2->result===false) {
 			$response->result	= false;

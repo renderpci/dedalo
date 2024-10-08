@@ -73,28 +73,35 @@ session_write_close();
 	$dedalo_version_string	= $data->dedalo_version ?? '';
 	$dedalo_version_array	= explode('.', $dedalo_version_string);
 
-	if (
-		(isset($dedalo_version_array[0]) && (int)$dedalo_version_array[0]=='6' &&
-		 isset($dedalo_version_array[1]) && (int)$dedalo_version_array[1]=='0')
-		) {
+	$major_version = isset($dedalo_version_array[0])
+		? (int)$dedalo_version_array[0]
+		: 5;
 
-		// 6.0 case. Use legacy freeze version copy of Ontology
-		$version_path = '/6.0';
-
-	}else{
-
-		// Others case. Use default active version path
-		$version_path = '';
+	if ($major_version<6) {
+		debug_log(__METHOD__
+			. " INVALID DEDALO VERSION ! Only >=6 are supported" . PHP_EOL
+			. json_encode($major_version, JSON_PRETTY_PRINT)
+			, logger::ERROR
+		);
+		http_response_code(403); // Unauthorized
+		exit();
 	}
+	// Use default active version path
+	$version_path = '';
+
 	error_log('Update Ontology version_path: ' . to_string($version_path));
 	error_log('Update Ontology selected_obj: ' . to_string($selected_obj));
 
+// compatibility with old configurations
+	if ($selected_obj->name==='dedalo4_development_str.custom.backup') {
+		$selected_obj->name = 'dedalo_development_str.custom.backup';
+	}
+
 // file info
 	$file_name 	= $selected_obj->name;
-	$file_path 	= ($selected_obj->name==='dedalo4_development_str.custom.backup')
+	$file_path 	= ($selected_obj->name==='dedalo_development_str.custom.backup')
 		? $selected_obj->path . $version_path . '/'. $selected_obj->name
 		: str_replace('/str_data', $version_path . '/str_data', $selected_obj->path) .'/'. $selected_obj->name;
-	// $file_path 	= str_replace('/str_data', $version_path . '/str_data', $selected_obj->path) .'/'. $selected_obj->name;
 	// debug
 		error_log('Update Ontology file_path: ' . $file_path);
 

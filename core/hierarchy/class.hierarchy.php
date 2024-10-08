@@ -2156,7 +2156,6 @@ class hierarchy {
 
 			$command  = '';
 			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
-			#$command .= 'psql dedalo4_'.DEDALO_ENTITY.' -h localhost  ';
 			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 			$command .= ' -c "\copy (SELECT section_id, section_tipo, datos FROM matrix_hierarchy WHERE ';
 			if ($current_section_tipo==='all') {
@@ -2192,7 +2191,7 @@ class hierarchy {
 			$response->msg	.= "<br>".implode('<br>', $msg);
 			$response->msg	.= '<br>' . 'command_res: ' .$command_res;
 			$response->msg	.= '<br>' . 'To import, use a command like this: ';
-			$response->msg	.= '<br>' . 'SECTION_TIPO=\'us1\' ; gunzip ${SECTION_TIPO}.copy.gz | psql dedalo4_myentity -U mydbuser -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from ${SECTION_TIPO}.copy"';
+			$response->msg	.= '<br>' . 'SECTION_TIPO=\'us1\' ; gunzip ${SECTION_TIPO}.copy.gz | psql dedalo_myentity -U mydbuser -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from ${SECTION_TIPO}.copy"';
 
 		// files links
 			$dir_path	= EXPORT_HIERARCHY_PATH; // like '../httpdocs/dedalo/install/import/hierarchy'
