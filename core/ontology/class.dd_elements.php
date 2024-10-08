@@ -43,7 +43,7 @@ class dd_elements {
 			# Render Buttons
 			if($this->modo==='tesauro_edit' || $this->modo==='modelo_edit') {
 
-				// if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!=='dedalo4_master' && DEDALO_DATABASE_CONN!=='dedalo4_development' ) {
+				// if( substr($terminoID, 0,2)==='dd' && DEDALO_DATABASE_CONN!=='dedalo4_master' && DEDALO_DATABASE_CONN!=='dedalo_development' ) {
 				//	No buttons are showed
 				// }else{
 					# Añadir hijo BtnMas

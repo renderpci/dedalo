@@ -1828,7 +1828,7 @@ class area_maintenance extends area_common {
 			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
 		// export. Before import, export a copy ;-)
-			$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+			$db_name = 'dedalo_development_str_'.date("Y-m-d_Hi").'.custom';
 			$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
 			if ($res_export_structure->result===false) {
 
@@ -1845,7 +1845,7 @@ class area_maintenance extends area_common {
 		// import
 			$prev_time = start_time(); // reset exec time
 			$import_structure_response = backup::import_structure(
-				'dedalo4_development_str.custom', // string db_name
+				'dedalo_development_str.custom', // string db_name
 				true, // bool check_server
 				$ar_dedalo_prefix_tipos // array dedalo_prefix_tipos
 			);

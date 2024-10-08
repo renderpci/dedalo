@@ -458,7 +458,7 @@ abstract class backup {
 	* When export structure is done, two versions are created: full and partial. Full contain all tld and sequences of dedalo *_dd tables
 	* and partial the same except jer_dd and matrix_descriptors_dd
 	* @see trigger.db_utils
-	* @param string|null $db_name like 'dedalo4_development_str.custom'. If null, default is used
+	* @param string|null $db_name like 'dedalo_development_str.custom'. If null, default is used
 	* @param bool $exclude_tables default true
 	* @return string $res_html table of results
 	*/
@@ -491,7 +491,7 @@ abstract class backup {
 
 		// db_name
 			if (empty($db_name)) {
-				$db_name = 'dedalo4_development_str.custom';
+				$db_name = 'dedalo_development_str.custom';
 			}
 
 		$file_path		 = rtrim(DEDALO_BACKUP_PATH_ONTOLOGY, '/');
@@ -567,7 +567,7 @@ abstract class backup {
 		}
 
 		// save_dedalo_str_tables_data. Save partials str data based on tld to independent files
-			if ($db_name==='dedalo4_development_str.custom' && $response->result===true) {
+			if ($db_name==='dedalo_development_str.custom' && $response->result===true) {
 
 				// save_dedalo_str_tables_data
 				$res_dedalo_str_tables_data = self::save_dedalo_str_tables_data();
@@ -730,7 +730,7 @@ abstract class backup {
 	* IMPORT_STRUCTURE
 	* Exec pg_restore of selected backup file
 	* @see trigger.db_utils
-	* @param string db_name default 'dedalo4_development_str.custom'
+	* @param string db_name default 'dedalo_development_str.custom'
 	* @param bool $check_server = true
 	* @param array|null $dedalo_prefix_tipos = null
 	* @return object $response
@@ -740,7 +740,7 @@ abstract class backup {
 	* 	errors: array
 	* }
 	*/
-	public static function import_structure( string $db_name='dedalo4_development_str.custom', bool $check_server=true, ?array $dedalo_prefix_tipos=null ) : object {
+	public static function import_structure( string $db_name='dedalo_development_str.custom', bool $check_server=true, ?array $dedalo_prefix_tipos=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -783,7 +783,7 @@ abstract class backup {
 				return $el->type==='main_file';
 			});
 
-			// compose file path as /var/www/html/dedalo/install/import/ontology/dedalo4_development_str.custom.backup
+			// compose file path as /var/www/html/dedalo/install/import/ontology/dedalo_development_str.custom.backup
 			$main_sql_file_path = is_object($main_file_item)
 				? $main_file_item->path .'/'. $main_file_item->name
 				: null;
@@ -1346,10 +1346,10 @@ abstract class backup {
 		// BASE - Files
 
 			// Always includes main files
-			// dedalo4_development_str
+			// dedalo_development_str
 			$obj = new stdClass();
 				$obj->type = 'main_file';
-				$obj->name = 'dedalo4_development_str.custom.backup';
+				$obj->name = 'dedalo_development_str.custom.backup';
 				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY;
 			$ar_files[] = $obj;
 
