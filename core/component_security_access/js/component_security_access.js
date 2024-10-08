@@ -73,7 +73,7 @@ export const component_security_access = function() {
 /**
 * INIT
 * @param object options
-* @return promise bool
+* @return bool common_init
 */
 component_security_access.prototype.init = async function(options) {
 
@@ -148,7 +148,6 @@ component_security_access.prototype.build = async function(options) {
 * Note that component property 'changed_value' begins as copy of
 * DB self.data.value first element (key zero)
 * Will be used to save component data in a compact block
-*
 * @param object item
 * 	datalist item with info about tipo, model, value as
 	{
@@ -159,8 +158,7 @@ component_security_access.prototype.build = async function(options) {
 		section_tipo: "mht5"
 	}
 * @param int input_value
-*
-* @return array changed_value
+* @return array value
 *  array of objects like:
 	[
 		{
@@ -181,7 +179,7 @@ component_security_access.prototype.update_value = function(item, input_value) {
 
 	// item check
 		if (!item) {
-			console.warn("Ignored undefined item:", input_value);
+			console.error("Ignored undefined item:", input_value);
 			return value
 		}
 
@@ -205,9 +203,11 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		self.filled_value = value
 
 	// event. publish update_item_value_xx event on change data.value
-		const name = 'update_item_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo
-		event_manager.publish(name, input_value)
-		// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
+		event_manager.publish(
+			'update_item_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
+			input_value
+		)
+
 
 	return value
 }//end update_value
@@ -332,7 +332,6 @@ component_security_access.prototype.get_children = function(item, datalist) {
 		section_tipo: "mht5"
 	}
 * @param integer input_value
-*
 * @return bool diff_value
 */
 component_security_access.prototype.update_parents_radio_butons = async function(item, input_value) {
@@ -395,28 +394,6 @@ component_security_access.prototype.update_parents_radio_butons = async function
 
 
 /**
-* CHANGE_VALUE
-* Overwrite component_common method
-* @return promise
-* Resolve bool|object (API response) from change_value()
-*/
-	// component_security_access.prototype.change_value = async function(options) {
-
-	// 	const self = this
-
-	// 	// options
-	// 		const from_save_changes = options.from_save_changes || false
-
-	// 	const api_response = (from_save_changes===true)
-	// 		? await component_common.prototype.change_value.call(this, options) // internal call from self save_changes. Pass untouched to component_common
-	// 		: await self.save_changes() // Prepare as save changes mode that triggers change_value again
-
-	// 	return api_response
-	// }//end change_value
-
-
-
-/**
 * SAVE_CHANGES
 * Rebuild self.data.value removing empty zero values and save result
 * @return promise
@@ -454,13 +431,15 @@ component_security_access.prototype.save_changes = async function() {
 }//end save_changes
 
 
+
 /**
 * GET_CHANGES_DATA
-* get changes of the specific file, parsed to be represented
+* Get changes of the specific file, parsed to be represented
+* @param string filename
 * @return promise
 * 	Resolve bool|object (API response) from parse_simple_schema_changes_files()
 */
-component_security_access.prototype.get_changes_data = async function(filename){
+component_security_access.prototype.get_changes_data = async function(filename) {
 
 	// data_manager
 	const api_response = await data_manager.request({
