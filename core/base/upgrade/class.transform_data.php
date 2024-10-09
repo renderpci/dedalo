@@ -1281,4 +1281,57 @@ class transform_data {
 
 
 
+	/**
+	* COPY_DESCRIPTORS_TO_JER_DD
+	* Called by the update to 6.3.0, it copy the table descriptors as object of lang:term
+	* and insert it into the term column in jer_dd
+	* @return bool
+	*/
+	public static function copy_descriptors_to_jer_dd() : bool {
+
+		// jer_dd. delete terms (jer_dd)
+			$sql_query = '
+				SELECT * FROM "jer_dd";
+			';
+			$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		// iterate jer_dd_result row
+		while($row = pg_fetch_assoc($jer_dd_result)) {
+
+			$terminoID	= $row['terminoID'];
+			$id			= $row['id'];
+
+			// matrix_descriptors_dd. delete descriptors (matrix_descriptors_dd)
+			$sql_query = 'SELECT * FROM "matrix_descriptors_dd" WHERE "parent" = \''.$terminoID.'\' AND "tipo" = \'termino\';';
+			$descriptors_result = pg_query(DBi::_getConnection(), $sql_query);
+
+			$term_obj = new stdClass();
+			while($term = pg_fetch_assoc($descriptors_result)) {
+
+				$lang		= $term['lang'];
+				$term_data	= $term['dato'];
+
+				$term_obj->$lang = $term_data;
+			}
+
+			$string_term_object = json_encode($term_obj);
+
+			$strQuery	= "UPDATE \"jer_dd\" SET term = $1 WHERE id = $2 ";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $string_term_object, $id ));
+			if($result===false) {
+				$msg = "Failed Update section_data (jer_dd) $id";
+				debug_log(__METHOD__
+					." ERROR: $msg "
+					, logger::ERROR
+				);
+				return false;
+			}
+		}
+
+
+		return true;
+	}//end copy_descriptors_to_jer_dd
+
+
+
 }//end class transform_data
