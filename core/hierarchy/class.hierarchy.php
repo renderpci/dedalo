@@ -4,12 +4,12 @@ declare(strict_types=1);
 * HIERARCHY
 * Centralized hierarchy methods
 */
-class hierarchy {
+class hierarchy extends ontology {
 
 
 
 	// Table where hierarchy data is stored
-	static $table = 'matrix_hierarchy_main';
+	static $main_table = 'matrix_hierarchy_main';
 
 
 
@@ -616,7 +616,7 @@ class hierarchy {
 			}
 
 		// delete the virtual section
-			$deleted = ontology::clean_structure_data($tld);
+			$deleted = ontology_v5::clean_structure_data($tld);
 
 			$response->result = $deleted;
 
@@ -724,95 +724,6 @@ class hierarchy {
 
 		return true;
 	}//end create_root_terms
-
-
-
-	/**
-	* SET_HIERARCHY_PERMISSIONS
-	* Allow current user access to created default sections
-	* @param object $options
-	* @return bool
-	*/
-		// private static function set_hierarchy_permissions( object $options ) : bool {
-
-		// 	// options
-		// 		$section_tipo	= $options->section_tipo ?? null;
-		// 		$section_id		= $options->section_id ?? null;
-		// 		$ar_sections	= $options->ar_sections	?? null;
-
-		// 	// user_id
-		// 		$user_id = logged_user_id();
-		// 		if (SHOW_DEBUG===true || $user_id<1) {
-		// 			return true;
-		// 		}
-
-		// 	// Profile
-		// 		$profile_id		= security::get_user_profile( $user_id );
-		// 		$section_id		= $profile_id;
-		// 		$permissions	= 2;
-
-		// 	// Security areas
-		// 		$component_security_areas = component_common::get_instance(
-		// 			'component_security_areas',
-		// 			DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
-		// 			$section_id,
-		// 			'edit',
-		// 			DEDALO_DATA_NOLAN,
-		// 			DEDALO_SECTION_PROFILES_TIPO
-		// 		);
-		// 		$dato_security_areas = (object)$component_security_areas->get_dato();
-
-
-		// 	// Security access
-		// 		$component_security_access = component_common::get_instance(
-		// 			'component_security_access',
-		// 			DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
-		// 			$section_id,
-		// 			'edit',
-		// 			DEDALO_DATA_NOLAN,
-		// 			DEDALO_SECTION_PROFILES_TIPO
-		// 		);
-		// 		$dato_security_access = (object)$component_security_access->get_dato();
-
-
-		// 	# Iterate sections (normally like ts1,ts2)
-		// 	foreach ((array)$ar_sections as $current_section_tipo) {
-
-		// 		# Security areas
-		// 		$dato_security_areas->$current_section_tipo = $permissions;
-
-
-		// 		# Security access
-		// 		# Components inside section
-		// 		$real_section = section::get_section_real_tipo_static( $current_section_tipo );
-		// 		$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
-		// 			$real_section,
-		// 			$ar_modelo_name_required=array('component','button','section_group'),
-		// 			$from_cache=true,
-		// 			$resolve_virtual=false,
-		// 			$recursive=true,
-		// 			$search_exact=false
-		// 		);
-		// 		$dato_security_access->$current_section_tipo = new stdClass();
-		// 		foreach ($ar_children as $children_tipo) {
-		// 			$dato_security_access->$current_section_tipo->$children_tipo = $permissions;
-		// 		}
-
-		// 	}//end foreach ($ar_sections as $current_section_tipo)
-
-		// 	# Save calculated data once
-		// 	$component_security_areas->set_dato($dato_security_areas);
-		// 	$component_security_areas->Save();
-
-		// 	$component_security_access->set_dato($dato_security_access);
-		// 	$component_security_access->Save();
-
-		// 	# Regenerate permissions table
-		// 	security::reset_permissions_table();
-
-		// 	return true;
-		// }//end set_hierarchy_permissions
-
 
 
 	/**
@@ -947,310 +858,310 @@ class hierarchy {
 
 
 
-	/**
-	* ROWS_JER_TO_MATRIX_JSON
-	* @return null
-	*/
-	private static function rows_jer_to_matrix_json($id, $terminoID, $parent, $dato_modelo, $section_tipo_id, $esdescriptor_orig, $visible_orig, $norden, $usableIndex_orig, $relaciones, $properties, $tld, $modelo) {
-
-		$esdescriptor = new locator();
-			$esdescriptor->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-			if ($esdescriptor_orig === 'si') {
-				$esdescriptor->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
-			}else{
-				$esdescriptor->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
-			}
-
-		$visible = new locator();
-			$visible->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-			if ($visible_orig === 'si') {
-				$visible->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
-			}else{
-				$visible->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
-			}
-
-		$usableIndex = new locator();
-			$usableIndex->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-			if ($usableIndex_orig === 'si') {
-				$usableIndex->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
-			}else{
-				$usableIndex->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
-			}
-
-		if(strpos($terminoID, 'lg-')===0) {
-
-			$dato_childrens = array();
-				$ar_childrens = RecordObj_dd::get_ar_childrens($terminoID);
-				$from_component_tipo = DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
-				foreach ($ar_childrens as $curent_tipo) {
-
-					$children_id = self::get_lg_id_from_terminoID($curent_tipo);
-
-					$children = new locator();
-						$children->set_section_tipo($tld.$section_tipo_id);
-						$children->set_section_id($children_id);
-						$children->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
-						$children->set_from_component_tipo($from_component_tipo);
-
-					$dato_childrens[] =  $children;
-				}
-		}else{
-
-			$dato_childrens = array();
-				$ar_childrens = RecordObj_dd::get_ar_childrens($terminoID);
-				foreach ($ar_childrens as $curent_tipo) {
-
-					$children_id = substr($curent_tipo, 2);
-
-					$children = new locator();
-						$children->set_section_tipo($tld.$section_tipo_id);
-						$children->set_section_id($children_id);
-						$children->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
-						$children->set_from_component_tipo(DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO);
-
-					$dato_childrens[] = $children;
-				}
-
-		}//end if(strpos($terminoID, 'lg-')===0)
-
-		if(empty($dato_modelo)) {
-
-			$loc_modelo = null;
-
-		}else{
-
-			$modelo_id = substr($dato_modelo, 2);
-
-			$loc_modelo = new locator();
-				$loc_modelo->set_section_tipo($tld.'2');
-				$loc_modelo->set_section_id($modelo_id);
-				$loc_modelo->set_type(DEDALO_RELATION_TYPE_MODEL_TIPO);
-				$loc_modelo->set_from_component_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO);
-		}
-
-		// ["ts2","pt234","fr37028"]
-		$relaciones	= json_decode($relaciones);
-		$relacion = array();
-		if(!empty($relaciones) && is_array($relaciones)){
-
-			foreach ($relaciones as $value) {
-
-				$locator = new locator();
-
-				$prefix = RecordObj_dd::get_prefix_from_tipo($value);
-				$locator->set_section_tipo($prefix.'1');
-
-				$relation_id = substr($value, strlen($prefix));
-				$locator->set_section_id($relation_id);
-
-				$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
-
-				$relacion[]	= $locator;
-				unset($locator );
-			}
-		}
-
-		$section_tipo = $tld.$section_tipo_id;
-		$section 	  = section::get_instance($id, $section_tipo);
-		$section->forced_create_record();
-
-		$component_esdescriptor	= self::row_to_json_obj('hierarchy23', $id, $esdescriptor, DEDALO_DATA_NOLAN, $section_tipo);
-		$component_visible		= self::row_to_json_obj('hierarchy26', $id, $visible, DEDALO_DATA_NOLAN, $section_tipo);
-		//$component_norden		= self::row_to_json_obj('hierarchy42', $id, $norden, DEDALO_DATA_NOLAN, $section_tipo); // Removed 11-03-2017
-		$component_usableIndex	= self::row_to_json_obj('hierarchy24', $id, $usableIndex, DEDALO_DATA_NOLAN, $section_tipo);
-		//$component_parent		= self::row_to_json_obj('hierarchy36', $id, $dato_parent, DEDALO_DATA_NOLAN, $section_tipo);
-		$component_children		= self::row_to_json_obj('hierarchy49', $id, $dato_childrens, DEDALO_DATA_NOLAN, $section_tipo);
-		$component_relacion		= self::row_to_json_obj('hierarchy35', $id, $relacion, DEDALO_DATA_NOLAN, $section_tipo);
-		$component_modelo		= self::row_to_json_obj('hierarchy27', $id, $loc_modelo, DEDALO_DATA_NOLAN, $section_tipo);
-
-		# Lang case
-		if (strpos($terminoID, 'lg-')===0) {
-			$code = substr($terminoID, 3);
-			$component_codigo = self::row_to_json_obj('hierarchy41', $id, $code, DEDALO_DATA_NOLAN, $section_tipo);
-		}
-
-		unset($esdescriptor);
-		unset($visible);
-		unset($norden);
-		unset($usableIndex);
-		unset($dato_parent);
-		unset($relacion);
-		unset($loc_modelo);
-
-		unset($component_esdescriptor);
-		unset($component_visible);
-		unset($component_norden);
-		unset($component_usableIndex);
-		//unset($component_parent);
-		unset($component_children);
-		unset($component_relacion);
-		unset($component_modelo);
-
-		$strQuery_descriptors = "SELECT * FROM \"matrix_descriptors\" WHERE parent = '$terminoID'";
-		$result_descriptors	  = JSON_RecordObj_matrix::search_free($strQuery_descriptors);
-			while ($rows_descriptors = pg_fetch_assoc($result_descriptors)) {
-
-				$dato	= (string)$rows_descriptors['dato'];
-				$tipo	= (string)$rows_descriptors['tipo'];
-				$lang	= (string)$rows_descriptors['lang'];
-
-				if($tipo === 'termino'){
-					$component_termino	= self::row_to_json_obj('hierarchy25', $id, $dato, $lang ,$section_tipo);
-					unset($component_termino);
-				}
-				elseif($tipo === 'def'){
-					$component_def = self::row_to_json_obj('hierarchy28', $id, $dato, $lang ,$section_tipo);
-					unset($component_def);
-				}
-				elseif($tipo === 'notes'){
-					$component_notes = self::row_to_json_obj('hierarchy33', $id, $dato, $lang ,$section_tipo);
-					unset($component_notes);
-				}
-				elseif($tipo === 'index'){
-					$dato = json_decode($dato);
-
-					foreach((array)$dato as $locator) {
-						#$locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO);
-						$locator->type = DEDALO_RELATION_TYPE_INDEX_TIPO; // note is a stdClass now
-					}
-
-					$component_index = self::row_to_json_obj('hierarchy40', $id, $dato, DEDALO_DATA_NOLAN, $section_tipo);
-					unset($component_index);
-				}
-				elseif($tipo === 'obs'){
-					$component_obs = self::row_to_json_obj('hierarchy32', $id, $dato, $lang ,$section_tipo);
-					unset($component_obs);
-				}
-				#{"lat":"39.462571","lon":"-0.376295","zoom":17}
-				elseif($tipo === 'altitude'){
-
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
-					$component	= component_common::get_instance($model_name,
-						'hierarchy31',
-						$id,
-						'edit',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-
-					$component_dato = $component->get_dato();
-
-					if(!is_object($component_dato)){
-						$component_dato = new stdClass();
-					}
-					$component_dato->alt =(int)$dato;
-					$component_alt = self::row_to_json_obj('hierarchy31', $id, $component_dato, DEDALO_DATA_NOLAN ,$section_tipo);
-
-					unset($model_name);
-					unset($component);
-					unset($component_dato);
-					unset($component_alt);
-				}
-				elseif($tipo === 'geolocalizacion'){
-
-					$datos = explode(',', $dato);
-
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
-					$component	= component_common::get_instance($model_name,
-						'hierarchy31',
-						$id,
-						'edit',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-
-					$component_dato = $component->get_dato();
-
-					if(!is_object($component_dato)){
-						$component_dato = new stdClass();
-					}
-					$component_dato->lat = $datos[0];
-					$component_dato->lon = $datos[1];
-
-					$component_notes = self::row_to_json_obj('hierarchy31', $id, $component_dato, DEDALO_DATA_NOLAN ,$section_tipo);
-
-					unset($model_name);
-					unset($component);
-					unset($component_dato);
-					unset($component_notes);
-				}
-				elseif($tipo === 'nomenclator_code'){
-					$component_notes = self::row_to_json_obj('hierarchy41', $id, (int)$dato, DEDALO_DATA_NOLAN ,$section_tipo);
-				}
-				#31/12/1973-01/07/1976
-				elseif($tipo === 'tiempo'){
-
-					if (strpos($dato, '-')!==false) {
-						$fechas = explode("-", $dato);
-						$fecha_ini = explode("/", $fechas[0]);
-						$fecha_fin = explode("/", $fechas[1]);
-
-						$dato_time = new stdClass();
-
-						$dd_date = new dd_date();
-						$dd_date->set_day($fecha_ini[0]);
-						$dd_date->set_month($fecha_ini[1]);
-						$dd_date->set_year($fecha_ini[2]);
-
-						$dato_time->start = $dd_date;
-
-						$dd_date = new dd_date();
-						$dd_date->set_day($fecha_fin[0]);
-						$dd_date->set_month($fecha_fin[1]);
-						$dd_date->set_year($fecha_fin[2]);
-
-						$dato_time->end = $dd_date;
-
-					}else{
-
-						$fecha = explode("/", $dato);
-
-						$dato_time = new dd_date();
-						$dato_time->set_day($fecha[0]);
-						$dato_time->set_month($fecha[1]);
-						$dato_time->set_year($fecha[2]);
-					}
-					// component_date Marco temporal hierarchy30
-					$component_tiempo = self::row_to_json_obj('hierarchy30', $id, $dato_time, DEDALO_DATA_NOLAN ,$section_tipo);
-
-					unset($fechas);
-					unset($fecha_ini);
-					unset($fecha_fin);
-					unset($dato_time);
-					unset($dd_date);
-					unset($component_tiempo);
-				}
-
-				unset($dato);
-				unset($tipo);
-				unset($lang);
-
-				// let GC do the memory job
-				time_nanosleep(0, 10000000); // 10 ms
-
-			}//end while
-
-		return null;
-	}//end rows_to_matrix_json
-
-
-
-	/**
-	* GET_LG_ID_FROM_TERMINOID
-	* @return int $id
-	*/
-	private static function get_lg_id_from_terminoID( string $termino_id ) {
-
-		# SOURCE TABLE DATA
-		$strQuery = "SELECT id FROM \"jer_lg\" WHERE \"terminoID\" = '$termino_id' ";
-		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		while ($rows = pg_fetch_assoc($result)) {
-			$id = $rows['id'];
-			return $id;
-		}
-
-		return 1;
-	}//end get_lg_id_from_terminoID
+	// /**
+	// * ROWS_JER_TO_MATRIX_JSON
+	// * @return null
+	// */
+	// private static function rows_jer_to_matrix_json($id, $terminoID, $parent, $dato_modelo, $section_tipo_id, $esdescriptor_orig, $visible_orig, $norden, $usableIndex_orig, $relaciones, $properties, $tld, $modelo) {
+
+	// 	$esdescriptor = new locator();
+	// 		$esdescriptor->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+	// 		if ($esdescriptor_orig === 'si') {
+	// 			$esdescriptor->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+	// 		}else{
+	// 			$esdescriptor->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
+	// 		}
+
+	// 	$visible = new locator();
+	// 		$visible->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+	// 		if ($visible_orig === 'si') {
+	// 			$visible->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+	// 		}else{
+	// 			$visible->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
+	// 		}
+
+	// 	$usableIndex = new locator();
+	// 		$usableIndex->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+	// 		if ($usableIndex_orig === 'si') {
+	// 			$usableIndex->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+	// 		}else{
+	// 			$usableIndex->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
+	// 		}
+
+	// 	if(strpos($terminoID, 'lg-')===0) {
+
+	// 		$dato_childrens = array();
+	// 			$ar_childrens = RecordObj_dd::get_ar_childrens($terminoID);
+	// 			$from_component_tipo = DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
+	// 			foreach ($ar_childrens as $curent_tipo) {
+
+	// 				$children_id = self::get_lg_id_from_terminoID($curent_tipo);
+
+	// 				$children = new locator();
+	// 					$children->set_section_tipo($tld.$section_tipo_id);
+	// 					$children->set_section_id($children_id);
+	// 					$children->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+	// 					$children->set_from_component_tipo($from_component_tipo);
+
+	// 				$dato_childrens[] =  $children;
+	// 			}
+	// 	}else{
+
+	// 		$dato_childrens = array();
+	// 			$ar_childrens = RecordObj_dd::get_ar_childrens($terminoID);
+	// 			foreach ($ar_childrens as $curent_tipo) {
+
+	// 				$children_id = substr($curent_tipo, 2);
+
+	// 				$children = new locator();
+	// 					$children->set_section_tipo($tld.$section_tipo_id);
+	// 					$children->set_section_id($children_id);
+	// 					$children->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+	// 					$children->set_from_component_tipo(DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO);
+
+	// 				$dato_childrens[] = $children;
+	// 			}
+
+	// 	}//end if(strpos($terminoID, 'lg-')===0)
+
+	// 	if(empty($dato_modelo)) {
+
+	// 		$loc_modelo = null;
+
+	// 	}else{
+
+	// 		$modelo_id = substr($dato_modelo, 2);
+
+	// 		$loc_modelo = new locator();
+	// 			$loc_modelo->set_section_tipo($tld.'2');
+	// 			$loc_modelo->set_section_id($modelo_id);
+	// 			$loc_modelo->set_type(DEDALO_RELATION_TYPE_MODEL_TIPO);
+	// 			$loc_modelo->set_from_component_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO);
+	// 	}
+
+	// 	// ["ts2","pt234","fr37028"]
+	// 	$relaciones	= json_decode($relaciones);
+	// 	$relacion = array();
+	// 	if(!empty($relaciones) && is_array($relaciones)){
+
+	// 		foreach ($relaciones as $value) {
+
+	// 			$locator = new locator();
+
+	// 			$prefix = RecordObj_dd::get_prefix_from_tipo($value);
+	// 			$locator->set_section_tipo($prefix.'1');
+
+	// 			$relation_id = substr($value, strlen($prefix));
+	// 			$locator->set_section_id($relation_id);
+
+	// 			$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
+
+	// 			$relacion[]	= $locator;
+	// 			unset($locator );
+	// 		}
+	// 	}
+
+	// 	$section_tipo = $tld.$section_tipo_id;
+	// 	$section 	  = section::get_instance($id, $section_tipo);
+	// 	$section->forced_create_record();
+
+	// 	$component_esdescriptor	= self::row_to_json_obj('hierarchy23', $id, $esdescriptor, DEDALO_DATA_NOLAN, $section_tipo);
+	// 	$component_visible		= self::row_to_json_obj('hierarchy26', $id, $visible, DEDALO_DATA_NOLAN, $section_tipo);
+	// 	//$component_norden		= self::row_to_json_obj('hierarchy42', $id, $norden, DEDALO_DATA_NOLAN, $section_tipo); // Removed 11-03-2017
+	// 	$component_usableIndex	= self::row_to_json_obj('hierarchy24', $id, $usableIndex, DEDALO_DATA_NOLAN, $section_tipo);
+	// 	//$component_parent		= self::row_to_json_obj('hierarchy36', $id, $dato_parent, DEDALO_DATA_NOLAN, $section_tipo);
+	// 	$component_children		= self::row_to_json_obj('hierarchy49', $id, $dato_childrens, DEDALO_DATA_NOLAN, $section_tipo);
+	// 	$component_relacion		= self::row_to_json_obj('hierarchy35', $id, $relacion, DEDALO_DATA_NOLAN, $section_tipo);
+	// 	$component_modelo		= self::row_to_json_obj('hierarchy27', $id, $loc_modelo, DEDALO_DATA_NOLAN, $section_tipo);
+
+	// 	# Lang case
+	// 	if (strpos($terminoID, 'lg-')===0) {
+	// 		$code = substr($terminoID, 3);
+	// 		$component_codigo = self::row_to_json_obj('hierarchy41', $id, $code, DEDALO_DATA_NOLAN, $section_tipo);
+	// 	}
+
+	// 	unset($esdescriptor);
+	// 	unset($visible);
+	// 	unset($norden);
+	// 	unset($usableIndex);
+	// 	unset($dato_parent);
+	// 	unset($relacion);
+	// 	unset($loc_modelo);
+
+	// 	unset($component_esdescriptor);
+	// 	unset($component_visible);
+	// 	unset($component_norden);
+	// 	unset($component_usableIndex);
+	// 	//unset($component_parent);
+	// 	unset($component_children);
+	// 	unset($component_relacion);
+	// 	unset($component_modelo);
+
+	// 	$strQuery_descriptors = "SELECT * FROM \"matrix_descriptors\" WHERE parent = '$terminoID'";
+	// 	$result_descriptors	  = JSON_RecordObj_matrix::search_free($strQuery_descriptors);
+	// 		while ($rows_descriptors = pg_fetch_assoc($result_descriptors)) {
+
+	// 			$dato	= (string)$rows_descriptors['dato'];
+	// 			$tipo	= (string)$rows_descriptors['tipo'];
+	// 			$lang	= (string)$rows_descriptors['lang'];
+
+	// 			if($tipo === 'termino'){
+	// 				$component_termino	= self::row_to_json_obj('hierarchy25', $id, $dato, $lang ,$section_tipo);
+	// 				unset($component_termino);
+	// 			}
+	// 			elseif($tipo === 'def'){
+	// 				$component_def = self::row_to_json_obj('hierarchy28', $id, $dato, $lang ,$section_tipo);
+	// 				unset($component_def);
+	// 			}
+	// 			elseif($tipo === 'notes'){
+	// 				$component_notes = self::row_to_json_obj('hierarchy33', $id, $dato, $lang ,$section_tipo);
+	// 				unset($component_notes);
+	// 			}
+	// 			elseif($tipo === 'index'){
+	// 				$dato = json_decode($dato);
+
+	// 				foreach((array)$dato as $locator) {
+	// 					#$locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO);
+	// 					$locator->type = DEDALO_RELATION_TYPE_INDEX_TIPO; // note is a stdClass now
+	// 				}
+
+	// 				$component_index = self::row_to_json_obj('hierarchy40', $id, $dato, DEDALO_DATA_NOLAN, $section_tipo);
+	// 				unset($component_index);
+	// 			}
+	// 			elseif($tipo === 'obs'){
+	// 				$component_obs = self::row_to_json_obj('hierarchy32', $id, $dato, $lang ,$section_tipo);
+	// 				unset($component_obs);
+	// 			}
+	// 			#{"lat":"39.462571","lon":"-0.376295","zoom":17}
+	// 			elseif($tipo === 'altitude'){
+
+	// 				$model_name	= RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
+	// 				$component	= component_common::get_instance($model_name,
+	// 					'hierarchy31',
+	// 					$id,
+	// 					'edit',
+	// 					DEDALO_DATA_NOLAN,
+	// 					$section_tipo
+	// 				);
+
+	// 				$component_dato = $component->get_dato();
+
+	// 				if(!is_object($component_dato)){
+	// 					$component_dato = new stdClass();
+	// 				}
+	// 				$component_dato->alt =(int)$dato;
+	// 				$component_alt = self::row_to_json_obj('hierarchy31', $id, $component_dato, DEDALO_DATA_NOLAN ,$section_tipo);
+
+	// 				unset($model_name);
+	// 				unset($component);
+	// 				unset($component_dato);
+	// 				unset($component_alt);
+	// 			}
+	// 			elseif($tipo === 'geolocalizacion'){
+
+	// 				$datos = explode(',', $dato);
+
+	// 				$model_name	= RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
+	// 				$component	= component_common::get_instance($model_name,
+	// 					'hierarchy31',
+	// 					$id,
+	// 					'edit',
+	// 					DEDALO_DATA_NOLAN,
+	// 					$section_tipo
+	// 				);
+
+	// 				$component_dato = $component->get_dato();
+
+	// 				if(!is_object($component_dato)){
+	// 					$component_dato = new stdClass();
+	// 				}
+	// 				$component_dato->lat = $datos[0];
+	// 				$component_dato->lon = $datos[1];
+
+	// 				$component_notes = self::row_to_json_obj('hierarchy31', $id, $component_dato, DEDALO_DATA_NOLAN ,$section_tipo);
+
+	// 				unset($model_name);
+	// 				unset($component);
+	// 				unset($component_dato);
+	// 				unset($component_notes);
+	// 			}
+	// 			elseif($tipo === 'nomenclator_code'){
+	// 				$component_notes = self::row_to_json_obj('hierarchy41', $id, (int)$dato, DEDALO_DATA_NOLAN ,$section_tipo);
+	// 			}
+	// 			#31/12/1973-01/07/1976
+	// 			elseif($tipo === 'tiempo'){
+
+	// 				if (strpos($dato, '-')!==false) {
+	// 					$fechas = explode("-", $dato);
+	// 					$fecha_ini = explode("/", $fechas[0]);
+	// 					$fecha_fin = explode("/", $fechas[1]);
+
+	// 					$dato_time = new stdClass();
+
+	// 					$dd_date = new dd_date();
+	// 					$dd_date->set_day($fecha_ini[0]);
+	// 					$dd_date->set_month($fecha_ini[1]);
+	// 					$dd_date->set_year($fecha_ini[2]);
+
+	// 					$dato_time->start = $dd_date;
+
+	// 					$dd_date = new dd_date();
+	// 					$dd_date->set_day($fecha_fin[0]);
+	// 					$dd_date->set_month($fecha_fin[1]);
+	// 					$dd_date->set_year($fecha_fin[2]);
+
+	// 					$dato_time->end = $dd_date;
+
+	// 				}else{
+
+	// 					$fecha = explode("/", $dato);
+
+	// 					$dato_time = new dd_date();
+	// 					$dato_time->set_day($fecha[0]);
+	// 					$dato_time->set_month($fecha[1]);
+	// 					$dato_time->set_year($fecha[2]);
+	// 				}
+	// 				// component_date Marco temporal hierarchy30
+	// 				$component_tiempo = self::row_to_json_obj('hierarchy30', $id, $dato_time, DEDALO_DATA_NOLAN ,$section_tipo);
+
+	// 				unset($fechas);
+	// 				unset($fecha_ini);
+	// 				unset($fecha_fin);
+	// 				unset($dato_time);
+	// 				unset($dd_date);
+	// 				unset($component_tiempo);
+	// 			}
+
+	// 			unset($dato);
+	// 			unset($tipo);
+	// 			unset($lang);
+
+	// 			// let GC do the memory job
+	// 			time_nanosleep(0, 10000000); // 10 ms
+
+	// 		}//end while
+
+	// 	return null;
+	// }//end rows_to_matrix_json
+
+
+
+	// /**
+	// * GET_LG_ID_FROM_TERMINOID
+	// * @return int $id
+	// */
+	// private static function get_lg_id_from_terminoID( string $termino_id ) {
+
+	// 	# SOURCE TABLE DATA
+	// 	$strQuery = "SELECT id FROM \"jer_lg\" WHERE \"terminoID\" = '$termino_id' ";
+	// 	$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+	// 	while ($rows = pg_fetch_assoc($result)) {
+	// 		$id = $rows['id'];
+	// 		return $id;
+	// 	}
+
+	// 	return 1;
+	// }//end get_lg_id_from_terminoID
 
 
 
@@ -1543,7 +1454,7 @@ class hierarchy {
 				a.datos#>>'{components, hierarchy6, dato, lg-nolan}' AS tld,
 				a.datos#>>'{components, hierarchy8, dato, lg-nolan}' AS main_lang,
 				a.datos#>>'{relations}' AS hierarchy59
-				FROM \"".hierarchy::$table."\" a
+				FROM \"".hierarchy::$main_table."\" a
 				WHERE
 				a.section_tipo = 'hierarchy1'
 				-- filter by is active 'yes'
@@ -1756,254 +1667,6 @@ class hierarchy {
 
 
 	/**
-	* UPDATE_TARGET_SECTION
-	* Assign default target section_tipo to current hierarchy record
-	* This is based in record TLD like 'ts1' for 'ts'
-	* @param object $request_options
-	* @return object $response
-	*/
-	public static function update_target_section( object $request_options ) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-
-
-		$options = new stdClass();
-			$options->section_id   = null;
-			$options->section_tipo = null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		$section_tipo 	= $options->section_tipo;
-		$section_id		= (int)$options->section_id;
-
-		// tld (alpha2)
-			$tipo		= DEDALO_HIERARCHY_TLD2_TIPO;
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model_name,
-				$tipo,
-				$section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$tld = $component->get_dato();
-			if (is_array($tld)) {
-				$tld = reset($tld);
-			}
-			if (empty($tld) || strlen($tld)<2) {
-				$response->msg = 'Error.  Current tld (alpha2) is empty or invalid: '.to_string($tld);
-				return $response;
-			}
-			debug_log(__METHOD__
-				." tipo: $tipo - tld ".to_string($tld)
-				, logger::DEBUG
-			);
-
-		// dedalo_hierarchy_target_section_tipo
-			$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model_name,
-				$tipo,
-				$section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$default_section_tipo_term = self::get_default_section_tipo_term($tld);
-			$component->set_dato($default_section_tipo_term);
-			$component->Save();
-			debug_log(__METHOD__
-				. " tipo: $tipo  ". PHP_EOL
-				. ' default_section_tipo_term: '.to_string($default_section_tipo_term)
-				, logger::DEBUG
-			);
-
-		// dedalo_hierarchy_target_section_model_tipo
-			$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model_name,
-				$tipo,
-				$section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$default_section_tipo_model = self::get_default_section_tipo_model($tld);
-			$component->set_dato($default_section_tipo_model);
-			$component->Save();
-			debug_log(__METHOD__
-				. " tipo: $tipo " . PHP_EOL
-				. ' default_section_tipo_model: ' .to_string($default_section_tipo_model)
-				, logger::DEBUG
-			);
-
-		// response OK
-			$response->result	= true;
-			$response->msg		= " Update target section term [$default_section_tipo_term] and model [$default_section_tipo_model] done successfully";
-
-
-		return (object)$response;
-	}//end update_target_section
-
-
-
-	/**
-	* SET_LANG_HIERARCHY (not used!)
-	* @return object $response
-	*/
-		// public static function set_lang_hierarchy() : object {
-
-		// 	$response = new stdClass();
-		// 		$response->result 	= false;
-		// 		$response->msg 		= 'Error on set_lang_hierarchy ';
-
-		// 	$filter_value 	= "datos#>'{components,".DEDALO_HIERARCHY_TLD2_TIPO.",dato,lg-nolan}' = '[\"LG\"]' ";
-		// 	$strQuery = " SELECT section_id FROM \"".hierarchy::$table."\" WHERE $filter_value ";
-		// 	$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		// 	while ($rows = pg_fetch_assoc($result)) {
-		// 		$section_id = $rows['section_id'];
-		// 		break;
-		// 	}
-
-		// 	if (!isset($section_id)) {
-		// 		$response->msg .= "Record with TLD2: 'LG' not found in table ".hierarchy::$table;
-		// 		return $response;
-		// 	}
-
-		// 	// DEDALO_HIERARCHY_TARGET_SECTION_TIPO hierarchy53
-		// 		$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-		// 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		// 		$component	= component_common::get_instance(
-		// 			$model_name,
-		// 			$tipo,
-		// 			$section_id,
-		// 			'edit',
-		// 			DEDALO_DATA_NOLAN,
-		// 			DEDALO_HIERARCHY_SECTION_TIPO
-		// 		);
-		// 		$component->set_dato( array("lg1") );
-		// 		$component->Save();
-
-		// 	// DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO hierarchy58
-		// 		$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
-		// 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		// 		$component	= component_common::get_instance(
-		// 			$model_name,
-		// 			$tipo,
-		// 			$section_id,
-		// 			'edit',
-		// 			DEDALO_DATA_NOLAN,
-		// 			DEDALO_HIERARCHY_SECTION_TIPO
-		// 		);
-		// 		$component->set_dato( array("lg2") );
-		// 		$component->Save();
-
-		// 	// DEDALO_HIERARCHY_CHILDREN_TIPO
-		// 		$tipo		= DEDALO_HIERARCHY_CHILDREN_TIPO;
-		// 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		// 		$component	= component_common::get_instance(
-		// 			$model_name,
-		// 			$tipo,
-		// 			$section_id,
-		// 			'edit',
-		// 			DEDALO_DATA_NOLAN,
-		// 			DEDALO_HIERARCHY_SECTION_TIPO
-		// 		);
-		// 		$locator = new locator();
-		// 			$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO); // lg1
-		// 			$locator->set_section_id(1); // 1
-		// 			$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
-		// 			$locator->set_from_component_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO); // hierarchy53
-
-		// 		$component->set_dato( $locator );
-		// 		$component->Save();
-
-		// 	// response OK
-		// 		$response->result	= true;
-		// 		$response->msg		= "Section hierarchy ".DEDALO_HIERARCHY_SECTION_TIPO." - $section_id is configured successfully";
-
-
-		// 	return $response;
-		// }//end set_lang_hierarchy
-
-
-
-	/**
-	* GET_HIERARCHY_TYPE_FROM_SECTION_TIPO (not used!)
-	* @param string $section_tipo
-	* @return int|null $hierarchy_type
-	*/
-		// public static function get_hierarchy_type_from_section_tipo(string $section_tipo) : ?int {
-
-		// 	// cache results recover if exists
-		// 		static $hierarchy_type_from_section_tipo;
-		// 		if (isset($hierarchy_type_from_section_tipo[$section_tipo])) {
-		// 			return $hierarchy_type_from_section_tipo[$section_tipo];
-		// 		}
-
-		// 	$hierarchy_type = null;
-
-		// 	$search_query_object = json_decode('{
-		// 	  "id": "hierarchy1_list",
-		// 	  "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
-		// 	  "order": false,
-		// 	  "limit": 1,
-		// 	  "filter": {
-		// 		"$and": [
-		// 		  {
-		// 			"q": "='.$section_tipo.'",
-		// 			"q_operator": null,
-		// 			"path": [
-		// 			  {
-		// 				"section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
-		// 				"component_tipo": "'.DEDALO_HIERARCHY_TARGET_SECTION_TIPO.'",
-		// 				"model": "component_input_text",
-		// 				"name": "Target thesaurus"
-		// 			  }
-		// 			]
-		// 		  }
-		// 		]
-		// 	  },
-		// 	  "select": [
-		// 		{
-		// 		  "path": [
-		// 			{
-		// 			  "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
-		// 			  "component_tipo": "'.DEDALO_HIERARCHY_TYPOLOGY_TIPO.'",
-		// 			  "model": "component_select",
-		// 			  "name": "Typology"
-		// 			}
-		// 		  ]
-		// 		}
-		// 	  ]
-		// 	}');
-
-		// 	$search			= search::get_instance($search_query_object);
-		// 	$search_result	= $search->search();
-		// 	$ar_records		= $search_result->ar_records;
-
-		// 	foreach ($ar_records as $key => $row) {
-
-		// 		if( $ar_locators = $row->{DEDALO_HIERARCHY_TYPOLOGY_TIPO} ) {
-		// 			if (isset($ar_locators[0]->section_id)) {
-		// 				$hierarchy_type = (int)$ar_locators[0]->section_id;
-		// 			}
-		// 		}
-		// 	}
-
-		// 	// cache results
-		// 		$hierarchy_type_from_section_tipo[$section_tipo] = $hierarchy_type;
-
-		// 	return $hierarchy_type;
-		// }//end get_hierarchy_type_from_section_tipo
-
-
-
-	/**
 	* GET_HIERARCHY_SECTION
 	* Search hierarchy sections by target section_tipo and
 	* get result section_id
@@ -2067,7 +1730,7 @@ class hierarchy {
 			$response->errors	= [];
 
 		// short vars
-			$table			= hierarchy::$table; // expected 'matrix_hierarchy_main'
+			$table			= self::$main_table; // expected 'matrix_hierarchy_main'
 			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
 
 		$sql = '
