@@ -125,6 +125,25 @@ class RecordObj_dd extends RecordDataBoundObject {
 	}//end get_prefix_from_tipo
 
 
+	/**
+	* GET_ID_FROM_TIPO
+	* @return string|null Like '12' or '765'
+	*/
+	public static function get_id_from_tipo(string $tipo) : ?string {
+
+		preg_match("/\d+/", $tipo, $output_array);
+		if (empty($output_array[0])) {
+			if(SHOW_DEBUG===true) {
+				dump(debug_backtrace()[0]," debug_backtrace Invalid tipo received ". json_encode($tipo));
+			}
+			debug_log(__METHOD__." Error: Invalid tipo received. Impossible get_id_from_tipo this tipo :  ".to_string($tipo), logger::ERROR);
+			return null;
+		}
+
+		return $output_array[0];
+	}//end get_id_from_tipo
+
+
 
 	/**
 	* GET_ID_FROM_TIPO
@@ -1455,6 +1474,95 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return in_array($current_tld, $active_tlds);
 	}//end check_active_tld
+
+
+
+	/**
+	* SAVE
+	* PASADA A RecordObj_dd (Pública. Esta carpeta es privada de momento 28-08-2016)
+	*/
+	public function Save( $descriptor_dato_unused=null ) {
+
+		if(!verify_dedalo_prefix_tipos($this->prefijo)) {
+			if(SHOW_DEBUG===true) {
+				trigger_error("Error on save 'RecordObj_dd_edit'. Prefijo is empty or wrong. Nothing is saved!");
+			}
+			return false;
+		}
+
+		if (empty($this->parent)) {
+			if(SHOW_DEBUG===true) {
+				trigger_error("Error on save 'RecordObj_dd_edit'. Parent is empty. Nothing is saved!");
+			}
+			return false;
+		}else{
+			if(!verify_dedalo_prefix_tipos($this->parent)) {
+				if(SHOW_DEBUG===true) {
+					trigger_error("Error on save 'RecordObj_dd_edit'. Parent Prefijo is empty or wrong. Nothing is saved!");
+				}
+				return false;
+			}
+		}
+
+		#
+		# EDIT
+		# TERMINO ID EXISTS : UPDATE RECORD
+		if (!empty($this->terminoID) && verify_dedalo_prefix_tipos($this->prefijo)) {
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Saving with parent save ".to_string(), logger::DEBUG);
+			}
+			return parent::Save();
+		}
+
+		#
+		# INSERT
+		# TERMINO ID NOT CREATED : BUILD NEW AND INSERT
+		# Creamos el terminoID a partir del prefijo y el contador contador para el prefijo actual
+		$counter_dato   = self::get_counter_value($this->prefijo);
+		$terminoID		= (string)$this->prefijo . (int)($counter_dato+1);
+			#dump($terminoID," terminoID - prefijo:$this->prefijo");die();
+
+		# Fix terminoID : Important!
+		$this->set_terminoID($terminoID);
+
+		# Set defaults
+		$this->set_tld( (string)$this->prefijo );
+		if(empty($this->norden)) $this->set_norden( (int)1 );
+
+
+		if (!empty($this->terminoID)) {
+
+			$result = parent::Save();
+
+			if ($result) {
+
+				$counter_dato_updated  = self::update_counter($this->prefijo, $counter_dato);
+					#dump($counter_dato_updated," counter_dato_updated $this->prefijo");
+
+				$prefix_parent 		= self::get_prefix_from_tipo($this->parent);
+				$prefix_terminoID 	= self::get_prefix_from_tipo($this->terminoID);
+
+				$value_parent 		= (int)substr($this->parent,  strlen($prefix_parent));
+				$value_terminoID 	= (int)substr($this->terminoID, strlen($prefix_terminoID));
+
+				//if ($value_terminoID<=$value_parent ) {
+				//	dump($value_parent, 	' value_parent for '.$this->parent);
+				//	dump($value_terminoID,  ' value_parent for '.$this->terminoID);
+				//	throw new Exception("Error Processing Request. Inconsistency detected. parent:$this->parent , terminoID:$this->terminoID", 1);
+				//}
+
+				#
+				# DESCRIPTORS : finally we create one record in descriptors with this main info
+				$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, 'lg-spa');
+				$RecordObj_descriptors_dd->set_tipo('termino');
+				$RecordObj_descriptors_dd->set_parent($terminoID);
+				$RecordObj_descriptors_dd->set_lang('lg-spa');
+				$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
+			}
+		}
+
+		return (string)$terminoID;
+	}//end Save
 
 
 
