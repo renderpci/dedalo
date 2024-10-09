@@ -874,15 +874,23 @@ class hierarchy {
 			$RecordObj_dd->set_relaciones($options->relaciones);
 			$RecordObj_dd->set_properties($options->properties);
 
+		// term
+			$lang = DEDALO_DATA_LANG;
+			$term = $RecordObj_dd->get_term() ?? new stdClass();
+			$term->{$lang} = $options->name;
+			$RecordObj_dd->set_term( json_encode($term) );
+
 		// force_insert_on_save
 			$RecordObj_dd->set_force_insert_on_save(true); # important !
 
 		// SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
-			$created_id_ts = $RecordObj_dd->save_term_and_descriptor( $options->name );
+			// $created_id_ts = $RecordObj_dd->save_term_and_descriptor( $options->name );
+			$created_id_ts = $RecordObj_dd->Save();
 			if ($created_id_ts) {
 				$response->result 	= true;
 				$response->msg 		= "Created record: $created_id_ts - $options->name";
 			}
+
 
 		return $response;
 	}//end create_term
