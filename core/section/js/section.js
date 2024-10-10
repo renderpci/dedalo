@@ -58,6 +58,7 @@ export const section = function() {
 	this.ar_section_id			= null
 
 	this.node					= null
+	this.events_tokens			= null
 	this.ar_instances			= null
 	this.caller					= null
 
