@@ -154,7 +154,7 @@ class tools_register {
 			if (!empty($ar_ontologies)) {
 
 				// Clean. remove structure records in the database
-					ontology::clean_structure_data('tool');
+					ontology_v5::clean_structure_data('tool');
 
 				// import ontology (structure) in jer_dd
 					if (defined('ONTOLOGY_DB')) {
@@ -164,7 +164,7 @@ class tools_register {
 						);
 					}else{
 						foreach ($ar_ontologies as $current_ontology) {
-							ontology::import($current_ontology);
+							ontology_v5::import($current_ontology);
 						}
 					}
 
