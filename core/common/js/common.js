@@ -773,6 +773,21 @@ const do_delete_self = async function (self) {
 
 	const result = await delete_instance(instance_options)
 
+	// delete caller instance reference (ar_instances)
+		if (self.caller?.ar_instances) {
+			const ar_instances_length = self.caller.ar_instances.length
+			for (let i = 0; i < ar_instances_length; i++) {
+				const item = self.caller.ar_instances[i]
+				if (item.id===self.id) {
+					self.caller.ar_instances.splice(i, 1)
+					if(SHOW_DEBUG===true) {
+						// console.log('))))) deleted caller instance reference:', self.caller.model, self.id);
+					}
+					break;
+				}
+			}
+		}
+
 
 	return result
 }//end do_delete_self
