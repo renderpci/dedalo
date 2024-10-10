@@ -15,6 +15,8 @@ class ontology {
 
 	/**
 	* CEATE_ONTOLOGY_RECORDS
+	*
+	* @param array $jer_dd_rows
 	* @return void
 	*/
 	public function ceate_ontology_records( array $jer_dd_rows ) {
@@ -43,8 +45,9 @@ class ontology {
 
 	/**
 	* GET_ONTOLOGY_MAIN_FORM_TLD
+	*
 	* @param string $tld
-	* @return
+	* @return object|null $row
 	*/
 	public function get_ontology_main_form_tld( string $tld ) : ?object {
 
@@ -107,6 +110,8 @@ class ontology {
 
 	/**
 	* CREATE_NEW_MAIN_SECTION
+	*
+	* @param string $tld
 	* @return
 	*/
 	public function create_new_main_section( string $tld ) {
