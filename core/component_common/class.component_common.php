@@ -164,6 +164,10 @@ abstract class component_common extends common {
 						. "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'"
 						, logger::ERROR
 					);
+					if(SHOW_DEBUG===true) {
+						$bt = debug_backtrace();
+						dump($bt, ' bt ++ '.to_string());
+					}
 
 				// fix bad model
 					$component_name = $model_name;

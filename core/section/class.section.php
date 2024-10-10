@@ -1236,7 +1236,8 @@ class section extends common {
 						['component_filter'],
 						true, // from_cache
 						false, // resolve_virtual
-						true // cache
+						true, // recursive
+						true // search_exact
 					);
 					if (empty($ar_tipo_component_filter[0])) {
 
