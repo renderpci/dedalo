@@ -10,7 +10,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {pause} from '../../../core/common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import * as instances from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 
 
@@ -177,7 +177,7 @@ const get_content_data = async function(self) {
 
 					await pause(300) // fake process wait
 
-					const service_upload = await instances.get_instance({
+					const service_upload = await get_instance({
 						id_variant			: 'generic_upload_file', // prevent id collisions
 						model				: 'service_upload',
 						allowed_extensions	: ['zip','kml'],
@@ -242,7 +242,7 @@ const get_content_data = async function(self) {
 
 						// resource component used as tool_upload caller
 						// It is necessary because he knows the proper tool context
-							const component_image = await instances.get_instance({
+							const component_image = await get_instance({
 								model			: 'component_image',
 								tipo			: component_resources_image_tipo,
 								section_tipo	: section_resources_image_tipo,

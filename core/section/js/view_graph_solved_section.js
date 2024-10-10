@@ -8,7 +8,7 @@
 	import {when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {create_source} from '../../common/js/common.js'
 	import {open_window, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
@@ -100,7 +100,7 @@ view_graph_solved_section.render = async function(self, options) {
 				const tipo			= self.from_map.name
 
 				// component_name
-				instances.get_instance({
+				get_instance({
 					tipo			: tipo,
 					section_tipo	: section_tipo,
 					section_id		: section_id,
@@ -586,7 +586,7 @@ const get_graph = async function(options) {
 				const section_id		= options.section_id
 
 				// create the component source instance
-					const source_component = await instances.get_instance({
+					const source_component = await get_instance({
 						section_tipo	: section_tipo,
 						section_id		: section_id,
 						tipo			: tipo,
@@ -816,7 +816,7 @@ const render_left = async (self) => {
 
 	async function get_source_component_context(source){
 
-		const component = await instances.get_instance({
+		const component = await get_instance({
 			tipo			: source,
 			section_tipo	: self.section_tipo,
 			section_id		: 'tmp',
@@ -934,7 +934,7 @@ const render_source_section = async function(options) {
 		add_show		: true
 	}
 
-	const section = await instances.get_instance(section_options)
+	const section = await get_instance(section_options)
 	await section.build(true)
 	// section.fixed_columns_map = true
 

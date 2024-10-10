@@ -12,7 +12,7 @@
 	import {when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import '../../common/js/dd-modal.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -2164,7 +2164,7 @@ export const ui = {
 			}
 
 		// instance search. Get the instance of the component that was created by the section in build-render process
-			const all_instances	= instances.get_all_instances()
+			const all_instances	= get_all_instances()
 			const component		= all_instances.find( el =>
 				el.tipo === first_ddo.tipo &&
 				el.section_tipo === section_tipo &&
@@ -3091,7 +3091,7 @@ export const ui = {
 				class_name		: 'body content'
 			})
 			// component instance
-			const instance = await instances.get_instance({
+			const instance = await get_instance({
 				model			: self.model,
 				tipo			: self.tipo,
 				section_tipo	: self.section_tipo || self.tipo,

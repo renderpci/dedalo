@@ -51,9 +51,9 @@
 		// user is not logged
 
 		import ('../../common/js/instances.js')
-		.then(async function(instances){
+		.then(async function(module){
 
-			const instance = await instances.get_instance({
+			const instance = await module.get_instance({
 				model	: 'login',
 				tipo	: 'dd229',
 				mode	: 'edit',

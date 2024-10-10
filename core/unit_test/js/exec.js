@@ -12,10 +12,10 @@
 			// user is not logged
 
 			import ('../../common/js/instances.js')
-			.then(async function(instances){
+			.then(async function(module){
 
 				// login instance add
-					instances.get_instance({
+					module.get_instance({
 						model	: 'login',
 						tipo	: 'dd229',
 						mode	: 'edit',

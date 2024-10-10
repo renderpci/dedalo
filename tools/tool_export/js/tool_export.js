@@ -8,7 +8,7 @@
 	import {clone} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import * as instances from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_export} from './render_tool_export.js'
 	import {
@@ -227,7 +227,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 		}
 
 	// dd_grid. Init the dd_grid instance if it isn't already
-		const dd_grid = self.dd_grid || await instances.get_instance({
+		const dd_grid = self.dd_grid || await get_instance({
 			model				: 'dd_grid',
 			section_tipo		: self.caller.section_tipo,
 			tipo				: self.caller.section_tipo,
@@ -266,7 +266,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 	// 	const self = this
 
 	// 	// dd_grid
-	// 	const new_dd_grid = await instances.get_instance({
+	// 	const new_dd_grid = await get_instance({
 	// 		model			: 'dd_grid',
 	// 		section_tipo	: self.caller.section_tipo,
 	// 		// section_id	: section_id,

@@ -5,7 +5,7 @@
 
 
 // import needed modules
-	import * as instances from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_user_admin} from './render_tool_user_admin.js' // self tool rendered (called from render common)
@@ -312,7 +312,7 @@ tool_user_admin.prototype.build_user_section = async function() {
 			id_variant		: section_tipo +'_'+ section_id + '_build_user_section'
 		}
 
-	const section = await instances.get_instance(instance_options)
+	const section = await get_instance(instance_options)
 		// filter search disallow
 			section.filter = false
 		// inspector disallow

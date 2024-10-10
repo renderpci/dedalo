@@ -8,7 +8,7 @@
 	import {clone, url_vars_to_object, object_to_url_vars, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {
 		common,
 		set_context_vars,
@@ -892,7 +892,7 @@ export const get_section_records = async function(options) {
 
 			// promise add and continue init and build
 				ar_promises.push(new Promise(function(resolve){
-					instances.get_instance(instance_options)
+					get_instance(instance_options)
 					.then(function(current_section_record){
 						current_section_record.build()
 						.then(function(){
@@ -1325,7 +1325,7 @@ section.prototype.change_mode = async function(options) {
 		current_context.mode = mode
 
 	// instance
-		const new_instance = await instances.get_instance({
+		const new_instance = await get_instance({
 			model			: current_context.model,
 			tipo			: current_context.tipo,
 			section_tipo	: current_context.section_tipo,

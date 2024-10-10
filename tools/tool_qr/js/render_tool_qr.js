@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
-	import { get_instance } from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	// import * as QRCode from '../lib/qrcode/easy.qrcode.js';
 	// import * as QRCode from 'easyqrcodejs';
 
