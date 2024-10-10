@@ -9,7 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {
 		render_search
 	} from './render_search.js'
@@ -485,7 +485,7 @@ search.prototype.get_component_instance = async function(options) {
 				mode			: 'search',
 				lang			: lang
 			}
-			const component_instance = await instances.get_instance(component_options)
+			const component_instance = await get_instance(component_options)
 
 	// data. Inject value from search user preset before build is needed for portal 'resolve_data' API call
 		component_instance.data = {

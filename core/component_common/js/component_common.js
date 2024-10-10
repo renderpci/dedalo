@@ -9,7 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {set_before_unload} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import {set_context_vars, create_source} from '../../common/js/common.js'
 	import {events_subscription} from './events_subscription.js'
 	import {ui} from '../../common/js/ui.js'
@@ -801,7 +801,7 @@ component_common.prototype.update_datum = async function(new_datum) {
 		// When one component is observed by other and the observable component data is changed, the observer component also will change
 		// It's necessary update the data in all components (self, observers), not only the caller.
 			// COMMENTED 08-09-2023 BY Paco/Alex: Apparently is not necessary anymore (!)
-			// const ar_instances = await instances.get_all_instances()
+			// const ar_instances = await get_all_instances()
 			// // Iterate data and instances with equal data
 			// for (let i = new_data_length - 1; i >= 0; i--) {
 
@@ -1215,7 +1215,7 @@ component_common.prototype.change_mode = async function(options) {
 		current_context.mode = mode
 
 	// element. Create the instance options for build it. The instance is reflect of the context and section_id
-		const new_instance = await instances.get_instance({
+		const new_instance = await get_instance({
 			model			: current_context.model,
 			tipo			: current_context.tipo,
 			section_tipo	: current_context.section_tipo,
@@ -1281,7 +1281,7 @@ component_common.prototype.change_mode = async function(options) {
 	// 		const section_lang			= self.section_lang
 
 	// 	// element. Create the instance options for build it. The instance is reflect of the context and section_id
-	// 		const new_instance = await instances.get_instance({
+	// 		const new_instance = await get_instance({
 	// 			model			: current_context.model,
 	// 			tipo			: current_context.tipo,
 	// 			section_tipo	: current_context.section_tipo,
@@ -1451,7 +1451,7 @@ export const check_unsaved_data = async function(options={}) {
 */
 export const save_unsaved_components = async function() {
 
-	const ar_instances = instances.get_all_instances()
+	const ar_instances = get_all_instances()
 	const ar_instances_length = ar_instances.length
 	for (let i = 0; i < ar_instances_length; i++) {
 
@@ -1572,7 +1572,7 @@ export const get_dataframe = async function(options) {
 	instance_options.standalone	= false
 
 	// component_dataframe init instance
-	const component_dataframe = await instances.get_instance(instance_options)
+	const component_dataframe = await get_instance(instance_options)
 
 	// data. Get his data from datum
 	// it get data from datum as section_record does (see section_record get_component_data() for portals)
@@ -1664,7 +1664,7 @@ export const delete_dataframe = async function(options) {
 			return false
 		}
 
-		const all_instances = instances.get_all_instances()
+		const all_instances = get_all_instances()
 		const component_dataframe = all_instances.find(el =>
 			el.model							=== 'component_dataframe'
 			&& el.tipo							=== ddo_dataframe.tipo

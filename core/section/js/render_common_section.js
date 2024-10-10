@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 
 
 
@@ -256,7 +256,7 @@ export const render_relation_list = function(options) {
 
 			const relation_list	= (instance && instance.model==='relation_list')
 				? instance // pagination case do not need to init relation_list
-				: await instances.get_instance({
+				: await get_instance({
 					model			: 'relation_list',
 					tipo			: section_tipo,
 					section_tipo	: section_tipo,

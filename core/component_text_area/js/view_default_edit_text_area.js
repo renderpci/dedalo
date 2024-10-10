@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {pause, url_vars_to_object} from '../../common/js/utils/index.js'
 	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
@@ -1122,8 +1122,8 @@ const render_note = async function(options) {
 				filter			: false
 			}
 			// get the instance, built and render
-			const note_section	=	await instances.get_instance(instance_options)
-									await note_section.build(true)
+			const note_section	= await get_instance(instance_options)
+								  await note_section.build(true)
 
 			return note_section
 		}

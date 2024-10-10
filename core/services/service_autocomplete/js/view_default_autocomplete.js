@@ -9,7 +9,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {clone} from '../../../common/js/utils/index.js'
-	import * as instances from '../../../common/js/instances.js'
+	import {get_instance} from '../../../common/js/instances.js'
 	import {get_section_records} from '../../../section/js/section.js'
 
 
@@ -1604,7 +1604,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 							lang			: current_element_context.lang,
 							id_variant		: self.id
 						}
-						const current_instance = await instances.get_instance(instance_options)
+						const current_instance = await get_instance(instance_options)
 						current_instance.build(false)
 						const node = await current_instance.render()
 

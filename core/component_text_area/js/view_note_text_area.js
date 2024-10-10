@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 
@@ -196,7 +196,7 @@ view_note_text_area.render = async function(self, options) {
 							auto_init_editor	: true,
 							caller				: self
 						}
-						const component = await instances.get_instance(options)
+						const component = await get_instance(options)
 
 						await component.build(true)
 						// force to remove buttons

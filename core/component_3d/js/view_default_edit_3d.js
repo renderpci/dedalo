@@ -367,7 +367,7 @@ export const get_buttons = (self) => {
 		// })
 		// button_info.addEventListener("mouseup", async (e) =>{
 
-		// 	const player_3d = await instances.get_instance({
+		// 	const player_3d = await get_instance({
 		// 		model 			: 'component_3d',
 		// 		section_tipo	: self.section_tipo,
 		// 		section_id		: self.section_id,
