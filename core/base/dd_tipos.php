@@ -44,7 +44,7 @@ define('DEDALO_COMPONENT_PROJECT_LANGS_TIPO',			'dd267');
 define('DEDALO_PROJECTS_CHILDREN_TIPO',					'dd1594');
 
 // dedalo_diffusion_tipo
-define('DEDALO_DIFFUSION_TIPO',							'dd3');
+define('DEDALO_DIFFUSION_TIPO',							'dd1190'); // previous 'dd3'
 define('DEDALO_COMPONENT_SI_NO_TIPO',					'dd62'); // Type of the value field (not of the section) private list with possible values: 1,2 (yes, no) -translatable-
 define('DEDALO_SECTION_SI_NO_TIPO',						'dd64');
 
