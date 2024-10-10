@@ -59,6 +59,19 @@ service_time_machine.prototype.init = async function(options) {
 
 	const self = this
 
+	// safe init double control. To detect duplicated events cases
+		if (typeof this.is_init!=='undefined') {
+			console.error('Duplicated init for element:', this);
+			if(SHOW_DEBUG===true) {
+				alert('Duplicated init element');
+			}
+			return false
+		}
+		this.is_init = true
+
+	// status update
+		self.status = 'initializing'
+
 	self.model			= options.model || 'service_time_machine'
 	self.tipo			= options.section_tipo
 	self.section_tipo	= options.section_tipo
