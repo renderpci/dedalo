@@ -70,8 +70,7 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_area_maintenance_api.php';
 // others
 include DEDALO_CORE_PATH . '/ontology/class.ontology.php';
 // legacy classes (used only by v5 shared Ontology)
-include DEDALO_CORE_PATH . '/legacy/class.css.php';
-include DEDALO_CORE_PATH . '/legacy/class.js.php';
+include DEDALO_CORE_PATH . '/ontology/class.ontology_v5.php';
 // tools
 include DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php';
 // include the shared classes
