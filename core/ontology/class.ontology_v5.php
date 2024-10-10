@@ -16,7 +16,7 @@
 
 
 /**
-* ONTOLOGY
+* ONTOLOGY_V5
 * Manages structure (ontology) import and export data
 * Useful for developers to create tools structure data
 */
@@ -975,7 +975,4 @@ class ontology_v5 {
 
 
 
-}//end ontology
-
-
-
+}//end ontology_v5
