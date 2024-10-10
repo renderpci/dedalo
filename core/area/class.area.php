@@ -94,7 +94,7 @@ class area extends area_common  {
 					if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 
 				// areas. Get the JSON format of the ontology
-					$areas[] = ontology::tipo_to_json_item($area_tipo, [
+					$areas[] = ontology_v5::tipo_to_json_item($area_tipo, [
 						'tipo'			=> true,
 						'tld'			=> false,
 						'is_model'		=> false,
@@ -118,7 +118,7 @@ class area extends area_common  {
 						// skip the areas_deny
 						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
 
-						$areas[] = ontology::tipo_to_json_item($child_area_tipo, [
+						$areas[] = ontology_v5::tipo_to_json_item($child_area_tipo, [
 							'tipo'			=> true,
 							'tld'			=> false,
 							'is_model'		=> false,
