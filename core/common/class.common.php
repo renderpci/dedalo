@@ -1375,7 +1375,6 @@ abstract class common {
 			// controller include
 				$json = include( $path );
 
-
 		// Debug
 			if(SHOW_DEBUG===true) {
 
@@ -1760,9 +1759,6 @@ abstract class common {
 						$dd_object->new_dataframe = (!empty($new_dataframe))
 							? $new_dataframe[0]
 							: null;
-
-						// component info from Ontology (!) For now it is not used because it affects speed.
-						// $dd_object->ontology_info = $this->get_ontology_info();
 					}
 
 					// set the show_interface of shared sections
@@ -3487,16 +3483,31 @@ abstract class common {
 						case 'search':
 						default:
 							if ($model==='section') {
-								# case section list is defined
+								// case section list is defined
 								$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section_list', 'children', true);
 								if(isset($ar_terms[0])) {
-									# Use found related terms as new list
+									// Use found related terms as new list
 									$current_term = $ar_terms[0];
 									$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
 										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
 									);
+								}else{
+									// try with real section
+									$real_section_tipo = section::get_section_real_tipo_static($tipo);
+									if ($real_section_tipo!==$tipo) {
+										$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($real_section_tipo, 'section_list', 'children', true);
+										if(isset($ar_terms[0])) {
+											// Use found related terms as new list
+											$current_term = $ar_terms[0];
+											$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
+												$current_term, // string tipo
+												true, // bool cache
+												true // bool simple
+											);
+										}
+									}
 								}
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
