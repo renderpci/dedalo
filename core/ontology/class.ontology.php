@@ -1,10 +1,11 @@
 <?php
-
 /**
 * ONTOLOGY
 * Manages the main ontology definitions of Dédalo
 */
 class ontology {
+
+
 
 	// Table where ontology data is stored
 	static $main_table			= 'matrix_ontology_main';
@@ -14,7 +15,7 @@ class ontology {
 
 	/**
 	* CEATE_ONTOLOGY_RECORDS
-	* @return
+	* @return void
 	*/
 	public function ceate_ontology_records( array $jer_dd_rows ) {
 
@@ -36,7 +37,6 @@ class ontology {
 
 			$setion_data = $this->buil_section_row_from_jer_dd($row, $target_section_tipo);
 		}
-
 	}//end ceate_ontology_records
 
 
@@ -82,7 +82,6 @@ class ontology {
 	*/
 	public function buil_section_row_from_jer_dd( object $jer_dd_row, string $target_section_tipo) {
 
-
 		// vars
 		$tipo			= $jer_dd_row->terminoID;
 		$parent_tipo	= $jer_dd_row->parent;
@@ -93,7 +92,6 @@ class ontology {
 			$descriptor->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 			$descriptor->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
 
-
 		// term
 		$tld				= RecordObj_dd::get_prefix_from_tipo( $tipo );
 		$section_id			= RecordObj_dd::get_id_from_tipo( $tipo );
@@ -103,11 +101,8 @@ class ontology {
 		$parent_section_id	= RecordObj_dd::get_id_from_tipo( $parent_tipo );
 		$parent_main_section_row = $this->get_ontology_main_form_tld( $parent_tld );
 		$ar_target_section_tipo = $parent_main_section_row->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
-
-
-
-
 	}//end buil_section_row_from_jer_dd
+
 
 
 	/**
@@ -140,8 +135,6 @@ class ontology {
 		$section_data->components->hierarchy5->dato->{DEDALO_STRUCTURE_LANG} = [$tld];
 		// TLD
 		$section_data->components->hierarchy6->dato->{DEDALO_DATA_NOLAN} = [$tld];
-
-
 	}//end create_new_main_section
 
 
