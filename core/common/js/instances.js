@@ -207,7 +207,7 @@ export const get_all_instances = function() {
 
 /**
 * DELETE_INSTANCE
-* Delete the found instance/s from memory
+* Delete the found instance/s from global 'instances' array list
 * @param object options
 * @return int deleted
 */
