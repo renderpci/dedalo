@@ -115,15 +115,19 @@ export const get_instance = async function(options){
 	// key. build the key locator of the instance
 		const key = options.key || key_instances_builder(options)
 
+	// search. Check if the instance is already in the cache
+		const instances_length = instances.length
+		for (let i = instances_length - 1; i >= 0; i--) {
+			if (instances[i].id===key) {
+				// if(SHOW_DEBUG===true) {
+				// 	console.log('))))) found_instance:', instances[i]);
+				// }
+				return instances[i]
+			}
+		}
+
 	// Return a promise that resolves the instance
 	return new Promise(async function(resolve){
-
-		// search. Check if the instance is already in the cache
-			const found_instance = instances.find(instance => instance.id===key)
-			// resolve the promise with the cache instance found
-			if (found_instance) {
-				resolve(found_instance)
-			}
 
 		// element file import path. Determine the path for importing the module
 		// import element module file once (and wait until finish)
