@@ -220,6 +220,9 @@ section.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('new_section_' + self.id, new_section_handler)
 			)
+			if(SHOW_DEBUG===true) {
+				console.warn('))))) added section event subscription new_section_:', self.id, self.status, performance.now());
+			}
 
 		// duplicate_section_ event
 			const duplicate_section_handler = async (options) => {
