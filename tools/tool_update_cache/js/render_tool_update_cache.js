@@ -8,6 +8,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {render_footer} from '../../tool_common/js/render_tool_common.js'
 
 
 
@@ -198,6 +199,10 @@ const get_content_data = async function(self) {
 			})
 		}
 		check_process_data()
+
+	// footer_node
+		const footer_node = render_footer(self)
+		fragment.appendChild(footer_node)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
