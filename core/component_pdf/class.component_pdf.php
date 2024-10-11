@@ -1,7 +1,5 @@
 <?php
 declare(strict_types=1);
-
-
 /**
 * CLASS COMPONENT PDF
 *
@@ -99,7 +97,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_FOLDER
-	* 	Get element dir from config
+	* Get element DEDALO_PDF_FOLDER value from config
 	* @return string
 	*/
 	public function get_folder() : string {
@@ -155,6 +153,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_RELATED_COMPONENT_TEXT_AREA_TIPO
+	* Returns related component_text_area tipos (used to write PDF text)
 	* @return array $related_component_text_area_tipo
 	*/
 	public function get_related_component_text_area_tipo() : array {
@@ -333,7 +332,6 @@ class component_pdf extends component_media_common implements component_media_in
 					$component_target_filename->Save();
 				}
 
-
 			// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
 			// this cases are: «odt», «doc», «pages» files, or other document file.
 				if( $file_extension !== $this->get_extension() ){
@@ -346,7 +344,6 @@ class component_pdf extends component_media_common implements component_media_in
 					$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 					return $response;
 				}
-
 
 			// Generate default_pdf_format : copy the PDF to web format
 			// original file is conserved (like myfilename.pdf and myfilename.doc)
@@ -554,9 +551,14 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* RENAME_OLD_FILES
-	* @param $file_name string as 'test175_test65_3'
+	* @param string $file_name string
+	* 	as 'test175_test65_3'
 	* @param $folder_path string
 	* @return object $response
+	* {
+	* 	result : boo
+	* 	msg: string
+	* }
 	*/
 	public function rename_old_files( string $file_name, string $folder_path ) : object {
 
@@ -584,6 +586,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
+	* Read config DEDALO_PDF_ALTERNATIVE_EXTENSIONS value or null
 	* @return array|null $alternative_extensions
 	*/
 	public function get_alternative_extensions() : ?array {
@@ -753,7 +756,6 @@ class component_pdf extends component_media_common implements component_media_in
 			return $response;
 		}
 
-		#
 		# PAGES TAGS
 		$original_text	= str_replace("","", $pdf_text); // original text without page marks
 		if($method==='text_engine'){
@@ -780,7 +782,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return $response;
 	}//end build_pdf_transcription
-
 
 
 
@@ -943,10 +944,9 @@ class component_pdf extends component_media_common implements component_media_in
 	/**
 	* UTF8_CLEAN
 	* @param string $string = ''
-	* @param bool $control = false
 	* @param string $string
 	*/
-	public static function utf8_clean( string $string='', bool $control=false ) : string {
+	public static function utf8_clean( string $string='' ) : string {
 
 		$string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
 
@@ -1184,7 +1184,7 @@ class component_pdf extends component_media_common implements component_media_in
 					$ocr_options->source_file	= (string)$source_file;	# full source pdf file path
 					$ocr_options->ocr_lang		= $ocr_lang;		# lang used to process the file
 
-				$ocr_response = (object)component_pdf::process_ocr_file( $ocr_options );
+				$ocr_response = component_pdf::process_ocr_file( $ocr_options );
 			}
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
@@ -1324,7 +1324,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return true;
 	}//end create_alternative_version
-
 
 
 
