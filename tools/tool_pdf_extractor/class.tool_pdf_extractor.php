@@ -1,8 +1,10 @@
 <?php
 /**
 * CLASS TOOL_PDF_EXTRACTOR
-*
-*
+* Manages the extraction of text from PDF files (not OCR) used for publication searches.
+* Adds the page number for easy location of articles or parts of the document.
+* To work, it requires the installation of a daemon like 'pdftotext', whose path is defined in the config as 'PDF_AUTOMATIC_TRANSCRIPTION_ENGINE' and is usually: '/usr/bin/pdftotext'.
+* More information about automatic transcription engine using XPDF from http://www.foolabs.com/xpdf/ or https://pdftot
 */
 class tool_pdf_extractor extends tool_common {
 
@@ -11,11 +13,11 @@ class tool_pdf_extractor extends tool_common {
 	/**
 	* GET_PDF_DATA
 	* Exec a shell command against selected daemon processor
-	* to extract the file text
+	* to extract the PDF file text
 	* @param object $options
 	* @return object $response
 	*/
-	public static function get_pdf_data(object $options) {
+	public static function get_pdf_data( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

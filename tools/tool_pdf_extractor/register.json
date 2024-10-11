@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 26,
-              "hour": 15,
-              "time": 65063231484,
+              "day": 11,
+              "hour": 18,
+              "time": 65078014920,
               "year": 2024,
-              "month": 4,
-              "minute": 51,
-              "second": 24
+              "month": 10,
+              "minute": 22,
+              "second": 0
             }
           }
         ]
@@ -148,7 +148,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.3"
+          "1.0.4"
         ]
       }
     },
@@ -285,7 +285,7 @@
       "inf": "Dev info [component_text_area]",
       "dato": {
         "lg-nolan": [
-          "<br data-mce-bogus=\"1\">"
+          "<p>Manages the extraction of text from PDF files (not OCR) used for publication searches.</p><p>Adds the page number for easy location of articles or parts of the document.</p><p>To work, it requires the installation of a daemon like 'pdftotext', whose path is defined in the config as 'PDF_AUTOMATIC_TRANSCRIPTION_ENGINE' and is usually: '/usr/bin/pdftotext'.</p><p>More information about automatic transcription engine using XPDF from http://www.foolabs.com/xpdf/ or https://pdftot</p>"
         ]
       }
     },
@@ -448,6 +448,156 @@
               "lang": "lg-deu",
               "name": "page_out",
               "value": "Seite raus"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "select_text",
+              "value": "Select text"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "select_text",
+              "value": "Seleccionar texto"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "select_text",
+              "value": "Seleccioneu el text"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "select_text",
+              "value": "Hautatu testua"
+            },
+            {
+              "lang": "lg-por",
+              "name": "select_text",
+              "value": "Selecionar texto"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "select_text",
+              "value": "Sélectionner le texte"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "select_text",
+              "value": "Seleziona il testo"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "select_text",
+              "value": "Επιλέξτε κείμενο"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "select_text",
+              "value": "Text auswählen"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "select_text",
+              "value": "पाठ चयन गर्नुहोस्"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "page_in",
+              "value": "Hasierako orrialdea"
+            },
+            {
+              "lang": "lg-por",
+              "name": "page_in",
+              "value": "Página inicial"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "page_in",
+              "value": "Page d'accueil"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "page_in",
+              "value": "Pagina iniziale"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "total_pages",
+              "value": "Orriak guztira"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "page_out",
+              "value": "Pagina finale"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "total_pages",
+              "value": "Pagine totali"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "total_pages",
+              "value": "Nombre total de pages"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "page_out",
+              "value": "Page finale"
+            },
+            {
+              "lang": "lg-por",
+              "name": "page_out",
+              "value": "Página final"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "page_out",
+              "value": "Azken orrialdea"
+            },
+            {
+              "lang": "lg-por",
+              "name": "total_pages",
+              "value": "Total de páginas"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "proces_method",
+              "value": "Modalità di elaborazione"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "proces_method",
+              "value": "Méthode de traitement"
+            },
+            {
+              "lang": "lg-por",
+              "name": "proces_method",
+              "value": "Método de processamento"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "proces_method",
+              "value": "Prozesatzeko metodoa"
+            },
+            {
+              "lang": "lg-por",
+              "name": "do_process",
+              "value": "Processo"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "do_process",
+              "value": "Prozesua"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "do_process",
+              "value": "Processus"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "do_process",
+              "value": "Processo"
             }
           ]
         ]
@@ -482,7 +632,7 @@
   "section_id": 27,
   "created_date": "2023-11-03 13:36:32",
   "section_tipo": "dd1340",
-  "modified_date": "2024-04-26 15:51:24",
+  "modified_date": "2024-10-11 18:22:00",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

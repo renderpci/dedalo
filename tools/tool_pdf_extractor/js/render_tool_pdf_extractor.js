@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {render_footer} from '../../tool_common/js/render_tool_common.js'
 
 
 
@@ -82,11 +83,12 @@ const get_content_data = async function(self) {
 				class_name		: 'options_input page_in',
 				parent 			: options_container
 			})
-			page_in_input.addEventListener('change',(e)=>{
+			const change_page_handler = (e) => {
 				self.config.page_in = (!e.target.value || e.target.value==='')
 					? false
 					: e.target.value
-			})
+			}
+			page_in_input.addEventListener('change', change_page_handler)
 
 		// page_out
 			const page_out_label = ui.create_dom_element({
@@ -101,11 +103,12 @@ const get_content_data = async function(self) {
 				class_name		: 'options_input page_out',
 				parent 			: options_container
 			})
-			page_out.addEventListener('change',(e)=>{
+			const change_number_handler = (e) => {
 				self.config.page_out = (!e.target.value || e.target.value==='')
 					? false
 					: e.target.value
-			})
+			}
+			page_out.addEventListener('change', change_number_handler)
 
 		// method
 			// the user can choose the method of the extraction, it can be "text" or "html",
@@ -176,7 +179,7 @@ const get_content_data = async function(self) {
 			inner_html		: self.get_tool_label('do_process'),
 			parent			: fragment
 		})
-		button_submit.addEventListener('mouseup', async (e)=>{
+		const mouseup_handler = async (e) => {
 			e.stopPropagation()
 
 			// cleanup
@@ -235,8 +238,14 @@ const get_content_data = async function(self) {
 				preview.innerHTML = pdf_data
 
 			// loading css
+				preview.classList.remove('hide')
 				elements.map(el => el.classList.remove('loading'))
-		})
+
+			// show button select
+				button_select.classList.remove('hide')
+		}
+		button_submit.addEventListener('mouseup', mouseup_handler)
+
 		// icon
 		const icon_gear = ui.create_dom_element({
 			element_type	: 'span',
@@ -259,9 +268,26 @@ const get_content_data = async function(self) {
 		// preview
 		const preview = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'preview',
+			class_name		: 'preview hide',
 			parent			: response_container
 		})
+		// button_select
+		const button_select = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning button_select hide',
+			inner_html		: self.get_tool_label('select_text') || 'Select text',
+			parent			: fragment
+		})
+		// click_handler
+		const click_handler = (e) => {
+			e.stopPropagation()
+
+			window.getSelection()
+				.selectAllChildren(
+					preview
+				)
+		}
+		button_select.addEventListener('click', click_handler)
 
 	// info
 		// container info
@@ -277,6 +303,10 @@ const get_content_data = async function(self) {
 		// 	inner_html		: '<label>Caller component</label>' + self.caller.model,
 		// 	parent			: info
 		// })
+
+	// footer_node
+		const footer_node = render_footer(self)
+		fragment.appendChild(footer_node)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
