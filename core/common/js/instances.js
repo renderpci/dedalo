@@ -14,16 +14,19 @@
 * Create the cache instances const.
 * The cache will be the storage for all active instances of the components.
 * type: array of objects, every object will be one instance
-* Instances format: [{
-*					"model"			: "component_input_text",
-*					"tipo"			: "oh15",
-*					"section_tipo"	: "oh1",
-*					"section_id"	: "2",
-*					"mode"			: "edit",
-*					"lang"			: "lg-eng",
-*					"key"			: "component_input_text_oh15_oh1_2_edit_lg-eng",
-*					"instance"		: {instance_object}
-*					}]
+* Sample:
+* [
+*  {
+*	"model"			: "component_input_text",
+*	"tipo"			: "oh15",
+*	"section_tipo"	: "oh1",
+*	"section_id"	: "2",
+*	"mode"			: "edit",
+*	"lang"			: "lg-eng",
+*	"key"			: "component_input_text_oh15_oh1_2_edit_lg-eng",
+*	"instance"		: {instance_object}
+*  }
+* ]
 */
 export const instances = []
 
@@ -36,27 +39,26 @@ export const instances = []
 * and this method create one promise to wait for the creation instance of every component,
 * @param object options
 * Sample:
-*	{
-*		"model"			: "component_input_text",
-*		"tipo"			: "oh15",
-*		"section_tipo"	: "oh1",
-*		"section_id"	: "2",
-*		"mode"			: "edit",
-*		"lang"			: "lg-eng"
-*	}
+* {
+*	"model"			: "component_input_text",
+*	"tipo"			: "oh15",
+*	"section_tipo"	: "oh1",
+*	"section_id"	: "2",
+*	"mode"			: "edit",
+*	"lang"			: "lg-eng"
+* }
 * @return promise
 */
-export const get_instance = async function(options){
+export const get_instance = async function(options) {
 
 	// options. main vars
-		const tipo				= options.tipo
-		const section_tipo		= options.section_tipo
-		const section_id		= options.section_id // string format
+		const tipo			= options.tipo
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id // string format
 
 	// options. optional vars (only mandatory to build the instance)
-		const direct_path		= options.direct_path
-		const mode				= options.mode  || 'list'
-		const lang				= options.lang  || page_globals.dedalo_data_lang || null
+		const mode	= options.mode  || 'list'
+		const lang	= options.lang  || page_globals.dedalo_data_lang || null
 
 	// Resolve the model if not provided
 		const model = options.model || await ( async () => {
@@ -127,7 +129,7 @@ export const get_instance = async function(options){
 		}
 
 	// Return a promise that resolves the instance
-	return new Promise(async function(resolve){
+	return new Promise(async function(resolve) {
 
 		// element file import path. Determine the path for importing the module
 		// import element module file once (and wait until finish)
@@ -153,7 +155,7 @@ export const get_instance = async function(options){
 				}
 			}
 		})()
-		.then(async function(module){
+		.then(async function(module) {
 
 			// check module
 				const module_main_function = model
@@ -195,7 +197,8 @@ export const get_instance = async function(options){
 
 /**
 * GET_ALL_INSTANCES
-* Get all created instances from memory
+* Get all created instances from global 'instances' array list
+* where are stored the new instances
 * @return array instances
 */
 export const get_all_instances = function() {
@@ -254,8 +257,10 @@ export const delete_instance = async function(options) {
 
 /**
 * FIND_INSTANCES
-* Get all created instances from memory
-* @return array find_instances
+* Get all created instances from global 'instances' array list
+* that matches the given options
+* @param object options
+* @return array found_instances
 */
 export const find_instances = function(options) {
 
@@ -275,7 +280,6 @@ export const find_instances = function(options) {
 
 	return found_instances
 }//end find_instances
-
 
 
 
@@ -299,7 +303,9 @@ export const key_instances_builder = function(options) {
 		}
 	}
 
+	// join all non empty elements in an string used as id for the instance
 	const key = key_parts.join('_')
+
 
 	return key
 }//end key_instances_builder
