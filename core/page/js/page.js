@@ -399,16 +399,9 @@ const navigate = async function(user_navigation_options) {
 			if (!new_page_element_instance) {
 				console.error("error on get new_page_element_instance:", new_page_element_instance);
 				// loading css remove
-				if (container) {setTimeout(()=> container.classList.remove('loading'), 150)}
+				if (container) {setTimeout(()=> container.classList.remove('loading'), 50)}
 				console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
 				return false
-			}else{
-				// remove instance from cache to prevent to use old request_config
-				await new_page_element_instance.destroy(
-					true, // delete_self
-					true, // delete_dependencies
-					true // remove_dom
-				)
 			}
 
 		// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
