@@ -294,8 +294,8 @@ export const key_instances_builder = function(options) {
 	const order = ['model','tipo','section_tipo','section_id','mode','lang','parent','matrix_id','id_variant','column_id']
 	const key_parts = []
 
-	const l = order.length
-	for (let i = 0; i < l; i++) {
+	const order_length = order.length
+	for (let i = 0; i < order_length; i++) {
 
 		const current_value = options[order[i]] ? options[order[i]].toString() : '';
 		if (options.hasOwnProperty(order[i]) && typeof current_value!=='undefined' && current_value!==null && current_value.length>0){

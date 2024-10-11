@@ -26,7 +26,7 @@ if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 * see the main page initialization in /page/index.html
 * @return bool
 */
-export const events_init = function(){
+export const events_init = function() {
 
 	// add visibility change to control if the user change the tab without save
 		document.addEventListener('visibilitychange', visibility_change);
