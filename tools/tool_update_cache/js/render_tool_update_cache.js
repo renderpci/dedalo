@@ -48,17 +48,6 @@ render_tool_update_cache.prototype.edit = async function(options) {
 			content_data : content_data
 		})
 
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.caller.refresh()
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
-
 
 	return wrapper
 }//end edit
@@ -125,7 +114,7 @@ const get_content_data = async function(self) {
 			inner_html		: (get_label.update || 'Update') +' '+ (self.get_tool_label('records') || 'Records') + ': ' + self.caller.total,
 			parent			: buttons_container
 		})
-		button_apply.addEventListener('click', async function(e){
+		const click_handler = async (e) => {
 			e.stopPropagation()
 			e.preventDefault()
 
@@ -169,7 +158,8 @@ const get_content_data = async function(self) {
 					components_list_container	: components_list_container,
 					self						: self
 				})
-		})//end button_apply.addEventListener('click', async function(e)
+		}
+		button_apply.addEventListener('click', click_handler)
 
 	// response_message
 		const response_message = ui.create_dom_element({
@@ -338,7 +328,7 @@ const render_components_list = function(self) {
 					}
 					component_label.prepend(input_checkbox)
 					// change event handler
-						const handle_change = (e) => {
+						const change_handler = (e) => {
 							if (input_checkbox.checked) {
 								self.selected_tipos.push(element.tipo)
 							}else{
@@ -348,7 +338,7 @@ const render_components_list = function(self) {
 								}
 							}
 						}
-						input_checkbox.addEventListener('change', handle_change)
+						input_checkbox.addEventListener('change', change_handler)
 
 				// regenerate_container. Regeneration options for update (like component_image)
 					const regenerate_container = ui.create_dom_element({
@@ -452,7 +442,7 @@ const render_regenerate_options = function(self, item) {
 					})
 					option_label.prepend(input_checkbox)
 					// change event
-					const handle_change = () => {
+					const change_handler = () => {
 						// set tool var regenerate_options item value
 						self.regenerate_options[tipo] = {
 							[regenerate_item.name] : input_checkbox.checked
@@ -461,7 +451,7 @@ const render_regenerate_options = function(self, item) {
 							console.log('self.regenerate_options:', self.regenerate_options);
 						}
 					}
-					input_checkbox.addEventListener('change', handle_change)
+					input_checkbox.addEventListener('change', change_handler)
 					break;
 
 				default:
@@ -622,7 +612,6 @@ const render_response_report = function (self, api_response) {
 			parent			: report_node
 		})
 	}
-
 
 	// response n_components
 	if (api_response.n_components) {
