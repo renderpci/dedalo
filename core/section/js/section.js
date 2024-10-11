@@ -213,7 +213,9 @@ section.prototype.init = async function(options) {
 				}
 
 				// unlock new section creation
-				page_globals.creating_section = false
+				setTimeout(function(){
+					page_globals.creating_section = false
+				}, 1500)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('new_section_' + self.id, new_section_handler)
@@ -245,7 +247,9 @@ section.prototype.init = async function(options) {
 				}
 
 				// unlock new section creation
-				page_globals.creating_section = false
+				setTimeout(function(){
+					page_globals.creating_section = false
+				}, 1500)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('duplicate_section_' + self.id, duplicate_section_handler)
