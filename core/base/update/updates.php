@@ -7,13 +7,13 @@ $updates = new stdClass();
 
 
 
-$v=628; #####################################################################################
+$v=629; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
 	$updates->$v->version_major			= 6;
 	$updates->$v->version_medium		= 2;
-	$updates->$v->version_minor			= 8;
+	$updates->$v->version_minor			= 9;
 
 	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
@@ -37,6 +37,29 @@ $updates->$v = new stdClass();
 				WITH (OIDS = FALSE);
 				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
 				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
+			");
+
+		// Add the term column to jer_dd table
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DO $$
+				BEGIN
+					IF NOT EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'jer_dd\' and column_name=\'term\')
+					THEN
+						ALTER TABLE "jer_dd"
+						ADD "term" jsonb NULL;
+						COMMENT ON TABLE "jer_dd" IS \'Term and translations\';
+					END IF;
+				END $$;
+			');
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS jer_dd_term
+				ON public.jer_dd USING gin
+				(term jsonb_path_ops)
+				TABLESPACE pg_default;
 			");
 
 
