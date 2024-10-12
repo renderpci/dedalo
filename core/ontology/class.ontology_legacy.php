@@ -16,11 +16,11 @@
 
 
 /**
-* ONTOLOGY_V5
+* ONTOLOGY_LEGACY
 * Manages structure (ontology) import and export data
 * Useful for developers to create tools structure data
 */
-class ontology_v5 {
+class ontology_legacy {
 
 
 
@@ -31,7 +31,7 @@ class ontology_v5 {
 	*/
 	public static function export(string $tipo) : array {
 
-		$ar_data = ontology_v5::parse($tipo);
+		$ar_data = ontology_legacy::parse($tipo);
 
 		return $ar_data;
 	}//end export
@@ -49,13 +49,13 @@ class ontology_v5 {
 		$ar_data = [];
 
 		// current term data
-			$item = ontology_v5::tipo_to_json_item($tipo);
+			$item = ontology_legacy::tipo_to_json_item($tipo);
 			$ar_data[] = $item;
 
 		// children
 			$children = RecordObj_dd::get_ar_recursive_childrens($tipo);
 			foreach ($children as $children_tipo) {
-				$ar_data[] = ontology_v5::tipo_to_json_item($children_tipo);
+				$ar_data[] = ontology_legacy::tipo_to_json_item($children_tipo);
 			}
 
 		return $ar_data;
@@ -424,7 +424,7 @@ class ontology_v5 {
 				}
 
 			// get the ontology JSON format
-				$ar_elements[]	= ontology_v5::tipo_to_json_item($element_tipo, [
+				$ar_elements[]	= ontology_legacy::tipo_to_json_item($element_tipo, [
 					'tipo'			=> true,
 					'tld'			=> false,
 					'is_model'		=> false,
@@ -487,7 +487,7 @@ class ontology_v5 {
 
 		// verify if term already exists in the section
 			// section_id. search and locate the ontology record by term_id
-			$section_id = ontology_v5::get_section_id_by_term_id($term_id);
+			$section_id = ontology_legacy::get_section_id_by_term_id($term_id);
 			if (!empty($section_id)) {
 				debug_log(__METHOD__
 					." Ignored add term request. Section: '$section_id' already exists!
@@ -553,9 +553,9 @@ class ontology_v5 {
 
 		// JSON Ontology Item
 			if (empty($json_item)) {
-				$json_item	= ontology_v5::tipo_to_json_item($term_id);
+				$json_item	= ontology_legacy::tipo_to_json_item($term_id);
 			}
-			$save_item	= ontology_v5::save_json_ontology_item($term_id, $json_item);	// returns object response
+			$save_item	= ontology_legacy::save_json_ontology_item($term_id, $json_item);	// returns object response
 
 		// component parent
 			// (function($value) use($section_tipo, $section_id, $lang) {
@@ -683,10 +683,10 @@ class ontology_v5 {
 			}
 
 		// section_id. search and locate the ontology record by term_id
-			$section_id = ontology_v5::get_section_id_by_term_id($term_id);
+			$section_id = ontology_legacy::get_section_id_by_term_id($term_id);
 			// empty case. Create a new one
 			if (empty($section_id)) {
-				$section_id = ontology_v5::add_term((object)[
+				$section_id = ontology_legacy::add_term((object)[
 					'term_id' => $term_id
 				]);
 				if (empty($section_id)) {
@@ -727,7 +727,7 @@ class ontology_v5 {
 
 
 		// save ontology object too
-			$json_item = ontology_v5::tipo_to_json_item($term_id);
+			$json_item = ontology_legacy::tipo_to_json_item($term_id);
 			(function($value) use($section_tipo, $section_id) {
 
 				$component_tipo	= ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
@@ -853,7 +853,7 @@ class ontology_v5 {
 	* @param string $term_id
 	* 	Like 'rsc368'
 	* @param mixed $json_item (object | null)
-	* 	object created using method: ontology_v5::tipo_to_json_item($term_id)
+	* 	object created using method: ontology_legacy::tipo_to_json_item($term_id)
 	* @return object $response
 	*/
 	public static function save_json_ontology_item(string $term_id, ?object $json_item=null) : object {
@@ -865,11 +865,11 @@ class ontology_v5 {
 		$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
 
 		// section_id. locate the ontology record by term_id
-			$section_id = ontology_v5::get_section_id_by_term_id($term_id);
+			$section_id = ontology_legacy::get_section_id_by_term_id($term_id);
 			if (empty($section_id)) {
 
 				// create a new record
-				$section_id = ontology_v5::add_term((object)[
+				$section_id = ontology_legacy::add_term((object)[
 					'term_id'	=> $term_id
 				]);
 				// (!) Note that add_term also add self calculated JSON item
@@ -878,7 +878,7 @@ class ontology_v5 {
 
 
 			if (empty($json_item)) {
-				$json_item = ontology_v5::tipo_to_json_item($term_id);
+				$json_item = ontology_legacy::tipo_to_json_item($term_id);
 			}
 
 			// updated existing record
@@ -948,8 +948,8 @@ class ontology_v5 {
 
 			// JSON Ontology Item save
 				$term_id	= $terminoID;
-				$json_item	= ontology_v5::tipo_to_json_item($term_id);
-				$save_item	= ontology_v5::save_json_ontology_item($term_id, null);
+				$json_item	= ontology_legacy::tipo_to_json_item($term_id);
+				$save_item	= ontology_legacy::save_json_ontology_item($term_id, null);
 
 			debug_log(__METHOD__." ---> Added/updated term: ".to_string($terminoID).PHP_EOL.$save_item->msg, logger::WARNING);
 		}
@@ -963,4 +963,4 @@ class ontology_v5 {
 
 
 
-}//end ontology_v5
+}//end ontology_legacy
