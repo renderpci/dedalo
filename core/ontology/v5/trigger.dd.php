@@ -351,8 +351,7 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 			$result = $RecordObj_dd->Save();
 
 
-
-		$response->result	= $result;
+		$response->result	= $result===false ? false : true;
 		$response->msg		= ($result===false)
 			? 'Error on save descriptor'
 			: 'OK. Request done successfully';
