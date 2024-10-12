@@ -7,9 +7,9 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
-	import { get_instance } from '../../../core/common/js/instances.js'
-	// import * as QRCode from '../lib/qrcode/easy.qrcode.js';
-	// import * as QRCode from 'easyqrcodejs';
+	import {get_instance} from '../../../core/common/js/instances.js'
+	import {render_footer} from '../../tool_common/js/render_tool_common.js'
+
 
 
 
@@ -87,9 +87,9 @@ const get_content_data = async function(self) {
 			render_canvas(self)
 		)
 
-	// qr_footer
-		const qr_footer = render_footer(self)
-		fragment.appendChild(qr_footer)
+	// footer_node
+		const footer_node = render_footer(self)
+		fragment.appendChild(footer_node)
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -435,41 +435,6 @@ const generate_qr = function(options) {
 			)
 	})
 }//end generate_qr
-
-
-
-/**
-* RENDER_FOOTER
-* Creates the footer nodes
-* @param object self
-* @return HTMLElement qr_footer
-*/
-const render_footer = function (self) {
-
-	const qr_footer = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'qr_footer'
-	})
-
-	// icon
-	ui.create_dom_element({
-		element_type	: 'img',
-		class_name		: 'icon',
-		src				: self.context.icon,
-		parent			: qr_footer
-	})
-
-	// developer
-	ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'info',
-		inner_html		: `Developed  by ${self.context.developer}`,
-		parent			: qr_footer
-	})
-
-
-	return qr_footer
-}//end render_footer
 
 
 

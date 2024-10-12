@@ -6,7 +6,7 @@
 
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags} from '../../../core/common/js/utils/index.js'
 
@@ -638,7 +638,7 @@ export const render_relogin = async function(options={}) {
 		}
 
 	// loggin_instance
-		const loggin_instance = await instances.get_instance({
+		const loggin_instance = await get_instance({
 			model					: 'login',
 			tipo					: 'dd229',
 			mode					: 'edit',

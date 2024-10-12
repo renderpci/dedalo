@@ -500,6 +500,7 @@ export const render_column_remove = function(options) {
 						parent			: body
 					})
 					const relation_list = render_relation_list({
+						self			: self,
 						section_id		: section_id,
 						section_tipo	: section_tipo
 					})

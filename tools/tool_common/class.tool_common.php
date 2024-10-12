@@ -550,9 +550,19 @@ class tool_common {
 					if(!is_object($current_config)){
 						$ar_config		= tools_register::get_all_default_config_tool_client();
 						$current_config	= array_find($ar_config, function($el) use($current_value) {
-							return $el->name===$current_value->name;
+							return is_object($el) && is_object($current_value) && $el->name===$current_value->name;
 						});
 					}
+
+					if(!is_object($current_config)){
+						debug_log(__METHOD__
+							. " Ignored bad config " . PHP_EOL
+							. to_string($current_config)
+							, logger::ERROR
+						);
+						continue;
+					}
+
 					$current_value->config = is_object($current_config)
 						? $current_config->config
 						: null;

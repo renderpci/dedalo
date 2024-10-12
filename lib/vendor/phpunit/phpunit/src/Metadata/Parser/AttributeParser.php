@@ -11,7 +11,9 @@ namespace PHPUnit\Metadata\Parser;
 
 use const JSON_THROW_ON_ERROR;
 use function assert;
+use function class_exists;
 use function json_decode;
+use function method_exists;
 use function sprintf;
 use function str_starts_with;
 use function strtolower;
@@ -58,6 +60,7 @@ use PHPUnit\Framework\Attributes\RequiresOperatingSystemFamily;
 use PHPUnit\Framework\Attributes\RequiresPhp;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\Attributes\RequiresPhpunit;
+use PHPUnit\Framework\Attributes\RequiresPhpunitExtension;
 use PHPUnit\Framework\Attributes\RequiresSetting;
 use PHPUnit\Framework\Attributes\RunClassInSeparateProcess;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
@@ -91,10 +94,16 @@ final readonly class AttributeParser implements Parser
      */
     public function forClass(string $className): MetadataCollection
     {
+        assert(class_exists($className));
+
         $result = [];
 
         foreach ((new ReflectionClass($className))->getAttributes() as $attribute) {
             if (!str_starts_with($attribute->getName(), 'PHPUnit\\Framework\\Attributes\\')) {
+                continue;
+            }
+
+            if (!class_exists($attribute->getName())) {
                 continue;
             }
 
@@ -288,6 +297,15 @@ final readonly class AttributeParser implements Parser
 
                     break;
 
+                case RequiresPhpunitExtension::class:
+                    assert($attributeInstance instanceof RequiresPhpunitExtension);
+
+                    $result[] = Metadata::requiresPhpunitExtensionOnClass(
+                        $attributeInstance->extensionClass(),
+                    );
+
+                    break;
+
                 case RequiresSetting::class:
                     assert($attributeInstance instanceof RequiresSetting);
 
@@ -369,10 +387,17 @@ final readonly class AttributeParser implements Parser
      */
     public function forMethod(string $className, string $methodName): MetadataCollection
     {
+        assert(class_exists($className));
+        assert(method_exists($className, $methodName));
+
         $result = [];
 
         foreach ((new ReflectionMethod($className, $methodName))->getAttributes() as $attribute) {
             if (!str_starts_with($attribute->getName(), 'PHPUnit\\Framework\\Attributes\\')) {
+                continue;
+            }
+
+            if (!class_exists($attribute->getName())) {
                 continue;
             }
 
@@ -637,6 +662,15 @@ final readonly class AttributeParser implements Parser
                         ConstraintRequirement::from(
                             $attributeInstance->versionRequirement(),
                         ),
+                    );
+
+                    break;
+
+                case RequiresPhpunitExtension::class:
+                    assert($attributeInstance instanceof RequiresPhpunitExtension);
+
+                    $result[] = Metadata::requiresPhpunitExtensionOnMethod(
+                        $attributeInstance->extensionClass(),
                     );
 
                     break;

@@ -41,6 +41,8 @@ print js::build_tag('inc/javascript.js', 'defer');
 print js::build_tag('js/dd_common.js', 'defer');
 print js::build_tag('js/dd_list.js', 'defer');
 print js::build_tag('js/app_utils.js', 'defer');
+// is_master
+$is_master = (defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true);
 ?>
 </head>
 <body onLoad="set_localStorage('tsopen','1',7);" onBeforeUnload="set_localStorage('tsopen','0',7);" onUnload="set_localStorage('tsopen','0',7);" >
@@ -50,11 +52,11 @@ print js::build_tag('js/app_utils.js', 'defer');
 
   <tr>
 	<td>
-		<div class="header">
+		<div class="header<?php echo $is_master ? ' master' : ''; ?>">
 			<img class="logo_dedalo" src="images/logo_dedalo_white.svg">
 			<h2 class="title">Ontology</h2>
 
-			<?php if (defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true) { # EXPORT BUTTON (ADMIN) ?>
+			<?php if ($is_master===true) { # EXPORT BUTTON (ADMIN) ?>
 				<a href="javascript:void(0)" class="export export_ontology" onclick="dd.export_str(this)"><span class="tree"></span>Export Ontology</a>
 				<a href="javascript:void(0)" class="export" onclick="dd.build_version_from_git_master(this, 5, 'master')"><span class="gear"></span>Build code from GIT v5</a>
 				<a href="javascript:void(0)" class="export" onclick="dd.build_version_from_git_master(this, 6, 'master')"><span class="gear"></span>Build code from GIT v6 master</a>

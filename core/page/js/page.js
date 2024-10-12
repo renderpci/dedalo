@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {common, push_browser_history, set_environment} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
@@ -61,6 +62,19 @@ page.prototype.init = async function(options) {
 
 	const self = this
 
+	// safe init double control. To detect duplicated events cases
+		if (typeof this.is_init!=='undefined') {
+			console.error('Duplicated init for element:', this);
+			if(SHOW_DEBUG===true) {
+				alert('Duplicated init element');
+			}
+			return false
+		}
+		this.is_init = true
+
+	// status update
+		self.status = 'initializing'
+
 	// set vars
 		self.model			= 'page'
 		self.type			= 'page'
@@ -73,13 +87,17 @@ page.prototype.init = async function(options) {
 		self.menu_data		= options.menu_data
 
 	// events subscriptions
+
 		// event user_navigation. Menu navigation (not pagination)
+			const user_navigation_handler = (user_navigation_options) => {
+				navigate.bind(this)(user_navigation_options)
+			}
 			self.events_tokens.push(
-				event_manager.subscribe('user_navigation', navigate.bind(this))
+				event_manager.subscribe('user_navigation', user_navigation_handler)
 			)
 
 		// event activate_component
-			const fn_activate_component = function(component_instance) {
+			const activate_component_handler = function(component_instance) {
 
 				// lock_component. launch worker
 				if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
@@ -133,23 +151,26 @@ page.prototype.init = async function(options) {
 						event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 					})
 				}
-			}//end fn_activate_component
+			}//end activate_component_handler
 			self.events_tokens.push(
-				event_manager.subscribe('activate_component', fn_activate_component)
+				event_manager.subscribe('activate_component', activate_component_handler)
 			)
 
 		// event dedalo_notification
-			const fn_dedalo_notification = (data) => {
-				setTimeout(()=>{
-					render_notification_msg(self, data)
-				}, 0)
-			}//end fn_dedalo_notification
+			const dedalo_notification_handler = (data) => {
+				dd_request_idle_callback(
+					() => render_notification_msg(self, data)
+				)
+			}//end dedalo_notification_handler
 			self.events_tokens.push(
-				event_manager.subscribe('dedalo_notification', fn_dedalo_notification)
+				event_manager.subscribe('dedalo_notification', dedalo_notification_handler)
 			)
 
 	// events listeners. Add window/document general events
 		self.add_events()
+
+	// css. Update custom CSS based on environment
+		set_custom_css()
 
 	// set page instance as global to be available
 		window.dd_page = self
@@ -378,16 +399,9 @@ const navigate = async function(user_navigation_options) {
 			if (!new_page_element_instance) {
 				console.error("error on get new_page_element_instance:", new_page_element_instance);
 				// loading css remove
-				if (container) {setTimeout(()=> container.classList.remove('loading'), 150)}
+				if (container) {setTimeout(()=> container.classList.remove('loading'), 50)}
 				console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
 				return false
-			}else{
-				// remove instance from cache to prevent to use old request_config
-				await new_page_element_instance.destroy(
-					true, // delete_self
-					true, // delete_dependencies
-					true // remove_dom
-				)
 			}
 
 		// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
@@ -762,6 +776,36 @@ const update_css_file = function(sheet_name) {
 
 	return false
 }//end update_css_file
+
+
+
+/**
+* SET_CUSTOM_CSS
+* Set custom specific CSS based on operating system, browser, etc
+* @return void
+*/
+const set_custom_css = function () {
+
+	// browser specifics
+	{
+		const regex = /Windows/gm;
+		const found = regex.exec(navigator.userAgent)
+		if (found) {
+			// add to body @see general.less for affections
+			document.body.classList.add('os-windows')
+			return
+		}
+	}
+	{
+		const regex = /Macintosh/gm;
+		const found = regex.exec(navigator.userAgent)
+		if (found) {
+			// add to body @see general.less for affections
+			document.body.classList.add('os-macintosh')
+			return
+		}
+	}
+}//end set_custom_css
 
 
 /**

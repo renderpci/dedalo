@@ -120,6 +120,7 @@ export const relation_list = function() {
 	this.request_config_object	= null
 	this.rqo					= null
 
+	this.events_tokens			= []
 
 	return true
 }//end relation_list
@@ -147,6 +148,19 @@ export const relation_list = function() {
 relation_list.prototype.init = function(options) {
 
 	const self = this
+
+	// safe init double control. To detect duplicated events cases
+		if (typeof this.is_init!=='undefined') {
+			console.error('Duplicated init for element:', this);
+			if(SHOW_DEBUG===true) {
+				alert('Duplicated init element');
+			}
+			return false
+		}
+		this.is_init = true
+
+	// status update
+		self.status = 'initializing'
 
 	self.model			= 'relation_list'
 	self.type			= options.type || 'detail'
@@ -320,9 +334,11 @@ relation_list.prototype.get_related_records = async function(section_tipo) {
 * Target section filter is calculated and fixed in server.
 * Then, opens a new window to navigate the results
 * @param string section_tipo
+* @param array ar_section_id
+* @param string|null target_window
 * @return bool true
 */
-relation_list.prototype.open_related_records = async function(section_tipo, ar_section_id) {
+relation_list.prototype.open_related_records = async function(section_tipo, ar_section_id, target_window) {
 
 	const self = this
 
@@ -381,10 +397,11 @@ relation_list.prototype.open_related_records = async function(section_tipo, ar_s
 		section.destroy()
 
 	// open a new window without additional params.
-		// Note that the new window will be use the fixed session value fixed in server
+		// Note that the new window will be use the session value fixed in server
 		// for this section tipo by the previous dummy section build
 		open_window({
-			url : `${DEDALO_CORE_URL}/page/?tipo=${section_tipo}&menu=false`
+			url		: `${DEDALO_CORE_URL}/page/?tipo=${section_tipo}&menu=false`,
+			target	: target_window
 		})
 
 

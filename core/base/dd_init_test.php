@@ -63,7 +63,11 @@
 // SESSIONS
 	if (defined('DEDALO_SESSIONS_PATH')) {
 		// verify directory already exists
-		if( !check_sessions_directory() ){
+		$dedalo_sessions_path_folder_path = defined('DEDALO_SESSIONS_PATH')
+			? DEDALO_SESSIONS_PATH
+			: @session_save_path();
+		$dir_exists = create_directory($dedalo_sessions_path_folder_path, 0750);
+		if( !$dir_exists ){
 			die("Unable to write sessions. Review your permissions for sessions directory path (php user: $php_user)");
 		}
 		// clean old files (sessions and caches)

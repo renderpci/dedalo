@@ -3538,7 +3538,7 @@ abstract class common {
 										}
 									};
 
-									//fallback when the related term has not section defined
+									// fallback when the related term has not section defined
 									// it will use of the main component related
 									if($section_isset === false){
 										$ar_main_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(

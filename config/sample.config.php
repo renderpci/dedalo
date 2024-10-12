@@ -32,7 +32,7 @@
 			? 'localhost'
 			: $_SERVER['HTTP_HOST'] ?? ''
 		);
-		define('DEDALO_PROTOCOL',	(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
+		define('DEDALO_PROTOCOL', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
 
 	// root paths
 		define('DEDALO_ROOT_PATH',	dirname(dirname(__FILE__)));

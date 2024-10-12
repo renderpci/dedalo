@@ -492,6 +492,28 @@ final readonly class TestResult
         return $this->numberOfDeprecations() > 0;
     }
 
+    public function hasPhpOrUserDeprecations(): bool
+    {
+        return $this->numberOfPhpOrUserDeprecations() > 0;
+    }
+
+    public function numberOfPhpOrUserDeprecations(): int
+    {
+        return count($this->deprecations) +
+               count($this->phpDeprecations);
+    }
+
+    public function hasPhpunitDeprecations(): bool
+    {
+        return $this->numberOfPhpunitDeprecations() > 0;
+    }
+
+    public function numberOfPhpunitDeprecations(): int
+    {
+        return count($this->testTriggeredPhpunitDeprecationEvents) +
+               count($this->testRunnerTriggeredDeprecationEvents);
+    }
+
     public function numberOfDeprecations(): int
     {
         return count($this->deprecations) +

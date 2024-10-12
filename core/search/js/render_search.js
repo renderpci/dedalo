@@ -1087,7 +1087,12 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 		}//end if (ar_check_box.length>1)
 
 	// event subscription. Fire update on each publication of update_sections_list_
-		event_manager.subscribe('update_sections_list_' + self.id, update_sections_list)
+		const update_sections_list_handler = () => {
+			update_sections_list()
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('update_sections_list_' + self.id, update_sections_list_handler)
+		)
 
 
 	return true

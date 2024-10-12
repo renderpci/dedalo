@@ -71,11 +71,7 @@ service_upload.prototype.init = async function(options) {
 		}
 
 	// events
-		self.events_tokens.push(
-			event_manager.subscribe('upload_file_status_'+self.id, fn_update_file_status)
-		)
-		function fn_update_file_status(options) {
-
+		const upload_file_status_handler = (options) => {
 			// options
 				const msg	= options.msg
 				const value	= options.value
@@ -103,6 +99,9 @@ service_upload.prototype.init = async function(options) {
 					}
 				}
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('upload_file_status_'+self.id, upload_file_status_handler)
+		)
 
 
 	return common_init

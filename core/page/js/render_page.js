@@ -182,7 +182,11 @@ const render_maintenance_msg = function() {
 */
 export const render_notification_msg = function( self, dedalo_notification ) {
 
-	const wrapper = self.node
+	// wrapper node
+		const wrapper = self.node
+		if (!wrapper) {
+			return null
+		}
 
 	// empty case
 		if (!dedalo_notification) {

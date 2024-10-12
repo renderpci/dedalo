@@ -66,9 +66,6 @@ export const area_thesaurus = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	// area_thesaurus.prototype.init		= area_common.prototype.init
-	// area_thesaurus.prototype.build		= area_common.prototype.build
-	// area_thesaurus.prototype.render		= common.prototype.render
 	area_thesaurus.prototype.refresh		= common.prototype.refresh
 	area_thesaurus.prototype.destroy		= common.prototype.destroy
 	area_thesaurus.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -90,32 +87,30 @@ area_thesaurus.prototype.init = async function(options) {
 		const common_init = await area_common.prototype.init.call(this, options);
 
 	// events subscription
-		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
-		self.events_tokens.push(
-			event_manager.subscribe('toggle_search_panel_'+self.id, fn_toggle_search_panel)
-		)
-		async function fn_toggle_search_panel() {
 
-			if (self.search_container.children.length===0) {
-				// await add_to_container(self.search_container, self.filter)
-				await ui.load_item_with_spinner({
-					container	: self.search_container,
-					label		: 'filter',
-					callback	: async () => {
-						await self.filter.build()
-						return self.filter.render()
-					}
-				})
+		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
+			const toggle_search_panel_handler = async () => {
+
+				if (self.search_container.children.length===0) {
+					// await add_to_container(self.search_container, self.filter)
+					await ui.load_item_with_spinner({
+						container	: self.search_container,
+						label		: 'filter',
+						callback	: async () => {
+							await self.filter.build()
+							return self.filter.render()
+						}
+					})
+				}
+				toggle_search_panel(self.filter)
 			}
-			toggle_search_panel(self.filter)
-		}
+			self.events_tokens.push(
+				event_manager.subscribe('toggle_search_panel_'+self.id, toggle_search_panel_handler)
+			)
 
 		// render event
-		self.events_tokens.push(
-			event_manager.subscribe('render_'+self.id, fn_render)
-		)
-		function fn_render() {
-			// open_search_panel. local DDBB table status
+			const render_handler = () => {
+				// open_search_panel. local DDBB table status
 				const status_id			= 'open_search_panel'
 				const collapsed_table	= 'status'
 				data_manager.get_local_db_data(status_id, collapsed_table, true)
@@ -137,7 +132,10 @@ area_thesaurus.prototype.init = async function(options) {
 						toggle_search_panel(self.filter)
 					}
 				})
-		}
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_'+self.id, render_handler)
+			)
 
 	// URL vars
 		const url_vars = url_vars_to_object(window.location.search)
