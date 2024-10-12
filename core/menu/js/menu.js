@@ -201,7 +201,7 @@ menu.prototype.open_ontology = function(e) {
 	e.stopPropagation()
 
 	open_window({
-		url			: DEDALO_CORE_URL + '/ontology/',
+		url			: DEDALO_CORE_URL + '/ontology/v5/',
 		target		: '_blank',
 		features	: 'new_tab'
 	})
