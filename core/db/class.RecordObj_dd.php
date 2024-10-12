@@ -125,25 +125,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 	}//end get_prefix_from_tipo
 
 
-	/**
-	* GET_ID_FROM_TIPO
-	* @return string|null Like '12' or '765'
-	*/
-	public static function get_id_from_tipo(string $tipo) : ?string {
-
-		preg_match("/\d+/", $tipo, $output_array);
-		if (empty($output_array[0])) {
-			if(SHOW_DEBUG===true) {
-				dump(debug_backtrace()[0]," debug_backtrace Invalid tipo received ". json_encode($tipo));
-			}
-			debug_log(__METHOD__." Error: Invalid tipo received. Impossible get_id_from_tipo this tipo :  ".to_string($tipo), logger::ERROR);
-			return null;
-		}
-
-		return $output_array[0];
-	}//end get_id_from_tipo
-
-
 
 	/**
 	* GET_ID_FROM_TIPO
