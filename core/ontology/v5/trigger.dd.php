@@ -204,17 +204,15 @@ if(!empty($data) && $data->mode==='edit_ts') {
 			exit();
 		}
 
-	// JSON Ontology Item save
-		$term_id	= $terminoID;
-		$json_item	= (object)ontology_v5::tipo_to_json_item($term_id);
-		$save_item	= ontology_v5::save_json_ontology_item($term_id, $json_item);	// return object response
-
+	// // JSON Ontology Item save
+	// 	$term_id	= $terminoID;
+	// 	$json_item	= (object)ontology::tipo_to_json_item($term_id);
+	// 	// $save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
 
 	// // descriptors
 	// 	// sync Dédalo ontology records. Returns boolean
 	// 	$descriptors = $json_item->descriptors ?? [];
 	// 	foreach ($descriptors as $current_item) {
-
 
 	// 		if ($current_item->type==='term') {
 	// 			ontology::edit_term((object)[
@@ -225,7 +223,6 @@ if(!empty($data) && $data->mode==='edit_ts') {
 	// 			]);
 	// 		}
 	// 	}
-
 
 	// css structure . For easy css edit, save
 		$dedalo_version = get_dedalo_version();
@@ -278,7 +275,7 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 		$response->msg		= 'Error. Request failed on save_descriptor. ';
 
 	// mandatory vars
-
+		// mandatory vars
 		if(empty($data->terminoID)) {
 			$response->msg .= " terminoID is mandatory!";
 			echo json_encode($response, JSON_UNESCAPED_UNICODE);
@@ -291,7 +288,6 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 		}
 
 	// short vars
-
 		$value = !empty($data->dato)
 			? trim($data->dato)
 			: '';
@@ -342,7 +338,6 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 		// save jer_dd record
 			$RecordObj_dd = new RecordObj_dd_edit($terminoID);
 
-
 			// term object
 			$term = $RecordObj_dd->get_term() ?? new stdClass();
 
@@ -354,6 +349,7 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 
 			// save
 			$result = $RecordObj_dd->Save();
+
 
 
 		$response->result	= $result;
@@ -418,7 +414,7 @@ if($accion==='insertTS') {
 			}
 
 		// sync Dédalo ontology records
-			// ontology_v5::add_term((object)[
+			// ontology::add_term((object)[
 			// 	'term_id'	=> $terminoID
 			// ]);
 
@@ -495,8 +491,8 @@ if($accion==='deleteTS') {
 
 		# HIJOS . Verificamos si tiene hijos (aunque el javascript debe haber evitado llegar aquí.)
 			$RecordObj_dd_edit	= new RecordObj_dd_edit($terminoID);
-			$n_hijos			= count($RecordObj_dd_edit->get_ar_childrens_of_this(null));
-			if( $n_hijos > 0 )	die("<div class=\"error\"> $el_descriptor_tiene_hijos_title.<br> $para_eliminar_una_rama_title  $renderBtnVolver</div>");
+			$n_hijos 			= $RecordObj_dd_edit->get_n_hijos();
+			if( $n_hijos >0 )	die("<div class=\"error\"> $el_descriptor_tiene_hijos_title.<br> $para_eliminar_una_rama_title  $renderBtnVolver</div>");
 
 		# RELACIONES . Si tiene relaciones, las eliminamos para no dejar rastro
 			$arguments=array();
@@ -781,10 +777,10 @@ if($accion==='duplicate') {
 
 	// JSON Ontology Item save
 		// json_item build
-			$json_item	= (object)ontology_v5::tipo_to_json_item($terminoID);
+			$json_item	= (object)ontology::tipo_to_json_item($terminoID);
 			$json_item->tipo = $new_terminoID; // replace tipo
 		// add item to Ontology
-			ontology_v5::add_term((object)[
+			ontology::add_term((object)[
 				'term_id'	=> $new_terminoID,
 				'json_item'	=> $json_item
 			]);
@@ -795,7 +791,7 @@ if($accion==='duplicate') {
 		foreach ($descriptors as $current_item) {
 
 			if ($current_item->type==='term') {
-				ontology_v5::edit_term((object)[
+				ontology::edit_term((object)[
 					'term_id'	=> $new_terminoID,
 					'dato'		=> $current_item->value,
 					'dato_tipo'	=> 'termino',

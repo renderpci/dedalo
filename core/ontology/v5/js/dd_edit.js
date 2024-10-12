@@ -8,7 +8,7 @@ $(function() {
 	cargarTSrel(terminoID);
 	opcionesND();
 
-	// $('#termino_'+id).focus();
+	$('#termino_'+id).focus();
 });
 
 
@@ -396,17 +396,23 @@ function codigoKeyUp(obj) {
 /**
 * LOADDESCRIPTORSGRID
 */
-function loadDescriptorsGrid( lang ) {
+function loadDescriptorsGrid( id_focus ) {
 
 	// get page global 'terminoID'
 	const current_terminoID = terminoID;
+
+	if(typeof id==='undefined') {
+		alert("global var id is not available : "+id)
+		return false
+	}
 
 	// DescriptorsGrid
 		const tbodyDescriptorsGrid = document.getElementById('tbodyDescriptorsGrid')
 		tbodyDescriptorsGrid.classList.add('spinner');
 
-	const data = {
+	const data	= {
 		mode		: 'loadDescriptorsGrid',
+		id			: id, // is set in page
 		terminoID	: current_terminoID,
 		top_tipo	: page_globals.top_tipo
 	}
@@ -442,10 +448,10 @@ function loadDescriptorsGrid( lang ) {
 	})
 	.always(function() {
 		tbodyDescriptorsGrid.classList.remove('spinner')
-		if(typeof lang!=='undefined') {
-			const input = document.querySelector(`.input_term[data-lang="${lang}"][data-term_id="${terminoID}"]`);
-			if (input) {
-				input.focus()
+		if(typeof id_focus!=='undefined') {
+			const el = document.getElementById('termino_'+ id_focus)
+			if (el) {
+				el.focus()
 			}
 		}
 	});
@@ -462,8 +468,8 @@ function loadDescriptorsGrid( lang ) {
 function removeDescriptor(id, terminoID, lang) {
 
 	// mandatory vars check
-		if(!terminoID || !terminoID) {
-			alert("Error on removeDescriptor. Invalid lang or terminoID");
+		if( !terminoID ) {
+			alert("Error on removeDescriptor. Invalid id or terminoID");
 			return false
 		}
 
@@ -472,14 +478,14 @@ function removeDescriptor(id, terminoID, lang) {
 			return false
 		}
 
-	// spinner loading
+	// spinner lodaing
 		const descriptors_node = document.getElementById("tbodyDescriptorsGrid")
 			  descriptors_node.classList.add('spinner');
 
 	// trigger vars
 		const ajax_data = {
 			mode		: 'removeDescriptor',
-			lang		: lang,
+			id			: id,
 			terminoID	: terminoID,
 			lang		: lang,
 			top_tipo	: page_globals.top_tipo
@@ -487,10 +493,10 @@ function removeDescriptor(id, terminoID, lang) {
 
 	// trigger request
 		const js_promise = $.ajax({
-			url		: descriptors_trigger,
-			data	: ajax_data,
-			type	: 'POST',
-			success	: function(response_msg) {
+			url			: descriptors_trigger,
+			data		: ajax_data,
+			type		: "POST",
+			success		: function(response_msg) {
 				if (response_msg==='OK') {
 					// reload descriptors grid
 					loadDescriptorsGrid();
@@ -594,13 +600,13 @@ function redimensionarVentana() {
 */
 const add_new_lang = function(select_obj) {
 
-	const lang = select_obj.value
+	const terminoID_lang = select_obj.value
 
 	switch(true) {
-		case (lang==='otro') :
+		case (terminoID_lang==='otro') :
 			return dd_abrirTSlist('tesauro_rel','lenguaje');
 			break;
-		case (lang==='' || typeof(lang)==='undefined') :
+		case (terminoID_lang==='' || typeof(terminoID_lang)==='undefined') :
 			return false;
 			break;
 	}
@@ -616,23 +622,17 @@ const add_new_lang = function(select_obj) {
 	const mode 			= 'newDescriptor'
 	const mydata		= { mode 			: mode,
 							terminoID		: terminoID,
-							lang 			: terminoID_lang,
+							lang 	: terminoID_lang,
 							top_tipo		: page_globals.top_tipo || null
 							}; //console.log("mydata", url, mydata); // return;
 
 	// Spinner ON
 	target_div.classList.add('spinner')
 
-	const data = {
-		mode		: 'newDescriptor',
-		terminoID	: terminoID,
-		lang		: lang
-	}
-
 	// AJAX CALL
 	$.ajax({
-		url		: descriptors_trigger,
-		data	: data,
+		url		: url,
+		data	: mydata,
 		type	: "POST"
 	})
 	.done(function(received_data) {
@@ -640,7 +640,7 @@ const add_new_lang = function(select_obj) {
 		// Expected received_data is a int with new id created in table "matrix_descriptors_dd"
 
 		// GRID : Reload descriptors
-		loadDescriptorsGrid( lang );
+		loadDescriptorsGrid(received_data);
 			//console.log(received_data)
 		redimensionarVentana();
 	})
