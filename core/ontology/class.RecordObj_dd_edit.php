@@ -103,7 +103,7 @@ class RecordObj_dd_edit extends RecordObj_dd {
 	* Actualiza el contador para el tld dado (ej. 'dd').
 	* El 'current_value' es opcional. Si no se recibe se calcula
 	*/
-	public static function update_counter(string $tld, $current_value=null) {
+	public static function update_counter(string $tld, ?int $current_value=null) : int|false {
 
 		#if (!$current_value) {
 		#	$current_value = self::get_counter_value($tld);
