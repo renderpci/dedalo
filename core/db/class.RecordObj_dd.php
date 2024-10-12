@@ -375,6 +375,27 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* SET_TERM
+	* Encodes given $term value as JSON stringified value and set to
+	* parent term value as string
+	* @param object|null $term
+	* @return object|null
+	*/
+	public function set_term( ?object $term ) : bool  {
+
+		$term_value = is_object($term)
+			? json_encode($term)
+			: null;
+
+		// JSON stringified object from column 'term'
+		$term = parent::set_term($term_value);
+
+		return true;
+	}//end set_term
+
+
+
+	/**
 	* GET_DESCRIPTOR_DATO_BY_TIPO
 	* Get termino dato by tipo ('termino','def','obs') static version
 	* @param string $terminoID
