@@ -468,7 +468,7 @@ function loadDescriptorsGrid( id_focus ) {
 function removeDescriptor(id, terminoID, lang) {
 
 	// mandatory vars check
-		if(!id || id<1 || !terminoID) {
+		if(!terminoID) {
 			alert("Error on removeDescriptor. Invalid id or terminoID");
 			return false
 		}
