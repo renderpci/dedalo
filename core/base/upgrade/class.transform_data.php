@@ -1281,6 +1281,7 @@ class transform_data {
 	}//end delete_tipos
 
 
+
 	/**
 	* COPY_DESCRIPTORS_TO_JER_DD
 	* Called by the update to 6.3.0, it copy the table descriptors as object of lang:term
