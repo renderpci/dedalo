@@ -269,7 +269,7 @@ class dd extends dd_elements {
 
 				$RecordObj_dd	= new RecordObj_dd_edit($terminoID);
 
-				$termino		= RecordObj_dd_edit::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;
+				$termino		= RecordObj_dd_edit::get_termino_by_tipo($terminoID,$this->ts_lang) ?? '';		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;
 				$def			= RecordObj_dd_edit::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
 				$obs			= RecordObj_dd_edit::get_obs_by_tipo($terminoID,$this->ts_lang);
 
@@ -283,8 +283,8 @@ class dd extends dd_elements {
 				$RecordObj_dd2	= new RecordObj_dd_edit($terminoID);
 				#$hijosND		= count($RecordObj_dd2->get_ar_childrens_of_this('no'));
 				$hijosND		= 0;#$this->HNoDescriptores($terminoID);
-				$hijosD			= count($RecordObj_dd->get_ar_childrens_of_this('si'));
-				$children		= count($RecordObj_dd->get_ar_childrens_of_this(null));
+				$hijosD			= $RecordObj_dd->get_n_hijos_descriptores();
+				$children		= $RecordObj_dd->get_n_hijos();
 				$ncaptaciones	= 0;#$RecordObj_dd->get_n_captaciones();
 				$nIndexaciones	= 0;#count(self::get_ar_indexations($terminoID));
 

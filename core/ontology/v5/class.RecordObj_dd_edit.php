@@ -1657,11 +1657,15 @@ class RecordObj_dd_edit extends RecordDataBoundObject {
 
 				#
 				# DESCRIPTORS : finally we create one record in descriptors with this main info
-				$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, 'lg-spa');
-				$RecordObj_descriptors_dd->set_tipo('termino');
-				$RecordObj_descriptors_dd->set_parent($terminoID);
-				$RecordObj_descriptors_dd->set_lang('lg-spa');
-				$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
+				$dedalo_version = explode(".", DEDALO_VERSION);
+
+				if( (int)$dedalo_version[0]<=6 && (int)$dedalo_version[1]<3 ){
+					$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, 'lg-spa');
+					$RecordObj_descriptors_dd->set_tipo('termino');
+					$RecordObj_descriptors_dd->set_parent($terminoID);
+					$RecordObj_descriptors_dd->set_lang('lg-spa');
+					$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
+				}
 			}
 		}
 
@@ -1670,11 +1674,9 @@ class RecordObj_dd_edit extends RecordDataBoundObject {
 
 
 
-
 	# MODELOS ARRAY
 	# Se usa en  el selector de tesauro edit para asignar modelo
 	public function get_ar_all_modelos() : array {
-
 
 		# STATIC CACHE
 		static $ar_all_modelos_data;
