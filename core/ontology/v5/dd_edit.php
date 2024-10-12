@@ -21,7 +21,10 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 // classes and functions
 	require_once(dirname(__FILE__) . '/class.RecordObj_dd_edit.php');
-	require_once(dirname(dirname(__FILE__)) . '/db/class.RecordObj_descriptors_dd.php');
+	$dedalo_version = explode(".", DEDALO_VERSION);
+	if( (int)$dedalo_version[0]<=6 && (int)$dedalo_version[1]<3 ){
+		require_once(dirname(dirname(__FILE__)) . '/db/class.RecordObj_descriptors_dd.php');
+	}
 	// require_once(dirname(__FILE__) . '/common/class.navigator.php');
 	require_once(dirname(__FILE__) . '/class.dd.php');
 	require_once(dirname(__FILE__) . '/d3_functions.php');
