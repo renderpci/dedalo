@@ -1,0 +1,105 @@
+<?php
+/**
+* DESCRIPTORS_GRID
+*	Loaded by trigger.descriptor_dd in each loop iteration
+*
+* Defined vars
+* 	$langFull
+*	$lang
+* 	$mainLang
+* 	$ar_all_langs
+* 	$id
+* 	$termino
+* 	$parent_desc
+* 	$def
+*/
+?>
+<tr class="separator">
+
+	<!-- LANG NAME -->
+		<td style="text-align:center">
+			<strong><?php echo $langFull ?></strong>
+			<?php if(SHOW_DEBUG) echo " [$lang]" ?>
+		</td>
+
+	<!-- TERM -->
+		<td colspan="2">
+
+			<input type="text" class="input_term" id="termino_<?php echo $id ?>" value="<?php echo $termino ?>"
+			onfocus="myfocus(this)" onblur="myblur(this);"
+			data-lang="<?php echo $lang ?>"
+			data-term_id="<?php echo $terminoID ?>"
+			data-parent="<?php echo $terminoID ?>"
+			data-tipo="termino"
+			onchange="save_descriptor(this)">
+
+			<?php /*
+			<div class="definition"><?php echo $def ?></div>
+			*/ ?>
+		</td>
+
+	<!-- DEFINITION -->
+		<?php /*<td>
+
+			<textarea name="def_<?php echo $def_id ?>" id="def_<?php echo $def_id ?>" style="width:100%; height:14px;"
+			onfocus="myfocus(this)" onblur="myblur(this);"
+			data-parent="<?php echo $parent_desc ?>" data-lang="<?php echo $lang ?>" data-tipo="def"
+			onchange="save_descriptor(this)" ><?php echo $def ?></textarea>
+
+		</td>*/ ?>
+
+	<!-- LANG : NEW -->
+		<td align="center">
+
+			<?php
+			#
+			# SELECT : Sólo se muestra el selector para el idioma principal (viene disparado por ts_edit !)
+			if($lang===$mainLang) {
+
+				$select_html='';
+
+				# LANGS SELECTOR
+				$excludeLang	= $mainLang;
+				$selectedItem	= $lang;
+
+				$select_html .= '<select name="SelectLangList" id="SelectLangList" class="selectProjectLang" onChange="add_new_lang(this);" title="Langs">';
+
+					// options
+
+					// blank
+						$select_html .= '<option value=""></option>';
+
+					// langs
+						foreach($ar_all_langs as $current_terminoID => $termino) {
+
+							if($current_terminoID===$excludeLang) continue; # Skip
+
+							$selected = ($selectedItem==$current_terminoID)
+								? ' selected="selected"'
+								: ' ';
+
+							$select_html .= '<option value="'.$current_terminoID.'"'.$selected.'>';
+							$select_html .= $termino .' ['. $current_terminoID .']';
+							$select_html .= '</option>';
+						}
+
+					# OTRO
+					global $otro_title;
+					$select_html .= "<option value=\"otro\"> $otro_title </option>";
+
+				$select_html .= '</select>';
+
+				print $select_html;
+
+			}else{
+
+				# Delete current descriptor
+				# 'terminoID' is defined in 'ts_descriptors_grid.php'
+
+				echo "<img src=\"images/delete.png\" class=\"dropBox\" title=\"Delete $langFull\" onclick=\"removeDescriptor('$id','$terminoID','$lang')\" />";
+
+			}
+			?>
+		</td>
+
+</tr>

@@ -1,0 +1,45 @@
+<?php
+	# TIPO TO OPEN
+	$prefix = substr($terminoID, 0,2);
+	if($prefix=='dd') {
+		$tipo = 5;
+	}else{
+		$tipo = 'all';
+	}
+?>
+<!-- LISTADO DE TERMINOS RELACIONADOS -->
+<div class="textoIndex">
+	<!-- BTN Abrir Tesauro -->
+	<input value="<?php echo $terminos_title ?>" class="btnTesauro" onclick="dd_abrirTSlist('tesauro_rel','<?php echo $tipo ?>',this);" type="button">
+
+	<?php if($n_terminos_relacionados>0){?>
+	<div class="related_terms"><?php echo $terminos_relacionados_title ?>  <?php echo " [".$n_terminos_relacionados."] "; ?></div>
+	<hr>
+
+	<div class="related_terms_rows">
+		<?php
+		// related terms
+			if(count($arTR)===0) {
+
+				$html = "<span style=\"color:grey\">$no_hay_terminos_relacionados_title</span>";
+
+			}else{
+				$html = '';
+				# recoremos el array
+				foreach($arTR['termino'] as $key => $termino) {
+
+					$terminoID	= $arTR['terminoID'][$key];
+					$terminoNjs	= urlencode($termino);
+
+					$html .= '<div class="related_term_item">';
+					$html .= "<img src=\"images/delete.png\" hspace=\"4\" onClick=\"unlinkTS('$terminoID','$terminoNjs')\" title=\"$eliminar_relacion_title\"/>";
+					$html .= $termino;
+					$html .= '<span class="terminoIDinList"> ['.$terminoID.']</span>';
+					$html .= '</div>';
+				}
+			}
+			echo $html;
+		?>
+	</div>
+	<?php }#if($n_terminos_relacionados>0)?>
+</div>
