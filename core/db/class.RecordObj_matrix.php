@@ -160,6 +160,15 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 		$matrix_table = $this->matrix_table;
 
+		if ($matrix_table==='matrix_descriptors_dd') {
+			debug_log(__METHOD__
+				. " Error. Invalid call to unsupported table 'matrix_descriptors_dd' " . PHP_EOL
+				, logger::ERROR
+			);
+			$bt = debug_backtrace();
+			dump($bt, ' debug_backtrace ++ '.to_string($matrix_table));
+		}
+
 		$arguments = array();
 
 		# PARENT (optional)
