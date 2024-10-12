@@ -471,6 +471,19 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px; cursor:poin
 		display: flex;
 		align-items: center;
 
+		&.master {
+			background-color: #28946c;
+
+			// buttons
+			.export {
+				background-color: transparent;
+			}
+			// title
+			.title, a {
+				color: white !important;
+			}
+		}
+
 		>h2.title {
 			padding: 0;
 			padding-right: 1rem;

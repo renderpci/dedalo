@@ -26,7 +26,7 @@ if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 * see the main page initialization in /page/index.html
 * @return bool
 */
-export const events_init = function(){
+export const events_init = function() {
 
 	// add visibility change to control if the user change the tab without save
 		document.addEventListener('visibilitychange', visibility_change);
@@ -42,13 +42,13 @@ export const events_init = function(){
 		}
 
 	// save
-		const saving = event_manager.subscribe('save', fn_save)
-		function fn_save(result) {
+		const save_handler = (result) => {
 			if(SHOW_DEBUG===true) {
 				console.log('events_init save result:', result)
 			}
 			// saved = true
 		}
+		const saving = event_manager.subscribe('save', save_handler)
 
 
 	return true
@@ -195,7 +195,7 @@ export const dd_request_idle_callback = function (callback) {
 
 	if (typeof window.requestIdleCallback === 'function') {
 		// Use requestIdleCallback to schedule work if available
-		requestIdleCallback(callback)
+		requestIdleCallback(callback, { timeout: 1000 })
 	} else {
 		// window.requestAnimationFrame(callback)
 		// Fallback for browsers without requestIdleCallback support like Safari

@@ -178,12 +178,20 @@ const build_grid_html = function(self, context, columns, data, count_data, CSS_s
 		// click handler
 		const click_handler = async (e) => {
 			e.stopPropagation()
+
+			// target window
+			// By default, the same window is used (recycled) but,
+			// if user clicks with ALT key, anew window
+			const target_window = (e.altKey===true)
+				? section_tipo +'_'+ (new Date()).getTime()
+				: null
+
 			// loading class
 			grid.classList.add('loading')
 			// calculate all related records to current section
 			const related_records = await self.get_related_records(section_tipo)
 			// open new window with them
-			await self.open_related_records(section_tipo, related_records)
+			await self.open_related_records(section_tipo, related_records, target_window)
 			// loading class
 			grid.classList.remove('loading')
 		}
@@ -238,9 +246,11 @@ const build_grid_html = function(self, context, columns, data, count_data, CSS_s
 					// data_set					: current_data,
 					parent						: grid
 				})
-				data_row_header.addEventListener('click', ()=>{
+				const click_handler = (e) => {
+					e.stopPropagation()
 					edit_relation(current_data)
-				})
+				}
+				data_row_header.addEventListener('click', click_handler)
 
 				//the id information
 				const data_row = ui.create_dom_element({
@@ -330,10 +340,11 @@ const parse_paginator_html = async function(self, wrapper) {
 			parent			: paginator_buttons
 		})
 		// create the event to go to the previous record
-		previous_button.addEventListener('click', (e)=>{
+		const click_handler_previous = (e) => {
 			e.stopPropagation()
 			previous_records(self)
-		})
+		}
+		previous_button.addEventListener('click', click_handler_previous)
 
 	// create a paginator next button
 		const next_button	= ui.create_dom_element({
@@ -342,10 +353,11 @@ const parse_paginator_html = async function(self, wrapper) {
 			parent			: paginator_buttons
 		})
 		// create the event to go to the next record
-		next_button.addEventListener('click', (e)=>{
+		const click_handler_next = (e) => {
 			e.stopPropagation()
 			next_records(self)
-		})
+		}
+		next_button.addEventListener('click', click_handler_next)
 }//end parse_paginator_html
 
 

@@ -553,7 +553,20 @@ class section extends common {
 
 				// component_dataframe
 				if (get_class($component_obj)==='component_dataframe') {
-					$save_options->time_machine_section_id_key	= (int)$component_obj->caller_dataframe->section_id_key;
+					$section_id_key = $component_obj->caller_dataframe->section_id_key ?? null;
+					if (empty($section_id_key)) {
+						debug_log(__METHOD__
+							. " Skipped set section_id_key to dataframe. Empty section_id_key" . PHP_EOL
+							. ' model: ' . get_class($component_obj) . PHP_EOL
+							. ' tipo: ' . to_string($component_obj->tipo) . PHP_EOL
+							. ' section_tipo: ' . to_string($component_obj->section_tipo) . PHP_EOL
+							. ' section_id: ' . to_string($component_obj->section_id)
+							, logger::ERROR
+						);
+					}else{
+						// set save_options time_machine_section_id_key
+						$save_options->time_machine_section_id_key	= (int)$component_obj->caller_dataframe->section_id_key;
+					}
 				}
 
 				if( isset($component_obj->bulk_process_id) ){
@@ -1223,7 +1236,8 @@ class section extends common {
 						['component_filter'],
 						true, // from_cache
 						false, // resolve_virtual
-						true // cache
+						true, // recursive
+						true // search_exact
 					);
 					if (empty($ar_tipo_component_filter[0])) {
 
@@ -4230,9 +4244,9 @@ class section extends common {
 	/**
 	* DUPLICATE_CURRENT_SECTION
 	* Creates a new record cloning all data from current section
-	* @return int section_id
+	* @return int|string|null $section_id
 	*/
-	public function duplicate_current_section() {
+	public function duplicate_current_section() : int|string|null {
 
 		$section_tipo = $this->get_tipo();
 
@@ -4241,7 +4255,7 @@ class section extends common {
 			$new_section_id	= $new_section->Save();
 
 			if (empty($new_section_id) || (int)$new_section_id<1) {
-				return false;
+				return null;
 			}
 
 		// copy data
@@ -4279,6 +4293,18 @@ class section extends common {
 				foreach ($group_locators as $current_tipo => $ar_locators) {
 					// model filter
 					$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					// model safe
+					if (strpos($current_model, 'component_')!==0) {
+						debug_log(__METHOD__
+							. " Skipped non component model " . PHP_EOL
+							. ' model: ' . to_string($current_model) . PHP_EOL
+							. ' tipo: ' . to_string($current_tipo) . PHP_EOL
+							. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+							. ' new_section_id: ' . to_string($new_section_id)
+							, logger::ERROR
+						);
+						continue;
+					}
 					if (in_array($current_model, $skip_models)) {
 						continue;
 					}
@@ -4313,19 +4339,37 @@ class section extends common {
 
 						$current_tipo	= $ar_parent_tipo[0];
 						$current_model	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$component		= component_common::get_instance(
-							$current_model,
-							$current_tipo,
-							$new_section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$section_tipo
-						);
-						$component->set_dato($parents_data);
-						$component->Save(); // forces to create each relation in relation table and time machine and activity records
+
+						$save_current = true;
+						// model safe
+						if (strpos($current_model, 'component_')!==0) {
+							debug_log(__METHOD__
+								. " Skipped non component model " . PHP_EOL
+								. ' model: ' . to_string($current_model) . PHP_EOL
+								. ' tipo: ' . to_string($current_tipo) . PHP_EOL
+								. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+								. ' new_section_id: ' . to_string($new_section_id)
+								, logger::ERROR
+							);
+							$save_current = false;
+						}
+						if (in_array($current_model, $skip_models)) {
+							$save_current = false;
+						}
+						if ($save_current===true) {
+							$component = component_common::get_instance(
+								$current_model,
+								$current_tipo,
+								$new_section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$section_tipo
+							);
+							$component->set_dato($parents_data);
+							$component->Save(); // forces to create each relation in relation table and time machine and activity records
+						}
 					}
 				}
-
 
 			// components
 				foreach ($source_dato->components as $current_tipo => $component_full_dato) {
@@ -4335,13 +4379,25 @@ class section extends common {
 					}
 					// model filter
 					$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					// model safe
+					if (strpos($current_model, 'component_')!==0) {
+						debug_log(__METHOD__
+							. " Skipped non component model " . PHP_EOL
+							. ' model: ' . to_string($current_model) . PHP_EOL
+							. ' tipo: ' . to_string($current_tipo) . PHP_EOL
+							. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+							. ' new_section_id: ' . to_string($new_section_id)
+							, logger::ERROR
+						);
+						continue;
+					}
 					if (in_array($current_model, $skip_models)) {
 						continue;
 					}
 					// its OK. Add value
 					foreach ($component_full_dato->dato as $lang => $local_value) {
 
-						$component	= component_common::get_instance(
+						$component = component_common::get_instance(
 							$current_model,
 							$current_tipo,
 							$new_section_id,

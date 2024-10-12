@@ -489,14 +489,14 @@ const init_paginator = async function(self){
 		await self.paginator.build()
 
 		// paginator_goto_ event
-			const fn_paginator_goto = function(offset) {
+			const paginator_goto_handler = function(offset) {
 				self.rqo.sqo.offset = offset
 				// refresh
 				self.refresh()
-			}//end fn_paginator_goto
+			}
 			self.events_tokens.push(
-				event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
-			)//end events push
+				event_manager.subscribe('paginator_goto_'+self.paginator.id, paginator_goto_handler)
+			)
 
 	}else{
 		// refresh existing
@@ -537,9 +537,12 @@ const get_filter_section = async function (self, filter_section_container) {
 	// if the user change the state of the section in middle of pagination refresh
 	// and the new paginator is empty (less than limit)
 	// previous paginator could be set erroneously.
-	event_manager.subscribe('render_'+self.paginator.id, function(){
+	const render_handler = () => {
 		filter_section_container.classList.remove('loading')
-	})
+	}
+	self.events_tokens.push(
+		event_manager.subscribe('render_'+self.paginator.id, render_handler)
+	)
 
 	// create the nodes for the sections
 	for (let i = 0; i < total_len; i++) {

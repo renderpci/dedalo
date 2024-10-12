@@ -4,8 +4,8 @@
 * Manages image files process with ImageMagick lib
 * https://imagemagick.org
 */
-
 final class ImageMagick {
+
 
 
 	/**
@@ -34,7 +34,7 @@ final class ImageMagick {
 	* @param string $target_file (full target thumb file path)
 	* @return string|bool $result
 	*/
-	public static function dd_thumb(string $source_file, string $target_file) : string|bool {
+	public static function dd_thumb( string $source_file, string $target_file ) : string|bool {
 
 		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -86,7 +86,7 @@ final class ImageMagick {
 	* @return string|bool $result
 	*	Terminal command response
 	*/
-	public static function convert(object $options) : string|bool {
+	public static function convert( object $options ) : string|bool {
 
 		$source_file	= $options->source_file; // file to be processed, mandatory.
 		$ar_layers		= $options->ar_layers ?? null; // in image is the layer of the image, by default all (false), in pdf is the number of page/s, by default all (false).
@@ -339,6 +339,7 @@ final class ImageMagick {
 			$command		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
 			$tiff_format	= shell_exec($command);
 
+		// debug
 			debug_log(__METHOD__
 				. " get_layers_file_info command " . PHP_EOL
 				. 'command: ' .to_string($command) . PHP_EOL
@@ -346,25 +347,25 @@ final class ImageMagick {
 				, logger::WARNING
 			);
 
-			// empty case
+		// empty case
 			if (empty($tiff_format)) {
 				return 1;
 			}
 
-			// the result could be:
+		// the result could be:
 			// 1 		- without layer, for the flatten images
 			// 8 true 	- the number of the layers and boolean true, (PSD files doesn't has the bool)
 			// the layer number include the layer 0, that is a flat image of all layers
 			$ar_lines		= explode(' ', $tiff_format);
 			$layer_number	= (int)$ar_lines[0];
 
-			// if layer number is greater than 1 send the number
+		// if layer number is greater than 1 send the number
 			if($layer_number > 1 ){
 				return $layer_number;
 			}
 
-			return 1; //$ar_lines[0]
 
+		return 1;
 	}//end get_layers_file_info
 
 
@@ -553,7 +554,7 @@ final class ImageMagick {
 	* @return dd_date|null $dd_date
 	* 	dd_date object
 	*/
-	public static function get_date_time_original(string $file) : ?dd_date {
+	public static function get_date_time_original( string $file ) : ?dd_date {
 
 		$command			= MAGICK_PATH . 'identify -quiet -format "%[EXIF:DateTimeOriginal]" ' .'"'.$file.'"';
 		$DateTimeOriginal	= shell_exec($command);
@@ -601,7 +602,7 @@ final class ImageMagick {
 	* 		height: 1024
 	* 	}
 	*/
-	public static function get_dimensions(string $file_path) : object {
+	public static function get_dimensions( string $file_path ) : object {
 
 		$image_dimensions = new stdClass();
 

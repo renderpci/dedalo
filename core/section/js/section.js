@@ -8,7 +8,7 @@
 	import {clone, url_vars_to_object, object_to_url_vars, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {
 		common,
 		set_context_vars,
@@ -58,6 +58,7 @@ export const section = function() {
 	this.ar_section_id			= null
 
 	this.node					= null
+	this.events_tokens			= null
 	this.ar_instances			= null
 	this.caller					= null
 
@@ -99,7 +100,7 @@ export const section = function() {
 	section.prototype.list_header		= render_list_section.prototype.list_header
 	section.prototype.solved			= render_solved_section.prototype.solved
 
-	section.prototype.delete_record		= render_common_section.prototype.delete_record
+	section.prototype.render_delete_record_dialog = render_common_section.prototype.render_delete_record_dialog
 
 
 
@@ -115,13 +116,16 @@ section.prototype.init = async function(options) {
 
 	// safe init double control. To detect duplicated events cases
 		if (typeof this.is_init!=='undefined') {
-			console.error('Duplicated init for section:', this);
+			console.error('Duplicated init for element:', this);
 			if(SHOW_DEBUG===true) {
-				alert('Duplicated init section');
+				alert('Duplicated init element');
 			}
 			return false
 		}
 		this.is_init = true
+
+	// status update
+		self.status = 'initializing'
 
 	// vars
 		// instance key used vars
@@ -186,130 +190,76 @@ section.prototype.init = async function(options) {
 
 	// event subscriptions
 
-		// New and duplicate rebuild rqo and sqo
-			const navigate_to_new_section = async function(section_id){
-
-				const source = create_source(self, 'search')
-					source.section_id	= section_id
-					source.mode			= 'edit'
-
-				// get sqo after modification for proper navigation
-				const sqo = {
-					mode				: self.mode,
-					section_tipo		: [{tipo:self.section_tipo}],
-					filter_by_locators	: [],
-					filter 				: null,
-					limit				: 1,
-					offset				: 0
-				}
-
-				// rebuild sqo when is a separated window
-				// and session is not the main session
-				// in those cases, the section has a filter_by_locators
-				// and is necessary add the new locator.
-				if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
-					const old_locators = self.rqo.sqo.filter_by_locators
-					sqo.filter_by_locators.push(...old_locators)
-				}
-
-				// new section generated
-				sqo.filter_by_locators.push({
-					section_tipo	: self.section_tipo,
-					section_id		: section_id
-				})
-
-				sqo.offset = sqo.filter_by_locators.length - 1
-
-				// save pagination
-				// Updates local DB pagination values to preserve consistence
-				if (self.session_save===true) {
-					// list pagination
-					await data_manager.set_local_db_data(
-						{
-							id		: `${self.tipo}_list`,
-							value	: {
-								limit : (self.mode==='list' && self.rqo.sqo?.limit)
-									? self.rqo.sqo.limit
-									: 10,
-								offset : 0
-							}
-						},
-						'pagination'
-					)
-					// edit pagination
-					await data_manager.set_local_db_data(
-						{
-							id		: `${self.tipo}_edit`,
-							value	: {
-								limit	: 1,
-								offset	: sqo.offset
-							}
-						},
-						'pagination'
-					)
-				}
-
-				// launch event 'user_navigation' that page is watching
-				event_manager.publish('user_navigation', {
-					source	: source,
-					sqo		: sqo
-				})
-			}
-
 		// new_section_ event
-			self.events_tokens.push(
-				event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
-			)
-			async function fn_create_new_section() {
-
-				// data_manager. create
-				const rqo = {
-					action	: 'create',
-					source	: {
-						section_tipo : self.section_tipo
-					}
-				}
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				if (api_response.result && api_response.result>0) {
-					const section_id = api_response.result
-					navigate_to_new_section(section_id)
-				}
-			}//end fn_create_new_section
-
-		// duplicate_section_ event
-			self.events_tokens.push(
-				event_manager.subscribe('duplicate_section_' + self.id, fn_duplicate_section)
-			)
-			async function fn_duplicate_section( options ) {
+			const new_section_handler = async () => {
 
 				if (!confirm(get_label.sure || 'Sure?')) {
 					return false
 				}
 
-				// data_manager. create
-				const rqo = {
-					action	: 'duplicate',
-					source	: {
-						section_tipo	: options.section_tipo,
-						section_id		: options.section_id
-					}
+				// lock new section creation while a creation process is working
+				if (page_globals.creating_section) {
+					console.error('Error. Ignored new section event. Wait for the creation of the active section to finish.');
+					alert("Wait for the creation of the active section to finish.");
+					return
 				}
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				if (api_response.result && api_response.result>0) {
-					const section_id = api_response.result
-					navigate_to_new_section(section_id)
+				page_globals.creating_section = true
+
+				const new_section_id = await self.create_section()
+
+				// navigate to the new record
+				if (new_section_id) {
+					self.navigate_to_new_section(new_section_id)
 				}
-			}//end fn_duplicate_section
+
+				// unlock new section creation
+				setTimeout(function(){
+					page_globals.creating_section = false
+				}, 1500)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('new_section_' + self.id, new_section_handler)
+			)
+			if(SHOW_DEBUG===true) {
+				console.warn('))))) added section event subscription new_section_:', self.id, self.status, performance.now());
+			}
+
+		// duplicate_section_ event
+			const duplicate_section_handler = async (options) => {
+
+				// options
+				const section_id = options.section_id
+
+				if (!confirm(get_label.sure || 'Sure?')) {
+					return false
+				}
+
+				// lock new section creation while a creation process is working
+				if (page_globals.creating_section) {
+					console.error('Error. Ignored new section event. Wait for the creation of the active section to finish.');
+					alert("Wait for the creation of the active section to finish.");
+					return
+				}
+				page_globals.creating_section = true
+
+				const new_section_id = await self.duplicate_section(section_id)
+
+				// navigate to the new record
+				if (new_section_id) {
+					self.navigate_to_new_section(new_section_id)
+				}
+
+				// unlock new section creation
+				setTimeout(function(){
+					page_globals.creating_section = false
+				}, 1500)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('duplicate_section_' + self.id, duplicate_section_handler)
+			)
 
 		// delete_section_ event. (!) Moved to self button delete in render_section_list
-			self.events_tokens.push(
-				event_manager.subscribe('delete_section_' + self.id, fn_delete_section)
-			)
-			async function fn_delete_section(options) {
+			const delete_section_handler = async (options) => {
 
 				// options
 					const section_id	= options.section_id
@@ -326,20 +276,19 @@ section.prototype.init = async function(options) {
 						}
 
 				// delete_section
-					self.delete_record({
+					await self.render_delete_record_dialog({
 						section			: section,
 						section_id		: section_id,
 						section_tipo	: section_tipo,
 						sqo				: sqo
 					})
-			}//end fn_create_new_section
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('delete_section_' + self.id, delete_section_handler)
+			)
 
 		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
-			self.events_tokens.push(
-				event_manager.subscribe('toggle_search_panel_'+self.id, fn_toggle_search_panel)
-			)
-			async function fn_toggle_search_panel() {
-
+			const toggle_search_panel_handler = async () => {
 				if (!self.search_container || !self.filter) {
 					console.log('stop event no filter 1:', this);
 					return
@@ -356,13 +305,13 @@ section.prototype.init = async function(options) {
 					})
 				}
 				toggle_search_panel(self.filter)
-			}//end fn_toggle_search_panel
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('toggle_search_panel_'+self.id, toggle_search_panel_handler)
+			)
 
 		// render_ event
-			const render_token = event_manager.subscribe('render_'+self.id, fn_render)
-			self.events_tokens.push(render_token)
-			function fn_render() {
-
+			const render_handler = () => {
 				// menu label control
 					const update_menu = (menu) => {
 
@@ -447,7 +396,14 @@ section.prototype.init = async function(options) {
 							toggle_search_panel(self.filter)
 						}
 					})
-			}//end fn_render
+
+				if(SHOW_DEBUG===true) {
+					console.log('section. event_manager.events.length:', event_manager.events.length);
+				}
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_'+self.id, render_handler)
+			)
 
 	// load additional files as css used by section_tool in self.config
 		if(self.config && self.config.source_model==='section_tool') {
@@ -662,11 +618,15 @@ section.prototype.build = async function(autoload=false) {
 			// debug
 				if(SHOW_DEBUG===true) {
 
-					// fn_show_debug_info
-						const fn_show_debug_info = function() {
-							event_manager.unsubscribe(event_token)
+					let debug_token
 
-							const debug = document.getElementById("debug")
+					// fn_show_debug_info
+						const render_handler = () => {
+
+							// remove event subscription
+							event_manager.unsubscribe(debug_token)
+
+							const debug = document.getElementById('debug')
 							if (!debug) {
 								console.log('Ignored debug');
 								return
@@ -685,17 +645,12 @@ section.prototype.build = async function(autoload=false) {
 									parent			: debug
 								})
 								button_debug.tabIndex = -1;
-								button_debug.addEventListener("click", function(){
+								const click_handler = () => {
 
 									if (debug_container.hasChildNodes()) {
 										debug_container.classList.toggle('hide')
 										return
 									}
-
-									// clean
-										// while (debug_container.firstChild) {
-										// 	debug_container.removeChild(debug_container.firstChild)
-										// }
 
 									// collect debug data
 									load_data_debug(self, api_response, self.rqo)
@@ -715,7 +670,8 @@ section.prototype.build = async function(autoload=false) {
 												behavior	: 'smooth'
 											});
 									})
-								})
+								}
+								button_debug.addEventListener('click', click_handler)
 
 							// debug_container
 								const debug_container = ui.create_dom_element({
@@ -724,11 +680,11 @@ section.prototype.build = async function(autoload=false) {
 									parent			: debug
 								})
 
-							// show
+							// show debug node removing hide style
 								debug.classList.remove('hide')
 						}
-					const event_token = event_manager.subscribe('render_'+self.id, fn_show_debug_info)
-					self.events_tokens.push(event_token)
+					debug_token = event_manager.subscribe('render_'+self.id, render_handler)
+					self.events_tokens.push(debug_token)
 				}
 		}//end if (autoload===true)
 
@@ -758,32 +714,25 @@ section.prototype.build = async function(autoload=false) {
 			})
 
 			// event paginator_goto_
-				const fn_paginator_goto = async function(offset) {
+				const paginator_goto_handler = (offset) => {
 					self.update_pagination(offset)
 				}
 				self.events_tokens.push(
-					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+					event_manager.subscribe('paginator_goto_'+self.paginator.id, paginator_goto_handler)
 				)
-
 		}//end if (!self.paginator)
 
 	// inspector
 		if (self.inspector===null && self.mode==='edit' && self.permissions) {
-			// if (initiator && initiator.model==='component_portal') {
 
-			// 	self.inspector = null
-
-			// }else{
-
-				const current_inspector = new inspector()
-				current_inspector.init({
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					caller			: self
-				})
-				// fix section inspector
-				self.inspector = current_inspector
-			// }
+			const current_inspector = new inspector()
+			current_inspector.init({
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id,
+				caller			: self
+			})
+			// fix section inspector
+			self.inspector = current_inspector
 		}
 
 	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)
@@ -954,7 +903,7 @@ export const get_section_records = async function(options) {
 
 			// promise add and continue init and build
 				ar_promises.push(new Promise(function(resolve){
-					instances.get_instance(instance_options)
+					get_instance(instance_options)
 					.then(function(current_section_record){
 						current_section_record.build()
 						.then(function(){
@@ -995,6 +944,97 @@ section.prototype.load_section_tool_files = function() {
 			console.log('loaded section_tool files:', url);
 		}
 }//end load_section_tool_files
+
+
+
+/**
+* CREATE_SECTION
+* Creates a new section record calling API
+* @return int|string|null
+*/
+section.prototype.create_section = async function () {
+
+	const self = this
+
+	// source
+		const source = create_source(self, 'create')
+
+	// data_manager. delete
+		const rqo = {
+			action	: 'create',
+			source	: source
+		}
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+		// manage errors
+		const errors = api_response?.errors || []
+		if (errors.length>0) {
+			alert('Errors: \n' + errors.join('\n'));
+		}
+
+		if (api_response.result && api_response.result>0) {
+
+			const new_section_id = api_response.result
+
+			return new_section_id
+
+		}else{
+			console.error('api_response.errors:', api_response.errors);
+			console.error( api_response.msg || 'Error on create record!');
+		}
+
+
+	return null
+}//end create_section
+
+
+
+/**
+* DUPLICATE_SECTION
+* Creates a new section record and copies the current data into it
+* @param object options
+* @return int|string|null
+*/
+section.prototype.duplicate_section = async function (section_id) {
+
+	const self = this
+
+	// source
+		const source = create_source(self, 'duplicate')
+		// add section_id used as data source to clone
+		source.section_id
+
+	// data_manager. delete
+		const rqo = {
+			action	: 'duplicate',
+			source	: source
+		}
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+		// manage errors
+		const errors = api_response?.errors || []
+		if (errors.length>0) {
+			alert('Errors: \n' + errors.join('\n'));
+		}
+
+		if (api_response.result && api_response.result>0) {
+
+			const new_section_id = api_response.result
+
+			return new_section_id
+
+		}else{
+			console.error('api_response.errors:', api_response.errors);
+			console.error( api_response.msg || 'Error on create record!');
+		}
+
+
+	return null
+}//end duplicate_section
 
 
 
@@ -1054,6 +1094,8 @@ section.prototype.delete_section = async function (options) {
 		}else{
 			console.error('api_response.errors:', api_response.errors);
 			console.error( api_response.msg || 'Error on delete records!');
+
+			return false
 		}
 
 
@@ -1175,6 +1217,88 @@ section.prototype.navigate = async function(options) {
 
 
 /**
+* NAVIGATE_TO_NEW_SECTION
+* After a create or duplicate action, go to the new created record
+* @param int|string section_id
+* @return bool
+*/
+section.prototype.navigate_to_new_section = async function(section_id) {
+
+	const self = this
+
+	const source = create_source(self, 'search')
+		source.section_id	= section_id
+		source.mode			= 'edit'
+
+	// get sqo after modification for proper navigation
+	const sqo = {
+		mode				: self.mode,
+		section_tipo		: [{tipo:self.section_tipo}],
+		filter_by_locators	: [],
+		filter 				: null,
+		limit				: 1,
+		offset				: 0
+	}
+
+	// rebuild sqo when is a separated window
+	// and session is not the main session
+	// in those cases, the section has a filter_by_locators
+	// and is necessary add the new locator.
+	if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
+		const old_locators = self.rqo.sqo.filter_by_locators
+		sqo.filter_by_locators.push(...old_locators)
+	}
+
+	// new section generated
+	sqo.filter_by_locators.push({
+		section_tipo	: self.section_tipo,
+		section_id		: section_id
+	})
+
+	sqo.offset = sqo.filter_by_locators.length - 1
+
+	// save pagination
+	// Updates local DB pagination values to preserve consistence
+	if (self.session_save===true) {
+		// list pagination
+		await data_manager.set_local_db_data(
+			{
+				id		: `${self.tipo}_list`,
+				value	: {
+					limit : (self.mode==='list' && self.rqo.sqo?.limit)
+						? self.rqo.sqo.limit
+						: 10,
+					offset : 0
+				}
+			},
+			'pagination'
+		)
+		// edit pagination
+		await data_manager.set_local_db_data(
+			{
+				id		: `${self.tipo}_edit`,
+				value	: {
+					limit	: 1,
+					offset	: sqo.offset
+				}
+			},
+			'pagination'
+		)
+	}
+
+	// launch event 'user_navigation' that page is watching
+	event_manager.publish('user_navigation', {
+		source	: source,
+		sqo		: sqo
+	})
+
+
+	return true
+}//end navigate_to_new_section
+
+
+
+/**
 * CHANGE_MODE
 * Destroy current instance and dependencies without remove HTML nodes (used to get target parent node placed in DOM)
 * Create a new instance in the new mode (for example, from list to edit) and view (ex, from default to line )
@@ -1212,7 +1336,7 @@ section.prototype.change_mode = async function(options) {
 		current_context.mode = mode
 
 	// instance
-		const new_instance = await instances.get_instance({
+		const new_instance = await get_instance({
 			model			: current_context.model,
 			tipo			: current_context.tipo,
 			section_tipo	: current_context.section_tipo,

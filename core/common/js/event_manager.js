@@ -34,13 +34,23 @@ const event_manager_class = function(){
 	* 	Like: 'activate_component'
 	* @param function callback
 	* 	Like: 'fn_activate_component'
-	* @return string token
+	* @return string|null token
 	* 	custom string incremental like: 'event_270'
 	*/
 	this.subscribe = function(event_name, callback) {
 
 		// new event. Init. Create the unique token
 			const token = "event_"+String(++this.last_token)
+
+		// check if already exists
+			const exists = this.event_exists(event_name, callback)
+			if (exists===true) {
+				console.error(')))) Found duplicated subscription: ' + event_name);
+				if(SHOW_DEBUG===true) {
+					alert("Found duplicated subscription " + event_name);
+				}
+				// We will not return yet (only debug detection for now)
+			}
 
 		// create the event
 			const new_event = {
@@ -51,14 +61,6 @@ const event_manager_class = function(){
 
 		// add the event to the global events of the page
 			this.events.push(new_event)
-
-		// duplicates check debug
-			// const lookup = this.events.reduce((a, e) => {
-			// 	a[e.event_name] = ++a[e.event_name] || 0;
-			// 	return a;
-			// }, {});
-			// console.log('subscribe duplicates:', this.events.filter(e => lookup[e.event_name]));
-			// console.log('this:', this);
 
 		// return the token to save into the events_tokens properties inside the caller instance
 			return token
@@ -72,28 +74,31 @@ const event_manager_class = function(){
 	* event_token is a unique string returned on each subscription
 	* @param string event_token
 	* 	custom string incremental like: 'event_270'
-	* @return array new_events_list
-	* 	A new array without the removed event
+	* @return bool
 	*/
 	this.unsubscribe = function(event_token) {
 
 		const self = this
 
-		// removeEventListener
-			// console.log("event_token:",event_token,self.events);
-			// const found = self.events.find(el => el.token===event_token)
-			// if (found) {
-			// 	removeEventListener(found.event_name, found.callback)
-			// 	console.log("removed listener to :", found);
-			// }
+		if (!event_token) {
+			if(SHOW_DEBUG===true) {
+				console.error('Ignored empty event_token from unsubscribe:', event_token);
+			}
+			return false
+		}
 
 		// find the event in the global events and remove it
-			const new_events_list = self.events.map( (current_event, key, events) => {
-				(current_event.token === event_token) ? events.splice(key, 1) : null
-			})
+			const events_length = self.events.length
+			for (let i = 0; i < events_length; i++) {
+				const event = self.events[i]
+				if (event.token===event_token) {
+					self.events.splice(i, 1)
+					return true
+				}
+			}
 
 
-		return new_events_list
+		return false
 	}//end unsubscribe
 
 
@@ -141,6 +146,33 @@ const event_manager_class = function(){
 
 		return this.events
 	}//end get_events
+
+
+
+	/**
+	* EVENT_EXISTS
+	* Check if given event already exists in the main events register array
+	* @param string event_name
+	* @param callable callback
+	* @return bool
+	*/
+	this.event_exists = function(event_name, callback) {
+
+		// iterate events
+		const events = this.get_events()
+		const events_length = events.length
+		for (let i = 0; i < events_length; i++) {
+
+			const event = events[i]
+
+			if (event_name===event.event_name && callback===event.callback) {
+				return true
+			}
+		}
+
+
+		return false
+	}//end event_exists
 
 
 

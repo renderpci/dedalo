@@ -541,7 +541,7 @@ data_manager.prototype.component_load_data = async function() {
 	const component = this
 
 	// section_record instance
-		const section_record = await instances.get_instance({
+		const section_record = await get_instance({
 			model			: 'section_record',
 			tipo			: component.section_tipo,
 			section_tipo	: component.section_tipo,
@@ -571,7 +571,7 @@ data_manager.prototype.component_load_data = async function() {
 data_manager.prototype.component_load_context = async function(component) {
 
 	// section_record instance
-		const section_record = await instances.get_instance({
+		const section_record = await get_instance({
 			model			: 'section_record',
 			tipo			: component.section_tipo,
 			section_tipo	: component.section_tipo,

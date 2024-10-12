@@ -95,12 +95,14 @@ render_menu.prototype.edit = async function() {
 					})
 					// insert after button_toggle_inspector
 					button_toggle_inspector.parentNode.insertBefore(menu_mobile_wrapper, button_toggle_inspector.nextSibling);
-					const fn_user_navigation = function(e) {
+					const user_navigation_handler = (e) => {
 						if (!menu_mobile_wrapper.classList.contains('hide')) {
 							menu_mobile_wrapper.classList.add('hide')
 						}
 					}
-					event_manager.subscribe('user_navigation', fn_user_navigation)
+					self.events_tokens.push(
+						event_manager.subscribe('user_navigation', user_navigation_handler)
+					)
 				}else{
 					menu_mobile_wrapper.classList.toggle('hide')
 				}

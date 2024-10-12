@@ -335,8 +335,7 @@ class component_av extends component_media_common implements component_media_int
 			}
 
 		// FFMPEG create_posterframe
-		$Ffmpeg	= new Ffmpeg();
-		$command_response = $Ffmpeg->create_posterframe((object)[
+		$command_response = Ffmpeg::create_posterframe((object)[
 			'timecode'				=> $current_time, // like '00:00:10',
 			'src_file'				=> $src_file,
 			'quality'				=> $quality,

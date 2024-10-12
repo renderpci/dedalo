@@ -60,9 +60,12 @@ view_default_edit_image.render = function(self, options) {
 		wrapper.content_data = content_data
 
 	// event
-		event_manager.subscribe('full_screen_'+self.id, () => {
+		const full_screen_handler = () => {
 			fit_image(self)
-		})
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('full_screen_'+self.id, full_screen_handler)
+		)
 
 
 	return wrapper
@@ -112,7 +115,6 @@ const get_content_value = function(i, value, self) {
 
 	// short vars
 		const quality			= self.quality || self.context.features.quality
-		const extension			= self.context.features.extension
 		const data				= self.data || {}
 		const files_info		= value && value.files_info
 			? value.files_info
@@ -256,17 +258,18 @@ const get_content_value = function(i, value, self) {
 
 /**
 * RENDER_IMAGE_EXTERNAL
-* @param object file_info
-* @return HTMLElement image_external_node
+* @param string file_url
+* @return HTMLElement image_container
 */
 const render_image_external = function(file_url) {
 
 	const image_container = ui.create_dom_element({
 		element_type	: 'div',
-		class_name 		: 'image_container work_area'
+		class_name		: 'image_container work_area'
 	})
 
-	const image_external_node = ui.create_dom_element({
+	// image_external
+	ui.create_dom_element({
 		element_type	: 'img',
 		class_name		: 'image image_external',
 		src				: file_url,
@@ -330,7 +333,7 @@ const render_image_node = function(self, file_info, content_value) {
 			// image_container.image = image
 
 	// fallback to default svg file
-		function svg_fallback(object_node) {
+		const svg_fallback = (object_node) => {
 			// fallback to default svg file
 			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
 			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
@@ -375,9 +378,9 @@ const render_image_node = function(self, file_info, content_value) {
 		image_container.object_node	= object_node
 
 		// auto-change url the first time
-		object_node.onload = async function() {
+		const load_handler = async () => {
 			if (quality!==self.context.features.default_quality) {
-				await fn_img_quality_change(url)
+				await image_quality_change_handler(url)
 			}
 
 			// dynamic_url . prevents to cache files inside svg object
@@ -389,15 +392,13 @@ const render_image_node = function(self, file_info, content_value) {
 
 			content_value.classList.remove('hide')
 		}
+		object_node.addEventListener('load', load_handler)
 
 	// change event
-		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
-		self.events_tokens.push(image_change_event)
-		// object_node.dataset.image_change_event = image_change_event // string like 'event_167'
-		async function fn_img_quality_change (img_src) {
+		const image_quality_change_handler = async (url) => {
 
 			// as '/dedalo/media/image/3MB/0/rsc29_rsc170_2.jpg?t=1714996905397'
-			self.img_src = img_src
+			self.img_src = url
 
 			// svg document inside the object_node tag
 			const svg_doc = object_node.contentDocument;
@@ -421,7 +422,7 @@ const render_image_node = function(self, file_info, content_value) {
 				})
 
 				// update t var from image URL
-				const beats	= img_src.split('?')
+				const beats	= url.split('?')
 
 				// force to refresh image from svg
 				// await fetch(beats[0], { cache: 'reload' })
@@ -432,9 +433,10 @@ const render_image_node = function(self, file_info, content_value) {
 				// set the new source to the image node into the svg
 				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', new_url)
 			}
-
-			return true
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('image_quality_change_'+self.id, image_quality_change_handler)
+		)
 
 
 	return image_container
@@ -444,7 +446,7 @@ const render_image_node = function(self, file_info, content_value) {
 
 /**
 * GET_BUTTONS
-* @param object instance
+* @param object self
 * @return HTMLElement buttons_container
 */
 const get_buttons = (self) => {
@@ -469,14 +471,16 @@ const get_buttons = (self) => {
 				title			: 'Toggle vector editor',
 				parent			: fragment
 			})
-			vector_editor.addEventListener('mouseup', (e) => {
+			// mouseup event
+			const mouseup_handler = (e) => {
 				e.stopPropagation()
 
 				vector_editor_tools.classList.toggle('hide')
 				if(!vector_editor_tools.classList.contains('hide')){
 					self.load_vector_editor()
 				}
-			})
+			}
+			vector_editor.addEventListener('mouseup', mouseup_handler)
 
 			// svg editor tools
 			const vector_editor_tools = ui.create_dom_element({
@@ -496,13 +500,15 @@ const get_buttons = (self) => {
 				title			: get_label.full_screen || 'Full screen',
 				parent			: fragment
 			})
-			button_fullscreen.addEventListener('click', function(e) {
+			// click event
+			const click_handler = (e) => {
 				e.stopPropagation()
 				ui.enter_fullscreen(self.node, ()=>{
 					event_manager.publish('full_screen_'+self.id, false)
 				})
 				event_manager.publish('full_screen_'+self.id, true)
-			})
+			}
+			button_fullscreen.addEventListener('click', click_handler)
 		}
 
 	// buttons container
@@ -586,11 +592,11 @@ const fit_image = function(self) {
 		}
 
 	// event resize. Only if we are in fullscreen
-		const fn_resize = () => {
+		const resize_handler = () => {
 			fit_image(self)
 		}
 		if (wrapper.classList.contains('fullscreen')) {
-			window.onresize = fn_resize;
+			window.addEventListener('resize', resize_handler)
 		}
 }//end fit_image
 

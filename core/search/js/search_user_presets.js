@@ -6,7 +6,7 @@
 
 // import
 	import {data_manager} from '../../common/js/data_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {create_source} from '../../common/js/common.js'
 
 
@@ -280,7 +280,7 @@ export const load_user_search_presets = async function(self) {
 			inspector		: false, // (!) disable elements
 			filter			: false // (!) disable elements
 		}
-		const section = await instances.get_instance(instance_options)
+		const section = await get_instance(instance_options)
 		await section.build(true)
 
 	// section. render another node of component caller and append to container
@@ -374,7 +374,7 @@ export const edit_user_search_preset = async function(self, section_id) {
 			add_show 		: true,
 			id_variant		: self.section_tipo +'_'+ section_id + '_search_user_preset'
 		}
-		const section = await instances.get_instance(instance_options)
+		const section = await get_instance(instance_options)
 		// filter search disallow
 			section.filter = false
 		// inspector disallow
@@ -408,7 +408,7 @@ export const load_search_preset = async function(options) {
 			mode			: 'edit',
 			lang			: page_globals.dedalo_data_nolan
 		}
-		const component = await instances.get_instance(instance_options)
+		const component = await get_instance(instance_options)
 		await component.build(true)
 		const value = component.data.value
 
@@ -461,7 +461,7 @@ export const create_new_search_preset = function(options) {
 				const new_section_id = api_response.result
 
 				// set section_tipo value
-					const component_instance_section_tipo = await instances.get_instance({
+					const component_instance_section_tipo = await get_instance({
 						tipo			: presets_component_section_value_tipo, // 'dd642',
 						model			: 'component_input_text',
 						section_tipo	: section_tipo,
@@ -477,7 +477,7 @@ export const create_new_search_preset = function(options) {
 					await component_instance_section_tipo.save(changed_data_section)
 
 				// set user value
-					const component_instance_user = await instances.get_instance({
+					const component_instance_user = await get_instance({
 						tipo			: presets_component_user_id_value_tipo, // 'dd654',
 						model			: 'component_select',
 						section_tipo	: section_tipo,

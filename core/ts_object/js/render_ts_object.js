@@ -672,7 +672,7 @@ const render_id_column = function(options) {
 					link_delete.addEventListener('click', (e) =>{
 						e.stopPropagation()
 						// delete record using wrapper data
-						delete_record({
+						render_delete_record_dialog({
 							self					: self,
 							section_id				: section_id,
 							section_tipo			: section_tipo,
@@ -746,7 +746,7 @@ const render_id_column = function(options) {
 
 
 /**
-* DELETE_RECORD
+* RENDER_DELETE_RECORD_DIALOG
 * Creates the modal with relations and buttons for delete record
 * @param object options
 * {
@@ -757,7 +757,7 @@ const render_id_column = function(options) {
 * }
 * @return bool
 */
-const delete_record = function (options) {
+const render_delete_record_dialog = function (options) {
 
 	// options
 		const self						= options.self
@@ -796,6 +796,7 @@ const delete_record = function (options) {
 			parent			: body
 		})
 		const relation_list = render_relation_list({
+			self			: self,
 			section_id		: section_id,
 			section_tipo	: section_tipo
 		})
@@ -915,7 +916,7 @@ const delete_record = function (options) {
 
 	// self.delete(link_delete)
 
-}//end delete_record
+}//end render_delete_record_dialog
 
 
 

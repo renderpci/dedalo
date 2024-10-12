@@ -6,14 +6,14 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance, find_instances} from '../../common/js/instances.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {render_layer_selector} from './render_edit_component_text_area.js'
 
 
 
 /**
-* RENDER_draw
+* RENDER_DRAW
 *
 * @param object options
 * @return HTMLElement fragment
@@ -38,9 +38,8 @@ export const render_draw = async function(options) {
 			lang			: page_globals.dedalo_data_nolan
 		}
 		// get the reference component instance
-		const found_instances = instances.find_instances(tag_component_options)
-
-		const component_tags_draw = found_instances.length > 0
+		const found_instances		= find_instances(tag_component_options)
+		const component_tags_draw	= found_instances.length > 0
 			? found_instances[0]
 			: null
 
@@ -98,7 +97,7 @@ export const render_draw = async function(options) {
 			caller			: self
 		}
 		// get the instance, built and render
-			const reference_component = await instances.get_instance(instance_options)
+			const reference_component = await get_instance(instance_options)
 										await reference_component.build(true)
 			if(reference_component.permissions<1){
 				const label = get_label.no_access  || 'No access here'

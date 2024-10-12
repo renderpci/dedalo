@@ -1,7 +1,5 @@
 <?php
 declare(strict_types=1);
-
-
 /**
 * CLASS COMPONENT PDF
 *
@@ -99,7 +97,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_FOLDER
-	* 	Get element dir from config
+	* Get element DEDALO_PDF_FOLDER value from config
 	* @return string
 	*/
 	public function get_folder() : string {
@@ -155,6 +153,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_RELATED_COMPONENT_TEXT_AREA_TIPO
+	* Returns related component_text_area tipos (used to write PDF text)
 	* @return array $related_component_text_area_tipo
 	*/
 	public function get_related_component_text_area_tipo() : array {
@@ -333,7 +332,6 @@ class component_pdf extends component_media_common implements component_media_in
 					$component_target_filename->Save();
 				}
 
-
 			// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
 			// this cases are: «odt», «doc», «pages» files, or other document file.
 				if( $file_extension !== $this->get_extension() ){
@@ -346,7 +344,6 @@ class component_pdf extends component_media_common implements component_media_in
 					$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 					return $response;
 				}
-
 
 			// Generate default_pdf_format : copy the PDF to web format
 			// original file is conserved (like myfilename.pdf and myfilename.doc)
@@ -554,9 +551,14 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* RENAME_OLD_FILES
-	* @param $file_name string as 'test175_test65_3'
+	* @param string $file_name string
+	* 	as 'test175_test65_3'
 	* @param $folder_path string
 	* @return object $response
+	* {
+	* 	result : boo
+	* 	msg: string
+	* }
 	*/
 	public function rename_old_files( string $file_name, string $folder_path ) : object {
 
@@ -584,6 +586,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
+	* Read config DEDALO_PDF_ALTERNATIVE_EXTENSIONS value or null
 	* @return array|null $alternative_extensions
 	*/
 	public function get_alternative_extensions() : ?array {
@@ -704,6 +707,7 @@ class component_pdf extends component_media_common implements component_media_in
 				. 'result: '.to_string($result)
 				, logger::ERROR
 			);
+			$response->errors[] = 'daemon engine response error: ' . $output;
 			return $response;
 		}
 
@@ -725,6 +729,7 @@ class component_pdf extends component_media_common implements component_media_in
 		# Test is valid utf8
 		$test_utf8 = self::valid_utf8($pdf_text);
 		if (!$test_utf8) {
+			$response->errors[] = 'current string is NOT utf8 valid';
 			debug_log(__METHOD__
 				." WARNING: Current string is NOT utf8 valid. Anyway continue ... "
 				, logger::WARNING
@@ -739,6 +744,7 @@ class component_pdf extends component_media_common implements component_media_in
 		if (!$pdf_text) {
 			$response->result	= 'error';
 			$response->msg		= "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
+			$response->errors[] = 'bad format encoding';
 			return $response;
 		}
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
@@ -746,10 +752,10 @@ class component_pdf extends component_media_common implements component_media_in
 		if (empty($pdf_text)) {
 			$response->result	= 'error';
 			$response->msg		= "Error Processing Request pdf_automatic_transcription: Empty text";
+			$response->errors[] = 'empty text';
 			return $response;
 		}
 
-		#
 		# PAGES TAGS
 		$original_text	= str_replace("","", $pdf_text); // original text without page marks
 		if($method==='text_engine'){
@@ -768,13 +774,14 @@ class component_pdf extends component_media_common implements component_media_in
 		}
 
 		$response->result	= (string)$pdf_text;
-		$response->msg		= "Ok Processing Request pdf_automatic_transcription: text processed";
+		$response->msg		= empty($response->errors)
+			? 'OK. Processing Request pdf_automatic_transcription: text processed'
+			: 'Warning: some errors were found';
 		$response->original	= trim($original_text);
 
 
 		return $response;
 	}//end build_pdf_transcription
-
 
 
 
@@ -937,10 +944,9 @@ class component_pdf extends component_media_common implements component_media_in
 	/**
 	* UTF8_CLEAN
 	* @param string $string = ''
-	* @param bool $control = false
 	* @param string $string
 	*/
-	public static function utf8_clean( string $string='', bool $control=false ) : string {
+	public static function utf8_clean( string $string='' ) : string {
 
 		$string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
 
@@ -1147,7 +1153,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 		// Options
 			$first_page					= $options->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
-			$transcription				= $options->transcription ?? false;
+			$transcription				= $options->transcription ?? true;
 			$ocr						= $options->ocr ?? false;
 			$ocr_lang					= $options->ocr_lang ?? null;
 			$delete_normalized_files	= $options->delete_normalized_files ?? true;
@@ -1178,7 +1184,7 @@ class component_pdf extends component_media_common implements component_media_in
 					$ocr_options->source_file	= (string)$source_file;	# full source pdf file path
 					$ocr_options->ocr_lang		= $ocr_lang;		# lang used to process the file
 
-				$ocr_response = (object)component_pdf::process_ocr_file( $ocr_options );
+				$ocr_response = component_pdf::process_ocr_file( $ocr_options );
 			}
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
@@ -1318,7 +1324,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return true;
 	}//end create_alternative_version
-
 
 
 

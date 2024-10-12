@@ -164,6 +164,10 @@ abstract class component_common extends common {
 						. "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'"
 						, logger::ERROR
 					);
+					if(SHOW_DEBUG===true) {
+						$bt = debug_backtrace();
+						dump($bt, ' bt ++ '.to_string());
+					}
 
 				// fix bad model
 					$component_name = $model_name;
@@ -172,10 +176,10 @@ abstract class component_common extends common {
 
 				debug_log(__METHOD__
 					. ' Error Processing Request. Illegal component: ' .PHP_EOL
-					. ' component_name:' . to_string($component_name) .PHP_EOL
-					. ' tipo:' . to_string($tipo) .PHP_EOL
-					. ' section_tipo:' . to_string($section_tipo) .PHP_EOL
-					. ' section_id:' . to_string($section_id) .PHP_EOL
+					. ' component_name :' . to_string($component_name) .PHP_EOL
+					. ' tipo: ' . to_string($tipo) .PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) .PHP_EOL
+					. ' section_id: ' . to_string($section_id) .PHP_EOL
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
@@ -3771,6 +3775,10 @@ abstract class component_common extends common {
 				break;
 
 			case 'update':
+				// safe format
+				if (!is_array($dato)) {
+					$dato = [$dato];
+				}
 				// check if the key exist in the $dato if the key exist change it directly, else create all positions with null value for coherence
 				if( isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato) ) {
 					$dato[$changed_data->key] = $changed_data->value;

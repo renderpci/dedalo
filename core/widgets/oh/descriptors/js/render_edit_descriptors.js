@@ -5,7 +5,7 @@
 
 
 // imports
-	import * as instances from '../../../../common/js/instances.js'
+	import {get_instance} from '../../../../common/js/instances.js'
 	import {ui} from '../../../../common/js/ui.js'
 
 
@@ -159,7 +159,7 @@ const render_values = function(self, data) {
 
 		// dd_grid build and append
 		const dd_grid_data	= [data.find(el => el.id==='terms').value]
-		const dd_grid		= await instances.get_instance({
+		const dd_grid		= await get_instance({
 			model			: 'dd_grid',
 			section_tipo	: self.section_tipo,
 			section_id		: self.section_id,

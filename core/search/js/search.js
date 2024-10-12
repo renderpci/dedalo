@@ -9,8 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {
 		render_search
 	} from './render_search.js'
@@ -80,6 +79,19 @@ search.prototype.init = async function(options) {
 
 	const self = this
 
+	// safe init double control. To detect duplicated events cases
+		if (typeof this.is_init!=='undefined') {
+			console.error('Duplicated init for element:', this);
+			if(SHOW_DEBUG===true) {
+				alert('Duplicated init element');
+			}
+			return false
+		}
+		this.is_init = true
+
+	// status update
+		self.status = 'initializing'
+
 	// options
 		self.caller		= options.caller
 		self.context	= options.caller.context
@@ -138,11 +150,7 @@ search.prototype.init = async function(options) {
 	// events subscription
 		// change_search_element. Update value, subscription to the changes: if the DOM input value was changed,
 		// observers DOM elements will be changed own value with the observable value
-		self.events_tokens.push(
-			event_manager.subscribe('change_search_element', fn_change_search_element)
-		)
-		async function fn_change_search_element(instance) {
-
+		const change_search_element_handler = async (instance) => {
 			// parse filter to DOM
 			self.parse_dom_to_json_filter({
 				mode : self.mode
@@ -163,6 +171,9 @@ search.prototype.init = async function(options) {
 				hilite		: hilite // bool
 			})
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('change_search_element', change_search_element_handler)
+		)
 
 	// permissions
 		self.permissions = 2
@@ -487,7 +498,7 @@ search.prototype.get_component_instance = async function(options) {
 				mode			: 'search',
 				lang			: lang
 			}
-			const component_instance = await instances.get_instance(component_options)
+			const component_instance = await get_instance(component_options)
 
 	// data. Inject value from search user preset before build is needed for portal 'resolve_data' API call
 		component_instance.data = {
@@ -947,6 +958,12 @@ search.prototype.update_state = async function(options) {
 			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
 			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo
+
+		// check valid sections
+			if (!self.target_section_tipo || !self.target_section_tipo.length) {
+				console.error('Empty target_section_tipo. Unable to update caller:', self.target_section_tipo);
+				return
+			}
 
 		// request_config_object.sqo update. Copy rqo.sqo pagination values to request_config_object
 			caller_instance.request_config_object.sqo.limit		= caller_instance.rqo.sqo.limit
