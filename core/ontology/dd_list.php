@@ -162,10 +162,14 @@ if($t==='form' && $n===0) {
 	$total_dd	= pg_fetch_assoc($result)['exact_count'];
 
 	# Total termns
-	$strQuery		= "SELECT count(*) AS exact_count FROM \"matrix_descriptors_dd\" ";
-	$result			= JSON_RecordObj_matrix::search_free($strQuery);
-	$total_terms	= pg_fetch_assoc($result)['exact_count'];
+	$dedalo_version = explode(".", DEDALO_VERSION);
+	if( (int)$dedalo_version[0]<=6 && (int)$dedalo_version[1]<3 ){
+		$strQuery		= "SELECT count(*) AS exact_count FROM \"matrix_descriptors_dd\" ";
+		$result			= JSON_RecordObj_matrix::search_free($strQuery);
+		$total_terms	= pg_fetch_assoc($result)['exact_count'];
+	}
 
+	$total_terms	=$total_dd;
 
 
 $page_html = dirname(__FILE__).'/html/dd_list.phtml';

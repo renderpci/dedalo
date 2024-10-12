@@ -269,7 +269,7 @@ class dd extends dd_elements {
 
 				$RecordObj_dd	= new RecordObj_dd_edit($terminoID);
 
-				$termino		= RecordObj_dd_edit::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;
+				$termino		= RecordObj_dd_edit::get_termino_by_tipo($terminoID,$this->ts_lang) ?? '';		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;
 				$def			= RecordObj_dd_edit::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
 				$obs			= RecordObj_dd_edit::get_obs_by_tipo($terminoID,$this->ts_lang);
 

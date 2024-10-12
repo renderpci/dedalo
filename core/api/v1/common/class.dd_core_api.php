@@ -1676,7 +1676,7 @@ final class dd_core_api {
 		// 		$response->error	= null;
 
 		// 	// ontology call
-		// 		$children = ontology::get_children_recursive($target_tipo);
+		// 		$children = ontology_legacy::get_children_recursive($target_tipo);
 
 		// 	// response
 		// 		$response->result	= $children;
