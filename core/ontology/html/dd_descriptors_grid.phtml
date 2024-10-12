@@ -24,12 +24,15 @@
 
 	<!-- TERM -->
 		<td colspan="2">
-			<input type="text" name="termino_<?php echo $id ?>" id="termino_<?php echo $id ?>" class="input_term" value="<?php echo $termino ?>"
+			<input type="text" class="input_term" value="<?php echo $termino ?>"
 			onfocus="myfocus(this)" onblur="myblur(this);"
-			data-parent="<?php echo $parent_desc ?>" data-lang="<?php echo $lang ?>" data-tipo="termino"
+			data-lang="<?php echo $lang ?>"
+			data-term_id="<?php echo $terminoID ?>"
 			onchange="save_descriptor(this)">
 
+			<?php /*
 			<div class="definition"><?php echo $def ?></div>
+			*/ ?>
 		</td>
 
 	<!-- DEFINITION -->
@@ -89,9 +92,8 @@
 
 				# Delete current descriptor
 				# 'terminoID' is defined in 'ts_descriptors_grid.php'
-				echo "<img src=\"images/delete.png\" class=\"dropBox\" title=\"Delete $langFull\" onclick=\"removeDescriptor('$id','$terminoID')\" />";
+				echo "<img src=\"images/delete.png\" class=\"dropBox\" title=\"Delete $langFull\" onclick=\"removeDescriptor('$lang','$terminoID')\" />";
 			}
-			#
 			?>
 		</td>
 

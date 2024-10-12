@@ -4,15 +4,15 @@ $modeloGet = (isset($_REQUEST['modelo']))
 	: $modelo ?? false;
 
 $RecordObj_dd	= new RecordObj_dd(null,'dd');
-$ar_all_modelos = $RecordObj_dd->get_ar_all_modelos();
+$ar_all_models	= $RecordObj_dd->get_ar_all_models();
 
 
 # ordenamos alfabéticamente los modelos
-$ar_all_modelos_ordered = (function() use($ar_all_modelos){
+$ar_all_models_ordered = (function() use($ar_all_models){
 
 	$sorted_models = [];
 
-	foreach($ar_all_modelos as $modeloID) {
+	foreach($ar_all_models as $modeloID) {
 
 		if($modeloID==='dd2') {
 			# filtramos el registro autointroducido al crear la tabla ( dd2 )
@@ -34,7 +34,7 @@ $ar_all_modelos_ordered = (function() use($ar_all_modelos){
 ?>
 <select name="modelo" id="modelo" class="model_selector">
 	<option value="" <?php if (!(strcmp("", $modeloGet))) {echo "selected=\"selected\"";} ?> > </option>
-	<?php foreach($ar_all_modelos_ordered as $modeloID => $modelo) { ?>
+	<?php foreach($ar_all_models_ordered as $modeloID => $modelo) { ?>
 		<option value="<?php echo $modeloID ?>" <?php if (!(strcmp($modeloID, $modeloGet))) {echo "selected=\"selected\"";} ?> >
 			<?php echo $modelo; if(SHOW_DEBUG==true) echo " [$modeloID]" ;?>
 		</option>
