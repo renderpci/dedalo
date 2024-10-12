@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?php echo DEDALO_ENTITY ?> DD Edit</title>
+<?php
+// css
+	print css::build_tag('css/legacy/general.css',null,false);
+	print css::build_tag('css/legacy/edit.css',null,false);
+	print css::build_tag('css/dd_page.css',null,false);
+	print css::build_tag('css/dd_edit.css',null,false);
+	print css::build_tag('jsoneditor/dist/jsoneditor.min.css');
+?>
+<script type="text/javascript">
+// vars
+	const terminoID									= '<?php echo $terminoID ?>'
+	const esdescriptor								= '<?php echo $esdescriptor ?>'
+	const parent									= '<?php echo $parent;?>'
+	const head										= '<?php echo $head;?>'
+	const debe_introducir_el_tesauro_title			= '<?php echo msgJS($debe_introducir_el_tesauro_title) ?>'
+	const nHijos									= '<?php echo $nHijos;?>'
+	const un_termino_con_hijos_title				= '<?php echo msgJS($un_termino_con_hijos_title)?>'
+	const hasRelation								= '<?php echo $hasRelation ?>'
+	const un_termino_con_descriptores_title			= '<?php echo msgJS($un_termino_con_descriptores_title)?>'
+	const un_no_descriptor_ha_de_depender_title		= '<?php echo msgJS($un_no_descriptor_ha_de_depender_title) ?>'
+	const seguro_que_quiere_desvincular_title		= '<?php echo msgJS($seguro_que_quiere_desvincular_title) ?>'
+	const descriptor_title							= '<?php echo msgJS($descriptor_title) ?>'
+	const esta_seguro_de_eliminar_registro_1_title	= '<?php echo msgJS($esta_seguro_de_eliminar_registro_1_title) ?>'
+	const debe_introducir_title						= '<?php echo msgJS($debe_introducir_title)?>'
+	const padre_title								= '<?php echo msgJS($padre_title);  ?>'
+	const trsND										= '#relTR,#hermanosTR,#hijosTR,#modeloTR,#usableIndexTR'
+	const DEDALO_LIB_BASE_URL						= '<?php echo DEDALO_LIB_BASE_URL ?>'
+
+	var window_docu
+</script>
+<?php
+// js
+	print js::build_tag('jquery/dist/jquery.min.js', 'defer');
+	print js::build_tag('jquery/dist/jquery-ui.min.js', 'defer');
+	print js::build_tag('inc/javascript.js', 'defer');
+	print js::build_tag('js/dd_common.js', null);
+	print js::build_tag('js/dd_edit.js', 'defer');
+	print js::build_tag('js/app_utils.js', 'defer');
+// Additional CSS / JS
+	print js::build_tag('jsoneditor/dist/jsoneditor.min.js', 'defer');
+?>
+</head>
+<body>
+<div id="wrapGeneral" class="hidden">
+	<form name="form1" id="form1" method="post" onSubmit="return false"><?php // onSubmit="edit_ts(this, event); ?>
+		<table class="table_edit">
+
+
+			<!-- title -->
+				<tr>
+					<td align="right" nowrap class="topTDround"><?php echo "$editar_title $termino_title  <strong>$terminoID</strong> "?></td>
+				</tr>
+
+
+			<!-- opciones principales -->
+				<tr>
+					<td>
+						<table class="table_opciones_principales" width="100%" border="0" cellspacing="2" cellpadding="2">
+							<tr>
+
+							<!-- ES DESCRIPTOR -->
+							<td align="center" valign="top">
+								<?php echo $es_descriptor_title ?><br>
+								<select name="esdescriptor" id="esdescriptor" onChange="verificarDescriptor(this.value)" title="<?php echo $cambiar_tipo_title ?>">
+								 <option value="si" <?php if (!empty($esdescriptor) && !(strcmp('si', $esdescriptor))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
+								 <option value="no" <?php if (!empty($esdescriptor) &&!(strcmp('no', $esdescriptor))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
+								</select>
+							</td>
+
+							<!-- MODELO -->
+							<td align="center" valign="top">
+								<?php
+								echo ucfirst($modelo_title);
+								if(SHOW_DEBUG==true || SHOW_DEVELOPER===true) echo " (esmodelo:$esmodelo)" ;
+								?>
+								<br>
+								<?php
+								# select modelos
+								if($esmodelo!='si')	{
+									echo "<input name=\"esmodelo\" type=\"hidden\" id=\"esmodelo\" style=\"width:30px;text-align:center\" value=\"no\" readonly>";
+									include_once('dd_select_modelos.php');
+								}else{
+									echo "<input name=\"esmodelo\" type=\"text\" id=\"esmodelo\" style=\"width:30px;text-align:center\" value=\"si\" readonly>";
+								}
+								?>
+							</td>
+
+							<!-- TRADUCIBLE -->
+							<td align="center" nowrap="nowrap" valign="top">
+								<?php if(!empty($traducible_title)) echo ucfirst($traducible_title) ?><br>
+								<select name="traducible" id="traducible">
+									<option value="si" <?php if (!empty($traducible) && !(strcmp('si', $traducible))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
+									<option value="no" <?php if (!empty($traducible) && !(strcmp('no', $traducible))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
+								</select>
+							</td>
+
+							<!-- VISIBLE -->
+							<td align="center" nowrap="nowrap" valign="top">
+								<?php echo "Visible"; echo " [$visible]";?><br>
+								<select name="visible" id="visible">
+									<option value="si" <?php if (!empty($visible) && !(strcmp('si', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $si_title ?></option>
+									<option value="no" <?php if (!empty($visible) && !(strcmp('no', $visible))) {echo "selected=\"selected\" ";} ?>><?php echo $no_title ?></option>
+								</select>
+							</td>
+
+							<!-- LINK DOCU -->
+							<!-- <td align="center" nowrap="nowrap" valign="top">
+								<div id="container_docu">Docu<br></div>
+								<script type="text/javascript">
+									const container	= document.getElementById("container_docu")
+									const link		= create_dom_element({
+										element_type	: 'a',
+										inner_html		: terminoID,
+										parent			: container
+									})
+									link.term_id = terminoID
+									link.addEventListener('click', open_docu)
+								</script>
+							</td>
+ -->
+							</tr>
+						</table><!-- /table_opciones_principales -->
+				 </td>
+				</tr>
+
+
+			<!-- termino y traducciones -->
+				<tr>
+					<td>
+						<table id="terminosTable" width="100%" border="0" cellpadding="0" cellspacing="0">
+
+							<!-- header -->
+							<tr>
+								<td class="td_header td_term1"><?php echo $idioma_title ?></td>
+								<td class="td_header td_term2"><?php echo $termino_title ?></td>
+								<td class="td_header td_term3"><?php echo $definicion_title ?></td>
+								<td class="td_header td_term4"><?php echo $nuevo_title ?></td>
+							</tr>
+
+							<!-- mainLang -->
+							<tr>
+								<td colspan="4" style="margin:0px;padding:0px;"><div id="div_keyup"><!-- Ajax response here codigoKeyup(termino) --></div></td>
+							</tr>
+
+							<!-- descriptors_tr -->
+							<?php echo $descriptors_tr_html ?>
+
+							<!-- traducciones header -->
+							<tr>
+								<td colspan="4" class="td_header" style="text-align:left;" ><?php echo $traducciones_title ?></td>
+							</tr>
+							<!-- traducciones descriptors grid ts_descriptors_grid.php ajax -->
+							<tbody id="tbodyDescriptorsGrid">
+								<!-- Ajax load grid from ts_descriptors_grid.php . need id of current descriptor -->
+							</tbody>
+
+						</table> <!-- /terminosTable -->
+					</td>
+				</tr>
+
+
+			<!-- informacion -->
+				<tr>
+					<td class="td_header"> <?php echo $informacion_title ?></td>
+				</tr>
+
+
+			<!-- observaciones -->
+				<?php
+					// generated in dd_descriptord_grid_obs.phtml
+
+				//	echo $descriptors_tr_obs_html;
+
+				?>
+
+
+			<!-- relaciones -->
+				<tr>
+					<td>
+						<div class="div_wraper wraper_relations">
+							<div class="left_div" style="padding-top:6px;">
+								<?php echo $relaciones_title ?>
+							</div>
+							<div class="right_div">
+								<div id="div_rel"><!-- Ajax lista de relaciones --></div>
+							</div>
+						</div>
+					</td>
+				</tr>
+
+
+			<!-- V5 Propiedades -->
+				<tr>
+					<td class="td_header" id="propiedades_group_button" onClick="simpleToogleTBODY('propiedades_group',this)" style="cursor:pointer">
+						V5 Propiedades <div class="flecha_open_tboby"></div>
+					</td>
+				</tr>
+				<tbody id="propiedades_group" class="hide">
+					<tr>
+						<td>
+							<div class="wraper_propiedades">
+								<textarea id="propiedades" name="propiedades" class="propiedades_textarea hide"><?php echo $propiedades ?></textarea>
+								<div id="editor_json" class="editor_json_container"></div>
+								<script>
+								// let propiedades_editor
+								window.addEventListener('DOMContentLoaded', (event) => {
+
+									const propiedades_dato		= <?php echo json_encode($propiedades) ?>;
+									const propiedades_options	= {
+										mode	: 'code',
+										modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+										error	: function (err) {
+											alert(err.toString());
+										}
+									}
+									// create the editor
+										const propiedades_container	= document.getElementById('editor_json');
+										propiedades_editor	= new JSONEditor(propiedades_container, propiedades_options);
+										// set json
+										if (propiedades_dato) {
+											propiedades_editor.set( JSON.parse(propiedades_dato) )
+										}
+
+									// status (opened/closed)
+										const status = localStorage.getItem('propiedades_group')
+										if (status) {
+											const propiedades_group_button = document.getElementById('propiedades_group_button')
+											propiedades_group_button.click()
+										}
+								})
+								</script>
+							</div><!-- /div_wraper -->
+						</td>
+					</tr>
+				</tbody>
+
+
+			<!-- V6 properties-->
+				<tr>
+					<td class="td_header" id="properties_group_button" onClick="simpleToogleTBODY('properties_group',this)" style="cursor:pointer">
+						V6 Properties <div class="flecha_open_tboby"></div>
+					</td>
+				</tr>
+				<tbody id="properties_group" class="hide">
+					<tr>
+						<td>
+							<div class="wraper_propiedades">
+								<?php
+								$properties_text = json_encode($properties);
+								?>
+								<textarea id="properties" name="properties" class="properties_textarea hide"><?php echo $properties_text ?></textarea>
+								<div id="properties_editor_json" class="editor_json_container"></div>
+								<script>
+								// let properties_editor
+								window.addEventListener('DOMContentLoaded', (event) => {
+
+									const properties_dato		= <?php echo json_encode($properties) ?>;
+									const properties_options	= {
+										mode	: 'code',
+										modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+										error	: function (err) {
+											alert(err.toString());
+										}
+									}
+									// create properties_editor
+										const properties_container	= document.getElementById('properties_editor_json');
+										properties_editor			= new JSONEditor(properties_container, properties_options)
+
+										// set json
+										if (properties_dato) {
+											properties_editor.set( properties_dato )
+										}
+
+										setTimeout(function(){
+											document.getElementById('wrapGeneral').classList.remove('hidden')
+										}, 100)
+
+									// status (opened/closed)
+										const status = localStorage.getItem('properties_group')
+										if (status) {
+											const propiedades_group_button = document.getElementById('properties_group_button')
+											propiedades_group_button.click()
+										}
+								})
+								</script>
+							</div>
+						</td>
+					</tr>
+					<tr class=""><td><div class="tr_separator"></div></td></tr>
+				</tbody>
+
+
+
+			<!-- hierarchie info -->
+				<tr class="row_border_bottom">
+					<td>
+					 <table class="table_hierarchy_info">
+						<!-- PARENT : Dependiente de (padre) -->
+							<tr>
+							 <td align="right" nowrap  ><?php echo $dependiente_de_title ?> </td>
+							 <td align="center" nowrap ><?php echo $parentInicial = $parent ; ?></td>
+							 <td align="left" nowrap >
+								<?php echo $cambiar_a_title ?>
+								<input name="parent" type="text" id="parent" style="width:90px; text-align:center" value="<?php echo $parent ?>" onFocus="myfocus(this)" onBlur="myblur(this)">
+								<span class="anotacionTexto">(<?php echo $al_cambiar_el_padre_title ?>)</span>
+							 </td>
+							</tr>
+
+					 </table><!-- /table_hierarchy_info -->
+					</td>
+				</tr>
+
+
+			<!-- submit -->
+				<tr>
+					<td style="padding:10px; text-align:center">
+						<div class="form_buttons">
+							<input type="hidden" name="terminoID" value="<?php echo $terminoID # el terminoID devuelto por por la búsqueda.(idem que el get) ?>">
+							<!-- Campos obligatorios -->
+							<input type="hidden" name="parentInicial" value="<?php echo $parent ?>" >
+							<input type="hidden" name="nHijos" value="<?php echo $nHijos ?>">
+							<input type="button" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon" onClick="edit_ts(document.getElementById('form1'), event);">
+							<input name="export" type="button" value=" Export JSON " onClick="export_ontology(this, '<?php echo $terminoID ?>');">
+							<input name="export" type="button" value=" Export CSV " onClick="export_ontology_csv(this, '<?php echo $terminoID ?>');">
+						</div><!-- /form_buttons -->
+					</td>
+				</tr>
+
+
+		</table><!-- /table_edit -->
+	</form>
+</div><!-- wrapGeneral -->
+</body>
+</html>
