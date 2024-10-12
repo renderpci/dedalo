@@ -107,18 +107,18 @@ render_menu.prototype.edit = async function() {
 			}//end fn_menu_mobile_click
 			let menu_mobile_wrapper = null
 
-	// ontology link
-		if (self.data && self.data.show_ontology===true) {
-			const ontology_link = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'ontology top_item',
-				inner_html		: get_label.ontology || 'Ontology',
-				parent			: fragment
-			})
-			// set pointers
-			self.ontology_link = ontology_link
-			ontology_link.addEventListener('click', self.open_ontology)
-		}
+	// // ontology link
+	// 	if (self.data && self.data.show_ontology===true) {
+	// 		const ontology_link = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'ontology top_item',
+	// 			inner_html		: get_label.ontology || 'Ontology',
+	// 			parent			: fragment
+	// 		})
+	// 		// set pointers
+	// 		self.ontology_link = ontology_link
+	// 		ontology_link.addEventListener('click', self.open_ontology)
+	// 	}
 
 	// user name link (open tool_user_admin)
 		const logged_user_name = ui.create_dom_element({
