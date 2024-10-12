@@ -15,6 +15,7 @@
 ?>
 <script type="text/javascript">
 // vars
+	const id										= '<?php echo $id ?>'
 	const terminoID									= '<?php echo $terminoID ?>'
 	const esdescriptor								= '<?php echo $esdescriptor ?>'
 	const parent									= '<?php echo $parent;?>'
@@ -43,7 +44,7 @@
 	print js::build_tag('js/dd_common.js', null);
 	print js::build_tag('js/dd_edit.js', 'defer');
 	print js::build_tag('js/app_utils.js', 'defer');
-// Additional CSS / JS
+// Aditional css / js
 	print js::build_tag('jsoneditor/dist/jsoneditor.min.js', 'defer');
 ?>
 </head>
@@ -152,13 +153,14 @@
 							<!-- descriptors_tr -->
 							<?php echo $descriptors_tr_html ?>
 
+
 							<!-- traducciones header -->
 							<tr>
 								<td colspan="4" class="td_header" style="text-align:left;" ><?php echo $traducciones_title ?></td>
 							</tr>
 							<!-- traducciones descriptors grid ts_descriptors_grid.php ajax -->
 							<tbody id="tbodyDescriptorsGrid">
-								<!-- Ajax load grid from ts_descriptors_grid.php . need id of current descriptor -->
+								<!-- Ajax load grid from ts_descriptors_grid.php . need id of currrent descriptor -->
 							</tbody>
 
 						</table> <!-- /terminosTable -->
@@ -175,9 +177,7 @@
 			<!-- observaciones -->
 				<?php
 					// generated in dd_descriptord_grid_obs.phtml
-
 				//	echo $descriptors_tr_obs_html;
-
 				?>
 
 

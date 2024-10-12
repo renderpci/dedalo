@@ -3,7 +3,6 @@ $modeloGet = (isset($_REQUEST['modelo']))
 	? safe_xss($_REQUEST['modelo'])
 	: $modelo ?? false;
 
-
 $RecordObj_dd	= new RecordObj_dd_edit(null,'dd');
 $ar_all_modelos = $RecordObj_dd->get_ar_all_modelos();
 
