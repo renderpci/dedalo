@@ -16,7 +16,7 @@
 
 
 /**
-* ONTOLOGY_LEGACY
+* ONTOLOGY_legacy
 * Manages structure (ontology) import and export data
 * Useful for developers to create tools structure data
 */
