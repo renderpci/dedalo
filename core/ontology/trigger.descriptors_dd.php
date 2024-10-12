@@ -162,7 +162,7 @@ if($mode==='export_ontology') {
 
 	// include(dirname(__FILE__) . '/class.ontology.php');
 
-	$response = ontology_v5::export($terminoID);
+	$response = ontology_legacy::export($terminoID);
 
 	echo json_encode($response, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 	exit();
