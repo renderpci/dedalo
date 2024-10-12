@@ -79,7 +79,7 @@ class dd_elements {
 			}
 
 			# BUTTON DESPLEGAR TERMINOS RELACIONADOS BtnTR
-			$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($terminoID);
+			$ar_terminos_relacionados = RecordObj_dd_edit::get_ar_terminos_relacionados($terminoID);
 			if(count($ar_terminos_relacionados)>0) $html .= $this->renderBtnTR($terminoID);
 
 			# DESPLEGAR DEFINICIÓN BtnInfo
@@ -102,7 +102,7 @@ class dd_elements {
 			# MODELO
 			if(!empty($modelo) && trim($modelo)!='' && $this->esmodelo!='si') {
 				#dump($modelo,"modelo");
-				$modelo_name = RecordObj_dd::get_termino_by_tipo($modelo);
+				$modelo_name = RecordObj_dd_edit::get_termino_by_tipo($modelo);
 				$html .= $this->renderBtnM($terminoID,$modelo,$modelo_name);
 			}
 
@@ -505,7 +505,7 @@ class dd_elements {
 		$html  = '' ;
 
 		#$arrayTR = self::terminosRelacionados($terminoID);
-		$ar_terminos_relacionados = (array)RecordObj_dd::get_ar_terminos_relacionados($terminoID);
+		$ar_terminos_relacionados = (array)RecordObj_dd_edit::get_ar_terminos_relacionados($terminoID);
 			#dump($ar_terminos_relacionados,'ar_terminos_relacionados '.$terminoID);
 
 		$html .= "<ul class=\"tesauro_tr_sortable\" id=\"tesauro_tr_sortable_{$terminoID}\" data-termino_id=\"$terminoID\">";
@@ -513,9 +513,9 @@ class dd_elements {
 
 			foreach( (array)$ar_tr as $modeloID => $terminoID) {
 
-				$termino 	 = RecordObj_dd::get_termino_by_tipo($terminoID);
-				// $modelo_text = RecordObj_dd::get_modelo_name_by_tipo($terminoID); # NO usar el guardado porque puede haberse cambiado en el tiempo (solucionar posibles inconsistencias)
-				$modelo_text = RecordObj_dd::get_legacy_model_name_by_tipo($terminoID);
+				$termino 	 = RecordObj_dd_edit::get_termino_by_tipo($terminoID);
+				// $modelo_text = RecordObj_dd_edit::get_modelo_name_by_tipo($terminoID); # NO usar el guardado porque puede haberse cambiado en el tiempo (solucionar posibles inconsistencias)
+				$modelo_text = RecordObj_dd_edit::get_legacy_model_name_by_tipo($terminoID);
 
 				$html .= "<li class=\"\" data-tipo=\"$terminoID\" data-modelo=\"$modeloID\">";	#<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
 				#$html .= "<li class=\"\" data-tipo=\"$terminoID\">";
@@ -664,16 +664,16 @@ class dd_elements {
 
 		$html = '' ;
 
-		$RecordObj_dd			= new RecordObj_dd($terminoID);
+		$RecordObj_dd			= new RecordObj_dd_edit($terminoID);
 		$ar_childrens_of_this	= $RecordObj_dd->get_ar_childrens_of_this($esdecriptor='no');
 
 		if(is_array($ar_childrens_of_this) && count($ar_childrens_of_this)>0) foreach($ar_childrens_of_this as $current_terminoID) {
 
-			$terminoND = RecordObj_dd::get_termino_by_tipo($current_terminoID,false);
+			$terminoND = RecordObj_dd_edit::get_termino_by_tipo($current_terminoID,false);
 
 			if($this->modo==='tesauro_edit') {
 
-				$RecordObj_dd2	= new RecordObj_dd($current_terminoID);
+				$RecordObj_dd2	= new RecordObj_dd_edit($current_terminoID);
 				$parent			= $RecordObj_dd2->get_parent();
 				$html .= $this->renderBtnBorrar($current_terminoID, $children=0, $nIndexaciones=0, $parent, $terminoND);
 				$html .= $this->renderBtnEditTermino($current_terminoID,$parent);

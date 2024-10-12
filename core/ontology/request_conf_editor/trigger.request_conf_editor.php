@@ -100,7 +100,7 @@ function save_properties($json_data) {
 		}
 
 	// term
-		$RecordObj_dd = new RecordObj_dd($tipo);
+		$RecordObj_dd = new RecordObj_dd_edit($tipo);
 
 	// properties
 		$old_properties = $RecordObj_dd->get_properties(); // force open connection

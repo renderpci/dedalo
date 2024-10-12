@@ -50,7 +50,7 @@ function print_children_recursive() {
 		$term_id = $_GET['tipo'] ?? 'dd3'; // diffusion
 
 	// children recursive
-		$ar_tipo = RecordObj_dd::get_ar_recursive_childrens(
+		$ar_tipo = RecordObj_dd_edit::get_ar_recursive_childrens(
 			$term_id,
 			$is_recursion=false,
 			$ar_exclude_models=false,
@@ -82,7 +82,7 @@ function print_children_recursive() {
 		foreach ($ar_langs as $lang) {
 
 			// term. resolve term from descriptors
-				$term = RecordObj_dd::get_termino_by_tipo(
+				$term = RecordObj_dd_edit::get_termino_by_tipo(
 					$current_tipo, // string $terminoID
 					$lang, // string $lang=null
 					false, // bool $from_cache=false
