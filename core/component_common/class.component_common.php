@@ -4241,7 +4241,7 @@ abstract class component_common extends common {
 
 		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 
-		$section_id = ontology::get_section_id_by_term_id($this->tipo);
+		$section_id = ontology_legacy::get_section_id_by_term_id($this->tipo);
 
 		$component_tipo	= ONTOLOGY_SECTION_TIPOS['definition']; // expected dd1478
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_text_area

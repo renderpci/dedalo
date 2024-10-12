@@ -41,14 +41,14 @@ require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 		// edit
 			// JSON Ontology Item save
-			$json_item	= (object)ontology::tipo_to_json_item($current_tipo);
+			$json_item	= (object)ontology_legacy::tipo_to_json_item($current_tipo);
 				// dump($json_item, ' json_item ++ '.to_string());
-			$save_item	= ontology::save_json_ontology_item($current_tipo, $json_item);	// return object response
+			$save_item	= ontology_legacy::save_json_ontology_item($current_tipo, $json_item);	// return object response
 
 			if (!empty($json_item->descriptors)) {
 				foreach ($json_item->descriptors as $descriptor_value) {
 
-					$result = ontology::edit_term((object)[
+					$result = ontology_legacy::edit_term((object)[
 						'term_id'	=> $current_tipo,
 						'dato'		=> $descriptor_value->value,
 						'dato_tipo'	=> 'termino',
