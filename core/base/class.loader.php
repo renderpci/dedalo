@@ -68,7 +68,7 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_info.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_3d_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_area_maintenance_api.php';
 // others
-include DEDALO_CORE_PATH . '/ontology/class.ontology.php';
+include DEDALO_CORE_PATH . '/ontology/class.ontology_legacy.php';
 // legacy classes (used only by v5 shared Ontology)
 
 include DEDALO_CORE_PATH . '/ontology/class.ontology_legacy.php';

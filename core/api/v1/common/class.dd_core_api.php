@@ -1627,7 +1627,6 @@ final class dd_core_api {
 
 
 
-
 	/**
 	* BUILD_JSON_ROWS
 	* Gets context and data from given element (section, component, area)

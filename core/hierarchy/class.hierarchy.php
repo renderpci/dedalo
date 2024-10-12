@@ -616,7 +616,7 @@ class hierarchy extends ontology {
 			}
 
 		// delete the virtual section
-			$deleted = ontology_v5::clean_structure_data($tld);
+			$deleted = ontology_legacy::clean_structure_data($tld);
 
 			$response->result = $deleted;
 
