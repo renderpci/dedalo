@@ -3,7 +3,7 @@ $modeloGet = (isset($_REQUEST['modelo']))
 	? safe_xss($_REQUEST['modelo'])
 	: $modelo ?? false;
 
-$RecordObj_dd	= new RecordObj_dd(null,'dd');
+$RecordObj_dd	= new RecordObj_dd_edit(null,'dd');
 $ar_all_modelos = $RecordObj_dd->get_ar_all_modelos();
 
 
@@ -19,13 +19,13 @@ $ar_all_modelos_ordered = (function() use($ar_all_modelos){
 			continue;
 		}
 
-		$model_current_RecordObj_dd	= new RecordObj_dd($modeloID);
+		$model_current_RecordObj_dd	= new RecordObj_dd_edit($modeloID);
 		$current_visible			= $model_current_RecordObj_dd->get_visible();
 		if ($current_visible!=='si') {
 			continue;
 		}
 		// add
-		$sorted_models[$modeloID] = RecordObj_dd::get_termino_by_tipo($modeloID);
+		$sorted_models[$modeloID] = RecordObj_dd_edit::get_termino_by_tipo($modeloID);
 	}
 	asort($sorted_models);
 

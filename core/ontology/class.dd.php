@@ -157,7 +157,7 @@ class dd extends dd_elements {
 	public static function terminoID2parent(string $terminoID) : ?string {
 
 		if(strlen($terminoID)>2) {
-			$RecordObj_dd	= new RecordObj_dd($terminoID);
+			$RecordObj_dd	= new RecordObj_dd_edit($terminoID);
 			return $RecordObj_dd->get_parent();
 		}
 
@@ -172,8 +172,8 @@ class dd extends dd_elements {
 	public static function prefijoFix2(string $terminoID, string $terminoID2) : string {
 
 		# prefijo válido
-		$prefijo	= RecordObj_dd::get_prefix_from_tipo($terminoID);
-		$prefijo2	= RecordObj_dd::get_prefix_from_tipo($terminoID2);
+		$prefijo	= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
+		$prefijo2	= RecordObj_dd_edit::get_prefix_from_tipo($terminoID2);
 
 		# verificamos si terminoID2 tiene prefijo
 		$pattern	= "/[a-z][a-z]/i";
@@ -204,7 +204,7 @@ class dd extends dd_elements {
 	*/
 	protected static function esmodeloCurrent(string $terminoID) : string {
 
-		$RecordObj_dd	= new RecordObj_dd($terminoID);
+		$RecordObj_dd	= new RecordObj_dd_edit($terminoID);
 		$esmodelo		= $RecordObj_dd->get_esmodelo();
 
 		return $esmodelo ;
@@ -219,7 +219,7 @@ class dd extends dd_elements {
 	*/
 	protected static function esdescriptorCurrent(string $terminoID) : string {
 
-		$RecordObj_dd	= new RecordObj_dd($terminoID);
+		$RecordObj_dd	= new RecordObj_dd_edit($terminoID);
 		$esdescriptor	= $RecordObj_dd->get_esdescriptor();
 
 		return $esdescriptor ;
@@ -248,7 +248,7 @@ class dd extends dd_elements {
 
 		$html = '' ;			#print("parentInicial:$parentInicial, terminoIDActual:$terminoIDActual, terminoIDresalte:$terminoIDresalte, header:$header, esmodelo:$esmodelo ");die();
 
-		$RecordObj_dd			= new RecordObj_dd($parentInicial);
+		$RecordObj_dd			= new RecordObj_dd_edit($parentInicial);
 		$ar_childrens_of_this	= $RecordObj_dd->get_ar_childrens_of_this($esdecriptor='si', $this->esmodelo, 'norden ASC, id');
 			#dump($ar_childrens_of_this,'ar_childrens_of_this');	#die();
 
@@ -267,11 +267,11 @@ class dd extends dd_elements {
 			#	continue;
 			#}
 
-				$RecordObj_dd	= new RecordObj_dd($terminoID);
+				$RecordObj_dd	= new RecordObj_dd_edit($terminoID);
 
-				$termino		= RecordObj_dd::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;
-				$def			= RecordObj_dd::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
-				$obs			= RecordObj_dd::get_obs_by_tipo($terminoID,$this->ts_lang);
+				$termino		= RecordObj_dd_edit::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;
+				$def			= RecordObj_dd_edit::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
+				$obs			= RecordObj_dd_edit::get_obs_by_tipo($terminoID,$this->ts_lang);
 
 				$parent			= $RecordObj_dd->get_parent();
 				$modelo			= $RecordObj_dd->get_modelo();
@@ -280,7 +280,7 @@ class dd extends dd_elements {
 				$traducible		= $RecordObj_dd->get_traducible();
 				$propiedades	= $RecordObj_dd->get_propiedades();
 				$properties		= $RecordObj_dd->get_properties();
-				$RecordObj_dd2	= new RecordObj_dd($terminoID);
+				$RecordObj_dd2	= new RecordObj_dd_edit($terminoID);
 				#$hijosND		= count($RecordObj_dd2->get_ar_childrens_of_this('no'));
 				$hijosND		= 0;#$this->HNoDescriptores($terminoID);
 				$hijosD			= $RecordObj_dd->get_n_hijos_descriptores();
@@ -629,7 +629,7 @@ class dd extends dd_elements {
 					# array de padres ordenados hacia arriba
 					#$matriz = $this->padresArray($terminoIDActual);
 
-					$RecordObj_dd	= new RecordObj_dd($terminoIDActual);
+					$RecordObj_dd	= new RecordObj_dd_edit($terminoIDActual);
 					$matriz 		= $RecordObj_dd->get_ar_parents_of_this();		#print_r($matriz); die();
 
 					if(is_array($matriz) && count($matriz)>0)
@@ -702,8 +702,8 @@ class dd extends dd_elements {
 		$nivel = 0 ;
 
 		$parent			= dd::terminoID2parent($terminoID);
-		$parent_zero	= RecordObj_dd::get_prefix_from_tipo($terminoID).'0';
-		$prefijo		= RecordObj_dd::get_prefix_from_tipo($terminoID);
+		$parent_zero	= RecordObj_dd_edit::get_prefix_from_tipo($terminoID).'0';
+		$prefijo		= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
 
 		if( $parent===$parent_zero || $parent===$prefijo || $parent==='') {
 
@@ -711,7 +711,7 @@ class dd extends dd_elements {
 
 		}else{
 
-			$RecordObj_dd		= new RecordObj_dd($terminoID);
+			$RecordObj_dd		= new RecordObj_dd_edit($terminoID);
 			$ar_parents_of_this	= $RecordObj_dd->get_ar_parents_of_this();
 
 			if(is_array($ar_parents_of_this)) {
@@ -791,8 +791,8 @@ class dd extends dd_elements {
 	# PREFIJO COMPARE
 		// public static function prefijo_compare__DEPRECATED($terminoID, $terminoID2) {
 
-		// 	$prefijo	= RecordObj_dd::get_prefix_from_tipo($terminoID);
-		// 	$prefijo2	= RecordObj_dd::get_prefix_from_tipo($terminoID2);
+		// 	$prefijo	= RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
+		// 	$prefijo2	= RecordObj_dd_edit::get_prefix_from_tipo($terminoID2);
 
 		// 	if (!empty($prefijo) && $prefijo===$prefijo2) {
 		// 		return true;

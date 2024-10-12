@@ -465,7 +465,7 @@ function loadDescriptorsGrid( id_focus ) {
 * REMOVEDESCRIPTOR
 * @return promise
 */
-function removeDescriptor(id, terminoID) {
+function removeDescriptor(id, terminoID, lang) {
 
 	// mandatory vars check
 		if(!id || id<1 || !terminoID) {
@@ -487,6 +487,7 @@ function removeDescriptor(id, terminoID) {
 			mode		: 'removeDescriptor',
 			id			: id,
 			terminoID	: terminoID,
+			lang		: lang,
 			top_tipo	: page_globals.top_tipo
 		}
 
@@ -621,7 +622,7 @@ const add_new_lang = function(select_obj) {
 	const mode 			= 'newDescriptor'
 	const mydata		= { mode 			: mode,
 							terminoID		: terminoID,
-							terminoID_lang 	: terminoID_lang,
+							lang 	: terminoID_lang,
 							top_tipo		: page_globals.top_tipo || null
 							}; //console.log("mydata", url, mydata); // return;
 

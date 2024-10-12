@@ -181,7 +181,7 @@ while ($rows = pg_fetch_assoc($result)) {
 	}
 	$parent		= $padre ;
 	$terminoID	= $rows["terminoID"];
-	$termino	= RecordObj_dd::get_termino_by_tipo($terminoID);
+	$termino	= RecordObj_dd_edit::get_termino_by_tipo($terminoID);
 
 	$nordenArray[] = "$terminoID,$norden" ;
 
