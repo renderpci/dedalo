@@ -53,7 +53,7 @@ class ontology_legacy {
 			$ar_data[] = $item;
 
 		// children
-			$children = RecordObj_dd_edit::get_ar_recursive_childrens($tipo);
+			$children = RecordObj_dd::get_ar_recursive_childrens($tipo);
 			foreach ($children as $children_tipo) {
 				$ar_data[] = ontology_legacy::tipo_to_json_item($children_tipo);
 			}
@@ -102,7 +102,7 @@ class ontology_legacy {
 			$options->label			= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		$RecordObj_dd = new RecordObj_dd_edit($tipo);
+		$RecordObj_dd = new RecordObj_dd($tipo);
 		$RecordObj_dd->use_cache = false; // (!) prevents using previous db results
 		$RecordObj_dd->get_dato();
 
@@ -118,7 +118,7 @@ class ontology_legacy {
 				$item->is_model = $RecordObj_dd->get_esmodelo();
 			}
 			if ($options->model===true) {
-				$item->model = RecordObj_dd_edit::get_modelo_name_by_tipo($tipo,true);
+				$item->model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			}
 			if ($options->model_tipo===true) {
 				$item->model_tipo = $RecordObj_dd->get_modelo();
@@ -176,7 +176,7 @@ class ontology_legacy {
 
 			// get termino by tipo with fallback
 			if ($options->label===true) {
-				$item->label = RecordObj_dd_edit::get_termino_by_tipo(
+				$item->label = RecordObj_dd::get_termino_by_tipo(
 					$tipo, // string terminoID
 					DEDALO_APPLICATION_LANG, // string lang
 					true, // bool from_cache
@@ -209,22 +209,22 @@ class ontology_legacy {
 				$esmodelo	= $item->is_model ?? 'no';
 				$traducible	= $item->translatable===true ? 'si' : 'no';
 
-				$RecordObj_dd_edit = new RecordObj_dd_edit(null, $item->tld);
+				$RecordObj_dd = new RecordObj_dd(null, $item->tld);
 
-				$RecordObj_dd_edit->set_terminoID($item->tipo);
-				$RecordObj_dd_edit->set_esdescriptor('si');
-				$RecordObj_dd_edit->set_esdescriptor('si');
-				$RecordObj_dd_edit->set_visible('si');
-				$RecordObj_dd_edit->set_parent($item->parent);
-				$RecordObj_dd_edit->set_esmodelo($esmodelo);
-				$RecordObj_dd_edit->set_norden($item->order);
-				$RecordObj_dd_edit->set_traducible($traducible);
-				$RecordObj_dd_edit->set_relaciones($item->relations);
-				$RecordObj_dd_edit->set_properties($item->properties);
-				$RecordObj_dd_edit->set_modelo($item->model_tipo);
-				$RecordObj_dd_edit->set_tld($item->tld);
+				$RecordObj_dd->set_terminoID($item->tipo);
+				$RecordObj_dd->set_esdescriptor('si');
+				$RecordObj_dd->set_esdescriptor('si');
+				$RecordObj_dd->set_visible('si');
+				$RecordObj_dd->set_parent($item->parent);
+				$RecordObj_dd->set_esmodelo($esmodelo);
+				$RecordObj_dd->set_norden($item->order);
+				$RecordObj_dd->set_traducible($traducible);
+				$RecordObj_dd->set_relaciones($item->relations);
+				$RecordObj_dd->set_properties($item->properties);
+				$RecordObj_dd->set_modelo($item->model_tipo);
+				$RecordObj_dd->set_tld($item->tld);
 
-				$term_id = $RecordObj_dd_edit->Save();
+				$term_id = $RecordObj_dd->Save();
 
 			// descriptors
 				$descriptors = $item->descriptors;
@@ -325,7 +325,7 @@ class ontology_legacy {
 
 		// 	$ar_elements = [];
 
-		// 	$source_model = RecordObj_dd_edit::get_modelo_name_by_tipo($tipo,true);
+		// 	$source_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		// 	switch ($source_model) {
 
 		// 		case 'section':
@@ -344,7 +344,7 @@ class ontology_legacy {
 
 		// 		default:
 		// 			# Areas
-		// 			$RecordObj_dd		= new RecordObj_dd_edit($tipo);
+		// 			$RecordObj_dd		= new RecordObj_dd($tipo);
 		// 			$ar_ts_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
 		// 			break;
 		// 	}
@@ -363,7 +363,7 @@ class ontology_legacy {
 		// 	foreach((array)$ar_ts_childrens as $element_tipo) {
 
 		// 		// Remove_exclude_models
-		// 			$component_model = RecordObj_dd_edit::get_modelo_name_by_tipo($element_tipo,true);
+		// 			$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 		// 			if( in_array($component_model, $ar_exclude_modelo)) {
 		// 				continue ;
 		// 			}
@@ -424,7 +424,7 @@ class ontology_legacy {
 
 		$ar_elements = [];
 
-		$source_model = RecordObj_dd_edit::get_modelo_name_by_tipo($tipo,true);
+		$source_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		switch ($source_model) {
 
 			case 'section':
@@ -460,7 +460,7 @@ class ontology_legacy {
 
 			default:
 				# Areas
-				$RecordObj_dd	= new RecordObj_dd_edit($tipo);
+				$RecordObj_dd	= new RecordObj_dd($tipo);
 				$ar_ts_children	= $RecordObj_dd->get_ar_childrens_of_this();
 				break;
 		}
@@ -486,7 +486,7 @@ class ontology_legacy {
 		foreach($ar_children as $element_tipo) {
 
 			// Remove_exclude_models
-				$component_model = RecordObj_dd_edit::get_modelo_name_by_tipo($element_tipo,true);
+				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 				if( in_array($component_model, $ar_exclude_model)) {
 					continue ;
 				}
@@ -549,7 +549,7 @@ class ontology_legacy {
 			}
 
 		// tld
-			$tld = RecordObj_dd_edit::get_prefix_from_tipo($term_id);
+			$tld = RecordObj_dd::get_prefix_from_tipo($term_id);
 			if (empty($tld)) {
 				debug_log(__METHOD__." Error on add_term. Ignored. Empty term_id in options: ".to_string($options), logger::ERROR);
 				return false;
@@ -582,7 +582,7 @@ class ontology_legacy {
 		// component term_id
 			(function($value) use($section_tipo, $section_id, $lang) {
 				$tipo			= ONTOLOGY_SECTION_TIPOS['term_id'];
-				$modelo_name	= RecordObj_dd_edit::get_modelo_name_by_tipo($tipo,true);
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$component		= component_common::get_instance($modelo_name,
 																 $tipo,
 																 $section_id,
@@ -597,7 +597,7 @@ class ontology_legacy {
 		// component tld
 			(function($value) use($section_tipo, $section_id, $lang) {
 				$tipo			= ONTOLOGY_SECTION_TIPOS['tld'];
-				$modelo_name	= RecordObj_dd_edit::get_modelo_name_by_tipo($tipo,true);
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$component		= component_common::get_instance($modelo_name,
 																 $tipo,
 																 $section_id,
@@ -612,7 +612,7 @@ class ontology_legacy {
 		// component id
 			(function($value) use($section_tipo, $section_id, $lang) {
 				$tipo			= ONTOLOGY_SECTION_TIPOS['id'];
-				$modelo_name	= RecordObj_dd_edit::get_modelo_name_by_tipo($tipo,true);
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$component		= component_common::get_instance($modelo_name,
 																 $tipo,
 																 $section_id,
@@ -634,7 +634,7 @@ class ontology_legacy {
 			// (function($value) use($section_tipo, $section_id, $lang) {
 
 			// 	$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
-			// 	$modelo_name	= RecordObj_dd_edit::get_modelo_name_by_tipo($component_tipo,true);
+			// 	$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			// 	// filter
 			// 		$filter_string = '{
@@ -674,7 +674,7 @@ class ontology_legacy {
 
 			// 		if ($count===1) {
 			// 			$tipo 			= ONTOLOGY_SECTION_TIPOS['parent'];
-			// 			$modelo_name 	= RecordObj_dd_edit::get_modelo_name_by_tipo($tipo,true);
+			// 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			// 			$component 		= component_common::get_instance($modelo_name,
 			// 															 $tipo,
 			// 															 $section_id,
@@ -700,7 +700,7 @@ class ontology_legacy {
 		// component is_model
 			// (function($value) use($section_tipo, $section_id, $lang) {
 			// 	$tipo 			= ONTOLOGY_SECTION_TIPOS['is_model'];
-			// 	$modelo_name 	= RecordObj_dd_edit::get_modelo_name_by_tipo($tipo,true);
+			// 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			// 	$component 		= component_common::get_instance($modelo_name,
 			// 													 $tipo,
 			// 													 $section_id,
@@ -789,7 +789,7 @@ class ontology_legacy {
 
 					(function($value) use($section_tipo, $section_id, $component_tipo, $lang, $dato_tipo) {
 						// dump($lang, ' $lang ++ component_tipo: '.$component_tipo.' - dato_tipo: '.$dato_tipo. ' - value: '.to_string($value));
-						$modelo_name	= RecordObj_dd_edit::get_modelo_name_by_tipo($component_tipo,true);
+						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$component		= component_common::get_instance($modelo_name,
 																		 $component_tipo,
 																		 $section_id,
@@ -808,7 +808,7 @@ class ontology_legacy {
 						(function($value) use($section_tipo, $section_id) {
 
 							$component_tipo	= ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
-							$modelo_name	= RecordObj_dd_edit::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
+							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
 							$component		= component_common::get_instance($modelo_name,
 																			 $component_tipo,
 																			 $section_id,
@@ -843,7 +843,7 @@ class ontology_legacy {
 
 		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 		$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
-		$modelo_name	= RecordObj_dd_edit::get_modelo_name_by_tipo($component_tipo,true);
+		$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 		// filter
 			$filter_string = '{
@@ -968,7 +968,7 @@ class ontology_legacy {
 
 			// updated existing record
 			$component_tipo	= ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
-			$modelo_name	= RecordObj_dd_edit::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
 			$component		= component_common::get_instance(
 				$modelo_name,
 				$component_tipo,
@@ -1055,7 +1055,7 @@ class ontology_legacy {
 
 /*
 DBi::_getConnection();
-include('class.RecordObj_dd_edit.php');
+include('class.RecordObj_dd.php');
 $ontology_data = json_decode('[
   {
     "tipo": "oh81",
