@@ -351,10 +351,10 @@ class logger_backend_activity extends logger_backend {
 	public function log_message(
 		string $message,
 		int $log_level=logger::INFO,
-		string $tipo_where=null,
-		string $operations=null,
-		array $datos=null,
-		int $user_id=null
+		?string $tipo_where=null,
+		?string $operations=null,
+		?array $datos=null,
+		?int $user_id=null
 		) {
 
 		$options = (object)[

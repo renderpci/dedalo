@@ -87,39 +87,41 @@ area_common.prototype.init = async function(options) {
 
 
 	// events subscription
+
 		// render_ event
-			const render_token = event_manager.subscribe('render_'+self.id, fn_render)
-			self.events_tokens.push(render_token)
-			function fn_render() {
+			const render_handler = () => {
 
 				// menu label control
-					const update_menu = (menu) => {
+				const update_menu = (menu) => {
 
-						// menu instance check. Get from caller page
-						if (!menu) {
-							if(SHOW_DEBUG===true) {
-								console.log('menu is not available from area.');
-							}
-							return
+					// menu instance check. Get from caller page
+					if (!menu) {
+						if(SHOW_DEBUG===true) {
+							console.log('menu is not available from area.');
 						}
-
-						// update_section_label
-						menu.update_section_label({
-							value					: self.label,
-							mode					: self.mode,
-							section_label_on_click	: null
-						})
+						return
 					}
+
+					// update_section_label
+					menu.update_section_label({
+						value					: self.label,
+						mode					: self.mode,
+						section_label_on_click	: null
+					})
+				}
 
 				// call only for direct page created sections
-					if (self.caller && self.caller.model==='page') {
-						// menu. Get from caller page
-						const menu_instance = self.caller && self.caller.ar_instances
-							? self.caller.ar_instances.find(el => el.model==='menu')
-							: null
-						update_menu( menu_instance )
-					}
+				if (self.caller && self.caller.model==='page') {
+					// menu. Get from caller page
+					const menu_instance = self.caller && self.caller.ar_instances
+						? self.caller.ar_instances.find(el => el.model==='menu')
+						: null
+					update_menu( menu_instance )
+				}
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_'+self.id, render_handler)
+			)
 
 	// status update
 		self.status = 'initialized'

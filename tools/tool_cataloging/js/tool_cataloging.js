@@ -80,7 +80,7 @@ tool_cataloging.prototype.init = async function(options) {
 		// the cataloging section has a portal that point to any other section to be ordered
 		// when the user drag the section to be placed in the thesaurus the thesaurus create new term (new section)
 		// this new section has a portal that need to be updated with the locator received
-		const add_child_handler = async function(options) {
+		const ts_add_child_tool_cataloging_handler = async function(options) {
 
 			// options
 				// new_ts_section. The new section created by the thesaurus
@@ -135,8 +135,9 @@ tool_cataloging.prototype.init = async function(options) {
 						}
 				})
 		}
-		const token = event_manager.subscribe('ts_add_child_tool_cataloging', add_child_handler)
-		self.events_tokens.push(token)
+		self.events_tokens.push(
+			event_manager.subscribe('ts_add_child_tool_cataloging', ts_add_child_tool_cataloging_handler)
+		)
 
 
 	return common_init

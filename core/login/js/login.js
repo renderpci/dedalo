@@ -69,6 +69,19 @@ login.prototype.init = async function(options) {
 
 	const self = this
 
+	// safe init double control. To detect duplicated events cases
+		if (typeof this.is_init!=='undefined') {
+			console.error('Duplicated init for element:', this);
+			if(SHOW_DEBUG===true) {
+				alert('Duplicated init element');
+			}
+			return false
+		}
+		this.is_init = true
+
+	// status update
+		self.status = 'initializing'
+
 	// instance key used vars
 	self.model					= options.model
 	self.tipo					= options.tipo
@@ -195,6 +208,17 @@ export const quit = async function(options={}) {
 
 		// manage result
 			if (api_response.result===true) {
+
+				// reset some user preferences status from local database
+				[
+					'inspector_time_machine_list',
+					'inspector_component_history_block',
+					'inspector_relation_list',
+					'open_search_panel'
+				]
+				.map(el => {
+					data_manager.delete_local_db_data(el, 'status')
+				})
 
 				// unregister serviceWorker
 				// Handle service worker unregistration if supported

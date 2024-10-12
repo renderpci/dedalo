@@ -78,6 +78,9 @@ component_image.prototype.init = async function(options) {
 
 	const self = this
 
+	// call the generic common tool init
+		const common_init = await component_common.prototype.init.call(this, options)
+
 	// image_container node
 		self.image_container 		= null
 	// image size
@@ -95,10 +98,6 @@ component_image.prototype.init = async function(options) {
 	// editor init vars
 		self.ar_layers				= []
 		self.vector_editor			= null
-
-
-	// call the generic common tool init
-		const common_init = await component_common.prototype.init.call(this, options)
 
 
 	return common_init

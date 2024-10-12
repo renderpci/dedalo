@@ -32,7 +32,7 @@
 			? 'localhost'
 			: $_SERVER['HTTP_HOST'] ?? ''
 		);
-		define('DEDALO_PROTOCOL',	(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
+		define('DEDALO_PROTOCOL', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
 
 	// root paths
 		define('DEDALO_ROOT_PATH',	dirname(dirname(__FILE__)));
@@ -624,7 +624,7 @@
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER',			true);
 	define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
-	define('STRUCTURE_SERVER_URL',			'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
+	define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/lib/dedalo/extras/str_manager/');
 	define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 	// structure_download. When ontology is updated, download files are saved here
 	define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
@@ -637,9 +637,9 @@
 	// server side (master)
 		// Do not apply here. Only for master server
 	// client side
-		// target dir where git command send the compressed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
-		define('DEDALO_SOURCE_VERSION_URL',			'https://master.render.es/dedalo/code/dedalo6_code.zip');
-		// target dir where git command send the compressed file like 'https://master.render.es/dedalo/code/dedalo5_code.zip'
+		// target dir where git command send the compressed file like 'https://master.dedalo.dev/dedalo/code/dedalo5_code.zip'
+		define('DEDALO_SOURCE_VERSION_URL',			'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
+		// target dir where git command send the compressed file like 'https://master.dedalo.dev/dedalo/code/dedalo5_code.zip'
 		define('DEDALO_SOURCE_VERSION_LOCAL_DIR',	'/tmp/'.DEDALO_ENTITY);
 
 

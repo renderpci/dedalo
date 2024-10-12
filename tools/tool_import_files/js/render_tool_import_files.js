@@ -200,9 +200,12 @@ const get_content_data_edit = async function(self) {
 		})//end button_process_import.addEventListener('click')
 
 		// drop_zone_success. On upload file success, re-activate button
-		event_manager.subscribe('drop_zone_success',() => {
+		const drop_zone_success_handler = () => {
 			button_process_import.classList.remove('loading')
-		})
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('drop_zone_success', drop_zone_success_handler)
+		)
 
 		// on reload page, if files_data exists, activate button
 		if(self.files_data.length > 0){
@@ -604,9 +607,12 @@ const render_options_container = function (self, content_data) {
 					})
 					// when the images was added (drop) set the import mode
 					// (check the name and assign the field)
-					event_manager.subscribe('drop_zone_addedfile',() => {
+					const drop_zone_addedfile_handler = () => {
 						set_import_mode(self, control_field_check_box.checked)
-					})
+					}
+					self.events_tokens.push(
+						event_manager.subscribe('drop_zone_addedfile', drop_zone_addedfile_handler)
+					)
 
 					// switch_label
 					ui.create_dom_element({

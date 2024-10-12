@@ -95,30 +95,32 @@ render_menu.prototype.edit = async function() {
 					})
 					// insert after button_toggle_inspector
 					button_toggle_inspector.parentNode.insertBefore(menu_mobile_wrapper, button_toggle_inspector.nextSibling);
-					const fn_user_navigation = function(e) {
+					const user_navigation_handler = (e) => {
 						if (!menu_mobile_wrapper.classList.contains('hide')) {
 							menu_mobile_wrapper.classList.add('hide')
 						}
 					}
-					event_manager.subscribe('user_navigation', fn_user_navigation)
+					self.events_tokens.push(
+						event_manager.subscribe('user_navigation', user_navigation_handler)
+					)
 				}else{
 					menu_mobile_wrapper.classList.toggle('hide')
 				}
 			}//end fn_menu_mobile_click
 			let menu_mobile_wrapper = null
 
-	// ontology link
-		if (self.data && self.data.show_ontology===true) {
-			const ontology_link = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'ontology top_item',
-				inner_html		: get_label.ontology || 'Ontology',
-				parent			: fragment
-			})
-			// set pointers
-			self.ontology_link = ontology_link
-			ontology_link.addEventListener('click', self.open_ontology)
-		}
+	// // ontology link
+	// 	if (self.data && self.data.show_ontology===true) {
+	// 		const ontology_link = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'ontology top_item',
+	// 			inner_html		: get_label.ontology || 'Ontology',
+	// 			parent			: fragment
+	// 		})
+	// 		// set pointers
+	// 		self.ontology_link = ontology_link
+	// 		ontology_link.addEventListener('click', self.open_ontology)
+	// 	}
 
 	// user name link (open tool_user_admin)
 		const logged_user_name = ui.create_dom_element({

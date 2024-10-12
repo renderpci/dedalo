@@ -14,7 +14,7 @@
 .wrapper_tool.tool_pdf_extractor {
 
 	.spinner {
-		border-top-color: @tool_color;
+		border-top-color: @tool_main_color;
 	}
 
 	>.content_data {
@@ -68,18 +68,29 @@
     		}
 
     		>.preview {
-				max-height: 24rem;
+				max-height: 25rem;
+				line-height: 1.2rem;
 				overflow: auto;
 				margin-top: 1rem;
-				background-color: #fffafc;
+				background-color: @color_grey_ultralight;
 				padding: 1rem;
 				border-radius: 4px;
+				border: 1px solid @color_grey_medium;
     		}
 		}
 
 
+		>.button_select {
+			background-color: @tool_main_color;
+			border-color: darken(@tool_main_color, 3%);
+			color: white;
+			margin-left: calc(50% - 5rem);
+			margin-top: 1.5rem;
+		}
+
+
 		// system info
-		.info {
+		>.info {
 			background-color: #f5f5f5;
 			color: #8c8c8c;
 

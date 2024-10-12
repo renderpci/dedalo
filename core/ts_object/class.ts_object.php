@@ -174,7 +174,7 @@ class ts_object {
 							// unset($ar_properties[$key]);
 							continue;
 						}else if ($model===true) {
-							if (($type==='link_childrens' || $type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+							if ( ($type==='link_childrens' || $type==='link_children') && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo==='ontology35') ) {
 								// unset($ar_properties[$key]);
 								continue;
 							}else if ($type==='link_childrens_model' || $type==='link_children_model') {
@@ -556,7 +556,7 @@ class ts_object {
 	*/
 	public static function is_indexable( string $section_tipo, int|string $section_id ) : bool {
 
-		if (strpos($section_tipo, 'hierarchy')===0) {
+		if (strpos($section_tipo, 'hierarchy')===0 || strpos($section_tipo, 'ontology')===0) {
 			// Root hierarchies are always false
 			return false;
 		}

@@ -62,7 +62,9 @@ export const get_content_data = async function(self) {
 
 			await current_widget.build()
 			const widget_node = await current_widget.render()
-			fragment.appendChild(widget_node)
+			if (widget_node) {
+				fragment.appendChild(widget_node)
+			}
 		}
 
 

@@ -6,6 +6,162 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=630; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 3;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 8;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 WARNING! Before apply this update:</h1>
+			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
+			<br>The minimum version of Ontology need to be: <b>Dédalo 2024-09-04T18:51:21+02:00 Benimamet</b>
+			<br>
+			<br>
+			<br>This update changes the Tangible and Intangible portals in thesaurus, (tchi59, tch60)
+			<br>Now, the components will not save related data into it.
+			<br>Therefore, this script remove the previous saved data into them.
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// DATABASE UPDATES
+		// Add the term column to jer_dd table
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DO $$
+				BEGIN
+					IF NOT EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'jer_dd\' and column_name=\'term\')
+					THEN
+						ALTER TABLE "jer_dd"
+						ADD "term" jsonb NULL;
+						COMMENT ON TABLE "jer_dd" IS \'Term and translations\';
+					END IF;
+				END $$;
+			');
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS jer_dd_term
+				ON public.jer_dd USING gin
+				(term jsonb_path_ops)
+				TABLESPACE pg_default;
+			");
+
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "copy_descriptors_to_jer_dd";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+
+
+$v=628; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 2;
+	$updates->$v->version_minor			= 8;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 7;
+
+	// DATABASE UPDATES
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_main_id_seq;
+				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
+			");
+		// Add the matrix_ontology table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
+				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
+			");
+
+
+
+$v=629; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 2;
+	$updates->$v->version_minor			= 9;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 7;
+
+	// DATABASE UPDATES
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_main_id_seq;
+				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
+			");
+		// Add the matrix_ontology table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
+				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
+			");
+
+		// Add the term column to jer_dd table
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DO $$
+				BEGIN
+					IF NOT EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'jer_dd\' and column_name=\'term\')
+					THEN
+						ALTER TABLE "jer_dd"
+						ADD "term" jsonb NULL;
+						COMMENT ON TABLE "jer_dd" IS \'Term and translations\';
+					END IF;
+				END $$;
+			');
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS jer_dd_term
+				ON public.jer_dd USING gin
+				(term jsonb_path_ops)
+				TABLESPACE pg_default;
+			");
+
+
 
 $v=627; #####################################################################################
 $updates->$v = new stdClass();
@@ -1056,6 +1212,33 @@ $updates->$v = new stdClass();
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				CREATE INDEX IF NOT EXISTS \"matrix_time_machine_section_id_key\" ON \"matrix_time_machine\" (\"section_id\", \"section_id_key\", \"section_tipo\", \"tipo\", \"lang\");
 			");
+
+		// Replace the old id_matrix of the time machine database
+		// With the new bulk_process_id column.
+		// bulk_process_id column will use to store the unique id generated by bulk processes as propagate or import.
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DO $$
+				BEGIN
+					IF EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'matrix_time_machine\' and column_name=\'id_matrix\')
+					THEN
+						ALTER TABLE "public"."matrix_time_machine" RENAME COLUMN "id_matrix" TO "bulk_process_id";
+						COMMENT ON COLUMN "matrix_time_machine"."bulk_process_id" IS \'Bulk process id identifying the massive change\';
+					END IF;
+				END $$;
+			');
+		// Drop id_matrix index from time machine, the column was removed.
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS public.matrix_time_machine_id_matrix;
+			');
+		// Create the bulk_process_id index (replace the id_matrix index)
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				CREATE INDEX IF NOT EXISTS matrix_time_machine_bulk_process_id
+					ON public.matrix_time_machine USING btree
+					(bulk_process_id ASC NULLS LAST)
+					TABLESPACE pg_default;
+			');
 
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [

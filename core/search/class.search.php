@@ -506,22 +506,24 @@ class search {
 			// because UNION is used for tables
 			$total = 0;
 			$totals_group = [];
-			while($row = pg_fetch_assoc($count_result)) {
-				// get the total as the sum of all rows
-				$total = $total + (int)$row['full_count'];
+			if ($count_result!==false) {
+				while($row = pg_fetch_assoc($count_result)) {
+					// get the total as the sum of all rows
+					$total = $total + (int)$row['full_count'];
 
-				// group by
-				// get the specific total of the group_by concept (as section_tipo)
-				if( isset($this->search_query_object->group_by) ){
-					$current_totals_object = new stdClass();
-					$ar_keys = [];
-					foreach($this->search_query_object->group_by as $current_group){
-						$ar_keys[] = $row[$current_group];
+					// group by
+					// get the specific total of the group_by concept (as section_tipo)
+					if( isset($this->search_query_object->group_by) ){
+						$current_totals_object = new stdClass();
+						$ar_keys = [];
+						foreach($this->search_query_object->group_by as $current_group){
+							$ar_keys[] = $row[$current_group];
+						}
+						$current_totals_object->key		= $ar_keys;
+						$current_totals_object->value	= (int)$row['full_count'];
+
+						$totals_group[] = $current_totals_object;
 					}
-					$current_totals_object->key		= $ar_keys;
-					$current_totals_object->value	= (int)$row['full_count'];
-
-					$totals_group[] = $current_totals_object;
 				}
 			}
 

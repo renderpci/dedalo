@@ -8,7 +8,7 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {instances} from '../../common/js/instances.js'
+	import {get_all_instances} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {
 		render_column_component_info,
@@ -369,7 +369,8 @@ const render_tag_column = function(options) {
 					].join('_')
 
 				// locate component into the global array of instances
-					const component = instances.find(el => el.id_base===id_base)
+					const all_instances	= get_all_instances()
+					const component		= all_instances.find(el => el.id_base===id_base)
 					if (component) {
 
 						// text_area_instance

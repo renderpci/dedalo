@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {pause, url_vars_to_object} from '../../common/js/utils/index.js'
 	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
@@ -1122,8 +1122,8 @@ const render_note = async function(options) {
 				filter			: false
 			}
 			// get the instance, built and render
-			const note_section	=	await instances.get_instance(instance_options)
-									await note_section.build(true)
+			const note_section	= await get_instance(instance_options)
+								  await note_section.build(true)
 
 			return note_section
 		}
@@ -1131,8 +1131,9 @@ const render_note = async function(options) {
 		// subscribe to the change publication of the component_publication of the section node
 		// when the component_publication change it will change the tag note state, showing if the note is private or public
 		const publication_id_base = note_section_tipo+'_'+note_section_id+'_'+features.notes_publication_tipo
-		event_manager.subscribe('change_publication_value_'+publication_id_base, fn_change_publication_state)
-		function fn_change_publication_state(changed_value) {
+
+		// change_publication_value_ event
+		const change_publication_value_handler = (changed_value) => {
 			// change the state of the note with the data of the component_publication (section_id = 2 means no publishable)
 			const state = changed_value.section_id=='2' // no active value
 				? 'a' // no publishable
@@ -1164,6 +1165,9 @@ const render_note = async function(options) {
 				// text_editor.save()
 			}
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('change_publication_value_'+publication_id_base, change_publication_value_handler)
+		)
 
 	// header
 		const header = ui.create_dom_element({

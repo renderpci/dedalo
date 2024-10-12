@@ -164,6 +164,10 @@ abstract class component_common extends common {
 						. "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'"
 						, logger::ERROR
 					);
+					if(SHOW_DEBUG===true) {
+						$bt = debug_backtrace();
+						dump($bt, ' bt ++ '.to_string());
+					}
 
 				// fix bad model
 					$component_name = $model_name;
@@ -172,10 +176,10 @@ abstract class component_common extends common {
 
 				debug_log(__METHOD__
 					. ' Error Processing Request. Illegal component: ' .PHP_EOL
-					. ' component_name:' . to_string($component_name) .PHP_EOL
-					. ' tipo:' . to_string($tipo) .PHP_EOL
-					. ' section_tipo:' . to_string($section_tipo) .PHP_EOL
-					. ' section_id:' . to_string($section_id) .PHP_EOL
+					. ' component_name :' . to_string($component_name) .PHP_EOL
+					. ' tipo: ' . to_string($tipo) .PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) .PHP_EOL
+					. ' section_id: ' . to_string($section_id) .PHP_EOL
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
@@ -3771,6 +3775,10 @@ abstract class component_common extends common {
 				break;
 
 			case 'update':
+				// safe format
+				if (!is_array($dato)) {
+					$dato = [$dato];
+				}
 				// check if the key exist in the $dato if the key exist change it directly, else create all positions with null value for coherence
 				if( isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato) ) {
 					$dato[$changed_data->key] = $changed_data->value;
@@ -4220,38 +4228,6 @@ abstract class component_common extends common {
 
 		return $response;
 	}//end conform_import_data
-
-
-
-	/**
-	* GET_ONTOLOGY_INFO
-	* Get the component information (former 'def', now 'Definition') from the Ontology
-	* for current component term_id
-	* @return string|null $ontology_info
-	*/
-	public function get_ontology_info() : ?string {
-
-		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
-
-		$section_id = ontology::get_section_id_by_term_id($this->tipo);
-
-		$component_tipo	= ONTOLOGY_SECTION_TIPOS['definition']; // expected dd1478
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_text_area
-		$component		= component_common::get_instance(
-			$model,
-			$component_tipo,
-			$section_id,
-			'list',
-			DEDALO_APPLICATION_LANG,
-			$section_tipo
-		);
-		$dato = $component->get_dato();
-
-		$ontology_info = $dato[0] ?? null;
-
-
-		return $ontology_info;
-	}//end get_ontology_info
 
 
 

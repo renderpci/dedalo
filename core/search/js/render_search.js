@@ -126,7 +126,7 @@ render_search.prototype.render_base = function() {
 		self.search_global_container = search_global_container
 
 	// thesaurus add on
-		if (self.caller.model==='area_thesaurus') {
+		if (self.caller.model==='area_thesaurus' || self.caller.model === 'area_ontology') {
 			const thesaurus_options_node = render_sections_selector(self)
 			search_global_container.appendChild(thesaurus_options_node)
 		}
@@ -1087,7 +1087,12 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 		}//end if (ar_check_box.length>1)
 
 	// event subscription. Fire update on each publication of update_sections_list_
-		event_manager.subscribe('update_sections_list_' + self.id, update_sections_list)
+		const update_sections_list_handler = () => {
+			update_sections_list()
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('update_sections_list_' + self.id, update_sections_list_handler)
+		)
 
 
 	return true

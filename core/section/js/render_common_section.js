@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 
 
 
@@ -23,12 +23,12 @@ export const render_common_section = function() {
 
 
 /**
-* DELETE_RECORD
+* RENDER_DELETE_RECORD_DIALOG
 * Delete selected record or Delete find records
 * @param object options
 * @return bool
 */
-render_common_section.prototype.delete_record = async (options) => {
+render_common_section.prototype.render_delete_record_dialog = async (options) => {
 
 	// options
 		const section		= options.section
@@ -67,6 +67,7 @@ render_common_section.prototype.delete_record = async (options) => {
 
 				// relation_list
 					const relation_list = render_relation_list({
+						self			: section,
 						section_tipo	: section_tipo,
 						section_id		: section_id
 					})
@@ -184,7 +185,7 @@ render_common_section.prototype.delete_record = async (options) => {
 
 
 	return true
-}//end delete_record
+}//end render_delete_record_dialog
 
 
 
@@ -200,6 +201,7 @@ render_common_section.prototype.delete_record = async (options) => {
 export const render_relation_list = function(options) {
 
 	// options
+		const self			= options.self
 		const section_tipo	= options.section_tipo
 		const section_id	= options.section_id
 
@@ -229,14 +231,16 @@ export const render_relation_list = function(options) {
 		})
 
 	// relation_list events
-		const fn_relation_list_paginator = function(relation_list) {
+		const relation_list_paginator_handler = (relation_list) => {
 			relation_list_body.classList.add('loading')
 			load_relation_list(relation_list)
 			.then(function(){
 				relation_list_body.classList.remove('loading')
 			})
 		}
-		event_manager.subscribe('relation_list_paginator_'+section_tipo, fn_relation_list_paginator)
+		self.events_tokens.push(
+			event_manager.subscribe('relation_list_paginator_'+section_tipo, relation_list_paginator_handler)
+		)
 
 	// track collapse toggle state of content
 		const load_relation_list = async function(instance) {
@@ -252,7 +256,7 @@ export const render_relation_list = function(options) {
 
 			const relation_list	= (instance && instance.model==='relation_list')
 				? instance // pagination case do not need to init relation_list
-				: await instances.get_instance({
+				: await get_instance({
 					model			: 'relation_list',
 					tipo			: section_tipo,
 					section_tipo	: section_tipo,

@@ -136,6 +136,8 @@ define('DEDALO_6_CODE_SERVER_GIT_DIR','');
 define('DEDALO_6_CODE_FILES_DIR','');
 define('SOCRATA_CONFIG',[]);
 
+define('PDF_OCR_ENGINE','');
+
 function session_start_manager(){};
 function fix_cascade_config_var(){};
 class logger{};

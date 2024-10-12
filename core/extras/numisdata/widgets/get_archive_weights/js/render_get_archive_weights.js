@@ -98,10 +98,11 @@ const get_value_element = (i, current_value, self) => {
 		})
 
 	// iterate object properties
+		let span_value
 		for (let [label, value] of Object.entries(current_value)) {
 
 			// label
-				const span_label = ui.create_dom_element({
+				ui.create_dom_element({
 					type		: 'span',
 					class_name	: 'label',
 					inner_html	: label,
@@ -109,7 +110,7 @@ const get_value_element = (i, current_value, self) => {
 				})
 
 			// value
-				const span_value = ui.create_dom_element({
+				span_value = ui.create_dom_element({
 					type		: 'span',
 					class_name	: 'value',
 					inner_html	: JSON.stringify(value),
@@ -117,12 +118,14 @@ const get_value_element = (i, current_value, self) => {
 				})
 		}
 		// event update_widget_value_
-		self.events_tokens.push(
-			event_manager.subscribe('update_widget_value_'+self.id, fn_update_widget_value)
-		)
-		function fn_update_widget_value(changed_data) {
-			span_value.innerHTML = JSON.stringify(changed_data)
+		const update_widget_value_handler = (changed_data) => {
+			if (span_value) {
+				span_value.innerHTML = JSON.stringify(changed_data)
+			}
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('update_widget_value_'+self.id, update_widget_value_handler)
+		)
 
 
 	return li

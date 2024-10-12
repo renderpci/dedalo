@@ -22,6 +22,29 @@
 		}
 	}
 
+	body {
+		// OS detection added by page instance on init
+
+		&.os-windows {
+			// force Roboto as default font instead windows default
+			font-family: Roboto, Helvetica, Arial, sans-serif;
+
+			// improve labels readability
+			.wrapper_component >.label {
+				font-weight: 500;
+			}
+
+			// improve menu readability
+			.menu>.menu_hierarchy a {
+				font-weight: 400;
+			}
+		}
+
+		&.os-macintosh {
+
+		}
+	}
+
 	b,
 	strong {
 		font-weight: bold;

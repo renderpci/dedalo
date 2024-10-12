@@ -201,7 +201,7 @@ function get_username() : ?string {
 * LOGGED_USER_FULL_USERNAME
 * Resolve current logged user username
 * This is the short version, like 'render'
-* @return int|null $full_username
+* @return string|null $full_username
 */
 function logged_user_full_username() : ?string {
 
@@ -417,6 +417,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 * }
 */
 function curl_request(object $options) : object {
+	$start_time=start_time();
 
 	// options
 		$url			= $options->url; // mandatory
@@ -498,7 +499,8 @@ function curl_request(object $options) : object {
 				. ' httpcode: ' . $httpcode . PHP_EOL
 				. ' url: ' . $url . PHP_EOL
 				. ' msg: ' . $msg . PHP_EOL
-				. ' bt:  ' . to_string( debug_backtrace()[0] )
+				. ' bt:  ' . to_string( debug_backtrace()[0] ) . PHP_EOL
+				. ' time: ' . exec_time_unit_auto($start_time)
 				, $debug_level
 			);
 
@@ -1547,45 +1549,6 @@ function safe_sql_query(string $sql_query) : string {
 
 
 /**
-* CHECK_SESSIONS_DIRECTORY
-* Verify the existence of target session directory.
-* If not already exists, it creates a new one
-* @return bool
-*/
-function check_sessions_directory() : bool {
-
-	$folder_path = defined('DEDALO_SESSIONS_PATH')
-		? DEDALO_SESSIONS_PATH
-		: @session_save_path();
-
-	// Target folder exists test
-	if(!is_dir($folder_path) ) {
-
-		// try to create it
-		if(!mkdir($folder_path, 0750, true)) {
-
-			// error (use trigger_error here because log manager is not ready yet)
-			trigger_error(__METHOD__
-				.' Error on read or create sessions directory. Permission denied' . PHP_EOL
-				.' folder_path: ' .$folder_path
-			);
-
-			return false;
-		}
-
-		// OK. Directory created (use error_log here because log manager is not ready yet)
-		error_log(__METHOD__
-			." CREATED DIR: $folder_path  "
-		);
-	}
-
-
-	return true;
-}//end check_sessions_directory
-
-
-
-/**
 * SESSION_START_MANAGER
 * Starts a session with a specific timeout, path, GC probability...
 * @param array $options
@@ -1690,7 +1653,7 @@ function session_start_manager(array $options) : bool {
 				// error starting session case
 				if ( $session_is_ok !== true ) {
 					if (defined('DEDALO_SESSIONS_PATH')) {
-						if( !check_sessions_directory() ){
+						if( !create_directory(DEDALO_SESSIONS_PATH) ){
 							$msg = 'Unable to write sessions. Review your permissions for sessions directory path 1';
 							debug_log(__METHOD__
 								. $msg . PHP_EOL

@@ -1428,7 +1428,7 @@ export const ts_object = new function() {
 					if(type==='term') {
 
 						// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
-							const fn_update_value = function() {
+							const save_handler = function() {
 
 								const caller = current_component
 
@@ -1462,9 +1462,8 @@ export const ts_object = new function() {
 									components.pop();
 								}
 							}
-
 							self.events_tokens.push(
-								event_manager.subscribe('save_' + current_component.id_base, fn_update_value)
+								event_manager.subscribe('save_' + current_component.id_base, save_handler)
 							)
 					}
 

@@ -28,9 +28,9 @@ abstract class logger_backend {
 	abstract function log_message(
 		string $message,
 		int $log_level=logger::INFO,
-		string $tipo_donde=null,
-		string $operations=null,
-		array $datos=null
+		?string $tipo_donde=null,
+		?string $operations=null,
+		?array $datos=null
 	);
 
 
