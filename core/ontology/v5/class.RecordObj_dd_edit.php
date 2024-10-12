@@ -96,65 +96,6 @@ class RecordObj_dd_edit extends RecordObj_dd {
 
 
 
-	/**
-	* UPDATE_COUNTER
-	* @param (string)$tld, (int)$current_value=false
-	* @return int|false
-	* Actualiza el contador para el tld dado (ej. 'dd').
-	* El 'current_value' es opcional. Si no se recibe se calcula
-	*/
-	public static function update_counter(string $tld, $current_value=null) {
-
-		#if (!$current_value) {
-		#	$current_value = self::get_counter_value($tld);
-		#}
-
-		$db_value = self::get_counter_value($tld);
-		if (!is_null($current_value) & $current_value<$db_value) {
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Ignored invalid counter value: $current_value . DB value is $db_value ".to_string(), logger::ERROR);
-			}
-			return false;
-		}
-
-		$counter_dato_updated = intval($current_value+1) ;
-
-		$strQuery 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
-		$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $counter_dato_updated, $tld));
-		if (!$result) {
-			if(SHOW_DEBUG===true) {
-				trigger_error("Error on update_counter 'RecordObj_dd_edit'. Nothing is saved! : $strQuery");
-			}
-			return false;
-		}
-
-		return $counter_dato_updated;
-	}//end update_counter
-
-
-
-	/**
-	* GET_COUNTER_VALUE
-	* @return int
-	*/
-	public static function get_counter_value($tld) : int {
-
-		$strQuery		= "SELECT counter FROM \"main_dd\" WHERE tld = '$tld' LIMIT 1";
-		$search			= JSON_RecordDataBoundObject::search_free($strQuery);
-		$result			= pg_fetch_assoc($search);
-		$counter_value	= $result['counter'] ?? null;
-
-		if (!$counter_value || is_null($counter_value)) {
-
-			$insert_counter = 'INSERT INTO "main_dd" ("tld", "counter") VALUES (\''.$tld.'\', 0);';
-			pg_query(DBi::_getConnection(), $insert_counter);
-
-			return 0;
-		}
-
-		return (int)$counter_value;
-	}//end get_counter_value
-
 
 
 }//end class RecordObj_dd_edit
