@@ -1,5 +1,4 @@
 <?php
-require_once( dirname(__FILE__) . '/class.RecordObj_dd_edit.php');
 
 
 
@@ -21,7 +20,7 @@ require_once( dirname(__FILE__) . '/class.RecordObj_dd_edit.php');
 * Manages structure (ontology) import and export data
 * Useful for developers to create tools structure data
 */
-class ontology {
+class ontology_legacy {
 
 
 
@@ -233,12 +232,12 @@ class ontology {
 
 					$term = $current_descriptor->type==='term' ? 'termino' : $current_descriptor->type;
 
-					$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(
+					$RecordObj_descriptors_dd_edit = new RecordObj_descriptors_dd_edit(
 						'matrix_descriptors_dd', null, $item->tipo, $current_descriptor->lang, $term
 					);
 
-					$RecordObj_descriptors_dd->set_dato($current_descriptor->value);
-					$RecordObj_descriptors_dd->Save();
+					$RecordObj_descriptors_dd_edit->set_dato($current_descriptor->value);
+					$RecordObj_descriptors_dd_edit->Save();
 
 				}// end foreach ($descriptors)
 
@@ -801,7 +800,7 @@ class ontology {
 						$new_dato = ($modelo_name==='component_input_text') ? [$value] : $value;
 						$component->set_dato($new_dato);
 						$component->Save();
-						// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd
+						// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd_edit
 					})($dato);
 
 					// save ontology object too
