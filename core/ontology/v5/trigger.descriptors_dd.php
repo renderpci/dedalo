@@ -193,7 +193,7 @@ if($mode=='newDescriptor') {
 	// 	}else{
 
 	// 		// sync Dédalo ontology records
-	// 			$result = ontology::edit_term((object)[
+	// 			$result = ontology_v5::edit_term((object)[
 	// 				'term_id'	=> $parent,
 	// 				'dato'		=> $dato,
 	// 				'dato_tipo'	=> $tipo,
@@ -221,7 +221,7 @@ if($mode==='export_ontology') {
 
 	// include(dirname(__FILE__) . '/class.ontology.php');
 
-	$response = ontology::export($terminoID);
+	$response = ontology_v5::export($terminoID);
 
 	echo json_encode($response, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 	exit();
