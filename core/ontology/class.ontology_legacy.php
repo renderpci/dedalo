@@ -232,12 +232,12 @@ class ontology_legacy {
 
 					$term = $current_descriptor->type==='term' ? 'termino' : $current_descriptor->type;
 
-					$RecordObj_descriptors_dd_edit = new RecordObj_descriptors_dd_edit(
+					$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(
 						'matrix_descriptors_dd', null, $item->tipo, $current_descriptor->lang, $term
 					);
 
-					$RecordObj_descriptors_dd_edit->set_dato($current_descriptor->value);
-					$RecordObj_descriptors_dd_edit->Save();
+					$RecordObj_descriptors_dd->set_dato($current_descriptor->value);
+					$RecordObj_descriptors_dd->Save();
 
 				}// end foreach ($descriptors)
 
@@ -800,7 +800,7 @@ class ontology_legacy {
 						$new_dato = ($modelo_name==='component_input_text') ? [$value] : $value;
 						$component->set_dato($new_dato);
 						$component->Save();
-						// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd_edit
+						// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd
 					})($dato);
 
 					// save ontology object too
