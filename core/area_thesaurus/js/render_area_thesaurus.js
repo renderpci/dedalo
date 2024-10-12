@@ -42,7 +42,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 		self.ts_object.linker = self.linker // usually a portal component instance
 
 		// parse data
-		const data = self.data.find(item => item.tipo==='dd100')
+		const data = self.data.find(item => item.tipo==='dd100' || item.tipo==='dd5')
 
 	// content_data
 		if (render_level==='content') {
@@ -142,7 +142,7 @@ const render_content_data = function(self) {
 		})
 
 	// elements
-		const data				= self.data.find(item => item.tipo==='dd100')
+		const data				= self.data.find(item => item.tipo==='dd100' || item.tipo==='dd5')
 		const ts_nodes			= data.value
 		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy')
 

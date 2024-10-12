@@ -953,7 +953,8 @@ search.prototype.update_state = async function(options) {
 			caller_instance.request_config_object.sqo.offset	= caller_instance.rqo.sqo.offset
 
 		switch (caller_instance.model) {
-			case 'area_thesaurus': {
+			case 'area_thesaurus':
+			case 'area_ontology': {
 
 				// area. refresh current area using navigation
 					const area_ts_promise = caller_instance.navigate({
