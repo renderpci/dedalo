@@ -459,7 +459,7 @@ function loadDescriptorsGrid( lang ) {
 * REMOVEDESCRIPTOR
 * @return promise
 */
-function removeDescriptor(lang, terminoID) {
+function removeDescriptor(id, terminoID, lang) {
 
 	// mandatory vars check
 		if(!terminoID || !terminoID) {
@@ -481,6 +481,7 @@ function removeDescriptor(lang, terminoID) {
 			mode		: 'removeDescriptor',
 			lang		: lang,
 			terminoID	: terminoID,
+			lang		: lang,
 			top_tipo	: page_globals.top_tipo
 		}
 
@@ -610,7 +611,14 @@ const add_new_lang = function(select_obj) {
 		return false
 	}
 
-	const target_div = document.getElementById("tbodyDescriptorsGrid")
+	const url 			= descriptors_trigger
+	const target_div	= document.getElementById("tbodyDescriptorsGrid")
+	const mode 			= 'newDescriptor'
+	const mydata		= { mode 			: mode,
+							terminoID		: terminoID,
+							lang 			: terminoID_lang,
+							top_tipo		: page_globals.top_tipo || null
+							}; //console.log("mydata", url, mydata); // return;
 
 	// Spinner ON
 	target_div.classList.add('spinner')

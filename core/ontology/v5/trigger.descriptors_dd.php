@@ -54,7 +54,7 @@ if($mode==='loadDescriptorsGrid') {
 	$mainLang		= DEDALO_STRUCTURE_LANG;
 	$ar_all_langs	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 
-	$RecordObj_dd	= new RecordObj_dd($terminoID);
+	$RecordObj_dd	= new RecordObj_dd_edit($terminoID);
 	$term			= $RecordObj_dd->get_term() ?? new stdClass();
 
 	foreach ($term as $lang => $termino) {
@@ -90,7 +90,7 @@ if($mode==='removeDescriptor') {
 		}
 
 	// RecordObj_dd
-	$RecordObj_dd = new RecordObj_dd($terminoID);
+	$RecordObj_dd = new RecordObj_dd_edit($terminoID);
 
 	// term object
 	$term = $RecordObj_dd->get_term() ?? new stdClass();
@@ -128,7 +128,7 @@ if($mode=='newDescriptor') {
 	}
 
 	// RecordObj_dd
-	$RecordObj_dd = new RecordObj_dd($terminoID);
+	$RecordObj_dd = new RecordObj_dd_edit($terminoID);
 
 	// term object
 	$term = $RecordObj_dd->get_term() ?? new stdClass();

@@ -209,20 +209,23 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		$json_item	= (object)ontology_v5::tipo_to_json_item($term_id);
 		$save_item	= ontology_v5::save_json_ontology_item($term_id, $json_item);	// return object response
 
-	// descriptors
-		// sync Dédalo ontology records. Returns boolean
-		$descriptors = $json_item->descriptors ?? [];
-		foreach ($descriptors as $current_item) {
 
-			if ($current_item->type==='term') {
-				ontology_v5::edit_term((object)[
-					'term_id'	=> $terminoID,
-					'dato'		=> $current_item->value,
-					'dato_tipo'	=> 'termino',
-					'lang'		=> $current_item->lang
-				]);
-			}
-		}
+	// // descriptors
+	// 	// sync Dédalo ontology records. Returns boolean
+	// 	$descriptors = $json_item->descriptors ?? [];
+	// 	foreach ($descriptors as $current_item) {
+
+
+	// 		if ($current_item->type==='term') {
+	// 			ontology::edit_term((object)[
+	// 				'term_id'	=> $terminoID,
+	// 				'dato'		=> $current_item->value,
+	// 				'dato_tipo'	=> 'termino',
+	// 				'lang'		=> $current_item->lang
+	// 			]);
+	// 		}
+	// 	}
+
 
 	// css structure . For easy css edit, save
 		$dedalo_version = get_dedalo_version();
@@ -238,7 +241,7 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		}
 
 	// publication schema (only for model diffusion_element)
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
+		$modelo_name = RecordObj_dd_edit::get_modelo_name_by_tipo($terminoID,true);
 		if ($modelo_name==='diffusion_element') {
 			if (defined('MYSQL_DEDALO_HOSTNAME_CONN') && defined('MYSQL_DEDALO_USERNAME_CONN') && defined('MYSQL_DEDALO_PASSWORD_CONN')) {
 				if (DEDALO_ENTITY==='master') {
@@ -275,6 +278,7 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 		$response->msg		= 'Error. Request failed on save_descriptor. ';
 
 	// mandatory vars
+
 		if(empty($data->terminoID)) {
 			$response->msg .= " terminoID is mandatory!";
 			echo json_encode($response, JSON_UNESCAPED_UNICODE);
@@ -287,8 +291,9 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 		}
 
 	// short vars
-		$value = !empty($data->value)
-			? trim($data->value)
+
+		$value = !empty($data->dato)
+			? trim($data->dato)
 			: '';
 		$lang		= $data->lang;
 		$terminoID	= $data->terminoID;
@@ -318,14 +323,25 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 			// }
 
 		// sync Dédalo ontology records. Returns boolean
-			// $result = ontology_v5::edit_term((object)[
-			// 	'term_id'	=> $terminoID,
-			// 	'value'		=> $value,
-			// 	'lang'		=> $lang
+			// $result = ontology::edit_term((object)[
+			// 	'term_id'	=> $data->parent,
+			// 	'dato'		=> $data->dato,
+			// 	'dato_tipo'	=> $data->tipo, // normally 'termino'
+			// 	'lang'		=> $data->lang
 			// ]);
 
+	// set and save the value to descriptors dd
+		$dedalo_version = explode(".", DEDALO_VERSION);
+		if( (int)$dedalo_version[0]<=6 && (int)$dedalo_version[1]<3 ){
+
+			$RecordObj = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, null, $terminoID, $lang, 'termino');
+			$RecordObj->set_dato($data->dato);
+			$result = $RecordObj->Save();
+		}
+
 		// save jer_dd record
-			$RecordObj_dd = new RecordObj_dd($terminoID);
+			$RecordObj_dd = new RecordObj_dd_edit($terminoID);
+
 
 			// term object
 			$term = $RecordObj_dd->get_term() ?? new stdClass();
@@ -375,7 +391,7 @@ if($accion==='insertTS') {
 			: 'no';
 
 	// norden
-		$ar_childrens	= RecordObj_dd::get_ar_childrens($parent);
+		$ar_childrens	= RecordObj_dd_edit::get_ar_childrens($parent);
 		$norden			= (int)count($ar_childrens)+1;
 
 	// configure RecordObj_dd
@@ -730,7 +746,7 @@ if($accion==='duplicate') {
 		$relaciones		= $current_term->get_relaciones();
 
 	// norden
-		$ar_childrens	= RecordObj_dd::get_ar_childrens($parent);
+		$ar_childrens	= RecordObj_dd_edit::get_ar_childrens($parent);
 		$norden			= (int)count($ar_childrens)+1;
 
 	// configure RecordObj_dd
