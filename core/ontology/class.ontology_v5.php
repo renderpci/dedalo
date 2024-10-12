@@ -669,13 +669,16 @@ class ontology_v5 {
 
 		// options
 			$term_id	= $options->term_id; // string as 'dd1582'
-			$dato		= $options->dato; // string as 'Oral History'
-			$dato_tipo	= $options->dato_tipo; // string options: termino | def | obs
+			$value		= $options->value; // string as 'Oral History'
 			$lang		= $options->lang; // string as 'lg-spa'
 
 		// check term_id
 			if (empty($term_id)) {
-				debug_log(__METHOD__." Error on edit_term. Ignored. Empty term_id in options: ".to_string($options), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on edit_term. Ignored. Empty term_id in options: "
+					.' options: ' . to_string($options)
+					, logger::ERROR
+				);
 				return false;
 			}
 
@@ -688,74 +691,59 @@ class ontology_v5 {
 				]);
 				if (empty($section_id)) {
 					// prevent dead loops stopping here !
-					throw new Exception("Error. Unable to create term record in Ontology section (term_id:'$term_id')", 1);
+					debug_log(__METHOD__
+						. " Error. Unable to create term record in Ontology section" . PHP_EOL
+						. ' term_id: ' . to_string($term_id)
+						, logger::ERROR
+					);
+					return false;
 				}
-				debug_log(__METHOD__." [CREATED] get_section_id_by_term_id section_id +++ section_id: '$section_id' +++ term_id: $term_id", logger::WARNING);
+				debug_log(__METHOD__
+					." [CREATED] get_section_id_by_term_id section_id +++ section_id: '$section_id' +++ term_id: $term_id"
+					, logger::WARNING
+				);
 			}
 
-		// update value
-			if (!empty($section_id)) {
+		// short vars
+			$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
+			$component_tipo	= ONTOLOGY_SECTION_TIPOS['term'];
+			$dato_tipo		= 'termino';
 
-				// short vars
-					$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
-					$component_tipo	= (function($dato_tipo){
-						switch ($dato_tipo) {
-							case 'term':
-							case 'termino':
-								return ONTOLOGY_SECTION_TIPOS['term'];
-							case 'def':
-								return ONTOLOGY_SECTION_TIPOS['definition'];
-							case 'obs':
-								return ONTOLOGY_SECTION_TIPOS['observations'];
-						}
-						return null;
-					})($dato_tipo);
+		// component save value
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$component_tipo,
+				$section_id,
+				'edit',
+				$lang,
+				$section_tipo
+			);
 
-				// component save value
-				if (!empty($component_tipo)) {
-
-					(function($value) use($section_tipo, $section_id, $component_tipo, $lang, $dato_tipo) {
-						// dump($lang, ' $lang ++ component_tipo: '.$component_tipo.' - dato_tipo: '.$dato_tipo. ' - value: '.to_string($value));
-						$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$component		= component_common::get_instance($modelo_name,
-																		 $component_tipo,
-																		 $section_id,
-																		 'edit',
-																		 $lang,
-																		 $section_tipo);
-
-						$new_dato = ($modelo_name==='component_input_text') ? [$value] : $value;
-						$component->set_dato($new_dato);
-						$component->Save();
-						// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd
-					})($dato);
-
-					// save ontology object too
-						$json_item = ontology_v5::tipo_to_json_item($term_id);
-						(function($value) use($section_tipo, $section_id) {
-
-							$component_tipo	= ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
-							$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
-							$component		= component_common::get_instance($modelo_name,
-																			 $component_tipo,
-																			 $section_id,
-																			 'edit',
-																			 DEDALO_DATA_NOLAN,
-																			 $section_tipo);
-							$component->set_dato($value);
-							$component->Save();
-						})($json_item);
-
-					return true;
-				}else{
-					trigger_error('edit_term : Invalid component_tipo '.$component_tipo);
-				}
-			}else{
-				trigger_error('edit_term : Invalid section_id '.$section_id);
-			}
+			$new_dato = ($modelo_name==='component_input_text') ? [$value] : $value;
+			$component->set_dato($new_dato);
+			$component->Save();
+			// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd
 
 
-		return false;
+		// save ontology object too
+			$json_item = ontology_v5::tipo_to_json_item($term_id);
+			(function($value) use($section_tipo, $section_id) {
+
+				$component_tipo	= ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
+				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
+				$component		= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $section_id,
+																 'edit',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				$component->set_dato($value);
+				$component->Save();
+			})($json_item);
+
+
+		return true;
 	}//end edit_term
 
 

@@ -206,8 +206,8 @@ if(!empty($data) && $data->mode==='edit_ts') {
 
 	// JSON Ontology Item save
 		$term_id	= $terminoID;
-		$json_item	= (object)ontology::tipo_to_json_item($term_id);
-		$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
+		$json_item	= (object)ontology_v5::tipo_to_json_item($term_id);
+		$save_item	= ontology_v5::save_json_ontology_item($term_id, $json_item);	// return object response
 
 	// descriptors
 		// sync Dédalo ontology records. Returns boolean
@@ -215,7 +215,7 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		foreach ($descriptors as $current_item) {
 
 			if ($current_item->type==='term') {
-				ontology::edit_term((object)[
+				ontology_v5::edit_term((object)[
 					'term_id'	=> $terminoID,
 					'dato'		=> $current_item->value,
 					'dato_tipo'	=> 'termino',
@@ -275,11 +275,23 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 		$response->msg		= 'Error. Request failed on save_descriptor. ';
 
 	// mandatory vars
-		if(empty($data->parent)) {
-			$response->msg .= " parent is mandatory!";
+		if(empty($data->terminoID)) {
+			$response->msg .= " terminoID is mandatory!";
 			echo json_encode($response, JSON_UNESCAPED_UNICODE);
 			exit();
 		}
+		if(empty($data->lang)) {
+			$response->msg .= " lang is mandatory!";
+			echo json_encode($response, JSON_UNESCAPED_UNICODE);
+			exit();
+		}
+
+	// short vars
+		$value = !empty($data->value)
+			? trim($data->value)
+			: '';
+		$lang		= $data->lang;
+		$terminoID	= $data->terminoID;
 
 	// if ($data->tipo==='obs') {
 
@@ -306,12 +318,27 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 			// }
 
 		// sync Dédalo ontology records. Returns boolean
-			$result = ontology::edit_term((object)[
-				'term_id'	=> $data->parent,
-				'dato'		=> $data->dato,
-				'dato_tipo'	=> $data->tipo, // normally 'termino'
-				'lang'		=> $data->lang
-			]);
+			// $result = ontology_v5::edit_term((object)[
+			// 	'term_id'	=> $terminoID,
+			// 	'value'		=> $value,
+			// 	'lang'		=> $lang
+			// ]);
+
+		// save jer_dd record
+			$RecordObj_dd = new RecordObj_dd($terminoID);
+
+			// term object
+			$term = $RecordObj_dd->get_term() ?? new stdClass();
+
+			// update
+			$term->{$lang} = $value;
+
+			// set
+			$RecordObj_dd->set_term($term);
+
+			// save
+			$result = $RecordObj_dd->Save();
+
 
 		$response->result	= $result;
 		$response->msg		= ($result===false)
@@ -375,7 +402,7 @@ if($accion==='insertTS') {
 			}
 
 		// sync Dédalo ontology records
-			// ontology::add_term((object)[
+			// ontology_v5::add_term((object)[
 			// 	'term_id'	=> $terminoID
 			// ]);
 
@@ -452,8 +479,8 @@ if($accion==='deleteTS') {
 
 		# HIJOS . Verificamos si tiene hijos (aunque el javascript debe haber evitado llegar aquí.)
 			$RecordObj_dd_edit	= new RecordObj_dd_edit($terminoID);
-			$n_hijos 			= $RecordObj_dd_edit->get_n_hijos();
-			if( $n_hijos >0 )	die("<div class=\"error\"> $el_descriptor_tiene_hijos_title.<br> $para_eliminar_una_rama_title  $renderBtnVolver</div>");
+			$n_hijos			= count($RecordObj_dd_edit->get_ar_childrens_of_this(null));
+			if( $n_hijos > 0 )	die("<div class=\"error\"> $el_descriptor_tiene_hijos_title.<br> $para_eliminar_una_rama_title  $renderBtnVolver</div>");
 
 		# RELACIONES . Si tiene relaciones, las eliminamos para no dejar rastro
 			$arguments=array();
@@ -738,10 +765,10 @@ if($accion==='duplicate') {
 
 	// JSON Ontology Item save
 		// json_item build
-			$json_item	= (object)ontology::tipo_to_json_item($terminoID);
+			$json_item	= (object)ontology_v5::tipo_to_json_item($terminoID);
 			$json_item->tipo = $new_terminoID; // replace tipo
 		// add item to Ontology
-			ontology::add_term((object)[
+			ontology_v5::add_term((object)[
 				'term_id'	=> $new_terminoID,
 				'json_item'	=> $json_item
 			]);
@@ -752,7 +779,7 @@ if($accion==='duplicate') {
 		foreach ($descriptors as $current_item) {
 
 			if ($current_item->type==='term') {
-				ontology::edit_term((object)[
+				ontology_v5::edit_term((object)[
 					'term_id'	=> $new_terminoID,
 					'dato'		=> $current_item->value,
 					'dato_tipo'	=> 'termino',

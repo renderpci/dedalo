@@ -8,7 +8,7 @@ $(function() {
 	cargarTSrel(terminoID);
 	opcionesND();
 
-	$('#termino_'+id).focus();
+	// $('#termino_'+id).focus();
 });
 
 
@@ -396,23 +396,17 @@ function codigoKeyUp(obj) {
 /**
 * LOADDESCRIPTORSGRID
 */
-function loadDescriptorsGrid( id_focus ) {
+function loadDescriptorsGrid( lang ) {
 
 	// get page global 'terminoID'
 	const current_terminoID = terminoID;
-
-	if(typeof id==='undefined') {
-		alert("global var id is not available : "+id)
-		return false
-	}
 
 	// DescriptorsGrid
 		const tbodyDescriptorsGrid = document.getElementById('tbodyDescriptorsGrid')
 		tbodyDescriptorsGrid.classList.add('spinner');
 
-	const data	= {
+	const data = {
 		mode		: 'loadDescriptorsGrid',
-		id			: id, // is set in page
 		terminoID	: current_terminoID,
 		top_tipo	: page_globals.top_tipo
 	}
@@ -448,10 +442,10 @@ function loadDescriptorsGrid( id_focus ) {
 	})
 	.always(function() {
 		tbodyDescriptorsGrid.classList.remove('spinner')
-		if(typeof id_focus!=='undefined') {
-			const el = document.getElementById('termino_'+ id_focus)
-			if (el) {
-				el.focus()
+		if(typeof lang!=='undefined') {
+			const input = document.querySelector(`.input_term[data-lang="${lang}"][data-term_id="${terminoID}"]`);
+			if (input) {
+				input.focus()
 			}
 		}
 	});
@@ -465,11 +459,11 @@ function loadDescriptorsGrid( id_focus ) {
 * REMOVEDESCRIPTOR
 * @return promise
 */
-function removeDescriptor(id, terminoID) {
+function removeDescriptor(lang, terminoID) {
 
 	// mandatory vars check
-		if(!id || id<1 || !terminoID) {
-			alert("Error on removeDescriptor. Invalid id or terminoID");
+		if(!terminoID || !terminoID) {
+			alert("Error on removeDescriptor. Invalid lang or terminoID");
 			return false
 		}
 
@@ -478,24 +472,24 @@ function removeDescriptor(id, terminoID) {
 			return false
 		}
 
-	// spinner lodaing
+	// spinner loading
 		const descriptors_node = document.getElementById("tbodyDescriptorsGrid")
 			  descriptors_node.classList.add('spinner');
 
 	// trigger vars
 		const ajax_data = {
 			mode		: 'removeDescriptor',
-			id			: id,
+			lang		: lang,
 			terminoID	: terminoID,
 			top_tipo	: page_globals.top_tipo
 		}
 
 	// trigger request
 		const js_promise = $.ajax({
-			url			: descriptors_trigger,
-			data		: ajax_data,
-			type		: "POST",
-			success		: function(response_msg) {
+			url		: descriptors_trigger,
+			data	: ajax_data,
+			type	: 'POST',
+			success	: function(response_msg) {
 				if (response_msg==='OK') {
 					// reload descriptors grid
 					loadDescriptorsGrid();
@@ -599,13 +593,13 @@ function redimensionarVentana() {
 */
 const add_new_lang = function(select_obj) {
 
-	const terminoID_lang = select_obj.value
+	const lang = select_obj.value
 
 	switch(true) {
-		case (terminoID_lang==='otro') :
+		case (lang==='otro') :
 			return dd_abrirTSlist('tesauro_rel','lenguaje');
 			break;
-		case (terminoID_lang==='' || typeof(terminoID_lang)==='undefined') :
+		case (lang==='' || typeof(lang)==='undefined') :
 			return false;
 			break;
 	}
@@ -616,22 +610,21 @@ const add_new_lang = function(select_obj) {
 		return false
 	}
 
-	const url 			= descriptors_trigger
-	const target_div	= document.getElementById("tbodyDescriptorsGrid")
-	const mode 			= 'newDescriptor'
-	const mydata		= { mode 			: mode,
-							terminoID		: terminoID,
-							terminoID_lang 	: terminoID_lang,
-							top_tipo		: page_globals.top_tipo || null
-							}; //console.log("mydata", url, mydata); // return;
+	const target_div = document.getElementById("tbodyDescriptorsGrid")
 
 	// Spinner ON
 	target_div.classList.add('spinner')
 
+	const data = {
+		mode		: 'newDescriptor',
+		terminoID	: terminoID,
+		lang		: lang
+	}
+
 	// AJAX CALL
 	$.ajax({
-		url		: url,
-		data	: mydata,
+		url		: descriptors_trigger,
+		data	: data,
 		type	: "POST"
 	})
 	.done(function(received_data) {
@@ -639,7 +632,7 @@ const add_new_lang = function(select_obj) {
 		// Expected received_data is a int with new id created in table "matrix_descriptors_dd"
 
 		// GRID : Reload descriptors
-		loadDescriptorsGrid(received_data);
+		loadDescriptorsGrid( lang );
 			//console.log(received_data)
 		redimensionarVentana();
 	})

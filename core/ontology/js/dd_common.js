@@ -227,33 +227,19 @@ function create_dom_element(element_options){
 function save_descriptor(input_node) {
 
 	// input values
-		const parent	= input_node.dataset.parent
 		const lang		= input_node.dataset.lang
-		const tipo		= input_node.dataset.tipo
-		const dato		= input_node.value
+		const terminoID	= input_node.dataset.term_id
+		const value		= input_node.value
 
 	// check mandatory vars
 		switch(true) {
-			case typeof parent==="undefined" :
-				alert(" parent data is not defined! \n Data is not saved! ")
-				return Promise.resolve(false);
-				break;
-
 			case typeof lang==="undefined" 	:
 				alert(" lang data is not defined! \n Data is not saved! ")
 				return Promise.resolve(false);
-				break;
 
-			case typeof tipo==="undefined" 	:
-				alert(" tipo data is not defined! \n Data is not saved! ")
+			case (typeof terminoID==='undefined'):
+				alert("Sorry: global terminoID is not defined \n Data is not saved!")
 				return Promise.resolve(false);
-				break;
-		}
-
-	// terminoID is a page global. Verify
-		if (typeof terminoID==='undefined') {
-			alert("Sorry: global terminoID is not defined \n Data is not saved!")
-			return Promise.resolve(false);
 		}
 
 	// form lock
@@ -269,12 +255,9 @@ function save_descriptor(input_node) {
 			url		: 'trigger.dd.php',
 			body	: {
 				mode		: 'save_descriptor',
-				parent		: parent,
 				lang		: lang,
-				tipo		: tipo,
-				dato		: dato,
-				terminoID	: terminoID,
-				top_tipo	: page_globals.top_tipo
+				value		: value,
+				terminoID	: terminoID
 			}
 		})
 		.then(function(response){
