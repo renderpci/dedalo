@@ -10,7 +10,6 @@
 namespace PHPUnit\Framework;
 
 use const PHP_EOL;
-use function array_keys;
 use function array_merge;
 use function array_pop;
 use function array_reverse;
@@ -57,7 +56,7 @@ use Throwable;
  *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
+class TestSuite implements IteratorAggregate, Reorderable, Test
 {
     /**
      * @var non-empty-string
@@ -128,14 +127,6 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
     final private function __construct(string $name)
     {
         $this->name = $name;
-    }
-
-    /**
-     * Returns a string representation of the test suite.
-     */
-    public function toString(): string
-    {
-        return $this->name();
     }
 
     /**
@@ -302,19 +293,9 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
     }
 
     /**
-     * Returns the test groups of the suite.
-     *
-     * @return list<non-empty-string>
-     */
-    public function groups(): array
-    {
-        return array_keys($this->groups);
-    }
-
-    /**
      * @return array<non-empty-string, list<non-empty-string>>
      */
-    public function groupDetails(): array
+    public function groups(): array
     {
         return $this->groups;
     }
@@ -646,7 +627,9 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
                     continue;
                 }
 
-                if ($missingRequirements = (new Requirements)->requirementsNotSatisfiedFor($this->name, $beforeClassMethod)) {
+                $missingRequirements = (new Requirements)->requirementsNotSatisfiedFor($this->name, $beforeClassMethod);
+
+                if ($missingRequirements !== []) {
                     $this->markTestSuiteSkipped(implode(PHP_EOL, $missingRequirements));
                 }
 

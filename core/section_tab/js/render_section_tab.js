@@ -45,11 +45,11 @@ render_section_tab.prototype.edit = async function(options) {
 		switch (self.context.view) {
 			case 'tab': {
 				// nothing to do
-				const fn_active = function() {
+				const tab_active_handler = () => {
 					wrapper.classList.add('active')
 				}
 				self.events_tokens.push(
-					event_manager.subscribe('tab_active_'+self.tipo, fn_active)
+					event_manager.subscribe('tab_active_'+self.tipo, tab_active_handler)
 				)
 				break;
 			}

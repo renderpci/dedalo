@@ -629,11 +629,7 @@ const render_activity_info = async function(self) {
 		})
 
 	// event save
-		self.events_tokens.push(
-			event_manager.subscribe('save', fn_saved)
-		)
-		function fn_saved(options) {
-
+		const save_handler = (options) => {
 			// revived options contains an object with instance and api_response
 			const node_info_options = Object.assign(options, {
 				container : activity_info_body
@@ -643,6 +639,9 @@ const render_activity_info = async function(self) {
 			const node_info = render_node_info(node_info_options)
 			activity_info_body.prepend(node_info)
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('save', save_handler)
+		)
 
 
 	return activity_info_body

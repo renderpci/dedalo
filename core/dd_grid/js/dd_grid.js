@@ -55,7 +55,7 @@ export const dd_grid = function(){
 * @param object options
 * @return bool
 */
-dd_grid.prototype.init	= async function(options) {
+dd_grid.prototype.init = async function(options) {
 
 	const self = this
 

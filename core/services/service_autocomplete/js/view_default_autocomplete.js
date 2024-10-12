@@ -9,7 +9,7 @@
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {clone} from '../../../common/js/utils/index.js'
-	import * as instances from '../../../common/js/instances.js'
+	import {get_instance} from '../../../common/js/instances.js'
 	import {get_section_records} from '../../../section/js/section.js'
 
 
@@ -263,11 +263,14 @@ const get_content_data = function(self) {
 			self.service_autocomplete_keys(e)
 		}
 		// remove the event when the caller is deactivate to avoid conflicts between events
-		event_manager.subscribe('deactivate_component', function(component){
+		const deactivate_component_handler = (component) => {
 			if (component.id===self.caller.id) {
 				document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 			}
-		})
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('deactivate_component', deactivate_component_handler)
+		)
 
 	// fix main nodes pointers
 		self.search_input		= search_input
@@ -1601,7 +1604,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 							lang			: current_element_context.lang,
 							id_variant		: self.id
 						}
-						const current_instance = await instances.get_instance(instance_options)
+						const current_instance = await get_instance(instance_options)
 						current_instance.build(false)
 						const node = await current_instance.render()
 

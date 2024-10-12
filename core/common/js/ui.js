@@ -12,7 +12,7 @@
 	import {when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import '../../common/js/dd-modal.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -1686,13 +1686,6 @@ export const ui = {
 			return false
 		}
 
-		function fn_render_target(instance_wrapper) {
-			const target_container = instance_wrapper.querySelector(container_selector)
-			if (target_container) {
-				target_container.appendChild(source_node)
-			}
-		}
-
 		if (target_instance.status==='rendered') {
 
 			if (target_instance.node===null) {
@@ -1716,9 +1709,16 @@ export const ui = {
 		}else{
 
 			// target_instance node not ready case
-			source_instance.events_tokens.push(
-				event_manager.subscribe('render_'+target_instance.id , fn_render_target)
-			)
+			let token
+			const render_handler = (instance_wrapper) => {
+				const target_container = instance_wrapper.querySelector(container_selector)
+				if (target_container) {
+					target_container.appendChild(source_node)
+				}
+				event_manager.unsubscribe(token)
+			}
+			token = event_manager.subscribe('render_'+target_instance.id, render_handler)
+			source_instance.events_tokens.push(token)
 		}
 
 
@@ -2072,7 +2072,8 @@ export const ui = {
 						const debug_div			= document.getElementById('debug')
 
 					// show hidden elements again on close
-						event_manager.subscribe('modal_close', () => {
+						const modal_close_handler = () => {
+
 							content_data_page.classList.remove('hide')
 							if(debug_div) {
 								debug_div.classList.remove('hide')
@@ -2083,7 +2084,8 @@ export const ui = {
 								top			: page_y_offset,
 								behavior	: 'auto'
 							})
-						})
+						}
+						event_manager.subscribe('modal_close', modal_close_handler)
 
 					modal_container._showModalBig();
 					break;
@@ -2162,7 +2164,7 @@ export const ui = {
 			}
 
 		// instance search. Get the instance of the component that was created by the section in build-render process
-			const all_instances	= instances.get_all_instances()
+			const all_instances	= get_all_instances()
 			const component		= all_instances.find( el =>
 				el.tipo === first_ddo.tipo &&
 				el.section_tipo === section_tipo &&
@@ -2783,7 +2785,7 @@ export const ui = {
 
 		// check wrapper node
 			if (!instance.node) {
-				console.log('Skip hilite! Invalid instance node. instance :', instance);
+				console.warn('Skip hilite! Invalid instance node. instance :', instance);
 				return
 			}
 
@@ -3089,7 +3091,7 @@ export const ui = {
 				class_name		: 'body content'
 			})
 			// component instance
-			const instance = await instances.get_instance({
+			const instance = await get_instance({
 				model			: self.model,
 				tipo			: self.tipo,
 				section_tipo	: self.section_tipo || self.tipo,

@@ -12,6 +12,8 @@ import {elements} from './elements.js'
 		'test_delete_instance',
 		'test_components_lifecycle',
 		'test_others_lifecycle',
+		'test_instances_lifecycle',
+		'test_event_manager',
 		'test_components_data_changes',
 		'test_components_activate',
 		'test_components_render',

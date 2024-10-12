@@ -75,6 +75,19 @@ paginator.prototype.init = function(options) {
 
 	const self = this
 
+	// safe init double control. To detect duplicated events cases
+		if (typeof this.is_init!=='undefined') {
+			console.error('Duplicated init for element:', this);
+			if(SHOW_DEBUG===true) {
+				alert('Duplicated init element');
+			}
+			return false
+		}
+		this.is_init = true
+
+	// status update
+		self.status = 'initializing'
+
 	if (!options.caller) {
 		console.error("Paginator options caller not found:", options);
 	}
@@ -303,12 +316,14 @@ paginator.prototype.paginate = async function(offset) {
 
 	// paginator content data update
 		// Note that caller refresh the paginator too, adding loading class feels more responsive for user
-		// self.refresh()
 		self.node.classList.add('loading')
-		event_manager.subscribe('render_'+self.caller.id, fn_render)
-		function fn_render() {
+
+		const render_handler = () => {
 			self.node.classList.remove('loading')
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('render_'+self.caller.id, render_handler)
+		)
 
 
 	return true

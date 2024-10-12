@@ -46,4 +46,39 @@ export const render_error = async function(self, options) {
 
 
 
+/**
+* RENDER_FOOTER
+* Creates the footer nodes
+* @param object self
+* @return HTMLElement footer_node
+*/
+export const render_footer = function (self) {
+
+	const footer_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'footer_node'
+	})
+
+	// icon
+	ui.create_dom_element({
+		element_type	: 'img',
+		class_name		: 'icon',
+		src				: self.context.icon,
+		parent			: footer_node
+	})
+
+	// developer
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'info',
+		inner_html		: `Developed by ${self.context.developer}`,
+		parent			: footer_node
+	})
+
+
+	return footer_node
+}//end render_footer
+
+
+
 // @license-end

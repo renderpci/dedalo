@@ -7,7 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {clone, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {create_source, push_browser_history} from '../../common/js/common.js'
@@ -354,7 +354,7 @@ const get_buttons = function(self) {
 							delete delete_sqo.offset
 
 							// delete_record
-							self.delete_record({
+							self.render_delete_record_dialog({
 								section			: self,
 								section_id		: null,
 								section_tipo	: self.section_tipo,
@@ -454,7 +454,7 @@ const render_column_graph = function(options) {
 		const target_section_tipo = target_section_data.value[0]
 
 		// target section
-			const section = await instances.get_instance({
+			const section = await get_instance({
 				model 			: 'section',
 				tipo			: target_section_tipo,
 				section_tipo	: target_section_tipo,

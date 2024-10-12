@@ -7,7 +7,7 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {render_list_section_record} from './render_list_section_record.js'
 	import {render_edit_section_record} from './render_edit_section_record.js'
 
@@ -73,6 +73,19 @@ export const section_record = function() {
 section_record.prototype.init = async function(options) {
 
 	const self = this
+
+	// safe init double control. To detect duplicated events cases
+		if (typeof this.is_init!=='undefined') {
+			console.error('Duplicated init for element:', this);
+			if(SHOW_DEBUG===true) {
+				alert('Duplicated init element');
+			}
+			return false
+		}
+		this.is_init = true
+
+	// status update
+		self.status = 'initializing'
 
 	// options vars
 		self.model						= options.model
@@ -200,7 +213,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 				: instance_options.id_variant
 
 	// component / section group. Create the instance options for build it, the instance is reflect of the context and section_id
-		const current_instance = await instances.get_instance(instance_options)
+		const current_instance = await get_instance(instance_options)
 		if(!current_instance || typeof current_instance.build!=='function'){
 			console.warn(`ERROR on build instance (ignored ${current_context.model}):`, current_instance);
 			return

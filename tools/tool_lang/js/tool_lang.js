@@ -82,6 +82,11 @@ tool_lang.prototype.init = async function(options) {
 				self.target_translator = translator_engine_select_object.value
 			}
 
+		// debug
+			if(SHOW_DEBUG===true) {
+				console.log('self [tool_lang]:', self);
+			}
+
 	} catch (error) {
 		self.error = error
 		console.error(error)

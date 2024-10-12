@@ -965,7 +965,7 @@ export const service_ckeditor = function() {
 		// <reference>text to be selected</reference>
 			if(tag_obj || (tag_obj.type==='reference')){
 
-				const editor	= self.editor
+				const editor = self.editor
 
 				const tag_reference	= self.get_view_tag(tag_obj)
 				editor.editing.view.change((writer) => {

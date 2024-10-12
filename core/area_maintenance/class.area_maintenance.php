@@ -115,6 +115,25 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
+
+		// ontology_processes *
+			$item = new stdClass();
+				$item->id		= 'ontology_processes';
+				$item->type		= 'widget';
+				$item->label	= label::get_label('ontology_processes') ?? 'Update Ontology';
+				$item->value	= (object)[
+					'current_ontology'		=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa'),
+					'prefix_tipos'			=> $DEDALO_PREFIX_TIPOS,
+					'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
+					'structure_server_url'	=> (defined('STRUCTURE_SERVER_URL') ? STRUCTURE_SERVER_URL : null),
+					'structure_server_code'	=> (defined('STRUCTURE_SERVER_CODE') ? STRUCTURE_SERVER_CODE : null),
+					'ontology_db'			=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
+					'body'					=> defined('ONTOLOGY_DB')
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
 		// move_tld
 			$item = new stdClass();
 				$item->id		= 'move_tld';
@@ -1828,7 +1847,7 @@ class area_maintenance extends area_common {
 			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
 		// export. Before import, export a copy ;-)
-			$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+			$db_name = 'dedalo_development_str_'.date("Y-m-d_Hi").'.custom';
 			$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
 			if ($res_export_structure->result===false) {
 
@@ -1845,7 +1864,7 @@ class area_maintenance extends area_common {
 		// import
 			$prev_time = start_time(); // reset exec time
 			$import_structure_response = backup::import_structure(
-				'dedalo4_development_str.custom', // string db_name
+				'dedalo_development_str.custom', // string db_name
 				true, // bool check_server
 				$ar_dedalo_prefix_tipos // array dedalo_prefix_tipos
 			);
@@ -1938,6 +1957,136 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end update_ontology
+
+
+
+
+	/**
+	* JER_DD_TO_MATRIX_ONTOLOGY
+	* Is called from area_maintenence widget 'jer_dd_to_matrix_ontology' across dd_area_maintenance::class_request
+	* Connect with master server, download ontology files and update local DDBB and lang files
+	* @param object $options
+	* {
+	* 	ar_dedalo_prefix_tipos : array ['numisdata','rsc']
+	* }
+	* @return object $response
+	* {
+	* 	result: bool,
+	* 	msg: string,
+	* 	errors: array
+	* }
+	*/
+	public static function jer_dd_to_matrix_ontology(object $options) : object {
+		$start_time=start_time();
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
+
+		// export. Before import, export a copy ;-)
+			$db_name = 'dedalo_ontology_'.date("Y-m-d_Hi").'.custom';
+			$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
+			if ($res_export_structure->result===false) {
+
+				// error on export current DDBB
+				$response->msg		= 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
+				$response->errors[]	= $response->msg;
+				return $response;
+
+			}else{
+				// Append msg
+				$ar_msg[] = $res_export_structure->msg . ' - export time: '.exec_time_unit_auto($start_time);
+			}
+
+		// options
+			$ar_dedalo_prefix_tipos = $options->ar_dedalo_prefix_tipos;
+			if (empty($ar_dedalo_prefix_tipos) || !is_array($ar_dedalo_prefix_tipos)) {
+				$response->errors[] = 'Empty mandatory ar_dedalo_prefix_tipos value';
+				return $response;
+			}
+			foreach ($ar_dedalo_prefix_tipos as $prefix) {
+				if(!hierarchy::valid_tld($prefix)) {
+					$response->errors[] = 'Error. Invalid prefix value: '. to_string($prefix);
+					return $response;
+				}else{
+					// get jer_dd
+					$jer_dd_rows = ontology_v5::get_tld_records($prefix);
+
+				}
+			}
+
+		// ar_msg
+			$ar_msg = [];
+
+
+		// optimize tables
+			$ar_tables = ['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list'];
+			backup::optimize_tables($ar_tables);
+
+		// delete all session data except auth
+			foreach ($_SESSION['dedalo'] as $key => $value) {
+				if ($key==='auth') continue;
+				unset($_SESSION['dedalo'][$key]);
+			}
+
+		// update javascript labels
+			$ar_langs = DEDALO_APPLICATION_LANGS;
+			foreach ($ar_langs as $lang => $label) {
+
+				// direct
+					$write_file = backup::write_lang_file($lang);
+					if ($write_file===false) {
+						$response->errors[]	= 'Error writing write_lang_file of lang: ' . $lang;
+						continue;
+					}
+
+				// debug
+					debug_log(__METHOD__
+						. " Writing lang file " . PHP_EOL
+						. ' lang: ' . to_string($lang)
+						, logger::WARNING
+					);
+			}
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'SAVE',
+				logger::INFO,
+				DEDALO_ROOT_TIPO,
+				NULL,
+				[
+					'msg'		=> 'Updated Ontology',
+					'version'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
+				],
+				logged_user_id() // int
+			);
+
+		// force reset cache of hierarchy tree
+			// delete previous cache files
+			dd_cache::delete_cache_files();
+
+		// get new Ontology info
+			$RecordObj_dd = new RecordObj_dd(DEDALO_ROOT_TIPO);
+			$root_info = (object)[
+				'term' => RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
+				'properties' => $RecordObj_dd->get_properties()
+			];
+
+		// response
+			$response->result	= true;
+			array_unshift( $ar_msg, 'OK. Request done '.__METHOD__);
+			$response->msg = implode(PHP_EOL, $ar_msg);
+			$response->root_info = $root_info;
+
+
+		return $response;
+	}//end jer_dd_to_matrix_ontology
+
+
+
+
 
 
 

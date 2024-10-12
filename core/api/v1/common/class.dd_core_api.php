@@ -697,7 +697,7 @@ final class dd_core_api {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+			$response->errors	= [];
 
 		// short vars
 			$source			= $rqo->source;
@@ -713,7 +713,11 @@ final class dd_core_api {
 			$section	= section::get_instance(null, $section_tipo);
 			$section_id	= $section->Save(); // Section save, returns the created section_id
 
-		// OJO : Aquí, cuando guardemos las opciones de búsqueda, resetearemos el count para forzar a recalculat el total
+			if (empty($section_id)) {
+				$response->errors[] = 'Failed to save the section';
+			}
+
+		// OJO : Aquí, cuando guardemos las opciones de búsqueda, resetearemos el count para forzar a recalcular el total
 			//   esto está ahora en 'section_records' pero puede cambiar..
 			// Update search_query_object full_count property
 				// $search_options = section_records::get_search_options($section_tipo);
@@ -732,25 +736,25 @@ final class dd_core_api {
 
 	/**
 	* DUPLICATE
-	* duplicate a section record of given section tipo and section_id
-	* and returns the new section_id assigned by the counter
-	* @param object $json_data
+	* Duplicates a section record of given section tipo and section_id
+	* and returns the new section_id assigned by counter
+	* @param object $rqo
 	* sample:
 	* {
 	*    "action": "duplicate ",
 	*    "source": {
 	*        "section_tipo": "oh1"
-	* 		"section_id": 2 // integer
+	* 		"section_id": "2"
 	*    }
 	* }
-	* @return array $result
+	* @return object $response
 	*/
 	public static function duplicate(object $rqo) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+			$response->errors	= [];
 
 		// short vars
 			$source			= $rqo->source;
@@ -768,6 +772,9 @@ final class dd_core_api {
 			$section	= section::get_instance($section_id, $section_tipo);
 			$section_id	= $section->duplicate_current_section();
 
+			if (empty($section_id)) {
+				$response->errors[] = 'Failed to duplicate the section';
+			}
 
 		$response->result	= $section_id;
 		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
@@ -1439,7 +1446,7 @@ final class dd_core_api {
 		// build element
 			switch (true) {
 				case $model==='section':
-					$element = section::get_instance(null, $section_tipo);
+					$element = section::get_instance(null, $section_tipo, $mode);
 					break;
 
 				// case $model==='section_tm':
@@ -1618,74 +1625,6 @@ final class dd_core_api {
 
 	// search methods ///////////////////////////////////
 
-
-
-	/**
-	* FILTER_SET_EDITING_PRESET (!) Deactivated 01-30-2023 because nobody uses it
-	* Saves given filter in temp preset section
-	* @param object $options
-	* @return object $response
-	*/
-		// public static function filter_set_editing_preset(object $options) : object {
-
-		// 	// options
-		// 		$section_tipo	= $options->section_tipo;
-		// 		$filter_obj		= $options->filter_obj;
-
-		// 	$response = new stdClass();
-		// 		$response->result	= false;
-		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-		// 		$response->error	= null;
-
-		// 	// save_temp_preset
-		// 		$result = search::save_temp_preset(
-		// 			logged_user_id(),
-		// 			$section_tipo,
-		// 			$filter_obj
-		// 		);
-
-		// 	// response
-		// 		$response->result	= $result;
-		// 		$response->msg		= 'OK. Request done';
-
-
-		// 	return $response;
-		// }//end filter_set_editing_preset
-
-
-
-	/**
-	* ONTOLOGY_GET_CHILDREN_RECURSIVE (!) Deactivated 01-30-2023 because nobody uses it
-	* Calculate recursively the children of given term
-	* @param object $options
-	* @return object $response
-	*/
-		// public static function ontology_get_children_recursive(object $options) : object {
-
-		// 	// session_write_close();
-
-		// 	// options
-		// 		$target_tipo = $options->target_tipo;
-
-		// 	$response = new stdClass();
-		// 		$response->result	= false;
-		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-		// 		$response->error	= null;
-
-		// 	// ontology call
-		// 		$children = ontology::get_children_recursive($target_tipo);
-
-		// 	// response
-		// 		$response->result	= $children;
-		// 		$response->msg		= 'OK. Request done';
-
-
-		// 	return $response;
-		// }//end ontology_get_children_recursive
-
-
-
-	// private methods ///////////////////////////////////
 
 
 

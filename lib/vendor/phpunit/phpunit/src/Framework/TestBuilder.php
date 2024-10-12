@@ -13,6 +13,7 @@ use function array_merge;
 use function assert;
 use PHPUnit\Metadata\Api\DataProvider;
 use PHPUnit\Metadata\Api\Groups;
+use PHPUnit\Metadata\Api\Requirements;
 use PHPUnit\Metadata\BackupGlobals;
 use PHPUnit\Metadata\BackupStaticProperties;
 use PHPUnit\Metadata\ExcludeGlobalVariableFromBackup;
@@ -40,10 +41,11 @@ final readonly class TestBuilder
     {
         $className = $theClass->getName();
 
-        $data = (new DataProvider)->providedData(
-            $className,
-            $methodName,
-        );
+        $data = null;
+
+        if ($this->requirementsSatisfied($className, $methodName)) {
+            $data = (new DataProvider)->providedData($className, $methodName);
+        }
 
         if ($data !== null) {
             return $this->buildDataProviderTestSuite(
@@ -272,5 +274,14 @@ final readonly class TestBuilder
     private function shouldAllTestMethodsOfTestClassBeRunInSingleSeparateProcess(string $className): bool
     {
         return MetadataRegistry::parser()->forClass($className)->isRunClassInSeparateProcess()->isNotEmpty();
+    }
+
+    /**
+     * @param class-string     $className
+     * @param non-empty-string $methodName
+     */
+    private function requirementsSatisfied(string $className, string $methodName): bool
+    {
+        return (new Requirements)->requirementsNotSatisfiedFor($className, $methodName) === [];
     }
 }

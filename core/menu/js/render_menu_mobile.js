@@ -42,14 +42,14 @@ export const render_menu = (options) => {
 		}
 	}
 
-	// ontology button
-	if (self.ontology_link) {
-		const cloned_node = self.ontology_link.cloneNode(true);
-		cloned_node.classList.remove('top_item')
-		cloned_node.classList.add('menu_mobile_item')
-		cloned_node.addEventListener('click', self.open_ontology)
-		wrapper.append(cloned_node)
-	}
+	// // ontology button
+	// if (self.ontology_link) {
+	// 	const cloned_node = self.ontology_link.cloneNode(true);
+	// 	cloned_node.classList.remove('top_item')
+	// 	cloned_node.classList.add('menu_mobile_item')
+	// 	cloned_node.addEventListener('click', self.open_ontology)
+	// 	wrapper.append(cloned_node)
+	// }
 
 
 	return wrapper

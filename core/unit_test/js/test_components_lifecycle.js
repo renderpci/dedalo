@@ -1,12 +1,13 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global it, describe, assert */
 /*eslint no-undef: "error"*/
+'use strict';
 
 import {
 	elements
 } from './elements.js'
-import {get_instance} from '../../common/js/instances.js'
-import {clone} from '../../common/js/utils/util.js'
+import {get_instance, get_all_instances} from '../../common/js/instances.js'
+
 
 
 // vars
@@ -107,7 +108,7 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 						}
 
 						// exec
-						await life_cycle_test(options, element.view)
+						life_cycle_test(options, element.view)
 					}
 				})()
 		});
@@ -245,10 +246,14 @@ async function life_cycle_test(element, view) {
 					true // remove_dom . default false
 				)
 
+			const all_instances = get_all_instances()
+
 			// asserts
 				assert.equal(new_instance.status, 'destroyed')
 				assert.deepEqual(new_instance.ar_instances, [])
 				assert.deepEqual(new_instance.node, null)
+				assert.deepEqual(new_instance.events_tokens, [])
+				assert.deepEqual(all_instances, [])
 		});
 
 	});//end describe(element.model, function()
