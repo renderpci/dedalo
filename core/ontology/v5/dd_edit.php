@@ -1,9 +1,7 @@
 <?php
 // ontology custon config file
-require_once( dirname(__FILE__) .'/config/config_ontology.php' );
+require_once( dirname(__FILE__) .'/ontology_legacy_setup.php');
 
-# Old lang vars
-require_once( dirname(__FILE__) . '/lang/lang_code.php' );
 
 // login
 	$is_logged	= login::is_logged();
