@@ -19,6 +19,7 @@ config/*
 !config/sample.config_core.php
 !config/dd_tipos.php
 !config/version.inc
+!/core/ontology/v5/config/config_ontology.php
 
 # various
 acc
