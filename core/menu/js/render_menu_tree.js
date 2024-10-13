@@ -176,6 +176,12 @@ const render_item_hierarchy = (options) => {
 		const item			= options.item
 		const current_tipo	= options.current_tipo
 
+	// item label check
+		if (!item.label) {
+			console.error('item without label:', item);
+			item.label = item.tipo || 'Unknown'
+		}
+
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
