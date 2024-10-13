@@ -4571,6 +4571,12 @@ abstract class common {
 							}
 						}
 
+					// time machine case
+						if ($tool->name==='tool_time_machine' && get_called_class()==='component_relation_parent') {
+							// skip tool for component_relation_parent because it has no data
+							continue;
+						}
+
 					if ($requirement_translatable===true) {
 
 						$translatable = ($is_component===true)
