@@ -1856,6 +1856,13 @@ class area_maintenance extends area_common {
 				return $response;
 
 			}else{
+				// errors
+				if (!empty($import_structure_response->errors)) {
+					$response->errors = array_merge($response->errors, $import_structure_response->errors);
+					$response->msg = 'Error. Request import_structure failed 4 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
+					return $response;
+				}
+
 				// Append msg
 				$import_structure_response_ar_msg = explode(PHP_EOL, $import_structure_response->msg);
 				$ar_msg		=  array_merge($ar_msg, $import_structure_response_ar_msg);
