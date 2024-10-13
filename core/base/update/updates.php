@@ -6,36 +6,68 @@ global $updates;
 $updates = new stdClass();
 
 
-$v=630; #####################################################################################
+
+$v=629; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
 	$updates->$v->version_major			= 6;
-	$updates->$v->version_medium		= 3;
-	$updates->$v->version_minor			= 0;
+	$updates->$v->version_medium		= 2;
+	$updates->$v->version_minor			= 9;
 
 	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 2;
-	$updates->$v->update_from_minor		= 8;
+	$updates->$v->update_from_minor		= 7;
 
 	// alert
 		$alert					= new stdClass();
 		$alert->notification	= 'V '.$v;
 
 		$alert->command			= "
-			<h1>🧐 WARNING! Before apply this update:</h1>
-			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
-			<br>The minimum version of Ontology need to be: <b>Dédalo 2024-09-04T18:51:21+02:00 Benimamet</b>
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<br>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.
 			<br>
+			<br>The 6.3 update will be a big change into the ontology and how Dédalo works.
 			<br>
-			<br>This update changes the Tangible and Intangible portals in thesaurus, (tchi59, tch60)
-			<br>Now, the components will not save related data into it.
-			<br>Therefore, this script remove the previous saved data into them.
+			<br>To prepare for the transition it is necessary to change the current master server for the ontology after applying this update.
+			<br>Therefore you will need to change it into <b>config.php</b> the next constants.
+			<br>
+			<br>From:
+			<br><b>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				define('STRUCTURE_SERVER_URL',			'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
+				define('DEDALO_SOURCE_VERSION_URL',			'https://master.render.es/dedalo/code/dedalo6_code.zip');
+			</pre></b>
+			<br>to:
+			<br><b>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
+				define('DEDALO_SOURCE_VERSION_URL',			'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
+			</pre></b>
+			<br>Future releases will ONLY be published on the new <b>master.dedalo.dev</b> server.
 		";
 		$updates->$v->alert_update[] = $alert;
 
 	// DATABASE UPDATES
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_main_id_seq;
+				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
+			");
+		// Add the matrix_ontology table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
+				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
+			");
+
 		// Add the term column to jer_dd table
 			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
 				DO $$
@@ -59,7 +91,7 @@ $updates->$v = new stdClass();
 				TABLESPACE pg_default;
 			");
 
-	// RUN_SCRIPTS
+		// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
