@@ -22,6 +22,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $relaciones;
 	protected $propiedades;
 	protected $properties;
+	protected $term;
 	protected $prefijo ;
 
 	// fields external
@@ -99,7 +100,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			'traducible'	=> 'traducible',
 			'relaciones'	=> 'relaciones',
 			'propiedades'	=> 'propiedades',
-			'properties'	=> 'properties'
+			'properties'	=> 'properties',
+			'term'			=> 'term'
 		];
 	}//end defineRelationMap
 
@@ -303,6 +305,50 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return (int)$counter_value;
 	}//end get_counter_value
+
+
+
+	/**
+	* GET_TERM
+	* Get jer_dd column 'term' and try to parse as JSON abject
+	* @return object|null
+	*/
+	public function get_term() : ?object  {
+
+		// JSON stringified object from column 'term'
+		$term = parent::get_term();
+		if (empty($term)) {
+			return null;
+		}
+
+		$term_object = json_handler::decode($term);
+		if (!$term_object) {
+			return null;
+		}
+
+		return $term_object;
+	}//end get_term
+
+
+
+	/**
+	* SET_TERM
+	* Encodes given $term value as JSON stringified value and set to
+	* parent term value as string
+	* @param object|null $term
+	* @return object|null
+	*/
+	public function set_term( ?object $term ) : bool  {
+
+		$term_value = is_object($term)
+			? json_encode($term)
+			: null;
+
+		// JSON stringified object from column 'term'
+		$term = parent::set_term($term_value);
+
+		return true;
+	}//end set_term
 
 
 
