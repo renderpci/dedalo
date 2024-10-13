@@ -785,11 +785,10 @@ class hierarchy extends ontology {
 			$RecordObj_dd->set_relaciones($options->relaciones);
 			$RecordObj_dd->set_properties($options->properties);
 
-		// term
-			$lang = DEDALO_DATA_LANG;
-			$term = $RecordObj_dd->get_term() ?? new stdClass();
-			$term->{$lang} = $options->name;
-			$RecordObj_dd->set_term( json_encode($term) );
+		// term. Column term
+			$term = new stdClass();
+				$term->{DEDALO_STRUCTURE_LANG} = $options->name;
+			$RecordObj_dd->set_term($term);
 
 		// force_insert_on_save
 			$RecordObj_dd->set_force_insert_on_save(true); # important !
