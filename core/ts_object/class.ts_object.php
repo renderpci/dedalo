@@ -100,9 +100,11 @@ class ts_object {
 						false, // recursive
 						true // search_exact
 					);
-					# relation map defined in properties
-					$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
-					$ar_properties	= $RecordObj_dd->get_properties();
+					// relation map defined in properties
+					if (isset($ar_children[0])) {
+						$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
+						$ar_properties	= $RecordObj_dd->get_properties();
+					}
 				}
 			}//end if (!isset($ar_children[0]))
 
