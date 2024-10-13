@@ -324,29 +324,35 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 			// 	'lang'		=> $data->lang
 			// ]);
 
-	// set and save the value to descriptors dd
+	// save descriptors record. Set and save the value to descriptors dd
 		$dedalo_version = explode(".", DEDALO_VERSION);
 		if( (int)$dedalo_version[0]<=6 && (int)$dedalo_version[1]<3 ){
 
-			$RecordObj = new RecordObj_descriptors_dd_edit(RecordObj_descriptors_dd_edit::$descriptors_matrix_table, null, $terminoID, $lang, 'termino');
+			$RecordObj = new RecordObj_descriptors_dd_edit(
+				RecordObj_descriptors_dd_edit::$descriptors_matrix_table,
+				null, // id
+				$terminoID,
+				$lang,
+				'termino'
+			);
 			$RecordObj->set_dato($data->dato);
 			$result = $RecordObj->Save();
 		}
 
-		// save jer_dd record
-			$RecordObj_dd = new RecordObj_dd_edit($terminoID);
+	// save jer_dd record
+		$RecordObj_dd = new RecordObj_dd_edit($terminoID);
 
-			// term object
-			$term = $RecordObj_dd->get_term() ?? new stdClass();
+		// term object
+		$term = $RecordObj_dd->get_term() ?? new stdClass();
 
-			// update
-			$term->{$lang} = $value;
+		// update
+		$term->{$lang} = $value;
 
-			// set
-			$RecordObj_dd->set_term($term);
+		// set
+		$RecordObj_dd->set_term($term);
 
-			// save
-			$result = $RecordObj_dd->Save();
+		// save
+		$result = $RecordObj_dd->Save();
 
 
 		$response->result	= $result===false ? false : true;
@@ -738,11 +744,14 @@ if($accion==='duplicate') {
 		$properties		= $current_term->get_properties();
 		$relaciones		= $current_term->get_relaciones();
 
+		// term object
+		$term = $current_term->get_term();
+
 	// norden
 		$ar_childrens	= RecordObj_dd_edit::get_ar_childrens($parent);
 		$norden			= (int)count($ar_childrens)+1;
 
-	// configure RecordObj_dd
+	// new term. configure RecordObj_dd
 		$RecordObj_dd_edit 	= new RecordObj_dd_edit(NULL, $prefix);
 			# Defaults
 			$RecordObj_dd_edit->set_esdescriptor($esdescriptor);
@@ -755,6 +764,9 @@ if($accion==='duplicate') {
 			$RecordObj_dd_edit->set_properties($properties);
 			$RecordObj_dd_edit->set_relaciones($relaciones);
 			$RecordObj_dd_edit->set_norden($norden);
+
+			// set
+			$RecordObj_dd_edit->set_term($term);
 
 	// save : After save, we can recover new created terminoID (prefix+autoIncrement)
 		$created_id_ts = $RecordObj_dd_edit->Save();
