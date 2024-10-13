@@ -874,6 +874,11 @@ class hierarchy {
 			$RecordObj_dd->set_relaciones($options->relaciones);
 			$RecordObj_dd->set_properties($options->properties);
 
+		// term. Column term
+			$term = new stdClass();
+				$term->{DEDALO_STRUCTURE_LANG} = $options->name;
+			$RecordObj_dd->set_term($term);
+
 		// force_insert_on_save
 			$RecordObj_dd->set_force_insert_on_save(true); # important !
 
