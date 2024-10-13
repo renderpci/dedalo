@@ -1,4 +1,14 @@
 # V5 Ontology editor
 
-Since Dédalo was rebuilt with his ontology introduced in v4, this has been the interface of the editor. At the begin was a fork of the v3 thesaurus code and it was adapted to manage the terms and connections between nodes.
-Now this tech is totally obsolete and it was removed from the main branch. This code is obsolete and we recommend do not use it. But, it's working (last tests was in 6.2.9 and 6.3.0)and can be used if you want or you need it.
+Since Dédalo was rebuilt with its ontology introduced in v4, this has been the editor interface. It was originally a fork of the v3 thesaurus code and was adapted to handle terms and connections between nodes.
+This technology is now completely obsolete and has been removed from the main branch. This code is deprecated and we recommend not to use it. But, it is working (last tests were in 6.2.9 and 6.3.0) and can be used if you want or need it.
+
+# Installing
+
+If you want to use it. Download the code and move it into the Dédalo installation in this path:
+
+> ./dedalo/core/ontology/v5
+
+And call it directly into your browser (Dédalo has not link for it).
+
+Ontology editor has dead, large live the Ontology editor!
