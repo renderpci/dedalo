@@ -103,7 +103,9 @@ class dd_elements {
 			if(!empty($modelo) && trim($modelo)!='' && $this->esmodelo!='si') {
 				#dump($modelo,"modelo");
 				$modelo_name = RecordObj_dd_edit::get_termino_by_tipo($modelo);
-				$html .= $this->renderBtnM($terminoID,$modelo,$modelo_name);
+				if(!empty($modelo_name)) {
+					$html .= $this->renderBtnM($terminoID,$modelo,$modelo_name);
+				}
 			}
 
 			# DESPLEGAR HIJOS BtnFlecha
