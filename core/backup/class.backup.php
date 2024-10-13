@@ -10,7 +10,7 @@ abstract class backup {
 
 	// Columns to save (used by copy command, etc.)
 	// Do not use id column NEVER here
-	public static $jer_dd_columns			= '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades, properties';
+	public static $jer_dd_columns			= '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades, properties, term';
 	public static $descriptors_dd_columns	= 'parent, dato, tipo, lang';
 	public static $checked_download_str_dir	= false;
 
@@ -775,7 +775,14 @@ abstract class backup {
 
 			// download from remote
 			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
-				backup::download_ontology_files($ontology_file_list);
+				$download_response = backup::download_ontology_files($ontology_file_list);
+				if ($download_response->result===false || !empty($download_response->errors)) {
+					$response->errors = array_merge($response->errors, $download_response->errors);
+					$response->result	= false;
+					$response->msg .= ' Error on download_ontology_files';
+
+					return $response;
+				}
 			}
 
 			// find main_file_item
@@ -1468,11 +1475,15 @@ abstract class backup {
 			// Overwrite path to new downloaded files
 			$obj->path = $target_dir;
 			// direct download
-			$downloaded = backup::download_remote_structure_file($obj, $target_dir);
-			if ($downloaded) {
+			$download_remote_response = backup::download_remote_structure_file($obj, $target_dir);
+			$downloaded = $download_remote_response->result;
+			if ($downloaded===true) {
 				$download_files[] = $obj;
 			}else{
-				$response->errors[] = 'Download file failed: ' . $target_dir;
+				$response->errors[] = 'Download file failed: ' . $obj->name;
+				foreach ($download_remote_response->errors as $current_error) {
+					$response->errors[] = $current_error;
+				}
 			}
 		}
 
@@ -1489,12 +1500,31 @@ abstract class backup {
 
 	/**
 	* DOWNLOAD_REMOTE_STRUCTURE_FILE
+	* Call master server to get the desired file using a CURL request
+	* If received code is not 200, return false as response result
 	* @param object $obj
+	* {
+	*	 "type": "matrix_dd_file",
+	*	 "name": "matrix_dd.copy",
+	*	 "table": "matrix_dd",
+	*	 "tld": "dd",
+	*	 "path": "/local_path/dedalo/install/import/ontology"
+	* }
 	* @param string $target_dir
-	* @return bool
+	* @return object $response
+	* {
+	* 	result: bool
+	* 	msg: string
+	* 	errors: array
+	* }
 	*/
-	public static function download_remote_structure_file(object $obj, string $target_dir) : bool {
+	public static function download_remote_structure_file( object $obj, string $target_dir ) : object {
 		$start_time = start_time();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// curl request
 			$data = (object)[
@@ -1505,7 +1535,7 @@ abstract class backup {
 			];
 			$data_string = "data=" . json_encode($data);
 			// request
-			$response = curl_request((object)[
+			$curl_response = curl_request((object)[
 				'url'				=> STRUCTURE_SERVER_URL .'?' .$data_string,
 				'post'				=> true,
 				'header'			=> false, // bool add header to result
@@ -1515,7 +1545,7 @@ abstract class backup {
 					? SERVER_PROXY // from Dédalo config file
 					: false // default case
 			]);
-			$data = $response->result;
+			$data = $curl_response->result;
 
 		// errors
 			// sample of failed download
@@ -1525,20 +1555,24 @@ abstract class backup {
 			// 	"error": false,
 			// 	"code": 400
 			// }
-			if ($response->code!=200) {
+			if ($curl_response->code!=200) {
 				// error connecting to master server
 				// Do not add debug error here because it is already handled by curl_request
-				return false;
+				$response->errors[] = 'bad server response code: ' . $curl_response->code . ' (' .$curl_response->msg.')' ;
+				$response->msg .= ' Code is not as expected (200). Response code: ' . to_string($curl_response->code);
+				return $response;
 			}
 			if (empty($data)) {
 				// received data is empty (possibly a master server problem dealing with the request)
 				debug_log(__METHOD__
 					. " Empty result from download ontology file request " . PHP_EOL
-					. ' response: ' .to_string($response) . PHP_EOL
+					. ' response: ' .to_string($curl_response) . PHP_EOL
 					. ' obj param: ' . to_string($obj)
 					, logger::ERROR
 				);
-				return false;
+				$response->errors[] = 'empty data';
+				$response->msg .= ' Empty result from download ontology file request';
+				return $response;
 			}
 
 		// debug
@@ -1579,11 +1613,17 @@ abstract class backup {
 				. ' obj param: ' . to_string($obj)
 				, logger::ERROR
 			);
-			return false;
+			$response->errors[] = 'file writing fails';
+			$response->msg .= ' Error writing downloaded ontology file '.$obj->name;
+			return $response;
 		}
 
+		// response
+		$response->result = true;
+		$response->msg .= ' OK. Request done successfully for file ' . $obj->name;
 
-		return true;
+
+		return $response;
 	}//end download_remote_structure_file
 
 
@@ -1598,7 +1638,8 @@ abstract class backup {
 		// data
 			$data = array(
 				"code"				=> STRUCTURE_SERVER_CODE,
-				"check_connection"	=> true
+				"check_connection"	=> true,
+				'dedalo_version'	=> DEDALO_VERSION
 			);
 			$data_string = "data=" . json_encode($data);
 

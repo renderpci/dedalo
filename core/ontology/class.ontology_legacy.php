@@ -725,7 +725,6 @@ class ontology_legacy {
 			$component->Save();
 			// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd
 
-
 		// save ontology object too
 			$json_item = ontology_legacy::tipo_to_json_item($term_id);
 			(function($value) use($section_tipo, $section_id) {

@@ -76,16 +76,36 @@ session_write_close();
 	$major_version = isset($dedalo_version_array[0])
 		? (int)$dedalo_version_array[0]
 		: 5;
+	$minor_version = isset($dedalo_version_array[1])
+		? (int)$dedalo_version_array[1]
+		: 0;
+	$patch_version = isset($dedalo_version_array[2])
+		? (int)$dedalo_version_array[2]
+		: 0;
 
+	// only version >= 6 are supported. v5 is not compatible whit this ontology
 	if ($major_version<6) {
 		debug_log(__METHOD__
 			. " INVALID DEDALO VERSION ! Only >=6 are supported" . PHP_EOL
-			. json_encode($major_version, JSON_PRETTY_PRINT)
+			. json_encode($dedalo_version_array, JSON_PRETTY_PRINT)
 			, logger::ERROR
 		);
 		http_response_code(403); // Unauthorized
 		exit();
 	}
+
+	// point of no return: 6.2.9
+	// versions bellow 6.2.9 must be blocked to update ontology because the new jer_dd column 'term' is added
+	if ( $major_version===6 && ($minor_version<2 || ($minor_version===2 && $patch_version<9)) ) {
+		debug_log(__METHOD__
+			. " INVALID DEDALO VERSION ! Only >=6.2.9 are supported" . PHP_EOL
+			. json_encode($dedalo_version_array, JSON_PRETTY_PRINT)
+			, logger::ERROR
+		);
+		http_response_code(403); // Unauthorized
+		exit();
+	}
+
 	// Use default active version path
 	$version_path = '';
 

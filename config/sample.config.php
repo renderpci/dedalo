@@ -624,7 +624,7 @@
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER',			true);
 	define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
-	define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/lib/dedalo/extras/str_manager/');
+	define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
 	define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 	// structure_download. When ontology is updated, download files are saved here
 	define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);

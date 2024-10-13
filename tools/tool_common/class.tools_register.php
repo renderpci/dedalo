@@ -154,7 +154,7 @@ class tools_register {
 			if (!empty($ar_ontologies)) {
 
 				// Clean. remove structure records in the database
-					ontology_v5::clean_structure_data('tool');
+					ontology_legacy::clean_structure_data('tool');
 
 				// import ontology (structure) in jer_dd
 					if (defined('ONTOLOGY_DB')) {
@@ -164,12 +164,12 @@ class tools_register {
 						);
 					}else{
 						foreach ($ar_ontologies as $current_ontology) {
-							ontology_v5::import($current_ontology);
+							ontology_legacy::import($current_ontology);
 						}
 					}
 
 				// update counter at end to consolidate
-					RecordObj_dd_edit::update_counter('tool', $counter-1);
+					RecordObj_dd::update_counter('tool', $counter-1);
 			}
 
 			// section

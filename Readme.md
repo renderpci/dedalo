@@ -3,20 +3,24 @@
 
 #### V6 transition state
 
+The transition was complete! All supported ontologies are ready to be used in Dédalo v6.
+
+Important!: The current version 6.2.9 will be the last version compatible with the v5 ontology model. In the next version will be removed the old ontology editor and freeze support for v5.
+
 | ontology | state | use | interface | tools | comments | v5 compatibility until (dmy) |
 | --- | --- | --- | --- | --- | --- | --- |
-| dd | production | 100% | 100% | 100% |All definitions are ready | October 2024 |
-| rsc | production | 100% | 100% | 100% | All definitions are ready| October 2024 |
-| hierarchy | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
-| ww | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
-| oh | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
+| dd | production | 100% | 100% | 100% |All definitions are ready | 12/10/2024 |
+| rsc | production | 100% | 100% | 100% | All definitions are ready| 12/10/2024 |
+| hierarchy | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
+| ww | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
+| oh | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
 | numisdata | production | 100% | 100% | 100% |  All definitions are ready | 30/04/2024 |
-| isad | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
-| ich | production | 100% | 100% | 100%  | All definitions are ready | October 2024 |
-| tch | beta | 90% | 90% | 90%  | Install and test it, but don't use in production |  not compatible |
+| isad | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
+| ich | production | 100% | 100% | 100%  | All definitions are ready | 12/10/2024 |
+| tch | production | 100% | 100% | 100%  |  All definitions are ready |  not compatible |
 | tchi | production | 100% | 100% | 100%  | All definitions are ready  | not compatible |
-| dmm | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
-| mdcat | production | 100% | 100% | 100% | All definitions are ready| October 2024 |
+| dmm | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
+| mdcat | production | 100% | 100% | 100% | All definitions are ready| 12/10/2024 |
 
 
 ## 1. What is Dédalo?
@@ -146,29 +150,48 @@ Then, install Dédalo manually [following this instruction(https://dedalo.dev/do
 ## 6. Update
 
 You can follow the instruction to [update here](https://dedalo.dev/docs/management/updates/).
-In a nutshell, Dédalo has three main updates procedures:
+In a nutshell, Dédalo has four main updates procedures:
 
 1. Update the code files (php, js, css, html, etc.)
     - Create a backup of all files.
-    - Download the new files and change the files in your server.
-    - You will need see the new config files and put the changes into your own config files (/dedalo/config/config.php and /dedalo/config/config_db.php) is not possible change this files automatically because are the configuration files and it has specific pw and paths of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
+    - Option 1, manual update (remove old caches and files, as a clean install):
+        - Download the new files and change the files in your server.
+        - You will need see the new config files and put the changes into your own config files: `../dedalo/config/config.php`, `../dedalo/config/config_db.php`, `../dedalo/config/config_areas.php` and `../dedalo/config/config_core.php`.
+    - Option 2 automatically (preserve old caches and files):
+        - Log-in as `root` user.
+        - You will see an indication, a "red" box, as vertical band in the left side of the menu.
+        - Go to the Maintenance panel: *Administration->Maintenance*
+        - Locate the `Check config` panel and press the `Activate maintenance mode` button
+        - Locate the `Update code` panel and press the `Update Dédalo code to the latest version` button
+        - Review your config files see the info into the `Check config` panel or checking the changes in `../dedalo/config/sample.config.xx.php` files. Note: is not possible change this files automatically because are the configuration files and it has specific pw and paths of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
 
 2. Update the ontology structure with the sections, components, list, etc.
     - Do the first update step
-    - Log-in with any "developer" user.
-    - You will see an indication, an "orange" or "red" box, to the left of menu (red box, if you have the debugger active) a "grey" sub-menu with your server configuration, and a new "Development" menu, press it to go to the "admin utils" page.
-    - Locate the "Update Ontology" panel and press the "Update Dédalo ontology to the latest version" button, if all go well you will see a "green" alert.
+    - Log-in with any `developer` user.
+    - You will see an indication, an "orange" or "red" box, as vertical band in the left side of the menu.
+    - Go to the Maintenance panel: *Administration->Maintenance*
+    - Locate the `Update Ontology` panel and press the `Update Dédalo ontology to the latest version` button, if all go well you will see a "green" alert.
     - Log-out and log-in with a normal admin user.
 
 3. Update the data in your installation
     - Do the first and second update steps
-    - Log-in with any "developer" user.
-    - You will see an indication, an "orange" or "red" box, to the left of menu (red box, if you have the debugger active) a "grey" sub-menu with your server configuration, and a new "Development" menu, press it to go to the "admin utils" page.
-    - Locate the "Update Data" panel. If your data version is different that the "code files" version, Dédalo will show that you need update, press the «update» link and wait for notifications.
+    - Log-in with any `developer` user.
+    - You will see an indication, an "orange" or "red" box, as vertical band in the left side of the menu.
+    - Go to the Maintenance panel: *Administration->Maintenance*
+    - Locate the `Update Data panel`. If your data version is different that the "code files" version, Dédalo will show that you need update, press the «update» link and wait for notifications.
     - If all go well you will see a report with the changes.
-    - Reload the page 'Administration Tools'. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v6.0.9 pass from v6.0.9 to -> v6.0.10, v6.0.10 to -> v6.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
+    - Reload the page `Maintenance`. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v6.0.9 pass from v6.0.9 to -> v6.0.10, v6.0.10 to -> v6.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
     - Log-out and log-in with normal admin user.
     - Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" into the list of the sections for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
+
+4. Update the tools
+    - Do all previous updates
+    - Log-in with any `developer` user.
+    - You will see an indication, an "orange" or "red" box, as vertical band in the left side of the menu.
+    - Go to the Maintenance panel: *Administration->Maintenance*
+    - Locate the `Register tools` panel and press the `Register tools` button.
+    - If all go well you will see a report with the changes.
+
 
 ## 7. Importing toponymy
 

@@ -284,7 +284,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* 	Optional. If not received, it is calculated
 	* @return int|false $counter_dato_updated
 	*/
-	protected static function update_counter(string $tld, ?int $current_value=null) : int|false {
+	// protected static function update_counter(string $tld, int $current_value=null) : int { // removed by compatibility wit v5 ontology
+	public static function update_counter(string $tld, $current_value=null) {
 
 		if ($current_value===null) {
 			$current_value = self::get_counter_value($tld);
@@ -308,7 +309,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param string $tld
 	* @return int $counter_value
 	*/
-	protected static function get_counter_value( string $tld ) : int {
+	public static function get_counter_value(string $tld) : int {
 
 		$strQuery	= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
 		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
