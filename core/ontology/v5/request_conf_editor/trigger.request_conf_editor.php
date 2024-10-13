@@ -1,6 +1,6 @@
 <?php
 // ontology custom config file
-require_once( dirname(dirname(__FILE__)) .'/config/config_ontology.php' );
+require_once( dirname(dirname(__FILE__)) .'/ontology_legacy_setup.php');
 $start_time = start_time(); // add always after include config
 
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data

@@ -1,6 +1,6 @@
 <?php
 // ontology custom config file
-require_once( dirname(__FILE__) .'/config/config_ontology.php');
+require_once( dirname(__FILE__) .'/ontology_legacy_setup.php');
 
 /*
 * CLASE DD BASADA EN TESAURO V3

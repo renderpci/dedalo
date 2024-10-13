@@ -5,9 +5,7 @@
 $start_time = hrtime(true);
 
 // ontology custom config file
-include_once( dirname(__FILE__) .'/config/config_ontology.php' );
-// Old lang vars
-include_once( dirname(__FILE__) . '/lang/lang_code.php' );
+require_once( dirname(__FILE__) .'/ontology_legacy_setup.php');
 
 
 

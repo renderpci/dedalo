@@ -2,15 +2,16 @@
 
 
 
-// config. Dédalo main config file. 
+// config. Dédalo main config file.
 // This the only one difference between D5 and D6 versions dd ontology folder
-	require_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php');
-	require_once dirname(dirname(__FILE__)) . '/class.RecordObj_dd_edit.php';
-	require_once(dirname(dirname(__FILE__)) . '/class.RecordObj_descriptors_dd_edit.php');
+	require_once dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php';
+	require_once dirname(__FILE__) . '/class.RecordObj_dd_edit.php';
+	require_once dirname(__FILE__) . '/class.RecordObj_descriptors_dd_edit.php';
+	require_once dirname(__FILE__) . '/lang/lang_code.php';
 
 // add legacy classes
-	require_once dirname(dirname(__FILE__))  . '/legacy/class.css.php';
-	require_once dirname(dirname(__FILE__))  . '/legacy/class.js.php';
+	require_once dirname(__FILE__)  . '/legacy/class.css.php';
+	require_once dirname(__FILE__)  . '/legacy/class.js.php';
 
 
 // session auth user_id. May differ between D5 / D6 vesions

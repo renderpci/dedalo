@@ -3,10 +3,7 @@
 	ini_set('output_buffering', 'off');
 
 // ontology custom config file
-require_once( dirname(__FILE__) .'/config/config_ontology.php' );
-// Old lang vars
-require_once( dirname(__FILE__) . '/lang/lang_code.php' );
-
+require_once( dirname(__FILE__) .'/ontology_legacy_setup.php');
 
 
 // login check
