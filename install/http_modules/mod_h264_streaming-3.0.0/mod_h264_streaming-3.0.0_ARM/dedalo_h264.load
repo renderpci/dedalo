@@ -1,2 +1,0 @@
-LoadModule h264_streaming_module /usr/lib/apache2/modules/mod_dedalo_h264_streaming.so
-AddHandler h264-streaming.extensions .mp4
