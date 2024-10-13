@@ -215,6 +215,7 @@ const render_canvas = (self) => {
 		const qr_promises = []
 
 		const value = self.section.data.value || []
+
 		const value_length = value.length
 		for (let i = 0; i < value_length; i++) {
 
