@@ -1,6 +1,6 @@
 <?php
-// ontology custon config file
-require_once( dirname(dirname(__FILE__)) .'/config/config_ontology.php' );
+// ontology custom config file
+require_once( dirname(dirname(__FILE__)) .'/ontology_legacy_setup.php');
 
 
 
