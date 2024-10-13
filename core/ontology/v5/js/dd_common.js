@@ -273,7 +273,7 @@ function save_descriptor(input_node) {
 				lang		: lang,
 				tipo		: tipo,
 				dato		: dato,
-				terminoID	: terminoID,
+				terminoID	: parent, // terminoID,
 				top_tipo	: page_globals.top_tipo
 			}
 		})
