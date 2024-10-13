@@ -143,7 +143,11 @@ export const ts_object = new function() {
 							// remove spinner
 							children_element.firstChild.classList.remove('arrow_spinner');
 							// set arrow icon as opened
-							children_element.firstChild.classList.add('ts_object_children_arrow_icon_open')
+							const add_class = (children_element.dataset.type==='link_children_nd')
+								? 'ts_object_children_arrow_icon_open_nd'
+								: 'ts_object_children_arrow_icon_open'
+
+							children_element.firstChild.classList.add(add_class)
 							// Update arrow state
 							// ts_object.update_arrow_state(children_element, true) // disabled temporally
 						}
