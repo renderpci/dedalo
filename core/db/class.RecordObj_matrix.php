@@ -1,9 +1,8 @@
 <?php
-// declare(strict_types=1);
+declare(strict_types=1);
 /**
 * RecordObj_matrix
-*
-*
+* Handles matrix_descriptors_dd table records
 */
 class RecordObj_matrix extends RecordDataBoundObject {
 

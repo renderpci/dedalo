@@ -1,5 +1,5 @@
 <?php
-// declare(strict_types=1);
+declare(strict_types=1);
 # RecordObj_descriptors_dd
 # Extiende RecordObj_matrix, cambiándole la tabla y algunos métodos específicos
 # La tabla matrix_descriptors es similar a matrix pero el parent es VARCHAR(8) para soportar tipos like 'dd1'
@@ -144,14 +144,14 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 	/**
 	* SET DATO OVERWRITE PARENT JSON SET DATO
-	* @param $dato String
+	* @param mixed $dato
 	*/
-	function set_dato($dato, bool $raw=false) {
+	function set_dato(mixed $dato, bool $raw=false) : void {
 
  		if ($raw===true) {
 			$this->dato = $dato;
 			$this->arModifiedRelations['dato'] = 1;
-			return ;
+			return;
 		}
 
  		if(is_array($dato)) {
