@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * ONTOLOGY
 * Manages the main ontology definitions of Dédalo

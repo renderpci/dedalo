@@ -442,7 +442,7 @@ class hierarchy extends ontology {
 				// 	}
 
 			// set main_dd counter. Creates a counter in main_dd with $current_value +1 (9)
-				// $counter_value = RecordObj_dd_edit::update_counter($tld2, $current_value=8);
+				// $counter_value = RecordObj_dd::update_counter($tld2, $current_value=8);
 
 			// virtual section-list-thesaurus . modelo . model terms
 				// $options = new stdClass();
@@ -529,7 +529,7 @@ class hierarchy extends ontology {
 						}
 
 					// set main_dd counter. Creates a counter in main_dd with $current_value +1 (3)
-						// $counter_value = RecordObj_dd_edit::update_counter($tld2, $current_value=2);
+						// $counter_value = RecordObj_dd::update_counter($tld2, $current_value=2);
 				}
 
 			// virtual section-list for model. terms
@@ -556,7 +556,7 @@ class hierarchy extends ontology {
 						}
 
 					// set main_dd counter. Creates a counter in main_dd with $current_value +1 (3)
-						// $counter_value = RecordObj_dd_edit::update_counter($tld2, $current_value=2);
+						// $counter_value = RecordObj_dd::update_counter($tld2, $current_value=2);
 				}
 		}//end if ($real_section_tipo===DEDALO_THESAURUS_SECTION_TIPO)
 
