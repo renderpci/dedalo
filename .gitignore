@@ -169,3 +169,6 @@ phpunit-results.*
 /lab
 /core/lab
 /webpack*
+
+# ignore old ontology editor 'v5'
+/core/ontology/v5
