@@ -53,7 +53,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		return [
 			# db field name		# property name
 			'id'				=> 'ID',				// integer
-			#'id_matrix'		=> 'id_matrix',			// integer
+			'bulk_process_id'	=> 'bulk_process_id',	// integer
 			'section_id'		=> 'section_id',		// integer
 			'section_tipo'		=> 'section_tipo',		// string varchar 32
 			'tipo'				=> 'tipo',				// string varchar 32
@@ -62,8 +62,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 			'userID'			=> 'userID',			// integer
 			'state'				=> 'state',				// string char 32
 			'dato'				=> 'dato',				// jsonb format
-			'section_id_key'	=> 'section_id_key',	// integer
-			'bulk_process_id'	=> 'bulk_process_id'	// integer
+			'section_id_key'	=> 'section_id_key'	// integer
 		];
 	}//end defineRelationMap
 
@@ -106,11 +105,6 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	* @return array $ar_id
 	*/
 	public static function get_ar_time_machine_of_this( ?string $tipo=null, int|string|null $parent=null, ?string $lang=null, ?string $section_tipo=null, int $limit=10, int $offset=0, ?int $section_id_key=null, ?int $bulk_process_id=null ) : array {
-
-		/// Temporal !!!
-		#$limit = 1000000;
-
-		$ar_id 	= array();
 
 		$arguments=array();
 		if(!empty($tipo))

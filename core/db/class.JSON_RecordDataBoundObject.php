@@ -3,7 +3,6 @@ declare(strict_types=1);
 /**
 * JSON_RECORDDATABOUNDOBJECT
 *
-
 */
 abstract class JSON_RecordDataBoundObject {
 
@@ -53,10 +52,11 @@ abstract class JSON_RecordDataBoundObject {
 
 	# GET_DATO : GET DATO UNIFICADO (JSON)
 	public function get_dato() {
+
 		if($this->blIsLoaded!==true) {
 			$this->Load();
 		}
-		// if(!isset($this->dato)) return null;
+
 		return $this->dato ?? null;
 	}//end get_dato
 

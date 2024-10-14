@@ -1180,8 +1180,11 @@ final class Ffmpeg {
 			}
 
 		// exec command
-			$command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
-			$output  = json_decode( shell_exec($command) );
+			$command	= DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
+			$result		= shell_exec($command);
+			$output		= !empty($result)
+				? json_decode( $result )
+				: null;
 
 		// cache
 			$media_streams_cache[$key] = $output;

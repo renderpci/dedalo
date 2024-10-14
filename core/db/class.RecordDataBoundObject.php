@@ -2,7 +2,7 @@
 declare(strict_types=1);
 /**
 * RecordDataBoundObject
-* Connect with Ontology an matrix_time_machine tables in PostgreSQL:
+* Connect with Ontology tables in PostgreSQL:
 * Note that, for speed, all DB
 * 	jer_dd
 * 		id	integer Auto Increment [nextval('jer_dd_id_seq')]
@@ -18,6 +18,7 @@ declare(strict_types=1);
 *		relaciones	text NULL
 *		propiedades	text NULL
 *		properties	jsonb NULL
+* 		term jsonb NULL
 *
 * 	matrix_descriptors_dd
 * 		id	integer Auto Increment [nextval('matrix_descriptors_dd_id_seq')]
@@ -339,7 +340,6 @@ abstract class RecordDataBoundObject {
 		// Fix loaded state
 			$this->blIsLoaded = true;
 
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
@@ -371,7 +371,6 @@ abstract class RecordDataBoundObject {
 	public function Save() {
 
 		# SAVE UPDATE
-		#if(isset($this->ID) && $this->ID>0 && $this->force_insert_on_save!=true) {
 		if(isset($this->ID) && strlen($this->ID)>0 && $this->force_insert_on_save!==true) {
 
 			$strQuery		= ' UPDATE "'.$this->strTableName.'" SET ' ;
@@ -379,7 +378,7 @@ abstract class RecordDataBoundObject {
 
 			foreach($this->arRelationMap as $key => $value) {
 
-				$actualVal = & $this->$value ;
+				$actualVal = & $this->$value;
 
 				if(array_key_exists($value, $this->arModifiedRelations)) {
 
@@ -394,9 +393,7 @@ abstract class RecordDataBoundObject {
 					}else if(is_int($current_val)) { // changed  from is_numeric to is_int (06-06-2016)
 						$strQuery_set .= "\"$key\" = $current_val, ";
 					}else{
-						#$strQuery_set .= "\"$key\" = '".pg_escape_string($current_val)."', ";	# Escape the text data
 						$strQuery_set .= "\"$key\" = " . pg_escape_literal($this->get_connection(), $current_val) . ", ";
-						#$strQuery_set .= "\"$key\" = '".$current_val."', ";	# Escape the text data
 					}
 				}
 			}
@@ -409,7 +406,6 @@ abstract class RecordDataBoundObject {
 					dump($strQuery, ' strQuery');
 				}
 				trigger_error($msg);
-				#throw new Exception($msg, 1); #die($msg);
 
 				// Because is not an error, only a impossible save query, notify and return normally
 				return $this->ID;
@@ -509,7 +505,7 @@ abstract class RecordDataBoundObject {
 				);
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
-					throw new Exception("Error Processing Request (1-b): ".pg_last_error(DBi::_getConnection()), 1);
+					throw new Exception("Error Processing Request (1-b): ". pg_last_error(DBi::_getConnection()), 1);
 				}
 			}
 			// Fix new received id

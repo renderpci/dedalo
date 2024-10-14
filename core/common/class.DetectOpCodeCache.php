@@ -64,7 +64,7 @@ final class DetectOpCodeCache
    */
   public static function hasEaccelerator()
   {
-    // !empty doesn't work, because no variable 
+    // !empty doesn't work, because no variable
     return (bool)strlen(ini_get('eaccelerator.enable'));
   }
 
