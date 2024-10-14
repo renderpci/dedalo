@@ -1,8 +1,8 @@
 <?php
+declare(strict_types=1);
 /**
 * DB_DATA_CHECK
-*
-*
+* Manages database integrity tasks like check sequences
 */
 class db_data_check {
 
@@ -10,6 +10,8 @@ class db_data_check {
 
 	/**
 	* CHECK_SEQUENCES
+	* Verify that postgresql database sequences are correct
+	* checking information_schema.table
 	* @return stdClass object $response
 	*/
 	public static function check_sequences() : object {

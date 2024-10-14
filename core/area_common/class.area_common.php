@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * AREA_COMMON
-*
 *
 */
 class area_common extends common  {
@@ -35,8 +35,9 @@ class area_common extends common  {
 	* __CONSTRUCT
 	* @param string $tipo
 	* @param string $mode
+	* @return void
 	*/
-	protected function __construct(string $tipo, string $mode) {
+	protected function __construct( string $tipo, string $mode ) {
 
 		// fix main vars
 		$this->set_tipo($tipo);

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * AREA_ONTOLOGY
 * Manage whole ontology hierarchy
@@ -13,6 +14,8 @@ class area_ontology extends area_thesaurus {
 	* @var
 	*/
 
+
+
 	/**
 	* GET_hierarchy_section_tipo
 	* @return string $section_tipo
@@ -23,6 +26,7 @@ class area_ontology extends area_thesaurus {
 
 		return $hierarchy_section_tipo;
 	}//end get_hierarchy_section_tipo
+
 
 
 }//end area_ontology

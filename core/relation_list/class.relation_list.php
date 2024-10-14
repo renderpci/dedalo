@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS RELATION_LIST
 * Manage the relations of the sections

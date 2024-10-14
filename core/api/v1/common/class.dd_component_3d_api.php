@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * DD_COMPONENT_3d_API
 * Manage API REST data flow of the component with Dédalo
