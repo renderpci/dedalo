@@ -47,7 +47,7 @@ final class hierarchy_test extends TestCase {
 	*/
 	public function test_ar_tables_with_relations() {
 
-		$result = hierarchy::$table;
+		$result = hierarchy::$main_table;
 
 		$this->assertTrue(
 			gettype($result)==='string' ,
