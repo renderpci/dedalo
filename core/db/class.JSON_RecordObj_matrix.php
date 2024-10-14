@@ -168,25 +168,25 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 
 
-	# define current table (tr for this obj)
-	protected function defineTableName() {
-		return ( $this->matrix_table );
+	// define current table (tr for this obj)
+	protected function defineTableName() : string {
+		return $this->matrix_table;
 	}
-	# define PrimaryKeyName (id)
-	protected function definePrimaryKeyName() {
-		return ('id');
+	// define PrimaryKeyName (id)
+	protected function definePrimaryKeyName() : string {
+		return 'id';
 	}
-	# array of pairs db field name, obj property name like fieldName => propertyName
+	// array of pairs db field name, obj property name like fieldName => propertyName
 	protected function defineRelationMap() : array {
-		return (array(
+		return [
 			# db field-name	   # property name
-			"id"			=> "ID",
-			"section_id"	=> "section_id",
-			"section_tipo"	=> "section_tipo",
-			"datos"			=> "datos"
-		));
+			'id'			=> 'ID',
+			'section_id'	=> 'section_id',
+			'section_tipo'	=> 'section_tipo',
+			'datos'			=> 'datos'
+		];
 	}
-	# get_ID
+	// get_ID
 	public function get_id() : ?int {
 		return parent::get_ID();
 	}

@@ -66,12 +66,12 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 
 	# define current table (tr for this obj)
-	protected function defineTableName() {
-		return ( $this->matrix_table );
+	protected function defineTableName() : string {
+		return $this->matrix_table;
 	}
 	# define PrimaryKeyName (id)
-	protected function definePrimaryKeyName() {
-		return ('id');
+	protected function definePrimaryKeyName() : string {
+		return 'id';
 	}
 	# array of pairs db field name, obj property name like fieldName => propertyName
 	protected function defineRelationMap() : array {
