@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * AREA
-*
 *
 */
 class area extends area_common  {

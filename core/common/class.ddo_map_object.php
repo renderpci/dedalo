@@ -1,5 +1,6 @@
 <?php
-/*
+declare(strict_types=1);
+/**
 * CLASS DDO_MAP_OBJECT
 * Defines object with normalized properties and checks
 *

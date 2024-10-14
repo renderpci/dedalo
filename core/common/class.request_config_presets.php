@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS REQUEST_CONFIG_PRESETS
 *

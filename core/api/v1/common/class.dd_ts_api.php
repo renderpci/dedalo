@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * DD_TS_API
 * Manage API REST data of area_thesaurus and ts_object with Dédalo

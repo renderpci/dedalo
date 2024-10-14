@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * Ffmpeg
 * Manages audiovisual processing actions using FFMPEG library

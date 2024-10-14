@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS ImageMagick
 * Manages image files process with ImageMagick lib
