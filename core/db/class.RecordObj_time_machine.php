@@ -1,9 +1,8 @@
 <?php
-// declare(strict_types=1);
+declare(strict_types=1);
 /**
-* RecordObj_time_machine
-*
-*
+* RECORDOBJ_TIME_MACHINE
+* Handles matrix_time_machine table records
 */
 class RecordObj_time_machine extends RecordDataBoundObject {
 
@@ -36,21 +35,22 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	public $use_cache_manager = false;
 
 
+
 	public function __construct( ?string $id=null ) {
 		parent::__construct($id);
 	}
 
 	# define current table (tr for this obj)
-	protected function defineTableName() {
-		return ( self::$time_machine_matrix_table );
+	protected function defineTableName() : string {
+		return self::$time_machine_matrix_table;
 	}
 	# define PrimaryKeyName (id)
-	protected function definePrimaryKeyName() {
-		return ('id');
+	protected function definePrimaryKeyName() : string {
+		return 'id';
 	}
 	# array of pairs db field name, obj property name like fieldName => propertyName
-	protected function defineRelationMap() {
-		return (array(
+	protected function defineRelationMap() : array {
+		return [
 			# db field name		# property name
 			'id'				=> 'ID',				// integer
 			#'id_matrix'		=> 'id_matrix',			// integer
@@ -64,7 +64,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 			'dato'				=> 'dato',				// jsonb format
 			'section_id_key'	=> 'section_id_key',	// integer
 			'bulk_process_id'	=> 'bulk_process_id'	// integer
-		));
+		];
 	}//end defineRelationMap
 
 
@@ -79,9 +79,15 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 
 
-	public function set_dato($dato, $raw=false) {
+	/**
+	* SET_DATO :
+	* Set dato unified method (JSON)
+	* @param mixed $dato
+	*/
+	public function set_dato( mixed $dato ) : void {
 		$dato = json_handler::encode($dato);
-		parent::set_dato( $dato, $raw );
+
+		parent::set_dato( $dato );
 	}//end set_dato
 
 

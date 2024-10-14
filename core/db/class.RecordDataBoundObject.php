@@ -1,5 +1,5 @@
 <?php
-// declare(strict_types=1);
+declare(strict_types=1);
 /**
 * RecordDataBoundObject
 * Connect with Ontology an matrix_time_machine tables in PostgreSQL:
@@ -167,8 +167,9 @@ abstract class RecordDataBoundObject {
 	/**
 	* SET_DATO :
 	* Set dato unified method (JSON)
+	* @param mixed $dato
 	*/
-	public function set_dato($dato, bool $raw=false) {
+	public function set_dato( mixed $dato ) : void {
 
 		// Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
@@ -459,10 +460,16 @@ abstract class RecordDataBoundObject {
 							$actualVal = json_handler::encode($actualVal);
 						}
 
-						$strValueList .= (is_int($actualVal) && $this->strTableName!=='matrix_time_machine')
-							? $actualVal . ', '
-							// : "'".pg_escape_string($this->get_connection(), (string)$actualVal)."', "; // Escape the text data
-							: pg_escape_literal($this->get_connection(), $actualVal) . ', '; // Escape the text data
+						// $strValueList .= (is_int($actualVal) && $this->strTableName!=='matrix_time_machine')
+						// 	? $actualVal . ', '
+						// 	// : "'".pg_escape_string($this->get_connection(), (string)$actualVal)."', "; // Escape the text data
+						// 	: pg_escape_literal($this->get_connection(), $actualVal) . ', '; // Escape the text data
+
+						$safe_value = is_string($actualVal)
+							? pg_escape_literal($this->get_connection(), $actualVal) // Escape the text data
+							: $actualVal;
+
+						$strValueList .= $safe_value . ', ';
 					}
 				}
 			}

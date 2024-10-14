@@ -1,9 +1,9 @@
 <?php
-// declare(strict_types=1);
+declare(strict_types=1);
 /**
-* JSON_RecordDataBoundObject
+* JSON_RECORDDATABOUNDOBJECT
 *
-*
+
 */
 abstract class JSON_RecordDataBoundObject {
 
@@ -63,7 +63,7 @@ abstract class JSON_RecordDataBoundObject {
 
 
 	# SET_DATO : SET DATO UNIFICADO (JSON)
-	public function set_dato($dato) {
+	public function set_dato( mixed $dato ) : void {
 
 		# Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
@@ -463,8 +463,9 @@ abstract class JSON_RecordDataBoundObject {
 
 	/**
 	* GET_AR_EDITABLE_FIELDS
+	* @return array|false $ar_editable_fields
 	*/
-	public function get_ar_editable_fields() {
+	public function get_ar_editable_fields() : array|false {
 
 		static $ar_editable_fields;
 
@@ -474,11 +475,14 @@ abstract class JSON_RecordDataBoundObject {
 
 		if(is_array($this->arRelationMap)) {
 
+			$ar_editable_fields = [];
 			foreach($this->arRelationMap as $field_name => $property_name) {
 
-				if($property_name!=='ID') $ar_editable_fields[] = $field_name ;
+				if($property_name!=='ID') {
+					$ar_editable_fields[] = $field_name;
+				}
 			}
-			return $ar_editable_fields ;
+			return $ar_editable_fields;
 		}
 
 		return false;
@@ -493,11 +497,11 @@ abstract class JSON_RecordDataBoundObject {
 	* 	Full SQL query like "SELECT id FROM table WHERE id>0"
 	* @param bool $wait
 	* 	to set syc/async exec. Default us true
-	* @return PgSql\Result|bool $result
+	* @return PgSql\Result|false $result
 	*   resource (PHP<8) OR object (PHP>=8) | false $result
 	* 	Database resource/object from exec query
 	*/
-	public static function search_free(string $strQuery, bool $wait=true) {
+	public static function search_free( string $strQuery, bool $wait=true ) : PgSql\Result|false {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -929,7 +933,7 @@ abstract class JSON_RecordDataBoundObject {
 		return false;
 	}
 	# ACCESSORS SET
-	private function SetAccessor(string $strMember, $strNewValue) {
+	private function SetAccessor(string $strMember, mixed $strNewValue) {
 
 		if(property_exists($this, $strMember)) {
 
