@@ -378,14 +378,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_DESCRIPTOR_DATO_BY_TIPO
-	* Get termino dato by tipo ('termino','def','obs') static version
+	* Get 'term' value in given lang
+	* Do not call this method directly, use 'get_termino_by_tipo' instead
 	* @param string $terminoID
 	* @param string $lang = null
-	* @param string $tipo
 	* @param bool $fallback = false
 	* @return string|null $dato
 	*/
-	public static function get_descriptor_dato_by_tipo( string $terminoID, ?string $lang=null, ?string $tipo=null, bool $fallback=false ) : ?string {
+	private static function get_descriptor_dato_by_tipo( string $terminoID, ?string $lang=null, bool $fallback=false ) : ?string {
 
 		// Verify : In cases such as, for example, when solving the model of a related term that has no model assigned to it, the terminoID will be empty.
 		// This is not a mistake but we must avoid resolving it.
@@ -458,7 +458,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$result	= self::get_descriptor_dato_by_tipo(
 				$terminoID,
 				$lang,
-				'termino', // string typology
 				$fallback
 			);
 
@@ -1539,7 +1538,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 			if ($result) {
 
 				$counter_dato_updated  = self::update_counter($this->prefijo, $counter_dato);
-					#dump($counter_dato_updated," counter_dato_updated $this->prefijo");
 
 				$prefix_parent 		= self::get_prefix_from_tipo($this->parent);
 				$prefix_terminoID 	= self::get_prefix_from_tipo($this->terminoID);
