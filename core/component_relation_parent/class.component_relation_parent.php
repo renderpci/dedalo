@@ -754,7 +754,7 @@ class component_relation_parent extends component_relation_common {
 				$main_filter	= ",\"from_component_tipo\":\"$hierarchy_from_component_tipo\"";
 				$main_compare	= "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$main_filter."}";
 				$sql_where		= "datos#>'{relations}' @> '[$main_compare]'::jsonb";
-				$table			= hierarchy::$table;
+				$table			= hierarchy::$main_table;
 				$strQuery	   .= "\nUNION ALL \nSELECT $sql_select FROM \"$table\" WHERE $sql_where ";
 			}
 
