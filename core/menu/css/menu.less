@@ -327,9 +327,13 @@
 						border-top: 5px solid transparent;
 						border-left: 5px solid #9d9d9d;
 						position: absolute;
-						right: 8px;
-						top: 10px;
+						top: 0.66em;
+						right: 0.66em;
 						pointer-events: none;
+
+						@media screen and (min-width: @width_break_point_0) { // 1024px
+							top: 0.66em;
+						}
 					}
 
 					&.active {
