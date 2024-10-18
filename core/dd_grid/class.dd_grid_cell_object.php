@@ -483,7 +483,7 @@ class dd_grid_cell_object {
 							// when the value is empty []
 							// check if it has a fallback value
 							// if they have, use it.
-							$fallback = $value->fallback_value[$key];
+							$fallback = $value->fallback_value[$key] ?? null;
 							if(!empty($fallback)){
 								$ar_column_value[] = $fallback;
 							}
