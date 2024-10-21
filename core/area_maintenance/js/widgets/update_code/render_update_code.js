@@ -206,7 +206,13 @@ const get_content_data_edit = async function(self) {
 					},
 					options	: {}
 				},
-				on_done : reload_js_files // clean browser cache
+				on_done : () => {
+					// event publish
+					// listen by widget update_data_version.init
+					event_manager.publish('update_code_done', self)
+					// clean browser cache
+					reload_js_files()
+				}
 			})
 		}
 

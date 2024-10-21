@@ -74,12 +74,12 @@ render_update_data_version.prototype.list = async function(options) {
 const get_content_data = async function(self) {
 
 	// short vars
-		const value						= self.value || {}
-		const update_version			= value.update_version
-		const current_version_in_db		= value.current_version_in_db
-		const dedalo_version			= value.dedalo_version
-		const updates					= value.updates
-		const local_db_id				= 'process_update_data_version'
+		const value					= self.value
+		const update_version		= value.update_version
+		const current_version_in_db	= value.current_version_in_db
+		const dedalo_version		= value.dedalo_version
+		const updates				= value.updates
+		const local_db_id			= 'process_update_data_version'
 
 	// maintenance_mode from environment
 		const maintenance_mode = page_globals.maintenance_mode
@@ -88,6 +88,18 @@ const get_content_data = async function(self) {
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
 		})
+
+	// set widget container label color style
+		const when_in_dom_handler = () => {
+			if (update_version) {
+				const wrapper = self.node
+				const widget_container = wrapper.parentNode.parentNode
+				if (widget_container) {
+					widget_container.classList.add('danger')
+				}
+			}
+		}
+		when_in_dom(content_data, when_in_dom_handler)
 
 	// dedalo_db_management
 		if (!update_version) {
