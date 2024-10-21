@@ -109,6 +109,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* Build MySQL query string for create table request and exec query
 	* Called by trigger (trigger.diffusion_xx_web.php) to exec sql code
 	* @param array $table_data
+	* @param bool $drop = true
 	* @see trigger.diffusion_ [ENTITY] _web.php
 	* Format example:
 	* (

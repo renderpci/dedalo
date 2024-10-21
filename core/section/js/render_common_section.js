@@ -113,7 +113,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				text_content 	: get_label.delete_data_and_record || 'Delete record',
 				parent			: footer
 			})
-			button_delete_record.addEventListener('click', function(e){
+			const click_delete_record_handler = (e) => {
 				e.stopPropagation()
 
 				if (!confirm(get_label.sure)) {
@@ -123,7 +123,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				// spinner
 				const spinner = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'spinner_modal',
+					class_name		: 'spinner spinner_modal',
 					parent			: body
 				})
 				body.classList.add('loading')
@@ -137,7 +137,8 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				.then(function(){
 					modal.on_close()
 				})
-			})
+			}
+			button_delete_record.addEventListener('click', click_delete_record_handler)
 
 		// button_delete_data
 			const button_delete_data = ui.create_dom_element({
@@ -146,7 +147,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				text_content	: get_label.delete_data_only || 'delete data',
 				parent			: footer
 			})
-			button_delete_data.addEventListener('click', function(e){
+			const click_delete_data_handler = (e) => {
 				e.stopPropagation()
 
 				if (!confirm(get_label.sure)) {
@@ -156,7 +157,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				// spinner
 				const spinner = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'spinner',
+					class_name		: 'spinner spinner_modal',
 					parent			: body
 				})
 				body.classList.add('loading')
@@ -169,7 +170,8 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				.then(function(){
 					modal.on_close()
 				})
-			})
+			}
+			button_delete_data.addEventListener('click', click_delete_data_handler)
 
 	// modal
 		const modal = ui.attach_to_modal({
