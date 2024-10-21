@@ -119,7 +119,7 @@ class dd_cache {
 			$file_path	= $base_path . '/' . $prefix . $file_name;
 
 		// string data
-			$string_data = json_encode($data);
+			$string_data = json_encode($data, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 
 		// save data to file
 			$result = file_put_contents($file_path, $string_data, LOCK_EX);
