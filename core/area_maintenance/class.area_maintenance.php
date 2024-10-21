@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
+include_once DEDALO_CORE_PATH . '/area_maintenance/class.area_maintenance_widgets.php';
 /**
 * AREA_MAINTENANCE
 * System administrator's area with useful methods to
@@ -1512,6 +1514,39 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end update_data_version
+
+
+
+	/**
+	* GET_WIDGET_VALUE
+	* Returns updated widget value
+	* It is used to update widget data dynamically
+	* @param object options
+	*  sample:
+	*  {
+	* 	 name : string update_data_version
+	*  }
+	* @return object $response
+	*/
+	public static function get_widget_value( object $options ) : object {
+
+		// options
+			$name = $options->name;
+
+		// exec widget call
+			if( method_exists('area_maintenance_widgets', $name) ) {
+				return call_user_func(array('area_maintenance_widgets', $name), []);
+			}
+
+		// error response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed. The widget is not defined: '. to_string($name);
+				$response->errors	= [];
+
+
+		return $response;
+	}//end get_widget_value
 
 
 
