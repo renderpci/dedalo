@@ -270,7 +270,7 @@ class tool_diffusion extends tool_common {
 
 							// error case
 							$response->msg[]	= 'Not sqo_session found from id: '.$sqo_id;
-							$response->error[]	= 'no sqo session found';
+							$response->errors[]	= 'no sqo session found';
 							debug_log(__METHOD__
 								."  " . to_string($response->msg)
 								, logger::ERROR
@@ -300,6 +300,7 @@ class tool_diffusion extends tool_common {
 							$pdata->current	= new stdClass();
 								$pdata->current->section_tipo = $section_tipo;
 							$pdata->total_ms = exec_time_unit($start_time);
+							$pdata->errors = $response->errors;
 						// send to output
 						print_cli($pdata);
 					}
@@ -311,31 +312,30 @@ class tool_diffusion extends tool_common {
 				// reset offset
 				$sqo->offset = 0;
 
-
 				// BULK PROCESS ID
-				// create new process section
-					$bulk_process_section = section::get_instance(
-						null, // string|null section_id
-						DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
-					);
-					$bulk_process_section->Save();
+					// create new process section
+						$bulk_process_section = section::get_instance(
+							null, // string|null section_id
+							DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+						);
+						$bulk_process_section->Save();
 
-				// get the bulk_process_id as the section_id of the section process
-					$bulk_process_id = $bulk_process_section->get_section_id();
+					// get the bulk_process_id as the section_id of the section process
+						$bulk_process_id = $bulk_process_section->get_section_id();
 
-				// Save the process name into the process section
-					$bulk_process_label_component = component_common::get_instance(
-						'component_input_text', // string model
-						DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
-						$bulk_process_id, // string section_id
-						'list', // string mode
-						DEDALO_DATA_NOLAN, // string lang
-						DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
-					);
-					$bulk_process_label_component->set_dato(['publication']);
-					$bulk_process_label_component->Save();
-					//set the static var with the bulk_process_id, it will be use to save last publication date
-					diffusion::$bulk_process_id = $bulk_process_id;// bulk process id to group the section published.
+					// Save the process name into the process section
+						$bulk_process_label_component = component_common::get_instance(
+							'component_input_text', // string model
+							DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
+							$bulk_process_id, // string section_id
+							'list', // string mode
+							DEDALO_DATA_NOLAN, // string lang
+							DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+						);
+						$bulk_process_label_component->set_dato(['publication']);
+						$bulk_process_label_component->Save();
+						//set the static var with the bulk_process_id, it will be use to save last publication date
+						diffusion::$bulk_process_id = $bulk_process_id;// bulk process id to group the section published.
 
 				// iterate as long as search records are found
 				while (true) {
@@ -359,18 +359,12 @@ class tool_diffusion extends tool_common {
 					// store errors if occurred
 					if (!empty($chunk_errors)) {
 						$response->errors = array_merge($response->errors, $chunk_errors);
-						// CLI process data
-						if ( running_in_cli()===true ) {
-							$pdata->errors = $response->errors;
-							// send to output
-							print_cli($pdata);
-						}
 					}
 
 					// CLI process data
 					if ( running_in_cli()===true ) {
 						// update memory usage on each chunk group
-						$pdata->memory	= dd_memory_usage();
+						$pdata->memory = dd_memory_usage();
 						// send to output
 						print_cli($pdata);
 					}
@@ -403,9 +397,14 @@ class tool_diffusion extends tool_common {
 			//remove the bulk_process_id
 			diffusion::$bulk_process_id = null;
 
+		// errors
+			$total_errors = count($response->errors);
+
 		// response OK
 			$response->result						= true;
-			$response->msg[]						= 'OK. Request done successfully';
+			$response->msg[]						= ($total_errors > 0)
+				? 'Request done with some errors: ' . $total_errors
+				: 'OK. Request done successfully';
 			$response->memory						= dd_memory_usage();
 			$response->last_update_record_response	= tool_diffusion::$last_update_record_response ?? null;
 
@@ -459,6 +458,12 @@ class tool_diffusion extends tool_common {
 				'resolve_references'		=> true
 			]);
 
+			$response_errors = $update_record_response->errors ?? [];
+			foreach ($response_errors as $current_error) {
+				// append errors
+				$errors[] = $current_error;
+			}
+
 			// manage errors
 			if ($update_record_response->result===false) {
 				if (isset($update_record_response->code) && $update_record_response->code===2) {
@@ -487,6 +492,7 @@ class tool_diffusion extends tool_common {
 			if ( running_in_cli()===true ) {
 				$pdata->current->time	= exec_time_unit($start_time, 'ms');
 				$pdata->total_ms		= $pdata->total_ms + $pdata->current->time;
+				$pdata->errors			= $errors;
 				// send to output
 				print_cli($pdata);
 			}
