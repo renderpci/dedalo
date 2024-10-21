@@ -124,7 +124,10 @@ class dd_cache {
 		// save data to file
 			$result = file_put_contents($file_path, $string_data, LOCK_EX);
 			if ($result===false) {
-				debug_log(__METHOD__." Error on write file  ".to_string($file_path), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on write file. file_path:  " . $file_path
+					, logger::ERROR
+				);
 			}
 
 		// debug
