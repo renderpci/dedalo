@@ -208,25 +208,13 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// update_data_version *
-			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
-			$updates				= update::get_updates();
-			$update_version			= update::get_update_version();
-			$update_version_plain	= empty($update_version)
-				? ''
-				: implode('', $update_version);
-
 			$item = new stdClass();
 				$item->id		= 'update_data_version';
-				$item->class	= empty($update_version) ? 'success width_100' : 'danger width_100';
+				$item->class	= 'success width_100';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('update').' '.label::get_label('data');
-				$item->value	= (object)[
-					'update_version'		=> $update_version,
-					'current_version_in_db'	=> get_current_version_in_db(),
-					'dedalo_version'		=> get_dedalo_version(),
-					'updates'				=> $updates->{$update_version_plain} ?? null
-				];
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
