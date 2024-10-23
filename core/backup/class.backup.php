@@ -821,7 +821,7 @@ abstract class backup {
 
 		// Import the database and output the status to the page
 			$command  = DB_BIN_PATH.'pg_restore ' . DBi::get_connection_string() . ' --dbname '.DEDALO_DATABASE_CONN;
-			$command .= ' --no-password --clean --no-owner --no-privileges -v "'.$main_sql_file_path.'"';
+			$command .= ' --no-password --clean --no-owner --no-privileges "'.$main_sql_file_path.'"';
 
 		// exec command
 			exec($command.' 2>&1', $output, $worked_result);
@@ -834,29 +834,13 @@ abstract class backup {
 				if(SHOW_DEBUG===true) {
 				$ar_msg[] = 'Command: ' . $command;
 				}
-
-				// load_dedalo_str_tables_data_from_files
-				// Load partials srt data based on tld to independent files
-				$res_str_tables_data_from_files = (object)self::load_dedalo_str_tables_data_from_files();
-				if ($res_str_tables_data_from_files->result===false) {
-
-					$response->result	= false;
-					$ar_msg[]			= $res_str_tables_data_from_files->msg ?? 'Unknown error on load_dedalo_str_tables_data_from_files';
-					$response->errors[]	= 'Error during load_dedalo_str_tables_data_from_files: ';
-					$response->errors	= array_merge($response->errors, (array)$res_str_tables_data_from_files->errors);
-
-				}else{
-
-					$response->result	= true;
-					$ar_msg[]			= '-----------------------------------------------------------------------';
-					$ar_msg[]			= $res_str_tables_data_from_files->msg;
-					$ar_msg[]			= '-----------------------------------------------------------------------';
-				}
+				$ar_msg[] = 'Command output: ' . json_encode($output, JSON_PRETTY_PRINT);
 				break;
 
 			case 1: // error 1
-				$ar_msg[] = 'There was an error during import (pg_restore). Please make sure the import file is saved in the same folder as this script and check your values:';
+				$ar_msg[] = 'There was an error during import (using pg_restore). Errors may have occurred during pg_restore. See Command output for details';
 				$ar_msg[] = 'Command result: ' . to_string($worked_result);
+				$ar_msg[] = 'Command output: ' . json_encode($output, JSON_PRETTY_PRINT);
 				$ar_msg[] = 'DB Name: ' . DEDALO_DATABASE_CONN;
 				$ar_msg[] = 'DB User Name: ' . DEDALO_USERNAME_CONN;
 				$ar_msg[] = 'DB Host Name: ' . DEDALO_HOSTNAME_CONN;
@@ -865,7 +849,7 @@ abstract class backup {
 				$ar_msg[] = 'Command: ' . $command;
 				}
 				$response->result	= false;
-				$response->errors[]	= 'Error during import (pg_restore)';
+				$response->errors[]	= 'Error: pg_restore errors have occurred';
 				break;
 
 			default: // error unknown
@@ -876,10 +860,30 @@ abstract class backup {
 				if(SHOW_DEBUG===true) {
 				$ar_msg[] = 'Command: ' . $command;
 				}
+				$ar_msg[] = 'Command output: ' . json_encode($output, JSON_PRETTY_PRINT);
 				$response->result	= false;
 				$response->errors[]	= 'Error during command execution (unknown). code: ' . to_string($worked_result);
 				break;
 		}
+
+		// load data from files (tld files)
+			// load_dedalo_str_tables_data_from_files
+			// Load partials srt data based on tld to independent files
+			$res_str_tables_data_from_files = (object)self::load_dedalo_str_tables_data_from_files();
+			if ($res_str_tables_data_from_files->result===false) {
+
+				$response->result	= false;
+				$ar_msg[]			= $res_str_tables_data_from_files->msg ?? 'Unknown error on load_dedalo_str_tables_data_from_files';
+				$response->errors[]	= 'Error during load_dedalo_str_tables_data_from_files: ';
+				$response->errors	= array_merge($response->errors, (array)$res_str_tables_data_from_files->errors);
+
+			}else{
+
+				$response->result	= true;
+				$ar_msg[]			= '-----------------------------------------------------------------------';
+				$ar_msg[]			= $res_str_tables_data_from_files->msg;
+				$ar_msg[]			= '-----------------------------------------------------------------------';
+			}
 
 		// response
 			if ($response->result===false) {
