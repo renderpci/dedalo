@@ -234,7 +234,7 @@ const get_content_data_edit = async function(self) {
 								// errors node
 									if (api_response.errors.length>0) {
 										ui.create_dom_element({
-											element_type	: 'div',
+											element_type	: 'pre',
 											class_name		: 'error',
 											inner_html		: api_response.errors.join('<br />'),
 											parent			: body_response
