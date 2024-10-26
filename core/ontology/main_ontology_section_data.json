@@ -33,7 +33,7 @@
 		{
 			"type": "dd48",
 			"section_id": "1",
-			"section_tipo": "ontology40",
+			"section_tipo": "localontology1",
 			"from_component_tipo": "hierarchy45"
 		}
 	],
