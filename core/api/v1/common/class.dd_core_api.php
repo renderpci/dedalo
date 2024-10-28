@@ -68,6 +68,10 @@ final class dd_core_api {
 	*/
 	public static function start(object $rqo) : object {
 
+		// emergency recovery jer_dd without term data. Uncomment if needed
+			// require_once DEDALO_CORE_PATH .'/base/upgrade/class.transform_data.php';
+			// transform_data::copy_descriptors_to_jer_dd();
+
 		// options
 			$options	= $rqo->options ?? new StdClass();
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars

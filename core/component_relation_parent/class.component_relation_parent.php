@@ -978,6 +978,7 @@ class component_relation_parent extends component_relation_common {
 	}//end get_parents_recursive
 
 
+
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
