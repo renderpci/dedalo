@@ -104,6 +104,7 @@ class area_maintenance extends area_common {
 					'prefix_tipos'			=> $DEDALO_PREFIX_TIPOS,
 					'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
 					'structure_server_url'	=> (defined('STRUCTURE_SERVER_URL') ? STRUCTURE_SERVER_URL : null),
+					'structure_server_check'=> backup::check_remote_server(),
 					'structure_server_code'	=> (defined('STRUCTURE_SERVER_CODE') ? STRUCTURE_SERVER_CODE : null),
 					'ontology_db'			=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
 					'body'					=> defined('ONTOLOGY_DB')

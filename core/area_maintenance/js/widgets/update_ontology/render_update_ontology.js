@@ -118,12 +118,30 @@ const get_content_data_edit = async function(self) {
 						inner_html		: label,
 						parent			: config_grid
 					})
-					ui.create_dom_element({
+					const value_node = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'value',
 						inner_html		: value,
 						parent			: config_grid
 					})
+
+					// check URL is reachable
+					if (label==='STRUCTURE_SERVER_URL') {
+						const server_check_code = structure_server_check.code
+						if (server_check_code===200) {
+							ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button icon check success',
+								parent			: value_node
+							})
+						}else{
+							ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button icon cancel error',
+								parent			: value_node
+							})
+						}
+					}
 				}
 				// structure_from_server
 					add_to_grid('Config:', '')
