@@ -1948,4 +1948,55 @@ class area_maintenance extends area_common {
 
 
 
+	/**
+	* RECOVER_JER_DD_COLUMN
+	* Used in version 6.2.9 to recover unset jet_dd column 'term' and values
+	* @return bool
+	*/
+	public static function recover_jer_dd_column() {
+
+		require_once DEDALO_CORE_PATH .'/base/upgrade/class.transform_data.php';
+
+		try {
+
+			// safe column term check/creation
+			$sql = sanitize_query('
+				DO $$
+				BEGIN
+					IF NOT EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'jer_dd\' and column_name=\'term\')
+					THEN
+						ALTER TABLE "jer_dd"
+						ADD "term" jsonb NULL;
+						COMMENT ON TABLE "jer_dd" IS \'Term and translations\';
+					END IF;
+				END $$;
+			');
+			$result = pg_query(DBi::_getConnection(), $sql);
+			if ($result===false) {
+				return false;
+			}
+
+			// safe term data fill from 'matrix_descriptors_dd'
+			$result = transform_data::copy_descriptors_to_jer_dd();
+			if ($result===false) {
+				return false;
+			}
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__
+				. " Error (exception) on recover term jer_dd_column" . PHP_EOL
+				. ' Caught exception: ' . $e->getMessage()
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end recover_jer_dd_column
+
+
+
 }//end class area_maintenance
