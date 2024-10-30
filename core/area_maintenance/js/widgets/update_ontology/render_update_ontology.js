@@ -67,14 +67,15 @@ render_update_ontology.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value					= self.value || {}
-		const current_ontology		= value.current_ontology
-		const ontology_db			= value.ontology_db
-		const structure_from_server	= value.structure_from_server
-		const structure_server_url	= value.structure_server_url
-		const structure_server_code	= value.structure_server_code
-		const prefix_tipos			= value.prefix_tipos || []
-		const confirm_text			= value.confirm_text || 'Sure?'
+		const value						= self.value || {}
+		const current_ontology			= value.current_ontology
+		const ontology_db				= value.ontology_db
+		const structure_from_server		= value.structure_from_server
+		const structure_server_url		= value.structure_server_url
+		const structure_server_code		= value.structure_server_code
+		const structure_server_check	= value.structure_server_check
+		const prefix_tipos				= value.prefix_tipos || []
+		const confirm_text				= value.confirm_text || 'Sure?'
 
 	// content_data
 		const content_data = ui.create_dom_element({
