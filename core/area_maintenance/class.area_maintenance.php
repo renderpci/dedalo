@@ -226,7 +226,8 @@ class area_maintenance extends area_common {
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
 				$item->value	= (object)[
 					'dedalo_source_version_url'			=> DEDALO_SOURCE_VERSION_URL,
-					'dedalo_source_version_local_dir'	=> DEDALO_SOURCE_VERSION_LOCAL_DIR
+					'dedalo_source_version_local_dir'	=> DEDALO_SOURCE_VERSION_LOCAL_DIR,
+					'dedalo_source_version_url_check'	=> check_url(DEDALO_SOURCE_VERSION_URL)
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
