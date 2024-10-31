@@ -1547,19 +1547,22 @@ class area_maintenance extends area_common {
 	* @param object $options
 	* @return object $response
 	*/
-	public static function set_congif_auto(object $options) {
+	private static function set_congif_auto(object $options) {
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
 
 		// options
 			$name	= $options->name; // name of the constant like 'MAINTENANCE_MODE_CUSTOM'
 			$value	= $options->value ?? null; // value of the constant like bool 'false'
 
 		// user root check. Only root user can set congif_core
-			if (logged_user_id()!==DEDALO_SUPERUSER) {
+			if (logged_user_id()!==DEDALO_SUPERUSER
+				&& is_ontology_available() // only blocks if no Ontology error was detected (recovery case)
+				) {
 				$response->msg = 'Error. only root user can set congif_core';
 				return $response;
 			}
@@ -1674,6 +1677,42 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end set_congif_auto
+
+
+
+	/**
+	* SET_MAINTENANCE_MODE
+	* Changes Dédalo maintenance mode from true to false or vice-versa
+	* Uses area_maintenance:: set_congif_auto to overwrite the core_config files
+	* Input and output are normalized objects to allow use it from area_maintenance API
+	* @param object $options
+	* {
+	* 	value : bool
+	* }
+	* @return object $response
+	*/
+	public static function set_maintenance_mode( object $options ) : object {
+
+		// options
+			$value = $options->value;
+
+		// check value type
+			if (!is_bool($value)) {
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed';
+					$response->errors	= [];
+				return $response;
+			}
+
+		$response = area_maintenance:: set_congif_auto((object)[
+			'name'	=> 'DEDALO_MAINTENANCE_MODE_CUSTOM',
+			'value'	=> $value
+		]);
+
+
+		return $response;
+	}//end set_maintenance_mode
 
 
 
