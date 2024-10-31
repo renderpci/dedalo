@@ -178,28 +178,30 @@ $global_start_time = hrtime(true);
 			}
 
 	// } catch (Throwable $e) { // For PHP 7
-		// 	$result = new stdClass();
-		// 		$result->result	= false;
-		// 		$result->msg	= (SHOW_DEBUG===true)
-		// 			? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
-		// 			: 'Throwable Exception when calling Dédalo API. Contact with your admin';
-		// 		$result->debug	= (object)[
-		// 			'rqo' => $rqo
-		// 		];
 
-		// 	trigger_error($e->getMessage());
+	// 	$response = new stdClass();
+	// 		$response->result	= false;
+	// 		$response->msg	= (SHOW_DEBUG===true)
+	// 			? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
+	// 			: 'Throwable Exception when calling Dédalo API. Contact with your admin';
+	// 		$response->debug	= (object)[
+	// 			'rqo' => $rqo
+	// 		];
 
-		// } catch (Exception $e) { // For PHP 5
+	// 	// trigger_error($e->getMessage());
 
-		// 	$result = new stdClass();
-		// 		$result->result	= false;
-		// 		$result->msg	= (SHOW_DEBUG===true)
-		// 			? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
-		// 			: 'Exception when calling Dédalo API. Contact with your admin';
-		// 		$result->debug	= (object)[
-		// 			'rqo' => $rqo
-		// 		];
-	// 	trigger_error($e->getMessage());
+	// } catch (Exception $e) { // For PHP 5
+
+	// 	$response = new stdClass();
+	// 		$response->result	= false;
+	// 		$response->msg	= (SHOW_DEBUG===true)
+	// 			? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
+	// 			: 'Exception when calling Dédalo API. Contact with your admin';
+	// 		$response->debug	= (object)[
+	// 			'rqo' => $rqo
+	// 		];
+
+	// 	// trigger_error($e->getMessage());
 	// }
 
 

@@ -68,10 +68,10 @@ render_check_config.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value				= self.value || {}
-		const info				= value.info || {}
-		const errors			= info.errors
-		const result			= info.result || []
+		const value		= self.value || {}
+		const info		= value.info || {}
+		const errors	= info.errors
+		const result	= info.result || []
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -458,4 +458,7 @@ const render_recovery_mode = (self) => {
 
 	return recovery_mode_container
 }//end render_recovery_mode
+
+
+
 // @license-end

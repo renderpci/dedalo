@@ -1405,43 +1405,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return $active_tlds_cache;
 		}
 
-		// ONTOLOGY_DB case. Used to easy layout design in master
-		if ( defined('ONTOLOGY_DB') ) {
-
-			static $ontology_pg_conn;
-			if(isset($ontology_pg_conn)) {
-				return($ontology_pg_conn);
-			}
-
-			$ontology_pg_conn = DBi::_getConnection(
-				ONTOLOGY_DB['DEDALO_HOSTNAME_CONN'], // host
-				ONTOLOGY_DB['DEDALO_USERNAME_CONN'], // user
-				ONTOLOGY_DB['DEDALO_PASSWORD_CONN'], // password
-				ONTOLOGY_DB['DEDALO_DATABASE_CONN'], // database name
-				ONTOLOGY_DB['DEDALO_DB_PORT_CONN'], // port
-				ONTOLOGY_DB['DEDALO_SOCKET_CONN'], // socket
-				false // use cache
-			);
-			if($ontology_pg_conn===false) {
-				debug_log(__METHOD__
-					." Invalid DDBB connection. Unable to connect (52-2)"
-					, logger::ERROR
-				);
-				throw new Exception("Error. Could not connect to database (52-2)", 1);
-			}
-
-			$connection = $ontology_pg_conn;
-		}else{
-
-			$connection = DBi::_getConnection(
-				DEDALO_HOSTNAME_CONN, // string host
-				DEDALO_USERNAME_CONN, // string user
-				DEDALO_PASSWORD_CONN, // string password
-				DEDALO_DATABASE_CONN, // string database
-				DEDALO_DB_PORT_CONN, // ?string port
-				DEDALO_SOCKET_CONN // ?string socket
-			);
-		}
+		$connection = DBi::_getConnection(
+			DEDALO_HOSTNAME_CONN, // string host
+			DEDALO_USERNAME_CONN, // string user
+			DEDALO_PASSWORD_CONN, // string password
+			DEDALO_DATABASE_CONN, // string database
+			DEDALO_DB_PORT_CONN, // ?string port
+			DEDALO_SOCKET_CONN // ?string socket
+		);
 
 		// check valid connection
 		if ($connection===false) {
