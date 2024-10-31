@@ -539,6 +539,10 @@ abstract class RecordDataBoundObject {
 		// matrix_table. Optionally change table temporally for search
 			if (!empty($matrix_table)) {
 				$this->strTableName = $matrix_table;
+			}else{
+				// forces to recalculate the table name
+				// Note that in recovery_mode changes on the fly
+				$this->strTableName = $this->defineTableName();
 			}
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;

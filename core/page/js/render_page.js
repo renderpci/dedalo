@@ -68,6 +68,12 @@ const get_content_data = async function(self) {
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.type)
 
+	// dedalo_recovery_mode. maintenance_msg (defined in config and get from environment)
+		if(page_globals.recovery_mode===true){
+			const recovery_container = render_recovery_msg()
+			content_data.prepend(recovery_container)
+		}
+
 	// dedalo_maintenance_mode. maintenance_msg (defined in config and get from environment)
 		if(page_globals.maintenance_mode===true){
 			const maintenance_container = render_maintenance_msg()
@@ -161,8 +167,34 @@ const render_maintenance_msg = function() {
 		parent			: maintenance_container
 	})
 
-
 	return maintenance_container
+}//end render_maintenance_msg
+
+
+
+/**
+* RENDER_RECOVERY_MSG
+* Render HTML node based in environment page_globals.recovery_mode value
+* @return HTMLElement recovery_container
+*/
+const render_recovery_msg = function() {
+
+	// recovery_container
+	const recovery_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'recovery_container error'
+	})
+
+	// recovery_msg
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'recovery_msg',
+		inner_html		: '<span style="font-size:2rem"> 🥵 </span> ' + (get_label.site_in_recovery_mode || 'WARNING: The system is in recovery mode, your main ontology is probably damaged!'),
+		parent			: recovery_container
+	})
+
+
+	return recovery_container
 }//end render_maintenance_msg
 
 

@@ -1561,7 +1561,9 @@ class area_maintenance extends area_common {
 
 		// user root check. Only root user can set congif_core
 			if (logged_user_id()!==DEDALO_SUPERUSER
-				&& is_ontology_available() // only blocks if no Ontology error was detected (recovery case)
+				// && is_ontology_available() // only blocks if no Ontology error was detected (recovery case)
+				&& $name!=='DEDALO_RECOVERY_MODE'
+				&& (!defined('DEDALO_RECOVERY_MODE') || DEDALO_RECOVERY_MODE==false)
 				) {
 				$response->msg = 'Error. only root user can set congif_core';
 				return $response;
@@ -1574,6 +1576,16 @@ class area_maintenance extends area_common {
 			switch ($name) {
 
 				case 'DEDALO_MAINTENANCE_MODE_CUSTOM':
+					// boolean
+					$ar_allow_type = ['boolean'];
+					if (!in_array($value_type, $ar_allow_type)) {
+						$response->msg = 'Error. invalid value type. Only allow boolean';
+						return $response;
+					}
+					$write_value = json_encode( (bool)$value );
+					break;
+
+				case 'DEDALO_RECOVERY_MODE':
 					// boolean
 					$ar_allow_type = ['boolean'];
 					if (!in_array($value_type, $ar_allow_type)) {
@@ -1713,6 +1725,54 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end set_maintenance_mode
+
+
+
+	/**
+	* SET_RECOVERY_MODE
+	* Changes Dédalo recovery mode from true to false or vice-versa
+	* Uses area_recovery::set_congif_core to overwrite the core_config files
+	* Input and output are normalized objects to allow use it from area_recovery API
+	* Could be changed from area_mainteanance check_config widget
+	* or automatically from API start
+	* @see dd_core_api->start
+	* @param object $options
+	* {
+	* 	value : bool
+	* }
+	* @return object $response
+	*/
+	public static function set_recovery_mode( object $options ) : object {
+
+		// options
+			$value = $options->value;
+
+		// check value type
+			if (!is_bool($value)) {
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed';
+					$response->errors	= [];
+				return $response;
+			}
+
+		// set config_core constant value
+		area_maintenance::set_congif_core((object)[
+			'name'	=> 'DEDALO_RECOVERY_MODE',
+			'value'	=> $value
+		]);
+
+		// set environmental var accessible in all Dédalo just now
+		$_ENV['DEDALO_RECOVERY_MODE'] = $value;
+
+		$response = new stdClass();
+			$response->result	= true;
+			$response->msg		= 'OK. Request done successfully';
+			$response->errors	= [];
+
+
+		return $response;
+	}//end set_recovery_mode
 
 
 
