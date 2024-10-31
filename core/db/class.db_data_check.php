@@ -63,6 +63,7 @@ class db_data_check {
 				if (pg_num_rows($result2) === 0) {
 					continue;	// Skip empty tables
 				}
+
 				$last_id = pg_fetch_result($result2, 0, 'id');
 
 				# Find vars in current sequence

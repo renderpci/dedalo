@@ -148,9 +148,10 @@ const get_content_data = function(self) {
 					parent			: fragment
 				})
 			}
+
 			return ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'content_data error',
+				class_name		: 'content_data error_message error',
 				inner_html		: 'Error on create login form. login_items are invalid. Check your database connection and integrity or reinstall Dédalo',
 				parent			: fragment
 			})
