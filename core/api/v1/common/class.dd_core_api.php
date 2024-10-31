@@ -68,15 +68,36 @@ final class dd_core_api {
 	*/
 	public static function start(object $rqo) : object {
 
-		// emergency recovery jer_dd without term data. Uncomment if needed
-			// require_once DEDALO_CORE_PATH .'/base/upgrade/class.transform_data.php';
-			// transform_data::copy_descriptors_to_jer_dd();
-
 		// options
 			$options	= $rqo->options ?? new StdClass();
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars
 			$menu		= $options->menu ?? false;
 			// (!) properties 'sqo' and 'source' could be received too, but they are not used here but in common->build_request_config
+
+		// recovery mode. Note that GET vars are inside $options->search_obj
+		// If a URL recovery param is received as ?recovery=XXX and the value matches
+		// the config DEDALO_RECOVERY_KEY, the system enters in recovery and maintenance modes
+		// to allow root user login and fix the Ontology problem
+			if (isset($search_obj->recovery)) {
+				$dedalo_recovery_key = defined('DEDALO_RECOVERY_KEY') ? DEDALO_RECOVERY_KEY : null;
+				if (!empty($dedalo_recovery_key) && $search_obj->recovery===$dedalo_recovery_key) {
+					// set recovery mode (modifies config_core)
+					area_maintenance::set_recovery_mode((object)[
+						'value' => true
+					]);
+					// set maintenance mode too (modifies config_core)
+					area_maintenance::set_maintenance_mode((object)[
+						'value' => true
+					]);
+				}else{
+					// return error. Prevent to calculate the environment here
+					$response = new stdClass();
+						$response->result	= false;
+						$response->msg		= 'Error. Invalid recovery key';
+						$response->error	= null;
+					return $response;
+				}
+			}
 
 		// response
 			$response = new stdClass();
@@ -2621,6 +2642,8 @@ final class dd_core_api {
 			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION_CUSTOM')
 				? DEDALO_NOTIFICATION_CUSTOM
 				: (defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : false);
+			// recovery mode
+			$obj->recovery_mode					= $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
 
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {

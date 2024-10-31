@@ -138,9 +138,9 @@ const get_content_data_edit = async function(self) {
 					form_container.button_submit.classList.add('danger')
 				}
 
-				// add maintenance_mode_body_response at end
-				maintenance_mode_container.appendChild(maintenance_mode_body_response)
-			}
+			// recovery_mode
+				const recovery_mode_container = render_recovery_mode(self)
+				content_data.appendChild(recovery_mode_container)
 
 			// notification
 			{
@@ -384,4 +384,78 @@ const get_content_data_edit = async function(self) {
 
 
 
+
+/**
+* RENDER_RECOVERY_MODE
+* Creates the form nodes to switch between recovery modes
+* @param object self
+* @return HTMLElement recovery_mode_container
+*/
+const render_recovery_mode = (self) => {
+
+	const recovery_mode_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'container recovery_mode_container',
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label',
+		inner_html		: 'recovery mode',
+		parent			: recovery_mode_container
+	})
+
+	// body_response warning
+	const recovery_mode_body_response = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: "Warning! On true, Ontology backup table will be used instead the main Ontology table.",
+		class_name		: 'body_response'
+	})
+
+	// form
+	const submit_label = page_globals.recovery_mode===true
+		? 'Deactivate recovery mode'
+		: 'Activate recovery mode'
+	const new_recovery_mode = !page_globals.recovery_mode
+	const form_container = self.caller.init_form({
+		submit_label	: submit_label,
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: recovery_mode_container,
+		body_response	: recovery_mode_body_response,
+		trigger : {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'class_request',
+			source	: {
+				action : 'set_recovery_mode'
+			},
+			options	: {
+				value : new_recovery_mode
+
+			}
+		},
+		on_done : (api_response) => {
+			if (api_response.result) {
+				setTimeout(function(){
+					// update page_globals value
+					page_globals.recovery_mode = new_recovery_mode
+					// render the page again
+					window.dd_page.refresh({
+						build_autoload	: false,
+						destroy			: false
+					})
+				}, 0)
+			}
+		}
+	})
+	if (page_globals.recovery_mode===false) {
+		form_container.button_submit.classList.add('danger')
+	}
+
+	// add recovery_mode_body_response at end
+	recovery_mode_container.appendChild(recovery_mode_body_response)
+
+
+	return recovery_mode_container
+}//end render_recovery_mode
 // @license-end

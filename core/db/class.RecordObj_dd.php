@@ -30,6 +30,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 	// optional specific loads
 	protected $ar_recursive_childrens_of_this = [];
 
+	// default table. Can be changed on the fly base on DEDALO_RECOVERY_MODE
+	public static $table = 'jer_dd';
+
 
 
 	/**
@@ -73,7 +76,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	// DEFINETABLENAME : define current table (tr for this obj)
 	protected function defineTableName() : string {
-		return 'jer_dd';
+
+		// if in recovery mode, changes table name to jer_dd_backup
+		$DEDALO_RECOVERY_MODE = $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
+		if ($DEDALO_RECOVERY_MODE===true) {
+			self::$table = 'jer_dd_backup';
+		}
+
+		return self::$table;
 	}
 	// DEFINEPRIMARYKEYNAME : define PrimaryKeyName (id)
 	protected function definePrimaryKeyName() : string {
@@ -685,7 +695,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				'sql_code'			=> $sql_code,
 				'sql_limit'			=> 1
 			],
-			'jer_dd'
+			RecordObj_dd::$table // jer_dd | jer_dd_backup
 		);
 		$terminoID = $ar_result[0] ?? null;
 
@@ -1441,7 +1451,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			);
 		}
 
-		$strQuery	= "SELECT tld FROM jer_dd GROUP BY tld";
+		$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+		$strQuery	= "SELECT tld FROM \"$table\" GROUP BY tld";
 		$result		= pg_query($connection, $strQuery);
 
 		$active_tlds = [];

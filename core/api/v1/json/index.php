@@ -123,6 +123,22 @@ $global_start_time = hrtime(true);
 	}
 
 
+// recovery mode
+	// rqo->recovery_mode is set automatically by data_manager.request_config from environment page_globals
+	// to preserve the recovery status across API calls
+	// @see dd_core_api->start
+	$recovery_mode = $rqo->recovery_mode ?? false;
+	if ($recovery_mode===true) {
+		// verify is not a malicious request
+		if (defined('DEDALO_RECOVERY_MODE') && DEDALO_RECOVERY_MODE===true) {
+			// change config environmental var value after verify
+			// that Dédalo is really in recovery mode (set in config_core)
+			// Note that this action changes the default Ontology table used: jer_dd -> jer_dd_backup
+			$_ENV['DEDALO_RECOVERY_MODE'] = true;
+		}
+	}
+
+
 
 // prevent_lock from session
 	$session_closed = false;

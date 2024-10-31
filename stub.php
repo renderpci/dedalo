@@ -138,6 +138,9 @@ define('SOCRATA_CONFIG',[]);
 
 define('PDF_OCR_ENGINE','');
 
+define('DEDALO_RECOVERY_KEY','');
+define('DEDALO_RECOVERY_MODE','');
+
 function session_start_manager(){};
 function fix_cascade_config_var(){};
 class logger{};
