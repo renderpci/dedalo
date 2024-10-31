@@ -113,11 +113,10 @@ const get_content_data_edit = async function(self) {
 						dd_api	: 'dd_area_maintenance_api',
 						action	: 'class_request',
 						source	: {
-							action : 'set_congif_auto'
+							action : 'set_maintenance_mode'
 						},
 						options	: {
-							name	: 'DEDALO_MAINTENANCE_MODE_CUSTOM',
-							value	: new_maintenance_mode
+							value : new_maintenance_mode
 						}
 					},
 					on_done : (api_response) => {
