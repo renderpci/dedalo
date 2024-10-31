@@ -54,6 +54,9 @@ class db_data_check {
 				# Find last id in table
 				$sql		= " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
 				$result2	= JSON_RecordObj_matrix::search_free($sql);
+				if (!$result2) {
+					continue;
+				}
 				if (pg_num_rows($result2) === 0) {
 					continue;	// Skip empty tables
 				}
