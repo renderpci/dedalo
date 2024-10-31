@@ -1541,13 +1541,13 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* SET_CONGIF_AUTO
+	* SET_CONGIF_CORE
 	* This function set a custom maintenance mode. Useful when the root user
 	* do not have access to the config file to edit
 	* @param object $options
 	* @return object $response
 	*/
-	private static function set_congif_auto(object $options) {
+	private static function set_congif_core(object $options) {
 
 		// response
 			$response = new stdClass();
@@ -1688,14 +1688,14 @@ class area_maintenance extends area_common {
 
 
 		return $response;
-	}//end set_congif_auto
+	}//end set_congif_core
 
 
 
 	/**
 	* SET_MAINTENANCE_MODE
 	* Changes Dédalo maintenance mode from true to false or vice-versa
-	* Uses area_maintenance:: set_congif_auto to overwrite the core_config files
+	* Uses area_maintenance:: set_congif_core to overwrite the core_config files
 	* Input and output are normalized objects to allow use it from area_maintenance API
 	* @param object $options
 	* {
@@ -1717,7 +1717,7 @@ class area_maintenance extends area_common {
 				return $response;
 			}
 
-		$response = area_maintenance:: set_congif_auto((object)[
+		$response = area_maintenance:: set_congif_core((object)[
 			'name'	=> 'DEDALO_MAINTENANCE_MODE_CUSTOM',
 			'value'	=> $value
 		]);
