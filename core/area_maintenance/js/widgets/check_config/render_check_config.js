@@ -12,7 +12,7 @@
 
 
 /**
-* RENDER_check_config
+* RENDER_CHECK_CONFIG
 * Manages the component's logic and appearance in client side
 */
 export const render_check_config = function() {

@@ -202,7 +202,7 @@
 
 
 
-// BACKUP_TEMP
+// ONTOLOGY_DOWNLOAD_DIR
 	// Target folder exists test
 	if (defined('ONTOLOGY_DOWNLOAD_DIR') && ONTOLOGY_DOWNLOAD_DIR!==false) {
 		$folder_path = ONTOLOGY_DOWNLOAD_DIR;
@@ -802,13 +802,6 @@
 	}
 
 
-// Test mcrypt lib
-	# Change it to Open SSL in 4.0.22
-	#if (!function_exists('mcrypt_encrypt')) {
-	#	$init_response->msg .= trim("Error Processing Request: MCRYPT lib is not available");
-	#}
-
-
 
 // Test openSSL lib
 	if (!function_exists('openssl_encrypt')) {
@@ -1067,6 +1060,5 @@
 	}else{
 		array_unshift($init_response->msg, 'Init test passed with some warnings');
 	}
-
 
 	return $init_response;
