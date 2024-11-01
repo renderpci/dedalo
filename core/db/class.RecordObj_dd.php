@@ -77,10 +77,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	// DEFINETABLENAME : define current table (tr for this obj)
 	protected function defineTableName() : string {
 
-		// if in recovery mode, changes table name to jer_dd_backup
+		// if in recovery mode, changes table name to jer_dd_recovery
 		$DEDALO_RECOVERY_MODE = $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
 		if ($DEDALO_RECOVERY_MODE===true) {
-			self::$table = 'jer_dd_backup';
+			self::$table = 'jer_dd_recovery';
 		}
 
 		return self::$table;
@@ -695,7 +695,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				'sql_code'			=> $sql_code,
 				'sql_limit'			=> 1
 			],
-			RecordObj_dd::$table // jer_dd | jer_dd_backup
+			RecordObj_dd::$table // jer_dd | jer_dd_recovery
 		);
 		$terminoID = $ar_result[0] ?? null;
 
@@ -1422,7 +1422,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			);
 		}
 
-		$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+		$table		= RecordObj_dd::$table; // jer_dd | jer_dd_recovery
 		$strQuery	= "SELECT tld FROM \"$table\" GROUP BY tld";
 		$result		= pg_query($connection, $strQuery);
 

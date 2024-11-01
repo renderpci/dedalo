@@ -1284,11 +1284,21 @@ class transform_data {
 
 	/**
 	* COPY_DESCRIPTORS_TO_JER_DD
-	* Called by the update to 6.3.0, it copy the table descriptors as object of lang:term
+	* Called by the update to 6.3.0, copy the table descriptors as object of lang:term
 	* and insert it into the term column in jer_dd
 	* @return bool
 	*/
 	public static function copy_descriptors_to_jer_dd() : bool {
+
+		// check 'matrix_descriptors_dd' table before
+			$matrix_descriptors_dd_exists = DBi::check_table_exists('matrix_descriptors_dd');
+			if (!$matrix_descriptors_dd_exists) {
+				debug_log(__METHOD__
+					. " Error. Unable to get matrix_descriptors_dd records because the table do not exists" . PHP_EOL
+					, logger::ERROR
+				);
+				return false;
+			}
 
 		// jer_dd. delete terms (jer_dd)
 			$sql_query = '

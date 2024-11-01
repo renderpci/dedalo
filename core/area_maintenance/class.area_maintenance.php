@@ -2216,4 +2216,59 @@ class area_maintenance extends area_common {
 
 
 
+	/**
+	* CREATE_JER_DD_RECOVERY
+	* Creates (delete previous if already exists) the recovery table
+	* containing only 'dd' tld for use in 'recovery_mode'
+	* Source file is a SQL string file located at /dedalo/install/db/jer_dd_recovery.sql
+	* @return object $response
+	*/
+	public static function create_jer_dd_recovery() {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		try {
+
+			$sql_file	= DEDALO_ROOT_PATH . '/install/db/jer_dd_recovery.sql';
+			$sql_string	= file_get_contents($sql_file);
+			if (!$sql_string) {
+				$response->msg = 'Error getting jer_dd_recovery.sql file from install directory';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' sql_file:' . to_string($sql_file)
+					, logger::ERROR
+				);
+				$response->errors[] = 'File unavailable';
+				return $response;
+			}
+
+			$result = pg_query(DBi::_getConnection(), $sql_string);
+			if (!$result) {
+				$response->msg = 'Error getting executing jer_dd_recovery.sql file';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' sql_string:' . to_string($sql_string)
+					, logger::ERROR
+				);
+				$response->errors[] = 'File unavailable';
+				return $response;
+			}
+
+			$response->result	= true;
+			$response->msg		= 'OK. Request done successfully';
+
+		} catch (Exception $e) {
+			$response->msg = 'Caught exception: ' . $e->getMessage();
+			$response->errors[] = 'Exception occurred';
+		}
+
+
+		return $response;
+	}//end create_jer_dd_recovery
+
+
+
 }//end class area_maintenance
