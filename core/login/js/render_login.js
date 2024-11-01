@@ -243,7 +243,7 @@ const get_content_data = function(self) {
 			const button_enter_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button_enter_label',
-				inner_html		: strip_tags(login_item_enter.label),
+				inner_html		: strip_tags(login_item_enter.label || 'Enter'),
 				parent			: button_enter
 			})
 		// event click

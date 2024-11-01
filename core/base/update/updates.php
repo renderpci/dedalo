@@ -7,6 +7,30 @@ $updates = new stdClass();
 
 
 
+$v=630; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 3;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 9;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+		";
+		$updates->$v->alert_update[] = $alert;
+
+
+
 $v=629; #####################################################################################
 $updates->$v = new stdClass();
 

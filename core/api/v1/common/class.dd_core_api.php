@@ -542,10 +542,6 @@ final class dd_core_api {
 				? 'OK. Request done'
 				: 'Error: ' . to_string($response->error);
 
-		// jer_dd descriptors
-			// require_once DEDALO_CORE_PATH .'/base/upgrade/class.transform_data.php';
-			// transform_data::copy_descriptors_to_jer_dd();
-
 
 		return $response;
 	}//end start
