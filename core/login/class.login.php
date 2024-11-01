@@ -61,6 +61,16 @@ class login extends common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed [Login]';
 
+		// column term check
+			$column_term_exists = DBi::check_column_exists('jer_dd', 'term');
+			if (!$column_term_exists) {
+				// creates the column
+				DBi::add_column('jer_dd', 'term', 'jsonb NULL', 'Term and translations');
+				// fill values
+				require_once DEDALO_CORE_PATH .'/base/upgrade/class.transform_data.php';
+				$copy = transform_data::copy_descriptors_to_jer_dd();
+			}
+
 		// options
 			$username = $options->username;
 			$password = $options->password;
