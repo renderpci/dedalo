@@ -2440,12 +2440,7 @@ class install extends common {
 		try {
 
 			// table exists check
-				$sql = '
-					SELECT EXISTS (SELECT table_name FROM information_schema.tables WHERE table_name = \'matrix_users\');
-				';
-				$result	= pg_query(DBi::_getConnection(), $sql);
-				$row	= pg_fetch_object($result);
-				$exists	= ($row->exists==='t');
+				$exists	= DBi::check_table_exists('matrix_users');
 
 				if ($exists===false) {
 					$response->result	= false;
