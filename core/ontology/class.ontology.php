@@ -143,6 +143,45 @@ class ontology {
 		$section_data->components->hierarchy6->dato->{DEDALO_DATA_NOLAN} = [$tld];
 	}//end create_new_main_section
 
+	/**
+	* MAP_TARGET_SECTION_TIPO_TO_TLD
+	* @return string|null $tld
+	*/
+	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : ?string {
+
+		foreach (self::$cache_target_section_tipo as $current_tld => $value) {
+			if($value === $target_section_tipo){
+				return $current_tld;
+			}
+		}
+
+		$ontology_main = self::get_ontology_main_form_target_section_tipo($target_section_tipo);
+
+		if( empty($ontology_main) ){
+			debug_log(__METHOD__
+				. " Error for target_section_tipo, the main ontology don't exist, target_section_tipo: " . PHP_EOL
+				. to_string( $target_section_tipo )
+				, logger::ERROR
+			);
+			return null;
+		}
+		$ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
+
+		if( empty($ar_tld) ){
+			debug_log(__METHOD__
+				. " Error for tld, the main ontology has not defined target section_tipo" . PHP_EOL
+				. 'target_section_tipo: ' .to_string( $target_section_tipo )
+				, logger::ERROR
+			);
+			return null;
+		}
+		$tld = $ar_tld[0];
+
+		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
+
+		return $tld;
+	}//end map_target_section_tipo_to_tld
+
 
 	/**
 	* GET_ALL_ONTOLOGY_SECTIONS
