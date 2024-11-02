@@ -72,6 +72,10 @@ class json_handler {
 	*/
 	public static function decode(string $json, bool $assoc=false) {
 
+		if ($json==='null') {
+			return null;
+		}
+
 		$result = json_decode($json, $assoc);
 
 		// check errors
