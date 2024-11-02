@@ -6,6 +6,40 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=630; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 3;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 9;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<br>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Generate main ontology sections, it get your prefix_tipos definition in config.php and all active hierarchies defined in hierarchy section";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "generate_all_main_ontology_sections";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
 
 $v=629; #####################################################################################
 $updates->$v = new stdClass();
