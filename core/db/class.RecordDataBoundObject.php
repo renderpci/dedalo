@@ -90,40 +90,6 @@ abstract class RecordDataBoundObject {
 	*/
 	private function get_connection() : PgSql\Connection|bool {
 
-		$ontology_tables = [
-			'jer_dd',
-			'matrix_descriptors_dd',
-			'main_dd'
-		];
-
-		// ONTOLOGY_DB case. Used to easy layout design in master
-			if (defined('ONTOLOGY_DB') && true===in_array($this->strTableName, $ontology_tables)) {
-
-				static $ontology_pg_conn;
-				if(isset($ontology_pg_conn)) {
-					return($ontology_pg_conn);
-				}
-
-				$ontology_pg_conn = DBi::_getConnection(
-					ONTOLOGY_DB['DEDALO_HOSTNAME_CONN'], // host
-					ONTOLOGY_DB['DEDALO_USERNAME_CONN'], // user
-					ONTOLOGY_DB['DEDALO_PASSWORD_CONN'], // password
-					ONTOLOGY_DB['DEDALO_DATABASE_CONN'], // database name
-					ONTOLOGY_DB['DEDALO_DB_PORT_CONN'], // port
-					ONTOLOGY_DB['DEDALO_SOCKET_CONN'], // socket
-					false // use cache
-				);
-				if($ontology_pg_conn===false) {
-					debug_log(__METHOD__
-						." Invalid DDBB connection. Unable to connect (52-2)"
-						, logger::ERROR
-					);
-					throw new Exception("Error. Could not connect to database (52-2)", 1);
-				}
-
-				return $ontology_pg_conn;
-			}
-
 		$connection = DBi::_getConnection(
 			DEDALO_HOSTNAME_CONN, // string host
 			DEDALO_USERNAME_CONN, // string user
@@ -573,6 +539,10 @@ abstract class RecordDataBoundObject {
 		// matrix_table. Optionally change table temporally for search
 			if (!empty($matrix_table)) {
 				$this->strTableName = $matrix_table;
+			}else{
+				// forces to recalculate the table name
+				// Note that in recovery_mode changes on the fly
+				$this->strTableName = $this->defineTableName();
 			}
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;

@@ -2464,3 +2464,73 @@ function get_backtrace_sequence() : array  {
 
 	return $seq;
 }//end get_backtrace_sequence
+
+
+
+/**
+* CHECK_URL
+* Exec a PHP header request to verify if URL is reachable
+* Only 200 code in response is interpreted as reachable
+* @param string $url
+* @return bool
+*/
+function check_url( string $url ) : bool {
+
+	try {
+
+		$context = stream_context_create(
+			[
+				'http' => array(
+					'method' => 'HEAD'
+				)
+			]
+		);
+
+		$headers = get_headers($url, false, $context);
+
+		$first_line = $headers[0] ?? '';
+			dump($first_line, ' first_line ++ '.to_string());
+
+		if ( strpos($first_line, ' 200 ')!==false) {
+			return true;
+		}
+
+	} catch (Exception $e) {
+
+		debug_log(__METHOD__
+			. " Exception checking URL: $url " . PHP_EOL
+			. ' Caught exception: ' . $e->getMessage()
+			, logger::DEBUG
+		);
+	}
+
+
+	return false;
+}//end check_url
+
+
+
+/**
+* IS_ONTOLOGY_AVAILABLE
+* Check if Ontology (jer_dd) is reachable
+* @return bool
+*/
+function is_ontology_available() {
+
+ 	try {
+
+		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
+		$term			= $RecordObj_dd->get_term();
+
+		return is_object($term);
+
+	} catch (Exception $e) {
+		debug_log(__METHOD__
+			. " Error (exception) on check term jer_dd_column" . PHP_EOL
+			. ' Caught exception: ' . $e->getMessage()
+			, logger::ERROR
+		);
+
+		return false;
+	}
+ }//end is_ontology_available

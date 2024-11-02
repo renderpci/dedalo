@@ -1641,11 +1641,11 @@ abstract class backup {
 
 		// data
 			$data = array(
-				"code"				=> STRUCTURE_SERVER_CODE,
-				"check_connection"	=> true,
+				'code'				=> STRUCTURE_SERVER_CODE,
+				'check_connection'	=> true,
 				'dedalo_version'	=> DEDALO_VERSION
 			);
-			$data_string = "data=" . json_encode($data);
+			$data_string = 'data=' . json_encode($data);
 
 		// curl_request
 			$response = curl_request((object)[

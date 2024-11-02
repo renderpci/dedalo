@@ -71,6 +71,7 @@ const get_content_data_edit = async function(self) {
 		const value								= self.value || {}
 		const dedalo_source_version_url			= value.dedalo_source_version_url
 		const dedalo_source_version_local_dir	= value.dedalo_source_version_local_dir
+		const dedalo_source_version_url_check	= value.dedalo_source_version_url_check
 		const local_db_id						= 'process_update_code'
 
 	// content_data
@@ -89,12 +90,25 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// dedalo_source_version_url
-		ui.create_dom_element({
+		const source_version_url_node = ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: 'dedalo_source_version_url: ' + dedalo_source_version_url,
 			class_name		: 'info_text light',
 			parent			: content_data
 		})
+		if (dedalo_source_version_url_check) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button icon check success',
+				parent			: source_version_url_node
+			})
+		}else{
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button icon cancel error',
+				parent			: source_version_url_node
+			})
+		}
 
 		// dedalo_source_version_local_dir
 		ui.create_dom_element({

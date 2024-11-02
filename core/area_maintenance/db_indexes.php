@@ -566,46 +566,6 @@
 		TABLESPACE pg_default;
 	';
 
-// matrix_descriptors_dd
-	$ar_sql_query[] = '
-		CREATE INDEX IF NOT EXISTS matrix_descriptors_dd_dato_tipo_lang
-		ON public.matrix_descriptors_dd USING btree
-		(dato COLLATE pg_catalog."default" ASC NULLS LAST, tipo COLLATE pg_catalog."default" ASC NULLS LAST, lang COLLATE pg_catalog."default" ASC NULLS LAST)
-		TABLESPACE pg_default;
-		-- Index: matrix_descriptors_dd_lang
-
-		-- DROP INDEX IF EXISTS public.matrix_descriptors_dd_lang;
-
-		CREATE INDEX IF NOT EXISTS matrix_descriptors_dd_lang
-		ON public.matrix_descriptors_dd USING btree
-		(lang COLLATE pg_catalog."default" ASC NULLS LAST)
-		TABLESPACE pg_default;
-		-- Index: matrix_descriptors_dd_parent
-
-		-- DROP INDEX IF EXISTS public.matrix_descriptors_dd_parent;
-
-		CREATE INDEX IF NOT EXISTS matrix_descriptors_dd_parent
-		ON public.matrix_descriptors_dd USING btree
-		(parent COLLATE pg_catalog."default" ASC NULLS LAST)
-		TABLESPACE pg_default;
-		-- Index: matrix_descriptors_dd_parent_tipo_lang
-
-		-- DROP INDEX IF EXISTS public.matrix_descriptors_dd_parent_tipo_lang;
-
-		CREATE INDEX IF NOT EXISTS matrix_descriptors_dd_parent_tipo_lang
-		ON public.matrix_descriptors_dd USING btree
-		(parent COLLATE pg_catalog."default" ASC NULLS LAST, tipo COLLATE pg_catalog."default" ASC NULLS LAST, lang COLLATE pg_catalog."default" ASC NULLS LAST)
-		TABLESPACE pg_default;
-		-- Index: matrix_descriptors_dd_tipo
-
-		-- DROP INDEX IF EXISTS public.matrix_descriptors_dd_tipo;
-
-		CREATE INDEX IF NOT EXISTS matrix_descriptors_dd_tipo
-		ON public.matrix_descriptors_dd USING btree
-		(tipo COLLATE pg_catalog."default" ASC NULLS LAST)
-		TABLESPACE pg_default;
-	';
-
 // matrix_hierarchy
 	$ar_sql_query[] = '
 		CREATE INDEX IF NOT EXISTS matrix_hierarchy_datos_idx

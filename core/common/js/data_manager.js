@@ -43,6 +43,12 @@ data_manager.request = async function(options) {
 		this.body			= options.body // body data type must match "Content-Type" header
 		this.use_worker		= options.use_worker ?? false
 
+	// recovery mode. Auto add if environment recovery_mode is true
+	// On set to true, it is passed across all API request calls preserving the mode
+		if (page_globals.recovery_mode) {
+			this.body.recovery_mode = true
+		}
+
 	// reset page_globals.api_errors
 		page_globals.api_errors = []
 

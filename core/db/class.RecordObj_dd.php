@@ -30,6 +30,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 	// optional specific loads
 	protected $ar_recursive_childrens_of_this = [];
 
+	// default table. Can be changed on the fly base on DEDALO_RECOVERY_MODE
+	public static $table = 'jer_dd';
+
 
 
 	/**
@@ -73,7 +76,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	// DEFINETABLENAME : define current table (tr for this obj)
 	protected function defineTableName() : string {
-		return 'jer_dd';
+
+		// if in recovery mode, changes table name to jer_dd_backup
+		$DEDALO_RECOVERY_MODE = $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
+		if ($DEDALO_RECOVERY_MODE===true) {
+			self::$table = 'jer_dd_backup';
+		}
+
+		return self::$table;
 	}
 	// DEFINEPRIMARYKEYNAME : define PrimaryKeyName (id)
 	protected function definePrimaryKeyName() : string {
@@ -685,7 +695,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				'sql_code'			=> $sql_code,
 				'sql_limit'			=> 1
 			],
-			'jer_dd'
+			RecordObj_dd::$table // jer_dd | jer_dd_backup
 		);
 		$terminoID = $ar_result[0] ?? null;
 
@@ -1437,43 +1447,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return $active_tlds_cache;
 		}
 
-		// ONTOLOGY_DB case. Used to easy layout design in master
-		if ( defined('ONTOLOGY_DB') ) {
-
-			static $ontology_pg_conn;
-			if(isset($ontology_pg_conn)) {
-				return($ontology_pg_conn);
-			}
-
-			$ontology_pg_conn = DBi::_getConnection(
-				ONTOLOGY_DB['DEDALO_HOSTNAME_CONN'], // host
-				ONTOLOGY_DB['DEDALO_USERNAME_CONN'], // user
-				ONTOLOGY_DB['DEDALO_PASSWORD_CONN'], // password
-				ONTOLOGY_DB['DEDALO_DATABASE_CONN'], // database name
-				ONTOLOGY_DB['DEDALO_DB_PORT_CONN'], // port
-				ONTOLOGY_DB['DEDALO_SOCKET_CONN'], // socket
-				false // use cache
-			);
-			if($ontology_pg_conn===false) {
-				debug_log(__METHOD__
-					." Invalid DDBB connection. Unable to connect (52-2)"
-					, logger::ERROR
-				);
-				throw new Exception("Error. Could not connect to database (52-2)", 1);
-			}
-
-			$connection = $ontology_pg_conn;
-		}else{
-
-			$connection = DBi::_getConnection(
-				DEDALO_HOSTNAME_CONN, // string host
-				DEDALO_USERNAME_CONN, // string user
-				DEDALO_PASSWORD_CONN, // string password
-				DEDALO_DATABASE_CONN, // string database
-				DEDALO_DB_PORT_CONN, // ?string port
-				DEDALO_SOCKET_CONN // ?string socket
-			);
-		}
+		$connection = DBi::_getConnection(
+			DEDALO_HOSTNAME_CONN, // string host
+			DEDALO_USERNAME_CONN, // string user
+			DEDALO_PASSWORD_CONN, // string password
+			DEDALO_DATABASE_CONN, // string database
+			DEDALO_DB_PORT_CONN, // ?string port
+			DEDALO_SOCKET_CONN // ?string socket
+		);
 
 		// check valid connection
 		if ($connection===false) {
@@ -1483,7 +1464,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			);
 		}
 
-		$strQuery	= "SELECT tld FROM jer_dd GROUP BY tld";
+		$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+		$strQuery	= "SELECT tld FROM \"$table\" GROUP BY tld";
 		$result		= pg_query($connection, $strQuery);
 
 		$active_tlds = [];
