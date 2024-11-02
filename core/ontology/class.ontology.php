@@ -33,11 +33,10 @@ class ontology {
 			$tld = $row->tld;
 			$main_section_row = $this->get_ontology_main_form_tld( $tld );
 
-			$ar_target_section_tipo = $main_section_row->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 
 	/**
 	* GET_ONTOLOGY_MAIN_FrOM_TLD
-	* Get the matrix record of ontology main from a tld
+	* Find the matrix record of ontology main from a given tld
 	* sample: dd --> section_tipo: ontology35, section_id: 1
 	* @param string $tld
 	* @return object|null $row
@@ -77,17 +76,12 @@ class ontology {
 
 
 	/**
-	* GET_ONTOLOGY_MAIN_FORM_TLD
+	* GET_ONTOLOGY_MAIN_FROM_TLD
 	*
 	* @param string $tld
 	* @return object|null $row
 	*/
-	public function get_ontology_main_form_tld( string $tld ) : ?object {
-
-		$sql = '
-			SELECT *
-			FROM "'.self::$main_table.'"
-			WHERE
+	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
 			section_tipo = \''.self::$main_section_tipo.'\' AND
 			f_unaccent(datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld.'"\].*\')
 		';
@@ -405,7 +399,7 @@ class ontology {
 	* REORDER_NODES_FROM_JER_DD
 	* Once the matrix records of jer_dd parse is set
 	* is possible assign the order between nodes.
-	* find the ontology nodes as matrix rows and order by the jer_dd definition.
+	* Find the ontology nodes as matrix rows and order by the jer_dd definition.
 	* @param string $tld
 	* @return bool
 	*/
@@ -490,7 +484,7 @@ class ontology {
 
 
 		// check if exist the main tld
-		$ontology_main = self::get_ontology_main_form_tld( $tld );
+		$ontology_main = self::get_ontology_main_from_tld( $tld );
 
 		if( !empty($ontology_main) ){
 			debug_log(__METHOD__
@@ -586,11 +580,11 @@ class ontology {
 			return $cache_target_section_tipo[$tld];
 		}
 
-		$ontology_main = self::get_ontology_main_form_tld( $tld );
+		$ontology_main = self::get_ontology_main_from_tld( $tld );
 
 		if( empty($ontology_main) ){
 			self::add_main_section( $tld );
-			$ontology_main	= self::get_ontology_main_form_tld( $tld );
+			$ontology_main	= self::get_ontology_main_from_tld( $tld );
 		}
 
 		if( empty($ontology_main) ){
