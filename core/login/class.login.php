@@ -1340,7 +1340,7 @@ class login extends common {
 
 		// short vars
 			$model	= 'login';
-			$tipo	= $this->get_tipo();
+			$tipo	= $this->get_tipo(); // get_login_tipo dd229
 			$mode	= $this->get_mode();
 			$label	= $this->get_label();
 			$lang	= $this->get_lang();

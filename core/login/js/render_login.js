@@ -8,7 +8,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-	import {strip_tags} from '../../../core/common/js/utils/index.js'
+	import {strip_tags, url_vars_to_object} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -133,9 +133,25 @@ const get_content_data = function(self) {
 	// check login_items. If there were problems with type resolution, maybe the Ontology tables are not reachable
 		if (!login_items || !login_items.find(el => el.tipo==='dd255')) {
 
+			// URL vars. Check for 'recovery' GET param
+			const url_vars = url_vars_to_object()
+			if (url_vars.recovery) {
+				// refresh the window to force read DEDALO_MAINTENANCE_MODE in server side
+				setTimeout(function(){
+					// Refresh the page and bypass the cache
+					location.reload(true);
+				}, 3000)
+				return ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'content_data error_message warning',
+					inner_html		: '🥵 Trying to recover from a serious problem in the Ontology. Please wait.. or reload the page',
+					parent			: fragment
+				})
+			}
+
 			return ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'content_data error',
+				class_name		: 'content_data error_message error',
 				inner_html		: 'Error on create login form. login_items are invalid. Check your database connection and integrity or reinstall Dédalo',
 				parent			: fragment
 			})

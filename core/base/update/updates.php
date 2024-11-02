@@ -1346,6 +1346,59 @@ $updates->$v = new stdClass();
 					TABLESPACE pg_default;
 			');
 
+	// DATABASE UPDATES 2 (mandatory updating to 6.2.9)
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_main_id_seq;
+				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
+			");
+		// Add the matrix_ontology table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
+				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
+			");
+
+		// Add the term column to jer_dd table
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DO $$
+				BEGIN
+					IF NOT EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'jer_dd\' and column_name=\'term\')
+					THEN
+						ALTER TABLE "jer_dd"
+						ADD "term" jsonb NULL;
+						COMMENT ON TABLE "jer_dd" IS \'Term and translations\';
+					END IF;
+				END $$;
+			');
+
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS jer_dd_term
+				ON public.jer_dd USING gin
+				(term jsonb_path_ops)
+				TABLESPACE pg_default;
+			");
+
+		// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "copy_descriptors_to_jer_dd";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
 			'component_av',

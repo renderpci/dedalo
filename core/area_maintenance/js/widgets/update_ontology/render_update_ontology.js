@@ -67,14 +67,15 @@ render_update_ontology.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value					= self.value || {}
-		const current_ontology		= value.current_ontology
-		const ontology_db			= value.ontology_db
-		const structure_from_server	= value.structure_from_server
-		const structure_server_url	= value.structure_server_url
-		const structure_server_code	= value.structure_server_code
-		const prefix_tipos			= value.prefix_tipos || []
-		const confirm_text			= value.confirm_text || 'Sure?'
+		const value						= self.value || {}
+		const current_ontology			= value.current_ontology
+		const ontology_db				= value.ontology_db
+		const structure_from_server		= value.structure_from_server
+		const structure_server_url		= value.structure_server_url
+		const structure_server_code		= value.structure_server_code
+		const structure_server_check	= value.structure_server_check
+		const prefix_tipos				= value.prefix_tipos || []
+		const confirm_text				= value.confirm_text || 'Sure?'
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -118,12 +119,30 @@ const get_content_data_edit = async function(self) {
 						inner_html		: label,
 						parent			: config_grid
 					})
-					ui.create_dom_element({
+					const value_node = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'value',
 						inner_html		: value,
 						parent			: config_grid
 					})
+
+					// check URL is reachable
+					if (label==='STRUCTURE_SERVER_URL') {
+						const server_check_code = structure_server_check.code
+						if (server_check_code===200) {
+							ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button icon check success',
+								parent			: value_node
+							})
+						}else{
+							ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button icon cancel error',
+								parent			: value_node
+							})
+						}
+					}
 				}
 				// structure_from_server
 					add_to_grid('Config:', '')

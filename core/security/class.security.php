@@ -381,6 +381,8 @@ class security {
 
 	/**
 	* CLEAN_CACHE
+	* Removes PHP session permissions_table and
+	* security static vars 'permissions_table_cache'
 	* @return bool
 	*/
 	public static function clean_cache() {

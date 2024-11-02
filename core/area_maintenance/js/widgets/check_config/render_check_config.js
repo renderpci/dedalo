@@ -68,10 +68,10 @@ render_check_config.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value				= self.value || {}
-		const info				= value.info || {}
-		const errors			= info.errors
-		const result			= info.result || []
+		const value		= self.value || {}
+		const info		= value.info || {}
+		const errors	= info.errors
+		const result	= info.result || []
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -81,66 +81,13 @@ const get_content_data_edit = async function(self) {
 	// root only
 		if (page_globals.is_root===true) {
 
-			// maintenance mode
-			{
-				const maintenance_mode_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'container maintenance_mode_container',
-					parent			: content_data
-				})
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'label',
-					inner_html		: 'Maintenance mode',
-					parent			: maintenance_mode_container
-				})
-				const maintenance_mode_body_response = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: "Warning! On true, users other than 'root' will be kicked and will not be able to login in this mode.",
-					class_name		: 'body_response'
-				})
-				// form
-				const submit_label = page_globals.maintenance_mode===true
-					? 'Deactivate maintenance mode'
-					: 'Activate maintenance mode'
-				const new_maintenance_mode = !page_globals.maintenance_mode
-				const form_container = self.caller.init_form({
-					submit_label	: submit_label,
-					confirm_text	: get_label.sure || 'Sure?',
-					body_info		: maintenance_mode_container,
-					body_response	: maintenance_mode_body_response,
-					trigger : {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'class_request',
-						source	: {
-							action : 'set_congif_auto'
-						},
-						options	: {
-							name	: 'DEDALO_MAINTENANCE_MODE_CUSTOM',
-							value	: new_maintenance_mode
-						}
-					},
-					on_done : (api_response) => {
-						if (api_response.result) {
-							setTimeout(function(){
-								// update page_globals value
-								page_globals.maintenance_mode = new_maintenance_mode
-								// render the page again
-								window.dd_page.refresh({
-									build_autoload	: false,
-									destroy			: false
-								})
-							}, 0)
-						}
-					}
-				})
-				if (page_globals.maintenance_mode===false) {
-					form_container.button_submit.classList.add('danger')
-				}
+			// maintenance_mode
+				const maintenance_mode_container = render_maintenance_mode(self)
+				content_data.appendChild(maintenance_mode_container)
 
-				// add maintenance_mode_body_response at end
-				maintenance_mode_container.appendChild(maintenance_mode_body_response)
-			}
+			// recovery_mode
+				const recovery_mode_container = render_recovery_mode(self)
+				content_data.appendChild(recovery_mode_container)
 
 			// notification
 			{
@@ -381,6 +328,158 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RENDER_MAINTENANCE_MODE
+* Creates the form nodes to switch between maintenance modes
+* @param object self
+* @return HTMLElement maintenance_mode_container
+*/
+const render_maintenance_mode = (self) => {
+
+	const maintenance_mode_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'container maintenance_mode_container',
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label',
+		inner_html		: 'maintenance mode',
+		parent			: maintenance_mode_container
+	})
+
+	// body_response warning
+	const maintenance_mode_body_response = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: "Warning! On true, users other than 'root' will be kicked and will not be able to login in this mode.",
+		class_name		: 'body_response'
+	})
+
+	// form
+	const submit_label = page_globals.maintenance_mode===true
+		? 'Deactivate maintenance mode'
+		: 'Activate maintenance mode'
+	const new_maintenance_mode = !page_globals.maintenance_mode
+	const form_container = self.caller.init_form({
+		submit_label	: submit_label,
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: maintenance_mode_container,
+		body_response	: maintenance_mode_body_response,
+		trigger : {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'class_request',
+			source	: {
+				action : 'set_maintenance_mode'
+			},
+			options	: {
+				value : new_maintenance_mode
+
+			}
+		},
+		on_done : (api_response) => {
+			if (api_response.result) {
+				setTimeout(function(){
+					// update page_globals value
+					page_globals.maintenance_mode = new_maintenance_mode
+					// render the page again
+					window.dd_page.refresh({
+						build_autoload	: false,
+						destroy			: false
+					})
+				}, 0)
+			}
+		}
+	})
+	if (page_globals.maintenance_mode===false) {
+		form_container.button_submit.classList.add('danger')
+	}
+
+	// add maintenance_mode_body_response at end
+	maintenance_mode_container.appendChild(maintenance_mode_body_response)
+
+
+	return maintenance_mode_container
+}//end render_maintenance_mode
+
+
+
+/**
+* RENDER_RECOVERY_MODE
+* Creates the form nodes to switch between recovery modes
+* @param object self
+* @return HTMLElement recovery_mode_container
+*/
+const render_recovery_mode = (self) => {
+
+	const recovery_mode_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'container recovery_mode_container',
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label',
+		inner_html		: 'recovery mode',
+		parent			: recovery_mode_container
+	})
+
+	// body_response warning
+	const recovery_mode_body_response = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: "Warning! On true, Ontology backup table will be used instead the main Ontology table.",
+		class_name		: 'body_response'
+	})
+
+	// form
+	const submit_label = page_globals.recovery_mode===true
+		? 'Deactivate recovery mode'
+		: 'Activate recovery mode'
+	const new_recovery_mode = !page_globals.recovery_mode
+	const form_container = self.caller.init_form({
+		submit_label	: submit_label,
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: recovery_mode_container,
+		body_response	: recovery_mode_body_response,
+		trigger : {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'class_request',
+			source	: {
+				action : 'set_recovery_mode'
+			},
+			options	: {
+				value : new_recovery_mode
+
+			}
+		},
+		on_done : (api_response) => {
+			if (api_response.result) {
+				setTimeout(function(){
+					// update page_globals value
+					page_globals.recovery_mode = new_recovery_mode
+					// render the page again
+					window.dd_page.refresh({
+						build_autoload	: false,
+						destroy			: false
+					})
+				}, 0)
+			}
+		}
+	})
+	if (page_globals.recovery_mode===false) {
+		form_container.button_submit.classList.add('danger')
+	}
+
+	// add recovery_mode_body_response at end
+	recovery_mode_container.appendChild(recovery_mode_body_response)
+
+
+	return recovery_mode_container
+}//end render_recovery_mode
 
 
 

@@ -27,6 +27,17 @@
 			box-shadow: 10px 10px 62px 0px rgba(0,0,0,0.43);
 		}
 
+		&.error_message {
+			padding: 2rem;
+			line-height: 1.75rem;
+			font-size: 1.2rem;
+
+			&.warning {
+				background-color: @color_warning;
+				color: @color_white;
+			}
+		}
+
 		@media screen and (max-width: @width_break_point_1) {
 			width: 70vw;
 		}

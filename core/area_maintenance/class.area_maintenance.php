@@ -104,6 +104,7 @@ class area_maintenance extends area_common {
 					'prefix_tipos'			=> $DEDALO_PREFIX_TIPOS,
 					'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
 					'structure_server_url'	=> (defined('STRUCTURE_SERVER_URL') ? STRUCTURE_SERVER_URL : null),
+					'structure_server_check'=> backup::check_remote_server(),
 					'structure_server_code'	=> (defined('STRUCTURE_SERVER_CODE') ? STRUCTURE_SERVER_CODE : null),
 					'ontology_db'			=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
 					'body'					=> defined('ONTOLOGY_DB')
@@ -225,7 +226,8 @@ class area_maintenance extends area_common {
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
 				$item->value	= (object)[
 					'dedalo_source_version_url'			=> DEDALO_SOURCE_VERSION_URL,
-					'dedalo_source_version_local_dir'	=> DEDALO_SOURCE_VERSION_LOCAL_DIR
+					'dedalo_source_version_local_dir'	=> DEDALO_SOURCE_VERSION_LOCAL_DIR,
+					'dedalo_source_version_url_check'	=> check_url(DEDALO_SOURCE_VERSION_URL)
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -1539,25 +1541,30 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* SET_CONGIF_AUTO
+	* SET_CONGIF_CORE
 	* This function set a custom maintenance mode. Useful when the root user
 	* do not have access to the config file to edit
 	* @param object $options
 	* @return object $response
 	*/
-	public static function set_congif_auto(object $options) {
+	private static function set_congif_core(object $options) {
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
 
 		// options
 			$name	= $options->name; // name of the constant like 'MAINTENANCE_MODE_CUSTOM'
 			$value	= $options->value ?? null; // value of the constant like bool 'false'
 
 		// user root check. Only root user can set congif_core
-			if (logged_user_id()!==DEDALO_SUPERUSER) {
+			if (logged_user_id()!==DEDALO_SUPERUSER
+				// && is_ontology_available() // only blocks if no Ontology error was detected (recovery case)
+				&& $name!=='DEDALO_RECOVERY_MODE'
+				&& (!defined('DEDALO_RECOVERY_MODE') || DEDALO_RECOVERY_MODE==false)
+				) {
 				$response->msg = 'Error. only root user can set congif_core';
 				return $response;
 			}
@@ -1569,6 +1576,16 @@ class area_maintenance extends area_common {
 			switch ($name) {
 
 				case 'DEDALO_MAINTENANCE_MODE_CUSTOM':
+					// boolean
+					$ar_allow_type = ['boolean'];
+					if (!in_array($value_type, $ar_allow_type)) {
+						$response->msg = 'Error. invalid value type. Only allow boolean';
+						return $response;
+					}
+					$write_value = json_encode( (bool)$value );
+					break;
+
+				case 'DEDALO_RECOVERY_MODE':
 					// boolean
 					$ar_allow_type = ['boolean'];
 					if (!in_array($value_type, $ar_allow_type)) {
@@ -1671,7 +1688,91 @@ class area_maintenance extends area_common {
 
 
 		return $response;
-	}//end set_congif_auto
+	}//end set_congif_core
+
+
+
+	/**
+	* SET_MAINTENANCE_MODE
+	* Changes Dédalo maintenance mode from true to false or vice-versa
+	* Uses area_maintenance:: set_congif_core to overwrite the core_config files
+	* Input and output are normalized objects to allow use it from area_maintenance API
+	* @param object $options
+	* {
+	* 	value : bool
+	* }
+	* @return object $response
+	*/
+	public static function set_maintenance_mode( object $options ) : object {
+
+		// options
+			$value = $options->value;
+
+		// check value type
+			if (!is_bool($value)) {
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed';
+					$response->errors	= [];
+				return $response;
+			}
+
+		$response = area_maintenance:: set_congif_core((object)[
+			'name'	=> 'DEDALO_MAINTENANCE_MODE_CUSTOM',
+			'value'	=> $value
+		]);
+
+
+		return $response;
+	}//end set_maintenance_mode
+
+
+
+	/**
+	* SET_RECOVERY_MODE
+	* Changes Dédalo recovery mode from true to false or vice-versa
+	* Uses area_recovery::set_congif_core to overwrite the core_config files
+	* Input and output are normalized objects to allow use it from area_recovery API
+	* Could be changed from area_mainteanance check_config widget
+	* or automatically from API start
+	* @see dd_core_api->start
+	* @param object $options
+	* {
+	* 	value : bool
+	* }
+	* @return object $response
+	*/
+	public static function set_recovery_mode( object $options ) : object {
+
+		// options
+			$value = $options->value;
+
+		// check value type
+			if (!is_bool($value)) {
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed';
+					$response->errors	= [];
+				return $response;
+			}
+
+		// set config_core constant value
+		area_maintenance::set_congif_core((object)[
+			'name'	=> 'DEDALO_RECOVERY_MODE',
+			'value'	=> $value
+		]);
+
+		// set environmental var accessible in all Dédalo just now
+		$_ENV['DEDALO_RECOVERY_MODE'] = $value;
+
+		$response = new stdClass();
+			$response->result	= true;
+			$response->msg		= 'OK. Request done successfully';
+			$response->errors	= [];
+
+
+		return $response;
+	}//end set_recovery_mode
 
 
 
@@ -1912,7 +2013,7 @@ class area_maintenance extends area_common {
 			}
 
 		// optimize tables
-			$ar_tables = ['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list'];
+			$ar_tables = ['jer_dd','matrix_dd','matrix_list'];
 			backup::optimize_tables($ar_tables);
 
 		// delete all session data except auth
@@ -1987,7 +2088,6 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end update_ontology
-
 
 
 
@@ -2113,10 +2213,6 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end jer_dd_to_matrix_ontology
-
-
-
-
 
 
 

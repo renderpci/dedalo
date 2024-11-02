@@ -7,7 +7,6 @@ declare(strict_types=1); // TEST NOT FINISHED !
 * a normalized RQO (Request Query Object)
 * Note that only authorized users (Global Admins, Developer and root users)
 * can access this methods (permissions checked in dd_manager)
-*
 */
 final class dd_area_maintenance_api {
 
@@ -33,7 +32,7 @@ final class dd_area_maintenance_api {
 		* }
 	* @return object response { result: mixed, msg: string }
 	*/
-	public static function class_request(object $rqo) : object {
+	public static function class_request( object $rqo ) : object {
 
 		// options
 			$options			= $rqo->options ?? [];
@@ -118,7 +117,7 @@ final class dd_area_maintenance_api {
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function structure_to_json(object $rqo) : object {
+	public static function structure_to_json( object $rqo ) : object {
 
 		// session_write_close();
 
@@ -173,7 +172,7 @@ final class dd_area_maintenance_api {
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function import_structure_from_json(object $rqo) : object {
+	public static function import_structure_from_json( object $rqo ) : object {
 
 		// session_write_close();
 
@@ -240,7 +239,7 @@ final class dd_area_maintenance_api {
 	* }
 	* @return object $response
 	*/
-	public static function lock_components_actions(object $rqo) : object {
+	public static function lock_components_actions( object $rqo ) : object {
 
 		// response
 			$response = new stdClass();
@@ -281,7 +280,7 @@ final class dd_area_maintenance_api {
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function modify_counter(object $rqo) : object {
+	public static function modify_counter( object $rqo ) : object {
 
 		session_write_close();
 
@@ -342,13 +341,14 @@ final class dd_area_maintenance_api {
 
 	/**
 	* PARSE_SIMPLE_SCHEMA_CHANGES_FILES
-	* Used to call the hierarchy function by client
+	* Used to call the hierarchy function by client in 'component_security_access'
 	* get the parse data of specific file send by client in the rqo->options->filename
+	* @see component_security_access.js request
 	* @param object $rqo
 	* @return object $response
 	* response>result will be the array of changes/additions into the ontology since last update section by section.
 	*/
-	public static function parse_simple_schema_changes_files(object $rqo) : object {
+	public static function parse_simple_schema_changes_files( object $rqo ) : object {
 
 		// options
 			$options	= $rqo->options;
