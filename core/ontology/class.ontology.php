@@ -337,9 +337,61 @@ class ontology {
 
 
 	/**
-	* CREATE_NEW_MAIN_SECTION
-	*
+	* ASSING_RELATIONS_FROM_JER_DD
+	* Once the matrix records of jer_dd parse is set
+	* is possible assign the relations between nodes.
+	* Get the relations column in jer_dd and set it as component_portal locator pointed to other matrix ontology record.
 	* @param string $tld
+	* @return bool
+	*/
+	public static function assing_relations_from_jer_dd( string $tld) : bool {
+
+		// vars
+		$target_section_tipo = self::map_tld_to_target_section_tipo( $tld );
+
+		// get all section
+		$all_section_instances = section::get_resource_all_section_records_unfiltered( $target_section_tipo );
+
+		while ($row = pg_fetch_assoc($all_section_instances)) {
+			$section_id = $row['section_id'];
+
+			$node_tipo = $tld.$section_id;
+			$relations = RecordObj_dd::get_ar_terminos_relacionados( $node_tipo, true, true );
+
+			// Relations
+			$relations_tipo			= 'ontology10';
+			$relations_model		= RecordObj_dd::get_modelo_name_by_tipo( $relations_tipo  );
+			$relations_component	= component_common::get_instance(
+				$relations_model,
+				$relations_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$related_locators = [];
+			foreach ($relations as $related_tipo) {
+
+				// get the parent tld and id
+				$related_section_id		= RecordObj_dd::get_id_from_tipo( $related_tipo );
+				$related_tld			= RecordObj_dd::get_prefix_from_tipo( $related_tipo );
+				$related_section_tipo	= self::map_tld_to_target_section_tipo( $related_tld );
+
+				$related_locator = new locator();
+					$related_locator->set_section_tipo( $related_section_tipo );
+					$related_locator->set_section_id( $related_section_id );
+
+				$related_locators[] = $related_locator;
+			}
+
+			$relations_component->set_dato( $related_locators );
+			$relations_component->Save();
+		}
+
+		return true;
+	}//end assing_relations_from_jer_dd
+
 	* @return
 	*/
 	public function create_new_main_section( string $tld ) {
