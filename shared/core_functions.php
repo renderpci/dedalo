@@ -344,11 +344,11 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 			break;
 
 		case logger::ERROR:
-			if ( running_in_cli()===true ) {
+			// if ( running_in_cli()===true ) {
 
-				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+			// 	$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
 
-			}else{
+			// }else{
 
 				$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
 					. ' ' . $info .' '. PHP_EOL
@@ -357,7 +357,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 					. ' [seq]: '  . implode(' > ', $bts);
 
 				$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
-			}
+			// }
 
 			// DEDALO_ERRORS ADD
 			$_ENV['DEDALO_LAST_ERROR'] = $info;
