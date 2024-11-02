@@ -134,14 +134,90 @@ class ontology {
 			$options->tld			= 'ontology';
 			$options->term			= $term;
 
+	/**
+	* ADD_MAIN_SECTION
+	* Create new section in the main ontology sections.
+	* The main section could be the official tlds as dd, rsc, hierarchy, etc
+	* Or local ontology defined by every institution as es, qdp, mupreva, etc
+	* @param string $tld
+	* @return int|string|null $main_section_id
+	*/
+	public static function add_main_section( string $tld ) : int|string|null {
+
+		// get all ontology terms in jer_dd
+		$ontology_nodes = RecordObj_dd::get_all_tld_nodes( ['ontology','localontology'] );
+
+		$found = false;
+		foreach ($ontology_nodes as $item) {
+
+			$string_term = $item->term;
+			$term = json_decode($string_term);
+			$name = $term->{DEDALO_STRUCTURE_LANG};
+
+			if($name === $tld) {
+				$found = $item;
+				break;
+			}
+		}
+
+		$target_section_tipo = $found === false
+			? ontology::create_jr_dd_local_ontology_section_node( $tld )
+			: $found->terminoID;
+
+
+		// check if exist the main tld
+		$ontology_main = self::get_ontology_main_form_tld( $tld );
+
+		if( !empty($ontology_main) ){
+			debug_log(__METHOD__
+				. " Ignored to add new main ontology with this tld, the main ontology exists, don't use this function to change the main ontology section, tld: " . PHP_EOL
+				. to_string( $tld )
+				, logger::DEBUG
+			);
+			return null;
+		}
+
 		// ontology table
-		$section_data = json_decode( file_get_contents('main_ontology_section_data.json') );
+		$section_data = json_decode( file_get_contents( dirname(__FILE__).'/main_ontology_section_data.json') );
 
 		// Name
 		$section_data->components->hierarchy5->dato->{DEDALO_STRUCTURE_LANG} = [$tld];
 		// TLD
 		$section_data->components->hierarchy6->dato->{DEDALO_DATA_NOLAN} = [$tld];
-	}//end create_new_main_section
+
+
+		// Target section tipo
+		$section_data->components->hierarchy53->dato->{DEDALO_DATA_NOLAN} = [$target_section_tipo];
+		//general term
+		$general_term = new locator();
+			$general_term->set_section_tipo($tld);
+			$general_term->set_section_id('1');
+			$general_term->set_type('dd48');
+			$general_term->set_from_component_tipo('hierarchy45');
+
+		$section_data->relations[] = $general_term;
+
+		// add model root node in the dd main section only, only dd has the models for the ontology.
+		if($tld === 'dd'){
+			//model term
+			$model_term = new locator();
+				$model_term->set_section_tipo($tld);
+				$model_term->set_section_id('2');
+				$model_term->set_type('dd48');
+				$model_term->set_from_component_tipo('hierarchy45');
+
+			$section_data->relations[] = $model_term;
+		}
+
+		$main_section = section::get_instance(
+			null, // string|null section_id
+			self::$main_section_tipo// string section_tipo
+		);
+		$main_section->set_dato( $section_data );
+		$main_section_id = $main_section->Save();
+
+		return $main_section_id;
+	}//end add_main_section
 	/**
 	* MAP_TLD_TO_TARGET_SECTION_TIPO
 	* @param string $tld
