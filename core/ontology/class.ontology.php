@@ -27,11 +27,13 @@ class ontology {
 	* @param array $jer_dd_rows
 	* @return void
 	*/
-	public function ceate_ontology_records( array $jer_dd_rows ) {
+	public static function ceate_ontology_records( array $jer_dd_rows ) {
 
-		foreach ($jer_dd_rows as $row) {
-			$tld = $row->tld;
-			$main_section_row = $this->get_ontology_main_form_tld( $tld );
+		foreach ($jer_dd_rows as $jer_dd_row) {
+			$setion_data = self::add_section_row_from_jer_dd( $jer_dd_row );
+		}
+	}//end ceate_ontology_records
+
 
 
 	/**
