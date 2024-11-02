@@ -335,7 +335,7 @@ abstract class JSON_RecordDataBoundObject {
 							$debug_strQuery = preg_replace_callback(
 								'/\$(\d+)\b/',
 								function($match) use ($params) {
-									$key=($match[1]-1); return ( is_null($params[$key])?'NULL':pg_escape_literal(DBi::_getConnection(), $params[$key]) );
+									$key=($match[1]-1); return ( is_null($params[$key])?'NULL':pg_escape_literal(DBi::_getConnection(), to_string($params[$key])) );
 								},
 								$strQuery
 							);

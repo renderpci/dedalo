@@ -598,7 +598,7 @@ class component_relation_parent extends component_relation_common {
 
 			debug_log(__METHOD__
 				." Error: component_relation_children not found in this section" . PHP_EOL
-				.' component_tipo: '. $component_tipo . PHP_EOL
+				.' model_name: '. $model_name . PHP_EOL
 				.' component_tipo: '. $component_tipo . PHP_EOL
 				, logger::ERROR
 			);

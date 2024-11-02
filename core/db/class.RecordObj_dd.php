@@ -686,7 +686,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public static function get_model_terminoID( string $model ) : ?string {
 
 		// `where` clause of SQL query
-		$sql_code = 'esmodelo = \'si\' AND term @> \'{"lg-spa":"'.$model.'"}\'';
+		$sql_code = 'esmodelo = \'si\' AND term @> \'{"'.DEDALO_STRUCTURE_LANG.'":"'.$model.'"}\'';
 
 		$RecordObj_dd	= new RecordObj_dd(null, 'dd');
 		$ar_result		= $RecordObj_dd->search(
@@ -702,6 +702,48 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return $terminoID;
 	}//end get_model_terminoID
+
+
+
+	/**
+	* get_all_tld_nodes
+	* Get all nodes of specified tlds
+	* @param  array $ar_tl
+	* @return array $result
+	*/
+	public static function get_all_tld_nodes( array $ar_tld ) : array {
+
+		$sentences = [];
+
+		foreach ($ar_tld as $current_tld) {
+			$safe_tld = safe_tld($current_tld);
+
+			if ( $safe_tld !== false ) {
+				$sentences[] = '"tld"= \''. $safe_tld. '\'';
+			}else{
+				debug_log(__METHOD__
+					. " Invalid tld, ignored:" . PHP_EOL
+					. to_string( $current_tld )
+					, logger::ERROR
+				);
+			}
+		}
+
+		$filter = implode(' OR ', $sentences );
+
+		// `where` clause of SQL query
+		$sql_query = 'SELECT * FROM "jer_dd" WHERE '. $filter ;
+
+		$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		$ontology_records = [];
+		// iterate jer_dd_result row
+		while($row = pg_fetch_object($jer_dd_result)) {
+			$ontology_records[] = $row;
+		}
+
+		return $ontology_records;
+	}//end get_all_tld_nodes
 
 
 
@@ -1062,7 +1104,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$value = parent::get_relaciones();
 
 		$relaciones = !empty($value)
-			? json_decode($value, true)
+			? json_handler::decode($value, true)
 			: null;
 
 		return $relaciones;
@@ -1518,28 +1560,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$result = parent::Save();
 
 			if ($result) {
-
 				$counter_dato_updated  = self::update_counter($this->prefijo, $counter_dato);
-
-				$prefix_parent 		= self::get_prefix_from_tipo($this->parent);
-				$prefix_terminoID 	= self::get_prefix_from_tipo($this->terminoID);
-
-				$value_parent 		= (int)substr($this->parent,  strlen($prefix_parent));
-				$value_terminoID 	= (int)substr($this->terminoID, strlen($prefix_terminoID));
-
-				//if ($value_terminoID<=$value_parent ) {
-				//	dump($value_parent, 	' value_parent for '.$this->parent);
-				//	dump($value_terminoID,  ' value_parent for '.$this->terminoID);
-				//	throw new Exception("Error Processing Request. Inconsistency detected. parent:$this->parent , terminoID:$this->terminoID", 1);
-				//}
-
-				#
-				# DESCRIPTORS : finally we create one record in descriptors with this main info
-				$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, 'lg-spa');
-				$RecordObj_descriptors_dd->set_tipo('termino');
-				$RecordObj_descriptors_dd->set_parent($terminoID);
-				$RecordObj_descriptors_dd->set_lang('lg-spa');
-				$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
 			}
 		}
 

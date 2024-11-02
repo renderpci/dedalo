@@ -105,8 +105,8 @@ class update {
 				}
 			}
 			if (empty($update)) {
-				$response->msg		= 'Unable to get proper update. Check current version: '.$current_version;
-				$response->errors[]	= 'Update item not found for version '.$current_version;
+				$response->msg		= 'Unable to get proper update. Check current version: '.to_string($current_version);
+				$response->errors[]	= 'Update item not found for version '.to_string($current_version);
 				return $response;
 			}
 
