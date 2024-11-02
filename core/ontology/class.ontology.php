@@ -79,33 +79,235 @@ class ontology {
 
 
 	/**
-	* BUIL_SECTION_ROW_FROM_JER_DD
+	* ADD_SECTION_ROW_FROM_JER_DD
+	* Transform jer_dd row (from DDBB) into matrix ontology row (section record).
 	* @param object $jer_dd_row
 	* @param string $target_section_tipo
 	* @return
 	*/
-	public function buil_section_row_from_jer_dd( object $jer_dd_row, string $target_section_tipo) {
+	public static function add_section_row_from_jer_dd( object $jer_dd_row ) {
 
 		// vars
-		$tipo			= $jer_dd_row->terminoID;
-		$parent_tipo	= $jer_dd_row->parent;
+		$tld					= $jer_dd_row->tld;
+		$target_section_tipo	= self::map_tld_to_target_section_tipo( $tld );
+		$node_tipo				= $jer_dd_row->terminoID;
+		$parent					= $jer_dd_row->parent;
+		$model					= $jer_dd_row->modelo;
+		$is_model				= $jer_dd_row->esmodelo;
+		$is_descriptor			= $jer_dd_row->esdescriptor;
+		$visible				= $jer_dd_row->visible;
+		$translatable			= $jer_dd_row->traducible;
+		$relations				= !empty ( $jer_dd_row->relaciones )
+			? (json_handler::decode( $jer_dd_row->relaciones ) ?? [])
+			: [];
+		$properties_v5			= !empty ( $jer_dd_row->propiedades ) ? json_decode( $jer_dd_row->propiedades ) : new stdClass();
+		$properties				= !empty ( $jer_dd_row->properties ) ? json_decode( $jer_dd_row->properties ) : new stdClass();
+		$term					= !empty ( $jer_dd_row->term ) ? json_decode( $jer_dd_row->term ) : new stdClass();
 
-		$section_data = new stdClass();
+		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc
+		$section_id = RecordObj_dd::get_id_from_tipo( $node_tipo );
 
-		$descriptor = new locator();
-			$descriptor->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-			$descriptor->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+		// Section, create new section
+		$section = section::get_instance(
+			$section_id,
+			$target_section_tipo
+		);
+
+		$section->forced_create_record();
+
+		// tld
+			$tld_tipo		= 'ontology7';
+			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
+			$tld_component	= component_common::get_instance(
+				$tld_model,
+				$tld_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$tld_component->set_dato( [$tld] );
+			$tld_component->Save();
+
+		// model
+			// get the model tld and id
+			if( !empty($model) && $model!=='null' ){
+				$model_section_id	= RecordObj_dd::get_id_from_tipo( $model );
+				$model_tld			= RecordObj_dd::get_prefix_from_tipo( $model );
+				$model_section_tipo	= self::map_tld_to_target_section_tipo( $model_tld );
+
+				$model_locator = new locator();
+					$model_locator->set_section_tipo( $model_section_tipo );
+					$model_locator->set_section_id( $model_section_id );
+
+				$model_tipo			= 'ontology6';
+				$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
+				$model_component	= component_common::get_instance(
+					$model_model,
+					$model_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$target_section_tipo
+				);
+
+				$model_component->set_dato( [$model_locator] );
+				$model_component->Save();
+			}
+
+		// descriptor
+			$is_desctipor_tipo		= 'ontology4';
+			$is_desctipor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_desctipor_tipo  );
+			$is_desctipor_component	= component_common::get_instance(
+				$is_desctipor_model,
+				$is_desctipor_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$descriptor_locator = new locator();
+				$descriptor_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+				$descriptor_locator->set_section_id($is_descriptor === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+
+			$is_desctipor_component->set_dato( [$descriptor_locator] );
+			$is_desctipor_component->Save();
+
+		// is model
+			$is_model_tipo		= 'ontology30';
+			$is_model_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_model_tipo  );
+			$is_model_component	= component_common::get_instance(
+				$is_model_model,
+				$is_model_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$is_model_locator = new locator();
+				$is_model_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+				$is_model_locator->set_section_id($is_model === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+
+			$is_model_component->set_dato( [$is_model_locator] );
+			$is_model_component->Save();
+
+		// translatable
+			$translatable_tipo		= 'ontology8';
+			$translatable_model		= RecordObj_dd::get_modelo_name_by_tipo( $translatable_tipo  );
+			$translatable_component	= component_common::get_instance(
+				$translatable_model,
+				$translatable_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$tanslatable_locator = new locator();
+				$tanslatable_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+				$tanslatable_locator->set_section_id($translatable === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+
+			$translatable_component->set_dato( [$tanslatable_locator] );
+			$translatable_component->Save();
 
 		// term
-		$tld				= RecordObj_dd::get_prefix_from_tipo( $tipo );
-		$section_id			= RecordObj_dd::get_id_from_tipo( $tipo );
+			$term_tipo		= 'ontology5';
+			$term_model		= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo  );
 
-		// parent
-		$parent_tld			= RecordObj_dd::get_prefix_from_tipo( $parent_tipo );
-		$parent_section_id	= RecordObj_dd::get_id_from_tipo( $parent_tipo );
-		$parent_main_section_row = $this->get_ontology_main_form_tld( $parent_tld );
-		$ar_target_section_tipo = $parent_main_section_row->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
-	}//end buil_section_row_from_jer_dd
+			foreach ($term as $current_lang => $term_value) {
+
+				$term_component	= component_common::get_instance(
+					$term_model,
+					$term_tipo ,
+					$section_id,
+					'list',
+					$current_lang,
+					$target_section_tipo
+				);
+
+				$term_component->set_dato( [$term_value] );
+				$term_component->Save();
+			}
+
+		// properties V5
+			$properties_v5_tipo			= 'ontology19';
+			$properties_v5_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_v5_tipo  );
+			$properties_v5_component	= component_common::get_instance(
+				$properties_v5_model,
+				$properties_v5_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$properties_v5_component->set_dato( [$properties_v5] );
+			$properties_v5_component->Save();
+
+		// properties CSS
+			$properties_css_tipo		= 'ontology16';
+			$properties_css_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_css_tipo  );
+			$properties_css_component	= component_common::get_instance(
+				$properties_css_model,
+				$properties_css_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$properties_css = $properties->css ?? null;
+
+			$properties_css_component->set_dato( [$properties_css] );
+			$properties_css_component->Save();
+
+		// properties RQO
+			$properties_rqo_tipo		= 'ontology17';
+			$properties_rqo_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_rqo_tipo  );
+			$properties_rqo_component	= component_common::get_instance(
+				$properties_rqo_model,
+				$properties_rqo_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$properties_rqo = $properties->source ?? null;
+
+			$properties_rqo_component->set_dato( [$properties_rqo] );
+			$properties_rqo_component->Save();
+
+		// properties
+			$properties_tipo		= 'ontology18';
+			$properties_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_tipo  );
+			$properties_component	= component_common::get_instance(
+				$properties_model,
+				$properties_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			if(!empty($properties)) {
+				$properties_general = new stdClass();
+				foreach ($properties as $pkey => $pvalue) {
+					if ($pkey==='source' || $pkey==='css') {
+						continue;
+					}
+					$properties_general->{$pkey} = $pvalue;
+				}
+				$properties_general_value = [$properties_general];
+			}
+
+			$properties_component->set_dato( $properties_general_value ?? null );
+			$properties_component->Save();
+
+	}//end add_section_row_from_jer_dd
 
 
 
