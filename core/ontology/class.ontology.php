@@ -78,31 +78,43 @@ class ontology {
 
 
 	/**
-	* GET_ONTOLOGY_MAIN_FROM_TLD
-	*
+	* GET_ONTOLOGY_MAIN_FORM_TARGET_SECTION_TIPO
+	* Find the matrix row of the ontology main from a target section tipo from ontology matrix row
+	* ontology40 --> section_tipo: ontology35, section_id: 1
 	* @param string $tld
 	* @return object|null $row
 	*/
 	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
-			section_tipo = \''.self::$main_section_tipo.'\' AND
-			f_unaccent(datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld.'"\].*\')
-		';
 
-		$result = pg_query(DBi::_getConnection(), $sql);
-		if ($result===false) {
-			$msg = " Error on db execution (get_ontology_main_form_tld): ".pg_last_error(DBi::_getConnection());
-			debug_log(__METHOD__
-				. $msg
-				, logger::ERROR
-			);
+		$safe_tipo = safe_tipo( $target_section_tipo );
 
-			return null; // return error here !
-		}
-		$rows	= pg_fetch_assoc($result);
-		$row	= $rows[0] ?? null;
+		$filter = json_decode( '
+			{
+				"$and": [{
+					"q": "'.$safe_tipo.'",
+					"path": [{
+						"section_tipo": "'.self::$main_section_tipo.'",
+						"component_tipo": "hierarchy53"
+					}]
+				}]
+			}
+		');
+
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo( [self::$main_section_tipo] );
+			$sqo->set_filter( $filter );
+			$sqo->set_limit( 1 );
+
+		$search = search::get_instance(
+			$sqo, // object sqo
+		);
+		$response	= $search->search();
+		$ar_records	= $response->ar_records;
+
+		$row = $ar_records[0] ?? null;
 
 		return $row;
-	}//end get_ontology_main_form_tld
+	}//end get_ontology_main_form_target_section_tipo
 
 
 
