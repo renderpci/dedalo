@@ -144,5 +144,67 @@ class ontology {
 	}//end create_new_main_section
 
 
+	/**
+	* GET_ALL_ONTOLOGY_SECTIONS
+	* Calculate ontology sections (target section tipo) of types requested, like ontology40,localontology3,...
+	* @return array $ontology_sections
+	*/
+	public static function get_all_ontology_sections() : array {
+
+		// cache
+			static $cache_ontology_sections;
+			$use_cache = true;
+			if ($use_cache===true) {
+				$cache_key = 'all_ontology_sections';
+				if (isset($cache_ontology_sections[$cache_key])) {
+					return $cache_ontology_sections[$cache_key];
+				}
+			}
+
+		// search_query_object
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( [self::$main_section_tipo] );
+				$sqo->set_limit( 0 );
+
+
+		// search exec
+			$search	= search::get_instance($sqo);
+			$result	= $search->search();
+
+		// iterate rows
+			$ontology_sections = [];
+			foreach ($result->ar_records as $row) {
+
+				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {
+					debug_log(__METHOD__
+						." Skipped ontology without target section tipo: $row->section_tipo, $row->section_id ".to_string()
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				$target_dato			= $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
+				$target_section_tipo	= $target_dato[0] ?? null;
+
+				if (empty($target_section_tipo)) {
+					debug_log(__METHOD__
+						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ". PHP_EOL
+						.' target_dato: '. to_string($target_dato)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				$ontology_sections[] = $target_section_tipo;
+			}//end foreach ($result->ar_records as $row)
+
+		// cache
+			if ($use_cache===true) {
+				$cache_ontology_sections[$cache_key] = $ontology_sections;
+			}
+
+
+		return $ontology_sections;
+	}//end get_all_ontology_sections
 
 }//end ontology

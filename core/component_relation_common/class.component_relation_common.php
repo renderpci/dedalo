@@ -2438,6 +2438,11 @@ class component_relation_common extends component_common {
 					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
 					break;
 
+				case 'ontology_sections':
+					$ontolgoy_sections = ontology::get_all_ontology_sections();
+					$ar_section_tipo = array_merge($ar_section_tipo, $ontolgoy_sections);
+					break;
+					
 				case 'field_value':
 					// this case is used in component_relation_children in the hierarchy section
 					// in these case the array of sections will get from the value of specific field
