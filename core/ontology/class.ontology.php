@@ -392,9 +392,62 @@ class ontology {
 		return true;
 	}//end assing_relations_from_jer_dd
 
-	* @return
+
+
+	/**
+	* REORDER_NODES_FROM_JER_DD
+	* Once the matrix records of jer_dd parse is set
+	* is possible assign the order between nodes.
+	* find the ontology nodes as matrix rows and order by the jer_dd definition.
+	* @param string $tld
+	* @return bool
 	*/
-	public function create_new_main_section( string $tld ) {
+	public static function reorder_nodes_from_jer_dd( string $tld ) : bool {
+
+		// vars
+		$target_section_tipo	= self::map_tld_to_target_section_tipo( $tld );
+
+		//get all section
+		$all_section_instances = section::get_resource_all_section_records_unfiltered( $target_section_tipo );
+
+		while ($row = pg_fetch_assoc($all_section_instances)) {
+			$section_id = $row['section_id'];
+
+			$node_tipo = $tld.$section_id;
+
+			$children = RecordObj_dd::get_ar_childrens($node_tipo);
+
+			$children_data = [];
+			foreach ($children as $child_tipo) {
+
+				$child_section_id	= RecordObj_dd::get_id_from_tipo( $child_tipo );
+				$child_tld			= RecordObj_dd::get_prefix_from_tipo( $child_tipo );
+				$child_section_tipo	= self::map_tld_to_target_section_tipo( $child_tld );
+
+				$child_locator = new locator();
+					$child_locator->set_section_tipo($child_section_tipo);
+					$child_locator->set_section_id($child_section_id);
+
+				$children_data[] = $child_locator;
+			}
+
+			$children_tipo		= 'ontology14';
+			$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo );
+			$children_component	= component_common::get_instance(
+				$children_model,
+				$children_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+			$children_component->set_dato($children_data);
+			$children_component->Save();
+		}
+
+		return true;
+	}//end reorder_nodes_from_jer_dd
 
 		// jer_dd
 		// insert into the jer_dd the new main section.
