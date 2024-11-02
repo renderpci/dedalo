@@ -1094,7 +1094,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$value = parent::get_relaciones();
 
 		$relaciones = !empty($value)
-			? json_decode($value, true)
+			? json_handler::decode($value, true)
 			: null;
 
 		return $relaciones;
