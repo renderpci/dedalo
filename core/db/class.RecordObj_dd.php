@@ -696,6 +696,48 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* get_all_tld_nodes
+	* Get all nodes of specified tlds
+	* @param  array $ar_tl
+	* @return array $result
+	*/
+	public static function get_all_tld_nodes( array $ar_tld ) : array {
+
+		$sentences = [];
+
+		foreach ($ar_tld as $current_tld) {
+			$safe_tld = safe_tld($current_tld);
+
+			if ( $safe_tld !== false ) {
+				$sentences[] = '"tld"= \''. $safe_tld. '\'';
+			}else{
+				debug_log(__METHOD__
+					. " Invalid tld, ignored:" . PHP_EOL
+					. to_string( $current_tld )
+					, logger::ERROR
+				);
+			}
+		}
+
+		$filter = implode(' OR ', $sentences );
+
+		// `where` clause of SQL query
+		$sql_query = 'SELECT * FROM "jer_dd" WHERE '. $filter ;
+
+		$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		$ontology_records = [];
+		// iterate jer_dd_result row
+		while($row = pg_fetch_object($jer_dd_result)) {
+			$ontology_records[] = $row;
+		}
+
+		return $ontology_records;
+	}//end get_all_tld_nodes
+
+
+
+	/**
 	* GET_AR_TERMINOID_BY_MODELO_NAME
 	* Resolves all terms matching the model given
 	* @param string $modelo_name
