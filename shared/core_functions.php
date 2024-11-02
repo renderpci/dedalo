@@ -1774,6 +1774,24 @@ function safe_lang(string $lang) : string|bool {
 }//end safe_lang
 
 
+/**
+* SAFE_TLD
+* Remove extra malicious code
+* Only small caps are admitted
+* @param string $tld
+* @return string|bool $tld
+*/
+function safe_tld(string $tld) : string|bool {
+
+	preg_match("/^[a-z]{2,}$/", $tld, $output_array);
+	if (empty($output_array[0])) {
+		return false;
+	}
+
+	return $tld;
+}//end safe_tld
+
+
 
 /**
 * SAFE_TIPO
