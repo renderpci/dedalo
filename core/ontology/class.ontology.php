@@ -449,22 +449,7 @@ class ontology {
 		return true;
 	}//end reorder_nodes_from_jer_dd
 
-		// jer_dd
-		// insert into the jer_dd the new main section.
-		$term = new stdClass();
-			$term->{DEDALO_STRUCTURE_LANG} = $tld;
-		$options = new stdClass();
-			$options->terminoID		= $tld.'6';
-			$options->parent		= 'ontology59';
-			$options->modelo		= 'dd6';
-			$options->esmodelo		= 'no';
-			$options->esdescriptor	= 'si';
-			$options->visible		= 'si';
-			$options->traducible	= 'no';
-			$options->relaciones	= json_decode('[{"dd6":"ontology1"},{"dd626":"dd1201"}]');
-			$options->properties	= null;
-			$options->tld			= 'ontology';
-			$options->term			= $term;
+
 
 	/**
 	* ADD_MAIN_SECTION
@@ -550,6 +535,39 @@ class ontology {
 
 		return $main_section_id;
 	}//end add_main_section
+
+
+	/**
+	* CREATE_JR_DD_LOCAL_ONTOLOGY_SECTION_NODE
+	* Create new jer_dd row with localontology tld for the local tlds
+	* Used to creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc
+	* Is necessary a jer_dd row to represent it.
+	* @param string $tld
+	* @return string $term_id
+	*/
+	public static function create_jr_dd_local_ontology_section_node( string $tld ) : string {
+
+		$term = new stdClass();
+			$term->{DEDALO_STRUCTURE_LANG} = $tld;
+
+		$RecordObj_dd = new RecordObj_dd(null, 'localontology');
+			$RecordObj_dd->set_parent('localontology1');
+			$RecordObj_dd->set_modelo('dd6');
+			$RecordObj_dd->set_esmodelo('no');
+			$RecordObj_dd->set_esdescriptor('si');
+			$RecordObj_dd->set_visible('si');
+			$RecordObj_dd->set_tld('localontology');
+			$RecordObj_dd->set_traducible('no');
+			$RecordObj_dd->set_relaciones( json_decode('[{"dd6":"ontology1"},{"dd626":"dd1201"}]') );
+			$RecordObj_dd->set_term( $term );
+
+		$term_id = $RecordObj_dd->Save();
+
+		return $term_id;
+	}//end create_jr_dd_local_ontology_section_node
+
+
+
 	/**
 	* MAP_TLD_TO_TARGET_SECTION_TIPO
 	* @param string $tld
