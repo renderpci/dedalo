@@ -1578,28 +1578,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$result = parent::Save();
 
 			if ($result) {
-
 				$counter_dato_updated  = self::update_counter($this->prefijo, $counter_dato);
-
-				$prefix_parent 		= self::get_prefix_from_tipo($this->parent);
-				$prefix_terminoID 	= self::get_prefix_from_tipo($this->terminoID);
-
-				$value_parent 		= (int)substr($this->parent,  strlen($prefix_parent));
-				$value_terminoID 	= (int)substr($this->terminoID, strlen($prefix_terminoID));
-
-				//if ($value_terminoID<=$value_parent ) {
-				//	dump($value_parent, 	' value_parent for '.$this->parent);
-				//	dump($value_terminoID,  ' value_parent for '.$this->terminoID);
-				//	throw new Exception("Error Processing Request. Inconsistency detected. parent:$this->parent , terminoID:$this->terminoID", 1);
-				//}
-
-				#
-				# DESCRIPTORS : finally we create one record in descriptors with this main info
-				$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, 'lg-spa');
-				$RecordObj_descriptors_dd->set_tipo('termino');
-				$RecordObj_descriptors_dd->set_parent($terminoID);
-				$RecordObj_descriptors_dd->set_lang('lg-spa');
-				$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
 			}
 		}
 

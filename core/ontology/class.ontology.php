@@ -612,6 +612,7 @@ class ontology {
 	}//end map_tld_to_target_section_tipo
 
 
+
 	/**
 	* MAP_TARGET_SECTION_TIPO_TO_TLD
 	* @return string|null $tld
@@ -650,6 +651,8 @@ class ontology {
 
 		return $tld;
 	}//end map_target_section_tipo_to_tld
+
+
 
 
 	/**
@@ -714,5 +717,6 @@ class ontology {
 
 		return $ontology_sections;
 	}//end get_all_ontology_sections
+
 
 }//end ontology
