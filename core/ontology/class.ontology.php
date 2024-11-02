@@ -28,19 +28,44 @@ class ontology {
 
 			$ar_target_section_tipo = $main_section_row->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 
-			if ( empty($ar_target_section_tipo) ) {
-				debug_log(__METHOD__
-					. 'Ignored tld because it does not has a target section_tipo defined in main ontology: '. $tld
-					, logger::ERROR
-				);
-				continue;
+	/**
+	* GET_ONTOLOGY_MAIN_FrOM_TLD
+	* Get the matrix record of ontology main from a tld
+	* sample: dd --> section_tipo: ontology35, section_id: 1
+	* @param string $tld
+	* @return object|null $row
+	*/
+	public static function get_ontology_main_from_tld( string $tld ) : ?object {
+
+		$safe_tld = safe_tld( $tld );
+
+		$filter = json_decode( '
+			{
+				"$and": [{
+					"q": "'.$safe_tld.'",
+					"path": [{
+						"section_tipo": "'.self::$main_section_tipo.'",
+						"component_tipo": "hierarchy6"
+					}]
+				}]
 			}
+		');
 
-			$target_section_tipo = $ar_target_section_tipo[0];
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo( [self::$main_section_tipo] );
+			$sqo->set_filter( $filter );
+			$sqo->set_limit( 1 );
 
-			$setion_data = $this->buil_section_row_from_jer_dd($row, $target_section_tipo);
-		}
-	}//end ceate_ontology_records
+		$search = search::get_instance(
+			$sqo, // object sqo
+		);
+		$response	= $search->search();
+		$ar_records	= $response->ar_records;
+
+		$row = $ar_records[0] ?? null;
+
+		return $row;
+	}//end get_ontology_main_from_tld
 
 
 
