@@ -476,30 +476,29 @@ class ontology {
 	*/
 	public static function add_main_section( string $tld ) : int|string|null {
 
-		// get all ontology terms in jer_dd
-		$ontology_nodes = RecordObj_dd::get_all_tld_nodes( ['ontology','localontology'] );
+		$ontology_tipos			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology38','section','children_recursive' );
+		$local_ontology_tipos	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'localontology1','section','children_recursive' );
 
-		$found = false;
-		foreach ($ontology_nodes as $item) {
+		$all_tipos = array_merge($ontology_tipos, $local_ontology_tipos);
+		$all_tipos = array_unique( $all_tipos );
 
-			$string_term = $item->term;
-			$term = json_decode($string_term);
-			$name = $term->{DEDALO_STRUCTURE_LANG};
+		//sort tipos
+		foreach ($all_tipos as $ontology_tipo) {
 
-			if($name === $tld) {
-				$found = $item;
+			$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG);
+
+			if( $tld === $ontology_tld) {
+				$target_section_tipo = $ontology_tipo;
 				break;
 			}
 		}
 
-		$target_section_tipo = $found === false
-			? ontology::create_jr_dd_local_ontology_section_node( $tld )
-			: $found->terminoID;
-
+		if( !isset($target_section_tipo) ){
+			$target_section_tipo = ontology::create_jr_dd_local_ontology_section_node( $tld );
+		}
 
 		// check if exist the main tld
 		$ontology_main = self::get_ontology_main_from_tld( $tld );
-
 		if( !empty($ontology_main) ){
 			debug_log(__METHOD__
 				. " Ignored to add new main ontology with this tld, the main ontology exists, don't use this function to change the main ontology section, tld: " . PHP_EOL
@@ -514,6 +513,7 @@ class ontology {
 
 		// Name
 		$section_data->components->hierarchy5->dato->{DEDALO_STRUCTURE_LANG} = [$tld];
+
 		// TLD
 		$section_data->components->hierarchy6->dato->{DEDALO_DATA_NOLAN} = [$tld];
 
