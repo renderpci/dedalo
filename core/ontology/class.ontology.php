@@ -594,7 +594,8 @@ class ontology {
 
 	/**
 	* MAP_TLD_TO_TARGET_SECTION_TIPO
-	*
+	* get the target section tipo from a given tld
+	* dd ---> ontology40
 	* @param string $tld
 	* @return string|null $target_section_tipo
 	*/
@@ -641,7 +642,8 @@ class ontology {
 
 	/**
 	* MAP_TARGET_SECTION_TIPO_TO_TLD
-	*
+	* get the tld from a given target section tipo
+	* ontology40 --> dd
 	* @param string $target_section_tipo
 	* @return string|null $tld
 	*/
