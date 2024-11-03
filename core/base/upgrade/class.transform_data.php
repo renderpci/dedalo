@@ -1336,56 +1336,33 @@ class transform_data {
 
 	/**
 	* GENERATE_ALL_MAIN_ONTOLOGY_SECTIONS
+	*
 	* @return
 	*/
 	public static function generate_all_main_ontology_sections() {
 
-		$prefix_tipos = DEDALO_PREFIX_TIPOS;
+		$all_active_tld = RecordObj_dd::get_active_tlds();
 
-		$local_tipos = hierarchy::get_active_hierarchies();
+		$ontology_tlds = array_map(function($el){
+			return RecordObj_dd::get_termino_by_tipo($el, DEDALO_STRUCTURE_LANG);
+		}, RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology38','section','children_recursive' ));
 
-		$unique_tld = $prefix_tipos;
-
-		$unique_local_tld = [];
-		foreach ($local_tipos as $item) {
-			$tld_lower_case = strtolower($item->tld);
-			if( in_array($tld_lower_case, $unique_tld) ){
-				continue;
-			}
-			$unique_tld[] = $tld_lower_case;
-			$unique_local_tld[] = $tld_lower_case;
-		}
-
-		$ontology_nodes = RecordObj_dd::get_all_tld_nodes( ['ontology','localontology'] );
-
-		foreach ($unique_local_tld as $local_tld) {
-
-			$found = false;
-			foreach ($ontology_nodes as $item) {
-
-				$string_term = $item->term;
-				$term = json_decode($string_term);
-				$name = $term->{DEDALO_STRUCTURE_LANG};
-
-				if($name === $local_tld) {
-					$found = true;
-					break;
-				}
-			}
-
-			if( $found === false ){
-				ontology::create_jr_dd_local_ontology_section_node( $local_tld );
+		// add first the ontology_tlds to preserve the order
+		$sorted_tlds = $ontology_tlds;
+		foreach ($all_active_tld as $current_tld) {
+			if (!in_array($current_tld, $sorted_tlds)) {
+				$sorted_tlds[] = $current_tld;
 			}
 		}
 
-		foreach ($unique_tld as $tld) {
+		foreach ($sorted_tlds as $tld) {
 			ontology::add_main_section( $tld );
 			$jer_dd_rows = RecordObj_dd::get_all_tld_nodes( [$tld] );
 			ontology::ceate_ontology_records( $jer_dd_rows );
 		}
 
 
-		foreach ($unique_tld as $tld) {
+		foreach ($all_active_tld as $tld) {
 			ontology::assing_relations_from_jer_dd( $tld );
 			ontology::reorder_nodes_from_jer_dd( $tld );
 		}
