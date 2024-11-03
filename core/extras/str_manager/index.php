@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * STR_MANAGER
 * Get requested str_data from extras dir and send as download file
