@@ -170,8 +170,7 @@ class ontology {
 			$tld_component->set_dato( [$tld] );
 			$tld_component->Save();
 
-		// model
-			// get the model tld and id
+		// model. Get the model tld and id
 			if( !empty($model) && $model!=='null' ){
 				$model_section_id	= RecordObj_dd::get_id_from_tipo( $model );
 				$model_tld			= RecordObj_dd::get_prefix_from_tipo( $model );
@@ -420,17 +419,16 @@ class ontology {
 	public static function reorder_nodes_from_jer_dd( string $tld ) : bool {
 
 		// vars
-		$target_section_tipo	= self::map_tld_to_target_section_tipo( $tld );
+		$target_section_tipo = self::map_tld_to_target_section_tipo( $tld );
 
-		//get all section
+		// get all section
 		$all_section_instances = section::get_resource_all_section_records_unfiltered( $target_section_tipo );
 
 		while ($row = pg_fetch_assoc($all_section_instances)) {
-			$section_id = $row['section_id'];
 
-			$node_tipo = $tld.$section_id;
-
-			$children = RecordObj_dd::get_ar_childrens($node_tipo);
+			$section_id	= $row['section_id'];
+			$node_tipo	= $tld.$section_id;
+			$children	= RecordObj_dd::get_ar_childrens($node_tipo);
 
 			$children_data = [];
 			foreach ($children as $child_tipo) {
@@ -460,6 +458,7 @@ class ontology {
 			$children_component->set_dato($children_data);
 			$children_component->Save();
 		}
+
 
 		return true;
 	}//end reorder_nodes_from_jer_dd
@@ -557,6 +556,7 @@ class ontology {
 		$main_section->set_dato( $section_data );
 		$main_section_id = $main_section->Save();
 
+
 		return $main_section_id;
 	}//end add_main_section
 
@@ -582,7 +582,7 @@ class ontology {
 			$RecordObj_dd->set_visible('si');
 			$RecordObj_dd->set_tld('localontology');
 			$RecordObj_dd->set_traducible('no');
-			$RecordObj_dd->set_relaciones( json_decode('[{"dd6":"ontology1"},{"dd626":"dd1201"}]') );
+			$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 			$RecordObj_dd->set_term( $term );
 
 		$term_id = $RecordObj_dd->Save();
@@ -594,6 +594,7 @@ class ontology {
 
 	/**
 	* MAP_TLD_TO_TARGET_SECTION_TIPO
+	*
 	* @param string $tld
 	* @return string|null $target_section_tipo
 	*/
@@ -632,6 +633,7 @@ class ontology {
 
 		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
 
+
 		return self::$cache_target_section_tipo[$tld];
 	}//end map_tld_to_target_section_tipo
 
@@ -639,6 +641,8 @@ class ontology {
 
 	/**
 	* MAP_TARGET_SECTION_TIPO_TO_TLD
+	*
+	* @param string $target_section_tipo
 	* @return string|null $tld
 	*/
 	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : ?string {
@@ -672,6 +676,7 @@ class ontology {
 		$tld = $ar_tld[0];
 
 		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
+
 
 		return $tld;
 	}//end map_target_section_tipo_to_tld
@@ -741,6 +746,7 @@ class ontology {
 
 		return $ontology_sections;
 	}//end get_all_ontology_sections
+
 
 
 }//end ontology
