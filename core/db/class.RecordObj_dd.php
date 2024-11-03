@@ -1447,26 +1447,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return $active_tlds_cache;
 		}
 
-		$connection = DBi::_getConnection(
-			DEDALO_HOSTNAME_CONN, // string host
-			DEDALO_USERNAME_CONN, // string user
-			DEDALO_PASSWORD_CONN, // string password
-			DEDALO_DATABASE_CONN, // string database
-			DEDALO_DB_PORT_CONN, // ?string port
-			DEDALO_SOCKET_CONN // ?string socket
-		);
-
-		// check valid connection
-		if ($connection===false) {
-			debug_log(__METHOD__
-				." Invalid DDBB connection. Unable to connect (52-1)"
-				, logger::ERROR
-			);
-		}
-
 		$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
 		$strQuery	= "SELECT tld FROM \"$table\" GROUP BY tld";
-		$result		= pg_query($connection, $strQuery);
+		$result		= pg_query(DBi::_getConnection(), $strQuery);
 
 		$active_tlds = [];
 		while($row = pg_fetch_assoc($result)) {
