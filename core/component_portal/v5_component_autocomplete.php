@@ -203,7 +203,7 @@
 	* @see class.diffusion_mysql.php
 	*/
 	$_get_diffusion_value = function( $lang=null, $option_obj=null ) : string {
-			// global $_get_valor;
+		// global $_get_valor;
 
 		// force recalculate for each lang
 			unset($this->valor);
