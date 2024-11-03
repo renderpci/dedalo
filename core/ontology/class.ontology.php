@@ -517,28 +517,37 @@ class ontology {
 		// TLD
 		$section_data->components->hierarchy6->dato->{DEDALO_DATA_NOLAN} = [$tld];
 
-
 		// Target section tipo
 		$section_data->components->hierarchy53->dato->{DEDALO_DATA_NOLAN} = [$target_section_tipo];
-		//general term
-		$general_term = new locator();
-			$general_term->set_section_tipo($tld);
-			$general_term->set_section_id('1');
-			$general_term->set_type('dd48');
-			$general_term->set_from_component_tipo('hierarchy45');
-
-		$section_data->relations[] = $general_term;
 
 		// add model root node in the dd main section only, only dd has the models for the ontology.
 		if($tld === 'dd'){
+
+			// general term
+			$general_term = new locator();
+				$general_term->set_section_tipo($target_section_tipo);
+				$general_term->set_section_id('1');
+				$general_term->set_type('dd48');
+				$general_term->set_from_component_tipo('hierarchy45');
+
+			$section_data->relations[] = $general_term;
+
+
 			//model term
 			$model_term = new locator();
-				$model_term->set_section_tipo($tld);
+				$model_term->set_section_tipo($target_section_tipo);
 				$model_term->set_section_id('2');
 				$model_term->set_type('dd48');
 				$model_term->set_from_component_tipo('hierarchy45');
 
 			$section_data->relations[] = $model_term;
+
+			//active in thesaurus, set only dd as active to show in the thesaurus tree
+			foreach($section_data->relations as $locator){
+				if($locator->from_component_tipo === 'hierarchy125'){
+					$locator->section_id = "1";
+				}
+			}
 		}
 
 		$main_section = section::get_instance(
