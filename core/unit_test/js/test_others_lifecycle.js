@@ -63,16 +63,21 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 				// }
 			})
 
+		// menu
+			elements.push({
+				model	: 'menu',
+				lang	: lang
+			})
+
+		// page
 			elements.push({
 				model	: 'page',
 				menu	: true
 			})
 
+
 		return elements
 	}//end get_elelemnts
-	// throw "exit";
-
-
 
 
 
