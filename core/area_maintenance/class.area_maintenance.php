@@ -2264,7 +2264,7 @@ class area_maintenance extends area_common {
 
 	/**
 	* CREATE_JER_DD_RECOVERY
-	* Creates (delete previous if already exists) the recovery table
+	* Creates (delete previous if already exists) the recovery table 'jer_dd_recovery'
 	* containing only 'dd' tld for use in 'recovery_mode'
 	* Source file is a SQL string file located at /dedalo/install/db/jer_dd_recovery.sql
 	* @return object $response

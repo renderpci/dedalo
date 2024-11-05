@@ -151,3 +151,4 @@ function logged_user_is_developer() {};
 class Socrata(){function post(){}};
 $options = new stdClass();
 function apcu_enabled(){};
+function logger_backend_activity(){};

@@ -267,7 +267,7 @@ abstract class RecordDataBoundObject {
 					//     "propiedades": "{\r\n  \"inverse_relations\": false\r\n}",
 					//     "properties": "{\"inverse_relations\": false}"
 					// }
-				if($row===false)	{
+				if ($row===false) {
 					// if(SHOW_DEBUG===true) {
 					// 	// dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
 					// 	// throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
