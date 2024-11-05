@@ -6,6 +6,7 @@ global $updates;
 $updates = new stdClass();
 
 
+
 $v=630; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -39,29 +40,6 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "generate_all_main_ontology_sections";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
-
-
-$v=630; #####################################################################################
-$updates->$v = new stdClass();
-
-	# UPDATE TO
-	$updates->$v->version_major			= 6;
-	$updates->$v->version_medium		= 3;
-	$updates->$v->version_minor			= 0;
-
-	# MINIMUM UPDATE FROM
-	$updates->$v->update_from_major		= 6;
-	$updates->$v->update_from_medium	= 2;
-	$updates->$v->update_from_minor		= 9;
-
-	// alert
-		$alert					= new stdClass();
-		$alert->notification	= 'V '.$v;
-
-		$alert->command			= "
-			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
-		";
-		$updates->$v->alert_update[] = $alert;
 
 
 
