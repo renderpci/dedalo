@@ -2635,7 +2635,7 @@ final class dd_core_api {
 			$obj->maintenance_mode				= defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
 				? DEDALO_MAINTENANCE_MODE_CUSTOM
 				: (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : false);
-			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION_CUSTOM')
+			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION_CUSTOM') && !empty(DEDALO_NOTIFICATION_CUSTOM)
 				? DEDALO_NOTIFICATION_CUSTOM
 				: (defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : false);
 			// recovery mode
