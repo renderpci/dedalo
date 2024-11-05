@@ -1596,20 +1596,24 @@ class area_maintenance extends area_common {
 					break;
 
 				// Disable (Experimental with serious security implications)
-				// case 'DEDALO_NOTIFICATION_CUSTOM':
-				// 	// string|boolean
-				// 	$ar_allow_type = ['boolean','string'];
-				// 	if (!in_array($value_type, $ar_allow_type)) {
-				// 		$response->msg = 'Error. invalid value type. Only allow boolean|string';
-				// 		return $response;
-				// 	}
-				// 	if (is_string($value)) {
-				// 		$msg = safe_xss($value);
-				// 		$write_value = '["msg" => "'.$msg.'", "class_name" => "warning"]';
-				// 	}else{
-				// 		$write_value = 'false'; // no true is expected
-				// 	}
-				// 	break;
+				case 'DEDALO_NOTIFICATION_CUSTOM':
+					if (logged_user_id()!==DEDALO_SUPERUSER) {
+						$response->msg = 'Error. only root user can set congif_core';
+						return $response;
+					}
+					// string|boolean
+					$ar_allow_type = ['boolean','string'];
+					if (!in_array($value_type, $ar_allow_type)) {
+						$response->msg = 'Error. invalid value type. Only allow boolean|string';
+						return $response;
+					}
+					if (is_string($value)) {
+						$msg = safe_xss($value);
+						$write_value = '["msg" => "'.trim($msg).'", "class_name" => "warning"]';
+					}else{
+						$write_value = 'false'; // no true is expected
+					}
+					break;
 
 				default:
 					$response->msg = 'Error. Invalid name';
@@ -1773,6 +1777,48 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end set_recovery_mode
+
+
+
+	/**
+	* SET_NOTIFICATION
+	* Writes the given notification text to config_core
+	* Note that this custom notifications are stored in core_config file
+	* and read from API update_lock_components_state on every component activation/deactivation
+	* @param object $options
+	* {
+	* 	value : string
+	* }
+	* @return object $response
+	*/
+	public static function set_notification( object $options ) : object {
+
+		// options
+			$value = $options->value;
+
+		// check value type
+			if (!is_string($value) && !is_bool($value)) {
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed. value is not string or bool';
+					$response->errors	= [];
+				return $response;
+			}
+
+		// set config_core constant value
+		area_maintenance::set_congif_core((object)[
+			'name'	=> 'DEDALO_NOTIFICATION_CUSTOM',
+			'value'	=> $value
+		]);
+
+		$response = new stdClass();
+			$response->result	= true;
+			$response->msg		= 'OK. Request done successfully';
+			$response->errors	= [];
+
+
+		return $response;
+	}//end set_notification
 
 
 

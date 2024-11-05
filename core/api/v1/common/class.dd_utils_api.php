@@ -1237,6 +1237,10 @@ final class dd_utils_api {
 			$response->dedalo_notification = (defined('DEDALO_NOTIFICATION'))
 				? DEDALO_NOTIFICATION
 				: null;
+			// DEDALO_NOTIFICATION_CUSTOM from area_maintenance (overwrites the default notification)
+				if (defined('DEDALO_NOTIFICATION_CUSTOM') && !empty(DEDALO_NOTIFICATION_CUSTOM)) {
+					$response->dedalo_notification = DEDALO_NOTIFICATION_CUSTOM;
+				}
 
 
 		return $response;
