@@ -1406,15 +1406,23 @@ component_text_area.prototype.build_tag = function(options) {
 /*	Geo location
 ----------------------------------------------------------------------------------------- */
 
+
+
 	/**
 	* CREATE_GEO_TAG
 	* Build a new annotation when user clicks on text editor button
-	*
-	* @return
+	* It is called wen user press F2 in the keyboard
+	* @param object options
+	* {
+	*	data_tag : object as {data:[1], label:'15.1', last_layer_id: 3, layers: [{},{}], state: 'n', tag_id: 15, type: 'geo'}
+	* 	text_editor : object (service_ckeditor instance)
+	* }
+	* @return bool inserted
 	*/
 	component_text_area.prototype.create_geo_tag = function(options) {
 
-		const self = options.caller
+		const self = this
+
 		// get the text_editor sent by the event (button_note event)
 		const text_editor = options.text_editor
 
@@ -1430,17 +1438,18 @@ component_text_area.prototype.build_tag = function(options) {
 
 		// tag images
 			const geo_view_tag  = self.build_view_tag_obj({
-				type	: "geo",
+				type	: 'geo',
 				state	: tag_state,
 				label	: tag_id,
-				data	: ""
+				data	: ''
 			}, tag_id)
 
-		// const tag = self.build_view_tag_obj(geo_view_tag, tag_id)
 		// insert the new note tag in the caret position of the text_editor
-		const inserted_tag = text_editor.set_content(geo_view_tag)
+		const inserted = text_editor.set_content(geo_view_tag)
 
-	}
+
+		return inserted
+	}//end create_geo_tag
 
 
 
