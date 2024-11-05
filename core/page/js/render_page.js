@@ -274,10 +274,12 @@ export const render_notification_msg = function( self, dedalo_notification ) {
 			parent			: wrapper.notification_container
 		})
 		// css animation fade
-		setTimeout(()=>{
-			notification_msg.style.setProperty('--speed', '1s');
-			notification_msg.classList.add('fade-in')
-		}, 0)
+		requestAnimationFrame(
+			() => {
+				notification_msg.style.setProperty('--speed', '1s');
+				notification_msg.classList.add('fade-in')
+			}
+		)
 
 	// fix to compare with next requests
 	self.last_dedalo_notification = dedalo_notification
