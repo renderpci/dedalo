@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
@@ -278,6 +279,21 @@ const get_content_data_edit = async function(self) {
 										inner_html		: response_string,
 										parent			: body_response
 									})
+
+								// menu force to update (server cache files are deleted previously)
+									dd_request_idle_callback(
+										() => {
+											const page = self.caller.caller
+											if (page) {
+												const menu = page.ar_instances.find(el => el.model==='menu')
+												if (menu) {
+													menu.refresh({
+														build_autoload : true
+													})
+												}
+											}
+										}
+									)
 							}
 					}
 				})
