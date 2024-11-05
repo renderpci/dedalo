@@ -35,8 +35,9 @@ function dump( mixed $val=null, ?string $var_name=null, ?array $arguments=null )
 		array_pop($bts);
 
 	// msg
+		$root_path = defined('DEDALO_ROOT_PATH') ? DEDALO_ROOT_PATH : dirname(dirname(__FILE__));
 		$msg  = ' DUMP ' . PHP_EOL
-			   .' Caller: ' . str_replace(DEDALO_ROOT_PATH, '', $bt[0]['file']) . PHP_EOL
+			   .' Caller: ' . str_replace($root_path, '', $bt[0]['file']) . PHP_EOL
 			   .' Line: ' . @$bt[0]['line'];
 
 	// LEVEL 1
