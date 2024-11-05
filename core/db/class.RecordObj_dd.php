@@ -81,6 +81,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$DEDALO_RECOVERY_MODE = $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
 		if ($DEDALO_RECOVERY_MODE===true) {
 			self::$table = 'jer_dd_recovery';
+		}else{
+			// restore table name
+			self::$table = 'jer_dd';
 		}
 
 		return self::$table;
