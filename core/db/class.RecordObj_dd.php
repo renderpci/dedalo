@@ -233,7 +233,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return null;
 		}
 
-		$properties_parsed = json_decode($properties);
+		$properties_parsed = is_string($properties)
+			? json_decode($properties)
+			: $properties;
+
 
 		return $properties_parsed;
 	}//end get_propiedades
@@ -382,7 +385,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			: null;
 
 		// JSON stringified object from column 'term'
-		$term = parent::set_term($term_value);
+		parent::set_term($term_value);
 
 		return true;
 	}//end set_term
