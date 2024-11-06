@@ -332,7 +332,7 @@ abstract class RecordDataBoundObject {
 	* SAVE
 	* Update current record
 	* @return mixed $this->ID
-	* 	string|bool
+	* 	string|false
 	*/
 	public function Save() {
 

@@ -686,6 +686,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_MODEL_TERMINOID
 	* Resolves term id searching jer_dd models
+	* Only one term exist by model (models are unique)
 	* @param string $model
 	* @return string|null $terminoID
 	*/
@@ -712,16 +713,32 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* get_all_tld_nodes
-	* Get all nodes of specified tlds
+	* GET_ALL_TLD_NODES
+	* Get all jer_dd rows of specified tlds
 	* @param  array $ar_tl
 	* @return array $result
+	* [
+	* 	{
+	* 	 "id": "15461858",
+	*    "terminoID": "rsc1355",
+	*    "parent": "rsc1341",
+	*    "modelo": "dd592",
+	*    "esmodelo": "no",
+	*    "esdescriptor": "si",
+	*    "visible": "si",
+	*    "norden": "10",
+	*    "tld": "rsc",
+	* 	 ..
+	* 	},
+	* 	{}, ..
+	* ]
 	*/
 	public static function get_all_tld_nodes( array $ar_tld ) : array {
 
 		$sentences = [];
 
 		foreach ($ar_tld as $current_tld) {
+
 			$safe_tld = safe_tld($current_tld);
 
 			if ( $safe_tld !== false ) {
@@ -729,7 +746,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}else{
 				debug_log(__METHOD__
 					. " Invalid tld, ignored:" . PHP_EOL
-					. to_string( $current_tld )
+					. ' tld: ' . to_string( $current_tld )
 					, logger::ERROR
 				);
 			}
@@ -740,7 +757,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		// `where` clause of SQL query
 		$sql_query = 'SELECT * FROM "jer_dd" WHERE '. $filter ;
 
-		$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+		$jer_dd_result = pg_query(DBi::_getConnection(), $sql_query);
 
 		$ontology_records = [];
 		// iterate jer_dd_result row
@@ -755,16 +772,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_AR_TERMINOID_BY_MODELO_NAME
-	* Resolves all terms matching the model given
+	* Resolves all terms matching the given model
 	* @param string $modelo_name
-	* @param string $prefijo = 'dd'
 	* @return array $ar_result
 	*/
-	public static function get_ar_terminoID_by_modelo_name( string $modelo_name, string $prefijo='dd' ) : array {
+	public static function get_ar_terminoID_by_modelo_name( string $modelo_name ) : array {
 
 		// static cache
 			static $ar_terminoID_by_modelo_name;
-			$cache_uid = $modelo_name.'-'.$prefijo;
+			$cache_uid = $modelo_name;
 			if(isset($ar_terminoID_by_modelo_name[$cache_uid])) {
 				return $ar_terminoID_by_modelo_name[$cache_uid];
 			}
@@ -797,6 +813,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_ALL_MODELS
 	* It is used in the edit thesaurus selector to assign model
 	* @return array $ar_all_modelos
+	* 	Array of all models term_id as ["dd3","dd1226","dd1259",..]
 	*/
 	public function get_ar_all_models() : array {
 
@@ -814,10 +831,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_AR_ALL_TERMINOID_OF_MODELO_TIPO
-	*
+	* Resolves all term id of given model tipo, like
+	* dd6 => ["oh1","dd917",..]
 	* @param string $modelo_tipo
 	* @param bool $use_cache = true
 	* @return array $ar_all_terminoID
+	* 	Array of all term_id as ["oh1","dd917",..]
 	*/
 	public static function get_ar_all_terminoID_of_modelo_tipo( string $modelo_tipo, bool $use_cache=true ) : array {
 
@@ -838,9 +857,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_AR_CHILDRENS_OF_THIS
 	* Get array of terms (terminoID) with parent = $this->terminoID
-	* @param string|null $esdescriptor
-	* @param string|null $esmodelo
-	* @param string|null $order_by
+	* Its mean that only direct children (first level) will be returned
+	* @param string|null $esdescriptor = 'si'
+	* @param string|null $esmodelo = null
+	* @param string|null $order_by = 'norden'
+	* @param bool $use_cache = true
 	* @return array $ar_childrens_of_this
 	*/
 	public function get_ar_childrens_of_this( ?string $esdescriptor='si', ?string $esmodelo=null, $order_by='norden', bool $use_cache=true ) : array {
@@ -895,6 +916,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_AR_CHILDRENS
 	* Resolves all terms that have given tipo as parent
+	* Not discriminates descriptors or models, result includes all children
 	* @param string $tipo
 	* @param string $order_by = 'norden'
 	* @return array $ar_childrens
@@ -1026,9 +1048,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_AR_PARENTS_OF_THIS
-	* Resolves current term  parents recursively
+	* Resolves the current term's parents recursively
 	* @param bool $ksort = true
 	* @return array $ar_parents_of_this
+	* 	Assoc array sample: ["4": "dd1", "3": "dd14", "2": "rsc1", "1": "rsc75", "0": "rsc76"]
 	*/
 	public function get_ar_parents_of_this( bool $ksort=true ) : array {
 
@@ -1074,7 +1097,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_AR_SIBLINGS_OF_THIS
-	* Resolves all siblings of current term
+	* Resolves all siblings descriptors of current term
 	* searching same parent that term parent
 	* @return array $ar_siblings_of_this
 	*/
@@ -1104,6 +1127,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_RELACIONES
 	* Get and parse stringified JSON from column `relaciones` as assoc array
 	* @return array|null $relaciones
+	* 	Assoc array sample: [{"tipo": "rsc170"},{"tipo": "rsc174"},{"tipo": "rsc23"}]
 	*/
 	public function get_relaciones() : ?array {
 
@@ -1121,8 +1145,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* SET_RELACIONES
 	* Set 'relaciones' as JSON (MODELO: $ar_relaciones[$terminoID_source][] = array($modelo => $terminoID_rel))
+	* Set value s string JSON encoded array or null
 	* @param array|null $ar_relaciones
-	* 	Could array, string, null
+	* 	Could be array, string, null
+	* @return bool
 	*/
 	public function set_relaciones( ?array $ar_relaciones) : bool {
 
@@ -1417,8 +1443,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_COLOR
-	* get the color defined in properties
+	* Get the color defined in properties
 	* if it's not defined return default gray
+	* It is used to set custom styles to component_section_id in some sections
 	* @param string $section_tiop
 	* @return string $color
 	* 	like '#b9b9b9'
@@ -1472,7 +1499,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* CHECK_ACTIVE_TLD
-	* Check if the tipo tld is available and installed in the ontology looking the jer_dd
+	* Checks if the tipo tld is available and installed in the Ontology looking for the jer_dd
 	* @param string $tipo
 	* @return bool
 	*/
@@ -1494,8 +1521,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* SAVE
 	* PASADA A RecordObj_dd (Pública. Esta carpeta es privada de momento 28-08-2016)
+	* @return string|false $terminoID
 	*/
-	public function Save( $descriptor_dato_unused=null ) {
+	public function Save() : string|false {
 
 		if(!verify_dedalo_prefix_tipos($this->prefijo)) {
 			if(SHOW_DEBUG===true) {
