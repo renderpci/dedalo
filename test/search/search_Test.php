@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestDox;
+// use PHPUnit\Framework\Attributes\TestDox;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -1392,7 +1392,10 @@ final class search_test extends TestCase {
 		$expected .= PHP_EOL.' LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)';
 
 		if(SHOW_DEBUG===true) {
-			$expected  = "-- JOIN GROUP matrix_dd - rs167_rs20_dd64 - Si/No" . PHP_EOL ." ". $expected;
+			$lang_custom = DEDALO_DATA_LANG==='lg-spa'
+				? 'Si/No'
+				: 'Yes/No';
+			$expected  = "-- JOIN GROUP matrix_dd - rs167_rs20_dd64 - " . $lang_custom . PHP_EOL ." ". $expected;
 		}
 
 		// dump( trim($result['rs167_rs20_dd64']), ' $result[rs167_rs20_dd64] ++ '.to_string());
@@ -2071,14 +2074,19 @@ final class search_test extends TestCase {
 		$expected .= PHP_EOL.' LEFT JOIN matrix_dd AS rs167_rs20_dd64 ON (r_rs167_rs20_dd64.target_section_id=rs167_rs20_dd64.section_id AND r_rs167_rs20_dd64.target_section_tipo=rs167_rs20_dd64.section_tipo)';
 
 		if(SHOW_DEBUG===true) {
-			$expected = '-- JOIN GROUP matrix_dd - rs167_rs20_dd64 - Si/No' .PHP_EOL . ' ' . $expected;
+			$lang_custom = DEDALO_DATA_LANG==='lg-spa'
+				? 'Si/No'
+				: 'Yes/No';
+			$expected = '-- JOIN GROUP matrix_dd - rs167_rs20_dd64 - ' . $lang_custom . PHP_EOL . ' ' . $expected;
 		}
 
 
 		$eq		= trim($result)===$expected;
 		$this->assertTrue(
 			$eq,
-			'expected true trim($result)==="LEFT JOIN relations AS r_rs167_rs20_dd64 ON ..." and received: ' . json_encode($result)
+			'expected true trim($result)==="LEFT JOIN relations AS r_rs167_rs20_dd64 ON ..." and received: ' . PHP_EOL
+			.' result: ' . json_encode( trim($result) ) . PHP_EOL
+			.' expected: ' . json_encode($expected)
 		);
 	}//end test_get_sql_joins
 
