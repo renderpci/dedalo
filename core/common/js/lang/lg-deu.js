@@ -466,5 +466,6 @@
     "component": "Komponente",
     "translatable": "Übersetzbar",
     "reading": "Lesen",
-    "tool_qr": "QR-Codes"
+    "tool_qr": "QR-Codes",
+    "layer_selector": "Ebenenwähler"
 }

@@ -466,5 +466,6 @@
     "component": "Component",
     "translatable": "Traduïble",
     "reading": "Llegint",
-    "tool_qr": "Codis QR"
+    "tool_qr": "Codis QR",
+    "layer_selector": "Selector de capa"
 }

@@ -466,5 +466,6 @@
     "component": "Composant",
     "translatable": "Traductible",
     "reading": "Lecture",
-    "tool_qr": "QR Codes"
+    "tool_qr": "QR Codes",
+    "layer_selector": "Sélecteur de couches"
 }

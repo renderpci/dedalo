@@ -466,5 +466,6 @@
     "component": "Συστατικό",
     "translatable": "Μεταφράσιμος",
     "reading": "Ανάγνωση",
-    "tool_qr": "Κωδικοί QR"
+    "tool_qr": "Κωδικοί QR",
+    "layer_selector": "Επιλογέας στρώσεων"
 }

@@ -466,5 +466,6 @@
     "component": "Componente",
     "translatable": "Traducibile",
     "reading": "Lettura",
-    "tool_qr": "Codici QR"
+    "tool_qr": "Codici QR",
+    "layer_selector": "Selettore di livello"
 }
