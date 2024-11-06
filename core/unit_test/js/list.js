@@ -20,6 +20,7 @@ import {elements} from './elements.js'
 		'test_no_logged_error',
 		'test_unknown_error',
 		'test_page',
+		'test_component_text_area',
 		// 'test_component_portal_pagination'
 	]
 
