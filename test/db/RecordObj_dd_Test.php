@@ -581,4 +581,865 @@ final class RecordObj_dd_test extends TestCase {
 
 
 
+	/**
+	* TEST_get_model_terminoID
+	* @return void
+	*/
+	public function test_get_model_terminoID(): void {
+
+		// root
+			$result = RecordObj_dd::get_model_terminoID('root');
+
+			$expected	= 'string';
+			$eq			= gettype($result)===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . gettype($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+			$expected	= 'dd117';
+			$eq			= $result===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// component_portal
+			$result = RecordObj_dd::get_model_terminoID('component_portal');
+
+			$expected	= 'dd592';
+			$eq			= $result===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// section
+			$result = RecordObj_dd::get_model_terminoID('section');
+
+			$expected	= 'dd6';
+			$eq			= $result===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_model_terminoID
+
+
+
+	/**
+	* TEST_get_all_tld_nodes
+	* @return void
+	*/
+	public function test_get_all_tld_nodes(): void {
+
+		// root
+			$result = RecordObj_dd::get_all_tld_nodes(['dd','rsc']);
+
+			$expected	= 'array';
+			$eq			= gettype($result)===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . gettype($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// dd1
+			$found = array_find($result, function($el) {
+				return $el->terminoID==='dd1';
+			});
+
+			$expected	= true;
+			$eq			= is_object($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// rsc15
+			$found = array_find($result, function($el) {
+				return $el->terminoID==='rsc15';
+			});
+
+			$expected	= true;
+			$eq			= is_object($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_all_tld_nodes
+
+
+
+	/**
+	* TEST_get_ar_terminoID_by_modelo_name
+	* @return void
+	*/
+	public function test_get_ar_terminoID_by_modelo_name(): void {
+
+		// component_portal
+			$result = RecordObj_dd::get_ar_terminoID_by_modelo_name(
+				'component_portal'
+			);
+
+			$expected	= 'array';
+			$eq			= gettype($result)===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . gettype($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// dd51
+			$found = array_find($result, function($el) {
+				return $el==='dd51';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// component_input_text
+			$result = RecordObj_dd::get_ar_terminoID_by_modelo_name(
+				'component_input_text'
+			);
+
+		// rsc85
+			$found = array_find($result, function($el) {
+				return $el==='rsc85';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_terminoID_by_modelo_name
+
+
+
+	/**
+	* TEST_get_ar_all_models
+	* @return void
+	*/
+	public function test_get_ar_all_models(): void {
+
+		$RecordObj_dd	= new RecordObj_dd(NULL, 'dd');
+
+		$result = $RecordObj_dd->get_ar_all_models();
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// dd251
+			$found = array_find($result, function($el) {
+				return $el==='dd251';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_all_models
+
+
+
+	/**
+	* TEST_get_ar_all_terminoID_of_modelo_tipo
+	* @return void
+	*/
+	public function test_get_ar_all_terminoID_of_modelo_tipo(): void {
+
+		// section
+			$result = RecordObj_dd::get_ar_all_terminoID_of_modelo_tipo(
+				'dd6'
+			);
+
+			$expected	= 'array';
+			$eq			= gettype($result)===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . gettype($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// oh1
+			$found = array_find($result, function($el) {
+				return $el==='oh1';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_all_terminoID_of_modelo_tipo
+
+
+
+	/**
+	* TEST_get_ar_childrens_of_this
+	* @return void
+	*/
+	public function test_get_ar_childrens_of_this(): void {
+
+		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
+
+		$result = $RecordObj_dd->get_ar_childrens_of_this();
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// dd242
+			$found = array_find($result, function($el) {
+				return $el==='dd242';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_childrens_of_this
+
+
+
+	/**
+	* TEST_get_ar_childrens
+	* @return void
+	*/
+	public function test_get_ar_childrens(): void {
+
+		$result = RecordObj_dd::get_ar_childrens('dd1');
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// dd242
+			$found = array_find($result, function($el) {
+				return $el==='dd242';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_childrens
+
+
+
+	/**
+	* TEST_get_ar_recursive_childrens_of_this
+	* @return void
+	*/
+	public function test_get_ar_recursive_childrens_of_this(): void {
+
+		$RecordObj_dd	= new RecordObj_dd('dd242');
+		$result			= $RecordObj_dd->get_ar_recursive_childrens_of_this('dd242');
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// count
+			$expected	= true;
+			$eq			= count($result)>1;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_recursive_childrens_of_this
+
+
+
+	/**
+	* TEST_get_ar_recursive_childrens
+	* @return void
+	*/
+	public function test_get_ar_recursive_childrens(): void {
+
+		$result = RecordObj_dd::get_ar_recursive_childrens('dd242');
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// count
+			$expected	= true;
+			$eq			= count($result)>1;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_recursive_childrens
+
+
+
+	/**
+	* TEST_get_ar_parents_of_this
+	* @return void
+	*/
+	public function test_get_ar_parents_of_this(): void {
+
+		$RecordObj_dd	= new RecordObj_dd('rsc85');
+		$result			= $RecordObj_dd->get_ar_parents_of_this();
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// count
+			$expected	= true;
+			$eq			= count($result)>1;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_parents_of_this
+
+
+
+	/**
+	* TEST_get_ar_siblings_of_this
+	* @return void
+	*/
+	public function test_get_ar_siblings_of_this(): void {
+
+		$RecordObj_dd	= new RecordObj_dd('rsc85');
+		$result			= $RecordObj_dd->get_ar_siblings_of_this();
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// count
+			$expected	= true;
+			$eq			= count($result)>1;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// rsc85
+			$found = array_find($result, function($el) {
+				return $el==='rsc85';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_siblings_of_this
+
+
+
+	/**
+	* TEST_get_relaciones
+	* @return void
+	*/
+	public function test_get_relaciones(): void {
+
+		// image rsc88
+		$RecordObj_dd	= new RecordObj_dd('rsc88');
+		$result			= $RecordObj_dd->get_relaciones();
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// count
+			$expected	= true;
+			$eq			= count($result)>1;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// rsc170
+			$values = [];
+			foreach ($result as $value) {
+				$values = array_merge($values, array_values($value));
+			}
+			$found = array_find($values, function($el) {
+				return $el==='rsc170';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_relaciones
+
+
+
+	/**
+	* TEST_set_relaciones
+	* @return void
+	*/
+	public function test_set_relaciones(): void {
+
+		// image rsc88
+		$RecordObj_dd = new RecordObj_dd('rsc88');
+		// force load DB value
+		$RecordObj_dd->Load();
+		$result			= $RecordObj_dd->set_relaciones(['tipo'=>'rsc91']);
+
+		$expected	= 'boolean';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// check set value
+			$relaciones = $RecordObj_dd->get_relaciones();
+
+			$expected	= 'array';
+			$eq			= gettype($relaciones)===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . gettype($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+			$expected	= ['tipo'=>'rsc91'];
+			$eq			= $relaciones===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . gettype($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// null case
+			$result = $RecordObj_dd->set_relaciones(null);
+
+			$expected	= 'boolean';
+			$eq			= gettype($result)===$expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . gettype($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		$RecordObj_dd->__destuct();
+	}//end test_set_relaciones
+
+
+
+	/**
+	* TEST_get_ar_terminos_relacionados
+	* @return void
+	*/
+	public function test_get_ar_terminos_relacionados(): void {
+
+		$result = RecordObj_dd::get_ar_terminos_relacionados(
+			'rsc88',
+			true,
+			true // simple
+		);
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// rsc170
+			$found = array_find($result, function($el) {
+				return $el==='rsc170';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_terminos_relacionados
+
+
+
+	/**
+	* TEST_get_ar_terminoID_by_modelo_name_and_relation
+	* @return void
+	*/
+	public function test_get_ar_terminoID_by_modelo_name_and_relation(): void {
+
+		// children
+		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			'rsc88',
+			'section_list',
+			'children'
+		);
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// rsc208
+			$found = array_find($result, function($el) {
+				return $el==='rsc208';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// children_recursive
+		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			'rsc75', // People
+			'component_input_text',
+			'children_recursive'
+		);
+
+		// rsc85
+			$found = array_find($result, function($el) {
+				return $el==='rsc85';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// termino_relacionado
+		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			'rsc88', // Image
+			'component_input_text',
+			'termino_relacionado'
+		);
+
+		// rsc23
+			$found = array_find($result, function($el) {
+				return $el==='rsc23';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// parent
+		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			'rsc88', // Image
+			'section_group',
+			'parent'
+		);
+
+		// rsc76
+			$found = array_find($result, function($el) {
+				return $el==='rsc76';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_ar_terminoID_by_modelo_name_and_relation
+
+
+
+	/**
+	* TEST_get_translatable
+	* @return void
+	*/
+	public function test_get_translatable(): void {
+
+		// false
+		$result = RecordObj_dd::get_translatable(
+			'rsc88', // component_image
+		);
+
+		$expected	= 'boolean';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		$expected	= false;
+		$eq			= $result===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . to_string($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// true
+		$result = RecordObj_dd::get_translatable(
+			'rsc99', // component_text_area
+		);
+
+		$expected	= 'boolean';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		$expected	= true;
+		$eq			= $result===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . to_string($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+	}//end test_get_translatable
+
+
+
+	/**
+	* TEST_get_color
+	* @return void
+	*/
+	public function test_get_color(): void {
+
+		$result = RecordObj_dd::get_color(
+			'rsc167', // Audiovisual
+		);
+
+		$expected	= 'string';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		$expected	= '#a93f25';
+		$eq			= $result===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . to_string($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+	}//end test_get_color
+
+
+
+	/**
+	* TEST_get_active_tlds
+	* @return void
+	*/
+	public function test_get_active_tlds(): void {
+
+		$result = RecordObj_dd::get_active_tlds();
+
+		$expected	= 'array';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// rsc
+			$found = array_find($result, function($el) {
+				return $el==='rsc';
+			});
+
+			$expected	= true;
+			$eq			= is_string($found);
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_get_active_tlds
+
+
+
+	/**
+	* TEST_check_active_tld
+	* @return void
+	*/
+	public function test_check_active_tld(): void {
+
+		// true active
+		$result = RecordObj_dd::check_active_tld('rsc25');
+
+		$expected	= 'boolean';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// rsc
+			$expected	= true;
+			$eq			= $result===true;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+
+		// false active
+		$result = RecordObj_dd::check_active_tld('elraspatld92');
+
+		$expected	= 'boolean';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		// rsc
+			$expected	= true;
+			$eq			= $result===false;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_check_active_tld
+
+
+
 }//end class
