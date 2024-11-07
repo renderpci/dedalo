@@ -2983,12 +2983,16 @@ export const ui = {
 				}
 
 				// Replace container or placeholder with result_node
-				if (replace_container) {
-					container.replaceWith(result_node);
-				} else {
-					// default
-					container_placeholder.replaceWith(result_node);
-				}
+				requestAnimationFrame(
+					() => {
+						if (replace_container) {
+							container.replaceWith(result_node);
+						} else {
+							// default
+							container_placeholder.replaceWith(result_node);
+						}
+					}
+				)
 
 				return result_node;
 			} catch (error) {
