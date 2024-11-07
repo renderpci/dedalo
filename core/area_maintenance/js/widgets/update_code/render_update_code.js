@@ -207,27 +207,29 @@ const get_content_data_edit = async function(self) {
 
 		}else{
 			// form init
-			self.caller.init_form({
-				submit_label	: 'Update Dédalo code to the latest version',
-				confirm_text	: get_label.sure || 'Sure?',
-				body_info		: content_data,
-				body_response	: body_response,
-				trigger : {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
-						action	: 'update_code'
+			if (self.caller?.init_form) {
+				self.caller.init_form({
+					submit_label	: 'Update Dédalo code to the latest version',
+					confirm_text	: get_label.sure || 'Sure?',
+					body_info		: content_data,
+					body_response	: body_response,
+					trigger : {
+						dd_api	: 'dd_area_maintenance_api',
+						action	: 'class_request',
+						source	: {
+							action	: 'update_code'
+						},
+						options	: {}
 					},
-					options	: {}
-				},
-				on_done : () => {
-					// event publish
-					// listen by widget update_data_version.init
-					event_manager.publish('update_code_done', self)
-					// clean browser cache
-					reload_js_files()
-				}
-			})
+					on_done : () => {
+						// event publish
+						// listen by widget update_data_version.init
+						event_manager.publish('update_code_done', self)
+						// clean browser cache
+						reload_js_files()
+					}
+				})
+			}
 		}
 
 	// add at end body_response
