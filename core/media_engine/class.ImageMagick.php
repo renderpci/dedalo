@@ -393,6 +393,16 @@ final class ImageMagick {
 				, logger::WARNING
 			);
 
+			if (empty($string_channels)) {
+				debug_log(__METHOD__
+					. " Unable to get command execution result on get channels. Empty result " . PHP_EOL
+					. 'command: ' .to_string($command) . PHP_EOL
+					. 'channels: ' . json_encode($string_channels)
+					, logger::ERROR
+				);
+				return false;
+			}
+
 		// the result could be:
 		// srgb  3.0 -> 3 channels 0 meta channels, without any meta channel (transparent channel)
 		// srgb  4.1 -> 4 channels 1 of them is meta channel (transparent channel)
