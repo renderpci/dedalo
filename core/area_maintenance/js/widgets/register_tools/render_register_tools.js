@@ -9,6 +9,7 @@
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
+
 /**
 * RENDER_REGISTER_TOOLS
 * Manages the widget logic and appearance in client side
