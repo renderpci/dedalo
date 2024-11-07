@@ -114,20 +114,22 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init new empty test record
-		self.caller.init_form({
-			submit_label	: 'Truncate test table and Create new empty test record',
-			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
-			body_response	: body_response,
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
-				source	: {
-					action : 'create_test_record'
-				},
-				options	: {}
-			}
-		})
+		if (self.caller?.init_form) {
+			self.caller.init_form({
+				submit_label	: 'Truncate test table and Create new empty test record',
+				confirm_text	: get_label.sure || 'Sure?',
+				body_info		: content_data,
+				body_response	: body_response,
+				trigger : {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'class_request',
+					source	: {
+						action : 'create_test_record'
+					},
+					options	: {}
+				}
+			})
+		}
 
 	// add at end body_response
 		content_data.appendChild(body_response)

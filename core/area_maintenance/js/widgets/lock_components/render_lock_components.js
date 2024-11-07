@@ -89,7 +89,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'info_node',
 			parent			: content_data
 		})
-		if (active_users.result) {
+		if (active_users?.result) {
 			print_active_users(active_users)
 		}
 

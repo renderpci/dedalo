@@ -108,24 +108,26 @@ const render_content_data = async function(self) {
 				})
 
 			// form init
-				self.caller.init_form({
-					submit_label	: self.name,
-					confirm_text	: get_label.sure || 'Sure?',
-					body_info		: content_data,
-					body_response	: body_response,
-					inputs			: [{
-						type		: 'text',
-						name		: 'dedalo_prefix_tipos',
-						label		: 'Dédalo prefix tipos to import',
-						mandatory	: false,
-						value		: tipos.join(',')
-					}],
-					trigger			: {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'import_structure_from_json',
-						options	: null
-					}
-				})
+				if (self.caller?.init_form) {
+					self.caller.init_form({
+						submit_label	: self.name,
+						confirm_text	: get_label.sure || 'Sure?',
+						body_info		: content_data,
+						body_response	: body_response,
+						inputs			: [{
+							type		: 'text',
+							name		: 'dedalo_prefix_tipos',
+							label		: 'Dédalo prefix tipos to import',
+							mandatory	: false,
+							value		: tipos.join(',')
+						}],
+						trigger			: {
+							dd_api	: 'dd_area_maintenance_api',
+							action	: 'import_structure_from_json',
+							options	: null
+						}
+					})
+				}
 
 			// add at end body_response
 				content_data.appendChild(body_response)

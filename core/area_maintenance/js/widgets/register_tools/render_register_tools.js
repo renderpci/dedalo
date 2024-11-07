@@ -78,7 +78,6 @@ const render_content_data = async function(self) {
 			}
 			return carry
 		}, [])
-		console.log('outdated:', outdated);
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -233,7 +232,7 @@ const render_content_data = async function(self) {
 		})
 
 	// form init
-		if (self.caller.init_form) {
+		if (self.caller?.init_form) {
 			self.caller.init_form({
 				submit_label	: get_label.registrar_herramientas || self.name,
 				confirm_text	: get_label.sure || 'Sure?',

@@ -98,33 +98,35 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init
-		self.caller.init_form({
-			submit_label	: 'Regenerate relations table data',
-			confirm_text	: confirm_text,
-			body_info		: content_data,
-			body_response	: body_response,
-			inputs			: [{
-				type		: 'text',
-				name		: 'tables',
-				label		: 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
-				mandatory	: true
-			}],
-			on_submit	: (e, values) => {
+		if (self.caller?.init_form) {
+			self.caller.init_form({
+				submit_label	: 'Regenerate relations table data',
+				confirm_text	: confirm_text,
+				body_info		: content_data,
+				body_response	: body_response,
+				inputs			: [{
+					type		: 'text',
+					name		: 'tables',
+					label		: 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
+					mandatory	: true
+				}],
+				on_submit	: (e, values) => {
 
-				const input		= values.find(el => el.name==='tables')
-				const tables	= input?.value // string like '*'
+					const input		= values.find(el => el.name==='tables')
+					const tables	= input?.value // string like '*'
 
-				// regenerate_relations
-				regenerate_relations(tables)
-				.then(function(response){
-					update_process_status(
-						response.pid,
-						response.pfile,
-						body_response
-					)
-				})
-			}
-		})
+					// regenerate_relations
+					regenerate_relations(tables)
+					.then(function(response){
+						update_process_status(
+							response.pid,
+							response.pfile,
+							body_response
+						)
+					})
+				}
+			})
+		}
 
 	// regenerate_relations
 		const regenerate_relations = async (tables) => {
