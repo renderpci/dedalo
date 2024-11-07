@@ -161,30 +161,40 @@ const build_widget = (item, self) => {
 		.then(async function(module){
 
 			// instance widget
-				const widget = new module[item.id]()
+			const widget = new module[item.id]()
 
 			// init widget
-				await widget.init({
-					id				: item.id,
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					lang			: self.lang,
-					mode			: self.mode, // list
-					model			: 'widget',
-					name			: item.label,
-					value			: item.value,
-					caller			: self
-				})
-			// build
-				await widget.build(false)
-			// render
-				widget.render()
-				.then(function(node){
-					if (node) {
-						node.classList.add('body_info')
-						body.appendChild(node)
-					}
-				})
+			await widget.init({
+				id				: item.id,
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id,
+				lang			: self.lang,
+				mode			: self.mode, // list
+				model			: 'widget',
+				name			: item.label,
+				value			: item.value,
+				caller			: self
+			})
+
+			// render and append widget node
+			ui.load_item_with_spinner({
+				container			: body,
+				preserve_content	: false,
+				label				: item.id,
+				callback			: async () => {
+
+					// build
+					await widget.build(false)
+
+					// render
+					const node = await widget.render()
+
+					// add CSS class for selection
+					node.classList.add('body_info')
+
+					return node
+				}
+			});
 		})
 		.catch((err) => {
 			console.error(err)
