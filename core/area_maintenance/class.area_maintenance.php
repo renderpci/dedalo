@@ -460,6 +460,19 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
+		// system_info *
+			$item = new stdClass();
+				$item->id		= 'system_info';
+				$item->type		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= 'SYSTEM INFO';
+				$item->class	= 'width_100';
+				$item->value	= (object)[
+					'src' => DEDALO_CORE_URL.'/area_maintenance/system_info.php'
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
 
 		return $ar_widgets;
 	}//end get_ar_widgets
