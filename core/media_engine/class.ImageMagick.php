@@ -371,7 +371,6 @@ final class ImageMagick {
 
 
 
-
 	/**
 	* HAS_META_CHANNEL
 	* Check all channels in the image and find if any of them has a meta channel
@@ -404,8 +403,8 @@ final class ImageMagick {
 
 		$meta_channel = false;
 		foreach ($ar_channels_info[0] as $channels_data) {
-			$ar_channel_info 	= explode('.', $channels_data);
-			$meta_channel_info = (int)$ar_channel_info[1];
+			$ar_channel_info	= explode('.', $channels_data);
+			$meta_channel_info	= (int)$ar_channel_info[1];
 
 			if($meta_channel_info > 0){
 				$meta_channel = true;
