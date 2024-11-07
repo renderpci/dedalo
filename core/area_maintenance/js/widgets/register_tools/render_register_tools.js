@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {when_in_dom} from '../../../../common/js/events.js'
 
 
 
@@ -68,13 +69,33 @@ const render_content_data = async function(self) {
 	// short vars
 		const value		= self.value || {}
 		const datalist	= value.datalist || []
-		const errors	= value.errors
+		const errors	= value.errors || []
+
+	// check versions
+		const outdated = datalist.reduce((carry, value) => {
+			if (value.version !== value.installed_version) {
+				carry.push(value)
+			}
+			return carry
+		}, [])
+		console.log('outdated:', outdated);
 
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
 		})
 
+	// set widget container label color style
+		if (errors.length || outdated.length) {
+			const when_in_dom_handler = () => {
+				const wrapper = self.node
+				const widget_container = wrapper.parentNode.parentNode
+				if (widget_container) {
+					widget_container.classList.add('danger')
+				}
+			}
+			when_in_dom(content_data, when_in_dom_handler)
+		}
 
 	// datalist
 		// header
