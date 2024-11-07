@@ -380,12 +380,14 @@ const render_psql_backup_files = function() {
 		class_name		: 'backup_toggle_button unselectable',
 		parent			: backup_files_container
 	})
-	backup_toggle.addEventListener('click', async function(e) {
+	const click_handler = async (e) => {
 		e.stopPropagation()
 		// toggle backup_files_list visibility
 		backup_files_list.classList.toggle('hide')
 		// clean previous intervals
-		if (interval) clearInterval(interval);
+		if (interval) {
+			clearInterval(interval);
+		}
 		// if hiding, return
 		if (backup_files_list.classList.contains('hide')) {
 			return
@@ -396,7 +398,8 @@ const render_psql_backup_files = function() {
 		interval = setInterval(()=>{
 			refresh_files_list('psql', backup_files_list)
 		}, 1000);
-	})
+	}
+	backup_toggle.addEventListener('click', click_handler)
 
 	// files list container (JOSN array of objects) as
 	// [{ "name": "2024-04-02_223514.dedalo6_development.postgresql_-1_forced_dbv6-1-4.custom.backup", "size": "5.34 GB"}]
@@ -435,13 +438,15 @@ const render_mysql_backup_files = function() {
 		class_name		: 'backup_toggle_button unselectable',
 		parent			: backup_files_container
 	})
-	mysql_backup_toggle.addEventListener('click', async function(e) {
+	const click_handler = async (e) => {
 		e.stopPropagation()
 		// toggle backup_files_list visibility
 		mysql_backup_files_list.classList.toggle('hide')
 		// clean previous intervals
-		if (interval) clearInterval(interval);
-
+		if (interval) {
+			clearInterval(interval);
+		}
+		// if hiding, return
 		if (mysql_backup_files_list.classList.contains('hide')) {
 			return
 		}
@@ -451,7 +456,8 @@ const render_mysql_backup_files = function() {
 		interval = setInterval(()=> {
 			refresh_files_list('mysql', mysql_backup_files_list)
 		}, 1000);
-	})
+	}
+	mysql_backup_toggle.addEventListener('click', click_handler)
 
 	// files list container (JOSN array of objects) as
 	// [{ "name": "2024-04-02_223514.dedalo6_development.postgresql_-1_forced_dbv6-1-4.custom.backup", "size": "5.34 GB"}]
