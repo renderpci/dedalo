@@ -6,8 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {when_in_dom} from '../../../../common/js/events.js'
-
+	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
 /**
