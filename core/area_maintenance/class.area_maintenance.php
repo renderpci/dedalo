@@ -152,23 +152,11 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// register_tools *
-			$tools_files_list = tools_register::get_tools_files_list();
-			$need_update = array_reduce($tools_files_list, function ($carry, $c_tool) {
-				return $carry || ($c_tool->version !== $c_tool->installed_version);
-			}, false);
 			$item = new stdClass();
 				$item->id		= 'register_tools';
-				$item->class	= $need_update===false ? 'success' : 'danger';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('registrar_herramientas');
-				$item->value	= (object)[
-					'datalist' => $tools_files_list
-				];
-				// verify tipo 'dd1644' Developer added Ontology field 09-10-2023
-				if (empty(RecordObj_dd::get_modelo_name_by_tipo('dd1644',true))) {
-					$item->value->errors[] = 'Your Ontology is outdated. Term \'dd1644\' do not exists';
-				}
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 

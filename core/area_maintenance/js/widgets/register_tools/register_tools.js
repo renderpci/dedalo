@@ -6,6 +6,7 @@
 
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {render_register_tools} from './render_register_tools.js'
 
 
@@ -47,6 +48,73 @@ export const register_tools = function() {
 	// // render
 	register_tools.prototype.edit		= render_register_tools.prototype.list
 	register_tools.prototype.list		= render_register_tools.prototype.list
+
+
+
+/**
+* BUILD
+* Custom build overwrites common widget method
+* @param bool autoload = false
+* @return bool
+*/
+register_tools.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// call generic common tool build
+		const common_build = await widget_common.prototype.build.call(this, autoload);
+
+	try {
+
+		// specific actions.. like fix main_element for convenience
+		self.value = await self.get_widget_value()
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
+
+
+	return common_build
+}//end build_custom
+
+
+
+/**
+* GET_WIDGET_VALUE
+* Get widget value from class maintenance
+* The options 'name' property is the class method name
+* @return result
+* {
+    "datalist": array as [{"developer":"Dédalo Team","name":"tool_cataloging",..}]
+    "errors": array|null
+  }
+*/
+register_tools.prototype.get_widget_value = async () => {
+
+	// get files list updated
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'class_request',
+			source	: {
+				action : 'get_widget_value'
+			},
+			options	: {
+				name : 'register_tools'
+			}
+		}
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) get_widget_value api_response:', api_response);;
+	}
+
+	const result = api_response.result
+
+
+	return result
+}//end get_widget_value
 
 
 
