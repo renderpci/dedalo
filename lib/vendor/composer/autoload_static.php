@@ -34,6 +34,10 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         array (
             'OneLogin\\' => 9,
         ),
+        'L' => 
+        array (
+            'Linfo\\' => 6,
+        ),
         'E' => 
         array (
             'EasyRdf\\' => 8,
@@ -72,6 +76,10 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         'OneLogin\\' => 
         array (
             0 => __DIR__ . '/..' . '/onelogin/php-saml/src',
+        ),
+        'Linfo\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/linfo/linfo/src/Linfo',
         ),
         'EasyRdf\\' => 
         array (
