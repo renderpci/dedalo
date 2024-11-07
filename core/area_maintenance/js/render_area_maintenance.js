@@ -5,7 +5,7 @@
 
 
 // imports
-	import {when_in_viewport} from '../../common/js/events.js'
+	import {when_in_dom, when_in_viewport} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
@@ -406,6 +406,40 @@ export const build_form = function(widget_object) {
 
 	return form_container
 }//end build_form
+
+
+
+/**
+* SET_WIDGET_LABEL_STYLE
+* Locate widget_container and set (add/remove) the given style
+* If the node is not ready, wait until is available in the DOM
+* @param object self
+* @param string style (as 'danger')
+* @param mode string add|remove
+* @param HTMLElement ref_node (to observe node)
+* @return void
+*/
+export const set_widget_label_style = function (self, style, mode, ref_node) {
+
+	if (!self.node) {
+		const when_in_dom_handler = () => {
+			set_widget_label_style(self, style, mode, ref_node)
+		}
+		when_in_dom(ref_node, when_in_dom_handler)
+		return
+	}
+
+	const wrapper = self.node
+	const widget_container = wrapper.parentNode.parentNode
+	if (widget_container) {
+
+		if (mode==='remove') {
+			widget_container.classList.remove(style)
+		}else{
+			widget_container.classList.add(style)
+		}
+	}
+}//end set_widget_label_style
 
 
 
