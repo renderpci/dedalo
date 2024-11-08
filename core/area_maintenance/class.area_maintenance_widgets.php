@@ -162,8 +162,13 @@ class area_maintenance_widgets extends area_common {
 			$system_list = [];
 
 			$system_list[] = (object)[
-				'name'	=> 'cpu',
+				'name'	=> 'os',
 				'value'	=> $linfo->getOS()
+			];
+
+			$system_list[] = (object)[
+				'name'	=> 'model',
+				'value'	=> $linfo->getModel()
 			];
 
 			$system_list[] = (object)[
@@ -171,31 +176,20 @@ class area_maintenance_widgets extends area_common {
 				'value'	=> $linfo->getCPUArchitecture()
 			];
 
-			// linux
-				$system_list[] = (object)[
-					'name'	=> 'kernel',
-					'value'	=> $linfo->getKernel()
-				];
+			$system_list[] = (object)[
+				'name'	=> 'cpu',
+				'value'	=> $linfo->getCPU()
+			];
 
-				$system_list[] = (object)[
-					'name'	=> 'devices',
-					'value'	=> $linfo->getDevs()
-				];
+			$system_list[] = (object)[
+				'name'	=> 'kernel',
+				'value'	=> $linfo->getKernel()
+			];
 
-				$system_list[] = (object)[
-					'name'	=> 'raid',
-					'value'	=> $linfo->getRAID()
-				];
-
-				$system_list[] = (object)[
-					'name'	=> 'services',
-					'value'	=> $linfo->getServices()
-				];
-
-				$system_list[] = (object)[
-					'name'	=> 'distribution',
-					'value'	=> $linfo->getDistro()
-				];
+			$system_list[] = (object)[
+				'name'	=> 'distribution',
+				'value'	=> $linfo->getDistro()
+			];
 
 			$system_list[] = (object)[
 				'name'	=> 'hostname',
@@ -208,23 +202,28 @@ class area_maintenance_widgets extends area_common {
 			];
 
 			$system_list[] = (object)[
+				'name'	=> 'devices',
+				'value'	=> $linfo->getDevs()
+			];
+
+			$system_list[] = (object)[
+				'name'	=> 'raid',
+				'value'	=> $linfo->getRAID()
+			];
+
+			$system_list[] = (object)[
+				'name'	=> 'services',
+				'value'	=> $linfo->getServices()
+			];
+
+			$system_list[] = (object)[
 				'name'	=> 'load',
 				'value'	=> $linfo->getLoad()
 			];
 
 			$system_list[] = (object)[
-				'name'	=> 'cpu',
-				'value'	=> $linfo->getCPU()
-			];
-
-			$system_list[] = (object)[
 				'name'	=> 'ram',
 				'value'	=> $linfo->getRam()
-			];
-
-			$system_list[] = (object)[
-				'name'	=> 'model',
-				'value'	=> $linfo->getModel()
 			];
 
 			$system_list[] = (object)[
