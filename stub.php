@@ -139,6 +139,7 @@ define('PDF_OCR_ENGINE','');
 
 define('DEDALO_RECOVERY_KEY','');
 define('DEDALO_RECOVERY_MODE','');
+define('DEDALO_BINARY_BASE_PATH','');
 
 function session_start_manager(){};
 function fix_cascade_config_var(){};

@@ -29,6 +29,34 @@ final class ImageMagick {
 
 
 	/**
+	* GET_IMAGEMAGICK_INSTALLED_PATH
+	* @return string
+	*/
+	public static function get_imagemagick_installed_path() : string {
+
+		return MAGICK_PATH . 'convert';
+	}//end get_imagemagick_installed_path
+
+
+
+	/**
+	* GET_VERSION
+	* Get binary version
+	* @return string
+	*/
+	public static function get_version() : string {
+
+		$cmd  = ImageMagick::get_imagemagick_installed_path();
+		$cmd .= ' -version | sed -n "s/Version: ImageMagick \([-0-9.]*\).*/\1/p;" ';
+
+		$version = trim(shell_exec($cmd));
+
+		return $version;
+	}//end get_version
+
+
+
+	/**
 	* DD_THUMB
 	* Creates the thumb version file using the ImageMagick command line
 	* @param string $source_file (full source file path)

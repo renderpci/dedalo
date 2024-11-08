@@ -29,6 +29,23 @@ final class Ffmpeg {
 
 
 	/**
+	* GET_VERSION
+	* Get binary version
+	* @return string
+	*/
+	public static function get_version() : string {
+
+		$cmd  = Ffmpeg::get_ffmpeg_installed_path();
+		$cmd .= ' -version | sed -n "s/ffmpeg version \([-0-9.]*\).*/\1/p;" ';
+
+		$version = trim(shell_exec($cmd));
+
+		return $version;
+	}//end get_version
+
+
+
+	/**
 	* GET_QT_FASTSTART_INSTALLED_PATH
 	* @return string
 	*/
