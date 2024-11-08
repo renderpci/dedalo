@@ -1,0 +1,47 @@
+/**
+* system_info
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.system_info {
+
+	.datalist_container {
+		position: relative;
+		min-height: 20rem;
+
+		>.info_item {
+
+			>.name {
+				font-weight: 600;
+				margin-top: 2rem;
+				font-size: 1.2rem;
+				margin-bottom: 0.66rem;
+				text-transform: uppercase;
+			}
+
+			>.value {
+				background-color: transparent;
+
+				&.success {
+					font-weight: 700;
+					color: green;
+				}
+				&.error {
+					font-weight: 700;
+					color: red;
+				}
+			}
+
+			>.info {
+				padding-left: 1rem;
+			}
+		}
+	}
+
+	// errors
+	.info_text {
+		padding: 1rem;
+		border-radius: 4px;
+		margin-top: 1rem;
+	}
+}//end system_info
