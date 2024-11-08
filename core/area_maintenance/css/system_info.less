@@ -9,33 +9,72 @@
 		position: relative;
 		min-height: 20rem;
 
-		>.info_item {
+		// common list container
+		>.list_container {
+			margin-top: 0.5rem;
+			margin-bottom: 2rem;
 
-			>.name {
-				font-weight: 600;
-				margin-top: 2rem;
-				font-size: 1.2rem;
-				margin-bottom: 0.66rem;
-				text-transform: uppercase;
-			}
+			.info_item {
+				display: grid;
+				border-bottom: 1px solid @color_white;
+				gap: 0.5rem;
+				padding: 1rem;
 
-			>.value {
-				background-color: transparent;
-
-				&.success {
-					font-weight: 700;
-					color: green;
+				&:last-of-type {
+					border: none;
 				}
-				&.error {
-					font-weight: 700;
-					color: red;
-				}
-			}
 
-			>.info {
-				padding-left: 1rem;
+				&.header {
+					background-color: @color_grey_darken;
+					color: @color_white;
+					padding-top: 0.5rem;
+					padding-bottom: 0.5rem;
+				}
+
+				>.name {
+					font-weight: 600;
+					// font-size: 1.2rem;
+					// margin-top: 2rem;
+					// margin-bottom: 0.66rem;
+					text-transform: uppercase;
+				}
+
+				>.value {
+					background-color: transparent;
+					margin: 0px;
+					padding: 0px;
+
+					&.success {
+						font-weight: 700;
+						color: @color_success;
+					}
+					&.failed {
+						font-weight: 700;
+						color: @color_danger;
+					}
+				}
+
+				>.info {
+					// padding-left: 1rem;
+				}
 			}
 		}
+
+		>.requeriments_list_container {
+			>.info_item {
+				display: grid;
+				grid-template-columns: 25rem 7rem 2fr;
+			}
+		}
+
+		>.system_list_container {
+			>.info_item {
+				display: grid;
+				grid-template-columns: 25rem 3fr;
+			}
+		}
+
+
 	}
 
 	// errors

@@ -146,9 +146,10 @@ const render_content_data = async function(self) {
 const render_datalist = (self, datalist_container) => {
 
 	// short vars
-		const value		= self.value || {}
-		const datalist	= value.datalist || []
-		const errors	= value.errors || []
+		const value				= self.value || {}
+		const system_list		= value.system_list || []
+		const requeriments_list	= value.requeriments_list || []
+		const errors			= value.errors || []
 
 	// set widget container label color style
 		if (errors.length) {
@@ -159,10 +160,178 @@ const render_datalist = (self, datalist_container) => {
 
 	const fragment = new DocumentFragment()
 
-	const datalist_length = datalist.length
-	for (let i = 0; i < datalist_length; i++) {
+	// Dédalo requeriments_list
+		const requeriments_list_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_container requeriments_list_container',
+			parent			: fragment
+		})
+		requeriments_list_container.appendChild(
+			render_requeriments_list(requeriments_list)
+		)
 
-		const item = datalist[i]
+	// System overview system_list
+		const system_list_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_container system_list_container',
+			parent			: fragment
+		})
+		system_list_container.appendChild(
+			render_system_list(system_list)
+		)
+
+	// clean node
+		while (datalist_container.firstChild) {
+			datalist_container.removeChild(datalist_container.firstChild);
+		}
+
+	// append to datalist_container
+		datalist_container.appendChild(fragment)
+
+
+	return true
+}//end render_datalist
+
+
+
+/**
+* RENDER_REQUERIMENTS_LIST
+* Render the list of Dédalo requirements check
+* @param array system_list
+* @return DocumentFragment
+*/
+const render_requeriments_list = function (requeriments_list) {
+
+	const fragment = new DocumentFragment()
+
+	// header
+		// info_item
+		const info_item = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_item header',
+			parent			: fragment
+		})
+		// Check label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: '',
+			inner_html		: 'Check',
+			parent			: info_item
+		})
+		// result label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: '',
+			inner_html		: 'Result',
+			parent			: info_item
+		})
+		// info label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: '',
+			inner_html		: 'Info',
+			parent			: info_item
+		})
+
+	const requeriments_list_length = requeriments_list.length
+	for (let i = 0; i < requeriments_list_length; i++) {
+
+		const item = requeriments_list[i]
+
+		const name	= item.name
+		const value	= item.value
+		const info	= item.info
+
+		// info_item
+		const info_item = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_item',
+			parent			: fragment
+		})
+
+		// name
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'name',
+			inner_html		: name + ': ',
+			parent			: info_item
+		})
+
+		// value
+		const class_add = (typeof value === 'boolean')
+			? (value===true ? ' success' : ' failed')
+			: ''
+		const value_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'value' + class_add,
+			inner_html		: JSON.stringify(value, null, 2),
+			parent			: info_item
+		})
+
+		if (class_add===' success') {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button icon check success',
+				parent			: value_node
+			})
+		}else if(class_add===' failed') {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button icon cancel error',
+				parent			: value_node
+			})
+		}
+
+		// info
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'info',
+			inner_html		: info,
+			parent			: info_item
+		})
+	}
+
+
+	return fragment
+}//end render_requeriments_list
+
+
+/**
+* RENDER_SYSTEM_LIST
+* Render the list of system resources like OS, RAM, etc.
+* @param array system_list
+* @return DocumentFragment
+*/
+const render_system_list = function (system_list) {
+
+	const fragment = new DocumentFragment()
+
+	// header
+		// info_item
+		const info_item = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_item header',
+			parent			: fragment
+		})
+		// Check label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: '',
+			inner_html		: 'Info',
+			parent			: info_item
+		})
+		// info label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: '',
+			inner_html		: 'Value',
+			parent			: info_item
+		})
+
+	const system_list_length = system_list.length
+	for (let i = 0; i < system_list_length; i++) {
+
+		const item = system_list[i]
 
 		const name	= item.name
 		const value	= item.value
@@ -183,25 +352,20 @@ const render_datalist = (self, datalist_container) => {
 		})
 
 		// value
+		const value_string = typeof value==='string'
+			? value
+			: JSON.stringify(value, null, 2)
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'value',
-			inner_html		: JSON.stringify(value, null, 2),
+			inner_html		: value_string,
 			parent			: info_item
 		})
 	}
 
-	// clean node
-	while (datalist_container.firstChild) {
-		datalist_container.removeChild(datalist_container.firstChild);
-	}
 
-	// append
-	datalist_container.appendChild(fragment)
-
-
-	return true
-}//end render_datalist
+	return fragment
+}//end render_system_list
 
 
 

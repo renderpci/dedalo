@@ -2166,6 +2166,159 @@ function test_php_version_supported(string $minimum_php_version='8.1.0') : bool 
 
 
 /**
+* TEST_APACHE_VERSION_SUPPORTED
+* Test if Apache version is supported
+* @param string $minimum_version = '2.4.6'
+* @return bool
+*/
+function test_apache_version_supported(string $minimum_version='2.4.6') : bool {
+
+	$version = get_apache_version();
+
+	if (empty($version)) {
+		return false;
+	}
+
+	if (version_compare(trim($version), trim($minimum_version)) >= 0) {
+		return true;
+	}else{
+		debug_log(__METHOD__
+			." This Apache version (".$version.") is not supported ! Please update your Apache to $minimum_version or higher ASAP "
+			, logger::ERROR
+		);
+		return false;
+	}
+}//end test_apache_version_supported
+
+
+
+/**
+* TEST_POSTGRESQL_VERSION_SUPPORTED
+* Test if postgresql version is supported
+* @param string $minimum_version = '16.1'
+* @return bool
+*/
+function test_postgresql_version_supported(string $minimum_version='16.1') : bool {
+
+	$version = get_postgresql_version();
+
+	if (empty($version)) {
+		return false;
+	}
+
+	if (version_compare(trim($version), trim($minimum_version)) >= 0) {
+		return true;
+	}else{
+		debug_log(__METHOD__
+			." This postgresql version (".$version.") is not supported ! Please update your postgresql to $minimum_version or higher ASAP "
+			, logger::ERROR
+		);
+		return false;
+	}
+}//end test_postgresql_version_supported
+
+
+
+/**
+* GET_APACHE_VERSION
+* Get the Apache daemon version
+* @return string $version
+*/
+function get_apache_version() : string {
+
+	$binary_base_path = get_base_binary_path();
+
+	$name		= 'httpd';
+	$cmd		= $binary_base_path . '/'.$name.' -v | sed -n "s/Server version: Apache\/\([-0-9.]*\).*/\1/p;" ';
+	$version	= shell_exec($cmd);
+	if (empty($version)) {
+		$cmd		= $name.' -v | sed -n "s/Server version: Apache\/\([-0-9.]*\).*/\1/p;" ';
+		$version	= shell_exec($cmd);
+	}
+
+	if (empty($version)) {
+		$name		= 'apache2';
+		$cmd		= $binary_base_path . '/'.$name.' -v | sed -n "s/Server version: Apache\/\([-0-9.]*\).*/\1/p;" ';
+		$version	= shell_exec($cmd);
+		if (empty($version)) {
+			$cmd		= $name.' -v | sed -n "s/Server version: Apache\/\([-0-9.]*\).*/\1/p;" ';
+			$version	= shell_exec($cmd);
+		}
+	}
+
+	if (empty($version)) {
+		debug_log(__METHOD__
+			." Apache ($name) not found "
+			, logger::ERROR
+		);
+		return '';
+	}
+
+
+	return trim($version);
+}//end get_apache_version
+
+
+
+/**
+* GET_POSTGRESQL_VERSION
+* Get the postgresql daemon version
+* @return string $version
+*/
+function get_postgresql_version() : string {
+
+	$binary_base_path = get_base_binary_path();
+
+	$name		= 'pg_config';
+	$cmd		= $binary_base_path . '/'.$name.' --version | sed -n "s/PostgreSQL \([-0-9.]*\).*/\1/p;" ';
+	$version	= shell_exec($cmd);
+	if (empty($version)) {
+		$cmd		= $name.' --version | sed -n "s/PostgreSQL \([-0-9.]*\).*/\1/p;" ';
+		$version	= shell_exec($cmd);
+	}
+
+	if (empty($version)) {
+		debug_log(__METHOD__
+			." PostgreSQL ($name) not found "
+			, logger::ERROR
+		);
+		return '';
+	}
+
+
+	return trim($version);
+}//end get_postgresql_version
+
+
+
+/**
+* GET_BASE_BINARY_PATH
+* Calculates the current desired default base binary path
+* for daemon execution
+* @return string
+*/
+function get_base_binary_path() : string {
+
+	if (defined('DEDALO_BINARY_BASE_PATH')) {
+		return DEDALO_BINARY_BASE_PATH;
+	}
+
+	switch (PHP_OS) {
+		case 'Darwin':
+			$binary_base_path = '/opt/homebrew/bin';
+			break;
+		case 'Linux':
+		default:
+			$binary_base_path = '/usr/bin';
+			break;
+	}
+
+	return $binary_base_path;
+}//end get_base_binary_path
+
+
+
+/**
 * SANITIZE_FILE_NAME
 * Sanitize filenames for user uploaded files
 * From Sean Vieira
