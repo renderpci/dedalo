@@ -318,7 +318,7 @@ class area_maintenance extends area_common {
 		// dedalo_api_test_environment *
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
-				$item->class	= 'width_100';
+				$item->class	= 'green fit width_100';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
@@ -329,7 +329,7 @@ class area_maintenance extends area_common {
 		// sqo_test_environment *
 			$item = new stdClass();
 				$item->id		= 'sqo_test_environment';
-				$item->class	= 'blue width_100';
+				$item->class	= 'blue fit width_100';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
@@ -451,6 +451,7 @@ class area_maintenance extends area_common {
 		// php_info *
 			$item = new stdClass();
 				$item->id		= 'php_info';
+				$item->class	= 'violet fit width_100';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'PHP INFO';

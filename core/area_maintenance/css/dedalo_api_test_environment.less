@@ -1,0 +1,51 @@
+/**
+* dedalo_api_test_environment
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.dedalo_api_test_environment {
+	background-color: #c0e4cd;
+
+	>.content_data {
+
+		>label {
+
+		}
+
+		>.button_submit {
+			margin: 0.25rem;
+		}
+
+		>.editor_json_container {
+			display: block;
+			height: 50vh;
+			min-height: 450px;
+
+			.jsoneditor-menu {
+				background-color: #21984b; // green instead default blue
+			}
+
+			.jsoneditor {
+				z-index: 1;
+			}
+		}
+
+		>.body_response {
+			max-width: calc(100vw - 4rem);
+
+			>.api_response {
+				white-space: pre-wrap;
+				padding: 1.2rem;
+				line-height: 1.1rem;
+				font-family: monospace;
+			}
+
+			>.pre {
+				>.json-container {
+					white-space: pre-wrap;
+					overflow: auto;
+				}
+			}
+		}
+	}
+}//end dedalo_api_test_environment
