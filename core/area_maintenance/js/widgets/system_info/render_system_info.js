@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+ 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
@@ -152,11 +153,15 @@ const render_datalist = (self, datalist_container) => {
 		const errors			= value.errors || []
 
 	// set widget container label color style
-		if (errors.length) {
-			set_widget_label_style(self, 'danger', 'add', datalist_container)
-		}else{
-			set_widget_label_style(self, 'danger', 'remove', datalist_container)
-		}
+		dd_request_idle_callback(
+			() => {
+				if (errors.length) {
+					set_widget_label_style(self, 'danger', 'add', datalist_container)
+				}else{
+					set_widget_label_style(self, 'danger', 'remove', datalist_container)
+				}
+			}
+		)
 
 	const fragment = new DocumentFragment()
 
@@ -167,7 +172,7 @@ const render_datalist = (self, datalist_container) => {
 			parent			: fragment
 		})
 		requeriments_list_container.appendChild(
-			render_requeriments_list(requeriments_list)
+			render_requeriments_list(requeriments_list, self, datalist_container)
 		)
 
 	// System overview system_list
@@ -200,9 +205,12 @@ const render_datalist = (self, datalist_container) => {
 * @param array system_list
 * @return DocumentFragment
 */
-const render_requeriments_list = function (requeriments_list) {
+const render_requeriments_list = function (requeriments_list, self, datalist_container) {
 
 	const fragment = new DocumentFragment()
+
+	// failed_list
+		const failed_list = []
 
 	// header
 		// info_item
@@ -214,21 +222,18 @@ const render_requeriments_list = function (requeriments_list) {
 		// Check label
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: '',
 			inner_html		: 'Check',
 			parent			: info_item
 		})
 		// result label
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: '',
 			inner_html		: 'Result',
 			parent			: info_item
 		})
 		// info label
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: '',
 			inner_html		: 'Info',
 			parent			: info_item
 		})
@@ -253,7 +258,7 @@ const render_requeriments_list = function (requeriments_list) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'name',
-			inner_html		: name + ': ',
+			inner_html		: name,
 			parent			: info_item
 		})
 
@@ -268,6 +273,7 @@ const render_requeriments_list = function (requeriments_list) {
 			parent			: info_item
 		})
 
+		// icon success / failed
 		if (class_add===' success') {
 			ui.create_dom_element({
 				element_type	: 'span',
@@ -280,9 +286,11 @@ const render_requeriments_list = function (requeriments_list) {
 				class_name		: 'button icon cancel error',
 				parent			: value_node
 			})
+
+			failed_list.push(name)
 		}
 
-		// info
+		// info text
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'info',
@@ -291,14 +299,24 @@ const render_requeriments_list = function (requeriments_list) {
 		})
 	}
 
+	// failed list
+	if (failed_list.length>0) {
+		dd_request_idle_callback(
+			() => {
+				set_widget_label_style(self, 'danger', 'add', datalist_container)
+			}
+		)
+	}
+
 
 	return fragment
 }//end render_requeriments_list
 
 
+
 /**
 * RENDER_SYSTEM_LIST
-* Render the list of system resources like OS, RAM, etc.
+* Render the list of server resources like OS, RAM, etc.
 * @param array system_list
 * @return DocumentFragment
 */
@@ -316,14 +334,12 @@ const render_system_list = function (system_list) {
 		// Check label
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: '',
-			inner_html		: 'Info',
+			inner_html		: 'Server info',
 			parent			: info_item
 		})
 		// info label
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: '',
 			inner_html		: 'Value',
 			parent			: info_item
 		})
@@ -347,7 +363,7 @@ const render_system_list = function (system_list) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'name',
-			inner_html		: name + ': ',
+			inner_html		: name,
 			parent			: info_item
 		})
 
