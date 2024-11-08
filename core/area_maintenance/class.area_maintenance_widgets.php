@@ -167,6 +167,37 @@ class area_maintenance_widgets extends area_common {
 			];
 
 			$system_list[] = (object)[
+				'name'	=> 'CPU architecture',
+				'value'	=> $linfo->getCPUArchitecture()
+			];
+
+			// linux
+				$system_list[] = (object)[
+					'name'	=> 'kernel',
+					'value'	=> $linfo->getKernel()
+				];
+
+				$system_list[] = (object)[
+					'name'	=> 'devices',
+					'value'	=> $linfo->getDevs()
+				];
+
+				$system_list[] = (object)[
+					'name'	=> 'raid',
+					'value'	=> $linfo->getRAID()
+				];
+
+				$system_list[] = (object)[
+					'name'	=> 'services',
+					'value'	=> $linfo->getServices()
+				];
+
+				$system_list[] = (object)[
+					'name'	=> 'distribution',
+					'value'	=> $linfo->getDistro()
+				];
+
+			$system_list[] = (object)[
 				'name'	=> 'hostname',
 				'value'	=> $linfo->getHostname()
 			];
