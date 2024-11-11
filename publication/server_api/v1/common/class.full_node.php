@@ -161,14 +161,13 @@ class full_node extends stdClass {
 
 	/**
 	* GET_FULL_FRAGMENTS
-	* Resturns an array for maintain format, but only one fragment can exists
+	* Returns an array for maintain format, but only one fragment can exists
 	* @return array $full_fragments
 	*/
 	public function get_full_fragments( $raw_text ) {
 
 		# REMOVE_RESTRICTED_TEXT
-		$raw_text_sure = web_data::remove_restricted_text( $raw_text, $this->av_section_id );
-			#dump($raw_text_sure, ' $raw_text_sure ++ '.to_string());
+		$raw_text_sure = web_data::remove_restricted_text( $raw_text, $this->av_section_id ) ?? '';
 
 		$fragm = TR::deleteMarks($raw_text_sure);
 
