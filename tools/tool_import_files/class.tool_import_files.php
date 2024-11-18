@@ -141,7 +141,7 @@ class tool_import_files extends tool_common {
 		// logger activity. Note that this log is here because generic service_upload
 		// is not capable to know if the uploaded file is the last one in a chunked file scenario
 			// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
-			$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+			$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 			$safe_file_data		= pg_escape_string(DBi::_getConnection(), $file_data_encoded);
 			logger::$obj['activity']->log_message(
 				'UPLOAD COMPLETE',
