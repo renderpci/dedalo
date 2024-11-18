@@ -103,6 +103,11 @@
 
 
 
+// internal encoding
+	mb_internal_encoding('UTF-8');
+
+
+
 // dedalo entity
 	// dedalo_entity string. Do not use here spaces or non ASCII chars
 	define('DEDALO_ENTITY', 'my_entity_name'); // Like 'dedalo4'
