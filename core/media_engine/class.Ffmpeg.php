@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 /**
-* Ffmpeg
+* CLASS Ffmpeg
 * Manages audiovisual processing actions using FFMPEG library
+*
 */
 final class Ffmpeg {
 
@@ -69,7 +70,7 @@ final class Ffmpeg {
 
 	/**
 	* GET_AR_SETTINGS
-	* Array list of setting files inside dir 'ffmpeg_settings'
+	* Array list of setting files inside dir '/dedalo/core/media_engine/ffmpeg_settings'
 	* @return array|null $ar_settings
 	*/
 	public static function get_ar_settings() : ?array {
