@@ -541,7 +541,7 @@ class system {
 	* @see config.php
 	* @return bool
 	*/
-	public static function remove_old_chunk_files() : bool{
+	public static function remove_old_chunk_files() : bool {
 
 		$ar_folder = DEDALO_AV_AR_QUALITY;
 		foreach ($ar_folder as $quality) {
