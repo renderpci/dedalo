@@ -2407,7 +2407,7 @@ function get_cookie_properties() : object {
 * 	true when directory already exists or is created successfully
 * 	false when not exists and is not possible to create it for any reason
 */
-function create_directory(string $folder_path, int $create_dir_permissions=0750) {
+function create_directory(string $folder_path, int $create_dir_permissions=0750) : bool {
 
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
@@ -2496,7 +2496,6 @@ function check_url( string $url ) : bool {
 		$headers = get_headers($url, false, $context);
 
 		$first_line = $headers[0] ?? '';
-			dump($first_line, ' first_line ++ '.to_string());
 
 		if ( strpos($first_line, ' 200 ')!==false) {
 			return true;

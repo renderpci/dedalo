@@ -204,7 +204,7 @@ final class dd_core_api {
 						$login_context = $login->get_structure_context();
 					} catch (Exception $e) {
 						debug_log(__METHOD__
-							." Caught exception: Error on get login context: " . PHP_EOL
+							. ' Caught exception: Error on get login context: ' . PHP_EOL
 							. ' exception message: '. $e->getMessage()
 							, logger::ERROR
 						);
