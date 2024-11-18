@@ -60,9 +60,9 @@ final class ImageMagick {
 		$cmd  = ImageMagick::get_imagemagick_installed_path();
 		$cmd .= ' -version | sed -n "s/Version: ImageMagick \([-0-9.]*\).*/\1/p;" ';
 
-		$version = trim(shell_exec($cmd));
+		$version = shell_exec($cmd) ?? '';
 
-		return $version;
+		return trim($version);
 	}//end get_version
 
 
@@ -350,21 +350,6 @@ final class ImageMagick {
 
 		return $result;
 	}//end convert
-
-
-
-	/**
-	* GET_IMAGE_FILE_INFO
-	* @return
-	*/
-		// public static function get_image_file_info( $source_file ) {
-		// 				# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
-		// 	$commnad = MAGICK_PATH . "convert $source_file json: ";
-		// 	$output  = json_decode( shell_exec($command) );
-		// 		#dump($output, ' output ++ '.to_string( $command ));
-
-		// 	return $output;
-		// }//end get_image_file_info
 
 
 
