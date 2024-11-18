@@ -68,6 +68,7 @@ lib/vendor/*
 !lib/vendor/sweetrdf
 # !lib/vendor/sebastian
 !lib/vendor/phpunit
+!lib/vendor/linfo
 # !vendor/maxmind
 # !vendor/maxmind-db
 # !vendor/react
