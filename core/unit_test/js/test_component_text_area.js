@@ -25,14 +25,6 @@ import {pause} from '../../common/js/utils/util.js'
 // component_options
 	const component_options = elements.find(el => el.model==='component_text_area')
 
-
-
-describe(`COMPONENT_TEXT_AREA WITH COMPONENT_GEOLOCATION TEST`,  function() {
-
-	this.timeout(4000);
-
-	let component
-
 	let pause_time = 300
 
 	const section_tipo	= 'dmm480' // map of grapes
@@ -45,6 +37,12 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_GEOLOCATION TEST`,  function() {
 		tipo			: 'dmm507', // Site
 		section_tipo	: section_tipo // map of grapes
 	});
+
+	let component
+
+describe(`COMPONENT_TEXT_AREA WITH COMPONENT_GEOLOCATION TEST`,  function() {
+
+	this.timeout(4000);
 
 	it(`Create component`, async function() {
 
@@ -242,9 +240,143 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_GEOLOCATION TEST`,  function() {
 		);
 	});
 
-
-
 });//end describe(`COMPONENT PORTAL PAGINATION TEST`
+
+
+
+describe(`COMPONENT_TEXT_AREA WITH COMPONENT_IMAGE TEST`,  function() {
+
+	it(`Destroy component`, async function() {
+
+		await pause(pause_time)
+
+		await component.destroy(true)
+
+		// clean nodes
+		while (component_container.firstChild) {
+			component_container.removeChild(component_container.firstChild);
+		}
+
+		assert.equal(
+			(component_container.firstChild===null),
+			true,
+			`node expected DOM`
+		);
+	});
+
+	it(`Create component`, async function() {
+
+		component = null
+
+		const options = Object.assign(component_options, {
+			section_id		: section_id,
+			mode			: 'edit',
+			view			: 'default',
+			tipo			: 'rsc30', // description
+			section_tipo	: 'rsc170', // images
+			model			: 'component_text_area'
+		});
+
+		component = await get_instance(options)
+		await component.build(true)
+		component.auto_init_editor = true
+		const node = await component.render()
+
+		component_container.appendChild(node)
+
+		assert.equal(
+			(node instanceof Element),
+			true,
+			`node expected DOM`
+		);
+
+		{
+			// image
+			const options = Object.assign(component_options, {
+				section_id		: section_id,
+				mode			: 'edit',
+				view			: 'default',
+				tipo			: 'rsc29', // image
+				section_tipo	: 'rsc170', // images
+				model			: 'component_image'
+			});
+			const component = await get_instance(options)
+			await component.build(true)
+			component.auto_init_editor = true
+			const node = await component.render()
+			component_container.appendChild(node)
+		}
+	});
+
+	it(`Activated`, async function() {
+
+		// await pause(pause_time)
+
+		ui.component.activate(component)
+
+		it(`Active 2`, async function() {
+			assert.deepEqual(
+				component.active,
+				true,
+				`active expected true`
+			);
+		});
+	});
+
+	it(`Set value: This is a text string `, async function() {
+
+		const text_editor = component.text_editor
+
+		await pause(pause_time)
+
+		const service = text_editor[0]
+		const editor = service.editor // ckeditor instance
+
+		const str = 'This is a text string'
+		editor.setData(str);
+
+		await pause(pause_time)
+
+		// ui.component.deactivate(component)
+	});
+
+	it(`key F2 again`, async function() {
+
+		const text_editor = component.text_editor
+
+		await pause(pause_time)
+
+		const service = text_editor[0]
+		const editor = service.editor // ckeditor instance
+
+		editor.editing.view.document.fire(
+			'keydown',
+			{
+				name : 'keydown',
+				domEvent : {
+					code			: "F2",
+					key				: "F2",
+					keyCode			: 113,
+					altKey			: false,
+					ctrlKey			: false,
+					keystroke		: 113,
+					metaKey			: false,
+					shiftKey		: false,
+					stopPropagation	: () => {},
+					preventDefault	: () => {}
+				}
+			}
+		);
+	});
+
+	it(`Save`, async function() {
+
+		await pause(pause_time)
+
+		await component.save()
+	});
+
+});//end describe(`COMPONENT_TEXT_AREA WITH COMPONENT_IMAGE TEST`,  function()
 
 
 
