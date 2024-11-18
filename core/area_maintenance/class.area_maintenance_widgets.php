@@ -79,6 +79,9 @@ class area_maintenance_widgets extends area_common {
 	*/
 	public static function system_info() : object {
 
+		// get overall system info
+			$info = system::get_info();
+
 		// requeriments_list
 			// installation elements test
 
@@ -100,27 +103,92 @@ class area_maintenance_widgets extends area_common {
 				'info'	=> 'URL: '.DEDALO_SOURCE_VERSION_URL
 			];
 
+			// RAM
+			$total_gb	= system::get_ram();
+			$requeriments_list[] = (object)[
+				'name'	=> 'System RAM memory',
+				'value'	=> ($total_gb>=16),
+				'info'	=> 'RAM: '.$total_gb .' GB - minimum: 16 GB'
+			];
+
 			// PHP version
 			$requeriments_list[] = (object)[
 				'name'	=> 'PHP Supported version',
-				'value'	=> test_php_version_supported('8.3.0'),
+				'value'	=> system::test_php_version_supported('8.3.0'),
 				'info'	=> 'Version: '.PHP_VERSION . ' - minimum: 8.3.0'
 			];
 
+			// php_memory
+			$php_memory_gigabytes = system::get_php_memory();
+			$requeriments_list[] = (object)[
+				'name'	=> 'PHP memory limit',
+				'value'	=> $php_memory_gigabytes >= 8,
+				'info'	=> 'Memory: '.$php_memory_gigabytes . ' GB - minimum: 8 GB'
+			];
+
 			// Apache version
-			$version = get_apache_version();
+			$version = system::get_apache_version();
 			$requeriments_list[] = (object)[
 				'name'	=> 'Apache supported version',
-				'value'	=> test_apache_version_supported('2.4.6'),
+				'value'	=> system::test_apache_version_supported('2.4.6'),
 				'info'	=> 'Version: '. $version . ' - minimum: 2.4.6'
 			];
 
 			// PostgreSQL version
-			$version = get_postgresql_version();
+			$version = system::get_postgresql_version();
 			$requeriments_list[] = (object)[
 				'name'	=> 'PostgreSQL supported version',
-				'value'	=> test_postgresql_version_supported('16.1'),
+				'value'	=> system::test_postgresql_version_supported('16.1'),
 				'info'	=> 'Version: '. $version . ' - minimum: 16.1'
+			];
+
+			// mysql
+			if (	(defined('MYSQL_DEDALO_DATABASE_CONN') && !empty(MYSQL_DEDALO_DATABASE_CONN))
+				&& ( defined('MYSQL_DEDALO_HOSTNAME_CONN') && MYSQL_DEDALO_HOSTNAME_CONN==='localhost'
+					|| (defined('MYSQL_DEDALO_SOCKET_CONN') && !empty(MYSQL_DEDALO_SOCKET_CONN)) )
+				) {
+				$mysql_server = system::get_mysql_server();
+				if (empty($mysql_server)) {
+					$requeriments_list[] = (object)[
+						'name'	=> 'MySQL/MariaDB server not found',
+						'value'	=> false,
+						'info'	=> 'Not installed'
+					];
+				} else {
+					$version = system::get_mysql_version($mysql_server);
+					if ($mysql_server==='mariadb') {
+						$requeriments_list[] = (object)[
+							'name'	=> 'MariaDB supported version',
+							'value'	=> (version_compare(trim($version), '5.6') >= 0),
+							'info'	=> 'Version: '. $version . ' - minimum: 5.6'
+						];
+					}else
+					if ($mysql_server==='mysql') {
+						$requeriments_list[] = (object)[
+							'name'	=> 'MySQL supported version',
+							'value'	=> (version_compare(trim($version), '5.6') >= 0),
+							'info'	=> 'Version: '. $version . ' - minimum: 5.6'
+						];
+					}
+				}
+			}
+
+			// HTTP Protocol
+			$protocol = $_SERVER["SERVER_PROTOCOL"];
+			$h2_protocol = ($protocol==='HTTP/2.0');
+			$requeriments_list[] = (object)[
+				'name'	=> 'HTTP h2 protocol',
+				'value'	=> $h2_protocol,
+				'info'	=> "Protocol: $protocol - required: HTTP/2.0"
+			];
+
+			// HTTPS support
+			$is_https = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')
+					 || (isset($_SERVER['HTTPS']) && $_SERVER['SERVER_PORT'] == 443);
+			$requeriments_list[] = (object)[
+				'name'	=> 'HTTPS connection',
+				'value'	=> $is_https,
+				'info'	=> "Connection HTTPS: " . ($_SERVER['HTTPS'] ?? $_SERVER['SERVER_PORT']) . " - required: HTTPS 443"
 			];
 
 			// FFMPEG installed
@@ -137,6 +205,22 @@ class area_maintenance_widgets extends area_common {
 				'info'	=> 'Version: '. $ffmpeg_version . ' - minimum: 5.0'
 			];
 
+			// FFPROVE version
+			$ffprove_version = Ffmpeg::get_ffprove_version();
+			$requeriments_list[] = (object)[
+				'name'	=> 'ffprove installed',
+				'value'	=> !empty($ffprove_version),
+				'info'	=> 'Version: ' .$ffprove_version. ' - Path: ' . Ffmpeg::get_ffprove_installed_path()
+			];
+
+			// FFMPEG libx264 installed
+			$libx264_installed = Ffmpeg::check_lib('libx264');
+			$requeriments_list[] = (object)[
+				'name'	=> 'FFMPEG libx264 installed',
+				'value'	=> $libx264_installed,
+				'info'	=> 'FFMPEG lib libx264 enable'
+			];
+
 			// IMAGEMAGICK installed
 			$imagemagick_version = ImageMagick::get_version();
 			$requeriments_list[] = (object)[
@@ -151,104 +235,100 @@ class area_maintenance_widgets extends area_common {
 				'info'	=> 'Version: '. $imagemagick_version . ' - minimum: 6.9'
 			];
 
-		// system_list
-			// @use linfo
-			// linfo lib installed via composer
-			// @see https://github.com/jrgp/linfo
-			include_once DEDALO_LIB_PATH . '/vendor/autoload.php';
 
-			$linfo = new \Linfo\Linfo;
+
+		// system_list
 
 			$system_list = [];
 
 			$system_list[] = (object)[
 				'name'	=> 'os',
-				'value'	=> $linfo->getOS()
+				'value'	=> $info->getOS()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'model',
-				'value'	=> $linfo->getModel()
+				'value'	=> $info->getModel()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'CPU architecture',
-				'value'	=> $linfo->getCPUArchitecture()
+				'value'	=> $info->getCPUArchitecture()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'cpu',
-				'value'	=> $linfo->getCPU()
+				'value'	=> $info->getCPU()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'kernel',
-				'value'	=> $linfo->getKernel()
+				'value'	=> $info->getKernel()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'distribution',
-				'value'	=> $linfo->getDistro()
+				'value'	=> $info->getDistro()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'hostname',
-				'value'	=> $linfo->getHostname()
+				'value'	=> $info->getHostname()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'virtualization',
-				'value'	=> $linfo->getVirtualization()
+				'value'	=> $info->getVirtualization()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'devices',
-				'value'	=> $linfo->getDevs()
+				'value'	=> $info->getDevs()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'raid',
-				'value'	=> $linfo->getRAID()
+				'value'	=> $info->getRAID()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'services',
-				'value'	=> $linfo->getServices()
+				'value'	=> $info->getServices()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'load',
-				'value'	=> $linfo->getLoad()
+				'value'	=> $info->getLoad()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'ram',
-				'value'	=> $linfo->getRam()
+				'value'	=> $info->getRam()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'hd',
-				'value'	=> $linfo->getHD()
+				'value'	=> $info->getHD()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'mounts',
-				'value'	=> $linfo->getMounts()
+				'value'	=> $info->getMounts()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'net',
-				'value'	=> $linfo->getNet()
+				'value'	=> $info->getNet()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'uptime',
-				'value'	=> $linfo->getUpTime()
+				'value'	=> $info->getUpTime()
 			];
 
 			$system_list[] = (object)[
 				'name'	=> 'process_status',
-				'value'	=> $linfo->getProcessStats()
+				'value'	=> $info->getProcessStats()
 			];
 
 

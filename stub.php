@@ -153,3 +153,4 @@ $options = new stdClass();
 function apcu_enabled(){};
 function logger_backend_activity(){};
 class Linfo{};
+class system{};

@@ -381,30 +381,14 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// php_user *
-			$info = (function(){
-				try {
-					if (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) {
-						$info = posix_getpwuid(posix_geteuid());
-					}else{
-						$name			= get_current_user();
-						$current_user	= trim(shell_exec('whoami'));
-						$info = [
-							'name'			=> $name,
-							'current_user'	=> $current_user
-						];
-					}
-				} catch (Exception $e) {
-					debug_log(__METHOD__." Exception:".$e->getMessage(), logger::ERROR);
-				}
-				return $info;
-			})();
+			$php_user_info = system::get_php_user_info();
 			$item = new stdClass();
 				$item->id		= 'php_user';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'PHP USER';
 				$item->value	= (object)[
-					'info' => $info
+					'info' => $php_user_info
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;

@@ -132,7 +132,7 @@ class install extends common {
 
 		// check php version
 			$properties->php_version			= PHP_VERSION;
-			$properties->php_version_supported	= test_php_version_supported(); // >= 8.1.0
+			$properties->php_version_supported	= system::test_php_version_supported(); // >= 8.1.0
 
 		// max_execution_time
 			$max_execution_time = ini_get('max_execution_time');
