@@ -23,7 +23,7 @@ export const render_tool_image_rotation = function() {
 /**
 * EDIT
 * Render tool DOM nodes
-* This function is called by render common attached in 'tool_posterframe.js'
+* This function is called by render common
 * @param object options
 * @return HTMLElement wrapper
 */
@@ -46,6 +46,7 @@ render_tool_image_rotation.prototype.edit = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end edit
