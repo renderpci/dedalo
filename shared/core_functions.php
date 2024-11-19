@@ -2126,6 +2126,33 @@ function get_legacy_constant_value(string $constant_name) {
 
 
 /**
+* GET_BASE_BINARY_PATH
+* Calculates the current desired default base binary path
+* for daemon execution
+* @return string
+*/
+function get_base_binary_path() : string {
+
+	if (defined('DEDALO_BINARY_BASE_PATH')) {
+		return DEDALO_BINARY_BASE_PATH;
+	}
+
+	switch (PHP_OS) {
+		case 'Darwin':
+			$binary_base_path = '/opt/homebrew/bin';
+			break;
+		case 'Linux':
+		default:
+			$binary_base_path = '/usr/bin';
+			break;
+	}
+
+	return $binary_base_path;
+}//end get_base_binary_path
+
+
+
+/**
 * TEST_PHP_VERSION_SUPPORTED
 * Test if PHP version is supported
 * @param string $minimum_php_version = '8.1.0'
