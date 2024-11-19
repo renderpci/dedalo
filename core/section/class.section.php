@@ -2406,6 +2406,10 @@ class section extends common {
 
 	/**
 	* GET_RESOURCE_ALL_SECTION_RECORDS_UNFILTERED
+	* Iterate result as:
+	* while ($rows = pg_fetch_assoc($result)) {
+	*	$current_id = $rows['section_id'];
+	* }
 	* @param string $section_tipo
 	* @param string $select = 'section_id'
 	* @return PgSql\Result|bool $result

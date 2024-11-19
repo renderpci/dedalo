@@ -314,7 +314,7 @@ var button_delete = new function() {
 					//console.log("[button_delete.delete_record_action] response",response)
 					//console.trace()
 				}
-				if (response && response.result !==false) {
+				if (response && response.result!==false) {
 
 					// Reload the current page
 					setTimeout(function(){
