@@ -5,7 +5,7 @@
 
 
 // imports
-	import {when_in_viewport} from '../../common/js/events.js'
+	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -81,20 +81,20 @@ export const get_content_data = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 
-			// used setTimeout to force new separate task
-			setTimeout(function(){
+			// force new separate task
+			dd_request_idle_callback(
+				() => {
+					// value
+					const value_item = inputs_value[i] || self.default_value[0]
 
-				// value
-				const value_item = inputs_value[i] || self.default_value[0]
-
-				const input_element_node = (self.permissions===1)
-					? get_content_value_read(i, value_item, self)
-					: get_content_value(i, value_item, self)
-				content_data.appendChild(input_element_node)
-				// set the pointer
-				content_data[i] = input_element_node
-
-			}, 0)
+					const input_element_node = (self.permissions===1)
+						? get_content_value_read(i, value_item, self)
+						: get_content_value(i, value_item, self)
+					content_data.appendChild(input_element_node)
+					// set the pointer
+					content_data[i] = input_element_node
+				}
+			)
 		}
 
 	return content_data
