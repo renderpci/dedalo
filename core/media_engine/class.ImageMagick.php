@@ -51,6 +51,17 @@ final class ImageMagick {
 
 
 	/**
+	* GET_IMAGEMAGICK_PDFINFO_PATH
+	* @return string
+	*/
+	public static function get_imagemagick_pdfinfo_path() : string {
+
+		return MAGICK_PATH . 'pdfinfo';
+	}//end get_imagemagick_pdfinfo_path
+
+
+
+	/**
 	* GET_VERSION
 	* Get binary version
 	* @return string
