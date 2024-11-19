@@ -87,25 +87,31 @@ const get_content_data = async function(self) {
 			})
 			self.image_container = image_container
 
-			// temporal image to show while main_element is rebuilt and rendered
+		// main_element_image. Temporal image to show while main_element is rebuilt and rendered
 			const main_element_image = ui.create_dom_element({
 				element_type	: 'img',
-				src				: DEDALO_MEDIA_URL + default_file_info?.file_path + '?t=' + (new Date()).getTime(),
 				parent			: image_container
 			})
+			// set pointer
 			self.main_element_image = main_element_image
-
-			main_element_image.onload = () => {
+			// load event
+			const load_handler = () => {
 				const image_size = main_element_image.getBoundingClientRect()
 				image_container.style.width		= image_size.width +'px'
 				image_container.style.height	= image_size.height +'px'
-
-				//save current values as default values (will use into the no-expand option)
+				// save current values as default values (will use into the no-expand option)
 				self.image_container.dd_options = {
 					width	: image_size.width,
 					height	: image_size.height
 				}
 			}
+			main_element_image.addEventListener('load', load_handler)
+			// set source
+			requestAnimationFrame(
+				() => {
+					main_element_image.src = DEDALO_MEDIA_URL + default_file_info?.file_path + '?t=' + (new Date()).getTime()
+				}
+			)
 
 		// axis_container
 			const axis_container = ui.create_dom_element({
