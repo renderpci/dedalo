@@ -6,14 +6,15 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {get_section_records} from '../../section/js/section.js'
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {
 		render_column_component_info,
 		activate_autocomplete,
 		get_buttons,
 		render_references,
 	} from './render_edit_component_portal.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
 
 
 
@@ -79,15 +80,18 @@ view_line_edit_portal.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// autocomplete
-		wrapper.addEventListener('click', function(e) {
+	// service autocomplete
+		const click_handler = (e) => {
 			e.stopPropagation()
-			setTimeout(function(){
-				if (self.active) {
-					activate_autocomplete(self, wrapper)
+			dd_request_idle_callback(
+				() => {
+					if (self.active) {
+						activate_autocomplete(self, wrapper)
+					}
 				}
-			}, 1)
-		})
+			)
+		}
+		wrapper.addEventListener('click', click_handler)
 
 	// change_mode
 		wrapper.addEventListener('dblclick', function(e) {

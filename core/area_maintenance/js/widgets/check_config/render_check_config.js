@@ -291,15 +291,17 @@ const render_maintenance_mode = (self) => {
 			},
 			on_done : (api_response) => {
 				if (api_response.result) {
-					setTimeout(function(){
-						// update page_globals value
-						page_globals.maintenance_mode = new_maintenance_mode
-						// render the page again
-						window.dd_page.refresh({
-							build_autoload	: false,
-							destroy			: false
-						})
-					}, 0)
+					dd_request_idle_callback(
+						() => {
+							// update page_globals value
+							page_globals.maintenance_mode = new_maintenance_mode
+							// render the page again
+							window.dd_page.refresh({
+								build_autoload	: false,
+								destroy			: false
+							})
+						}
+					)
 				}
 			}
 		})
@@ -369,15 +371,17 @@ const render_recovery_mode = (self) => {
 			},
 			on_done : (api_response) => {
 				if (api_response.result) {
-					setTimeout(function(){
-						// update page_globals value
-						page_globals.recovery_mode = new_recovery_mode
-						// render the page again
-						window.dd_page.refresh({
-							build_autoload	: false,
-							destroy			: false
-						})
-					}, 0)
+					dd_request_idle_callback(
+						() => {
+							// update page_globals value
+							page_globals.recovery_mode = new_recovery_mode
+							// render the page again
+							window.dd_page.refresh({
+								build_autoload	: false,
+								destroy			: false
+							})
+						}
+					)
 				}
 			}
 		})

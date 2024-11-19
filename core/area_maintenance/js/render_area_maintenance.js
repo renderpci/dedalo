@@ -5,7 +5,7 @@
 
 
 // imports
-	import {when_in_dom, when_in_viewport} from '../../common/js/events.js'
+	import {when_in_dom, when_in_viewport, dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
@@ -93,9 +93,11 @@ const get_content_data = function(self) {
 
 		 // remove invisible class to prevent flickering
 			when_in_viewport(content_data, ()=>{
-				setTimeout(function(){
-					content_data.classList.remove('invisible')
-				}, 75)
+				dd_request_idle_callback(
+					() => {
+						content_data.classList.remove('invisible')
+					}
+				)
 			})
 
 
