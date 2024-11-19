@@ -19,7 +19,7 @@ class tool_import_files extends tool_common {
 	* @return array $ar_data
 	* 	Associative array with all extracted data
 	*/
-	public static function get_file_data(string $dir, string $file) : array {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/"
+	public static function get_file_data( string $dir, string $file ) : array {
 
 		$ar_data = array();
 
@@ -232,12 +232,12 @@ class tool_import_files extends tool_common {
 
 	/**
 	* GET_MEDIA_FILE_DATE
-	*
+	* Calculates the media file date
 	* @param array $media_file
 	* 	Assoc array with file info like file_path
 	* @return object|null dd_date $dd_date
 	*/
-	public static function get_media_file_date(array $media_file, string $model) : ?object {
+	public static function get_media_file_date( array $media_file, string $model ) : ?object {
 
 		$dd_date			= null;
 		$source_full_path	= $media_file['file_path'];
@@ -252,7 +252,7 @@ class tool_import_files extends tool_common {
 				break;
 
 			case 'component_pdf':
-				$command =  MAGICK_PATH. '/pdfinfo -rawdates ' . $source_full_path . ' | grep -i CreationDate';
+				$command = ImageMagick::get_imagemagick_pdfinfo_path() . ' -rawdates ' . $source_full_path . ' | grep -i CreationDate';
 
 				// exec command
 				$result = exec($command.' 2>&1', $output, $worked_result);
@@ -314,7 +314,7 @@ class tool_import_files extends tool_common {
 	* @param $options
 	* @return object $response
 	*/
-	public static function file_processor(object $options) : object {
+	public static function file_processor( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -405,7 +405,7 @@ class tool_import_files extends tool_common {
 	* @param object $options
 	* @return object $response
 	*/
-	public static function import_files(object $options) : object {
+	public static function import_files( object $options ) : object {
 		$start_time=start_time();
 
 		$response = new stdClass();
@@ -1135,8 +1135,6 @@ class tool_import_files extends tool_common {
 					break;
 			}//end switch ($ddo->role)
 		}//end foreach ($ar_ddo_map as $ddo)
-
-
 	}//end set_components_data
 
 

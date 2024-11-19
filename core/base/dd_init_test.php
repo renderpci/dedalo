@@ -494,7 +494,7 @@
 		$init_response->errors	= true;
 		debug_log(__METHOD__
 			. "  ".implode(PHP_EOL, $init_response->msg) .PHP_EOL
-			. 'path: ' . MAGICK_PATH
+			. 'path: ' . ImageMagick::get_imagemagick_installed_path()
 			, logger::ERROR
 		);
 
