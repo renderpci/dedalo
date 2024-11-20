@@ -1088,7 +1088,6 @@ class transform_data {
 
 
 
-
 	/**
 	* DELETE_TIPOS
 	* Delete tipos, his time machine and his relations
