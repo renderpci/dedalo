@@ -1619,14 +1619,16 @@ const render_docu_links = function(self, tipo) {
 			title			: 'Documentation',
 			parent			: fragment
 		})
-		docu_link.addEventListener('mousedown', function(e) {
+		// mousedown event
+		const mousedown_handler_docu = (e) => {
 			e.stopPropagation()
 			open_ontology_window(
 				self,
 				'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang,
 				'docu_link'
 			)
-		})
+		}
+		docu_link.addEventListener('mousedown', mousedown_handler_docu)
 
 	if (SHOW_DEVELOPER===true) {
 
@@ -1637,14 +1639,16 @@ const render_docu_links = function(self, tipo) {
 				title			: 'Local Ontology',
 				parent			: fragment
 			})
-			local_ontology.addEventListener('mousedown', function(e) {
+			// mousedown event
+			const mousedown_handler_local = (e) => {
 				e.stopPropagation()
 				open_ontology_window(
 					self,
-					DEDALO_CORE_URL + '/ontology/v5/dd_edit.php?terminoID=' + tipo,
+					`${DEDALO_CORE_URL}/ontology/v5/dd_edit.php?terminoID=${tipo}`,
 					'local_ontology'
 				)
-			})
+			}
+			local_ontology.addEventListener('mousedown', mousedown_handler_local)
 
 		// local ontology tree search
 			const local_ontology_search = ui.create_dom_element({
@@ -1653,14 +1657,16 @@ const render_docu_links = function(self, tipo) {
 				title			: 'Local Ontology tree search',
 				parent			: fragment
 			})
-			local_ontology_search.addEventListener('mousedown', function(e) {
+			// mousedown event
+			const mousedown_handler_tree = (e) => {
 				e.stopPropagation()
 				open_ontology_window(
 					self,
-					DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
+					`${DEDALO_CORE_URL}/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
 					'local_ontology_search'
 				)
-			})
+			}
+			local_ontology_search.addEventListener('mousedown', mousedown_handler_tree)
 
 		// master_ontology
 			const master_ontology = ui.create_dom_element({
@@ -1669,14 +1675,16 @@ const render_docu_links = function(self, tipo) {
 				title			: 'Master Ontology',
 				parent			: fragment
 			})
-			master_ontology.addEventListener('mousedown', function(e) {
+			// mousedown event
+			const mousedown_handler_master = (e) => {
 				e.stopPropagation()
 				open_ontology_window(
 					self,
 					'https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=' + tipo,
 					'master_ontology'
 				)
-			})
+			}
+			master_ontology.addEventListener('mousedown', mousedown_handler_master)
 
 	}//end if (SHOW_DEVELOPER===true)
 
