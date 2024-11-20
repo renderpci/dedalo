@@ -113,34 +113,36 @@ inspector.prototype.init = async function(options) {
 				)
 				// open ontology window if already open to preserve component selected coherence
 				if(SHOW_DEVELOPER===true) {
-					setTimeout(function(){
-						if (window.docu_window && !window.docu_window.closed) {
-							const tipo	= actived_component.tipo
-							let url		= null
-							switch (self.last_docu_type) {
-								case 'docu_link': // web dedalo/ontology
-									url = 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
-									break;
-								case 'local_ontology':
-									url = DEDALO_CORE_URL + '/ontology/v5/dd_edit.php?terminoID=' + tipo
-									break;
-								case 'local_ontology_search':
-									url = DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
-									break;
-								case 'master_ontology':
-									url = 'https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=' + tipo
-									break;
-							}
-							if (url) {
-								open_ontology_window(
-									self,
-									url,
-									self.last_docu_type,
-									false // focus bool
-								)
+					dd_request_idle_callback(
+						() => {
+							if (window.docu_window && !window.docu_window.closed) {
+								const tipo	= actived_component.tipo
+								let url		= null
+								switch (self.last_docu_type) {
+									case 'docu_link': // web dedalo/ontology
+										url = 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
+										break;
+									case 'local_ontology':
+										url = DEDALO_CORE_URL + '/ontology/v5/dd_edit.php?terminoID=' + tipo
+										break;
+									case 'local_ontology_search':
+										url = DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
+										break;
+									case 'master_ontology':
+										url = 'https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=' + tipo
+										break;
+								}
+								if (url) {
+									open_ontology_window(
+										self,
+										url,
+										self.last_docu_type,
+										false // focus bool
+									)
+								}
 							}
 						}
-					}, 1)
+					)
 				}
 			}
 			self.events_tokens.push(
