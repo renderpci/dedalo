@@ -1641,7 +1641,7 @@ const render_docu_links = function(self, tipo) {
 				e.stopPropagation()
 				open_ontology_window(
 					self,
-					DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo,
+					DEDALO_CORE_URL + '/ontology/v5/dd_edit.php?terminoID=' + tipo,
 					'local_ontology'
 				)
 			})
@@ -1657,7 +1657,7 @@ const render_docu_links = function(self, tipo) {
 				e.stopPropagation()
 				open_ontology_window(
 					self,
-					DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
+					DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
 					'local_ontology_search'
 				)
 			})
@@ -1673,7 +1673,7 @@ const render_docu_links = function(self, tipo) {
 				e.stopPropagation()
 				open_ontology_window(
 					self,
-					'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo,
+					'https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=' + tipo,
 					'master_ontology'
 				)
 			})
