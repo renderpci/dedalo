@@ -122,13 +122,13 @@ inspector.prototype.init = async function(options) {
 									url = 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
 									break;
 								case 'local_ontology':
-									url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
+									url = DEDALO_CORE_URL + '/ontology/v5/dd_edit.php?terminoID=' + tipo
 									break;
 								case 'local_ontology_search':
-									url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
+									url = DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
 									break;
 								case 'master_ontology':
-									url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo
+									url = 'https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=' + tipo
 									break;
 							}
 							if (url) {
