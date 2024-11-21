@@ -1927,7 +1927,7 @@ abstract class backup {
 	public static function write_lang_file(string $lang) : bool {
 
 		// all labels
-		$ar_label = label::get_ar_label($lang);
+		$ar_label = label::get_ar_label($lang, false);
 		if (empty($ar_label)) {
 			debug_log(__METHOD__
 				. " Error on get labels for lang: $lang" . PHP_EOL
@@ -1958,6 +1958,12 @@ abstract class backup {
 
 			return false;
 		}
+
+		// remove lang cache
+		$cache_file_name = label::build_cache_file_name($lang);
+		dd_cache::delete_cache_files([
+			$cache_file_name
+		]);
 
 		debug_log(__METHOD__
 			. " Generated js labels file for lang: $lang - $file_path " .PHP_EOL
