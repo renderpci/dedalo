@@ -959,7 +959,7 @@ const render_build_version = function(quality, self) {
 								build_autoload : false
 							})
 						}else{
-							// check again after 5 sec
+							// check again after 2 sec
 							self.timer = setTimeout(async function(){
 								check_file()
 							}, 2000)

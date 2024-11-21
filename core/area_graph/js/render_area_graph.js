@@ -42,7 +42,7 @@ render_area_graph.prototype.list = async function(options) {
 		self.ts_object.linker = self.linker // usually a portal component instance
 
 		// parse data
-		const data = self.data.find(item => item.tipo==='dd100')
+		const data = self.data.find(item => item.tipo==='dd100') || {}
 
 	// content_data
 		if (render_level==='content') {
@@ -147,9 +147,9 @@ const render_content_data = function(self) {
 		})
 
 	// elements
-		const data				= self.data.find(item => item.tipo==='dd100')
-		const ts_nodes			= data.value
-		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy')
+		const data				= self.data.find(item => item.tipo==='dd100') || {}
+		const ts_nodes			= data.value || []
+		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy') || []
 
 	// typology_nodes. sort typologies by order field
 		const typology_nodes	= ts_nodes.filter(node => node.type==='typology' )

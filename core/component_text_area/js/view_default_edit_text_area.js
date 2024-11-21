@@ -316,7 +316,7 @@ const get_content_value = (i, current_value, self) => {
 				// activate on user click
 
 				// click event
-				const fn_click_init = function(e) {
+				const click_handler = function(e) {
 					e.stopPropagation()
 
 					value_container.classList.add('loading')
@@ -333,9 +333,9 @@ const get_content_value = (i, current_value, self) => {
 						}
 					})
 					// once only. Remove event to prevent duplicates
-					content_value.removeEventListener('mousedown', fn_click_init)
-				}//end fn_click_init
-				content_value.addEventListener('mousedown', fn_click_init)
+					content_value.removeEventListener('mousedown', click_handler)
+				}//end click_handler
+				content_value.addEventListener('mousedown', click_handler)
 			}
 		}//end if (self.show_interface.read_only!==true)
 

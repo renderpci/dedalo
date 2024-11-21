@@ -944,6 +944,12 @@ export const ts_object = new function() {
 	*/
 	this.hilite_element = function(element, clean_others) {
 
+		// element node is mandatory
+			if (!element) {
+				console.error('Empty hilite_element param element:', element);
+				return 0
+			}
+
 		// undefined clean_others case
 			if (typeof clean_others==='undefined') {
 				clean_others = true
