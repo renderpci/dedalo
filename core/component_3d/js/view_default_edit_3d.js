@@ -92,7 +92,7 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 
-			// used setTimeout to force new separate task
+			// force new separate task
 			dd_request_idle_callback(
 				() => {
 					const content_value = (self.permissions===1)

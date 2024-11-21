@@ -7,6 +7,7 @@
 	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 
 
+
 if (typeof HTMLElement!=='undefined') {
 class DDModal extends HTMLElement {
 	constructor() {
@@ -395,11 +396,6 @@ class DDModal extends HTMLElement {
 				header.classList.remove('mini')
 				this.mini = false
 
-				// setTimeout(()=>{
-				// 	const wrapper_page = document.querySelector('.wrapper.page')
-				// 	wrapper_page.appendChild(this)
-				// }, 2000)
-
 			}else{
 
 				// minimize
@@ -415,14 +411,10 @@ class DDModal extends HTMLElement {
 					let offset = 60
 					for (let i = 0; i < items.length; i++) {
 						const el = items[i]
-						// console.log("el:",el);
 
 						// const elemRect = el.getBoundingClientRect()
 						const bottom = parseInt((offset*i)) + (5*i+5)
-						// console.log("bottom:",bottom);
-
 						const modal = el.shadowRoot.querySelector('.modal')
-						// console.log("modal:",modal);
 						modal.style.bottom = bottom + "px";
 					}
 				}
@@ -439,42 +431,13 @@ class DDModal extends HTMLElement {
 		}
 
 		// unsaved_data check
-			/* OLD WAY
-				if (window.unsaved_data===true) {
-
-					// check if the modified components is inside the modal
-						let unsaved_component_data = false
-						const components = this.querySelectorAll('.wrapper_component')
-						if (components) {
-							const components_length = components.length
-							for (let i = 0; i < components_length; i++) {
-								const item = components[i]
-								if (item.classList.contains('modified')) {
-									unsaved_component_data = true
-									break
-								}
-							}
-						}
-
-					// if true, confirm exit by user
-						if (unsaved_component_data===true) {
-							if (!confirm(get_label.discard_changes || 'Discard unsaved changes?')) {
-								return false
-							}else{
-								window.unsaved_data===false
-							}
-						}
-				}
-				*/
-			// check_unsaved_data
-				const result = await check_unsaved_data({
-					confirm_msg : 'dd-modal: ' + (get_label.discard_changes || 'Discard unsaved changes?')
-				})
-				if (!result) {
-					// user selects 'cancel' in dialog confirm. Stop navigation
-					return false
-				}
-
+			const result = await check_unsaved_data({
+				confirm_msg : 'dd-modal: ' + (get_label.discard_changes || 'Discard unsaved changes?')
+			})
+			if (!result) {
+				// user selects 'cancel' in dialog confirm. Stop navigation
+				return false
+			}
 
 		this._modalVisible = false;
 		this._modal.style.display = 'none';
@@ -582,8 +545,7 @@ class DDModal extends HTMLElement {
 		this.shadowRoot.querySelector(".mini_modal").remove()
 	}
 }
-customElements.define('dd-modal',DDModal);
+customElements.define('dd-modal', DDModal);
 }
-
 
 // @license-end
