@@ -35,9 +35,6 @@ export const events_init = function() {
 			if (document.visibilityState==='hidden' && window.unsaved_data===true) {
 
 				await saving
-				// setTimeout(function(){
-				// 	console.log("saved:", saved);
-				// },100)
 			}
 		}
 

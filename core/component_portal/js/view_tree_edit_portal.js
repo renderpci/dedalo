@@ -139,19 +139,21 @@ export const add_events = function(self, wrapper) {
 						}
 						const label = ar_label.join(', ')
 
-					const changed_data = [Object.freeze({
-						action	: 'remove',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: null
-					})]
+					// changed_data
+						const changed_data = [Object.freeze({
+							action	: 'remove',
+							key		: JSON.parse(e.target.dataset.key),
+							value	: null
+						})]
 
-					const changed = self.change_value({
+					// change_value execution
+					self.change_value({
 						changed_data	: changed_data,
 						label			: label,
 						refresh			: false,
 						build_autoload	: false
 					})
-					changed.then(async (api_response)=>{
+					.then(async (api_response) => {
 
 						// update pagination offset
 							self.update_pagination_values('remove')
@@ -173,7 +175,8 @@ export const add_events = function(self, wrapper) {
 
 					return true
 				}//end if(e.target.matches('.button.remove'))
-		}//end fn_wrapper_click
+		}
+		wrapper.addEventListener('click', click_handler)
 
 
 	return true
