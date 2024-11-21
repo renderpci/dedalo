@@ -82,9 +82,11 @@ render_inspector.prototype.edit = async function(options) {
 		wrapper.appendChild(content_data)
 
 	// tooltip
-		setTimeout(function(){
-			ui.activate_tooltips(wrapper)
-		}, 1)
+		dd_request_idle_callback(
+			() => {
+				ui.activate_tooltips(wrapper)
+			}
+		)
 
 
 	return wrapper

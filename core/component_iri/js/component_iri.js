@@ -7,6 +7,7 @@
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {render_edit_component_iri} from '../../component_iri/js/render_edit_component_iri.js'
 	import {render_list_component_iri} from '../../component_iri/js/render_list_component_iri.js'
 	import {render_search_component_iri} from '../../component_iri/js/render_search_component_iri.js'
@@ -168,19 +169,21 @@ component_iri.prototype.focus_first_input = function() {
 			? self.node.content_data[0].querySelector('.input_value.url')
 			: null;
 		if (url_input) {
+			dd_request_idle_callback(
+				() => {
+					if (self.active && url_input !== document.activeElement) {
 
-			setTimeout(function(){
-				if (self.active && url_input !== document.activeElement) {
+						// check another focus elements like q_operator
+						if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
+							return
+						}
 
-					// check another focus elements like q_operator
-					if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
-						return
+						url_input.focus()
 					}
-
-					url_input.focus()
 				}
-			}, 25)
+			)
 		}
+
 
 	return true
 }//end focus_first_input

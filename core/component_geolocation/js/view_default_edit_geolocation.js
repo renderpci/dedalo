@@ -330,9 +330,11 @@ export const get_content_value = (i, current_value, self) =>{
 						})
 						// add resize content_value event to allow user to resize the map
 						new ResizeObserver( function(){
-							setTimeout(function(){
-								self.refresh_map(self.map)
-							}, 5)
+							dd_request_idle_callback(
+								() => {
+									self.refresh_map(self.map)
+								}
+							)
 						})
 						.observe( content_value )
 					})
