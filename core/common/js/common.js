@@ -9,6 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_elements_css_object} from '../../page/js/css.js'
 	import {render_relogin} from '../../login/js/render_login.js'
@@ -497,9 +498,11 @@ common.prototype.render = async function (options={}) {
 
 	// activate_tooltips
 		if (self.mode==='edit') {
-			setTimeout(function(){
-				ui.activate_tooltips(result_node)
-			}, 1)
+			dd_request_idle_callback(
+				() => {
+					ui.activate_tooltips(result_node)
+				}
+			)
 		}
 
 	// debug

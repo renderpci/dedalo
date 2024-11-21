@@ -6,7 +6,7 @@
 
 // imports
 	import {get_instance} from '../../common/js/instances.js'
-	import {when_in_dom} from '../../common/js/events.js'
+	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
@@ -372,11 +372,14 @@ const render_drag_node = function(options) {
 							}
 						}
 						target_key_input.addEventListener('keyup', keyup_handler)
-						setTimeout(()=>{
-							// set the input field active
-							target_key_input.focus()
-							target_key_input.select()
-						}, 1)
+						// focus input
+						dd_request_idle_callback(
+							() => {
+								// set the input field active
+								target_key_input.focus()
+								target_key_input.select()
+							}
+						)
 					}
 				})
 		})//end drag_node.addEventListener('dblclick', function(e)
@@ -642,10 +645,12 @@ export const render_column_remove = function(options) {
 					// the unlink option will be fired
 					const focus_the_button = function() {
 						// set the focus to the button_unlink
-						setTimeout(function(){
-							button_unlink_record.focus()
-							button_unlink_record.classList.add('focus')
-						}, 100)
+						dd_request_idle_callback(
+							() => {
+								button_unlink_record.focus()
+								button_unlink_record.classList.add('focus')
+							}
+						)
 						button_unlink_record.addEventListener('keyup', (e)=>{
 							e.preventDefault()
 							if(e.key==='Enter'){

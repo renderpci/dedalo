@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 
@@ -220,15 +221,14 @@ const get_content_value = (i, current_value, self) => {
 			if (auto_init_editor===true) {
 
 				// activate now
-
 				value_container.classList.add('loading')
 				// use timeout only to force real async execution
-				setTimeout(function(){
-					init_current_service_text_editor()
-					// .then(()=>{
+				dd_request_idle_callback(
+					() => {
+						init_current_service_text_editor()
 						value_container.classList.remove('loading')
-					// })
-				}, 35)
+					}
+				)
 
 			}else{
 
