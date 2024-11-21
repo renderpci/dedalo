@@ -1442,8 +1442,8 @@ class component_relation_common extends component_common {
 				}else{
 					$q_obj = new stdClass();
 						$q_obj->from_component_tipo = $component_tipo ;
-					$ar_q 	  = array($q_obj);
-					$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
+					$ar_q		= array($q_obj);
+					$q_clean	= '\''.json_encode($ar_q).'\'::jsonb IS DISTINCT FROM TRUE';
 				}
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
