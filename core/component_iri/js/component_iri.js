@@ -151,11 +151,6 @@ component_iri.prototype.focus_first_input = function() {
 
 	const self = this
 
-	// already active
-		if (self.active) {
-			return false
-		}
-
 	// title_input
 		const title_input = self.node.content_data && self.node.content_data[0]
 			? self.node.content_data[0].querySelector('.input_value.title')
