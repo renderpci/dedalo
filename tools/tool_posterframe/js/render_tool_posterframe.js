@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
 
 
@@ -61,16 +62,18 @@ render_tool_posterframe.prototype.edit = async function(options) {
 		})
 		// rebuild it in 'player' mode to get stream info (allow navigation frame by frame)
 		self.main_element.build(true)
-		.then(async function(){
-			setTimeout(function(){
-				self.main_element.mode = 'edit'
-				self.main_element.context.view = 'player'
-				self.main_element.render()
-				.then(function(component_node){
-					main_element_container.appendChild(component_node)
-					spinner.remove()
-				})
-			}, 10)
+		.then(function(){
+			dd_request_idle_callback(
+				() => {
+					self.main_element.mode = 'edit'
+					self.main_element.context.view = 'player'
+					self.main_element.render()
+					.then(function(component_node){
+						main_element_container.appendChild(component_node)
+						spinner.remove()
+					})
+				}
+			)
 		})
 
 

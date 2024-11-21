@@ -7,6 +7,7 @@
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {LZString as lzstring} from '../../../core/common/js/utils/lzstring.js'
 	import {ui} from '../../../core/common/js/ui.js'
@@ -741,9 +742,11 @@ const view_modal = async function(options) {
 				tool_instance.on_close_actions('modal')
 				// re-select the caller component
 				if (caller.type==='component') {
-					setTimeout(()=>{
-						ui.component.activate(caller)
-					}, 1)
+					dd_request_idle_callback(
+						() => {
+							ui.component.activate(caller)
+						}
+					)
 				}
 
 			}else{
@@ -753,11 +756,11 @@ const view_modal = async function(options) {
 				})
 				.then(()=>{
 					// re-select the caller component
-					if (caller.type==='component') {
-						setTimeout(()=>{
+					dd_request_idle_callback(
+						() => {
 							ui.component.activate(caller)
-						}, 1)
-					}
+						}
+					)
 				})
 				tool_instance.destroy(true, true, true)
 			}
