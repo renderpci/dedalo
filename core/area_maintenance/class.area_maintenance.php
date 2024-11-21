@@ -2124,6 +2124,43 @@ class area_maintenance extends area_common {
 
 
 	/**
+	* REBUILD_LANG_FILES
+	* Re-write label lang JS files and deletes the existing lang cache files
+	* It is called from 'Update Ontology' widget
+	* @param object $options
+	* @return object $response
+	*/
+	public static function rebuild_lang_files( object $options ) : object {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
+
+		// write_lang_file
+			$ar_langs = DEDALO_APPLICATION_LANGS;
+			foreach ($ar_langs as $lang => $label) {
+				$result = backup::write_lang_file($lang);
+				if ($result!==true) {
+					$response->errors[] = 'Failed write lang file: ' .$lang;
+				}
+			}
+
+		// response
+			if(count($response->errors)===0) {
+				$response->result	= true;
+				$response->msg		= 'OK. Request done successfully';
+				$response->updated	= $ar_langs;
+			}
+
+
+		return $response;
+	}//end rebuild_lang_files
+
+
+
+	/**
 	* JER_DD_TO_MATRIX_ONTOLOGY
 	* Is called from area_maintenence widget 'jer_dd_to_matrix_ontology' across dd_area_maintenance::class_request
 	* Connect with master server, download ontology files and update local DDBB and lang files

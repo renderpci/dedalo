@@ -304,9 +304,108 @@ const get_content_data_edit = async function(self) {
 	// add at end body_response
 		content_data.appendChild(body_response)
 
+	// render_rebuild_lang_files
+		const rebuild_lang_files_container = render_rebuild_lang_files()
+		content_data.appendChild(rebuild_lang_files_container)
+
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RENDER_REBUILD_LANG_FILES
+* Renders text and button to allow to call API dd_area_maintenance_api->rebuild_lang_files
+* @return HTMLElement rebuild_lang_files_container
+*/
+const render_rebuild_lang_files = function () {
+
+	// rebuild_lang_files_container
+		const rebuild_lang_files_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'rebuild_lang_files_container'
+		})
+
+	// info_text
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_text',
+			inner_html		: `Re-builds all Dédalo javascript lang files used to resolve labels like '/dedalo/core/common/js/lang/lg-cat.js'`,
+			parent			: rebuild_lang_files_container
+		})
+
+	// button submit (make backup)
+		const button_submit = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_submit',
+			inner_html		: 'Re-build lang label files',
+			parent			: rebuild_lang_files_container
+		})
+		// click event
+		const click_handler = async (e) => {
+			e.stopPropagation()
+
+			// blur button
+			document.activeElement.blur()
+
+			// clean up container
+			while (body_response.firstChild) {
+				body_response.removeChild(body_response.firstChild);
+			}
+
+			// spinner
+			const spinner = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner',
+				parent			: body_response
+			})
+
+			// call API to fire process and get PID
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'class_request',
+					source	: {
+						action : 'rebuild_lang_files'
+					},
+					options	: {}
+				}
+			})
+
+			spinner.remove()
+
+			if (!api_response || !api_response.result) {
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error',
+					inner_html		: 'Error: failed make_backup',
+					parent			: body_response
+				})
+				return
+			}
+
+			// result_value pre JSON
+			ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'result_value',
+				inner_html		: JSON.stringify(api_response, null, 2),
+				parent			: body_response
+			})
+		}
+		button_submit.addEventListener('click', click_handler)
+
+	// body_response
+		const body_response = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body_response',
+			parent			: rebuild_lang_files_container
+		})
+
+
+	return rebuild_lang_files_container
+}//end render_rebuild_lang_files
 
 
 
