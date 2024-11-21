@@ -218,6 +218,10 @@ const get_content_data_edit = async function(self) {
 										}
 									}
 								})
+								// debug
+								if(SHOW_DEBUG===true) {
+									console.log('))) update_ontology api_response:', api_response);
+								}
 
 							// loading  remove
 								spinner.remove()

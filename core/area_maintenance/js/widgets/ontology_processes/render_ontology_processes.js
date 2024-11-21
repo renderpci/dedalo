@@ -198,6 +198,10 @@ const get_content_data_edit = async function(self) {
 										}
 									}
 								})
+								// debug
+								if(SHOW_DEBUG===true) {
+									console.log('))) render Ontology process api_response:', api_response);
+								}
 
 							// loading  remove
 								spinner.remove()
