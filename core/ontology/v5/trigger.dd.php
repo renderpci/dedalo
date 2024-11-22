@@ -809,6 +809,23 @@ if($accion==='duplicate') {
 		// 	}
 		// }
 
+	// save descriptors record. Set and save the value to descriptors dd
+		$dedalo_version = explode(".", DEDALO_VERSION);
+		if( (int)$dedalo_version[0]<=6 && (int)$dedalo_version[1]<3 ){
+
+			foreach ($term as $current_lang => $term_value) {
+				$RecordObj = new RecordObj_descriptors_dd_edit(
+					RecordObj_descriptors_dd_edit::$descriptors_matrix_table,
+					null, // id
+					$new_terminoID,
+					$current_lang,
+					'termino'
+				);
+				$RecordObj->set_dato($term_value);
+				$result = $RecordObj->Save();
+			}
+		}
+
 	// response
 		$response = (object)[
 			'new_terminoID'	=> $new_terminoID,
