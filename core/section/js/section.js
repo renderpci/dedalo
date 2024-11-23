@@ -497,12 +497,14 @@ section.prototype.build = async function(autoload=false) {
 				mode	: self.mode
 			})
 			.then(function(){
-				// preload search (experimental disable)
+				// preload search (experimental disable now)
 				const pre_built_search = false
 				if (pre_built_search && self.mode==='list') {
-					setTimeout(function(){
-						self.filter.build()
-					}, 100)
+					dd_request_idle_callback(
+						() => {
+							self.filter.build()
+						}
+					)
 				}
 			})
 		}
