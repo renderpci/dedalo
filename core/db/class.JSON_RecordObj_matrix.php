@@ -309,10 +309,10 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 					, logger::ERROR
 				);
 			}else{
-				debug_log(__METHOD__
-					." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms'
-					, logger::DEBUG
-				);
+				// debug_log(__METHOD__
+				// 	." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms'
+				// 	, logger::DEBUG
+				// );
 			}
 
 
