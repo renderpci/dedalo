@@ -422,17 +422,19 @@ const render_notification = (self) => {
 		parent			: notification_container
 	})
 
+	const dedalo_notification = page_globals.dedalo_notification ?? false;
+
 	// body response
 	const notification_body_response = ui.create_dom_element({
 		element_type	: 'div',
-		inner_html		: "Notification. " + JSON.stringify(page_globals.dedalo_notification, null, 2),
+		inner_html		: "Notification. " + JSON.stringify(dedalo_notification, null, 2),
 		class_name		: 'body_response'
 	})
 	// sample: define('DEDALO_NOTIFICATION', ['msg' => $notice, 'class_name' => 'warning']);
 
 	// form
 	if (self.caller?.init_form) {
-		const submit_label = page_globals.dedalo_notification===false
+		const submit_label = !dedalo_notification
 			? 'Activate notification'
 			: 'Remove notification'
 
@@ -441,12 +443,12 @@ const render_notification = (self) => {
 			confirm_text	: get_label.sure || 'Sure?',
 			body_info		: notification_container,
 			body_response	: notification_body_response,
-			inputs			: (page_globals.dedalo_notification===false)
+			inputs			: (dedalo_notification===false)
 				? [{
 					type		: 'text',
 					name		: 'notification_text',
 					label		: 'Message here..',
-					mandatory	: (page_globals.dedalo_notification===false)
+					mandatory	: (dedalo_notification===false)
 				  }]
 				: null,
 			on_submit : async (e, values) => {
@@ -454,7 +456,7 @@ const render_notification = (self) => {
 				const input				= values.find(el => el.name==='notification_text')
 				const notification_text	= input?.value // string like 'My custom notification'
 
-				const notification_value = page_globals.dedalo_notification===false
+				const notification_value = dedalo_notification===false
 					? notification_text
 					: false
 
@@ -466,7 +468,7 @@ const render_notification = (self) => {
 							action	: 'set_notification',
 						},
 						options : {
-							value	: notification_value // string
+							value	: notification_value // string|false
 						}
 					}
 				})
