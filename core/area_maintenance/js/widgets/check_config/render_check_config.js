@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {open_window, object_to_url_vars} from '../../../../common/js/utils/index.js'
+	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 
 
 
@@ -90,103 +90,11 @@ const get_content_data_edit = async function(self) {
 				content_data.appendChild(recovery_mode_container)
 
 			// notification
-			{
-				/* Disable (Experimental with serious security implications)
-				const notification_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'container',
-					parent			: content_data
-				})
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'label',
-					inner_html		: 'Notification',
-					parent			: notification_container
-				})
-				const notification_body_response = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: "Notification. " + JSON.stringify(page_globals.dedalo_notification, null, 2),
-					class_name		: 'body_response'
-				})
-				// sample: define('DEDALO_NOTIFICATION', ['msg' => $notice, 'class_name' => 'warning']);
-				// form
-				console.log('page_globals.dedalo_notification:', page_globals.dedalo_notification);
-				const submit_label = page_globals.dedalo_notification===false
-					? 'Activate notification'
-					: 'Remove notification'
-				const form_container = self.caller.init_form({
-					submit_label	: submit_label,
-					confirm_text	: get_label.sure || 'Sure?',
-					body_info		: notification_container,
-					body_response	: notification_body_response,
-					inputs			: (page_globals.dedalo_notification===false)
-						? [{
-							type		: 'text',
-							name		: 'notification_text',
-							label		: 'Message here..',
-							mandatory	: (page_globals.dedalo_notification===false)
-						  }]
-						: null,
-					on_submit : async (e, values) => {
+			/* Disable (Experimental with serious security implications) */
+				const notification_container = render_notification(self)
+				content_data.appendChild(notification_container)
 
-						const input				= values.find(el => el.name==='notification_text')
-						const notification_text	= input?.value // string like 'My custom notification'
 
-						const notification_value = page_globals.dedalo_notification===false
-							? notification_text
-							: false
-
-						const api_response = await data_manager.request({
-							body		: {
-								dd_api	: 'dd_area_maintenance_api',
-								action	: 'class_request',
-								source	: {
-									action	: 'set_congif_auto',
-								},
-								options : {
-									name	: 'DEDALO_NOTIFICATION_CUSTOM',
-									value	: notification_value // string
-								}
-							}
-						})
-						if(SHOW_DEBUG===true) {
-							console.log('))))))))))))) api_response:', api_response);
-						}
-
-						if (api_response.result) {
-							// update page_globals value
-							page_globals.dedalo_notification = notification_value===false
-								? false
-								: {
-									msg			: notification_value,
-									class_name	: 'warning'
-								  }
-							// render the page again
-							setTimeout(function(){
-								window.dd_page.refresh({
-									build_autoload	: false,
-									destroy			: false
-								})
-							}, 10)
-						}else{
-							const error_txt = api_response.msg || 'Error setting notification_value (unknown)'
-							const error_node = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'error',
-								inner_html		: error_txt,
-								parent			: notification_body_response
-							})
-						}
-					}
-				})
-				if (page_globals.dedalo_notification===null) {
-					// form_container.button_submit.classList.add('danger')
-				}
-
-				// add notification_body_response at end
-				notification_container.appendChild(notification_body_response)
-				*/
-			}
 		}//end if (page_globals.is_root===true)
 
 
@@ -360,42 +268,46 @@ const render_maintenance_mode = (self) => {
 	})
 
 	// form
-	const submit_label = page_globals.maintenance_mode===true
-		? 'Deactivate maintenance mode'
-		: 'Activate maintenance mode'
-	const new_maintenance_mode = !page_globals.maintenance_mode
-	const form_container = self.caller.init_form({
-		submit_label	: submit_label,
-		confirm_text	: get_label.sure || 'Sure?',
-		body_info		: maintenance_mode_container,
-		body_response	: maintenance_mode_body_response,
-		trigger : {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
-				action : 'set_maintenance_mode'
-			},
-			options	: {
-				value : new_maintenance_mode
+	if (self.caller?.init_form) {
+		const submit_label = page_globals.maintenance_mode===true
+			? 'Deactivate maintenance mode'
+			: 'Activate maintenance mode'
+		const new_maintenance_mode = !page_globals.maintenance_mode
+		const form_container = self.caller.init_form({
+			submit_label	: submit_label,
+			confirm_text	: get_label.sure || 'Sure?',
+			body_info		: maintenance_mode_container,
+			body_response	: maintenance_mode_body_response,
+			trigger : {
+				dd_api	: 'dd_area_maintenance_api',
+				action	: 'class_request',
+				source	: {
+					action : 'set_maintenance_mode'
+				},
+				options	: {
+					value : new_maintenance_mode
 
+				}
+			},
+			on_done : (api_response) => {
+				if (api_response.result) {
+					dd_request_idle_callback(
+						() => {
+							// update page_globals value
+							page_globals.maintenance_mode = new_maintenance_mode
+							// render the page again
+							window.dd_page.refresh({
+								build_autoload	: false,
+								destroy			: false
+							})
+						}
+					)
+				}
 			}
-		},
-		on_done : (api_response) => {
-			if (api_response.result) {
-				setTimeout(function(){
-					// update page_globals value
-					page_globals.maintenance_mode = new_maintenance_mode
-					// render the page again
-					window.dd_page.refresh({
-						build_autoload	: false,
-						destroy			: false
-					})
-				}, 0)
-			}
+		})
+		if (page_globals.maintenance_mode===false) {
+			form_container.button_submit.classList.add('danger')
 		}
-	})
-	if (page_globals.maintenance_mode===false) {
-		form_container.button_submit.classList.add('danger')
 	}
 
 	// add maintenance_mode_body_response at end
@@ -436,42 +348,46 @@ const render_recovery_mode = (self) => {
 	})
 
 	// form
-	const submit_label = page_globals.recovery_mode===true
-		? 'Deactivate recovery mode'
-		: 'Activate recovery mode'
-	const new_recovery_mode = !page_globals.recovery_mode
-	const form_container = self.caller.init_form({
-		submit_label	: submit_label,
-		confirm_text	: get_label.sure || 'Sure?',
-		body_info		: recovery_mode_container,
-		body_response	: recovery_mode_body_response,
-		trigger : {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
-				action : 'set_recovery_mode'
-			},
-			options	: {
-				value : new_recovery_mode
+	if (self.caller?.init_form) {
+		const submit_label = page_globals.recovery_mode===true
+			? 'Deactivate recovery mode'
+			: 'Activate recovery mode'
+		const new_recovery_mode = !page_globals.recovery_mode
+		const form_container = self.caller.init_form({
+			submit_label	: submit_label,
+			confirm_text	: get_label.sure || 'Sure?',
+			body_info		: recovery_mode_container,
+			body_response	: recovery_mode_body_response,
+			trigger : {
+				dd_api	: 'dd_area_maintenance_api',
+				action	: 'class_request',
+				source	: {
+					action : 'set_recovery_mode'
+				},
+				options	: {
+					value : new_recovery_mode
 
+				}
+			},
+			on_done : (api_response) => {
+				if (api_response.result) {
+					dd_request_idle_callback(
+						() => {
+							// update page_globals value
+							page_globals.recovery_mode = new_recovery_mode
+							// render the page again
+							window.dd_page.refresh({
+								build_autoload	: false,
+								destroy			: false
+							})
+						}
+					)
+				}
 			}
-		},
-		on_done : (api_response) => {
-			if (api_response.result) {
-				setTimeout(function(){
-					// update page_globals value
-					page_globals.recovery_mode = new_recovery_mode
-					// render the page again
-					window.dd_page.refresh({
-						build_autoload	: false,
-						destroy			: false
-					})
-				}, 0)
-			}
+		})
+		if (page_globals.recovery_mode===false) {
+			form_container.button_submit.classList.add('danger')
 		}
-	})
-	if (page_globals.recovery_mode===false) {
-		form_container.button_submit.classList.add('danger')
 	}
 
 	// add recovery_mode_body_response at end
@@ -480,6 +396,120 @@ const render_recovery_mode = (self) => {
 
 	return recovery_mode_container
 }//end render_recovery_mode
+
+
+
+/**
+* RENDER_NOTIFICATION
+* Creates the form nodes to send user notifications
+* Note that this custom notifications are stored in core_config file
+* and read from API update_lock_components_state on every component activation/deactivation
+* @param object self
+* @return HTMLElement recovery_mode_container
+*/
+const render_notification = (self) => {
+
+	const notification_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'container'
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label',
+		inner_html		: 'Notification',
+		parent			: notification_container
+	})
+
+	// body response
+	const notification_body_response = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: "Notification. " + JSON.stringify(page_globals.dedalo_notification, null, 2),
+		class_name		: 'body_response'
+	})
+	// sample: define('DEDALO_NOTIFICATION', ['msg' => $notice, 'class_name' => 'warning']);
+
+	// form
+	if (self.caller?.init_form) {
+		const submit_label = page_globals.dedalo_notification===false
+			? 'Activate notification'
+			: 'Remove notification'
+
+		self.caller.init_form({
+			submit_label	: submit_label,
+			confirm_text	: get_label.sure || 'Sure?',
+			body_info		: notification_container,
+			body_response	: notification_body_response,
+			inputs			: (page_globals.dedalo_notification===false)
+				? [{
+					type		: 'text',
+					name		: 'notification_text',
+					label		: 'Message here..',
+					mandatory	: (page_globals.dedalo_notification===false)
+				  }]
+				: null,
+			on_submit : async (e, values) => {
+
+				const input				= values.find(el => el.name==='notification_text')
+				const notification_text	= input?.value // string like 'My custom notification'
+
+				const notification_value = page_globals.dedalo_notification===false
+					? notification_text
+					: false
+
+				const api_response = await data_manager.request({
+					body		: {
+						dd_api	: 'dd_area_maintenance_api',
+						action	: 'class_request',
+						source	: {
+							action	: 'set_notification',
+						},
+						options : {
+							value	: notification_value // string
+						}
+					}
+				})
+				if(SHOW_DEBUG===true) {
+					console.log('debug set_notification api_response:', api_response);
+				}
+
+				if (api_response.result) {
+					// update page_globals value
+					page_globals.dedalo_notification = notification_value===false
+						? false
+						: {
+							msg			: notification_value,
+							class_name	: 'warning'
+						  }
+					// render the page again
+					dd_request_idle_callback(
+						() => {
+							window.dd_page.refresh({
+								build_autoload	: false,
+								destroy			: false
+							})
+						}
+					)
+				}else{
+					const error_txt = api_response.msg || 'Error setting notification_value (unknown)'
+					const error_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error',
+						inner_html		: error_txt,
+						parent			: notification_body_response
+					})
+				}
+			}
+		})
+	}
+
+	// add notification_body_response at end
+	notification_container.appendChild(notification_body_response)
+
+
+	return notification_container
+}//end render_notification
 
 
 

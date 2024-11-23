@@ -9,6 +9,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
 		render_ts_pagination,
@@ -945,6 +946,12 @@ export const ts_object = new function() {
 	*/
 	this.hilite_element = function(element, clean_others) {
 
+		// element node is mandatory
+			if (!element) {
+				console.error('Empty hilite_element param element:', element);
+				return 0
+			}
+
 		// undefined clean_others case
 			if (typeof clean_others==='undefined') {
 				clean_others = true
@@ -1480,9 +1487,11 @@ export const ts_object = new function() {
 
 					// activate
 						if (key===0) {
-							setTimeout(function(){
-								ui.component.activate(current_component)
-							}, 50)
+							dd_request_idle_callback(
+								() => {
+									ui.component.activate(current_component)
+								}
+							)
 						}
 
 					return component_node
@@ -1834,11 +1843,16 @@ export const ts_object = new function() {
 
 			}else{
 
-				// Last elements are the final found elements and must be hilite
-				const last_element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
-				setTimeout(function(){
-					self.hilite_element(last_element, false);
-				}, 120)
+				dd_request_idle_callback(
+					() => {
+						// Last elements are the final found elements and must be hilite
+						// const last_element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
+						const last_element = main_div.querySelector('.elements_container > .term')
+						if (last_element) {
+							self.hilite_element(last_element, false);
+						}
+					}
+				)
 			}
 
 			// Open arrows and fix children container state

@@ -88,7 +88,8 @@ const get_content_data_edit = async function(self) {
 					inner_html		: `Open Swagger UI ${item.db_name}`,
 					parent			: content_data
 				})
-				button_open.addEventListener('click', function(e) {
+				// click event
+				const click_handler = (e) => {
 					e.stopPropagation()
 
 					// url
@@ -97,10 +98,17 @@ const get_content_data_edit = async function(self) {
 							db_name	: item.db_name,
 							lang	: page_globals.dedalo_application_lang
 						})
-						const url = `${DEDALO_ROOT_WEB}/publication/server_api/v1/docu/ui/?` + url_vars;
+
+					// api_ui. Normally is in the same server, but it is possible to define other in config.php
+					const api_ui = item.api_ui
+						? item.api_ui
+						: `${DEDALO_ROOT_WEB}/publication/server_api/v1/docu/ui/`
+
+					const url = api_ui + '?' + url_vars
 
 					window.open(url)
-				})
+				}
+				button_open.addEventListener('click', click_handler)
 		}
 
 	// diffusion_values (from config file)

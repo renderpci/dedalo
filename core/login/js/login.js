@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {
 		render_login,
 		render_files_loader
@@ -250,15 +251,17 @@ export const quit = async function(options={}) {
 
 				}else{
 
-					setTimeout(()=>{
-						if (is_developer) {
-							// reload window to show the login form without loosing the current URL
-							window.location.replace(window.location.href);
-						}else{
-							// redirect to Dédalo base URL to force access to default user section
-							window.location.href = DEDALO_ROOT_WEB
+					dd_request_idle_callback(
+						() => {
+							if (is_developer) {
+								// reload window to show the login form without loosing the current URL
+								window.location.replace(window.location.href);
+							}else{
+								// redirect to Dédalo base URL to force access to default user section
+								window.location.href = DEDALO_ROOT_WEB
+							}
 						}
-					}, 1)
+					)
 				}
 
 			}else{
@@ -360,9 +363,11 @@ login.prototype.action_dispatch = async function(api_response) {
 					// It's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
 					if (api_response.result_options?.redirect) {
 
-						setTimeout(() => {
-							window.location.replace( api_response.result_options.redirect )
-						}, 1)
+						dd_request_idle_callback(
+							() => {
+								window.location.replace( api_response.result_options.redirect )
+							}
+						)
 						return
 					}
 
@@ -414,9 +419,12 @@ login.prototype.action_dispatch = async function(api_response) {
 				// Usually when all files are loaded
 					const finish_handler = () => {
 						// login continue
-						setTimeout(()=>{
-							load_finish()
-						}, 40);
+						dd_request_idle_callback(
+							() => {
+								console.log('this:', this);
+								load_finish()
+							}
+						)
 					}
 			// on_message. Handle worker message events
 				const on_message = (event) => {

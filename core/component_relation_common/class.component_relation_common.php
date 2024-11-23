@@ -1399,7 +1399,7 @@ class component_relation_common extends component_common {
 
 		// q . Object locator is expected
 		$q = $query_object->q;
-		if (!is_object($q)) {
+		if (!is_object($q) && $q!=='only_operator') {
 			debug_log(__METHOD__
 				. " Expected q type is object " . PHP_EOL
 				. ' type: ' . gettype($q) . PHP_EOL
@@ -1442,8 +1442,8 @@ class component_relation_common extends component_common {
 				}else{
 					$q_obj = new stdClass();
 						$q_obj->from_component_tipo = $component_tipo ;
-					$ar_q 	  = array($q_obj);
-					$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
+					$ar_q		= array($q_obj);
+					$q_clean	= '\''.json_encode($ar_q).'\'::jsonb IS DISTINCT FROM TRUE';
 				}
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
@@ -2442,7 +2442,7 @@ class component_relation_common extends component_common {
 					$ontolgoy_sections = ontology::get_all_ontology_sections();
 					$ar_section_tipo = array_merge($ar_section_tipo, $ontolgoy_sections);
 					break;
-					
+
 				case 'field_value':
 					// this case is used in component_relation_children in the hierarchy section
 					// in these case the array of sections will get from the value of specific field

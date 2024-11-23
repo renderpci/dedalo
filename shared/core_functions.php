@@ -35,8 +35,9 @@ function dump( mixed $val=null, ?string $var_name=null, ?array $arguments=null )
 		array_pop($bts);
 
 	// msg
+		$root_path = defined('DEDALO_ROOT_PATH') ? DEDALO_ROOT_PATH : dirname(dirname(__FILE__));
 		$msg  = ' DUMP ' . PHP_EOL
-			   .' Caller: ' . str_replace(DEDALO_ROOT_PATH, '', $bt[0]['file']) . PHP_EOL
+			   .' Caller: ' . str_replace($root_path, '', $bt[0]['file']) . PHP_EOL
 			   .' Line: ' . @$bt[0]['line'];
 
 	// LEVEL 1
@@ -2144,23 +2145,29 @@ function get_legacy_constant_value(string $constant_name) {
 
 
 /**
-* TEST_PHP_VERSION_SUPPORTED
-* Test if PHP version is supported
-* @param string $minimum_php_version = '8.1.0'
-* @return bool
+* GET_BASE_BINARY_PATH
+* Calculates the current desired default base binary path
+* for daemon execution
+* @return string
 */
-function test_php_version_supported(string $minimum_php_version='8.1.0') : bool {
+function get_base_binary_path() : string {
 
-	if (version_compare(PHP_VERSION, $minimum_php_version) >= 0) {
-		return true;
-	}else{
-		debug_log(__METHOD__
-			." This PHP version (".PHP_VERSION.") is not supported ! Please update your PHP to $minimum_php_version or higher ASAP "
-			, logger::ERROR
-		);
-		return false;
+	if (defined('DEDALO_BINARY_BASE_PATH')) {
+		return DEDALO_BINARY_BASE_PATH;
 	}
-}//end test_php_version_supported
+
+	switch (PHP_OS) {
+		case 'Darwin':
+			$binary_base_path = '/opt/homebrew/bin';
+			break;
+		case 'Linux':
+		default:
+			$binary_base_path = '/usr/bin';
+			break;
+	}
+
+	return $binary_base_path;
+}//end get_base_binary_path
 
 
 
@@ -2400,7 +2407,7 @@ function get_cookie_properties() : object {
 * 	true when directory already exists or is created successfully
 * 	false when not exists and is not possible to create it for any reason
 */
-function create_directory(string $folder_path, int $create_dir_permissions=0750) {
+function create_directory(string $folder_path, int $create_dir_permissions=0750) : bool {
 
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
@@ -2489,7 +2496,6 @@ function check_url( string $url ) : bool {
 		$headers = get_headers($url, false, $context);
 
 		$first_line = $headers[0] ?? '';
-			dump($first_line, ' first_line ++ '.to_string());
 
 		if ( strpos($first_line, ' 200 ')!==false) {
 			return true;

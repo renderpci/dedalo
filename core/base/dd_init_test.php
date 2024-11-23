@@ -1,7 +1,10 @@
 <?php
-# SYSTEM TEST
-# Verify the integrity of the system (usually in the boot sequence or login)
-# Checks for the existence of items / directories / permissions needed to run Dédalo
+/**
+* SYSTEM TEST
+* Verify the integrity of the system (usually in the boot sequence or login)
+* Checks for the existence of items / directories / permissions needed to run Dédalo
+*/
+
 
 
 // default values
@@ -28,13 +31,13 @@
 
 // PHP VERSION
 	$minimum = '8.1.0';
-	if (test_php_version_supported()===false) {
+	if (system::test_php_version_supported()===false) {
 
 		$init_response->msg[]	= 'Error. This php version '.PHP_VERSION.' is not supported by Dédalo. Update PHP to '.$minimum.' or higher ASAP';
 		$init_response->errors	= true;
 		debug_log(__METHOD__
 			.' '.implode(PHP_EOL, $init_response->msg). PHP_EOL
-			.' test_php_version_supported: ' . to_string( test_php_version_supported() ) . PHP_EOL
+			.' test_php_version_supported: ' . to_string( system::test_php_version_supported() ) . PHP_EOL
 			.' PHP_VERSION: ' . PHP_VERSION . PHP_EOL
 			.' minimum: ' . $minimum
 			, logger::ERROR
@@ -63,116 +66,66 @@
 // SESSIONS
 	if (defined('DEDALO_SESSIONS_PATH')) {
 		// verify directory already exists
-		$dedalo_sessions_path_folder_path = defined('DEDALO_SESSIONS_PATH')
-			? DEDALO_SESSIONS_PATH
-			: @session_save_path();
-		$dir_exists = create_directory($dedalo_sessions_path_folder_path, 0750);
+		$dir_exists = system::check_sessions_path();
 		if( !$dir_exists ){
 			die("Unable to write sessions. Review your permissions for sessions directory path (php user: $php_user)");
 		}
 		// clean old files (sessions and caches)
-		$cache_life	= 4 * 24 * 60 * 60; // caching time, in seconds - 2 days -
-		$files		= glob(DEDALO_SESSIONS_PATH . '/*');
-		foreach($files as $file) {
-
-			// time in seconds (number of seconds since the Unix Epoch (January 1 1970 00:00:00 GMT))
-			$date_now		= time();
-			$date_modified	= filemtime($file);
-
-			if ( ($date_now - $date_modified) >= $cache_life ) {
-				$deleted = unlink($file);
-				if( !$deleted ) {
-					debug_log(__METHOD__
-						. " Error deleting cache file " . PHP_EOL
-						. ' file: ' . to_string($file)
-						, logger::ERROR
-					);
-					continue;
-				}
-
-				debug_log(__METHOD__
-					. " Deleted cache file " . PHP_EOL
-					. ' file: ' . to_string($file) .PHP_EOL
-					. ' date_modified: ' . to_string($date_modified)
-					, logger::WARNING
-				);
-			}
-		}
+		system::delete_old_sessions_files();
 	}
 
 
 
 // BACKUPS
 	// Target folder exists test
-	$folder_path = DEDALO_BACKUP_PATH;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, $create_dir_permissions, true)) {
-
-			$init_response->msg[]	= "Error on read or create backups directory. Permission denied (php user: $php_user)";
-			$init_response->errors	= true;
-			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' folder_path: ' .$folder_path . PHP_EOL
-				.' create_dir_permissions: ' . to_string($create_dir_permissions)
-				, logger::ERROR
-			);
-
-			return $init_response;
-		}
+	// Note that this directory contains various types of backups:
+	// /db, /ontology, /mysql, /temp
+	if (!system::check_backup_path()) {
+		$init_response->msg[]	= "Error on read or create backups directory. (php user: $php_user)";
+		$init_response->errors	= true;
 		debug_log(__METHOD__
-			." CREATED DIR: $folder_path  "
-			, logger::DEBUG
+			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' folder_path: ' . DEDALO_BACKUP_PATH
+			, logger::ERROR
 		);
+
+		return $init_response;
 	}
 
 
 
-// BACKUP_PATH_ONTOLOGY
+// DEDALO_BACKUP_PATH_ONTOLOGY
 	// Target folder exists test
+	// Note that this directory is inside DEDALO_BACKUP_PATH
 	$folder_path = DEDALO_BACKUP_PATH_ONTOLOGY;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, $create_dir_permissions, true)) {
-
-			$init_response->msg[]	= "Error on read or create backup_path_ontology directory. Permission denied (php user: $php_user)";
-			$init_response->errors	= true;
-			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' folder_path: ' .$folder_path . PHP_EOL
-				.' create_dir_permissions: ' . to_string($create_dir_permissions)
-				, logger::ERROR
-			);
-
-			return $init_response;
-		}
+	if (!system::check_directory($folder_path)) {
+		$init_response->msg[]	= "Error on read or create backup_path_ontology directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
 		debug_log(__METHOD__
-			." CREATED DIR: $folder_path  "
-			, logger::DEBUG
+			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' folder_path: ' . $folder_path
+			, logger::ERROR
 		);
+
+		return $init_response;
 	}
 
 
 
 // BACKUPS_ONTOLOGY_DOWNLOAD_DIR
 	// Target folder exists test
+	// Normally is DEDALO_BACKUP_PATH_ONTOLOGY . '/download'
 	$folder_path = ONTOLOGY_DOWNLOAD_DIR;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, 0700, true)) {
-
-			$init_response->msg[]	= "Error on read or create ONTOLOGY_DOWNLOAD_DIR directory. Permission denied (php user: $php_user)";
-			$init_response->errors	= true;
-			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' folder_path: ' .$folder_path . PHP_EOL
-				.' create_dir_permissions: ' . to_string($create_dir_permissions)
-				, logger::ERROR
-			);
-
-			return $init_response;
-		}
+	if (!system::check_directory($folder_path)) {
+		$init_response->msg[]	= "Error on read or create ONTOLOGY_DOWNLOAD_DIR directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
 		debug_log(__METHOD__
-			." CREATED DIR: $folder_path  "
-			, logger::DEBUG
+			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' folder_path: ' . $folder_path
+			, logger::ERROR
 		);
+
+		return $init_response;
 	}
 
 
@@ -180,52 +133,16 @@
 // BACKUP_TEMP
 	// Target folder exists test
 	$folder_path = DEDALO_BACKUP_PATH_TEMP;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, $create_dir_permissions, true)) {
-
-			$init_response->msg[]	= "Error on read or create backup temp directory. Permission denied (php user: $php_user)";
-			$init_response->errors	= true;
-			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' folder_path: ' .$folder_path . PHP_EOL
-				.' create_dir_permissions: ' . to_string($create_dir_permissions)
-				, logger::ERROR
-			);
-
-			return $init_response;
-		}
+	if (!system::check_directory($folder_path)) {
+		$init_response->msg[]	= "Error on read or create backup temp directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
 		debug_log(__METHOD__
-			." CREATED DIR: $folder_path "
-			, logger::DEBUG
+			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' folder_path: ' .$folder_path
+			, logger::ERROR
 		);
-	}
 
-
-
-// ONTOLOGY_DOWNLOAD_DIR
-	// Target folder exists test
-	if (defined('ONTOLOGY_DOWNLOAD_DIR') && ONTOLOGY_DOWNLOAD_DIR!==false) {
-		$folder_path = ONTOLOGY_DOWNLOAD_DIR;
-
-		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, $create_dir_permissions, true)) {
-
-				$init_response->msg[]	= 'Error on read or create backup ' .ONTOLOGY_DOWNLOAD_DIR. ' directory. Permission denied '."(php user: $php_user)";
-				$init_response->errors	= true;
-				debug_log(__METHOD__
-					."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions)
-					, logger::ERROR
-				);
-
-				return $init_response;
-			}
-			debug_log(__METHOD__
-				." CREATED DIR: $folder_path  "
-				, logger::DEBUG
-			);
-		}
+		return $init_response;
 	}
 
 
@@ -235,24 +152,16 @@
 	$DEDALO_PREFIX_TIPOS = (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 	foreach ($DEDALO_PREFIX_TIPOS as $current_tipo) {
 		$folder_path = DEDALO_EXTRAS_PATH . '/' . $current_tipo;
-		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, $create_dir_permissions, true)) {
-
-				$init_response->msg[]	= "Error on read or create 'extras' directory ($current_tipo). Permission denied (php user: $php_user)";
-				$init_response->errors	= true;
-				debug_log(__METHOD__
-					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions)
-					, logger::ERROR
-				);
-
-				return $init_response;
-			}
+		if (!system::check_directory($folder_path)) {
+			$init_response->msg[]	= "Error on read or create 'extras' directory ($current_tipo). Permission denied (php user: $php_user)";
+			$init_response->errors	= true;
 			debug_log(__METHOD__
-				." CREATED DIR: $folder_path "
-				, logger::DEBUG
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path
+				, logger::ERROR
 			);
+
+			return $init_response;
 		}
 	}
 
@@ -261,24 +170,16 @@
 // MEDIA FOLDER
 	// Target folder exists test
 	$folder_path = DEDALO_MEDIA_PATH;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, $create_dir_permissions,true)) {
-
-			$init_response->msg[]	= "Error on read or create 'media' directory. Permission denied (php user: $php_user)";
-			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' folder_path: ' .$folder_path . PHP_EOL
-				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-				, logger::ERROR
-			);
-
-			return $init_response;
-		}
+	if (!system::check_directory($folder_path)) {
+		$init_response->msg[]	= "Error on read or create 'media' directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
 		debug_log(__METHOD__
-			." CREATED DIR: $folder_path "
-			, logger::DEBUG
+			.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' folder_path: ' .$folder_path
+			, logger::ERROR
 		);
+
+		return $init_response;
 	}
 
 
@@ -289,24 +190,17 @@
 	$ar_folder[] = 'subtitles'; // append subtitles as quality only to force iterate it
 	foreach ($ar_folder as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality;
-		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, $create_dir_permissions, true)) {
-
-				$init_response->msg[]	= "Error on read or create media quality: '$quality' directory. Permission denied (php user: $php_user)";
-				$init_response->errors	= true;
-				debug_log(__METHOD__
-					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-					, logger::ERROR
-				);
-
-				return $init_response;
-			}
+		if (!system::check_directory($folder_path)) {
+			$init_response->msg[]	= "Error on read or create media quality: '$quality' directory. Permission denied (php user: $php_user)";
+			$init_response->errors	= true;
 			debug_log(__METHOD__
-				." CREATED DIR: $folder_path "
-				, logger::DEBUG
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
+				, logger::ERROR
 			);
+
+			return $init_response;
 		}
 	}
 
@@ -318,24 +212,16 @@
 	$ar_quality[] = 'svg'; // append svg as quality only to force iterate it
 	foreach ($ar_quality as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . '/'. $quality;
-		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, $create_dir_permissions, true)) {
-
-				$init_response->msg[]	= "Error on read or create image quality '$quality' directory. Permission denied (php user: $php_user)";
-				$init_response->errors	= true;
-				debug_log(__METHOD__
-					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-					, logger::ERROR
-				);
-
-				return $init_response;
-			}
+		if (!system::check_directory($folder_path)) {
+			$init_response->msg[]	= "Error on read or create image quality '$quality' directory. Permission denied (php user: $php_user)";
+			$init_response->errors	= true;
 			debug_log(__METHOD__
-				." CREATED DIR: $folder_path "
-				, logger::DEBUG
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path
+				, logger::ERROR
 			);
+
+			return $init_response;
 		}
 	}
 
@@ -355,24 +241,17 @@
 			$ar_quality[] = DEDALO_QUALITY_THUMB; // append thumb as quality only to force iterate it
 			foreach ($ar_quality as $quality) {
 				$folder_path = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/'. $quality;
-				if( !is_dir($folder_path) ) {
-					if(!mkdir($folder_path, $create_dir_permissions, true)) {
+				if (!system::check_directory($folder_path)) {
 
-						$init_response->msg[]	= "Error on read or create pdf quality '$quality' directory. Permission denied (php user: $php_user)";
-						$init_response->errors	= true;
-						debug_log(__METHOD__
-							.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-							.' folder_path: ' .$folder_path . PHP_EOL
-							.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-							, logger::ERROR
-						);
-
-						return $init_response;
-					}
+					$init_response->msg[]	= "Error on read or create pdf quality '$quality' directory. Permission denied (php user: $php_user)";
+					$init_response->errors	= true;
 					debug_log(__METHOD__
-						." CREATED DIR: $folder_path "
-						, logger::DEBUG
+						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+						.' folder_path: ' .$folder_path
+						, logger::ERROR
 					);
+
+					return $init_response;
 				}
 			}
 	}
@@ -385,24 +264,17 @@
 	$ar_quality[] = 'posterframe';
 	foreach ($ar_quality as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER . '/'. $quality;
-		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, $create_dir_permissions, true)) {
+		if (!system::check_directory($folder_path)) {
 
-				$init_response->msg[]	= "Error on read or create 3d quality '$quality' directory. Permission denied (php user: $php_user)";
-				$init_response->errors	= true;
-				debug_log(__METHOD__
-					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-					, logger::ERROR
-				);
-
-				return $init_response;
-			}
+			$init_response->msg[]	= "Error on read or create 3d quality '$quality' directory. Permission denied (php user: $php_user)";
+			$init_response->errors	= true;
 			debug_log(__METHOD__
-				." CREATED DIR: $folder_path "
-				, logger::DEBUG
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path
+				, logger::ERROR
 			);
+
+			return $init_response;
 		}
 	}
 
@@ -420,48 +292,34 @@
 
 		// Target folder exists test
 			$folder_path = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER ;
-			if( !is_dir($folder_path) ) {
-				if(!mkdir($folder_path, $create_dir_permissions, true)) {
+			if (!system::check_directory($folder_path)) {
 
-					$init_response->msg[]	= "Error on read or create SVG directory. Permission denied (php user: $php_user)";
-					$init_response->errors	= true;
-					debug_log(__METHOD__
-						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-						.' folder_path: ' .$folder_path . PHP_EOL
-						.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-						, logger::ERROR
-					);
-
-					return $init_response;
-				}
+				$init_response->msg[]	= "Error on read or create SVG directory. Permission denied (php user: $php_user)";
+				$init_response->errors	= true;
 				debug_log(__METHOD__
-					." CREATED DIR: $folder_path "
-					, logger::DEBUG
+					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' folder_path: ' .$folder_path . PHP_EOL
+					, logger::ERROR
 				);
+
+				return $init_response;
 			}
 
 		// quality folders create if not already exists
 			$ar_quality = DEDALO_SVG_AR_QUALITY;
 			foreach ($ar_quality as $quality) {
 				$folder_path = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER . '/'. $quality;
-				if( !is_dir($folder_path) ) {
-					if(!mkdir($folder_path, $create_dir_permissions, true)) {
+				if (!system::check_directory($folder_path)) {
 
-						$init_response->msg[]	= "Error on read or create svg quality '$quality' directory. Permission denied (php user: $php_user)";
-						$init_response->errors	= true;
-						debug_log(__METHOD__
-							.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-							.' folder_path: ' .$folder_path . PHP_EOL
-							.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-							, logger::ERROR
-						);
-
-						return $init_response;
-					}
+					$init_response->msg[]	= "Error on read or create svg quality '$quality' directory. Permission denied (php user: $php_user)";
+					$init_response->errors	= true;
 					debug_log(__METHOD__
-						." CREATED DIR: $folder_path "
-						, logger::DEBUG
+						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+						.' folder_path: ' .$folder_path
+						, logger::ERROR
 					);
+
+					return $init_response;
 				}
 			}
 	}
@@ -472,24 +330,17 @@
 	// Target folder exists test
 	if(defined('DEDALO_HTML_FILES_FOLDER')) {
 		$folder_path = DEDALO_MEDIA_PATH.DEDALO_HTML_FILES_FOLDER;
-		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, $create_dir_permissions, true)) {
+		if (!system::check_directory($folder_path)) {
 
-				$init_response->msg[]	= "Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied (php user: $php_user)";
-				$init_response->errors	= true;
-				debug_log(__METHOD__
-					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-					, logger::ERROR
-				);
-
-				return $init_response;
-			}
+			$init_response->msg[]	= "Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied (php user: $php_user)";
+			$init_response->errors	= true;
 			debug_log(__METHOD__
-				." CREATED DIR: $folder_path "
-				, logger::DEBUG
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path
+				, logger::ERROR
 			);
+
+			return $init_response;
 		}
 	}
 
@@ -499,24 +350,18 @@
 	// Target folder exists test
 	if(defined('DEDALO_IMAGE_WEB_FOLDER')) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . DEDALO_IMAGE_WEB_FOLDER;
-		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, $create_dir_permissions, true)) {
+		if (!system::check_directory($folder_path)) {
 
-				$init_response->msg[]	= "Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied (php user: $php_user)";
-				$init_response->errors	= true;
-				debug_log(__METHOD__
-					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-					, logger::ERROR
-				);
-
-				return $init_response;
-			}
+			$init_response->msg[]	= "Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied (php user: $php_user)";
+			$init_response->errors	= true;
 			debug_log(__METHOD__
-				." CREATED DIR: $folder_path "
-				, logger::DEBUG
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
+				, logger::ERROR
 			);
+
+			return $init_response;
 		}
 	}
 
@@ -526,24 +371,18 @@
 	// Target folder exists test
 	if(defined('DEDALO_TOOL_EXPORT_FOLDER_PATH')) {
 		$folder_path = DEDALO_TOOL_EXPORT_FOLDER_PATH;
-		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, $create_dir_permissions, true)) {
+		if (!system::check_directory($folder_path)) {
 
-				$init_response->msg[]	= "Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied (php user: $php_user)";
-				$init_response->errors	= true;
-				debug_log(__METHOD__
-					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					.' folder_path: ' .$folder_path . PHP_EOL
-					.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-					, logger::ERROR
-				);
-
-				return $init_response;
-			}
+			$init_response->msg[]	= "Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied (php user: $php_user)";
+			$init_response->errors	= true;
 			debug_log(__METHOD__
-				." CREATED DIR: $folder_path "
-				, logger::DEBUG
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
+				, logger::ERROR
 			);
+
+			return $init_response;
 		}
 	}
 
@@ -564,36 +403,36 @@
 
 
 // DEDALO_UPLOAD_TMP_DIR
-	if(!create_directory(
-		DEDALO_UPLOAD_TMP_DIR,
-		$create_dir_permissions
-	)) {
+	$folder_path = DEDALO_UPLOAD_TMP_DIR;
+	if (!system::check_directory($folder_path)) {
+
 		$init_response->msg[]	= "Error on read or create DEDALO_UPLOAD_TMP_DIR directory. Permission denied (php user: $php_user)";
 		$init_response->errors	= true;
+
 		return $init_response;
 	}
 
 
 
 // IMPORT DIR
-	if(!create_directory(
-		DEDALO_MEDIA_PATH . '/import',
-		$create_dir_permissions
-	)) {
+	$folder_path = DEDALO_MEDIA_PATH . '/import';
+	if (!system::check_directory($folder_path)) {
+
 		$init_response->msg[]	= "Error on read or create import directory. Permission denied (php user: $php_user)";
 		$init_response->errors	= true;
+
 		return $init_response;
 	}
 
 
 
 // IMPORT HISTORY DIR
-	if(!create_directory(
-		DEDALO_MEDIA_PATH . '/import/history',
-		$create_dir_permissions
-	)) {
+	$folder_path = DEDALO_MEDIA_PATH . '/import/history';
+	if (!system::check_directory($folder_path)) {
+
 		$init_response->msg[]	= "Error on read or create import history directory. Permission denied (php user: $php_user)";
 		$init_response->errors	= true;
+
 		return $init_response;
 	}
 
@@ -627,60 +466,35 @@
 
 
 // PGPASS FILE
-	$php_user_home 	= getenv('HOME'); //$_SERVER['HOME'];
-	$path 			= $php_user_home . '/.pgpass';
-	if (!file_exists($path)) {
+	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===true) {
+		if (!system::check_pgpass_file()) {
 
-		$init_response->msg[]	= 'Warning: File .pgpass not found at: '.$path . PHP_EOL . ' Check your .pgpass file into php user home dir';
-		$init_response->errors	= true;
-		debug_log(__METHOD__
-			.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-			.' php_user_home: ' . to_string($php_user_home) . PHP_EOL
-			.' path: ' . to_string($path) . PHP_EOL
-			, logger::ERROR
-		);
+			$php_user_home	= getenv('HOME'); //$_SERVER['HOME'];
+			$path			= $php_user_home . '/.pgpass';
 
-		// return $init_response; // continue here, don't stop the flow, only notify error
-
-	}else{
-
-		$file_permissions = substr(sprintf('%o', fileperms($path)), -4);
-		if ($file_permissions!='0600') {
-			// Try to change it
-				if(false===chmod($path, 0600)){
-
-					$init_response->msg[]	= 'Warning: File .pgpass permissions is : '.$file_permissions . PHP_EOL . ' Unable to automatic set. Check manually your .pgpass file permissions and set to: 0600';
-					$init_response->errors	= true;
-					debug_log(__METHOD__
-						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-						.' file_permissions: ' . to_string($file_permissions)
-						, logger::ERROR
-					);
-
-					// return $init_response; // continue here, don't stop the flow, only notify error
-
-				}else{
-					debug_log(__METHOD__
-						." Changed permissions of file .pgpass to 0600 "
-						, logger::ERROR
-					);
-				}
+			$init_response->msg[]	= 'Warning: Invalid .pgpass file' . PHP_EOL . ' Check your .pgpass file into php user home dir';
+			$init_response->errors	= true;
+			debug_log(__METHOD__
+				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' php_user_home: ' . to_string($php_user_home) . PHP_EOL
+				.' path: ' . to_string($path) . PHP_EOL
+				, logger::ERROR
+			);
+			// Do not stop here. Only inform to user
 		}
 	}
 
 
 
 // IMAGE MAGICK
-	#exec(MAGICK_PATH. "convert -version", $out, $rcode); // Try to get ImageMagick "convert" program version number.
-	#if ($rcode!==0) $init_response->msg .= trim("Error on system test. ImageMagick lib not found");
-	$image_magick = shell_exec('command -v '.MAGICK_PATH.'convert');
-	if (empty($image_magick)) {
+	$imagemagick_version = ImageMagick::get_version();
+	if (empty($imagemagick_version)) {
 
 		$init_response->msg[]	= 'Error on system test. ImageMagick lib not found. Review your config path';
 		$init_response->errors	= true;
 		debug_log(__METHOD__
 			. "  ".implode(PHP_EOL, $init_response->msg) .PHP_EOL
-			. 'path: ' . MAGICK_PATH
+			. 'path: ' . ImageMagick::get_imagemagick_installed_path()
 			, logger::ERROR
 		);
 
@@ -690,14 +504,31 @@
 
 
 // FFMPEG
-	$ffmpeg = trim(shell_exec('command -v '.DEDALO_AV_FFMPEG_PATH));
-	if (empty($ffmpeg)) {
+	$ffmpeg_version = Ffmpeg::get_version();
+	if (empty($ffmpeg_version)) {
 
 		$init_response->msg[]	= 'Error on system test. ffmpeg lib not found';
 		$init_response->errors	= true;
 		debug_log(__METHOD__
 			."  ".implode(PHP_EOL, $init_response->msg) .PHP_EOL
-			.' DEDALO_AV_FFMPEG_PATH: ' . DEDALO_AV_FFMPEG_PATH
+			.' ffmpeg_path: ' . $ffmpeg_path
+			, logger::ERROR
+		);
+
+		return $init_response;
+	}
+
+
+
+// FFPROBE
+	$ffprove_version = Ffmpeg::get_ffprove_version();
+	if (empty($ffprove_version)) {
+
+		$init_response->msg[]	= 'Error on system test. ffprobe lib not found';
+		$init_response->errors	= true;
+		debug_log(__METHOD__
+			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' ffprove_path: ' . Ffmpeg::get_ffprove_installed_path()
 			, logger::ERROR
 		);
 
@@ -715,22 +546,6 @@
 		debug_log(__METHOD__
 			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
 			.' DEDALO_AV_FASTSTART_PATH: ' . DEDALO_AV_FASTSTART_PATH
-			, logger::ERROR
-		);
-
-		return $init_response;
-	}
-
-
-// FFPROBE
-	$ffprobe = trim(shell_exec('command -v '.DEDALO_AV_FFPROBE_PATH));
-	if (empty($ffprobe)) {
-
-		$init_response->msg[]	= 'Error on system test. ffprobe lib not found';
-		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
-			.' DEDALO_AV_FFPROBE_PATH: ' . DEDALO_AV_FFPROBE_PATH
 			, logger::ERROR
 		);
 
@@ -780,7 +595,7 @@
 
 
 // CURL
-	if(!function_exists('curl_init') || !function_exists('curl_version')) {
+	if (!system::check_curl()) {
 
 		$init_response->msg[]	= 'Error Processing Request. Curl: function "curl_init" not found. Please review your PHP configuration';
 		$init_response->errors	= true;
@@ -827,10 +642,10 @@
 
 			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 
-			$current_query 	= PHP_EOL.sanitize_query("
+			$current_query = PHP_EOL.sanitize_query("
 				CREATE TABLE IF NOT EXISTS public.matrix_test
 				(
-				   LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
+					LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
 				)
 				WITH (OIDS = FALSE);
 				CREATE SEQUENCE IF NOT EXISTS matrix_test_id_seq;
@@ -901,23 +716,17 @@
 
 		// create directory if is not already created
 			if (!empty($files_path)) {
-				if ( !is_dir($files_path) ) {
-					if(!mkdir($files_path, 0750, true)) {
-						debug_log(__METHOD__
-							." Error creating files_path path: " . $files_path
-							, logger::ERROR
-						);
+				if (!system::check_directory($files_path)) {
 
-						$init_response->msg[]	= 'Warning: Unable to create cache dir: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
-						$init_response->errors	= true;
-						debug_log(__METHOD__
-							."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
-							.' files_path: ' . $files_path
-							, logger::ERROR
-						);
+					$init_response->msg[]	= 'Warning: Unable to create cache dir: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
+					$init_response->errors	= true;
+					debug_log(__METHOD__
+						."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+						.' files_path: ' . $files_path
+						, logger::ERROR
+					);
 
-						return $init_response;
-					}
+					return $init_response;
 				}
 			}
 
@@ -985,63 +794,7 @@
 // temporal chunks remove. Delete possible broken upload files as chunks
 	if (defined('DEDALO_UPLOAD_SERVICE_CHUNK_FILES') && DEDALO_UPLOAD_SERVICE_CHUNK_FILES!==false) {
 		try {
-			$ar_folder = DEDALO_AV_AR_QUALITY;
-			foreach ($ar_folder as $quality) {
-
-				$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/'. $quality;
-
-				// get chunk files (.blob)
-					$files = glob( $folder_path.'/*.blob' );
-					if (empty($files)) {
-						continue;
-					}
-
-				// folder_path_to_delete
-					$folder_path_to_delete = $folder_path .'/to_delete';
-					if( !is_dir($folder_path_to_delete) ) {
-						if(!mkdir($folder_path_to_delete, 0755, true)) {
-							debug_log(__METHOD__
-								." Error creating folder_path_to_delete path: " . $folder_path_to_delete
-								, logger::ERROR
-							);
-						}
-						debug_log(__METHOD__
-							." Created dir: ".$folder_path_to_delete
-							, logger::WARNING
-						);
-					}
-
-				// iterate found files checking the date
-					$max_preservation_hours = 12;
-					foreach ($files as $file) {
-
-						$modification_time_secs	= filemtime($file);
-						$current_time_secs		= time();
-						$difference_in_hours	= round( ($current_time_secs/3600) - round($modification_time_secs/3600), 0 );
-						if ($difference_in_hours >= $max_preservation_hours) {
-
-							$target = $folder_path_to_delete . '/' . pathinfo($file)['basename'];
-
-							// move file to directory 'to_delete'
-							$rename_result	= rename($file, $target);
-							if ($rename_result===false) {
-								debug_log(__METHOD__
-									. " Error on move file " . PHP_EOL
-									. ' file: ' .$file . PHP_EOL
-									. ' target: ' .$target
-									, logger::ERROR
-								);
-							}else{
-								debug_log(__METHOD__
-									. " Moved file successfully " . PHP_EOL
-									. ' file:   ' . $file . PHP_EOL
-									. ' target: ' . $target
-									, logger::DEBUG
-								);
-							}
-						}
-					}
-			}
+			system::remove_old_chunk_files();
 		} catch (Exception $e) {
 			debug_log(__METHOD__
 				. " Error on clean CHUNK_FILES " . PHP_EOL

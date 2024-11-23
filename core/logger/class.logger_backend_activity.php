@@ -371,4 +371,5 @@ class logger_backend_activity extends logger_backend {
 	}//end log_message
 
 
+
 }//end class logger_backend_activity

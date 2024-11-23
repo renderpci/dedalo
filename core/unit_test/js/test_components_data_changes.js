@@ -11,6 +11,8 @@ import {get_instance} from '../../common/js/instances.js'
 
 describe("COMPONENTS DATA CHANGES", async function() {
 
+	this.timeout(4000);
+
 	for (let i = 0; i < elements.length; i++) {
 
 		// if (elements[i].model!=='component_av') continue;

@@ -82,7 +82,9 @@ update_data_version.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Custom build
+* Custom build overwrites common widget method
+* @param bool autoload = false
+* @return bool
 */
 update_data_version.prototype.build = async function(autoload=false) {
 

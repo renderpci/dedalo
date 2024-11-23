@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -41,7 +42,7 @@ render_area_graph.prototype.list = async function(options) {
 		self.ts_object.linker = self.linker // usually a portal component instance
 
 		// parse data
-		const data = self.data.find(item => item.tipo==='dd100')
+		const data = self.data.find(item => item.tipo==='dd100') || {}
 
 	// content_data
 		if (render_level==='content') {
@@ -64,13 +65,15 @@ render_area_graph.prototype.list = async function(options) {
 					}
 
 				// render. parse_search_result with ts_object
-					setTimeout(function(){
-						self.ts_object.parse_search_result(
-							data.ts_search.result, // object data
-							null, // HTMLElement main_div
-							false // bool is_recursion
-						)
-					}, 1)
+					dd_request_idle_callback(
+						() => {
+							self.ts_object.parse_search_result(
+								data.ts_search.result, // object data
+								null, // HTMLElement main_div
+								false // bool is_recursion
+							)
+						}
+					)
 
 				return content_data
 
@@ -144,9 +147,9 @@ const render_content_data = function(self) {
 		})
 
 	// elements
-		const data				= self.data.find(item => item.tipo==='dd100')
-		const ts_nodes			= data.value
-		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy')
+		const data				= self.data.find(item => item.tipo==='dd100') || {}
+		const ts_nodes			= data.value || []
+		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy') || []
 
 	// typology_nodes. sort typologies by order field
 		const typology_nodes	= ts_nodes.filter(node => node.type==='typology' )

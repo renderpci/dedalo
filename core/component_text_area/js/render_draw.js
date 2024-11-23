@@ -242,20 +242,23 @@ export const render_draw = async function(options) {
 			class_name		: 'layer_selector_container',
 			parent			: body
 		})
-			const layer_selector_label = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'label layer_selector_label',
-				inner_html		: get_label.set_img_layer || 'Set image layer',
-				parent			: layer_selector_container
-			})
-
+		// layer_selector_label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label layer_selector_label',
+			inner_html		: get_label.set_img_layer || 'Set image layer',
+			parent			: layer_selector_container
+		})
+		// layer_selector_node
 		const layer_selector_node = render_layer_selector({
 			self		: self,
 			data_tag	: selected_tag,
 			text_editor	: text_editor,
 			callback	: set_layer_selected
 		})
-		layer_selector_container.appendChild(layer_selector_node)
+		if (layer_selector_node) {
+			layer_selector_container.appendChild(layer_selector_node)
+		}
 
 	// footer
 		const footer = ui.create_dom_element({

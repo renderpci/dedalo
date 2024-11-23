@@ -152,23 +152,11 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// register_tools *
-			$tools_files_list = tools_register::get_tools_files_list();
-			$need_update = array_reduce($tools_files_list, function ($carry, $c_tool) {
-				return $carry || ($c_tool->version !== $c_tool->installed_version);
-			}, false);
 			$item = new stdClass();
 				$item->id		= 'register_tools';
-				$item->class	= $need_update===false ? 'success' : 'danger';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('registrar_herramientas');
-				$item->value	= (object)[
-					'datalist' => $tools_files_list
-				];
-				// verify tipo 'dd1644' Developer added Ontology field 09-10-2023
-				if (empty(RecordObj_dd::get_modelo_name_by_tipo('dd1644',true))) {
-					$item->value->errors[] = 'Your Ontology is outdated. Term \'dd1644\' do not exists';
-				}
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -330,7 +318,7 @@ class area_maintenance extends area_common {
 		// dedalo_api_test_environment *
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
-				$item->class	= 'width_100';
+				$item->class	= 'green fit width_100';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
@@ -341,7 +329,7 @@ class area_maintenance extends area_common {
 		// sqo_test_environment *
 			$item = new stdClass();
 				$item->id		= 'sqo_test_environment';
-				$item->class	= 'blue width_100';
+				$item->class	= 'blue fit width_100';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
@@ -393,30 +381,14 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// php_user *
-			$info = (function(){
-				try {
-					if (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) {
-						$info = posix_getpwuid(posix_geteuid());
-					}else{
-						$name			= get_current_user();
-						$current_user	= trim(shell_exec('whoami'));
-						$info = [
-							'name'			=> $name,
-							'current_user'	=> $current_user
-						];
-					}
-				} catch (Exception $e) {
-					debug_log(__METHOD__." Exception:".$e->getMessage(), logger::ERROR);
-				}
-				return $info;
-			})();
+			$php_user_info = system::get_php_user_info();
 			$item = new stdClass();
 				$item->id		= 'php_user';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'PHP USER';
 				$item->value	= (object)[
-					'info' => $info
+					'info' => $php_user_info
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -463,11 +435,25 @@ class area_maintenance extends area_common {
 		// php_info *
 			$item = new stdClass();
 				$item->id		= 'php_info';
+				$item->class	= 'violet fit width_100';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'PHP INFO';
 				$item->value	= (object)[
 					'src' => DEDALO_CORE_URL.'/area_maintenance/php_info.php'
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+		// system_info *
+			$item = new stdClass();
+				$item->id		= 'system_info';
+				$item->type		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= 'SYSTEM INFO';
+				$item->class	= 'width_100';
+				$item->value	= (object)[
+					'src' => DEDALO_CORE_URL.'/area_maintenance/system_info.php'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -1596,20 +1582,24 @@ class area_maintenance extends area_common {
 					break;
 
 				// Disable (Experimental with serious security implications)
-				// case 'DEDALO_NOTIFICATION_CUSTOM':
-				// 	// string|boolean
-				// 	$ar_allow_type = ['boolean','string'];
-				// 	if (!in_array($value_type, $ar_allow_type)) {
-				// 		$response->msg = 'Error. invalid value type. Only allow boolean|string';
-				// 		return $response;
-				// 	}
-				// 	if (is_string($value)) {
-				// 		$msg = safe_xss($value);
-				// 		$write_value = '["msg" => "'.$msg.'", "class_name" => "warning"]';
-				// 	}else{
-				// 		$write_value = 'false'; // no true is expected
-				// 	}
-				// 	break;
+				case 'DEDALO_NOTIFICATION_CUSTOM':
+					if (logged_user_id()!==DEDALO_SUPERUSER) {
+						$response->msg = 'Error. only root user can set congif_core';
+						return $response;
+					}
+					// string|boolean
+					$ar_allow_type = ['boolean','string'];
+					if (!in_array($value_type, $ar_allow_type)) {
+						$response->msg = 'Error. invalid value type. Only allow boolean|string';
+						return $response;
+					}
+					if (is_string($value)) {
+						$msg = safe_xss($value);
+						$write_value = '["msg" => "'.trim($msg).'", "class_name" => "warning"]';
+					}else{
+						$write_value = 'false'; // no true is expected
+					}
+					break;
 
 				default:
 					$response->msg = 'Error. Invalid name';
@@ -1773,6 +1763,48 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end set_recovery_mode
+
+
+
+	/**
+	* SET_NOTIFICATION
+	* Writes the given notification text to config_core
+	* Note that this custom notifications are stored in core_config file
+	* and read from API update_lock_components_state on every component activation/deactivation
+	* @param object $options
+	* {
+	* 	value : string
+	* }
+	* @return object $response
+	*/
+	public static function set_notification( object $options ) : object {
+
+		// options
+			$value = $options->value;
+
+		// check value type
+			if (!is_string($value) && !is_bool($value)) {
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed. value is not string or bool';
+					$response->errors	= [];
+				return $response;
+			}
+
+		// set config_core constant value
+		area_maintenance::set_congif_core((object)[
+			'name'	=> 'DEDALO_NOTIFICATION_CUSTOM',
+			'value'	=> $value
+		]);
+
+		$response = new stdClass();
+			$response->result	= true;
+			$response->msg		= 'OK. Request done successfully';
+			$response->errors	= [];
+
+
+		return $response;
+	}//end set_notification
 
 
 
@@ -2092,6 +2124,43 @@ class area_maintenance extends area_common {
 
 
 	/**
+	* REBUILD_LANG_FILES
+	* Re-write label lang JS files and deletes the existing lang cache files
+	* It is called from 'Update Ontology' widget
+	* @param object $options
+	* @return object $response
+	*/
+	public static function rebuild_lang_files( object $options ) : object {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
+
+		// write_lang_file
+			$ar_langs = DEDALO_APPLICATION_LANGS;
+			foreach ($ar_langs as $lang => $label) {
+				$result = backup::write_lang_file($lang);
+				if ($result!==true) {
+					$response->errors[] = 'Failed write lang file: ' .$lang;
+				}
+			}
+
+		// response
+			if(count($response->errors)===0) {
+				$response->result	= true;
+				$response->msg		= 'OK. Request done successfully';
+				$response->updated	= $ar_langs;
+			}
+
+
+		return $response;
+	}//end rebuild_lang_files
+
+
+
+	/**
 	* JER_DD_TO_MATRIX_ONTOLOGY
 	* Is called from area_maintenence widget 'jer_dd_to_matrix_ontology' across dd_area_maintenance::class_request
 	* Connect with master server, download ontology files and update local DDBB and lang files
@@ -2218,7 +2287,7 @@ class area_maintenance extends area_common {
 
 	/**
 	* CREATE_JER_DD_RECOVERY
-	* Creates (delete previous if already exists) the recovery table
+	* Creates (delete previous if already exists) the recovery table 'jer_dd_recovery'
 	* containing only 'dd' tld for use in 'recovery_mode'
 	* Source file is a SQL string file located at /dedalo/install/db/jer_dd_recovery.sql
 	* @return object $response

@@ -93,17 +93,41 @@
 
 			&.danger {
 				>.widget_label {
+					transition: background-color 300ms ease-in-out;
 					background-color: @color_danger;
 				}
 			}
 
 			&.blue {
-				background-color: @color_blue;
 				>.widget_label {
 					background-color: #3070d8;
 				}
 				>.widget_body {
 					background-color: @color_grey_light;
+				}
+			}
+
+			&.green {
+				>.widget_label {
+					background-color: #21984b;
+				}
+				>.widget_body {
+					background-color: #c0e4cd;
+				}
+			}
+
+			&.violet {
+				>.widget_label {
+					background-color: #777bb3;
+				}
+				>.widget_body {
+					background-color: #9999cc;
+				}
+			}
+
+			&.fit {
+				>.widget_body {
+					padding: 0px;
 				}
 			}
 
@@ -132,7 +156,7 @@
 
 			// body
 			>.widget_body {
-				padding: 1em;
+				padding: 1rem;
 				background-color: #fce8d2;
 				min-height: 9.5rem;
 				flex-grow: 1; // grow vertical to fill
@@ -298,13 +322,12 @@
 					// button eraser
 					.eraser {
 						position: absolute;
-						right: 0px;
-						top: 0px;
+						right: 1rem;
+						top: 1rem;
 						z-index: 1;
 					}
 				}//end .body_response
 			}//end .widget_body
-
 
 			// generic styles
 			.info_text {
@@ -318,628 +341,24 @@
 			.comment {
 				color: @color_grey_darken;
 			}
-
-			&#make_backup {
-
-				.button_submit {
-					margin-top: 0.75rem;
-				}
-
-				.body_response {
-					.backup_files_info {
-						margin: 0.5rem;
-						margin-top: 0px;
-					}
-				}
-
-				.backup_toggle_button {
-					padding: 0.5rem;
-					cursor: pointer;
-
-					&:active {
-						opacity: 0.5;
-					}
-				}
-			}//end make_backup
-
-			&#move_tld {
-
-				.file_container {
-					display: flex;
-					flex-wrap: wrap;
-					align-items: center;
-					justify-content: space-between;
-					margin-top: 0.25rem;
-					margin-bottom: 0.25rem;
-					border-bottom: 1px solid #dad0c5;
-
-					>.label {
-						display: flex;
-						align-items: center;
-						height: 2rem;
-						margin-top: 1px;
-						cursor: pointer;
-
-						&.selected {
-							font-weight: 400;
-							color: black;
-						}
-
-						>input {
-							cursor: pointer;
-						}
-					}
-
-					// arrow
-					>.show_file_content {
-						cursor: pointer;
-						padding-right: 1.5rem;
-					}
-					>.file_content_container {
-						width: 100%;
-						z-index: 0;
-					}
-				}
-			}//end move_tld
-
-			&#sqo_test_environment, &#dedalo_api_test_environment {
-				flex: 1 1 100%;
-
-				.editor_json_container {
-					display: block;
-					height: 50vh;
-					min-height: 450px;
-
-					.jsoneditor {
-						z-index: 1;
-					}
-				}
-
-				>.widget_body {
-					padding: 0px;
-
-					.button_submit {
-						margin: 0.25rem;
-					}
-
-					>.body_info {
-						padding: 0px;
-					}
-
-					>.body_response {
-						>div {
-							white-space: pre-wrap;
-							padding: 1.2rem;
-							line-height: 1.1rem;
-							background-color: aliceblue;
-							font-family: monospace;
-						}
-					}
-				}
-			}//end search_query_object_test_environment
-
-			&#dedalo_api_test_environment {
-
-				>.widget_label {
-					background-color: #21984b;
-				}
-				>.widget_body {
-					background-color: #c0e4cd;
-				}
-				.jsoneditor-menu {
-					background-color: #21984b; // green instead default blue
-				}
-			}//end dedalo_api_test_environment
-
-			&#sqo_test_environment {
-				>.widget_body {
-					background-color: #cbdcf7;
-				}
-				.jsoneditor-menu {
-					background-color: #3170d8; // green instead default blue
-				}
-			}
-
-			&#unit_test {
-
-				.long_process_container {
-					margin-bottom: 1.25rem;
-
-					.info_text {
-						margin-left: 0.5rem;
-						margin-right: 0.5rem;
-					}
-
-					.input_update_rate {
-						width: 4rem;
-						text-align: center;
-					}
-
-					.long_process_response {
-						margin-top: 1rem;
-					}
-				}
-			}
-
-			&#register_tools {
-
-				.tool_item {
-					display: grid;
-					grid-template-columns: 1.2fr 1.1fr 3rem 4rem 1.5fr;
-					gap: 0.5rem;
-					line-height: 1.1rem;
-					border-bottom: 1px solid @color_grey_dark;
-					margin-bottom: 0.25rem;
-					padding-bottom: 0.25rem;
-
-					&.header {
-						color: #000;
-						padding: 0.25rem;
-						padding-left: 0;
-						font-weight: 400;
-
-						.tool_warning {
-							color: unset;
-						}
-					}
-
-					.tool_name {
-						word-break: break-all;
-					}
-					.tool_version {
-						text-align: right;
-					}
-					.tool_installed_version {
-						text-align: right;
-					}
-					.developer {
-						word-break: break-all;
-					}
-					.tool_warning {
-						color: @color_orange_dedalo;
-					}
-				}
-
-				// errors
-				.info_text {
-					padding: 1rem;
-					border-radius: 4px;
-					margin-top: 1rem;
-				}
-			}//end register_tools
-
-			&#php_info {
-				flex: 1 1 100%;
-				background-color: #9999cc;
-
-				>.widget_label {
-					background-color: #777bb3;
-				}
-
-				>.widget_body {
-					padding: 0px;
-
-					>.body_info {
-						height: 100%;
-						padding: 0px;
-
-						>iframe.php_info_iframe {
-							margin: 0px;
-							padding: 0px;
-							width: 100%;
-							min-height: 100vh;
-						}
-					}
-				}
-			}//end php_info
-
-			&#update_ontology {
-
-			}//end &#update_ontology
-
-			&#add_hierarchy {
-
-				.description {
-					line-height: 1.1rem;
-					padding-bottom: 0.5rem;
-				}
-
-				.hierarchy_container {
-					padding-top: 1rem;
-					padding-bottom: 1rem;
-				}
-
-				.typology_label {
-					font-size: 1.3rem;
-					text-align: center;
-					padding: 0;
-					border-bottom: 0.1rem #676463 solid;
-				}
-
-				// hierarchies_import_block
-				.hierarchy_ul {
-					padding-top: 1rem;
-					padding-bottom: 1rem;
-					padding-left: 1.5rem;
-					display: grid;
-					grid-template-columns: repeat(6, 1fr);
-					gap: 0.25rem;
-
-					@media screen and (max-width: @width_break_point_1) {
-						grid-template-columns: repeat(4, 1fr);
-					}
-					@media screen and (min-width: 2000px) {
-						grid-template-columns: repeat(8, 1fr);
-					}
-				}
-
-				.hierarchy_label {
-					cursor: pointer;
-					line-height: 1.5rem;
-					margin-bottom: 2px;
-					padding: 0px;
-					padding-right: 0.75rem;
-					display: inline-block;
-					align-items: center;
-
-					&:hover {
-						box-shadow: 0px 1px 0px #e5e5e5;
-					}
-
-					>.hierarchy_checkbox {
-						vertical-align: text-bottom;
-						line-height: 1rem;
-						height: 1rem;
-						width: 1rem;
-						margin: 0px;
-						margin-right: 0.5rem;
-						margin-left: -1.5rem;
-					}
-
-					>.active_hierarchy {
-						color: @color_green_success;
-						font-weight: 800;
-					}
-				}
-
-				.import_hierarchies_button {
-					background-color: white;
-					color: black;
-				}
-
-				.msg {
-					position: relative;
-					padding: 2rem;
-
-					.spinner {
-						top: 0px;
-					}
-				}
-
-				.button_refresh {
-					padding: 1rem;
-					padding-top: 0.25rem;
-					padding-bottom: 0.25rem;
-					float: right;
-				}
-			}//end &#add_hierarchy
-
-			&#counters_status {
-
-				.counters_total {
-					padding-bottom: 1rem;
-				}
-
-				.errors_container {
-					display: block;
-					padding: 0.66rem;
-					color: @color_danger;
-					font-weight: 500;
-					line-height: 1.1rem;
-
-					--icon-path : url('../../../core/themes/default/icons/warning.svg');
-					&:before {
-						background-color: @color_danger;
-						content: ' ';
-						display: inline-block;
-						height: 1.5em;
-						width: 1.5em;
-						margin-right: 0.5rem;
-						opacity: 1;
-						vertical-align: bottom;
-						// .fn_add_mask(@icon_name);
-						-webkit-mask-image: var(--icon-path);
-								mask-image: var(--icon-path);
-						-webkit-mask-size: contain;
-								mask-size: contain;
-						-webkit-mask-repeat: no-repeat;
-								mask-repeat: no-repeat;
-						-webkit-mask-position: center;
-								mask-position: center;
-
-						@media screen and (max-width: @width_break_point_1) {
-							margin-right: 0px;
-						}
-					}
-
-					>.error_pre {
-						background-color: unset;
-					}
-				}
-
-				.datalist_container {
-
-					.datalist_item_container {
-						display: grid;
-						grid-template-columns: 10rem auto 8rem 8rem 8rem 8rem;
-						align-items: center;
-						gap: 0.5rem;
-						line-height: 1.1rem;
-						border-bottom: 1px solid @color_grey_dark;
-						margin-bottom: 0.25rem;
-						padding-bottom: 0.25rem;
-
-						&.header {
-							color: #000;
-							padding: 0.25rem;
-							padding-left: 0;
-							font-weight: 500;
-						}
-
-						>.item_column {
-							display: block;
-
-							&.right {
-								text-align: right;
-								padding-right: 0.5rem;
-
-								&.header {
-									padding-right: 0px;
-								}
-							}
-
-							&.center {
-								text-align: center;
-							}
-
-							&.out_of_sync {
-								color: @color_danger;
-								font-weight: bold;
-							}
-
-							&.fix_counter_container, &.reset_counter_container {
-								padding-right: 0px;
-								&.header {
-									padding-right: 0.33rem;
-								}
-								.button_action {
-									line-height: 1rem;
-
-									&.reset_counter {
-										color: white !important;
-										font-weight: 300;
-									}
-								}
-							}
-						}
-					}
-				}
-			}//end &#counters_status
-
-			&#check_config {
-
-				.errors_container {
-					display: block;
-					padding: 0.66rem;
-					color: @color_danger;
-					font-weight: 500;
-					line-height: 1.1rem;
-					--icon-path : url('../../../core/themes/default/icons/warning.svg');
-					&:before {
-						background-color: @color_danger;
-						content: ' ';
-						display: inline-block;
-						height: 1.5em;
-						width: 1.5em;
-						margin-right: 0.5rem;
-						opacity: 1;
-						vertical-align: bottom;
-						// .fn_add_mask(@icon_name);
-						-webkit-mask-image: var(--icon-path);
-								mask-image: var(--icon-path);
-						-webkit-mask-size: contain;
-								mask-size: contain;
-						-webkit-mask-repeat: no-repeat;
-								mask-repeat: no-repeat;
-						-webkit-mask-position: center;
-								mask-position: center;
-
-						@media screen and (max-width: @width_break_point_1) {
-							margin-right: 0px;
-						}
-					}
-
-					>.error_pre {
-						background-color: unset;
-					}
-				}
-
-				// maintenance_mode & notifications
-				.container {
-					width: 100%;
-					padding-bottom: 1.5rem;
-
-					>.label {
-						font-weight: 600;
-						font-size: 1.1rem;
-						padding: 0px;
-						padding-left: 0.5rem;
-						padding-bottom: 0.75rem;
-						text-transform: uppercase;
-					}
-
-					>.form_container {
-						padding: 0px;
-
-						.button_submit {
-
-							&.danger {
-								color: @color_white_dirty !important;
-								background-color: @color_danger;
-								font-weight: unset;
-							}
-						}
-					}
-					>.body_response {
-						padding: 0.5rem;
-					}
-
-					&.maintenance_mode_container {
-
-					}
-				}//end >.container
-
-
-				.tables {
-					width: 100%;
-					display: grid;
-					grid-template-columns: 1fr 1fr;
-				}
-
-				.missing_container, .obsolete_container {
-					display: grid;
-					grid-auto-rows: auto 1fr 1fr minmax(1ch,10ch);
-
-					>.label {
-						font-weight: 600;
-						font-size: 1.1rem;
-						padding: 0px;
-						padding-left: 0.5rem;
-						padding-bottom: 0.75rem;
-						text-transform: uppercase;
-					}
-
-					>.file_container {
-
-						>.label {
-							padding: 0.5rem;
-							border-bottom: 1px solid #c2c2c2;
-						}
-
-						>.data {
-							padding: 0.5rem;
-							line-height: 1.2rem;
-							color: @color_green_success;
-
-							&.missing {
-								color: @color_danger;
-								font-weight: 600;
-							}
-
-							&.obsolete {
-								color: @color_orange_dedalo;
-								font-weight: 400;
-							}
-						}
-					}
-				}
-
-				.datalist_container {
-					margin-bottom: 0.5rem;
-
-					&.show_list {
-						cursor: pointer;
-						user-select: none;
-						vertical-align: bottom;
-						width: 100%;
-
-						>.icon {
-							vertical-align: bottom;
-						}
-					}
-
-					.datalist_item_container {
-						display: grid;
-						align-items: center;
-						gap: 0.5rem;
-						line-height: 1.1rem;
-						margin-bottom: 0.25rem;
-						padding-bottom: 0.25rem;
-
-						&.header {
-							color: #000;
-							padding: 0.25rem;
-							padding-left: 0;
-							font-weight: 500;
-						}
-
-						>.item_column {
-							display: block;
-
-							&.right {
-								text-align: right;
-								padding-right: 0.5rem;
-
-								&.header {
-									padding-right: 0px;
-								}
-							}
-
-							&.center {
-								text-align: center;
-							}
-
-							&.non_defined {
-								color: @color_danger;
-								font-weight: bold;
-							}
-						}
-					}
-				}
-			}//end &#check_config
-
-			&#lock_components {
-
-				.info_node {
-					padding: 1rem;
-					line-height: 1.1rem;
-					white-space: pre-wrap;
-				}
-
-				.button_refresh {
-					margin-top: 1rem;
-				}
-
-				.button_force_unlock_all_components {
-					float: right;
-					margin-top: 1rem;
-				}
-			}//end &#lock_components
-
-			&#database_info {
-
-				.version_info {
-					background-color: transparent;
-					margin-bottom: 1rem;
-				}
-
-				.button_rebuild_indexes {
-
-				}
-
-				.info_node {
-					padding: 0px;
-					line-height: 1.1rem;
-
-					.response_node {
-						padding: 1rem;
-						white-space: pre;
-					}
-				}
-			}//end &#database_info
-
 		}//end .widget_container
 
 	}//end .content_data
+
+	// widgets import
+	@import (once) './add_hierarchy';
+	@import (once) './check_config';
+	@import (once) './counters_status';
+	@import (once) './database_info';
+	@import (once) './dedalo_api_test_environment';
+	@import (once) './lock_components';
+	@import (once) './make_backup';
+	@import (once) './move_tld';
+	@import (once) './php_info';
+	@import (once) './register_tools';
+	@import (once) './sqo_test_environment';
+	@import (once) './system_info';
+	@import (once) './unit_test';
+	@import (once) './update_ontology';
 
 }//end .area_maintenance

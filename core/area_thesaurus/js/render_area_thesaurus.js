@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -65,13 +66,15 @@ render_area_thesaurus.prototype.list = async function(options) {
 					}
 
 				// render. parse_search_result with ts_object
-					setTimeout(function(){
-						self.ts_object.parse_search_result(
-							data.ts_search.result, // object data
-							null, // HTMLElement main_div
-							false // bool is_recursion
-						)
-					}, 1)
+					dd_request_idle_callback(
+						() => {
+							self.ts_object.parse_search_result(
+								data.ts_search.result, // object data
+								null, // HTMLElement main_div
+								false // bool is_recursion
+							)
+						}
+					)
 
 				return content_data
 

@@ -68,7 +68,7 @@ const get_content_data_edit = async function(self) {
 
 	// short vars
 		const value		= self.value || {}
-		const datalist	= value.datalist
+		const datalist	= value.datalist || []
 		const errors	= value.errors
 
 	// content_data

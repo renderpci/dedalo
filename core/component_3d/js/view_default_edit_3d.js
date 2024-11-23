@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {when_in_viewport} from '../../common/js/events.js'
+	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import { viewer } from './viewer/viewer.js';
 
@@ -92,15 +92,17 @@ const get_content_data_edit = function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 
-			// used setTimeout to force new separate task
-			setTimeout(function(){
-				const content_value = (self.permissions===1)
-					? get_content_value_read(i, inputs_value[i], self)
-					: get_content_value(i, inputs_value[i], self)
-				content_data.appendChild(content_value)
-				// set pointer
-				content_data[i] = content_value
-			}, 0)
+			// force new separate task
+			dd_request_idle_callback(
+				() => {
+					const content_value = (self.permissions===1)
+						? get_content_value_read(i, inputs_value[i], self)
+						: get_content_value(i, inputs_value[i], self)
+					content_data.appendChild(content_value)
+					// set pointer
+					content_data[i] = content_value
+				}
+			)
 		}
 
 
@@ -190,16 +192,17 @@ export const get_content_value = (i, current_value, self) => {
 			) // rootPath, fileMap
 			.catch((e) => this.onError(e))
 			.then((gltf) => {
-				setTimeout(function(){
+				dd_request_idle_callback(
+					() => {
+						// publish event viewer is ready
+						event_manager.publish('viewer_ready_'+self.id, viewer_3d)
 
-					// publish event viewer is ready
-					event_manager.publish('viewer_ready_'+self.id, viewer_3d)
-
-					// remove posterframe
-					if (content_value.posterframe) {
-						content_value.posterframe.remove()
+						// remove posterframe
+						if (content_value.posterframe) {
+							content_value.posterframe.remove()
+						}
 					}
-				}, 1)
+				)
 			});
 		}else{
 

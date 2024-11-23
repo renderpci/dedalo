@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {load_json_editor_files} from '../../area_maintenance.js'
 	import {print_response} from '../../render_area_maintenance.js'
@@ -78,7 +77,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// load editor gracefully
-		const node = ui.load_item_with_spinner({
+		ui.load_item_with_spinner({
 			container			: content_data,
 			preserve_content	: false,
 			label				: self.name,
@@ -87,11 +86,7 @@ const get_content_data_edit = async function(self) {
 				await load_json_editor_files()
 
 				// container
-					const container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'container',
-						parent			: content_data
-					})
+					const container = new DocumentFragment()
 
 				// label
 					ui.create_dom_element({
@@ -107,7 +102,8 @@ const get_content_data_edit = async function(self) {
 						inner_html		: `OK`,
 						parent			: container
 					})
-					button_submit.addEventListener('mousedown', async function(e) {
+					// click event
+					const click_handler = async (e) => {
 						e.stopPropagation()
 
 						const editor_text = self.editor.getText()
@@ -122,19 +118,22 @@ const get_content_data_edit = async function(self) {
 						}
 
 						// loading
-						container.classList.add('loading')
+						content_data.classList.add('loading')
 
 						// data_manager
 						const api_response = await data_manager.request({
 							body : rqo
 						})
-						console.log("/// json_editor_api api_response:",api_response);
+						if(SHOW_DEBUG===true) {
+							// console.log("/// json_editor_api api_response:",api_response);
+						}
 
 						// loading
-						container.classList.remove('loading')
+						content_data.classList.remove('loading')
 
 						print_response(body_response, api_response)
-					})
+					}
+					button_submit.addEventListener('click', click_handler)
 
 				// json_editor_api_container
 					const json_editor_api_container = ui.create_dom_element({
@@ -144,7 +143,7 @@ const get_content_data_edit = async function(self) {
 					})
 
 				// JSON editor
-					const options	= {
+					const options = {
 						mode	: 'code',
 						modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
 						onError	: function (err) {
@@ -155,14 +154,18 @@ const get_content_data_edit = async function(self) {
 							if (editor_text.length<3) return
 
 							// check is JSON valid and store
-							const body_options = JSON.parse(editor_text)
-							if (body_options) {
-								window.localStorage.setItem('json_editor_api', editor_text);
+							try {
+								const body_options = JSON.parse(editor_text)
+								if (body_options) {
+									window.localStorage.setItem('json_editor_api', editor_text);
+								}
+							} catch (error) {
+								// console.error(error)
 							}
 						}
 					}
-					// localStorage.removeItem('json_editor_api');
-					const sample_data	= [{"typo":"source","type":"component","action":"get_data","model":"component_input_text","tipo":"test159","section_tipo":"test65","section_id":"1","mode":"edit","lang":"lg-eng"}]
+					// localStorage
+					const sample_data	= {"id":"section_oh1_edit_lg-eng","action":"read","source":{"typo":"source","type":"section","action":"search","model":"section","tipo":"rsc170","section_tipo":"rsc170","section_id":null,"mode":"edit","view":null,"lang":"lg-eng"},"sqo":{"section_tipo":["rsc170"],"limit":1,"offset":0}}
 					const saved_value	= localStorage.getItem('json_editor_api')
 					const editor_value	= JSON.parse(saved_value) || sample_data
 					const editor		= new JSONEditor(json_editor_api_container, options, editor_value)
