@@ -116,11 +116,6 @@ area_maintenance.prototype.build = async function(autoload=true) {
 					return false
 				}
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					console.log('area_maintenance build api_response:', api_response);
-				}
-
 			// set the result to the datum
 				self.datum	= api_response.result
 
