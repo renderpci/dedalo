@@ -30,6 +30,18 @@ $updates->$v = new stdClass();
 		";
 		$updates->$v->alert_update[] = $alert;
 
+	// DATABASE UPDATES
+		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
+		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
+		");
+		// DATABASE UPDATES
+		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
+		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			DROP TABLE IF EXISTS \"main_dd\" CASCADE;
+		");
+
+
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data

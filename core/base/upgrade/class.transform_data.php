@@ -1349,40 +1349,65 @@ class transform_data {
 
 	/**
 	* GENERATE_ALL_MAIN_ONTOLOGY_SECTIONS
-	*
-	* @return
+	* Creates the matrix ontology records (main and regular) from 'jer_dd'
+	* It is such as 'jer_dd' -> 'matrix' transformation building the next
+	* Ontology edit ecosystem based in regular sections and records instead a
+	* monolithic jer_dd table that will be used as read only parsed ontology
+	* @return bool
 	*/
-	public static function generate_all_main_ontology_sections() {
+	public static function generate_all_main_ontology_sections() : bool {
 
+		// disable log
+		logger_backend_activity::$enable_log = false;
+
+		// collect all existing tld in 'jer_dd' table
 		$all_active_tld = RecordObj_dd::get_active_tlds();
 
+		// collect all children sections of 'ontology38' ('Instances')
+		// like 'dd', 'ontology', 'rsc', 'nexus', etc.
 		$ontology_tlds = array_map(function($el){
-			return RecordObj_dd::get_termino_by_tipo($el, DEDALO_STRUCTURE_LANG);
+			return RecordObj_dd::get_termino_by_tipo($el, DEDALO_STRUCTURE_LANG, false);
 		}, RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology38','section','children_recursive' ));
 
 		// add first the ontology_tlds to preserve the order
 		$sorted_tlds = $ontology_tlds;
+		// add all others non already included
 		foreach ($all_active_tld as $current_tld) {
 			if (!in_array($current_tld, $sorted_tlds)) {
 				$sorted_tlds[] = $current_tld;
 			}
 		}
 
+		// firs iteration. matrix records creation
 		foreach ($sorted_tlds as $tld) {
+
+			// main_section. Add one main section for each tld if not already exists
 			ontology::add_main_section( $tld );
+
+			// ontology_records. Collects all jer_dd records for the current tld and
+			// creates a matrix record for each one
 			$jer_dd_rows = RecordObj_dd::get_all_tld_nodes( [$tld] );
 			ontology::ceate_ontology_records( $jer_dd_rows );
 		}
 
+		// second iteration. After all records have been created
+		// we can assign relationships and set the order of children
+		foreach ($sorted_tlds as $tld) {
 
-		foreach ($all_active_tld as $tld) {
-			ontology::assing_relations_from_jer_dd( $tld );
+			// assign relationships between records (from jer_dd column 'relaciones')
+			ontology::assign_relations_from_jer_dd( $tld );
+
+			// set child order (from jer_dd column 'norden')
 			ontology::reorder_nodes_from_jer_dd( $tld );
 		}
 
+		// enable log again
+		logger_backend_activity::$enable_log = true;
 
 		die();
 
+
+		return true;
 	}//end generate_all_main_ontology_sections
 
 

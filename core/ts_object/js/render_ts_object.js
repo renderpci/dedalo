@@ -390,13 +390,15 @@ export const render_children_list = function(options) {
 				next_node_type = 'thesaurus_node'
 			}
 
+
 			// dataset
 				const current_section_id	= ar_children_data[i].section_id
 				const current_section_tipo	= ar_children_data[i].section_tipo
 				const dataset = {
-					section_tipo	: current_section_tipo,
-					section_id		: current_section_id,
-					node_type		: next_node_type
+					section_tipo		: current_section_tipo,
+					section_id			: current_section_id,
+					node_type			: next_node_type,
+					is_hierarchy_node	: (node_type==='hierarchy_node') ? true : false
 				}
 				if (target_section_tipo) {
 					dataset.target_section_tipo = target_section_tipo
@@ -635,12 +637,13 @@ const render_id_column = function(options) {
 									//  button_obj: a.id_column_link.ts_object_add
 									// 	wrap: div.wrap_ts_object
 									// }
-
 									// vars from response
+										// check if the node is hierarchy or not
+											const is_hierarchy_node = JSON.parse( response.wrap.dataset.is_hierarchy_node )
 										// new_section_id . Generated as response by the trigger add_child
 											const new_section_id 	= response.result
 										// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
-											const section_tipo 	  	= response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
+											const section_tipo 	  	= ( is_hierarchy_node === true ) ? response.wrap.dataset.target_section_tipo : response.wrap.dataset.section_tipo //response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
 										// button_obj. button plus that user clicks
 											const button_obj 		= response.button_obj
 										// children_element. list_thesaurus_element of current wrapper

@@ -46,6 +46,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 			$this->set_terminoID($terminoID);
 			$this->set_prefijo( self::get_prefix_from_tipo($terminoID) );
+			$this->set_tld( self::get_prefix_from_tipo($terminoID) );
 
 			#$prefix = dd::terminoID2prefix($terminoID);
 			#$prefix = self::get_prefix_from_tipo($terminoID);
@@ -56,6 +57,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 			$terminoID = null;
 			$this->set_prefijo($prefijo);
+			$this->set_tld($prefijo);
 
 		}else{
 
@@ -1498,6 +1500,31 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* GET_ROW_DATA
+	* Find the given tipo in jer_dd and return the row if exists.
+	* @param string $tipo (terminoID)
+	* @return object|null $row
+	*/
+	public static function get_row_data( string $tipo ) : ?object {
+
+		//remove any other things than tld and section_id in the tipo string
+		$safe_tipo = safe_tipo($tipo);
+
+		$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+		$strQuery	= "SELECT * FROM \"$table\" WHERE \"terminoID\"='$safe_tipo' LIMIT 1";
+		$result		= pg_query(DBi::_getConnection(), $strQuery);
+
+		$row_data = null;
+		while($row = pg_fetch_object($result)) {
+			$row_data = $row;
+		}
+
+		return $row_data;
+	}//end get_row_data
+
+
+
+	/**
 	* CHECK_ACTIVE_TLD
 	* Checks if the tipo tld is available and installed in the Ontology looking for the jer_dd
 	* @param string $tipo
@@ -1583,6 +1610,98 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return (string)$terminoID;
 	}//end Save
+
+
+
+	/**
+	* INSERT
+	* Create a row into jer_dd with ontology data
+	* The insert will search if tipo exists previously,
+	* if the tipo was found, delete it and insert as new one
+	* else insert new one
+	* @return string|false|null $tipo(terminoID)
+	*/
+	public function insert() : string|false|null {
+
+		$row_data = self::get_row_data($this->terminoID);
+
+		//remove any other things than tld and section_id in the tipo string
+		$safe_tipo = safe_tipo($this->terminoID);
+
+		if( !empty($row_data) ){
+
+			$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+			$strQuery	= "DELETE FROM \"$table\" WHERE \"terminoID\" = '$safe_tipo'";
+			$result		= pg_query(DBi::_getConnection(), $strQuery);
+
+			if($result===false) {
+				if(SHOW_DEBUG===true) {
+					$msg = __METHOD__." Failed Delete record (RDBO) from terminoID: $safe_tipo";
+				}else{
+					$msg = "Failed Delete record (RDBO). Record $safe_tipo is not deleted. Please contact with your admin" ;
+				}
+				trigger_error($msg);
+				debug_log(__METHOD__
+					. ' ' . $msg .PHP_EOL
+					. 'strQuery: ' . to_string($strQuery)
+					, logger::ERROR
+				);
+
+				return false;
+			}
+		}
+
+		// force to insert in the Save process of his parent.
+		$this->force_insert_on_save = true;
+
+		$this->set_terminoID( $this->terminoID );
+
+		// insert, the Save return the tipo (terminoID)
+		$new_terminoID = parent::Save();
+
+		return $new_terminoID;
+	}//end insert
+
+
+
+	/**
+	* GET_LAST_SECTION_ID_FROM_TLD
+	* Find the tipo(terminioID) in jer_dd and choose the last id
+	* @return
+	*/
+	public function get_last_section_id_from_tld() : int {
+
+		//remove any other things than tld in the tld string
+		$safe_tld	= safe_tld($this->tld);
+
+		// Find last id of current section
+			$table	= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+			$sql	= 'SELECT "terminoID" FROM "'.$table.'" WHERE tld = \''.$safe_tld.'\'';
+			$result	= JSON_RecordObj_matrix::search_free($sql);
+			$value	= ($result === false)
+				? null // Skip empty tables
+				: ((pg_num_rows($result)===0)
+					? null // Skip empty tables
+					: true );
+
+			// pg_fetch_result($result, 0, 'terminoID'))
+			$max_section_id = 0;
+			if( $value === true ){
+
+				$ar_section_id = [];
+				while($row = pg_fetch_assoc($result)) {
+					$string_id = self::get_id_from_tipo( $row['terminoID'] );
+
+					$ar_section_id[] = $string_id === false
+						? 0
+						: (int)$string_id;
+				}
+				$max_section_id = max( $ar_section_id );
+			}
+
+		return $max_section_id;
+	}//end get_last_section_id_from_tld
+
 
 
 

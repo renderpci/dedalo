@@ -46,6 +46,7 @@ export const ts_object = new function() {
 	*/
 	this.get_children = function(children_element, pagination, clean_children_container) {
 
+
 		// short vars
 			const tipo					= children_element.dataset.tipo
 			const wrap					= children_element.parentNode.parentNode
@@ -338,6 +339,7 @@ export const ts_object = new function() {
 			while (parent_nd_container && parent_nd_container.hasChildNodes()) {
 				parent_nd_container.removeChild(parent_nd_container.lastChild);
 			}
+
 
 		// Build DOM elements iterating ar_children_data
 		return new Promise(function(resolve) {
@@ -1230,6 +1232,7 @@ export const ts_object = new function() {
 			const section_tipo			= wrap.dataset.section_tipo
 			const target_section_tipo	= wrap.dataset.target_section_tipo
 			const node_type				= wrap.dataset.node_type || null
+			const is_hierarchy_node		= JSON.parse( wrap.dataset.is_hierarchy_node ) || false
 			const tipo					= children_element.dataset.tipo
 
 		// target_section_tipo check on add_child_from_hierarchy mode
@@ -1245,7 +1248,7 @@ export const ts_object = new function() {
 			const source = {
 				section_id			: section_id,
 				section_tipo		: section_tipo,
-				target_section_tipo	: target_section_tipo,
+				target_section_tipo	: (is_hierarchy_node===true) ? target_section_tipo : section_tipo,
 				node_type			: node_type,
 				tipo				: tipo
 			}

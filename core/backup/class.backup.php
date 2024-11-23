@@ -509,7 +509,7 @@ abstract class backup {
 		$command .= DB_BIN_PATH . 'pg_dump ' . DBi::get_connection_string();
 		$command .= ' --no-owner --no-privileges';
 		if ($exclude_tables===true) {
-		$command .= ' -T "jer_dd*" -T "matrix_descriptors_dd*"';	// Exclude tables (AND respective sequences) ( T UPERCASE )
+			$command .= ' -T "jer_dd*" -T "matrix_descriptors_dd*"';	// Exclude tables (AND respective sequences) ( T UPERCASE )
 		}
 		$command .= ' -F c -t "*_dd" -t "*dd_id_seq"';				// Include tables ( t lowercase ) -t "*_dd" -t "*dd_id_seq"
 		$command .= ' ' . DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
