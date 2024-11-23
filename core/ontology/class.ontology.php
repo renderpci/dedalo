@@ -497,7 +497,7 @@ class ontology {
 		}
 
 		if( !isset($target_section_tipo) ){
-			$target_section_tipo = ontology::create_jr_dd_local_ontology_section_node( $tld );
+			$target_section_tipo = ontology::create_jer_dd_local_ontology_section_node( $tld );
 		}
 
 		// check if exist the main tld
@@ -565,20 +565,55 @@ class ontology {
 	}//end add_main_section
 
 
+
 	/**
-	* CREATE_JR_DD_LOCAL_ONTOLOGY_SECTION_NODE
+	* CREATE_JER_DD_LOCAL_ONTOLOGY_SECTION_NODE
 	* Create new jer_dd row with localontology tld for the local tlds
 	* Used to creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc
 	* Is necessary a jer_dd row to represent it.
 	* @param string $tld
 	* @return string $term_id
 	*/
-	public static function create_jr_dd_local_ontology_section_node( string $tld ) : string {
+	public static function create_jer_dd_local_ontology_section_node( string $tld ) : string {
 
-		$term = new stdClass();
-			$term->{DEDALO_STRUCTURE_LANG} = $tld;
+		// check local ontology node definition in jer_dd
+		// localontology1 is a root node of all local tld of the entities
+		// the node is not sync by master server definition and need to be created locally
+		// if the node exits use it as parent node.
+			$local_ontology_row_data = RecordObj_dd::get_row_data('localontology1');
 
-		$RecordObj_dd = new RecordObj_dd(null, 'localontology');
+			if( empty($local_ontology_row_data) ){
+
+				$local_ontology_RecordObj_dd = new RecordObj_dd('localontology1');
+
+				$local_ontology_RecordObj_dd->set_parent('dd5');
+				$local_ontology_RecordObj_dd->set_modelo('dd4');
+				$local_ontology_RecordObj_dd->set_esmodelo('no');
+				$local_ontology_RecordObj_dd->set_esdescriptor('si');
+				$local_ontology_RecordObj_dd->set_visible('si');
+				$local_ontology_RecordObj_dd->set_tld('localontology');
+				$local_ontology_RecordObj_dd->set_traducible('no');
+
+				$local_ontology_term = json_decode('
+					{
+						"lg-spa": "Instancias locales",
+						"lg-cat": "Instàncies locals",
+						"lg-deu": "Lokale Instanzen",
+						"lg-ell": "Τοπικές περιπτώσεις",
+						"lg-eng": "Local instances",
+						"lg-fra": "Instances locales",
+						"lg-ita": "Istanze locali"
+					}
+				');
+				$local_ontology_RecordObj_dd->set_term( $local_ontology_term );
+				$id = $local_ontology_RecordObj_dd->insert();
+			}
+
+		$tld_RecordObj_dd = new RecordObj_dd(null, 'localontology');
+		$last_id = $tld_RecordObj_dd->get_last_section_id_from_tld();
+
+		$terminoID = 'localontology'.( $last_id+1 );
+		$RecordObj_dd = new RecordObj_dd($terminoID);
 			$RecordObj_dd->set_parent('localontology1');
 			$RecordObj_dd->set_modelo('dd6');
 			$RecordObj_dd->set_esmodelo('no');
@@ -587,12 +622,16 @@ class ontology {
 			$RecordObj_dd->set_tld('localontology');
 			$RecordObj_dd->set_traducible('no');
 			$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+
+			$term = new stdClass();
+				$term->{DEDALO_STRUCTURE_LANG} = $tld;
 			$RecordObj_dd->set_term( $term );
 
-		$term_id = $RecordObj_dd->Save();
+		$term_id = $RecordObj_dd->insert();
+
 
 		return $term_id;
-	}//end create_jr_dd_local_ontology_section_node
+	}//end create_jer_dd_local_ontology_section_node
 
 
 
