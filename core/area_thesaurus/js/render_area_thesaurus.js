@@ -254,6 +254,8 @@ const render_content_data = function(self) {
 							parent			: hierarchy_elements_container
 						})
 
+						// link_children.node_type = 'hierarchy_node';
+
 					// ts_object Get from API and render element
 						self.ts_object.get_children(link_children)
 						.then(()=>{
