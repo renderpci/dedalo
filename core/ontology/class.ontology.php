@@ -2,7 +2,7 @@
 declare(strict_types=1);
 /**
 * ONTOLOGY
-* Manages the main ontology definitions of Dédalo
+* Manages the main ontology definitions of Dédalo.
 */
 class ontology {
 
@@ -19,6 +19,7 @@ class ontology {
 		'hierarchy'		=> 'ontology44',
 		'rsc'			=> 'ontology45'
 	];
+
 
 
 	/**
@@ -81,9 +82,9 @@ class ontology {
 
 	/**
 	* GET_ONTOLOGY_MAIN_FORM_TARGET_SECTION_TIPO
-	* Find the matrix row of the ontology main from a target section tipo from ontology matrix row
+	* Find the matrix row of the ontology main from a given target section tipo as ontology matrix row
 	* ontology40 --> section_tipo: ontology35, section_id: 1
-	* @param string $tld
+	* @param string $target_section_tipo
 	* @return object|null $row
 	*/
 	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
@@ -127,7 +128,7 @@ class ontology {
 	* Transform jer_dd row (from DDBB) into matrix ontology row (section record).
 	* @param object $jer_dd_row
 	* @param string $target_section_tipo
-	* @return
+	* @return bool
 	*/
 	public static function add_section_row_from_jer_dd( object $jer_dd_row ) {
 
@@ -355,22 +356,23 @@ class ontology {
 
 
 	/**
-	* ASSING_RELATIONS_FROM_JER_DD
+	* ASSIGN_RELATIONS_FROM_JER_DD
 	* Once the matrix records of jer_dd parse is set
-	* is possible assign the relations between nodes.
+	* it is possible to assign the relations between nodes.
 	* Get the relations column in jer_dd and set it as component_portal locator pointed to other matrix ontology record.
 	* @param string $tld
 	* @return bool
 	*/
-	public static function assing_relations_from_jer_dd( string $tld) : bool {
+	public static function assign_relations_from_jer_dd( string $tld) : bool {
 
-		// vars
+		// target_section_tipo
 		$target_section_tipo = self::map_tld_to_target_section_tipo( $tld );
 
-		// get all section
+		// get all section instances rows
 		$all_section_instances = section::get_resource_all_section_records_unfiltered( $target_section_tipo );
 
 		while ($row = pg_fetch_assoc($all_section_instances)) {
+
 			$section_id = $row['section_id'];
 
 			$node_tipo = $tld.$section_id;
@@ -407,8 +409,9 @@ class ontology {
 			$relations_component->Save();
 		}
 
+
 		return true;
-	}//end assing_relations_from_jer_dd
+	}//end assign_relations_from_jer_dd
 
 
 
@@ -471,7 +474,7 @@ class ontology {
 
 	/**
 	* ADD_MAIN_SECTION
-	* Create new section in the main ontology sections.
+	* Creates a new section in the main ontology sections.
 	* The main section could be the official tlds as dd, rsc, hierarchy, etc
 	* Or local ontology defined by every institution as es, qdp, mupreva, etc
 	* @param string $tld
@@ -485,7 +488,7 @@ class ontology {
 		$all_tipos = array_merge($ontology_tipos, $local_ontology_tipos);
 		$all_tipos = array_unique( $all_tipos );
 
-		//sort tipos
+		// sort tipos
 		foreach ($all_tipos as $ontology_tipo) {
 
 			$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG);
@@ -523,7 +526,7 @@ class ontology {
 		// Target section tipo
 		$section_data->components->hierarchy53->dato->{DEDALO_DATA_NOLAN} = [$target_section_tipo];
 
-		// add model root node in the dd main section only, only dd has the models for the ontology.
+		// add model root node in the dd main section only. Note that only dd has the models for the ontology.
 		if($tld === 'dd'){
 
 			// general term
@@ -535,8 +538,7 @@ class ontology {
 
 			$section_data->relations[] = $general_term;
 
-
-			//model term
+			// model term
 			$model_term = new locator();
 				$model_term->set_section_tipo($target_section_tipo);
 				$model_term->set_section_id('2');
@@ -545,10 +547,10 @@ class ontology {
 
 			$section_data->relations[] = $model_term;
 
-			//active in thesaurus, set only dd as active to show in the thesaurus tree
+			// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
 			foreach($section_data->relations as $locator){
 				if($locator->from_component_tipo === 'hierarchy125'){
-					$locator->section_id = "1";
+					$locator->section_id = '1';
 				}
 			}
 		}
@@ -673,8 +675,10 @@ class ontology {
 			);
 			return null;
 		}
+
 		$target_section_tipo = $ar_target_section_tipo[0];
 
+		// cache save
 		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
 
 
@@ -692,6 +696,7 @@ class ontology {
 	*/
 	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : ?string {
 
+		// cache check
 		foreach (self::$cache_target_section_tipo as $current_tld => $value) {
 			if($value === $target_section_tipo){
 				return $current_tld;
@@ -718,8 +723,10 @@ class ontology {
 			);
 			return null;
 		}
+
 		$tld = $ar_tld[0];
 
+		// cache save
 		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
 
 
@@ -728,10 +735,9 @@ class ontology {
 
 
 
-
 	/**
 	* GET_ALL_ONTOLOGY_SECTIONS
-	* Calculate ontology sections (target section tipo) of types requested, like ontology40,localontology3,...
+	* Calculates ontology sections (target section tipo) like ontology40, localontology3, ...
 	* @return array $ontology_sections
 	*/
 	public static function get_all_ontology_sections() : array {
@@ -750,7 +756,6 @@ class ontology {
 			$sqo = new search_query_object();
 				$sqo->set_section_tipo( [self::$main_section_tipo] );
 				$sqo->set_limit( 0 );
-
 
 		// search exec
 			$search	= search::get_instance($sqo);
