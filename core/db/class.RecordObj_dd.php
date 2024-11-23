@@ -46,6 +46,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 			$this->set_terminoID($terminoID);
 			$this->set_prefijo( self::get_prefix_from_tipo($terminoID) );
+			$this->set_tld( self::get_prefix_from_tipo($terminoID) );
 
 			#$prefix = dd::terminoID2prefix($terminoID);
 			#$prefix = self::get_prefix_from_tipo($terminoID);
@@ -56,6 +57,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 			$terminoID = null;
 			$this->set_prefijo($prefijo);
+			$this->set_tld($prefijo);
 
 		}else{
 
