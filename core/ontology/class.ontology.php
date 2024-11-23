@@ -725,7 +725,7 @@ class ontology {
 		}
 		$ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 
-		if( empty($ar_tld) ){
+		if( empty($ar_tld) || empty($ar_tld[0]) ){
 			debug_log(__METHOD__
 				. " Error for tld, the main ontology has not defined target section_tipo" . PHP_EOL
 				. 'target_section_tipo: ' .to_string( $target_section_tipo )
