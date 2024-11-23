@@ -515,19 +515,20 @@ class ontology {
 			$target_section_tipo = ontology::create_jer_dd_local_ontology_section_node( $tld );
 		}
 
-		// check if exist the main tld
+		// check if the main tld already exists
 		$ontology_main = self::get_ontology_main_from_tld( $tld );
 		if( !empty($ontology_main) ){
 			debug_log(__METHOD__
-				. " Ignored to add new main ontology with this tld, the main ontology exists, don't use this function to change the main ontology section, tld: " . PHP_EOL
-				. to_string( $tld )
-				, logger::DEBUG
+				. " Ignored to add new main ontology with this tld, the main ontology already exists, don't use this function to change the main ontology section." . PHP_EOL
+				. ' tld: ' . to_string( $tld )
+				, logger::WARNING
 			);
 			return null;
 		}
 
-		// ontology table
-		$section_data = json_decode( file_get_contents( dirname(__FILE__).'/main_ontology_section_data.json') );
+		// ontology table record template data
+		$section_data_string	= file_get_contents( dirname(__FILE__).'/main_ontology_section_data.json' );
+		$section_data			= json_handler::decode( $section_data_string );
 
 		// Name
 		$section_data->components->hierarchy5->dato->{DEDALO_STRUCTURE_LANG} = [$tld];
