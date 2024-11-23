@@ -6,6 +6,7 @@
 
 // imports
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {render_counters_status} from './render_counters_status.js'
 
@@ -96,13 +97,15 @@ counters_status.prototype.modify_counter = async function(options) {
 			// update datalist value
 			self.value.datalist = api_response.datalist
 
-			setTimeout(function(){
-				// refresh DOM only
-				self.refresh({
-					build_autoload	: false, // default is true
-					destroy			: true // default is true
-				})
-			}, 100)
+			dd_request_idle_callback(
+				() => {
+					// refresh DOM only
+					self.refresh({
+						build_autoload	: false, // default is true
+						destroy			: true // default is true
+					})
+				}
+			)
 
 			alert(api_response.msg)
 

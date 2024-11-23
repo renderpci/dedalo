@@ -1240,7 +1240,8 @@ class component_text_area extends component_common {
 				}
 
 			// change p by br to preserve v5 compatibility (ck/tiny)
-				$diffusion_value = preg_replace('/(<p>)/i', '<br>', $diffusion_value);
+				// $diffusion_value = preg_replace('/(<p>)/i', '<br>', $diffusion_value);
+				$diffusion_value = preg_replace('/<p( style=".*?")?>/i', '<br>', $diffusion_value);
 				$diffusion_value = preg_replace('/(<\/p>)/i', '', $diffusion_value);
 
 			// Remove first br
