@@ -785,7 +785,7 @@ abstract class backup {
 				}
 			}
 
-			// find main_file_item
+			// find main_file_item. main_file is the shared value lists: dedalo_development_str.custom.backup
 			$main_file_item = array_find($ontology_file_list, function($el){
 				return $el->type==='main_file';
 			});
@@ -990,27 +990,27 @@ abstract class backup {
 
 				#
 				# MATRIX_DESCRIPTORS_DD
-					$table 		= 'matrix_descriptors_dd';
-					$tld 		= $current_tld;
-					$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
-					$res2 		= backup::copy_from_file($table, $path_file, $tld);
-					if (empty($res2)) {
-						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
-						debug_log(__METHOD__." $msg ".to_string($res2), logger::ERROR);
-						// $load_with_errors=true;
-						if(SHOW_DEBUG===true) {
-							$msg .= "<pre>".print_r($res2,true)."</pre>";
-						}
+					// $table 		= 'matrix_descriptors_dd';
+					// $tld 		= $current_tld;
+					// $path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
+					// $res2 		= backup::copy_from_file($table, $path_file, $tld);
+					// if (empty($res2)) {
+					// 	$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
+					// 	debug_log(__METHOD__." $msg ".to_string($res2), logger::ERROR);
+					// 	// $load_with_errors=true;
+					// 	if(SHOW_DEBUG===true) {
+					// 		$msg .= "<pre>".print_r($res2,true)."</pre>";
+					// 	}
 
-						$response->result	= false;
-						$response->msg		.= $msg;
-						$response->errors[]	= "Error on import $table {$tld}";
-						return $response;
-					}
-					if(SHOW_DEBUG===true) {
-						$msg .= "<br>Imported dedalo core data";
-						$msg .= " (jer_dd {$tld} [<b>".trim($res1)."</b>], matrix_descriptors_dd {$tld} [<b>".trim($res2)."</b>]) ";
-					}
+					// 	$response->result	= false;
+					// 	$response->msg		.= $msg;
+					// 	$response->errors[]	= "Error on import $table {$tld}";
+					// 	return $response;
+					// }
+					// if(SHOW_DEBUG===true) {
+					// 	$msg .= "<br>Imported dedalo core data";
+					// 	$msg .= " (jer_dd {$tld} [<b>".trim($res1)."</b>], matrix_descriptors_dd {$tld} [<b>".trim($res2)."</b>]) ";
+					// }
 
 				$ar_msg[]=$msg;
 
@@ -1168,16 +1168,16 @@ abstract class backup {
 				}
 
 			# SEQUENCE UPDATE (to the last table id)
-				$table = 'matrix_descriptors_dd';
-				$consolidate_sequence = (object)self::consolidate_sequence($table);
-				if ($consolidate_sequence->result===false) {
-					$response->result 	 = false;
-					$response->msg 		.= $consolidate_sequence->msg;
-					$response->errors[]	= "Error consolidating sequences ($table): " . ($consolidate_sequence->msg ?? '');
-					return $response;
-				}else{
-					$msg .= $consolidate_sequence->msg;
-				}
+				// $table = 'matrix_descriptors_dd';
+				// $consolidate_sequence = (object)self::consolidate_sequence($table);
+				// if ($consolidate_sequence->result===false) {
+				// 	$response->result 	 = false;
+				// 	$response->msg 		.= $consolidate_sequence->msg;
+				// 	$response->errors[]	= "Error consolidating sequences ($table): " . ($consolidate_sequence->msg ?? '');
+				// 	return $response;
+				// }else{
+				// 	$msg .= $consolidate_sequence->msg;
+				// }
 
 			$ar_msg[]=$msg;
 
@@ -1372,11 +1372,11 @@ abstract class backup {
 				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 			$ar_files[] = $obj;
 			// matrix_descriptors_dd_dd
-			$obj = new stdClass();
-				$obj->type = 'descriptors_file';
-				$obj->name = 'matrix_descriptors_dd_dd.copy';
-				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-			$ar_files[] = $obj;
+			// $obj = new stdClass();
+			// 	$obj->type = 'descriptors_file';
+			// 	$obj->name = 'matrix_descriptors_dd_dd.copy';
+			// 	$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+			// $ar_files[] = $obj;
 
 			// resources str file
 			// jer_dd_rsc
@@ -1386,11 +1386,11 @@ abstract class backup {
 				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 			$ar_files[] = $obj;
 			// matrix_descriptors_dd_rsc
-			$obj = new stdClass();
-				$obj->type = 'descriptors_file';
-				$obj->name = 'matrix_descriptors_dd_rsc.copy';
-				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-			$ar_files[] = $obj;
+			// $obj = new stdClass();
+			// 	$obj->type = 'descriptors_file';
+			// 	$obj->name = 'matrix_descriptors_dd_rsc.copy';
+			// 	$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+			// $ar_files[] = $obj;
 
 			// private list of values
 			// matrix_dd
@@ -1436,13 +1436,13 @@ abstract class backup {
 					$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
 				$ar_files[] = $obj;
 				// matrix_descriptors_dd
-				$obj = new stdClass();
-					$obj->type  = 'extras_descriptors_file';
-					$obj->table = 'matrix_descriptors_dd';
-					$obj->tld 	= $folder_name;
-					$obj->name  = 'matrix_descriptors_dd_' . $folder_name . '.copy';
-					$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
-				$ar_files[] = $obj;
+				// $obj = new stdClass();
+				// 	$obj->type  = 'extras_descriptors_file';
+				// 	$obj->table = 'matrix_descriptors_dd';
+				// 	$obj->tld 	= $folder_name;
+				// 	$obj->name  = 'matrix_descriptors_dd_' . $folder_name . '.copy';
+				// 	$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
+				// $ar_files[] = $obj;
 			}
 
 
