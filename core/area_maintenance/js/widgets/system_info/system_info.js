@@ -7,6 +7,7 @@
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {pause} from '../../../../common/js/utils/util.js'
 	import {render_system_info} from './render_system_info.js'
 
 
@@ -65,6 +66,11 @@ system_info.prototype.build = async function(autoload=false) {
 		const common_build = await widget_common.prototype.build.call(this, autoload);
 
 	try {
+
+		// delay value resolution to avoid blocking other widgets
+		// note that system info has a lower priority because could be
+		// a long request collecting the system resources info
+		await pause(600)
 
 		// specific actions.. like fix main_element for convenience
 		self.value = await self.get_widget_value()
