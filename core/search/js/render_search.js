@@ -897,7 +897,9 @@ const render_sections_selector = (self) => {
 			}
 
 		// cookie. previous cookie stored value
-			const cookie_name		= 'selected_typology'
+			// get the model to set into the cookie / area_thesaurus || area_ontology
+			const caller_model  	= self.caller.model
+			const cookie_name		= `selected_typology_${caller_model}`
 			const selected_typology	= read_cookie(cookie_name)
 			if (selected_typology) {
 				typology_selector.value = selected_typology
