@@ -29,6 +29,56 @@ final class ImageMagick {
 
 
 	/**
+	* GET_IMAGEMAGICK_INSTALLED_PATH
+	* @return string
+	*/
+	public static function get_imagemagick_installed_path() : string {
+
+		return MAGICK_PATH . 'convert';
+	}//end get_imagemagick_installed_path
+
+
+
+	/**
+	* GET_IMAGEMAGICK_IDENTIFY_PATH
+	* @return string
+	*/
+	public static function get_imagemagick_identify_path() : string {
+
+		return MAGICK_PATH . 'identify';
+	}//end get_imagemagick_identify_path
+
+
+
+	/**
+	* GET_IMAGEMAGICK_PDFINFO_PATH
+	* @return string
+	*/
+	public static function get_imagemagick_pdfinfo_path() : string {
+
+		return MAGICK_PATH . 'pdfinfo';
+	}//end get_imagemagick_pdfinfo_path
+
+
+
+	/**
+	* GET_VERSION
+	* Get binary version
+	* @return string
+	*/
+	public static function get_version() : string {
+
+		$cmd  = ImageMagick::get_imagemagick_installed_path();
+		$cmd .= ' -version | sed -n "s/Version: ImageMagick \([-0-9.]*\).*/\1/p;" ';
+
+		$version = shell_exec($cmd) ?? '';
+
+		return trim($version);
+	}//end get_version
+
+
+
+	/**
 	* DD_THUMB
 	* Creates the thumb version file using the ImageMagick command line
 	* @param string $source_file (full source file path)
@@ -59,7 +109,7 @@ final class ImageMagick {
 		// command
 		$command = implode(' ', [
 			'nice -n 19',
-			MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" "
+			ImageMagick::get_imagemagick_installed_path()." -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" "
 		]);
 
 		// run command
@@ -136,7 +186,7 @@ final class ImageMagick {
 		// Get info about source file color space
 		$command = implode(' ', [
 			'nice -n 19',
-			MAGICK_PATH . "identify -quiet -format '%[colorspace]' " .$source_file. "[0]"
+			ImageMagick::get_imagemagick_identify_path() . " -quiet -format '%[colorspace]' " .$source_file. "[0]"
 		]);
 		$colorspace_info = shell_exec($command);	//-format "%[EXIF:DateTimeOriginal]"
 
@@ -268,7 +318,7 @@ final class ImageMagick {
 		// command
 			$command = implode(' ', [
 				'nice -n 19',
-				MAGICK_PATH . 'convert '.$begin_flags.' "'.$source_file.'" '.$middle_flags.' "'.$target_file.'" '
+				ImageMagick::get_imagemagick_installed_path().' '.$begin_flags.' "'.$source_file.'" '.$middle_flags.' "'.$target_file.'" '
 			]);
 
 		// debug
@@ -315,21 +365,6 @@ final class ImageMagick {
 
 
 	/**
-	* GET_IMAGE_FILE_INFO
-	* @return
-	*/
-		// public static function get_image_file_info( $source_file ) {
-		// 				# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
-		// 	$commnad = MAGICK_PATH . "convert $source_file json: ";
-		// 	$output  = json_decode( shell_exec($command) );
-		// 		#dump($output, ' output ++ '.to_string( $command ));
-
-		// 	return $output;
-		// }//end get_image_file_info
-
-
-
-	/**
 	* GET_LAYERS_FILE_INFO
 	* @param string $source_file
 	* @return int $layer_number
@@ -337,7 +372,7 @@ final class ImageMagick {
 	public static function get_layers_file_info( string $source_file ) : int {
 
 		// tiff info. Get the layer number of TIFF (PSD use the same property) :
-			$command		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
+			$command		= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
 			$tiff_format	= shell_exec($command);
 
 		// debug
@@ -371,7 +406,6 @@ final class ImageMagick {
 
 
 
-
 	/**
 	* HAS_META_CHANNEL
 	* Check all channels in the image and find if any of them has a meta channel
@@ -384,7 +418,7 @@ final class ImageMagick {
 	public static function has_meta_channel( string $source_file ) : bool {
 
 		// tiff info. Get the channel number of TIFF (PSD use the same property) :
-			$command			= MAGICK_PATH . 'identify -quiet -format "%[channels]" '. '"'. $source_file . '"';
+			$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[channels]" '. '"'. $source_file . '"';
 			$string_channels	= shell_exec($command);
 
 			debug_log(__METHOD__
@@ -393,6 +427,16 @@ final class ImageMagick {
 				. 'channels: ' . json_encode($string_channels)
 				, logger::WARNING
 			);
+
+			if (empty($string_channels)) {
+				debug_log(__METHOD__
+					. " Unable to get command execution result on get channels. Empty result " . PHP_EOL
+					. 'command: ' .to_string($command) . PHP_EOL
+					. 'channels: ' . json_encode($string_channels)
+					, logger::ERROR
+				);
+				return false;
+			}
 
 		// the result could be:
 		// srgb  3.0 -> 3 channels 0 meta channels, without any meta channel (transparent channel)
@@ -404,8 +448,8 @@ final class ImageMagick {
 
 		$meta_channel = false;
 		foreach ($ar_channels_info[0] as $channels_data) {
-			$ar_channel_info 	= explode('.', $channels_data);
-			$meta_channel_info = (int)$ar_channel_info[1];
+			$ar_channel_info	= explode('.', $channels_data);
+			$meta_channel_info	= (int)$ar_channel_info[1];
 
 			if($meta_channel_info > 0){
 				$meta_channel = true;
@@ -452,9 +496,9 @@ final class ImageMagick {
 				$color =  "-alpha set -virtual-pixel transparent -background none -interpolate Mesh";
 			};
 			if($rotation_mode === 'expanded'){
-				$command = MAGICK_PATH ."convert '$source' $color +distort SRT $degrees '$target'";
+				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color +distort SRT $degrees '$target'";
 			}else{
-				$command = MAGICK_PATH . "convert '$source' $color -distort SRT $degrees '$target'";
+				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color -distort SRT $degrees '$target'";
 			}
 
 			$result = shell_exec($command);
@@ -494,7 +538,7 @@ final class ImageMagick {
 	public static function get_media_attributes( string $file_path ) : ?array {
 
 		// convert image.jpg[1x1+0+0] json:
-			$command		= MAGICK_PATH . "convert '$file_path' json: ";
+			$command		= ImageMagick::get_imagemagick_installed_path() . " '$file_path' json: ";
 			$exec_result	= shell_exec($command);
 
 		// debug
@@ -531,7 +575,7 @@ final class ImageMagick {
 		$is_opaque = true;
 
 		// get all layers opacity
-			$command	= MAGICK_PATH . 'identify -quiet -format "%[opaque]" '. $source_file;
+			$command	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[opaque]" '. $source_file;
 			$output		= shell_exec($command);
 
 		// check the output, if the output has any True, the image will be opaque, else (all layers are false) the image is transparent.
@@ -557,12 +601,12 @@ final class ImageMagick {
 	*/
 	public static function get_date_time_original( string $file ) : ?dd_date {
 
-		$command			= MAGICK_PATH . 'identify -quiet -format "%[EXIF:DateTimeOriginal]" ' .'"'.$file.'"';
+		$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[EXIF:DateTimeOriginal]" ' .'"'.$file.'"';
 		$DateTimeOriginal	= shell_exec($command);
 		$regex				= "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
 
 		if(empty($DateTimeOriginal)){
-			$command			= MAGICK_PATH . 'identify -quiet -format "%[date:modify]" ' .'"'.$file.'"';
+			$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[date:modify]" ' .'"'.$file.'"';
 			$DateTimeOriginal	= shell_exec($command);
 			$regex = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
 		}
@@ -607,13 +651,13 @@ final class ImageMagick {
 
 		$image_dimensions = new stdClass();
 
-		$command_orientation	= MAGICK_PATH . 'identify -quiet -format "%[orientation]" ' .'"'.$file_path.'"[0]';
+		$command_orientation	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[orientation]" ' .'"'.$file_path.'"[0]';
 		$orientation			= shell_exec($command_orientation);
 
-		$commnad_w	= MAGICK_PATH . 'identify -quiet -format %w ' .'"'.$file_path.'"[0]';
+		$commnad_w	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %w ' .'"'.$file_path.'"[0]';
 		$width		= shell_exec($commnad_w);
 
-		$commnad_h	= MAGICK_PATH . 'identify -quiet -format %h ' .'"'.$file_path.'"[0]';
+		$commnad_h	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %h ' .'"'.$file_path.'"[0]';
 		$height		= shell_exec($commnad_h);
 
 			// Undefined  - 0

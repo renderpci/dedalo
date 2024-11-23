@@ -1293,14 +1293,16 @@ component_text_area.prototype.add_component_history_note = async function(option
 /**
 * BUILD_TAG
 * Build a new annotation when user clicks on text editor button
-*
-* @return
+* @param object options
+* @return void
 */
 component_text_area.prototype.build_tag = function(options) {
 
-	const self = options.caller
-	// get the text_editor sent by the event (button_note event)
-	const text_editor = options.text_editor
+	// options
+		// component_text_area_insrance
+		const self = options.caller
+		// get the text_editor sent by the event (button_note event)
+		const text_editor = options.text_editor
 
 	const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, 'F2')
 	const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -1322,36 +1324,45 @@ component_text_area.prototype.build_tag = function(options) {
 		data_tag.tag_id = tag_id
 
 		switch(data_tag.type) {
+
 			case ('draw'):
+				// open layer selector
 				const layer_selector = render_layer_selector({
 					self		: self,
 					data_tag	: data_tag,
 					text_editor	: text_editor,
 					callback	: self.create_draw_tag.bind(self)
 				})
-				self.node.appendChild(layer_selector)
+				if (layer_selector) {
+					self.node.appendChild(layer_selector)
+				}
 				break;
+
 			case ('geo'): {
+				// open layer selector
 				 const layer_selector = render_layer_selector({
 					self		: self,
 					data_tag	: data_tag,
 					text_editor	: text_editor,
 					callback	: self.create_geo_tag.bind(self)
 				})
-				 self.node.appendChild(layer_selector)
+				if (layer_selector) {
+				 	self.node.appendChild(layer_selector)
+				}
 				break;
 			}
-			case ('page'): {
 
+			case ('page'): {
 				// modal selector
 				render_page_selector(self, data_tag, tag_id, text_editor)
 				break;
 			}
+
 			default: {
-
 				const tag = self.build_view_tag_obj(data_tag, tag_id)
-
-				text_editor.set_content(tag)
+				if (tag) {
+					text_editor.set_content(tag)
+				}
 				break;
 			}
 		}// end switch
@@ -1406,15 +1417,23 @@ component_text_area.prototype.build_tag = function(options) {
 /*	Geo location
 ----------------------------------------------------------------------------------------- */
 
+
+
 	/**
 	* CREATE_GEO_TAG
 	* Build a new annotation when user clicks on text editor button
-	*
-	* @return
+	* It is called wen user press F2 in the keyboard
+	* @param object options
+	* {
+	*	data_tag : object as {data:[1], label:'15.1', last_layer_id: 3, layers: [{},{}], state: 'n', tag_id: 15, type: 'geo'}
+	* 	text_editor : object (service_ckeditor instance)
+	* }
+	* @return bool inserted
 	*/
 	component_text_area.prototype.create_geo_tag = function(options) {
 
-		const self = options.caller
+		const self = this
+
 		// get the text_editor sent by the event (button_note event)
 		const text_editor = options.text_editor
 
@@ -1430,17 +1449,18 @@ component_text_area.prototype.build_tag = function(options) {
 
 		// tag images
 			const geo_view_tag  = self.build_view_tag_obj({
-				type	: "geo",
+				type	: 'geo',
 				state	: tag_state,
 				label	: tag_id,
-				data	: ""
+				data	: ''
 			}, tag_id)
 
-		// const tag = self.build_view_tag_obj(geo_view_tag, tag_id)
 		// insert the new note tag in the caret position of the text_editor
-		const inserted_tag = text_editor.set_content(geo_view_tag)
+		const inserted = text_editor.set_content(geo_view_tag)
 
-	}
+
+		return inserted
+	}//end create_geo_tag
 
 
 

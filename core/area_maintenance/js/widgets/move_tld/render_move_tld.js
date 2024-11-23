@@ -186,30 +186,32 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init
-		self.caller.init_form({
-			submit_label	: 'Move TLD terms',
-			// confirm_text	: confirm_text,
-			body_info		: content_data,
-			body_response	: body_response,
-			on_submit	: (e, values) => {
+		if (self.caller?.init_form) {
+			self.caller.init_form({
+				submit_label	: 'Move TLD terms',
+				// confirm_text	: confirm_text,
+				body_info		: content_data,
+				body_response	: body_response,
+				on_submit	: (e, values) => {
 
-				if (!files_selected.length) {
-					alert("Error: no files are selected");
-					return
+					if (!files_selected.length) {
+						alert("Error: no files are selected");
+						return
+					}
+
+					// move_tld
+					self.exec_move_tld(files_selected)
+					.then(function(response){
+						update_process_status(
+							local_db_id,
+							response.pid,
+							response.pfile,
+							body_response
+						)
+					})
 				}
-
-				// move_tld
-				self.exec_move_tld(files_selected)
-				.then(function(response){
-					update_process_status(
-						local_db_id,
-						response.pid,
-						response.pfile,
-						body_response
-					)
-				})
-			}
-		})
+			})
+		}
 
 	// update_process_status
 		const update_process_status = function(id, pid, pfile, container) {

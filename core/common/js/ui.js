@@ -9,7 +9,7 @@
 		strip_tags,
 		prevent_open_new_window
 	} from '../../common/js/utils/index.js'
-	import {when_in_dom} from '../../common/js/events.js'
+	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
@@ -696,23 +696,23 @@ export const ui = {
 										? component.node.content_data[0].querySelector('input, select')
 										: null;
 								if (first_input) {
-									setTimeout(function(){
-										if (component.active && first_input !== document.activeElement) {
+									dd_request_idle_callback(
+										() => {
+											if (component.active && first_input !== document.activeElement) {
 
-											// check another focus elements like q_operator
-											if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
-												return
+												// check another focus elements like q_operator
+												if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
+													return
+												}
+
+												first_input.focus()
 											}
-
-											first_input.focus()
 										}
-									}, 25)
+									)
 								}
 							}//end if (!already_focus)
 					}
 				}
-
-
 
 			// fix component as active
 				page_globals.component_active = component
@@ -1031,34 +1031,35 @@ export const ui = {
 						self.node.classList.remove('save_success')
 					}
 
-				setTimeout(()=>{
-
-					// success. add save_success class to component wrappers (green line animation)
-						if (self.node) {
-							self.node.classList.add('save_success')
-							// animationPlayState sets
-							self.node.style.animationPlayState			= 'running';
-							self.node.style.webkitAnimationPlayState	= 'running';
-						}
-
-					// remove save_success. after 2000 ms, remove wrapper class to avoid issues on refresh
-						setTimeout(()=>{
-
+				dd_request_idle_callback(
+					() => {
+						// success. add save_success class to component wrappers (green line animation)
 							if (self.node) {
-
-								// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
-								self.node.style.animationPlayState			= 'paused';
-								self.node.style.webkitAnimationPlayState	= 'paused';
-
-								// remove animation style
-								if (self.node.classList.contains('save_success')) {
-									self.node.classList.remove('save_success')
-								}
+								self.node.classList.add('save_success')
+								// animationPlayState sets
+								self.node.style.animationPlayState			= 'running';
+								self.node.style.webkitAnimationPlayState	= 'running';
 							}
 
-							resolve(true)
-						}, 2000)
-				}, 25)
+						// remove save_success. after 2000 ms, remove wrapper class to avoid issues on refresh
+							setTimeout(()=>{
+
+								if (self.node) {
+
+									// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
+									self.node.style.animationPlayState			= 'paused';
+									self.node.style.webkitAnimationPlayState	= 'paused';
+
+									// remove animation style
+									if (self.node.classList.contains('save_success')) {
+										self.node.classList.remove('save_success')
+									}
+								}
+
+								resolve(true)
+							}, 2000)
+					}
+				)//end dd_request_idle_callback
 			})
 		}//end exec_save_successfully_animation
 
@@ -2983,12 +2984,16 @@ export const ui = {
 				}
 
 				// Replace container or placeholder with result_node
-				if (replace_container) {
-					container.replaceWith(result_node);
-				} else {
-					// default
-					container_placeholder.replaceWith(result_node);
-				}
+				requestAnimationFrame(
+					() => {
+						if (replace_container) {
+							container.replaceWith(result_node);
+						} else {
+							// default
+							container_placeholder.replaceWith(result_node);
+						}
+					}
+				)
 
 				return result_node;
 			} catch (error) {

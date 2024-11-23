@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 
 
 
@@ -54,34 +55,35 @@ view_ip_list_input_text.render = async function(self, options) {
 				break;
 
 			default:
-				setTimeout(async ()=>{
+				dd_request_idle_callback(
+					async () => {
+						// cache
+							// cache create if not exists or reset if is too big
+							if (!window.resolved_ip_data || Object.keys(window.resolved_ip_data).length>300) {
+								window.resolved_ip_data = {}
+							}
+							// cache set function call
+							if (!window.resolved_ip_data[ip]) {
+								window.resolved_ip_data[ip] = resolve_ip_data(ip)
+							}
 
-					// cache
-						// cache create if not exists or reset if is too big
-						if (!window.resolved_ip_data || Object.keys(window.resolved_ip_data).length>100) {
-							window.resolved_ip_data = {}
-						}
-						// cache set function call
-						if (!window.resolved_ip_data[ip]) {
-							window.resolved_ip_data[ip] = resolve_ip_data(ip)
-						}
+						// exec function and wait if is not already resolved
+							const response = await window.resolved_ip_data[ip]
+							if (!response) {
+								return
+							}
 
-					// exec function and white if is not already resolved
-						const response = await window.resolved_ip_data[ip]
-						if (!response) {
-							return
-						}
-
-					// create the link with flag
-						const link = ui.create_dom_element({
-							element_type	: 'a',
-							href			: response.href,
-							class_name		: 'link',
-							inner_html		: response.label,
-							parent			: wrapper
-						})
-						link.target = '_blank'
-				}, 250)
+						// create the link with flag
+							const link = ui.create_dom_element({
+								element_type	: 'a',
+								href			: response.href,
+								class_name		: 'link',
+								inner_html		: response.label,
+								parent			: wrapper
+							})
+							link.target = '_blank'
+					}
+				)
 				break;
 		}
 

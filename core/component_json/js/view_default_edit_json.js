@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {change_handler} from './component_json.js'
 
 
@@ -171,9 +172,11 @@ const get_content_value = (key, current_value, self) => {
 
 					// add resize content_value event to allow user to resize the map
 						new ResizeObserver( function(){
-							setTimeout(function(){
-								editor.resize();
-							}, 3)
+							dd_request_idle_callback(
+								() => {
+									editor.resize();
+								}
+							)
 						})
 						.observe( content_value )
 			})

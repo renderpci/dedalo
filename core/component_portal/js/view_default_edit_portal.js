@@ -7,6 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
 		render_column_id,
@@ -136,14 +137,17 @@ view_default_edit_portal.render = async function(self, options) {
 		})
 
 	// service autocomplete
-		wrapper.addEventListener('click', function(e) {
+		const click_handler = (e) => {
 			e.stopPropagation()
-			setTimeout(function(){
-				if (self.active) {
-					activate_autocomplete(self, wrapper)
+			dd_request_idle_callback(
+				() => {
+					if (self.active) {
+						activate_autocomplete(self, wrapper)
+					}
 				}
-			}, 1)
-		})
+			)
+		}
+		wrapper.addEventListener('click', click_handler)
 
 
 	return wrapper

@@ -44,7 +44,7 @@ define('DEDALO_BACKUP_PATH_TEMP','');
 define('DEDALO_BACKUP_PATH_DB','');
 define('DEDALO_BACKUP_PATH_ONTOLOGY','');
 define('LOGGER_LEVEL',8);
-define('UPDATE_LOG_FILE'.'');
+define('UPDATE_LOG_FILE','');
 define('DEDALO_STRUCTURE_LANG','');
 define('DEDALO_APPLICATION_LANGS',[]);
 define('DEDALO_APPLICATION_LANGS_DEFAULT','');
@@ -124,7 +124,6 @@ define('DEDALO_SUPERUSER','');
 define('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS','');
 define('MYSQL_DB_BIN_PATH','');
 
-define('DEDALO_NOTIFICATION',[]);
 define('EXPORT_HIERARCHY_PATH','');
 define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS','');
 define('DEDALO_NOTIFICATION_CUSTOM','');
@@ -140,6 +139,7 @@ define('PDF_OCR_ENGINE','');
 
 define('DEDALO_RECOVERY_KEY','');
 define('DEDALO_RECOVERY_MODE','');
+define('DEDALO_BINARY_BASE_PATH','');
 
 function session_start_manager(){};
 function fix_cascade_config_var(){};
@@ -148,6 +148,10 @@ function custom_postprocessing_image(){};
 // function logged_user_id() : ?int {};
 function logged_user_is_developer() {};
 // function array_find(?array $ar_value=null, callable $fn);
-class Socrata(){function post(){}};
+class Socrata{};
 $options = new stdClass();
 function apcu_enabled(){};
+function logger_backend_activity(){};
+function get_base_binary_path(){};
+class Linfo{};
+class system{};

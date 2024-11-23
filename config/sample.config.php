@@ -103,6 +103,11 @@
 
 
 
+// internal encoding
+	mb_internal_encoding('UTF-8');
+
+
+
 // dedalo entity
 	// dedalo_entity string. Do not use here spaces or non ASCII chars
 	define('DEDALO_ENTITY', 'my_entity_name'); // Like 'dedalo4'
@@ -227,7 +232,7 @@
 		// WARNING	= 25;
 		// ERROR	= 10;
 		// CRITICAL	= 5;
-		define('LOGGER_LEVEL', (SHOW_DEBUG===true)
+		define('LOGGER_LEVEL', (SHOW_DEBUG===true || SHOW_DEVELOPER===true)
 			? logger::DEBUG // log all messages
 			: logger::ERROR // log only errors
 		);
@@ -609,13 +614,14 @@
 	// diffusion_custom
 	// Optional custom class to manipulate diffusion options. string|bool . Default: false
 	define('DIFFUSION_CUSTOM', false);
-	// api (publication). This definition is used in administration panels to auto-fill main vars
+	// api (publication). This definition is used only in area maintenance to auto-fill main vars
 	// Note that in the public server config file, you need to define again this values because
 	// the public API files could be place in another location/server as independent files
 	define('API_WEB_USER_CODE_MULTIPLE', [
 		[
 			'db_name'	=> '', // like web_my_entity
-			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+			'code'		=> '',  // like asd38kjlkasd6gadsg2fasdoijQks
+			'api_ui'	=> null // optional api ui URL. Used only when publication is in another server like 'https://dedalo.dev/dedalo/publication/server_api/v1/docu/ui/'
 		]
 	]);
 

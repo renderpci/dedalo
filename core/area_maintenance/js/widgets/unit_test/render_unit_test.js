@@ -83,17 +83,18 @@ const get_content_data_edit = async function(self) {
 		const button_open = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light',
-			inner_html		: `Open alpha unit test`,
+			inner_html		: `Open JS unit test`,
 			parent			: content_data
 		})
-		button_open.addEventListener('click', function(e) {
+		const click_handler = (e) => {
 			e.stopPropagation()
 
 			// url
 			const url = `${DEDALO_ROOT_WEB}/core/unit_test/`
 
 			window.open(url)
-		})
+		}
+		button_open.addEventListener('click', click_handler)
 
 	// list_of_test
 		const list_of_test = ui.create_dom_element({
@@ -101,7 +102,6 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'list_of_test',
 			parent			: content_data
 		})
-		const content = content_data
 		import('../../../../unit_test/js/list.js')
 		.then(function(module){
 			ui.update_node_content(list_of_test, JSON.stringify(module.list_of_test, null, 2))
@@ -114,20 +114,22 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init new empty test record
-		self.caller.init_form({
-			submit_label	: 'Truncate test table and Create new empty test record',
-			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
-			body_response	: body_response,
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
-				source	: {
-					action : 'create_test_record'
-				},
-				options	: {}
-			}
-		})
+		if (self.caller?.init_form) {
+			self.caller.init_form({
+				submit_label	: 'Truncate test table and Create new empty test record',
+				confirm_text	: get_label.sure || 'Sure?',
+				body_info		: content_data,
+				body_response	: body_response,
+				trigger : {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'class_request',
+					source	: {
+						action : 'create_test_record'
+					},
+					options	: {}
+				}
+			})
+		}
 
 	// add at end body_response
 		content_data.appendChild(body_response)
@@ -258,7 +260,7 @@ const render_long_process = function() {
 			inner_html		: 'Run long process',
 			parent			: long_process_container
 		})
-		button_run_long_process.addEventListener('click', (e) => {
+		const click_handler = (e) => {
 			e.stopPropagation()
 
 			// prompt
@@ -280,7 +282,9 @@ const render_long_process = function() {
 					long_process_response
 				)
 			})
-		})
+		}
+		button_run_long_process.addEventListener('click', click_handler)
+
 		const label_update_rate = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'info_text',

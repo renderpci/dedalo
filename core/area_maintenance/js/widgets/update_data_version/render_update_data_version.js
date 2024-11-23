@@ -9,6 +9,7 @@
 	import {when_in_dom} from '../../../../common/js/events.js'
 	import {render_stream} from '../../../../common/js/render_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 	// hljs
 	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
@@ -90,16 +91,9 @@ const get_content_data = async function(self) {
 		})
 
 	// set widget container label color style
-		const when_in_dom_handler = () => {
-			if (update_version) {
-				const wrapper = self.node
-				const widget_container = wrapper.parentNode.parentNode
-				if (widget_container) {
-					widget_container.classList.add('danger')
-				}
-			}
+		if (update_version) {
+			set_widget_label_style(self, 'danger', 'add', content_data)
 		}
-		when_in_dom(content_data, when_in_dom_handler)
 
 	// dedalo_db_management
 		if (!update_version) {

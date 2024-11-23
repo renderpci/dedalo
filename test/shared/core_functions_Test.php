@@ -672,6 +672,7 @@ final class core_functions_test extends TestCase {
 	}//end test_array_key_path
 
 
+
 	/**
 	* TEST_array_keys_recursive
 	* @return void
@@ -1763,7 +1764,7 @@ final class core_functions_test extends TestCase {
 	*/
 	public function test_test_php_version_supported() {
 
-		$result = test_php_version_supported(
+		$result = system::test_php_version_supported(
 			'8.2.0'
 		);
 

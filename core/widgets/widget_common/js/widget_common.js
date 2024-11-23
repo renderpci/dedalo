@@ -97,25 +97,35 @@ widget_common.prototype.build = async function(autoload=false) {
 	// autoload
 		if (autoload===true) {
 
-			const rqo = {
-				action	: 'get_widget_dato',
-				dd_api	: 'dd_component_info',
-				source	: {
-					tipo			: self.caller.tipo,
-					section_tipo	: self.caller.section_tipo,
-					section_id		: self.caller.section_id,
-					mode			: self.mode
-				},
-				options	: {
-					widget_name	: self.name
-				}
-			}
-			const api_response = await data_manager.request({
-				body: rqo
-			});
+			// component_info caller cases
+			// all component_info widgets are using this unified load data way
+			// for convenience we place this API request in the common build
+			if (self.caller==='component_info') {
 
-			if(api_response.result) {
-				self.value = api_response.result
+				const rqo = {
+					action	: 'get_widget_dato',
+					dd_api	: 'dd_component_info',
+					source	: {
+						tipo			: self.caller.tipo,
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id,
+						mode			: self.mode
+					},
+					options	: {
+						widget_name	: self.name
+					}
+				}
+				const api_response = await data_manager.request({
+					body: rqo
+				});
+
+				if(api_response.result) {
+					self.value = api_response.result
+				}
+
+			}else{
+
+				// let each widget handle its own data load overwriting this build
 			}
 		}
 

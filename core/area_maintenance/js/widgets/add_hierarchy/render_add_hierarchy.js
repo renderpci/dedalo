@@ -89,7 +89,7 @@ const get_content_data_edit = async function(self) {
 		const hierarchy_files_dir_path	= value.hierarchy_files_dir_path
 		const hierarchy_typologies		= value.hierarchy_typologies
 		const active_hierarchies		= []
-		const active_hierarchies_length	= value.active_hierarchies.length
+		const active_hierarchies_length	= value.active_hierarchies?.length
 		for (let i = 0; i < active_hierarchies_length; i++) {
 			const item = value.active_hierarchies[i]
 			if (item.tld) {

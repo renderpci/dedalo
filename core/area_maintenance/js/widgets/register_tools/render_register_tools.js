@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
 
@@ -67,14 +68,12 @@ const render_content_data = async function(self) {
 
 	// short vars
 		const value		= self.value || {}
-		const datalist	= value.datalist || []
-		const errors	= value.errors
+		const errors	= value.errors || []
 
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
 		})
-
 
 	// datalist
 		// header
@@ -123,80 +122,17 @@ const render_content_data = async function(self) {
 				parent			: tool_item
 			})
 
-		// list
-			const datalist_length = datalist.length
-			for (let i = 0; i < datalist_length; i++) {
-
-				const item = datalist[i]
-
-				const name				= item.name
-				const version			= item.version
-				const developer			= item.developer
-				const installed_version	= item.installed_version
-				const ar_warning		= item.warning
-					? [item.warning]
-					: []
-
-				// tool_item
-				const tool_item = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_item',
-					parent			: content_data
-				})
-
-				// name
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_name',
-					inner_html		: name,
-					parent			: tool_item
-				})
-
-				// developer
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'developer',
-					inner_html		: developer,
-					parent			: tool_item
-				})
-
-				// version
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_version',
-					inner_html		: version,
-					parent			: tool_item
-				})
-
-				// installed_version
-				const installed_version_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_installed_version',
-					inner_html		: installed_version,
-					parent			: tool_item
-				})
-				if (installed_version!==version) {
-					installed_version_node.classList.add('warning')
-				}
-
-				// warning
-				if (!version) {
-					ar_warning.push('Tool version not defined')
-				}
-				if (!installed_version) {
-					ar_warning.push('Installed version not defined')
-				}
-				const warning_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_warning',
-					inner_html		: ar_warning.join('<br>'),
-					parent			: tool_item
-				})
-			}
+		// datalist_container
+			const datalist_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'datalist_container',
+				parent			: content_data
+			})
+			render_datalist(self, datalist_container)
 
 	// info errors
-		if (value.errors) {
-			const text = `Errors found. Fix this errors before continue: <br>` + value.errors.join('<br>')
+		if (errors.length) {
+			const text = `Errors found. Fix this errors before continue: <br>` + errors.join('<br>')
 			ui.create_dom_element({
 				element_type	: 'div',
 				inner_html		: text,
@@ -212,7 +148,7 @@ const render_content_data = async function(self) {
 		})
 
 	// form init
-		if (self.caller.init_form) {
+		if (self.caller?.init_form) {
 			self.caller.init_form({
 				submit_label	: get_label.registrar_herramientas || self.name,
 				confirm_text	: get_label.sure || 'Sure?',
@@ -225,6 +161,14 @@ const render_content_data = async function(self) {
 						action : 'register_tools'
 					},
 					options	: {}
+				},
+				on_done : async () => {
+
+					// get and update value
+					self.value = await self.get_widget_value()
+
+					// render datalist again
+					render_datalist(self, datalist_container)
 				}
 			})
 		}
@@ -235,6 +179,120 @@ const render_content_data = async function(self) {
 
 	return content_data
 }//end render_content_data
+
+
+
+/**
+* RENDER_DATALIST
+* Create the datalist nodes and add nodes to datalist_container
+* @param object self
+* @return bool
+*/
+const render_datalist = (self, datalist_container) => {
+
+	// short vars
+		const value		= self.value || {}
+		const datalist	= value.datalist || []
+		const errors	= value.errors || []
+
+	// check versions
+		const outdated = datalist.reduce((carry, value) => {
+			if (value.version !== value.installed_version) {
+				carry.push(value)
+			}
+			return carry
+		}, [])
+
+	// set widget container label color style
+		if (errors.length || outdated.length) {
+			set_widget_label_style(self, 'danger', 'add', datalist_container)
+		}else{
+			set_widget_label_style(self, 'danger', 'remove', datalist_container)
+		}
+
+	const fragment = new DocumentFragment()
+
+	const datalist_length = datalist.length
+	for (let i = 0; i < datalist_length; i++) {
+
+		const item = datalist[i]
+
+		const name				= item.name
+		const version			= item.version
+		const developer			= item.developer
+		const installed_version	= item.installed_version
+		const ar_warning		= item.warning
+			? [item.warning]
+			: []
+
+		// tool_item
+		const tool_item = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tool_item',
+			parent			: fragment
+		})
+
+		// name
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tool_name',
+			inner_html		: name,
+			parent			: tool_item
+		})
+
+		// developer
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'developer',
+			inner_html		: developer,
+			parent			: tool_item
+		})
+
+		// version
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tool_version',
+			inner_html		: version,
+			parent			: tool_item
+		})
+
+		// installed_version
+		const installed_version_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tool_installed_version',
+			inner_html		: installed_version,
+			parent			: tool_item
+		})
+		if (installed_version!==version) {
+			installed_version_node.classList.add('warning')
+		}
+
+		// warning
+		if (!version) {
+			ar_warning.push('Tool version not defined')
+		}
+		if (!installed_version) {
+			ar_warning.push('Installed version not defined')
+		}
+		const warning_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tool_warning',
+			inner_html		: ar_warning.join('<br>'),
+			parent			: tool_item
+		})
+	}
+
+	// clean node
+	while (datalist_container.firstChild) {
+		datalist_container.removeChild(datalist_container.firstChild);
+	}
+
+	// append
+	datalist_container.appendChild(fragment)
+
+
+	return true
+}//end render_datalist
 
 
 

@@ -159,21 +159,37 @@
 
 		// layer_selector (editing images)
 		.layer_selector {
-			width: 163px;
-			background-color: @color_orange_dedalo;
+			min-width: 12.27rem;
+			background-color: @color_grey_medium; // @color_orange_dedalo;
 			position: absolute;
-			right: 0px;
-			top: 0px;
+			right: -1px;
+			top: 1px;
 			padding: 0px;
 			text-align: right;
 			z-index: 3;
+			// display: flex;
+			// flex-wrap: wrap;
+			// justify-content: flex-end;
 
-			>.button {
-				margin: 0.5em;
-				float: none;
-				display: inline-block;
-				&.add {
-					float: left;
+			>.layer_selector_header {
+				margin: 0.5rem;
+
+				>.layer_icon, >.button {
+					display: inline-block;
+					margin: 0.5rem;
+					margin-bottom: 0.10rem;
+					vertical-align: middle;
+				}
+
+				>.layer_icon {
+					color: @color_grey_dark_1;
+				}
+
+				>.button {
+
+					&.add {
+						float: left;
+					}
 				}
 			}
 
@@ -181,17 +197,21 @@
 			>.layer_ul {
 				text-align: left;
 				clear: both;
+				margin-top: 0.5rem;
+				width: 100%;
+
 
 				>li {
 					display: grid;
 					grid-template-columns: 1em 1em auto 1em;
 					align-items: center;
-					border-bottom: 1px solid #777777;
-					border-left: 1px solid #777777;
-					border-right: 1px solid #777777;
+					border-bottom: 1px solid @color_grey_medium;
+					border-left: 1px solid @color_grey_medium;
+					border-right: 1px solid @color_grey_medium;
 					cursor: pointer;
 					background-color: @color_white;
 					height: 30px;
+					background-color: @color_grey_ultralight;
 
 					&:hover {
 						background-color: @color_orange_dedalo;
@@ -202,11 +222,12 @@
 						color: initial;
 					}
 					&:first-child {
-						border-top: 0.5px solid #777777;
+						border-top: 0.5px solid @color_grey_medium;
 					}
 
 					.layer_id {
 						justify-self: center;
+						padding-left: 0.5rem;
 					}
 					.user_layer_name {
 
