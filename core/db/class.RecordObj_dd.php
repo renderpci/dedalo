@@ -1577,4 +1577,52 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
+	/**
+	* INSERT
+	* Create a row into jer_dd with ontology data
+	* The insert will search if tipo exists previously,
+	* if the tipo was found, delete it and insert as new one
+	* else insert new one
+	* @return string|false|null $tipo(terminoID)
+	*/
+	public function insert() : string|false|null {
+
+		$row_data = self::get_row_data($this->terminoID);
+
+		//remove any other things than tld and section_id in the tipo string
+		$safe_tipo = safe_tipo($this->terminoID);
+
+		if( !empty($row_data) ){
+
+			$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+			$strQuery	= "DELETE FROM \"$table\" WHERE \"terminoID\" = '$safe_tipo'";
+			$result		= pg_query(DBi::_getConnection(), $strQuery);
+
+			if($result===false) {
+				if(SHOW_DEBUG===true) {
+					$msg = __METHOD__." Failed Delete record (RDBO) from terminoID: $safe_tipo";
+				}else{
+					$msg = "Failed Delete record (RDBO). Record $safe_tipo is not deleted. Please contact with your admin" ;
+				}
+				trigger_error($msg);
+				debug_log(__METHOD__
+					. ' ' . $msg .PHP_EOL
+					. 'strQuery: ' . to_string($strQuery)
+					, logger::ERROR
+				);
+
+				return false;
+			}
+		}
+
+		// force to insert in the Save process of his parent.
+		$this->force_insert_on_save = true;
+
+		$this->set_terminoID( $this->terminoID );
+
+		// insert, the Save return the tipo (terminoID)
+		$new_terminoID = parent::Save();
+
+		return $new_terminoID;
+	}//end insert
 }//end class RecordObj_dd
