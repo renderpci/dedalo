@@ -319,7 +319,7 @@ const get_content_data = async function(self) {
 					body : {
 						dd_api		: 'dd_utils_api',
 						action		: 'get_process_status',
-						update_rate	: 41, // int milliseconds
+						update_rate	: 1000, // int milliseconds
 						options		: {
 							pid		: pid,
 							pfile	: pfile
