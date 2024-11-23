@@ -130,7 +130,7 @@ class ontology {
 	* @param string $target_section_tipo
 	* @return bool
 	*/
-	public static function add_section_row_from_jer_dd( object $jer_dd_row ) {
+	public static function add_section_row_from_jer_dd( object $jer_dd_row ) : bool {
 
 		// vars
 		$tld					= $jer_dd_row->tld;
@@ -351,6 +351,8 @@ class ontology {
 			$properties_component->set_dato( $properties_general_value ?? null );
 			$properties_component->Save();
 
+
+		return true;
 	}//end add_section_row_from_jer_dd
 
 
