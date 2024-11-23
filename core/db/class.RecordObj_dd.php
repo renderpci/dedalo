@@ -1465,6 +1465,31 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* GET_ROW_DATA
+	* Find the given tipo in jer_dd and return the row if exists.
+	* @param string $tipo (terminoID)
+	* @return object|null $row
+	*/
+	public static function get_row_data( string $tipo ) : ?object {
+
+		//remove any other things than tld and section_id in the tipo string
+		$safe_tipo = safe_tipo($tipo);
+
+		$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+		$strQuery	= "SELECT * FROM \"$table\" WHERE \"terminoID\"='$safe_tipo' LIMIT 1";
+		$result		= pg_query(DBi::_getConnection(), $strQuery);
+
+		$row_data = null;
+		while($row = pg_fetch_object($result)) {
+			$row_data = $row;
+		}
+
+		return $row_data;
+	}//end get_row_data
+
+
+
+	/**
 	* CHECK_ACTIVE_TLD
 	* Check if the tipo tld is available and installed in the ontology looking the jer_dd
 	* @param string $tipo
