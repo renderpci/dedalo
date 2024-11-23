@@ -31,6 +31,24 @@ $updates->$v = new stdClass();
 		$updates->$v->alert_update[] = $alert;
 
 	// DATABASE UPDATES
+		// re check if exist matrix_onology tables:
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_main_id_seq;
+				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
+			");
+		// Add the matrix_ontology table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
+				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
+			");
+
 		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
 		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 			DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
