@@ -1505,20 +1505,28 @@ class area_maintenance extends area_common {
 	* @return object $response
 	*/
 	public static function get_widget_value( object $options ) : object {
+		$start_time=start_time();
 
 		// options
 			$name = $options->name;
 
 		// exec widget call
 			if( method_exists('area_maintenance_widgets', $name) ) {
-				return call_user_func(array('area_maintenance_widgets', $name), []);
+
+				$response = call_user_func(array('area_maintenance_widgets', $name), []);
+
+			}else{
+				// error response
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed. The widget is not defined: '. to_string($name);
+					$response->errors	= [];
 			}
 
-		// error response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed. The widget is not defined: '. to_string($name);
-				$response->errors	= [];
+			$total_time = exec_time_unit($start_time,'ms').' ms';
+			$response->get_value_time = $total_time . 'ms';
+
+			session_write_close();
 
 
 		return $response;
