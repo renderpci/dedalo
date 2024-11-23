@@ -503,7 +503,7 @@ class ontology {
 		// sort tipos
 		foreach ($all_tipos as $ontology_tipo) {
 
-			$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG);
+			$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG, false); // important don't use cache here!
 
 			if( $tld === $ontology_tld) {
 				$target_section_tipo = $ontology_tipo;
