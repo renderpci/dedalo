@@ -2,7 +2,7 @@
 declare(strict_types=1);
 /**
 * ONTOLOGY
-* Manages the main ontology definitions of Dédalo
+* Manages the main ontology definitions of Dédalo.
 */
 class ontology {
 
@@ -21,17 +21,28 @@ class ontology {
 	];
 
 
+
 	/**
 	* CEATE_ONTOLOGY_RECORDS
-	*
+	* Iterate all given $jer_dd_rows and creates a section row for each one
+	* @see transform_data::generate_all_main_ontology_sections
 	* @param array $jer_dd_rows
 	* @return void
 	*/
 	public static function ceate_ontology_records( array $jer_dd_rows ) {
 
 		foreach ($jer_dd_rows as $jer_dd_row) {
-			$setion_data = self::add_section_row_from_jer_dd( $jer_dd_row );
+			$result = self::add_section_row_from_jer_dd( $jer_dd_row );
+			if (!$result) {
+				debug_log(__METHOD__
+					. " Error adding section " . PHP_EOL
+					. ' jer_dd_row: ' . to_string($jer_dd_row)
+					, logger::ERROR
+				);
+			}
 		}
+
+		return true;
 	}//end ceate_ontology_records
 
 
@@ -50,6 +61,7 @@ class ontology {
 		$filter = json_decode( '
 			{
 				"$and": [{
+					"q_operator": "==",
 					"q": "'.$safe_tld.'",
 					"path": [{
 						"section_tipo": "'.self::$main_section_tipo.'",
@@ -72,6 +84,7 @@ class ontology {
 
 		$row = $ar_records[0] ?? null;
 
+
 		return $row;
 	}//end get_ontology_main_from_tld
 
@@ -79,9 +92,9 @@ class ontology {
 
 	/**
 	* GET_ONTOLOGY_MAIN_FORM_TARGET_SECTION_TIPO
-	* Find the matrix row of the ontology main from a target section tipo from ontology matrix row
+	* Find the matrix row of the ontology main from a given target section tipo as ontology matrix row
 	* ontology40 --> section_tipo: ontology35, section_id: 1
-	* @param string $tld
+	* @param string $target_section_tipo
 	* @return object|null $row
 	*/
 	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
@@ -91,6 +104,7 @@ class ontology {
 		$filter = json_decode( '
 			{
 				"$and": [{
+					"q_operator": "==",
 					"q": "'.$safe_tipo.'",
 					"path": [{
 						"section_tipo": "'.self::$main_section_tipo.'",
@@ -113,6 +127,7 @@ class ontology {
 
 		$row = $ar_records[0] ?? null;
 
+
 		return $row;
 	}//end get_ontology_main_form_target_section_tipo
 
@@ -123,9 +138,9 @@ class ontology {
 	* Transform jer_dd row (from DDBB) into matrix ontology row (section record).
 	* @param object $jer_dd_row
 	* @param string $target_section_tipo
-	* @return
+	* @return bool
 	*/
-	public static function add_section_row_from_jer_dd( object $jer_dd_row ) {
+	public static function add_section_row_from_jer_dd( object $jer_dd_row ) : bool {
 
 		// vars
 		$tld					= $jer_dd_row->tld;
@@ -346,27 +361,30 @@ class ontology {
 			$properties_component->set_dato( $properties_general_value ?? null );
 			$properties_component->Save();
 
+
+		return true;
 	}//end add_section_row_from_jer_dd
 
 
 
 	/**
-	* ASSING_RELATIONS_FROM_JER_DD
+	* ASSIGN_RELATIONS_FROM_JER_DD
 	* Once the matrix records of jer_dd parse is set
-	* is possible assign the relations between nodes.
+	* it is possible to assign the relations between nodes.
 	* Get the relations column in jer_dd and set it as component_portal locator pointed to other matrix ontology record.
 	* @param string $tld
 	* @return bool
 	*/
-	public static function assing_relations_from_jer_dd( string $tld) : bool {
+	public static function assign_relations_from_jer_dd( string $tld) : bool {
 
-		// vars
+		// target_section_tipo
 		$target_section_tipo = self::map_tld_to_target_section_tipo( $tld );
 
-		// get all section
+		// get all section instances rows
 		$all_section_instances = section::get_resource_all_section_records_unfiltered( $target_section_tipo );
 
 		while ($row = pg_fetch_assoc($all_section_instances)) {
+
 			$section_id = $row['section_id'];
 
 			$node_tipo = $tld.$section_id;
@@ -403,8 +421,9 @@ class ontology {
 			$relations_component->Save();
 		}
 
+
 		return true;
-	}//end assing_relations_from_jer_dd
+	}//end assign_relations_from_jer_dd
 
 
 
@@ -467,7 +486,7 @@ class ontology {
 
 	/**
 	* ADD_MAIN_SECTION
-	* Create new section in the main ontology sections.
+	* Creates a new section in the main ontology sections.
 	* The main section could be the official tlds as dd, rsc, hierarchy, etc
 	* Or local ontology defined by every institution as es, qdp, mupreva, etc
 	* @param string $tld
@@ -481,10 +500,10 @@ class ontology {
 		$all_tipos = array_merge($ontology_tipos, $local_ontology_tipos);
 		$all_tipos = array_unique( $all_tipos );
 
-		//sort tipos
+		// sort tipos
 		foreach ($all_tipos as $ontology_tipo) {
 
-			$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG);
+			$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG, false); // important don't use cache here!
 
 			if( $tld === $ontology_tld) {
 				$target_section_tipo = $ontology_tipo;
@@ -493,22 +512,23 @@ class ontology {
 		}
 
 		if( !isset($target_section_tipo) ){
-			$target_section_tipo = ontology::create_jr_dd_local_ontology_section_node( $tld );
+			$target_section_tipo = ontology::create_jer_dd_local_ontology_section_node( $tld );
 		}
 
-		// check if exist the main tld
+		// check if the main tld already exists
 		$ontology_main = self::get_ontology_main_from_tld( $tld );
 		if( !empty($ontology_main) ){
 			debug_log(__METHOD__
-				. " Ignored to add new main ontology with this tld, the main ontology exists, don't use this function to change the main ontology section, tld: " . PHP_EOL
-				. to_string( $tld )
-				, logger::DEBUG
+				. " Ignored to add new main ontology with this tld, the main ontology already exists, don't use this function to change the main ontology section." . PHP_EOL
+				. ' tld: ' . to_string( $tld )
+				, logger::WARNING
 			);
 			return null;
 		}
 
-		// ontology table
-		$section_data = json_decode( file_get_contents( dirname(__FILE__).'/main_ontology_section_data.json') );
+		// ontology table record template data
+		$section_data_string	= file_get_contents( dirname(__FILE__).'/main_ontology_section_data.json' );
+		$section_data			= json_handler::decode( $section_data_string );
 
 		// Name
 		$section_data->components->hierarchy5->dato->{DEDALO_STRUCTURE_LANG} = [$tld];
@@ -519,7 +539,7 @@ class ontology {
 		// Target section tipo
 		$section_data->components->hierarchy53->dato->{DEDALO_DATA_NOLAN} = [$target_section_tipo];
 
-		// add model root node in the dd main section only, only dd has the models for the ontology.
+		// add model root node in the dd main section only. Note that only dd has the models for the ontology.
 		if($tld === 'dd'){
 
 			// general term
@@ -531,8 +551,7 @@ class ontology {
 
 			$section_data->relations[] = $general_term;
 
-
-			//model term
+			// model term
 			$model_term = new locator();
 				$model_term->set_section_tipo($target_section_tipo);
 				$model_term->set_section_id('2');
@@ -541,10 +560,10 @@ class ontology {
 
 			$section_data->relations[] = $model_term;
 
-			//active in thesaurus, set only dd as active to show in the thesaurus tree
+			// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
 			foreach($section_data->relations as $locator){
 				if($locator->from_component_tipo === 'hierarchy125'){
-					$locator->section_id = "1";
+					$locator->section_id = '1';
 				}
 			}
 		}
@@ -561,20 +580,55 @@ class ontology {
 	}//end add_main_section
 
 
+
 	/**
-	* CREATE_JR_DD_LOCAL_ONTOLOGY_SECTION_NODE
+	* CREATE_JER_DD_LOCAL_ONTOLOGY_SECTION_NODE
 	* Create new jer_dd row with localontology tld for the local tlds
 	* Used to creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc
 	* Is necessary a jer_dd row to represent it.
 	* @param string $tld
 	* @return string $term_id
 	*/
-	public static function create_jr_dd_local_ontology_section_node( string $tld ) : string {
+	public static function create_jer_dd_local_ontology_section_node( string $tld ) : string {
 
-		$term = new stdClass();
-			$term->{DEDALO_STRUCTURE_LANG} = $tld;
+		// check local ontology node definition in jer_dd
+		// localontology1 is a root node of all local tld of the entities
+		// the node is not sync by master server definition and need to be created locally
+		// if the node exits use it as parent node.
+			$local_ontology_row_data = RecordObj_dd::get_row_data('localontology1');
 
-		$RecordObj_dd = new RecordObj_dd(null, 'localontology');
+			if( empty($local_ontology_row_data) ){
+
+				$local_ontology_RecordObj_dd = new RecordObj_dd('localontology1');
+
+				$local_ontology_RecordObj_dd->set_parent('dd5');
+				$local_ontology_RecordObj_dd->set_modelo('dd4');
+				$local_ontology_RecordObj_dd->set_esmodelo('no');
+				$local_ontology_RecordObj_dd->set_esdescriptor('si');
+				$local_ontology_RecordObj_dd->set_visible('si');
+				$local_ontology_RecordObj_dd->set_tld('localontology');
+				$local_ontology_RecordObj_dd->set_traducible('no');
+
+				$local_ontology_term = json_decode('
+					{
+						"lg-spa": "Instancias locales",
+						"lg-cat": "Instàncies locals",
+						"lg-deu": "Lokale Instanzen",
+						"lg-ell": "Τοπικές περιπτώσεις",
+						"lg-eng": "Local instances",
+						"lg-fra": "Instances locales",
+						"lg-ita": "Istanze locali"
+					}
+				');
+				$local_ontology_RecordObj_dd->set_term( $local_ontology_term );
+				$id = $local_ontology_RecordObj_dd->insert();
+			}
+
+		$tld_RecordObj_dd = new RecordObj_dd(null, 'localontology');
+		$last_id = $tld_RecordObj_dd->get_last_section_id_from_tld();
+
+		$terminoID = 'localontology'.( $last_id+1 );
+		$RecordObj_dd = new RecordObj_dd($terminoID);
 			$RecordObj_dd->set_parent('localontology1');
 			$RecordObj_dd->set_modelo('dd6');
 			$RecordObj_dd->set_esmodelo('no');
@@ -583,44 +637,57 @@ class ontology {
 			$RecordObj_dd->set_tld('localontology');
 			$RecordObj_dd->set_traducible('no');
 			$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+
+			$term = new stdClass();
+				$term->{DEDALO_STRUCTURE_LANG} = $tld;
 			$RecordObj_dd->set_term( $term );
 
-		$term_id = $RecordObj_dd->Save();
+		$term_id = $RecordObj_dd->insert();
+
 
 		return $term_id;
-	}//end create_jr_dd_local_ontology_section_node
+	}//end create_jer_dd_local_ontology_section_node
 
 
 
 	/**
 	* MAP_TLD_TO_TARGET_SECTION_TIPO
-	*
+	* get the target section tipo from a given tld
+	* dd ---> ontology40
 	* @param string $tld
 	* @return string|null $target_section_tipo
 	*/
 	public static function map_tld_to_target_section_tipo( string $tld ) : ?string {
 
-		if( isset($cache_target_section_tipo[$tld]) ){
-			return $cache_target_section_tipo[$tld];
+		// cache. Defined as general for this class
+		if( isset(self::$cache_target_section_tipo[$tld]) ){
+			return self::$cache_target_section_tipo[$tld];
 		}
 
-		$ontology_main = self::get_ontology_main_from_tld( $tld );
+		// get_ontology_main record
+		$ontology_main_row = self::get_ontology_main_from_tld( $tld );
 
-		if( empty($ontology_main) ){
+		if( empty($ontology_main_row) ){
+			// creates a new one
 			self::add_main_section( $tld );
-			$ontology_main	= self::get_ontology_main_from_tld( $tld );
+			// try again
+			$ontology_main_row = self::get_ontology_main_from_tld( $tld );
 		}
 
-		if( empty($ontology_main) ){
+		// empty unrecoverable case
+		if( empty($ontology_main_row) ){
 			debug_log(__METHOD__
-				. " Error for tld, the main ontology don't exist, tld: " . PHP_EOL
-				. to_string( $tld )
+				. " Error for tld, the main ontology don't exist." . PHP_EOL
+				. ' tld: ' . to_string( $tld )
 				, logger::ERROR
 			);
 			return null;
 		}
-		$ar_target_section_tipo = $ontology_main->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 
+		// target_section_tipo from row data
+		$ar_target_section_tipo = $ontology_main_row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
+
+		// unset or empty data case
 		if( empty($ar_target_section_tipo) ){
 			debug_log(__METHOD__
 				. " Error for target_section_tipo, the main ontology has not defined target section_tipo" . PHP_EOL
@@ -629,8 +696,10 @@ class ontology {
 			);
 			return null;
 		}
+
 		$target_section_tipo = $ar_target_section_tipo[0];
 
+		// cache save
 		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
 
 
@@ -641,12 +710,14 @@ class ontology {
 
 	/**
 	* MAP_TARGET_SECTION_TIPO_TO_TLD
-	*
+	* get the tld from a given target section tipo
+	* ontology40 --> dd
 	* @param string $target_section_tipo
 	* @return string|null $tld
 	*/
 	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : ?string {
 
+		// cache check
 		foreach (self::$cache_target_section_tipo as $current_tld => $value) {
 			if($value === $target_section_tipo){
 				return $current_tld;
@@ -665,7 +736,7 @@ class ontology {
 		}
 		$ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 
-		if( empty($ar_tld) ){
+		if( empty($ar_tld) || empty($ar_tld[0]) ){
 			debug_log(__METHOD__
 				. " Error for tld, the main ontology has not defined target section_tipo" . PHP_EOL
 				. 'target_section_tipo: ' .to_string( $target_section_tipo )
@@ -673,8 +744,10 @@ class ontology {
 			);
 			return null;
 		}
+
 		$tld = $ar_tld[0];
 
+		// cache save
 		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
 
 
@@ -683,10 +756,9 @@ class ontology {
 
 
 
-
 	/**
 	* GET_ALL_ONTOLOGY_SECTIONS
-	* Calculate ontology sections (target section tipo) of types requested, like ontology40,localontology3,...
+	* Calculates ontology sections (target section tipo) like ontology40, localontology3, ...
 	* @return array $ontology_sections
 	*/
 	public static function get_all_ontology_sections() : array {
@@ -705,7 +777,6 @@ class ontology {
 			$sqo = new search_query_object();
 				$sqo->set_section_tipo( [self::$main_section_tipo] );
 				$sqo->set_limit( 0 );
-
 
 		// search exec
 			$search	= search::get_instance($sqo);
