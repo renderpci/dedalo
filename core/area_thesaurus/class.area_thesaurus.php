@@ -226,7 +226,7 @@ class area_thesaurus extends area_common {
 				}
 			]
 		}');
-	dump($search_query_object, '$search_query_object +-------------------+ '.to_string());
+
 		$search = search::get_instance($search_query_object);
 		$result = $search->search();
 
