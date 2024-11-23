@@ -107,7 +107,7 @@ register_tools.prototype.get_widget_value = async () => {
 		}
 	})
 	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value api_response:', api_response);;
+		console.log('))) get_widget_value resgister_tools api_response:', api_response);;
 	}
 
 	const result = api_response.result
