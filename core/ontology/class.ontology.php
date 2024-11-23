@@ -24,15 +24,25 @@ class ontology {
 
 	/**
 	* CEATE_ONTOLOGY_RECORDS
-	*
+	* Iterate all given $jer_dd_rows and creates a section row for each one
+	* @see transform_data::generate_all_main_ontology_sections
 	* @param array $jer_dd_rows
 	* @return void
 	*/
 	public static function ceate_ontology_records( array $jer_dd_rows ) {
 
 		foreach ($jer_dd_rows as $jer_dd_row) {
-			$setion_data = self::add_section_row_from_jer_dd( $jer_dd_row );
+			$result = self::add_section_row_from_jer_dd( $jer_dd_row );
+			if (!$result) {
+				debug_log(__METHOD__
+					. " Error adding section " . PHP_EOL
+					. ' jer_dd_row: ' . to_string($jer_dd_row)
+					, logger::ERROR
+				);
+			}
 		}
+
+		return true;
 	}//end ceate_ontology_records
 
 
