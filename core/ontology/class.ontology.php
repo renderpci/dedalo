@@ -50,6 +50,7 @@ class ontology {
 		$filter = json_decode( '
 			{
 				"$and": [{
+					"q_operator": "==",
 					"q": "'.$safe_tld.'",
 					"path": [{
 						"section_tipo": "'.self::$main_section_tipo.'",
@@ -72,6 +73,7 @@ class ontology {
 
 		$row = $ar_records[0] ?? null;
 
+
 		return $row;
 	}//end get_ontology_main_from_tld
 
@@ -91,6 +93,7 @@ class ontology {
 		$filter = json_decode( '
 			{
 				"$and": [{
+					"q_operator": "==",
 					"q": "'.$safe_tipo.'",
 					"path": [{
 						"section_tipo": "'.self::$main_section_tipo.'",
@@ -112,6 +115,7 @@ class ontology {
 		$ar_records	= $response->ar_records;
 
 		$row = $ar_records[0] ?? null;
+
 
 		return $row;
 	}//end get_ontology_main_form_target_section_tipo
