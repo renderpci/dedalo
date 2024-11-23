@@ -81,7 +81,7 @@ class area_thesaurus extends area_common {
 		$hierarchy_section_tipo = $this->get_hierarchy_section_tipo();
 
 		// get all hierarchy sections
-			$ar_records = self::get_active_and_visible_hierarchy_sections( $hierarchy_section_tipo );
+			$ar_records = self::get_active_hierarchy_sections( $hierarchy_section_tipo );
 
 		$ar_items = [];
 		foreach ($ar_records as $row) {
@@ -151,6 +151,23 @@ class area_thesaurus extends area_common {
 				$hierarchy_target_order_dato	= $hierarchy_section_order->get_dato();
 				$hierarchy_target_order_value	= $hierarchy_target_order_dato[0] ?? 0;
 
+			// active_in_thesaurus get the status of the component active
+			// it will use to discard into tree view the hierarchy in client
+			// in the JSON controller will check to remove his typology if the hierarchy is not active
+				$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO,true);
+				$hierarchy_active_in_thesaurus = component_common::get_instance(
+					$model,
+					DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO,
+					$row->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$row->section_tipo
+				);
+				$active_in_thesaurus_data	= $hierarchy_active_in_thesaurus->get_dato();
+				$active_in_thesaurus		= isset($active_in_thesaurus_data[0]) && (int)$active_in_thesaurus_data[0]->section_id === NUMERICAL_MATRIX_VALUE_YES
+					? true
+					: false;
+
 			// item
 				$item = new stdClass();
 					$item->section_id			= $row->section_id;
@@ -161,6 +178,7 @@ class area_thesaurus extends area_common {
 					$item->order				= $hierarchy_target_order_value;
 					$item->type					= 'hierarchy';
 					$item->children_tipo		= $hierarchy_children_tipo;
+					$item->active_in_thesaurus	= $active_in_thesaurus;
 
 			$ar_items[] = $item;
 		}//end foreach ($ar_records as $key => $row)
@@ -172,14 +190,14 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_ACTIVE_and_visible_HIERARCHY_SECTIONS
+	* GET_ACTIVE_HIERARCHY_SECTIONS
+	* @param string $section_tipo
 	* @return array $ar_records
 	*/
-	public static function get_active_and_visible_hierarchy_sections( string $section_tipo ) : array {
+	public static function get_active_hierarchy_sections( string $section_tipo ) : array {
 
-		$active_tipo		= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
-		$order_tipo			= DEDALO_HIERARCHY_ORDER_TIPO; // hierarchy48
-		$active_in_ts_tipo	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO; //hierarchy125
+		$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
+		$order_tipo		= DEDALO_HIERARCHY_ORDER_TIPO; // hierarchy48
 
 		$search_query_object = json_decode('{
 			"id": "thesaurus",
@@ -196,17 +214,6 @@ class area_thesaurus extends area_common {
 								"model": "component_radio_button",
 								"section_tipo": "'.$section_tipo.'",
 								"component_tipo": "'.$active_tipo.'"
-							}
-						]
-					},
-					{
-						"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"'.$active_in_ts_tipo.'"},
-						"path": [
-							{
-								"name": "Active",
-								"model": "component_radio_button",
-								"section_tipo": "'.$section_tipo.'",
-								"component_tipo": "'.$active_in_ts_tipo.'"
 							}
 						]
 					}
@@ -233,7 +240,7 @@ class area_thesaurus extends area_common {
 		$ar_records = $result->ar_records;
 
 		return $ar_records;
-	}//end get_active_and_visible_hierarchy_sections
+	}//end get_active_hierarchy_sections
 
 
 

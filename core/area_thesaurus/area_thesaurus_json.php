@@ -63,6 +63,12 @@
 			$ar_tipologies_section_id = [];
 			$ar_typologies = [];
 			foreach ($hierarchy_sections as $hierarchy_data) {
+
+				// remove the typology of hierarchies that are not active to show it in thesaurus tree
+				if( isset($hierarchy_data->active_in_thesaurus) && $hierarchy_data->active_in_thesaurus === false ){
+					continue;
+				}
+
 				if (!in_array($hierarchy_data->typology_section_id, $ar_tipologies_section_id)) {
 					$ar_tipologies_section_id[] = $hierarchy_data->typology_section_id;
 					$typology = new stdClass();

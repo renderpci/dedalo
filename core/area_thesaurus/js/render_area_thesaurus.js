@@ -147,13 +147,16 @@ const render_content_data = function(self) {
 			parent			: fragment
 		})
 
+	// get the ontology node to define is the caller is ontology or thesaurus
+		const is_ontology = self.data.find(item => item.tipo==='dd5') ? true : false;
+
 	// elements
 		const data				= self.data.find(item => item.tipo==='dd100' || item.tipo==='dd5')
 		const ts_nodes			= data.value
-		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy')
+		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy' && node.active_in_thesaurus === true )
 
 	// typology_nodes. sort typologies by order field
-		const typology_nodes	= ts_nodes.filter(node => node.type==='typology' )
+		const typology_nodes	= ts_nodes.filter(node => node.type==='typology')
 		typology_nodes.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
 
 	// iterate typology_nodes
