@@ -500,10 +500,18 @@ class ontology {
 		$all_tipos = array_merge($ontology_tipos, $local_ontology_tipos);
 		$all_tipos = array_unique( $all_tipos );
 
-		// sort tipos
+		// find target section_tipo
 		foreach ($all_tipos as $ontology_tipo) {
 
-			$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG, false); // important don't use cache here!
+			$RecordObj_dd	= new RecordObj_dd($ontology_tipo);
+			$properties		= $RecordObj_dd->get_properties();
+			$ontology_tld	= $properties->main_tld ?? null;
+
+			// local cases will not have the tld inside properties
+			// in those cases will use the term as tld and name
+			if( !isset($ontology_tld) ){
+				$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG, false); // important don't use cache here!
+			}
 
 			if( $tld === $ontology_tld) {
 				$target_section_tipo = $ontology_tipo;
@@ -531,13 +539,23 @@ class ontology {
 		$section_data			= json_handler::decode( $section_data_string );
 
 		// Name
-		$section_data->components->hierarchy5->dato->{DEDALO_STRUCTURE_LANG} = [$tld];
+			$RecordObj_dd	= new RecordObj_dd($target_section_tipo);
+			$term = $RecordObj_dd->get_term();
+			$all_term = isset($term)
+				? $term
+				: (object)[
+					DEDALO_STRUCTURE_LANG => $tld
+				 ];
+
+			foreach($all_term as $lang => $term){
+				$section_data->components->hierarchy5->dato->{$lang} = [$term];
+			}
 
 		// TLD
-		$section_data->components->hierarchy6->dato->{DEDALO_DATA_NOLAN} = [$tld];
+			$section_data->components->hierarchy6->dato->{DEDALO_DATA_NOLAN} = [$tld];
 
 		// Target section tipo
-		$section_data->components->hierarchy53->dato->{DEDALO_DATA_NOLAN} = [$target_section_tipo];
+			$section_data->components->hierarchy53->dato->{DEDALO_DATA_NOLAN} = [$target_section_tipo];
 
 		// add model root node in the dd main section only. Note that only dd has the models for the ontology.
 		if($tld === 'dd'){
@@ -637,6 +655,11 @@ class ontology {
 			$RecordObj_dd->set_tld('localontology');
 			$RecordObj_dd->set_traducible('no');
 			$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+
+			// Properties, add main_tld as official tld definitions
+			$properties = new stdClass();
+				$properties->main_tld = $tld;
+			$RecordObj_dd->set_properties($properties);
 
 			$term = new stdClass();
 				$term->{DEDALO_STRUCTURE_LANG} = $tld;
