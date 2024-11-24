@@ -1792,29 +1792,6 @@ abstract class backup {
 
 
 
-	/**
-	* GET_MATRIX_DESCRIPTORS_TLD_DATA
-	* Get all database table 'matrix_descriptors_dd' rows from given tld
-	* @param string $tld
-	*	like 'ts'
-	* @return array $tld_data
-	*	array of objects
-	*/
-	public static function get_matrix_descriptors_tld_data(string $tld) : array {
-
-		$tld_data = [];
-
-		$columns	= '"parent", "dato", "tipo", "lang"';
-		$strQuery	= 'SELECT '.$columns.' FROM "matrix_descriptors_dd" WHERE parent ~ \'^'.$tld.'[0-9]\' ORDER BY "parent" ASC';
-		$result		= JSON_RecordObj_matrix::search_free($strQuery);
-		while ($row = pg_fetch_object($result)) {
-			$tld_data[] = $row;
-		}
-
-		return $tld_data;
-	}//end get_matrix_descriptors_tld_data
-
-
 
 	/**
 	* IMPORT_STRUCTURE_JSON_DATA
