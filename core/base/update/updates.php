@@ -26,7 +26,12 @@ $updates->$v = new stdClass();
 
 		$alert->command			= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
-			<br>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.
+
+			<p>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.</p>
+			<br>
+			<p>1 - Before continue, update Dédalo Ontology to the latest version making sure 'ontology' is in the list
+			of tld (prefix tipos). <br>Sample: 'dd,rsc,hierarchy,tch,tchi,test,utoponymy,ww,zenon,ontology'.
+			</p>
 		";
 		$updates->$v->alert_update[] = $alert;
 
