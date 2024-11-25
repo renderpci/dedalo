@@ -114,11 +114,6 @@ class logger_backend_activity extends logger_backend {
 
 		// check values
 
-			// disable log
-				if(logger_backend_activity::$enable_log===false) {
-					return null;
-				}
-
 			// if the type of activity is not sent, it is not possible to generate log
 				if (empty($tipo_where)) {
 					debug_log(__METHOD__
@@ -356,7 +351,12 @@ class logger_backend_activity extends logger_backend {
 		?string $operations=null,
 		?array $datos=null,
 		?int $user_id=null
-		) {
+		) : void {
+
+		// disable log
+			if(logger_backend_activity::$enable_log===false) {
+				return;
+			}
 
 		$options = (object)[
 			'message'		=> $message,
