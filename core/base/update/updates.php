@@ -54,6 +54,17 @@ $updates->$v = new stdClass();
 				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
 			");
 
+		// Clean matrix_ontology tables
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+				TRUNCATE "matrix_ontology";
+			');
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+				TRUNCATE "matrix_ontology_main";
+			');
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+				DELETE FROM "matrix_counter" WHERE "tipo" LIKE \'ontology%\'
+			');
+
 		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
 		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 			DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
