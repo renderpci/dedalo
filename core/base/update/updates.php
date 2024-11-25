@@ -70,7 +70,7 @@ $updates->$v = new stdClass();
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
 			$script_obj = new stdClass();
-				$script_obj->info			= "Generate main ontology sections, it get your prefix_tipos definition in config.php and all active hierarchies defined in hierarchy section";
+				$script_obj->info			= "Generate main ontology sections, it get all our jer_dd distinct tld and all active hierarchies defined in hierarchy section";
 				$script_obj->script_class	= "transform_data";
 				$script_obj->script_method	= "generate_all_main_ontology_sections";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent

@@ -390,7 +390,6 @@ export const render_children_list = function(options) {
 				next_node_type = 'thesaurus_node'
 			}
 
-
 			// dataset
 				const current_section_id	= ar_children_data[i].section_id
 				const current_section_tipo	= ar_children_data[i].section_tipo
@@ -1036,9 +1035,10 @@ const render_term = function(options) {
 		}
 		term_node.addEventListener('click', click_handler)
 
+		// term_text
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'term_text ' + (is_descriptor ? '' : 'no_descriptor'),
+			class_name		: 'term_text' + (is_descriptor ? '' : ' no_descriptor'),
 			inner_html		: term_text,
 			parent			: term_node
 		})
@@ -1058,8 +1058,8 @@ const render_term = function(options) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'id_info',
-			inner_html		: ' ['+ child_data.section_tipo +'_'+ child_data.section_id +']',
-			parent			: term_node // fragment
+			inner_html		: '['+ child_data.section_tipo +'_'+ child_data.section_id +']',
+			parent			: term_node
 		})
 
 

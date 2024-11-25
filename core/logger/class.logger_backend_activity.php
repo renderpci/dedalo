@@ -79,7 +79,7 @@ class logger_backend_activity extends logger_backend {
 	* Require url_data string like: 'mysql://user:password@host/database?table=matrix_activity' for compatibility
 	* @param array|null $url_data
 	*/
-	public function __construct(?array $url_data) {
+	public function __construct( ?array $url_data ) {
 
 		// FIX ARRAY ar_elements_activity_tipo
 		logger_backend_activity::$ar_elements_activity_tipo = [
@@ -102,7 +102,7 @@ class logger_backend_activity extends logger_backend {
 	* @param object $options
 	* @return int|null section_id
 	*/
-	public function log_message_defer(object $options) : ?int {
+	public function log_message_defer( object $options ) : ?int {
 
 		// options
 			$message	= $options->message;
