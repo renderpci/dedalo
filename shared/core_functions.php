@@ -331,17 +331,13 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 			break;
 
 		case logger::WARNING:
-			if ( running_in_cli()===true ) {
 
-				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+			$base_msg = 'DEBUG_LOG ['.$level_string.'] ' . $info . PHP_EOL
+				. '[seq]: '  . implode(' > ', $bts);
 
-			}else{
-
-				$base_msg = 'DEBUG_LOG ['.$level_string.'] ' . $info . PHP_EOL
-					. '[seq]: '  . implode(' > ', $bts);
-
-				$msg = sprintf($colorFormats['cyan'], $base_msg);
-			}
+			$msg = running_in_cli()===true
+				? $base_msg
+				: sprintf($colorFormats['cyan'], $base_msg);
 			break;
 
 		case logger::ERROR:
