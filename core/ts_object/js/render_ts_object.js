@@ -53,7 +53,11 @@ export const render_ts_line = function(options) {
 			// TERM
 				case (child_data.ar_elements[j].type==='term'): {
 
-					const term_node = render_term({
+					const render_handler = self.caller.model==='area_ontology'
+						? render_ontology_term
+						: render_term
+
+					const term_node = render_handler({
 						self			: self,
 						child_data		: child_data,
 						is_descriptor	: is_descriptor,
@@ -262,7 +266,7 @@ export const render_ts_line = function(options) {
 					// Case common buttons and links
 					const element_show_component = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: class_for_all + ' default',
+						class_name		: class_for_all + ' default ' + child_data.ar_elements[j].tipo,
 						data_set		: children_dataset,
 						text_node		: current_value, // creates a span node with the value inside
 						parent 			: fragment
@@ -442,7 +446,7 @@ export const render_children_list = function(options) {
 		// ELEMENTS CONTAINER . elements container
 			const elements_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'elements_container',
+				class_name		: 'elements_container ' + self.caller.model,
 				data_set		: {role : 'elements_container'},
 				parent			: wrap_ts_object
 			})
@@ -1065,6 +1069,114 @@ const render_term = function(options) {
 
 	return term_node
 }//end render_term
+
+
+
+/**
+* RENDER_ONTOLOGY_TERM
+* Creates the term nodes like:
+* <div class="list_thesaurus_element term" data-tipo="hierarchy25" data-type="term" data-section_tipo="aa1" data-section_id="1">
+*  <span class="term_text">Social Anthropology</span>
+*  <span class="id_info"> [aa1_1]</span>
+* </div>
+* @param object options
+* {
+*	child_data: object {ar_elements:[{}], has_descriptor_children:true, is_descriptor:true, ..}
+* 	is_descriptor: bool
+*	key: int
+* 	self: object
+* }
+* @return HTMLElement term_node
+*/
+const render_ontology_term = function(options) {
+
+	// options
+		const self			= options.self
+		const child_data	= options.child_data
+		const is_descriptor	= options.is_descriptor
+		const key			= options.key // int j
+
+	// parse parts
+		const regex				= /^(.*) ([a-z]{2,}) ([0-9]+)$/gm;
+		const term_regex_result	= regex.exec(child_data.ar_elements[key].value)
+
+		// term_id . like 'dd_1'
+			const term_id	= term_regex_result
+				? term_regex_result[2] + '_' + term_regex_result[3]
+				: child_data.section_tipo +'_'+ child_data.section_id
+
+		// term_text
+			// const term_text = Array.isArray( child_data.ar_elements[key].value )
+			// 	? child_data.ar_elements[key].value.join(' ')
+			// 	: child_data.ar_elements[key].value
+			const term_text = term_regex_result
+				? term_regex_result[1]
+				: child_data.ar_elements[key].value
+
+	// children_dataset
+		const children_dataset	= {
+			tipo	: child_data.ar_elements[key].tipo[0], // use only the first item of the array (title)
+			type	: child_data.ar_elements[key].type
+		}
+
+	// overwrite dataset (we need section_id and section_tipo to select when content is updated)
+		children_dataset.section_tipo	= child_data.section_tipo
+		children_dataset.section_id		= child_data.section_id
+
+	// term_node
+		const term_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_thesaurus_element term',
+			data_set		: children_dataset
+		})
+
+	// term_text
+		const term_text_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'term_text' + (is_descriptor ? '' : ' no_descriptor'),
+			inner_html		: term_text,
+			parent			: term_node
+		})
+		// click event
+		const click_handler = (e) => {
+			e.stopPropagation()
+
+			if(self.thesaurus_mode==='relation'){
+				return // ignore relation click
+			}
+
+			term_node.classList.add('loading')
+
+			// show_component_in_ts_object
+			self.show_component_in_ts_object(term_node, e)
+			.then(function(){
+				term_node.classList.remove('loading')
+			})
+		}
+		term_text_node.addEventListener('click', click_handler)
+
+	// element_to_hilite
+		if (self.element_to_hilite) {
+			if(		term_node.dataset.section_id == self.element_to_hilite.section_id
+				&& 	term_node.dataset.section_tipo===self.element_to_hilite.section_tipo) {
+				// hilite element
+				setTimeout(function(){
+					self.hilite_element(term_node)
+				}, 200)
+			}
+		}
+
+	// id_info. Like '[hierarchy1_246]' (Term terminoID )
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'id_info',
+			inner_html		: '['+ term_id +']',
+			parent			: term_node
+		})
+
+
+	return term_node
+}//end render_ontology_term
 
 
 
