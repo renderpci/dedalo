@@ -1363,17 +1363,32 @@ class transform_data {
 		// collect all existing tld in 'jer_dd' table
 		$all_active_tld = RecordObj_dd::get_active_tlds();
 
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->memory = '';
+				common::$pdata->action = '';
+				common::$pdata->total = '';
+				unset(common::$pdata->counter); // move counter property position
+				common::$pdata->counter = 0;
+				common::$pdata->tld = '';
+				common::$pdata->active_tld = $all_active_tld;
+				$base_msg = common::$pdata->msg;
+			}
+
 		// collect all children sections of 'ontology38' ('Instances')
 		// like 'dd', 'ontology', 'rsc', 'nexus', etc.
 		$ontology_tlds = [];
 		$ontology_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology38','section','children_recursive' );
 		foreach ($ontology_children as $current_tipo) {
 
-			$term = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_STRUCTURE_LANG, false) ?? '';
-			$ar_tem = explode(' | ', $term );
-			$RecordObj_dd = new RecordObj_dd($current_tipo);
-			$properties = $RecordObj_dd->get_properties();
-			$tld = $properties->main_tld ?? null;
+			$term			= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_STRUCTURE_LANG, false) ?? '';
+			$ar_tem			= explode(' | ', $term );
+			$RecordObj_dd	= new RecordObj_dd($current_tipo);
+			$properties		= $RecordObj_dd->get_properties();
+			$tld			= $properties->main_tld ?? null;
 
 			if( empty($tld) ){
 				debug_log(__METHOD__
@@ -1408,11 +1423,34 @@ class transform_data {
 			}
 		}
 
+		$total_tld = count($sorted_tlds);
+
 		// firs iteration. matrix records creation
 		foreach ($sorted_tlds as $tld) {
 
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->action = 'add_main_section ';
+					common::$pdata->tld = $tld;
+					common::$pdata->memory = dd_memory_usage();
+					common::$pdata->counter++;
+					common::$pdata->total = $total_tld;
+					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
+					// send to output
+					print_cli(common::$pdata);
+				}
+
 			// main_section. Add one main section for each tld if not already exists
 			ontology::add_main_section( $tld );
+
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->action = 'ceate_ontology_records';
+					common::$pdata->memory = dd_memory_usage();
+					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
+					// send to output
+					print_cli(common::$pdata);
+				}
 
 			// ontology_records. Collects all jer_dd records for the current tld and
 			// creates a matrix record for each one
@@ -1420,16 +1458,48 @@ class transform_data {
 			ontology::ceate_ontology_records( $jer_dd_rows );
 		}
 
+		// reset counter
+		common::$pdata->counter = 0;
+
 		// second iteration. After all records have been created
 		// we can assign relationships and set the order of children
 		foreach ($sorted_tlds as $tld) {
 
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->action = 'assign_relations_from_jer_dd';
+					common::$pdata->tld = $tld;
+					common::$pdata->memory = dd_memory_usage();
+					common::$pdata->counter++;
+					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
+					// send to output
+					print_cli(common::$pdata);
+				}
+
 			// assign relationships between records (from jer_dd column 'relaciones')
 			ontology::assign_relations_from_jer_dd( $tld );
+
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->action = 'reorder_nodes_from_jer_dd';
+					common::$pdata->memory = dd_memory_usage();
+					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
+					// send to output
+					print_cli(common::$pdata);
+				}
 
 			// set child order (from jer_dd column 'norden')
 			ontology::reorder_nodes_from_jer_dd( $tld );
 		}
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				common::$pdata->action = 'generate_all_main_ontology_sections done!';
+				common::$pdata->memory = dd_memory_usage();
+				common::$pdata->msg = $base_msg . ' done!';
+				// send to output
+				print_cli(common::$pdata);
+			}
 
 		// enable log again
 		logger_backend_activity::$enable_log = true;
