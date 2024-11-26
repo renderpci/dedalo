@@ -222,23 +222,9 @@ class ontology_legacy {
 				$RecordObj_dd->set_properties($item->properties);
 				$RecordObj_dd->set_modelo($item->model_tipo);
 				$RecordObj_dd->set_tld($item->tld);
+				$RecordObj_dd->set_term($item->term);
 
 				$term_id = $RecordObj_dd->Save();
-
-			// descriptors
-				$descriptors = $item->descriptors;
-				foreach ($descriptors as $current_descriptor) {
-
-					$term = $current_descriptor->type==='term' ? 'termino' : $current_descriptor->type;
-
-					$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(
-						'matrix_descriptors_dd', null, $item->tipo, $current_descriptor->lang, $term
-					);
-
-					$RecordObj_descriptors_dd->set_dato($current_descriptor->value);
-					$RecordObj_descriptors_dd->Save();
-
-				}// end foreach ($descriptors)
 
 		}//end foreach ($data as $key => $item)
 
