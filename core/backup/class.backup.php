@@ -566,7 +566,7 @@ abstract class backup {
 
 	/**
 	* SAVE_DEDALO_STR_TABLES_DATA
-	* Select tlds from table 'main_dd' and iterate saving one file for tld
+	* Select unique tlds from table 'jer_dd' and iterate saving one file for tld
 	* Core tlds are saved in 'backups_structure' dir
 	* Extras tlds are saved in its respective dir inside 'extras' folder
 	* @return object $response
@@ -587,14 +587,12 @@ abstract class backup {
 
 		#
 		# MAIN TLDS
-		# Get all main tlds like dd,oh,ich,rsc,et..
-		$strQuery = "SELECT tld FROM \"main_dd\" ORDER BY \"tld\" ";
-		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
-		$ar_msg = array();
-		while ($rows = pg_fetch_assoc($result)) {
+		# Get all main tlds like dd,oh,ich,rsc,etc.. from table jer_dd grouped by tld
+		$active_tlds = RecordObj_dd::get_active_tlds();
 
-			$current_tld = $rows['tld'];
-			#if ($current_tld!='dd') continue;
+		$ar_msg = array();
+		foreach ($active_tlds as $current_tld) {
+
 			$msg='';
 			$msg .= "<b>$current_tld</b>";
 
@@ -1551,16 +1549,29 @@ abstract class backup {
 	*/
 	public static function optimize_tables(array $tables) {
 
-		// $command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
-		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-		// $command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -h ".DEDALO_HOSTNAME_CONN . $port_command;
-		$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
+		// command_base
+			$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 
 		// re-index
 			$index_commands = [];
 			foreach ($tables as $current_table) {
+
+				if (!DBi::check_table_exists($current_table)) {
+					debug_log(__METHOD__
+						. " Ignored non existing table " . PHP_EOL
+						. ' table: ' . to_string($current_table)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 				$index_commands[] = 'REINDEX TABLE "'.$current_table.'"';
 			}
+
+			if (empty($index_commands)) {
+				return false;
+			}
+
 			$command = $command_base . ' -c \''.implode('; ', $index_commands).';\'';
 			// exec command
 				$res = shell_exec($command);
@@ -1572,6 +1583,8 @@ abstract class backup {
 				);
 
 		// VACUUM
+			// safe tables only
+			$tables = array_filter($tables, 'DBi::check_table_exists');
 			$command = $command_base . ' -c \'VACUUM ' . implode(', ', $tables) .';\'';
 			// exec command
 				$res = shell_exec($command);

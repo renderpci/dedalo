@@ -36,9 +36,9 @@ $updates->$v = new stdClass();
 		$updates->$v->alert_update[] = $alert;
 
 	// DATABASE UPDATES
-		// re check if exist matrix_onology tables:
+		// re check if exist matrix_ontology tables:
 		// Add the matrix_ontology_main table
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
 				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
 				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
 				WITH (OIDS = FALSE);
@@ -46,35 +46,27 @@ $updates->$v = new stdClass();
 				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
 			");
 		// Add the matrix_ontology table
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
 				CREATE TABLE IF NOT EXISTS public.matrix_ontology
 				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
 				WITH (OIDS = FALSE);
 				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
 				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
 			");
-
-		// Clean matrix_ontology tables
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+		// Clean matrix_ontology tables to allow re-update more than once preserving the counters
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				TRUNCATE "matrix_ontology";
 			');
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				TRUNCATE "matrix_ontology_main";
 			');
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				DELETE FROM "matrix_counter" WHERE "tipo" LIKE \'ontology%\'
 			');
 		// Delete the matrix_descriptors_dd table, no longer used
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
 				DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
 			");
-		");
-		// DATABASE UPDATES
-		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
-		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			DROP TABLE IF EXISTS \"main_dd\" CASCADE;
-		");
-
 
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
@@ -450,7 +442,18 @@ $updates->$v = new stdClass();
 			');
 		// Create the tld index of main_dd, optimize the location of sections.
 			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
-				CREATE INDEX IF NOT EXISTS main_dd_tld ON public.main_dd USING btree (tld COLLATE pg_catalog."default" ASC NULLS LAST);
+				DO $$
+				BEGIN
+					IF EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'main_dd\')
+					THEN
+						CREATE INDEX IF NOT EXISTS main_dd_tld
+						ON public.main_dd USING btree
+						(tld COLLATE pg_catalog."default" ASC NULLS LAST)
+						TABLESPACE pg_default;
+					END IF;
+				END $$;
 			');
 		// Create the counter of section
 			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
