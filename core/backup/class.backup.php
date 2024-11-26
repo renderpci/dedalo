@@ -665,9 +665,9 @@ abstract class backup {
 		}
 
 
-		# All is ok
-		$response->result 	= true;
-		$response->msg 		= implode('<hr>', $ar_msg);
+		# All is OK
+		$response->result	= true;
+		$response->msg		= implode('<hr>', $ar_msg);
 
 
 		return (object)$response;
@@ -1651,7 +1651,7 @@ abstract class backup {
 
 		$tld_data = [];
 
-		// $columns	= '"terminoID", "parent", "modelo", "esmodelo", "esdescriptor", "visible", "norden", "tld", "traducible", "relaciones", "propiedades", "properties"';
+		// $columns	= '"terminoID", "parent", "modelo", "esmodelo", "esdescriptor", "visible", "norden", "tld", "traducible", "relaciones", "propiedades", "properties","term';
 		$columns	= self::$jer_dd_columns;
 		$strQuery	= 'SELECT '.$columns.' FROM "jer_dd" WHERE tld = \''.$tld.'\' ORDER BY "terminoID" ASC';
 		$result		= JSON_RecordObj_matrix::search_free($strQuery);
