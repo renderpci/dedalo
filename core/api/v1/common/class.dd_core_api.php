@@ -1457,6 +1457,7 @@ final class dd_core_api {
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
+			$simple			= $rqo->simple ?? false; // simple context response
 
 		// response
 			$response = new stdClass();
@@ -1555,14 +1556,28 @@ final class dd_core_api {
 					break;
 			}
 
-		// element JSON
-			$get_json_options = new stdClass();
-				$get_json_options->get_context	= true;
-				$get_json_options->get_data		= false;
-			$element_json = $element->get_json($get_json_options);
 
-		// context add
-			$context = $element_json->context;
+		// context
+			if ($simple===true) {
+
+				// simple context case
+
+				$context = $element->get_structure_context_simple(
+					1, // permissions
+					false // add_request_config
+				);
+			}else{
+
+				// default case
+
+				// element JSON
+					$get_json_options = new stdClass();
+						$get_json_options->get_context	= true;
+						$get_json_options->get_data		= false;
+					$element_json = $element->get_json($get_json_options);
+
+				$context = $element_json->context;
+			}
 
 		// response
 			$response->result	= $context;
