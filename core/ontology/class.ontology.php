@@ -32,7 +32,7 @@ class ontology {
 	public static function ceate_ontology_records( array $jer_dd_rows ) {
 
 		foreach ($jer_dd_rows as $jer_dd_row) {
-			$result = self::add_section_row_from_jer_dd( $jer_dd_row );
+			$result = self::add_section_record_from_jer_dd( $jer_dd_row );
 			if (!$result) {
 				debug_log(__METHOD__
 					. " Error adding section " . PHP_EOL
@@ -134,13 +134,13 @@ class ontology {
 
 
 	/**
-	* ADD_SECTION_ROW_FROM_JER_DD
-	* Transform jer_dd row (from DDBB) into matrix ontology row (section record).
+	* ADD_SECTION_RECORD_FROM_JER_DD
+	* Transforms jer_dd row (from DDBB) into matrix ontology row (section record).
 	* @param object $jer_dd_row
 	* @param string $target_section_tipo
 	* @return bool
 	*/
-	public static function add_section_row_from_jer_dd( object $jer_dd_row ) : bool {
+	public static function add_section_record_from_jer_dd( object $jer_dd_row ) : bool {
 
 		// vars
 		$tld					= $jer_dd_row->tld;
@@ -363,7 +363,7 @@ class ontology {
 
 
 		return true;
-	}//end add_section_row_from_jer_dd
+	}//end add_section_record_from_jer_dd
 
 
 
