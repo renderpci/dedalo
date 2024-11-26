@@ -64,42 +64,33 @@ class ontology_legacy {
 
 	/**
 	* TIPO_TO_JSON_ITEM
-	* Resolve full ontology item data from tipo
+	* This is a normalized Ontology JSON item.
+	* Basically, is a jerd_dd record, but with parsed JSON values and translated property names.
+	* Fills requested ontology item data resolving tipo
 	* @param string $tipo
-	* @param array $request_options = [....]
+	* @param array $options = []
 	* @return object $item
 	*/
-	public static function tipo_to_json_item(string $tipo, array $request_options=[
-		'tipo' 			=> true,
-		'tld'			=> true,
-		'is_model'		=> true,
-		'model'			=> true,
-		'model_tipo'	=> true,
-		'parent'		=> true,
-		'order'			=> true,
-		'translatable'	=> true,
-		'propiedades'	=> true,
-		'properties'	=> true,
-		'relations'		=> true,
-		'descriptors'	=> true,
-		'label'			=> false
-		]) : object {
+	public static function tipo_to_json_item( string $tipo, array $options=[] ) : object {
 
-		$options = new stdClass();
-			$options->tipo			= false;
-			$options->tld			= false;
-			$options->is_model		= false;
-			$options->model			= false;
-			$options->model_tipo	= false;
-			$options->parent		= false;
-			$options->order			= false;
-			$options->translatable	= false;
-			$options->propiedades	= false;
-			$options->properties	= false;
-			$options->relations		= false;
-			$options->descriptors	= false;
-			$options->label			= false;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// default options fallback
+		if (empty($options)) {
+			$options = [
+				'tipo',
+				'tld',
+				'is_model',
+				'model',
+				'model_tipo',
+				'parent',
+				'order',
+				'translatable',
+				'propiedades',
+				'properties',
+				'relations',
+				'term',
+				// 'label'
+			];
+		}
 
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$RecordObj_dd->use_cache = false; // (!) prevents using previous db results
@@ -107,81 +98,33 @@ class ontology_legacy {
 
 		$item = new stdClass();
 
-			if ($options->tipo===true) {
-				$item->tipo = $tipo;
+		foreach ($options as $property) {
+			switch ($property) {
+				case 'tipo':
+					$item->{$property} = $tipo;
+					break;
+				case 'model':
+					// $item->{$property} = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$item->{$property} = $RecordObj_dd->get_modelo_name();
+					break;
+				case 'model_tipo':
+					$item->{$property} = $RecordObj_dd->get_modelo();
+					break;
+				case 'translatable':
+					$item->{$property} = $RecordObj_dd->get_traducible()==='si';
+					break;
+				case 'propiedades':
+					$item->{$property} = $RecordObj_dd->get_propiedades(true);
+					break;
+				case 'label':
+					$term = $RecordObj_dd->get_term() ?? new stdClass();
+					$item->{$property} = $term->{DEDALO_APPLICATION_LANG} ?? '';
+					break;
+				default:
+					$item->{$property} = $RecordObj_dd->{'get_'.$property}();
 			}
-			if ($options->tld===true) {
-				$item->tld = $RecordObj_dd->get_tld();
-			}
-			if ($options->is_model===true) {
-				$item->is_model = $RecordObj_dd->get_esmodelo();
-			}
-			if ($options->model===true) {
-				$item->model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			}
-			if ($options->model_tipo===true) {
-				$item->model_tipo = $RecordObj_dd->get_modelo();
-			}
-			if ($options->parent===true) {
-				$item->parent = $RecordObj_dd->get_parent();
-			}
-			if ($options->order===true) {
-				$item->order = (int)$RecordObj_dd->get_norden();
-			}
-			if ($options->translatable===true) {
-				$item->translatable = $RecordObj_dd->get_traducible()==='si';
-			}
-			if ($options->propiedades===true) {
-				$propiedades = $RecordObj_dd->get_propiedades(true);
-				$item->propiedades = $propiedades; // stored as string in DDBB
-			}
-			if ($options->properties===true) {
-				$item->properties = $RecordObj_dd->get_properties();
-			}
-			if ($options->relations===true) {
+		}
 
-				$current_relations = $RecordObj_dd->get_relaciones();
-				if (!empty($current_relations)) {
-
-					$relations = array_map(function($element){
-						$element		= is_array($element) ? (object)$element : $element;
-						$element_array	= get_object_vars($element);
-						$current_obj = new stdClass();
-							$current_obj->tipo = property_exists($element, 'tipo')
-								? $element->tipo
-								: reset($element_array);
-						return $current_obj;
-					}, $current_relations);
-				}
-				$item->relations = $relations ?? null;
-			}
-			if ($options->descriptors===true) {
-					// descriptors
-					$strQuery		= "SELECT dato, tipo, lang FROM \"matrix_descriptors_dd\" WHERE parent = '$tipo'";
-					$result			= JSON_RecordObj_matrix::search_free($strQuery);
-					$ar_descriptors	= [];
-					while ($row = pg_fetch_assoc($result)) {
-
-						$type = $row['tipo']==='termino' ? 'term' : $row['tipo'];
-
-						$ar_descriptors[] = (object)[
-							'value'	=> $row['dato'],
-							'lang'	=> $row['lang'],
-							'type'	=> $type
-						];
-					}
-					$item->descriptors = $ar_descriptors;
-			}
-
-			// get termino by tipo with fallback
-			if ($options->label===true) {
-				$item->label = RecordObj_dd::get_termino_by_tipo(
-					$tipo, // string terminoID
-					DEDALO_APPLICATION_LANG, // string lang
-					true, // bool from_cache
-					true // bool do fallback
-				);
-			}
 
 		return $item;
 	}//end tipo_to_json_item
@@ -421,18 +364,11 @@ class ontology_legacy {
 
 			// get the ontology JSON format
 				$ar_elements[]	= ontology_legacy::tipo_to_json_item($element_tipo, [
-					'tipo'			=> true,
-					'tld'			=> false,
-					'is_model'		=> false,
-					'model'			=> true,
-					'model_tipo'	=> false,
-					'parent'		=> true,
-					'order'			=> true,
-					'translatable'	=> false,
-					'properties'	=> false,
-					'relations'		=> false,
-					'descriptors'	=> false,
-					'label'			=> true
+					'tipo',
+					'model',
+					'parent',
+					'order',
+					'label'
 				]);
 
 			$ar_elements = array_merge( $ar_elements, self::get_children_recursive($element_tipo) );

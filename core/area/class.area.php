@@ -110,18 +110,11 @@ class area extends area_common  {
 				// areas. Get the JSON format of the ontology
 
 					$areas[] = ontology_legacy::tipo_to_json_item($area_tipo, [
-						'tipo'			=> true,
-						'tld'			=> false,
-						'is_model'		=> false,
-						'model'			=> true,
-						'model_tipo'	=> false,
-						'parent'		=> true,
-						'order'			=> false,
-						'translatable'	=> false,
-						'properties'	=> true,
-						'relations'		=> false,
-						'descriptors'	=> false,
-						'label'			=> true
+						'tipo',
+						'model',
+						'parent',
+						'properties',
+						'label'
 					]);
 
 				// group_areas. get the all children areas and sections of current
@@ -134,18 +127,11 @@ class area extends area_common  {
 						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
 
 						$areas[] = ontology_legacy::tipo_to_json_item($child_area_tipo, [
-							'tipo'			=> true,
-							'tld'			=> false,
-							'is_model'		=> false,
-							'model'			=> true,
-							'model_tipo'	=> false,
-							'parent'		=> true,
-							'order'			=> false,
-							'translatable'	=> false,
-							'properties'	=> true,
-							'relations'		=> false,
-							'descriptors'	=> false,
-							'label'			=> true
+							'tipo',
+							'model',
+							'parent',
+							'properties',
+							'label'
 						]);
 					}
 			}//end foreach ($ar_root_areas as $area_tipo)
