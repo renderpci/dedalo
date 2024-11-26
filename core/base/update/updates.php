@@ -26,7 +26,12 @@ $updates->$v = new stdClass();
 
 		$alert->command			= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
-			<br>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.
+
+			<p>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.</p>
+			<br>
+			<p>1 - Before continue, update Dédalo Ontology to the latest version making sure 'ontology' is in the list
+			of tld (prefix tipos). <br>Sample: 'dd,rsc,hierarchy,tch,tchi,test,utoponymy,ww,zenon,ontology'.
+			</p>
 		";
 		$updates->$v->alert_update[] = $alert;
 
@@ -49,6 +54,17 @@ $updates->$v = new stdClass();
 				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
 			");
 
+		// Clean matrix_ontology tables
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+				TRUNCATE "matrix_ontology";
+			');
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+				TRUNCATE "matrix_ontology_main";
+			');
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+				DELETE FROM "matrix_counter" WHERE "tipo" LIKE \'ontology%\'
+			');
+
 		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
 		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 			DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
@@ -65,7 +81,7 @@ $updates->$v = new stdClass();
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
 			$script_obj = new stdClass();
-				$script_obj->info			= "Generate main ontology sections, it get your prefix_tipos definition in config.php and all active hierarchies defined in hierarchy section";
+				$script_obj->info			= "Generate main ontology sections, it get all our jer_dd distinct tld and all active hierarchies defined in hierarchy section";
 				$script_obj->script_class	= "transform_data";
 				$script_obj->script_method	= "generate_all_main_ontology_sections";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent

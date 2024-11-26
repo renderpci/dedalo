@@ -7,5 +7,27 @@
 * Included from main.less file
 */
 .area_ontology {
+	background-color: #fafcfc;
+	height: 100%;
+
+	>.content_data {
+
+		>.thesaurus_list_wrapper {
+			background-color: unset;
+
+			>.thesaurus_type_block {
+
+				>.typology_name {
+					background-color: @color_green_ontology;
+					color: white;
+
+					&:hover {
+						background-color: darken(@color_green_ontology, 10%);
+					}
+				}
+			}
+		}
+
+	}
 
 }//end .area_ontology

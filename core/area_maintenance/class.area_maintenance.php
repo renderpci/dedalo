@@ -74,14 +74,17 @@ class area_maintenance extends area_common {
 
 		$ar_widgets = [];
 
-		$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
-
+		// tld list
+			$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
+			// force to add 'ontology' to the list
+			$DEDALO_PREFIX_TIPOS = array_values(array_unique(
+				array_merge($DEDALO_PREFIX_TIPOS, ['ontology'])
+			));
 
 		// make_backup *
 			$item	= $this->item_make_backup();
 			$widget	= $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// regenerate_relations * . Delete and create again table relations records
 			$item = new stdClass();
@@ -118,7 +121,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// ontology_processes *
 			$item = new stdClass();
 				$item->id		= 'ontology_processes';
@@ -135,7 +137,6 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// move_tld
 			$item = new stdClass();
@@ -159,28 +160,6 @@ class area_maintenance extends area_common {
 				$item->label	= label::get_label('registrar_herramientas');
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
-		// build_structure_css
-			// $item = new stdClass();
-			// 	$item->id		= 'build_structure_css';
-			// 	$item->type		= 'widget';
-			// 	$item->tipo		= $this->tipo;
-			// 	$item->parent	= $this->tipo;
-			// 	$item->label	= label::get_label('build_structure_css');
-			// 	$item->body		= 'Regenerate css from actual structure (Ontology)';
-			// 	$item->run[]	= (object)[
-			// 		'fn'		=> 'init_form',
-			// 		'options'	=> (object)[
-			// 			'confirm_text' => label::get_label('sure') ?? 'Sure?'
-			// 		]
-			// 	];
-			// 	$item->trigger 	= (object)[
-			// 		'dd_api'	=> 'dd_utils_api',
-			// 		'action'	=> 'build_structure_css',
-			// 		'options'	=> null
-			// 	];
-			// $widget = $this->widget_factory($item);
-			// $ar_widgets[] = $widget;
 
 		// build_install_version *
 			$item = new stdClass();
@@ -238,33 +217,33 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// export_ontology_to_json *
-			$item = new stdClass();
-				$item->id		= 'export_ontology_to_json';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('export_json_ontology') ?? 'Export JSON ontology';;
-				$item->value	= (object)[
-					'file_name'	=> 'structure.json',
-					'file_path'	=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
-					'tipos'		=> $DEDALO_PREFIX_TIPOS
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			// $item = new stdClass();
+			// 	$item->id		= 'export_ontology_to_json';
+			// 	$item->type		= 'widget';
+			// 	$item->tipo		= $this->tipo;
+			// 	$item->label	= label::get_label('export_json_ontology') ?? 'Export JSON ontology';;
+			// 	$item->value	= (object)[
+			// 		'file_name'	=> 'structure.json',
+			// 		'file_path'	=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
+			// 		'tipos'		=> $DEDALO_PREFIX_TIPOS
+			// 	];
+			// $widget = $this->widget_factory($item);
+			// $ar_widgets[] = $widget;
 
 		// import_ontology_from_json *
-			$item = new stdClass();
-				$item->id		= 'import_ontology_from_json';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
-				$item->value	= (object)[
-					'ontology_db'	=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
-					'file_name'		=> 'structure.json',
-					'file_path'		=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
-					'tipos'			=> $DEDALO_PREFIX_TIPOS
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			// $item = new stdClass();
+			// 	$item->id		= 'import_ontology_from_json';
+			// 	$item->type		= 'widget';
+			// 	$item->tipo		= $this->tipo;
+			// 	$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
+			// 	$item->value	= (object)[
+			// 		'ontology_db'	=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
+			// 		'file_name'		=> 'structure.json',
+			// 		'file_path'		=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
+			// 		'tipos'			=> $DEDALO_PREFIX_TIPOS
+			// 	];
+			// $widget = $this->widget_factory($item);
+			// $ar_widgets[] = $widget;
 
 		// export_hierarchy *
 			$item = new stdClass();
