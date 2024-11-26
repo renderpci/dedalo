@@ -210,7 +210,7 @@ final class dd_core_api {
 						);
 					}
 					if (empty($login_context) ||
-						empty($login_context->properties->login_items) // indicates table matrix_descriptors serious problem
+						empty($login_context->properties->login_items) // indicates Ontology tables serious problem
 						) {
 
 						// Warning: running with database problems. Load installer context instead login context

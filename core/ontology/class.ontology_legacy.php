@@ -590,10 +590,6 @@ class ontology_legacy {
 	/**
 	* EDIT_TERM
 	* Edit term in section 'Ontology'.
-	* Note on save section finish, also is saved the value in 'matrix_descriptors_dd'
-	*
-	* @see class section -> post_save_component_processes
-	*
 	* @param object $options
 	* @return bool
 	*/

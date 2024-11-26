@@ -317,23 +317,17 @@ abstract class backup {
 			}
 
 		// command
-			// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-			// $command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN . $port_command . ' -h '.DEDALO_HOSTNAME_CONN;
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			switch ($table) {
 
 				case 'jer_dd':
-					// $command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM jer_dd WHERE ". '\"terminoID\"' ." LIKE '{$tld}%') TO '{$path_file}' \" " ;
-					$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM \"jer_dd\" WHERE tld = '{$tld}') TO '{$path_file}' \" " ;
-					break;
-
-				case 'matrix_descriptors_dd':
-					// $command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%') TO '{$path_file}' \" ";
-					$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent SIMILAR TO '{$tld}[0-9]+') TO '{$path_file}' \" ";
+					$command = $command_base
+						. " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM \"jer_dd\" WHERE tld = '{$tld}') TO '{$path_file}' \" ";
 					break;
 
 				case 'matrix_dd':
-					$command = $command_base . " -c \"\copy (SELECT * FROM \"$table\") TO '{$path_file}' \" ";
+					$command = $command_base
+						. " -c \"\copy (SELECT * FROM \"$table\") TO '{$path_file}' \" ";
 					break;
 			}
 
@@ -379,7 +373,7 @@ abstract class backup {
 			}
 
 		// tld mandatory for some tables check
-			if ($table==='jer_dd' || $table==='matrix_descriptors_dd') {
+			if ($table==='jer_dd') {
 				if (empty($tld)) {
 					debug_log(__METHOD__
 						. " Error Processing Request. tld is mandatory " . PHP_EOL
@@ -413,24 +407,8 @@ abstract class backup {
 				$command_history[] = $command;
 				break;
 
-			case 'matrix_descriptors_dd':
-				# DELETE . Remove previous records
-				// $command = $command_base . " -c \"DELETE FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
-				$command = $command_base . " -c \"DELETE FROM \"matrix_descriptors_dd\" WHERE parent SIMILAR TO '{$tld}[0-9]+' \" ";
-				$res .= shell_exec($command);
-				#$res .= exec( $command );
-				$command_history[] = $command;
-
-				# COPY . Load data from file
-				$command = $command_base . " -c \"\copy matrix_descriptors_dd(".addslashes(backup::$descriptors_dd_columns).") from {$path_file}\" ";
-				$res .= shell_exec($command);
-				#$res .= exec( $command );
-				$command_history[] = $command;
-				break;
-
 			case 'matrix_dd':
 				# DELETE . Remove previous records
-				#$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$tld}%';"; #pg_query(DBi::_getConnection(), $strQuery);
 				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
@@ -454,9 +432,9 @@ abstract class backup {
 	/**
 	* EXPORT_STRUCTURE (Ontology)
 	* Exec pg_dump of selected tables and generate PostgreSQL 'copy' of tld independent files
-	* By default, jer_dd and matrix_descriptors_dd (and sequences) are excluded because they are saved as independent tld files
+	* By default, jer_dd (and sequences) are excluded because they are saved as independent tld files
 	* When export structure is done, two versions are created: full and partial. Full contain all tld and sequences of dedalo *_dd tables
-	* and partial the same except jer_dd and matrix_descriptors_dd
+	* and partial the same except jer_dd
 	* @see trigger.db_utils
 	* @param string|null $db_name like 'dedalo_development_str.custom'. If null, default is used
 	* @param bool $exclude_tables default true
@@ -502,18 +480,16 @@ abstract class backup {
 		# '-b' include blobs
 		# '-v' verbose mode
 		# '-t "*_dd"' tables wildcard. dump only tables ended with '_dd'
-		# -T "jer_dd*" -T "matrix_descriptors_dd*"  exclude tables
 		$command  = '';
 		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
 		// $command .= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN . $port_command . ' -U "'.DEDALO_USERNAME_CONN.'" ';
 		$command .= DB_BIN_PATH . 'pg_dump ' . DBi::get_connection_string();
 		$command .= ' --no-owner --no-privileges';
 		if ($exclude_tables===true) {
-			$command .= ' -T "jer_dd*" -T "matrix_descriptors_dd*"';	// Exclude tables (AND respective sequences) ( T UPERCASE )
+			$command .= ' -T "jer_dd*"';	// Exclude tables (AND respective sequences) ( T UPERCASE )
 		}
 		$command .= ' -F c -t "*_dd" -t "*dd_id_seq"';				// Include tables ( t lowercase ) -t "*_dd" -t "*dd_id_seq"
 		$command .= ' ' . DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
-		// -T "jer_dd" -T "matrix_descriptors_dd"
 
 		// exec command
 		exec($command.' 2>&1', $output, $worked_result);
@@ -657,33 +633,8 @@ abstract class backup {
 					$msg .= "<br> -> $path_file ";
 				}
 
-			#
-			# MATRIX_DESCRIPTORS_DD
-				$table 		= 'matrix_descriptors_dd';
-				$tld 		= $current_tld;
-				$path_file 	= "{$path}/{$table}_{$tld}.copy";
-				$res2 		= backup::copy_to_file($table, $path_file, $tld);
-
-				if (empty($res2)) {
-					$msg .= "Error on export $table {$tld} . Please try again";
-					#print("<div class=\"error\">$msg</div>");
-					debug_log(__METHOD__
-						." $msg ". PHP_EOL
-						.' result: ' . to_string($res2)
-						, logger::ERROR
-					);
-					// $load_with_errors = true;
-					#throw new Exception(" Error on read or create file. Permission denied ({$path_file})");
-					$response->result 	= false;
-					$response->msg 		= "Error on read or create directory. Permission denied for copy_to_file ($path_file)";
-					return $response;
-				}else{
-					$msg .= "<br>Exported [$tld] $table (<b>".trim($res2)."</b>) - fields: ". str_replace(' ', '', backup::$descriptors_dd_columns);
-					$msg .= "<br> -> $path_file ";
-				}
-
 			$ar_msg[] = $msg;
-			#$msg = " -> Saved str tables partial data to $current_tld (jer_dd: <b>".trim($res1)."</b> - matrix_descriptors_dd: <b>".trim($res2)."</b>)";
+			#$msg = " -> Saved str tables partial data to $current_tld (jer_dd: <b>".trim($res1)."</b>)";
 		}//end while
 
 
@@ -988,30 +939,6 @@ abstract class backup {
 						return $response;
 					}
 
-				#
-				# MATRIX_DESCRIPTORS_DD
-					// $table 		= 'matrix_descriptors_dd';
-					// $tld 		= $current_tld;
-					// $path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
-					// $res2 		= backup::copy_from_file($table, $path_file, $tld);
-					// if (empty($res2)) {
-					// 	$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
-					// 	debug_log(__METHOD__." $msg ".to_string($res2), logger::ERROR);
-					// 	// $load_with_errors=true;
-					// 	if(SHOW_DEBUG===true) {
-					// 		$msg .= "<pre>".print_r($res2,true)."</pre>";
-					// 	}
-
-					// 	$response->result	= false;
-					// 	$response->msg		.= $msg;
-					// 	$response->errors[]	= "Error on import $table {$tld}";
-					// 	return $response;
-					// }
-					// if(SHOW_DEBUG===true) {
-					// 	$msg .= "<br>Imported dedalo core data";
-					// 	$msg .= " (jer_dd {$tld} [<b>".trim($res1)."</b>], matrix_descriptors_dd {$tld} [<b>".trim($res2)."</b>]) ";
-					// }
-
 				$ar_msg[]=$msg;
 
 				// let GC do the memory job
@@ -1100,23 +1027,6 @@ abstract class backup {
 							debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
 							$load_with_errors=true;
 						}
-
-					#
-					# MATRIX_DESCRIPTORS_DD EXTRAS
-						$table 		= 'matrix_descriptors_dd';
-						$tld 		= $current_dir;
-						$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
-						$res2 		= backup::copy_from_file($table, $path_file, $tld);
-
-						if (empty($res2)) {
-							$msg .= "<br>Error on import $table {$tld} . Please try again";
-							if(SHOW_DEBUG===true) {
-								#throw new Exception("Error Processing Request: $msg", 1);
-							}
-							#print("<div class=\"error\">$msg</div>");
-							debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
-							$load_with_errors=true;
-						}
 					*/
 
 
@@ -1166,19 +1076,6 @@ abstract class backup {
 				}else{
 					$msg .= $consolidate_sequence->msg;
 				}
-
-			# SEQUENCE UPDATE (to the last table id)
-				// $table = 'matrix_descriptors_dd';
-				// $consolidate_sequence = (object)self::consolidate_sequence($table);
-				// if ($consolidate_sequence->result===false) {
-				// 	$response->result 	 = false;
-				// 	$response->msg 		.= $consolidate_sequence->msg;
-				// 	$response->errors[]	= "Error consolidating sequences ($table): " . ($consolidate_sequence->msg ?? '');
-				// 	return $response;
-				// }else{
-				// 	$msg .= $consolidate_sequence->msg;
-				// }
-
 			$ar_msg[]=$msg;
 
 
@@ -1371,12 +1268,6 @@ abstract class backup {
 				$obj->name = 'jer_dd_dd.copy';
 				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 			$ar_files[] = $obj;
-			// matrix_descriptors_dd_dd
-			// $obj = new stdClass();
-			// 	$obj->type = 'descriptors_file';
-			// 	$obj->name = 'matrix_descriptors_dd_dd.copy';
-			// 	$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-			// $ar_files[] = $obj;
 
 			// resources str file
 			// jer_dd_rsc
@@ -1385,12 +1276,6 @@ abstract class backup {
 				$obj->name = 'jer_dd_rsc.copy';
 				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 			$ar_files[] = $obj;
-			// matrix_descriptors_dd_rsc
-			// $obj = new stdClass();
-			// 	$obj->type = 'descriptors_file';
-			// 	$obj->name = 'matrix_descriptors_dd_rsc.copy';
-			// 	$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-			// $ar_files[] = $obj;
 
 			// private list of values
 			// matrix_dd
@@ -1425,7 +1310,7 @@ abstract class backup {
 				$extras_folders[] = $base_dir;
 			}
 
-		// add every TLD to ar_files list (jer_dd and matrix_descriptors_dd parts)
+		// add every TLD to ar_files list (jer_dd parts)
 			foreach ($extras_folders as $folder_name) {
 				// jer_dd
 				$obj = new stdClass();
@@ -1435,14 +1320,6 @@ abstract class backup {
 					$obj->name  = 'jer_dd_' . $folder_name . '.copy';
 					$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
 				$ar_files[] = $obj;
-				// matrix_descriptors_dd
-				// $obj = new stdClass();
-				// 	$obj->type  = 'extras_descriptors_file';
-				// 	$obj->table = 'matrix_descriptors_dd';
-				// 	$obj->tld 	= $folder_name;
-				// 	$obj->name  = 'matrix_descriptors_dd_' . $folder_name . '.copy';
-				// 	$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
-				// $ar_files[] = $obj;
 			}
 
 
@@ -1457,12 +1334,10 @@ abstract class backup {
 	* @param array $ontology_file_list
 	* 	Array of objects as
 	* 	[{
-	* 		type: extras_descriptors_file,
-	* 		table: matrix_descriptors_dd,
-	* 		tld: oh,
-	* 		name: matrix_descriptors_dd_oh.copy
-	* 		path: DEDALO_EXTRAS_PATH/oh/str_data
-	* 	}]
+	* 		type: jer_file,
+	* 		name: jer_dd_dd.copy
+	* 		path: DEDALO_EXTRAS_PATH/ontology/str_data
+	* 	},..]
 	* @return object $response
 	*/
 	public static function download_ontology_files(array $ontology_file_list) : object {
@@ -1715,7 +1590,7 @@ abstract class backup {
 
 	/**
 	* STRUCTURE_TO_JSON
-	* Creates a compatible JSON data from table 'jer_dd' and 'matrix_descriptors_dd'
+	* Creates a compatible JSON data from table 'jer_dd'
 	* using the given array of tld
 	* @param array $ar_tld
 	*	array of strings like ['dd','rsc'...]
@@ -1795,7 +1670,7 @@ abstract class backup {
 
 	/**
 	* IMPORT_STRUCTURE_JSON_DATA
-	* Insert data terms into tables 'jer_dd' and 'matrix_descriptors_dd' deleting previous row if exists
+	* Insert data terms into tables 'jer_dd' deleting previous row if exists
 	* @param array $data
 	*  data is a vertical array of objects from parsed JSON file 'structure.json'
 	* @return object $response
@@ -1811,7 +1686,7 @@ abstract class backup {
 
 		$updated_tipo = [];
 
-		// iterate all objects and replace existing data in each table (jer_dd, matrix_descriptors_dd)
+		// iterate all objects and replace existing data in each table (jer_dd)
 		foreach ($data as $item) {
 
 			// short vars
@@ -1827,7 +1702,7 @@ abstract class backup {
 				$relaciones		= empty($item->relaciones) ? null : $item->relaciones;
 				$propiedades	= empty($item->propiedades) ? null : $item->propiedades; // pg_escape_string($item->propiedades); // string
 				$properties		= json_encode($item->properties); // jsonb
-				$descriptors	= $item->descriptors ?? [];
+				$term			= !empty($item->term) ? json_encode($item->term) : null; // jsonb
 
 			// tld filter optional from $ar_tld param
 				if (!empty($ar_tld) && !in_array($tld, $ar_tld)) {
@@ -1836,45 +1711,22 @@ abstract class backup {
 
 			// jer_dd
 				// delete previous
-					$strQuery  = PHP_EOL . 'DELETE FROM "jer_dd" WHERE "terminoID" = \''.$terminoID.'\' ;';
-					if (!$result = pg_query($conn, $strQuery)) {
+					$strQuery = 'DELETE FROM "jer_dd" WHERE "terminoID" = \''.$terminoID.'\' ;';
+					if (!pg_query($conn, $strQuery)) {
 						throw new Exception("Error Processing Request. Error on delete term ".to_string($terminoID), 1);
 					}
 				// insert new
-					// $fields	= '"terminoID", "parent", "modelo", "esmodelo", "esdescriptor", "visible", "norden", "tld", "traducible", "relaciones", "propiedades", "properties"';
+					// $fields	= '"terminoID", "parent", "modelo", "esmodelo", "esdescriptor", "visible", "norden", "tld", "traducible", "relaciones", "propiedades", "properties", "term';
 					$fields		= self::$jer_dd_columns;
-					$strQuery	= 'INSERT INTO "jer_dd" ('.$fields.') VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)';
-					if (!$result = pg_query_params($conn, $strQuery, array($terminoID, $parent, $modelo, $esmodelo, $esdescriptor, $visible, $norden, $tld, $traducible, $relaciones, $propiedades, $properties)) ) {
+					$strQuery	= 'INSERT INTO "jer_dd" ('.$fields.') VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)';
+					if (!pg_query_params($conn, $strQuery, [$terminoID, $parent, $modelo, $esmodelo, $esdescriptor, $visible, $norden, $tld, $traducible, $relaciones, $propiedades, $properties, $term])) {
 						throw new Exception("Error Processing Request. Error on import_structure_json_data (1) Invalid jer_dd query ".to_string($strQuery), 1);
 					}
 
+			// add term as updated
+				$updated_tipo[] = $terminoID;
 
-			// matrix_descriptors_dd
-				foreach ($descriptors as $descriptor_item) {
-
-					$parent	= $terminoID;
-					$dato	= empty($descriptor_item->value) ? null : $descriptor_item->value;
-					$tipo	= empty($descriptor_item->type) ? null : $descriptor_item->type;
-					$lang	= empty($descriptor_item->lang) ? null : $descriptor_item->lang;
-
-					// delete previous
-						$strQuery  = PHP_EOL . 'DELETE FROM "matrix_descriptors_dd" WHERE "parent" = \''.$terminoID.'\' AND tipo = \''.$descriptor_item->type.'\' AND lang = \''.$descriptor_item->lang.'\' ;';
-						if (!$result = pg_query($conn, $strQuery)) {
-							throw new Exception("Error Processing Request. Error on import_structure_json_data (2) Invalid descriptor query ".to_string($strQuery), 1);
-						}
-					// insert
-						$fields = '"parent", "dato", "tipo", "lang"';
-						// $values = '\''.$terminoID.'\', \''. pg_escape_string($descriptor_item->value).'\', \''.$descriptor_item->type.'\', \''.$descriptor_item->lang.'\'';
-						// $strQuery .= PHP_EOL . 'INSERT INTO "matrix_descriptors_dd" ('.$fields.') VALUES '. PHP_EOL. '('.$values.');'.PHP_EOL;
-						$strQuery = 'INSERT INTO "matrix_descriptors_dd" ('.$fields.') VALUES ($1, $2, $3, $4)';
-						if (!$result = pg_query_params($conn, $strQuery, array($parent, $dato, $tipo, $lang)) ) {
-							throw new Exception("Error Processing Request. Error on import_structure_json_data (1) Invalid jer_dd query ".to_string($strQuery), 1);
-						}
-
-				}
-
-			$updated_tipo[] = $terminoID;
-
+			// debug
 			debug_log(__METHOD__." + Updated structure item '$terminoID' ".to_string(), logger::DEBUG);
 		}
 
