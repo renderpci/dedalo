@@ -70,10 +70,7 @@ system_info.prototype.build = async function(autoload=false) {
 		// delay value resolution to avoid blocking other widgets
 		// note that system info has a lower priority because could be
 		// a long request collecting the system resources info
-		await pause(600)
-
-		// specific actions.. like fix main_element for convenience
-		self.value = await self.get_widget_value()
+		// value will be fixed at render, when datalist_container is in view port
 
 	} catch (error) {
 		self.error = error
