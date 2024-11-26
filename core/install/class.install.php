@@ -949,31 +949,38 @@ class install extends common {
 			}
 
 		// clean matrix_descriptors_dd
-			$items	= array_map(function($el){
-				return 'parent !~ \'^'.$el.'[0-9]+\'';
-			}, $config->to_preserve_tld);
-			$line	= implode(' AND ', $items);
-			$sql = '
-				DELETE
-				FROM "matrix_descriptors_dd"
-				WHERE
-				'.$line.';
-			';
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
-			if ($exec) {
-				$result   = pg_query($db_install_conn, $sql);
-				if (!$result) {
-					$msg = " Error on db execution (matrix_descriptors_dd): ".pg_last_error(DBi::_getConnection());
-					debug_log(__METHOD__.$msg, logger::ERROR);
-					$response->msg = $msg;
-					return $response;
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				$items	= array_map(function($el){
+					return 'parent !~ \'^'.$el.'[0-9]+\'';
+				}, $config->to_preserve_tld);
+				$line	= implode(' AND ', $items);
+				$sql = '
+					DELETE
+					FROM "matrix_descriptors_dd"
+					WHERE
+					'.$line.';
+				';
+				debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+				if ($exec) {
+					$result   = pg_query($db_install_conn, $sql);
+					if (!$result) {
+						$msg = " Error on db execution (matrix_descriptors_dd): ".pg_last_error(DBi::_getConnection());
+						debug_log(__METHOD__.$msg, logger::ERROR);
+						$response->msg = $msg;
+						return $response;
+					}
 				}
 			}
 
 		// re-index ontology tables
 			$sql = '
-				REINDEX TABLE "jer_dd"; REINDEX TABLE "matrix_descriptors_dd";
+				REINDEX TABLE "jer_dd";";
 			';
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				$sql .= '
+					REINDEX TABLE "matrix_descriptors_dd";
+				';
+			}
 			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);

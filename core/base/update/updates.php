@@ -64,10 +64,10 @@ $updates->$v = new stdClass();
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
 				DELETE FROM "matrix_counter" WHERE "tipo" LIKE \'ontology%\'
 			');
-
-		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
-		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
+		// Delete the matrix_descriptors_dd table, no longer used
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+				DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
+			");
 		");
 		// DATABASE UPDATES
 		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
@@ -1234,11 +1234,6 @@ $updates->$v = new stdClass();
 			");
 
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-				CREATE INDEX IF NOT EXISTS \"matrix_descriptors_dd_dato_tipo_lang\" ON \"matrix_descriptors_dd\" (\"dato\", \"tipo\", \"lang\");
-				REINDEX TABLE public.matrix_descriptors_dd;
-			");
-
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				CREATE INDEX IF NOT EXISTS matrix_relations_gin ON public.matrix USING gin ((datos #> '{relations}'::text[]) jsonb_path_ops) TABLESPACE pg_default;
 			");
 
@@ -1438,14 +1433,15 @@ $updates->$v = new stdClass();
 
 		// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
-				$script_obj->script_class	= "transform_data";
-				$script_obj->script_method	= "copy_descriptors_to_jer_dd";
-				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
+					$script_obj->script_class	= "transform_data";
+					$script_obj->script_method	= "copy_descriptors_to_jer_dd";
+					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+			}
 
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
