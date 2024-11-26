@@ -1715,11 +1715,12 @@ abstract class backup {
 
 	/**
 	* STRUCTURE_TO_JSON
-	* Creates a compatible JSON data from table 'jer_dd' and 'matrix_descriptors_dd' using the
-	* given tlds
+	* Creates a compatible JSON data from table 'jer_dd' and 'matrix_descriptors_dd'
+	* using the given array of tld
 	* @param array $ar_tld
 	*	array of strings like ['dd','rsc'...]
 	* @return array $ar_data
+	* 	array of every row with properties and term JSON decoded
 	*/
 	public static function structure_to_json(array $ar_tld) : array {
 
@@ -1729,32 +1730,19 @@ abstract class backup {
 			$tld = trim($tld);
 
 			// check valid tld
-				if(!preg_match('/^[a-z]{2,}(_[a-z]{2,})?$/', $tld)) {
+				// if(!preg_match('/^[a-z]{2,}(_[a-z]{2,})?$/', $tld)) {
+				if ( !safe_tld($tld) ) {
 					throw new Exception("Error Processing Request. Error on structure_to_json. Invalid tld ".to_string($tld), 1);
 				}
 
-			$jer_dd_tld_data				= backup::get_jer_dd_tld_data($tld);
-			$matrix_descriptors_tld_data	= backup::get_matrix_descriptors_tld_data($tld);
+			// search in DDB every tld record
+				$jer_dd_tld_data = backup::get_jer_dd_tld_data($tld);
 
-			foreach ($jer_dd_tld_data as $row) {
-
-				// add descriptors data (from 'matrix_descriptors') to jer_dd row object
-				$descriptors = array_filter($matrix_descriptors_tld_data, function($item) use($row) {
-					return $item->parent===$row->terminoID;
-				});
-				foreach ($descriptors as $descriptor_item) {
-
-					$item = new stdClass();
-						$item->type		= $descriptor_item->tipo;
-						$item->lang		= $descriptor_item->lang;
-						$item->value	= $descriptor_item->dato;
-
-					$row->descriptors[] = $item;
-				}
-
-				// store complete object
-				$ar_data[] = $row;
-			}//end foreach ($jer_dd_tld_data as $row)
+			// add all rows to ar_data container
+				foreach ($jer_dd_tld_data as $row) {
+					// store complete object
+					$ar_data[] = $row;
+				}//end foreach ($jer_dd_tld_data as $row)
 		}
 
 
@@ -1786,6 +1774,11 @@ abstract class backup {
 					$row->properties = json_decode($row->properties);
 				}
 
+			// term
+				if (isset($row->term)) {
+					$row->term = json_decode($row->term);
+				}
+
 			$tld_data[] = $row;
 		}
 
@@ -1797,29 +1790,6 @@ abstract class backup {
 		return $tld_data;
 	}//end get_jer_dd_tld_data
 
-
-
-	/**
-	* GET_MATRIX_DESCRIPTORS_TLD_DATA
-	* Get all database table 'matrix_descriptors_dd' rows from given tld
-	* @param string $tld
-	*	like 'ts'
-	* @return array $tld_data
-	*	array of objects
-	*/
-	public static function get_matrix_descriptors_tld_data(string $tld) : array {
-
-		$tld_data = [];
-
-		$columns	= '"parent", "dato", "tipo", "lang"';
-		$strQuery	= 'SELECT '.$columns.' FROM "matrix_descriptors_dd" WHERE parent ~ \'^'.$tld.'[0-9]\' ORDER BY "parent" ASC';
-		$result		= JSON_RecordObj_matrix::search_free($strQuery);
-		while ($row = pg_fetch_object($result)) {
-			$tld_data[] = $row;
-		}
-
-		return $tld_data;
-	}//end get_matrix_descriptors_tld_data
 
 
 

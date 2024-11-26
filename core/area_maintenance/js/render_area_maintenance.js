@@ -432,7 +432,7 @@ export const set_widget_label_style = function (self, style, mode, ref_node) {
 	}
 
 	const wrapper = self.node
-	const widget_container = wrapper.parentNode.parentNode
+	const widget_container = wrapper.parentNode?.parentNode
 	if (widget_container) {
 
 		if (mode==='remove') {

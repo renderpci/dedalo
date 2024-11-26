@@ -720,10 +720,10 @@ class component_relation_common extends component_common {
 
 					// type
 						if (!isset($locator_copy->type)) {
-							debug_log(__METHOD__
-								." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
-								, logger::WARNING
-							);
+							// debug_log(__METHOD__
+							// 	." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
+							// 	, logger::DEBUG
+							// );
 							$locator_copy->type = $relation_type;
 						}
 

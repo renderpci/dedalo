@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
- 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
+ 	import {dd_request_idle_callback,when_in_viewport} from '../../../../common/js/events.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
@@ -76,16 +76,6 @@ const render_content_data = async function(self) {
 			element_type : 'div'
 		})
 
-	// datalist
-
-		// datalist_container
-			const datalist_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'datalist_container',
-				parent			: content_data
-			})
-			render_datalist(self, datalist_container)
-
 	// info errors
 		if (errors.length) {
 			const text = `Errors found. Fix this errors before continue: <br>` + errors.join('<br>')
@@ -97,37 +87,55 @@ const render_content_data = async function(self) {
 			})
 		}
 
+	// datalist_container
+		const datalist_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'datalist_container',
+			parent			: content_data
+		})
+		// get system data from API
+		let load_status = null
+		const load_data = () => {
+			// prevent to load multiple times
+			if (load_status!==null) {
+				return
+			}
+			load_status = 'loading'
+			const spinner = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'spinner',
+				parent			: datalist_container
+			})
+			const info = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info',
+				inner_html		: 'Collecting system info. Please wait..',
+				parent			: datalist_container
+			})
+
+			self.get_widget_value()
+			.then(function(value){
+				load_status = 'loaded'
+				spinner.remove()
+				info.remove()
+				// fix value
+				self.value = value
+				// render system info to datalist_container
+				render_datalist(self, datalist_container)
+			})
+		}
+		when_in_viewport(
+			datalist_container,
+			load_data
+		)
+		// force load system info to allow update widget label color
+		setTimeout(load_data, 2000)
+
 	// body_response
 		const body_response = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'body_response'
 		})
-
-	// form init
-		// if (self.caller?.init_form) {
-		// 	self.caller.init_form({
-		// 		submit_label	: get_label.registrar_herramientas || self.name,
-		// 		confirm_text	: get_label.sure || 'Sure?',
-		// 		body_info		: content_data,
-		// 		body_response	: body_response,
-		// 		trigger : {
-		// 			dd_api	: 'dd_area_maintenance_api',
-		// 			action	: 'class_request',
-		// 			source	: {
-		// 				action : 'system_info'
-		// 			},
-		// 			options	: {}
-		// 		},
-		// 		on_done : async () => {
-
-		// 			// get and update value
-		// 			self.value = await self.get_widget_value()
-
-		// 			// render datalist again
-		// 			render_datalist(self, datalist_container)
-		// 		}
-		// 	})
-		// }
 
 	// add at end body_response
 		content_data.appendChild(body_response)

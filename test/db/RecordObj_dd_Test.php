@@ -636,13 +636,13 @@ final class RecordObj_dd_test extends TestCase {
 
 
 	/**
-	* TEST_get_all_tld_nodes
+	* TEST_get_all_tld_records
 	* @return void
 	*/
-	public function test_get_all_tld_nodes(): void {
+	public function test_get_all_tld_records(): void {
 
 		// root
-			$result = RecordObj_dd::get_all_tld_nodes(['dd','rsc']);
+			$result = RecordObj_dd::get_all_tld_records(['dd','rsc']);
 
 			$expected	= 'array';
 			$eq			= gettype($result)===$expected;
@@ -680,7 +680,7 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_all_tld_nodes
+	}//end test_get_all_tld_records
 
 
 

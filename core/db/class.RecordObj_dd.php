@@ -715,7 +715,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* GET_ALL_TLD_NODES
+	* GET_ALL_TLD_RECORDS
 	* Get all jer_dd rows of specified tlds
 	* @param  array $ar_tl
 	* @return array $result
@@ -735,14 +735,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* 	{}, ..
 	* ]
 	*/
-	public static function get_all_tld_nodes( array $ar_tld ) : array {
+	public static function get_all_tld_records( array $ar_tld ) : array {
 
 		$sentences = [];
-
 		foreach ($ar_tld as $current_tld) {
 
 			$safe_tld = safe_tld($current_tld);
-
 			if ( $safe_tld !== false ) {
 				$sentences[] = '"tld"= \''. $safe_tld. '\'';
 			}else{
@@ -754,21 +752,25 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}
 		}
 
+		// no tld valid items found
+		if (empty($sentences)) {
+			return [];
+		}
+
 		$filter = implode(' OR ', $sentences );
 
 		// `where` clause of SQL query
-		$sql_query = 'SELECT * FROM "jer_dd" WHERE '. $filter ;
+		$sql_query		= 'SELECT * FROM "jer_dd" WHERE '. $filter ;
+		$jer_dd_result	= pg_query(DBi::_getConnection(), $sql_query);
 
-		$jer_dd_result = pg_query(DBi::_getConnection(), $sql_query);
-
-		$ontology_records = [];
 		// iterate jer_dd_result row
+		$ontology_records = [];
 		while($row = pg_fetch_object($jer_dd_result)) {
 			$ontology_records[] = $row;
 		}
 
 		return $ontology_records;
-	}//end get_all_tld_nodes
+	}//end get_all_tld_records
 
 
 

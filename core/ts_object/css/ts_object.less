@@ -213,7 +213,6 @@
 			padding-right: 5px;
 			font-size: 1.1em;
 			text-align: center;
-			cursor: pointer;
 			border-left: 1px solid #c3c3c3;
 			opacity: 0.3;
 			width: 29px;
@@ -221,11 +220,6 @@
 
 			&.term_img {
 				height: 1.3rem;
-				opacity: 1;
-			}
-
-			&:hover {
-				color: #ef7d00 !important;
 				opacity: 1;
 			}
 
@@ -273,6 +267,15 @@
 			inline-size: auto;
 			overflow-wrap: break-word;
 			hyphens: auto;
+
+			>.term_text {
+				cursor: pointer;
+
+				&:hover {
+					color: #ef7d00 !important;
+					opacity: 1;
+				}
+			}
 
 			&.loading {
 
@@ -339,9 +342,43 @@
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
+			cursor: pointer;
 
 			&.default {
 
+			}
+
+			// area_ontology elements common
+			.area_ontology & {
+				min-width: 1.4rem;
+				background-color: #c3c3c3;
+				color: #252525;
+
+				border-radius: 1px;
+				height: 1.2rem;
+				font-size: 11px;
+				vertical-align: bottom;
+				top: 2px;
+			}
+
+			// ontology properties
+			&.ontology18 {
+				background-color: #1b531f;
+				color: white;
+			}
+
+			// ontology v5 properties
+			&.ontology19 {
+				background-color: #e9dd9f;
+				color: #252525;
+				&:hover {
+					color: #252525 !important;
+				}
+			}
+
+			// ontology model
+			&.ontology6 {
+				// background-color: #c3c3c3;
 			}
 
 			&:hover {
@@ -375,7 +412,6 @@
 			}
 		}
 
-
 		.list_thesaurus_element.button_recusive_indexations{
 			font-size: 1.5rem;
 			font-weight: bolder;
@@ -404,9 +440,15 @@
 			height: 1.4em;
 			position: static;
 			width: 1.4em;
-			margin: 3px;
+			margin: 2px;
 			.triangle_right;
 			opacity: 0.6;
+			cursor: pointer;
+
+			// ontology children arrow
+			.area_ontology & {
+				border-color: transparent transparent transparent #373737;
+			}
 
 			&:hover {
 				opacity: 1;
@@ -415,8 +457,14 @@
 
 		.ts_object_children_arrow_icon_open {
 			.triangle_down;
+			position: relative;
 			left: -2px;
-			top: 1px;
+			top: 2px;
+
+			// ontology children arrow
+			.area_ontology & {
+				border-color: #373737 transparent transparent;
+			}
 
 			&.arrow_spinner {
 				border-color: transparent;
@@ -450,8 +498,10 @@
 			content: " ";
 			display: block;
 			position: absolute;
-			top: 0.17rem;
-			left: 0.27rem;
+			// top: 0.17rem;
+			// left: 0.27rem;
+			top: -13px;
+			left: -6px;
 			width: 1.1rem;
 			height: 1.1rem;
 			border: 2px solid @color_grey_medium_1;
@@ -459,9 +509,17 @@
 			border-radius: 50%;
 			animation: run_spinner 800ms linear infinite;
 
+
+
 			@media screen and (max-width: @width_break_point_0) {
 				top: 0.10rem;
 				left: 0.17rem;
+			}
+		}
+
+		.area_ontology & {
+			&:after {
+				border-top-color: @color_grey_dark_3;
 			}
 		}
 	}
