@@ -1033,24 +1033,26 @@ class install extends common {
 			}
 
 		// clean main_dd (Ontology counters)
-			$items = array_map(function($el){
-				return '\''.$el.'\'';
-			}, $to_preserve_tld);
-			$line	= implode(',', $items);
-			$sql = '
-				DELETE
-				FROM "main_dd"
-				WHERE
-				tld NOT IN('.$line.');
-			';
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
-			if ($exec) {
-				$result   = pg_query($db_install_conn, $sql);
-				if (!$result) {
-					$msg = " Error on db execution (main_dd): ".pg_last_error(DBi::_getConnection());
-					debug_log(__METHOD__.$msg, logger::ERROR);
-					$response->msg = $msg;
-					return $response;
+			if (DBi::check_table_exists('main_dd')) {
+				$items = array_map(function($el){
+					return '\''.$el.'\'';
+				}, $to_preserve_tld);
+				$line	= implode(',', $items);
+				$sql = '
+					DELETE
+					FROM "main_dd"
+					WHERE
+					tld NOT IN('.$line.');
+				';
+				debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+				if ($exec) {
+					$result   = pg_query($db_install_conn, $sql);
+					if (!$result) {
+						$msg = " Error on db execution (main_dd): ".pg_last_error(DBi::_getConnection());
+						debug_log(__METHOD__.$msg, logger::ERROR);
+						$response->msg = $msg;
+						return $response;
+					}
 				}
 			}
 
