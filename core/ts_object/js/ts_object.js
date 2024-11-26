@@ -1424,8 +1424,11 @@ export const ts_object = new function() {
 			const components = [] // array of created component instances
 			const render_component_node = async function(tipo, key) {
 
+				const model = await data_manager.resolve_model(tipo, section_tipo)
+
 				// component instance
 					const current_component = await get_instance({
+						model			: model,
 						section_tipo	: section_tipo,
 						section_id		: section_id,
 						tipo			: tipo,
