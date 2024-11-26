@@ -167,14 +167,15 @@ $updates->$v = new stdClass();
 
 		// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
-				$script_obj->script_class	= "transform_data";
-				$script_obj->script_method	= "copy_descriptors_to_jer_dd";
-				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
+					$script_obj->script_class	= "transform_data";
+					$script_obj->script_method	= "copy_descriptors_to_jer_dd";
+					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+			}
 
 
 
@@ -298,14 +299,15 @@ $updates->$v = new stdClass();
 
 		// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
-				$script_obj->script_class	= "transform_data";
-				$script_obj->script_method	= "copy_descriptors_to_jer_dd";
-				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
+					$script_obj->script_class	= "transform_data";
+					$script_obj->script_method	= "copy_descriptors_to_jer_dd";
+					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+			}
 
 
 

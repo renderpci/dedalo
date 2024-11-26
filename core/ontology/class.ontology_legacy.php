@@ -140,7 +140,7 @@ class ontology_legacy {
 	*/
 	public static function import(array $data) : bool {
 
-		foreach ($data as $key => $item) {
+		foreach ($data as $item) {
 
 			if (empty($item) || !isset($item->tld)) {
 				debug_log(__METHOD__." Ignored empty item on import ".to_string(), logger::ERROR);
@@ -659,12 +659,14 @@ class ontology_legacy {
 
 				$component_tipo	= ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
 				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
-				$component		= component_common::get_instance($modelo_name,
-																 $component_tipo,
-																 $section_id,
-																 'edit',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
+				$component		= component_common::get_instance(
+					$modelo_name,
+					$component_tipo,
+					$section_id,
+					'edit',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
 				$component->set_dato($value);
 				$component->Save();
 			})($json_item);
@@ -803,7 +805,6 @@ class ontology_legacy {
 				$response->msg = 'OK. Created a new ontology term record including JSON item '.$term_id.' successfully';
 			}
 
-
 			if (empty($json_item)) {
 				$json_item = ontology_legacy::tipo_to_json_item($term_id);
 			}
@@ -862,23 +863,25 @@ class ontology_legacy {
 		// get all terms
 		$sql_query = '
 			create or replace function naturalsort(text)
-			    returns bytea language sql immutable strict as $f$
-			    select string_agg(convert_to(coalesce(r[2], length(length(r[1])::text) || length(r[1])::text || r[1]), \'SQL_ASCII\'),\'\x00\')
-			    from regexp_matches($1, \'0*([0-9]+)|([^0-9]+)\', \'g\') r;
+				returns bytea language sql immutable strict as $f$
+				select string_agg(convert_to(coalesce(r[2], length(length(r[1])::text) || length(r[1])::text || r[1]), \'SQL_ASCII\'),\'\x00\')
+				from regexp_matches($1, \'0*([0-9]+)|([^0-9]+)\', \'g\') r;
 			$f$;
 			SELECT "terminoID" FROM "jer_dd" WHERE tld!=\'test\' ORDER BY naturalsort("terminoID") ASC;
 		';
 		$result		= pg_query(DBi::_getConnection(), $sql_query);
 		while ($row = pg_fetch_assoc($result)) {
 
-			$terminoID = $row['terminoID'];
+			$term_id = $row['terminoID'];
 
 			// JSON Ontology Item save
-				$term_id	= $terminoID;
-				$json_item	= ontology_legacy::tipo_to_json_item($term_id);
 				$save_item	= ontology_legacy::save_json_ontology_item($term_id, null);
 
-			debug_log(__METHOD__." ---> Added/updated term: ".to_string($terminoID).PHP_EOL.$save_item->msg, logger::WARNING);
+			debug_log(__METHOD__
+				." ---> Added/updated term: ".to_string($term_id) . PHP_EOL
+				.$save_item->msg
+				, logger::WARNING
+			);
 		}
 
 		$response->result	= true;
