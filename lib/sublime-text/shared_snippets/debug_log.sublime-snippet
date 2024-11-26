@@ -2,7 +2,7 @@
 	<content><![CDATA[
 debug_log(__METHOD__
 	. " $1 " . PHP_EOL
-	. to_string($2)
+	. ' $2: ' . to_string($3)
 	, logger::DEBUG
 );
 ]]></content>
