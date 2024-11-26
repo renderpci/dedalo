@@ -118,7 +118,15 @@ class ontology_legacy {
 					break;
 				case 'label':
 					$term = $RecordObj_dd->get_term() ?? new stdClass();
-					$item->{$property} = $term->{DEDALO_APPLICATION_LANG} ?? '';
+					$label = $term->{DEDALO_APPLICATION_LANG} ?? $term->{DEDALO_STRUCTURE_LANG} ?? null;
+					if (is_null($label)) {
+						// fallback to anything
+						foreach ($term as $value) {
+							$label = $value;
+							break;
+						}
+					}
+					$item->{$property} = $label;
 					break;
 				default:
 					$item->{$property} = $RecordObj_dd->{'get_'.$property}();
