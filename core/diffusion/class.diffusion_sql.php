@@ -4364,6 +4364,63 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* MAP_LOCATOR_TO_VALUE
+	* Transform locator value (usually a radio button) to value
+	* Get only the first locator section_id if exists
+	* @param object $options
+	* {
+	* 	"section_tipo": "dmm1023",
+	*	"section_id": 1,
+	*	"diffusion_element_tipo": "mdcat2195",
+	*	"lang": "lg-cat",
+	*	"properties": {
+	*		"process_dato": "diffusion_sql::map_locator_to_value",
+	*		"process_dato_arguments": {
+	*			"map": {
+	*				"1": 1,
+	*				"2": 0
+	*			}
+	*		}
+	*	},
+	*	"tipo": "mdcat4622",
+	*	"component_tipo": "dmm1082"
+	* }
+	* @param ?array $dato=null
+	* @return mixed $mapped_value
+	*/
+	public static function map_locator_to_value(object $options, ?array $dato=null) : mixed {
+
+		if (empty($dato) || empty($dato[0])) {
+			return null;
+		}
+
+		$value = $dato[0]->section_id;
+
+		// map is an object as {"1":true,"2":false}
+		$map = $options->properties->process_dato_arguments->map;
+
+		$mapped_value = $map->{$value} ?? null;
+
+		// cast is an string
+		$cast = $options->properties->process_dato_arguments->cast ?? null;
+		if ($cast) {
+			switch ($cast) {
+				case 'int':
+					$mapped_value = (int)$mapped_value;
+					break;
+
+				default:
+					// code...
+					break;
+			}
+		}
+
+		return $mapped_value;
+	}//end map_locator_to_value
+
+
+
+	/**
 	* BUILD_GEOLOCATION_DATA
 	* @param object $options
 	* @param mixed dato
