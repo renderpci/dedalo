@@ -503,6 +503,7 @@ class ontology {
 		// find target section_tipo
 		foreach ($all_tipos as $ontology_tipo) {
 
+			// get the tld inside properties of the jer_dd row of the term
 			$RecordObj_dd	= new RecordObj_dd($ontology_tipo);
 			$properties		= $RecordObj_dd->get_properties();
 			$ontology_tld	= $properties->main_tld ?? null;
@@ -512,7 +513,7 @@ class ontology {
 			if( !isset($ontology_tld) ){
 				$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG, false); // important don't use cache here!
 			}
-
+			//target section_tipo will be the ontology tipo as ontology40
 			if( $tld === $ontology_tld) {
 				$target_section_tipo = $ontology_tipo;
 				break;
