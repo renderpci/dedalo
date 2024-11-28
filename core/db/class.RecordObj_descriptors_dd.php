@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 # RecordObj_descriptors_dd
-# Extiende RecordObj_matrix, cambiándole la tabla y algunos métodos específicos
+# Extiende RecordObj_matrix_descriptors, cambiándole la tabla y algunos métodos específicos
 # La tabla matrix_descriptors es similar a matrix pero el parent es VARCHAR(8) para soportar tipos like 'dd1'
 
-class RecordObj_descriptors_dd extends RecordObj_matrix {
+class RecordObj_descriptors_dd extends RecordObj_matrix_descriptors {
 
 
 
@@ -73,8 +73,8 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 				];
 				// $arguments['sql_limit']	= 1; // remoevd to optimize sql cache
 				// string $matrix_table=null, int $id=null, string $parent=null, string $tipo=null, string $lang=null
-				$RecordObj_matrix	= new RecordObj_matrix(self::$descriptors_matrix_table);
-				$ar_id				= $RecordObj_matrix->search($arguments);
+				$RecordObj_matrix_descriptors	= new RecordObj_matrix_descriptors(self::$descriptors_matrix_table);
+				$ar_id				= $RecordObj_matrix_descriptors->search($arguments);
 
 				if(empty($ar_id[0])) {
 					$lang	= self::$descriptors_mainLang;
@@ -270,9 +270,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 	/**
 	* SAVE
-	* Sobreescribe RecordObj_matrix->Save
+	* Sobreescribe RecordObj_matrix_descriptors->Save
 	* Verifica que los parámetros mínimos están fijados (id,parent,tipo,lang) y si todo es correcto
-	* llama a la función principal en su clase padre (RecordObj_matrix)
+	* llama a la función principal en su clase padre (RecordObj_matrix_descriptors)
 	* @return int|null $id
 	*/
 	public function Save() : ?int {

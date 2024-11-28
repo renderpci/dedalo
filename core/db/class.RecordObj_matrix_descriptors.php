@@ -1,10 +1,14 @@
 <?php
 declare(strict_types=1);
 /**
-* RecordObj_matrix
+* RecordObj_matrix_descriptors
 * Handles matrix_descriptors_dd table records
 */
-class RecordObj_matrix extends RecordDataBoundObject {
+class RecordObj_matrix_descriptors extends RecordDataBoundObject {
+
+
+
+	// (!) CALL ONLY USED BY RecordObj_descriptors_dd
 
 
 
@@ -141,7 +145,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	*/
 	protected function calculate_ID() {
 
-		# RECORDOBJ_MATRIX : IMPORTANT ! Set use cache to false
+		# RECORDOBJ_MATRIX_DESCRIPTORS : IMPORTANT ! Set use cache to false
 		#$this->use_cache = false;
 
 		if($this->ID!==null) {
@@ -211,16 +215,16 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		# CURRENT OBJ TEST COPY
 		if (!empty($this->ID) ) {
 			# Load dummy copy to test data (Avoid overwrite current object edited data)
-			$RecordObj_matrix_test 	= new RecordObj_matrix($this->matrix_table, (int)$this->ID);
+			$RecordObj_matrix_descriptors_test 	= new RecordObj_matrix_descriptors($this->matrix_table, (int)$this->ID);
 		}
 
 		# TEST VALID TIPO
 		if ( empty($this->tipo) ) {
 			# Si no está definido, lo intentamos cargar del matrix test
-			if (isset($RecordObj_matrix_test))	$this->tipo	= $RecordObj_matrix_test->get_tipo();
+			if (isset($RecordObj_matrix_descriptors_test))	$this->tipo	= $RecordObj_matrix_descriptors_test->get_tipo();
 			# Si no existe o no existe en matrix test, lanzamos una excepción
 			if (empty($this->tipo) || strlen($this->tipo)<3 ) {
-				dump($RecordObj_matrix_test,'this en matrix RecordObj_matrix id:'.$this->ID );
+				dump($RecordObj_matrix_descriptors_test,'this en matrix RecordObj_matrix_descriptors id:'.$this->ID );
 				$msg = "Save matrix: valid 'tipo' value is mandatory! (tipo:$this->tipo) No data is saved!";
 				debug_log(__METHOD__.$msg);
 				// $GLOBALS['log_messages'][] = $msg;
@@ -232,7 +236,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		# TEST VALID LANG
 		if ( empty($this->lang) ) {
 			# Si no está definido, lo intentamos cargar del matrix test
-			if (isset($RecordObj_matrix_test))	$this->lang	= $RecordObj_matrix_test->get_lang();
+			if (isset($RecordObj_matrix_descriptors_test))	$this->lang	= $RecordObj_matrix_descriptors_test->get_lang();
 			# Si no existe o no existe en matrix test, lanzamos una excepción
 			if (empty($this->lang) || strlen($this->lang)<5) {
 				$msg = "Save matrix: valid 'lang' value is mandatory! (lang:$this->lang) No data is saved! <br>";
@@ -246,7 +250,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		# TEST VALID PARENT
 		if ( strpos($this->matrix_table, 'counter')===false && !strlen($this->parent) ) {
 			# Si no está definido, lo intentamos cargar del matrix test
-			if (isset($RecordObj_matrix_test))	$this->parent	= $RecordObj_matrix_test->get_parent();
+			if (isset($RecordObj_matrix_descriptors_test))	$this->parent	= $RecordObj_matrix_descriptors_test->get_parent();
 			# Si no existe o no existe en matrix test, lanzamos una excepción
 			if (strlen($this->parent)<1) {
 				$msg = "Save matrix: valid 'parent' value is mandatory! (parent:$this->parent) No data is saved! ($this->tipo)";
@@ -395,4 +399,4 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 
 
-}//end class RecordObj_matrix
+}//end class RecordObj_matrix_descriptors

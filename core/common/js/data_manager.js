@@ -429,6 +429,38 @@ data_manager.get_element_context = async function(source) {
 
 
 /**
+* RESOLVE_MODEL
+* Resolves element simple context and extract the model
+* from the response object
+* Used in ts_object.js to resolve components model to load
+* @param string tipo
+* @param string section_tipo
+* @return string|null model
+*/
+data_manager.resolve_model = async function(tipo, section_tipo) {
+
+	// api request
+		const api_response = await this.request({
+			body : {
+				action	: 'get_element_context',
+				simple	: true, // force simple context here
+				source	: {
+					tipo			: tipo,
+					section_tipo	: section_tipo
+				}
+			}
+		})
+
+	// model from context simple response
+		const model = api_response.result?.model || null
+
+
+	return model
+}//end resolve_model
+
+
+
+/**
 * GET_PAGE_ELEMENT
 * Get full page element
 * Expected options:

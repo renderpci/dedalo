@@ -1293,8 +1293,7 @@ class transform_data {
 	public static function copy_descriptors_to_jer_dd() : bool {
 
 		// check 'matrix_descriptors_dd' table before
-			$matrix_descriptors_dd_exists = DBi::check_table_exists('matrix_descriptors_dd');
-			if (!$matrix_descriptors_dd_exists) {
+			if (!DBi::check_table_exists('matrix_descriptors_dd')) {
 				debug_log(__METHOD__
 					. " Error. Unable to get matrix_descriptors_dd records because the table do not exists" . PHP_EOL
 					, logger::ERROR

@@ -36,9 +36,9 @@ $updates->$v = new stdClass();
 		$updates->$v->alert_update[] = $alert;
 
 	// DATABASE UPDATES
-		// re check if exist matrix_onology tables:
+		// re check if exist matrix_ontology tables:
 		// Add the matrix_ontology_main table
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
 				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
 				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
 				WITH (OIDS = FALSE);
@@ -46,35 +46,27 @@ $updates->$v = new stdClass();
 				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
 			");
 		// Add the matrix_ontology table
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
 				CREATE TABLE IF NOT EXISTS public.matrix_ontology
 				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
 				WITH (OIDS = FALSE);
 				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
 				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
 			");
-
-		// Clean matrix_ontology tables
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+		// Clean matrix_ontology tables to allow re-update more than once preserving the counters
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				TRUNCATE "matrix_ontology";
 			');
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				TRUNCATE "matrix_ontology_main";
 			');
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				DELETE FROM "matrix_counter" WHERE "tipo" LIKE \'ontology%\'
 			');
-
-		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
-		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
-		");
-		// DATABASE UPDATES
-		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
-		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			DROP TABLE IF EXISTS \"main_dd\" CASCADE;
-		");
-
+		// Delete the matrix_descriptors_dd table, no longer used
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+				DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
+			");
 
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
@@ -175,14 +167,15 @@ $updates->$v = new stdClass();
 
 		// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
-				$script_obj->script_class	= "transform_data";
-				$script_obj->script_method	= "copy_descriptors_to_jer_dd";
-				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
+					$script_obj->script_class	= "transform_data";
+					$script_obj->script_method	= "copy_descriptors_to_jer_dd";
+					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+			}
 
 
 
@@ -306,14 +299,15 @@ $updates->$v = new stdClass();
 
 		// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
-				$script_obj->script_class	= "transform_data";
-				$script_obj->script_method	= "copy_descriptors_to_jer_dd";
-				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
+					$script_obj->script_class	= "transform_data";
+					$script_obj->script_method	= "copy_descriptors_to_jer_dd";
+					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+			}
 
 
 
@@ -450,7 +444,18 @@ $updates->$v = new stdClass();
 			');
 		// Create the tld index of main_dd, optimize the location of sections.
 			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
-				CREATE INDEX IF NOT EXISTS main_dd_tld ON public.main_dd USING btree (tld COLLATE pg_catalog."default" ASC NULLS LAST);
+				DO $$
+				BEGIN
+					IF EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'main_dd\')
+					THEN
+						CREATE INDEX IF NOT EXISTS main_dd_tld
+						ON public.main_dd USING btree
+						(tld COLLATE pg_catalog."default" ASC NULLS LAST)
+						TABLESPACE pg_default;
+					END IF;
+				END $$;
 			');
 		// Create the counter of section
 			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
@@ -1234,11 +1239,6 @@ $updates->$v = new stdClass();
 			");
 
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-				CREATE INDEX IF NOT EXISTS \"matrix_descriptors_dd_dato_tipo_lang\" ON \"matrix_descriptors_dd\" (\"dato\", \"tipo\", \"lang\");
-				REINDEX TABLE public.matrix_descriptors_dd;
-			");
-
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				CREATE INDEX IF NOT EXISTS matrix_relations_gin ON public.matrix USING gin ((datos #> '{relations}'::text[]) jsonb_path_ops) TABLESPACE pg_default;
 			");
 
@@ -1438,14 +1438,15 @@ $updates->$v = new stdClass();
 
 		// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
-				$script_obj->script_class	= "transform_data";
-				$script_obj->script_method	= "copy_descriptors_to_jer_dd";
-				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
+					$script_obj->script_class	= "transform_data";
+					$script_obj->script_method	= "copy_descriptors_to_jer_dd";
+					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+			}
 
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [

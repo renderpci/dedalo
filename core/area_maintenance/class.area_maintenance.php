@@ -2208,7 +2208,7 @@ class area_maintenance extends area_common {
 
 
 		// optimize tables
-			$ar_tables = ['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list'];
+			$ar_tables = ['jer_dd','matrix_dd','matrix_list'];
 			backup::optimize_tables($ar_tables);
 
 		// delete all session data except auth
