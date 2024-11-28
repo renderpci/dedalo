@@ -26,7 +26,7 @@ export const render_common_section = function() {
 * RENDER_DELETE_RECORD_DIALOG
 * Delete selected record or Delete find records
 * @param object options
-* @return bool
+* @return dd-modal modal
 */
 render_common_section.prototype.render_delete_record_dialog = async (options) => {
 
@@ -113,7 +113,8 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				text_content 	: get_label.delete_data_and_record || 'Delete record',
 				parent			: footer
 			})
-			button_delete_record.addEventListener('click', function(e){
+			// click event
+			const delete_click_handler = (e) => {
 				e.stopPropagation()
 
 				if (!confirm(get_label.sure)) {
@@ -137,7 +138,8 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				.then(function(){
 					modal.on_close()
 				})
-			})
+			}
+			button_delete_record.addEventListener('click', delete_click_handler)
 
 		// button_delete_data
 			const button_delete_data = ui.create_dom_element({
@@ -146,7 +148,8 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				text_content	: get_label.delete_data_only || 'delete data',
 				parent			: footer
 			})
-			button_delete_data.addEventListener('click', function(e){
+			// click event
+			const delete_data_click_handler = (e) => {
 				e.stopPropagation()
 
 				if (!confirm(get_label.sure)) {
@@ -169,14 +172,15 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				.then(function(){
 					modal.on_close()
 				})
-			})
+			}
+			button_delete_data.addEventListener('click', delete_data_click_handler)
 
 	// modal
 		const modal = ui.attach_to_modal({
-			header	: header,
-			body	: body,
-			footer	: footer,
-			size	: 'small', // string size small|big|normal
+			header		: header,
+			body		: body,
+			footer		: footer,
+			size		: 'small', // string size small|big|normal
 			callback	: (dd_modal) => {
 				dd_modal.modal_content.style.width = '34rem'
 				dd_modal.modal_content.style.maxWidth = '100%'
@@ -184,7 +188,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 		})
 
 
-	return true
+	return modal
 }//end render_delete_record_dialog
 
 
