@@ -147,6 +147,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 				text_content	: get_label.delete_data_only || 'delete data',
 				parent			: footer
 			})
+			// event click
 			const click_delete_data_handler = (e) => {
 				e.stopPropagation()
 
