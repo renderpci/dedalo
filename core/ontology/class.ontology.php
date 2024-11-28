@@ -847,6 +847,47 @@ class ontology {
 	/**
 
 	/**
+	* GET_TERM_ID_FROM_LOCATOR
+	* Get the component with the tld data with a given locator
+	* and build the term_id as tld.secion_id (dd55)
+	* @param object $locator
+	* @return string|null $term_id;
+	*/
+	public function get_term_id_from_locator( object $locator ) : ?string {
+
+		// get the component data
+		// using the locator
+		$tld_tipo		= 'ontology7';
+		$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
+		$tld_component	= component_common::get_instance(
+			$tld_model,
+			$tld_tipo ,
+			$locator->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$locator->section_tipo
+		);
+
+		$tld_data = $tld_component->get_dato();
+
+		if( empty($tld_data) ){
+			debug_log(__METHOD__
+				. " Empty tld from locator " . PHP_EOL
+				. 'locator: ' . to_string($locator )
+				, logger::ERROR
+			);
+			return null;
+		}
+
+		$tld		= reset( $tld_data );
+		$term_id	= $tld . $locator->section_id;
+
+		return $term_id;
+	}//end get_term_id_from_locator
+
+
+
+	/**
 	* GET_ORDER_FROM_LOCATOR
 	* get the children data from locator
 	* and locate the given locator into the children data
@@ -940,4 +981,12 @@ class ontology {
 
 		return $response;
 	}//end set_records_in_jer_dd
+
+
+
+
+
+
+
+
 }//end ontology
