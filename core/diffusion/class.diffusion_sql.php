@@ -3260,6 +3260,90 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* ANONYMIZED_NAME
+	* Process given components data to anonymize the values.
+	* Like 'Juan Pérez Marina' to 'JPM'
+	* @param object $options
+	* {
+	*	"section_tipo": "dmm1023",
+	*	"section_id": 16,
+	*	"diffusion_element_tipo": "mdcat2195",
+	*	"lang": "lg-cat",
+	*	"properties": {
+	*		"process_dato": "diffusion_sql::anonymized_name",
+	*		"process_dato_arguments": {
+	*			"target_component_tipo": [
+	*				"rsc85",
+	*				"rsc86"
+	*			],
+	* 			"anonymized_type": "name_capitals"
+	*		}
+	*	},
+	*	"tipo": "mdcat4587",
+	*	"component_tipo": "dmm1041"
+	* }
+	* @param array|null dato
+	*	Is a portal dato
+	* @return string $section_tipo
+	*/
+	public static function anonymized_name( object $options,  ?array $dato ) : ?string {
+
+		if (empty($dato)) {
+			return null;
+		}
+
+		$target_component_tipo	= $options->properties->process_dato_arguments->target_component_tipo ?? [];
+		$anonymized_type		= $options->properties->process_dato_arguments->anonymized_type ?? 'name';
+		$lang = $options->lang;
+		$mode = 'list';
+
+		$ar_values = [];
+		foreach ($dato as $locator) {
+
+			$ar_parts = [];
+
+			$section_id		= $locator->section_id;
+			$section_tipo	= $locator->section_tipo;
+
+			foreach ($target_component_tipo as $tipo) {
+				$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component = component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					$mode, // string mode
+					$lang, // string lang
+					$section_tipo // string section_tipo
+				);
+
+				$diffusion_value = $component->get_diffusion_value();
+				if (!empty($diffusion_value)) {
+
+					switch ($anonymized_type) {
+						case 'name_capitals':
+						default:
+							$string_parts = explode(' ', $diffusion_value);
+							foreach ($string_parts as $spart) {
+								$first_char = substr($spart, 0, 1);
+								$ar_parts[] = strtoupper($first_char);
+							}
+							break;
+					}
+				}
+			}
+
+			$ar_values[] = implode('', $ar_parts);
+		}
+
+		$value = implode(',', $ar_values);
+
+
+		return $value;
+	}//end anonymized_name
+
+
+
+	/**
 	* MAP_TO_TERMINOID
 	* Returns current section tipo like 'es1'
 	* @param object $options
