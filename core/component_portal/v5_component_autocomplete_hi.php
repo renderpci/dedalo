@@ -401,7 +401,16 @@
 									}
 								// append terms
 									$locator_terms = array_merge($locator_terms, $ar_terms);
-							}
+
+								// slice. @see mdcat4589
+									if(isset($value->slice)){
+										$slice_values = is_array($value->slice) ? $value->slice : [$value->slice];
+										if (isset($slice_values[1])) {
+											$locator_terms = array_slice($locator_terms, $slice_values[0], $slice_values[1]);
+										}else{
+											$locator_terms = array_slice($locator_terms, $slice_values[0]);
+										}
+									}
 
 						// join locator terms and append
 							$ar_diffusion_value[] = implode(', ', $locator_terms);
