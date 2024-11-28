@@ -258,13 +258,14 @@ class diffusion_socrata extends diffusion  {
 
 		// debug
 			// errors
-			if (isset($response->Errors) && (int)$response->Errors>0) {
+			if ($response->error===true || (isset($response->Errors) && (int)$response->Errors>0)) {
 				debug_log(__METHOD__
 					." !!! ERROR ON UPSERT SOCRATA RECORD ".json_encode($response, JSON_PRETTY_PRINT) . PHP_EOL
 					.' response: ' . to_string($response) . PHP_EOL
 					.' data: ' . to_string($data)
 					, logger::ERROR
 				);
+
 			}else{
 				debug_log(__METHOD__
 					." Socrata response" . PHP_EOL
