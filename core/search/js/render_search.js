@@ -18,6 +18,7 @@
 		load_user_search_presets,
 		presets_section_tipo
 	} from './search_user_presets.js'
+	import {render_preset_modal} from './view_search_user_presets.js'
 
 
 
@@ -216,7 +217,8 @@ render_search.prototype.render_base = function() {
 				class_name		: 'button add',
 				parent			: component_presets_label
 			})
-			button_add_preset.addEventListener('click', async function(e){
+			// click event
+			const add_click_handler = async (e) => {
 				e.stopPropagation()
 
 				const section_id = await create_new_search_preset({
@@ -227,29 +229,16 @@ render_search.prototype.render_base = function() {
 				// launch the editor
 				const section = await edit_user_search_preset(self, section_id)
 
-				// modal
-					const body = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'container'
-					})
-					section.render()
-					.then(function(section_node){
-						body.appendChild(section_node)
-						// modal attach
-						const modal_container = ui.attach_to_modal({
-							header		: get_label.search_presets || 'User search preset',
-							body		: body,
-							footer		: null,
-							size		: 'small',
-							callback	: (dd_modal) => {
-								dd_modal.modal_content.style.width = '20rem'
-							},
-							on_close	: () => {
-								self.user_presets_section.refresh()
-							}
-						})
-					})
-			})
+				// open modal to edit the new preset
+				render_preset_modal({
+					caller		: section,
+					section_id	: section_id,
+					on_close	: () => {
+						self.user_presets_section.refresh()
+					}
+				})
+			}
+			button_add_preset.addEventListener('click', add_click_handler)
 
 		// button save preset
 			const button_save_preset = ui.create_dom_element({
@@ -258,7 +247,8 @@ render_search.prototype.render_base = function() {
 				inner_html		: get_label.save +' '+ get_label.changes,
 				parent			: search_container_selection_presets
 			})
-			button_save_preset.addEventListener('click', function(e) {
+			// click event
+			const save_click_handler = (e) => {
 				e.stopPropagation()
 
 				// check user_preset_section_id is already set
@@ -281,7 +271,8 @@ render_search.prototype.render_base = function() {
 							button_save_preset.classList.add('hide')
 						}
 					})
-			})
+			}
+			button_save_preset.addEventListener('click', save_click_handler)
 			// fix
 			self.button_save_preset = button_save_preset
 
