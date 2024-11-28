@@ -1581,4 +1581,26 @@ section.prototype.update_pagination = async function (offset) {
 
 
 
+/**
+* FOCUS_FIRST_INPUT
+* Mimics components method with same name
+* Get first component (inside first section_record) and activate it
+* @return bool
+*/
+section.prototype.focus_first_input = function() {
+
+	const self = this
+
+	const ar_instances = self.ar_instances[0]?.ar_instances || []
+	const component = ar_instances.find(el => el.type==='component')
+	if (component) {
+		ui.component.activate(component)
+		return true
+	}
+
+	return false
+}//end focus_first_input
+
+
+
 // @license-end
