@@ -439,6 +439,13 @@ data_manager.get_element_context = async function(source) {
 */
 data_manager.resolve_model = async function(tipo, section_tipo) {
 
+	// cache from page_globals
+		const cache_key = tipo
+		page_globals.models = page_globals.models || {}
+		if (page_globals.models[cache_key]) {
+			return page_globals.models[cache_key]
+		}
+
 	// api request
 		const api_response = await this.request({
 			body : {
@@ -453,6 +460,9 @@ data_manager.resolve_model = async function(tipo, section_tipo) {
 
 	// model from context simple response
 		const model = api_response.result?.model || null
+
+	// store in cache
+		page_globals.models[cache_key] = model
 
 
 	return model
