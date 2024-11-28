@@ -312,6 +312,11 @@
 
 						$locator_terms = [];
 
+						// select_model filter. Calculate model code as es1_1
+							if (isset($value->select_model)) {
+								$model_code = get_model_code($current_locator);
+							}
+
 						// self include. $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $fields_separator=', ', $include_self=true
 							// current_value array|null
 							$current_value = component_relation_common::get_locator_value(
@@ -321,7 +326,16 @@
 								null // array|null ar_components_related
 							);
 							if (!empty($current_value)) {
-								$locator_terms[] = implode(', ', $current_value);
+
+								// select_model filter
+								if (isset($value->select_model)) {
+									// if model do not match, skip to include self term
+									if (in_array($model_code, (array)$value->select_model)) {
+										$locator_terms[] = implode(', ', $current_value);
+									}
+								}else{
+									$locator_terms[] = implode(', ', $current_value);
+								}
 							}
 
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
@@ -337,6 +351,15 @@
 							$stopped	= false;
 							$ar_terms	= [];
 							foreach ($ar_parents as $parent_locator) {
+
+								// select_model filter
+									if (isset($value->select_model)) {
+										$parent_model_code = get_model_code($parent_locator);
+										if (!in_array($parent_model_code, (array)$value->select_model)) {
+											// skip locator
+											continue;
+										}
+									}
 
 								// parent_end_by_term_id. Uses a term_id as last valid parent
 									if(isset($value->parent_end_by_term_id)){
@@ -432,3 +455,43 @@
 
 		return $diffusion_value;
 	};//end get_diffusion_value
+
+
+
+	/**
+	* GET_MODEL_CODE
+	* Resolves model as code (not name) like 'es1_1' from locator
+	* @param object $locator
+	* @return string|null $term_id
+	*/
+	if (!function_exists('get_model_code')) {
+		function get_model_code( object $locator ) : ?string {
+
+			$ar_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+				$locator->section_tipo,
+				['component_relation_model'],
+				true,
+				true,
+				true,
+				true
+			);
+			$component = component_common::get_instance(
+				'component_relation_model',
+				$ar_tipo[0],
+				$locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$locator->section_tipo
+			);
+			$component_dato = $component->get_dato();
+			if(isset($component_dato[0])){
+
+				$term_id = $component_dato[0]->section_tipo.'_'.$component_dato[0]->section_id;
+
+				return $term_id;
+			}
+
+
+			return null;
+		}//end get_model_code
+	}
