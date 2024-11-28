@@ -845,6 +845,49 @@ class ontology {
 
 
 	/**
+
+	/**
+	* GET_ORDER_FROM_LOCATOR
+	* get the children data from locator
+	* and locate the given locator into the children data
+	* order will be the position of the locator into the array + 1
+	* @param object $locator
+	* @return int $order
+	*/
+	public function get_order_from_locator( object $locator ) : int {
+
+		// get the component data
+		// using the locator
+		$children_tipo		= 'ontology14';
+		$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo  );
+		$children_component	= component_common::get_instance(
+			$children_model,
+			$children_tipo ,
+			$locator->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$locator->section_tipo
+		);
+
+		$children_data = $children_component->get_dato();
+
+		$data_len = count( $children_data );
+		$order = 1;
+		for ($i=0; $i < $data_len; $i++) {
+
+			if($children_data[$i]->section_tipo === $locator->section_tipo
+				&& (int)$children_data[$i]->section_id === (int)$locator->section_id){
+				$order = $i+1;
+				break;
+			}
+		}
+
+		return $order;
+	}//end get_order_from_locator
+
+
+
+	/**
 	* INSERT_JER_DD_RECORD
 	* parse the section record and insert into jer_dd
 	* @param string $section_tipo
