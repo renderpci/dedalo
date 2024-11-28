@@ -741,7 +741,7 @@ class diffusion_sql extends diffusion  {
 										$value = str_replace(['<br>',' | ','  '], $separator, $value);
 										$value = strip_tags($value);
 
-									    $column = [];
+										$column = [];
 										$column['field_name']		= RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
 										$column['field_value']		= $value;
 										$column['tipo']				= $curent_children_tipo;
@@ -1312,7 +1312,7 @@ class diffusion_sql extends diffusion  {
 								$ar_all_langs = common::get_ar_all_langs();
 								array_push($ar_all_langs, DEDALO_DATA_NOLAN);
 								foreach ($ar_all_langs as $current_t_lang) {
-								 	$current_component->set_lang($current_t_lang);
+									$current_component->set_lang($current_t_lang);
 									$current_diffusion_value_try = $current_component->get_diffusion_value($current_t_lang, $option_obj);
 									if (!empty($current_diffusion_value_try)) {
 										$ar_field_data['field_value'] = $current_diffusion_value_try;
@@ -2420,17 +2420,17 @@ class diffusion_sql extends diffusion  {
 	/**
 	* SAVE_GLOBAL_TABLE_DATA
 	*
-	    {
-	      "table_tipo": "test_19",
-	      "columns_map": [
-	        {
-	          "target_column": "full_data",
-	          "source_columns": [
-	            "nombre"
-	          ]
-	        }
-	      ]
-	    }
+		{
+		  "table_tipo": "test_19",
+		  "columns_map": [
+			{
+			  "target_column": "full_data",
+			  "source_columns": [
+				"nombre"
+			  ]
+			}
+		  ]
+		}
 	*
 	* @return object $save
 	*/
@@ -3422,25 +3422,25 @@ class diffusion_sql extends diffusion  {
 		# Reference:
 		# dato:
 		#   [0] => stdClass Object
-        #   (
-        #       [section_tipo] => mupreva2564
-        #       [section_id] => 1
-        #       [component_tipo] => mupreva2571
-        #   )
-        # options:
-        #   [typology] =>
-	    #   [value] =>
-	    #   [tipo] => mupreva2586
-	    #   [parent] => 2
-	    #   [lang] => lg-vlca
-	    #   [section_tipo] => mupreva2564
-	    #   [caler_id] => 3
-	    #   [properties] => stdClass Object
-	    #       (
-	    #           [varchar] => 128
-	    #           [process_dato] => diffusion_sql::map_locator_to_terminoID_parent
-	    #       )
-	    #   [diffusion_element_tipo] => mupreva800
+		#   (
+		#       [section_tipo] => mupreva2564
+		#       [section_id] => 1
+		#       [component_tipo] => mupreva2571
+		#   )
+		# options:
+		#   [typology] =>
+		#   [value] =>
+		#   [tipo] => mupreva2586
+		#   [parent] => 2
+		#   [lang] => lg-vlca
+		#   [section_tipo] => mupreva2564
+		#   [caler_id] => 3
+		#   [properties] => stdClass Object
+		#       (
+		#           [varchar] => 128
+		#           [process_dato] => diffusion_sql::map_locator_to_terminoID_parent
+		#       )
+		#   [diffusion_element_tipo] => mupreva800
 
 		$terminoID = null;
 
@@ -3954,18 +3954,18 @@ class diffusion_sql extends diffusion  {
 	public static function calculate_measurements($options, $dato) {
 
 		# [typology] =>
-	    # [value] =>
-	    # [tipo] => mupreva1991
-	    # [parent] => 22252
-	    # [lang] => lg-fra
-	    # [section_tipo] => mupreva1
-	    # [caler_id] => 3
-	    # [properties] => stdClass Object
-	    #     (
-	    #         [process_dato] => diffusion_sql::calculate_measurements
-	    #     )
+		# [value] =>
+		# [tipo] => mupreva1991
+		# [parent] => 22252
+		# [lang] => lg-fra
+		# [section_tipo] => mupreva1
+		# [caler_id] => 3
+		# [properties] => stdClass Object
+		#     (
+		#         [process_dato] => diffusion_sql::calculate_measurements
+		#     )
 
-	    $measurements = null;
+		$measurements = null;
 
 		$diffusion_tipo = $options->tipo;
 		$section_id 	= $options->parent;
@@ -4183,7 +4183,7 @@ class diffusion_sql extends diffusion  {
 				: null;
 
 			if (empty($term_id)) {
-			 	return null;
+				return null;
 			}
 
 		switch ($column) {
@@ -4898,10 +4898,37 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* SPLIT_DATE_RANGE
-	* @see numisdata1034 to get indirect call config (using diffusion_sql::resolve_value)
+	* Split and format a component_date value
+	* sample of properties config
+	* // Indirect (mdcat4595):
+	* {
+	*	"process_dato": "diffusion_sql::resolve_value",
+	*	"process_dato_arguments": {
+	*		"target_component_tipo": "rsc89",
+	*		"component_method": "get_dato",
+	*		"output": "split_date_range",
+	*		"output_options": {
+	*			"selected_key": 0,
+	*			"selected_date": "start",
+	*			"date_format": "year"
+	*		}
+	*	}
+	* }
+	* // Direct config (mdcat4608)
+	* {
+	*	  "process_dato": "diffusion_sql::split_date_range",
+	*	  "process_dato_arguments": {
+	*		"selected_key": 0,
+	*		"selected_date": "end",
+	*		"date_format": "year"
+	*	  }
+	* }
+	* @see mdcat4595 to get indirect call config (using diffusion_sql::resolve_value)
+	* @param object $options
+	* @param array|null $dato
 	* @return string|null
 	*/
-	public static function split_date_range($options, $dato) {
+	public static function split_date_range(object $options, ?array $dato) : ?string {
 
 		$process_dato_arguments = (!isset($options->properties))
 			? $options // case direct from resolve value output
@@ -4911,6 +4938,7 @@ class diffusion_sql extends diffusion  {
 		$selected_date 	= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
 		$date_format 	= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
 
+		// debug
 			// dump($options, ' split_date_range options ++ '.to_string());
 			// dump($dato, ' split_date_range dato ++ '.to_string());
 			// dump($process_dato_arguments, ' process_dato_arguments ++ '.to_string());

@@ -9,6 +9,8 @@ require DEDALO_LIB_PATH . '/vendor/soda-php/public/socrata.php';
 */
 class diffusion_socrata extends diffusion  {
 
+
+
 	public static $database_name;
 	public static $database_tipo;
 	public static $ar_table;
@@ -279,9 +281,19 @@ class diffusion_socrata extends diffusion  {
 
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* Resolves Ontology all related sections (linked from socrata tables) ready to publish in Socrata.
+	* It is used to determine whether the current section has a Diffusion button to publish the content.
 	* @param string $diffusion_element_tipo
 	* @param string|null $class_name = null
 	* @return array $ar_diffusion_sections
+	* sample:
+	* [
+	*	"dmm1023",
+	*	"oh1",
+	*	"rsc205",
+	*	"mdcat757",
+	*	"mdcat813"
+	* ]
 	*/
 	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
 

@@ -422,6 +422,7 @@
 											}
 										}
 									}
+
 								// append terms
 									$locator_terms = array_merge($locator_terms, $ar_terms);
 
@@ -434,6 +435,8 @@
 											$locator_terms = array_slice($locator_terms, $slice_values[0]);
 										}
 									}
+
+							}//end if (!empty($ar_terms))
 
 						// join locator terms and append
 							$ar_diffusion_value[] = implode(', ', $locator_terms);
