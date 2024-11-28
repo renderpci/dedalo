@@ -68,6 +68,27 @@ final class dd_core_api {
 	*/
 	public static function start(object $rqo) : object {
 
+		// test jer_dd without term data catch 22 situation
+			try {
+				$RecordObj_dd = new RecordObj_dd('dd1', 'dd');
+				$term = $RecordObj_dd->get_term();
+				if (empty($term)) {
+					$result = area_maintenance::recover_jer_dd_column();
+					if ($result===false) {
+						debug_log(__METHOD__
+							. " Error recovering term column from jer_dd table" . PHP_EOL
+							, logger::ERROR
+						);
+					}
+				}
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. " Error (exception) on check term jer_dd_column" . PHP_EOL
+					. ' Caught exception: ' . $e->getMessage()
+					, logger::ERROR
+				);
+			}
+
 		// options
 			$options	= $rqo->options ?? new StdClass();
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars

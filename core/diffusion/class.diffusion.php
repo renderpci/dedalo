@@ -481,34 +481,34 @@ abstract class diffusion  {
 		// value
 			$row = new stdClass();
 
-				$item = new stdClass();
-					$item->value = diffusion::build_id($section_tipo, $section_id, $lang);
-					$item->model = 'field_text';
-				$row->id = $item;
+				// fixed columns
+					$item = new stdClass();
+						$item->value = diffusion::build_id($section_tipo, $section_id, $lang);
+						$item->model = 'field_text';
+					$row->id = $item;
 
-				$item = new stdClass();
-					$item->value = $section_tipo;
-					$item->model = 'field_text';
-				$row->section_tipo = $item;
+					$item = new stdClass();
+						$item->value = $section_tipo;
+						$item->model = 'field_text';
+					$row->section_tipo = $item;
 
-				$item = new stdClass();
-					$item->value = $section_id;
-					$item->model = 'field_int';
-				$row->section_id = $item;
+					$item = new stdClass();
+						$item->value = $section_id;
+						$item->model = 'field_int';
+					$row->section_id = $item;
 
-				$item = new stdClass();
-					$item->value = $lang;
-					$item->model = 'field_text';
-				$row->lang = $item;
+					$item = new stdClass();
+						$item->value = $lang;
+						$item->model = 'field_text';
+					$row->lang = $item;
 
-				$item = new stdClass();
-					$item->value = date('Y-m-d H:i:s');
-					$item->model = 'field_date';
-				$row->publish_date = $item;
+					$item = new stdClass();
+						$item->value = date('Y-m-d H:i:s');
+						$item->model = 'field_date';
+					$row->publish_date = $item;
 
-				# resolve each field
+				// other columns. Resolve each field
 				foreach ($ar_fields as $field) {
-					#if ($field->label==='publication') continue;
 
 					$value = self::get_field_value($field->tipo, $section_tipo, $section_id, $lang, $options);
 
@@ -626,7 +626,10 @@ abstract class diffusion  {
 							}
 							break;
 						default:
-							debug_log(__METHOD__." INVALID DATA_TO_BE_USED MODE (ignored tipo: $component_tipo) 'data_to_be_used': ".to_string($properties->data_to_be_used), logger::DEBUG);
+							debug_log(__METHOD__
+								." INVALID DATA_TO_BE_USED MODE (ignored tipo: $component_tipo) 'data_to_be_used': ".to_string($properties->data_to_be_used)
+								, logger::ERROR
+							);
 							break;
 					}
 					break;
