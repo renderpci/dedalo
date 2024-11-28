@@ -95,7 +95,13 @@ class diffusion_socrata extends diffusion  {
 				$json_row = $this->build_json_row($json_row_options);
 				// Add
 				$ar_rows[] = $json_row;
+
+				// debug
+				if(SHOW_DEBUG===true) {
+					// dump($json_row, ' json_row ++ '.to_string()); die();
+				}
 			}
+
 
 		// Configure final objects to build upsert bulk action
 			$socrata_delete = ':deleted';
