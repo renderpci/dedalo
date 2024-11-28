@@ -1796,6 +1796,42 @@ class area_maintenance extends area_common {
 
 
 	/**
+	* SET_MAINTENANCE_MODE
+	* Changes Dédalo maintenance mode from true to false or vice-versa
+	* Uses area_maintenance:: set_congif_auto to overwrite the core_config files
+	* Input and output are normalized objects to allow use it from area_maintenance API
+	* @param object $options
+	* {
+	* 	value : bool
+	* }
+	* @return object $response
+	*/
+	public static function set_maintenance_mode( object $options ) : object {
+
+		// options
+			$value = $options->value;
+
+		// check value type
+			if (!is_bool($value)) {
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Request failed';
+					$response->errors	= [];
+				return $response;
+			}
+
+		$response = area_maintenance:: set_congif_auto((object)[
+			'name'	=> 'DEDALO_MAINTENANCE_MODE_CUSTOM',
+			'value'	=> $value
+		]);
+
+
+		return $response;
+	}//end set_maintenance_mode
+
+
+
+	/**
 	* GET_DEFINITIONS_FILES
 	* Get the list of JSON files in the directory:
 	* 	/dedalo/core/base/transform_definition_files

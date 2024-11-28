@@ -35,7 +35,7 @@
 * GET_EDITING_PRESET_JSON_FILTER
 * Get json_filter from temp presets if exists
 * Matching using section tipo and user id
-* @param object self
+* @param object self (search instance)
 * @return object|null
 */
 export const get_editing_preset_json_filter = async function(self) {
@@ -112,7 +112,6 @@ export const get_editing_preset_json_filter = async function(self) {
 			sqo		: sqo,
 			show	: show
 		}
-
 
 	// API request
 		const api_response = await data_manager.request({
@@ -245,7 +244,8 @@ export const load_user_search_presets = async function(self) {
 			]
 		}
 		const sqo = {
-			limit			: 10,
+			limit			: 0,
+			offset			: 0,
 			filter			: fiter,
 			section_tipo	: [{
 				tipo : presets_section_tipo // 'dd623'
@@ -278,7 +278,8 @@ export const load_user_search_presets = async function(self) {
 			add_show		: true,
 			id_variant		: self.section_tipo + '_search_user_presets',
 			inspector		: false, // (!) disable elements
-			filter			: false // (!) disable elements
+			filter			: false, // (!) disable elements
+			session_save	: false
 		}
 		const section = await get_instance(instance_options)
 		await section.build(true)
@@ -460,37 +461,49 @@ export const create_new_search_preset = function(options) {
 
 				const new_section_id = api_response.result
 
+				const save_promises = []
+
 				// set section_tipo value
-					const component_instance_section_tipo = await get_instance({
-						tipo			: presets_component_section_value_tipo, // 'dd642',
-						model			: 'component_input_text',
-						section_tipo	: section_tipo,
-						section_id		: new_section_id,
-						mode			: 'edit'
-					})
-					await component_instance_section_tipo.build(true)
-					const changed_data_section = [{
-						action	: 'insert',
-						key		: 0,
-						value	: self.section_tipo
-					}]
-					await component_instance_section_tipo.save(changed_data_section)
+					save_promises.push(
+						(async () => {
+							const component_instance_section_tipo = await get_instance({
+								tipo			: presets_component_section_value_tipo, // 'dd642',
+								model			: 'component_input_text',
+								section_tipo	: section_tipo,
+								section_id		: new_section_id,
+								mode			: 'edit'
+							})
+							await component_instance_section_tipo.build(true)
+							const changed_data_section = [{
+								action	: 'insert',
+								key		: 0,
+								value	: self.section_tipo
+							}]
+							await component_instance_section_tipo.save(changed_data_section)
+						})()
+					)
 
 				// set user value
-					const component_instance_user = await get_instance({
-						tipo			: presets_component_user_id_value_tipo, // 'dd654',
-						model			: 'component_select',
-						section_tipo	: section_tipo,
-						section_id		: new_section_id,
-						mode			: 'edit'
-					})
-					await component_instance_user.build(true)
-					const changed_data_user = [{
-						action	: 'insert',
-						key		: 0,
-						value	: locator_user
-					}]
-					await component_instance_user.save(changed_data_user)
+					save_promises.push(
+						(async () => {
+							const component_instance_user = await get_instance({
+								tipo			: presets_component_user_id_value_tipo, // 'dd654',
+								model			: 'component_select',
+								section_tipo	: section_tipo,
+								section_id		: new_section_id,
+								mode			: 'edit'
+							})
+							await component_instance_user.build(true)
+							const changed_data_user = [{
+								action	: 'insert',
+								key		: 0,
+								value	: locator_user
+							}]
+							await component_instance_user.save(changed_data_user)
+						})()
+					)
+
+				await Promise.all(save_promises)
 
 				resolve(new_section_id)
 			}else{

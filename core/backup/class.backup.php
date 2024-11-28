@@ -789,7 +789,7 @@ abstract class backup {
 			case 1: // error 1
 				$ar_msg[] = 'There was an error during import (using pg_restore). Errors may have occurred during pg_restore. See Command output for details';
 				$ar_msg[] = 'Command result: ' . to_string($worked_result);
-				$ar_msg[] = 'Command output: ' . json_encode($output, JSON_PRETTY_PRINT);
+				$ar_msg[] = 'Command output: ' . PHP_EOL . json_encode($output, JSON_PRETTY_PRINT) . PHP_EOL;
 				$ar_msg[] = 'DB Name: ' . DEDALO_DATABASE_CONN;
 				$ar_msg[] = 'DB User Name: ' . DEDALO_USERNAME_CONN;
 				$ar_msg[] = 'DB Host Name: ' . DEDALO_HOSTNAME_CONN;

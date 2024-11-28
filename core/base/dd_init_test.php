@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * SYSTEM TEST
 * Verify the integrity of the system (usually in the boot sequence or login)
@@ -411,6 +412,81 @@
 
 		return $init_response;
 	}
+	// write dir inside
+	if(!create_directory(
+		DEDALO_UPLOAD_TMP_DIR . '/test',
+		$create_dir_permissions
+	)) {
+		$init_response->msg[]	= "Error on create DEDALO_UPLOAD_TMP_DIR /test directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
+		return $init_response;
+	}
+
+
+
+// curl check
+	if (defined('STRUCTURE_SERVER_CODE')) {
+		$remote_server_response = backup::check_remote_server();
+		$code = $remote_server_response->code ?? 'unknown';
+		if ($code!==200) {
+			$init_response->msg[]	= "Error checking remote server. Response code: '$code' (php user: $php_user)";
+			$init_response->errors	= true;
+			debug_log(__METHOD__
+				. ' Unable to connect with Ontology server' . PHP_EOL
+				. ' STRUCTURE_SERVER_CODE: ' . to_string(STRUCTURE_SERVER_CODE)
+				, logger::ERROR
+			);
+		}else{
+			try {
+				// data
+				$data_string = "data=" . json_encode(null);
+				// curl_request
+				$curl_response = curl_request((object)[
+					'url'				=> 'https://master.dedalo.dev/',
+					'post'				=> true,
+					'postfields'		=> $data_string,
+					'returntransfer'	=> 1,
+					'followlocation'	=> true,
+					'header'			=> false, // bool add header to result
+					'ssl_verifypeer'	=> false,
+					'timeout'			=> 5, // int seconds
+					'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+						? SERVER_PROXY // from Dédalo config file
+						: false // default case
+				]);
+				$contents = $curl_response->result;
+				// check contents
+				if ($contents===false) {
+					$msg = "Error checking curl_request. curl_response->result is false (php user: $php_user)";
+					$init_response->msg[]	= $msg;
+					$init_response->errors	= true;
+					debug_log(__METHOD__
+						. " $msg" . PHP_EOL
+						. ' curl_response: ' . to_string($curl_response)
+						, logger::ERROR
+					);
+				}
+				$file_name		= 'test.html';
+				$target_file	= DEDALO_UPLOAD_TMP_DIR . '/test/' . $file_name;
+				$put_contents	= file_put_contents($target_file, $contents);
+				if (!$put_contents) {
+					$msg = 'Error. Request fail to write on : '.$target_file;
+					$init_response->msg[]	= $msg;
+					$init_response->errors	= true;
+					debug_log(__METHOD__
+						." $msg"
+						, logger::ERROR
+					);
+				}
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. " Exception on curl request test: " . $e->getMessage()
+					, logger::ERROR
+				);
+			}
+		}
+	}
+
 
 
 
@@ -423,7 +499,15 @@
 
 		return $init_response;
 	}
-
+	// write dir inside
+	if(!create_directory(
+		DEDALO_MEDIA_PATH . '/import/test',
+		$create_dir_permissions
+	)) {
+		$init_response->msg[]	= "Error on create DEDALO_MEDIA_PATH . '/import/test' directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
+		return $init_response;
+	}
 
 
 // IMPORT HISTORY DIR
