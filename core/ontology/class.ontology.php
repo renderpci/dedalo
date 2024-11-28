@@ -844,4 +844,57 @@ class ontology {
 
 
 
+	/**
+	* INSERT_JER_DD_RECORD
+	* parse the section record and insert into jer_dd
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return string|null $term_id
+	*/
+	public static function insert_jer_dd_record( string $section_tipo, string|int $section_id ) : ?string {
+
+		$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $section_tipo, $section_id );
+		$term_id = $jer_dd_record->insert();
+
+		return $term_id;
+	}//end insert_jer_dd_record
+
+
+
+	/**
+	* SET_RECORDS_IN_JER_DD
+	* @return
+	*/
+	public function set_records_in_jer_dd( object $sqo ) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		$search = search::get_instance(
+			$sqo, // object sqo
+		);
+		$response	= $search->search();
+		$ar_records	= $response->ar_records;
+
+		foreach ($ar_records as $current_record) {
+
+			$section_tipo	= $current_record->section_tipo;
+			$section_id		= $current_record->section_id;
+
+			$term_id = ontology::insert_jer_dd_record( $section_tipo, $section_id );
+
+			if( empty($term_id ) ){
+				$response->errors[] = 'Failed insert into jer_dd with section_tipo: ' . $section_tipo .' section_id: '. $section_id;
+			}
+		}
+
+		if( empty($response->errors) ){
+			$response->result	= true;
+			$response->msg		= 'Ok. Request done';
+		}
+
+		return $response;
+	}//end set_records_in_jer_dd
 }//end ontology
