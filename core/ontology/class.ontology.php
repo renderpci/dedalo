@@ -845,6 +845,357 @@ class ontology {
 
 
 	/**
+	* PARSE_SECTION_RECORD_TO_JER_DD_RECORD
+	* Build every component in the section given ($section_tipo, $section_id)
+	* get the component_data and parse as column of jer_dd format.
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object|null $jer_dd_record
+	*/
+	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?object {
+
+		// tld
+			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  seciton_id)
+				$tld_tipo		= 'ontology7';
+				$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
+				$tld_component	= component_common::get_instance(
+					$tld_model,
+					$tld_tipo ,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
+
+				$tld_data = $tld_component->get_dato();
+				// if tld_data is empty stop the process
+				// tld is mandatory!
+				if(empty($tld_data)){
+					return false;
+				}
+				// create the term_id
+				$tld = reset( $tld_data );
+				$terminoID = $tld . $section_id;
+
+			// create the RecordObj_dd with the term_id and set the tld
+				$jer_dd_record = new RecordObj_dd( $terminoID );
+				$jer_dd_record->set_tld( $tld );
+
+		// parent
+		// parent needs to know the parent tld of the locator to build the term_id
+			$parent_tipo		= 'ontology15';
+			$parent_model		= RecordObj_dd::get_modelo_name_by_tipo( $parent_tipo  );
+			$parent_component	= component_common::get_instance(
+				$parent_model,
+				$parent_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$parent_data = $parent_component->get_dato();
+
+			if(empty($parent_data)){
+
+				debug_log(__METHOD__
+					. " Record without parent " . PHP_EOL
+					. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
+					. 'section_id	: ' . to_string($section_id). PHP_EOL
+					. 'parent_tipo	: ' . to_string($parent_tipo)
+					, logger::DEBUG
+				);
+
+			}else{
+
+				// get the parent data
+				// use the locator
+				$parent_locator	= reset($parent_data);
+				$parent = ontology::get_term_id_from_locator($parent_locator);
+				$jer_dd_record->set_parent( $parent );
+			}
+
+
+		// model. Get the model tld and id
+			$model_tipo			= 'ontology6';
+			$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
+			$model_component	= component_common::get_instance(
+				$model_model,
+				$model_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$model_data = $model_component->get_dato();
+
+			if(empty($model_data)){
+
+				debug_log(__METHOD__
+					. " Record without model " . PHP_EOL
+					. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
+					. 'section_id	: ' . to_string($section_id). PHP_EOL
+					. 'model_tipo	: ' . to_string($model_tipo)
+					, logger::DEBUG
+				);
+
+			}else{
+
+				// get the parent data
+				// use the locator
+				$model_locator	= reset($model_data);
+				$model = ontology::get_term_id_from_locator($model_locator);
+				$jer_dd_record->set_modelo( $model );
+			}
+
+		// is model
+			$is_model_tipo		= 'ontology30';
+			$is_model_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_model_tipo  );
+			$is_model_component	= component_common::get_instance(
+				$is_model_model,
+				$is_model_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$is_model_data = $is_model_component->get_dato();
+
+			if(empty($is_model_data)){
+
+				debug_log(__METHOD__
+					. " Record without is_model_data " . PHP_EOL
+					. 'section_tipo		: ' . to_string($section_tipo). PHP_EOL
+					. 'section_id		: ' . to_string($section_id). PHP_EOL
+					. 'is_model_tipo	: ' . to_string($is_model_tipo)
+					, logger::DEBUG
+				);
+
+			}else{
+
+				$is_model_locator	= reset($is_model_data);
+				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
+				$jer_dd_record->set_esmodelo( $is_model );
+			}
+
+		// descriptor
+			$is_desctipor_tipo		= 'ontology4';
+			$is_desctipor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_desctipor_tipo  );
+			$is_desctipor_component	= component_common::get_instance(
+				$is_desctipor_model,
+				$is_desctipor_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$is_descriptor_data = $is_desctipor_component->get_dato();
+
+			if(empty($is_descriptor_data)){
+
+				debug_log(__METHOD__
+					. " Record without is_descriptor_data " . PHP_EOL
+					. 'section_tipo		: ' . to_string($section_tipo). PHP_EOL
+					. 'section_id		: ' . to_string($section_id). PHP_EOL
+					. 'is_desctipor_tipo	: ' . to_string($is_desctipor_tipo)
+					, logger::DEBUG
+				);
+
+			}else{
+				$is_descriptor_data_locator	= reset($is_descriptor_data);
+				$is_descriptor = (int)$is_descriptor_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
+				$jer_dd_record->set_esdescriptor( $is_descriptor );
+			}
+
+		// visibility
+			$jer_dd_record->set_visible( 'si' );
+
+		// Order
+			// use the parent data to get the children data and calculate the order.
+			$order = ontology::get_order_from_locator( $parent_locator );
+
+			$jer_dd_record->set_norden( $order );
+
+		// translatable
+			$translatable_tipo		= 'ontology8';
+			$translatable_model		= RecordObj_dd::get_modelo_name_by_tipo( $translatable_tipo  );
+			$translatable_component	= component_common::get_instance(
+				$translatable_model,
+				$translatable_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$translatable_data = $translatable_component->get_dato();
+
+			if(empty($translatable_data)){
+
+				debug_log(__METHOD__
+					. "Record without translatable_data " . PHP_EOL
+					. 'section_tipo			: ' . to_string($section_tipo). PHP_EOL
+					. 'section_id			: ' . to_string($section_id). PHP_EOL
+					. 'translatable_tipo	: ' . to_string($translatable_tipo)
+					, logger::DEBUG
+				);
+
+			}else{
+				$translatable_data_locator	= reset($translatable_data);
+				$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
+				$jer_dd_record->set_traducible( $translatable );
+			}
+
+		// Relations
+			$relations_tipo			= 'ontology10';
+			$relations_model		= RecordObj_dd::get_modelo_name_by_tipo( $relations_tipo  );
+			$relations_component	= component_common::get_instance(
+				$relations_model,
+				$relations_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$relations_data = $relations_component->get_dato();
+
+			if( !empty($relations_data) ){
+
+				$relations = [];
+				foreach ($relations_data as $current_relation) {
+					// get the relation data
+					// use the locator
+					$relation_term_id = ontology::get_term_id_from_locator( $current_relation );
+
+					$relation = new stdClass();
+						$relation->tipo = $relation_term_id;
+					$relations[] = $relation;
+
+				}
+			}else{
+
+				$relations = null;
+			}
+
+			$jer_dd_record->set_relaciones( $relations );
+
+		// properties V5
+			$properties_v5_tipo			= 'ontology19';
+			$properties_v5_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_v5_tipo  );
+			$properties_v5_component	= component_common::get_instance(
+				$properties_v5_model,
+				$properties_v5_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$properties_v5_data = $properties_v5_component->get_dato();
+
+			if( !empty($properties_v5_data) ){
+				$properties_v5 = json_encode( $properties_v5_data );
+
+			}else{
+				$properties_v5 = null;
+			}
+
+			$jer_dd_record->set_propiedades( $properties_v5 );
+
+
+		// properties
+			$properties_tipo		= 'ontology18';
+			$properties_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_tipo  );
+			$properties_component	= component_common::get_instance(
+				$properties_model,
+				$properties_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$properties_data = $properties_component->get_dato();
+
+			if( !empty($properties_data) ){
+				$properties = reset($properties_data);
+			}else{
+				$properties = new stdClass();
+			}
+
+		// properties CSS
+			$properties_css_tipo		= 'ontology16';
+			$properties_css_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_css_tipo  );
+			$properties_css_component	= component_common::get_instance(
+				$properties_css_model,
+				$properties_css_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$properties_css_data = $properties_css_component->get_dato();
+
+			if( !empty($properties_css_data) ){
+				$properties->css = reset($properties_css_data);
+			}
+
+		// properties RQO
+			$properties_rqo_tipo		= 'ontology17';
+			$properties_rqo_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_rqo_tipo  );
+			$properties_rqo_component	= component_common::get_instance(
+				$properties_rqo_model,
+				$properties_rqo_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$properties_rqo_data = $properties_rqo_component->get_dato();
+			if( !empty($properties_rqo_data) ){
+				$properties->source = reset($properties_rqo_data);
+			}
+
+			if( empty(get_object_vars($properties)) ){
+				$properties = null;
+			}
+
+			$jer_dd_record->set_properties( $properties );
+
+		// term
+			$term_tipo		= 'ontology5';
+			$term_model		= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo );
+			$term_component	= component_common::get_instance(
+				$term_model,
+				$term_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+
+			$term_data = $term_component->get_dato_full();
+
+			if( !empty(get_object_vars($term_data)) ){
+				$term = new stdClass();
+				foreach ($term_data as $lang => $ar_term) {
+					if( !empty($ar_term) ){
+						$term->$lang = reset($ar_term);
+					}
+				}
+			}else{
+				$term = null;
+			}
+
+			$jer_dd_record->set_term( $term );
+
+		return $jer_dd_record;
+	}//end parse_section_record_to_jer_dd_record
+
+
 
 	/**
 	* GET_TERM_ID_FROM_LOCATOR
