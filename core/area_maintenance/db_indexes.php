@@ -136,10 +136,18 @@
 
 // main_dd
 	$ar_sql_query[] = '
-		CREATE INDEX IF NOT EXISTS main_dd_tld
-		ON public.main_dd USING btree
-		(tld COLLATE pg_catalog."default" ASC NULLS LAST)
-		TABLESPACE pg_default;
+		DO $$
+		BEGIN
+			IF EXISTS(SELECT *
+				FROM information_schema.columns
+				WHERE table_name=\'main_dd\')
+			THEN
+				CREATE INDEX IF NOT EXISTS main_dd_tld
+				ON public.main_dd USING btree
+				(tld COLLATE pg_catalog."default" ASC NULLS LAST)
+				TABLESPACE pg_default;
+			END IF;
+		END $$;
 	';
 
 // matrix

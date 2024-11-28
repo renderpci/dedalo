@@ -1147,6 +1147,36 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* GET_RELATIONS
+	* Get 'relaciones' column value and parse it as flat array
+	* for easy normalized access
+	* @see ontology_legacy::tipo_to_json_item()
+	* @return array|null $relations
+	*/
+	public function get_relations() : ?array {
+
+		$current_relations = $this->get_relaciones();
+		if (!empty($current_relations)) {
+
+			$relations = array_map(function($element){
+				$element		= is_array($element) ? (object)$element : $element;
+				$element_array	= get_object_vars($element);
+				$current_obj = new stdClass();
+					$current_obj->tipo = property_exists($element, 'tipo')
+						? $element->tipo
+						: reset($element_array);
+				return $current_obj;
+			}, $current_relations);
+		}else{
+			$relations = null;
+		}
+
+		return $relations;
+	}//end get_relations
+
+
+
+	/**
 	* SET_RELACIONES
 	* Set 'relaciones' as JSON (MODELO: $ar_relaciones[$terminoID_source][] = array($modelo => $terminoID_rel))
 	* Set value s string JSON encoded array or null
@@ -1442,6 +1472,34 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return ($translatable==='si');
 	}//end get_translatable
+
+
+
+	/**
+	* IS_MODEL
+	* Alias of get_esmodelo but responses boolean for convenience
+	* @return bool
+	*/
+	public function is_model() : bool {
+
+		$esmodelo = $this->get_esmodelo();
+
+		return ($esmodelo==='si');
+	}//end is_model
+
+
+
+	/**
+	* GET_ORDER
+	* Alias of get_norden
+	* @return bool
+	*/
+	public function get_order() : int {
+
+		$order = (int)$this->get_norden();
+
+		return $order;
+	}//end get_order
 
 
 
