@@ -9,7 +9,7 @@
 	import {object_to_url_vars, time_unit_auto, open_window} from '../../../core/common/js/utils/index.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {when_in_dom} from '../../../core/common/js/events.js'
+	import {when_in_viewport} from '../../../core/common/js/events.js'
 
 
 
@@ -48,17 +48,6 @@ render_tool_diffusion.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-
-	// focus first publish button
-		when_in_dom(
-			wrapper,
-			function() {
-				const publication_button = wrapper.querySelector('.publication_button')
-				if (publication_button) {
-					publication_button.focus()
-				}
-			}
-		)
 
 
 	return wrapper
@@ -512,7 +501,8 @@ export const render_publication_items = function(self) {
 					parent			: container_bottom
 				})
 				lock_items.push(publication_button)
-				publication_button.addEventListener('click', (e) => {
+				// click event
+				const click_handler = (e) => {
 					e.stopPropagation()
 
 					// user confirmation
@@ -527,7 +517,13 @@ export const render_publication_items = function(self) {
 						diffusion_element_tipo	: current_diffusion_element_tipo,
 						local_db_id				: local_db_id
 					})
+				}
+				publication_button.addEventListener('click', click_handler)
+
+				when_in_viewport(publication_button, ()=>{
+					publication_button.focus()
 				})
+
 				// disable cases :
 					if (
 						(item.connection_status && item.connection_status.result===false) ||
