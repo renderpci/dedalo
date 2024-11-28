@@ -168,7 +168,6 @@ class full_node extends stdClass {
 
 		# REMOVE_RESTRICTED_TEXT
 		$raw_text_sure = web_data::remove_restricted_text( $raw_text, $this->av_section_id ) ?? '';
-			#dump($raw_text_sure, ' $raw_text_sure ++ '.to_string());
 
 		$fragm = TR::deleteMarks($raw_text_sure);
 

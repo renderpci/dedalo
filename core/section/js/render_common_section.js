@@ -26,7 +26,7 @@ export const render_common_section = function() {
 * RENDER_DELETE_RECORD_DIALOG
 * Delete selected record or Delete find records
 * @param object options
-* @return bool
+* @return dd-modal modal
 */
 render_common_section.prototype.render_delete_record_dialog = async (options) => {
 
@@ -175,10 +175,10 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 
 	// modal
 		const modal = ui.attach_to_modal({
-			header	: header,
-			body	: body,
-			footer	: footer,
-			size	: 'small', // string size small|big|normal
+			header		: header,
+			body		: body,
+			footer		: footer,
+			size		: 'small', // string size small|big|normal
 			callback	: (dd_modal) => {
 				dd_modal.modal_content.style.width = '34rem'
 				dd_modal.modal_content.style.maxWidth = '100%'
@@ -186,7 +186,7 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 		})
 
 
-	return true
+	return modal
 }//end render_delete_record_dialog
 
 
