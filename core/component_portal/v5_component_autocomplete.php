@@ -70,7 +70,7 @@
 			// $fields_separator   = $this->get_fields_separator();
 			$fields_separator = (isset($propiedades->source->divisor))
 				? $propiedades->source->divisor
-				: ' | ';
+				: $fields_separator; // ' | ';
 
 		foreach ($dato as $current_locator) {
 
@@ -208,30 +208,6 @@
 		// force recalculate for each lang
 			unset($this->valor);
 
-		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> ')
-			$value = $this->get_valor($lang, 'array');
-			// value sample:
-				// [
-				//     {
-				//         "value": {
-				//             "type": "dd151",
-				//             "section_id": "4551",
-				//             "section_tipo": "rsc194",
-				//             "from_component_tipo": "rsc139"
-				//         },
-				//         "label": "<mark>Ripollès Alegre (Universitat de València)</mark>, <mark>Pere Pau</mark>"
-				//     },
-				//     {
-				//         "value": {
-				//             "type": "dd151",
-				//             "section_id": "3125",
-				//             "section_tipo": "rsc194",
-				//             "from_component_tipo": "rsc139"
-				//         },
-				//         "label": "<mark>Llorens Forcada</mark>, <mark>Maria del Mar</mark>"
-				//     }
-				// ]
-
 		// is_publicable from propiedades. case Bibliography 'rsc368'
 			$propiedades	= $this->get_propiedades(true);
 			$is_publicable	= (bool)(isset($propiedades->is_publicable) && $propiedades->is_publicable===true);
@@ -257,10 +233,41 @@
 				case isset($propiedades->source->divisor):
 					$fields_separator = $propiedades->source->divisor;
 					break;
+				case isset($diffusion_properties->separator_fields):
+					$fields_separator = $diffusion_properties->separator_fields;
+					break;
+				// records_separator
+				case isset($diffusion_properties->separator_rows):
+					$records_separator = $diffusion_properties->separator_rows;
+					break;
 				default:
 					$fields_separator = $fields_separator_default;
 					break;
 			}
+
+		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> ')
+			$value = $this->get_valor($lang, 'array', $fields_separator, $records_separator ?? null);
+			// value sample:
+				// [
+				//     {
+				//         "value": {
+				//             "type": "dd151",
+				//             "section_id": "4551",
+				//             "section_tipo": "rsc194",
+				//             "from_component_tipo": "rsc139"
+				//         },
+				//         "label": "<mark>Ripollès Alegre (Universitat de València)</mark>, <mark>Pere Pau</mark>"
+				//     },
+				//     {
+				//         "value": {
+				//             "type": "dd151",
+				//             "section_id": "3125",
+				//             "section_tipo": "rsc194",
+				//             "from_component_tipo": "rsc139"
+				//         },
+				//         "label": "<mark>Llorens Forcada</mark>, <mark>Maria del Mar</mark>"
+				//     }
+				// ]
 
 		$diffusion_value_clean = [];
 		foreach ($value as $item) {

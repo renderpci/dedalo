@@ -7,6 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from '../../section/js/render_common_section.js'
 	import {edit_user_search_preset, load_search_preset} from './search_user_presets.js'
@@ -87,17 +88,6 @@ view_search_user_presets.render = async function(self, options) {
 			if (self.context.css) {
 				// use defined section css
 				set_element_css(selector, self.context.css)
-			}else{
-				// flat columns create a sequence of grid widths taking care of sub-column space
-				// like 1fr 1fr 1fr 3fr 1fr
-				// const css_object = {
-				// 	'.list_body' : {
-				// 		'grid-template-columns' : '1rem 1rem auto 1rem'
-				// 	}
-				// }
-				// // use calculated css
-				// set_element_css(selector, css_object)
-				// (!) grid columns defined in search.css
 			}
 
 	// content_data append
@@ -151,11 +141,12 @@ const get_content_data = async function(ar_section_record, self) {
 					})
 					ar_promises.push(render_promise_node)
 				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	const section_record_node = values[i]
-					fragment.appendChild(section_record_node)
-				  }
+				await Promise.all(ar_promises)
+				.then(function(values) {
+					for (let i = 0; i < ar_section_record_length; i++) {
+						const section_record_node = values[i]
+						fragment.appendChild(section_record_node)
+					}
 				});
 		}
 
@@ -248,44 +239,28 @@ export const render_column_apply_preset = function(options) {
 	// button_apply
 		const button_apply = ui.create_dom_element({
 			element_type	: 'span',
+			id				: 'apply_preset_' + section_id,
 			class_name		: 'button_apply_preset button icon arrow_link'
 		})
+		// click handler
 		const apply_preset_handler = async (e) => {
 			e.stopPropagation()
 
 			// loading
 			self.node.classList.add('loading')
 
-			// load DDBB component_json data
-			load_search_preset({
-				section_id : section_id
+			// select_preset
+			await select_preset({
+				self			: self,
+				section_id		: section_id,
+				button_apply	: button_apply,
+				load_preset		: true
 			})
-			.then(function(json_filter){
 
-				// render_filter (into search_container_selection at center)
-				render_filter({
-					self				: self,
-					editing_preset		: json_filter,
-					allow_duplicates	: true
-				})
-				// render buttons (force to re-create the buttons)
-				self.render_search_buttons()
-				// set as selected
-				const section_record	= button_apply.parentNode.parentNode
-				const content_data		= section_record.parentNode
-				content_data.querySelectorAll('.section_record').forEach((el) => {
-					el.classList.remove('selected')
-				});
-				section_record.classList.add('selected')
-
-				// fix user_preset_section_id
-				self.user_preset_section_id = section_id
-
-				// loading
-				self.node.classList.remove('loading')
-			})
+			// loading
+			self.node.classList.remove('loading')
 		}
-		button_apply.addEventListener('mousedown', apply_preset_handler)
+		button_apply.addEventListener('click', apply_preset_handler)
 
 
 	return button_apply
@@ -294,10 +269,67 @@ export const render_column_apply_preset = function(options) {
 
 
 /**
+* SELECT_PRESET
+* Loads selected preset and render it into DOM
+* @param object options
+* {
+* 	self : object (search instance)
+* 	section_id: int|string (preset section_id)
+* 	button_apply: HTMLElement
+* 	load_preset: bool (default true)
+* }
+* @return
+*/
+export const select_preset = async function (options) {
+
+	// options
+		const self			= options.self
+		const section_id	= options.section_id
+		const button_apply	= options.button_apply
+		const load_preset	= options.load_preset ?? true
+
+	// load_preset
+	if (load_preset) {
+		// load DDBB component_json data
+		const json_filter = await load_search_preset({
+			section_id : section_id
+		})
+
+		// render_filter (into search_container_selection at center)
+		render_filter({
+			self				: self,
+			editing_preset		: json_filter,
+			allow_duplicates	: true
+		})
+
+		// render buttons (force to re-create the buttons)
+		self.render_search_buttons()
+	}
+
+	// reset all and set current as selected
+	if (button_apply) {
+		const section_record	= button_apply.parentNode.parentNode
+		const content_data		= section_record.parentNode
+		content_data.querySelectorAll('.section_record').forEach(el => {
+			el.classList.remove('selected')
+		});
+		section_record.classList.add('selected')
+	}
+
+	// fix user_preset_section_id
+	self.user_preset_section_id = section_id
+
+
+	return true
+}//end select_preset
+
+
+
+/**
 * RENDER_COLUMN_ID
 * @param object options
 * {
-* 	caller: instance,
+* 	caller: instance, (section)
 * 	section:id: string|int
 * }
 * @return HTMLElement button_edit
@@ -305,62 +337,88 @@ export const render_column_apply_preset = function(options) {
 export const render_column_id = function(options) {
 
 	// options
-		const self			= options.caller // object instance section
+		const section		= options.caller // object instance section
 		const section_id	= options.section_id
 
 	// button_edit
 		const button_edit = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'button_edit button icon edit button_view_' + self.context.view
+			class_name		: 'button_edit button icon edit button_view_' + section.context.view
 		})
-		const click_handler = async (e) => {
+		const click_handler = (e) => {
 			e.stopPropagation()
-
-			// modal body
-				const body = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'container'
-				})
-
-			// modal attach to document
-				ui.attach_to_modal({
-					header		: get_label.search_presets || 'User search preset',
-					body		: body,
-					footer		: null,
-					size		: 'small',
-					callback	: (dd_modal) => {
-						dd_modal.modal_content.style.width = '20rem'
-					}
-				})
-
-			// load section user_search_preset into modal body
-				ui.load_item_with_spinner({
-					container	: body,
-					label		: 'Preset ' + section_id,
-					style : {
-						height : '273px'
-					},
-					callback	: async function() {
-						// section load
-						const section		= await edit_user_search_preset(self, section_id)
-						const section_node	= await section.render()
-
-						// activate input name
-							const ar_instances = section.ar_instances[0]?.ar_instances || []
-							const component_input_text = ar_instances.find(el => el.model==='component_input_text')
-							if (component_input_text) {
-								ui.component.activate(component_input_text)
-							}
-
-						return section_node
-					}
-				})
+			// open modal to edit preset
+			render_preset_modal({
+				caller		: section,
+				section_id	: section_id
+			})
 		}
-		button_edit.addEventListener('click', click_handler)
+		button_edit.addEventListener('mousedown', click_handler)
 
 
 	return button_edit
 }//end render_column_id
+
+
+
+/**
+* RENDER_PRESET_MODAL
+* Creates and open a modal to edit current preset
+* @param object options
+* {
+* 	caller: instance, (section)
+* 	section:id: string|int
+* }
+* @return void
+*/
+export const render_preset_modal = function (options) {
+
+	// options
+		const section		= options.caller // object instance section
+		const section_id	= options.section_id
+		const on_close		= options.on_close || null
+
+	// modal body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'container'
+		})
+
+	// modal attach to document
+		ui.attach_to_modal({
+			header		: get_label.search_presets || 'User search preset',
+			body		: body,
+			footer		: null,
+			size		: 'small',
+			callback	: (dd_modal) => {
+				dd_modal.modal_content.style.width = '20rem'
+			},
+			on_close	: on_close
+		})
+
+	// load section user_search_preset into modal body
+		ui.load_item_with_spinner({
+			container	: body,
+			label		: 'Preset ' + section_id,
+			style : {
+				height : '273px'
+			},
+			callback	: async function() {
+				// section load
+				const edit_section	= await edit_user_search_preset(section, section_id)
+				const section_node	= await edit_section.render()
+
+				// activate input name
+				dd_request_idle_callback(
+					() => {
+						edit_section.focus_first_input()
+					}
+				)
+
+				return section_node
+			}
+		})
+}//end render_preset_modal
 
 
 
@@ -372,7 +430,7 @@ export const render_column_id = function(options) {
 export const render_column_remove = function(options) {
 
 	// options
-		const self			= options.caller // object instance section
+		const section		= options.caller // object instance section
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 
@@ -381,24 +439,45 @@ export const render_column_remove = function(options) {
 			element_type	: 'span',
 			class_name		: 'button_delete button delete_light icon'
 		})
-		delete_button.addEventListener('click', function(e){
+		// click event
+		const click_handler = async (e) => {
 			e.stopPropagation()
 
+			// confirm dialog
+				if (!confirm(get_label.sure || 'Sure?')) {
+					return
+				}
+
 			// delete section
-				self.render_delete_record_dialog({
-					section			: self,
-					section_id		: section_id,
-					section_tipo	: section_tipo,
-					sqo				: {
-						section_tipo		: [section_tipo],
-						filter_by_locators	: [{
-							section_tipo	: section_tipo,
-							section_id		: section_id
-						}],
-						limit				: 1
-					}
+				const sqo = {
+					section_tipo		: [section_tipo],
+					filter_by_locators	: [{
+						section_tipo	: section_tipo,
+						section_id		: section_id
+					}],
+					limit				: 1
+				}
+				const result = await section.delete_section({
+					sqo							: sqo,
+					delete_mode					: 'delete_record',
+					delete_diffusion_records	: false
 				})
-		})
+
+				if (result) {
+					// search : update buttons and selections
+					const search_instance = options.caller.caller
+					if (search_instance) {
+						// hide save button if is visible
+						const button_save_preset = search_instance.button_save_preset
+						if (!button_save_preset.classList.contains('hide')) {
+							button_save_preset.classList.add('hide')
+						}
+						// unset user_preset_section_id selection
+						search_instance.user_preset_section_id = null
+					}
+				}
+		}
+		delete_button.addEventListener('click', click_handler)
 
 
 	return delete_button

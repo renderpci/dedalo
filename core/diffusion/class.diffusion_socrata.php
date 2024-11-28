@@ -9,6 +9,8 @@ require DEDALO_LIB_PATH . '/vendor/soda-php/public/socrata.php';
 */
 class diffusion_socrata extends diffusion  {
 
+
+
 	public static $database_name;
 	public static $database_tipo;
 	public static $ar_table;
@@ -93,7 +95,13 @@ class diffusion_socrata extends diffusion  {
 				$json_row = $this->build_json_row($json_row_options);
 				// Add
 				$ar_rows[] = $json_row;
+
+				// debug
+				if(SHOW_DEBUG===true) {
+					// dump($json_row, ' json_row ++ '.to_string()); die();
+				}
 			}
+
 
 		// Configure final objects to build upsert bulk action
 			$socrata_delete = ':deleted';
@@ -256,13 +264,14 @@ class diffusion_socrata extends diffusion  {
 
 		// debug
 			// errors
-			if (isset($response->Errors) && (int)$response->Errors>0) {
+			if ($response->error===true || (isset($response->Errors) && (int)$response->Errors>0)) {
 				debug_log(__METHOD__
 					." !!! ERROR ON UPSERT SOCRATA RECORD ".json_encode($response, JSON_PRETTY_PRINT) . PHP_EOL
 					.' response: ' . to_string($response) . PHP_EOL
 					.' data: ' . to_string($data)
 					, logger::ERROR
 				);
+
 			}else{
 				debug_log(__METHOD__
 					." Socrata response" . PHP_EOL
@@ -279,9 +288,19 @@ class diffusion_socrata extends diffusion  {
 
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* Resolves Ontology all related sections (linked from socrata tables) ready to publish in Socrata.
+	* It is used to determine whether the current section has a Diffusion button to publish the content.
 	* @param string $diffusion_element_tipo
 	* @param string|null $class_name = null
 	* @return array $ar_diffusion_sections
+	* sample:
+	* [
+	*	"dmm1023",
+	*	"oh1",
+	*	"rsc205",
+	*	"mdcat757",
+	*	"mdcat813"
+	* ]
 	*/
 	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
 
