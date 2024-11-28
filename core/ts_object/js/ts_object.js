@@ -1433,8 +1433,8 @@ export const ts_object = new function() {
 						section_id		: section_id,
 						tipo			: tipo,
 						lang			: lang,
-						mode			: 'edit', // mode,
-						view			: 'default',
+						mode			: 'edit',
+						// view			: 'default', // do not force view here (let component to decide his view)
 						id_variant		: new Date().getTime()
 					})
 

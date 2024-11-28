@@ -520,6 +520,14 @@ abstract class backup {
 				$response->result 	= false;
 				$response->msg 		= implode($msg_separator, $ar_msg);
 				$response->errors[] = 'Error 1. Unable to export database';
+				if(SHOW_DEBUG===true) {
+					$response->command = $command;
+					debug_log(__METHOD__
+						. " Error 1. Unable to export database " . PHP_EOL
+						. ' command: ' . to_string($command)
+						, logger::ERROR
+					);
+				}
 				return $response; // Stop execution here
 
 			case 2: // error 2
@@ -533,6 +541,14 @@ abstract class backup {
 				$response->result 	= false;
 				$response->msg 		= implode($msg_separator, $ar_msg);
 				$response->errors[] = 'Error 2. Unable to export database';
+				if(SHOW_DEBUG===true) {
+					$response->command = $command;
+					debug_log(__METHOD__
+						. " Error 1. Unable to export database " . PHP_EOL
+						. ' command: ' . to_string($command)
+						, logger::ERROR
+					);
+				}
 				return $response; // Stop execution here
 
 			default: // error unknown
