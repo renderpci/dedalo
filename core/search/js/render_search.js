@@ -9,7 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {when_in_viewport} from '../../common/js/events.js'
+	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
 	import {create_cookie, read_cookie} from '../../common/js/utils/cookie.js'
 	import {
 		create_new_search_preset,
@@ -18,7 +18,7 @@
 		load_user_search_presets,
 		presets_section_tipo
 	} from './search_user_presets.js'
-	import {render_preset_modal} from './view_search_user_presets.js'
+	import {render_preset_modal,select_preset} from './view_search_user_presets.js'
 
 
 
@@ -132,20 +132,6 @@ render_search.prototype.render_base = function() {
 			search_global_container.appendChild(thesaurus_options_node)
 		}
 
-	// button_save_preset . Hidden by default
-		// ui.create_dom_element({
-		// 	element_type	: 'button',
-		// 	class_name		: 'button_save_preset hide99',
-		// 	inner_html		: get_label.save +' '+ get_label.changes,
-		// 	parent			: search_global_container
-		// })
-		// .addEventListener('click',function(e) {
-		// 	e.stopPropagation()
-
-		// 	console.log('e:', e);
-		// 	// self.save_preset(this)
-		// })
-
 	// toggle_container_selector (Show/hide where section fields list are loaded)
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -221,6 +207,7 @@ render_search.prototype.render_base = function() {
 			const add_click_handler = async (e) => {
 				e.stopPropagation()
 
+				// create_new_search_preset
 				const section_id = await create_new_search_preset({
 					self			: self,
 					section_tipo	: presets_section_tipo
@@ -235,6 +222,23 @@ render_search.prototype.render_base = function() {
 					section_id	: section_id,
 					on_close	: () => {
 						self.user_presets_section.refresh()
+						.then(function(response){
+							// activate created preset
+							dd_request_idle_callback(
+								() => {
+									const button_apply = document.getElementById('apply_preset_' + section_id)
+									if (button_apply) {
+										// button_apply.click()
+										select_preset({
+											self			: self,
+											section_id		: section_id,
+											button_apply	: button_apply,
+											load_preset		: false
+										})
+									}
+								}
+							)
+						})
 					}
 				})
 			}
