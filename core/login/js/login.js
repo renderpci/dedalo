@@ -174,6 +174,48 @@ login.prototype.build = async function(autoload=false) {
 
 
 /**
+* LOGIN
+* Exec the login action against the API
+* @param object options
+* {
+* 	username: string
+* 	auth: string
+* }
+* @return object response
+*/
+login.prototype.login = async function(options) {
+
+	// options
+		const username	= options.username
+		const auth		= options.auth
+
+	// request
+		const api_response = await data_manager.request({
+			body : {
+				action	: 'login',
+				dd_api	: 'dd_utils_api',
+				options	: {
+					username	: username,
+					auth		: auth
+				}
+			}
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('login api_response:', api_response);
+		}
+
+	// delete dedalo_files caches
+		await caches.delete('dedalo_files');
+
+
+	return api_response
+}//end login
+
+
+
+/**
 * QUIT
 * Close current user session
 * (!) Note that quit menu event removes local indexedDB menu data before quit
@@ -421,7 +463,6 @@ login.prototype.action_dispatch = async function(api_response) {
 						// login continue
 						dd_request_idle_callback(
 							() => {
-								console.log('this:', this);
 								load_finish()
 							}
 						)
