@@ -1018,7 +1018,7 @@ export const ts_object = new function() {
 	* @return int matches_length
 	*  (matches.length)
 	*/
-	this.refresh_element = function(section_tipo, section_id) {
+	this.refresh_element = function(section_tipo, section_id, hilite=true, callback) {
 
 		const self = this
 
@@ -1086,6 +1086,10 @@ export const ts_object = new function() {
 							)
 						}
 
+						// callback
+						if (callback) {
+							callback(term_node)
+						}
 					})
 			}else if(!element_children){
 				if (SHOW_DEBUG===true) {
@@ -1118,6 +1122,10 @@ export const ts_object = new function() {
 									)
 								}
 
+								// callback
+								if (callback) {
+									callback(term_node)
+								}
 							}
 
 						}else{
@@ -1136,7 +1144,6 @@ export const ts_object = new function() {
 						break
 					}
 				}
-
 			}
 		}//end for (let i = matches_length - 1; i >= 0; i--)
 
@@ -1189,11 +1196,18 @@ export const ts_object = new function() {
 		// window managing
 			if(self.edit_window===null || self.edit_window.closed) {
 
-				self.edit_window = open_window({
+				const height	= window.screen.availHeight
+				const width		= window.screen.availWidth > 1280
+					? window.screen.availWidth
+					: 1280
+
+				const new_window = self.edit_window = open_window({
 					url		: url,
 					target	: 'edit_window',
 					width	: 1280,
-					height	: 905,
+					height	: height,
+					top		: 0,
+					left	: (width - 1280),
 					on_blur : () => {
 						self.refresh_element(section_tipo, section_id)
 					}
