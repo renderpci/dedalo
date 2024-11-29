@@ -922,7 +922,7 @@
 		resize: vertical;
 		overflow: hidden;
 
-		// thematize
+		// theming
 		&.jsoneditor-mode-code {
 			border: thin solid #c0c0c0;
 		}
@@ -935,6 +935,11 @@
 			background-color: #949494;
 			border-bottom: 1px solid #838383;
 			display: table;
+		}
+
+		>.jsoneditor-outer {
+			// fix Firefox issue about height
+			display: table-row;
 		}
 
 		>.jsoneditor-menu a.jsoneditor-poweredBy {
