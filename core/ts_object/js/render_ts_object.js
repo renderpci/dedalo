@@ -6,9 +6,10 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {when_in_dom} from '../../common/js/events.js'
+	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {ts_object} from './ts_object.js'
+	import { get_instance } from '../../common/js/instances.js'
 
 
 
@@ -1096,6 +1097,10 @@ const render_ontology_term = function(options) {
 		const is_descriptor	= options.is_descriptor
 		const key			= options.key // int j
 
+	// short vars
+		const section_tipo	= child_data.section_tipo
+		const section_id	= child_data.section_id
+
 	// parse parts
 		const regex				= /^(.*) ([a-z]{2,}) ([0-9]+)$/gm;
 		const term_regex_result	= regex.exec(child_data.ar_elements[key].value)
@@ -1103,7 +1108,7 @@ const render_ontology_term = function(options) {
 		// term_id . like 'dd_1'
 			const term_id	= term_regex_result
 				? term_regex_result[2] + '_' + term_regex_result[3]
-				: child_data.section_tipo +'_'+ child_data.section_id
+				: section_tipo +'_'+ section_id
 
 		// term_text
 			// const term_text = Array.isArray( child_data.ar_elements[key].value )
@@ -1120,8 +1125,8 @@ const render_ontology_term = function(options) {
 		}
 
 	// overwrite dataset (we need section_id and section_tipo to select when content is updated)
-		children_dataset.section_tipo	= child_data.section_tipo
-		children_dataset.section_id		= child_data.section_id
+		children_dataset.section_tipo	= section_tipo
+		children_dataset.section_id		= section_id
 
 	// term_node
 		const term_node = ui.create_dom_element({
@@ -1175,6 +1180,51 @@ const render_ontology_term = function(options) {
 			inner_html		: '['+ term_id +']',
 			parent			: term_node
 		})
+
+	// button_duplicate
+		const button_duplicate = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button_duplicate',
+			inner_html		: '<span>+</span>',
+			parent			: term_node
+		})
+		// click event
+		const click_handler_duplicate = async (e) => {
+			e.stopPropagation()
+
+			if (!confirm(get_label.sure || 'Sure?')) {
+				return false
+			}
+
+			const section = await get_instance({
+				model			: 'section',
+				section_tipo	: section_tipo,
+				section_id		: section_id
+			})
+			const new_section_id = await section.duplicate_section(section_id)
+
+			// navigate to the new record
+			if (new_section_id) {
+				// update parent
+				if(SHOW_DEBUG===true) {
+					console.log('Created new_section_id:', new_section_id);
+				}
+				const callback = () => {
+					dd_request_idle_callback(
+						() => {
+							const term_node = document.querySelector('.list_thesaurus_element[data-type="term"][data-section_tipo="'+section_tipo+'"][data-section_id="'+new_section_id+'"]');
+							if (term_node) {
+								self.hilite_element(term_node)
+							}
+						}
+					)
+				}
+				// refresh wrap avoiding hilite
+				ts_object.refresh_element(section_tipo, section_id, false, callback)
+			}
+		}
+		button_duplicate.addEventListener('click', click_handler_duplicate)
+
 
 
 	return term_node
