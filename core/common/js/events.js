@@ -194,9 +194,9 @@ export const dd_request_idle_callback = function (callback) {
 		// Use requestIdleCallback to schedule work if available
 		requestIdleCallback(callback, { timeout: 1000 })
 	} else {
-		// window.requestAnimationFrame(callback)
 		// Fallback for browsers without requestIdleCallback support like Safari
-        setTimeout(callback, 1);
+		window.requestAnimationFrame(callback)
+        // setTimeout(callback, 1);
 	}
 }//end dd_request_idle_callback
 
