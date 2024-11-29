@@ -523,6 +523,8 @@ export function open_window(options) {
 		const height	= options.height && (options.height < window.screen.height)
 			? options.height
 			: ((default_height < window.screen.height) ? default_height : window.screen.height)
+		const top		= options.top || 0
+		const left		= options.left || 0
 		const on_blur	= options.on_blur || null
 
 	// window_features
@@ -532,7 +534,7 @@ export function open_window(options) {
 				return  null
 			}
 
-			const features_string = `width=${width},height=${height}` + (features ? (','+features) : '')
+			const features_string = `width=${width},height=${height},top=${top},left=${left}` + (features ? (','+features) : '')
 
 			return features_string
 		})()
