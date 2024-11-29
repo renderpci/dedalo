@@ -941,20 +941,18 @@ const render_delete_record_dialog = function (options) {
 			// the unlink option will be fired
 			const focus_the_button = function() {
 				// set the focus to the button_unlink
-				setTimeout(function(){
-					button_delete.focus()
-					button_delete.classList.add('focus')
-				}, 100)
+				dd_request_idle_callback(
+					() => {
+						button_delete.focus()
+						button_delete.classList.add('focus')
+					}
+				)
 				button_delete.addEventListener('keyup', (e)=>{
 					e.preventDefault()
-					if(e.key==='Enter'){
-						console.log('button_delete:', button_delete);
-						// button_delete.click()
-					}
 				})
 			}
 			// when the modal will be ready in DOM fire the function to attack the event
-			when_in_dom(button_delete, focus_the_button)
+			when_in_viewport(button_delete, focus_the_button)
 	}//end if (has_descriptor_children)
 
 	// modal
@@ -1052,9 +1050,11 @@ const render_term = function(options) {
 			if(		term_node.dataset.section_id == self.element_to_hilite.section_id
 				&& 	term_node.dataset.section_tipo===self.element_to_hilite.section_tipo) {
 				// hilite element
-				setTimeout(function(){
-					self.hilite_element(term_node)
-				}, 200)
+				dd_request_idle_callback(
+					() => {
+						self.hilite_element(term_node)
+					}
+				)
 			}
 		}
 
@@ -1160,9 +1160,11 @@ const render_ontology_term = function(options) {
 			if(		term_node.dataset.section_id == self.element_to_hilite.section_id
 				&& 	term_node.dataset.section_tipo===self.element_to_hilite.section_tipo) {
 				// hilite element
-				setTimeout(function(){
-					self.hilite_element(term_node)
-				}, 200)
+				dd_request_idle_callback(
+					() => {
+						self.hilite_element(term_node)
+					}
+				)
 			}
 		}
 

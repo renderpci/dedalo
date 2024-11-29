@@ -585,13 +585,15 @@ export const ts_object = new function() {
 		// Updates element_children_source
 			ts_object.update_arrow_state(element_children_source, false)
 
-		// hilite moved term. wait 300 ms to allow arrow state update
-			const element = wrap_source.querySelector('.list_thesaurus_element[data-type="term"]')
-			if (element) {
-				setTimeout(function(){
-					ts_object.hilite_element(element)
-				}, 200)
-			}
+		// hilite moved term. wait 200 ms to allow arrow state update
+			dd_request_idle_callback(
+				() => {
+					const element = wrap_source.querySelector('.list_thesaurus_element[data-type="term"]')
+					if (element) {
+						ts_object.hilite_element(element)
+					}
+				}
+			)
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1076,9 +1078,14 @@ export const ts_object = new function() {
 						// }
 
 						// element to hilite
-						setTimeout(function(){
-							self.hilite_element(term_node)
-						}, 200)
+						if (hilite) {
+							dd_request_idle_callback(
+								() => {
+									self.hilite_element(term_node)
+								}
+							)
+						}
+
 					})
 			}else if(!element_children){
 				if (SHOW_DEBUG===true) {
@@ -1099,12 +1106,18 @@ export const ts_object = new function() {
 
 							// root nodes case: hilite term
 
-							const term = children_container.firstChild.querySelector('.term')
-							if (term) {
+							const term_node = children_container.firstChild.querySelector('.term')
+							if (term_node) {
+
 								// element to hilite
-								setTimeout(function(){
-									self.hilite_element(term)
-								}, 200)
+								if (hilite) {
+									dd_request_idle_callback(
+										() => {
+											self.hilite_element(term_node)
+										}
+									)
+								}
+
 							}
 
 						}else{
