@@ -13,7 +13,7 @@
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
 
 
 
@@ -67,6 +67,13 @@ render_inspector.prototype.edit = async function(options) {
 		function expose() {
 			label.classList.add('up')
 		}
+		const observer = new IntersectionObserver(
+			([e]) => e.target.classList.toggle('is_pinned', e.intersectionRatio < 1),
+			{ threshold: [1] }
+		);
+		when_in_viewport(label, () => {
+			observer.observe(label);
+		})
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
