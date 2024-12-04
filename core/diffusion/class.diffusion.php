@@ -784,6 +784,21 @@ abstract class diffusion  {
 
 
 
+	/**
+	* GET_TABLE_TIPO
+	* Resolves the table tipo from diffusion_element_tipo for current section
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @return string|null $table
+	*/
+	public static function get_table_tipo( string $diffusion_element_tipo, string $section_tipo ) : ?string {
+
+		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
+
+		$table_tipo = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
+
+		return $table_tipo;
+	}//end get_table_tipo
 	// BUILD JSON DATA OUT //////////////////////////////////////////////////////////////////////
 
 
