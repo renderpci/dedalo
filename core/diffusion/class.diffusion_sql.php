@@ -3324,8 +3324,8 @@ class diffusion_sql extends diffusion  {
 						default:
 							$string_parts = explode(' ', $diffusion_value);
 							foreach ($string_parts as $spart) {
-								$first_char = substr($spart, 0, 1);
-								$ar_parts[] = strtoupper($first_char);
+								$first_char = mb_substr($spart, 0, 1);
+								$ar_parts[] = mb_strtoupper($first_char);
 							}
 							break;
 					}
