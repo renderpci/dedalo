@@ -328,8 +328,10 @@ menu.prototype.build_local_db_id = function(lang) {
 	// lang cascade fallback
 	lang = lang || page_globals?.dedalo_application_lang || ''
 
+	const version = page_globals.dedalo_version || 'unknown'
+
 	// id composition
-	const id = `${self.model}_${self.tipo}_${lang}_${user_id}`
+	const id = `${self.model}_${self.tipo}_${lang}_${version}_${user_id}`
 
 
 	return id
