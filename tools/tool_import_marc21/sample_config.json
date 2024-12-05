@@ -28,7 +28,7 @@
 			{
 				"info"			: "ISBN",
 				"field"			: "020",
-				"tipo"			: "rsc137",
+				"tipo"			: "rsc147",
 				"dd_action"		: {"rsc249":[{"section_id":"1","section_tipo":"dd292"}]},
 				"skip_on_empty"	: true
 			},
