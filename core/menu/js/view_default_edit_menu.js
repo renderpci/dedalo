@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {render_section_label} from './render_menu.js'
 	import * as menu_tree from './render_menu_tree.js'
@@ -72,7 +73,7 @@ view_default_edit_menu.render = async function(self, options) {
 
 	// events
 		// adjust_size. Adapt vertical size based on window width resizing
-		const observer = new ResizeObserver((entries) => {
+		const resize_observer = new ResizeObserver((entries) => {
 			entries.forEach((entry) => {
 				const debug_info_bar = content_data.debug_info_bar
 				// debug_info_bar
@@ -100,7 +101,33 @@ view_default_edit_menu.render = async function(self, options) {
 				requestAnimationFrame(adjust_size)
 			});
 		});
-		observer.observe(wrapper);
+		// adjust inspector_container top position. Set pinned class on menu sticky pin
+		const intersection_observer = new IntersectionObserver(
+			([e]) => {
+				const pinned = e.intersectionRatio < 1
+
+				// toggle menu class 'is_pinned'
+				e.target.classList.toggle('is_pinned', pinned)
+
+				// move up inspector on pinned
+				const inspector_container = document.getElementById('inspector_container')
+				if (inspector_container) {
+					const top = wrapper.getBoundingClientRect().bottom;
+					if (pinned) {
+						inspector_container.style.top = (top + 13) + 'px'
+					}else{
+						inspector_container.style.removeProperty('top');
+					}
+				}
+			},
+			{ threshold: [1] }
+		);
+
+		// fire events when_in_viewport
+		when_in_viewport(wrapper, () => {
+			resize_observer.observe(wrapper);
+			intersection_observer.observe(wrapper);
+		})
 
 
 	return wrapper
