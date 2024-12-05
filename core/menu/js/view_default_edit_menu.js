@@ -127,6 +127,8 @@ view_default_edit_menu.render = async function(self, options) {
 		when_in_viewport(wrapper, () => {
 			resize_observer.observe(wrapper);
 			intersection_observer.observe(wrapper);
+			// update class from version
+			wrapper.classList.add('v'+page_globals.dedalo_version.replaceAll('.','_'))
 		})
 
 
