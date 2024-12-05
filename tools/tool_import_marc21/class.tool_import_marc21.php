@@ -232,13 +232,12 @@ class tool_import_marc21 extends tool_common {
 								);
 
 								# DD_ACTION
-								if (!empty($value) && (isset($element_vars->dd_action) && $dd_action===$element_vars->dd_action)) {
+								if (!empty($value) && isset($element_vars->dd_action)) {
 
-									foreach ($dd_action as $key => $value) {
+									foreach ($element_vars->dd_action as $component_tipo_action => $component_action_value) {
 
-										$component_tipo_action	= $key;
-										$model_name				= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_action,true);
-										$component_action		= component_common::get_instance(
+										$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_action,true);
+										$component_action	= component_common::get_instance(
 											$model_name,
 											$component_tipo_action,
 											$section_id,
@@ -247,11 +246,11 @@ class tool_import_marc21 extends tool_common {
 											$section_tipo,
 											false
 										);
-										$component_action->set_dato($value);
+										$component_action->set_dato($component_action_value);
 										$component_action->Save();
 										debug_log(__METHOD__
 											." Saved dd_action. Component $component_tipo_action with dato: " . PHP_EOL
-											.' value: ' . to_string($value)
+											.' value: ' . to_string($component_action_value)
 											, logger::DEBUG
 										);
 									}
