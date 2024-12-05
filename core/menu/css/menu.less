@@ -13,16 +13,16 @@
 .menu {
 	margin: 0px;
 	padding: 0px;
+	position: -webkit-sticky;
+	position: sticky;
+	top: -0.1px;
+	left: 0px;
+	z-index: 4;
 
 	>.content_data {
-
 		// vars
 		--menu_heigth: 2.2rem;
 
-		position: -webkit-sticky;
-		position: sticky;
-		top: 0px;
-		left: 0px;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
@@ -31,7 +31,6 @@
 		font-size: 1rem;
 		color: @color_white;
 		line-height: 1.2em;
-		z-index: 4;
 
 		&.master {
 			background-color: #28946c;
