@@ -709,9 +709,8 @@ class transform_data {
 						$datos->section_tipo
 					);
 
-					$compnent_data = $component_view_in_ts->get_dato();
-
-					if(!empty($compnent_data)){
+					$component_data = $component_view_in_ts->get_dato();
+					if(!empty($component_data)){
 						return null;
 					}
 
@@ -890,7 +889,6 @@ class transform_data {
 						// skip non wanted sections records (column section_tipo is not included in the sections to change list)
 						return;
 					}
-
 
 					// datos properties
 					foreach ($datos as $datos_key => $datos_value) {
@@ -1500,11 +1498,11 @@ class transform_data {
 						$options->ar_transform_map	= $ar_transform_map;
 						$options->datos				= $dato;
 
-					$procesed_data = ( !empty($dato) )
+					$processed_data = ( !empty($dato) )
 						? transform_data::process_locators_in_section_data( $options )
 						: null;
 
-					$section_data_encoded = json_encode($procesed_data);
+					$section_data_encoded = json_encode($processed_data);
 
 					$new_tipo = $ar_transform_map[$tipo]->new;
 
@@ -1627,11 +1625,11 @@ class transform_data {
 						$options->ar_transform_map	= $ar_transform_map;
 						$options->datos				= $datos;
 
-					$procesed_data = ( !empty($datos) )
+					$processed_data = ( !empty($datos) )
 						? transform_data::process_locators_in_section_data( $options )
 						: null;
 
-					$section_data_encoded = json_encode($procesed_data);
+					$section_data_encoded = json_encode($processed_data);
 
 					$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
@@ -1808,7 +1806,6 @@ class transform_data {
 							$datos->section_id	= (int)$new_section_id;
 						}
 					}
-
 					break;
 			}
 		}//end foreach ($datos as $datos_key => $datos_value)
@@ -1957,7 +1954,7 @@ class transform_data {
 		switch ($action) {
 			case 'new_only_once':
 				// used to create new section as 'Typology' or other portal
-				// and set a component data inside new section with the specifyed values
+				// and set a component data inside new section with the specified values
 				// values could be a literal with translations or a related data.
 
 				// set a cache with the locator created
@@ -2019,11 +2016,10 @@ class transform_data {
 
 				// add new locator to datos
 				$datos->relations[] = $locator;
-
 				break;
 
 			default:
-				// doesn't used rigth now.
+				// doesn't used right now.
 				break;
 		}
 
