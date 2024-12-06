@@ -1524,16 +1524,17 @@ class transform_data {
 				if( isset($datos) ){
 
 					// matrix activity has a data has been changed by the time in the component dd551
-					// in those case the change only is applyed to this component
+					// in those case the change only is applied to this component
 					if ($table==='matrix_activity') {
 
 						$activity_data = $datos;
 						$old_activity_data = json_encode($activity_data);
 
+						//activity data is set into the dd551 component
 						$dd551_value = $datos->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? null;
 
 						if( !empty($dd551_value) ){
-
+							//store the old value to check if it change
 							$old_dd51_value = json_encode($dd551_value);
 
 							foreach ($dd551_value as $current_value) {
@@ -1541,7 +1542,8 @@ class transform_data {
 								if(isset($current_value->tipo)
 								&& isset($ar_transform_map[$current_value->tipo])
 								&& $current_value->tipo === $ar_transform_map[$current_value->tipo]->old){
-
+									// if data has tipo it will has id
+									// change it with the base_counter
 									if( isset($current_value->id) ){
 										$current_value->id = (int)$ar_transform_map[$current_value->tipo]->base_counter + (int)$current_value->id;
 									}
@@ -1552,7 +1554,8 @@ class transform_data {
 								if(isset($current_value->section_tipo)
 								&& isset($ar_transform_map[$current_value->section_tipo])
 								&& $current_value->section_tipo === $ar_transform_map[$current_value->section_tipo]->old){
-
+									// if data has section_tipo it will has section_id
+									// change it with the base_counter
 									if( isset($current_value->section_id) ){
 										$current_value->section_id = (int)$ar_transform_map[$current_value->section_tipo]->base_counter + (int)$current_value->section_id;
 									}
@@ -1563,7 +1566,8 @@ class transform_data {
 								if(isset($current_value->top_tipo)
 								&& isset($ar_transform_map[$current_value->top_tipo])
 								&& $current_value->top_tipo === $ar_transform_map[$current_value->top_tipo]->old){
-
+									// if data has top_tipo it will has top_id
+									// change it with the base_counter
 									if( isset($current_value->top_id) ){
 										$current_value->top_id = (int)$ar_transform_map[$current_value->top_tipo]->base_counter + (int)$current_value->top_id;
 									}
@@ -1573,19 +1577,23 @@ class transform_data {
 							}//end foreach
 
 							$new_dd551_data = json_encode($dd551_value);
-
+							// check if the dd551 data has been change, and set the new dd551 data
 							if( $old_dd51_value !== $new_dd551_data ){
 								$activity_data->components->dd551->dato->{DEDALO_DATA_NOLAN} = $dd551_value;
 							}//end if
 						}//end if
 
+						// encode activity data
 						// $new_activity_data = json_encode($activity_data);
 
 						$new_activity_data  = json_handler::encode($activity_data);
 						// prevent null encoded errors
 						$new_activity_data = str_replace(['\\u0000','\u0000'], ' ', $new_activity_data);
 
-
+						// change other data in activity
+						// usually is data with section_tipo only as where component.
+						// in those cases section_id is not assigned.
+						// Only will change the component_tipo
 						foreach ($ar_transform_map as $current_tipo => $transform_map_object) {
 							$new_activity_data = str_replace(
 								'"' . $current_tipo . '"',
@@ -1593,7 +1601,7 @@ class transform_data {
 								$new_activity_data
 							);
 						}
-
+						// if the activity was changed save it.
 						if( $old_activity_data !== $new_activity_data ){
 
 							$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
@@ -1609,10 +1617,12 @@ class transform_data {
 							}//end if
 						}//end if
 
+						// stop the process here. activity data is not compatible with other changes in standard sections.
 						return true;
 
 					}//end if ($table==='matrix_activity')
 
+					// change the standard data in regular sections
 					$options = new stdClass();
 						$options->ar_transform_map	= $ar_transform_map;
 						$options->datos				= $datos;
@@ -1636,17 +1646,21 @@ class transform_data {
 				}//end if( isset($datos) )
 
 				// dato. Time machine matrix table
+				// Time machine has specific columns and his data is of the component data, so it mix locators and literals.
 				// excluding component security access
 				if( isset($dato) && !empty($dato) && $table!=='matrix_counter' && $tipo!=='dd774'){
-
+					// set all data as JSON
 					$tm_value = is_string($dato)
 						? json_decode($dato)
 						: $dato;
 
+					// save old data to be check before save
 					$old_dato_encoded = json_encode( $tm_value );
 
+					// current data is a locator
 					if( is_array($tm_value) && is_object($tm_value[0]) && isset($tm_value[0]->section_tipo) && isset($tm_value[0]->type)){
 
+						// process data as locator
 						$options = new stdClass();
 							$options->ar_transform_map	= $ar_transform_map;
 							$options->tm_value			= $tm_value;
@@ -1655,6 +1669,7 @@ class transform_data {
 
 						$new_dato_encoded = json_encode( $new_tm_value );
 
+						//check if the data has been changed, if yes, save it.
 						if($old_dato_encoded !== $new_dato_encoded ){
 							$strQuery	= "UPDATE $table SET dato = $1 WHERE id = $2 ";
 							$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato_encoded, $id ));
@@ -1668,6 +1683,7 @@ class transform_data {
 							}
 						}
 					}else{
+						// if data is literal, it could be a component_text_area data and need to be processed as string
 						$component_tm_model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
 						if( $component_tm_model==='component_text_area' ){
 
@@ -1677,6 +1693,7 @@ class transform_data {
 
 							$new_literal = transform_data::replace_locator_in_string( $options );
 
+							//check if the data has been changed, if yes, save it.
 							if($old_dato_encoded !== $new_literal ){
 								$strQuery	= "UPDATE $table SET dato = $1 WHERE id = $2 ";
 								$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_literal, $id ));
@@ -1803,6 +1820,9 @@ class transform_data {
 
 	/**
 	* REPLACE_LOCATOR_IN_TM_DATA
+	* This function only accept locator data in tm machine.
+	* Filter previously the tm_data to send only locator data.
+	*
 	* @param $options->ar_transform_map
 	* {
 	*	"rsc194": {
@@ -1851,6 +1871,8 @@ class transform_data {
 
 	/**
 	* REPLACE_LOCATOR_IN_STRING
+	* Some locators are in middle of component_text_area data as string
+	* string locator is used as People tag, it need changed as text using regex
 	* @param object $options
 	* @return string $string
 	*/
@@ -1858,16 +1880,19 @@ class transform_data {
 
 		$string				= $options->string;
 		$ar_transform_map	= $options->ar_transform_map;
-
+		//get all locator in the middle of the string
+		// locator is identified as:
+		// text	'data:{'section_tipo':'rsc194','section_id':'1'}:data' text
 		$regex = '/data:({.*?}):data/m';
 
 		preg_match_all( $regex, $string, $matches);
 
 		$ar_locators = $matches[1] ?? [];
-
+		// remove duplicates
 		$unique_locators = array_unique($ar_locators);
 
 		foreach ($unique_locators as $pseudo_locator) {
+			// string locator use a simple quotes, it need change to double quotes
 			$current_locator = str_replace('\'', '"', $pseudo_locator);
 			$current_locator = json_decode($current_locator);
 
@@ -1884,22 +1909,21 @@ class transform_data {
 					);
 					continue;
 				}
-
+				// check if the locator has the old section_tipo reference
 				if( isset($ar_transform_map[$loc_value]) ){
 					// replace old tipo with the new one in any locator property
 					$current_locator->{$loc_key}	= $ar_transform_map[$loc_value]->new;
 					$new_section_id					= (int)$ar_transform_map[$loc_value]->base_counter + (int)$current_locator->section_id;
 					$current_locator->section_id	= (string)$new_section_id;
 
-					//to replace
+					//to replace, stringify the locator and change the double quotes to single
 					$new_pseudo_locator	= json_encode($current_locator);
 					$new_pseudo_locator	= str_replace( '"', '\'', $new_pseudo_locator);
-
+					// replace all occurrences in the string.
 					$string	= str_replace( $pseudo_locator, $new_pseudo_locator, $string);
 				}
 			}
 		}
-
 
 		return $string;
 	}//end replace_locator_in_string
@@ -2006,10 +2030,6 @@ class transform_data {
 
 		return $datos;
 	}//end set_move_identification_value
-
-
-
-
 
 
 
