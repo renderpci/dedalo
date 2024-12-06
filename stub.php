@@ -147,3 +147,4 @@ function logged_user_is_developer() {};
 // function array_find(?array $ar_value=null, callable $fn);
 class Socrata(){function post(){}};
 $options = new stdClass();
+function pg_escape_string(){};

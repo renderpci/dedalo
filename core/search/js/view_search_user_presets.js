@@ -239,6 +239,7 @@ export const render_column_apply_preset = function(options) {
 	// button_apply
 		const button_apply = ui.create_dom_element({
 			element_type	: 'span',
+			id				: 'apply_preset_' + section_id,
 			class_name		: 'button_apply_preset button icon arrow_link'
 		})
 		// click handler
@@ -248,40 +249,79 @@ export const render_column_apply_preset = function(options) {
 			// loading
 			self.node.classList.add('loading')
 
-			// load DDBB component_json data
-			const json_filter = await load_search_preset({
-				section_id : section_id
+			// select_preset
+			await select_preset({
+				self			: self,
+				section_id		: section_id,
+				button_apply	: button_apply,
+				load_preset		: true
 			})
-
-			// render_filter (into search_container_selection at center)
-			render_filter({
-				self				: self,
-				editing_preset		: json_filter,
-				allow_duplicates	: true
-			})
-
-			// render buttons (force to re-create the buttons)
-			self.render_search_buttons()
-
-			// reset all and set current as selected
-			const section_record	= button_apply.parentNode.parentNode
-			const content_data		= section_record.parentNode
-			content_data.querySelectorAll('.section_record').forEach(el => {
-				el.classList.remove('selected')
-			});
-			section_record.classList.add('selected')
-
-			// fix user_preset_section_id
-			self.user_preset_section_id = section_id
 
 			// loading
 			self.node.classList.remove('loading')
 		}
-		button_apply.addEventListener('mousedown', apply_preset_handler)
+		button_apply.addEventListener('click', apply_preset_handler)
 
 
 	return button_apply
 }//end render_column_apply_preset
+
+
+
+/**
+* SELECT_PRESET
+* Loads selected preset and render it into DOM
+* @param object options
+* {
+* 	self : object (search instance)
+* 	section_id: int|string (preset section_id)
+* 	button_apply: HTMLElement
+* 	load_preset: bool (default true)
+* }
+* @return
+*/
+export const select_preset = async function (options) {
+
+	// options
+		const self			= options.self
+		const section_id	= options.section_id
+		const button_apply	= options.button_apply
+		const load_preset	= options.load_preset ?? true
+
+	// load_preset
+	if (load_preset) {
+		// load DDBB component_json data
+		const json_filter = await load_search_preset({
+			section_id : section_id
+		})
+
+		// render_filter (into search_container_selection at center)
+		render_filter({
+			self				: self,
+			editing_preset		: json_filter,
+			allow_duplicates	: true
+		})
+
+		// render buttons (force to re-create the buttons)
+		self.render_search_buttons()
+	}
+
+	// reset all and set current as selected
+	if (button_apply) {
+		const section_record	= button_apply.parentNode.parentNode
+		const content_data		= section_record.parentNode
+		content_data.querySelectorAll('.section_record').forEach(el => {
+			el.classList.remove('selected')
+		});
+		section_record.classList.add('selected')
+	}
+
+	// fix user_preset_section_id
+	self.user_preset_section_id = section_id
+
+
+	return true
+}//end select_preset
 
 
 
@@ -390,7 +430,7 @@ export const render_preset_modal = function (options) {
 export const render_column_remove = function(options) {
 
 	// options
-		const self			= options.caller // object instance section
+		const section		= options.caller // object instance section
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 
@@ -400,35 +440,42 @@ export const render_column_remove = function(options) {
 			class_name		: 'button_delete button delete_light icon'
 		})
 		// click event
-		const click_handler = (e) => {
+		const click_handler = async (e) => {
 			e.stopPropagation()
 
-			// delete section
-				self.render_delete_record_dialog({
-					section			: self,
-					section_id		: section_id,
-					section_tipo	: section_tipo,
-					sqo				: {
-						section_tipo		: [section_tipo],
-						filter_by_locators	: [{
-							section_tipo	: section_tipo,
-							section_id		: section_id
-						}],
-						limit				: 1
-					}
-				})
-				.then(function(modal){
-					// focus button delete full record
-					dd_request_idle_callback(
-						() => {
-							const button_delete = modal.querySelector('button.danger.remove')
-							if (button_delete) {
-								button_delete.focus()
-							}
-						}
-					)
+			// confirm dialog
+				if (!confirm(get_label.sure || 'Sure?')) {
+					return
+				}
 
+			// delete section
+				const sqo = {
+					section_tipo		: [section_tipo],
+					filter_by_locators	: [{
+						section_tipo	: section_tipo,
+						section_id		: section_id
+					}],
+					limit				: 1
+				}
+				const result = await section.delete_section({
+					sqo							: sqo,
+					delete_mode					: 'delete_record',
+					delete_diffusion_records	: false
 				})
+
+				if (result) {
+					// search : update buttons and selections
+					const search_instance = options.caller.caller
+					if (search_instance) {
+						// hide save button if is visible
+						const button_save_preset = search_instance.button_save_preset
+						if (!button_save_preset.classList.contains('hide')) {
+							button_save_preset.classList.add('hide')
+						}
+						// unset user_preset_section_id selection
+						search_instance.user_preset_section_id = null
+					}
+				}
 		}
 		delete_button.addEventListener('click', click_handler)
 

@@ -227,7 +227,7 @@
 		// WARNING	= 25;
 		// ERROR	= 10;
 		// CRITICAL	= 5;
-		define('LOGGER_LEVEL', (SHOW_DEBUG===true)
+		define('LOGGER_LEVEL', (SHOW_DEBUG===true || SHOW_DEVELOPER===true)
 			? logger::DEBUG // log all messages
 			: logger::ERROR // log only errors
 		);

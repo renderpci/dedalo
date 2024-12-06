@@ -152,21 +152,21 @@ class component_text_area extends component_common {
 		// data
 			$data = $this->get_dato();
 
-		// procesed_data
+		// processed_data
 			switch ($this->mode) {
 				case 'indexation_list':
 					// process data to build the indexation custom columns
-					$procesed_data	= include 'component_text_area_value.php';
+					$processed_data	= include 'component_text_area_value.php';
 					$cell_type		= null;
 					break;
 
 				default:
-					$procesed_data = [];
+					$processed_data = [];
 					if (!empty($data)) {
 						foreach ($data as $current_value) {
 							// $current_value = trim($current_value);
 							if (!$this->is_empty($current_value)) {
-								$procesed_data[] = TR::add_tag_img_on_the_fly($current_value);
+								$processed_data[] = TR::add_tag_img_on_the_fly($current_value);
 							}
 						}
 					}
@@ -186,17 +186,17 @@ class component_text_area extends component_common {
 				switch ($this->mode) {
 					case 'indexation_list':
 						// process data to build the indexation custom columns
-						$procesed_fallback_value	= include 'component_text_area_value.php';
+						$processed_fallback_value	= include 'component_text_area_value.php';
 						$cell_type					= null;
 						break;
 
 					default:
-						$procesed_fallback_value = [];
+						$processed_fallback_value = [];
 						if (!empty($data)) {
 							foreach ($data as $current_value) {
 								// $current_value = trim($current_value);
 								if (!$this->is_empty($current_value)) {
-									$procesed_fallback_value[] = TR::add_tag_img_on_the_fly($current_value);
+									$processed_fallback_value[] = TR::add_tag_img_on_the_fly($current_value);
 								}
 							}
 						}
@@ -204,7 +204,7 @@ class component_text_area extends component_common {
 						break;
 				}
 			}else{
-				$procesed_fallback_value = []; // unnecessary to calculate
+				$processed_fallback_value = []; // unnecessary to calculate
 			}
 
 		// label
@@ -230,8 +230,8 @@ class component_text_area extends component_common {
 					$value->set_class_list($class_list);
 				}
 				$value->set_records_separator($records_separator);
-				$value->set_value($procesed_data);
-				$value->set_fallback_value($procesed_fallback_value);
+				$value->set_value($processed_data);
+				$value->set_fallback_value($processed_fallback_value);
 
 
 		return $value;
@@ -549,7 +549,6 @@ class component_text_area extends component_common {
 						, logger::ERROR
 					);
 					return null; // stop here !
-					break;
 			}
 
 		// Build in/out regex pattern to search
@@ -579,9 +578,9 @@ class component_text_area extends component_common {
 						$tag_out_pos = $tag_in_pos + mb_strlen($match[0][0]);
 
 						// tag_in like "[index-n-9--data::data]"
-						$tag_in		= $match[1][0];
+						$tag_in	= $match[1][0];
 						// tag_out like "[/index-n-9--data::data]"
-						$tag_out	= $match[4][0];
+						$tag_out = $match[4][0];
 
 						$fragment_object = (object)[
 							'text'			=> $fragment_text,
@@ -982,8 +981,8 @@ class component_text_area extends component_common {
 			$component_tipo	= $tags_config->tipo;
 
 		// component portal where the indexations are stored (v6 are direct instead v5 reverse pointers)
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$componet_index	= component_common::get_instance(
+			$model_name         = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_index    = component_common::get_instance(
 				$model_name,
 				$component_tipo,
 				$section_id,
@@ -992,7 +991,7 @@ class component_text_area extends component_common {
 				$section_tipo
 			);
 
-		$ar_tags_data = $componet_index->get_dato() ?? [];
+		$ar_tags_data = $component_index->get_dato() ?? [];
 
 
 		return $ar_tags_data;
@@ -1064,7 +1063,7 @@ class component_text_area extends component_common {
 		$tags_data = $this->get_component_tags_data( $tag_type );
 
 		$ar_indexation_terms	= [];
-		$ar_indextaion_obj		= [];
+		$ar_indexation_obj		= [];
 		foreach ($tags_data as $key => $current_tag_data) {
 
 			$locator = new locator();
@@ -1077,18 +1076,17 @@ class component_text_area extends component_common {
 
 			$ar_indexation_terms[] = $term;
 
-			$indextaion_obj = new stdClass();
-				$indextaion_obj->data	= $current_tag_data;
-				$indextaion_obj->label	= $term;
-			$ar_indextaion_obj[] = $indextaion_obj;
+			$indexation_obj = new stdClass();
+				$indexation_obj->data	= $current_tag_data;
+				$indexation_obj->label	= $term;
+			$ar_indexation_obj[] = $indexation_obj;
 		}//end foreach ($tags_data as $key => $current_tag_data)
 
 		if ($format==='text') {
 			$ar_terms = implode($separator, $ar_indexation_terms);	//json_encode($ar_indexation_terms);
 		}else{
-			$ar_terms = $ar_indextaion_obj;
+			$ar_terms = $ar_indexation_obj;
 		}
-		#dump($ar_terms, ' ar_terms ++ '.to_string());
 
 		return $ar_terms;
 	}//end get_tags_data_as_terms
@@ -1371,6 +1369,7 @@ class component_text_area extends component_common {
 	}//end get_diffusion_value_with_images
 
 
+
 	/**
 	* GET_AR_RELATED_SECTIONS
 	* get the ar_related_section object to use for persons tags
@@ -1416,8 +1415,7 @@ class component_text_area extends component_common {
 
 		$tags_persons = array();
 
-		$section_id			= $this->get_section_id();
-		// $section_tipo	= $this->get_section_tipo();
+		$section_id	= $this->get_section_id();
 
 		$properties = $this->get_properties();
 		if (!isset($properties->tags_persons)) {
@@ -1694,7 +1692,6 @@ class component_text_area extends component_common {
 
 			$this->set_dato($new_dato);
 		}
-
 
 		// Save component data. Defaults arguments: $update_all_langs_tags_state=false, $clean_text=true
 		$this->Save(
@@ -2251,8 +2248,8 @@ class component_text_area extends component_common {
 
 					// related tipo process (component_image, component_geolocation)
 						if (!empty($trim_dato)) {
-							$ar_realated_tipo = RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true);
-							foreach ($ar_realated_tipo as $current_tipo) {
+							$ar_related_tipo = RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true);
+							foreach ($ar_related_tipo as $current_tipo) {
 
 								$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 								switch (true) {

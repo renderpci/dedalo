@@ -3324,8 +3324,8 @@ class diffusion_sql extends diffusion  {
 						default:
 							$string_parts = explode(' ', $diffusion_value);
 							foreach ($string_parts as $spart) {
-								$first_char = substr($spart, 0, 1);
-								$ar_parts[] = strtoupper($first_char);
+								$first_char = mb_substr($spart, 0, 1);
+								$ar_parts[] = mb_strtoupper($first_char);
 							}
 							break;
 					}
@@ -3340,6 +3340,43 @@ class diffusion_sql extends diffusion  {
 
 		return $value;
 	}//end anonymized_name
+
+
+
+	/**
+	* STR_PAD
+	* Returns current value with n pads from left Like 1 => 00001
+	* @param object $options
+		* {
+		* 	"section_tipo": "dmm1023",
+		*	"section_id": 3,
+		*	"diffusion_element_tipo": "mdcat2195",
+		*	"lang": "lg-cat",
+		*	"properties": {
+		*		"process_dato": "diffusion_sql::str_pad",
+		*		"process_dato_arguments": {
+		*			"lenght": 5,
+		*			"pad": "0"
+		*		}
+		*	},
+		*	"tipo": "mdcat4586",
+		*	"component_tipo": "dmm1045"
+		* }
+	* @param int|string dato
+	*	Is a section_id from component_section_id value
+	* @return string $pad_value
+	*/
+	public static function str_pad(object $options,  $dato) : string {
+
+		$lenght	= $options->properties->process_dato_arguments->lenght ?? 1;
+		$pad	= $options->properties->process_dato_arguments->pad ?? '0';
+		$value	= $dato ?? '';
+
+		$pad_value = str_pad($value,  $lenght, $pad, STR_PAD_LEFT);
+
+
+		return $pad_value;
+	}//end str_pad
 
 
 
