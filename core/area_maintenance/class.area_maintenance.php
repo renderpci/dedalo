@@ -150,6 +150,22 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
+
+		// move_locator
+			$item = new stdClass();
+				$item->id		= 'move_locator';
+				$item->type		= 'widget';
+				$item->label	= 'Move locator';
+				$item->value	= (object)[
+					'body' => 'Move locator defined map items from source (e.g. rsc194) to target (e.g. rsc197) adding new section_id based in the last section_id of destiny.<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_locator.<br>
+							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+					'files' => area_maintenance::get_definitions_files( 'move_locator' )
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
 		// build_structure_css
 			// $item = new stdClass();
 			// 	$item->id		= 'build_structure_css';
