@@ -1335,4 +1335,112 @@ class transform_data {
 
 
 
+
+
+	/**
+	* SET_MOVE_IDENTIFICATION_VALUE
+	* Used to add a value to moved records
+	* It helps to identify that records moved
+	* ex: 	`People`(rsc194) moves to `People under study`(rsc197)
+	* 		set a `Typology` that moved recods as "moved from People"
+	* @param object $options
+	* @return object $datos
+	*/
+	public static function set_move_identification_value( object $options ) : object {
+
+		$action					= $options->action;
+		$section_tipo			= $options->section_tipo ?? null;
+		$from_component_tipo	= $options->from_component_tipo ?? null;
+		$type					= $options->type ?? null;
+		$component_tipo			= $options->component_tipo;
+		$value					= $options->value;
+		$datos					= $options->datos;
+
+		// cache to be used when the data needs to apply into every new record
+		static $cache_set_move_identification_value;
+		$cache_key = $action.'_'.$section_tipo.'_'.$component_tipo;
+
+		switch ($action) {
+			case 'new_only_once':
+				// used to create new section as 'Typology' or other portal
+				// and set a component data inside new section with the specifyed values
+				// values could be a literal with translations or a related data.
+
+				// set a cache with the locator created
+				// new only once create new section and use his locator to be assigned to all moved records
+				// therefore, if the cache is set, use previous locator in the cache
+				// else (the first time) create new one.
+				if (isset($cache_set_move_identification_value[$cache_key])) {
+
+					$locator = $cache_set_move_identification_value[$cache_key];
+
+				}else{
+					// create new section to save new data
+					// new section will be the locator to add into the records
+					$new_section = section::get_instance(
+						null, // string|null section_id
+						$section_tipo // string section_tipo
+					);
+					$new_section_id = $new_section->Save();
+
+					// create new component with the specification
+					$component_model		= RecordObj_dd::get_modelo_name_by_tipo( $component_tipo );
+					// check if the component is a related to be save as block, else create comonent for every lang.
+					$relation_components	= component_relation_common::get_components_with_relations();
+					$is_related				= in_array( $component_model, $relation_components );
+					// set the main lang of the component as translatable or not (for literals the lang will be change)
+					$translatable			= RecordObj_dd::get_translatable( $component_tipo );
+					$lang					= $translatable === true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$component				= component_common::get_instance(
+						$component_model, // string model
+						$component_tipo, // string tipo
+						$new_section_id, // string section_id
+						'list', // string mode
+						$lang, // string lang
+						$section_tipo // string section_tipo
+					);
+					// related component can save his data as block
+					if( $is_related	=== true ){
+						$component->set_dato( $value );
+						$component->Save();
+					}else{
+						// literal comonents needs to save his data by language
+						foreach ($value as $current_lang => $current_value) {
+							$component->set_lang( $current_lang );
+							$component->set_dato( $current_value );
+							$component->Save();
+						}
+					}
+					// fix new locator with the new section created
+					// take account that the value is not the component value because this action use a related component to set the value
+					$locator = new locator();
+						$locator->set_section_tipo( $section_tipo );
+						$locator->set_section_id( $new_section_id );
+						$locator->set_from_component_tipo( $from_component_tipo );
+						$locator->set_type( $type );
+
+					// set new locator into the cache to be used nex time
+					$cache_set_move_identification_value[$cache_key] = $locator;
+				}
+
+				// add new locator to datos
+				$datos->relations[] = $locator;
+
+				break;
+
+			default:
+				// doesn't used rigth now.
+				break;
+		}
+
+
+		return $datos;
+	}//end set_move_identification_value
+
+
+
+
+
+
+
 }//end class transform_data
