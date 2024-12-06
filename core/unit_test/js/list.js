@@ -17,6 +17,7 @@ import {elements} from './elements.js'
 		'test_components_data_changes',
 		'test_components_activate',
 		'test_components_render',
+		'test_component_text_area',
 		'test_no_logged_error',
 		'test_unknown_error',
 		'test_page',
