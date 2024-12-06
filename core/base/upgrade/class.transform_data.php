@@ -1335,6 +1335,365 @@ class transform_data {
 
 
 
+	/**
+	* CHANGES_IN_locators
+	* Map old tipos to new ones using JSON files definitions
+	* @param array $ar_tables
+	* @param array $json_files
+	* @return bool
+	*/
+	public static function changes_in_locators(array $ar_tables, array $json_files) : bool {
+
+		debug_log(__METHOD__ . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			. " CONVERTING ... " . PHP_EOL
+			. " changes_in_locators - tables: " . json_encode($ar_tables) . PHP_EOL
+			. " changes_in_locators - json_files: " . json_encode($json_files) . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			, logger::WARNING
+		);
+
+		$path = DEDALO_CORE_PATH.'/base/transform_definition_files/move_locator/';
+		// get transform map from files
+			//  value: {
+			//		"rsc194": {
+			//			"old": "rsc194",
+			//			"new": "rsc197",
+			//			"type": "section",
+			//			"perform": [
+			//				"move_tld"
+			//			],
+			//			"info": "Old People section => New People under Study section"
+			//		}
+			//	}
+			$ar_transform_map = [];
+			foreach ($json_files as $current_json_file) {
+				$contents			= file_get_contents($path.$current_json_file);
+				$transform_map		= json_decode($contents);
+				foreach ($transform_map as $transform_object) {
+					$ar_transform_map[$transform_object->old] = $transform_object;
+				}
+			}
+
+		// ar_section_elements. Select affected sections
+			$ar_section_elements = array_filter($ar_transform_map, function($el){
+				return $el->type==='section';
+			});
+			// ar_old_section_tipo without keys like ["rsc194"]
+			$ar_old_section_tipo = array_map(function($el){
+				return $el->old;
+			}, $ar_section_elements, []);
+
+			// ar_new_section_tipo without keys like ["rsc194"]
+			$ar_new_section_tipo = array_map(function($el){
+				return $el->new;
+			}, $ar_section_elements, []);
+
+		// counter of the new sections.
+			// counter will use as base section_id to add new section_id into the old section as:
+			// rsc197 counter = 8500
+			// old locator = rsc194_1
+			// will transform to rsc197_8501
+			// so, the new section_id will be `counter` + old_section_id
+			foreach ($ar_transform_map as $key => $value) {
+				$counter = counter::get_counter_value( $value->new );
+				$ar_transform_map[$key]->base_counter = $counter;
+			}
+
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->table = '';
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
+		update::tables_rows_iterator(
+			$ar_tables, // array of tables to iterate
+			function($row, $table, $max) use($ar_transform_map, $ar_old_section_tipo) { // callback function
+
+				$id				= $row['id'];
+				$section_tipo	= $row['section_tipo'] ?? null;
+				$section_id		= $row['section_id'] ?? null;
+				$datos			= (isset($row['datos'])) ? json_handler::decode($row['datos']) : null;
+				$dato			= (isset($row['dato'])) ? json_handler::decode($row['dato']) : null; // matrix_time_machine
+				$tipo			= $row['tipo'] ?? null; // matrix_time_machine
+
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': changes_in_locators'
+							. ' | table: ' 			. $table
+							. ' | id: ' 			. $id .' - ' . $max
+							. ' | section_tipo: ' 	. $section_tipo
+							. ' | section_id: '  	. ($row['section_id'] ?? '');
+						common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+							? dd_memory_usage() // update memory information once every 5000 items
+							: common::$pdata->memory;
+						common::$pdata->table = $table;
+						common::$pdata->section_tipo = $section_tipo;
+						common::$pdata->counter++;
+						// send to output
+						print_cli(common::$pdata);
+					}
+
+
+				// section_tipo. All tables has section_tipo
+				if( isset($section_tipo) && isset($ar_transform_map[$section_tipo]) ){
+
+					// new section_id
+						$base_section_id 	= $ar_transform_map[$section_tipo]->base_counter;
+						$new_section_id		= (int)$section_id + (int)$base_section_id;
+
+					$new_section_tipo	= $ar_transform_map[$section_tipo]->new;
+
+					// add data to new section
+					// create data to identify the moved from previous records
+					dump($ar_transform_map[$section_tipo], ' ar_transform_map +---------------+ '.to_string());
+						if( isset($ar_transform_map[$section_tipo]->add_data_to_new_section) ){
+
+							$process = $ar_transform_map[$section_tipo]->add_data_to_new_section;
+							foreach ($process as $fn_object) {
+								$fn 		= $fn_object->fn;
+								$fn_class 	= explode("::", $fn)[0];
+								$fn_method 	= explode("::", $fn)[1];
+								// check method already exists
+									if(!method_exists($fn_class, $fn_method)) {
+										debug_log(__METHOD__
+											. " Error. Calling undefined method $fn_object->fn . Ignored process !"
+											, logger::ERROR
+										);
+										continue;
+									}
+								//set current datos into the options
+								$fn_object->options->datos = $datos;
+
+									dump($fn, ' fn +---------------+ '.to_string());
+								$fn( $fn_object->options );
+							}
+						}
+
+					$strQuery	= "UPDATE $table SET section_tipo = $1, section_id = $2 WHERE id = $3 ";
+					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_section_tipo, $new_section_id, $id ));
+					if($result===false) {
+						$msg = "Failed Update section_tipo ($table) - $id";
+						debug_log(__METHOD__
+							." ERROR: $msg "
+							, logger::ERROR
+						);
+						return false;
+					}
+				}
+
+				// tipo. Only matrix_time_machine has tipo, it could not be set.
+				// (!) Change only if section_tipo match any of ar_old_section_tipo
+				if( isset($tipo) && isset($ar_transform_map[$tipo]) && in_array($section_tipo, $ar_old_section_tipo) ){
+
+					$options = new stdClass();
+						$options->ar_transform_map	= $ar_transform_map;
+						$options->datos				= $dato;
+
+					$procesed_data = ( !empty($dato) )
+						? transform_data::process_locators_in_section_data( $options )
+						: null;
+
+					$section_data_encoded = json_encode($procesed_data);
+
+					$new_tipo = $ar_transform_map[$tipo]->new;
+
+					$strQuery	= "UPDATE $table SET tipo = $1, dato = $2 WHERE id = $3 ";
+					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_tipo, $section_data_encoded, $id ));
+					if($result===false) {
+						$msg = "Failed Update tipo ($table) - $id";
+						debug_log(__METHOD__
+							." ERROR: $msg "
+							, logger::ERROR
+						);
+						return false;
+					}
+				}
+
+				// datos. Common matrix tables
+				if( isset($datos) ){
+
+					// matrix activity has a data has been changed by the time in the component dd551
+					// in those case the change only is applyed to this component
+					if ($table==='matrix_activity') {
+
+						$activity_data = $datos;
+						$old_activity_data = json_encode($activity_data);
+
+						$dd551_value = $datos->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? null;
+
+						if( !empty($dd551_value) ){
+
+							$old_dd51_value = json_encode($dd551_value);
+
+							foreach ($dd551_value as $current_value) {
+								// check tipo
+								if(isset($current_value->tipo)
+								&& isset($ar_transform_map[$current_value->tipo])
+								&& $current_value->tipo === $ar_transform_map[$current_value->tipo]->old){
+
+									if( isset($current_value->id) ){
+										$current_value->id = (int)$ar_transform_map[$current_value->tipo]->base_counter + (int)$current_value->id;
+									}
+									$current_value->tipo = $ar_transform_map[$current_value->tipo]->new;
+								}//end if
+
+								// check section_tipo
+								if(isset($current_value->section_tipo)
+								&& isset($ar_transform_map[$current_value->section_tipo])
+								&& $current_value->section_tipo === $ar_transform_map[$current_value->section_tipo]->old){
+
+									if( isset($current_value->section_id) ){
+										$current_value->section_id = (int)$ar_transform_map[$current_value->section_tipo]->base_counter + (int)$current_value->section_id;
+									}
+									$current_value->section_tipo = $ar_transform_map[$current_value->section_tipo]->new;
+								}//end if
+
+								// check top_tipo
+								if(isset($current_value->top_tipo)
+								&& isset($ar_transform_map[$current_value->top_tipo])
+								&& $current_value->top_tipo === $ar_transform_map[$current_value->top_tipo]->old){
+
+									if( isset($current_value->top_id) ){
+										$current_value->top_id = (int)$ar_transform_map[$current_value->top_tipo]->base_counter + (int)$current_value->top_id;
+									}
+									$current_value->top_tipo = $ar_transform_map[$current_value->top_tipo]->new;
+								}//end if
+
+							}//end foreach
+
+							$new_dd551_data = json_encode($dd551_value);
+
+							if( $old_dd51_value !== $new_dd551_data ){
+								$activity_data->components->dd551->dato->{DEDALO_DATA_NOLAN} = $dd551_value;
+							}//end if
+						}//end if
+
+						// $new_activity_data = json_encode($activity_data);
+
+						$new_activity_data  = json_handler::encode($activity_data);
+						// prevent null encoded errors
+						$new_activity_data = str_replace(['\\u0000','\u0000'], ' ', $new_activity_data);
+
+
+						foreach ($ar_transform_map as $current_tipo => $transform_map_object) {
+							$new_activity_data = str_replace(
+								'"' . $current_tipo . '"',
+								'"' . $transform_map_object->new . '"',
+								$new_activity_data
+							);
+						}
+
+						if( $old_activity_data !== $new_activity_data ){
+
+							$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+							$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_activity_data, $id ));
+
+							if($result===false) {
+								$msg = "Failed Update section_data ($table) $id";
+								debug_log(__METHOD__
+									." ERROR: $msg "
+									, logger::ERROR
+								);
+								return false;
+							}//end if
+						}//end if
+
+						return true;
+
+					}//end if ($table==='matrix_activity')
+
+					$options = new stdClass();
+						$options->ar_transform_map	= $ar_transform_map;
+						$options->datos				= $datos;
+
+					$procesed_data = ( !empty($datos) )
+						? transform_data::process_locators_in_section_data( $options )
+						: null;
+
+					$section_data_encoded = json_encode($procesed_data);
+
+					$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+					if($result===false) {
+						$msg = "Failed Update section_data ($table) $id";
+						debug_log(__METHOD__
+							." ERROR: $msg "
+							, logger::ERROR
+						);
+						return false;
+					}
+				}//end if( isset($datos) )
+
+				// dato. Time machine matrix table
+				// excluding component security access
+				if( isset($dato) && !empty($dato) && $table!=='matrix_counter' && $tipo!=='dd774'){
+
+					$tm_value = is_string($dato)
+						? json_decode($dato)
+						: $dato;
+
+					$old_dato_encoded = json_encode( $tm_value );
+
+					if( is_array($tm_value) && is_object($tm_value[0]) && isset($tm_value[0]->section_tipo) && isset($tm_value[0]->type)){
+
+						$options = new stdClass();
+							$options->ar_transform_map	= $ar_transform_map;
+							$options->tm_value			= $tm_value;
+
+						$new_tm_value = transform_data::replace_locator_in_tm_data( $options );
+
+						$new_dato_encoded = json_encode( $new_tm_value );
+
+						if($old_dato_encoded !== $new_dato_encoded ){
+							$strQuery	= "UPDATE $table SET dato = $1 WHERE id = $2 ";
+							$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato_encoded, $id ));
+							if($result===false) {
+								$msg = "Failed Update time machine ($table) record $id";
+								debug_log(__METHOD__
+									." ERROR: $msg "
+									, logger::ERROR
+								);
+								return false;
+							}
+						}
+					}else{
+						$component_tm_model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+						if( $component_tm_model==='component_text_area' ){
+
+							$options = new stdClass();
+								$options->string			= json_encode($tm_value);
+								$options->ar_transform_map	= $ar_transform_map;
+
+							$new_literal = transform_data::replace_locator_in_string( $options );
+
+							if($old_dato_encoded !== $new_literal ){
+								$strQuery	= "UPDATE $table SET dato = $1 WHERE id = $2 ";
+								$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_literal, $id ));
+								if($result===false) {
+									$msg = "Failed Update time machine ($table) record $id";
+									debug_log(__METHOD__
+										." ERROR: $msg "
+										, logger::ERROR
+									);
+									return false;
+								}
+							}
+						}
+					}//end if ( is_array($tm_value) && is_object($tm_value[0]) && isset($tm_value[0]->section_tipo) && isset($tm_value[0]->type))
+				}//end if( isset($dato) )
+			}//end anonymous function
+		);
+
+
+		return true;
+	}//end changes_in_locators
+
 
 
 	/**
