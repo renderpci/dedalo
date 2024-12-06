@@ -216,4 +216,24 @@ Split date range
 }
 ```
 
+##### deep
+```mermaid
+  flowchart LR
+  A[field : mdcat4593] --> | relation | id1([component : dmm1041]) --> | target | id2([component : rsc89])
+```
+```json
+{
+  "process_dato": "diffusion_sql::resolve_value",
+  "process_dato_arguments": {
+    "target_component_tipo": "rsc89",
+    "component_method": "get_dato",
+    "output": "split_date_range",
+    "output_options": {
+      "selected_key": 0,
+      "selected_date": "start"
+    }
+  }
+}
+```
+
 ---

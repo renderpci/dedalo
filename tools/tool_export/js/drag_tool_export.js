@@ -129,10 +129,11 @@ export const on_drop = function(container, event) {
 	// short vars
 		const path	= parsed_data.path
 		const ddo	= parsed_data.ddo
+		const id	= self.compose_id(ddo, path)
 
 	// rebuild ddo
 		const new_ddo = {
-			id				: ddo.section_tipo +'_'+ ddo.tipo +'_list_'+ ddo.lang,
+			id				: id,
 			tipo			: ddo.tipo,
 			section_tipo	: ddo.section_tipo,
 			model			: ddo.model,

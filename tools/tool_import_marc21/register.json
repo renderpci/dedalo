@@ -54,13 +54,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057518189,
+              "day": 5,
+              "hour": 11,
+              "time": 65082827480,
               "year": 2024,
-              "month": 2,
-              "minute": 49,
-              "second": 49
+              "month": 12,
+              "minute": 11,
+              "second": 20
             }
           }
         ]
@@ -140,7 +140,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.2"
+          "2.0.3"
         ]
       }
     },
@@ -303,6 +303,14 @@
         ]
       }
     },
+    "dd1362": {
+      "inf": "Implementación [component_text_area]",
+      "dato": {
+        "lg-nolan": [
+          "<p>Note that the default configuration provides a map that can be modified to suit specific needs.</p><p>To modify it, copy the default configuration into the configuration of your tools and edit the content.</p>"
+        ]
+      }
+    },
     "dd1372": {
       "inf": "Etiquetas [component_json]",
       "dato": {
@@ -443,7 +451,7 @@
               },
               {
                 "info": "ISBN",
-                "tipo": "rsc137",
+                "tipo": "rsc147",
                 "field": "020",
                 "dd_action": {
                   "rsc249": [
@@ -905,7 +913,7 @@
   "section_id": 17,
   "created_date": "2023-10-09 19:37:41",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:49:49",
+  "modified_date": "2024-12-05 11:11:20",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

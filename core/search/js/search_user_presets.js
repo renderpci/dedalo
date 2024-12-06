@@ -463,7 +463,7 @@ export const create_new_search_preset = function(options) {
 
 				const save_promises = []
 
-				// set section_tipo value
+				// save section_tipo value
 					save_promises.push(
 						(async () => {
 							const component_instance_section_tipo = await get_instance({
@@ -483,7 +483,7 @@ export const create_new_search_preset = function(options) {
 						})()
 					)
 
-				// set user value
+				// save user value
 					save_promises.push(
 						(async () => {
 							const component_instance_user = await get_instance({
@@ -500,6 +500,34 @@ export const create_new_search_preset = function(options) {
 								value	: locator_user
 							}]
 							await component_instance_user.save(changed_data_user)
+						})()
+					)
+
+				// save current DOM filter
+					save_promises.push(
+						(async () => {
+							const component_instance_user = await get_instance({
+								tipo			: presets_component_json_tipo, // 'dd625',
+								model			: 'component_json',
+								section_tipo	: section_tipo,
+								section_id		: new_section_id,
+								mode			: 'edit'
+							})
+							await component_instance_user.build(true)
+
+							// parse current DOM filter for save it
+							const json_filter_parsed = self.parse_dom_to_json_filter({
+								save_arguments : true
+							})
+							const json_filter = json_filter_parsed.filter
+							if (json_filter) {
+								const changed_data_user = [{
+									action	: 'insert',
+									key		: 0,
+									value	: json_filter
+								}]
+								await component_instance_user.save(changed_data_user)
+							}
 						})()
 					)
 

@@ -459,4 +459,20 @@ tool_export.prototype.update_local_db_data = async function() {
 
 
 
+/**
+* COMPOSE_ID
+* Compose the ddo id used in drag in the unified way
+* @param object ddo
+* @param array path
+* @return string id
+*/
+tool_export.prototype.compose_id = function (ddo, path) {
+
+	const id = path.map(el => el.section_tipo +'_'+ el.component_tipo).join('_') +'_list_'+ ddo.lang
+
+	return id
+}//end compose_id
+
+
+
 // @license-end
