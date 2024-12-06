@@ -3949,6 +3949,11 @@ class section extends common {
 
 								// dato. inject dato from time machine record
 									if ($source_model==='section') {
+
+										$dato = isset($dato)
+											? $dato
+											: new stdClass();
+
 										// dato safe format
 										if (!isset($dato->relations)) {
 											$dato->relations = [];
