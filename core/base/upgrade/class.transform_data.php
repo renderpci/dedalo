@@ -1336,6 +1336,55 @@ class transform_data {
 
 
 
+
+	/**
+	* REPLACE_LOCATOR_IN_TM_DATA
+	* @param $options->ar_transform_map
+	* {
+	*	"rsc194": {
+	*		"old": "rsc194",
+	*		"new": "rsc197",
+	*		"type": "section",
+	*		"perform": [
+	*			"move_tld"
+	*		],
+	* 		"base_counter": 76
+	*		"info": "Old People section => New People under Study section"
+	*	}
+	* @return
+	*/
+	public static function replace_locator_in_tm_data( object $options ) {
+
+		$ar_transform_map	= $options->ar_transform_map;
+		$tm_value			= $options->tm_value;
+
+		foreach ( $tm_value as $current_locator ) {
+
+			if (!is_object($current_locator)) {
+				continue;
+			}
+
+			foreach ($current_locator as $loc_key => $current_value) {
+
+				if( isset($ar_transform_map[$current_value]) && $current_value === $ar_transform_map[$current_value]->old ){
+
+					$current_locator->$loc_key	= $ar_transform_map[$current_value]->new;
+					$base_section_id			= $ar_transform_map[$current_value]->base_counter;
+
+					if($loc_key === 'section_tipo'){
+						$new_section_id					= (int)$base_section_id + (int)$current_locator->section_id;
+						$current_locator->section_id	= (string)$new_section_id;
+					}
+				}
+			}//end foreach
+		}//end foreach
+
+
+		return $tm_value;
+	}//end replace_locator_in_tm_data
+
+
+
 	/**
 	* REPLACE_LOCATOR_IN_STRING
 	* @param object $options
