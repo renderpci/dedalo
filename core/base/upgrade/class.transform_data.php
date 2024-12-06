@@ -636,6 +636,7 @@ class transform_data {
 	}//end remove_paper_lib_data_rsc29
 
 
+
 	/**
 	* UPDATE_HIERARCHY_VIEW_IN_THESAURUS
 	* @return bool
@@ -747,7 +748,7 @@ class transform_data {
 			, logger::WARNING
 		);
 
-		$path = DEDALO_CORE_PATH.'/base/transform_definition_files/';
+		$path = DEDALO_CORE_PATH.'/base/transform_definition_files/move_tld/';
 		// get transform map from files
 			$ar_transform_map = [];
 			foreach ($json_files as $current_json_file) {
@@ -1082,7 +1083,6 @@ class transform_data {
 
 		return $value;
 	}//end replace_tm_data
-
 
 
 

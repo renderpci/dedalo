@@ -115,20 +115,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// move_tld
-			$item = new stdClass();
-				$item->id		= 'move_tld';
-				$item->type		= 'widget';
-				$item->label	= 'Move TLD';
-				$item->value	= (object)[
-					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files.<br>
-							   Note that this can be a very long process because it has to go through all the records in all the tables.',
-					'files' => area_maintenance::get_definitions_files()
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
 		// register_tools *
 			$tools_files_list = tools_register::get_tools_files_list();
 			$need_update = array_reduce($tools_files_list, function ($carry, $c_tool) {
@@ -150,6 +136,20 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
+
+		// move_tld
+			$item = new stdClass();
+				$item->id		= 'move_tld';
+				$item->type		= 'widget';
+				$item->label	= 'Move TLD';
+				$item->value	= (object)[
+					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_tld.<br>
+							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+					'files' => area_maintenance::get_definitions_files( 'move_tld' )
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 		// build_structure_css
 			// $item = new stdClass();
 			// 	$item->id		= 'build_structure_css';
@@ -1676,10 +1676,10 @@ class area_maintenance extends area_common {
 	* 	/dedalo/core/base/transform_definition_files
 	* @return array
 	*/
-	public static function get_definitions_files() : array {
+	public static function get_definitions_files( string $directory ) : array {
 
 		$files_list = get_dir_files(
-			DEDALO_CORE_PATH . '/base/transform_definition_files',
+			DEDALO_CORE_PATH . '/base/transform_definition_files/'.$directory,
 			['json'],
 			function($el) {
 
@@ -1729,7 +1729,7 @@ class area_maintenance extends area_common {
 			}
 
 		// files
-			$definitions_files	= area_maintenance::get_definitions_files();
+			$definitions_files	= area_maintenance::get_definitions_files( 'move_tld' );
 			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
 				return in_array($el->file_name, $files_selected);
 			});
