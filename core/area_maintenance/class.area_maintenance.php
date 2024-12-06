@@ -1801,6 +1801,87 @@ class area_maintenance extends area_common {
 
 
 	/**
+	* MOVE_locator
+	* Transform Dédalo data from all tables replacing tipos
+	* using selected JSON file map
+	* Is called from widget 'move_locator' as process
+	* @param object $options
+	* {
+	* 	files_selected : array ['finds_numisdata279_to_tchi1.json']
+	* }
+	* @return object $response
+	*/
+	public static function move_locator(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// options
+			$files_selected = $options->files_selected;
+			if (empty($files_selected)) {
+				$response->errors[] = 'empty files_selected';
+				return $response;
+			}
+
+		// files
+			$definitions_files	= area_maintenance::get_definitions_files( 'move_locator' );
+			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
+				return in_array($el->file_name, $files_selected);
+			});
+			if (empty($json_files)) {
+				$response->errors[] = 'json_files not found';
+				return $response;
+			}
+
+			// ar_file_name
+			$ar_file_name = array_values(
+				array_map(function($el){
+					return $el->file_name;
+				}, $json_files)
+			);
+
+		// process changes_in_tipos
+			$ar_tables = [
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_counter',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_time_machine'
+			];
+			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
+			$result = transform_data::changes_in_locators(
+				$ar_tables,
+				$ar_file_name
+			);
+
+		$response->result	= $result;
+		$response->msg		= ($result===false)
+			? 'Error. changes_in_locators failed'
+			: 'OK. request done successfully';
+
+
+		return $response;
+	}//end move_locator
+
+
+
+	/**
 	* UPDATE_ONTOLOGY
 	* Is called from area_maintenence widget 'update_ontology' across dd_area_maintenance::class_request
 	* Connect with master server, download ontology files and update local DDBB and lang files
