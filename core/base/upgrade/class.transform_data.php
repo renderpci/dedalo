@@ -1336,6 +1336,63 @@ class transform_data {
 
 
 
+	/**
+	* REPLACE_LOCATOR_IN_STRING
+	* @param object $options
+	* @return string $string
+	*/
+	public static function replace_locator_in_string( object $options ) : string {
+
+		$string				= $options->string;
+		$ar_transform_map	= $options->ar_transform_map;
+
+		$regex = '/data:({.*?}):data/m';
+
+		preg_match_all( $regex, $string, $matches);
+
+		$ar_locators = $matches[1] ?? [];
+
+		$unique_locators = array_unique($ar_locators);
+
+		foreach ($unique_locators as $pseudo_locator) {
+			$current_locator = str_replace('\'', '"', $pseudo_locator);
+			$current_locator = json_decode($current_locator);
+
+			foreach ($current_locator as $loc_key => $loc_value) {
+
+				if (!is_string($loc_value) && !is_int($loc_value)) {
+					debug_log(__METHOD__
+						. " Ignored locator value ! " . PHP_EOL
+						. ' loc_key: ' . to_string($loc_key) . PHP_EOL
+						. ' loc_value: ' . to_string($loc_value) . PHP_EOL
+						. ' loc_value type: ' . gettype($loc_value) . PHP_EOL
+						. ' locator: ' . to_string($current_locator)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				if( isset($ar_transform_map[$loc_value]) ){
+					// replace old tipo with the new one in any locator property
+					$current_locator->{$loc_key}	= $ar_transform_map[$loc_value]->new;
+					$new_section_id					= (int)$ar_transform_map[$loc_value]->base_counter + (int)$current_locator->section_id;
+					$current_locator->section_id	= (string)$new_section_id;
+
+					//to replace
+					$new_pseudo_locator	= json_encode($current_locator);
+					$new_pseudo_locator	= str_replace( '"', '\'', $new_pseudo_locator);
+
+					$string	= str_replace( $pseudo_locator, $new_pseudo_locator, $string);
+				}
+			}
+		}
+
+
+		return $string;
+	}//end replace_locator_in_string
+
+
+
 
 	/**
 	* SET_MOVE_IDENTIFICATION_VALUE
