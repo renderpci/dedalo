@@ -1336,8 +1336,15 @@ class transform_data {
 
 
 	/**
-	* CHANGES_IN_locators
-	* Map old tipos to new ones using JSON files definitions
+	* CHANGES_IN_LOCATORS
+	* Map old locator to new one using JSON files definitions
+	* the JSON file defines old section_tipo and new section_tipo
+	* and it moves all locators as all tables to new locator.
+	* This method take account section_id of the new section_tipo using the last counter
+	* adding it to old section_id, for ex:
+	* old section_id : 5
+	* counter for the new section: 87
+	* new section_id : 92
 	* @param array $ar_tables
 	* @param array $json_files
 	* @return bool
@@ -1395,11 +1402,11 @@ class transform_data {
 			// old locator = rsc194_1
 			// will transform to rsc197_8501
 			// so, the new section_id will be `counter` + old_section_id
+			// it maintain coherence with all locators in every table and section.
 			foreach ($ar_transform_map as $key => $value) {
 				$counter = counter::get_counter_value( $value->new );
 				$ar_transform_map[$key]->base_counter = $counter;
 			}
-
 
 		// CLI process data
 			if ( running_in_cli()===true ) {
@@ -1451,8 +1458,7 @@ class transform_data {
 
 					// add data to new section
 					// create data to identify the moved from previous records
-					dump($ar_transform_map[$section_tipo], ' ar_transform_map +---------------+ '.to_string());
-						if( isset($ar_transform_map[$section_tipo]->add_data_to_new_section) ){
+						if( isset($ar_transform_map[$section_tipo]->add_data_to_new_section) && isset($datos) ){
 
 							$process = $ar_transform_map[$section_tipo]->add_data_to_new_section;
 							foreach ($process as $fn_object) {
@@ -1470,7 +1476,6 @@ class transform_data {
 								//set current datos into the options
 								$fn_object->options->datos = $datos;
 
-									dump($fn, ' fn +---------------+ '.to_string());
 								$fn( $fn_object->options );
 							}
 						}
