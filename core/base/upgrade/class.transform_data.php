@@ -1338,6 +1338,106 @@ class transform_data {
 
 
 	/**
+	* PROCESS_LOCATORS_IN_SECTION_DATA
+	* @param object $options
+	* @return object $datos
+	*/
+	public static function process_locators_in_section_data( object $options ) : object {
+
+		$ar_transform_map	= $options->ar_transform_map;
+		$datos				= $options->datos;
+
+		// datos properties
+		foreach ($datos as $datos_key => $datos_value) {
+
+			if( empty($datos_value) ){
+				continue;
+			}
+
+			switch ($datos_key) {
+				case 'relations_search':
+				case 'relations':
+					// update relations array
+					$relations = $datos_value ?? [];
+
+					foreach ($relations as $locator) {
+						foreach ($locator as $loc_key => $loc_value) {
+
+							if (!is_string($loc_value) && !is_int($loc_value)) {
+								debug_log(__METHOD__
+									. " Ignored locator value ! " . PHP_EOL
+									. ' loc_key: ' . to_string($loc_key) . PHP_EOL
+									. ' loc_value: ' . to_string($loc_value) . PHP_EOL
+									. ' loc_value type: ' . gettype($loc_value) . PHP_EOL
+									. ' locator: ' . to_string($locator)
+									, logger::ERROR
+								);
+								continue;
+							}
+
+							if( isset($ar_transform_map[$loc_value]) ){
+								// replace old tipo with the new one in any locator property
+								$locator->{$loc_key}	= $ar_transform_map[$loc_value]->new;
+								$new_section_id			= (int)$ar_transform_map[$loc_value]->base_counter + (int)$locator->section_id;
+								$locator->section_id	= (string)$new_section_id;
+							}
+						}
+					}
+					break;
+
+				case 'diffusion_info':
+				case 'components':
+					// update components object
+					$literal_components = $datos_value ?? null;
+
+					if( empty($literal_components) ){
+						break;
+					}
+
+					foreach ($literal_components as $literal_tipo => $literal_value) {
+						$model = RecordObj_dd::get_modelo_name_by_tipo( $literal_tipo );
+						if($model === 'component_text_area'){
+
+							$options = new stdClass();
+								$options->string			= json_encode($literal_value);
+								$options->ar_transform_map	= $ar_transform_map;
+
+							$new_literal = transform_data::replace_locator_in_string( $options );
+
+							$literal_components->{$literal_tipo} = json_decode( $new_literal );
+						}
+					}
+
+					// replace whole object
+					$datos->$datos_key = $literal_components;
+					break;
+
+				case 'inverse_locators':
+					// remove old data
+					unset($datos->{$datos_key});
+					break;
+
+				default:
+					// update other properties like section_tipo, section_real_tipo, etc.
+					$test_tipo = to_string($datos_value);
+					if( isset($ar_transform_map[$test_tipo]) ){
+						$datos->{$datos_key} = $ar_transform_map[$test_tipo]->new;
+						if( $datos_key === 'section_tipo'){
+							$new_section_id		= (int)$ar_transform_map[$test_tipo]->base_counter + (int)$datos->section_id;
+							$datos->section_id	= (int)$new_section_id;
+						}
+					}
+
+					break;
+			}
+		}//end foreach ($datos as $datos_key => $datos_value)
+
+		return $datos;
+	}//end process_locators_in_section_data
+
+
+
+	/**
 	* REPLACE_LOCATOR_IN_TM_DATA
 	* @param $options->ar_transform_map
 	* {
