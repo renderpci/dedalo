@@ -1849,6 +1849,18 @@ class transform_data {
 
 			foreach ($current_locator as $loc_key => $current_value) {
 
+				if (!is_string($current_value) && !is_int($current_value)) {
+					debug_log(__METHOD__
+						. " Ignored non acceptable  " . PHP_EOL
+						. ' loc_key: ' . to_string($loc_key) . PHP_EOL
+						. ' current_value: ' . to_string($current_value) . PHP_EOL
+						. ' current_value type: ' . gettype($current_value) . PHP_EOL
+						. ' current_locator: ' . to_string($current_locator)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 				if( isset($ar_transform_map[$current_value]) && $current_value === $ar_transform_map[$current_value]->old ){
 
 					$current_locator->$loc_key	= $ar_transform_map[$current_value]->new;
