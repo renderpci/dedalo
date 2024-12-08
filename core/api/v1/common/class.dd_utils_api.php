@@ -1359,6 +1359,9 @@ final class dd_utils_api {
 	public static function get_process_status(object $rqo) {
 		$start_time=start_time();
 
+		// max_execution_time
+			ini_set('max_execution_time', 36000); // seconds ( 3600 * 10 ) = 10 hours
+
 		// session unlock
 			session_write_close();
 
