@@ -35,6 +35,8 @@ $updates->$v = new stdClass();
 			<br>
 			<br><strong>It is highly recommended to make a backup</strong> prior to applying this update.
 			<br>
+			<br>After update. remove access to `People` for all users to keep section without new data. It will be removed in next ontology updates.
+			<br>
 			<br>Note: If you want to preserve two sections for people, you will need to change your ontology and your data by you own as it is defined in <strong>Optional step</strong> the agora topic.
 			<br>
 		";
