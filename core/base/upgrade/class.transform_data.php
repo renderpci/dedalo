@@ -1817,24 +1817,26 @@ class transform_data {
 
 	/**
 	* REPLACE_LOCATOR_IN_TM_DATA
-	* This function only accept locator data in tm machine.
+	* This function only accepts locator data in tm machine.
 	* Filter previously the tm_data to send only locator data.
-	*
-	* @param $options->ar_transform_map
+	* @param object $options-
 	* {
-	*	"rsc194": {
-	*		"old": "rsc194",
-	*		"new": "rsc197",
-	*		"type": "section",
-	*		"perform": [
-	*			"move_tld"
-	*		],
-	* 		"base_counter": 76
-	*		"info": "Old People section => New People under Study section"
+	* 	ar_transform_map: {
+	*		"rsc194": {
+	*			"old": "rsc194",
+	*			"new": "rsc197",
+	*			"type": "section",
+	*			"perform": [
+	*				"move_tld"
+	*			],
+	* 			"base_counter": 76
+	*			"info": "Old People section => New People under Study section"
 	*	}
-	* @return
+	* 	tm_value: array
+	* }
+	* @return array $tm_value
 	*/
-	public static function replace_locator_in_tm_data( object $options ) {
+	public static function replace_locator_in_tm_data( object $options ) : array {
 
 		$ar_transform_map	= $options->ar_transform_map;
 		$tm_value			= $options->tm_value;
@@ -1906,6 +1908,7 @@ class transform_data {
 					);
 					continue;
 				}
+
 				// check if the locator has the old section_tipo reference
 				if( isset($ar_transform_map[$loc_value]) ){
 					// replace old tipo with the new one in any locator property

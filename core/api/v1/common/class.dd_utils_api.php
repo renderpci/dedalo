@@ -1376,7 +1376,7 @@ final class dd_utils_api {
 			header("Cache-Control: no-cache, must-revalidate");
 			header('Connection: keep-alive');
 			header("Access-Control-Allow-Origin: *");
-			header('X-Accel-Buffering: no'); // nginex buffer control
+			header('X-Accel-Buffering: no'); // nginx buffer control
 
 		// mandatory vars
 			if (empty($pfile) || empty($pid)) {
