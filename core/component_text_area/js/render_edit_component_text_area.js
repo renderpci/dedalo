@@ -13,7 +13,7 @@
 
 
 /**
-* RENDER_EDIT_COMPONENT_text_area
+* RENDER_EDIT_COMPONENT_TEXT_AREA
 * Manage the components logic and appearance in client side
 */
 export const render_edit_component_text_area = function() {

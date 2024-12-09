@@ -108,13 +108,14 @@ $updates->$v = new stdClass();
 		// fix rsc197 counter
 			$script_obj = new stdClass();
 				$script_obj->info			= "Consolidate counter for People under study rsc197";
-				$script_obj->script_class	= "area_maintenance";
+				$script_obj->script_class	= "counter";
 				$script_obj->script_method	= "modify_counter";
 				$script_obj->script_vars	= [
 					'rsc197',
 					'fix'
 				]; // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
+
 
 
 $v=629; #####################################################################################

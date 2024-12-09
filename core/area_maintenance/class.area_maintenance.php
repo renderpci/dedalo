@@ -41,7 +41,7 @@ class area_maintenance extends area_common {
 	public function item_make_backup() : object {
 
 		// short vars
-			$mysql_db = (defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null);
+			$mysql_db = defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null;
 
 		// item
 			$item = new stdClass();
@@ -737,7 +737,6 @@ class area_maintenance extends area_common {
 		// response
 			$response->result	= true;
 			$response->msg[0]	= 'OK. All data is propagated successfully'; // Override first message
-			$response->msg		= $response->msg; // array
 
 
 		return $response;
@@ -1327,8 +1326,8 @@ class area_maintenance extends area_common {
 					: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo6_code' from 'dedalo6_code.zip'
 				$target		= DEDALO_ROOT_PATH;
 				$exclude	= ' --exclude="*/config*" --exclude="media" ';
-				$aditional 	= ''; // $is_preview===true ? ' --dry-run ' : '';
-				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
+				$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
+				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
 				$output		= shell_exec($command);
 				if ($output===null) {
 					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing rsync command. source: '.$source;
@@ -1572,7 +1571,6 @@ class area_maintenance extends area_common {
 				default:
 					$response->msg = 'Error. Invalid name';
 					return $response;
-					break;
 			}
 
 		// write_value check
