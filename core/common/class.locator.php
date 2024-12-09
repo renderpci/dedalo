@@ -498,12 +498,50 @@ class locator extends stdClass {
 				return $response;
 			}
 
+		// safe section_tipo
+			if (!safe_tipo($this->section_tipo)) {
+
+				$response->result	= false;
+				$response->errors[] = 'Invalid section_tipo';
+				$response->msg		= 'Invalid locator: locator section_tipo is invalid';
+
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace()[1];
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' backtrace 1: ' . to_string($bt)
+						, logger::ERROR
+					);
+				}
+
+				return $response;
+			}
+
 		// section_id mandatory
-			if (!isset($this->section_id)) {
+			if (!isset($this->section_id) || empty($this->section_id)) {
 
 				$response->result	= false;
 				$response->errors[] = 'Empty section_id';
 				$response->msg		= 'Invalid locator: locator section_id is mandatory';
+
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace()[1];
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' backtrace 1: ' . to_string($bt)
+						, logger::ERROR
+					);
+				}
+
+				return $response;
+			}
+
+		// safe section_id
+			if (!safe_section_id($this->section_id)) {
+
+				$response->result	= false;
+				$response->errors[] = 'Invalid section_id';
+				$response->msg		= 'Invalid locator: locator section_id is invalid';
 
 				if(SHOW_DEBUG===true) {
 					$bt = debug_backtrace()[1];

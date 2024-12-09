@@ -2969,16 +2969,53 @@ class component_relation_common extends component_common {
 								$failed->section_id		= $this->section_id;
 								$failed->data			= stripslashes( $import_value );
 								$failed->component_tipo	= $this->get_tipo();
-								$failed->msg			= 'IGNORED: mTry to import multiple section_tipo without clear target ';
+								$failed->msg			= 'IGNORED: Try to import multiple section_tipo without clear target ';
 							$response->errors[] = $failed;
 
 							return $response;
 						}
 						$target_section_tipo = $ar_target_section_tipo[0] ?? null;
+
+						// check valid target_section_tipo
+						if (!safe_tipo($target_section_tipo)) {
+							debug_log(__METHOD__
+								." Trying to import invalid target_section_tipo" .PHP_EOL
+								.' section_id: '. to_string($target_section_tipo)
+								, logger::ERROR
+							);
+
+							$failed = new stdClass();
+								$failed->section_id		= $this->section_id;
+								$failed->data			= to_string( $import_value );
+								$failed->component_tipo	= $this->get_tipo();
+								$failed->msg			= 'IGNORED: Try to import invalid target_section_tipo';
+							$response->errors[] = $failed;
+
+							return $response;
+						}
 					}
 
 				$ar_values = explode(',', (string)$value);
 				foreach ($ar_values as $section_id) {
+
+					// section_id. Check if section_id value is valid
+					if (!safe_section_id($section_id)) {
+						debug_log(__METHOD__
+							." Trying to import invalid section_id" .PHP_EOL
+							.' section_id: '. to_string($section_id)
+							, logger::ERROR
+						);
+
+						$failed = new stdClass();
+							$failed->section_id		= $this->section_id;
+							$failed->data			= to_string( $import_value );
+							$failed->component_tipo	= $this->get_tipo();
+							$failed->msg			= 'IGNORED: Try to import invalid section_id';
+						$response->errors[] = $failed;
+
+						return $response;
+					}
+
 					// old format (section_id)
 					// is int. Builds complete locator and set section_id from value
 					$locator = new locator();
@@ -3003,8 +3040,23 @@ class component_relation_common extends component_common {
 
 						$check_response = $locator->check_locator();
 						if ($check_response->result!==true) {
-							$msg = $check_response->msg . ' record section_id: ' . $this->section_id;
-							throw new Exception("Error Processing Request. ".$msg, 1);
+
+							debug_log(__METHOD__
+								." Trying to import invalid locator" . PHP_EOL
+								.' check_response->msg: ' . $check_response->msg . PHP_EOL
+								.' section_id: '. to_string($this->section_id) . PHP_EOL
+								.' locator: '. json_encode($locator, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+
+							$failed = new stdClass();
+								$failed->section_id		= $this->section_id;
+								$failed->data			= to_string( $import_value );
+								$failed->component_tipo	= $this->get_tipo();
+								$failed->msg			= 'IGNORED: Try to import invalid locator';
+							$response->errors[] = $failed;
+
+							return $response;
 						}
 
 						// ! type could be false (component_relation_parent)
