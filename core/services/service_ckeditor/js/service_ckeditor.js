@@ -678,7 +678,6 @@ export const service_ckeditor = function() {
 
 		// keyup event
 			editor.editing.view.document.on('keydown', function(evt, data ) {
-
 				if (custom_events.KeyUp) {
 					custom_events.KeyUp(data.domEvent, {})
 				}

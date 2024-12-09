@@ -709,9 +709,8 @@ class transform_data {
 						$datos->section_tipo
 					);
 
-					$compnent_data = $component_view_in_ts->get_dato();
-
-					if(!empty($compnent_data)){
+					$component_data = $component_view_in_ts->get_dato();
+					if(!empty($component_data)){
 						return null;
 					}
 
@@ -890,7 +889,6 @@ class transform_data {
 						// skip non wanted sections records (column section_tipo is not included in the sections to change list)
 						return;
 					}
-
 
 					// datos properties
 					foreach ($datos as $datos_key => $datos_value) {
@@ -1346,10 +1344,23 @@ class transform_data {
 	* counter for the new section: 87
 	* new section_id : 92
 	* @param array $ar_tables
+	* [
+	* 	'matrix_users',
+	*	'matrix_projects',
+	*	'matrix',
+	*	'matrix_list'...
+	* ]
 	* @param array $json_files
+	* [
+	*	"people_rsc194_to_rsc197.json", ..
+	* ]
 	* @return bool
 	*/
 	public static function changes_in_locators(array $ar_tables, array $json_files) : bool {
+
+		// disable activity log
+			logger_backend_activity::$enable_log = false;
+
 
 		debug_log(__METHOD__ . PHP_EOL
 			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -1389,11 +1400,6 @@ class transform_data {
 			// ar_old_section_tipo without keys like ["rsc194"]
 			$ar_old_section_tipo = array_map(function($el){
 				return $el->old;
-			}, $ar_section_elements, []);
-
-			// ar_new_section_tipo without keys like ["rsc194"]
-			$ar_new_section_tipo = array_map(function($el){
-				return $el->new;
 			}, $ar_section_elements, []);
 
 		// counter of the new sections.
@@ -1446,15 +1452,15 @@ class transform_data {
 						print_cli(common::$pdata);
 					}
 
-
 				// section_tipo. All tables has section_tipo
 				if( isset($section_tipo) && isset($ar_transform_map[$section_tipo]) ){
 
 					// new section_id
-						$base_section_id 	= $ar_transform_map[$section_tipo]->base_counter;
+						$base_section_id	= $ar_transform_map[$section_tipo]->base_counter;
 						$new_section_id		= (int)$section_id + (int)$base_section_id;
 
-					$new_section_tipo	= $ar_transform_map[$section_tipo]->new;
+					// new section tipo
+						$new_section_tipo = $ar_transform_map[$section_tipo]->new;
 
 					// add data to new section
 					// create data to identify the moved from previous records
@@ -1463,8 +1469,8 @@ class transform_data {
 							$process = $ar_transform_map[$section_tipo]->add_data_to_new_section;
 							foreach ($process as $fn_object) {
 								$fn 		= $fn_object->fn;
-								$fn_class 	= explode("::", $fn)[0];
-								$fn_method 	= explode("::", $fn)[1];
+								$fn_class 	= explode('::', $fn)[0];
+								$fn_method 	= explode('::', $fn)[1];
 								// check method already exists
 									if(!method_exists($fn_class, $fn_method)) {
 										debug_log(__METHOD__
@@ -1500,11 +1506,11 @@ class transform_data {
 						$options->ar_transform_map	= $ar_transform_map;
 						$options->datos				= $dato;
 
-					$procesed_data = ( !empty($dato) )
+					$processed_data = ( !empty($dato) )
 						? transform_data::process_locators_in_section_data( $options )
 						: null;
 
-					$section_data_encoded = json_encode($procesed_data);
+					$section_data_encoded = json_encode($processed_data);
 
 					$new_tipo = $ar_transform_map[$tipo]->new;
 
@@ -1527,8 +1533,8 @@ class transform_data {
 					// in those case the change only is applied to this component
 					if ($table==='matrix_activity') {
 
-						$activity_data = $datos;
-						$old_activity_data = json_encode($activity_data);
+						$activity_data		= $datos;
+						$old_activity_data	= json_encode($activity_data);
 
 						//activity data is set into the dd551 component
 						$dd551_value = $datos->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? null;
@@ -1606,7 +1612,6 @@ class transform_data {
 
 							$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 							$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_activity_data, $id ));
-
 							if($result===false) {
 								$msg = "Failed Update section_data ($table) $id";
 								debug_log(__METHOD__
@@ -1627,11 +1632,11 @@ class transform_data {
 						$options->ar_transform_map	= $ar_transform_map;
 						$options->datos				= $datos;
 
-					$procesed_data = ( !empty($datos) )
+					$processed_data = ( !empty($datos) )
 						? transform_data::process_locators_in_section_data( $options )
 						: null;
 
-					$section_data_encoded = json_encode($procesed_data);
+					$section_data_encoded = json_encode($processed_data);
 
 					$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
@@ -1670,7 +1675,7 @@ class transform_data {
 						$new_dato_encoded = json_encode( $new_tm_value );
 
 						//check if the data has been changed, if yes, save it.
-						if($old_dato_encoded !== $new_dato_encoded ){
+						if($old_dato_encoded !== $new_dato_encoded){
 							$strQuery	= "UPDATE $table SET dato = $1 WHERE id = $2 ";
 							$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato_encoded, $id ));
 							if($result===false) {
@@ -1711,6 +1716,9 @@ class transform_data {
 				}//end if( isset($dato) )
 			}//end anonymous function
 		);
+
+		// re-enable activity log
+			logger_backend_activity::$enable_log = true;
 
 
 		return true;
@@ -1808,7 +1816,6 @@ class transform_data {
 							$datos->section_id	= (int)$new_section_id;
 						}
 					}
-
 					break;
 			}
 		}//end foreach ($datos as $datos_key => $datos_value)
@@ -1820,24 +1827,26 @@ class transform_data {
 
 	/**
 	* REPLACE_LOCATOR_IN_TM_DATA
-	* This function only accept locator data in tm machine.
+	* This function only accepts locator data in tm machine.
 	* Filter previously the tm_data to send only locator data.
-	*
-	* @param $options->ar_transform_map
+	* @param object $options-
 	* {
-	*	"rsc194": {
-	*		"old": "rsc194",
-	*		"new": "rsc197",
-	*		"type": "section",
-	*		"perform": [
-	*			"move_tld"
-	*		],
-	* 		"base_counter": 76
-	*		"info": "Old People section => New People under Study section"
+	* 	ar_transform_map: {
+	*		"rsc194": {
+	*			"old": "rsc194",
+	*			"new": "rsc197",
+	*			"type": "section",
+	*			"perform": [
+	*				"move_tld"
+	*			],
+	* 			"base_counter": 76
+	*			"info": "Old People section => New People under Study section"
 	*	}
-	* @return
+	* 	tm_value: array
+	* }
+	* @return array $tm_value
 	*/
-	public static function replace_locator_in_tm_data( object $options ) {
+	public static function replace_locator_in_tm_data( object $options ) : array {
 
 		$ar_transform_map	= $options->ar_transform_map;
 		$tm_value			= $options->tm_value;
@@ -1849,6 +1858,18 @@ class transform_data {
 			}
 
 			foreach ($current_locator as $loc_key => $current_value) {
+
+				if (!is_string($current_value) && !is_int($current_value)) {
+					debug_log(__METHOD__
+						. " Ignored non acceptable  " . PHP_EOL
+						. ' loc_key: ' . to_string($loc_key) . PHP_EOL
+						. ' current_value: ' . to_string($current_value) . PHP_EOL
+						. ' current_value type: ' . gettype($current_value) . PHP_EOL
+						. ' current_locator: ' . to_string($current_locator)
+						, logger::ERROR
+					);
+					continue;
+				}
 
 				if( isset($ar_transform_map[$current_value]) && $current_value === $ar_transform_map[$current_value]->old ){
 
@@ -1880,7 +1901,7 @@ class transform_data {
 
 		$string				= $options->string;
 		$ar_transform_map	= $options->ar_transform_map;
-		//get all locator in the middle of the string
+		// get all locator in the middle of the string
 		// locator is identified as:
 		// text	'data:{'section_tipo':'rsc194','section_id':'1'}:data' text
 		$regex = '/data:({.*?}):data/m';
@@ -1909,6 +1930,7 @@ class transform_data {
 					);
 					continue;
 				}
+
 				// check if the locator has the old section_tipo reference
 				if( isset($ar_transform_map[$loc_value]) ){
 					// replace old tipo with the new one in any locator property
@@ -1927,7 +1949,6 @@ class transform_data {
 
 		return $string;
 	}//end replace_locator_in_string
-
 
 
 
@@ -1957,7 +1978,7 @@ class transform_data {
 		switch ($action) {
 			case 'new_only_once':
 				// used to create new section as 'Typology' or other portal
-				// and set a component data inside new section with the specifyed values
+				// and set a component data inside new section with the specified values
 				// values could be a literal with translations or a related data.
 
 				// set a cache with the locator created
@@ -1969,42 +1990,88 @@ class transform_data {
 					$locator = $cache_set_move_identification_value[$cache_key];
 
 				}else{
-					// create new section to save new data
-					// new section will be the locator to add into the records
-					$new_section = section::get_instance(
-						null, // string|null section_id
-						$section_tipo // string section_tipo
-					);
-					$new_section_id = $new_section->Save();
 
-					// create new component with the specification
-					$component_model		= RecordObj_dd::get_modelo_name_by_tipo( $component_tipo );
-					// check if the component is a related to be save as block, else create comonent for every lang.
-					$relation_components	= component_relation_common::get_components_with_relations();
-					$is_related				= in_array( $component_model, $relation_components );
-					// set the main lang of the component as translatable or not (for literals the lang will be change)
-					$translatable			= RecordObj_dd::get_translatable( $component_tipo );
-					$lang					= $translatable === true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-					$component				= component_common::get_instance(
-						$component_model, // string model
-						$component_tipo, // string tipo
-						$new_section_id, // string section_id
-						'list', // string mode
-						$lang, // string lang
-						$section_tipo // string section_tipo
+					// search in database (this prevents duplicates when user apply this update more than once)
+					$sqo = json_decode('
+						{
+							"section_tipo": [
+								"rsc450"
+							],
+							"limit": 10,
+							"offset": 0,
+							"filter": {
+								"$and": [
+									{
+										"q": [
+											"Moved from People"
+										],
+										"q_operator": null,
+										"path": [
+											{
+												"section_tipo": "rsc450",
+												"component_tipo": "rsc452",
+												"model": "component_input_text",
+												"name": "Typology"
+											}
+										],
+										"q_split": true,
+										"type": "jsonb"
+									}
+								]
+							}
+						}
+					');
+					$search = search::get_instance(
+						$sqo // object sqo
 					);
-					// related component can save his data as block
-					if( $is_related	=== true ){
-						$component->set_dato( $value );
-						$component->Save();
+					$check_search		= $search->search();
+					$check_ar_records	= $check_search->ar_records;
+					if(count($check_ar_records)>0) {
+
+						$record = $check_ar_records[0];
+
+						$new_section_id = $record['section_id'];
+
 					}else{
-						// literal comonents needs to save his data by language
-						foreach ($value as $current_lang => $current_value) {
-							$component->set_lang( $current_lang );
-							$component->set_dato( $current_value );
+
+						// create new section to save new data
+						// new section will be the locator to add into the records
+						$new_section = section::get_instance(
+							null, // string|null section_id
+							$section_tipo // string section_tipo
+						);
+						$new_section_id = $new_section->Save();
+
+						// create new component with the specification
+						$component_model		= RecordObj_dd::get_modelo_name_by_tipo( $component_tipo );
+						// check if the component is a related to be save as block, else create component for every lang.
+						$relation_components	= component_relation_common::get_components_with_relations();
+						$is_related				= in_array( $component_model, $relation_components );
+						// set the main lang of the component as translatable or not (for literals the lang will be change)
+						$translatable			= RecordObj_dd::get_translatable( $component_tipo );
+						$lang					= $translatable === true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$component				= component_common::get_instance(
+							$component_model, // string model
+							$component_tipo, // string tipo
+							$new_section_id, // string section_id
+							'list', // string mode
+							$lang, // string lang
+							$section_tipo // string section_tipo
+						);
+						// related component can save his data as block
+						if( $is_related	=== true ){
+							$component->set_dato( $value );
 							$component->Save();
+						}else{
+							// literal components needs to save his data by language
+							foreach ($value as $current_lang => $current_value) {
+								$component->set_lang( $current_lang );
+								$component->set_dato( $current_value );
+								$component->Save();
+							}
 						}
 					}
+
 					// fix new locator with the new section created
 					// take account that the value is not the component value because this action use a related component to set the value
 					$locator = new locator();
@@ -2013,17 +2080,16 @@ class transform_data {
 						$locator->set_from_component_tipo( $from_component_tipo );
 						$locator->set_type( $type );
 
-					// set new locator into the cache to be used nex time
+					// set new locator into the cache to be used next time
 					$cache_set_move_identification_value[$cache_key] = $locator;
 				}
 
 				// add new locator to datos
 				$datos->relations[] = $locator;
-
 				break;
 
 			default:
-				// doesn't used rigth now.
+				// doesn't used right now.
 				break;
 		}
 
