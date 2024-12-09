@@ -1990,42 +1990,88 @@ class transform_data {
 					$locator = $cache_set_move_identification_value[$cache_key];
 
 				}else{
-					// create new section to save new data
-					// new section will be the locator to add into the records
-					$new_section = section::get_instance(
-						null, // string|null section_id
-						$section_tipo // string section_tipo
-					);
-					$new_section_id = $new_section->Save();
 
-					// create new component with the specification
-					$component_model		= RecordObj_dd::get_modelo_name_by_tipo( $component_tipo );
-					// check if the component is a related to be save as block, else create comonent for every lang.
-					$relation_components	= component_relation_common::get_components_with_relations();
-					$is_related				= in_array( $component_model, $relation_components );
-					// set the main lang of the component as translatable or not (for literals the lang will be change)
-					$translatable			= RecordObj_dd::get_translatable( $component_tipo );
-					$lang					= $translatable === true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-					$component				= component_common::get_instance(
-						$component_model, // string model
-						$component_tipo, // string tipo
-						$new_section_id, // string section_id
-						'list', // string mode
-						$lang, // string lang
-						$section_tipo // string section_tipo
+					// search in database (this prevents duplicates when user apply this update more than once)
+					$sqo = json_decode('
+						{
+							"section_tipo": [
+								"rsc450"
+							],
+							"limit": 10,
+							"offset": 0,
+							"filter": {
+								"$and": [
+									{
+										"q": [
+											"Moved from People"
+										],
+										"q_operator": null,
+										"path": [
+											{
+												"section_tipo": "rsc450",
+												"component_tipo": "rsc452",
+												"model": "component_input_text",
+												"name": "Typology"
+											}
+										],
+										"q_split": true,
+										"type": "jsonb"
+									}
+								]
+							}
+						}
+					');
+					$search = search::get_instance(
+						$sqo // object sqo
 					);
-					// related component can save his data as block
-					if( $is_related	=== true ){
-						$component->set_dato( $value );
-						$component->Save();
+					$check_search		= $search->search();
+					$check_ar_records	= $check_search->ar_records;
+					if(count($check_ar_records)>0) {
+
+						$record = $check_ar_records[0];
+
+						$new_section_id = $record['section_id'];
+
 					}else{
-						// literal comonents needs to save his data by language
-						foreach ($value as $current_lang => $current_value) {
-							$component->set_lang( $current_lang );
-							$component->set_dato( $current_value );
+
+						// create new section to save new data
+						// new section will be the locator to add into the records
+						$new_section = section::get_instance(
+							null, // string|null section_id
+							$section_tipo // string section_tipo
+						);
+						$new_section_id = $new_section->Save();
+
+						// create new component with the specification
+						$component_model		= RecordObj_dd::get_modelo_name_by_tipo( $component_tipo );
+						// check if the component is a related to be save as block, else create component for every lang.
+						$relation_components	= component_relation_common::get_components_with_relations();
+						$is_related				= in_array( $component_model, $relation_components );
+						// set the main lang of the component as translatable or not (for literals the lang will be change)
+						$translatable			= RecordObj_dd::get_translatable( $component_tipo );
+						$lang					= $translatable === true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$component				= component_common::get_instance(
+							$component_model, // string model
+							$component_tipo, // string tipo
+							$new_section_id, // string section_id
+							'list', // string mode
+							$lang, // string lang
+							$section_tipo // string section_tipo
+						);
+						// related component can save his data as block
+						if( $is_related	=== true ){
+							$component->set_dato( $value );
 							$component->Save();
+						}else{
+							// literal components needs to save his data by language
+							foreach ($value as $current_lang => $current_value) {
+								$component->set_lang( $current_lang );
+								$component->set_dato( $current_value );
+								$component->Save();
+							}
 						}
 					}
+
 					// fix new locator with the new section created
 					// take account that the value is not the component value because this action use a related component to set the value
 					$locator = new locator();
@@ -2034,7 +2080,7 @@ class transform_data {
 						$locator->set_from_component_tipo( $from_component_tipo );
 						$locator->set_type( $type );
 
-					// set new locator into the cache to be used nex time
+					// set new locator into the cache to be used next time
 					$cache_set_move_identification_value[$cache_key] = $locator;
 				}
 
