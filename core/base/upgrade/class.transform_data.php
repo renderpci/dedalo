@@ -1344,13 +1344,23 @@ class transform_data {
 	* counter for the new section: 87
 	* new section_id : 92
 	* @param array $ar_tables
+	* [
+	* 	'matrix_users',
+	*	'matrix_projects',
+	*	'matrix',
+	*	'matrix_list'...
+	* ]
 	* @param array $json_files
+	* [
+	*	"people_rsc194_to_rsc197.json", ..
+	* ]
 	* @return bool
 	*/
 	public static function changes_in_locators(array $ar_tables, array $json_files) : bool {
 
 		// disable activity log
 			logger_backend_activity::$enable_log = false;
+
 
 		debug_log(__METHOD__ . PHP_EOL
 			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -1390,11 +1400,6 @@ class transform_data {
 			// ar_old_section_tipo without keys like ["rsc194"]
 			$ar_old_section_tipo = array_map(function($el){
 				return $el->old;
-			}, $ar_section_elements, []);
-
-			// ar_new_section_tipo without keys like ["rsc194"]
-			$ar_new_section_tipo = array_map(function($el){
-				return $el->new;
 			}, $ar_section_elements, []);
 
 		// counter of the new sections.
@@ -1447,15 +1452,15 @@ class transform_data {
 						print_cli(common::$pdata);
 					}
 
-
 				// section_tipo. All tables has section_tipo
 				if( isset($section_tipo) && isset($ar_transform_map[$section_tipo]) ){
 
 					// new section_id
-						$base_section_id 	= $ar_transform_map[$section_tipo]->base_counter;
+						$base_section_id	= $ar_transform_map[$section_tipo]->base_counter;
 						$new_section_id		= (int)$section_id + (int)$base_section_id;
 
-					$new_section_tipo	= $ar_transform_map[$section_tipo]->new;
+					// new section tipo
+						$new_section_tipo = $ar_transform_map[$section_tipo]->new;
 
 					// add data to new section
 					// create data to identify the moved from previous records
@@ -1464,8 +1469,8 @@ class transform_data {
 							$process = $ar_transform_map[$section_tipo]->add_data_to_new_section;
 							foreach ($process as $fn_object) {
 								$fn 		= $fn_object->fn;
-								$fn_class 	= explode("::", $fn)[0];
-								$fn_method 	= explode("::", $fn)[1];
+								$fn_class 	= explode('::', $fn)[0];
+								$fn_method 	= explode('::', $fn)[1];
 								// check method already exists
 									if(!method_exists($fn_class, $fn_method)) {
 										debug_log(__METHOD__
@@ -1528,8 +1533,8 @@ class transform_data {
 					// in those case the change only is applied to this component
 					if ($table==='matrix_activity') {
 
-						$activity_data = $datos;
-						$old_activity_data = json_encode($activity_data);
+						$activity_data		= $datos;
+						$old_activity_data	= json_encode($activity_data);
 
 						//activity data is set into the dd551 component
 						$dd551_value = $datos->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? null;
@@ -1607,7 +1612,6 @@ class transform_data {
 
 							$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 							$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_activity_data, $id ));
-
 							if($result===false) {
 								$msg = "Failed Update section_data ($table) $id";
 								debug_log(__METHOD__
@@ -1671,7 +1675,7 @@ class transform_data {
 						$new_dato_encoded = json_encode( $new_tm_value );
 
 						//check if the data has been changed, if yes, save it.
-						if($old_dato_encoded !== $new_dato_encoded ){
+						if($old_dato_encoded !== $new_dato_encoded){
 							$strQuery	= "UPDATE $table SET dato = $1 WHERE id = $2 ";
 							$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato_encoded, $id ));
 							if($result===false) {
@@ -1897,7 +1901,7 @@ class transform_data {
 
 		$string				= $options->string;
 		$ar_transform_map	= $options->ar_transform_map;
-		//get all locator in the middle of the string
+		// get all locator in the middle of the string
 		// locator is identified as:
 		// text	'data:{'section_tipo':'rsc194','section_id':'1'}:data' text
 		$regex = '/data:({.*?}):data/m';
@@ -1945,7 +1949,6 @@ class transform_data {
 
 		return $string;
 	}//end replace_locator_in_string
-
 
 
 
