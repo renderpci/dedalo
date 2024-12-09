@@ -1801,6 +1801,11 @@ function safe_tipo(string $tipo) : string|bool {
 */
 function safe_section_id( string|int $section_id ) : string|int|bool {
 
+	// temp case. Allow temp name for temporal sections
+	if ($section_id===DEDALO_SECTION_ID_TEMP) {
+		return $section_id;
+	}
+
 	preg_match("/^[0-9]+$/", (string)$section_id, $output_array);
 	if (empty($output_array[0])) {
 		return false;
