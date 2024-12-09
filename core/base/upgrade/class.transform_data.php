@@ -1349,6 +1349,9 @@ class transform_data {
 	*/
 	public static function changes_in_locators(array $ar_tables, array $json_files) : bool {
 
+		// disable activity log
+			logger_backend_activity::$enable_log = false;
+
 		debug_log(__METHOD__ . PHP_EOL
 			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 			. " CONVERTING ... " . PHP_EOL
@@ -1709,6 +1712,9 @@ class transform_data {
 				}//end if( isset($dato) )
 			}//end anonymous function
 		);
+
+		// re-enable activity log
+			logger_backend_activity::$enable_log = true;
 
 
 		return true;
