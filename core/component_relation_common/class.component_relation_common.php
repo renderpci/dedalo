@@ -2953,7 +2953,7 @@ class component_relation_common extends component_common {
 		// but not the locator [{"section_tipo":"oh1","section_id":"1"}] it's valid JSON
 			if (is_string($value) || is_int($value)) {
 
-				// $target_section_tipo
+				// target_section_tipo
 					if( empty($target_section_tipo) ) {
 
 						$ar_target_section_tipo = $this->get_ar_target_section_tipo();
@@ -2969,7 +2969,7 @@ class component_relation_common extends component_common {
 								$failed->section_id		= $this->section_id;
 								$failed->data			= stripslashes( $import_value );
 								$failed->component_tipo	= $this->get_tipo();
-								$failed->msg			= 'IGNORED: Try to import multiple section_tipo without clear target ';
+								$failed->msg			= 'IGNORED: Trying to import multiple section_tipo without clear target ';
 							$response->errors[] = $failed;
 
 							return $response;
@@ -2978,6 +2978,7 @@ class component_relation_common extends component_common {
 
 						// check valid target_section_tipo
 						if (!safe_tipo($target_section_tipo)) {
+
 							debug_log(__METHOD__
 								." Trying to import invalid target_section_tipo" .PHP_EOL
 								.' section_id: '. to_string($target_section_tipo)
@@ -2988,7 +2989,7 @@ class component_relation_common extends component_common {
 								$failed->section_id		= $this->section_id;
 								$failed->data			= to_string( $import_value );
 								$failed->component_tipo	= $this->get_tipo();
-								$failed->msg			= 'IGNORED: Try to import invalid target_section_tipo';
+								$failed->msg			= 'IGNORED: Trying to import invalid target_section_tipo';
 							$response->errors[] = $failed;
 
 							return $response;
@@ -3000,6 +3001,7 @@ class component_relation_common extends component_common {
 
 					// section_id. Check if section_id value is valid
 					if (!safe_section_id($section_id)) {
+
 						debug_log(__METHOD__
 							." Trying to import invalid section_id" .PHP_EOL
 							.' section_id: '. to_string($section_id)
@@ -3010,7 +3012,7 @@ class component_relation_common extends component_common {
 							$failed->section_id		= $this->section_id;
 							$failed->data			= to_string( $import_value );
 							$failed->component_tipo	= $this->get_tipo();
-							$failed->msg			= 'IGNORED: Try to import invalid section_id';
+							$failed->msg			= 'IGNORED: Trying to import invalid section_id';
 						$response->errors[] = $failed;
 
 						return $response;
@@ -3053,7 +3055,7 @@ class component_relation_common extends component_common {
 								$failed->section_id		= $this->section_id;
 								$failed->data			= to_string( $import_value );
 								$failed->component_tipo	= $this->get_tipo();
-								$failed->msg			= 'IGNORED: Try to import invalid locator';
+								$failed->msg			= 'IGNORED: Trying to import invalid locator';
 							$response->errors[] = $failed;
 
 							return $response;
