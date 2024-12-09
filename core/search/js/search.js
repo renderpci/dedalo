@@ -703,8 +703,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 	let operator_value = '$and' // Default (first level)
 
 	// Get search_group direct children
-	const children = search_group.children
-		// console.log("children:",children);
+	const children = search_group.children || []
 
 	// Iterate to find .search_group_operator div
 	const len = children.length
