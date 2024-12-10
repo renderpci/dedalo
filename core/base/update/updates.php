@@ -7,18 +7,18 @@ $updates = new stdClass();
 
 
 
-$v=630; #####################################################################################
+$v=640; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
 	$updates->$v->version_major			= 6;
-	$updates->$v->version_medium		= 3;
+	$updates->$v->version_medium		= 4;
 	$updates->$v->version_minor			= 0;
 
 	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
-	$updates->$v->update_from_medium	= 2;
-	$updates->$v->update_from_minor		= 9;
+	$updates->$v->update_from_medium	= 3;
+	$updates->$v->update_from_minor		= 0;
 
 	// alert
 		$alert					= new stdClass();
@@ -77,6 +77,117 @@ $updates->$v = new stdClass();
 				$script_obj->script_class	= "transform_data";
 				$script_obj->script_method	= "generate_all_main_ontology_sections";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+
+
+$v=630; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 3;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 9;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<br>This update will change your data, it will move `People` records to `People under study` changing the section_id of `People` data.
+			<br>
+			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
+			<br>The minimum version of Ontology need to be: <b>Dédalo 2024-12-01T00:00:00+01:00 Benimamet</b>
+			<br>
+			<br>This update follow the plan defined in <a href=https://agora.dedalo.dev/d/153-people-transformation-plan>agora</a>, please read it previously carefully.
+			<br>
+			<br><strong>It is highly recommended to make a backup</strong> prior to applying this update.
+			<br>
+			<br>After update. remove access to `People` for all users to keep section without new data. It will be removed in next ontology updates.
+			<br>
+			<br>Note: If you want to preserve two sections for people, you will need to change your ontology and your data by you own as it is defined in <strong>Optional step</strong> the agora topic.
+			<br>
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			$ar_tables = [
+				// 'new_matrix'
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_counter',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_time_machine'
+			];
+			$json_files =[
+				'people_rsc194_to_rsc197.json'
+			];
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Move data from section: People => People under study | rsc194 => rsc197";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "changes_in_locators";
+				$script_obj->script_vars	= [
+					$ar_tables,
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// Update the relations table
+			$ar_tables_to_update = [
+				'matrix',
+				'matrix_activities',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_indexations',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_notes',
+				'matrix_projects'
+			];
+			$table_to_update = new stdClass();
+				$table_to_update->tables =  implode(',', $ar_tables_to_update);
+			$script_obj = new stdClass();
+				$script_obj->info			= "Recreate the relations table with new tipos";
+				$script_obj->script_class	= "area_maintenance";
+				$script_obj->script_method	= "regenerate_relations";
+				$script_obj->script_vars	= [
+					$table_to_update
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// fix rsc197 counter
+			$script_obj = new stdClass();
+				$script_obj->info			= "Consolidate counter for People under study rsc197";
+				$script_obj->script_class	= "counter";
+				$script_obj->script_method	= "modify_counter";
+				$script_obj->script_vars	= [
+					'rsc197',
+					'fix'
+				]; // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
 
