@@ -100,9 +100,9 @@ $updates->$v = new stdClass();
 
 		$alert->command			= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
-			<br>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.
+			<br>The update prepares your database for the upcoming version 6.4.0 in which the old ontology editor will be removed.
 			<br>
-			<br>The 6.3 update will be a big change into the ontology and how Dédalo works.
+			<br>The 6.4 update will be a big change into the ontology and how Dédalo works.
 			<br>
 			<br>To prepare for the transition it is necessary to change the current master server for the ontology after applying this update.
 			<br>Therefore you will need to change it into <b>config.php</b> the next constants.
