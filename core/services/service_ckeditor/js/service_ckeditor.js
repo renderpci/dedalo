@@ -961,11 +961,17 @@ export const service_ckeditor = function() {
 
 	/**
 	* SET_SELECTION_FROM_TAG
+	* Set text selection from given tag
 	* @param object|null tag_obj
-	* Tag object with all parameters for search the tag inside the model structure of ckeditor
-	* @return void
+	*  Tag object with all parameters for search the tag inside the model structure of ckeditor
+	* @return bool
 	*/
 	this.set_selection_from_tag = function(tag_obj) {
+
+		// check tag object
+			if(!tag_obj){
+				return false
+			}
 
 		// short vars
 			const self = this
@@ -973,11 +979,12 @@ export const service_ckeditor = function() {
 		// Check the tag to be the type reference
 		// reference tags don't need find the in and out because it has a close node
 		// <reference>text to be selected</reference>
-			if(tag_obj || (tag_obj.type==='reference')){
+			if(tag_obj.type==='reference'){
 
 				const editor = self.editor
 
 				const tag_reference	= self.get_view_tag(tag_obj)
+
 				editor.editing.view.change((writer) => {
 					writer.setSelection( tag_reference, 'on' );
 				});
@@ -986,7 +993,7 @@ export const service_ckeditor = function() {
 		// Index tags has a span to mark the in and other span to mark out as:
 		// <span data.type="indexIn"></span>text to be selected<span data.type="indexOut"></span>
 		// Check the tag to be the type indexXX
-			if(!tag_obj || (tag_obj.type!=='indexIn' && tag_obj.type!=='indexOut')){
+			if(tag_obj.type!=='indexIn' && tag_obj.type!=='indexOut'){
 				return false
 			}
 
@@ -1006,6 +1013,8 @@ export const service_ckeditor = function() {
 			}else{
 				console.warn('Invalid tag_view_in/tag_view_out:', tag_view_in, tag_view_out);
 			}
+
+		return true
 	}//end set_selection_from_tag
 
 
