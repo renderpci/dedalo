@@ -699,28 +699,27 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 /**
 * GET_SEARCH_GROUP_OPERATOR
-* @param object search_group
+* Resolves current group operator from DOM
+* @param HTMLElement search_group
+* 	<div class="search_group column_2" data-id="1"><div class="operator search_group_operator and" data-value="$and">and [1]</div>..</div>
 * @return string operator_value
 * 	Like '$and' | '$or'
 */
 search.prototype.get_search_group_operator = function(search_group) {
 
-	let operator_value = '$and' // Default (first level)
-
 	// Get search_group direct children
-	const children = search_group.children
-		// console.log("children:",children);
+	const children = search_group.children || []
 
 	// Iterate to find .search_group_operator div
 	const len = children.length
 	for (let i = 0; i < len; i++) {
 		if(children[i].classList.contains('search_group_operator')) {
-			operator_value = children[i].dataset.value;
-			break;
+			// operator found
+			return children[i].dataset.value;
 		}
 	}
 
-	return operator_value
+	return '$and' // Default (first level)
 }//end get_search_group_operator
 
 
