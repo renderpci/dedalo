@@ -121,7 +121,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// ontology_processes *
 			$item = new stdClass();
 				$item->id		= 'ontology_processes';
@@ -139,21 +138,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// move_tld
-			$item = new stdClass();
-				$item->id		= 'move_tld';
-				$item->type		= 'widget';
-				$item->label	= 'Move TLD';
-				$item->value	= (object)[
-					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files.<br>
-							   Note that this can be a very long process because it has to go through all the records in all the tables.',
-					'files' => area_maintenance::get_definitions_files()
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
-
 		// register_tools *
 			$item = new stdClass();
 				$item->id		= 'register_tools';
@@ -162,7 +146,6 @@ class area_maintenance extends area_common {
 				$item->label	= label::get_label('registrar_herramientas');
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// move_tld
 			$item = new stdClass();
@@ -191,7 +174,6 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// build_structure_css
 			// $item = new stdClass();
