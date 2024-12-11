@@ -49,97 +49,30 @@ class ontology {
 
 
 	/**
-	* GET_ONTOLOGY_MAIN_FrOM_TLD
-	* Find the matrix record of ontology main from a given tld
-	* sample: dd --> section_tipo: ontology35, section_id: 1
-	* @param string $tld
-	* @return object|null $row
-	*/
-	public static function get_ontology_main_from_tld( string $tld ) : ?object {
-
-		$safe_tld = safe_tld( $tld );
-
-		$filter = json_decode( '
-			{
-				"$and": [{
-					"q_operator": "==",
-					"q": "'.$safe_tld.'",
-					"path": [{
-						"section_tipo": "'.self::$main_section_tipo.'",
-						"component_tipo": "hierarchy6"
-					}]
-				}]
-			}
-		');
-
-		$sqo = new search_query_object();
-			$sqo->set_section_tipo( [self::$main_section_tipo] );
-			$sqo->set_filter( $filter );
-			$sqo->set_limit( 1 );
-
-		$search = search::get_instance(
-			$sqo, // object sqo
-		);
-		$response	= $search->search();
-		$ar_records	= $response->ar_records;
-
-		$row = $ar_records[0] ?? null;
-
-
-		return $row;
-	}//end get_ontology_main_from_tld
-
-
-
-	/**
-	* GET_ONTOLOGY_MAIN_FORM_TARGET_SECTION_TIPO
-	* Find the matrix row of the ontology main from a given target section tipo as ontology matrix row
-	* ontology40 --> section_tipo: ontology35, section_id: 1
-	* @param string $target_section_tipo
-	* @return object|null $row
-	*/
-	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
-
-		$safe_tipo = safe_tipo( $target_section_tipo );
-
-		$filter = json_decode( '
-			{
-				"$and": [{
-					"q_operator": "==",
-					"q": "'.$safe_tipo.'",
-					"path": [{
-						"section_tipo": "'.self::$main_section_tipo.'",
-						"component_tipo": "hierarchy53"
-					}]
-				}]
-			}
-		');
-
-		$sqo = new search_query_object();
-			$sqo->set_section_tipo( [self::$main_section_tipo] );
-			$sqo->set_filter( $filter );
-			$sqo->set_limit( 1 );
-
-		$search = search::get_instance(
-			$sqo, // object sqo
-		);
-		$response	= $search->search();
-		$ar_records	= $response->ar_records;
-
-		$row = $ar_records[0] ?? null;
-
-
-		return $row;
-	}//end get_ontology_main_form_target_section_tipo
-
-
-
-	/**
 	* ADD_SECTION_RECORD_FROM_JER_DD
 	* Transforms jer_dd row (from DDBB) into matrix ontology row (section record).
 	* @param object $jer_dd_row
+	* Sample:
+		* {
+		*	"id": "16028305",
+		*	"terminoID": "test102",
+		*	"parent": "test45",
+		*	"modelo": "dd1747",
+		*	"esmodelo": "no",
+		*	"esdescriptor": "si",
+		*	"visible": "si",
+		*	"norden": "28",
+		*	"tld": "test",
+		*	"traducible": "no",
+		*	"relaciones": "null",
+		*	"propiedades": null,
+		*	"properties": null,
+		*	"term2": null,
+		*	"term": "{\"lg-spa\": \"section_id\"}"
+		* }
 	* @param string $target_section_tipo
 	* @return bool
+	* @test true
 	*/
 	public static function add_section_record_from_jer_dd( object $jer_dd_row ) : bool {
 
@@ -369,8 +302,96 @@ class ontology {
 
 
 	/**
+	* GET_ONTOLOGY_MAIN_FROM_TLD
+	* Find the matrix record of ontology main from a given tld
+	* sample: dd --> section_tipo: ontology35, section_id: 1
+	* @param string $tld
+	* @return object|null $row
+	* @test true
+	*/
+	public static function get_ontology_main_from_tld( string $tld ) : ?object {
+
+		$safe_tld = safe_tld( $tld );
+
+		$filter = json_decode( '
+			{
+				"$and": [{
+					"q_operator": "==",
+					"q": "'.$safe_tld.'",
+					"path": [{
+						"section_tipo": "'.self::$main_section_tipo.'",
+						"component_tipo": "hierarchy6"
+					}]
+				}]
+			}
+		');
+
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo( [self::$main_section_tipo] );
+			$sqo->set_filter( $filter );
+			$sqo->set_limit( 1 );
+
+		$search = search::get_instance(
+			$sqo, // object sqo
+		);
+		$response	= $search->search();
+		$ar_records	= $response->ar_records;
+
+		$row = $ar_records[0] ?? null;
+
+
+		return $row;
+	}//end get_ontology_main_from_tld
+
+
+
+	/**
+	* GET_ONTOLOGY_MAIN_FORM_TARGET_SECTION_TIPO
+	* Find the matrix row of the ontology main from a given target section tipo as ontology matrix row
+	* sample: ontology45 --> section_tipo: ontology35, section_id: 4
+	* @param string $target_section_tipo
+	* @return object|null $row
+	* @test true
+	*/
+	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
+
+		$safe_tipo = safe_tipo( $target_section_tipo );
+
+		$filter = json_decode( '
+			{
+				"$and": [{
+					"q_operator": "==",
+					"q": "'.$safe_tipo.'",
+					"path": [{
+						"section_tipo": "'.self::$main_section_tipo.'",
+						"component_tipo": "hierarchy53"
+					}]
+				}]
+			}
+		');
+
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo( [self::$main_section_tipo] );
+			$sqo->set_filter( $filter );
+			$sqo->set_limit( 1 );
+
+		$search = search::get_instance(
+			$sqo, // object sqo
+		);
+		$response	= $search->search();
+		$ar_records	= $response->ar_records;
+
+		$row = $ar_records[0] ?? null;
+
+
+		return $row;
+	}//end get_ontology_main_form_target_section_tipo
+
+
+
+	/**
 	* ASSIGN_RELATIONS_FROM_JER_DD
-	* Once the matrix records of jer_dd parse is set
+	* Once the matrix records of jer_dd parse is set,
 	* it is possible to assign the relations between nodes.
 	* Get the relations column in jer_dd and set it as component_portal locator pointed to other matrix ontology record.
 	* @param string $tld
