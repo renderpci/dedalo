@@ -2323,6 +2323,14 @@ function is_empty_dato(mixed $dato) : bool {
 
 	switch (true) {
 
+		case is_object($dato):
+
+			$value = (array)$dato;
+			if (!is_empty_dato($value)) {
+				return false;
+			}
+			return true;
+
 		case is_array($dato):
 
 			foreach ($dato as $value) {
