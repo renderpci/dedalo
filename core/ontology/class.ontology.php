@@ -396,6 +396,7 @@ class ontology {
 	* Get the relations column in jer_dd and set it as component_portal locator pointed to other matrix ontology record.
 	* @param string $tld
 	* @return bool
+	* @test true
 	*/
 	public static function assign_relations_from_jer_dd( string $tld) : bool {
 
@@ -456,6 +457,7 @@ class ontology {
 	* Find the ontology nodes as matrix rows and order by the jer_dd definition.
 	* @param string $tld
 	* @return bool
+	* @test true
 	*/
 	public static function reorder_nodes_from_jer_dd( string $tld ) : bool {
 
@@ -513,6 +515,7 @@ class ontology {
 	* Or local ontology defined by every institution as es, qdp, mupreva, etc
 	* @param string $tld
 	* @return int|string|null $main_section_id
+	* @test true
 	*/
 	public static function add_main_section( string $tld ) : int|string|null {
 
@@ -550,7 +553,7 @@ class ontology {
 		$ontology_main = self::get_ontology_main_from_tld( $tld );
 		if( !empty($ontology_main) ){
 			debug_log(__METHOD__
-				. " Ignored to add new main ontology with this tld, the main ontology already exists, don't use this function to change the main ontology section." . PHP_EOL
+				. " Ignored to add new main ontology with this tld, the main ontology already exists ($ontology_main->section_id), don't use this function to change the main ontology section." . PHP_EOL
 				. ' tld: ' . to_string( $tld )
 				, logger::WARNING
 			);
@@ -624,20 +627,19 @@ class ontology {
 
 	/**
 	* CREATE_JER_DD_LOCAL_ONTOLOGY_SECTION_NODE
-	* Create new jer_dd row with localontology tld for the local tlds
-	* Used to creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc
-	* Is necessary a jer_dd row to represent it.
+	* Creates new jer_dd row with localontology tld for the local tlds
+	* Used for the creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc
+	* A jer_dd row is needed to represent it.
 	* @param string $tld
 	* @return string $term_id
 	*/
-	public static function create_jer_dd_local_ontology_section_node( string $tld ) : string {
+	public function create_jer_dd_local_ontology_section_node( string $tld ) : string {
 
 		// check local ontology node definition in jer_dd
 		// localontology1 is a root node of all local tld of the entities
 		// the node is not sync by master server definition and need to be created locally
 		// if the node exits use it as parent node.
 			$local_ontology_row_data = RecordObj_dd::get_row_data('localontology1');
-
 			if( empty($local_ontology_row_data) ){
 
 				$local_ontology_RecordObj_dd = new RecordObj_dd('localontology1');
@@ -662,13 +664,13 @@ class ontology {
 					}
 				');
 				$local_ontology_RecordObj_dd->set_term( $local_ontology_term );
-				$id = $local_ontology_RecordObj_dd->insert();
+				$local_ontology_RecordObj_dd->insert();
 			}
 
-		$tld_RecordObj_dd = new RecordObj_dd(null, 'localontology');
-		$last_id = $tld_RecordObj_dd->get_last_section_id_from_tld();
+		$tld_RecordObj_dd	= new RecordObj_dd(null, 'localontology');
+		$last_id			= $tld_RecordObj_dd->get_last_section_id_from_tld();
+		$terminoID			= 'localontology'.( $last_id+1 );
 
-		$terminoID = 'localontology'.( $last_id+1 );
 		$RecordObj_dd = new RecordObj_dd($terminoID);
 			$RecordObj_dd->set_parent('localontology1');
 			$RecordObj_dd->set_modelo('dd6');

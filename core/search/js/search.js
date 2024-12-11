@@ -707,6 +707,12 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 */
 search.prototype.get_search_group_operator = function(search_group) {
 
+	const default_operator = '$and'
+
+	if (!search_group) {
+		return default_operator // Default (first level)
+	}
+
 	// Get search_group direct children
 	const children = search_group.children || []
 
@@ -719,7 +725,7 @@ search.prototype.get_search_group_operator = function(search_group) {
 		}
 	}
 
-	return '$and' // Default (first level)
+	return default_operator // Default (first level)
 }//end get_search_group_operator
 
 
