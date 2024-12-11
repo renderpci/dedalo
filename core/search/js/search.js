@@ -6,6 +6,7 @@
 
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
@@ -156,9 +157,13 @@ search.prototype.init = async function(options) {
 				mode : self.mode
 			})
 			// Set as changed, it will fire the event to save the temp search section (temp preset)
-			self.update_state({
-				state : 'changed'
-			})
+			dd_request_idle_callback(
+				() => {
+					self.update_state({
+						state : 'changed'
+					})
+				}
+			)
 			// show save animation. add save_success class to component wrappers (green line animation)
 			ui.component.exec_save_successfully_animation(instance)
 			// set instance as changed or not based on their value
@@ -803,6 +808,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 * Save editing preset
 * get the save state of the presets
 * @param object options
+* {
+*	"state": "changed"
+* }
 * @return bool
 */
 search.prototype.update_state = async function(options) {

@@ -27,9 +27,10 @@ class ontology {
 	* Iterate all given $jer_dd_rows and creates a section row for each one
 	* @see transform_data::generate_all_main_ontology_sections
 	* @param array $jer_dd_rows
-	* @return void
+	* @return bool
+	* @test true
 	*/
-	public static function ceate_ontology_records( array $jer_dd_rows ) {
+	public static function ceate_ontology_records( array $jer_dd_rows ) : bool {
 
 		foreach ($jer_dd_rows as $jer_dd_row) {
 			$result = self::add_section_record_from_jer_dd( $jer_dd_row );
