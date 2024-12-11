@@ -2207,7 +2207,7 @@ class transform_data {
 
 						$record = $check_ar_records[0];
 
-						$new_section_id = $record['section_id'];
+						$new_section_id = $record->section_id;
 
 					}else{
 
