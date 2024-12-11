@@ -6,6 +6,7 @@
 
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
@@ -156,9 +157,13 @@ search.prototype.init = async function(options) {
 				mode : self.mode
 			})
 			// Set as changed, it will fire the event to save the temp search section (temp preset)
-			self.update_state({
-				state : 'changed'
-			})
+			dd_request_idle_callback(
+				() => {
+					self.update_state({
+						state : 'changed'
+					})
+				}
+			)
 			// show save animation. add save_success class to component wrappers (green line animation)
 			ui.component.exec_save_successfully_animation(instance)
 			// set instance as changed or not based on their value
@@ -694,13 +699,19 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 /**
 * GET_SEARCH_GROUP_OPERATOR
-* @param object search_group
+* Resolves current group operator from DOM
+* @param HTMLElement search_group
+* 	<div class="search_group column_2" data-id="1"><div class="operator search_group_operator and" data-value="$and">and [1]</div>..</div>
 * @return string operator_value
 * 	Like '$and' | '$or'
 */
 search.prototype.get_search_group_operator = function(search_group) {
 
-	let operator_value = '$and' // Default (first level)
+	const default_operator = '$and'
+
+	if (!search_group) {
+		return default_operator // Default (first level)
+	}
 
 	// Get search_group direct children
 	const children = search_group.children || []
@@ -709,12 +720,12 @@ search.prototype.get_search_group_operator = function(search_group) {
 	const len = children.length
 	for (let i = 0; i < len; i++) {
 		if(children[i].classList.contains('search_group_operator')) {
-			operator_value = children[i].dataset.value;
-			break;
+			// operator found
+			return children[i].dataset.value;
 		}
 	}
 
-	return operator_value
+	return default_operator // Default (first level)
 }//end get_search_group_operator
 
 
@@ -802,6 +813,9 @@ search.prototype.get_search_group_operator = function(search_group) {
 * Save editing preset
 * get the save state of the presets
 * @param object options
+* {
+*	"state": "changed"
+* }
 * @return bool
 */
 search.prototype.update_state = async function(options) {

@@ -211,7 +211,7 @@ class section extends common {
 
 		// check tipo
 			if (empty($tipo)) {
-				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
+				throw new Exception("Error: on __construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
 			}
 
 		// uid
