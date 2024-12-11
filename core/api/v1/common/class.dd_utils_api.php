@@ -1363,6 +1363,9 @@ final class dd_utils_api {
 	public static function get_process_status(object $rqo) {
 		$start_time=start_time();
 
+		// max_execution_time
+			ini_set('max_execution_time', 36000); // seconds ( 3600 * 10 ) = 10 hours
+
 		// session unlock
 			session_write_close();
 
@@ -1380,7 +1383,7 @@ final class dd_utils_api {
 			header("Cache-Control: no-cache, must-revalidate");
 			header('Connection: keep-alive');
 			header("Access-Control-Allow-Origin: *");
-			header('X-Accel-Buffering: no'); // nginex buffer control
+			header('X-Accel-Buffering: no'); // nginx buffer control
 
 		// mandatory vars
 			if (empty($pfile) || empty($pid)) {

@@ -492,7 +492,7 @@ class area_graph extends area_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$response->strQuery = $search_result->strQuery;
-				$response->debug[] = exec_time_unit($start_time);
+				$response->debug = [exec_time_unit($start_time)];
 			}
 
 

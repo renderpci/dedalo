@@ -55,7 +55,7 @@ class tool_import_marc21 extends tool_common {
 
 			// ddo_map
 			$ar_ddo_map = $tool_config->ddo_map;
-			$imput_components_section_tipo	= [];	// all different used section tipo in section_temp
+			$input_components_section_tipo	= [];	// all different used section tipo in section_temp
 
 			// read Marc21 file format:
 				$ar_marc21_files_data = array_filter($files_data, function($el) {
@@ -65,7 +65,7 @@ class tool_import_marc21 extends tool_common {
 				$user_id = logged_user_id();
 				$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
-				$ar_procesing_info = [];
+				$ar_processing_info = [];
 
 			// data
 				foreach ($ar_marc21_files_data as $marc21_file_data) {
@@ -122,8 +122,8 @@ class tool_import_marc21 extends tool_common {
 
 						// Processing marc21 record
 							// Response track
-							$procesing_info			= new stdClass();
-							$ar_procesing_info[]	= $procesing_info;
+							$processing_info		= new stdClass();
+							$ar_processing_info[]	= $processing_info;
 
 							# Object foreach
 							foreach ($map as $element_vars) {
@@ -232,13 +232,12 @@ class tool_import_marc21 extends tool_common {
 								);
 
 								# DD_ACTION
-								if (!empty($value) && (isset($element_vars->dd_action) && $dd_action===$element_vars->dd_action)) {
+								if (!empty($value) && isset($element_vars->dd_action)) {
 
-									foreach ($dd_action as $key => $value) {
+									foreach ($element_vars->dd_action as $component_tipo_action => $component_action_value) {
 
-										$component_tipo_action	= $key;
-										$model_name				= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_action,true);
-										$component_action		= component_common::get_instance(
+										$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_action,true);
+										$component_action	= component_common::get_instance(
 											$model_name,
 											$component_tipo_action,
 											$section_id,
@@ -247,11 +246,11 @@ class tool_import_marc21 extends tool_common {
 											$section_tipo,
 											false
 										);
-										$component_action->set_dato($value);
+										$component_action->set_dato($component_action_value);
 										$component_action->Save();
 										debug_log(__METHOD__
 											." Saved dd_action. Component $component_tipo_action with dato: " . PHP_EOL
-											.' value: ' . to_string($value)
+											.' value: ' . to_string($component_action_value)
 											, logger::DEBUG
 										);
 									}
@@ -281,9 +280,9 @@ class tool_import_marc21 extends tool_common {
 								switch ($ddo->role) {
 									case 'input_component':
 
-										// imput_components_section_tipo store
-											if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
-												$imput_components_section_tipo[] = $ddo->section_tipo;
+										// input_components_section_tipo store
+											if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
+												$input_components_section_tipo[] = $ddo->section_tipo;
 											}
 
 										// component_data. Get from request and save
@@ -317,7 +316,7 @@ class tool_import_marc21 extends tool_common {
 				}//end foreach $ar_marc21_files
 
 		// Reset the temporary section of the components, for empty the fields.
-			foreach ($imput_components_section_tipo as $current_section_tipo) {
+			foreach ($input_components_section_tipo as $current_section_tipo) {
 				$temp_data_uid = $current_section_tipo .'_'. DEDALO_SECTION_ID_TEMP; // Like 'rsc197_tmp'
 				if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
 					unset( $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
@@ -412,7 +411,7 @@ class tool_import_marc21 extends tool_common {
 		$value = trim($text);
 
 
-		return (string)$value;
+		return $value;
 	}//end get_field
 
 
@@ -440,7 +439,7 @@ class tool_import_marc21 extends tool_common {
 		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$code			= pg_escape_string(DBi::_getConnection(), $marc21_id);
 
-		// JSON seach_query_object to search
+		// JSON search_query_object to search
 		$sqo = json_decode('
 		{
 			"id": "get_section_id_from_code",
@@ -475,8 +474,8 @@ class tool_import_marc21 extends tool_common {
 		}');
 
 		// search the sections that has this title
-			$search		= search::get_instance($sqo);
-			$result		= $search->search();
+			$search	= search::get_instance($sqo);
+			$result	= $search->search();
 
 		// section_id
 			$section_id = null; // Default
@@ -510,7 +509,7 @@ class tool_import_marc21 extends tool_common {
 		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$serie_name			= pg_escape_string(DBi::_getConnection(), $collection_title);
 
-		// JSON seach_query_object to search
+		// JSON search_query_object to search
 		$sqo = json_decode('
 		{
 			"id": "get_section_id_from_collections_container_title",
@@ -533,21 +532,21 @@ class tool_import_marc21 extends tool_common {
 			}
 		}');
 
-
 		// search the sections that has this title
 			$search	= search::get_instance($sqo);
 			$result	= $search->search();
 
-		$section_id = null; // Default
-		if (!empty($result->ar_records[0])) {
-			// Found it in database
-			$section_id = (int)$result->ar_records[0]->section_id;
+		// section_id
+			$section_id = null; // Default
+			if (!empty($result->ar_records[0])) {
+				// Found it in database
+				$section_id = (int)$result->ar_records[0]->section_id;
 
-			debug_log(__METHOD__
-				." Successful Founded record [$section_id] with requested code: ".to_string($collection_title)
-				, logger::DEBUG
-			);
-		}
+				debug_log(__METHOD__
+					." Successful Founded record [$section_id] with requested code: ".to_string($collection_title)
+					, logger::DEBUG
+				);
+			}
 
 
 		return $section_id;

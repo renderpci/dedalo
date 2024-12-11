@@ -43,7 +43,7 @@ class area_maintenance extends area_common {
 	public function item_make_backup() : object {
 
 		// short vars
-			$mysql_db = (defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null);
+			$mysql_db = defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null;
 
 		// item
 			$item = new stdClass();
@@ -138,20 +138,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// move_tld
-			$item = new stdClass();
-				$item->id		= 'move_tld';
-				$item->type		= 'widget';
-				$item->label	= 'Move TLD';
-				$item->value	= (object)[
-					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files.<br>
-							   Note that this can be a very long process because it has to go through all the records in all the tables.',
-					'files' => area_maintenance::get_definitions_files()
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
 		// register_tools *
 			$item = new stdClass();
 				$item->id		= 'register_tools';
@@ -160,6 +146,56 @@ class area_maintenance extends area_common {
 				$item->label	= label::get_label('registrar_herramientas');
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
+
+		// move_tld
+			$item = new stdClass();
+				$item->id		= 'move_tld';
+				$item->type		= 'widget';
+				$item->label	= 'Move TLD';
+				$item->value	= (object)[
+					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_tld.<br>
+							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+					'files' => area_maintenance::get_definitions_files( 'move_tld' )
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+		// move_locator
+			$item = new stdClass();
+				$item->id		= 'move_locator';
+				$item->type		= 'widget';
+				$item->label	= 'Move locator';
+				$item->value	= (object)[
+					'body' => 'Move locator defined map items from source (e.g. rsc194) to target (e.g. rsc197) adding new section_id based in the last section_id of destiny.<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_locator.<br>
+							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+					'files' => area_maintenance::get_definitions_files( 'move_locator' )
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+		// build_structure_css
+			// $item = new stdClass();
+			// 	$item->id		= 'build_structure_css';
+			// 	$item->type		= 'widget';
+			// 	$item->tipo		= $this->tipo;
+			// 	$item->parent	= $this->tipo;
+			// 	$item->label	= label::get_label('build_structure_css');
+			// 	$item->body		= 'Regenerate css from actual structure (Ontology)';
+			// 	$item->run[]	= (object)[
+			// 		'fn'		=> 'init_form',
+			// 		'options'	=> (object)[
+			// 			'confirm_text' => label::get_label('sure') ?? 'Sure?'
+			// 		]
+			// 	];
+			// 	$item->trigger 	= (object)[
+			// 		'dd_api'	=> 'dd_utils_api',
+			// 		'action'	=> 'build_structure_css',
+			// 		'options'	=> null
+			// 	];
+			// $widget = $this->widget_factory($item);
+			// $ar_widgets[] = $widget;
 
 		// build_install_version *
 			$item = new stdClass();
@@ -697,7 +733,6 @@ class area_maintenance extends area_common {
 		// response
 			$response->result	= true;
 			$response->msg[0]	= 'OK. All data is propagated successfully'; // Override first message
-			$response->msg		= $response->msg; // array
 
 
 		return $response;
@@ -1287,8 +1322,8 @@ class area_maintenance extends area_common {
 					: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo6_code' from 'dedalo6_code.zip'
 				$target		= DEDALO_ROOT_PATH;
 				$exclude	= ' --exclude="*/config*" --exclude="media" ';
-				$aditional 	= ''; // $is_preview===true ? ' --dry-run ' : '';
-				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
+				$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
+				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
 				$output		= shell_exec($command);
 				if ($output===null) {
 					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing rsync command. source: '.$source;
@@ -1591,7 +1626,6 @@ class area_maintenance extends area_common {
 				default:
 					$response->msg = 'Error. Invalid name';
 					return $response;
-					break;
 			}
 
 		// write_value check
@@ -1801,10 +1835,10 @@ class area_maintenance extends area_common {
 	* 	/dedalo/core/base/transform_definition_files
 	* @return array
 	*/
-	public static function get_definitions_files() : array {
+	public static function get_definitions_files( string $directory ) : array {
 
 		$files_list = get_dir_files(
-			DEDALO_CORE_PATH . '/base/transform_definition_files',
+			DEDALO_CORE_PATH . '/base/transform_definition_files/'.$directory,
 			['json'],
 			function($el) {
 
@@ -1854,7 +1888,7 @@ class area_maintenance extends area_common {
 			}
 
 		// files
-			$definitions_files	= area_maintenance::get_definitions_files();
+			$definitions_files	= area_maintenance::get_definitions_files( 'move_tld' );
 			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
 				return in_array($el->file_name, $files_selected);
 			});
@@ -1906,6 +1940,87 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end move_tld
+
+
+
+	/**
+	* MOVE_locator
+	* Transform Dédalo data from all tables replacing tipos
+	* using selected JSON file map
+	* Is called from widget 'move_locator' as process
+	* @param object $options
+	* {
+	* 	files_selected : array ['finds_numisdata279_to_tchi1.json']
+	* }
+	* @return object $response
+	*/
+	public static function move_locator(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// options
+			$files_selected = $options->files_selected;
+			if (empty($files_selected)) {
+				$response->errors[] = 'empty files_selected';
+				return $response;
+			}
+
+		// files
+			$definitions_files	= area_maintenance::get_definitions_files( 'move_locator' );
+			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
+				return in_array($el->file_name, $files_selected);
+			});
+			if (empty($json_files)) {
+				$response->errors[] = 'json_files not found';
+				return $response;
+			}
+
+			// ar_file_name
+			$ar_file_name = array_values(
+				array_map(function($el){
+					return $el->file_name;
+				}, $json_files)
+			);
+
+		// process changes_in_tipos
+			$ar_tables = [
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_counter',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_time_machine'
+			];
+			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
+			$result = transform_data::changes_in_locators(
+				$ar_tables,
+				$ar_file_name
+			);
+
+		$response->result	= $result;
+		$response->msg		= ($result===false)
+			? 'Error. changes_in_locators failed'
+			: 'OK. request done successfully';
+
+
+		return $response;
+	}//end move_locator
 
 
 

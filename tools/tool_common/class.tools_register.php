@@ -21,7 +21,7 @@ class tools_register {
 	static $tipo_developer					= 'dd1644';
 	static $tipo_dedalo_version_minimal		= 'dd1328';
 	static $section_tools_config_tipo		= 'dd996';
-	static $tipo_affeted_models				= 'dd1330';
+	static $tipo_affected_models			= 'dd1330';
 	static $tipo_properties					= 'dd1335';
 	static $tools_configuration				= 'dd999'; // tools Configuration component_json
 	static $tools_default_configuration		= 'dd1633'; // tools default Configuration component_json
@@ -54,7 +54,7 @@ class tools_register {
 			$info_objects_parsed	= [];
 			foreach ($ar_tools as $current_dir_tool) {
 
-				// basse_name
+				// basename
 					$basename = pathinfo($current_dir_tool)['basename'];
 
 				// ignore folders with name different from pattern 'tool_*'
@@ -303,7 +303,7 @@ class tools_register {
 								);
 							}
 					}
-			}
+			}//end if (!empty($info_objects_parsed))
 
 		// clean_cache. Remove previous stored data in session or files
 			tools_register::clean_cache();
@@ -528,9 +528,9 @@ class tools_register {
 			$dato    = $component->get_dato_full();
 			$value	= [];
 			if (!empty($dato)) {
-				foreach ($dato as $curent_lang => $current_value) {
+				foreach ($dato as $current_lang => $current_value) {
 					$value[] = (object)[
-						'lang'	=> $curent_lang,
+						'lang'	=> $current_lang,
 						'value'	=> reset($current_value)
 					];
 				}
@@ -585,9 +585,9 @@ class tools_register {
 			$dato	= $component->get_dato_full();
 			$value	= [];
 			if (!empty($dato)) {
-				foreach ($dato as $curent_lang => $current_value) {
+				foreach ($dato as $current_lang => $current_value) {
 					$value[] = (object)[
-						'lang'	=> $curent_lang,
+						'lang'	=> $current_lang,
 						'value'	=> $current_value
 					];
 				}
@@ -608,9 +608,9 @@ class tools_register {
 			$dato	= $component->get_dato_full();
 			$value	= [];
 			if (!empty($dato)) {
-				foreach ($dato as $curent_lang => $current_value) {
+				foreach ($dato as $current_lang => $current_value) {
 					$value[] = (object)[
-						'lang'	=> $curent_lang,
+						'lang'	=> $current_lang,
 						'value'	=> $current_value
 					];
 				}
@@ -618,7 +618,7 @@ class tools_register {
 			$tool_object->developer = $value;
 
 		// affected components (models)
-			$component_tipo	= self::$tipo_affeted_models; // 'dd1330';
+			$component_tipo	= self::$tipo_affected_models; // 'dd1330';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component		= component_common::get_instance(
@@ -827,7 +827,7 @@ class tools_register {
 				}
 
 			$tipo = $item->tipo;
-			$ar_items_childrens = array_filter($ontology, function($current_element) use($tipo){
+			$ar_items_children = array_filter($ontology, function($current_element) use($tipo){
 				return isset($current_element->parent) && $current_element->parent===$tipo;
 			});
 			$new_tld = 'tool'.++$counter;
@@ -835,7 +835,7 @@ class tools_register {
 			$item->tipo = $new_tld;
 			$item->tld 	= 'tool';
 
-			foreach ($ar_items_childrens as $key => $current_element) {
+			foreach ($ar_items_children as $key => $current_element) {
 				$ontology[$key]->parent = $new_tld;
 			}
 		}
@@ -1183,7 +1183,7 @@ class tools_register {
 		$ar_config = tools_register::get_all_config_tool();
 
 		// normalize config values
-		$ar_client_defautl_config = array_map(function($item){
+		$ar_client_default_config = array_map(function($item){
 
 			$new_config = [];
 			if( !empty($item->config) ) {
@@ -1201,10 +1201,10 @@ class tools_register {
 			return $new_item;
 		}, $ar_config);
 
-		$cache_ar_client_default_config = $ar_client_defautl_config;
+		$cache_ar_client_default_config = $ar_client_default_config;
 
 
-		return $ar_client_defautl_config;
+		return $ar_client_default_config;
 	}//end get_all_config_tool_client
 
 
