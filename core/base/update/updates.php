@@ -7,6 +7,7 @@ $updates = new stdClass();
 
 
 
+
 $v=640; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -78,6 +79,7 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "generate_all_main_ontology_sections";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
+
 
 
 
@@ -321,104 +323,6 @@ $updates->$v = new stdClass();
 				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
 				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
 			");
-
-
-
-$v=629; #####################################################################################
-$updates->$v = new stdClass();
-
-	# UPDATE TO
-	$updates->$v->version_major			= 6;
-	$updates->$v->version_medium		= 2;
-	$updates->$v->version_minor			= 9;
-
-	# MINIMUM UPDATE FROM
-	$updates->$v->update_from_major		= 6;
-	$updates->$v->update_from_medium	= 2;
-	$updates->$v->update_from_minor		= 7;
-
-	// alert
-		$alert					= new stdClass();
-		$alert->notification	= 'V '.$v;
-
-		$alert->command			= "
-			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
-			<br>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.
-			<br>
-			<br>The 6.3 update will be a big change into the ontology and how Dédalo works.
-			<br>
-			<br>To prepare for the transition it is necessary to change the current master server for the ontology after applying this update.
-			<br>Therefore you will need to change it into <b>config.php</b> the next constants.
-			<br>
-			<br>From:
-			<br><b>
-			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
-				define('STRUCTURE_SERVER_URL',			'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
-				define('DEDALO_SOURCE_VERSION_URL',			'https://master.render.es/dedalo/code/dedalo6_code.zip');
-			</pre></b>
-			<br>to:
-			<br><b>
-			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
-				define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
-				define('DEDALO_SOURCE_VERSION_URL',			'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
-			</pre></b>
-			<br>Future releases will ONLY be published on the new <b>master.dedalo.dev</b> server.
-		";
-		$updates->$v->alert_update[] = $alert;
-
-	// DATABASE UPDATES
-
-		// Add the matrix_ontology_main table
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
-				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
-				WITH (OIDS = FALSE);
-				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_main_id_seq;
-				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
-			");
-		// Add the matrix_ontology table
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-				CREATE TABLE IF NOT EXISTS public.matrix_ontology
-				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
-				WITH (OIDS = FALSE);
-				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
-				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
-			");
-
-		// Add the term column to jer_dd table
-			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
-				DO $$
-				BEGIN
-					IF NOT EXISTS(SELECT *
-						FROM information_schema.columns
-						WHERE table_name=\'jer_dd\' and column_name=\'term\')
-					THEN
-						ALTER TABLE "jer_dd"
-						ADD "term" jsonb NULL;
-						COMMENT ON TABLE "jer_dd" IS \'Term and translations\';
-					END IF;
-				END $$;
-			');
-
-		// Add the matrix_ontology_main table
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-				CREATE INDEX IF NOT EXISTS jer_dd_term
-				ON public.jer_dd USING gin
-				(term jsonb_path_ops)
-				TABLESPACE pg_default;
-			");
-
-		// RUN_SCRIPTS
-		// DATA INSIDE DATABASE UPDATES
-			if (DBi::check_table_exists('matrix_descriptors_dd')) {
-				require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-				$script_obj = new stdClass();
-					$script_obj->info			= "Copy matrix_descriptors_dd to jer_dd term column";
-					$script_obj->script_class	= "transform_data";
-					$script_obj->script_method	= "copy_descriptors_to_jer_dd";
-					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-				$updates->$v->run_scripts[] = $script_obj;
-			}
 
 
 

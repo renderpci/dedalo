@@ -55,11 +55,11 @@
 			); // $this->get_data_items();
 
 		// typologies
-			$ar_tipologies_section_id	= [];
+			$ar_typologies_section_id	= [];
 			$ar_typologies				= [];
 			foreach ($hierarchy_sections as $hierarchy_data) {
-				if (!in_array($hierarchy_data->typology_section_id, $ar_tipologies_section_id)) {
-					$ar_tipologies_section_id[] = $hierarchy_data->typology_section_id;
+				if (!in_array($hierarchy_data->typology_section_id, $ar_typologies_section_id)) {
+					$ar_typologies_section_id[] = $hierarchy_data->typology_section_id;
 					$typology = new stdClass();
 						$typology->section_id	= $hierarchy_data->typology_section_id;
 						$typology->type			= 'typology';

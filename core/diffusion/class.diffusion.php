@@ -784,6 +784,44 @@ abstract class diffusion  {
 
 
 
+	/**
+	* GET_TABLE_TIPO
+	* Resolves the table tipo from diffusion_element_tipo for current section
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @return string|null $table
+	*/
+	public static function get_table_tipo( string $diffusion_element_tipo, string $section_tipo ) : ?string {
+
+		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
+
+		$table_tipo = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
+
+		return $table_tipo;
+	}//end get_table_tipo
+
+
+
+	/**
+	* GET_TABLE_NAME
+	* Resolves the table name from diffusion_element_tipo for current section
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @return string|null $table_name
+	*/
+	public static function get_table_name( string $diffusion_element_tipo, string $section_tipo ) : ?string {
+
+		$table_tipo = diffusion_sql::get_table_tipo( $diffusion_element_tipo, $section_tipo );
+
+		$table_name = !empty($table_tipo)
+			? RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true)
+			: null;
+
+		return $table_name;
+	}//end get_table_name
+
+
+
 	// BUILD JSON DATA OUT //////////////////////////////////////////////////////////////////////
 
 

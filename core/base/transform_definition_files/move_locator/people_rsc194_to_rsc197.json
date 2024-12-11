@@ -1,0 +1,27 @@
+[{
+	"old":"rsc194",
+	"new": "rsc197",
+	"type":"section",
+	"perform":["move_tld"],
+	"add_data_to_new_section":[
+		{
+			"fn":"transform_data::set_move_identification_value",
+			"options":{
+				"action"				: "new_only_once",
+				"section_tipo"			: "rsc450",
+				"from_component_tipo"	: "rsc449",
+				"type"					: "dd151",
+				"component_tipo"		: "rsc452",
+				"value": {
+					"lg-cat": ["Mogut des de Persona"],
+					"lg-deu": ["Umgezogen aus Personen"],
+					"lg-ell": ["Μετακινήθηκε από People"],
+					"lg-eng": ["Moved from People"],
+					"lg-fra": ["Déplacé de Personnes"],
+					"lg-ita": ["Trasferito da Persone"],
+					"lg-spa": ["Movido desde Persona"]
+				}
+			}
+		}],
+	"info": "Old People section => New People under Study section"
+}]
