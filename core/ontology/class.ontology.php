@@ -633,7 +633,7 @@ class ontology {
 	* @param string $tld
 	* @return string $term_id
 	*/
-	public function create_jer_dd_local_ontology_section_node( string $tld ) : string {
+	public static function create_jer_dd_local_ontology_section_node( string $tld ) : string {
 
 		// check local ontology node definition in jer_dd
 		// localontology1 is a root node of all local tld of the entities
