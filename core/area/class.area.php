@@ -170,15 +170,15 @@ class area extends area_common  {
 
 		// short vars
 		$RecordObj_dd			= new RecordObj_dd($terminoID);
-		$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this();
-		$ar_ts_childrens_size	= sizeof($ar_ts_childrens);
+		$ar_ts_children			= $RecordObj_dd->get_ar_childrens_of_this();
+		$ar_ts_children_size	= sizeof($ar_ts_children);
 
-		if ($ar_ts_childrens_size>0) {
+		if ($ar_ts_children_size>0) {
 
-			// foreach ($ar_ts_childrens as $children_terminoID) {
-			for ($i=0; $i < $ar_ts_childrens_size; $i++) {
+			// foreach ($ar_ts_children as $children_terminoID) {
+			for ($i=0; $i < $ar_ts_children_size; $i++) {
 
-				$children_terminoID = $ar_ts_childrens[$i];
+				$children_terminoID = $ar_ts_children[$i];
 
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
 				$model			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
@@ -197,7 +197,7 @@ class area extends area_common  {
 					$ar_temp = self::get_ar_children_areas_recursive($children_terminoID);
 					$ar_children_areas_recursive = array_merge($ar_children_areas_recursive, $ar_temp);
 				}
-			}//end for ($i=0; $i < $ar_ts_childrens_size; $i++)
+			}//end for ($i=0; $i < $ar_ts_children_size; $i++)
 		}
 
 
@@ -215,7 +215,7 @@ class area extends area_common  {
 	public static function get_config_areas() : object {
 
 		// non existing config_areas.php file case
-			if( !include(DEDALO_CONFIG_PATH . '/config_areas.php') ) {
+			if( !include DEDALO_CONFIG_PATH . '/config_areas.php' ) {
 
 				debug_log(__METHOD__
 					." ERROR ON LOAD FILE config4_areas . Using empty values as default "
@@ -223,11 +223,11 @@ class area extends area_common  {
 				);
 
 				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. config4_areas file not found", 1);;
+					throw new Exception("Error Processing Request. config4_areas file not found", 1);
 				}
 
-				$areas_deny		= array();
-				$areas_allow	= array();
+				$areas_deny		= [];
+				$areas_allow	= [];
 			}
 
 		// config_areas object

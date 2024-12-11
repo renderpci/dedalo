@@ -1294,12 +1294,16 @@ component_text_area.prototype.add_component_history_note = async function(option
 * BUILD_TAG
 * Build a new annotation when user clicks on text editor button
 * @param object options
+* {
+* 	caller: object (component_text_area_instance),
+* 	text_editor: object (service_ckedito instance)
+* }
 * @return void
 */
 component_text_area.prototype.build_tag = function(options) {
 
 	// options
-		// component_text_area_insrance
+		// component_text_area instance
 		const self = options.caller
 		// get the text_editor sent by the event (button_note event)
 		const text_editor = options.text_editor

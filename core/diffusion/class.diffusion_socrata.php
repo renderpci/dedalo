@@ -81,11 +81,20 @@ class diffusion_socrata extends diffusion  {
 				return $response;
 			}
 
+		// table
+			$table_tipo			= diffusion::get_table_tipo($diffusion_element_tipo, $section_tipo);
+			$RecorObj_dd		= new RecordObj_dd($table_tipo);
+			$table_properties	= $RecorObj_dd->get_propiedades(true) ?? new stdClass();
+
 		// ar_rows. Build data (array of json_row objects) for each lang
 			$ar_rows = [];
 			$ar_all_project_langs = defined('DEDALO_DIFFUSION_LANGS')
 				? DEDALO_DIFFUSION_LANGS
 				: DEDALO_PROJECTS_DEFAULT_LANGS;
+			// overwrite langs from properties
+			if (isset($table_properties->langs)) {
+				$ar_all_project_langs = $table_properties->langs;
+			}
 			foreach ($ar_all_project_langs as $current_lang) {
 				$json_row_options = new stdClass();
 					$json_row_options->section_tipo 		  = $section_tipo;
@@ -105,7 +114,7 @@ class diffusion_socrata extends diffusion  {
 
 		// Configure final objects to build upsert bulk action
 			$socrata_delete = ':deleted';
-			$ar_socrata_rows = array_map(function($row) use($socrata_delete){
+			$ar_socrata_rows = array_map(function($row) use($socrata_delete, $table_properties){
 
 				// socrata_id. Add normalized socrata id
 				//$row->$socrata_id = $row->id;
@@ -147,10 +156,22 @@ class diffusion_socrata extends diffusion  {
 					unset($row->publication);
 				}
 
+				// exclude_columns (defined in table properties)
+				if (isset($table_properties->exclude_columns)) {
+					foreach ($table_properties->exclude_columns as $column) {
+						if (isset($row->{$column})) {
+							unset($row->{$column});
+						}
+					}
+				}
+
 				return $row;
 			}, $ar_rows);
 
 		// debug
+			// dump($table_properties, ' table_properties ++ '.to_string());
+			// dump($ar_rows, ' ar_rows ++ '.to_string());
+			// die();
 			debug_log(__METHOD__
 				." ar_socrata_rows ".json_encode($ar_socrata_rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
 				, logger::DEBUG
@@ -264,7 +285,8 @@ class diffusion_socrata extends diffusion  {
 
 		// debug
 			// errors
-			if ($response->error===true || (isset($response->Errors) && (int)$response->Errors>0)) {
+			$error = $response->error ?? $response->Errors ?? null;
+			if ($error===true || (int)$error>0) {
 				debug_log(__METHOD__
 					." !!! ERROR ON UPSERT SOCRATA RECORD ".json_encode($response, JSON_PRETTY_PRINT) . PHP_EOL
 					.' response: ' . to_string($response) . PHP_EOL

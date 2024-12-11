@@ -155,3 +155,4 @@ function logger_backend_activity(){};
 function get_base_binary_path(){};
 class Linfo{};
 class system{};
+function pg_escape_string(){};

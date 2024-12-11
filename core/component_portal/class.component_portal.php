@@ -629,7 +629,7 @@ class component_portal extends component_relation_common {
 					(object)['type' => 'autonomous_community'],
 					(object)['type' => 'province', 				'section_tipo' => 'fr2', 'section_id' => '41190'],
 					(object)['type' => 'region', 				'section_tipo' => 'fr2', 'section_id' => '41191'], // comarca
-					(object)['type' => 'municipality', 			'section_tipo' => 'fr2', 'section_id' => '41192']
+					(object)['type' => 'municipality', 			'section_tipo' => 'fr2', 'section_id' => '41193'] // commune
 				];
 				break;
 			// Cuba

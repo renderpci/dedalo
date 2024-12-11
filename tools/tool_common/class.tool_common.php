@@ -427,7 +427,7 @@ class tool_common {
 	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
 
 		// call general method
-		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
+		$full_ddo = $this->get_structure_context();
 
 
 		return $full_ddo;
@@ -1029,5 +1029,7 @@ class tool_common {
 
 		return null;
 	}//end get_tool_config
+
+
 
 }//end class tool_common
