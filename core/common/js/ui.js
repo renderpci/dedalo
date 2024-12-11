@@ -1730,6 +1730,7 @@ export const ui = {
 
 	/**
 	* TOGGLE_INSPECTOR
+	* Show/hide the section inspector when it exists
 	* @return void
 	*/
 	toggle_inspector : () => {
@@ -1738,6 +1739,9 @@ export const ui = {
 		if (inspector_wrapper) {
 
 			const wrapper_section = document.querySelector('.wrapper_section.edit')
+			if (!wrapper_section) {
+				return
+			}
 
 			if (inspector_wrapper.classList.contains('hide')) {
 				inspector_wrapper.classList.remove('hide')

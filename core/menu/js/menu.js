@@ -286,11 +286,9 @@ menu.prototype.delete_menu_local_db_data = async function() {
 /**
 * OPEN_TOOL_USER_ADMIN_HANDLER
 * Shared function to manage open tool tool_user_admin
-* @param object event e
 * @return void
 */
-menu.prototype.open_tool_user_admin_handler = function(e) {
-	e.stopPropagation();
+menu.prototype.open_tool_user_admin_handler = function() {
 
 	const self = this
 
@@ -412,6 +410,41 @@ menu.prototype.update_section_label = function(options) {
 
 	return true
 }//end update_section_label
+
+
+
+/**
+* CHANGE_LANG
+* Exec API request of selected lang (e.target.value)
+* @param object options
+* 	{
+* 		lang_type	: 'dedalo_data_lang',
+*		lang_value	: 'lg-spa'
+* 	}
+* @return promise
+* 	API request response
+*/
+menu.prototype.change_lang = async function(options) {
+
+	// options
+		const lang_type		= options.lang_type
+		const lang_value	= options.lang_value
+
+	// api call
+		const api_response = await data_manager.request({
+			use_worker	: true,
+			body		: {
+				action	: 'change_lang',
+				dd_api	: 'dd_utils_api',
+				options	: {
+					[lang_type] : lang_value
+				}
+			}
+		})
+
+
+	return api_response
+}//end change_lang
 
 
 

@@ -140,6 +140,8 @@ view_default_edit_menu.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA_EDIT
 * Render node for use in edit
+* @param object self
+*  instance of menu
 * @return HTMLElement wrapper
 */
 const get_content_data_edit = function(self) {
@@ -168,11 +170,12 @@ const get_content_data_edit = function(self) {
 			class_name		: 'dedalo_icon_top top_item',
 			parent			: fragment
 		})
-		dedalo_icon.addEventListener('click', fn_click_open)
-		function fn_click_open(e) {
+		// click event
+		const click_open_handler = (e) => {
 			e.stopPropagation()
 			window.open('https://dedalo.dev', 'Dédalo Site', []);
 		}
+		dedalo_icon.addEventListener('click', click_open_handler)
 
 	// menu_hierarchy. areas/sections hierarchy list
 		// menu tree (desktop)
@@ -194,8 +197,8 @@ const get_content_data_edit = function(self) {
 				class_name		: 'menu_mobile_icon top_item',
 				parent			: fragment
 			})
-			menu_mobile_icon.addEventListener('click', fn_menu_mobile_click)
-			function fn_menu_mobile_click(e) {
+			// click event
+			const menu_mobile_click_handler = (e) => {
 				e.stopPropagation()
 
 				if (!menu_mobile_wrapper) {
@@ -216,7 +219,8 @@ const get_content_data_edit = function(self) {
 				}else{
 					menu_mobile_wrapper.classList.toggle('hide')
 				}
-			}//end fn_menu_mobile_click
+			}
+			menu_mobile_icon.addEventListener('click', menu_mobile_click_handler)
 			let menu_mobile_wrapper = null
 
 	// ontology link
@@ -239,23 +243,15 @@ const get_content_data_edit = function(self) {
 			text_content	: username,
 			parent			: fragment
 		})
-		if (username!=='root') {
-			const fn_open_tool = function(e) {
+		if (username==='root') {
+			logged_user_name.classList.add('is_root','noevents')
+		}else{
+			// click event
+			const click_handler = function(e) {
 				e.stopPropagation();
-
-				// tool_user_admin Get the user_admin tool to be fired
-				const tool_user_admin = self.context.tools.find(el => el.model==='tool_user_admin')
-				if (!tool_user_admin) {
-					console.log('Tool user admin is not available in tools:', self.context.tools);
-				}
-
-				// open_tool (tool_common)
-				open_tool({
-					tool_context	: tool_user_admin || 'tool_user_admin',
-					caller			: self
-				})
+				self.open_tool_user_admin_handler()
 			}//end fn_open_tool
-			logged_user_name.addEventListener('click', self.open_tool_user_admin_handler.bind(self))
+			logged_user_name.addEventListener('click', click_handler)
 		}
 
 	// application lang selector
@@ -267,7 +263,8 @@ const get_content_data_edit = function(self) {
 				e.preventDefault()
 				change_lang({
 					lang_type	: 'dedalo_application_lang',
-					lang_value	: this.value
+					lang_value	: this.value,
+					self		: self
 				})
 			},
 			selected	: page_globals.dedalo_application_lang,
@@ -292,7 +289,8 @@ const get_content_data_edit = function(self) {
 					e.preventDefault()
 					change_lang({
 						lang_type	: 'dedalo_data_lang',
-						lang_value	: this.value
+						lang_value	: this.value,
+						self		: self
 					})
 				},
 				selected	: page_globals.dedalo_data_lang,
@@ -319,7 +317,12 @@ const get_content_data_edit = function(self) {
 			title			: get_label.inspector || 'Inspector',
 			parent			: fragment
 		})
-		button_toggle_inspector.addEventListener('click', ui.toggle_inspector)
+		// click event
+		const toggle_inspector_handler = (e) => {
+			e.stopPropagation()
+			ui.toggle_inspector()
+		}
+		button_toggle_inspector.addEventListener('click', toggle_inspector_handler)
 
 	// debug info bar
 		const debug_info_bar = (SHOW_DEVELOPER===true || SHOW_DEBUG===true)
@@ -465,14 +468,16 @@ const render_debug_info_bar = (self) => {
 			title			: 'Environment',
 			parent			: debug_info_bar
 		})
-		environment_link.addEventListener('click', function(e) {
+		// click event
+		const environment_click_handler = (e) => {
 			e.stopPropagation()
 			window.open(
 				DEDALO_ROOT_WEB + '/core/common/js/environment.js.php',
 				'Environment',
 				null
 			)
-		})
+		}
+		environment_link.addEventListener('click', environment_click_handler)
 
 	// ip_server
 		ui.create_dom_element({
@@ -493,17 +498,18 @@ const render_debug_info_bar = (self) => {
 * Exec API request of selected lang (e.target.value)
 * @param object options
 * 	{
-* 		lang_type	: 'dedalo_data_lang',
-*		lang_value	: 'lg-spa'
+* 		lang_type : 'dedalo_data_lang',
+*		lang_value : 'lg-spa',
+* 		self : object (menu instance)
 * 	}
-* @return promise
-* 	API request response
+* @return bool
 */
 const change_lang = async function(options) {
 
 	// options
 		const lang_type		= options.lang_type
 		const lang_value	= options.lang_value
+		const self			= options.self
 
 	// set page style as loading
 		const main = document.getElementById('main')
@@ -512,22 +518,16 @@ const change_lang = async function(options) {
 		}
 
 	// api call
-		const api_response = await data_manager.request({
-			use_worker	: true,
-			body		: {
-				action	: 'change_lang',
-				dd_api	: 'dd_utils_api',
-				options	: {
-					[lang_type] : lang_value
-				}
-			}
+		await self.change_lang({
+			lang_type,
+			lang_value
 		})
 
-	// reload window
+	// reload window after the change
 		window.location.reload(false);
 
 
-	return api_response
+	return true
 }//end change_lang
 
 
