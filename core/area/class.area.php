@@ -7,6 +7,7 @@ declare(strict_types=1);
 class area extends area_common  {
 
 
+
 	static $ar_ts_children_all_areas_hierarchized;
 
 	// CHILDREN AREAS CRITERION
@@ -153,7 +154,7 @@ class area extends area_common  {
 
 
 	/**
-	* GET AR CHILDREN AREAS RECURSIVE
+	* GET_AR_CHILDREN_AREAS_RECURSIVE
 	* Get all children areas (and sections) of current area (example: area_root)
 	* Look structure thesaurus for find children with valid model name
 	* @see get_ar_ts_children_areas
@@ -207,7 +208,7 @@ class area extends area_common  {
 
 
 	/**
-	* AREA_TO_REMOVE
+	* GET_CONFIG_AREAS
 	* Read file 'config_areas.php' from config and set
 	* areas_deny and areas_allow array values
 	* @return object $config_areas
