@@ -1798,7 +1798,7 @@ function safe_tld(string $tld) : string|bool {
 */
 function safe_tipo(string $tipo) : string|bool {
 
-	preg_match("/^[a-z]+[0-9]+$/", $tipo, $output_array);
+	preg_match("/^[a-z]{2,}[0-9]+$/", $tipo, $output_array);
 	if (empty($output_array[0])) {
 		return false;
 	}
