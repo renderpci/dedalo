@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS TOOL_IMPORT_DEDALO_CSV
 * Tool to import data into Dédalo.

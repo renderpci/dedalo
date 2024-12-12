@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 require_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * CLASS TRANSFORM_DATA

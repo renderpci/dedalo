@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * SYSTEM
 * Handle information and checks about the Dédalo system

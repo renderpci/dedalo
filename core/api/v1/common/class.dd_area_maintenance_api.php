@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1); // TEST NOT FINISHED !
+<?php declare(strict_types=1); // TEST NOT FINISHED !
 /**
 * DD_AREA_MAINTENANCE_API
 * Manage API REST data flow of the area with Dédalo

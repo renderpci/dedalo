@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS TS_OBJECT
 * Manage thesaurus hierarchical elements. Every element is a section used as thesaurus term

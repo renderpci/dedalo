@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 include_once DEDALO_CORE_PATH . '/area_maintenance/class.area_maintenance_widgets.php';
 /**

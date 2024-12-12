@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * DD_CORE_API
 * Manage API REST data with Dédalo

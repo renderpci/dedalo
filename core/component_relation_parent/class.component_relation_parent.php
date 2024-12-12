@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * COMPONENT_RELATION_PARENT
 * Class to manage parent relation between section.

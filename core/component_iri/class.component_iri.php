@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 include dirname(__FILE__) . '/class.dd_iri.php';
 /**
 * CLASS COMPONENT_IRI
