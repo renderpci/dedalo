@@ -1285,7 +1285,7 @@ class tools_register {
 
 		// delete_cache_files
 			$deleted_files = dd_cache::delete_cache_files([
-				'cache_user_tools.json'
+				tools_register::get_cache_user_tools_file_name() //	like 'cache_user_tools.json'
 			]);
 			if ($deleted_files===true) {
 				return true;
@@ -1294,6 +1294,20 @@ class tools_register {
 
 		return false;
 	}//end clean_cache
+
+
+
+	/**
+	* GET_CACHE_USER_TOOLS_FILE_NAME
+	* Normalized cache tool name
+	* Note that on save by dd_cache, file will be customized as
+	* 	'development_1_' + 'cache_user_tools.json'
+	* @return string
+	*/
+	public static function get_cache_user_tools_file_name() : string {
+
+		return 'cache_user_tools.json';
+	}//end get_cache_user_tools_file_name
 
 
 

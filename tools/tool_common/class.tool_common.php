@@ -889,7 +889,7 @@ class tool_common {
 					}
 
 				// cache file
-					$cache_file_name = 'cache_user_tools.json';
+					$cache_file_name = tools_register::get_cache_user_tools_file_name(); //	like 'cache_user_tools.json'
 					$file_cache = dd_cache::cache_from_file((object)[
 						'file_name'	=> $cache_file_name
 					]);
