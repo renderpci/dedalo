@@ -964,7 +964,6 @@ const render_delete_record_dialog = function (options) {
 			size		: 'normal', // string size small|big|normal
 			callback	: (dd_modal) => {
 				dd_modal.modal_content.style.width = '50rem'
-				dd_modal.modal_content.style.maxWidth = '100%'
 			}
 		})
 
