@@ -125,7 +125,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 	public static function get_prefix_from_tipo( string $tipo ) : string|false {
 
-		preg_match("/\D+/", $tipo, $output_array);
+		preg_match("/^[a-z]{2,}/", $tipo, $output_array);
 		if (empty($output_array[0])) {
 			debug_log(__METHOD__
 				." Error: Invalid tipo received. Impossible get_prefix_from_tipo this tipo :  " . PHP_EOL

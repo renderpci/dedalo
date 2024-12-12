@@ -1832,6 +1832,37 @@ function safe_section_id( string|int $section_id ) : string|int|bool {
 
 
 /**
+* TIPO_IN_ARRAY
+* Check if the tipo is in array
+* The given array could has a tld with '*' wildcard to indicate that all tipos of the tld are accepted.
+* ex: ontology40 will be accepted if in the array has a tld with * as: [ontology*]
+* if the array has not wildcards will be check the full string.
+* Is used in common to get tools and check the affected sections/components/etc...
+* see: tool_ontology definition.
+* @param string $tipo
+* @param array $array
+* @return bool
+*/
+function tipo_in_array( string $tipo, array $array ) : bool {
+
+	foreach ($array as $current_value) {
+		if( strpos($current_value, '*') !== false ){
+
+			$tipo_tld			= RecordObj_dd::get_prefix_from_tipo( $tipo );
+			$current_value_tld	= RecordObj_dd::get_prefix_from_tipo( $current_value );
+
+			if($tipo_tld === $current_value_tld){
+				return true;
+			}
+		}
+	}
+
+	return in_array( $tipo, $array );
+}//end tipo_in_array
+
+
+
+/**
 * FORMAT_SIZE_UNITS
 * Format bytes to more human readable unit like KG, MB, GB
 * @param int $bytes
@@ -2291,6 +2322,14 @@ function is_empty_dato(mixed $dato) : bool {
 	}
 
 	switch (true) {
+
+		case is_object($dato):
+
+			$value = (array)$dato;
+			if (!is_empty_dato($value)) {
+				return false;
+			}
+			return true;
 
 		case is_array($dato):
 

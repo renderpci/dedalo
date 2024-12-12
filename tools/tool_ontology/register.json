@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 24,
+              "day": 11,
               "hour": 21,
-              "time": 65081826995,
+              "time": 65083382264,
               "year": 2024,
-              "month": 11,
-              "minute": 16,
-              "second": 35
+              "month": 12,
+              "minute": 17,
+              "second": 44
             }
           }
         ]
@@ -123,7 +123,28 @@
       "inf": "Dédalo version minimum [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "6.3.0"
+          "6.4.0"
+        ]
+      }
+    },
+    "dd1335": {
+      "inf": "Properties [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "mode": "edit"
+          }
+        ]
+      }
+    },
+    "dd1350": {
+      "inf": "Affected types: [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            "ontology*",
+            "localontology*"
+          ]
         ]
       }
     },
@@ -139,7 +160,7 @@
   "section_id": 31,
   "created_date": "2024-11-24 21:14:25",
   "section_tipo": "dd1340",
-  "modified_date": "2024-11-24 21:16:35",
+  "modified_date": "2024-12-11 21:17:44",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
