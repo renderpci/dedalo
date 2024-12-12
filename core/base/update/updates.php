@@ -57,9 +57,11 @@ $updates->$v = new stdClass();
 		// Clean matrix_ontology tables to allow re-update more than once preserving the counters
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				TRUNCATE "matrix_ontology";
+				ALTER SEQUENCE IF EXISTS matrix_ontology_id_seq RESTART WITH 1 ;
 			');
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				TRUNCATE "matrix_ontology_main";
+				ALTER SEQUENCE IF EXISTS matrix_ontology_main_id_seq RESTART WITH 1 ;
 			');
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				DELETE FROM "matrix_counter" WHERE "tipo" LIKE \'ontology%\'
