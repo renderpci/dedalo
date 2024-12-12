@@ -53,6 +53,7 @@ class DDModal extends HTMLElement {
 					padding: 0;
 					padding-bottom: 1.5rem;
 					width: 80%;
+					max-width: 100%;
 					/*min-width: 390px;*/
 					min-width: 15rem;
 					max-height: 93.5vh;

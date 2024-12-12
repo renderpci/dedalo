@@ -182,7 +182,6 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 			size		: 'small', // string size small|big|normal
 			callback	: (dd_modal) => {
 				dd_modal.modal_content.style.width = '34rem'
-				dd_modal.modal_content.style.maxWidth = '100%'
 			}
 		})
 
