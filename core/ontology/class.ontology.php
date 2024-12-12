@@ -1043,7 +1043,27 @@ class ontology {
 
 		// Order
 			// use the parent data to get the children data and calculate the order.
-			$order = ontology::get_order_from_locator( $parent_locator );
+			$siblings	= ontology::get_siblings( $parent_locator );
+			$order		= ontology::get_order_from_locator( $locator, $siblings );
+
+			// as every node can change his order position related to other nodes
+			// every sibling of the node need update his own order.
+			// the order is save in the common parent node
+			// and is the array key of the locator sibling
+			foreach ($siblings as $key => $sibling_locator) {
+				// don't update when the sibling is the current node
+				// it will update when it will saved.
+				if($sibling_locator->section_tipo === $section_tipo
+					&& (int)$sibling_locator->section_id === (int)$section_id){
+					continue;
+				}
+				// get the term_id of the sibling used to get update jer_dd row
+				// and save with his position (array key +1)
+				$sibling_term_id	= ontology::get_term_id_from_locator( $sibling_locator );
+				$sibling_node		= new RecordObj_dd( $sibling_term_id );
+				$sibling_node->set_norden( $key+1 );
+				$sibling_node->Save();
+			}
 
 			$jer_dd_record->set_norden( $order );
 
@@ -1268,13 +1288,36 @@ class ontology {
 
 	/**
 	* GET_ORDER_FROM_LOCATOR
-	* get the children data from locator
-	* and locate the given locator into the children data
-	* order will be the position of the locator into the array + 1
+	* Use the array of siblings to locate the given locator
+	* order will be the position of the locator into the siblings array + 1
 	* @param object $locator
 	* @return int $order
 	*/
-	public function get_order_from_locator( object $locator ) : int {
+	public static function get_order_from_locator( object $locator, array $siblings ) : int {
+
+		$data_len = count( $siblings );
+		$order = 1;
+		for ($i=0; $i < $data_len; $i++) {
+
+			if($siblings[$i]->section_tipo === $locator->section_tipo
+				&& (int)$siblings[$i]->section_id === (int)$locator->section_id){
+				$order = $i+1;
+				break;
+			}
+		}
+
+		return $order;
+	}//end get_order_from_locator
+
+
+
+	/**
+	* GET_SIBLINGS
+	* Get the children data from parent node as siblings
+	* @param object $parent_locator
+	* @return array $children_data
+	*/
+	public static function get_siblings( object $parent_locator ) : array {
 
 		// get the component data
 		// using the locator
@@ -1283,27 +1326,17 @@ class ontology {
 		$children_component	= component_common::get_instance(
 			$children_model,
 			$children_tipo ,
-			$locator->section_id,
+			$parent_locator->section_id,
 			'list',
 			DEDALO_DATA_NOLAN,
-			$locator->section_tipo
+			$parent_locator->section_tipo
 		);
 
-		$children_data = $children_component->get_dato();
+		// siblings will be the children component data.
+		$siblings_data = $children_component->get_dato() ?? [];
 
-		$data_len = count( $children_data );
-		$order = 1;
-		for ($i=0; $i < $data_len; $i++) {
-
-			if($children_data[$i]->section_tipo === $locator->section_tipo
-				&& (int)$children_data[$i]->section_id === (int)$locator->section_id){
-				$order = $i+1;
-				break;
-			}
-		}
-
-		return $order;
-	}//end get_order_from_locator
+		return $siblings_data;
+	}//end get_siblings
 
 
 
