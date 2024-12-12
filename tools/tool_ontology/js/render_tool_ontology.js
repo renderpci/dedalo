@@ -5,14 +5,12 @@
 
 
 // imports
-	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {pause} from '../../../core/common/js/utils/index.js'
 
 
 
 /**
-* RENDER_TOOL_ontology
+* RENDER_TOOL_ONTOLOGY
 * Manages the component's logic and appearance in client side
 */
 export const render_tool_ontology = function() {
@@ -66,7 +64,7 @@ const get_content_data = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// user_info
-		const user_info = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'h2',
 			class_name		: 'user_info',
 			inner_html		: self.get_tool_label('user_info'),
@@ -74,83 +72,11 @@ const get_content_data = async function(self) {
 		})
 
 	// components container
-		const components_container = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'components_container',
 			parent 			: fragment
 		});
-
-	// active
-		// component instance_options
-		const active_instance_options = {
-			model			: 'component_radio_button',
-			mode			: 'edit',
-			tipo			: 'hierarchy4',
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			lang			: page_globals.dedalo_data_nolan,
-			id_variant		: self.name, // id_variant prevents id conflicts
-			caller			: self // set current tool as component caller (to check if component is inside tool or not)
-		}
-		// get instance and init
-		const active_component_instance = await get_instance(active_instance_options)
-		self.ar_instances.push(active_component_instance)
-		// build
-		await active_component_instance.build(true)
-		// show_interface
-		active_component_instance.show_interface.tools = false
-		active_component_instance.show_interface.button_add = false
-		// render
-		const active_component_node = await active_component_instance.render()
-		components_container.appendChild(active_component_node)
-
-	// real_section_tipo
-		// component instance_options
-		const real_st_instance_options = {
-			model			: 'component_input_text',
-			mode			: 'edit',
-			tipo			: 'hierarchy109',
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			lang			: page_globals.dedalo_data_nolan,
-			id_variant		: self.name, // id_variant prevents id conflicts
-			caller			: self // set current tool as component caller (to check if component is inside tool or not)
-		}
-		// get instance and init
-		const real_st_component_instance = await get_instance(real_st_instance_options)
-		self.ar_instances.push(real_st_component_instance)
-		// build
-		await real_st_component_instance.build(true)
-		// show_interface
-		real_st_component_instance.show_interface.tools = false
-		real_st_component_instance.show_interface.button_add = false
-		// render
-		const real_st_component_node = await real_st_component_instance.render()
-		components_container.appendChild(real_st_component_node)
-
-	// tld
-		// component instance_options
-		const tld_instance_options = {
-			model			: 'component_input_text',
-			mode			: 'edit',
-			tipo			: 'hierarchy6',
-			section_tipo	: self.caller.section_tipo,
-			section_id		: self.caller.section_id,
-			lang			: page_globals.dedalo_data_nolan,
-			id_variant		: self.name, // id_variant prevents id conflicts
-			caller			: self // set current tool as component caller (to check if component is inside tool or not)
-		}
-		// get instance and init
-		const tld_component_instance = await get_instance(tld_instance_options)
-		self.ar_instances.push(tld_component_instance)
-		// build
-		await tld_component_instance.build(true)
-		// show_interface
-		tld_component_instance.show_interface.tools = false
-		tld_component_instance.show_interface.button_add = false
-		// render
-		const tld_component_node = await tld_component_instance.render()
-		components_container.appendChild(tld_component_node)
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
@@ -163,110 +89,61 @@ const get_content_data = async function(self) {
 			const button_generate = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning gear',
-				inner_html		: self.get_tool_label('generate'),
+				inner_html		: self.get_tool_label('process') || 'Process',
 				parent			: buttons_container
 			})
-			button_generate.addEventListener('click', async function(e){
+			// click event
+			const click_handler = async () => {
 				e.stopPropagation();
 
-				// reset component error class
-					// real_st_component_instance.node.classList.remove('error')
-					// tld_component_instance.node.classList.remove('error')
-					// active_component_instance.node.classList.remove('error')
-					// messages_container.classList.remove('error')
+				// messages clean
 					[
-						real_st_component_instance.node,
-						tld_component_instance.node,
-						active_component_instance.node,
 						messages_container
 					]
 					.map(el => el.classList.remove('error'))
 
-				let spinner
-				function set_loading( set ) {
+				// spinner
+					let spinner
+					const set_loading = ( set ) => {
 
-					if (set===true) {
+						if (set===true) {
 
-						content_data.classList.add('loading')
-						messages_container.innerHTML = ''
+							content_data.classList.add('loading')
+							messages_container.innerHTML = ''
 
-						// spinner
-						spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner',
-							parent			: content_data.parentNode
-						})
+							// spinner
+							spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner',
+								parent			: content_data.parentNode
+							})
 
-					}else{
-
-						content_data.classList.remove('loading')
-						spinner.remove()
-					}
-				}
-
-				// check value
-					if (!real_st_component_instance.data.value || !real_st_component_instance.data.value[0]?.length) {
-						real_st_component_instance.node.classList.add('error')
-						return false
-					}
-					if (!tld_component_instance.data.value || !tld_component_instance.data.value[0]?.length) {
-						tld_component_instance.node.classList.add('error')
-						return false
-					}
-					if (!active_component_instance.data.value || active_component_instance.data.value[0]?.section_id!=1) {
-						active_component_instance.node.classList.add('error')
-						return false
-					}
-
-				// confirm twice
-					if (!confirm(get_label.sure || 'Sure?')) {
-						return false
-					}
-					content_data.classList.add('loading')
-					await pause(1000)
-					const warning = self.get_tool_label('absolute_sure')
-					if (!confirm(warning)) {
-						content_data.classList.remove('loading')
-						return false
-					}
-
-				set_loading(true)
-				await pause(3000)
-
-				self.generate_virtual_section({
-					force_to_create : check_force_to_create.checked
-				})
-				.then(function(api_response){
-
-					// user messages
-						messages_container.innerHTML = api_response.msg
-							? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
-							: 'Unknown error'
-
-					// reload section (caller)
-						if (api_response.result!==false) {
-							self.caller.refresh()
 						}else{
-							messages_container.classList.add('error')
+
+							content_data.classList.remove('loading')
+							spinner.remove()
 						}
+					}
+					set_loading(true)
 
-					set_loading(false)
-				})
-			})//end button_generate.addEventListener('click'
+				// call API
+					const api_response = await self.set_records_in_jer_dd()
 
-		// check box force to create
+				// user messages
+					messages_container.innerHTML = api_response.msg
+						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
+						: 'Unknown error'
 
-			const label_field_check_box = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'checkbox-label',
-					inner_html		: self.get_tool_label('force_to_create') || 'Force to create',
-					parent			: buttons_container
-				})
-				const check_force_to_create = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'checkbox',
-					parent			: label_field_check_box
-				})
+				// reload section (caller)
+					if (api_response.result!==false) {
+						self.caller.refresh()
+					}else{
+						messages_container.classList.add('error')
+					}
+
+				set_loading(false)
+			}
+			button_generate.addEventListener('click', click_handler)
 
 	// messages_container
 		const messages_container = ui.create_dom_element({
