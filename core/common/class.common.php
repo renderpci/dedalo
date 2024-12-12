@@ -4551,14 +4551,14 @@ abstract class common {
 				$in_properties				= $properties->tool_config->{$tool->name} ?? null;
 
 				if(		in_array($model, $affected_models)
-					||	in_array($tipo,  $affected_tipos)
+					||	tipo_in_array($tipo,  $affected_tipos)
 					||	($is_component===true && in_array('all_components', $affected_models))
 					||	!is_null($in_properties)
 				  ) {
 
 					// affected_tipos specific restriction like tool_indexation (only 'rsc36')
 						if (!empty($affected_tipos[0])) {
-							if(!in_array($tipo, $affected_tipos)) {
+							if(!tipo_in_array($tipo, $affected_tipos)) {
 								continue;
 							}
 						}
