@@ -345,13 +345,7 @@ final class tools_register_Test extends TestCase {
 				.' and is : '.to_string($result)
 		);
 
-		$this->assertTrue(
-			isset($_SESSION['dedalo']['registered_tools'])===false,
-			'expected false isset($_SESSION[\'dedalo\'][\'registered_tools\'])'
-				.' and is : '.to_string(isset($_SESSION['dedalo']['registered_tools']))
-		);
-
-		$file_name		= 'cache_registered_tools.json';
+		$file_name		= 'cache_user_tools.json';
 		$base_path		= DEDALO_CACHE_MANAGER['files_path'];
 		$file_path		= $base_path .'/'. $file_name;
 		$file_exists	= (file_exists($file_path));
