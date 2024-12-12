@@ -144,11 +144,11 @@ class ontology {
 			}
 
 		// descriptor
-			$is_desctipor_tipo		= 'ontology4';
-			$is_desctipor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_desctipor_tipo  );
-			$is_desctipor_component	= component_common::get_instance(
-				$is_desctipor_model,
-				$is_desctipor_tipo ,
+			$is_descriptor_tipo			= 'ontology4';
+			$is_descriptor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_descriptor_tipo  );
+			$is_descriptor_component	= component_common::get_instance(
+				$is_descriptor_model,
+				$is_descriptor_tipo ,
 				$section_id,
 				'list',
 				DEDALO_DATA_NOLAN,
@@ -159,8 +159,8 @@ class ontology {
 				$descriptor_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 				$descriptor_locator->set_section_id($is_descriptor === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
-			$is_desctipor_component->set_dato( [$descriptor_locator] );
-			$is_desctipor_component->Save();
+			$is_descriptor_component->set_dato( [$descriptor_locator] );
+			$is_descriptor_component->Save();
 
 		// is model
 			$is_model_tipo		= 'ontology30';
@@ -193,11 +193,11 @@ class ontology {
 				$target_section_tipo
 			);
 
-			$tanslatable_locator = new locator();
-				$tanslatable_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$tanslatable_locator->set_section_id($translatable === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+			$translatable_locator = new locator();
+				$translatable_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+				$translatable_locator->set_section_id($translatable === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
-			$translatable_component->set_dato( [$tanslatable_locator] );
+			$translatable_component->set_dato( [$translatable_locator] );
 			$translatable_component->Save();
 
 		// term
@@ -883,7 +883,7 @@ class ontology {
 			$locator->set_section_id($section_id);
 
 		// tld
-			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  seciton_id)
+			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  section_id)
 				$tld_tipo		= 'ontology7';
 				$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
 				$tld_component	= component_common::get_instance(
@@ -1009,18 +1009,18 @@ class ontology {
 			}
 
 		// descriptor
-			$is_desctipor_tipo		= 'ontology4';
-			$is_desctipor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_desctipor_tipo  );
-			$is_desctipor_component	= component_common::get_instance(
-				$is_desctipor_model,
-				$is_desctipor_tipo ,
+			$is_descriptor_tipo			= 'ontology4';
+			$is_descriptor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_descriptor_tipo  );
+			$is_descriptor_component	= component_common::get_instance(
+				$is_descriptor_model,
+				$is_descriptor_tipo ,
 				$section_id,
 				'list',
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
 
-			$is_descriptor_data = $is_desctipor_component->get_dato();
+			$is_descriptor_data = $is_descriptor_component->get_dato();
 
 			if(empty($is_descriptor_data)){
 
@@ -1028,7 +1028,7 @@ class ontology {
 					. " Record without is_descriptor_data " . PHP_EOL
 					. 'section_tipo		: ' . to_string($section_tipo). PHP_EOL
 					. 'section_id		: ' . to_string($section_id). PHP_EOL
-					. 'is_desctipor_tipo	: ' . to_string($is_desctipor_tipo)
+					. 'is_descriptor_tipo	: ' . to_string($is_descriptor_tipo)
 					, logger::DEBUG
 				);
 
@@ -1248,7 +1248,7 @@ class ontology {
 	/**
 	* GET_TERM_ID_FROM_LOCATOR
 	* Get the component with the tld data with a given locator
-	* and build the term_id as tld.secion_id (dd55)
+	* and build the term_id as tld.section_id (dd55)
 	* @param object $locator
 	* @return string|null $term_id;
 	*/
