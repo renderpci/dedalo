@@ -618,8 +618,9 @@ export const open_tool = async (options) => {
 const view_modal = async function(options) {
 
 	// options
-		const tool_context	= options.tool_context || {}
-		const caller		= options.caller
+		const tool_context		= options.tool_context || {}
+		const caller			= options.caller
+		const windowFeatures	= options.windowFeatures || null
 
 	// tool context additional properties
 		tool_context.lang		= caller.lang
@@ -763,6 +764,14 @@ const view_modal = async function(options) {
 					)
 				})
 				tool_instance.destroy(true, true, true)
+			}
+		}
+
+	// windowFeatures. To customize the modal size in a tool, set tool properties
+	// `windowFeatures` like `{"windowFeatures":{"width":"34rem","maxWidth":"100%"}}`
+		if (windowFeatures) {
+			for (let [key, value] of Object.entries(windowFeatures)) {
+				modal.modal_content.style[key] = value
 			}
 		}
 
