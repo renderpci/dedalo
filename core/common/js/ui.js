@@ -27,6 +27,7 @@
 export const ui = {
 
 
+
 	/**
 	* LOCAL VARS
 	*/
@@ -361,7 +362,7 @@ export const ui = {
 				class_name		: 'button close button_exit_edit show_on_active'
 			})
 			// click event
-			const fn_click = async function(e) {
+			const click_handler = async function(e) {
 				e.stopPropagation()
 
 				await ui.component.deactivate(instance)
@@ -372,7 +373,7 @@ export const ui = {
 					autoload	: autoload
 				})
 			}
-			button_close_node.addEventListener('click', fn_click)
+			button_close_node.addEventListener('click', click_handler)
 
 
 			return button_close_node;
@@ -1266,7 +1267,6 @@ export const ui = {
 						})
 					}
 
-
 				// tool_buttons_container
 					const tool_buttons_container = ui.create_dom_element({
 						element_type	: 'div',
@@ -1291,13 +1291,16 @@ export const ui = {
 						class_name		: 'button close white',
 						parent			: tool_header
 					})
-					button_close.addEventListener('click', function(){
+					const click_handler = (e) => {
+						e.stopPropagation()
+
 						if (prevent_open_new_window()===true) {
 							history.back();
 						}else{
 							window.close();
 						}
-					})
+					}
+					button_close.addEventListener('click', click_handler)
 			}//end if (mode!=='mini')
 
 			// content_data
@@ -1370,9 +1373,8 @@ export const ui = {
 				})
 				tool_button.insertAdjacentHTML('beforeend', tool_context.label)
 
-
 			// Events
-				tool_button.addEventListener('mousedown', function(e){
+				const mousedown_handler = (e) => {
 					e.stopPropagation()
 
 					// open_tool (tool_common)
@@ -1380,7 +1382,8 @@ export const ui = {
 							tool_context	: tool_context,
 							caller			: self
 						})
-				})
+				}
+				tool_button.addEventListener('mousedown', mousedown_handler)
 
 
 			return tool_button
@@ -1417,7 +1420,7 @@ export const ui = {
 				})
 
 			// Events
-				tool_button.addEventListener('mousedown', function(e){
+				const mousedown_handler = (e) => {
 					e.stopPropagation();
 
 					// open_tool (tool_common)
@@ -1425,7 +1428,8 @@ export const ui = {
 							tool_context	: tool_context,
 							caller			: self
 						})
-				})
+				}
+				tool_button.addEventListener('mousedown', mousedown_handler)
 
 
 			return tool_button
@@ -2106,7 +2110,9 @@ export const ui = {
 
 		// remove on close
 			modal_container.on_close = () => {
+
 				modal_container.remove()
+
 				if (typeof on_close==='function') {
 					// exec callback
 					on_close()
@@ -2853,7 +2859,7 @@ export const ui = {
 			class_name		: 'exit_button',
 			parent			: node
 		})
-		const fn_click = function(e) {
+		const click_handler = function(e) {
 			e.stopPropagation()
 
 			node.classList.remove('fullscreen')
@@ -2863,7 +2869,7 @@ export const ui = {
 				exit_callback()
 			}
 		}
-		exit_button.addEventListener('click', fn_click)
+		exit_button.addEventListener('click', click_handler)
 
 		// set exit event
 		const exit_fullscreen = function(e) {
