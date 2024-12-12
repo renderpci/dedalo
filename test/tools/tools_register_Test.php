@@ -344,7 +344,7 @@ final class tools_register_Test extends TestCase {
 				.' and is : '.to_string($result)
 		);
 
-		$file_name		= 'cache_user_tools.json';
+		$file_name		= tools_register::get_cache_user_tools_file_name(); //	like 'cache_user_tools.json'
 		$base_path		= DEDALO_CACHE_MANAGER['files_path'];
 		$file_path		= $base_path .'/'. $file_name;
 		$file_exists	= (file_exists($file_path));
