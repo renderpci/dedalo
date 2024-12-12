@@ -1252,7 +1252,7 @@ class ontology {
 	* @param object $locator
 	* @return string|null $term_id;
 	*/
-	public function get_term_id_from_locator( object $locator ) : ?string {
+	public static function get_term_id_from_locator( object $locator ) : ?string {
 
 		// get the component data
 		// using the locator
@@ -1359,9 +1359,10 @@ class ontology {
 
 	/**
 	* SET_RECORDS_IN_JER_DD
-	* @return
+	* @param object $sqo
+	* @return object $response
 	*/
-	public function set_records_in_jer_dd( object $sqo ) {
+	public static function set_records_in_jer_dd( object $sqo ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1388,16 +1389,11 @@ class ontology {
 
 		if( empty($response->errors) ){
 			$response->result	= true;
-			$response->msg		= 'Ok. Request done';
+			$response->msg		= 'OK. Request done';
 		}
 
 		return $response;
 	}//end set_records_in_jer_dd
-
-
-
-
-
 
 
 
