@@ -877,6 +877,11 @@ class ontology {
 	*/
 	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?object {
 
+		// node locator
+		$locator = new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+
 		// tld
 			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  section_id)
 				$tld_tipo		= 'ontology7';

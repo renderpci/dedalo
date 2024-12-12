@@ -1613,24 +1613,24 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		if(!verify_dedalo_prefix_tipos($this->prefijo)) {
 			if(SHOW_DEBUG===true) {
-				trigger_error("Error on save 'RecordObj_dd_edit'. Prefijo is empty or wrong. Nothing is saved!");
+				trigger_error("Error on save 'RecordObj_dd'. Prefijo is empty or wrong. Nothing is saved!");
 			}
 			return false;
 		}
 
-		if (empty($this->parent)) {
-			if(SHOW_DEBUG===true) {
-				trigger_error("Error on save 'RecordObj_dd_edit'. Parent is empty. Nothing is saved!");
-			}
-			return false;
-		}else{
-			if(!verify_dedalo_prefix_tipos($this->parent)) {
-				if(SHOW_DEBUG===true) {
-					trigger_error("Error on save 'RecordObj_dd_edit'. Parent Prefijo is empty or wrong. Nothing is saved!");
-				}
-				return false;
-			}
-		}
+		// if (empty($this->parent)) {
+		// 	if(SHOW_DEBUG===true) {
+		// 		trigger_error("Error on save 'RecordObj_dd'. Parent is empty. Nothing is saved!");
+		// 	}
+		// 	return false;
+		// }else{
+		// 	if(!verify_dedalo_prefix_tipos($this->parent)) {
+		// 		if(SHOW_DEBUG===true) {
+		// 			trigger_error("Error on save 'RecordObj_dd'. Parent Prefijo is empty or wrong. Nothing is saved!");
+		// 		}
+		// 		return false;
+		// 	}
+		// }
 
 		#
 		# EDIT
