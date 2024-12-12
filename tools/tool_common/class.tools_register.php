@@ -306,7 +306,14 @@ class tools_register {
 			}//end if (!empty($info_objects_parsed))
 
 		// clean_cache. Remove previous stored data in session or files
-			tools_register::clean_cache();
+			$deleted = tools_register::clean_cache();
+			if (!$deleted) {
+				debug_log(__METHOD__
+					. " Error deleting tools cache " . PHP_EOL
+					. ' deleted: ' . to_string($deleted)
+					, logger::ERROR
+				);
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1271,19 +1278,15 @@ class tools_register {
 	/**
 	* CLEAN_CACHE
 	* Delete session and cache files from tools
+	* The file is saved in sessions directory as
+	*  'development_1_cache_user_tools.json'
 	* @return bool
 	*/
 	public static function clean_cache() {
 
-		// session. Remove previous stored data in session
-			// cache of already calculated tools
-			if (isset($_SESSION['dedalo']['registered_tools'])) {
-				unset($_SESSION['dedalo']['registered_tools']);
-			}
-
 		// delete_cache_files
 			$deleted_files = dd_cache::delete_cache_files([
-				'cache_registered_tools.json'
+				'cache_user_tools.json'
 			]);
 			if ($deleted_files===true) {
 				return true;
