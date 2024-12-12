@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * LOGGER BACKEND ACTIVITY CLASS
 * Manages activity records write to matrix_activity table

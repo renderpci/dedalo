@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * TOOLS_REGISTER
 * Manages tools registration process, from /tools directory elements to the

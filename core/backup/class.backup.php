@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1); // NOT IN UNIT TEST !
+<?php declare(strict_types=1); // NOT IN UNIT TEST !
 /**
 * CLASS BACKUP
 *

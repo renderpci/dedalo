@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * RecordObj_matrix_descriptors
 * Handles matrix_descriptors_dd table records

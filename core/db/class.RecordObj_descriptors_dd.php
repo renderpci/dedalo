@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 # RecordObj_descriptors_dd
 # Extiende RecordObj_matrix_descriptors, cambiándole la tabla y algunos métodos específicos
 # La tabla matrix_descriptors es similar a matrix pero el parent es VARCHAR(8) para soportar tipos like 'dd1'

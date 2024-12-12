@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * COMMON (ABSTRACT CLASS)
 * Shared methods by sections and components

@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * DD_COMPONENT_PORTAL_API
 * Manage API REST data flow of the component with Dédalo

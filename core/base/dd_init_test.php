@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * SYSTEM TEST
 * Verify the integrity of the system (usually in the boot sequence or login)

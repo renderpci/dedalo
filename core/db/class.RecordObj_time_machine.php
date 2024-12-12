@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * RECORDOBJ_TIME_MACHINE
 * Handles matrix_time_machine table records

@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * AREA_THESAURUS
 * Manage whole thesaurus hierarchies

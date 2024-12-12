@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * DD_DATE CLASS
 * Build dd_date objects like common dates but without restrictions/limitations of
