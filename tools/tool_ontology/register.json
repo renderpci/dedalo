@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 11,
-              "hour": 21,
-              "time": 65083382264,
+              "day": 12,
+              "hour": 10,
+              "time": 65083430601,
               "year": 2024,
               "month": 12,
-              "minute": 17,
-              "second": 44
+              "minute": 43,
+              "second": 21
             }
           }
         ]
@@ -90,16 +90,49 @@
     "dd612": {
       "inf": "Description [component_text_area]",
       "dato": {
+        "lg-cat": [
+          "<p>Gestiona la transformació de l'ontologia en registres jer_dd</p>"
+        ],
+        "lg-deu": [
+          "<p>Verwaltet die Umwandlung der Ontologie in hier_dd-Datensätze.</p>"
+        ],
+        "lg-ell": [
+          "<p>Διαχειρίζεται τον μετασχηματισμό της οντολογίας σε εγγραφές hier_dd.</p>"
+        ],
         "lg-eng": [
           "<p>Handles Ontology transformation to 'jer_dd' records</p>"
+        ],
+        "lg-fra": [
+          "<p>Gère la transformation de l'ontologie en enregistrements hier_dd.</p>"
+        ],
+        "lg-spa": [
+          "<p>Gestiona la transformación de la ontología en registros jer_dd</p>"
         ]
       }
     },
     "dd799": {
       "inf": "Label [component_input_text]",
       "dato": {
+        "lg-cat": [
+          "Processament dels nodes d'ontologia"
+        ],
+        "lg-deu": [
+          "Ontologieknoten verarbeiten"
+        ],
+        "lg-ell": [
+          "Επεξεργασία κόμβων οντολογίας"
+        ],
         "lg-eng": [
-          "Tool Ontology"
+          "Processing ontology nodes"
+        ],
+        "lg-fra": [
+          "Traitement des nœuds d'ontologie"
+        ],
+        "lg-ita": [
+          "Elaborazione dei nodi ontologici"
+        ],
+        "lg-spa": [
+          "Procesar los nodos de la ontología"
         ]
       }
     },
@@ -148,6 +181,50 @@
         ]
       }
     },
+    "dd1372": {
+      "inf": "Labels [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-eng",
+              "name": "process",
+              "value": "Process"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "process",
+              "value": "Procesar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "process",
+              "value": "Procesar"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "process",
+              "value": "Procédé"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "process",
+              "value": "Processo"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "process",
+              "value": "Διαδικασία"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "process",
+              "value": "Prozess"
+            }
+          ]
+        ]
+      }
+    },
     "dd1644": {
       "inf": "Developer [component_input_text]",
       "dato": {
@@ -160,7 +237,7 @@
   "section_id": 31,
   "created_date": "2024-11-24 21:14:25",
   "section_tipo": "dd1340",
-  "modified_date": "2024-12-11 21:17:44",
+  "modified_date": "2024-12-12 10:43:21",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
