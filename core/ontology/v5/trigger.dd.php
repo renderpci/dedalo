@@ -354,6 +354,23 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 		// save
 		$result = $RecordObj_dd->Save();
 
+		// descriptors :set and save the value to descriptors dd
+			try {
+				$RecordObj = new RecordObj_descriptors_dd(
+					RecordObj_descriptors_dd::$descriptors_matrix_table,
+					null,
+					$terminoID,
+					$lang,
+					'termino'
+				);
+				$RecordObj->set_dato($value);
+				$RecordObj->Save();
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. " Unable to save in descriptors_matrix_table "
+					, logger::ERROR
+				);
+			}
 
 		$response->result	= $result===false ? false : true;
 		$response->msg		= ($result===false)
