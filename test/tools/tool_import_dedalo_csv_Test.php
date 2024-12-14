@@ -7,7 +7,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class tool_import_dedalo_csv_Test extends TestCase {
+final class tool_import_dedalo_csv_test extends TestCase {
 
 
 

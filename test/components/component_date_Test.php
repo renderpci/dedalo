@@ -7,7 +7,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_date_Test extends TestCase {
+final class component_date_test extends TestCase {
 
 
 
