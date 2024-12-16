@@ -115,11 +115,11 @@ export const on_drop = async function(self, event) {
 				const data_obj = JSON.parse(data_transfer_json)
 
 			// add children, create new section and his node in the tree
-			// go deep in the tree to point base to getback into the wrap by the add_child method
+			// go deep in the tree to point base to get back into the wrap by the add_child method
 			// (it will use parentNode.parentNode to find the wrap)
 				const button_obj = wrap_target.firstChild.firstChild
 				// set mode to button for add_child
-				button_obj.dataset.mode = (wrap_target.dataset.section_tipo==='hierarchy1')
+				button_obj.dataset.mode = self.is_root( wrap_target.dataset.section_tipo ) // hierarchy1
 					? 'add_child_from_hierarchy'
 					: 'add_child';
 				// request to create the section and node
