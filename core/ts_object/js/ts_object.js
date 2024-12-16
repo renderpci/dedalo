@@ -1449,7 +1449,7 @@ export const ts_object = new function() {
 				}
 
 			// target section_tipo
-				const target_section_tipo = (element.section_tipo==='hierarchy1')
+				const target_section_tipo = self.is_root(element.section_tipo)
 					? Object.values(element.heritage)[0].section_tipo
 					: element.section_tipo
 
@@ -1884,6 +1884,24 @@ export const ts_object = new function() {
 
 		return link_children;
 	}//end get_link_children_from_wrap
+
+
+
+	/**
+	* IS_ROOT
+	* @param string tipo
+	* 	Usually 'hierarchy1' for Thesaurus and 'ontology35' fro Ontology
+	* @return bool
+	*/
+	this.is_root = function (tipo) {
+
+		const ar_root_tipo = [
+			'hierarchy1',
+			'ontology35'
+		]
+
+		return ar_root_tipo.includes(tipo)
+	}//end is_root
 
 
 
