@@ -378,352 +378,8 @@ export const ts_object = new function() {
 
 
 	/**
-	* ON_DRAG_MOUSEDOWN
-	* Fix ts_object.handle with received event
-	* @param event event
-	* @return void
-	*/
-	this.source = null;
-	this.handle = null;
-	this.on_drag_mousedown = function(event) {
-		if(SHOW_DEBUG===true) {
-			// console.log("))))) ts_object.on_drag_mousedown set handler:", event);
-		}
-
-		// handle. set with event value
-			ts_object.handle = event
-	}//end on_drag_mousedown
-
-
-
-	/**
-	* ON_DRAGSTART
-	* @param event event
-	* @return void
-	*/
-	this.old_parent_wrap = null
-	this.on_dragstart = function(event) {
-		event.stopPropagation()
-
-		if(SHOW_DEBUG===true) {
-			// console.log("))))) ts_object.on_dragstart event", event);
-		}
-
-		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
-			const wrap_ts_object = ts_object.find_up_tag(event.srcElement, 'wrap_ts_object')
-
-		// wrap_ts_object ondrop set as null
-			wrap_ts_object.ondrop = null
-
-		// if handle
-			if (ts_object.handle) {
-				event.stopPropagation();
-				ts_object.source = wrap_ts_object;
-				event.dataTransfer.effectAllowed = 'move';
-				event.dataTransfer.setData('text/html', wrap_ts_object.innerHTML);
-			}else{
-				event.preventDefault();
-			}
-
-		// Fix class var 'old_parent_wrap'
-			ts_object.old_parent_wrap = wrap_ts_object.parentNode.parentNode;
-			if(!ts_object.old_parent_wrap) {
-				console.log("[on_dragstart] Error on find old_parent_wrap");
-			}
-	}//end on_dragstart
-
-
-
-	/**
-	* ON_DRAG_END
-	* @param event event
-	* @return void
-	*/
-	this.target = null
-	this.on_drag_end = function(event) {
-		event.preventDefault()
-		event.stopPropagation()
-
-		if(SHOW_DEBUG===true) {
-			// console.log("))))) ts_object.on_drag_end event", event);
-		}
-
-		// target set as false
-			this.target = false;
-
-		// source. set as blank
-			ts_object.source = null;
-	}//end on_drag_end
-
-
-
-	/**
-	* ON_DROP
-	* @param event event
-	* @return bool
-	*/
-	this.on_drop = async function(event) {
-		event.preventDefault();
-		event.stopPropagation();
-
-		if(SHOW_DEBUG===true) {
-			// console.log("----------------------->>> ts_object.on_drop event:", event);
-		}
-
-		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
-			const wrap_ts_object = ts_object.find_up_tag(event.srcElement, 'wrap_ts_object')
-
-		// Remove drag_over class
-			wrap_ts_object.classList.remove('drag_over')
-
-		// wraps
-			const wrap_source	= ts_object.source // element that's move (global var defined at 'on_drag_mousedown')
-			const wrap_target	= wrap_ts_object // element on user leaves source wrap
-			if (wrap_source === wrap_target) {
-				console.warn("[ts_object.on_drop] Unable self drop (2) wrap_source is equal wrap_target");
-				return false;
-			}
-
-		// div_children
-			let div_children	= null
-			const nodes			= wrap_target.children // childNodes
-			const nodes_len		= nodes.length
-			for (let i = nodes_len - 1; i >= 0; i--) {
-				if (nodes[i].dataset.role === 'children_container'){
-					div_children = nodes[i]; break;
-				}
-			}
-			if (div_children===null) {
-				console.warn("[ts_object.on_drop] Unable self drop (3) div_children not found in nodes:",nodes);
-				return false;
-			}
-
-		// data_transfer_json case
-		// used by tool_cataloging to add data to the ts
-			const data_transfer_json = event.dataTransfer.getData("text/plain")
-			if (data_transfer_json && data_transfer_json.length>0) {
-				// parse from event.dataTransfer
-					const data_obj = JSON.parse(data_transfer_json)
-
-				// add children, create new section and his node in the tree
-				// go deep in the tree to point base to getback into the wrap by the add_child method
-				// (it will use parentNode.parentNode to find the wrap)
-					const button_obj = wrap_target.firstChild.firstChild
-					// set mode to button for add_child
-					button_obj.dataset.mode = (wrap_target.dataset.section_tipo==='hierarchy1')
-						? 'add_child_from_hierarchy'
-						: 'add_child';
-					// request to create the section and node
-					ts_object.add_child(button_obj)
-					.then(function(response){
-
-						// callback
-						if (data_obj.caller) {
-
-							// new_section_id . Generated as response by the trigger add_child
-								const new_section_id = response.result
-							// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
-								const section_tipo = wrap_target.dataset.target_section_tipo || wrap_target.dataset.section_tipo
-
-							// fire the event to update the component used as term in the new section
-								event_manager.publish('ts_add_child_' + data_obj.caller, {
-									locator			: data_obj.locator,
-									new_ts_section	: {
-										section_id		: new_section_id,
-										section_tipo	: section_tipo
-									},
-									callback : function() {
-
-										// link_children_element. list_thesaurus_element of current wrapper
-										const link_children_element = ts_object.get_link_children_from_wrap(wrap_target)
-										if(!link_children_element) {
-											console.warn("[tool_cataloging.set_new_thesaurus_value] Error on find link_children_element 'link_childrens'");
-											return false
-										}
-
-										// ts_object.update_arrow_state(link_children_element, true)
-
-									// refresh children container
-										ts_object.get_children(
-											link_children_element,
-											null, // object|null pagination
-											true // bool clean_children_container
-										)
-										.then(function(){
-											// update parent arrow button
-											 // ts_object.update_arrow_state(link_children_element, true)
-											ts_object.update_arrow_state(link_children_element, false)
-										})
-
-									}
-								})
-						}//end if (data_obj.caller)
-					})
-
-				return true // stop execution here
-			}
-
-		// element_children target/source
-			const element_children_target	= ts_object.get_link_children_from_wrap(wrap_target)
-			const element_children_source	= ts_object.get_link_children_from_wrap(ts_object.old_parent_wrap)
-
-		// check nodes
-			if ( !div_children || !wrap_source ) {
-				console.error('"Error on append child":', wrap_source, div_children);
-				return false
-			}
-
-		// add node
-			div_children.appendChild(wrap_source)
-
-		// Update parent data (returns a promise after HTTP request finish)
-			const response = await ts_object.update_parent_data(wrap_source)
-
-		// Updates element_children_target
-			// ts_object.update_arrow_state(element_children_target, true) // Not necessary ?
-
-		// Updates element_children_source
-			ts_object.update_arrow_state(element_children_source, false)
-
-		// hilite moved term. wait 200 ms to allow arrow state update
-			dd_request_idle_callback(
-				() => {
-					const element = wrap_source.querySelector('.list_thesaurus_element[data-type="term"]')
-					if (element) {
-						ts_object.hilite_element(element)
-					}
-				}
-			)
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				console.log("))))) [on_drop ts_object.update_parent_data] response", response)
-				console.log("))))) [ts_object.on_drop] Finish on_drop 3");
-			}
-
-
-		return true;
-	}//end on_drop
-
-
-
-	/**
-	* ON_DRAGOVER
-	* @param event event
-	* @return void
-	*/
-	this.on_dragover = function(event) {
-		event.preventDefault();
-		event.stopPropagation();
-
-		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
-		const wrap_ts_object = ts_object.find_up_tag(event.target, 'wrap_ts_object')
-		if (wrap_ts_object.classList.contains('drag_over')) {
-			return false
-		}
-
-		if(SHOW_DEBUG===true) {
-			// console.log("))))) ts_object.on_dragover event:", event.target);
-		}
-
-		// dataTransfer
-		event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
-
-		// Add drag_over class
-		wrap_ts_object.classList.add('drag_over')
-	}//end on_dragover
-
-
-
-	/**
-	* ON_DRAGLEAVE
-	* @param event event
-	* @return void
-	*/
-	this.on_dragleave = function(event) {
-		// event.preventDefault();
-		event.stopPropagation();
-
-		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
-		const wrap_ts_object = ts_object.find_up_tag(event.target, 'wrap_ts_object')
-
-		if(SHOW_DEBUG===true) {
-			// console.log("))))) ts_object.on_dragleave event:", event);
-		}
-
-		// Remove drag_over class
-		if (wrap_ts_object.classList.contains('drag_over')) {
-			wrap_ts_object.classList.remove('drag_over')
-		}else{
-			event.preventDefault();
-		}
-	}//end on_dragleave
-
-
-
-	/**
-	* ON_ORDER_DRAG_MOUSEDOWN
-	* @return void
-	*/
-		// this.order_source = null;
-		// this.order_handle = null;
-		// this.on_order_drag_mousedown = function(obj, event) {
-
-		// 	ts_object.order_handle = event;
-		// }//end on_order_drag_mousedown
-
-
-
-	/**
-	* ON_ORDER_DRAGSTART
-	* @return void
-	*/
-		// this.on_order_dragstart = function(obj, event) {
-
-		// 	obj.ondrop = null;
-
-		// 	// if (order_handle)
-		// 	if (ts_object.order_handle) {
-		// 		event.stopPropagation();
-		// 		ts_object.order_source = obj;
-		// 		event.dataTransfer.effectAllowed = 'move';
-		// 		event.dataTransfer.setData('text/html', obj.innerHTML);
-		// 	} else {
-		// 		event.preventDefault();
-		// 	}
-		// }//end on_order_dragstart
-
-
-
-	/**
-	* ON_ORDER_DRAG_END
-	* @return void
-	*/
-		// this.on_order_drag_end = function() {
-
-		// 	ts_object.target		= null;
-		// 	ts_object.order_source	= null;
-		// }//end on_order_drag_end
-
-
-
-	/**
-	* ON_ORDER_DRAGOVER
-	* @param DOM object obj
-	* 	Is the whole ts_object target wrapper
-	* @return void
-	*/
-		// this.on_order_dragover = function(obj, event) {
-		// 	event.preventDefault(); // Necessary. Allows us to drop.
-		// 	event.stopPropagation();
-		// 	event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
-		// }//end on_order_dragover
-
-
-
-	/**
 	* FIND_UP_TAG
-	* Search parent with given CSS selector recursively
+	* Search parent with given CSS selector looking up recursively
 	* @param HTMLElement el
 	* @param string class_name 'wrap_ts_object'
 	* @return HTMLElement|null
@@ -943,7 +599,7 @@ export const ts_object = new function() {
 	* Adds 'element_hilite' class to matching nodes
 	* @param HTMLElment element
 	* @param bool clean_others
-	* @return int len
+	* @return int matches_length
 	* 	matches.length
 	*/
 	this.hilite_element = function(element, clean_others) {
@@ -965,12 +621,12 @@ export const ts_object = new function() {
 			}
 
 		// hilite all appearances of current component (may appear more than once)
-			const matches	= document.querySelectorAll('.list_thesaurus_element[data-type="'+element.dataset.type+'"][data-section_tipo="'+element.dataset.section_tipo+'"][data-section_id="'+element.dataset.section_id+'"]');
-			const len		= matches.length;
-			for (let i = len - 1; i >= 0; i--) {
+			const matches = document.querySelectorAll(`.term[data-type="${element.dataset.type}"][data-section_tipo="${element.dataset.section_tipo}"][data-section_id="${element.dataset.section_id}"]`);
+			const matches_length = matches.length;
+			for (let i = matches_length - 1; i >= 0; i--) {
 
 				const node = matches[i]
-				node.classList.add("element_hilite");
+				node.classList.add('element_hilite');
 
 				// check parent is arrow_icon_open
 					const parent_wrapper = node.parentNode.parentNode.parentNode.parentNode;
@@ -988,7 +644,7 @@ export const ts_object = new function() {
 					}
 			}
 
-		return len
+		return matches_length
 	}//end hilite_element
 
 
@@ -1680,119 +1336,87 @@ export const ts_object = new function() {
 
 
 	/**
-	* LINK_TERM (REMOVED 04-05-2022 NOT USED ANYMORE)
-	* Add link to opener window for autocomplete_hi relations
-	*/
-		// this.link_term = function(button_obj) {
-
-		// 	// source window. Could be different than current (like iframe)
-		// 		const source_window = window.opener || window.parent
-		// 		if (source_window===null) {
-		// 			console.log("[link_term] Error on find window.opener / parent")
-		// 			return false
-		// 		}
-
-		// 	// publish event link_term
-		// 		source_window.event_manager.publish('link_term_'+ self.initiator, button_obj.data)
-
-
-		// 	return true
-		// }//end link_term
-
-
-	/**
 	* PARSER_SEARCH_RESULT
 	* Recursive parser for results of the search
 	* Only used for search result, not for regular tree render
+	* Called from render_area_thesaurus.list
 	* @param object data
-	* @param HTMLElement main_div
+	*  sample:
+		* [{
+		* 	"hierarchy1_66": {
+		* 		"section_tipo": "hierarchy1",
+		* 		"section_id": "66",
+		* 		"mode": "edit",
+		* 		"lang": "lg-eng",
+		* 		"is_descriptor": true,
+		* 		"is_indexable": false,
+		* 		"permissions_button_new": 3,
+		* 		"permissions_button_delete": 0,
+		* 		"permissions_indexation": 0,
+		* 		"permissions_structuration": 0,
+		* 		"ar_elements": [
+		* 			{
+		* 				"type": "term",
+		* 				"tipo": "hierarchy5",
+		* 				"value": "Spain",
+		* 				"model": "component_input_text"
+		* 			},
+		* 			{
+		* 				"type": "link_children",
+		* 				"tipo": "hierarchy45",
+		* 				"value": "button show children",
+		* 				"model": "component_relation_children"
+		* 			}
+		* 		],
+		* 		"heritage": {
+		* 			"es1_1": {
+		* 				"section_tipo": "es1",
+		* 				"section_id": "1",
+		* 				"mode": "edit",
+		* 				"lang": "lg-eng",
+		* 				"is_descriptor": true,
+		* 				"is_indexable": true,
+		* 				"permissions_button_new": 3,
+		* 				"permissions_button_delete": 3,
+		* 				"permissions_indexation": 3,
+		* 				"permissions_structuration": 0,
+		* 				"ar_elements": [
+		* 					{
+		* 						"type": "term",
+		* 						"tipo": "hierarchy25",
+		* 						"value": "Spain",
+		* 						"model": "component_input_text"
+		* 					},
+		* 					{
+		* 						"type": "icon",
+		* 						"tipo": "hierarchy28",
+		* 						"value": "NA",
+		* 						"model": "component_text_area"
+		* 					}, ...
+		* 				],
+		* 				"heritage": { ... }
+		* 			}
+		* 		}
+		* 	}
+		* }]
+	* @param array to_hilite
+	* 	array of locators found in search
+	* @param HTMLElement|null main_div
 	* @param bool is_recursion
 	* @return bool
 	*/
 	this.current_main_div = null;
-	this.ar_resolved = [];
-	this.parse_search_result = function( data, main_div, is_recursion ) {
+	this.parse_search_result = function( data, to_hilite, main_div, is_recursion ) {
 
 		const self = this
-
-		// sample data:
-			// {
-			// 	"hierarchy1_66": {
-			// 		"section_tipo": "hierarchy1",
-			// 		"section_id": "66",
-			// 		"mode": "edit",
-			// 		"lang": "lg-eng",
-			// 		"is_descriptor": true,
-			// 		"is_indexable": false,
-			// 		"permissions_button_new": 3,
-			// 		"permissions_button_delete": 0,
-			// 		"permissions_indexation": 0,
-			// 		"permissions_structuration": 0,
-			// 		"ar_elements": [
-			// 			{
-			// 				"type": "term",
-			// 				"tipo": "hierarchy5",
-			// 				"value": "Spain",
-			// 				"model": "component_input_text"
-			// 			},
-			// 			{
-			// 				"type": "link_children",
-			// 				"tipo": "hierarchy45",
-			// 				"value": "button show children",
-			// 				"model": "component_relation_children"
-			// 			}
-			// 		],
-			// 		"heritage": {
-			// 			"es1_1": {
-			// 				"section_tipo": "es1",
-			// 				"section_id": "1",
-			// 				"mode": "edit",
-			// 				"lang": "lg-eng",
-			// 				"is_descriptor": true,
-			// 				"is_indexable": true,
-			// 				"permissions_button_new": 3,
-			// 				"permissions_button_delete": 3,
-			// 				"permissions_indexation": 3,
-			// 				"permissions_structuration": 0,
-			// 				"ar_elements": [
-			// 					{
-			// 						"type": "term",
-			// 						"tipo": "hierarchy25",
-			// 						"value": "Spain",
-			// 						"model": "component_input_text"
-			// 					},
-			// 					{
-			// 						"type": "icon",
-			// 						"tipo": "hierarchy28",
-			// 						"value": "NA",
-			// 						"model": "component_text_area"
-			// 					}, ...
-			// 				],
-			// 				"heritage": { ... }
-			// 			}
-			// 		}
-			// 	}
-			// }
 
 		// iterate data object
 		for (const key in data) {
 
 			const element = data[key]
 
-			// checks already exists
-				if (ts_object.ar_resolved.indexOf(key) !== -1) {
-					if(SHOW_DEBUG===true) {
-						console.log("[ts_object.parse_search_result] Skipped resolved key "+key);
-					}
-
-					// Recursive parent element
-					//let h_data = element.heritage
-					//ts_object.parse_search_result(h_data, self.current_main_div, true)
-					continue;
-				}
-
 			// target section_tipo
-				const target_section_tipo = (element.section_tipo==='hierarchy1')
+				const target_section_tipo = self.is_root(element.section_tipo)
 					? Object.values(element.heritage)[0].section_tipo
 					: element.section_tipo
 
@@ -1819,71 +1443,59 @@ export const ts_object = new function() {
 					}
 				}
 
-			if(!main_div) {
+			// main_div conditional
+				if(!main_div) {
 
-				ts_object.ar_resolved = [] // reset array
-				console.warn("[ts_object.parse_search_result] Warn: No main_div found! ", '.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container ', element);
+					console.warn("[ts_object.parse_search_result] Warn: No main_div found! ", '.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container ', element);
 
-			}else{
+				}else{
 
-				const ar_children_data = []
-					  ar_children_data.push(element)
+					const ar_children_data = []
+						  ar_children_data.push(element)
 
-				const render_options = {
-					clean_children_container		: false, // Elements are added to existing main_div instead replace
-					children_container_is_loaded	: false, // Set children container as loaded
-					show_arrow_opened				: false, // Set icon arrow as opened
-					target_section_tipo				: target_section_tipo, // add always !
-					mode							: 'search'
+					const render_options = {
+						clean_children_container		: false, // Elements are added to existing main_div instead replace
+						children_container_is_loaded	: false, // Set children container as loaded
+						show_arrow_opened				: false, // Set icon arrow as opened
+						target_section_tipo				: target_section_tipo, // add always !
+						mode							: 'search'
+					}
+
+					// render children. dom_parse_children (returns a promise)
+						self.dom_parse_children(
+							ar_children_data,
+							main_div,
+							render_options
+						)
 				}
 
-				// render children. dom_parse_children (returns a promise)
-					self.dom_parse_children(
-						ar_children_data,
-						main_div,
-						render_options
+			// hilite current term
+				const term_hilite = to_hilite.find(el => el.section_id==element.section_id && el.section_tipo===element.section_tipo)
+				if (term_hilite) {
+					dd_request_idle_callback(
+						() => {
+							const term_node = document.querySelector(`.term[data-section_tipo="${element.section_tipo}"][data-section_id="${element.section_id}"]`)
+							if (term_node) {
+								self.hilite_element(term_node, false);
+							}
+						}
 					)
-			}
-
-			// des
-				// .then(function(result) {
-				// 	//console.log(element.heritage);
-				// 	if (typeof element.heritage!=='undefined') {
-				// 		var h_data = element.heritage
-				// 		self.parse_search_result(h_data, result)
-
-				// 		//var children_element = result.parentNode.querySelector('.elements_container > [data-type="link_children"]')
-				// 		//self.update_arrow_state(children_element, true)
-
-				// 		console.log("parse_search_result case "+key);
-				// 	}else{
-				// 		console.log("else case "+key);
-				// 		//self.dom_parse_children(ar_children_data, main_div, false)
-				// 	}
-				// })
-
+				}
 
 			// Recursion when heritage is present
 			// Note var self.current_main_div is set on each dom_parse_children call
-			if (typeof element.heritage!=='undefined') {
+			// (see render_ts_object.render_children_list)
+				if (typeof element.heritage!=='undefined') {
 
-				// Recursive parent element
-				const h_data = element.heritage
-				self.parse_search_result(h_data, self.current_main_div, true);
-
-			}else{
-
-				dd_request_idle_callback(
-					() => {
-						// Last elements are the final found elements and must be hilite
-						// const last_element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
-						const last_element = main_div.querySelector('.elements_container > .term')
-						if (last_element) {
-							self.hilite_element(last_element, false);
-						}
-					}
-				)
-			}
+					// Recursive parent element resolve
+					const h_data = element.heritage
+					self.parse_search_result(
+						h_data,
+						to_hilite,
+						self.current_main_div,
+						true
+					)
+				}
 
 			// Open arrows and fix children container state
 				// main_div.classList.remove('js_first_load')
@@ -1892,8 +1504,6 @@ export const ts_object = new function() {
 				// 	children_element.firstChild.classList.add('ts_object_children_arrow_icon_open')
 				// 	//console.log(children_element);
 				// }
-
-			// ts_object.ar_resolved.push(key);
 
 		}//end for (const key in data)
 
@@ -2228,6 +1838,24 @@ export const ts_object = new function() {
 
 		return link_children;
 	}//end get_link_children_from_wrap
+
+
+
+	/**
+	* IS_ROOT
+	* @param string tipo
+	* 	Usually 'hierarchy1' for Thesaurus and 'ontology35' from Ontology
+	* @return bool
+	*/
+	this.is_root = function (tipo) {
+
+		const ar_root_tipo = [
+			'hierarchy1',
+			'ontology35'
+		]
+
+		return ar_root_tipo.includes(tipo)
+	}//end is_root
 
 
 

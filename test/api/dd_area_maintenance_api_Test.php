@@ -7,7 +7,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class dd_area_maintenance_api_Test extends TestCase {
+final class dd_area_maintenance_api_test extends TestCase {
 
 
 

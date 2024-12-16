@@ -175,7 +175,7 @@ class ts_object {
 							// unset($ar_properties[$key]);
 							continue;
 						}else if ($model===true) {
-							if ( ($type==='link_childrens' || $type==='link_children') && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo==='ontology35') ) {
+							if ( ($type==='link_childrens' || $type==='link_children') && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo===DEDALO_ONTOLOGY_SECTION_TIPO) ) {
 								// unset($ar_properties[$key]);
 								continue;
 							}else if ($type==='link_childrens_model' || $type==='link_children_model') {
@@ -672,13 +672,16 @@ class ts_object {
 	* @param object $locator
 	* @return array|null $final_value
 	*/
-	public static function get_term_dato_by_locator(object $locator) : ?array {
+	public static function get_term_dato_by_locator( object $locator ) : ?array {
 
 		// check valid object
 			if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
 				if(SHOW_DEBUG===true) {
 					#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
-					debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
+					debug_log(__METHOD__
+						." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !"
+						, logger::ERROR
+					);
 				}
 				return null;
 			}
@@ -727,7 +730,7 @@ class ts_object {
 	*
 	* @return string|null $valor
 	*/
-	public static function get_term_by_locator(object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false) : ?string {
+	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) : ?string {
 
 		$valor = null;
 
@@ -735,7 +738,10 @@ class ts_object {
 			if (!property_exists($locator, 'section_tipo')) {
 				if(SHOW_DEBUG===true) {
 					#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
-					debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
+					debug_log(__METHOD__
+						." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !"
+						, logger::ERROR
+					);
 				}
 				return $valor; // null
 			}
@@ -828,7 +834,7 @@ class ts_object {
 	* Alias of get_term_by_locator
 	* @return string|null $valor
 	*/
-	public function resolve_locator(object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false) {
+	public function resolve_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) {
 		return ts_object::get_term_by_locator($locator, $lang, $from_cache);
 	}//end resolve_locator
 
@@ -931,7 +937,7 @@ class ts_object {
 	* }
 	* @return object $count_data_group_by
 	*/
-	public function get_count_data_group_by(object $component, object $section_list_thesaurus_item) : object {
+	public function get_count_data_group_by( object $component, object $section_list_thesaurus_item ) : object {
 
 		// cache
 			static $resolved_child;

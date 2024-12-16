@@ -7,7 +7,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class tools_register_Test extends TestCase {
+final class tools_register_test extends TestCase {
 
 
 

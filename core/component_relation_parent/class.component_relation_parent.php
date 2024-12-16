@@ -682,6 +682,8 @@ class component_relation_parent extends component_relation_common {
 		// options
 			// search_in_main_hierarchy. Enable to add parents from hierarchy section (hierarchy1)
 			$search_in_main_hierarchy = $options->search_in_main_hierarchy ?? false;
+			// main_table
+			$main_table = $options->main_table ?? hierarchy::$main_table;
 			// hierarchy_from_component_tipo. When 'search_in_main_hierarchy' is true, it allows to select the component_reation_children component to be searched.
 			$hierarchy_from_component_tipo = $options->hierarchy_from_component_tipo ?? DEDALO_HIERARCHY_CHILDREN_TIPO;
 
@@ -753,7 +755,7 @@ class component_relation_parent extends component_relation_common {
 				$main_filter	= ",\"from_component_tipo\":\"$hierarchy_from_component_tipo\"";
 				$main_compare	= "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$main_filter."}";
 				$sql_where		= "datos#>'{relations}' @> '[$main_compare]'::jsonb";
-				$table			= hierarchy::$main_table;
+				$table			= $main_table; // usually hierarchy::$main_table;
 				$strQuery	   .= "\nUNION ALL \nSELECT $sql_select FROM \"$table\" WHERE $sql_where ";
 			}
 
