@@ -36,6 +36,17 @@ class area_thesaurus extends area_common {
 
 
 	/**
+	* GET_MAIN_TABLE
+	* @return string
+	*/
+	public function get_main_table() {
+
+		return hierarchy::$main_table; // matrix_hierarchy_main
+	}//end get_main_table
+
+
+
+	/**
 	* GET_HIERARCHY_TYPOLOGIES
 	* Get an array of all section_id from records of current section
 	* @return array $hierarchy_typologies
@@ -455,8 +466,9 @@ class area_thesaurus extends area_common {
 								$section_tipo,
 								(object)[
 									'skip_root'						=> false,
-									'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo,
-									'search_in_main_hierarchy'		=> true
+									'search_in_main_hierarchy'		=> true,
+									'main_table'					=> $this->get_main_table(),
+									'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo
 								]
 							);
 							// add

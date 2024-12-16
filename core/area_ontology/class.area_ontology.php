@@ -28,4 +28,15 @@ class area_ontology extends area_thesaurus {
 
 
 
+	/**
+	* GET_MAIN_TABLE
+	* @return string
+	*/
+	public function get_main_table() {
+
+		return ontology::$main_table; // 'matrix_ontology_main'
+	}//end get_main_table
+
+
+
 }//end area_ontology
