@@ -81,6 +81,9 @@ define('DEDALO_COMPONENT_RESOURCES_TR_TIPO',			'rsc36');
 define('DEDALO_SECTION_RESOURCES_IMAGE_TIPO',			'rsc170');
 define('DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO',			'rsc29');
 
+// ontology
+define('DEDALO_ONTOLOGY_SECTION_TIPO',					'ontology35');
+
 // Hierarchy types
 define('DEDALO_HIERARCHY_TYPES_SECTION_TIPO',			'hierarchy13');
 define('DEDALO_HIERARCHY_TYPES_NAME_TIPO',				'hierarchy16');
