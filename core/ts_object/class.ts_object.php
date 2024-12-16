@@ -175,7 +175,7 @@ class ts_object {
 							// unset($ar_properties[$key]);
 							continue;
 						}else if ($model===true) {
-							if ( ($type==='link_childrens' || $type==='link_children') && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo==='ontology35') ) {
+							if ( ($type==='link_childrens' || $type==='link_children') && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo===DEDALO_ONTOLOGY_SECTION_TIPO) ) {
 								// unset($ar_properties[$key]);
 								continue;
 							}else if ($type==='link_childrens_model' || $type==='link_children_model') {
