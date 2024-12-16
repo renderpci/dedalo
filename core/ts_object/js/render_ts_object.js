@@ -10,6 +10,13 @@
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {ts_object} from './ts_object.js'
 	import { get_instance } from '../../common/js/instances.js'
+	import {
+		on_dragstart,
+		on_dragend,
+		on_drop,
+		on_dragover,
+		on_dragleave
+	} from './drag_and_drop.js'
 
 
 
@@ -419,15 +426,30 @@ export const render_children_list = function(options) {
 				// drag events attach
 				if (is_descriptor===true) {
 					// dragstart event
-					wrap_ts_object.addEventListener('dragstart', self.on_dragstart)
+					const dragstart_handler = (e) => {
+						on_dragstart(self, e)
+					}
+					wrap_ts_object.addEventListener('dragstart', dragstart_handler)
 					// dragend event
-					wrap_ts_object.addEventListener('dragend', self.on_drag_end)
+					const dragend_handler = (e) => {
+						on_dragend(self, e)
+					}
+					wrap_ts_object.addEventListener('dragend', dragend_handler)
 					// drop event
-					wrap_ts_object.addEventListener('drop', self.on_drop)
+					const drop_event = (e) => {
+						on_drop(self, e)
+					}
+					wrap_ts_object.addEventListener('drop', drop_event)
 					// dragover event
-					wrap_ts_object.addEventListener('dragover', self.on_dragover)
+					const dragover_handler = (e) => {
+						on_dragover(self, e)
+					}
+					wrap_ts_object.addEventListener('dragover', dragover_handler)
 					// dragleave
-					wrap_ts_object.addEventListener("dragleave", self.on_dragleave)
+					const dragleave_handler = (e) => {
+						on_dragleave(self, e)
+					}
+					wrap_ts_object.addEventListener('dragleave', dragleave_handler)
 				}
 
 		// ID COLUMN . id column content
@@ -685,7 +707,7 @@ const render_id_column = function(options) {
 			// MOVE DRAG . button drag element
 				if (children_data.permissions_button_new>=2) {
 					if(is_descriptor===true) {
-						const link_drag = ui.create_dom_element({
+						const dragger = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'id_column_link ts_object_drag',
 							title_label		: 'drag',
@@ -694,15 +716,16 @@ const render_id_column = function(options) {
 						// mousedown event
 						const mousedown_handler = (e) => {
 							e.stopPropagation()
-							self.on_drag_mousedown(e)
+							// handle. set with event value
+							self.handle = e
 						}
-						link_drag.addEventListener('mousedown', mousedown_handler)
+						dragger.addEventListener('mousedown', mousedown_handler)
 
 						// drag icon
 						ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'ts_object_drag_icon',
-							parent			: link_drag
+							parent			: dragger
 						})
 					}//if(is_descriptor===true)
 				}
@@ -1106,8 +1129,8 @@ const render_ontology_term = function(options) {
 
 		// term_id . like 'dd_1'
 			const term_id	= term_regex_result
-				? term_regex_result[2] + '_' + term_regex_result[3]
-				: section_tipo +'_'+ section_id
+				? term_regex_result[2] + term_regex_result[3]
+				: section_tipo + section_id
 
 		// term_text
 			// const term_text = Array.isArray( child_data.ar_elements[key].value )
@@ -1173,12 +1196,17 @@ const render_ontology_term = function(options) {
 		}
 
 	// id_info. Like '[hierarchy1_246]' (Term terminoID )
-		ui.create_dom_element({
+		const id_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'id_info',
 			inner_html		: '['+ term_id +']',
+			title			: section_tipo + ' - ' + section_id,
 			parent			: term_node
 		})
+		const click_handler_id_info = (e) => {
+			e.stopPropagation()
+		}
+		id_info.addEventListener('mousedown', click_handler_id_info)
 
 	// button_duplicate
 		const button_duplicate = ui.create_dom_element({

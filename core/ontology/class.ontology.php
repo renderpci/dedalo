@@ -9,7 +9,7 @@ class ontology {
 
 	// Table where ontology data is stored
 	static $main_table					= 'matrix_ontology_main';
-	static $main_section_tipo			= 'ontology35';
+	static $main_section_tipo			= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 	static $cache_target_section_tipo	= [
 		'dd'			=> 'ontology40',
 		'ontology'		=> 'ontology41',

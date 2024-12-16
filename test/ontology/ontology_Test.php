@@ -58,7 +58,7 @@ final class ontology_test extends TestCase {
 
 		// ontology::$main_section_tipo
 			$result		= ontology::$main_section_tipo;
-			$expected	= 'ontology35';
+			$expected	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 			$this->assertTrue(
 				$result===$expected ,
 				'expected:' . $expected . PHP_EOL
@@ -155,7 +155,7 @@ final class ontology_test extends TestCase {
 				.'result type: ' . gettype($result) . PHP_EOL
 			);
 
-			$expected = 'ontology35';
+			$expected = DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 			$this->assertTrue(
 				$result->section_tipo===$expected ,
 				'expected:' . to_string($expected) . PHP_EOL
@@ -202,7 +202,7 @@ final class ontology_test extends TestCase {
 				.'result type: ' . gettype($result) . PHP_EOL
 			);
 
-			$expected = 'ontology35';
+			$expected = DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 			$this->assertTrue(
 				$result->section_tipo===$expected ,
 				'expected:' . to_string($expected) . PHP_EOL
