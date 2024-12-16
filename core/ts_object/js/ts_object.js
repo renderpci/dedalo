@@ -599,7 +599,7 @@ export const ts_object = new function() {
 	* Adds 'element_hilite' class to matching nodes
 	* @param HTMLElment element
 	* @param bool clean_others
-	* @return int len
+	* @return int matches_length
 	* 	matches.length
 	*/
 	this.hilite_element = function(element, clean_others) {
@@ -621,12 +621,12 @@ export const ts_object = new function() {
 			}
 
 		// hilite all appearances of current component (may appear more than once)
-			const matches	= document.querySelectorAll('.list_thesaurus_element[data-type="'+element.dataset.type+'"][data-section_tipo="'+element.dataset.section_tipo+'"][data-section_id="'+element.dataset.section_id+'"]');
-			const len		= matches.length;
-			for (let i = len - 1; i >= 0; i--) {
+			const matches = document.querySelectorAll(`.term[data-type="${element.dataset.type}"][data-section_tipo="${element.dataset.section_tipo}"][data-section_id="${element.dataset.section_id}"]`);
+			const matches_length = matches.length;
+			for (let i = matches_length - 1; i >= 0; i--) {
 
 				const node = matches[i]
-				node.classList.add("element_hilite");
+				node.classList.add('element_hilite');
 
 				// check parent is arrow_icon_open
 					const parent_wrapper = node.parentNode.parentNode.parentNode.parentNode;
@@ -644,7 +644,7 @@ export const ts_object = new function() {
 					}
 			}
 
-		return len
+		return matches_length
 	}//end hilite_element
 
 
@@ -1341,91 +1341,79 @@ export const ts_object = new function() {
 	* Only used for search result, not for regular tree render
 	* Called from render_area_thesaurus.list
 	* @param object data
+	*  sample:
+		* [{
+		* 	"hierarchy1_66": {
+		* 		"section_tipo": "hierarchy1",
+		* 		"section_id": "66",
+		* 		"mode": "edit",
+		* 		"lang": "lg-eng",
+		* 		"is_descriptor": true,
+		* 		"is_indexable": false,
+		* 		"permissions_button_new": 3,
+		* 		"permissions_button_delete": 0,
+		* 		"permissions_indexation": 0,
+		* 		"permissions_structuration": 0,
+		* 		"ar_elements": [
+		* 			{
+		* 				"type": "term",
+		* 				"tipo": "hierarchy5",
+		* 				"value": "Spain",
+		* 				"model": "component_input_text"
+		* 			},
+		* 			{
+		* 				"type": "link_children",
+		* 				"tipo": "hierarchy45",
+		* 				"value": "button show children",
+		* 				"model": "component_relation_children"
+		* 			}
+		* 		],
+		* 		"heritage": {
+		* 			"es1_1": {
+		* 				"section_tipo": "es1",
+		* 				"section_id": "1",
+		* 				"mode": "edit",
+		* 				"lang": "lg-eng",
+		* 				"is_descriptor": true,
+		* 				"is_indexable": true,
+		* 				"permissions_button_new": 3,
+		* 				"permissions_button_delete": 3,
+		* 				"permissions_indexation": 3,
+		* 				"permissions_structuration": 0,
+		* 				"ar_elements": [
+		* 					{
+		* 						"type": "term",
+		* 						"tipo": "hierarchy25",
+		* 						"value": "Spain",
+		* 						"model": "component_input_text"
+		* 					},
+		* 					{
+		* 						"type": "icon",
+		* 						"tipo": "hierarchy28",
+		* 						"value": "NA",
+		* 						"model": "component_text_area"
+		* 					}, ...
+		* 				],
+		* 				"heritage": { ... }
+		* 			}
+		* 		}
+		* 	}
+		* }]
+	* @param array to_hilite
+	* 	array of locators found in search
 	* @param HTMLElement|null main_div
 	* @param bool is_recursion
 	* @return bool
 	*/
 	this.current_main_div = null;
-	this.ar_resolved = [];
-	this.parse_search_result = function( data, main_div, is_recursion ) {
+	this.parse_search_result = function( data, to_hilite, main_div, is_recursion ) {
 
 		const self = this
-
-		// sample data:
-			// [{
-			// 	"hierarchy1_66": {
-			// 		"section_tipo": "hierarchy1",
-			// 		"section_id": "66",
-			// 		"mode": "edit",
-			// 		"lang": "lg-eng",
-			// 		"is_descriptor": true,
-			// 		"is_indexable": false,
-			// 		"permissions_button_new": 3,
-			// 		"permissions_button_delete": 0,
-			// 		"permissions_indexation": 0,
-			// 		"permissions_structuration": 0,
-			// 		"ar_elements": [
-			// 			{
-			// 				"type": "term",
-			// 				"tipo": "hierarchy5",
-			// 				"value": "Spain",
-			// 				"model": "component_input_text"
-			// 			},
-			// 			{
-			// 				"type": "link_children",
-			// 				"tipo": "hierarchy45",
-			// 				"value": "button show children",
-			// 				"model": "component_relation_children"
-			// 			}
-			// 		],
-			// 		"heritage": {
-			// 			"es1_1": {
-			// 				"section_tipo": "es1",
-			// 				"section_id": "1",
-			// 				"mode": "edit",
-			// 				"lang": "lg-eng",
-			// 				"is_descriptor": true,
-			// 				"is_indexable": true,
-			// 				"permissions_button_new": 3,
-			// 				"permissions_button_delete": 3,
-			// 				"permissions_indexation": 3,
-			// 				"permissions_structuration": 0,
-			// 				"ar_elements": [
-			// 					{
-			// 						"type": "term",
-			// 						"tipo": "hierarchy25",
-			// 						"value": "Spain",
-			// 						"model": "component_input_text"
-			// 					},
-			// 					{
-			// 						"type": "icon",
-			// 						"tipo": "hierarchy28",
-			// 						"value": "NA",
-			// 						"model": "component_text_area"
-			// 					}, ...
-			// 				],
-			// 				"heritage": { ... }
-			// 			}
-			// 		}
-			// 	}
-			// }]
 
 		// iterate data object
 		for (const key in data) {
 
 			const element = data[key]
-
-			// checks already exists
-				if (ts_object.ar_resolved.indexOf(key) !== -1) {
-					if(SHOW_DEBUG===true) {
-						console.log("[ts_object.parse_search_result] Skipped resolved key "+key);
-					}
-
-					// Recursive parent element
-					//let h_data = element.heritage
-					//ts_object.parse_search_result(h_data, self.current_main_div, true)
-					continue;
-				}
 
 			// target section_tipo
 				const target_section_tipo = self.is_root(element.section_tipo)
@@ -1455,70 +1443,59 @@ export const ts_object = new function() {
 					}
 				}
 
-			if(!main_div) {
+			// main_div conditional
+				if(!main_div) {
 
-				ts_object.ar_resolved = [] // reset array
-				console.warn("[ts_object.parse_search_result] Warn: No main_div found! ", '.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container ', element);
+					console.warn("[ts_object.parse_search_result] Warn: No main_div found! ", '.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container ', element);
 
-			}else{
+				}else{
 
-				const ar_children_data = []
-					  ar_children_data.push(element)
+					const ar_children_data = []
+						  ar_children_data.push(element)
 
-				const render_options = {
-					clean_children_container		: false, // Elements are added to existing main_div instead replace
-					children_container_is_loaded	: false, // Set children container as loaded
-					show_arrow_opened				: false, // Set icon arrow as opened
-					target_section_tipo				: target_section_tipo, // add always !
-					mode							: 'search'
+					const render_options = {
+						clean_children_container		: false, // Elements are added to existing main_div instead replace
+						children_container_is_loaded	: false, // Set children container as loaded
+						show_arrow_opened				: false, // Set icon arrow as opened
+						target_section_tipo				: target_section_tipo, // add always !
+						mode							: 'search'
+					}
+
+					// render children. dom_parse_children (returns a promise)
+						self.dom_parse_children(
+							ar_children_data,
+							main_div,
+							render_options
+						)
 				}
 
-				// render children. dom_parse_children (returns a promise)
-					self.dom_parse_children(
-						ar_children_data,
-						main_div,
-						render_options
+			// hilite current term
+				const term_hilite = to_hilite.find(el => el.section_id==element.section_id && el.section_tipo===element.section_tipo)
+				if (term_hilite) {
+					dd_request_idle_callback(
+						() => {
+							const term_node = document.querySelector(`.term[data-section_tipo="${element.section_tipo}"][data-section_id="${element.section_id}"]`)
+							if (term_node) {
+								self.hilite_element(term_node, false);
+							}
+						}
 					)
-			}
-
-			// des
-				// .then(function(result) {
-				// 	//console.log(element.heritage);
-				// 	if (typeof element.heritage!=='undefined') {
-				// 		var h_data = element.heritage
-				// 		self.parse_search_result(h_data, result)
-
-				// 		//var children_element = result.parentNode.querySelector('.elements_container > [data-type="link_children"]')
-				// 		//self.update_arrow_state(children_element, true)
-
-				// 		console.log("parse_search_result case "+key);
-				// 	}else{
-				// 		console.log("else case "+key);
-				// 		//self.dom_parse_children(ar_children_data, main_div, false)
-				// 	}
-				// })
+				}
 
 			// Recursion when heritage is present
 			// Note var self.current_main_div is set on each dom_parse_children call
-			if (typeof element.heritage!=='undefined') {
+			// (see render_ts_object.render_children_list)
+				if (typeof element.heritage!=='undefined') {
 
-				// Recursive parent element
-				const h_data = element.heritage
-				self.parse_search_result(h_data, self.current_main_div, true);
-
-			}else{
-
-				dd_request_idle_callback(
-					() => {
-						// Last elements are the final found elements and must be hilite
-						// const last_element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
-						const last_element = main_div.querySelector('.elements_container > .term')
-						if (last_element) {
-							self.hilite_element(last_element, false);
-						}
-					}
-				)
-			}
+					// Recursive parent element resolve
+					const h_data = element.heritage
+					self.parse_search_result(
+						h_data,
+						to_hilite,
+						self.current_main_div,
+						true
+					)
+				}
 
 			// Open arrows and fix children container state
 				// main_div.classList.remove('js_first_load')
@@ -1527,8 +1504,6 @@ export const ts_object = new function() {
 				// 	children_element.firstChild.classList.add('ts_object_children_arrow_icon_open')
 				// 	//console.log(children_element);
 				// }
-
-			// ts_object.ar_resolved.push(key);
 
 		}//end for (const key in data)
 

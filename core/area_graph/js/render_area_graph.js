@@ -69,6 +69,7 @@ render_area_graph.prototype.list = async function(options) {
 						() => {
 							self.ts_object.parse_search_result(
 								data.ts_search.result, // object data
+								data.ts_search.to_hilite,
 								null, // HTMLElement main_div
 								false // bool is_recursion
 							)
@@ -116,7 +117,12 @@ render_area_graph.prototype.list = async function(options) {
 	// ts_search case
 		if (data.ts_search) {
 			const render_handler = () => {
-				self.ts_object.parse_search_result(data.ts_search.result, null, false)
+				self.ts_object.parse_search_result(
+					data.ts_search.result,
+					data.ts_search.to_hilite,
+					null,
+					false
+				)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('render_'+self.filter.id, render_handler)
