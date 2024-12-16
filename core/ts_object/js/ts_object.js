@@ -379,7 +379,7 @@ export const ts_object = new function() {
 
 	/**
 	* FIND_UP_TAG
-	* Search parent with given CSS selector recursively
+	* Search parent with given CSS selector looking up recursively
 	* @param HTMLElement el
 	* @param string class_name 'wrap_ts_object'
 	* @return HTMLElement|null
