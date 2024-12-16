@@ -1129,8 +1129,8 @@ const render_ontology_term = function(options) {
 
 		// term_id . like 'dd_1'
 			const term_id	= term_regex_result
-				? term_regex_result[2] + '_' + term_regex_result[3]
-				: section_tipo +'_'+ section_id
+				? term_regex_result[2] + term_regex_result[3]
+				: section_tipo + section_id
 
 		// term_text
 			// const term_text = Array.isArray( child_data.ar_elements[key].value )
@@ -1196,12 +1196,17 @@ const render_ontology_term = function(options) {
 		}
 
 	// id_info. Like '[hierarchy1_246]' (Term terminoID )
-		ui.create_dom_element({
+		const id_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'id_info',
 			inner_html		: '['+ term_id +']',
+			title			: section_tipo + ' - ' + section_id,
 			parent			: term_node
 		})
+		const click_handler_id_info = (e) => {
+			e.stopPropagation()
+		}
+		id_info.addEventListener('mousedown', click_handler_id_info)
 
 	// button_duplicate
 		const button_duplicate = ui.create_dom_element({
