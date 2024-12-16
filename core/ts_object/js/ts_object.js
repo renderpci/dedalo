@@ -1336,33 +1336,12 @@ export const ts_object = new function() {
 
 
 	/**
-	* LINK_TERM (REMOVED 04-05-2022 NOT USED ANYMORE)
-	* Add link to opener window for autocomplete_hi relations
-	*/
-		// this.link_term = function(button_obj) {
-
-		// 	// source window. Could be different than current (like iframe)
-		// 		const source_window = window.opener || window.parent
-		// 		if (source_window===null) {
-		// 			console.log("[link_term] Error on find window.opener / parent")
-		// 			return false
-		// 		}
-
-		// 	// publish event link_term
-		// 		source_window.event_manager.publish('link_term_'+ self.initiator, button_obj.data)
-
-
-		// 	return true
-		// }//end link_term
-
-
-
-	/**
 	* PARSER_SEARCH_RESULT
 	* Recursive parser for results of the search
 	* Only used for search result, not for regular tree render
+	* Called from render_area_thesaurus.list
 	* @param object data
-	* @param HTMLElement main_div
+	* @param HTMLElement|null main_div
 	* @param bool is_recursion
 	* @return bool
 	*/
@@ -1373,7 +1352,7 @@ export const ts_object = new function() {
 		const self = this
 
 		// sample data:
-			// {
+			// [{
 			// 	"hierarchy1_66": {
 			// 		"section_tipo": "hierarchy1",
 			// 		"section_id": "66",
@@ -1429,7 +1408,7 @@ export const ts_object = new function() {
 			// 			}
 			// 		}
 			// 	}
-			// }
+			// }]
 
 		// iterate data object
 		for (const key in data) {
@@ -1890,7 +1869,7 @@ export const ts_object = new function() {
 	/**
 	* IS_ROOT
 	* @param string tipo
-	* 	Usually 'hierarchy1' for Thesaurus and 'ontology35' fro Ontology
+	* 	Usually 'hierarchy1' for Thesaurus and 'ontology35' from Ontology
 	* @return bool
 	*/
 	this.is_root = function (tipo) {
