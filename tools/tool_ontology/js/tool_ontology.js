@@ -49,11 +49,11 @@ export const tool_ontology = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_ontology.prototype.render		= tool_common.prototype.render
+	tool_ontology.prototype.render	= tool_common.prototype.render
 	tool_ontology.prototype.destroy	= common.prototype.destroy
 	tool_ontology.prototype.refresh	= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
-	tool_ontology.prototype.edit		= render_tool_ontology.prototype.edit
+	tool_ontology.prototype.edit	= render_tool_ontology.prototype.edit
 
 
 
@@ -110,19 +110,22 @@ tool_ontology.prototype.build = async function(autoload=false) {
 
 
 /**
-* GENERATE_VIRTUAL_SECTION
-* Call the API to generate a new Ontology
+* SET_RECORDS_IN_JER_DD
+* Call the API to process the ontology node into the jer_dd rows
 * @return promise response
 */
-tool_ontology.prototype.generate_virtual_section = async function(options) {
+tool_ontology.prototype.set_records_in_jer_dd = async function() {
 
 	const self = this
 
-	const force_to_create = options.force_to_create || false
+	// sort vars
+		const mode			= self.caller.mode
+		const section_tipo	= self.caller.section_tipo
+		const section_id	= self.caller.section_id || null
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'generate_virtual_section')
+		const source = create_source(self, 'set_records_in_jer_dd')
 
 	// rqo
 		const rqo = {
@@ -130,9 +133,9 @@ tool_ontology.prototype.generate_virtual_section = async function(options) {
 			action	: 'tool_request',
 			source	: source,
 			options	: {
-				section_id		: self.caller.section_id,
-				section_tipo	: self.caller.section_tipo,
-				force_to_create : force_to_create
+				section_id		: section_id,
+				section_tipo	: section_tipo,
+				mode			: mode
 			}
 		}
 
@@ -144,13 +147,13 @@ tool_ontology.prototype.generate_virtual_section = async function(options) {
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
-					dd_console("-> generate_virtual_section API response:",'DEBUG',response);
+					dd_console("-> set_records_in_jer_dd API response:",'DEBUG',response);
 				}
 
 				resolve(response)
 			})
 		})
-}//end generate_virtual_section
+}//end set_records_in_jer_dd
 
 
 
