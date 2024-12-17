@@ -112,6 +112,10 @@ const get_content_data = async function(self) {
 							self, // object page instance
 							current_context // object is used as source
 						)
+						// if the instance doesn't exist stop.
+						if(!current_instance){
+							return null;
+						}
 
 						// store instance to locate on destroy
 						self.ar_instances.push(current_instance)
