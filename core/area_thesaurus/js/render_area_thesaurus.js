@@ -70,7 +70,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 						() => {
 							self.ts_object.parse_search_result(
 								data.ts_search.result, // object data
-								data.ts_search.to_hilite,
+								data.ts_search.found, // to hilite
 								null, // HTMLElement main_div
 								false // bool is_recursion
 							)
@@ -120,7 +120,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 			const render_handler = () => {
 				self.ts_object.parse_search_result(
 					data.ts_search.result,
-					data.ts_search.to_hilite,
+					data.ts_search.found, // to hilite
 					null,
 					false
 				)
