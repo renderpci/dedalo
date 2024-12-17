@@ -142,7 +142,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 				dd_request_idle_callback
 				(
 					() => {
-						const id_infos = document.querySelectorAll('.id_info')
+						const id_infos = document.querySelectorAll('.id_info.ontology')
 						const id_infos_length = id_infos.length
 					for (let i = 0; i < id_infos_length; i++) {
 
