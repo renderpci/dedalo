@@ -1858,15 +1858,18 @@ class search {
 		# alias . Sort version of main_section_tipo
 		$main_section_tipo_alias = $this->main_section_tipo_alias;
 
-		$ar_sentences = array();
+		// previous model
+			// $ar_sentences = array();
+			// // section_tipo
+			// 	foreach ($ar_section_tipo as $current_section_tipo) {
+			// 		$ar_sentences[] = $main_section_tipo_alias.'.section_tipo=\''. $current_section_tipo.'\'';
+			// 	}
 
-		// section_tipo
-			foreach ($ar_section_tipo as $current_section_tipo) {
-				$ar_sentences[] = $main_section_tipo_alias.'.section_tipo=\''. $current_section_tipo.'\'';
-			}
+			// // flat query string
+			// 	$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
 
-		// flat query string
-			$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
+		// IN model query
+			$main_where_sql = '(' . $main_section_tipo_alias.'.section_tipo IN (\'' . implode('\',\'', $ar_section_tipo) . '\'))';
 
 		// avoid root user is showed except for root
 			if (!isset($this->include_negative) || $this->include_negative!==true) {
