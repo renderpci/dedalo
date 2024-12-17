@@ -436,13 +436,13 @@ class area_thesaurus extends area_common {
 
 		// ar_path_mix . Calculate full path of each result
 			$ar_path_mix	= [];
-			$to_hilite		= [];
+			$found			= [];
 			foreach ($ar_records as $row) {
 
 				$section_tipo	= $row->section_tipo;
 				$section_id		= $row->section_id;
 
-				$to_hilite[] = [
+				$found[] = [
 					'section_tipo'	=> $section_tipo,
 					'section_id'	=> $section_id
 				];
@@ -501,10 +501,10 @@ class area_thesaurus extends area_common {
 			$total_records = count($ar_records);
 
 		// response
-			$response->msg			= 'Records found: ' . $total_records;
-			$response->result		= $result;
-			$response->total		= $total_records;
-			$response->to_hilite	= $to_hilite;
+			$response->msg		= 'Records found: ' . $total_records;
+			$response->result	= $result;
+			$response->total	= $total_records;
+			$response->found	= $found;
 
 		// debug
 			if(SHOW_DEBUG===true) {
