@@ -1201,6 +1201,10 @@ const render_ontology_term = function(options) {
 			class_name		: 'id_info',
 			inner_html		: '['+ term_id +']',
 			title			: section_tipo + ' - ' + section_id,
+			data_set		: {
+				section : section_tipo + ' - ' + section_id,
+				term_id : '['+ term_id +']'
+			},
 			parent			: term_node
 		})
 		const click_handler_id_info = (e) => {
