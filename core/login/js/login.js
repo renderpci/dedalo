@@ -206,8 +206,17 @@ login.prototype.login = async function(options) {
 			console.log('login api_response:', api_response);
 		}
 
-	// delete dedalo_files caches
-		await caches.delete('dedalo_files');
+	// delete dedalo_files caches (only HTTPS)
+		if ('serviceWorker' in navigator) {
+			try {
+
+				// delete dedalo_files caches
+				await caches.delete('dedalo_files');
+
+			} catch (error) {
+				console.error('ServiceWorker delete caches failed:', error);
+			}
+		}
 
 
 	return api_response

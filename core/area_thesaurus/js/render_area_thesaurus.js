@@ -101,6 +101,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 				class_name		: 'search_container',
 				parent			: fragment
 			})
+			// set pointers
 			self.search_container = search_container
 		}
 
@@ -113,6 +114,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 			label			: null
 		})
 		wrapper.prepend(fragment)
+		// set pointers
 		wrapper.content_data = content_data
 
 	// ts_search case
@@ -315,7 +317,7 @@ const sort_root_terms = function (a, b) {
 const get_buttons = function(self) {
 
 	// ar_buttons list from context
-		const ar_buttons = self.context.buttons
+		const ar_buttons = self.context?.buttons
 		if(!ar_buttons) {
 			return null;
 		}
@@ -330,24 +332,33 @@ const get_buttons = function(self) {
 			parent			: fragment
 		})
 
-		// filter button (search) . Show and hide all search elements
-			const filter_button	= ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning search',
-				inner_html		: get_label.find || 'Search',
-				parent			: buttons_container
-			})
-			filter_button.addEventListener('mousedown', function(e) {
-				e.stopPropagation()
-				event_manager.publish('toggle_search_panel_'+self.id)
-			})
-			// ui.create_dom_element({
-			// 	element_type	: 'span',
-			// 	class_name		: 'button white search',
-			// 	parent			: filter_button
-			// })
-			// filter_button.insertAdjacentHTML('beforeend', get_label.find)
+	// filter button (search) . Show and hide all search elements
+		const filter_button	= ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning search',
+			inner_html		: get_label.find || 'Search',
+			parent			: buttons_container
+		})
+		const mousedown_handler = (e) => {
+			e.stopPropagation()
+			event_manager.publish('toggle_search_panel_'+self.id)
+		}
+		filter_button.addEventListener('mousedown', mousedown_handler)
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'button white search',
+		// 	parent			: filter_button
+		// })
+		// filter_button.insertAdjacentHTML('beforeend', get_label.find)
 
+	// other_buttons_block
+		const other_buttons_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'other_buttons_block',
+			parent			: buttons_container
+		})
+
+	// other buttons
 		const ar_buttons_length = ar_buttons.length;
 		for (let i = 0; i < ar_buttons_length; i++) {
 
@@ -361,9 +372,9 @@ const get_buttons = function(self) {
 					element_type	: 'button',
 					class_name		: class_name,
 					inner_html		: current_button.label,
-					parent			: buttons_container
+					parent			: other_buttons_block
 				})
-				button_node.addEventListener('click', (e) => {
+				const click_handler = (e) => {
 					e.stopPropagation()
 
 					switch(current_button.model){
@@ -380,11 +391,12 @@ const get_buttons = function(self) {
 							event_manager.publish('click_' + current_button.model)
 							break;
 					}
-				})
+				}
+				button_node.addEventListener('click', click_handler)
 		}//end for (let i = 0; i < ar_buttons_length; i++)
 
 	// tools
-		ui.add_tools(self, buttons_container)
+		ui.add_tools(self, other_buttons_block)
 
 
 	return fragment

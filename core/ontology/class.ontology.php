@@ -806,6 +806,7 @@ class ontology {
 	/**
 	* GET_ALL_ONTOLOGY_SECTIONS
 	* Calculates ontology sections (target section tipo) like ontology40, localontology3, ...
+	* Stored in matrix_ontology_main table.
 	* @return array $ontology_sections
 	*/
 	public static function get_all_ontology_sections() : array {
@@ -820,18 +821,11 @@ class ontology {
 				}
 			}
 
-		// search_query_object
-			$sqo = new search_query_object();
-				$sqo->set_section_tipo( [self::$main_section_tipo] );
-				$sqo->set_limit( 0 );
-
-		// search exec
-			$search	= search::get_instance($sqo);
-			$result	= $search->search();
+		$ar_records = ontology::get_all_main_ontology_records();
 
 		// iterate rows
 			$ontology_sections = [];
-			foreach ($result->ar_records as $row) {
+			foreach ($ar_records as $row) {
 
 				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {
 					debug_log(__METHOD__
@@ -864,6 +858,29 @@ class ontology {
 
 		return $ontology_sections;
 	}//end get_all_ontology_sections
+
+
+
+	/**
+	* GET_ALL_MAIN_ONTOLOGY_RECORDS
+	* @return array $ar_records
+	*/
+	public static function get_all_main_ontology_records() :array {
+
+		// search_query_object
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( [self::$main_section_tipo] );
+				$sqo->set_limit( 0 );
+
+		// search exec
+			$search	= search::get_instance($sqo);
+			$result	= $search->search();
+
+		$ar_records = $result->ar_records ?? [];
+
+
+		return $ar_records;
+	}//end get_all_main_ontology_records
 
 
 
