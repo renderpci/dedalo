@@ -73,13 +73,6 @@ class area_maintenance extends area_common {
 
 		$ar_widgets = [];
 
-		// tld list
-			$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
-			// force to add 'ontology' to the list
-			$DEDALO_PREFIX_TIPOS = array_values(array_unique(
-				array_merge($DEDALO_PREFIX_TIPOS, ['ontology'])
-			));
-
 		// make_backup *
 			$item	= $this->item_make_backup();
 			$widget	= $this->widget_factory($item);
@@ -101,22 +94,7 @@ class area_maintenance extends area_common {
 				$item->id		= 'update_ontology';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('update_ontology') ?? 'Update Ontology';
-				$item->value	= (object)[
-					'current_ontology'		=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa'),
-					'prefix_tipos'			=> $DEDALO_PREFIX_TIPOS,
-					'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
-					'structure_server_url'	=> (defined('STRUCTURE_SERVER_URL') ? STRUCTURE_SERVER_URL : null),
-					'structure_server_check'=> backup::check_remote_server(),
-					'structure_server_code'	=> (defined('STRUCTURE_SERVER_CODE') ? STRUCTURE_SERVER_CODE : null),
-					'ontology_db'			=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
-					'body'					=> defined('ONTOLOGY_DB')
-						? 'Disabled update Ontology. You are using config ONTOLOGY_DB !'
-						: label::get_label('update_ontology')." is disabled for ".DEDALO_ENTITY,
-					'confirm_text'			=> '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' . PHP_EOL
-						.'!!!!!!!!!!!!!! DELETING ACTUAL ONTOLOGY !!!!!!!!!!!!!!!!!!!!!!!!!!!' . PHP_EOL
-						.'Are you sure you want to overwrite the current Ontology data?' .PHP_EOL
-						.'You will lose all changes made to the local Ontology.'
-				];
+				$item->value	= null;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -127,7 +105,6 @@ class area_maintenance extends area_common {
 				$item->label	= label::get_label('ontology_processes') ?? 'Update Ontology';
 				$item->value	= (object)[
 					'current_ontology'		=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa'),
-					'prefix_tipos'			=> $DEDALO_PREFIX_TIPOS,
 					'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
 					'structure_server_url'	=> (defined('STRUCTURE_SERVER_URL') ? STRUCTURE_SERVER_URL : null),
 					'structure_server_code'	=> (defined('STRUCTURE_SERVER_CODE') ? STRUCTURE_SERVER_CODE : null),
@@ -2048,75 +2025,89 @@ class area_maintenance extends area_common {
 				$response->errors	= [];
 
 		// options
-			$ar_dedalo_prefix_tipos = $options->ar_dedalo_prefix_tipos;
-			if (empty($ar_dedalo_prefix_tipos) || !is_array($ar_dedalo_prefix_tipos)) {
-				$response->errors[] = 'Empty mandatory ar_dedalo_prefix_tipos value';
-				return $response;
-			}
-			foreach ($ar_dedalo_prefix_tipos as $prefix) {
-				if(!hierarchy::valid_tld($prefix)) {
-					$response->errors[] = 'Error. Invalid prefix value: '. to_string($prefix);
-					return $response;
-				}
-			}
+			$server	= $options->server;
+			$files	= $options->files;
+			$info 	= $options->info;
 
 		// ar_msg
 			$ar_msg = [];
 
-		// Remote server check
-			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
 
-				debug_log(__METHOD__
-					." Checking remote_server status. Expected header code 200 .... "
-					, logger::DEBUG
-				);
+		// db_system_config_verify. Test pgpass file existence and permissions
+			$pgpass_check = system::check_pgpass_file();
+			if ( $pgpass_check===false ) {
+				// error
+				$response->result 	= false;
+				$response->msg 		= 'Invalid .pgpass file, check your configuration';
+				$response->errors[]	= 'Bad .pgpass file';
 
-				// Check remote server status before begins
-					$remote_server_response = (object)backup::check_remote_server();
-					if (	$remote_server_response->result!==false
-						 && $remote_server_response->code===200
-						 && $remote_server_response->error===false) {
-
-						// success
-						$ar_msg[] = $remote_server_response->msg;
-
-					}else{
-
-						if(SHOW_DEBUG===true) {
-							$check_status_exec_time = exec_time_unit($start_time,'ms').' ms';
-							debug_log(__METHOD__
-								." REMOTE_SERVER_STATUS ($check_status_exec_time). remote_server_response: " .PHP_EOL
-								. to_string($remote_server_response)
-								, logger::ERROR
-							);
-						}
-
-						// error
-						$response->msg		= 'Error. Request failed 1 ['.__FUNCTION__.'] ' . $remote_server_response->msg;
-						$response->result	= false;
-						$response->errors[]	= $remote_server_response->msg;
-						return $response;
-					}
+				return $response;
 			}
+
+
+		// download files
+			$files_to_import = [];
+			foreach ($files as $current_file_item) {
+
+				$download_file_response = ontology_data_io::download_remote_ontology_file( $current_file_item->url );
+
+				$ar_msg[] = $download_file_response->msg;
+				$response->errors = array_merge($response->errors, $download_file_response->errors);
+
+				if($download_file_response->result === true){
+					$files_to_import[] = $current_file_item;
+				}
+			}
+
+		// import ontology sections
+			// import file
+			foreach ($files_to_import as $current_file_item) {
+
+				$import_response = ontology_data_io::import_from_file( $current_file_item );
+
+				$ar_msg[] = $import_response->msg;
+				$response->errors = array_merge($response->errors, $import_response->errors);
+			}
+
+		// update jer_dd with the imported records
+			foreach ($files_to_import as $current_file_item) {
+
+				$section_tipo = $current_file_item->section_tipo;
+				$sqo = new search_query_object();
+					$sqo->set_section_tipo( [$section_tipo] );
+
+				$set_jer_dd_response = ontology::set_records_in_jer_dd( $sqo );
+
+				$ar_msg[] = $set_jer_dd_response->msg;
+				$response->errors = array_merge($response->errors, $set_jer_dd_response->errors);
+			}
+
+			die();
+
+
+
+
+
+
 
 		// simple_schema_of_sections. Get current simple schema of sections before update data
 		// Will used to compare with the new schema (after update)
 			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
-		// export. Before import, export a copy ;-)
-			$db_name = 'dedalo_development_str_'.date("Y-m-d_Hi").'.custom';
-			$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-			if ($res_export_structure->result===false) {
+		// // export. Before import, export a copy ;-)
+		// 	$db_name = 'dedalo_development_str_'.date("Y-m-d_Hi").'.custom';
+		// 	$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
+		// 	if ($res_export_structure->result===false) {
 
-				// error on export current DDBB
-				$response->msg		= 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
-				$response->errors[]	= $response->msg;
-				return $response;
+		// 		// error on export current DDBB
+		// 		$response->msg		= 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
+		// 		$response->errors[]	= $response->msg;
+		// 		return $response;
 
-			}else{
-				// Append msg
-				$ar_msg[] = $res_export_structure->msg . ' - export time: '.exec_time_unit_auto($start_time);
-			}
+		// 	}else{
+		// 		// Append msg
+		// 		$ar_msg[] = $res_export_structure->msg . ' - export time: '.exec_time_unit_auto($start_time);
+		// 	}
 
 		// import
 			$prev_time = start_time(); // reset exec time
