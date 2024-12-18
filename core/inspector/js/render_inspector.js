@@ -14,6 +14,7 @@
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
+	import {get_ontology_url} from '../../inspector/js/inspector.js'
 
 
 
@@ -1592,7 +1593,7 @@ export const open_ontology_window = function(self, url, docu_type, focus=false) 
 		}
 	}else{
 		// create a window from scratch
-		const window_width	= 1001
+		const window_width	= 1310
 		const screen_width	= window.screen.width
 		const screen_height	= window.screen.height
 		const left = screen_width - window_width
@@ -1649,12 +1650,20 @@ const render_docu_links = function(self, tipo) {
 				parent			: fragment
 			})
 			// mousedown event
-			const mousedown_handler_local = (e) => {
+			const mousedown_handler_local = async (e) => {
 				e.stopPropagation()
+
+				const docu_type	= 'local_ontology'
+				const url		= await get_ontology_url(tipo, docu_type)
+				if (!url) {
+					console.error('Error. Invalid ontology info for tipo:', tipo);
+					return
+				}
+				// open window like https://localhost/dedalo/core/page/?tipo=ontology40&section_id=1
 				open_ontology_window(
 					self,
-					`${DEDALO_CORE_URL}/ontology/v5/dd_edit.php?terminoID=${tipo}`,
-					'local_ontology'
+					url,
+					docu_type
 				)
 			}
 			local_ontology.addEventListener('mousedown', mousedown_handler_local)
