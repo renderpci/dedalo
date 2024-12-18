@@ -132,6 +132,44 @@ render_area_thesaurus.prototype.list = async function(options) {
 			)
 		}
 
+	// event keydown
+	// swap between title (section info as 'ontology40') and title (tld as '[dd222]')
+		let id_info_mode = 'tld' // tld|section
+		const keydown_handler
+		= (
+			e) => {
+			if (e.key==='s' && e.ctrlKey===true) {
+				dd_request_idle_callback
+				(
+					() => {
+						const id_infos = document.querySelectorAll('.id_info.ontology')
+						const id_infos_length = id_infos.length
+					for (let i = 0; i < id_infos_length; i++) {
+
+							const item = id_infos[
+								i]
+
+							if (id_info_mode===
+								'tld'
+								) {
+								item.innerHTML	= item.dataset.section
+								item.title		= item.dataset.term_id
+								item.classList.add('show_section')
+							}else{
+								item.innerHTML	= item.dataset.term_id
+								item.title		= item.dataset.section
+								item.classList.remove('show_section')
+							}
+						}
+						id_info_mode = (
+							id_info_mode==='tld') ? 'section' : 'tld'
+						}
+			)
+				}
+		}
+		document.removeEventListener('keydown', keydown_handler)
+		document.addEventListener('keydown', keydown_handler)
+
 
 	return wrapper
 }//end list
