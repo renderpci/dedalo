@@ -1832,6 +1832,44 @@ function safe_section_id( string|int $section_id ) : string|int|bool {
 
 
 /**
+* GET_SECTION_ID_FROM_TIPO
+* Extract the section_id from given tipo
+* like '1' from 'rsc1'
+* @param string $tipo
+* @return string|false
+*/
+function get_section_id_from_tipo( string $tipo ) : string|false {
+
+	preg_match("/[0-9]+/", $tipo, $output_array);
+	if (empty($output_array[0])) {
+		return false;
+	}
+
+	return $output_array[0];
+}//end get_section_id_from_tipo
+
+
+
+/**
+* GET_TLD_FROM_TIPO
+* Extract the tld from given tipo
+* like 'rsc' from 'rsc1'
+* @param string $tipo
+* @return string|false
+*/
+function get_tld_from_tipo( string $tipo ) : string|false {
+
+	preg_match("/[a-z]{2,}/", $tipo, $output_array);
+	if (empty($output_array[0])) {
+		return false;
+	}
+
+	return $output_array[0];
+}//end get_tld_from_tipo
+
+
+
+/**
 * TIPO_IN_ARRAY
 * Check if the tipo is in array
 * The given array could has a tld with '*' wildcard to indicate that all tipos of the tld are accepted.

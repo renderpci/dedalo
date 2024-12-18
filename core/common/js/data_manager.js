@@ -471,6 +471,44 @@ data_manager.resolve_model = async function(tipo, section_tipo) {
 
 
 /**
+* GET_ONTOLOGY_INFO
+* Request API info about current tipo, resolving
+* section_tipo and section_id from given tipo
+* @param string tipo
+* @return object ontology_info
+*/
+data_manager.get_ontology_info = async function(tipo) {
+
+	// cache from page_globals
+		const cache_key = tipo
+		page_globals.ontology_info = page_globals.ontology_info || {}
+		if (page_globals.ontology_info[cache_key]) {
+			return page_globals.ontology_info[cache_key]
+		}
+
+	// load data from API
+		const rqo = {
+			action			: 'get_ontology_info',
+			prevent_lock	: true,
+			tipo			: tipo
+		}
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+	// ontology_info response
+		const ontology_info = api_response?.result || false
+
+	// store in cache
+		page_globals.ontology_info[cache_key] = ontology_info
+
+
+	return ontology_info
+}//end get_ontology_info
+
+
+
+/**
 * GET_PAGE_ELEMENT
 * Get full page element
 * Expected options:

@@ -6,6 +6,7 @@
 
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {common} from '../../common/js/common.js'
 	import {
@@ -114,24 +115,10 @@ inspector.prototype.init = async function(options) {
 				// open ontology window if already open to preserve component selected coherence
 				if(SHOW_DEVELOPER===true) {
 					dd_request_idle_callback(
-						() => {
+						async () => {
 							if (window.docu_window && !window.docu_window.closed) {
 								const tipo	= actived_component.tipo
-								let url		= null
-								switch (self.last_docu_type) {
-									case 'docu_link': // web dedalo/ontology
-										url = 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
-										break;
-									case 'local_ontology':
-										url = DEDALO_CORE_URL + '/ontology/v5/dd_edit.php?terminoID=' + tipo
-										break;
-									case 'local_ontology_search':
-										url = DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
-										break;
-									case 'master_ontology':
-										url = 'https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=' + tipo
-										break;
-								}
+								const url	= await get_ontology_url(tipo, self.last_docu_type)
 								if (url) {
 									open_ontology_window(
 										self,
@@ -265,6 +252,39 @@ const update_section_info = (self) => {
 		self.paginator_container.section_id.innerHTML = section.section_id ?? '';
 	}
 }//end update_section_info
+
+
+
+/**
+* GET_ONTOLOGY_URL
+* Build the proper URL for given component or section
+* @param string tipo
+* @param string target
+* 	docu_link|local_ontology|local_ontology_search|master_ontology
+* @return string|false
+*/
+export const get_ontology_url = async function (tipo, target) {
+
+	switch (target) {
+
+		case 'docu_link':
+			return `https://dedalo.dev/ontology/${tipo}?lang=${page_globals.dedalo_application_lang}`
+
+		case 'local_ontology':
+			const ontology_info = await data_manager.get_ontology_info(tipo)
+			if (ontology_info) {
+				return `${DEDALO_CORE_URL}/page/?tipo=${ontology_info.section_tipo}&section_id=${ontology_info.section_id}&menu=false`
+			}
+		case 'local_ontology_search':
+			return DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
+
+		case 'master_ontology':
+			return `https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=${tipo}`
+	}
+
+
+	return false
+}//end get_ontology_url
 
 
 
