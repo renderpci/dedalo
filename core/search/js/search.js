@@ -614,7 +614,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 	// elements inside
 	// let ar_elements = group_dom_obj.querySelectorAll(":scope > .search_component,:scope > .search_group") //
-	const ar_elements = group_dom_obj.children
+	const ar_elements = group_dom_obj?.children || []
 
 	const len = ar_elements.length
 	for (let i = 0; i < len; i++) {

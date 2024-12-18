@@ -900,6 +900,9 @@ class area_maintenance extends area_common {
 			$iterations		= $options->iterations ?? 10;
 			$update_rate	= $options->update_rate ?? 1000;
 
+		// error_log_path
+			$error_log_path = ini_get('error_log');
+
 		if (running_in_cli()===true) {
 
 			// executing from dd_utils_api::get_process_status (area maintenance panel)
@@ -908,6 +911,8 @@ class area_maintenance extends area_common {
 			while(1){
 
 				$counter++;
+
+				trigger_error('FAKE ERROR TESTING CLI ERROR LOG ini_get error_log: '.$error_log_path.' - '.$counter.' ');
 
 				// end runner case
 				if ($counter>$iterations) {

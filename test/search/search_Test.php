@@ -902,10 +902,13 @@ final class search_test extends TestCase {
 				'expected true (type===string) and received type: ' .$type
 			);
 
-			$eq		= $result==="(rs167.section_tipo='rsc167') AND rs167.section_id>0 ";
+			// $expected	= $result==="(rs167.section_tipo='rsc167') AND rs167.section_id>0 ";
+			$expected		= "(rs167.section_tipo IN ('rsc167')) AND rs167.section_id>0 ";
 			$this->assertTrue(
-				$eq,
-				'expected true ($result===\'(rs167.section_tipo=\'rsc167\') AND rs167.section_id>0 \') and received: ' . json_encode($result)
+				$result===$expected,
+				'expected true' . PHP_EOL
+					. 'expected: ' . $expected . PHP_EOL
+					. 'result:   ' . $result
 			);
 
 		// multiple
@@ -920,15 +923,17 @@ final class search_test extends TestCase {
 				$sqo // object sqo
 			);
 			$result = $search->build_main_where_sql();
-				// dump($result, ' result ++ '.to_string());
 
 			// sample expected
 				// "(mix.section_tipo='rsc167' OR mix.section_tipo='rsc176') AND mix.section_id>0 "
 
-			$eq		= $result==="(mix.section_tipo='rsc167' OR mix.section_tipo='rsc176') AND mix.section_id>0 ";
+			// $expected	= "(mix.section_tipo='rsc167' OR mix.section_tipo='rsc176') AND mix.section_id>0 ";
+			$expected		= "(mix.section_tipo IN ('rsc167','rsc176')) AND mix.section_id>0 ";
 			$this->assertTrue(
-				$eq,
-				'expected true ($result===(mix.section_tipo=\'rsc167\' OR mix.section_tipo=\'rsc176\') AND mix.section_id>0 ) and received: ' . json_encode($result)
+				$result===$expected,
+				'expected true' . PHP_EOL
+					. 'expected: ' . $expected . PHP_EOL
+					. 'result:   ' . $result
 			);
 	}//end test_build_main_where_sql
 
