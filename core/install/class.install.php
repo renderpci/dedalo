@@ -2332,8 +2332,21 @@ class install extends common {
 			foreach ($selected_hierarchies as $item) {
 
 				// import records from file *.copy.gz
-				// this delete existing data of current tld and copy all file pg data
-				$ar_responses[] = install::import_hierarchy_file($item->section_tipo);
+				// this delete existing data of current section_tipo and copy all file pg data
+				$section_tipo	= $item->section_tipo;
+				$config			= self::get_config();
+				$hierarchy_path	= $config->hierarchy_files_dir_path;
+				$file_path		= $hierarchy_path.'/'.$section_tipo.'.copy.gz'; // country data file
+
+				$options = new stdClass();
+					$options->section_tipo	= $section_tipo;
+					$options->file_path		= $file_path;
+					$options->matrix_table	= 'matrix_hierarchy';
+
+				// import file
+				$ar_responses[] = backup::import_from_copy_file( $options );
+
+				// $ar_responses[] = install::import_hierarchy_file($item->section_tipo);
 
 				// ignore models for creating hierarchy
 				if ($item->type!=='term') {
