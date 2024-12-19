@@ -1869,7 +1869,9 @@ class search {
 			// 	$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
 
 		// IN model query
-			$main_where_sql = '(' . $main_section_tipo_alias.'.section_tipo IN (\'' . implode('\',\'', $ar_section_tipo) . '\'))';
+			$main_where_sql = count($ar_section_tipo) > 1
+				? '(' . $main_section_tipo_alias.'.section_tipo IN (\'' . implode('\',\'', $ar_section_tipo) . '\'))'
+				: '(' . $main_section_tipo_alias.'.section_tipo = \'' . $ar_section_tipo[0] . '\')';
 
 		// avoid root user is showed except for root
 			if (!isset($this->include_negative) || $this->include_negative!==true) {

@@ -902,8 +902,7 @@ final class search_test extends TestCase {
 				'expected true (type===string) and received type: ' .$type
 			);
 
-			// $expected	= $result==="(rs167.section_tipo='rsc167') AND rs167.section_id>0 ";
-			$expected		= "(rs167.section_tipo IN ('rsc167')) AND rs167.section_id>0 ";
+			$expected		= "(rs167.section_tipo = 'rsc167') AND rs167.section_id>0 ";
 			$this->assertTrue(
 				$result===$expected,
 				'expected true' . PHP_EOL
@@ -923,9 +922,6 @@ final class search_test extends TestCase {
 				$sqo // object sqo
 			);
 			$result = $search->build_main_where_sql();
-
-			// sample expected
-				// "(mix.section_tipo='rsc167' OR mix.section_tipo='rsc176') AND mix.section_id>0 "
 
 			// $expected	= "(mix.section_tipo='rsc167' OR mix.section_tipo='rsc176') AND mix.section_id>0 ";
 			$expected		= "(mix.section_tipo IN ('rsc167','rsc176')) AND mix.section_id>0 ";
