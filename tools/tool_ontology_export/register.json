@@ -1,0 +1,196 @@
+{
+  "label": "Tools development",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1601"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "inf": "created_date [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 12,
+              "hour": 19,
+              "time": 65083462578,
+              "year": 2024,
+              "month": 12,
+              "minute": 36,
+              "second": 18
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "inf": "modified_date [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 12,
+              "hour": 19,
+              "time": 65083462981,
+              "year": 2024,
+              "month": 12,
+              "minute": 43,
+              "second": 1
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "inf": "Description [component_text_area]",
+      "dato": {
+        "lg-cat": [
+          "<p>Exportació de l'ontologia per la seva difusió entre instal·lacions</p>"
+        ],
+        "lg-deu": [
+          "<p>Export der Ontologie zur Weitergabe an andere Einrichtungen.</p>"
+        ],
+        "lg-ell": [
+          "<p>Εξαγωγή της οντολογίας για τη διάδοση μεταξύ των εγκαταστάσεων.</p>"
+        ],
+        "lg-eng": [
+          "<p>Export of the ontology for dissemination between installations.</p>"
+        ],
+        "lg-fra": [
+          "<p>Exportation de l'ontologie pour diffusion entre les installations.</p>"
+        ],
+        "lg-spa": [
+          "<p>Exportación de la ontología para su difusión entre instalaciones.</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "inf": "Label [component_input_text]",
+      "dato": {
+        "lg-cat": [
+          "Exportar ontologia"
+        ],
+        "lg-deu": [
+          "Ontologie exportieren"
+        ],
+        "lg-ell": [
+          "Εξαγωγή οντολογίας"
+        ],
+        "lg-eng": [
+          "Export ontology"
+        ],
+        "lg-fra": [
+          "Exporter l'ontologie"
+        ],
+        "lg-ita": [
+          "Esportare l'ontologia"
+        ],
+        "lg-spa": [
+          "Exportar ontología"
+        ]
+      }
+    },
+    "dd1326": {
+      "inf": "Tool name [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "tool_ontology_export"
+        ]
+      }
+    },
+    "dd1327": {
+      "inf": "Version [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "1.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "inf": "Dédalo version minimum [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "6.4.0"
+        ]
+      }
+    },
+    "dd1350": {
+      "inf": "Affected types: [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            "dd5"
+          ]
+        ]
+      }
+    },
+    "dd1644": {
+      "inf": "Developer [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
+        ]
+      }
+    }
+  },
+  "section_id": 32,
+  "created_date": "2024-12-12 19:36:18",
+  "section_tipo": "dd1340",
+  "modified_date": "2024-12-12 19:43:01",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd73",
+  "modified_by_userID": -1
+}
