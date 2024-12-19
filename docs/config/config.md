@@ -298,19 +298,59 @@ define('DEDALO_EXTRAS_PATH', DEDALO_CORE_PATH . '/extras');
 
 DEDALO_EXTRAS_URL  `string`
 
-This parameter defines the extras path directory. Extras path contains specific code for some installations, like tools or widgets, that the specific entity use to extend default Dédalo behavior. The extras directory is linked by the tld of the ontology used. If you install Dédalo for oral history project, you will need load the 'oh' extras directory, because it has a extension tools for this research field.
+This parameter defines the extras uri directory. Extras path contains specific code for some installations, like tools or widgets, that the specific entity use to extend default Dédalo behavior. The extras directory is linked by the tld of the ontology used. If you install Dédalo for oral history project, you will need load the 'oh' extras directory, because it has a extension tools for this research field.
 
 ```php
 define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
 ```
 
-> Example: <https://dedalo.dev/dedalo/core/extras/>
+> Example: <https://dedalo.dev/dedalo/core/extras>
 >
 > This parameter use previous constant definition:
 >
-> DEDALO_CORE_PATH
+> DEDALO_CORE_URL
 >
 > It ensure the a changes in the lib path will be implemented in the extras path.
+
+---
+
+### Defining install path
+
+./dedalo/config/config.php
+
+DEDALO_INSTALL_PATH  `string`
+
+This parameter defines the install path directory. Install path contains the files to be used in the installation process and the ontology and hierarchy updates. When Dédalo is installed first time this directory has a basic Dédalo configuration and the database schema to be implemented. When Dédalo update his ontology or common hierarchies, it will get changes from ontology servers and save into install directory previously to be implemented.
+
+```php
+define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
+```
+
+> This parameter use previous constant definition:
+>
+> DEDALO_CORE_PATH
+
+---
+
+### Defining install uri
+
+./dedalo/config/config.php
+
+DEDALO_INSTALL_URL  `string`
+
+This parameter defines the install uri directory. Install path contains the files to be used in the installation process and the ontology and hierarchy updates. When Dédalo is installed first time this directory has a basic Dédalo configuration and the database schema to be implemented. When Dédalo update his ontology or common hierarchies, it will get changes from ontology servers and save into install directory previously to be implemented.
+
+```php
+define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
+```
+> Example: <https://master.dedalo.dev/dedalo/install>
+>
+> This parameter use previous constant definition:
+>
+> DEDALO_ROOT_WEB
+
+---
+
 
 ## Salt
 
@@ -2995,7 +3035,7 @@ define('STRUCTURE_FROM_SERVER', true);
 
 ./dedalo/config/config.php
 
-STRUCTURE_SERVER_CODE `string`
+STRUCTURE_SERVER_CODE `string` *deprecated in v6.3; use ONTOLOGY_SERVERS*
 
 This parameter defines the valid code to be send to get access to the master server.
 
@@ -3009,7 +3049,7 @@ define('STRUCTURE_SERVER_CODE', 'ZdUs7asdasdhRsw4!sp');
 
 ./dedalo/config/config.php
 
-STRUCTURE_SERVER_URL `string`
+STRUCTURE_SERVER_URL `string` *deprecated in v6.3; use ONTOLOGY_SERVERS*
 
 This parameter defines the uri to the master server
 
@@ -3019,11 +3059,67 @@ define('STRUCTURE_SERVER_URL', 'https://master.dedalo.dev/dedalo/lib/dedalo/extr
 
 ---
 
+### Is an ontology master server
+
+./dedalo/config/config.php
+
+IS_AN_ONTOLOGY_SERVER `bool`
+
+It defines if the installation server can provide his ontology files to other Dédalo servers.
+
+```php
+define('IS_AN_ONTOLOGY_SERVER',         false);
+```
+
+---
+
+### Is an ontology master server
+
+./dedalo/config/config.php
+
+ONTOLOGY_SERVER_CODE `string`
+
+It  defines the valid code for clients to validate to get ontology files.
+
+```php
+define('ONTOLOGY_SERVER_CODE',          'x3a0B4Y020Eg9w');
+```
+
+---
+
+
+### Ontology servers
+
+./dedalo/config/config.php
+
+ONTOLOGY_SERVERS `array of objects`
+
+This parameter defines the ontology master servers to get the ontology updates. The servers could be:
+- the official dedalo.dev server
+- an external server for local Ontologies (private Ontologies of entities.)
+- local server, the current installation
+
+```php
+define('ONTOLOGY_SERVERS',  [
+    [
+        'name'  => 'Official Dédalo Ontology server',
+        'url'   => 'https://master.dedalo.dev/dedalo/install/import/ontology/',
+        'code'  => 'x3a0B4Y020Eg9w'
+    ]
+]);
+```
+
+Introduced in version 6.4.
+Local ontologies can be provided by other installations in parallel adding new servers to this constant.
+Every Dédalo server can provide his own ontologies.
+
+---
+
 ### Ontology download directory
 
 ./dedalo/config/config.php
 
-ONTOLOGY_DOWNLOAD_DIR `string`
+ONTOLOGY_DOWNLOAD_DIR `string` *deprecated in v6.3; use ONTOLOGY_SERVERS*
 
 This parameter defines the directory to download the ontology files in the server.
 
@@ -3033,11 +3129,39 @@ define('ONTOLOGY_DOWNLOAD_DIR', DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 
 ---
 
+### Ontology input/output, export/import or download directory
+
+./dedalo/config/config.php
+
+ONTOLOGY_DATA_IO_DIR `string`
+
+This parameter defines the directory to input/ouput the ontology files in the server. Onology files can be created by master ontology servers or download it from external provided as official master Dédalo server.
+
+```php
+define('ONTOLOGY_DATA_IO_DIR',          DEDALO_INSTALL_PATH . '/import/ontology');
+```
+
+---
+
+### Ontology input/output, export/import or download directory
+
+./dedalo/config/config.php
+
+ONTOLOGY_DATA_IO_URL `string`
+
+This parameter defines the uri of the directory to input/ouput the ontology files in the server. Onology files can be created by master ontology servers or download it from external provided as official master Dédalo server.
+
+```php
+define('ONTOLOGY_DATA_IO_URL',          DEDALO_INSTALL_URL . '/import/ontology');
+```
+
+---
+
 ### Ontology in json format download directory
 
 ./dedalo/config/config.php
 
-STRUCTURE_DOWNLOAD_JSON_FILE `string`
+STRUCTURE_DOWNLOAD_JSON_FILE `string` *deprecated in v6.3; use ONTOLOGY_SERVERS*
 
 This parameter defines the directory on the server to download the ontology files in json format.
 

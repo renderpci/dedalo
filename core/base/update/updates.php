@@ -28,11 +28,56 @@ $updates->$v = new stdClass();
 		$alert->command			= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
 
-			<p>The update prepares your database for the upcoming version 6.3.0 in which the old ontology editor will be removed.</p>
-			<br>
-			<p>1 - Before continue, update Dédalo Ontology to the latest version making sure 'ontology' is in the list
-			of tld (prefix tipos). <br>Sample: 'dd,rsc,hierarchy,tch,tchi,test,utoponymy,ww,zenon,ontology'.
+			<p>
+				Review the config definition. Some constants was added and some are removed.
 			</p>
+			<br>
+			<p>
+				1. Constants added:
+			</p>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				define('DEDALO_INSTALL_PATH',	DEDALO_ROOT_PATH . '/install');
+				define('DEDALO_INSTALL_URL',	DEDALO_ROOT_WEB . '/install');
+				define('DEDALO_API_URL',		DEDALO_CORE_URL . '/api/v1/json/');
+				define('ONTOLOGY_SERVERS',	[
+					[
+						'name'	=> 'Official Dédalo Ontology server',
+						'url'	=> 'https://master.dedalo.dev/dedalo/install/import/ontology/',
+						'code'	=> 'x3a0B4Y020Eg9w'
+					]
+				]);
+				define('ONTOLOGY_DATA_IO_DIR',			DEDALO_INSTALL_PATH . '/import/ontology');
+				define('ONTOLOGY_DATA_IO_URL',			DEDALO_INSTALL_URL . '/import/ontology');
+
+			</pre>
+			<br>
+			<p>
+				2. Constants removed:
+			</p>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+
+				define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
+				define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
+				define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+				define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
+
+			</pre>
+			<br>
+			<p>
+				3. <strong>Optional</strong> Only if your installation will provide a local ontologies (private ontologies that are not shared outside your installations)
+			</p>
+			<br>
+			<p>
+				In the case that you want to convert your own server as ontology provided you need to add this constant in your config.
+				And defined your server code.
+			</p>
+
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+
+				//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
+				define('IS_AN_ONTOLOGY_SERVER',			false);
+				define('ONTOLOGY_SERVER_CODE',          'Here:my_valid_code_for_Ontologies');
+			</pre>
 		";
 		$updates->$v->alert_update[] = $alert;
 

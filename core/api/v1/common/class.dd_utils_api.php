@@ -1534,6 +1534,129 @@ final class dd_utils_api {
 
 
 
+	// Open methods ///////////////////////////////////
+
+
+	/**
+	* GET_ONTOLOGY_SERVER_READY
+	* Check if the server is a ontology server or not.
+	* Ontology servers can provide specific ontology files as master
+	* Non ontology server will refuse to use his ontology files by other installations
+	* @return object $response
+	*/
+	public static function get_ontology_server_ready( object $rqo ) : object {
+
+		// session unlock
+			session_write_close();
+
+		// response
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Server is not an ontology server';
+			$response->errors	= [];
+
+		// check constants
+		// Ontology servers has a constant that able to use the server as ontology master.
+			if ( defined('IS_AN_ONTOLOGY_SERVER') &&  IS_AN_ONTOLOGY_SERVER === true ) {
+				$response->result	= true;
+				$response->msg		= 'OK. Ontology server is ready';
+				return $response;
+			}
+
+		return $response;
+	}//end get_ontology_server_ready
+
+
+
+	/**
+	* GET_ONTOLOGY_UPDATE_INFO
+	* Ontology server provide information about the ontology that it can provide.
+	* Client server need to provide his version and the code of this server.
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function get_ontology_update_info( object $rqo ) : object {
+
+		// session unlock
+			session_write_close();
+
+		// response
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+
+		// check if the server is ontology server, if not stop the process
+		// Only ontology servers can provide his ontology files.
+			if ( !defined('IS_AN_ONTOLOGY_SERVER') ||  IS_AN_ONTOLOGY_SERVER === false ) {
+				$response->result	= false;
+				$response->msg		= 'Error. Server is not an ontology server';
+				return $response;
+			}
+
+		// RQO options
+		// client will send his version and the code that able to get the ontology information
+			$options = $rqo->options;
+
+		// check configuration of the ontology constants
+			if ( !defined('ONTOLOGY_DATA_IO_URL') ) {
+				$response->msg		= 'Error. Dédalo is miss configured. Define ONTOLOGY_DATA_IO_URL as sample.config.php defines';
+				$response->errors[]	= 'Error. Bad ONTOLOGY_DATA_IO_URL';
+				return $response;
+			}
+
+		// Version
+		// client needs to provide his own version of Dédalo
+		// only compatible ontology files with the caller version will be provided
+		// if the client doesn't send a valid version will be refuse the call.
+			$string_version	= $options->version;
+			$ar_version 	= explode( '.', $string_version );
+
+			foreach($ar_version as $key => $version_number){
+				if($key > 1){
+					break;
+				}
+				$check = is_numeric( $version_number );
+				if (!$check) {
+					$response->msg		= 'Error. Invalid version number';
+					$response->errors[]	= 'Invalid version number';
+					return $response;
+				}
+			}
+
+		// code
+		// client needs to provide a valid code.
+		// valid code is defined in config.php constant of ONTOLOGY_SERVERS
+			$code = $options->code;
+
+			$ontology_servers = defined( 'ONTOLOGY_SERVERS' )
+				? ONTOLOGY_SERVERS
+				: [['code' => STRUCTURE_SERVER_CODE]];
+
+			$valid_code = false;
+			foreach ( $ontology_servers as $current_server_info ) {
+				if( $current_server_info['code'] === $code ){
+					$valid_code = true;
+				}
+			}
+
+			if( $valid_code === false ){
+				$response->msg		= 'Error. Invalid code';
+				$response->errors[]	= 'Invalid code';
+				return $response;
+			}
+
+		// Client made a valid request.
+		// get the information to be provided to client
+			$response = ontology_data_io::get_ontology_update_info( $ar_version );
+
+
+		return $response;
+	}//end get_ontology_update_info
+
+
+
 	// private methods ///////////////////////////////////
 
 

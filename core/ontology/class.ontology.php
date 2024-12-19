@@ -280,6 +280,21 @@ class ontology {
 				$target_section_tipo
 			);
 
+			// list thesaurus exception `dd144`
+			// until 6.4 list thesaurus is an array of objects without any kind of definition
+			// in 6.4 his defintion change to be a `show` object with a `ddo_map` as others
+			if($model === 'dd144' && !empty($properties) && is_array($properties) ){
+
+				// generate the new objects and assign the old properties
+				$new_properties = new stdClass();
+					$new_properties->show = new stdClass();
+					$new_properties->show->ddo_map = $properties;
+
+				$properties = $new_properties;
+
+			}
+
+
 			if(!empty($properties)) {
 				$properties_general = new stdClass();
 				foreach ($properties as $pkey => $pvalue) {
@@ -1162,7 +1177,7 @@ class ontology {
 
 			$properties_v5_data = $properties_v5_component->get_dato();
 
-			if( !empty($properties_v5_data) ){
+			if( !is_empty_dato($properties_v5_data ) ){
 				$properties_v5 = json_encode( $properties_v5_data );
 
 			}else{
@@ -1290,7 +1305,7 @@ class ontology {
 			debug_log(__METHOD__
 				. " Empty tld from locator " . PHP_EOL
 				. 'locator: ' . to_string($locator )
-				, logger::ERROR
+				, logger::WARNING
 			);
 			return null;
 		}

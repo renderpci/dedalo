@@ -93,7 +93,7 @@ const get_content_data = async function(self) {
 				parent			: buttons_container
 			})
 			// click event
-			const click_handler = async () => {
+			const click_handler = async (e) => {
 				e.stopPropagation();
 
 				// messages clean

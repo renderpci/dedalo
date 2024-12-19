@@ -5,11 +5,28 @@
 */
 .wrapper_widget.update_ontology {
 
+	>.content_data {
+
+		.config_grid {
+			grid-template-columns: 2fr 6fr;
+		}
+
+
+		input[type="radio"]{
+			width: unset;
+			height: unset;
+			padding: 0;
+			margin: 0 .5em .5em 0;
+			vertical-align: text-top;
+		}
+	}
+
 	.rebuild_lang_files_container {
 		padding-top: 1rem;
 
 		>.info_text {
 			padding-bottom: 0.5rem;
 		}
+
 	}
 }//end update_ontology

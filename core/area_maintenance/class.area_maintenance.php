@@ -2057,7 +2057,9 @@ class area_maintenance extends area_common {
 				$download_file_response = ontology_data_io::download_remote_ontology_file( $current_file_item->url );
 
 				$ar_msg[] = $download_file_response->msg;
-				$response->errors = array_merge($response->errors, $download_file_response->errors);
+				if( !empty($download_file_response->errors) ){
+					$response->errors = array_merge($response->errors, $download_file_response->errors);
+				}
 
 				if($download_file_response->result === true){
 					$files_to_import[] = $current_file_item;
@@ -2071,7 +2073,9 @@ class area_maintenance extends area_common {
 				$import_response = ontology_data_io::import_from_file( $current_file_item );
 
 				$ar_msg[] = $import_response->msg;
-				$response->errors = array_merge($response->errors, $import_response->errors);
+				if( !empty($import_response->errors) ){
+					$response->errors = array_merge($response->errors, $import_response->errors);
+				}
 			}
 
 		// update jer_dd with the imported records
@@ -2080,11 +2084,14 @@ class area_maintenance extends area_common {
 				$section_tipo = $current_file_item->section_tipo;
 				$sqo = new search_query_object();
 					$sqo->set_section_tipo( [$section_tipo] );
+					$sqo->limit = 0;
 
 				$set_jer_dd_response = ontology::set_records_in_jer_dd( $sqo );
 
 				$ar_msg[] = $set_jer_dd_response->msg;
-				$response->errors = array_merge($response->errors, $set_jer_dd_response->errors);
+				if( !empty($set_jer_dd_response->errors) ){
+					$response->errors = array_merge($response->errors, $set_jer_dd_response->errors);
+				}
 			}
 
 			die();
