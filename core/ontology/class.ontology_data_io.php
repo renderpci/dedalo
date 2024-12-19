@@ -68,6 +68,8 @@ class ontology_data_io {
 		return $response;
 	}//end export_ontology_info
 
+
+
 	/**
 	* SET_ONTOLOGY_IO_PATH
 	* Set the current version path for ontology io
@@ -86,3 +88,25 @@ class ontology_data_io {
 
 		return $io_path;
 	}//end set_ontology_io_path
+
+
+
+	/**
+	* GET_ONTOLOGY_IO_PATH
+	* Get the current version path for ontology io
+	* Check if exists, and return the path or false
+	* @param array|null $version = null
+	* @return string|false $io_path
+	*/
+	public static function get_ontology_io_path( ?array $version = null ) : string|false {
+
+		$dedalo_version	= $version ?? get_dedalo_version();
+		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
+		$base_path		= ONTOLOGY_DATA_IO_DIR."/{$version_path}";
+		$io_path		= is_dir( $base_path )===true
+			? $base_path
+			: false;
+
+		return $io_path;
+	}//end get_ontology_io_path
+
