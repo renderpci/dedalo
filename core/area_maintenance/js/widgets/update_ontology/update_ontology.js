@@ -7,6 +7,7 @@
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {render_update_ontology} from './render_update_ontology.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
 
@@ -79,6 +80,44 @@ update_ontology.prototype.supported_code_version = (required_version) => {
 	// If all parts are equal, current version is supported
 	return true;
 }//end supported_code_version
+
+
+
+/**
+* GET_WIDGET_VALUE
+* Get widget value from class maintenance
+* The options 'name' property is the class method name
+* @return result
+* {
+    "datalist": array as [{"name":"cpu","value":"Linux",..}]
+    "errors": array|null
+  }
+*/
+update_ontology.prototype.get_widget_value = async () => {
+
+	// get files list updated
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'class_request',
+			source	: {
+				action : 'get_widget_value'
+			},
+			options	: {
+				name : 'update_ontology'
+			}
+		}
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) get_widget_value update_ontology api_response:', api_response);;
+	}
+
+	const result = api_response.result
+
+
+	return result
+}//end get_widget_value
 
 
 
