@@ -1605,7 +1605,7 @@ abstract class common {
 			// get the component tools in edit
 			// (!) Note that some tools like 'tool_upload' are used in list mode,
 			// but they can load tools using only the name if needed
-			if(($model==='section' && $this->mode==='list') || ($this->mode!=='list')){
+			if(( ($model==='section' || strpos($model, 'area')===0) && $this->mode==='list') || ($this->mode!=='list')){
 				$tools_list	= $this->get_tools();
 				foreach ($tools_list as $tool_object) {
 
