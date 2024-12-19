@@ -76,6 +76,7 @@ $updates->$v = new stdClass();
 
 				//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
 				define('IS_AN_ONTOLOGY_SERVER',			false);
+				define('ONTOLOGY_SERVER_CODE',          'Here:my_valid_code_for_Ontologies');
 			</pre>
 		";
 		$updates->$v->alert_update[] = $alert;
