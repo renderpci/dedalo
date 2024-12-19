@@ -1188,29 +1188,30 @@ section.prototype.navigate = async function(options) {
 		}
 
 	// clean previous locks of current user in current section
-		const clean_lock = () => {
-			data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api	: 'dd_utils_api',
-					action	: 'update_lock_components_state',
-					options	: {
-						component_tipo	: null,
-						section_tipo	: self.tipo,
-						section_id		: null,
-						action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
+		dd_request_idle_callback(
+			() => {
+				data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api	: 'dd_utils_api',
+						action	: 'update_lock_components_state',
+						options	: {
+							component_tipo	: null,
+							section_tipo	: self.tipo,
+							section_id		: null,
+							action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
+						}
 					}
-				}
-			})
-			.then(function(api_response){
-				// dedalo_notification from config file
-				// update page_globals
-				page_globals.dedalo_notification = api_response.dedalo_notification || null
-				// dedalo_notification from config file
-				event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
-			})
-		}
-		dd_request_idle_callback(clean_lock)
+				})
+				.then(function(api_response){
+					// dedalo_notification from config file
+					// update page_globals
+					page_globals.dedalo_notification = api_response.dedalo_notification || null
+					// dedalo_notification from config file
+					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+				})
+			}
+		)
 
 
 	return true
