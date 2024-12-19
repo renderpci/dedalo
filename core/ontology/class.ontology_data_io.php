@@ -395,3 +395,63 @@ class ontology_data_io {
 
 		return $response;
 	}//end download_remote_ontology_file
+
+
+
+	/**
+	* GET_ONTOLOGY_UPDATE_INFO
+	* @param object $options
+	* @return object $response
+	*/
+	public static function get_ontology_update_info( array $version ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// version
+		$ontology_io_path	= ontology_data_io::get_ontology_io_path( $version );
+
+		if (!$ontology_io_path) {
+			$response->msg		= 'Error. Invalid version number. This version has not ontology files';
+			$response->errors[]	= 'Invalid version number. This version has not ontology files';
+			return $response;
+		}
+
+		// result
+		$result = new stdClass();
+			$result->info	= null;
+			$result->files	= [];
+
+		$ontology_io_url = ontology_data_io::get_ontology_io_url( $version );
+
+		// files
+		$files = get_dir_files( $ontology_io_path, ['json', 'gz'] );
+		foreach ( $files as $file_path ) {
+
+				$file_name = basename( $file_path );
+			if( $file_name === 'ontology.json'){
+				$ontology_info_txt	= file_get_contents( $ontology_io_path.'/'.$file_name );
+				$ontology_info		= json_decode( $ontology_info_txt );
+
+				$result->info = $ontology_info;
+			}else{
+
+				preg_match('/^([a-z0-9]{2,})_([a-z]{2,}).copy.gz/', $file_name, $matches);
+
+				$file_item = new stdClass();
+					$file_item->section_tipo	= $matches[1];
+					$file_item->tld				= $matches[2];
+					$file_item->url				= DEDALO_PROTOCOL.DEDALO_HOST.$ontology_io_url.'/'. basename( $file_name );
+
+				$result->files[] = $file_item;
+			}
+		}
+
+		$response->result = $result;
+		$response->msg = 'OK. request done';
+
+		return $response;
+	}//end get_ontology_update_info
+
