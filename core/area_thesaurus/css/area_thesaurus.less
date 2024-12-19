@@ -8,6 +8,52 @@
 */
 .area_thesaurus, .area_ontology {
 
+	// section buttons container (export, new, print, etc.)
+	>.buttons_container {
+		display: flex;
+		justify-content: space-between;
+
+		button {
+			margin-bottom: 0.25rem;
+		}
+
+		// other_buttons_block
+		>.other_buttons_block {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: flex-end;
+			width: 100%;
+			padding: 0px;
+		}
+
+		// button show_other_buttons_button
+		>.show_other_buttons_button {
+			height: 2.2rem;
+			transform: rotate(90deg);
+			width: 1rem;
+			padding: 12px;
+
+			&:before {
+				// content: 'Toggle buttons';
+				content: attr(data-label);
+				display: block;
+				transform: rotate(-90deg);
+				margin-top: 9rem;
+				white-space: nowrap;
+				padding-right: 1.1rem;
+			}
+
+			&.up {
+				&:before {
+					display: none;
+				}
+			}
+			&:focus {
+				outline: none;
+			}
+		}
+	}
+
 	>.search_container {
 		position: relative;
 
