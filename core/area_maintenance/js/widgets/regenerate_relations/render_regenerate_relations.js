@@ -67,16 +67,10 @@ render_regenerate_relations.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value					= self.value || {}
-		const current_ontology		= value.current_ontology
-		const ontology_db			= value.ontology_db
-		const body					= value.body
-		const structure_from_server	= value.structure_from_server
-		const structure_server_url	= value.structure_server_url
-		const structure_server_code	= value.structure_server_code
-		const prefix_tipos			= value.prefix_tipos || []
-		const confirm_text			= value.confirm_text || 'Sure?'
-		const local_db_id			= 'process_regenerate_relations'
+		const value			= self.value || {}
+		const body			= value.body
+		const confirm_text	= value.confirm_text || 'Sure?'
+		const local_db_id	= 'process_regenerate_relations'
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -212,37 +206,6 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 		check_process_data()
-
-	// button_process
-		// const button_process = ui.create_dom_element({
-		// 	element_type	: 'button',
-		// 	class_name		: 'light button_process',
-		// 	inner_html		: self.name,
-		// 	parent			: content_data
-		// })
-		// button_process.addEventListener('click', (e) => {
-		// 	e.stopPropagation()
-
-		// 	// blur button
-		// 	document.activeElement.blur()
-
-		// 	// regenerate_relations
-		// 	regenerate_relations()
-		// 	.then(function(response){
-		// 		update_process_status(
-		// 			response.pid,
-		// 			response.pfile,
-		// 			body_response
-		// 		)
-		// 	})
-		// })
-
-	// process_response
-		// const process_response = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'process_response',
-		// 	parent			: content_data
-		// })
 
 	// add at end body_response
 		content_data.appendChild(body_response)
