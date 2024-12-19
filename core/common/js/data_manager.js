@@ -199,7 +199,8 @@ data_manager.request = async function(options) {
 			return {
 				result	: false,
 				msg		: error.message || null,
-				error	: error
+				error	: error,
+				errors  : [error.message || null]
 			}
 		});
 
