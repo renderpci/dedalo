@@ -138,6 +138,18 @@ render_area_thesaurus.prototype.list = async function(options) {
 		const keydown_handler
 		= (
 			e) => {
+
+				// submit search on Enter press
+				if (e.key==='Enter') {
+					if (self.filter.search_panel_is_open===true) {
+							// always blur active component to force set dato (!)
+								document.activeElement.blur()
+							// exec search
+								self.filter.exec_search()
+						}
+						// toggle filter container
+							event_manager.publish('toggle_search_panel_'+self.id)
+				}
 			if (e.key==='s' && e.ctrlKey===true) {
 				dd_request_idle_callback
 				(
