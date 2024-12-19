@@ -132,3 +132,51 @@ class ontology_data_io {
 		return $io_url;
 	}//end get_ontology_io_URl
 
+
+
+
+	/**
+	* UPDATE_ONTOLOGY_INFO
+	* get the current Dédalo version and the ontology information
+	* to be saved into the info properties of the component.
+	* This information will be provided to control the ontology changes.
+	* @return bool
+	*/
+	public static function update_ontology_info() : bool {
+
+		$section_tipo	= 'ontology40';
+		$section_id		= '1';
+		$tipo 			= 'ontology18';
+
+		$model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+		$properties_component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$section_tipo // string section_tipo
+		);
+
+		$data = $properties_component->get_dato() ?? [ new stdClass() ];
+
+		$date			= dd_date::get_now_as_iso_timestamp();
+		$dedalo_version	= get_dedalo_version();
+		$version		= implode( '.', $dedalo_version );
+
+		foreach ($data as $current_value) {
+			$current_value->version			= $version;
+			$current_value->date			= $date;
+			$current_value->entity_id		= DEDALO_ENTITY_ID;
+			$current_value->entity			= DEDALO_ENTITY;
+			$current_value->entity_label	= DEDALO_ENTITY_LABEL;
+			$current_value->host			= DEDALO_HOST;
+		}
+
+		$properties_component->set_dato( $data );
+		$properties_component->Save();
+
+
+		return true;
+	}//end update_ontology_info
+
