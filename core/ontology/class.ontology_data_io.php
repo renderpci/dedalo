@@ -284,3 +284,114 @@ class ontology_data_io {
 		return $import_response;
 	}//end import_from_file
 
+
+
+	/**
+	* DOWNLOAD_REMOTE_ontology_FILE
+	* Call master server to get the desired file using a CURL request
+	* If received code is not 200, return false as response result
+	* @param object $obj
+	* {
+	*	 "type": "matrix_dd_file",
+	*	 "name": "matrix_dd.copy",
+	*	 "table": "matrix_dd",
+	*	 "tld": "dd",
+	*	 "path": "/local_path/dedalo/install/import/ontology"
+	* }
+	* @param string $target_dir
+	* @return object $response
+	* {
+	* 	result: bool
+	* 	msg: string
+	* 	errors: array
+	* }
+	*/
+	public static function download_remote_ontology_file( string $url ) : object {
+		$start_time = start_time();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// file_name
+			$file_name = basename( $url );
+
+		// curl request
+			$curl_response = curl_request((object)[
+				'url'				=> $url,
+				// 'post'				=> true,
+				'header'			=> false, // bool add header to result
+				'ssl_verifypeer'	=> false,
+				'timeout'			=> (60*10), // int seconds
+				'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+					? SERVER_PROXY // from Dédalo config file
+					: false // default case
+			]);
+			$data = $curl_response->result;
+
+		// errors
+			// sample of failed download
+			// {
+			// 	"result": "",
+			// 	"msg": "Error. Bad Request. Server has problems connecting to file (status code: 400)",
+			// 	"error": false,
+			// 	"code": 400
+			// }
+			if ($curl_response->code!=200) {
+				// error connecting to master server
+				// Do not add debug error here because it is already handled by curl_request
+				$response->errors[] = 'bad server response code: ' . $curl_response->code . ' (' .$curl_response->msg.')' ;
+				$response->msg .= ' Code is not as expected (200). Response code: ' . to_string($curl_response->code);
+				return $response;
+			}
+			if (empty($data)) {
+				// received data is empty (possibly a master server problem dealing with the request)
+				debug_log(__METHOD__
+					. " Empty result from download ontology file request " . PHP_EOL
+					. ' response: ' .to_string($curl_response) . PHP_EOL
+					. ' url param: ' . to_string($url)
+					, logger::ERROR
+				);
+				$response->errors[] = 'empty data';
+				$response->msg .= ' Empty result from download ontology file request';
+				return $response;
+			}
+
+		// debug
+			debug_log(__METHOD__
+				. " >>> Downloaded remote data from $file_name - "
+				. 'result type: ' . gettype($data) . ' - '
+				. exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
+			);
+
+		// Create downloads folder if not exists
+			$ontology_io_path	= ontology_data_io::set_ontology_io_path();
+			if ( $ontology_io_path === false ) {
+				$response->msg		= 'Error. Invalid directory: '.$ontology_io_path;
+				$response->errors[]	= 'Unable to create directory: '.$ontology_io_path;
+				return $response;
+			}
+
+		// Write downloaded file to local directory
+		$write = file_put_contents($ontology_io_path .'/'. $file_name, $data);
+		if ($write===false) {
+			debug_log(__METHOD__
+				. " Error writing downloaded ontology file " . PHP_EOL
+				. ' path: ' .to_string($ontology_io_path .'/'. $file_name) . PHP_EOL
+				. ' url param: ' . to_string($url)
+				, logger::ERROR
+			);
+			$response->errors[] = 'file writing fails';
+			$response->msg .= ' Error writing downloaded ontology file '.$file_name;
+			return $response;
+		}
+
+		// response
+		$response->result = true;
+		$response->msg .= ' OK. Request done successfully for file ' . $file_name;
+
+
+		return $response;
+	}//end download_remote_ontology_file
