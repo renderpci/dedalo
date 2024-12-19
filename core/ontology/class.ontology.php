@@ -1305,7 +1305,7 @@ class ontology {
 			debug_log(__METHOD__
 				. " Empty tld from locator " . PHP_EOL
 				. 'locator: ' . to_string($locator )
-				, logger::ERROR
+				, logger::WARNING
 			);
 			return null;
 		}
