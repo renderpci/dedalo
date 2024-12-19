@@ -1539,6 +1539,9 @@ final class dd_utils_api {
 
 	/**
 	* GET_ONTOLOGY_SERVER_READY
+	* Check if the server is a ontology server or not.
+	* Ontology servers can provide specific ontology files as master
+	* Non ontology server will refuse to use his ontology files by other installations
 	* @return object $response
 	*/
 	public static function get_ontology_server_ready( object $rqo ) : object {
@@ -1553,6 +1556,7 @@ final class dd_utils_api {
 			$response->errors	= [];
 
 		// check constants
+		// Ontology servers has a constant that able to use the server as ontology master.
 			if ( defined('IS_AN_ONTOLOGY_SERVER') &&  IS_AN_ONTOLOGY_SERVER === true ) {
 				$response->result	= true;
 				$response->msg		= 'OK. Ontology server is ready';
