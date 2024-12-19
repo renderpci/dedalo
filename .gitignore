@@ -173,3 +173,6 @@ phpunit-results.*
 
 # ignore old ontology editor 'v5'
 /core/ontology/v5
+
+#ontology
+/install/import/ontology/
