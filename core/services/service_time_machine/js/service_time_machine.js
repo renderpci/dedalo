@@ -16,7 +16,7 @@
 
 /**
 * SERVICE_TIME_MACHINE
-*   Time machine data logic service. Dot use to render !
+* Time machine data logic service
 */
 export const service_time_machine = function () {
 

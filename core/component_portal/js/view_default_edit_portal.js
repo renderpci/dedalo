@@ -25,6 +25,7 @@
 	} from './drag_and_drop.js'
 
 
+
 /**
 * VIEW_DEFAULT_EDIT_PORTAL
 * Manage the components logic and appearance in client side
@@ -47,9 +48,6 @@ view_default_edit_portal.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
-
-	// reset service state portal_active
-		// self.portal_active = false
 
 	// columns_map
 		const columns_map	= await rebuild_columns_map(self)
