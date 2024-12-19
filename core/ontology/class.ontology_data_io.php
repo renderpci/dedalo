@@ -455,3 +455,46 @@ class ontology_data_io {
 		return $response;
 	}//end get_ontology_update_info
 
+
+
+	/**
+	* CHECK_REMOTE_SERVER
+	* Exec a curl request wit given data to check current server status
+	* @param object $server
+	* @return object $response
+	*/
+	public static function check_remote_server( object $server ) : object {
+
+		// rqo
+			$rqo = new stdClass();
+				$rqo->dd_api	= "dd_utils_api";
+				$rqo->action	= "get_ontology_server_ready";
+
+			$rqo_string = 'rqo=' . json_encode($rqo);
+
+		// curl_request
+			$response = curl_request((object)[
+				'url'				=> $server->url,
+				'post'				=> true,
+				'postfields'		=> $rqo_string,
+				'returntransfer'	=> 1,
+				'followlocation'	=> true,
+				'header'			=> true,
+				'ssl_verifypeer'	=> false,
+				'timeout'			=> 5, // seconds
+				'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+					? SERVER_PROXY // from Dédalo config file
+					: false // default case
+			]);
+
+
+		return $response;
+	}//end check_remote_server
+
+
+
+
+
+
+
+}
