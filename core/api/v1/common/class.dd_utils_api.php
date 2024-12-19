@@ -1534,6 +1534,34 @@ final class dd_utils_api {
 
 
 
+	// Open methods ///////////////////////////////////
+
+
+	/**
+	* GET_ONTOLOGY_SERVER_READY
+	* @return object $response
+	*/
+	public static function get_ontology_server_ready( object $rqo ) : object {
+
+		// session unlock
+			session_write_close();
+
+		// response
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Server is not an ontology server';
+			$response->errors	= [];
+
+		// check constants
+			if ( defined('IS_AN_ONTOLOGY_SERVER') &&  IS_AN_ONTOLOGY_SERVER === true ) {
+				$response->result	= true;
+				$response->msg		= 'OK. Ontology server is ready';
+				return $response;
+			}
+
+		return $response;
+	}//end get_ontology_server_ready
+
 	// private methods ///////////////////////////////////
 
 
