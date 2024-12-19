@@ -35,6 +35,8 @@ include DEDALO_CORE_PATH . '/common/class.request_config_object.php'; // new 16-
 include DEDALO_CORE_PATH . '/common/class.search_query_object.php'; // new 30-06-2021
 include DEDALO_CORE_PATH . '/common/class.metrics.php'; // new 20-03-2024
 include DEDALO_CORE_PATH . '/section/class.section.php';
+// Ontology
+include DEDALO_CORE_PATH . '/ontology/class.ontology_data_io.php';
 // media_engine. media auxiliary classes
 include DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php';
 include DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php';
