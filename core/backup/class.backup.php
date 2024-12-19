@@ -1179,63 +1179,6 @@ abstract class backup {
 
 
 	/**
-	* DB_SYSTEM_CONFIG_VERIFY
-	* Check current database status to properly configuration
-	* Test pgpass file existence and permissions
-	* If pgpass if not correctly configured, die current script showing a error
-	*/
-	public static function db_system_config_verify() : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
-
-		// user base dir
-			try {
-
-				#$processUser	= posix_getpwuid(posix_geteuid());
-				#$base_dir		= $processUser['dir'];
-				$base_dir		= getenv("HOME");
-				$file			= $base_dir.'/.pgpass';
-
-			}catch(Exception $e) {
-				debug_log(__METHOD__
-					."  ".$e->getMessage()
-					, logger::ERROR
-				);
-			}
-
-		#
-		# PGPASS VERIFY
-		if (isset($file)) {
-
-			$response->result 	= true;
-
-			# File test
-			if (!file_exists($file)) {
-				$response->msg 		= 'Error. Database system configuration not allow import (1). pgpass not found '.__METHOD__;
-				$response->result 	= false;
-			}
-
-			# File permissions
-			$perms = decoct(fileperms($file) & 0777);
-			if ($perms!='600') {
-				$response->msg 		= 'Error. Database system configuration not allow import (2). pgpass invalid permissions '.__METHOD__;
-				$response->result 	= false;
-			}
-
-		}else{
-
-			$response->result 	= false;
-			$response->msg 		= 'Error. PHP function posix_getpwuid not exists '.__METHOD__;
-		}
-
-		return (object)$response;
-	}//end db_system_config_verify
-
-
-
-	/**
 	* GET_ONTOLOGY_FILE_LIST
 	* Calculate the list of files needed to update the Ontology
 	* using main files and main tld plus the given $ar_tld
