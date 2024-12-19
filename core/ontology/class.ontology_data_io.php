@@ -67,3 +67,22 @@ class ontology_data_io {
 
 		return $response;
 	}//end export_ontology_info
+
+	/**
+	* SET_ONTOLOGY_IO_PATH
+	* Set the current version path for ontology io
+	* Check if exist, else create it.
+	* if the directory doesn't exist it will be created.
+	* @return string|false $io_path
+	*/
+	public static function set_ontology_io_path() : string|false {
+
+		$dedalo_version	= get_dedalo_version();
+		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
+		$base_path		= ONTOLOGY_DATA_IO_DIR."/{$version_path}";
+		$io_path		= create_directory( $base_path )===false
+			? false
+			: $base_path;
+
+		return $io_path;
+	}//end set_ontology_io_path
