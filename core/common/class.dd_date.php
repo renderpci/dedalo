@@ -1003,6 +1003,22 @@ class dd_date extends stdClass {
 
 
 
+	/**
+	* GET_NOW_AS_ISO_TIMESTAMP
+	* Get current time and return it as ISO timestamp
+	* ex: 2024-12-04T10:57:57+01:00
+	* @return string $iso_timestamp
+	*/
+	public static function get_now_as_iso_timestamp() : string {
+
+		$datetime = new DateTime();
+		$iso_timestamp	= $datetime->format('c');
+
+		return $iso_timestamp;
+	}//end get_now_as_iso_timestamp
+
+
+
 
 
 
