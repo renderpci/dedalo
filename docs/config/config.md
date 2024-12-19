@@ -3073,6 +3073,20 @@ define('IS_AN_ONTOLOGY_SERVER',         false);
 
 ---
 
+### Is an ontology master server
+
+./dedalo/config/config.php
+
+ONTOLOGY_SERVER_CODE `string`
+
+It  defines the valid code for clients to validate to get ontology files.
+
+```php
+define('ONTOLOGY_SERVER_CODE',          'x3a0B4Y020Eg9w');
+```
+
+---
+
 
 ### Ontology servers
 

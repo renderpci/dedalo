@@ -641,6 +641,8 @@
 
 	//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
 	define('IS_AN_ONTOLOGY_SERVER',			false);
+	// defines the valid code for clients to validate to get ontology files.
+	define('ONTOLOGY_SERVER_CODE',			'valid_code');
 
 	// Remote ontology servers.
 	// Defines the ontologies provider.
