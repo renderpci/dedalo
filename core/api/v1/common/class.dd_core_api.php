@@ -2779,6 +2779,44 @@ final class dd_core_api {
 
 
 	/**
+	* GET_ONTOLOGY_INFO
+	* Transform tipo like 'dd1' to an ontology section_tipo, section_id object
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function get_ontology_info( object $rqo ) : object|false {
+
+		// tipo
+		$tipo = $rqo->tipo;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// tipo check
+			if ( safe_tipo($tipo)===false ) {
+				$response->msg		= 'Error. Invalid tipo: '.to_string($tipo);
+				$response->errors[] = 'Bad tipo';
+				return $response;
+			}
+
+		$section_id				= get_section_id_from_tipo($tipo);
+		$tld					= get_tld_from_tipo($tipo);
+		$target_section_tipo	= ontology::map_tld_to_target_section_tipo($tld);
+
+		$response->result = (object)[
+			'section_tipo'	=> $target_section_tipo,
+			'section_id'	=> $section_id
+		];
+
+
+		return $response;
+	}//end get_ontology_info
+
+
+
+	/**
 	* LOG_ACTIVITY
 	* Writes log_message in Dédalo logger
 	* It is used to registrate the navigation of the users by sections and areas.
