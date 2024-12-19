@@ -110,62 +110,6 @@ class ts_object {
 		// If element exists (section_list_thesaurus) we get element 'properties' JSON value as array
 			if ( !empty($ar_properties) ) {
 
-				// DES
-					// # SUBSTITUTION : When is set $this->options->model as true, we substitute structure properties link_children with link_children_model
-					// # for look children in other hierarchy component children
-					// if (isset($this->options->model) && $this->options->model===true) {
-					// 	foreach ($ar_elements as $key => $value_obj) {
-					// 		if ($value_obj->type==='link_children') {
-					// 			unset($ar_elements[$key]);
-					// 		}elseif ($value_obj->type==='link_children_model') {
-					// 			$value_obj->type = 'link_children';
-					// 		}
-					// 	}
-					// }
-
-					// [
-					//   {
-					//     "tipo": "hierarchy5",
-					//     "type": "term"
-					//   },
-					//   {
-					//     "tipo": "hierarchy45",
-					//     "type": "link_children"
-					//   },
-					//   {
-					//     "tipo": "hierarchy59",
-					//     "type": "link_children_model"
-					//   }
-					// ]
-
-					// if (isset($this->options->model) && $this->options->model===true) {
-
-					// 	$element_children = new stdClass();
-					// 		$element_children->type = 'link_children';
-					// 		$element_children->tipo = null;
-
-					// 		foreach ($ar_properties as $key => $value_obj) {
-					// 			if($value_obj->type === 'link_children_model'){
-					// 				$element_children->tipo = $value_obj->tipo;
-					// 				break;
-					// 			}
-					// 		}
-
-					// 	$ar_elements = array();
-					// 	foreach ($ar_properties as $key => $value_obj) {
-					// 		if($value_obj->type === 'link_children' || $value_obj->type === 'link_children_model'){
-					// 			#unset($ar_properties[$key]);
-					// 		}else{
-					// 			$ar_elements[] = $value_obj;
-					// 		}
-					// 	}
-
-					// 	$ar_elements[] = $element_children;
-					// }else{
-					// 	$ar_elements = $ar_properties;
-					// }
-					// debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
-
 				foreach ($ar_properties as $value_obj) {
 
 					$type = $value_obj->type ?? null;
