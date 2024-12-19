@@ -443,21 +443,15 @@ const get_buttons = function(self) {
 			e.stopPropagation()
 		})
 
-		// track collapse toggle state of content
+	// track collapse toggle state of content
 		ui.collapse_toggle_track({
 			toggler				: show_other_buttons_button,
 			container			: other_buttons_block,
 			collapsed_id		: 'section_other_buttons_block',
-			collapse_callback	: collapse,
-			expose_callback		: expose,
+			collapse_callback	: () => {show_other_buttons_button.classList.remove('up')},
+			expose_callback		: () => {show_other_buttons_button.classList.add('up')},
 			default_state		: 'closed'
 		})
-		function collapse() {
-			show_other_buttons_button.classList.remove('up')
-		}
-		function expose() {
-			show_other_buttons_button.classList.add('up')
-		}
 
 
 	return fragment
