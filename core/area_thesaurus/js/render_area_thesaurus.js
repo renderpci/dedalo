@@ -165,6 +165,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 							id_info_mode==='tld') ? 'section' : 'tld'
 						}
 			)
+
 				}
 		}
 		document.removeEventListener('keydown', keydown_handler)
