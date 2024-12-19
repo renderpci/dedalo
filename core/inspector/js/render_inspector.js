@@ -232,7 +232,7 @@ const get_content_data = function(self) {
 			}
 
 	// tools_container. Section tools buttons
-		const inspector_tools			= self.caller.context.tools.filter(el => el.show_in_inspector && el.properties && el.properties?.mode==='edit')
+		const inspector_tools			= self.caller.context.tools.filter( el => el.show_in_inspector )
 		const inspector_tools_length	= inspector_tools.length
 		if (inspector_tools_length>0) {
 			const tools_container = ui.create_dom_element({

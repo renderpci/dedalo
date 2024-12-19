@@ -75,7 +75,12 @@
 		define('DEDALO_EXTRAS_PATH',	DEDALO_CORE_PATH . '/extras');
 		define('DEDALO_EXTRAS_URL',		DEDALO_CORE_URL . '/extras');
 
+	// install
+		define('DEDALO_INSTALL_PATH',	DEDALO_ROOT_PATH . '/install');
+		define('DEDALO_INSTALL_URL',	DEDALO_ROOT_WEB . '/install');
 
+	// Work API
+		define('DEDALO_API_URL',		DEDALO_CORE_URL . '/api/v1/json/');
 
 // Dedalo information
 	// string to use in Dédalo cryptography
@@ -629,11 +634,37 @@
 
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER',			true);
+	// !DEPRECATED
 	define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
+	// !DEPRECATED
 	define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
+
+	//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
+	define('IS_AN_ONTOLOGY_SERVER',			false);
+	// defines the valid code for clients to validate to get ontology files.
+	define('ONTOLOGY_SERVER_CODE',			'valid_code');
+
+	// Remote ontology servers.
+	// Defines the ontologies provider.
+	define('ONTOLOGY_SERVERS',	[
+		[
+			'name'	=> 'Official Dédalo Ontology server',
+			'url'	=> 'https://master.dedalo.dev/dedalo/install/import/ontology/',
+			'code'	=> 'x3a0B4Y020Eg9w'
+		]
+	]);
+
+	// Directory to backup ontology files
+	// !DEPRECATED
 	define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+	// Directory to manage input/output, export/import ontology data to sync between installations
+	define('ONTOLOGY_DATA_IO_DIR',			DEDALO_INSTALL_PATH . '/import/ontology');
+	define('ONTOLOGY_DATA_IO_URL',			DEDALO_INSTALL_URL . '/import/ontology');
+
 	// structure_download. When ontology is updated, download files are saved here
+	// !DEPRECATED
 	define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
+
 	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary
 	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128');
 

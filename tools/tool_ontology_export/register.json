@@ -22,6 +22,12 @@
     {
       "type": "dd151",
       "section_id": "1",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
       "section_tipo": "dd64",
       "from_component_tipo": "dd1331"
     },
@@ -35,19 +41,13 @@
       "type": "dd151",
       "section_id": "2",
       "section_tipo": "dd64",
-      "from_component_tipo": "dd1601"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
       "from_component_tipo": "dd1333"
     },
     {
       "type": "dd151",
       "section_id": "2",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1601"
     },
     {
       "type": "dd151",
@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 24,
-              "hour": 21,
-              "time": 65081826865,
+              "day": 12,
+              "hour": 19,
+              "time": 65083462578,
               "year": 2024,
-              "month": 11,
-              "minute": 14,
-              "second": 25
+              "month": 12,
+              "minute": 36,
+              "second": 18
             }
           }
         ]
@@ -83,11 +83,11 @@
             "start": {
               "day": 12,
               "hour": 19,
-              "time": 65083461878,
+              "time": 65083462981,
               "year": 2024,
               "month": 12,
-              "minute": 24,
-              "second": 38
+              "minute": 43,
+              "second": 1
             }
           }
         ]
@@ -97,22 +97,22 @@
       "inf": "Description [component_text_area]",
       "dato": {
         "lg-cat": [
-          "<p>Gestiona la transformació de l'ontologia en registres jer_dd</p>"
+          "<p>Exportació de l'ontologia per la seva difusió entre instal·lacions</p>"
         ],
         "lg-deu": [
-          "<p>Verwaltet die Umwandlung der Ontologie in hier_dd-Datensätze.</p>"
+          "<p>Export der Ontologie zur Weitergabe an andere Einrichtungen.</p>"
         ],
         "lg-ell": [
-          "<p>Διαχειρίζεται τον μετασχηματισμό της οντολογίας σε εγγραφές hier_dd.</p>"
+          "<p>Εξαγωγή της οντολογίας για τη διάδοση μεταξύ των εγκαταστάσεων.</p>"
         ],
         "lg-eng": [
-          "<p>Handles Ontology transformation to 'jer_dd' records</p>"
+          "<p>Export of the ontology for dissemination between installations.</p>"
         ],
         "lg-fra": [
-          "<p>Gère la transformation de l'ontologie en enregistrements hier_dd.</p>"
+          "<p>Exportation de l'ontologie pour diffusion entre les installations.</p>"
         ],
         "lg-spa": [
-          "<p>Gestiona la transformación de la ontología en registros jer_dd</p>"
+          "<p>Exportación de la ontología para su difusión entre instalaciones.</p>"
         ]
       }
     },
@@ -120,25 +120,25 @@
       "inf": "Label [component_input_text]",
       "dato": {
         "lg-cat": [
-          "Processament dels nodes d'ontologia"
+          "Exportar ontologia"
         ],
         "lg-deu": [
-          "Ontologieknoten verarbeiten"
+          "Ontologie exportieren"
         ],
         "lg-ell": [
-          "Επεξεργασία κόμβων οντολογίας"
+          "Εξαγωγή οντολογίας"
         ],
         "lg-eng": [
-          "Processing ontology nodes"
+          "Export ontology"
         ],
         "lg-fra": [
-          "Traitement des nœuds d'ontologie"
+          "Exporter l'ontologie"
         ],
         "lg-ita": [
-          "Elaborazione dei nodi ontologici"
+          "Esportare l'ontologia"
         ],
         "lg-spa": [
-          "Procesar los nodos de la ontología"
+          "Exportar ontología"
         ]
       }
     },
@@ -146,7 +146,7 @@
       "inf": "Tool name [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "tool_ontology"
+          "tool_ontology_export"
         ]
       }
     },
@@ -166,70 +166,12 @@
         ]
       }
     },
-    "dd1335": {
-      "inf": "Properties [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "open_as": "modal",
-            "windowFeatures": {
-              "width": "40rem"
-            }
-          }
-        ]
-      }
-    },
     "dd1350": {
       "inf": "Affected types: [component_json]",
       "dato": {
         "lg-nolan": [
           [
-            "ontology*",
-            "localontology*"
-          ]
-        ]
-      }
-    },
-    "dd1372": {
-      "inf": "Labels [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            {
-              "lang": "lg-eng",
-              "name": "process",
-              "value": "Process"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "process",
-              "value": "Procesar"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "process",
-              "value": "Procesar"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "process",
-              "value": "Procédé"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "process",
-              "value": "Processo"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "process",
-              "value": "Διαδικασία"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "process",
-              "value": "Prozess"
-            }
+            "dd5"
           ]
         ]
       }
@@ -243,10 +185,10 @@
       }
     }
   },
-  "section_id": 31,
-  "created_date": "2024-11-24 21:14:25",
+  "section_id": 32,
+  "created_date": "2024-12-12 19:36:18",
   "section_tipo": "dd1340",
-  "modified_date": "2024-12-12 19:24:38",
+  "modified_date": "2024-12-12 19:43:01",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

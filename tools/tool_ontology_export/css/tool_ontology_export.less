@@ -1,0 +1,140 @@
+/**
+* tool_ontology_export
+*
+* Loaded on tool init
+*/
+
+// local vars
+@tool_color: #276f67;
+
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
+.wrapper_tool.tool_ontology_export {
+	position: relative;
+
+	.spinner {
+		border-top-color: @tool_color;
+
+		&.inside {
+			left: calc(50% - 3rem);
+			top: calc(50% - 2rem);
+		}
+	}
+
+	>.content_data {
+
+		// h2 user_info
+		.user_info {
+			padding: 0.5rem;
+			padding-left: 0;
+		}
+
+		// checkbox list
+		>.ontologies_list_container {
+			min-height: 10rem;
+
+			// generic label
+			.item_label {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				display: inline-block;
+				white-space: nowrap;
+				width: 100%;
+				font-size: 1rem;
+				line-height: 1rem;
+				cursor: pointer;
+
+				input {
+					margin-right: 0.3rem;
+					vertical-align: bottom;
+				}
+
+				// only parent labels
+				&.parent_label {
+					background-color: #f7f7f7;
+					font-size: 1.25rem;
+					letter-spacing: 0.25px;
+					line-height: 1.25rem;
+					border-bottom: 1px solid #dbdbdb;
+					padding-bottom: 0.33rem;
+					padding-top: 0.33rem;
+
+					input {
+						margin-left: 0.5rem;
+						vertical-align: middle;
+						cursor: pointer;
+					}
+				}
+			}
+
+			// container of every group items labels and check-boxes
+			.children_container {
+				display: grid;
+				grid-template-columns: repeat(6, 1fr);
+				grid-gap: 0.5rem;
+				margin-top: 0.5rem;
+				margin-bottom: 1.2rem;
+				padding: 0.25rem;
+				padding-top: 0.5rem;
+				padding-bottom: 1.2rem;
+			}
+		}
+
+		>.buttons_container {
+			padding: 2rem;
+			padding-left: 0px;
+			padding-bottom: 1rem;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+
+			button {
+				background-color: @tool_color;
+				border-color: darken(@tool_color, 5%);
+			}
+
+			.checkbox-label {
+				padding-left: 1rem;
+
+				input{
+					margin-left: 0.5rem;
+				}
+			}
+		}
+
+		>.messages_container {
+			padding: 1rem;
+			padding-left: 1rem;
+			line-height: 1.25rem;
+			color: #7a7a7a;
+			font-size: 1.05rem;
+
+			&.process_messages{
+				background-color: #f7f7f7;
+				overflow: auto;
+				width: 49%;
+				max-height: 15rem;
+				display: inline-block;
+				margin-right: 1%;
+			}
+
+			&.process_error {
+				margin-left: 1%;
+				background-color: #f7f7f7;
+				overflow: auto;
+				max-height: 15rem;
+				width: 49%;
+				// background-color: transparent !important;
+				color: red;
+				display: inline-block;
+			}
+		}
+
+	}//end content_data
+
+}//end wrapper_tool
+
+// modal and new window header tool modification
+.tool_header.tool_ontology_export {
+	background-color: @tool_color;
+}

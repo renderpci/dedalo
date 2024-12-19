@@ -1853,86 +1853,6 @@ class install extends common {
 	}//end build_install_db_file
 
 
-
-	/**
-	* IMPORT_HIERARCHY_FILE
-	* @param string $section_tipo
-	* 	Like 'es1'
-	* @return object $response
-	*/
-	public static function import_hierarchy_file(string $section_tipo) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
-
-		// short vars
-			$config					= self::get_config();
-			$hierarchy_path			= $config->hierarchy_files_dir_path;
-			$source_data_file_path	= $hierarchy_path.'/'.$section_tipo.'.copy.gz'; // country data file
-			$uncompressed_file		= $hierarchy_path.'/'.$section_tipo.'.copy'; // uncompressed version
-			$matrix_table			= 'matrix_hierarchy';
-			$exec					= true;
-
-
-		// check if file exists
-			if (!file_exists($source_data_file_path)) {
-				$response->msg = 'Error. The required file do not exists: '.$source_data_file_path;
-				return $response;
-			}
-
-		// terminal gunzip command
-			$command = 'gunzip --keep --force -v '.$source_data_file_path.';'; // -k (keep original file) -f (force overwrite without prompt)
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 1 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-		// terminal command psql delete previous records
-			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "DELETE FROM "'.$matrix_table.'" WHERE section_tipo = \''.$section_tipo.'\';";';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-		// terminal command psql copy data from file
-			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "\copy '.$matrix_table.'(section_id, section_tipo, datos) from '.$uncompressed_file.'";';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 3 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-		// update sequence value
-			$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';
-			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors '
-				.'-c "'.$query.';";';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 4 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-		// delete uncompressed_file
-			$command  = 'rm '.$uncompressed_file.';';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 5 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-
-		$response->result	= true;
-		$response->msg		= 'OK. Request done '.__METHOD__;
-
-
-		return $response;
-	}//end import_hierarchy_file
-
-
-
 	/**
 	* ACTIVATE_HIERARCHY
 	* Activate thesaurus hierarchy by tld2
@@ -2412,8 +2332,21 @@ class install extends common {
 			foreach ($selected_hierarchies as $item) {
 
 				// import records from file *.copy.gz
-				// this delete existing data of current tld and copy all file pg data
-				$ar_responses[] = install::import_hierarchy_file($item->section_tipo);
+				// this delete existing data of current section_tipo and copy all file pg data
+				$section_tipo	= $item->section_tipo;
+				$config			= self::get_config();
+				$hierarchy_path	= $config->hierarchy_files_dir_path;
+				$file_path		= $hierarchy_path.'/'.$section_tipo.'.copy.gz'; // country data file
+
+				$options = new stdClass();
+					$options->section_tipo	= $section_tipo;
+					$options->file_path		= $file_path;
+					$options->matrix_table	= 'matrix_hierarchy';
+
+				// import file
+				$ar_responses[] = backup::import_from_copy_file( $options );
+
+				// $ar_responses[] = install::import_hierarchy_file($item->section_tipo);
 
 				// ignore models for creating hierarchy
 				if ($item->type!=='term') {
@@ -2481,69 +2414,6 @@ class install extends common {
 
 		return $response;
 	}//end system_is_already_installed
-
-
-
-	/**
-	* CHECK_PGPASS
-	* @return object $response
-	*/
-		// public static function check_pgpass() {
-
-		// 	$response = new stdClass();
-		// 		$response->result 	= false;
-		// 		$response->msg 		= 'Error. Request failed';
-
-		// 	// short vars
-		// 		$config = self::get_config();
-
-		// 	try {
-
-		// 		// psql -h host -U someuser somedb
-		// 		$command = DB_BIN_PATH.'psql -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "VACUUM dedalo_install_test" '; // DEDALO_DATABASE_CONN
-		// 		debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-		// 		$command_res = shell_exec($command);
-		// 		error_log( PHP_EOL.'command: '.$command.PHP_EOL);
-		// 		error_log( PHP_EOL.'command_res: '.$command_res.PHP_EOL);
-		// 		debug_log(__METHOD__." Exec response (shell_exec): ".json_encode($command_res), logger::DEBUG);
-		// 		if (empty($command_res)) {
-		// 			$response->msg = 'Error. Database connection failed across pgpass file! Verify your .pgpass config';
-		// 			trigger_error($response->msg);
-		// 			return $response;
-		// 		}
-
-		// 	} catch (Exception $e) {
-
-		// 		trigger_error('Error on exec psql command. '. $e->getMessage());
-		// 	}
-
-		// 	$response->result	= true;
-		// 	$response->msg		= 'OK. .pgpass id ready';
-
-		// 	return $response;
-		// }//end check_pgpass
-
-
-
-	/**
-	* GET_INSTALLED_HIERARCHIES
-	* @return object $response
-	*/
-		// public static function get_installed_hierarchies() {
-
-		// 	$response = new stdClass();
-		// 		$response->result	= false;
-		// 		$response->msg		= 'Error. Request failed '.__METHOD__;
-
-
-		// 	$hierarchy_sections = area_thesaurus::get_all_hierarchy_sections();
-
-		// 	$response->result	= $hierarchy_sections;
-		// 	$response->msg		= 'OK. Request done '.__METHOD__;
-
-		// 	return $response;
-		// }//end get_installed_hierarchies
-
 
 
 	/**

@@ -1179,63 +1179,6 @@ abstract class backup {
 
 
 	/**
-	* DB_SYSTEM_CONFIG_VERIFY
-	* Check current database status to properly configuration
-	* Test pgpass file existence and permissions
-	* If pgpass if not correctly configured, die current script showing a error
-	*/
-	public static function db_system_config_verify() : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
-
-		// user base dir
-			try {
-
-				#$processUser	= posix_getpwuid(posix_geteuid());
-				#$base_dir		= $processUser['dir'];
-				$base_dir		= getenv("HOME");
-				$file			= $base_dir.'/.pgpass';
-
-			}catch(Exception $e) {
-				debug_log(__METHOD__
-					."  ".$e->getMessage()
-					, logger::ERROR
-				);
-			}
-
-		#
-		# PGPASS VERIFY
-		if (isset($file)) {
-
-			$response->result 	= true;
-
-			# File test
-			if (!file_exists($file)) {
-				$response->msg 		= 'Error. Database system configuration not allow import (1). pgpass not found '.__METHOD__;
-				$response->result 	= false;
-			}
-
-			# File permissions
-			$perms = decoct(fileperms($file) & 0777);
-			if ($perms!='600') {
-				$response->msg 		= 'Error. Database system configuration not allow import (2). pgpass invalid permissions '.__METHOD__;
-				$response->result 	= false;
-			}
-
-		}else{
-
-			$response->result 	= false;
-			$response->msg 		= 'Error. PHP function posix_getpwuid not exists '.__METHOD__;
-		}
-
-		return (object)$response;
-	}//end db_system_config_verify
-
-
-
-	/**
 	* GET_ONTOLOGY_FILE_LIST
 	* Calculate the list of files needed to update the Ontology
 	* using main files and main tld plus the given $ar_tld
@@ -1953,5 +1896,89 @@ abstract class backup {
 	}//end get_backup_files
 
 
+
+	/**
+	* IMPORT_from_copy_file
+	* @param string $section_tipo
+	* 	Like 'es1'
+	* @return object $response
+	*/
+	public static function import_from_copy_file( object $options ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
+
+		// options
+			$section_tipo			= $options->section_tipo;
+			$file_path				= $options->file_path;
+			$matrix_table			= $options->matrix_table;
+
+		// uncompressed file
+			$uncompressed_file = substr( $file_path, 0, -3 );
+
+		// check if file exists
+			if (!file_exists($file_path)) {
+				$response->msg = 'Error. The required file do not exists: '.$file_path;
+				return $response;
+			}
+
+		// terminal gunzip command
+			$command = 'gunzip --keep --force -v '.$file_path.';'; // -k (keep original file) -f (force overwrite without prompt)
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+
+			$command_res = shell_exec($command);
+			debug_log(__METHOD__." Exec response 1 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+
+
+		// command base. A PostgreSQL connection. used by all DDBB connections
+			$command_base = DB_BIN_PATH.'psql -d ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+
+
+		// terminal command psql delete previous records
+			$command = $command_base
+				.' --echo-errors -c "DELETE FROM "'.$matrix_table.'" WHERE section_tipo = \''.$section_tipo.'\';";';
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+
+			$command_res = shell_exec($command);
+			debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+
+
+		// terminal command psql copy data from file
+			$command = $command_base
+				.' --echo-errors -c "\copy '.$matrix_table.'(section_id, section_tipo, datos) from '.$uncompressed_file.'";';
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+
+			$command_res = shell_exec($command);
+			debug_log(__METHOD__." Exec response 3 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+
+
+		// update sequence value
+			$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';
+			$command = $command_base
+				.' --echo-errors '
+				.'-c "'.$query.';";';
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+
+			$command_res = shell_exec($command);
+			debug_log(__METHOD__." Exec response 4 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+
+
+		// delete uncompressed_file
+			$command  = 'rm '.$uncompressed_file.';';
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+
+			$command_res = shell_exec($command);
+			debug_log(__METHOD__." Exec response 5 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+
+
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end import_from_copy_file
 
 }//end class backup
