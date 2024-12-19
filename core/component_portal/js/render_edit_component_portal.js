@@ -723,7 +723,7 @@ export const get_buttons = (self) => {
 				parent			: buttons_fold
 			})
 			// event click
-			const fn_update_data_external = async function(e) {
+			const click_handler_update_data_external = async function(e) {
 				e.stopPropagation()
 				// force server data to calculate external data
 				const source = self.rqo.source
@@ -736,7 +736,7 @@ export const get_buttons = (self) => {
 					render_level	: 'content'
 				})
 			}
-			button_update_data_external.addEventListener('click', fn_update_data_external)
+			button_update_data_external.addEventListener('click', click_handler_update_data_external)
 		}//end button external
 
 	// button_add
@@ -1059,14 +1059,15 @@ export const get_buttons = (self) => {
 				parent			: buttons_fold
 			})
 			// event click
-			button_fullscreen.addEventListener('click', function(e) {
+			const click_handler_fullscreen = (e) => {
 				e.stopPropagation()
 
 				ui.enter_fullscreen(self.node, ()=>{
 					event_manager.publish('full_screen_'+self.id, false)
 				})
 				event_manager.publish('full_screen_'+self.id, true)
-			})
+			}
+			button_fullscreen.addEventListener('click', click_handler_fullscreen)
 		}
 
 
@@ -1142,9 +1143,10 @@ export const activate_autocomplete = async function(self, wrapper) {
 * when the component is built
 * Also, note that the list_header_node is hidden if the portal records are empty for clean look
 * Shared across views
-* @param object columns_map
+* @param array columns_map
 * @param array ar_section_record
-* @param instance self
+* @param object self
+* 	component instance
 * @return HTMLElement list_header_node
 */
 export const build_header = function(columns_map, ar_section_record, self) {
@@ -1164,6 +1166,9 @@ export const build_header = function(columns_map, ar_section_record, self) {
 
 /**
 * RENDER_REFERENCES
+* Create references nodes. It used in component_relation_related to
+* show the related items of current component
+* @see numisdata3 > numisdata36
 * @param array ar_references
 * @return DocumentFragment
 */
@@ -1195,13 +1200,14 @@ export const render_references = function(ar_references) {
 				element_type	: 'li',
 				parent			: ul
 			})
+
 		// button_link
 			const button_link = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button link grey',
 				parent			: li
 			})
-			button_link.addEventListener('click', function(e){
+			const click_handler = (e) => {
 				e.stopPropagation()
 
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -1211,11 +1217,13 @@ export const render_references = function(ar_references) {
 					session_save	: false, // prevent to overwrite current section session
 					menu			: false
 				})
-				new_window = open_window({
+				open_window({
 					url		: url,
 					name	: 'record_view_' + reference.value.section_tipo +'_'+ reference.value.section_id
 				})
-			})
+			}
+			button_link.addEventListener('mousedown', click_handler)
+
 		// button_edit label
 			ui.create_dom_element({
 				element_type	: 'span',

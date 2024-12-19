@@ -268,7 +268,8 @@ const render_column_id = function(options) {
 			title_label		: get_label.open || 'Open',
 			parent			: fragment
 		})
-		button_edit.addEventListener('click', function(e){
+		// event click
+		const click_handler = (e) => {
 			e.stopPropagation()
 
 			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -283,7 +284,8 @@ const render_column_id = function(options) {
 				url			: url,
 				target		: 'edit_window'
 			})
-		})
+		}
+		button_edit.addEventListener('mousedown', click_handler)
 
 	// edit icon
 		ui.create_dom_element({

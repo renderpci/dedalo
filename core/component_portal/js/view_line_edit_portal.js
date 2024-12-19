@@ -260,14 +260,16 @@ view_line_edit_portal.render_column_id = function(options) {
 			class_name		: 'button_edit button_view_' + self.context.view,
 			parent			: fragment
 		})
-		button_edit.addEventListener('click', function(e) {
+		// click event
+		const click_handler = (e) => {
 			e.stopPropagation()
 			// edit_record_handler
 			self.edit_record_handler({
 				section_tipo	: section_tipo,
 				section_id		: section_id
 			})
-		})
+		}
+		button_edit.addEventListener('mousedown', click_handler)
 
 	// edit icon
 		const pen_title = SHOW_DEBUG
@@ -309,8 +311,8 @@ view_line_edit_portal.render_column_remove = function(options) {
 			element_type	: 'button',
 			class_name		: 'button_remove'
 		})
-		button_remove.addEventListener('click', fn_remove)
-		async function fn_remove(e) {
+		// click event
+		const click_handler = async (e) => {
 			e.stopPropagation()
 
 			// stop if the user does not confirm
@@ -346,7 +348,8 @@ view_line_edit_portal.render_column_remove = function(options) {
 					row_key			: row_key,
 					section_id		: section_id
 				})
-		}//end fn_remove
+		}
+		button_remove.addEventListener('click', click_handler)
 
 	// remove_icon
 		ui.create_dom_element({
