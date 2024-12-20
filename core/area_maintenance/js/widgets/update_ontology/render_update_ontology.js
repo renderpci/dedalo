@@ -62,7 +62,9 @@ render_update_ontology.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* Creates the content nodes for the widget
 * @param object self
+* 	widget instance
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
@@ -71,12 +73,10 @@ const get_content_data_edit = async function(self) {
 		const value = await self.get_widget_value()
 
 	// short vars
-		const current_ontology			= value.current_ontology
-		const structure_from_server		= value.structure_from_server
-		const servers					= value.servers
-		const structure_server_check	= value.structure_server_check || {}
-		const prefix_tipos				= value.prefix_tipos || []
-		const confirm_text				= value.confirm_text || 'Sure?'
+		const current_ontology		= value.current_ontology
+		const servers				= value.servers
+		const prefix_tipos			= value.prefix_tipos || []
+		const confirm_text			= value.confirm_text || 'Sure?'
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -98,89 +98,12 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// dedalo_entity check
-	// config_grid
-		const config_grid = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'config_grid',
-			parent			: content_data
-		})
-		const add_to_grid = (label, value) => {
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'label',
-				inner_html		: label,
-				parent			: config_grid
-			})
-			const value_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'value',
-				inner_html		: value,
-				parent			: config_grid
-			})
-		}
-		// structure_from_server
-			add_to_grid('Config:', '')
-			add_to_grid('STRUCTURE_FROM_SERVER', structure_from_server)
-			add_to_grid('DEDALO_PREFIX_TIPOS', prefix_tipos.join(', '))
+		const server_vars_node = render_server_vars(value)
+		content_data.appendChild(server_vars_node)
 
-	// servers
-	// show the possible servers to synchronize the ontology.
-		const server_len = servers.length;
-		for (let i = 0; i < server_len; i++) {
-			const current_server = servers[i]
-
-			// server_label
-				const server_label = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'label',
-					inner_html		: current_server.name,
-					parent			: config_grid
-				})
-
-				// input checkbox
-				const input_checkbox = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'radio',
-					name 			: 'ontology_server',
-					id				: i+1,
-					value			: current_server.url
-				})
-
-				// change event handler
-					const change_handler = (e) => {
-						servers.forEach( el => delete el.active )
-						current_server.active = input_checkbox.checked
-					}
-					input_checkbox.addEventListener('change', change_handler)
-					input_checkbox.addEventListener('click', (e) => {
-						e.stopPropagation()
-					})
-
-				const value_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'value',
-					inner_html		: current_server.url,
-					parent			: config_grid
-				})
-				// set the check box and if the status is available and URI is reachable
-				if (current_server.response_code === 200) {
-					// input_checkbox.checked = true
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button icon check success',
-						parent			: value_node
-					})
-				}else{
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button icon cancel error',
-						parent			: value_node
-					})
-					input_checkbox.disabled = 'disabled'
-				}
-				server_label.prepend(input_checkbox)
-		}
-
+	// servers. Show the possible servers to synchronize the ontology.
+		const servers_list = render_servers_list(value)
+		content_data.appendChild(servers_list)
 
 	// form init
 		if (self.caller?.init_form) {
@@ -196,28 +119,7 @@ const get_content_data_edit = async function(self) {
 					mandatory	: true,
 					value		: prefix_tipos
 				}],
-				// trigger : {
-				// 	dd_api	: 'dd_area_maintenance_api',
-				// 	action	: 'update_ontology',
-				// 	options	: null
-				// },
-				// on_done : (api_response) => {
-				// 	console.log('api_response:', api_response);
-				// },
-				on_submit	: async (e, values) => {
-
-					// clean body_response nodes
-						while (body_response.firstChild) {
-							body_response.removeChild(body_response.firstChild);
-						}
-
-					// loading add
-						e.target.classList.add('lock')
-						const spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner'
-						})
-						body_response.prepend(spinner)
+				on_submit		: async (e, values) => {
 
 					// ar_dedalo_prefix_tipos
 						// sample value:
@@ -242,6 +144,19 @@ const get_content_data_edit = async function(self) {
 							return
 						}
 
+					// clean body_response nodes
+						while (body_response.firstChild) {
+							body_response.removeChild(body_response.firstChild);
+						}
+
+					// loading add
+						e.target.classList.add('lock')
+						const spinner = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'spinner'
+						})
+						body_response.prepend(spinner)
+
 					// Ontology information
 						const server_ontology_api_response = await data_manager.request({
 							url		: server.url,
@@ -257,14 +172,26 @@ const get_content_data_edit = async function(self) {
 								}
 							}
 						})
+						// debug
+						if(SHOW_DEBUG===true) {
+							console.log('debug server_ontology_api_response:', server_ontology_api_response)
+						}
 
-						const result = server_ontology_api_response.result
-
-						if(result === false){
+						const result = server_ontology_api_response?.result
+						if(!result){
+							e.target.classList.remove('lock')
+							spinner.remove()
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error',
+								inner_html		: server_ontology_api_response.msg || 'Error connecting server',
+								parent			: body_response
+							})
 							return
 						}
 
-						const files_filtrered = result.files.filter( el => ar_dedalo_prefix_tipos.find(item => item === el.tld) )
+					// files_filtered. Only selects math files with user tld section
+						const files_filtered = result.files.filter( el => ar_dedalo_prefix_tipos.find(item => item === el.tld) )
 
 					// API call
 						const api_response = await data_manager.request({
@@ -276,97 +203,103 @@ const get_content_data_edit = async function(self) {
 								},
 								options : {
 									server	: server,
-									files	: files_filtrered,
+									files	: files_filtered,
 									info 	: result.info
 								}
 							}
 						})
 						// debug
 						if(SHOW_DEBUG===true) {
-							console.log('))) update_ontology api_response:', api_response);
+							console.log('debug update_ontology api_response:', api_response);
 						}
 
 					// loading  remove
 						spinner.remove()
 						e.target.classList.remove('lock')
 
+					// fail case
+						if(!api_response){
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error',
+								inner_html		: server_ontology_api_response.msg || 'Error connecting server',
+								parent			: body_response
+							})
+							return
+						}
+
+					// version compatibility check
+						const required_version = api_response.root_info?.properties?.version
+						if (!required_version) {
+							api_response.errors.push('Unable to get required_version from Ontology')
+						}else{
+							const version_is_supported = self.supported_code_version(required_version)
+							if (!version_is_supported) {
+								ui.create_dom_element({
+									element_type	: 'h3',
+									class_name		: 'warning',
+									inner_html		: `
+										Warning.
+										Your Dédalo code version is too old to work with current Ontology.
+										You need code version >= ${required_version}
+										Please update Dédalo code ASAP to prevent incompatibility issues!
+									`,
+									parent			: body_response
+								})
+							}
+						}
+
+					// errors node
+						if (api_response.errors.length>0) {
+							ui.create_dom_element({
+								element_type	: 'pre',
+								class_name		: 'error',
+								inner_html		: api_response.errors.join('<br />'),
+								parent			: body_response
+							})
+						}
+
+					// message
+						const msg = api_response.msg.replace(/\n/g, '<br />');
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'response_node msg',
+							inner_html		: msg,
+							parent			: body_response
+						})
+
 					// remove annoying rqo_string from object
-						if (api_response && api_response.debug && api_response.debug.rqo_string) {
+						if (api_response.debug && api_response.debug.rqo_string) {
 							delete api_response.debug.rqo_string
 						}
 
-					// response_node pre JSON response
-						if (api_response) {
+					// JSON response PRE
+						const response_string = JSON.stringify(api_response, null, 2)
+							.replace(/\\n/g, '<br />');
+						ui.create_dom_element({
+							element_type	: 'pre',
+							class_name		: 'response_node_json',
+							inner_html		: response_string,
+							parent			: body_response
+						})
 
-							// version compatibility check
-								const required_version = api_response.root_info?.properties?.version
-								if (!required_version) {
-									api_response.errors.push('Unable to get required_version from Ontology')
-								}else{
-									const version_is_supported = self.supported_code_version(required_version)
-									if (!version_is_supported) {
-										ui.create_dom_element({
-											element_type	: 'h3',
-											class_name		: 'warning',
-											inner_html		: `
-												Warning.
-												Your Dédalo code version is too old to work with current Ontology.
-												You need code version >= ${required_version}
-												Please update Dédalo code ASAP to prevent incompatibility issues!
-											`,
-											parent			: body_response
+					// menu force to update (server cache files are deleted previously)
+						dd_request_idle_callback(
+							() => {
+								const page = self.caller.caller
+								if (page) {
+									const menu = page.ar_instances.find(el => el.model==='menu')
+									if (menu) {
+										menu.refresh({
+											build_autoload : true
 										})
 									}
 								}
-
-							// errors node
-								if (api_response.errors.length>0) {
-									ui.create_dom_element({
-										element_type	: 'pre',
-										class_name		: 'error',
-										inner_html		: api_response.errors.join('<br />'),
-										parent			: body_response
-									})
-								}
-
-							// message
-								const msg = api_response.msg.replace(/\n/g, '<br />');
-								ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'response_node msg',
-									inner_html		: msg,
-									parent			: body_response
-								})
-
-							// JSON response PRE
-								const response_string = JSON.stringify(api_response, null, 2)
-									.replace(/\\n/g, '<br />');
-								ui.create_dom_element({
-									element_type	: 'pre',
-									class_name		: 'response_node_json',
-									inner_html		: response_string,
-									parent			: body_response
-								})
-
-							// menu force to update (server cache files are deleted previously)
-								dd_request_idle_callback(
-									() => {
-										const page = self.caller.caller
-										if (page) {
-											const menu = page.ar_instances.find(el => el.model==='menu')
-											if (menu) {
-												menu.refresh({
-													build_autoload : true
-												})
-											}
-										}
-									}
-								)
-						}
+							}
+						)
 				}
 			})
 		}
-
 
 	// add at end body_response
 		content_data.appendChild(body_response)
@@ -378,6 +311,157 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RENDER_SERVERS_LIST
+* Creates the list of the available servers to select one
+* @param object value
+* @return HTMLElment servers_grid
+*/
+const render_servers_list = function (value) {
+
+	// short vars
+	const servers = value.servers
+
+	const servers_grid = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'config_grid servers_grid'
+	})
+
+	// Servers label
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label bold',
+		inner_html		: 'Servers',
+		parent			: servers_grid
+	})
+	ui.create_dom_element({
+		element_type	: 'div',
+		parent			: servers_grid
+	})
+
+	const server_len = servers.length;
+	for (let i = 0; i < server_len; i++) {
+
+		const current_server = servers[i]
+
+		// server_label
+			const server_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label',
+				inner_html		: current_server.name,
+				title			: current_server.name,
+				parent			: servers_grid
+			})
+
+		// input checkbox
+			const input_checkbox = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'radio',
+				name 			: 'ontology_server',
+				id				: i+1,
+				value			: current_server.url
+			})
+			// change event handler
+			const change_handler = (e) => {
+				servers.forEach( el => delete el.active )
+				current_server.active = input_checkbox.checked
+				servers_grid.querySelectorAll('.label, .value').forEach( el => el.classList.remove('active') )
+				server_label.classList.add('active')
+				value_node.classList.add('active')
+			}
+			input_checkbox.addEventListener('change', change_handler)
+			input_checkbox.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+
+		// value
+			const value_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'value',
+				inner_html		: current_server.url,
+				parent			: servers_grid
+			})
+			// set the check box and if the status is available and URI is reachable
+			if (current_server.response_code === 200) {
+				// input_checkbox.checked = true
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button icon check success',
+					parent			: value_node
+				})
+			}else{
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button icon cancel error',
+					parent			: value_node
+				})
+				input_checkbox.disabled = 'disabled'
+			}
+			server_label.prepend(input_checkbox)
+	}
+
+
+	return servers_grid
+}//end render_servers_list
+
+
+
+/**
+* RENDER_SERVER_VARS
+* Creates the list of server constants defined in config related to the
+* update of the Ontology
+* @param object value
+* @return HTMLElement config_grid
+*/
+const render_server_vars = function (value) {
+
+	// short vars
+		const structure_from_server	= value.structure_from_server
+		const prefix_tipos			= value.prefix_tipos || []
+
+	// config_grid
+		const config_grid = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'config_grid'
+		})
+
+	// Config label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label bold',
+			inner_html		: 'Config',
+			parent			: config_grid
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			parent			: config_grid
+		})
+
+	// add vars
+		const add_to_grid = (label, value, grid_container) => {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label',
+				inner_html		: label,
+				parent			: grid_container
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'value',
+				inner_html		: value,
+				parent			: grid_container
+			})
+		}
+
+		add_to_grid('STRUCTURE_FROM_SERVER', structure_from_server, config_grid)
+		add_to_grid('DEDALO_PREFIX_TIPOS', prefix_tipos.join(', '), config_grid)
+
+
+	return config_grid
+}//end render_server_vars
 
 
 
