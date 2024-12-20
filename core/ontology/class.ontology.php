@@ -787,17 +787,16 @@ class ontology {
 		}
 
 		$ontology_main = self::get_ontology_main_form_target_section_tipo($target_section_tipo);
-
 		if( empty($ontology_main) ){
 			debug_log(__METHOD__
-				. " Error for target_section_tipo, the main ontology don't exist, target_section_tipo: " . PHP_EOL
+				. " Warning for target_section_tipo, the main ontology don't exist, target_section_tipo: " . PHP_EOL
 				. to_string( $target_section_tipo )
-				, logger::ERROR
+				, logger::WARNING
 			);
 			return null;
 		}
-		$ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 
+		$ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 		if( empty($ar_tld) || empty($ar_tld[0]) ){
 			debug_log(__METHOD__
 				. " Error for tld, the main ontology has not defined target section_tipo" . PHP_EOL
