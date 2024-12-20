@@ -1289,32 +1289,48 @@ class ontology {
 	*/
 	public static function get_term_id_from_locator( object $locator ) : ?string {
 
-		// get the component data
-		// using the locator
-		$tld_tipo		= 'ontology7';
-		$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
-		$tld_component	= component_common::get_instance(
-			$tld_model,
-			$tld_tipo ,
-			$locator->section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			$locator->section_tipo
-		);
+		// get the tld from main ontology of the locator section_tipo
+		$tld = ontology::map_target_section_tipo_to_tld( $locator->section_tipo );
 
-		$tld_data = $tld_component->get_dato();
+		// check if the node exist and it get data to resolve the tld
+		// if not, try to get the tld from the main ontology definition.
+		if( empty($tld) ){
 
-		if( empty($tld_data) ){
 			debug_log(__METHOD__
 				. " Empty tld from locator " . PHP_EOL
-				. 'locator: ' . to_string($locator )
+				. 'locator: ' . to_string( $locator )
+				. 'The section_tipo needs to exist in the main ontology!'
 				, logger::WARNING
 			);
-			return null;
+
+			// get the component data
+			// using the locator
+			$tld_tipo		= 'ontology7';
+			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo );
+			$tld_component	= component_common::get_instance(
+				$tld_model,
+				$tld_tipo ,
+				$locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$locator->section_tipo
+			);
+
+			$tld = $tld_component->get_dato()[0] ?? null;
+
+			if( empty($tld) ){
+
+				debug_log(__METHOD__
+					. " Empty tld from locator " . PHP_EOL
+					. 'locator: ' . to_string($locator )
+					, logger::ERROR
+				);
+
+				return null;
+			}
 		}
 
-		$tld		= reset( $tld_data );
-		$term_id	= $tld . $locator->section_id;
+		$term_id = $tld . $locator->section_id;
 
 		return $term_id;
 	}//end get_term_id_from_locator
