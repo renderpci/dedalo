@@ -975,40 +975,6 @@ class ontology {
 				$jer_dd_record->set_parent( $parent );
 			}
 
-
-		// model. Get the model tld and id
-			$model_tipo			= 'ontology6';
-			$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
-			$model_component	= component_common::get_instance(
-				$model_model,
-				$model_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-
-			$model_data = $model_component->get_dato();
-
-			if(empty($model_data)){
-
-				debug_log(__METHOD__
-					. " Record without model " . PHP_EOL
-					. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
-					. 'section_id	: ' . to_string($section_id). PHP_EOL
-					. 'model_tipo	: ' . to_string($model_tipo)
-					, logger::DEBUG
-				);
-
-			}else{
-
-				// get the parent data
-				// use the locator
-				$model_locator	= reset($model_data);
-				$model = ontology::get_term_id_from_locator($model_locator);
-				$jer_dd_record->set_modelo( $model );
-			}
-
 		// is model
 			$is_model_tipo		= 'ontology30';
 			$is_model_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_model_tipo  );
@@ -1038,6 +1004,43 @@ class ontology {
 				$is_model_locator	= reset($is_model_data);
 				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
 				$jer_dd_record->set_esmodelo( $is_model );
+			}
+			$is_model = $is_model ?? 'no';
+
+		// model. Get the model tld and id
+			$model_tipo			= 'ontology6';
+			$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
+			$model_component	= component_common::get_instance(
+				$model_model,
+				$model_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$model_data = $model_component->get_dato();
+
+			if( empty($model_data) ){
+
+				if ( $is_model === 'no' ) {
+					debug_log(__METHOD__
+						. " Record without model " . PHP_EOL
+						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
+						. 'section_id	: ' . to_string($section_id). PHP_EOL
+						. 'model_tipo	: ' . to_string($model_tipo). PHP_EOL
+						. 'is_model	: ' . to_string($is_model)
+						, logger::ERROR
+					);
+				}
+
+			}else{
+
+				// get the parent data
+				// use the locator
+				$model_locator	= reset($model_data);
+				$model = ontology::get_term_id_from_locator($model_locator);
+				$jer_dd_record->set_modelo( $model );
 			}
 
 		// descriptor
