@@ -108,30 +108,26 @@ class ts_object {
 			}//end if (!isset($ar_children[0]))
 
 		// If element exists (section_list_thesaurus) we get element 'properties' JSON value as array
-			if ( !empty($ar_properties) ) {
+			if ( isset($ar_properties->show) && isset($ar_properties->show->ddo_map) ) {
 
-				foreach ($ar_properties as $value_obj) {
+				$ddo_map = $ar_properties->show->ddo_map;
+				foreach ($ddo_map as $current_ddo) {
 
-					$type = $value_obj->type ?? null;
+					$type = $current_ddo->type ?? null;
 
-					// link_children. optional model variations
-						if ($model===false && ($type==='link_childrens_model' || $type==='link_children_model')) {
-							// unset($ar_properties[$key]);
+					// link children exception
+						if ($model===false && $type==='link_children_model') {
 							continue;
 						}else if ($model===true) {
-							if ( ($type==='link_childrens' || $type==='link_children') && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo===DEDALO_ONTOLOGY_SECTION_TIPO) ) {
+							if ( $type==='link_children' && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo===DEDALO_ONTOLOGY_SECTION_TIPO) ) {
 								// unset($ar_properties[$key]);
 								continue;
-							}else if ($type==='link_childrens_model' || $type==='link_children_model') {
-								$value_obj->type = 'link_children';
+							}else if ( $type==='link_children_model' ) {
+								$current_ddo->type = 'link_children';
 							}
 						}
-						if ($type==='link_childrens_model' || $type==='link_childrens') {
-							$value_obj->type = 'link_children';
-						}
-
 					// add
-					$ar_elements[] = $value_obj;
+					$ar_elements[] = $current_ddo;
 				}//end foreach ($ar_properties as $key => $value_obj)
 				// $ar_elements = array_values($ar_properties);
 			}
