@@ -956,7 +956,7 @@ class ontology {
 
 			$parent_data = $parent_component->get_dato();
 
-			if(empty($parent_data)){
+			if( empty($parent_data) || empty($parent_data[0]) ){
 
 				debug_log(__METHOD__
 					. " Record without parent " . PHP_EOL
@@ -970,8 +970,10 @@ class ontology {
 
 				// get the parent data
 				// use the locator
-				$parent_locator	= reset($parent_data);
-				$parent = ontology::get_term_id_from_locator($parent_locator);
+				$parent_locator	= $parent_data[0];
+				$parent = ( $parent_locator->section_tipo !== DEDALO_ONTOLOGY_SECTION_TIPO )
+					? ontology::get_term_id_from_locator($parent_locator)
+					: 'dd0'; // main root nodes of the ontology dd1 and dd2
 				$jer_dd_record->set_parent( $parent );
 			}
 
