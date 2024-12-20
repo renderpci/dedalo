@@ -2070,7 +2070,9 @@ class area_maintenance extends area_common {
 			// import file
 			foreach ($files_to_import as $current_file_item) {
 
-				$import_response = ontology_data_io::import_from_file( $current_file_item );
+				$import_response = ( $current_file_item->section_tipo === 'matrix' )
+					? ontology_data_io::import_private_lists_from_file( $current_file_item )
+					: ontology_data_io::import_from_file( $current_file_item );
 
 				$ar_msg[] = $import_response->msg;
 				if( !empty($import_response->errors) ){
@@ -2080,6 +2082,11 @@ class area_maintenance extends area_common {
 
 		// update jer_dd with the imported records
 			foreach ($files_to_import as $current_file_item) {
+
+				//private list, matrix_dd, doesn't process it as jer_dd nodes
+				if($current_file_item->section_tipo === 'matrix'){
+					continue;
+				}
 
 				$section_tipo = $current_file_item->section_tipo;
 				$sqo = new search_query_object();
