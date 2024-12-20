@@ -292,6 +292,9 @@ class ontology_data_io {
 		return $response;
 	}//end export_private_lists_to_file
 
+
+
+	/**
 	* IMPORT_FROM_FILE
 	* Get ontology file in copy format from ontology server
 	* And import into the matrix_ontology table.
@@ -314,7 +317,7 @@ class ontology_data_io {
 			$file_name = basename( $url );
 
 		// import ontology path
-			$ontology_io_path	= ontology_data_io::get_ontology_io_path();
+			$ontology_io_path = ontology_data_io::get_ontology_io_path();
 
 			$file_path = $ontology_io_path.'/'.$file_name;
 
@@ -329,6 +332,45 @@ class ontology_data_io {
 
 		return $import_response;
 	}//end import_from_file
+
+
+
+	/**
+	* IMPORT_PRIVATE_LISTS_FROM_FILE
+	* Get ontology file in copy format from ontology server
+	* And import into the matrix_ontology table.
+	* @param object $file_item
+	* {
+	*  "section_tipo" 	: "ontology40",
+	*  "tld" 			: "dd"
+	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/ontology40_dd.copy.gz"
+	* }
+	* @return object $import_response
+	*/
+	public static function import_private_lists_from_file( object $file_item ) : object {
+
+		// options
+			$url = $file_item->url;
+
+		// file_name
+			$file_name = basename( $url );
+
+		// import ontology path
+			$ontology_io_path = ontology_data_io::get_ontology_io_path();
+
+			$file_path = $ontology_io_path.'/'.$file_name;
+
+			$options = new stdClass();
+				$options->file_path		= $file_path;
+				$options->matrix_table	= 'matrix_dd';
+				$options->delete_table	= true;
+
+		// import records from file *.copy.gz
+		// this delete existing data of current section_tipo and copy all file pg data
+			$import_response = backup::import_from_copy_file( $options );
+
+		return $import_response;
+	}//end import_private_lists_from_file
 
 
 
