@@ -1182,8 +1182,8 @@ class ontology {
 
 			$properties_v5_data = $properties_v5_component->get_dato();
 
-			if( !is_empty_dato($properties_v5_data ) ){
-				$properties_v5 = json_encode( $properties_v5_data );
+			if( !is_empty_dato( $properties_v5_data ) ){
+				$properties_v5 = json_encode( $properties_v5_data[0] );
 
 			}else{
 				$properties_v5 = null;
