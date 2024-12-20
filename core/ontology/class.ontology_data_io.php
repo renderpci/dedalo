@@ -246,6 +246,52 @@ class ontology_data_io {
 
 
 	/**
+	* EXPORT_PRIVATE_LISTS_TO_FILE
+	* Copy rows from matrix_dd table and save it into a copy file
+	* Copy is made using psql daemon
+	* @return object $response
+	*/
+	public static function export_private_lists_to_file() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// path to save the file
+			$ontology_io_path	= ontology_data_io::set_ontology_io_path();
+			if ( $ontology_io_path === false ) {
+				$response->msg		= 'Error. Invalid directory: '.$ontology_io_path;
+				$response->errors[]	= 'Unable to create directory: '.$ontology_io_path;
+				return $response;
+			}
+			$path_file  = "{$ontology_io_path}/matrix_dd.copy.gz";
+
+		// command
+			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+			$command = $command_base
+				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_dd\") TO PROGRAM 'gzip > {$path_file}';\" ";
+
+		// exec command in terminal
+			$command_result = shell_exec($command);
+
+		// check created file
+			if (!file_exists($path_file)) {
+				throw new Exception("Error Processing Request. File $path_file not created!", 1);
+				$response->msg		= 'Error Processing Request. File '.$path_file.' not created!';
+				$response->errors[]	= 'Target file was not created. Not found: matrix_dd.copy.gz';
+				return $response;
+			}
+
+		// all was done
+			$response->result			= true;
+			$response->msg				= 'OK. Request done';
+			$response->command_result	= $command_result;
+
+
+		return $response;
+	}//end export_private_lists_to_file
+
 	* IMPORT_FROM_FILE
 	* Get ontology file in copy format from ontology server
 	* And import into the matrix_ontology table.
