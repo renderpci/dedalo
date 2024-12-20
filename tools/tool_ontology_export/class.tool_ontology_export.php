@@ -125,6 +125,17 @@ class tool_ontology_export extends tool_common {
 		// export the ontology information into a ontology.json file
 		ontology_data_io::export_ontology_info();
 
+		// Process private list of matrix_dd node/s and change jer_dd rows
+			$private_list_response = ontology_data_io::export_private_lists_to_file();
+
+			// save all export messages
+			$ar_msg[] = $private_list_response->msg;
+
+			// errors
+			if( $private_list_response->result === false ){
+				$response->errors = array_merge( $response->errors, $private_list_response->errors );
+			}
+
 		// response
 			$response->result	= empty($response->errors);
 			$response->msg		= $response->result
