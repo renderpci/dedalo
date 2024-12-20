@@ -3,7 +3,7 @@
 * ONTOLOGY_DATA_IO
 * Manages the ontology in/out, the class export and import files to sync nodes between installations
 * Only shared Ontologies will be processed
-* 
+*
 * Note: Local Ontologies are managed by every installation and they are not used here.
 */
 class ontology_data_io {
@@ -411,11 +411,11 @@ class ontology_data_io {
 			$response->errors	= [];
 
 		// version
-		$ontology_io_path	= ontology_data_io::get_ontology_io_path( $version );
+		$ontology_io_path = ontology_data_io::get_ontology_io_path( $version );
 
 		if (!$ontology_io_path) {
-			$response->msg		= 'Error. Invalid version number. This version has not ontology files';
-			$response->errors[]	= 'Invalid version number. This version has not ontology files';
+			$response->msg		= 'Error. Invalid version number. This version does not contain ontology files. ' . implode('.', $version);
+			$response->errors[]	= 'Unsupported version number. '. implode('.', $version);
 			return $response;
 		}
 

@@ -1537,11 +1537,13 @@ final class dd_utils_api {
 	// Open methods ///////////////////////////////////
 
 
+
 	/**
 	* GET_ONTOLOGY_SERVER_READY
 	* Check if the server is a ontology server or not.
 	* Ontology servers can provide specific ontology files as master
 	* Non ontology server will refuse to use his ontology files by other installations
+	* @param object $rqo
 	* @return object $response
 	*/
 	public static function get_ontology_server_ready( object $rqo ) : object {
@@ -1585,7 +1587,6 @@ final class dd_utils_api {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
-
 
 		// check if the server is ontology server, if not stop the process
 		// Only ontology servers can provide his ontology files.
