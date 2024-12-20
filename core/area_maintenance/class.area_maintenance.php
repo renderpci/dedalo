@@ -2011,7 +2011,21 @@ class area_maintenance extends area_common {
 	* Connect with master server, download ontology files and update local DDBB and lang files
 	* @param object $options
 	* {
-	* 	ar_dedalo_prefix_tipos : array ['numisdata','rsc']
+	*	"server": {
+	*		"name": "Official Dédalo Ontology server",
+	* 		..
+	* 	},
+	* 	"files" : [{
+	*		"section_tipo": "ontology56",
+	*		"tld": "numisdata",
+	*		"url": "http://localhost:8080/dedalo/install/import/ontology/6.4/ontology56_numisdata.copy.gz"
+	*	}],
+	* 	"info": {
+	* 		"date": "2024-12-20T20:54:36+01:00",
+	* 		"host": "localhost:8080",
+	* 		"entity": "monedaiberica",
+	* 		..
+	* 	}
 	* }
 	* @return object $response
 	* {
