@@ -190,6 +190,14 @@ class area_maintenance_widgets extends area_common {
 				'info'	=> "Connection HTTPS: " . ($_SERVER['HTTPS'] ?? $_SERVER['SERVER_PORT']) . " - required: HTTPS 443"
 			];
 
+			// GD lib installed
+			$gd_lib_installed = system::check_gd_lib();
+			$requeriments_list[] = (object)[
+				'name'	=> 'GD lib installed',
+				'value'	=> $gd_lib_installed,
+				'info'	=> 'GD lib is needed to manage images in PHP'
+			];
+
 			// FFMPEG installed
 			$ffmpeg_version = Ffmpeg::get_version();
 			$requeriments_list[] = (object)[
