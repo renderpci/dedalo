@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
-include_once DEDALO_CORE_PATH . '/area_maintenance/class.area_maintenance_widgets.php';
+include_once DEDALO_CORE_PATH . '/area_maintenance/class.area_maintenance_widgets_values.php';
 /**
 * AREA_MAINTENANCE
 * System administrator's area with useful methods to
@@ -1506,9 +1506,9 @@ class area_maintenance extends area_common {
 			$name = $options->name;
 
 		// exec widget call
-			if( method_exists('area_maintenance_widgets', $name) ) {
+			if( method_exists('area_maintenance_widgets_values', $name) ) {
 
-				$response = call_user_func(array('area_maintenance_widgets', $name), []);
+				$response = call_user_func(array('area_maintenance_widgets_values', $name), []);
 
 			}else{
 				// error response

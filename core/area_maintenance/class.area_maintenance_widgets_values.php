@@ -1,9 +1,11 @@
 <?php declare(strict_types=1);
 /**
-* AREA_MAINTENANCE_WIDGETS
+* AREA_MAINTENANCE_WIDGETS_VALUES
 * Handle area maintenance widgets values
+* Note that for easy identification, the methods are named equal as is widget name
+* but that do not denote action, only a reference by name
 */
-class area_maintenance_widgets extends area_common {
+class area_maintenance_widgets_values {
 
 
 
@@ -425,4 +427,4 @@ class area_maintenance_widgets extends area_common {
 
 
 
-}//end area_maintenance_widgets
+}//end area_maintenance_widgets_values
