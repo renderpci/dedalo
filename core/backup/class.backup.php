@@ -1911,9 +1911,11 @@ abstract class backup {
 			$response->errors	= [];
 
 		// options
-			$section_tipo			= $options->section_tipo;
-			$file_path				= $options->file_path;
-			$matrix_table			= $options->matrix_table;
+			$section_tipo	= $options->section_tipo ?? null;
+			$file_path		= $options->file_path;
+			$matrix_table	= $options->matrix_table;
+			$delete_table	= $options->delete_table ?? false;
+			$columns		= $options->columns ?? ['section_id','section_tipo','datos'];
 
 		// uncompressed file
 			$uncompressed_file = substr( $file_path, 0, -3 );
@@ -1938,21 +1940,23 @@ abstract class backup {
 
 		// terminal command psql delete previous records
 			$command = $command_base
-				.' --echo-errors -c "DELETE FROM "'.$matrix_table.'" WHERE section_tipo = \''.$section_tipo.'\';";';
+				.' --echo-errors -c "DELETE FROM "'.$matrix_table.'"';
+				if( $delete_table !== true ){
+					$command .= " WHERE section_tipo = '$section_tipo'";
+				}
+				$command .= ';";';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 
 			$command_res = shell_exec($command);
 			debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 
-
 		// terminal command psql copy data from file
 			$command = $command_base
-				.' --echo-errors -c "\copy '.$matrix_table.'(section_id, section_tipo, datos) from '.$uncompressed_file.'";';
+				.' --echo-errors -c "\copy '.$matrix_table.' ('.implode(',', $columns).') from '.$uncompressed_file.'";';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 
 			$command_res = shell_exec($command);
 			debug_log(__METHOD__." Exec response 3 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-
 
 		// update sequence value
 			$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';

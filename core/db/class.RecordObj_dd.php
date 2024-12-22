@@ -1637,7 +1637,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# TERMINO ID EXISTS : UPDATE RECORD
 		if (!empty($this->terminoID) && verify_dedalo_prefix_tipos($this->prefijo)) {
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Saving with parent save ".to_string(), logger::DEBUG);
+				// debug_log(__METHOD__." Saving with parent save ".$this->terminoID, logger::DEBUG);
 			}
 			return parent::Save();
 		}
