@@ -27,7 +27,7 @@ class ontology_data_io {
 			$response->errors	= [];
 
 		// properties component (dd1)
-			$section_tipo	= 'ontology40';
+			$section_tipo	= 'dd0';
 			$section_id		= '1';
 			$tipo			= 'ontology18';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo( $tipo );
@@ -144,7 +144,7 @@ class ontology_data_io {
 	*/
 	public static function update_ontology_info() : bool {
 
-		$section_tipo	= 'ontology40';
+		$section_tipo	= 'dd0';
 		$section_id		= '1';
 		$tipo 			= 'ontology18';
 
@@ -300,9 +300,9 @@ class ontology_data_io {
 	* And import into the matrix_ontology table.
 	* @param object $file_item
 	* {
-	*  "section_tipo" 	: "ontology40",
+	*  "section_tipo" 	: "dd0",
 	*  "tld" 			: "dd"
-	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/ontology40_dd.copy.gz"
+	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/dd0_dd.copy.gz"
 	* }
 	* @return object $import_response
 	*/
@@ -341,9 +341,9 @@ class ontology_data_io {
 	* And import into the matrix_ontology table.
 	* @param object $file_item
 	* {
-	*  "section_tipo" 	: "ontology40",
+	*  "section_tipo" 	: "dd0",
 	*  "tld" 			: "dd"
-	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/ontology40_dd.copy.gz"
+	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/dd0_dd.copy.gz"
 	* }
 	* @return object $import_response
 	*/

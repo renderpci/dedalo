@@ -1374,10 +1374,11 @@ class transform_data {
 			$base_msg = common::$pdata->msg;
 		}
 
-		// collect all children sections of 'ontology38' ('Instances')
+		// collect all children sections of 'ontology40' ('Instances')
 		// like 'dd', 'ontology', 'rsc', 'nexus', etc.
 		$ontology_tlds = [];
-		$ontology_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology38','section','children_recursive' );
+		$ontology_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology40','section','children_recursive' );
+
 		foreach ($ontology_children as $current_tipo) {
 
 			$term			= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_STRUCTURE_LANG, false) ?? '';

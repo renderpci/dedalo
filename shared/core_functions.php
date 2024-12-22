@@ -1841,7 +1841,7 @@ function safe_section_id( string|int $section_id ) : string|int|bool {
 function get_section_id_from_tipo( string $tipo ) : string|false {
 
 	preg_match("/[0-9]+/", $tipo, $output_array);
-	if (empty($output_array[0])) {
+	if (empty($output_array[0]) && $output_array[0]!=0 ) {
 		return false;
 	}
 
@@ -1890,6 +1890,12 @@ function tipo_in_array( string $tipo, array $array ) : bool {
 			$current_value_tld	= RecordObj_dd::get_prefix_from_tipo( $current_value );
 
 			if($tipo_tld === $current_value_tld){
+				return true;
+			}
+		}
+		if( strpos($current_value, '/') !== false ){
+			preg_match($current_value, $tipo, $output_array);
+			if( !empty($output_array) ){
 				return true;
 			}
 		}
