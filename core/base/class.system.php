@@ -358,6 +358,20 @@ class system {
 
 
 	/**
+	* CHECK_GD_LIB
+	* Returns true if the PHP GD lib is installed, false if not
+	* @see https://www.php.net/manual/en/book.image.php
+	* @see https://www.php.net/manual/en/function.extension-loaded.php
+	* @return bool
+	*/
+	public static function check_gd_lib() : bool {
+
+		return extension_loaded('gd');
+	}//end check_gd_lib
+
+
+
+	/**
 	* CHECK_SESSIONS_PATH
 	* Checks if Dédalo sessions path is set and available
 	* constant 'DEDALO_SESSIONS_PATH' is defined in config.php
