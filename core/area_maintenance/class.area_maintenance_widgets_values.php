@@ -1,9 +1,11 @@
 <?php declare(strict_types=1);
 /**
-* AREA_MAINTENANCE_WIDGETS
+* AREA_MAINTENANCE_WIDGETS_VALUES
 * Handle area maintenance widgets values
+* Note that for easy identification, the methods are named equal as is widget name
+* but that do not denote action, only a reference by name
 */
-class area_maintenance_widgets extends area_common {
+class area_maintenance_widgets_values {
 
 
 
@@ -188,6 +190,14 @@ class area_maintenance_widgets extends area_common {
 				'name'	=> 'HTTPS connection',
 				'value'	=> $is_https,
 				'info'	=> "Connection HTTPS: " . ($_SERVER['HTTPS'] ?? $_SERVER['SERVER_PORT']) . " - required: HTTPS 443"
+			];
+
+			// GD lib installed
+			$gd_lib_installed = system::check_gd_lib();
+			$requeriments_list[] = (object)[
+				'name'	=> 'GD lib installed',
+				'value'	=> $gd_lib_installed,
+				'info'	=> 'GD lib is needed to manage images in PHP'
 			];
 
 			// FFMPEG installed
@@ -417,4 +427,4 @@ class area_maintenance_widgets extends area_common {
 
 
 
-}//end area_maintenance_widgets
+}//end area_maintenance_widgets_values
