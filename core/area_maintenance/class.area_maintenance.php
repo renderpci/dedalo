@@ -2011,7 +2011,21 @@ class area_maintenance extends area_common {
 	* Connect with master server, download ontology files and update local DDBB and lang files
 	* @param object $options
 	* {
-	* 	ar_dedalo_prefix_tipos : array ['numisdata','rsc']
+	*	"server": {
+	*		"name": "Official Dédalo Ontology server",
+	* 		..
+	* 	},
+	* 	"files" : [{
+	*		"section_tipo": "ontology56",
+	*		"tld": "numisdata",
+	*		"url": "http://localhost:8080/dedalo/install/import/ontology/6.4/ontology56_numisdata.copy.gz"
+	*	}],
+	* 	"info": {
+	* 		"date": "2024-12-20T20:54:36+01:00",
+	* 		"host": "localhost:8080",
+	* 		"entity": "monedaiberica",
+	* 		..
+	* 	}
 	* }
 	* @return object $response
 	* {
@@ -2070,7 +2084,9 @@ class area_maintenance extends area_common {
 			// import file
 			foreach ($files_to_import as $current_file_item) {
 
-				$import_response = ontology_data_io::import_from_file( $current_file_item );
+				$import_response = ( $current_file_item->section_tipo === 'matrix' )
+					? ontology_data_io::import_private_lists_from_file( $current_file_item )
+					: ontology_data_io::import_from_file( $current_file_item );
 
 				$ar_msg[] = $import_response->msg;
 				if( !empty($import_response->errors) ){
@@ -2080,6 +2096,11 @@ class area_maintenance extends area_common {
 
 		// update jer_dd with the imported records
 			foreach ($files_to_import as $current_file_item) {
+
+				//private list, matrix_dd, doesn't process it as jer_dd nodes
+				if($current_file_item->section_tipo === 'matrix'){
+					continue;
+				}
 
 				$section_tipo = $current_file_item->section_tipo;
 				$sqo = new search_query_object();

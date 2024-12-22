@@ -787,17 +787,16 @@ class ontology {
 		}
 
 		$ontology_main = self::get_ontology_main_form_target_section_tipo($target_section_tipo);
-
 		if( empty($ontology_main) ){
 			debug_log(__METHOD__
-				. " Error for target_section_tipo, the main ontology don't exist, target_section_tipo: " . PHP_EOL
+				. " Warning for target_section_tipo, the main ontology don't exist, target_section_tipo: " . PHP_EOL
 				. to_string( $target_section_tipo )
-				, logger::ERROR
+				, logger::WARNING
 			);
 			return null;
 		}
-		$ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 
+		$ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
 		if( empty($ar_tld) || empty($ar_tld[0]) ){
 			debug_log(__METHOD__
 				. " Error for tld, the main ontology has not defined target section_tipo" . PHP_EOL
@@ -956,7 +955,7 @@ class ontology {
 
 			$parent_data = $parent_component->get_dato();
 
-			if(empty($parent_data)){
+			if( empty($parent_data) || empty($parent_data[0]) ){
 
 				debug_log(__METHOD__
 					. " Record without parent " . PHP_EOL
@@ -970,43 +969,11 @@ class ontology {
 
 				// get the parent data
 				// use the locator
-				$parent_locator	= reset($parent_data);
-				$parent = ontology::get_term_id_from_locator($parent_locator);
+				$parent_locator	= $parent_data[0];
+				$parent = ( $parent_locator->section_tipo !== DEDALO_ONTOLOGY_SECTION_TIPO )
+					? ontology::get_term_id_from_locator($parent_locator)
+					: 'dd0'; // main root nodes of the ontology dd1 and dd2
 				$jer_dd_record->set_parent( $parent );
-			}
-
-
-		// model. Get the model tld and id
-			$model_tipo			= 'ontology6';
-			$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
-			$model_component	= component_common::get_instance(
-				$model_model,
-				$model_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-
-			$model_data = $model_component->get_dato();
-
-			if(empty($model_data)){
-
-				debug_log(__METHOD__
-					. " Record without model " . PHP_EOL
-					. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
-					. 'section_id	: ' . to_string($section_id). PHP_EOL
-					. 'model_tipo	: ' . to_string($model_tipo)
-					, logger::DEBUG
-				);
-
-			}else{
-
-				// get the parent data
-				// use the locator
-				$model_locator	= reset($model_data);
-				$model = ontology::get_term_id_from_locator($model_locator);
-				$jer_dd_record->set_modelo( $model );
 			}
 
 		// is model
@@ -1038,6 +1005,43 @@ class ontology {
 				$is_model_locator	= reset($is_model_data);
 				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
 				$jer_dd_record->set_esmodelo( $is_model );
+			}
+			$is_model = $is_model ?? 'no';
+
+		// model. Get the model tld and id
+			$model_tipo			= 'ontology6';
+			$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
+			$model_component	= component_common::get_instance(
+				$model_model,
+				$model_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$model_data = $model_component->get_dato();
+
+			if( empty($model_data) ){
+
+				if ( $is_model === 'no' ) {
+					debug_log(__METHOD__
+						. " Record without model " . PHP_EOL
+						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
+						. 'section_id	: ' . to_string($section_id). PHP_EOL
+						. 'model_tipo	: ' . to_string($model_tipo). PHP_EOL
+						. 'is_model	: ' . to_string($is_model)
+						, logger::ERROR
+					);
+				}
+
+			}else{
+
+				// get the parent data
+				// use the locator
+				$model_locator	= reset($model_data);
+				$model = ontology::get_term_id_from_locator($model_locator);
+				$jer_dd_record->set_modelo( $model );
 			}
 
 		// descriptor
@@ -1177,8 +1181,8 @@ class ontology {
 
 			$properties_v5_data = $properties_v5_component->get_dato();
 
-			if( !is_empty_dato($properties_v5_data ) ){
-				$properties_v5 = json_encode( $properties_v5_data );
+			if( !is_empty_dato( $properties_v5_data ) ){
+				$properties_v5 = json_encode( $properties_v5_data[0] );
 
 			}else{
 				$properties_v5 = null;
@@ -1286,32 +1290,48 @@ class ontology {
 	*/
 	public static function get_term_id_from_locator( object $locator ) : ?string {
 
-		// get the component data
-		// using the locator
-		$tld_tipo		= 'ontology7';
-		$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
-		$tld_component	= component_common::get_instance(
-			$tld_model,
-			$tld_tipo ,
-			$locator->section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			$locator->section_tipo
-		);
+		// get the tld from main ontology of the locator section_tipo
+		$tld = ontology::map_target_section_tipo_to_tld( $locator->section_tipo );
 
-		$tld_data = $tld_component->get_dato();
+		// check if the node exist and it get data to resolve the tld
+		// if not, try to get the tld from the main ontology definition.
+		if( empty($tld) ){
 
-		if( empty($tld_data) ){
 			debug_log(__METHOD__
 				. " Empty tld from locator " . PHP_EOL
-				. 'locator: ' . to_string($locator )
+				. 'locator: ' . to_string( $locator )
+				. 'The section_tipo needs to exist in the main ontology!'
 				, logger::WARNING
 			);
-			return null;
+
+			// get the component data
+			// using the locator
+			$tld_tipo		= 'ontology7';
+			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo );
+			$tld_component	= component_common::get_instance(
+				$tld_model,
+				$tld_tipo ,
+				$locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$locator->section_tipo
+			);
+
+			$tld = $tld_component->get_dato()[0] ?? null;
+
+			if( empty($tld) ){
+
+				debug_log(__METHOD__
+					. " Empty tld from locator " . PHP_EOL
+					. 'locator: ' . to_string($locator )
+					, logger::ERROR
+				);
+
+				return null;
+			}
 		}
 
-		$tld		= reset( $tld_data );
-		$term_id	= $tld . $locator->section_id;
+		$term_id = $tld . $locator->section_id;
 
 		return $term_id;
 	}//end get_term_id_from_locator
