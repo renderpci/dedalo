@@ -244,6 +244,13 @@ class area_maintenance_widgets_values {
 				'info'	=> 'Version: '. $imagemagick_version . ' - minimum: 6.9'
 			];
 
+			$free_space = system::get_disk_free_space() ?? 0; // in megabytes
+			$requeriments_list[] = (object)[
+				'name'	=> 'disk free space',
+				'info'	=> 'Main disk available space: '. number_format($free_space/1024, 0,'', '.') .' GB',
+				'value'	=> $free_space > 4000
+			];
+
 
 
 		// system_list
@@ -318,6 +325,16 @@ class area_maintenance_widgets_values {
 			$system_list[] = (object)[
 				'name'	=> 'hd',
 				'value'	=> $info->getHD()
+			];
+
+			$system_list[] = (object)[
+				'name'	=> 'disk info',
+				'value'	=> system::get_disk_info()
+			];
+
+			$system_list[] = (object)[
+				'name'	=> 'disk free space',
+				'value'	=> number_format($free_space/1024, 0,'', '.') . ' GB'
 			];
 
 			$system_list[] = (object)[
