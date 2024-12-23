@@ -230,6 +230,7 @@ abstract class JSON_RecordDataBoundObject {
 				// static $totaltime_static2;
 				// $totaltime_static2 = $totaltime_static2 + $totaltime;
 				// debug_log(__METHOD__." Total: $totaltime ms - $strQuery + sum ms: $totaltime_static2 ".to_string(), logger::DEBUG);
+				// error_log( json_encode($ar_JSON_RecordDataObject_load_query_cache) );
 			}
 
 

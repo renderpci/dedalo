@@ -291,9 +291,7 @@ class ontology {
 					$new_properties->show->ddo_map = $properties;
 
 				$properties = $new_properties;
-
 			}
-
 
 			if(!empty($properties)) {
 				$properties_general = new stdClass();
