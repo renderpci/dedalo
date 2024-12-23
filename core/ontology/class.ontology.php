@@ -97,13 +97,13 @@ class ontology {
 
 
 		// get_ontology_main record
-		$target_section_tipo_node = new RecordObj_dd( $target_section_tipo );
-		$target_section_tipo_id = $target_section_tipo_node->get_id();
+		// $target_section_tipo_node = new RecordObj_dd( $target_section_tipo );
+		// $target_section_tipo_id = $target_section_tipo_node->get_id();
 
-		if( !isset($target_section_tipo_id) ){
-			// creates a new one
-			$target_section_tipo = ontology::create_jer_dd_local_ontology_section_node( $tld );;
-		}
+		// if( !isset($target_section_tipo_id) ){
+		// 	// creates a new one
+		// 	$target_section_tipo = ontology::create_jer_dd_local_ontology_section_node( $tld );;
+		// }
 
 
 		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc
@@ -663,14 +663,17 @@ class ontology {
 	*/
 	public static function create_jer_dd_local_ontology_section_node( string $tld ) : string {
 
+		//Parent group
+			$parent_group = 'localontology1';
+
 		// check local ontology node definition in jer_dd
 		// localontology1 is a root node of all local tld of the entities
 		// the node is not sync by master server definition and need to be created locally
 		// if the node exits use it as parent node.
-			$local_ontology_row_data = RecordObj_dd::get_row_data('localontology1');
+			$local_ontology_row_data = RecordObj_dd::get_row_data($parent_group);
 			if( empty($local_ontology_row_data) ){
 
-				$local_ontology_RecordObj_dd = new RecordObj_dd('localontology1');
+				$local_ontology_RecordObj_dd = new RecordObj_dd($parent_group);
 
 				$local_ontology_RecordObj_dd->set_parent('dd5');
 				$local_ontology_RecordObj_dd->set_modelo('dd4');
@@ -695,10 +698,55 @@ class ontology {
 				$local_ontology_RecordObj_dd->insert();
 			}
 
+		// check his own typology to add as parent.
+			$typology_locator = hierarchy::get_typology_locator_from_tld( $tld );
+
+			if( !empty($typology_locator) ){
+				$typoology_id = (int)$typology_locator->section_id + 1;
+
+				$local_typology_tipo = 'localontology'.$typoology_id;
+
+				$local_ontology_row_data = RecordObj_dd::get_row_data( $local_typology_tipo );
+				if( empty($local_ontology_row_data) ){
+
+					$local_typology_RecordObj_dd = new RecordObj_dd( $local_typology_tipo );
+
+					$local_typology_RecordObj_dd->set_parent($parent_group);
+					$local_typology_RecordObj_dd->set_modelo('dd4');
+					$local_typology_RecordObj_dd->set_esmodelo('no');
+					$local_typology_RecordObj_dd->set_esdescriptor('si');
+					$local_typology_RecordObj_dd->set_visible('si');
+					$local_typology_RecordObj_dd->set_tld('localontology');
+					$local_typology_RecordObj_dd->set_traducible('no');
+
+					$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
+					$typology_term = component_common::get_instance(
+						$model, // string model
+						DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
+						$typology_locator->section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_LANG, // string lang
+						$typology_locator->section_tipo // string section_tipo
+					);
+
+					$typology_term_full_data = $typology_term->get_dato_full();
+
+					$typology_term = new stdClass();
+					foreach ($typology_term_full_data as $current_lang => $value) {
+						$typology_term->$current_lang = $value[0];
+					}
+
+					$local_typology_RecordObj_dd->set_term( $typology_term );
+					$local_typology_RecordObj_dd->insert();
+
+					$parent_group = $local_typology_tipo;
+				}
+			}
+
 		$terminoID			= $tld.'0'; // as mdcat0, mupreva0, etc
 
 		$RecordObj_dd = new RecordObj_dd($terminoID);
-			$RecordObj_dd->set_parent('localontology1');
+			$RecordObj_dd->set_parent($parent_group);
 			$RecordObj_dd->set_modelo('dd6');
 			$RecordObj_dd->set_esmodelo('no');
 			$RecordObj_dd->set_esdescriptor('si');
