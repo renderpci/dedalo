@@ -2150,4 +2150,39 @@ class hierarchy extends ontology {
 
 
 
+	/**
+	* GET_TYPOLOGY_LOCATOR_FROM_TLD
+	* Get the tld hierarchy definition and get his own typology definition
+	* @param string $tld
+	* @return object|null $typology_locator
+	*/
+	public function get_typology_locator_from_tld( string $tld ) :?object {
+
+		$hierarchy_response	= hierarchy::get_hierarchy_by_tld( $tld );
+		$hierarchy_row		= $hierarchy_response->result;
+
+		if( !isset($hierarchy_row) ){
+			return null;
+		}
+
+		$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+
+		$typology_component = component_common::get_instance(
+			$model, // string model
+			DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
+			$hierarchy_row->section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$hierarchy_row->section_tipo // string section_tipo
+		);
+
+		$typology_data = $typology_component->get_dato();
+
+		$typology_locator = $typology_data[0] ?? null;
+
+		return $typology_locator;
+	}//end get_typology_locator_from_tld
+
+
+
 }//end class hierarchy
