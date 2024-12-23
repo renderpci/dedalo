@@ -2156,7 +2156,7 @@ class hierarchy extends ontology {
 	* @param string $tld
 	* @return object|null $typology_locator
 	*/
-	public function get_typology_locator_from_tld( string $tld ) :?object {
+	public static function get_typology_locator_from_tld( string $tld ) :?object {
 
 		$hierarchy_response	= hierarchy::get_hierarchy_by_tld( $tld );
 		$hierarchy_row		= $hierarchy_response->result;
