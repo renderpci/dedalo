@@ -375,7 +375,7 @@ class ontology_data_io {
 
 
 	/**
-	* DOWNLOAD_REMOTE_ontology_FILE
+	* DOWNLOAD_REMOTE_ONTOLOGY_FILE
 	* Call master server to get the desired file using a CURL request
 	* If received code is not 200, return false as response result
 	* @param object $obj
@@ -547,8 +547,11 @@ class ontology_data_io {
 
 	/**
 	* CHECK_REMOTE_SERVER
-	* Exec a curl request wit given data to check current server status
+	* Exec a curl request with given data to check current server status
 	* @param object $server
+	* {
+	* 	url: https://master.dedalo.dev/dedalo/core/api/v1/json/
+	* }
 	* @return object $response
 	*/
 	public static function check_remote_server( object $server ) : object {
@@ -581,8 +584,4 @@ class ontology_data_io {
 
 
 
-
-
-
-
-}
+}//end ontology_data_io
