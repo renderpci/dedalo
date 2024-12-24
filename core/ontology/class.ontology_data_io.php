@@ -164,13 +164,25 @@ class ontology_data_io {
 		$dedalo_version	= get_dedalo_version();
 		$version		= implode( '.', $dedalo_version );
 
+		//hierarchy typology
+		$active_ontologies = array_map(function( $el ){
+			$active_ontology = new stdClass();
+				$active_ontology->tld				= strtolower($el->tld);
+				$active_ontology->name				= $el->name;
+				$active_ontology->typology_id		= $el->typology_id;
+				$active_ontology->typology_value	= $el->typology_value;
+
+			return $active_ontology;
+		},  hierarchy::get_active_hierarchies() );
+
 		foreach ($data as $current_value) {
-			$current_value->version			= $version;
-			$current_value->date			= $date;
-			$current_value->entity_id		= DEDALO_ENTITY_ID;
-			$current_value->entity			= DEDALO_ENTITY;
-			$current_value->entity_label	= DEDALO_ENTITY_LABEL;
-			$current_value->host			= DEDALO_HOST;
+			$current_value->version				= $version;
+			$current_value->date				= $date;
+			$current_value->entity_id			= DEDALO_ENTITY_ID;
+			$current_value->entity				= DEDALO_ENTITY;
+			$current_value->entity_label		= DEDALO_ENTITY_LABEL;
+			$current_value->host				= DEDALO_HOST;
+			$current_value->active_ontologies	= $active_ontologies;
 		}
 
 		$properties_component->set_dato( $data );
