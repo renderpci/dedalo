@@ -53,21 +53,40 @@ class tool_ontology_export extends tool_common {
 				$name = component_common::get_value_with_fallback_from_dato_full( $full_data );
 
 
-			// parent
-				$target_node	= new RecordObj_dd( $target_section_tipo );
-				$parent_tipo	= $target_node->get_parent();
-				$parent_node	= new RecordObj_dd( $parent_tipo );
-				$parent_order	= $parent_node->get_order();
-				$parent_name	= RecordObj_dd::get_termino_by_tipo( $parent_tipo );
+			// typology
+				$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+
+				$typology_component = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
+					$row->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$row->section_tipo // string section_tipo
+				);
+
+				$typology_data = $typology_component->get_dato()[0] ?? null;
+				if (empty($typology_data)) {
+					debug_log(__METHOD__
+						." Hierarchy without typology: $row->section_tipo, $row->section_id "
+						, logger::WARNING
+					);
+				}
+				$typology = ( !empty($typology_data) )
+					? (int)$typology_data->section_id
+					: null;
+
+			// typology name
+				$typology_name = $typology_component->get_value();
+
 
 			// store ontology resolution
 				$current_ontolgy = new stdClass();
 					$current_ontolgy->target_section_tipo	= $target_section_tipo;
 					$current_ontolgy->tld					= $tld;
 					$current_ontolgy->name					= $name;
-					$current_ontolgy->parent_tipo			= $parent_tipo;
-					$current_ontolgy->parent_order			= $parent_order;
-					$current_ontolgy->parent_name			= $parent_name;
+					$current_ontolgy->typology				= $typology;
+					$current_ontolgy->typology_name			= $typology_name;
 
 				$ontologies[] = $current_ontolgy;
 		}//end foreach ($result->ar_records as $row)
@@ -93,7 +112,7 @@ class tool_ontology_export extends tool_common {
 
 		// options
 			$selected_ontologies = $options->selected_ontologies ?? [];
-
+	dump($options, ' options +-----------------------+ '.to_string());
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -101,10 +120,10 @@ class tool_ontology_export extends tool_common {
 
 		$done = 0;
 		$ar_msg = [];
-		foreach ($selected_ontologies as $target_section_tipo) {
+		foreach ($selected_ontologies as $tld) {
 
 			// Process ontology node/s and change jer_dd rows
-			$ontology_response = ontology_data_io::export_to_file( $target_section_tipo );
+			$ontology_response = ontology_data_io::export_to_file( $tld );
 
 			// save all export messages
 			$ar_msg[] = $ontology_response->msg;
