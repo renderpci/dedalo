@@ -323,7 +323,7 @@ const get_content_data_edit = async function(self) {
 const render_servers_list = function (value) {
 
 	// short vars
-	const servers = value.servers
+	const servers = value.servers || []
 
 	const servers_grid = ui.create_dom_element({
 		element_type	: 'div',
