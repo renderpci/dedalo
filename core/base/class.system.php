@@ -617,4 +617,73 @@ class system {
 
 
 
+	/**
+	* GET_DISK_INFO
+	* Collects information about the system disks
+	* @return string $disk_info
+	*/
+	public static function get_disk_info() : string {
+
+		try {
+
+			switch (PHP_OS) {
+
+				case 'Darwin':
+					$ar_info = [];
+
+					// general info list
+					$list = shell_exec('/usr/sbin/diskutil list');
+					$ar_info[] = $list ;
+
+					// detailed info of each disk
+					preg_match_all('/\/dev\/disk[0-9]+/', $list, $output_array);
+					foreach ($output_array[0] as $disk_path) {
+						$ar_info[] = shell_exec('/usr/sbin/diskutil info '.$disk_path);
+					}
+
+					// result
+					$result = implode('<hr>', array_map(function($el){
+						return trim($el);
+					}, $ar_info));
+					break;
+
+				case 'Linux':
+				default:
+					$cmd = 'lsblk -io NAME,TYPE,SIZE,MOUNTPOINT,FSTYPE,MODEL';
+					$result = shell_exec($cmd);
+					break;
+			}
+
+			$disk_info = empty($result) ? 'Info unavailable' : str_replace("\n", '<br />', $result);
+
+		} catch (Exception $e) {
+
+			$disk_info = 'Info unavailable. Exception: ' . $e->getMessage();
+		}
+
+
+		return $disk_info;
+	}//end get_disk_info
+
+
+
+	/**
+	* GET_DISK_FREE_SPACE
+	* Get the main disk free space in megabytes
+	* @return int|null $megabytes
+	*/
+	public static function get_disk_free_space() : ?int {
+
+		$free_space = disk_free_space('/');
+		if (!$free_space) {
+			return null;
+		}
+
+		$megabytes = intval($free_space / 1024 / 1024);
+
+		return $megabytes;
+	}//end get_disk_free_space
+
+
+
 }//end class system

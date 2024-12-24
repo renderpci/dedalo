@@ -932,6 +932,8 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATO_FULL
+	* Don't constrain type to object because compatibility
+	* with component_relation_common->get_dato_full() (array)
 	* @return object|null $dato_full
 	* 	sample: {
 	*	    "lg-spa": [
