@@ -390,15 +390,7 @@ class ontology_data_io {
 	* DOWNLOAD_REMOTE_ontology_FILE
 	* Call master server to get the desired file using a CURL request
 	* If received code is not 200, return false as response result
-	* @param object $obj
-	* {
-	*	 "type": "matrix_dd_file",
-	*	 "name": "matrix_dd.copy",
-	*	 "table": "matrix_dd",
-	*	 "tld": "dd",
-	*	 "path": "/local_path/dedalo/install/import/ontology"
-	* }
-	* @param string $target_dir
+	* @param string $url
 	* @return object $response
 	* {
 	* 	result: bool
@@ -500,8 +492,21 @@ class ontology_data_io {
 
 	/**
 	* GET_ONTOLOGY_UPDATE_INFO
+	* Collect local ontology files and ontology info json file
+	* Called by API.
+	* Merge all information in a object with the available ontology files
 	* @param object $options
 	* @return object $response
+	* {
+	*	result : {
+	*		info : {},
+	* 		files : [{
+	* 			section_tipo : oh0,
+	* 			tld : oh,
+	* 			url : https://master.dedalo.dev/dedalo/install/import/ontology/6.4/oh0.copy.gz
+	* 		}]
+	* 	}
+	* }
 	*/
 	public static function get_ontology_update_info( array $version ) : object {
 
