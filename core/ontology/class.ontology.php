@@ -1221,14 +1221,24 @@ class ontology {
 			$parent_data = $parent_component->get_dato();
 
 			if( empty($parent_data) || empty($parent_data[0]) ){
-
-				debug_log(__METHOD__
-					. " Record without parent " . PHP_EOL
-					. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
-					. 'section_id	: ' . to_string($section_id). PHP_EOL
-					. 'parent_tipo	: ' . to_string($parent_tipo)
-					, logger::DEBUG
-				);
+				// main dd nodes exception
+				if( $terminoID==='dd1' || $terminoID==='dd2' ){
+					debug_log(__METHOD__
+						. " Record without parent " . PHP_EOL
+						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
+						. 'section_id	: ' . to_string($section_id). PHP_EOL
+						. 'parent_tipo	: ' . to_string($parent_tipo)
+						, logger::WARNING
+					);
+				}else{
+					debug_log(__METHOD__
+						. " Record without parent " . PHP_EOL
+						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
+						. 'section_id	: ' . to_string($section_id). PHP_EOL
+						. 'parent_tipo	: ' . to_string($parent_tipo)
+						, logger::ERROR
+					);
+				}
 
 			}else{
 
@@ -1237,7 +1247,7 @@ class ontology {
 				$parent_locator	= $parent_data[0];
 				$parent = ( $parent_locator->section_tipo !== DEDALO_ONTOLOGY_SECTION_TIPO )
 					? ontology::get_term_id_from_locator($parent_locator)
-					: 'dd0'; // main root nodes of the ontology dd1 and dd2
+					: null; // main root nodes of the ontology dd1 and dd2
 				$jer_dd_record->set_parent( $parent );
 			}
 
@@ -1343,30 +1353,32 @@ class ontology {
 			$jer_dd_record->set_visible( 'si' );
 
 		// Order
-			// use the parent data to get the children data and calculate the order.
-			$siblings	= ontology::get_siblings( $parent_locator );
-			$order		= ontology::get_order_from_locator( $locator, $siblings );
+			if( !empty($parent_locator) ){
+				// use the parent data to get the children data and calculate the order.
+				$siblings	= ontology::get_siblings( $parent_locator );
+				$order		= ontology::get_order_from_locator( $locator, $siblings );
 
-			// as every node can change his order position related to other nodes
-			// every sibling of the node need update his own order.
-			// the order is save in the common parent node
-			// and is the array key of the locator sibling
-			foreach ($siblings as $key => $sibling_locator) {
-				// don't update when the sibling is the current node
-				// it will update when it will saved.
-				if($sibling_locator->section_tipo === $section_tipo
-					&& (int)$sibling_locator->section_id === (int)$section_id){
-					continue;
+				// as every node can change his order position related to other nodes
+				// every sibling of the node need update his own order.
+				// the order is save in the common parent node
+				// and is the array key of the locator sibling
+				foreach ($siblings as $key => $sibling_locator) {
+					// don't update when the sibling is the current node
+					// it will update when it will saved.
+					if($sibling_locator->section_tipo === $section_tipo
+						&& (int)$sibling_locator->section_id === (int)$section_id){
+						continue;
+					}
+					// get the term_id of the sibling used to get update jer_dd row
+					// and save with his position (array key +1)
+					$sibling_term_id	= ontology::get_term_id_from_locator( $sibling_locator );
+					$sibling_node		= new RecordObj_dd( $sibling_term_id );
+					$sibling_node->set_norden( $key+1 );
+					$sibling_node->Save();
 				}
-				// get the term_id of the sibling used to get update jer_dd row
-				// and save with his position (array key +1)
-				$sibling_term_id	= ontology::get_term_id_from_locator( $sibling_locator );
-				$sibling_node		= new RecordObj_dd( $sibling_term_id );
-				$sibling_node->set_norden( $key+1 );
-				$sibling_node->Save();
-			}
 
-			$jer_dd_record->set_norden( $order );
+				$jer_dd_record->set_norden( $order );
+			}
 
 		// translatable
 			$translatable_tipo		= 'ontology8';
