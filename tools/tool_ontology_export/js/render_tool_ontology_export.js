@@ -198,55 +198,50 @@ const render_ontologies_list = function (self) {
 	const ontologies = self.ontologies || []
 
 	// parents unique
-	const key = 'parent_tipo';
-	const unique_parents = [...new Map(ontologies.map(el => [el[key], el] )).values()];
+	const key = 'typology';
+	const unique_typologies = [...new Map(ontologies.map(el => [el[key], el] )).values()];
 
-	const shared_parents = unique_parents.filter(el => el.target_section_tipo.indexOf('local') === -1 )
-		.sort( (a,b) => (a.parent_order < b.parent_order) ? -1 : 0)
-
-	const local_parents = unique_parents.filter(el => el.target_section_tipo.indexOf('local') != -1)
-		.sort( (a,b) => (a.parent_order < b.parent_order) ? -1 : 0)
-
-	const sorted_parents = [...shared_parents, ...local_parents]
+	const sorted_typologies = unique_typologies
+		.sort( (a,b) => (a.typology < b.typology) ? -1 : 0)
 
 	const fragment = new DocumentFragment()
 
-	const sorted_parents_length = sorted_parents.length
-	for (let i = 0; i < sorted_parents_length; i++) {
+	const sorted_typologies_length = sorted_typologies.length
+	for (let i = 0; i < sorted_typologies_length; i++) {
 
-		const parent = sorted_parents[i]
+		const typology_item = sorted_typologies[i]
 
-		// parent_label
-			const parent_label = ui.create_dom_element({
+		// typology_label
+			const typology_label = ui.create_dom_element({
 				element_type	: 'label',
-				class_name		: 'item_label parent_label unselectable icon_arrow',
-				inner_html		: parent.parent_name,
+				class_name		: 'item_label typology_label unselectable icon_arrow',
+				inner_html		: typology_item.typology_name,
 				parent			: fragment
 			})
-			parent_label.addEventListener('click', (e) => {
+			typology_label.addEventListener('click', (e) => {
 				e.preventDefault() // prevent interactions with the input checkbox
 			})
 
 		// input checkbox
-			const parent_input_checkbox = ui.create_dom_element({
+			const typology_input_checkbox = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
-				id				: parent.parent_tipo,
-				value			: parent.parent_tipo
+				id				: typology_item.typology,
+				value			: typology_item.typology
 			})
 			// change event handler
 			const change_handler = (e) => {
 				const children_nodes = children_container.querySelectorAll('input')
 				for (let k = children_nodes.length - 1; k >= 0; k--) {
-					children_nodes[k].checked = parent_input_checkbox.checked
+					children_nodes[k].checked = typology_input_checkbox.checked
 					children_nodes[k].dispatchEvent( new Event('change') );
 				}
 			}
-			parent_input_checkbox.addEventListener('change', change_handler)
-			parent_input_checkbox.addEventListener('click', (e) => {
+			typology_input_checkbox.addEventListener('change', change_handler)
+			typology_input_checkbox.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
-			parent_label.append(parent_input_checkbox)
+			typology_label.append(typology_input_checkbox)
 
 		// children_container
 			const children_container = ui.create_dom_element({
@@ -257,16 +252,16 @@ const render_ontologies_list = function (self) {
 
 		// track collapse toggle state of content
 			ui.collapse_toggle_track({
-				toggler				: parent_label,
+				toggler				: typology_label,
 				container			: children_container,
-				collapsed_id		: 'tool_ontology_export_' + parent.target_section_tipo,
-				collapse_callback	: () => {parent_label.classList.remove('up')},
-				expose_callback		: () => {parent_label.classList.add('up')},
+				collapsed_id		: 'tool_ontology_export_' + typology_item.typology,
+				collapse_callback	: () => {typology_label.classList.remove('up')},
+				expose_callback		: () => {typology_label.classList.add('up')},
 				default_state		: 'opened' // 'opened|closed'
 			})
 
 		// children group items
-			const children_ontologies = ontologies.filter(el => el.parent_tipo === parent.parent_tipo)
+			const children_ontologies = ontologies.filter(el => el.typology === typology_item.typology)
 				.sort( (a,b) => (a.name < b.name) ? -1 : 0)
 
 			const children_len = children_ontologies.length
@@ -287,11 +282,11 @@ const render_ontologies_list = function (self) {
 				const input_checkbox = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'checkbox',
-					id				: child.target_section_tipo,
-					value			: child.target_section_tipo
+					id				: child.tld,
+					value			: child.tld
 				})
 				// set value
-				if (self.selected_ontologies.find(el => el===child.target_section_tipo)) {
+				if (self.selected_ontologies.find(el => el===child.tld)) {
 					input_checkbox.checked = true
 					children_checked_counter++ // update counter
 				}
@@ -300,11 +295,11 @@ const render_ontologies_list = function (self) {
 				const change_handler = (e) => {
 					if (input_checkbox.checked) {
 						// add if not is not already included
-						if (!self.selected_ontologies.includes(child.target_section_tipo)) {
-							self.selected_ontologies.push(child.target_section_tipo)
+						if (!self.selected_ontologies.includes(child.tld)) {
+							self.selected_ontologies.push(child.tld)
 						}
 					}else{
-						const index = self.selected_ontologies.indexOf(child.target_section_tipo)
+						const index = self.selected_ontologies.indexOf(child.tld)
 						if (index > -1) {
 							self.selected_ontologies.splice(index, 1)
 						}
@@ -329,7 +324,7 @@ const render_ontologies_list = function (self) {
 
 		// update grouper checked value. if all children are check, then parent id checked
 			if (children_checked_counter===children_len) {
-				parent_input_checkbox.checked = true
+				typology_input_checkbox.checked = true
 			}
 	}
 
