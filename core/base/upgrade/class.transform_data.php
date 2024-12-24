@@ -1356,6 +1356,11 @@ class transform_data {
 		// disable log
 		logger_backend_activity::$enable_log = false;
 
+		//official ontologies
+
+		$ontology_file_content = file_get_contents( dirname(dirname(__FILE__)) .'/include/6-4-0_ontology.json' );
+		$ontology_info = json_decode( $ontology_file_content );
+
 		// collect all existing tld in 'jer_dd' table
 		$all_active_tld = RecordObj_dd::get_active_tlds();
 
@@ -1376,40 +1381,43 @@ class transform_data {
 
 		// collect all children sections of 'ontology40' ('Instances')
 		// like 'dd', 'ontology', 'rsc', 'nexus', etc.
-		$ontology_tlds = [];
-		$ontology_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology40','section','children_recursive' );
 
-		foreach ($ontology_children as $current_tipo) {
+		// $ontology_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology40','section','children_recursive' );
+		$ontology_tlds = array_map(function( $el ){
+			return $el->tld;
+		}, $ontology_info->active_ontologies);
 
-			$term			= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_STRUCTURE_LANG, false) ?? '';
-			$ar_tem			= explode(' | ', $term );
-			$RecordObj_dd	= new RecordObj_dd($current_tipo);
-			$properties		= $RecordObj_dd->get_properties();
-			$tld			= $properties->main_tld ?? null;
+		// foreach ($ontology_tipos as $current_tipo) {
 
-			if( empty($tld) ){
-				debug_log(__METHOD__
-					. "Ignored tld, empty main_tld" . PHP_EOL
-					. "tipo: " . to_string( $current_tipo )
-					, logger::ERROR
-				);
-				continue;
-			}
+		// 	$term			= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_STRUCTURE_LANG, false) ?? '';
+		// 	$ar_tem			= explode(' | ', $term );
+		// 	$RecordObj_dd	= new RecordObj_dd($current_tipo);
+		// 	$properties		= $RecordObj_dd->get_properties();
+		// 	$tld			= $properties->main_tld ?? null;
 
-			if( isset($ar_tem[1]) && $tld === $ar_tem[1] ){
+		// 	if( empty($tld) ){
+		// 		debug_log(__METHOD__
+		// 			. "Ignored tld, empty main_tld" . PHP_EOL
+		// 			. "tipo: " . to_string( $current_tipo )
+		// 			, logger::ERROR
+		// 		);
+		// 		continue;
+		// 	}
 
-				$ontology_tlds[] = $tld;
+		// 	if( isset($ar_tem[1]) && $tld === $ar_tem[1] ){
 
-			}else{
+		// 		$ontology_tlds[] = $tld;
 
-				debug_log(__METHOD__
-					. "Invalid tld, do not match with name" . PHP_EOL
-					. "tld: " . to_string( $tld ). " - name: " . to_string( $ar_tem )
-					, logger::ERROR
-				);
-				continue;
-			}
-		}
+		// 	}else{
+
+		// 		debug_log(__METHOD__
+		// 			. "Invalid tld, do not match with name" . PHP_EOL
+		// 			. "tld: " . to_string( $tld ). " - name: " . to_string( $ar_tem )
+		// 			, logger::ERROR
+		// 		);
+		// 		continue;
+		// 	}
+		// }
 
 		// add first the ontology_tlds to preserve the order
 		$sorted_tlds = $ontology_tlds;
