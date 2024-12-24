@@ -198,10 +198,10 @@ class ontology_data_io {
 	* EXPORT_TO_FILE
 	* Copy rows from DB to file filtered by tld
 	* Copy is made using psql daemon
-	* @param string $section_tipo
+	* @param string $tld
 	* @return object $response
 	*/
-	public static function export_to_file( string $section_tipo ) : object {
+	public static function export_to_file( string $tld ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -209,16 +209,13 @@ class ontology_data_io {
 			$response->errors	= [];
 
 		// check section tipo is a valid tipo
-			$check_section_tipo = safe_tipo( $section_tipo );
+			$check_tld = safe_tld( $tld );
 
-			if ( $check_section_tipo === false ) {
-				$response->msg		= 'Error. Invalid section_tipo: '.$section_tipo;
-				$response->errors[]	= 'Invalid section_tipo: '.$section_tipo;
+			if ( $check_tld === false ) {
+				$response->msg		= 'Error. Invalid tld: '.$tld;
+				$response->errors[]	= 'Invalid tld: '.$tld;
 				return $response;
 			}
-
-		// get tld of the target section_tipo
-			$tld = ontology::map_target_section_tipo_to_tld( $section_tipo );
 
 		// path to save the file
 			$ontology_io_path	= ontology_data_io::set_ontology_io_path();
@@ -227,7 +224,10 @@ class ontology_data_io {
 				$response->errors[]	= 'Unable to create directory: '.$ontology_io_path;
 				return $response;
 			}
-			$path_file  = "{$ontology_io_path}/{$section_tipo}_{$tld}.copy.gz";
+			$path_file  = "{$ontology_io_path}/{$tld}.copy.gz";
+
+		// get section_tipo
+			$section_tipo = ontology::map_tld_to_target_section_tipo( $tld );
 
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
