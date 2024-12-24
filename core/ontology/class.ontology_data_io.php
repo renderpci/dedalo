@@ -535,19 +535,19 @@ class ontology_data_io {
 		$files = get_dir_files( $ontology_io_path, ['json', 'gz'] );
 		foreach ( $files as $file_path ) {
 
-				$file_name = basename( $file_path );
+			$file_name = basename( $file_path );
+
 			if( $file_name === 'ontology.json'){
 				$ontology_info_txt	= file_get_contents( $ontology_io_path.'/'.$file_name );
 				$ontology_info		= json_decode( $ontology_info_txt );
 
 				$result->info = $ontology_info;
 			}else{
-
-				preg_match('/^([a-z0-9]{2,})_([a-z]{2,}).copy.gz/', $file_name, $matches);
+				preg_match('/^([a-z_]{2,}).copy.gz$/', $file_name, $matches);
 
 				$file_item = new stdClass();
-					$file_item->section_tipo	= $matches[1];
-					$file_item->tld				= $matches[2];
+					$file_item->tld				= $matches[1];
+					$file_item->section_tipo	= $matches[1]==='matrix' ? 'matrix' : $matches[1].'0';
 					$file_item->url				= DEDALO_PROTOCOL.DEDALO_HOST.$ontology_io_url.'/'. basename( $file_name );
 
 				$result->files[] = $file_item;
