@@ -1415,13 +1415,31 @@ class hierarchy extends ontology {
 				);
 				$main_lang = $component->get_value();
 
+			// Typology
+				$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+
+				$typology_component = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$section_tipo // string section_tipo
+				);
+
+				$typology_data	= $typology_component->get_dato();
+				$typology_id	= $typology_data[0]->section_id ?? null;
+				$typology_value = $typology_component->get_value();
+
 			return (object)[
 				'section_id'				=> $section_id,
 				'name'						=> $name,
 				'tld'						=> $tld,
 				'target_section_tipo'		=> $target_section_tipo,
 				'target_section_model_tipo'	=> $target_section_model_tipo,
-				'main_lang'					=> $main_lang
+				'main_lang'					=> $main_lang,
+				'typology_id'				=> $typology_id,
+				'typology_value'			=> $typology_value
 			];
 		}, $result->ar_records);
 
