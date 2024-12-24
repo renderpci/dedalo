@@ -652,6 +652,39 @@ class ontology {
 	}//end add_main_section
 
 
+	// /**
+	// * ADD_JER_DD_ONTOLOGY_SECTION
+	// * @return
+	// */
+	// public function add_jer_dd_ontology_section( $tld ) {
+
+	// 	$terminoID			= $tld.'0'; // as mdcat0, mupreva0, etc
+
+	// 	$RecordObj_dd = new RecordObj_dd($terminoID);
+	// 		$RecordObj_dd->set_parent($parent_group);
+	// 		$RecordObj_dd->set_modelo('dd6');
+	// 		$RecordObj_dd->set_esmodelo('no');
+	// 		$RecordObj_dd->set_esdescriptor('si');
+	// 		$RecordObj_dd->set_visible('si');
+	// 		$RecordObj_dd->set_tld($tld);
+	// 		$RecordObj_dd->set_traducible('no');
+	// 		$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+
+	// 		// Properties, add main_tld as official tld definitions
+	// 		// and local section color
+	// 		$properties = new stdClass();
+	// 			$properties->main_tld	= $tld;
+	// 			$properties->color		= '#2d8894';
+	// 		$RecordObj_dd->set_properties($properties);
+
+	// 		$term = new stdClass();
+	// 			$term->{DEDALO_STRUCTURE_LANG} = $tld;
+	// 		$RecordObj_dd->set_term( $term );
+
+	// 	$term_id = $RecordObj_dd->insert();
+
+
+	// }//end add_jer_dd_ontology_section
 
 	/**
 	* CREATE_JER_DD_LOCAL_ONTOLOGY_SECTION_NODE
@@ -738,9 +771,8 @@ class ontology {
 
 					$local_typology_RecordObj_dd->set_term( $typology_term );
 					$local_typology_RecordObj_dd->insert();
-
-					$parent_group = $local_typology_tipo;
 				}
+				$parent_group = $local_typology_tipo;
 			}
 
 		$terminoID			= $tld.'0'; // as mdcat0, mupreva0, etc
