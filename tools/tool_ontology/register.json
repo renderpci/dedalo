@@ -81,13 +81,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 12,
-              "hour": 19,
-              "time": 65083461878,
+              "day": 22,
+              "hour": 13,
+              "time": 65084304341,
               "year": 2024,
               "month": 12,
-              "minute": 24,
-              "second": 38
+              "minute": 25,
+              "second": 41
             }
           }
         ]
@@ -184,8 +184,8 @@
       "dato": {
         "lg-nolan": [
           [
-            "ontology*",
-            "localontology*"
+            "ontology35",
+            "/^[a-z]+0$/"
           ]
         ]
       }
@@ -246,7 +246,7 @@
   "section_id": 31,
   "created_date": "2024-11-24 21:14:25",
   "section_tipo": "dd1340",
-  "modified_date": "2024-12-12 19:24:38",
+  "modified_date": "2024-12-22 13:25:41",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

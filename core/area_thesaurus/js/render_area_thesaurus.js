@@ -133,7 +133,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 		}
 
 	// event keydown
-	// swap between title (section info as 'ontology40') and title (tld as '[dd222]')
+	// swap between title (section info as 'dd0') and title (tld as '[dd222]')
 		let id_info_mode = 'tld' // tld|section
 		const keydown_handler
 		= (

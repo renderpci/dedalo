@@ -149,7 +149,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public static function get_id_from_tipo( string $tipo ) : string|false {
 
 		preg_match("/\d+/", $tipo, $output_array);
-		if (empty($output_array[0])) {
+		if (empty($output_array[0]) && $output_array[0]!=0 ) {
 			debug_log(__METHOD__
 				." Error: Invalid tipo received. Impossible get_id_from_tipo this tipo :  " . PHP_EOL
 				.' tipo: ' . to_string($tipo)

@@ -115,6 +115,11 @@ $updates->$v = new stdClass();
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
 				DROP TABLE IF EXISTS \"matrix_descriptors_dd\" CASCADE;
 			");
+		// Set parent terms with dd0 to NULL in jer_dd. Now dd0 is a virtual section of ontology1
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+				UPDATE \"jer_dd\" SET \"parent\" = NULL
+				WHERE \"parent\" = 'dd0';
+			");
 
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES

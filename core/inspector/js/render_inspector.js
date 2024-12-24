@@ -1659,7 +1659,7 @@ const render_docu_links = function(self, tipo) {
 					console.error('Error. Invalid ontology info for tipo:', tipo);
 					return
 				}
-				// open window like https://localhost/dedalo/core/page/?tipo=ontology40&section_id=1
+				// open window like https://localhost/dedalo/core/page/?tipo=dd0&section_id=1
 				open_ontology_window(
 					self,
 					url,

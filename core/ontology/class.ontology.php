@@ -10,15 +10,6 @@ class ontology {
 	// Table where ontology data is stored
 	static $main_table					= 'matrix_ontology_main';
 	static $main_section_tipo			= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
-	static $cache_target_section_tipo	= [
-		'dd'			=> 'ontology40',
-		'ontology'		=> 'ontology41',
-		'localontology'	=> 'ontology42',
-		'lg'			=> 'ontology43',
-		'hierarchy'		=> 'ontology44',
-		'rsc'			=> 'ontology45'
-	];
-
 
 
 	/**
@@ -32,6 +23,18 @@ class ontology {
 	public static function ceate_ontology_records( array $jer_dd_rows ) : bool {
 
 		foreach ($jer_dd_rows as $jer_dd_row) {
+
+			$id = get_section_id_from_tipo( $jer_dd_row->terminoID );
+			// Skip main section of the tld.
+			// main section is defined with the tld  + 0 as dd0,rsc0, etc
+			// this definition will be stored in ontology main
+			// therefore, don't save it into matrix tables,
+			// it will create a mistake section with section_id = 0 and section_tipo as 'dd0'
+			// as well as section_tipo is fine with 'dd0' section_id can not be 0 in any case.
+			if( $id==='0' ){
+				continue;
+			}
+
 			$result = self::add_section_record_from_jer_dd( $jer_dd_row );
 			if (!$result) {
 				debug_log(__METHOD__
@@ -91,6 +94,17 @@ class ontology {
 		$properties_v5			= !empty ( $jer_dd_row->propiedades ) ? json_decode( $jer_dd_row->propiedades ) : new stdClass();
 		$properties				= !empty ( $jer_dd_row->properties ) ? json_decode( $jer_dd_row->properties ) : new stdClass();
 		$term					= !empty ( $jer_dd_row->term ) ? json_decode( $jer_dd_row->term ) : new stdClass();
+
+
+		// get_ontology_main record
+		// $target_section_tipo_node = new RecordObj_dd( $target_section_tipo );
+		// $target_section_tipo_id = $target_section_tipo_node->get_id();
+
+		// if( !isset($target_section_tipo_id) ){
+		// 	// creates a new one
+		// 	$target_section_tipo = ontology::create_jer_dd_local_ontology_section_node( $tld );;
+		// }
+
 
 		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc
 		$section_id = RecordObj_dd::get_id_from_tipo( $node_tipo );
@@ -531,7 +545,7 @@ class ontology {
 	*/
 	public static function add_main_section( string $tld ) : int|string|null {
 
-		$ontology_tipos			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology38','section','children_recursive' );
+		$ontology_tipos			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology40','section','children_recursive' );
 		$local_ontology_tipos	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'localontology1','section','children_recursive' );
 
 		$all_tipos = array_merge($ontology_tipos, $local_ontology_tipos);
@@ -550,7 +564,7 @@ class ontology {
 			if( !isset($ontology_tld) ){
 				$ontology_tld = RecordObj_dd::get_termino_by_tipo($ontology_tipo, DEDALO_STRUCTURE_LANG, false); // important don't use cache here!
 			}
-			//target section_tipo will be the ontology tipo as ontology40
+			//target section_tipo will be the ontology tipo as dd0
 			if( $tld === $ontology_tld) {
 				$target_section_tipo = $ontology_tipo;
 				break;
@@ -636,6 +650,39 @@ class ontology {
 	}//end add_main_section
 
 
+	// /**
+	// * ADD_JER_DD_ONTOLOGY_SECTION
+	// * @return
+	// */
+	// public function add_jer_dd_ontology_section( $tld ) {
+
+	// 	$terminoID			= $tld.'0'; // as mdcat0, mupreva0, etc
+
+	// 	$RecordObj_dd = new RecordObj_dd($terminoID);
+	// 		$RecordObj_dd->set_parent($parent_group);
+	// 		$RecordObj_dd->set_modelo('dd6');
+	// 		$RecordObj_dd->set_esmodelo('no');
+	// 		$RecordObj_dd->set_esdescriptor('si');
+	// 		$RecordObj_dd->set_visible('si');
+	// 		$RecordObj_dd->set_tld($tld);
+	// 		$RecordObj_dd->set_traducible('no');
+	// 		$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+
+	// 		// Properties, add main_tld as official tld definitions
+	// 		// and local section color
+	// 		$properties = new stdClass();
+	// 			$properties->main_tld	= $tld;
+	// 			$properties->color		= '#2d8894';
+	// 		$RecordObj_dd->set_properties($properties);
+
+	// 		$term = new stdClass();
+	// 			$term->{DEDALO_STRUCTURE_LANG} = $tld;
+	// 		$RecordObj_dd->set_term( $term );
+
+	// 	$term_id = $RecordObj_dd->insert();
+
+
+	// }//end add_jer_dd_ontology_section
 
 	/**
 	* CREATE_JER_DD_LOCAL_ONTOLOGY_SECTION_NODE
@@ -647,14 +694,17 @@ class ontology {
 	*/
 	public static function create_jer_dd_local_ontology_section_node( string $tld ) : string {
 
+		//Parent group
+			$parent_group = 'localontology1';
+
 		// check local ontology node definition in jer_dd
 		// localontology1 is a root node of all local tld of the entities
 		// the node is not sync by master server definition and need to be created locally
 		// if the node exits use it as parent node.
-			$local_ontology_row_data = RecordObj_dd::get_row_data('localontology1');
+			$local_ontology_row_data = RecordObj_dd::get_row_data($parent_group);
 			if( empty($local_ontology_row_data) ){
 
-				$local_ontology_RecordObj_dd = new RecordObj_dd('localontology1');
+				$local_ontology_RecordObj_dd = new RecordObj_dd($parent_group);
 
 				$local_ontology_RecordObj_dd->set_parent('dd5');
 				$local_ontology_RecordObj_dd->set_modelo('dd4');
@@ -679,23 +729,67 @@ class ontology {
 				$local_ontology_RecordObj_dd->insert();
 			}
 
-		$tld_RecordObj_dd	= new RecordObj_dd(null, 'localontology');
-		$last_id			= $tld_RecordObj_dd->get_last_section_id_from_tld();
-		$terminoID			= 'localontology'.( $last_id+1 );
+		// check his own typology to add as parent.
+			$typology_locator = hierarchy::get_typology_locator_from_tld( $tld );
+
+			if( !empty($typology_locator) ){
+				$typoology_id = (int)$typology_locator->section_id + 1;
+
+				$local_typology_tipo = 'localontology'.$typoology_id;
+
+				$local_ontology_row_data = RecordObj_dd::get_row_data( $local_typology_tipo );
+				if( empty($local_ontology_row_data) ){
+
+					$local_typology_RecordObj_dd = new RecordObj_dd( $local_typology_tipo );
+
+					$local_typology_RecordObj_dd->set_parent($parent_group);
+					$local_typology_RecordObj_dd->set_modelo('dd4');
+					$local_typology_RecordObj_dd->set_esmodelo('no');
+					$local_typology_RecordObj_dd->set_esdescriptor('si');
+					$local_typology_RecordObj_dd->set_visible('si');
+					$local_typology_RecordObj_dd->set_tld('localontology');
+					$local_typology_RecordObj_dd->set_traducible('no');
+
+					$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
+					$typology_term = component_common::get_instance(
+						$model, // string model
+						DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
+						$typology_locator->section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_LANG, // string lang
+						$typology_locator->section_tipo // string section_tipo
+					);
+
+					$typology_term_full_data = $typology_term->get_dato_full();
+
+					$typology_term = new stdClass();
+					foreach ($typology_term_full_data as $current_lang => $value) {
+						$typology_term->$current_lang = $value[0];
+					}
+
+					$local_typology_RecordObj_dd->set_term( $typology_term );
+					$local_typology_RecordObj_dd->insert();
+				}
+				$parent_group = $local_typology_tipo;
+			}
+
+		$terminoID			= $tld.'0'; // as mdcat0, mupreva0, etc
 
 		$RecordObj_dd = new RecordObj_dd($terminoID);
-			$RecordObj_dd->set_parent('localontology1');
+			$RecordObj_dd->set_parent($parent_group);
 			$RecordObj_dd->set_modelo('dd6');
 			$RecordObj_dd->set_esmodelo('no');
 			$RecordObj_dd->set_esdescriptor('si');
 			$RecordObj_dd->set_visible('si');
-			$RecordObj_dd->set_tld('localontology');
+			$RecordObj_dd->set_tld($tld);
 			$RecordObj_dd->set_traducible('no');
 			$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 			// Properties, add main_tld as official tld definitions
+			// and local section color
 			$properties = new stdClass();
-				$properties->main_tld = $tld;
+				$properties->main_tld	= $tld;
+				$properties->color		= '#2d8894';
 			$RecordObj_dd->set_properties($properties);
 
 			$term = new stdClass();
@@ -713,57 +807,73 @@ class ontology {
 	/**
 	* MAP_TLD_TO_TARGET_SECTION_TIPO
 	* get the target section tipo from a given tld
-	* dd ---> ontology40
+	* dd ---> dd0
 	* @param string $tld
-	* @return string|null $target_section_tipo
+	* @return string $target_section_tipo
 	*/
-	public static function map_tld_to_target_section_tipo( string $tld ) : ?string {
+	public static function map_tld_to_target_section_tipo( string $tld ) : string {
 
-		// cache. Defined as general for this class
-		if( isset(self::$cache_target_section_tipo[$tld]) ){
-			return self::$cache_target_section_tipo[$tld];
-		}
+		$safe_tld = safe_tld( $tld );
 
-		// get_ontology_main record
-		$ontology_main_row = self::get_ontology_main_from_tld( $tld );
-
-		if( empty($ontology_main_row) ){
-			// creates a new one
-			self::add_main_section( $tld );
-			// try again
-			$ontology_main_row = self::get_ontology_main_from_tld( $tld );
-		}
-
-		// empty unrecoverable case
-		if( empty($ontology_main_row) ){
+		if( $safe_tld === false){
 			debug_log(__METHOD__
-				. " Error for tld, the main ontology don't exist." . PHP_EOL
-				. ' tld: ' . to_string( $tld )
+				. " Error. current tld is not valid " . PHP_EOL
+				. to_string( $tld )
 				, logger::ERROR
 			);
-			return null;
+
+			throw new Exception(" Error. current tld is not valid", 1);
 		}
 
-		// target_section_tipo from row data
-		$ar_target_section_tipo = $ontology_main_row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
+		$target_section_tipo = $safe_tld.'0';
 
-		// unset or empty data case
-		if( empty($ar_target_section_tipo) ){
-			debug_log(__METHOD__
-				. " Error for target_section_tipo, the main ontology has not defined target section_tipo" . PHP_EOL
-				. 'tld: ' .to_string( $tld )
-				, logger::ERROR
-			);
-			return null;
-		}
+		return $target_section_tipo;
 
-		$target_section_tipo = $ar_target_section_tipo[0];
+		// // cache. Defined as general for this class
+		// if( isset(self::$cache_target_section_tipo[$tld]) ){
+		// 	return self::$cache_target_section_tipo[$tld];
+		// }
 
-		// cache save
-		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
+		// // get_ontology_main record
+		// $ontology_main_row = self::get_ontology_main_from_tld( $tld );
+
+		// if( empty($ontology_main_row) ){
+		// 	// creates a new one
+		// 	self::add_main_section( $tld );
+		// 	// try again
+		// 	$ontology_main_row = self::get_ontology_main_from_tld( $tld );
+		// }
+
+		// // empty unrecoverable case
+		// if( empty($ontology_main_row) ){
+		// 	debug_log(__METHOD__
+		// 		. " Error for tld, the main ontology don't exist." . PHP_EOL
+		// 		. ' tld: ' . to_string( $tld )
+		// 		, logger::ERROR
+		// 	);
+		// 	return null;
+		// }
+
+		// // target_section_tipo from row data
+		// $ar_target_section_tipo = $ontology_main_row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
+
+		// // unset or empty data case
+		// if( empty($ar_target_section_tipo) ){
+		// 	debug_log(__METHOD__
+		// 		. " Error for target_section_tipo, the main ontology has not defined target section_tipo" . PHP_EOL
+		// 		. 'tld: ' .to_string( $tld )
+		// 		, logger::ERROR
+		// 	);
+		// 	return null;
+		// }
+
+		// $target_section_tipo = $ar_target_section_tipo[0];
+
+		// // cache save
+		// self::$cache_target_section_tipo[$tld] = $target_section_tipo;
 
 
-		return self::$cache_target_section_tipo[$tld];
+		// return self::$cache_target_section_tipo[$tld];
 	}//end map_tld_to_target_section_tipo
 
 
@@ -771,53 +881,57 @@ class ontology {
 	/**
 	* MAP_TARGET_SECTION_TIPO_TO_TLD
 	* get the tld from a given target section tipo
-	* ontology40 --> dd
+	* dd0 --> dd
 	* @param string $target_section_tipo
 	* @return string|null $tld
 	*/
 	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : ?string {
 
-		// cache check
-		foreach (self::$cache_target_section_tipo as $current_tld => $value) {
-			if($value === $target_section_tipo){
-				return $current_tld;
-			}
-		}
-
-		$ontology_main = self::get_ontology_main_form_target_section_tipo($target_section_tipo);
-		if( empty($ontology_main) ){
-			debug_log(__METHOD__
-				. " Warning for target_section_tipo, the main ontology don't exist, target_section_tipo: " . PHP_EOL
-				. to_string( $target_section_tipo )
-				, logger::WARNING
-			);
-			return null;
-		}
-
-		$ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
-		if( empty($ar_tld) || empty($ar_tld[0]) ){
-			debug_log(__METHOD__
-				. " Error for tld, the main ontology has not defined target section_tipo" . PHP_EOL
-				. 'target_section_tipo: ' .to_string( $target_section_tipo )
-				, logger::ERROR
-			);
-			return null;
-		}
-
-		$tld = $ar_tld[0];
-
-		// cache save
-		self::$cache_target_section_tipo[$tld] = $target_section_tipo;
-
+		$tld = get_tld_from_tipo( $target_section_tipo );
 
 		return $tld;
+
+		// // cache check
+		// foreach (self::$cache_target_section_tipo as $current_tld => $value) {
+		// 	if($value === $target_section_tipo){
+		// 		return $current_tld;
+		// 	}
+		// }
+
+		// $ontology_main = self::get_ontology_main_form_target_section_tipo($target_section_tipo);
+		// if( empty($ontology_main) ){
+		// 	debug_log(__METHOD__
+		// 		. " Warning for target_section_tipo, the main ontology don't exist, target_section_tipo: " . PHP_EOL
+		// 		. to_string( $target_section_tipo )
+		// 		, logger::WARNING
+		// 	);
+		// 	return null;
+		// }
+
+		// $ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
+		// if( empty($ar_tld) || empty($ar_tld[0]) ){
+		// 	debug_log(__METHOD__
+		// 		. " Error for tld, the main ontology has not defined target section_tipo" . PHP_EOL
+		// 		. 'target_section_tipo: ' .to_string( $target_section_tipo )
+		// 		, logger::ERROR
+		// 	);
+		// 	return null;
+		// }
+
+		// $tld = $ar_tld[0];
+
+		// // cache save
+		// self::$cache_target_section_tipo[$tld] = $target_section_tipo;
+
+
+		// return $tld;
 	}//end map_target_section_tipo_to_tld
 
 
 
 	/**
 	* GET_ALL_ONTOLOGY_SECTIONS
-	* Calculates ontology sections (target section tipo) like ontology40, localontology3, ...
+	* Calculates ontology sections (target section tipo) like dd0, localontology3, ...
 	* Stored in matrix_ontology_main table.
 	* @return array $ontology_sections
 	*/
@@ -893,6 +1007,157 @@ class ontology {
 
 		return $ar_records;
 	}//end get_all_main_ontology_records
+
+
+
+	/**
+	* GET_ACTIVE_ELEMENTS
+	* Execs a real SQL search and
+	* returns an array of current active ontologies or hierarchies
+	* @return array $active_hierarchies
+	*/
+	public static function get_active_elements() : array {
+
+		// main filter
+		$filter = json_decode('
+			{
+				"$and": [
+					{
+						"q": [
+							{
+								"section_id": "1",
+								"section_tipo": "dd64",
+								"from_component_tipo": "hierarchy4"
+							}
+						],
+						"q_operator": null,
+						"path": [
+							{
+								"name": "Active",
+								"model": "component_radio_button",
+								"section_tipo": "hierarchy1",
+								"component_tipo": "hierarchy4"
+							}
+						],
+						"type": "jsonb"
+					}
+				]
+			}
+		');
+
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo( [self::$main_section_tipo] );
+			$sqo->set_limit( 0 );
+			$sqo->set_offset( 0 );
+			$sqo->set_filter( $filter );
+
+		$search = search::get_instance(
+			$sqo // object sqo
+		);
+		$result = $search->search();
+
+		// active_elements
+		$active_elements	= array_map(function($row){
+
+			$section_id		= $row->section_id;
+			$section_tipo	= $row->section_tipo;
+
+			// name
+				$tipo		= DEDALO_HIERARCHY_TERM_TIPO; // 'hierarchy5'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$name = $component->get_value();
+
+			// tld
+				$tipo		= DEDALO_HIERARCHY_TLD2_TIPO; // 'hierarchy6'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$tld = $component->get_value();
+
+			// target_section_tipo
+				$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO; // 'hierarchy53'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$target_section_tipo = $component->get_value();
+
+			// target_section_model_tipo
+				$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO; // 'hierarchy58'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$target_section_model_tipo = $component->get_value();
+
+			// main_lang
+				$tipo		= DEDALO_HIERARCHY_LANG_TIPO; // 'hierarchy8'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$main_lang = $component->get_value();
+
+			// Typology
+				$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+
+				$typology_component = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$section_tipo // string section_tipo
+				);
+
+				$typology_data	= $typology_component->get_dato();
+				$typology_id	= $typology_data[0]->section_id ?? null;
+				$typology_value = $typology_component->get_value();
+
+			return (object)[
+				'section_id'				=> $section_id,
+				'name'						=> $name,
+				'tld'						=> $tld,
+				'target_section_tipo'		=> $target_section_tipo,
+				'target_section_model_tipo'	=> $target_section_model_tipo,
+				'main_lang'					=> $main_lang,
+				'typology_id'				=> $typology_id,
+				'typology_value'			=> $typology_value
+			];
+		}, $result->ar_records);
+
+
+		return $active_elements;
+	}//end get_active_elements
 
 
 
@@ -1422,8 +1687,8 @@ class ontology {
 		$search = search::get_instance(
 			$sqo, // object sqo
 		);
-		$response	= $search->search();
-		$ar_records	= $response->ar_records;
+		$search_response	= $search->search();
+		$ar_records			= $search_response->ar_records;
 
 		foreach ($ar_records as $current_record) {
 

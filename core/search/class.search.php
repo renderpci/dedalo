@@ -2281,7 +2281,7 @@ class search {
 
 		// match regex
 			preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
-			if (empty($matches) || empty($matches[1]) || empty($matches[2]) ) {
+			if (empty($matches) || empty($matches[1]) || (empty($matches[2]) && $matches[2]!=0) ) {
 				debug_log(__METHOD__
 					." Error on preg match tipo: $tipo ". PHP_EOL
 					.'tipo: '.to_string($tipo)

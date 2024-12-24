@@ -281,7 +281,7 @@ class area_maintenance extends area_common {
 				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
 				$item->value	= (object)[
 					'hierarchies'				=> install::get_available_hierarchy_files()->result,
-					'active_hierarchies'		=> hierarchy::get_active_hierarchies(),
+					'active_hierarchies'		=> hierarchy::get_active_elements(),
 					'hierarchy_files_dir_path'	=> $install_config->hierarchy_files_dir_path,
 					'hierarchy_typologies'		=> $install_config->hierarchy_typologies
 				];
@@ -2084,15 +2084,22 @@ class area_maintenance extends area_common {
 			// import file
 			foreach ($files_to_import as $current_file_item) {
 
-				$import_response = ( $current_file_item->section_tipo === 'matrix' )
-					? ontology_data_io::import_private_lists_from_file( $current_file_item )
-					: ontology_data_io::import_from_file( $current_file_item );
+				// main section
+				// check if the main section exist
+					ontology::add_main_section( $current_file_item->tld );
 
-				$ar_msg[] = $import_response->msg;
-				if( !empty($import_response->errors) ){
-					$response->errors = array_merge($response->errors, $import_response->errors);
-				}
+				// matrix data
+					$import_response = ( $current_file_item->section_tipo === 'matrix' )
+						? ontology_data_io::import_private_lists_from_file( $current_file_item )
+						: ontology_data_io::import_from_file( $current_file_item );
+
+					$ar_msg[] = $import_response->msg;
+					if( !empty($import_response->errors) ){
+						$response->errors = array_merge($response->errors, $import_response->errors);
+					}
 			}
+
+
 
 		// update jer_dd with the imported records
 			foreach ($files_to_import as $current_file_item) {
@@ -2101,6 +2108,8 @@ class area_maintenance extends area_common {
 				if($current_file_item->section_tipo === 'matrix'){
 					continue;
 				}
+
+				
 
 				$section_tipo = $current_file_item->section_tipo;
 				$sqo = new search_query_object();

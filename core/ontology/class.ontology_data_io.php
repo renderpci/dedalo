@@ -27,7 +27,7 @@ class ontology_data_io {
 			$response->errors	= [];
 
 		// properties component (dd1)
-			$section_tipo	= 'ontology40';
+			$section_tipo	= 'dd0';
 			$section_id		= '1';
 			$tipo			= 'ontology18';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo( $tipo );
@@ -144,7 +144,7 @@ class ontology_data_io {
 	*/
 	public static function update_ontology_info() : bool {
 
-		$section_tipo	= 'ontology40';
+		$section_tipo	= 'dd0';
 		$section_id		= '1';
 		$tipo 			= 'ontology18';
 
@@ -164,13 +164,25 @@ class ontology_data_io {
 		$dedalo_version	= get_dedalo_version();
 		$version		= implode( '.', $dedalo_version );
 
+		//hierarchy typology
+		$active_ontologies = array_map(function( $el ){
+			$active_ontology = new stdClass();
+				$active_ontology->tld				= strtolower($el->tld);
+				$active_ontology->name				= $el->name;
+				$active_ontology->typology_id		= $el->typology_id;
+				$active_ontology->typology_value	= $el->typology_value;
+
+			return $active_ontology;
+		},  ontology::get_active_elements() );
+
 		foreach ($data as $current_value) {
-			$current_value->version			= $version;
-			$current_value->date			= $date;
-			$current_value->entity_id		= DEDALO_ENTITY_ID;
-			$current_value->entity			= DEDALO_ENTITY;
-			$current_value->entity_label	= DEDALO_ENTITY_LABEL;
-			$current_value->host			= DEDALO_HOST;
+			$current_value->version				= $version;
+			$current_value->date				= $date;
+			$current_value->entity_id			= DEDALO_ENTITY_ID;
+			$current_value->entity				= DEDALO_ENTITY;
+			$current_value->entity_label		= DEDALO_ENTITY_LABEL;
+			$current_value->host				= DEDALO_HOST;
+			$current_value->active_ontologies	= $active_ontologies;
 		}
 
 		$properties_component->set_dato( $data );
@@ -300,9 +312,9 @@ class ontology_data_io {
 	* And import into the matrix_ontology table.
 	* @param object $file_item
 	* {
-	*  "section_tipo" 	: "ontology40",
+	*  "section_tipo" 	: "dd0",
 	*  "tld" 			: "dd"
-	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/ontology40_dd.copy.gz"
+	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/dd0_dd.copy.gz"
 	* }
 	* @return object $import_response
 	*/
@@ -341,9 +353,9 @@ class ontology_data_io {
 	* And import into the matrix_ontology table.
 	* @param object $file_item
 	* {
-	*  "section_tipo" 	: "ontology40",
+	*  "section_tipo" 	: "dd0",
 	*  "tld" 			: "dd"
-	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/ontology40_dd.copy.gz"
+	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/dd0_dd.copy.gz"
 	* }
 	* @return object $import_response
 	*/
@@ -378,15 +390,7 @@ class ontology_data_io {
 	* DOWNLOAD_REMOTE_ONTOLOGY_FILE
 	* Call master server to get the desired file using a CURL request
 	* If received code is not 200, return false as response result
-	* @param object $obj
-	* {
-	*	 "type": "matrix_dd_file",
-	*	 "name": "matrix_dd.copy",
-	*	 "table": "matrix_dd",
-	*	 "tld": "dd",
-	*	 "path": "/local_path/dedalo/install/import/ontology"
-	* }
-	* @param string $target_dir
+	* @param string $url
 	* @return object $response
 	* {
 	* 	result: bool
@@ -488,8 +492,21 @@ class ontology_data_io {
 
 	/**
 	* GET_ONTOLOGY_UPDATE_INFO
+	* Collect local ontology files and ontology info json file
+	* Called by API.
+	* Merge all information in a object with the available ontology files
 	* @param object $options
 	* @return object $response
+	* {
+	*	result : {
+	*		info : {},
+	* 		files : [{
+	* 			section_tipo : oh0,
+	* 			tld : oh,
+	* 			url : https://master.dedalo.dev/dedalo/install/import/ontology/6.4/oh0.copy.gz
+	* 		}]
+	* 	}
+	* }
 	*/
 	public static function get_ontology_update_info( array $version ) : object {
 
@@ -518,19 +535,19 @@ class ontology_data_io {
 		$files = get_dir_files( $ontology_io_path, ['json', 'gz'] );
 		foreach ( $files as $file_path ) {
 
-				$file_name = basename( $file_path );
+			$file_name = basename( $file_path );
+
 			if( $file_name === 'ontology.json'){
 				$ontology_info_txt	= file_get_contents( $ontology_io_path.'/'.$file_name );
 				$ontology_info		= json_decode( $ontology_info_txt );
 
 				$result->info = $ontology_info;
 			}else{
-
-				preg_match('/^([a-z0-9]{2,})_([a-z]{2,}).copy.gz/', $file_name, $matches);
+				preg_match('/^([a-z_]{2,}).copy.gz$/', $file_name, $matches);
 
 				$file_item = new stdClass();
-					$file_item->section_tipo	= $matches[1];
-					$file_item->tld				= $matches[2];
+					$file_item->tld				= $matches[1];
+					$file_item->section_tipo	= $matches[1]==='matrix' ? 'matrix' : $matches[1].'0';
 					$file_item->url				= DEDALO_PROTOCOL.DEDALO_HOST.$ontology_io_url.'/'. basename( $file_name );
 
 				$result->files[] = $file_item;
