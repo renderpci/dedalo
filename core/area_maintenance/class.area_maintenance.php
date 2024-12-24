@@ -281,7 +281,7 @@ class area_maintenance extends area_common {
 				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
 				$item->value	= (object)[
 					'hierarchies'				=> install::get_available_hierarchy_files()->result,
-					'active_hierarchies'		=> hierarchy::get_active_hierarchies(),
+					'active_hierarchies'		=> hierarchy::get_active_elements(),
 					'hierarchy_files_dir_path'	=> $install_config->hierarchy_files_dir_path,
 					'hierarchy_typologies'		=> $install_config->hierarchy_typologies
 				];
