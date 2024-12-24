@@ -434,6 +434,17 @@ abstract class common {
 				return null;
 			}
 
+		// ONTOLOGY SECTIONS. Important exception. Introduced in v6.4
+		// Ontology sections has a tipo with 0 in his own definition.
+		// Sometimes this sections can be caller by other nodes of the ontology
+		// but the section is not loaded (mistake or because is not used)
+		// it happens with local definitions, to avoid the error
+		// will return matrix_ontolog as table for all this sections.
+			$section_id = get_section_id_from_tipo( $tipo );
+			if( $section_id === '0' ){
+				return 'matrix_ontology';
+			}
+
 		// model
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			// empty model case
