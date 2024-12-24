@@ -173,7 +173,7 @@ class ontology_data_io {
 				$active_ontology->typology_value	= $el->typology_value;
 
 			return $active_ontology;
-		},  hierarchy::get_active_hierarchies() );
+		},  ontology::get_active_elements() );
 
 		foreach ($data as $current_value) {
 			$current_value->version				= $version;

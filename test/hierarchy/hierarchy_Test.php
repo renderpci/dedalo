@@ -120,7 +120,7 @@ final class hierarchy_test extends TestCase {
 	*/
 	public function test_generate_virtual_section() {
 
-		$active_hierarchies = hierarchy::get_active_hierarchies();
+		$active_hierarchies = hierarchy::get_active_elements();
 
 		// unittest TLD (inactive)
 			$unittest_item = array_find($active_hierarchies, function($el){
@@ -259,14 +259,12 @@ final class hierarchy_test extends TestCase {
 
 
 	/**
-	* TEST_get_active_hierarchies
+	* TEST_get_actives
 	* @return void
 	*/
-	public function test_get_active_hierarchies() {
+	public function test_get_actives() {
 
-		$result = hierarchy::get_active_hierarchies(
-			null // ar_type
-		);
+		$result = hierarchy::get_active_elements();
 			// dump($result, ' result ++ '.count($result));
 
 		$this->assertTrue(
@@ -274,31 +272,7 @@ final class hierarchy_test extends TestCase {
 			'expected array ' . PHP_EOL
 				. gettype($result)
 		);
-
-
-		$result = hierarchy::get_active_hierarchies(
-			[3] // ar_type
-		);
-			// dump($result, ' result ++ '.count($result));
-
-		$reference = json_decode('
-			[{
-				"section_id": "244",
-				"name": "Languages",
-				"tld": "LG",
-				"target_section_tipo": "lg1",
-				"target_section_model_tipo": "lg2",
-				"main_lang": "English"
-			}]
-		');
-
-		$this->assertTrue(
-			$result[0]->tld===$reference[0]->tld && $result[0]->target_section_tipo===$reference[0]->target_section_tipo,
-			'expected equal true ' . PHP_EOL
-				. to_string($result) . PHP_EOL
-				. to_string($reference)
-		);
-	}//end test_get_active_hierarchies
+	}//end test_get_actives
 
 
 

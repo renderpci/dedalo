@@ -1013,6 +1013,157 @@ class ontology {
 
 
 	/**
+	* GET_ACTIVE_ELEMENTS
+	* Execs a real SQL search and
+	* returns an array of current active ontologies or hierarchies
+	* @return array $active_hierarchies
+	*/
+	public static function get_active_elements() : array {
+
+		// main filter
+		$filter = json_decode('
+			{
+				"$and": [
+					{
+						"q": [
+							{
+								"section_id": "1",
+								"section_tipo": "dd64",
+								"from_component_tipo": "hierarchy4"
+							}
+						],
+						"q_operator": null,
+						"path": [
+							{
+								"name": "Active",
+								"model": "component_radio_button",
+								"section_tipo": "hierarchy1",
+								"component_tipo": "hierarchy4"
+							}
+						],
+						"type": "jsonb"
+					}
+				]
+			}
+		');
+
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo( [self::$main_section_tipo] );
+			$sqo->set_limit( 0 );
+			$sqo->set_offset( 0 );
+			$sqo->set_filter( $filter );
+
+		$search = search::get_instance(
+			$sqo // object sqo
+		);
+		$result = $search->search();
+
+		// active_elements
+		$active_elements	= array_map(function($row){
+
+			$section_id		= $row->section_id;
+			$section_tipo	= $row->section_tipo;
+
+			// name
+				$tipo		= DEDALO_HIERARCHY_TERM_TIPO; // 'hierarchy5'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$name = $component->get_value();
+
+			// tld
+				$tipo		= DEDALO_HIERARCHY_TLD2_TIPO; // 'hierarchy6'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$tld = $component->get_value();
+
+			// target_section_tipo
+				$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO; // 'hierarchy53'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$target_section_tipo = $component->get_value();
+
+			// target_section_model_tipo
+				$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO; // 'hierarchy58'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$target_section_model_tipo = $component->get_value();
+
+			// main_lang
+				$tipo		= DEDALO_HIERARCHY_LANG_TIPO; // 'hierarchy8'
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$section_tipo // string section_tipo
+				);
+				$main_lang = $component->get_value();
+
+			// Typology
+				$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+
+				$typology_component = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$section_tipo // string section_tipo
+				);
+
+				$typology_data	= $typology_component->get_dato();
+				$typology_id	= $typology_data[0]->section_id ?? null;
+				$typology_value = $typology_component->get_value();
+
+			return (object)[
+				'section_id'				=> $section_id,
+				'name'						=> $name,
+				'tld'						=> $tld,
+				'target_section_tipo'		=> $target_section_tipo,
+				'target_section_model_tipo'	=> $target_section_model_tipo,
+				'main_lang'					=> $main_lang,
+				'typology_id'				=> $typology_id,
+				'typology_value'			=> $typology_value
+			];
+		}, $result->ar_records);
+
+
+		return $active_elements;
+	}//end get_active_elements
+
+
+
+	/**
 	* PARSE_SECTION_RECORD_TO_JER_DD_RECORD
 	* Build every component in the section given ($section_tipo, $section_id)
 	* get the component_data and parse as column of jer_dd format.
