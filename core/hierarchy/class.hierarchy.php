@@ -524,7 +524,7 @@ class hierarchy extends ontology {
 			}
 
 		// delete the virtual section
-			$deleted = ontology_legacy::clean_structure_data($tld);
+			$deleted = RecordObj_dd::delete_tld_nodes( $tld );
 
 			$response->result = $deleted;
 
