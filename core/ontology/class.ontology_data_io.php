@@ -167,10 +167,11 @@ class ontology_data_io {
 		//hierarchy typology
 		$active_ontologies = array_map(function( $el ){
 			$active_ontology = new stdClass();
-				$active_ontology->tld				= strtolower($el->tld);
-				$active_ontology->name				= $el->name;
-				$active_ontology->typology_id		= $el->typology_id;
-				$active_ontology->typology_value	= $el->typology_value;
+				$active_ontology->tld			= strtolower($el->tld);
+				$active_ontology->name			= $el->name;
+				$active_ontology->name_data		= $el->name_data;
+				$active_ontology->typology_id	= $el->typology_id;
+				$active_ontology->typology_name	= $el->typology_name;
 
 			return $active_ontology;
 		},  ontology::get_active_elements() );

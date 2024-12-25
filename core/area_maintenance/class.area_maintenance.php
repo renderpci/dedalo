@@ -2086,7 +2086,7 @@ class area_maintenance extends area_common {
 
 				// main section
 				// check if the main section exist
-					ontology::add_main_section( $current_file_item->tld );
+					ontology::add_main_section( $current_file_item );
 
 				// matrix data
 					$import_response = ( $current_file_item->section_tipo === 'matrix' )
