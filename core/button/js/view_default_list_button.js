@@ -27,7 +27,6 @@ export const view_default_list_button = function() {
 * @return HTMLElement wrapper
 */
 view_default_list_button.render = async function(self, options) {
-console.log('self:', self);
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.create_dom_element({
