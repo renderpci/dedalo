@@ -777,52 +777,6 @@ class ontology {
 		$target_section_tipo = $safe_tld.'0';
 
 		return $target_section_tipo;
-
-		// // cache. Defined as general for this class
-		// if( isset(self::$cache_target_section_tipo[$tld]) ){
-		// 	return self::$cache_target_section_tipo[$tld];
-		// }
-
-		// // get_ontology_main record
-		// $ontology_main_row = self::get_ontology_main_from_tld( $tld );
-
-		// if( empty($ontology_main_row) ){
-		// 	// creates a new one
-		// 	self::add_main_section( $tld );
-		// 	// try again
-		// 	$ontology_main_row = self::get_ontology_main_from_tld( $tld );
-		// }
-
-		// // empty unrecoverable case
-		// if( empty($ontology_main_row) ){
-		// 	debug_log(__METHOD__
-		// 		. " Error for tld, the main ontology don't exist." . PHP_EOL
-		// 		. ' tld: ' . to_string( $tld )
-		// 		, logger::ERROR
-		// 	);
-		// 	return null;
-		// }
-
-		// // target_section_tipo from row data
-		// $ar_target_section_tipo = $ontology_main_row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
-
-		// // unset or empty data case
-		// if( empty($ar_target_section_tipo) ){
-		// 	debug_log(__METHOD__
-		// 		. " Error for target_section_tipo, the main ontology has not defined target section_tipo" . PHP_EOL
-		// 		. 'tld: ' .to_string( $tld )
-		// 		, logger::ERROR
-		// 	);
-		// 	return null;
-		// }
-
-		// $target_section_tipo = $ar_target_section_tipo[0];
-
-		// // cache save
-		// self::$cache_target_section_tipo[$tld] = $target_section_tipo;
-
-
-		// return self::$cache_target_section_tipo[$tld];
 	}//end map_tld_to_target_section_tipo
 
 
@@ -839,41 +793,6 @@ class ontology {
 		$tld = get_tld_from_tipo( $target_section_tipo );
 
 		return $tld;
-
-		// // cache check
-		// foreach (self::$cache_target_section_tipo as $current_tld => $value) {
-		// 	if($value === $target_section_tipo){
-		// 		return $current_tld;
-		// 	}
-		// }
-
-		// $ontology_main = self::get_ontology_main_form_target_section_tipo($target_section_tipo);
-		// if( empty($ontology_main) ){
-		// 	debug_log(__METHOD__
-		// 		. " Warning for target_section_tipo, the main ontology don't exist, target_section_tipo: " . PHP_EOL
-		// 		. to_string( $target_section_tipo )
-		// 		, logger::WARNING
-		// 	);
-		// 	return null;
-		// }
-
-		// $ar_tld = $ontology_main->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN} ?? null;
-		// if( empty($ar_tld) || empty($ar_tld[0]) ){
-		// 	debug_log(__METHOD__
-		// 		. " Error for tld, the main ontology has not defined target section_tipo" . PHP_EOL
-		// 		. 'target_section_tipo: ' .to_string( $target_section_tipo )
-		// 		, logger::ERROR
-		// 	);
-		// 	return null;
-		// }
-
-		// $tld = $ar_tld[0];
-
-		// // cache save
-		// self::$cache_target_section_tipo[$tld] = $target_section_tipo;
-
-
-		// return $tld;
 	}//end map_target_section_tipo_to_tld
 
 
