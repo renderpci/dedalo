@@ -185,48 +185,6 @@ class ontology_legacy {
 
 
 	/**
-	* CLEAN_STRUCTURE_DATA
-	* Removes tld footprint from tables 'jer_dd' / 'main_dd'
-	* @param string $tld
-	* @return bool true
-	*/
-	public static function clean_structure_data(string $tld) : bool {
-
-		// jer_dd. delete terms (jer_dd)
-			$sql_query = '
-				DELETE FROM "jer_dd" WHERE "tld" = \''.$tld.'\';
-			';
-			$result_delete_jer = pg_query(DBi::_getConnection(), $sql_query);
-			if (!$result_delete_jer) {
-				debug_log(__METHOD__
-					. " Error deleting tld from table jer_dd" . PHP_EOL
-					. ' tld: ' . to_string($tld)
-					, logger::ERROR
-				);
-			}
-
-		// reset the TLD counter
-			if (DBi::check_table_exists('main_dd')) {
-				$sql_query = '
-					DELETE FROM "main_dd" WHERE "tld" = \''.$tld.'\';
-				';
-				$result_reset_counter = pg_query(DBi::_getConnection(), $sql_query);
-				if (!$result_reset_counter) {
-					debug_log(__METHOD__
-						. " Error deleting tld from table main_dd" . PHP_EOL
-						. ' tld: ' . to_string($tld)
-						, logger::ERROR
-					);
-				}
-			}
-
-
-		return true;
-	}//end clean_structure_data
-
-
-
-	/**
 	* GET_TLD_RECORDS
 	* Get all record in jer_dd table for specific tld (dd, rsc, ...)
 	* @param string $tld
