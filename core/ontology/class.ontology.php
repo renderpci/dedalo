@@ -1594,4 +1594,79 @@ class ontology {
 
 
 
+	/**
+	* DELETE_ONTOLOGY
+	* @return
+	*/
+	public function delete_ontology( string $tld ) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed. ';
+			$response->errors	= [];
+
+		$safe_tld = safe_tld( $tld );
+
+		// delete the jer_dd nodes
+			$deleted_jer_dd = RecordObj_dd::delete_tld_nodes( $safe_tld );
+
+		// delete main ontology section
+			$filter = json_decode('
+				{
+					"$and": [{
+						"q_operator": "==",
+						"q": "'.$safe_tld.'",
+						"path": [{
+							"section_tipo": "'.self::$main_section_tipo.'",
+							"component_tipo": "hierarchy6"
+						}]
+					}]
+				}
+			');
+
+			$main_sqo = new search_query_object();
+				$main_sqo->set_section_tipo( [self::$main_section_tipo] );
+				$main_sqo->set_filter( $filter );
+				$main_sqo->set_limit( 1 );
+
+			$main_source = new stdClass();
+				$main_source->action		= 'delete';
+				$main_source->model			= 'section';
+				$main_source->tipo			= self::$main_section_tipo;
+				$main_source->section_tipo	= self::$main_section_tipo;
+				$main_source->delete_mode	= 'delete_record';
+
+			$rqo = new request_query_object();
+				$rqo->set_action( 'delete' );
+				$rqo->set_source( $main_source );
+				$rqo->set_sqo( $main_sqo );
+
+			$delete_main_response = dd_core_api::delete( $rqo );
+
+		// delete all ontology nodes in matrix
+			$nodes_section_tipo = ontology::map_tld_to_target_section_tipo( $safe_tld );
+
+			$nodes_sqo = new search_query_object();
+				$nodes_sqo->set_section_tipo( [$nodes_section_tipo] );
+				$nodes_sqo->set_filter( $filter );
+				$nodes_sqo->set_limit( 0 );
+
+			$nodes_source = new stdClass();
+				$nodes_source->action		= 'delete';
+				$nodes_source->model		= 'section';
+				$nodes_source->tipo			= $nodes_section_tipo;
+				$nodes_source->section_tipo	= $nodes_section_tipo;
+				$nodes_source->delete_mode	= 'delete_record';
+
+			$rqo = new request_query_object();
+				$rqo->set_action( 'delete' );
+				$rqo->set_source( $nodes_source );
+				$rqo->set_sqo( $nodes_sqo );
+
+			$delete_nodes_response = dd_core_api::delete( $rqo );
+
+
+
+	}//end delete_ontology
+
 }//end ontology
