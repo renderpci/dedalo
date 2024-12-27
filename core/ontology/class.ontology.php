@@ -1036,7 +1036,7 @@ class ontology {
 		');
 
 		$sqo = new search_query_object();
-			$sqo->set_section_tipo( [self::$main_section_tipo] );
+			$sqo->set_section_tipo( [get_called_class()::$main_section_tipo] );
 			$sqo->set_limit( 0 );
 			$sqo->set_offset( 0 );
 			$sqo->set_filter( $filter );
@@ -1119,7 +1119,7 @@ class ontology {
 				$main_lang = $component->get_value();
 
 			// Typology
-				$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+				$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 
 				$typology_component = component_common::get_instance(
 					$model, // string model
@@ -1134,8 +1134,40 @@ class ontology {
 				$typology_id	= $typology_data[0]->section_id ?? null;
 				$typology_name	= $typology_component->get_value();
 
+			// hierarchy order
+				$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_ORDER_TIPO );
+				$component_order = component_common::get_instance(
+					$model,
+					DEDALO_HIERARCHY_ORDER_TIPO,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
+				$order_dato	= $component_order->get_dato();
+				$order_value	= $order_dato[0] ?? 0;
+
+			// active_in_thesaurus get the status of the component active
+			// it will use to discard into tree view the hierarchy in client
+			// in the JSON controller will check to remove his typology if the hierarchy is not active
+				$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO );
+				$component_active_in_thesaurus = component_common::get_instance(
+					$model,
+					DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
+				$active_in_thesaurus_data	= $component_active_in_thesaurus->get_dato();
+				$active_in_thesaurus		= isset($active_in_thesaurus_data[0]) && (int)$active_in_thesaurus_data[0]->section_id === NUMERICAL_MATRIX_VALUE_YES
+					? true
+					: false;
+
+
 			return (object)[
 				'section_id'				=> $section_id,
+				'section_tipo' 				=> $section_tipo,
 				'name'						=> $name,
 				'name_data'					=> $name_data,
 				'tld'						=> $tld,
@@ -1143,7 +1175,9 @@ class ontology {
 				'target_section_model_tipo'	=> $target_section_model_tipo,
 				'main_lang'					=> $main_lang,
 				'typology_id'				=> $typology_id,
-				'typology_name'				=> $typology_name
+				'typology_name'				=> $typology_name,
+				'order'						=> $order_value,
+				'active_in_thesaurus'		=> $active_in_thesaurus
 			];
 		}, $result->ar_records);
 
