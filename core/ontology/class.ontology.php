@@ -1530,7 +1530,7 @@ class ontology {
 
 			$term_data = $term_component->get_dato_full();
 
-			if( !empty(get_object_vars($term_data)) ){
+			if( !empty($term_data) && !empty(get_object_vars($term_data)) ){
 				$term = new stdClass();
 				foreach ($term_data as $lang => $ar_term) {
 					if( !empty($ar_term) ){
