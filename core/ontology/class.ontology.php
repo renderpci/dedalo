@@ -97,7 +97,7 @@ class ontology {
 
 
 		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc
-		$section_id = RecordObj_dd::get_id_from_tipo( $node_tipo );
+		$section_id = get_section_id_from_tipo( $node_tipo );
 
 		// Section, create new section
 		$section = section::get_instance(
@@ -124,7 +124,7 @@ class ontology {
 
 		// model. Get the model tld and id
 			if( !empty($model) && $model!=='null' ){
-				$model_section_id	= RecordObj_dd::get_id_from_tipo( $model );
+				$model_section_id	= get_section_id_from_tipo( $model );
 				$model_tld			= get_tld_from_tipo( $model );
 				$model_section_tipo	= self::map_tld_to_target_section_tipo( $model_tld );
 
@@ -445,7 +445,7 @@ class ontology {
 			foreach ($relations as $related_tipo) {
 
 				// get the parent tld and id
-				$related_section_id		= RecordObj_dd::get_id_from_tipo( $related_tipo );
+				$related_section_id		= get_section_id_from_tipo( $related_tipo );
 				$related_tld			= get_tld_from_tipo( $related_tipo );
 				$related_section_tipo	= self::map_tld_to_target_section_tipo( $related_tld );
 
@@ -492,7 +492,7 @@ class ontology {
 			$children_data = [];
 			foreach ($children as $child_tipo) {
 
-				$child_section_id	= RecordObj_dd::get_id_from_tipo( $child_tipo );
+				$child_section_id	= get_section_id_from_tipo( $child_tipo );
 				$child_tld			= get_tld_from_tipo( $child_tipo );
 				$child_section_tipo	= self::map_tld_to_target_section_tipo( $child_tld );
 

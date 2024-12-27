@@ -1842,6 +1842,12 @@ function get_section_id_from_tipo( string $tipo ) : string|false {
 
 	preg_match("/[0-9]+/", $tipo, $output_array);
 	if (empty($output_array[0]) && $output_array[0]!=0 ) {
+		debug_log(__METHOD__
+			." Error: Invalid tipo received. Impossible get_section_id_from_tipo this tipo :  " . PHP_EOL
+			.' tipo: ' . to_string($tipo)
+			, logger::ERROR
+		);
+
 		return false;
 	}
 
