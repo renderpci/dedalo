@@ -164,55 +164,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* SAVE_TERM_AND_DESCRIPTOR - (!) NOT USED
-	* Used to save elements in class hierarchy
-	* @see class.hierarchy.php
-	* @param string|null $value
-	* @return string $terminoID
-	*/
-		// public function save_term_and_descriptor( ?string $value=null ) : ?string {
-
-		// 	if (empty($this->parent)) {
-		// 		if(SHOW_DEBUG===true) {
-		// 			debug_log(__METHOD__
-		// 				." Error on save 'RecordObj_dd_edit'. Parent is empty. Nothing is saved! "
-		// 				, logger::DEBUG
-		// 			);
-		// 		}
-
-		// 		return null;
-		// 	}
-
-		// 	$terminoID = $this->terminoID;
-
-		// 	#
-		// 	# INSERT
-		// 	# TERMINO ID NOT CREATED : BUILD NEW AND INSERT
-		// 	# Creamos el terminoID a partir del prefijo y el contador contador para el prefijo actual
-		// 	$counter_dato = self::get_counter_value($this->prefijo);
-
-		// 	# Set defaults
-		// 	if(empty($this->norden)) $this->set_norden(1);
-
-		// 	// set value
-		// 	$term = $this->get_term();
-
-		// 	// save to database
-		// 	$result = parent::Save();
-
-		// 	// update_counter if no errors found saving
-		// 	if ($result!==false) {
-		// 		// update_counter
-		// 		self::update_counter($this->prefijo, $counter_dato);
-		// 	}
-
-
-		// 	return $terminoID;
-		// }//end Save
-
-
-
-	/**
 	* UPDATE_COUNTER
 	* Updates the counter for the given tld (ej. 'dd').
 	* @param string $tld
@@ -1536,20 +1487,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}
 			return false;
 		}
-
-		// if (empty($this->parent)) {
-		// 	if(SHOW_DEBUG===true) {
-		// 		trigger_error("Error on save 'RecordObj_dd'. Parent is empty. Nothing is saved!");
-		// 	}
-		// 	return false;
-		// }else{
-		// 	if(!verify_dedalo_prefix_tipos($this->parent)) {
-		// 		if(SHOW_DEBUG===true) {
-		// 			trigger_error("Error on save 'RecordObj_dd'. Parent Prefijo is empty or wrong. Nothing is saved!");
-		// 		}
-		// 		return false;
-		// 	}
-		// }
 
 		#
 		# EDIT

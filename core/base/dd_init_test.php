@@ -148,22 +148,20 @@
 
 
 // DEDALO_PREFIX_TIPOS
-	// Maintains consistency on defined DEDALO_PREFIX_TIPOS and extras folder dirs
-	$DEDALO_PREFIX_TIPOS = (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
-	foreach ($DEDALO_PREFIX_TIPOS as $current_tipo) {
-		$folder_path = DEDALO_EXTRAS_PATH . '/' . $current_tipo;
-		if (!system::check_directory($folder_path)) {
-			$init_response->msg[]	= "Error on read or create 'extras' directory ($current_tipo). Permission denied (php user: $php_user)";
-			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' folder_path: ' .$folder_path
-				, logger::ERROR
-			);
+	// Maintains consistency on defined ONTOLOGY_DATA_IO_DIR and extras folder dirs
+	$folder_path = ONTOLOGY_DATA_IO_DIR;
+	if (!system::check_directory($folder_path)) {
+		$init_response->msg[]	= "Error on read or create 'ontology i/o' directory. Permission denied (PHP user: $php_user)";
+		$init_response->errors	= true;
+		debug_log(__METHOD__
+			.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			.' folder_path: ' .$folder_path
+			, logger::ERROR
+		);
 
-			return $init_response;
-		}
+		return $init_response;
 	}
+
 
 
 
