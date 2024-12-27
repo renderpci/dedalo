@@ -192,6 +192,15 @@ const get_content_data_edit = async function(self) {
 
 					// files_filtered. Only selects math files with user tld section
 						const files_filtered = result.files.filter( el => ar_dedalo_prefix_tipos.find(item => item === el.tld) )
+						const files_filtered_length = files_filtered.length
+						for (let i = 0; i < files_filtered_length; i++) {
+							const file_item = files_filtered[i]
+							const found = result.info.active_ontologies.find(el => el.tld===file_item.tld)
+							if (found) {
+								file_item.typology_id	= found.typology_id
+								file_item.name_data		= found.name_data
+							}
+						}
 
 					// API call
 						const api_response = await data_manager.request({

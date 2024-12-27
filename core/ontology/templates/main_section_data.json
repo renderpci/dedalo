@@ -23,12 +23,6 @@
 			"section_id": "1",
 			"section_tipo": "dd64",
 			"from_component_tipo": "hierarchy4"
-		},
-		{
-			"type": "dd151",
-			"section_id": "5",
-			"section_tipo": "hierarchy13",
-			"from_component_tipo": "hierarchy9"
 		}
 	],
 	"components": {

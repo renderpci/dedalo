@@ -893,7 +893,7 @@ class component_relation_common extends component_common {
 			debug_log(__METHOD__
 				." Ignored add locator action because already exists. Tested properties: " . PHP_EOL
 				.' locator: ' . json_encode($locator)
-				, logger::ERROR
+				, logger::WARNING
 			);
 		}
 

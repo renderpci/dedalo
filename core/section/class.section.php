@@ -2591,9 +2591,9 @@ class section extends common {
 		}else{
 
 			// Check if section_id already exists
-				$current_section_id_exists = section::section_id_exists( $this->section_id, $this->tipo );
+				$current_section_record_exists = section::section_record_exists( $this->section_id, $this->tipo );
 				// Record already exists. Not continue
-				if($current_section_id_exists===true) {
+				if($current_section_record_exists===true) {
 					debug_log(__METHOD__
 						." Record already exists, ignored !!!! ($this->section_id, $this->tipo)"
 						, logger::WARNING
@@ -2613,14 +2613,14 @@ class section extends common {
 
 
 	/**
-	* SECTION_ID_EXISTS
+	* SECTION_RECORD_EXISTS
 	* Search in current matrix_table the section_id given for current section_tipo
 	* @param int|string $section_id
 	* 	Will be cast to int into the search
 	* @param string $section_tipo
 	* @return bool $result
 	*/
-	public static function section_id_exists( int|string $section_id, string $section_tipo ) : bool {
+	public static function section_record_exists( int|string $section_id, string $section_tipo ) : bool {
 
 		// Check if section_id already exists
 		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
@@ -2634,7 +2634,7 @@ class section extends common {
 
 
 		return $result;
-	}//end section_id_exists
+	}//end section_record_exists
 
 
 

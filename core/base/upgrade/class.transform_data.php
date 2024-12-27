@@ -1445,8 +1445,18 @@ class transform_data {
 					print_cli(common::$pdata);
 				}
 
+			$fie_item = array_find($ontology_info->active_ontologies, function( $el ) use($tld) {
+				return $el->tld === $tld;
+			});
+
+			$fie_item = ( isset($fie_item) )
+				? $fie_item
+				: (object)[
+					'tld' => $tld
+				 ];
+
 			// main_section. Add one main section for each tld if not already exists
-			ontology::add_main_section( $tld );
+			ontology::add_main_section( $fie_item );
 
 			// CLI process data
 				if ( running_in_cli()===true ) {

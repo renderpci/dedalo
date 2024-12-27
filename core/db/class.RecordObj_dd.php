@@ -1764,6 +1764,37 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* DELETE_TLD_NODES
+	* Removes all tld nodes in jer_dd
+	* @param string $tld
+	* @return bool true
+	*/
+	public static function delete_tld_nodes( string $tld ) : bool {
+
+		$table	= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+
+		//remove any other things than tld in the tld string
+		$safe_tld	= safe_tld($tld);
+
+		// jer_dd. delete terms (jer_dd)
+		$sql_query = '
+			DELETE FROM "'.$table.'" WHERE "tld" = \''.$tld.'\';
+		';
+		$delete_result = pg_query(DBi::_getConnection(), $sql_query);
+		if (!$delete_result) {
+			debug_log(__METHOD__
+				. " Error deleting tld from table jer_dd" . PHP_EOL
+				. ' tld: ' . to_string($tld)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end delete_tld_nodes
+
+
+	/*
 	* CONSOLIDATE_TABLE
 	* Remunerates table id column to consolidate id sequence from 1,2,...
 	* @return bool
@@ -1792,7 +1823,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return true;
 	}//end consolidate_table
-
 
 
 
