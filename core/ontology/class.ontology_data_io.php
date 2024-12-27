@@ -356,7 +356,7 @@ class ontology_data_io {
 	* {
 	*  "section_tipo" 	: "dd0",
 	*  "tld" 			: "dd"
-	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/dd0_dd.copy.gz"
+	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/matrix_dd.copy.gz"
 	* }
 	* @return object $import_response
 	*/
