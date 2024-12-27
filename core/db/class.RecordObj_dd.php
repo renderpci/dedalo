@@ -1763,5 +1763,37 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
+	/**
+	* CONSOLIDATE_TABLE
+	* Remunerates table id column to consolidate id sequence from 1,2,...
+	* @return bool
+	*/
+	public function consolidate_table() : bool {
+
+		$strQuery = '
+			UPDATE jer_dd t  -- intermediate unique violations are ignored now
+			SET id = t1.new_id
+			FROM (SELECT id, row_number() OVER (ORDER BY tld, id) AS new_id FROM jer_dd) t1
+			WHERE t.id = t1.id;
+
+			SELECT setval(\'jer_dd_id_seq\', max(id)) FROM jer_dd;  -- reset sequence
+		';
+		$result = pg_query(DBi::_getConnection(), $strQuery);
+		if($result===false) {
+			debug_log(__METHOD__
+				. ' Failed consolidate_table jer_dd' .PHP_EOL
+				. 'strQuery: ' . to_string($strQuery)
+				, logger::ERROR
+			);
+
+			return false;
+		}
+
+
+		return true;
+	}//end consolidate_table
+
+
+
 
 }//end class RecordObj_dd
