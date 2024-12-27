@@ -865,18 +865,7 @@ class ontology {
 				}
 
 		// create the jer_dd node
-			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($typology_id);
-
-			$sqo = (object)[
-				'section_tipo'			=> [$section_tipo],
-				'limit'					=> 1,
-				'offset'				=> 0,
-				'filter_by_locators'	=> [$locator]
-			];
-
-			ontology::set_records_in_jer_dd( $sqo );
+			ontology::insert_jer_dd_record( $section_tipo, $typology_id );
 
 		// return the parent grouper as `ontologytype14
 			$parent_grouper_tipo = $tld.$typology_id;
