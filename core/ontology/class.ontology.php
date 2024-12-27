@@ -96,16 +96,6 @@ class ontology {
 		$term					= !empty ( $jer_dd_row->term ) ? json_decode( $jer_dd_row->term ) : new stdClass();
 
 
-		// get_ontology_main record
-		// $target_section_tipo_node = new RecordObj_dd( $target_section_tipo );
-		// $target_section_tipo_id = $target_section_tipo_node->get_id();
-
-		// if( !isset($target_section_tipo_id) ){
-		// 	// creates a new one
-		// 	$target_section_tipo = ontology::create_jer_dd_ontology_section_node( $tld );;
-		// }
-
-
 		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc
 		$section_id = RecordObj_dd::get_id_from_tipo( $node_tipo );
 
@@ -580,14 +570,9 @@ class ontology {
 		// target_section_tipo fallback
 			$file_item->target_section_tipo = $target_section_tipo;
 
-
-		// get all target_section_tipo created before in main ontologies
-			$all_tipos = ontology::get_all_ontology_sections();
-
-
 		// ontology table record template data
-		$section_data_string	= file_get_contents( dirname(__FILE__).'/main_ontology_section_data.json' );
-		$section_data			= json_handler::decode( $section_data_string );
+			$section_data_string	= file_get_contents( DEDALO_CORE_PATH.'/ontology/templates/main_section_data.json' );
+			$section_data			= json_handler::decode( $section_data_string );
 
 		// Name
 			$section_data->components->hierarchy5->dato = $name_data;
@@ -610,47 +595,48 @@ class ontology {
 			}
 
 		// add model root node in the dd main section only. Note that only dd has the models for the ontology.
-		if($tld === 'dd'){
+			if($tld === 'dd'){
 
-			// general term
-			$general_term = new locator();
-				$general_term->set_type('dd48');
-				$general_term->set_section_tipo( $target_section_tipo );
-				$general_term->set_section_id('1');
-				$general_term->set_from_component_tipo('hierarchy45');
+				// general term
+				$general_term = new locator();
+					$general_term->set_type('dd48');
+					$general_term->set_section_tipo( $target_section_tipo );
+					$general_term->set_section_id('1');
+					$general_term->set_from_component_tipo('hierarchy45');
 
-			$section_data->relations[] = $general_term;
+				$section_data->relations[] = $general_term;
 
-			// model term
-			$model_term = new locator();
-				$model_term->set_type('dd48');
-				$model_term->set_section_tipo( $target_section_tipo );
-				$model_term->set_section_id('2');
-				$model_term->set_from_component_tipo('hierarchy45');
+				// model term
+				$model_term = new locator();
+					$model_term->set_type('dd48');
+					$model_term->set_section_tipo( $target_section_tipo );
+					$model_term->set_section_id('2');
+					$model_term->set_from_component_tipo('hierarchy45');
 
-			$section_data->relations[] = $model_term;
+				$section_data->relations[] = $model_term;
 
-			// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
-			foreach($section_data->relations as $locator){
-				if($locator->from_component_tipo === 'hierarchy125'){
-					$locator->section_id = '1';
+				// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
+				foreach($section_data->relations as $locator){
+					if($locator->from_component_tipo === 'hierarchy125'){
+						$locator->section_id = '1';
+					}
 				}
 			}
-		}
 
 		// check if the main tld already exists
 			$ontology_main = self::get_ontology_main_from_tld( $tld );
 
 		// if main section exist update it, else create new one
-			$main_section_tipo = ( !empty($ontology_main) )
+			$main_section_id = ( !empty($ontology_main) )
 				? $ontology_main->section_id
 				: null ;
 
 		// create jer_dd node for section
 			ontology::create_jer_dd_ontology_section_node( $file_item );
 
+		// matrix section
 			$main_section = section::get_instance(
-				$main_section_tipo, // string|null section_id
+				$main_section_id, // string|null section_id
 				self::$main_section_tipo// string section_tipo
 			);
 			$main_section->set_dato( $section_data );
