@@ -369,18 +369,18 @@ class ontology_data_io {
 			$file_name = basename( $url );
 
 		// import ontology path
-			$ontology_io_path = ontology_data_io::get_ontology_io_path();
+			$ontology_io_path	= ontology_data_io::get_ontology_io_path();
+			$file_path			= $ontology_io_path .'/'. $file_name;
 
-			$file_path = $ontology_io_path.'/'.$file_name;
-
+		// import records from file *.copy.gz
+		// this delete existing data of current section_tipo and copy all file pg data
 			$options = new stdClass();
 				$options->file_path		= $file_path;
 				$options->matrix_table	= 'matrix_dd';
 				$options->delete_table	= true;
 
-		// import records from file *.copy.gz
-		// this delete existing data of current section_tipo and copy all file pg data
 			$import_response = backup::import_from_copy_file( $options );
+
 
 		return $import_response;
 	}//end import_private_lists_from_file
