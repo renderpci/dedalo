@@ -825,7 +825,7 @@ final class section_test extends TestCase {
 		$mode			= 'edit';
 
 		// check exists
-			$current_section_id_exists = section::section_id_exists( $section_id, $section_tipo );
+			$current_section_id_exists = section::section_record_exists( $section_id, $section_tipo );
 
 		// new section
 			$section = section::get_instance(
@@ -861,7 +861,7 @@ final class section_test extends TestCase {
 			$section_id = 7;
 
 			// check exists
-			$current_section_id_exists = section::section_id_exists( $section_id, $section_tipo );
+			$current_section_id_exists = section::section_record_exists( $section_id, $section_tipo );
 
 			$section = section::get_instance(
 				$section_id, // string|null section_id
@@ -1651,7 +1651,7 @@ final class section_test extends TestCase {
 		$mode			= 'edit';
 
 		// delete section if exists
-			$current_section_id_exists = section::section_id_exists($section_id, $section_tipo);
+			$current_section_id_exists = section::section_record_exists($section_id, $section_tipo);
 			if ($current_section_id_exists) {
 				$section = section::get_instance(
 					$section_id, // string|null section_id
@@ -1693,7 +1693,7 @@ final class section_test extends TestCase {
 			.' result: ' . json_encode($result)
 		);
 
-		$eq = section::section_id_exists($section_id, $section_tipo);
+		$eq = section::section_record_exists($section_id, $section_tipo);
 		$this->assertTrue(
 			$eq,
 			'expected section_id_exists true '. PHP_EOL
@@ -1709,7 +1709,7 @@ final class section_test extends TestCase {
 			);
 			$result = $section->forced_create_record();
 
-			$eq = section::section_id_exists(4, $section_tipo);
+			$eq = section::section_record_exists(4, $section_tipo);
 			$this->assertTrue(
 				$eq,
 				'expected section_id_exists true '. PHP_EOL
@@ -1735,7 +1735,7 @@ final class section_test extends TestCase {
 		// 	$mode
 		// );
 
-		$result = section::section_id_exists($section_id, $section_tipo);
+		$result = section::section_record_exists($section_id, $section_tipo);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -1749,7 +1749,7 @@ final class section_test extends TestCase {
 			.' result: ' . json_encode($result)
 		);
 
-		$result = section::section_id_exists(4, $section_tipo);
+		$result = section::section_record_exists(4, $section_tipo);
 		$this->assertTrue(
 			$result===true,
 			'expected $result===true '. PHP_EOL
