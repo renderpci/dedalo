@@ -326,7 +326,7 @@ class component_text_area extends component_common {
 		}
 
 
-		 return $value_fragment;
+		return $value_fragment;
 	}//end get_value_fragment
 
 
@@ -355,7 +355,7 @@ class component_text_area extends component_common {
 			if ($clean_text && !empty($dato_current)) {
 				foreach ($dato_current as $key => $current_value) {
 					if (!empty($current_value)) {
-						$dato_current[$key] = TR::comform_tr_data($current_value);
+						$dato_current[$key] = TR::conform_tr_data($current_value);
 					}
 				}
 			}
