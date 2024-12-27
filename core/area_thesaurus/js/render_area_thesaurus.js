@@ -269,7 +269,7 @@ const render_content_data = function(self) {
 				}
 
 			// hierarchy sections
-				const hierarchy_sections_full = hierarchy_nodes.filter(node => node.typology_section_id===typology_item.section_id)
+				const hierarchy_sections_full = hierarchy_nodes.filter(node => parseInt(node.typology_section_id)===parseInt(typology_item.section_id))
 				// sort hierarchy_nodes by order value and alphabetic. First those with a order value and then the rest.
 				const ordered		= hierarchy_sections_full.filter(obj => obj.order !== 0).sort(sort_root_terms)
 				const disordered	= hierarchy_sections_full.filter(obj => obj.order === 0).sort(sort_root_terms);

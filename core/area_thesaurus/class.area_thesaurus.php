@@ -73,173 +73,49 @@ class area_thesaurus extends area_common {
 	*/
 	public function get_hierarchy_sections( ?array $hierarchy_types_filter=null, ?array $hierarchy_sections_filter=null, bool $terms_are_model=false ) : array {
 
-		$hierarchy_target_section_tipo	= $terms_are_model ? DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO : DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-		$hierarchy_children_tipo		= $terms_are_model ? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO 		: DEDALO_HIERARCHY_CHILDREN_TIPO;
-
-		$hierarchy_section_tipo = $this->get_hierarchy_section_tipo();
+		$hierarchy_children_tipo = $terms_are_model ? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO : DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 		// get all hierarchy sections
-		$ar_records = self::get_active_hierarchy_sections( $hierarchy_section_tipo );
+		$class_name = get_called_class()=== 'area_thesaurus' ? 'hierarchy' : 'ontology';
+		$active_elements = $class_name::get_active_elements();
 
 		$ar_items = [];
-		foreach ($ar_records as $row) {
+		foreach ($active_elements as $element) {
 
 			// typology data
-				$typology_data = $this->get_typology_data($row->section_id);
-				if (empty($typology_data)) {
-					debug_log(__METHOD__." Skipped hierarchy without defined typology. section_id: $row->section_id ", logger::WARNING);
+				if (empty($element->typology_id)) {
+					debug_log(__METHOD__." Skipped hierarchy without defined typology. section_id: $element->section_id ", logger::WARNING);
 					continue; // Skip
 				}
 
 			// Skip filtered types when defined
-				if (!empty($hierarchy_types_filter) && !in_array($typology_data->section_id, $hierarchy_types_filter)) {
-					continue; // Skip
-				}
-
-			// hierarchy target section tipo
-				$model			= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_target_section_tipo,true);
-				$target_section	= component_common::get_instance(
-					$model,
-					$hierarchy_target_section_tipo,
-					$row->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$row->section_tipo
-				);
-				$target_section_tipo_dato	= $target_section->get_dato();
-				$target_section_tipo		= $target_section_tipo_dato[0] ?? null;
-				if (empty($target_section_tipo)) {
-					debug_log(__METHOD__
-						." Skipped row $row->section_id with empty target_section_tipo ".$row->section_id
-						, logger::WARNING
-					);
+				if (!empty($hierarchy_types_filter) && !in_array($element->typology_id, $hierarchy_types_filter)) {
 					continue; // Skip
 				}
 
 			// Skip filtered sections when defined
-				if (!empty($hierarchy_sections_filter) && !in_array($target_section_tipo, $hierarchy_sections_filter)) {
+				if (!empty($hierarchy_sections_filter) && !in_array($element->target_section_tipo, $hierarchy_sections_filter)) {
 					continue; // Skip
 				}
 
-			// hierarchy target section name
-				$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO,true);
-				$hierarchy_section_name = component_common::get_instance(
-					$model,
-					DEDALO_HIERARCHY_TERM_TIPO,
-					$row->section_id,
-					'list',
-					DEDALO_DATA_LANG,
-					$row->section_tipo
-				);
-				$target_section_name = $hierarchy_section_name->get_valor();
-				if (empty($target_section_name)) {
-					$target_section_name = $this->get_hierarchy_name( $row->section_id );
-				}
-
-			// hierarchy order
-				$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ORDER_TIPO,true);
-				$hierarchy_section_order = component_common::get_instance(
-					$model,
-					DEDALO_HIERARCHY_ORDER_TIPO,
-					$row->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$row->section_tipo
-				);
-				$hierarchy_target_order_dato	= $hierarchy_section_order->get_dato();
-				$hierarchy_target_order_value	= $hierarchy_target_order_dato[0] ?? 0;
-
-			// active_in_thesaurus get the status of the component active
-			// it will use to discard into tree view the hierarchy in client
-			// in the JSON controller will check to remove his typology if the hierarchy is not active
-				$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO,true);
-				$hierarchy_active_in_thesaurus = component_common::get_instance(
-					$model,
-					DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO,
-					$row->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$row->section_tipo
-				);
-				$active_in_thesaurus_data	= $hierarchy_active_in_thesaurus->get_dato();
-				$active_in_thesaurus		= isset($active_in_thesaurus_data[0]) && (int)$active_in_thesaurus_data[0]->section_id === NUMERICAL_MATRIX_VALUE_YES
-					? true
-					: false;
-
 			// item
 				$item = new stdClass();
-					$item->section_id			= $row->section_id;
-					$item->section_tipo			= $row->section_tipo;
-					$item->target_section_tipo	= $target_section_tipo;
-					$item->target_section_name	= $target_section_name;
-					$item->typology_section_id	= $typology_data->section_id;
-					$item->order				= $hierarchy_target_order_value;
+					$item->section_id			= $element->section_id; //*
+					$item->section_tipo			= $element->section_tipo; //*
+					$item->target_section_tipo	= $element->target_section_tipo;//*
+					$item->target_section_name	= $element->name;//*
+					$item->typology_section_id	= $class_name==='ontology' ? '14' : $element->typology_id;//*
+					$item->order				= $element->order;//*
 					$item->type					= 'hierarchy';
 					$item->children_tipo		= $hierarchy_children_tipo;
-					$item->active_in_thesaurus	= $active_in_thesaurus;
+					$item->active_in_thesaurus	= $element->active_in_thesaurus;
 
 			$ar_items[] = $item;
-		}//end foreach ($ar_records as $key => $row)
+		}//end foreach ($active_elements as $key => $row)
 
 
 		return $ar_items;
 	}//end get_hierarchy_sections
-
-
-
-	/**
-	* GET_ACTIVE_HIERARCHY_SECTIONS
-	* @param string $section_tipo
-	* @return array $ar_records
-	*/
-	public static function get_active_hierarchy_sections( string $section_tipo ) : array {
-
-		$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
-		$order_tipo		= DEDALO_HIERARCHY_ORDER_TIPO; // hierarchy48
-
-		$search_query_object = json_decode('{
-			"id": "thesaurus",
-			"section_tipo": ["'.$section_tipo.'"],
-			"limit": 0,
-			"full_count": false,
-			"filter": {
-				"$and": [
-					{
-						"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"'.$active_tipo.'"},
-						"path": [
-							{
-								"name": "Active",
-								"model": "component_radio_button",
-								"section_tipo": "'.$section_tipo.'",
-								"component_tipo": "'.$active_tipo.'"
-							}
-						]
-					}
-				]
-			},
-			"order": [
-				{
-					"direction": "ASC",
-					"path": [
-						{
-							"name": "Order",
-							"model": "component_number",
-							"section_tipo": "'.$section_tipo.'",
-							"component_tipo": "'.$order_tipo.'"
-						}
-					]
-				}
-			]
-		}');
-
-		$search = search::get_instance($search_query_object);
-		$result = $search->search();
-
-		$ar_records = $result->ar_records;
-
-		return $ar_records;
-	}//end get_active_hierarchy_sections
-
 
 
 	/**
