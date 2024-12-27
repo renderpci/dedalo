@@ -198,11 +198,11 @@ const render_ontologies_list = function (self) {
 	const ontologies = self.ontologies || []
 
 	// parents unique
-	const key = 'typology';
+	const key = 'typology_id';
 	const unique_typologies = [...new Map(ontologies.map(el => [el[key], el] )).values()];
 
 	const sorted_typologies = unique_typologies
-		.sort( (a,b) => (a.typology < b.typology) ? -1 : 0)
+		.sort( (a,b) => (a.typology_id < b.typology_id) ? -1 : 0)
 
 	const fragment = new DocumentFragment()
 
@@ -226,8 +226,8 @@ const render_ontologies_list = function (self) {
 			const typology_input_checkbox = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
-				id				: typology_item.typology,
-				value			: typology_item.typology
+				id				: typology_item.typology_id,
+				value			: typology_item.typology_id
 			})
 			// change event handler
 			const change_handler = (e) => {
@@ -254,14 +254,14 @@ const render_ontologies_list = function (self) {
 			ui.collapse_toggle_track({
 				toggler				: typology_label,
 				container			: children_container,
-				collapsed_id		: 'tool_ontology_export_' + typology_item.typology,
+				collapsed_id		: 'tool_ontology_export_' + typology_item.typology_id,
 				collapse_callback	: () => {typology_label.classList.remove('up')},
 				expose_callback		: () => {typology_label.classList.add('up')},
 				default_state		: 'opened' // 'opened|closed'
 			})
 
 		// children group items
-			const children_ontologies = ontologies.filter(el => el.typology === typology_item.typology)
+			const children_ontologies = ontologies.filter(el => el.typology_id === typology_item.typology_id)
 				.sort( (a,b) => (a.name < b.name) ? -1 : 0)
 
 			const children_len = children_ontologies.length

@@ -1573,7 +1573,7 @@ final class dd_utils_api {
 	/**
 	* GET_ONTOLOGY_UPDATE_INFO
 	* Ontology server provide information about the ontology that it can provide.
-	* Client server need to provide his version and the code of this server.
+	* Client needs to provide his version and the code for this server.
 	* @param object $rqo
 	* @return object $response
 	*/

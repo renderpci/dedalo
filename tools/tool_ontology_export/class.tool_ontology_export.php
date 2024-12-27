@@ -72,7 +72,7 @@ class tool_ontology_export extends tool_common {
 						, logger::WARNING
 					);
 				}
-				$typology = ( !empty($typology_data) )
+				$typology_id = ( !empty($typology_data) )
 					? (int)$typology_data->section_id
 					: null;
 
@@ -85,7 +85,7 @@ class tool_ontology_export extends tool_common {
 					$current_ontolgy->target_section_tipo	= $target_section_tipo;
 					$current_ontolgy->tld					= $tld;
 					$current_ontolgy->name					= $name;
-					$current_ontolgy->typology				= $typology;
+					$current_ontolgy->typology_id			= $typology_id;
 					$current_ontolgy->typology_name			= $typology_name;
 
 				$ontologies[] = $current_ontolgy;
@@ -112,7 +112,6 @@ class tool_ontology_export extends tool_common {
 
 		// options
 			$selected_ontologies = $options->selected_ontologies ?? [];
-	dump($options, ' options +-----------------------+ '.to_string());
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';

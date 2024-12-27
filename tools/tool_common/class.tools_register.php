@@ -153,7 +153,7 @@ class tools_register {
 			if (!empty($ar_ontologies)) {
 
 				// Clean. remove structure records in the database
-					ontology_legacy::clean_structure_data('tool');
+					RecordObj_dd::delete_tld_nodes( 'tool' );
 
 				// import ontology (structure) in jer_dd
 					if (defined('ONTOLOGY_DB')) {

@@ -351,7 +351,7 @@ abstract class JSON_RecordDataBoundObject {
 						$this->ID = $id;
 					}elseif($this->ID!=$id) {
 						debug_log(__METHOD__
-							.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id
+							.' Error. [1] ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id
 							, logger::ERROR
 						);
 						// throw new Exception('Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id , 1);
@@ -376,7 +376,7 @@ abstract class JSON_RecordDataBoundObject {
 					$section_id = pg_fetch_result($result,0,'section_id');
 					if ($section_id===false) {
 						debug_log(__METHOD__
-							.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' '
+							.' Error (matrix_activity). ID received after update is different from current ID. this ID: '.$this->ID.' '
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {

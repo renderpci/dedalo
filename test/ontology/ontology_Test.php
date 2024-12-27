@@ -304,7 +304,7 @@ final class ontology_test extends TestCase {
 			$tld = 'test';
 
 			// Call the method under test
-	   		$result = ontology::create_jer_dd_local_ontology_section_node($tld);
+	   		$result = ontology::create_jer_dd_ontology_section_node($tld);
 	   			dump($result, ' result ++ '.to_string());
 
 			$expected = 'string';
