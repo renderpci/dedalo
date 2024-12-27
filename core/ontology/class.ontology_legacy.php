@@ -373,7 +373,7 @@ class ontology_legacy {
 			}
 
 		// tld
-			$tld = RecordObj_dd::get_prefix_from_tipo($term_id);
+			$tld = get_tld_from_tipo($term_id);
 			if (empty($tld)) {
 				debug_log(__METHOD__." Error on add_term. Ignored. Empty term_id in options: ".to_string($options), logger::ERROR);
 				return false;

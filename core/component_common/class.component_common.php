@@ -219,7 +219,7 @@ abstract class component_common extends common {
 						throw new Exception("Error Processing Request. section or ($component_name) intended to load as component", 1);
 					}
 				// tipo format check
-					if ( is_numeric($tipo) || !is_string($tipo) || !RecordObj_dd::get_prefix_from_tipo($tipo) ) {
+					if ( is_numeric($tipo) || !is_string($tipo) || !get_tld_from_tipo($tipo) ) {
 						dump($tipo," tipo");
 						throw new Exception("Error Processing Request. trying to use wrong var: '$tipo' as tipo to load as component", 1);
 					}
