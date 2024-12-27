@@ -115,38 +115,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 	}//end defineRelationMap
 
 
-	/**
-	* PREFIX_COMPARE - (!) NOT USED
-	* Verify 2 received terms have the same prefix
-	* @param string $terminoID
-	* @param string $terminoID2
-	* @param bool
-	*/
-		// public static function prefix_compare( string $terminoID, string $terminoID2 ) : bool {
-
-		// 	$prefijo	= get_tld_from_tipo($terminoID);
-		// 	$prefijo2	= get_tld_from_tipo($terminoID2);
-		// 	if (empty($prefijo) || empty($prefijo2)) {
-		// 		trigger_error("Error: prefix_compare received empty term! I can't compare this case");
-		// 		debug_log(__METHOD__
-		// 			." Error: prefix_compare received empty term! I can't compare this case" . PHP_EOL
-		// 			.' terminoID: ' . to_string($terminoID) . PHP_EOL
-		// 			.' terminoID2: ' . to_string($terminoID2) . PHP_EOL
-		// 			.' prefijo: ' . to_string($prefijo) . PHP_EOL
-		// 			.' prefijo2: ' . to_string($prefijo2)
-		// 			, logger::ERROR
-		// 		);
-
-		// 		return false;
-		// 	}
-
-		// 	$result = ($prefijo===$prefijo2);
-
-
-		// 	return $result;
-		// }//end prefix_compare
-
-
 
 	/**
 	* GET_PROPIEDADES
