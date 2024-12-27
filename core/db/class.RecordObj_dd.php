@@ -1745,12 +1745,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 	}//end delete_tld_nodes
 
 
-	/*
+
+	/**
 	* CONSOLIDATE_TABLE
 	* Remunerates table id column to consolidate id sequence from 1,2,...
 	* @return bool
 	*/
-	public function consolidate_table() : bool {
+	public static function consolidate_table() : bool {
 
 		$strQuery = '
 			UPDATE jer_dd t  -- intermediate unique violations are ignored now
@@ -1759,6 +1760,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			WHERE t.id = t1.id;
 
 			SELECT setval(\'jer_dd_id_seq\', max(id)) FROM jer_dd;  -- reset sequence
+
+			VACUUM FULL VERBOSE ANALYZE jer_dd;
 		';
 		$result = pg_query(DBi::_getConnection(), $strQuery);
 		if($result===false) {
@@ -1767,7 +1770,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 				. 'strQuery: ' . to_string($strQuery)
 				, logger::ERROR
 			);
-
 			return false;
 		}
 
