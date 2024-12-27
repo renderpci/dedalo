@@ -1861,6 +1861,11 @@ function get_tld_from_tipo( string $tipo ) : string|false {
 
 	preg_match("/[a-z]{2,}/", $tipo, $output_array);
 	if (empty($output_array[0])) {
+		debug_log(__METHOD__
+			." Error: Invalid tipo received. Impossible get_tld_from_tipo this tipo :  " . PHP_EOL
+			.' tipo: ' . to_string($tipo)
+			, logger::ERROR
+		);
 		return false;
 	}
 
@@ -1886,8 +1891,8 @@ function tipo_in_array( string $tipo, array $array ) : bool {
 	foreach ($array as $current_value) {
 		if( strpos($current_value, '*') !== false ){
 
-			$tipo_tld			= RecordObj_dd::get_prefix_from_tipo( $tipo );
-			$current_value_tld	= RecordObj_dd::get_prefix_from_tipo( $current_value );
+			$tipo_tld			= get_tld_from_tipo( $tipo );
+			$current_value_tld	= get_tld_from_tipo( $current_value );
 
 			if($tipo_tld === $current_value_tld){
 				return true;

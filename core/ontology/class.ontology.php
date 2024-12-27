@@ -125,7 +125,7 @@ class ontology {
 		// model. Get the model tld and id
 			if( !empty($model) && $model!=='null' ){
 				$model_section_id	= RecordObj_dd::get_id_from_tipo( $model );
-				$model_tld			= RecordObj_dd::get_prefix_from_tipo( $model );
+				$model_tld			= get_tld_from_tipo( $model );
 				$model_section_tipo	= self::map_tld_to_target_section_tipo( $model_tld );
 
 				$model_locator = new locator();
@@ -446,7 +446,7 @@ class ontology {
 
 				// get the parent tld and id
 				$related_section_id		= RecordObj_dd::get_id_from_tipo( $related_tipo );
-				$related_tld			= RecordObj_dd::get_prefix_from_tipo( $related_tipo );
+				$related_tld			= get_tld_from_tipo( $related_tipo );
 				$related_section_tipo	= self::map_tld_to_target_section_tipo( $related_tld );
 
 				$related_locator = new locator();
@@ -493,7 +493,7 @@ class ontology {
 			foreach ($children as $child_tipo) {
 
 				$child_section_id	= RecordObj_dd::get_id_from_tipo( $child_tipo );
-				$child_tld			= RecordObj_dd::get_prefix_from_tipo( $child_tipo );
+				$child_tld			= get_tld_from_tipo( $child_tipo );
 				$child_section_tipo	= self::map_tld_to_target_section_tipo( $child_tld );
 
 				$child_locator = new locator();

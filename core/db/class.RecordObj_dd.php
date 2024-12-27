@@ -44,11 +44,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 			// with terminoID
 
 			$this->set_terminoID($terminoID);
-			$this->set_prefijo( self::get_prefix_from_tipo($terminoID) );
-			$this->set_tld( self::get_prefix_from_tipo($terminoID) );
+			$this->set_prefijo( get_tld_from_tipo($terminoID) );
+			$this->set_tld( get_tld_from_tipo($terminoID) );
 
 			#$prefix = dd::terminoID2prefix($terminoID);
-			#$prefix = self::get_prefix_from_tipo($terminoID);
+			#$prefix = get_tld_from_tipo($terminoID);
 			#$id 	= self::get_id_from_tipo($terminoID);
 			#$this->set_ID(intval($id));
 
@@ -117,30 +117,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* GET_PREFIX_FROM_TIPO
-	* @param string $tipo
-	* @return string|false
-	* 	Like 'dd' or 'murapa'
-	*/
-	public static function get_prefix_from_tipo( string $tipo ) : string|false {
-
-		preg_match("/^[a-z]{2,}/", $tipo, $output_array);
-		if (empty($output_array[0])) {
-			debug_log(__METHOD__
-				." Error: Invalid tipo received. Impossible get_prefix_from_tipo this tipo :  " . PHP_EOL
-				.' tipo: ' . to_string($tipo)
-				, logger::ERROR
-			);
-
-			return false;
-		}
-
-		return $output_array[0];
-	}//end get_prefix_from_tipo
-
-
-
-	/**
 	* GET_ID_FROM_TIPO
 	* @param string $tipo
 	* @return string|false
@@ -173,8 +149,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 		// public static function prefix_compare( string $terminoID, string $terminoID2 ) : bool {
 
-		// 	$prefijo	= RecordObj_dd::get_prefix_from_tipo($terminoID);
-		// 	$prefijo2	= RecordObj_dd::get_prefix_from_tipo($terminoID2);
+		// 	$prefijo	= get_tld_from_tipo($terminoID);
+		// 	$prefijo2	= get_tld_from_tipo($terminoID2);
 		// 	if (empty($prefijo) || empty($prefijo2)) {
 		// 		trigger_error("Error: prefix_compare received empty term! I can't compare this case");
 		// 		debug_log(__METHOD__
@@ -1597,7 +1573,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		$active_tlds = RecordObj_dd::get_active_tlds();
-		$current_tld = RecordObj_dd::get_prefix_from_tipo($tipo);
+		$current_tld = get_tld_from_tipo($tipo);
 
 		return in_array($current_tld, $active_tlds);
 	}//end check_active_tld

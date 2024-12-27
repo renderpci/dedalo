@@ -150,7 +150,7 @@ class component_relation_model extends component_relation_common {
 
 				// final fallback (calculated from current prefix)
 					if (empty($target_section_tipo)) {
-						$prefix = RecordObj_dd::get_prefix_from_tipo($section_tipo);
+						$prefix = get_tld_from_tipo($section_tipo);
 						$target_section_tipo = $prefix.'2';
 					}
 

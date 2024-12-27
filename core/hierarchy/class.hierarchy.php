@@ -632,7 +632,7 @@ class hierarchy extends ontology {
 			$hierarchy_section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
 			$hierarchy_tld_tipo		= DEDALO_HIERARCHY_TLD2_TIPO;
 			$lang					= DEDALO_DATA_NOLAN;
-			$prefix					= RecordObj_dd::get_prefix_from_tipo($section_tipo);
+			$prefix					= get_tld_from_tipo($section_tipo);
 			$prefix_lower			= strtolower($prefix); // data is stored always in uppercase
 			$prefix_upper			= strtoupper($prefix); // data is stored always in uppercase
 
