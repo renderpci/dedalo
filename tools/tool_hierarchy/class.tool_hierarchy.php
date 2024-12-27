@@ -28,7 +28,7 @@ class tool_hierarchy extends tool_common {
 
 		// check if is necessary to delete the previous ontology terms before added new ones
 			if($force_to_create===true){
-				$delete_response = hierarchy::delete_virtual_section((object)[
+				$delete_response = hierarchy::delete_main((object)[
 					'section_id'	=> $section_id,
 					'section_tipo'	=> $section_tipo
 				]);
