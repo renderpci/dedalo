@@ -190,6 +190,8 @@ const get_content_data_edit = async function(self) {
 							return
 						}
 
+					// selected files
+						const selected_files = []
 					// files_filtered. Only selects math files with user tld section
 						const files_filtered = result.files.filter( el => ar_dedalo_prefix_tipos.find(item => item === el.tld) )
 						const files_filtered_length = files_filtered.length
@@ -205,8 +207,11 @@ const get_content_data_edit = async function(self) {
 						// it needs always be updated
 						const matrix_dd = result.files.find( el => el.tld==='matrix_dd' )
 						if(matrix_dd){
-							files_filtered.push(matrix_dd)
+							selected_files.push(matrix_dd)
 						}
+
+						// add all ontology filtered
+						selected_files.push(...files_filtered)
 
 					// API call
 						const api_response = await data_manager.request({
@@ -218,7 +223,7 @@ const get_content_data_edit = async function(self) {
 								},
 								options : {
 									server	: server,
-									files	: files_filtered,
+									files	: selected_files,
 									info 	: result.info
 								}
 							}
