@@ -49,7 +49,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 			#$prefix = dd::terminoID2prefix($terminoID);
 			#$prefix = get_tld_from_tipo($terminoID);
-			#$id 	= self::get_id_from_tipo($terminoID);
+			#$id 	= get_section_id_from_tipo($terminoID);
 			#$this->set_ID(intval($id));
 
 		}else if(!empty($prefijo) && strlen($prefijo)>=2) {
@@ -113,31 +113,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 			'term'			=> 'term'
 		];
 	}//end defineRelationMap
-
-
-
-	/**
-	* GET_ID_FROM_TIPO
-	* @param string $tipo
-	* @return string|false
-	* 	Like '12' or '765'
-	*/
-	public static function get_id_from_tipo( string $tipo ) : string|false {
-
-		preg_match("/\d+/", $tipo, $output_array);
-		if (empty($output_array[0]) && $output_array[0]!=0 ) {
-			debug_log(__METHOD__
-				." Error: Invalid tipo received. Impossible get_id_from_tipo this tipo :  " . PHP_EOL
-				.' tipo: ' . to_string($tipo)
-				, logger::ERROR
-			);
-
-			return false;
-		}
-
-		return $output_array[0];
-	}//end get_id_from_tipo
-
 
 
 	/**
@@ -1725,7 +1700,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 				$ar_section_id = [];
 				while($row = pg_fetch_assoc($result)) {
-					$string_id = self::get_id_from_tipo( $row['terminoID'] );
+					$string_id = get_section_id_from_tipo( $row['terminoID'] );
 
 					$ar_section_id[] = $string_id === false
 						? 0

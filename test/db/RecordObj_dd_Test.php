@@ -148,40 +148,6 @@ final class RecordObj_dd_test extends TestCase {
 
 
 
-
-	/**
-	* TEST_get_id_from_tipo
-	* @return void
-	*/
-	public function test_get_id_from_tipo(): void {
-
-		$test_term_id	= 'dd1';
-
-		$result		= RecordObj_dd::get_id_from_tipo($test_term_id);
-		$expected	= '1';
-		$eq = $result===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-
-		$test_term_id	= 'dd1a';
-
-		$result		= RecordObj_dd::get_id_from_tipo($test_term_id);
-		$expected	= '1';
-		$eq = $result===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-	}//end test_get_id_from_tipo
-
-
-
 	/**
 	* TEST_get_propiedades
 	* @return void
