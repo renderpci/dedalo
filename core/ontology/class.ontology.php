@@ -674,47 +674,14 @@ class ontology {
 		$tld					= $file_item->tld;
 		$typology_id			= $file_item->typology_id ?? 15;
 		$name_data				= $file_item->name_data;
+		$parent_grouper_tipo	= $file_item->parent_grouper_tipo ?? null;
 
-		//Parent group
-			$parent_group = 'ontology40'; // instances
-
-		// check his own typology to add as parent.
-			$local_typology_tipo = 'ontologytype'.$typology_id;
-
-			$local_ontology_row_data = RecordObj_dd::get_row_data( $local_typology_tipo );
-			if( empty($local_ontology_row_data) ){
-
-				$local_typology_RecordObj_dd = new RecordObj_dd( $local_typology_tipo );
-
-				$local_typology_RecordObj_dd->set_parent($parent_group);
-				$local_typology_RecordObj_dd->set_modelo('dd4');
-				$local_typology_RecordObj_dd->set_esmodelo('no');
-				$local_typology_RecordObj_dd->set_esdescriptor('si');
-				$local_typology_RecordObj_dd->set_visible('si');
-				$local_typology_RecordObj_dd->set_tld('ontologytype');
-				$local_typology_RecordObj_dd->set_traducible('no');
-
-				$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
-				$typology_term = component_common::get_instance(
-					$model, // string model
-					DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
-					$typology_id, // string section_id
-					'list', // string mode
-					DEDALO_DATA_LANG, // string lang
-					DEDALO_HIERARCHY_TYPES_SECTION_TIPO // string section_tipo
-				);
-
-				$typology_term_full_data = $typology_term->get_dato_full();
-
-				$typology_term = new stdClass();
-				foreach ($typology_term_full_data as $current_lang => $value) {
-					$typology_term->$current_lang = $value[0];
-				}
-
-				$local_typology_RecordObj_dd->set_term( $typology_term );
-				$local_typology_RecordObj_dd->insert();
-			}
-			$parent_group = $local_typology_tipo;
+		// create the parent group node
+		// parent group is set with his typology
+		// if typology is not set it will assign to typology 15 `others`
+		if( empty($parent_grouper_tipo) ){
+			$parent_grouper_tipo = ontology::create_parent_grouper( 'ontology40', 'ontologytype', (int)$typology_id);
+		}
 
 		// Ontology section for the given tld
 		// ontology section is the main or root node used to create the ontology nodes.
@@ -722,7 +689,7 @@ class ontology {
 			$terminoID = $tld.'0'; // as mdcat0, mupreva0, etc
 
 			$RecordObj_dd = new RecordObj_dd($terminoID);
-				$RecordObj_dd->set_parent($parent_group);
+				$RecordObj_dd->set_parent($parent_grouper_tipo);
 				$RecordObj_dd->set_modelo('dd6');
 				$RecordObj_dd->set_esmodelo('no');
 				$RecordObj_dd->set_esdescriptor('si');
@@ -750,6 +717,175 @@ class ontology {
 
 		return $term_id;
 	}//end create_jer_dd_ontology_section_node
+
+
+
+	/**
+	* CREATE_PARENT_GROUPER
+	* Create an area node with the typology information to group the nodes.
+	* @param string $parent_group
+	* @param string $tld
+	* @param int $typology_id
+	* @return string $parent_grouper_tipo
+	*/
+	public static function create_parent_grouper( string $parent_group='ontology40', string $tld='ontologytype', int $typology_id=15 ) : string {
+
+		// Ontology section for the given tld
+		// ontology section is the main or root node used to create the ontology nodes.
+		// it is defined as tld+0, instead nodes that they start with 1 as dd1, rsc1, etc
+			$name_data = (object)[
+				'lg-spa' => ($tld==='ontologytype') ? 'Tipologías de ontología' : 'Tipologías de jerarquía',
+				'lg-eng' => ($tld==='ontologytype') ? 'Ontology typologies' : 'Hierarchy typologies',
+				'lg-deu' => ($tld==='ontologytype') ? 'Ontologie-Typen' : 'Typologien der Hierarchie',
+				'lg-fra' => ($tld==='ontologytype') ? 'Types d\'ontologie' : 'Typologies hiérarchiques',
+				'lg-ita' => ($tld==='ontologytype') ? 'Tipi di ontologia' : 'Tipologie di gerarchia',
+				'lg-cat' => ($tld==='ontologytype') ? 'Tipus d\'ontologia' : 'Tipus de jerarquies',
+				'lg-ell' => ($tld==='ontologytype') ? 'Τύποι οντολογίας' : 'Τυπολογίες ιεραρχίας',
+			];
+			foreach ($name_data as $key => $value) {
+				if( $tld==='hierarchymtype' ){
+					$value = $value.' [m]';
+				}
+				$value = $value.' | '.$tld;
+
+				$name_data->$key = [$value];
+			}
+
+			$file_data = new stdClass();
+				$file_data->tld					= $tld;
+				$file_data->typology_id			= $typology_id;
+				$file_data->name_data			= $name_data;
+				$file_data->parent_grouper_tipo	= 'ontologytype14';
+
+			ontology::add_main_section( $file_data );
+
+		// Check parent
+		// parent nodes need to exist because the node will store itself in the children component of his parent
+		// the main instances of typology for ontology node is `ontology40`
+		// the main instances of typology for hierarchy nodes is `hierarchy56`
+		// the main instances of typology for hierarchy mocel nodes is hierarchy57`
+			$parent_tld			= get_tld_from_tipo( $parent_group );
+			$parent_section_id	= get_section_id_from_tipo( $parent_group );
+
+			$parent_node_tipo = $parent_tld.'0';
+			// check if the parent exists in jer_dd
+				$parent_ontology_row_data = RecordObj_dd::get_row_data( $parent_node_tipo );
+				if( empty($parent_ontology_row_data) ){
+
+					$RecordObj_dd = new RecordObj_dd($parent_node_tipo);
+					$RecordObj_dd->set_parent($parent_group);
+					$RecordObj_dd->set_modelo('dd6');
+					$RecordObj_dd->set_esmodelo('no');
+					$RecordObj_dd->set_esdescriptor('si');
+					$RecordObj_dd->set_visible('si');
+					$RecordObj_dd->set_tld($parent_tld);
+					$RecordObj_dd->set_traducible('no');
+					$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+
+					// Properties, add main_tld as official tld definitions
+					// and local section color
+					$properties = new stdClass();
+						$properties->main_tld	= $parent_tld;
+						$properties->color		= '#2d8894';
+					$RecordObj_dd->set_properties($properties);
+					$RecordObj_dd->insert();
+				}
+
+			// check if the parent exists in matrix
+				$section_record_exist = section::section_record_exists( $parent_section_id, $parent_node_tipo );
+				if( $section_record_exist===false ){
+					$parent_section = section::get_instance(
+						$parent_section_id, // string|null section_id
+						$parent_node_tipo // string section_tipo
+					);
+
+					$parent_section->forced_create_record();
+				}
+
+		// matrix section
+			$section_tipo = $tld.'0'; // as mdcat0, mupreva0, etc
+
+			$typology_section = section::get_instance(
+				$typology_id, // string|null section_id
+				$section_tipo, // string section_tipo
+				'list',
+				false
+			);
+
+			$typology_section->forced_create_record();
+
+			// ontology table record template data
+				$area_grouper_data_string	= file_get_contents( DEDALO_CORE_PATH.'/ontology/templates/area_grouper_data.json' );
+				$area_grouper_data			= json_handler::decode( $area_grouper_data_string );
+
+			// section data
+				$area_grouper_data->section_id = $typology_id;
+				$area_grouper_data->section_tipo = $tld.'0';
+
+			// tld
+				$area_grouper_data->components->ontology7->dato->{DEDALO_DATA_NOLAN} = [$tld];
+
+			// Name
+				$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
+				$typology_term = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
+					$typology_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					DEDALO_HIERARCHY_TYPES_SECTION_TIPO // string section_tipo
+				);
+
+				$typology_term_full_data = $typology_term->get_dato_full();
+
+				$area_grouper_data->components->ontology5->dato = $typology_term_full_data;
+
+			// save section
+				$typology_section->set_dato( $area_grouper_data );
+				$typology_section->Save();
+
+			// parent
+				$children_tipo		= 'ontology14';
+				$children_model		= 'component_relation_children';
+				$component_children	= component_common::get_instance(
+					$children_model, // string model
+					$children_tipo, // string tipo
+					$parent_section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$parent_node_tipo, // string section_tipo
+					false
+				);
+
+				$node_locator = new locator();
+					$node_locator->set_type( DEDALO_RELATION_TYPE_CHILDREN_TIPO );
+					$node_locator->set_section_tipo( $section_tipo );
+					$node_locator->set_section_id( $typology_id );
+					$node_locator->set_from_component_tipo( $children_tipo );
+
+				$is_added = $component_children->add_child( $node_locator );
+				if( $is_added === true){
+					$component_children->Save();
+				}
+
+		// create the jer_dd node
+			$locator = new locator();
+				$locator->set_section_tipo($section_tipo);
+				$locator->set_section_id($typology_id);
+
+			$sqo = (object)[
+				'section_tipo'			=> [$section_tipo],
+				'limit'					=> 1,
+				'offset'				=> 0,
+				'filter_by_locators'	=> [$locator]
+			];
+
+			ontology::set_records_in_jer_dd( $sqo );
+
+		$parent_grouper_tipo = $tld.$typology_id;
+
+		return $parent_grouper_tipo;
+	}//end create_parent_grouper
 
 
 
