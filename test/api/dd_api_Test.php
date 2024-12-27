@@ -926,7 +926,7 @@ final class dd_api_Test extends TestCase {
 		$section_tipo	= 'test3';
 
 		// first, create the section if not already exists
-			$current_section_id_exists = section::section_id_exists( $section_id, $section_tipo );
+			$current_section_id_exists = section::section_record_exists( $section_id, $section_tipo );
 			if ($current_section_id_exists===false) {
 				// new section
 				$section = section::get_instance(
