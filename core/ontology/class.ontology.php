@@ -1754,6 +1754,38 @@ class ontology {
 
 
 
+	/**
+	* GET_main_TLD
+	* Get the tld, in lowercase, of the hierarchy main section (ontology35 | hierarchy1)
+	* @param int|string $section_id
+	* @param string $section_tipo
+	* @return string $tld
+	*/
+	public static function get_main_tld(string|int $section_id, string $section_tipo) : ?string {
+
+		// tld
+			$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO;	// 'hierarchy6';
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tld_tipo, true);
+			$component	= component_common::get_instance(
+				$model_name,
+				$tld_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$dato		= $component->get_dato();
+			$first_dato	= $dato[0] ?? null;
+
+			if (empty($first_dato)) {
+				return null;
+			}
+
+		// always in lowercase
+			$tld = strtolower( $first_dato );
+
+		return $tld;
+	}//end get_main_tld
 
 
 
