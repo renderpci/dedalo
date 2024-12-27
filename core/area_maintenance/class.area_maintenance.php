@@ -2099,8 +2099,6 @@ class area_maintenance extends area_common {
 					}
 			}
 
-
-
 		// update jer_dd with the imported records
 			foreach ($files_to_import as $current_file_item) {
 
@@ -2108,8 +2106,6 @@ class area_maintenance extends area_common {
 				if($current_file_item->section_tipo === 'matrix'){
 					continue;
 				}
-
-				
 
 				$section_tipo = $current_file_item->section_tipo;
 				$sqo = new search_query_object();
