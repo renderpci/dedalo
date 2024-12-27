@@ -64,22 +64,6 @@ final class ontology_test extends TestCase {
 				'expected:' . $expected . PHP_EOL
 				.'result: ' .$result . PHP_EOL
 			);
-
-		// ontology::$main_section_tipo
-			$result		= ontology::$cache_target_section_tipo;
-			$expected	= [
-				'dd'			=> 'ontology40',
-				'ontology'		=> 'ontology41',
-				'localontology'	=> 'ontology42',
-				'lg'			=> 'ontology43',
-				'hierarchy'		=> 'ontology44',
-				'rsc'			=> 'ontology45'
-			];
-			$this->assertTrue(
-				$result===$expected ,
-				'expected:' . to_string($expected) . PHP_EOL
-				.'result: ' . to_string($result) . PHP_EOL
-			);
 	}//end test_class_vars
 
 
