@@ -663,9 +663,10 @@ class ontology {
 		$parent_grouper_tipo	= $file_item->parent_grouper_tipo ?? null;
 
 		// create the parent group node
-		// parent group is set with his typology
-		// if typology is not set it will assign to typology 15 `others`
+		// if parent group is given, will use it, else create the parent_gruper to build the nodes.
 		if( empty($parent_grouper_tipo) ){
+			// parent group is set with his typology
+			// if typology is not set it will assign to typology 15 `others`
 			$parent_grouper_tipo = ontology::create_parent_grouper( 'ontology40', 'ontologytype', (int)$typology_id);
 		}
 
@@ -709,6 +710,12 @@ class ontology {
 	/**
 	* CREATE_PARENT_GROUPER
 	* Create an area node with the typology information to group the nodes.
+	* Parent grouper organize the tld with clear structure in menu
+	* This method can create the main group nodes if doesn't exists previously,
+	* main nodes are mandatory to store the child information of the created area node:
+	* `ontologytype14` (core node) is dependent of `ontology40` (instances node)
+	* but when a rebuild the ontology as update process does, the child node can be processed before his parent exists,
+	* in those cases this method will create the main node (`ontology40`) in matrix to store the child locator.
 	* @param string $parent_group
 	* @param string $tld
 	* @param int $typology_id
@@ -716,9 +723,10 @@ class ontology {
 	*/
 	public static function create_parent_grouper( string $parent_group='ontology40', string $tld='ontologytype', int $typology_id=15 ) : string {
 
-		// Ontology section for the given tld
+		// Ontology main section for the given tld
 		// ontology section is the main or root node used to create the ontology nodes.
-		// it is defined as tld+0, instead nodes that they start with 1 as dd1, rsc1, etc
+		// it is defined as tld+0, instead nodes that they start with 1 as dd1, rsc1, etc.
+		// this node is create to manage the typology sections
 			$name_data = (object)[
 				'lg-spa' => ($tld==='ontologytype') ? 'Tipologías de ontología' : 'Tipologías de jerarquía',
 				'lg-eng' => ($tld==='ontologytype') ? 'Ontology typologies' : 'Hierarchy typologies',
@@ -741,12 +749,12 @@ class ontology {
 				$file_data->tld					= $tld;
 				$file_data->typology_id			= $typology_id;
 				$file_data->name_data			= $name_data;
-				$file_data->parent_grouper_tipo	= 'ontologytype14';
+				$file_data->parent_grouper_tipo	= 'ontologytype14';// don't create parent grouper
 
 			ontology::add_main_section( $file_data );
 
 		// Check parent
-		// parent nodes need to exist because the node will store itself in the children component of his parent
+		// parent nodes needs to exist because the node will store itself in the children component of his parent
 		// the main instances of typology for ontology node is `ontology40`
 		// the main instances of typology for hierarchy nodes is `hierarchy56`
 		// the main instances of typology for hierarchy mocel nodes is hierarchy57`
@@ -788,8 +796,8 @@ class ontology {
 					$parent_section->forced_create_record();
 				}
 
-		// matrix section
-			$section_tipo = $tld.'0'; // as mdcat0, mupreva0, etc
+		// matrix section of the typology node
+			$section_tipo = $tld.'0'; // it can be: ontologytype0, hierarchytype0, hierarchymtype0
 
 			$typology_section = section::get_instance(
 				$typology_id, // string|null section_id
@@ -797,8 +805,8 @@ class ontology {
 				'list',
 				false
 			);
-
-			$typology_section->forced_create_record();
+			// create the record in matrix_ontology table.
+				$typology_section->forced_create_record();
 
 			// ontology table record template data
 				$area_grouper_data_string	= file_get_contents( DEDALO_CORE_PATH.'/ontology/templates/area_grouper_data.json' );
@@ -812,6 +820,7 @@ class ontology {
 				$area_grouper_data->components->ontology7->dato->{DEDALO_DATA_NOLAN} = [$tld];
 
 			// Name
+				//use the typology name.
 				$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
 				$typology_term = component_common::get_instance(
 					$model, // string model
@@ -831,8 +840,9 @@ class ontology {
 				$typology_section->Save();
 
 			// parent
+			// save itself as child of his parent.
 				$children_tipo		= 'ontology14';
-				$children_model		= 'component_relation_children';
+				$children_model		= 'component_relation_children'; // don't use the jer_dd resolution here, it should not exists jet.
 				$component_children	= component_common::get_instance(
 					$children_model, // string model
 					$children_tipo, // string tipo
@@ -868,7 +878,8 @@ class ontology {
 
 			ontology::set_records_in_jer_dd( $sqo );
 
-		$parent_grouper_tipo = $tld.$typology_id;
+		// return the parent grouper as `ontologytype14
+			$parent_grouper_tipo = $tld.$typology_id;
 
 		return $parent_grouper_tipo;
 	}//end create_parent_grouper
@@ -1678,6 +1689,8 @@ class ontology {
 
 	/**
 	* SET_RECORDS_IN_JER_DD
+	* Insert a group of `matrix_ontology` records into `jer_dd`
+	* use a SQO given to search the group and process it.
 	* @param object $sqo
 	* @return object $response
 	*/
@@ -1718,6 +1731,11 @@ class ontology {
 
 	/**
 	* DELETE_MAIN
+	* Delete all ontology references with `section_it` and `section_tipo` of main ontology section.
+	* It delete given main section
+	* and delete all ontology records in `matrix_ontology` and `jer_dd` with the main `tld`.
+	* Therefore remove all references to the tld of the main ontology or hierarchy.
+	* It used to update ontology.
 	* @param object $options
 	* Sample:
 	* {
@@ -1755,7 +1773,7 @@ class ontology {
 
 
 	/**
-	* GET_main_TLD
+	* GET_MAIN_TLD
 	* Get the tld, in lowercase, of the hierarchy main section (ontology35 | hierarchy1)
 	* @param int|string $section_id
 	* @param string $section_tipo
@@ -1792,6 +1810,9 @@ class ontology {
 
 	/**
 	* DELETE_ONTOLOGY
+	* Delete all ontology references with `tld` given.
+	* Remove the `matrix_ontology` and `jer_dd` nodes of given `tld`
+	* It also delete the main ontology section.
 	* @param string $tld
 	* @return object $response
 	*/
@@ -1802,7 +1823,8 @@ class ontology {
 			$response->msg		= 'Error. Request failed. ';
 			$response->errors	= [];
 
-		$safe_tld = safe_tld( $tld );
+		// remove any other things than tld.
+			$safe_tld = safe_tld( $tld );
 
 		// delete the jer_dd nodes
 			$deleted_jer_dd = RecordObj_dd::delete_tld_nodes( $safe_tld );
@@ -1831,7 +1853,7 @@ class ontology {
 				return $delete_main_response;
 			}
 
-		// Delete all ontology nodes in matrix
+		// Delete all ontology nodes in matrix_ontology
 			$nodes_section_tipo = ontology::map_tld_to_target_section_tipo( $safe_tld );
 
 			$nodes_sqo = new search_query_object();
