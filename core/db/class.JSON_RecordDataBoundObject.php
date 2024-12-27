@@ -351,7 +351,7 @@ abstract class JSON_RecordDataBoundObject {
 						$this->ID = $id;
 					}elseif($this->ID!=$id) {
 						debug_log(__METHOD__
-							.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id
+							.' Error. [1] ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id
 							, logger::ERROR
 						);
 						// throw new Exception('Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id , 1);
