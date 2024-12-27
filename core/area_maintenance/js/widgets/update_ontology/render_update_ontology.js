@@ -201,6 +201,12 @@ const get_content_data_edit = async function(self) {
 								file_item.name_data		= found.name_data
 							}
 						}
+						// matrix_dd has the shared list of values with the typologies of ontology definitions
+						// it needs always be updated
+						const matrix_dd = result.files.find( el => el.tld==='matrix_dd' )
+						if(matrix_dd){
+							files_filtered.push(matrix_dd)
+						}
 
 					// API call
 						const api_response = await data_manager.request({
