@@ -112,9 +112,24 @@ tool_ontology_export.prototype.build = async function(autoload=false) {
 		const api_response	= await self.get_ontologies()
 		self.ontologies		= api_response?.result
 
-	// selected ontologies
-		const saved_selected_ontologies = localStorage.getItem('selected_ontologies')
-		self.selected_ontologies = saved_selected_ontologies ? JSON.parse(saved_selected_ontologies) : [];
+	// selected ontologies. Get previous user selections saved in local storage and fill selection for convenience
+		const saved_selected_ontologies			= localStorage.getItem('selected_ontologies')
+		const parsed_saved_selected_ontologies	= saved_selected_ontologies ? JSON.parse(saved_selected_ontologies) : [];
+		// add saved selected ontologies if found it into available self.ontologies list
+		const parsed_saved_selected_ontologies_length = parsed_saved_selected_ontologies.length
+		for (let i = 0; i < parsed_saved_selected_ontologies_length; i++) {
+			const current_tld = parsed_saved_selected_ontologies[i]
+			const found = self.ontologies.find(el => el.tld===current_tld)
+			if (!found) {
+				console.warn('Warning: Ignored invalid saved tld:', current_tld);
+				continue;
+			}
+			self.selected_ontologies.push(current_tld)
+		}
+		if(SHOW_DEBUG===true) {
+			console.log('build self.selected_ontologies:', self.selected_ontologies);
+		}
+
 
 	return common_build
 }//end build_custom
