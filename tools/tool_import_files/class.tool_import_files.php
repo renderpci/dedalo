@@ -342,7 +342,7 @@ class tool_import_files extends tool_common {
 				continue;
 			}
 
-			$script_file = str_replace(['DEDALO_EXTRAS_PATH'], [DEDALO_EXTRAS_PATH], $file_processor_obj->script_file);
+			$script_file =  dirname(__FILE__).$file_processor_obj->script_file;
 			if(include_once($script_file)) {
 
 				$function_name 	  = $file_processor_obj->function_name;
