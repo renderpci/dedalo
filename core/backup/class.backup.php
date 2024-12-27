@@ -148,83 +148,6 @@ abstract class backup {
 				$process	= new process($command);
 				$pid		= $process->getPid();
 
-			/* OLD WAY
-				if($skip_backup_time_range===true) {
-
-					// forced backup case. Wait until finish
-
-					$pfile		= process::get_unique_process_file();
-					$file_path	= process::get_process_path() .'/' . $pfile;
-					$command	= "nohup sh -c 'nice -n 19 $command' >$file_path 2>&1 & echo $!";
-
-					debug_log(__METHOD__
-						." Building direct backup file ($mysqlExportPath)". PHP_EOL
-						." Command: ". PHP_EOL. to_string($command)
-						, logger::DEBUG
-					);
-
-					$process	= new process($command);
-					$pid		= $process->getPid();
-
-				}else{
-
-					// default backup case. Async dump building sh file
-
-
-
-						$command = 'sleep 15s; nice -n 19 ' . $command;
-
-						// build sh file with backup command if not exists
-						$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_H") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
-						if(!file_exists($prgfile)) {
-
-							// target folder verify (exists and permissions)
-								$target_folder_path = DEDALO_BACKUP_PATH_TEMP;
-								if( !is_dir($target_folder_path) ) {
-									if(!mkdir($target_folder_path, 0775, true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
-								}
-
-							// sh file generating
-								$fp = fopen($prgfile, "w");
-								fwrite($fp, "#!/bin/bash\n");
-								fwrite($fp, "$command\n");
-								fclose($fp);
-
-							// sh file permissions
-								if(file_exists($prgfile)) {
-									chmod($prgfile, 0755);
-								}else{
-									$msg = "Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions";
-									debug_log(__METHOD__
-										." $msg "
-										, logger::ERROR
-									);
-									throw new Exception($msg, 1);
-								}
-
-							// fastcgi_finish_request
-								// if (function_exists('fastcgi_finish_request')) {
-								// 	fastcgi_finish_request();
-								// 	debug_log(__METHOD__." fastcgi_finish_request() function was called to prevent lock this connection. ".to_string(), logger::WARNING);
-								// } else {
-								// 	debug_log(__METHOD__." Error: This server does not support fastcgi_finish_request() function. ".to_string(), logger::ERROR);
-								// }
-
-							// run delayed command in background
-								$PID = exec_::exec_sh_file($prgfile);
-
-								debug_log(__METHOD__
-									." Building delayed backup file" . PHP_EOL
-									.' mysqlExportPath: ' . $mysqlExportPath . PHP_EOL
-									.' Command: '.$command .PHP_EOL
-									.' PID: '.$PID
-									, logger::WARNING
-								);
-						}
-
-				}//end if($skip_backup_time_range===true)
-				*/
-
 		}catch (Exception $e) {
 
 			$msg = "Error on backup_secuence. User: $username. - error: ".  $e->getMessage(). "\n";
@@ -287,7 +210,6 @@ abstract class backup {
 
 		return (array)$tableList;
 	}//end get_tables
-
 
 
 
@@ -372,6 +294,7 @@ abstract class backup {
 
 		return (string)$res;
 	}//end copy_from_file
+
 
 
 	/**
@@ -507,157 +430,6 @@ abstract class backup {
 
 		return $res;
 	}//end optimize_tables
-
-
-
-	/**
-	* STRUCTURE_TO_JSON
-	* Creates a compatible JSON data from table 'jer_dd'
-	* using the given array of tld
-	* @param array $ar_tld
-	*	array of strings like ['dd','rsc'...]
-	* @return array $ar_data
-	* 	array of every row with properties and term JSON decoded
-	*/
-	public static function structure_to_json(array $ar_tld) : array {
-
-		$ar_data = [];
-		foreach ($ar_tld as $tld) {
-
-			$tld = trim($tld);
-
-			// check valid tld
-				// if(!preg_match('/^[a-z]{2,}(_[a-z]{2,})?$/', $tld)) {
-				if ( !safe_tld($tld) ) {
-					throw new Exception("Error Processing Request. Error on structure_to_json. Invalid tld ".to_string($tld), 1);
-				}
-
-			// search in DDB every tld record
-				$jer_dd_tld_data = backup::get_jer_dd_tld_data($tld);
-
-			// add all rows to ar_data container
-				foreach ($jer_dd_tld_data as $row) {
-					// store complete object
-					$ar_data[] = $row;
-				}//end foreach ($jer_dd_tld_data as $row)
-		}
-
-
-		return $ar_data;
-	}//end structure_to_json
-
-
-
-	/**
-	* GET_JER_DD_TLD_DATA
-	* Get all database table 'jer_dd' rows from given tld
-	* @param string $tld
-	*	like 'ts'
-	* @return array $tld_data
-	*	array of objects
-	*/
-	public static function get_jer_dd_tld_data(string $tld) : array {
-
-		$tld_data = [];
-
-		// $columns	= '"terminoID", "parent", "modelo", "esmodelo", "esdescriptor", "visible", "norden", "tld", "traducible", "relaciones", "propiedades", "properties","term';
-		$columns	= self::$jer_dd_columns;
-		$strQuery	= 'SELECT '.$columns.' FROM "jer_dd" WHERE tld = \''.$tld.'\' ORDER BY "terminoID" ASC';
-		$result		= JSON_RecordObj_matrix::search_free($strQuery);
-		while ($row = pg_fetch_object($result)) {
-
-			// decode JSON properties
-				if (!empty($row->properties)) {
-					$row->properties = json_decode($row->properties);
-				}
-
-			// term
-				if (isset($row->term)) {
-					$row->term = json_decode($row->term);
-				}
-
-			$tld_data[] = $row;
-		}
-
-		// sort terminoID in natural way (dd1, dd2.. instead dd1, dd10)
-			uasort($tld_data, function($a, $b){
-				return strnatcmp($a->terminoID, $b->terminoID);
-			});
-
-		return $tld_data;
-	}//end get_jer_dd_tld_data
-
-
-
-
-	/**
-	* IMPORT_STRUCTURE_JSON_DATA
-	* Insert data terms into tables 'jer_dd' deleting previous row if exists
-	* @param array $data
-	*  data is a vertical array of objects from parsed JSON file 'structure.json'
-	* @return object $response
-	*/
-	public static function import_structure_json_data(array $data, array $ar_tld=[]) : object {
-
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed';
-
-		// conn . get db connection
-		$conn = DBi::_getConnection();
-
-		$updated_tipo = [];
-
-		// iterate all objects and replace existing data in each table (jer_dd)
-		foreach ($data as $item) {
-
-			// short vars
-				$terminoID		= $item->terminoID;
-				$parent			= empty($item->parent) ? null : $item->parent;
-				$modelo			= empty($item->modelo) ? null : $item->modelo;
-				$esmodelo		= empty($item->esmodelo) ? null : $item->esmodelo;
-				$esdescriptor	= empty($item->esdescriptor) ? null : $item->esdescriptor;
-				$visible		= empty($item->visible) ? null : $item->visible;
-				$norden			= (empty($item->norden) && $item->norden!='0') ? null : (int)$item->norden;
-				$tld			= $item->tld;
-				$traducible		= empty($item->traducible) ? null : $item->traducible;
-				$relaciones		= empty($item->relaciones) ? null : $item->relaciones;
-				$propiedades	= empty($item->propiedades) ? null : $item->propiedades; // pg_escape_string($item->propiedades); // string
-				$properties		= json_encode($item->properties); // jsonb
-				$term			= !empty($item->term) ? json_encode($item->term) : null; // jsonb
-
-			// tld filter optional from $ar_tld param
-				if (!empty($ar_tld) && !in_array($tld, $ar_tld)) {
-					continue;
-				}
-
-			// jer_dd
-				// delete previous
-					$strQuery = 'DELETE FROM "jer_dd" WHERE "terminoID" = \''.$terminoID.'\' ;';
-					if (!pg_query($conn, $strQuery)) {
-						throw new Exception("Error Processing Request. Error on delete term ".to_string($terminoID), 1);
-					}
-				// insert new
-					// $fields	= '"terminoID", "parent", "modelo", "esmodelo", "esdescriptor", "visible", "norden", "tld", "traducible", "relaciones", "propiedades", "properties", "term';
-					$fields		= self::$jer_dd_columns;
-					$strQuery	= 'INSERT INTO "jer_dd" ('.$fields.') VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)';
-					if (!pg_query_params($conn, $strQuery, [$terminoID, $parent, $modelo, $esmodelo, $esdescriptor, $visible, $norden, $tld, $traducible, $relaciones, $propiedades, $properties, $term])) {
-						throw new Exception("Error Processing Request. Error on import_structure_json_data (1) Invalid jer_dd query ".to_string($strQuery), 1);
-					}
-
-			// add term as updated
-				$updated_tipo[] = $terminoID;
-
-			// debug
-			debug_log(__METHOD__." + Updated structure item '$terminoID' ".to_string(), logger::DEBUG);
-		}
-
-		$response->result	= true;
-		$response->msg		= 'OK. Request done. Updated '.count($updated_tipo) .' from file data total '. count($data).' structure terms from tld: '. implode(', ',$ar_tld);
-
-
-		return $response;
-	}//end import_structure_json_data
 
 
 
@@ -935,5 +707,7 @@ abstract class backup {
 
 		return $response;
 	}//end import_from_copy_file
+
+
 
 }//end class backup
