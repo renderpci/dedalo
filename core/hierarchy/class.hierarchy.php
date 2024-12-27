@@ -46,7 +46,11 @@ class hierarchy extends ontology {
 
 	/**
 	* GENERATE_VIRTUAL_SECTION
-	* Note that virtual sections not contains components, only a exclude elements list term
+	* Create two sections used by thesaurus to manage the descriptors and model/typologies
+	* Descriptors are the main thesaurus section with the terms (Valencia, Amphorae, etc), and is defined with the tld & 1 as es1, object1, etc.
+	* Model/typologies are secondary thesaurus section used to disambiguation the descriptor (City, Black, etc...) and is defined with the tld & 2 as es2, object2, etc.
+	* Note: Virtual sections not contains components, they inheritance all definition from real sections.
+	* (`es1` is a section that use of the `hierarchy20` definition)
 	* @param object $options
 	* Sample:
 	* {
@@ -225,8 +229,13 @@ class hierarchy extends ontology {
 			$main_section = ontology::add_main_section( $main_options );
 
 		// ontology nodes
+		// Create two different nodes:
+		// 1. main section for the thesaurus descriptors. as ts1, es1, etc.
+		// 2. main section for the thesaurus models/typologies. ts2, es2, etc
 
 			// virtual section
+			// create the ontology node, save it, and process the `jer_dd`
+			// It uses a template to build the ontology node data
 
 				// ontology table record template data
 					$section_data_string	= file_get_contents( DEDALO_CORE_PATH.'/ontology/templates/virtual_section_data.json' );
