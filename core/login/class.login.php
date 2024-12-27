@@ -938,27 +938,6 @@ class login extends common {
 
 			debug_log(__METHOD__." data 2 New data ".to_string($data), logger::DEBUG);
 
-			// APACHE 2.2
-				// 	$htaccess_text  = '';
-
-				// 	$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
-				// 	$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
-				// 	$htaccess_text .= 'Order allow,deny'.PHP_EOL;
-				// 	$htaccess_text .= '</FilesMatch>'.PHP_EOL;
-
-				// 	$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
-				// 	$htaccess_text .= 'AuthType Basic'.PHP_EOL;
-				// 	$htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
-				// 	$htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
-				// 	$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
-				// 	$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
-				// 	$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
-				// 	$htaccess_text .= 'Order deny,allow'.PHP_EOL;
-				// 	$htaccess_text .= 'Deny from all'.PHP_EOL;
-				// 	$htaccess_text .= 'Allow from env=PASS'.PHP_EOL;
-				// 	$htaccess_text .= 'Require valid-user'.PHP_EOL;
-				// 	$htaccess_text .= 'Satisfy any'.PHP_EOL;
-
 			// APACHE 2.4
 				$htaccess_text  = '';
 
