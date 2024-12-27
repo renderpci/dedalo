@@ -228,35 +228,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// export_ontology_to_json *
-			// $item = new stdClass();
-			// 	$item->id		= 'export_ontology_to_json';
-			// 	$item->type		= 'widget';
-			// 	$item->tipo		= $this->tipo;
-			// 	$item->label	= label::get_label('export_json_ontology') ?? 'Export JSON ontology';;
-			// 	$item->value	= (object)[
-			// 		'file_name'	=> 'structure.json',
-			// 		'file_path'	=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
-			// 		'tipos'		=> $DEDALO_PREFIX_TIPOS
-			// 	];
-			// $widget = $this->widget_factory($item);
-			// $ar_widgets[] = $widget;
-
-		// import_ontology_from_json *
-			// $item = new stdClass();
-			// 	$item->id		= 'import_ontology_from_json';
-			// 	$item->type		= 'widget';
-			// 	$item->tipo		= $this->tipo;
-			// 	$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
-			// 	$item->value	= (object)[
-			// 		'ontology_db'	=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
-			// 		'file_name'		=> 'structure.json',
-			// 		'file_path'		=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
-			// 		'tipos'			=> $DEDALO_PREFIX_TIPOS
-			// 	];
-			// $widget = $this->widget_factory($item);
-			// $ar_widgets[] = $widget;
-
 		// export_hierarchy *
 			$item = new stdClass();
 				$item->id		= 'export_hierarchy';
@@ -2148,31 +2119,31 @@ class area_maintenance extends area_common {
 		// 	}
 
 		// import
-			$prev_time = start_time(); // reset exec time
-			$import_structure_response = backup::import_structure(
-				'dedalo_development_str.custom', // string db_name
-				true, // bool check_server
-				$ar_dedalo_prefix_tipos // array dedalo_prefix_tipos
-			);
-			if ($import_structure_response->result===false) {
-				// error on import current DDBB
-				$response->msg		= 'Error. Request import_structure failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
-				$response->errors	= array_merge($response->errors, $import_structure_response->errors);
-				return $response;
+			// $prev_time = start_time(); // reset exec time
+			// $import_structure_response = backup::import_structure(
+			// 	'dedalo_development_str.custom', // string db_name
+			// 	true, // bool check_server
+			// 	$ar_dedalo_prefix_tipos // array dedalo_prefix_tipos
+			// );
+			// if ($import_structure_response->result===false) {
+			// 	// error on import current DDBB
+			// 	$response->msg		= 'Error. Request import_structure failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
+			// 	$response->errors	= array_merge($response->errors, $import_structure_response->errors);
+			// 	return $response;
 
-			}else{
-				// errors
-				if (!empty($import_structure_response->errors)) {
-					$response->errors = array_merge($response->errors, $import_structure_response->errors);
-					$response->msg = 'Error. Request import_structure failed 4 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
-					return $response;
-				}
+			// }else{
+			// 	// errors
+			// 	if (!empty($import_structure_response->errors)) {
+			// 		$response->errors = array_merge($response->errors, $import_structure_response->errors);
+			// 		$response->msg = 'Error. Request import_structure failed 4 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
+			// 		return $response;
+			// 	}
 
-				// Append msg
-				$import_structure_response_ar_msg = explode(PHP_EOL, $import_structure_response->msg);
-				$ar_msg		=  array_merge($ar_msg, $import_structure_response_ar_msg);
-				$ar_msg[]	= 'Import time: '.exec_time_unit_auto($prev_time);
-			}
+			// 	// Append msg
+			// 	$import_structure_response_ar_msg = explode(PHP_EOL, $import_structure_response->msg);
+			// 	$ar_msg		=  array_merge($ar_msg, $import_structure_response_ar_msg);
+			// 	$ar_msg[]	= 'Import time: '.exec_time_unit_auto($prev_time);
+			// }
 
 		// optimize tables
 			$ar_tables = ['jer_dd','matrix_dd','matrix_list'];
