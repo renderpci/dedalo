@@ -308,11 +308,15 @@ class hierarchy extends ontology {
 					ontology::insert_jer_dd_record($tld2.'0', 1);
 
 			// virtual model section
-					// replace the model locator to yes
+					// modify the section data to use it as model.
 					foreach ($section_data->relations as $key => $current_locator) {
+						// replace the model locator to yes
 						if($current_locator->from_component_tipo==='ontology30' ){
 							$current_locator->section_id = (string)NUMERICAL_MATRIX_VALUE_YES;
-							break;
+						}
+						// remove the model of the data (remove dd6 'section' from model/typology)
+						if($current_locator->from_component_tipo==='ontology6' ){
+							unset( $section_data->relations[$key] );
 						}
 					}
 

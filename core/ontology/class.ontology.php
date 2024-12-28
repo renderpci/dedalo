@@ -678,6 +678,7 @@ class ontology {
 			$RecordObj_dd = new RecordObj_dd($terminoID);
 				$RecordObj_dd->set_parent($parent_grouper_tipo);
 				$RecordObj_dd->set_modelo('dd6');
+				$RecordObj_dd->set_model('section');
 				$RecordObj_dd->set_esmodelo('no');
 				$RecordObj_dd->set_esdescriptor('si');
 				$RecordObj_dd->set_visible('si');
@@ -769,6 +770,7 @@ class ontology {
 					$RecordObj_dd = new RecordObj_dd($parent_node_tipo);
 					$RecordObj_dd->set_parent($parent_group);
 					$RecordObj_dd->set_modelo('dd6');
+					$RecordObj_dd->set_model('section');
 					$RecordObj_dd->set_esmodelo('no');
 					$RecordObj_dd->set_esdescriptor('si');
 					$RecordObj_dd->set_visible('si');
@@ -1219,15 +1221,15 @@ class ontology {
 				// if tld_data is empty stop the process
 				// tld is mandatory!
 				if(empty($tld_data)){
-					return false;
+					return null;
 				}
 				// create the term_id
 				$tld = reset( $tld_data );
 				$terminoID = $tld . $section_id;
 
-			// create the RecordObj_dd with the term_id and set the tld
-				$jer_dd_record = new RecordObj_dd( $terminoID );
-				$jer_dd_record->set_tld( $tld );
+		// create the RecordObj_dd with the term_id and set the tld
+			$jer_dd_record = new RecordObj_dd( $terminoID );
+			$jer_dd_record->set_tld( $tld );
 
 		// parent
 		// parent needs to know the parent tld of the locator to build the term_id
@@ -1248,18 +1250,20 @@ class ontology {
 				// main dd nodes exception
 				if( $terminoID==='dd1' || $terminoID==='dd2' ){
 					debug_log(__METHOD__
-						. " Record without parent " . PHP_EOL
+						. " Record without parent data " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
-						. 'parent_tipo	: ' . to_string($parent_tipo)
+						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
+						. 'parent_data	: ' . to_string($parent_data)
 						, logger::WARNING
 					);
 				}else{
 					debug_log(__METHOD__
-						. " Record without parent " . PHP_EOL
+						. " Record without parent data " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
-						. 'parent_tipo	: ' . to_string($parent_tipo)
+						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
+						. 'parent_data	: ' . to_string($parent_data)
 						, logger::ERROR
 					);
 				}
@@ -1336,11 +1340,15 @@ class ontology {
 
 			}else{
 
-				// get the parent data
-				// use the locator
+				// set the model tipo as (dd6, dd3, etd.)
+				// using the locator of the component
+				// model will be the term_id (section_tipo & section_id)
 				$model_locator	= reset($model_data);
-				$model = ontology::get_term_id_from_locator($model_locator);
-				$jer_dd_record->set_modelo( $model );
+				$model_tipo_resolution = ontology::get_term_id_from_locator($model_locator);
+				$jer_dd_record->set_modelo( $model_tipo_resolution );
+				//set the model resolution (section, component_input_text, etc)
+				$model_resolution = RecordObj_dd::get_termino_by_tipo( $model_tipo_resolution, DEDALO_STRUCTURE_LANG );
+				$jer_dd_record->set_model( $model_resolution );
 			}
 
 		// descriptor
@@ -1753,6 +1761,106 @@ class ontology {
 
 
 	/**
+	* REGENERATE_RECORDS_IN_JER_DD
+	* Insert a group of `matrix_ontology` records into `jer_dd`
+	* use a SQO given to search the group and process it.
+	* @param array $tld
+	* @return object $response
+	*/
+	public static function regenerate_records_in_jer_dd( array $tld ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// create a copy of the $tld
+			$backup = RecordObj_dd::create_bk_table( $tld );
+
+			if($backup===false){
+				$response->errors[] ='Impossible to create the jer_dd backup previous to regenerate the tlds: '.to_string( $tld );
+				return $response;
+			}
+
+		// get all section_tipo from tld
+			$section_tipo = array_map( function($el) {
+				return ontology::map_tld_to_target_section_tipo($el);
+			},$tld );
+
+		// search all nodes as matrix records
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( $section_tipo );
+				$sqo->limit = 0;
+
+			$search = search::get_instance(
+				$sqo, // object sqo
+			);
+			$search_response	= $search->search();
+			$ar_records			= $search_response->ar_records;
+
+		// create the jer_dd nodes of all matrix records
+			$jer_dd_records = [];
+			foreach ($ar_records as $current_record) {
+
+				$current_section_tipo	= $current_record->section_tipo;
+				$current_section_id		= $current_record->section_id;
+
+				$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $current_section_tipo, $current_section_id );
+
+				if( empty($jer_dd_record ) ){
+					RecordObj_dd::delete_bk_table();
+					$response->errors[] = 'Failed regenerate jer_dd with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
+					return $response;
+				}
+
+				$jer_dd_records[] = $jer_dd_record;
+			}
+
+		// delete all jer_dd nodes of the given tld, empty jer_dd table of this tld
+		// add new main section for every tld (regenerate the main section)
+			foreach ($tld as $current_tld) {
+				RecordObj_dd::delete_tld_nodes( $current_tld );
+
+				// get the information to create the main section
+				$typology_id	= ontology::get_main_typology_id( $current_tld );
+				$name_data		= ontology::get_main_name_data( $current_tld );
+
+				$file_item = new stdClass();
+					$file_item->tld					= $current_tld;
+					$file_item->typology_id			= $typology_id ?? null;
+					$file_item->name_data			= $name_data ?? null;
+
+				ontology::add_main_section( $file_item );
+			}
+
+		// insert the new nodes of the given tld
+			foreach ($jer_dd_records as $jer_dd_record) {
+
+				$insert_result = $jer_dd_record->insert();
+
+				// error inserting
+				// recovery al tld from bk table.
+				if( empty($insert_result) ){
+					RecordObj_dd::restore_from_bk_table($tld);
+					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
+
+					// delete bk table
+					RecordObj_dd::delete_bk_table();
+					return $response;
+				}
+
+			}
+
+		if( empty($response->errors) ){
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+		}
+
+		return $response;
+	}//end regenerate_records_in_jer_dd
+
+
+	/**
 	* DELETE_MAIN
 	* Delete all ontology references with `section_it` and `section_tipo` of main ontology section.
 	* It delete given main section
@@ -1827,6 +1935,77 @@ class ontology {
 
 		return $tld;
 	}//end get_main_tld
+
+
+
+	/**
+	* GET_MAIN_TYPOLOGY_ID
+	* get the main section from the given tld
+	* create the typology component and get his data
+	* with his data get the `section_id` as `typology_id`
+	* if typology component has not data use the 15 ( others ) as `typology_id`
+	* @param string $tld
+	* @return int $typology_id
+	*/
+	public static function get_main_typology_id( string $tld ) : int {
+
+		// get main record
+			$main_record = ontology::get_ontology_main_from_tld( $tld );
+
+		// Typology component
+			$tipo		= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$main_record->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$main_record->section_tipo
+			);
+			$typology_data = $component->get_dato();
+
+		// use section_id as typology_id if empty data use 15 as default (others)
+		$typology_id = isset($typology_data[0])
+			? (int)$typology_data[0]->section_id
+			: 15;
+
+
+		return $typology_id;
+	}//end get_main_typology_id
+
+
+
+	/**
+	* GET_MAIN_NAME_DATA
+	* get the main section from the given tld
+	* create the name component and get his full data (all languages)
+	* return his full data as `name_data`
+	* name_data is used to insert has name / term of other nodes that clone his values.
+	* @param string $tld
+	* @return object $name_data
+	*/
+	public static function get_main_name_data( string $tld ) : object {
+
+		// get main record
+			$main_record = ontology::get_ontology_main_from_tld( $tld );
+
+		// Name component
+			$tipo		= DEDALO_HIERARCHY_TERM_TIPO;
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$main_record->section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$main_record->section_tipo
+			);
+			$name_data = $component->get_dato_full();
+
+		return $name_data;
+	}//end get_main_name_data
+
 
 
 
