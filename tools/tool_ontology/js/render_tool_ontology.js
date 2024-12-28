@@ -67,7 +67,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'h2',
 			class_name		: 'user_info',
-			inner_html		: self.get_tool_label('user_info'),
+			inner_html		: self.get_tool_label('export_to_jer_dd') || 'Export to jer_dd',
 			parent			: fragment
 		})
 
