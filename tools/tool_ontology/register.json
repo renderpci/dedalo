@@ -81,13 +81,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 13,
-              "time": 65084304341,
+              "day": 28,
+              "hour": 10,
+              "time": 65084813485,
               "year": 2024,
               "month": 12,
-              "minute": 25,
-              "second": 41
+              "minute": 51,
+              "second": 25
             }
           }
         ]
@@ -154,7 +154,7 @@
       "inf": "Version [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.0"
+          "1.0.1"
         ]
       }
     },
@@ -229,6 +229,71 @@
               "lang": "lg-deu",
               "name": "process",
               "value": "Prozess"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "export_to_jer_dd",
+              "value": "Export to jer_dd"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "export_to_jer_dd",
+              "value": "Exportar a jer_dd"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "export_to_jer_dd",
+              "value": "Exporta a jer_dd"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "export_to_jer_dd",
+              "value": "Exporter vers jer_dd"
+            },
+            {
+              "lang": "lg-por",
+              "name": "export_to_jer_dd",
+              "value": "Exportar para jer_dd"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "export_to_jer_dd",
+              "value": "Esportatu jer_dd-era"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "export_to_jer_dd",
+              "value": "Esporta in jer_dd"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "export_to_jer_dd",
+              "value": "Εξαγωγή σε jer_dd"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "export_to_jer_dd",
+              "value": "jer_dd मा निर्यात गर्नुहोस्"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "export_to_jer_dd",
+              "value": "Exportieren nach jer_dd"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "process",
+              "value": "प्रक्रिया"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "process",
+              "value": "Prozesua"
+            },
+            {
+              "lang": "lg-por",
+              "name": "process",
+              "value": "प्रक्रिया"
             }
           ]
         ]
@@ -246,7 +311,7 @@
   "section_id": 31,
   "created_date": "2024-11-24 21:14:25",
   "section_tipo": "dd1340",
-  "modified_date": "2024-12-22 13:25:41",
+  "modified_date": "2024-12-28 10:51:25",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
