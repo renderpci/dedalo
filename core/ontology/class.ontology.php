@@ -1836,6 +1836,42 @@ class ontology {
 
 
 
+	/**
+	* GET_MAIN_TYPOLOGY_ID
+	* get the main section from the given tld
+	* create the typology component and get his data
+	* with his data get the `section_id` as `typology_id`
+	* if typology component has not data use the 15 ( others ) as `typology_id`
+	* @param string $tld
+	* @return int $typology_id
+	*/
+	public static function get_main_typology_id( string $tld ) : int {
+
+		// get main record
+			$main_record = ontology::get_ontology_main_from_tld( $tld );
+
+		// Typology component
+			$tipo		= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$main_record->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$main_record->section_tipo
+			);
+			$typology_data = $component->get_dato();
+
+		// use section_id as typology_id if empty data use 15 as default (others)
+		$typology_id = isset($typology_data[0])
+			? (int)$typology_data[0]->section_id
+			: 15;
+
+
+		return $typology_id;
+	}//end get_main_typology_id
+
 
 	/**
 	* DELETE_ONTOLOGY
