@@ -2,7 +2,7 @@
 
 
 
-export * from './tool_ontology_export.js'
+export * from './tool_ontology_parser.js'
 
 
 

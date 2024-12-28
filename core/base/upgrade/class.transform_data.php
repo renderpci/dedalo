@@ -1344,6 +1344,82 @@ class transform_data {
 
 
 	/**
+	* FILL_MODEL_COLUMN_IN_JER_DD
+	* Called by the update to 6.4.0, resolve the model tipo with his name
+	* insert it into the model column in jer_dd
+	* @return bool
+	*/
+	public static function fill_model_column_in_jer_dd() : bool {
+
+		// jer_dd. select all records in jer_dd
+			$sql_query = '
+				SELECT * FROM "jer_dd"
+				WHERE "modelo" IS NOT NULL;
+			';
+			$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		// iterate jer_dd_result row
+		while($row = pg_fetch_assoc($jer_dd_result)) {
+
+			$model_tipo	= $row['modelo'];
+			$id			= $row['id'];
+
+			if( empty($model_tipo) ){
+				continue 1;
+			}
+
+			// matrix_descriptors_dd. delete descriptors (matrix_descriptors_dd)
+			$sql_query = 'SELECT * FROM "jer_dd" WHERE "terminoID" = \''.$model_tipo.'\' LIMIT 1 ;';
+			$model_result = pg_query(DBi::_getConnection(), $sql_query);
+
+
+			$result_count = pg_num_rows($model_result);
+
+			if($result_count !== 1) {
+				$msg = "Current model has not valid definition!!!!!. Review jer_dd for model: $model_tipo";
+				debug_log(__METHOD__
+					." ERROR: $msg "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+			$model = null;
+			while( $term = pg_fetch_assoc($model_result) ) {
+				$term_data	= json_decode ( $term['term'] );
+
+				if( empty($term_data) ) {
+					$msg = "Current model term has not valid definition!!!!!. Review jer_dd for model: $model_tipo";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				$model = $term_data->{DEDALO_STRUCTURE_LANG};
+			}
+
+			$strQuery	= "UPDATE \"jer_dd\" SET model = $1 WHERE id = $2 ";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $model, $id ));
+			if($result===false) {
+				$msg = "Failed Update section_data (jer_dd) $id";
+				debug_log(__METHOD__
+					." ERROR: $msg "
+					, logger::ERROR
+				);
+				return false;
+			}
+		}
+
+
+		return true;
+	}//end fill_model_column_in_jer_dd
+
+
+
+
+	/**
 	* GENERATE_ALL_MAIN_ONTOLOGY_SECTIONS
 	* Creates the matrix ontology records (main and regular) from 'jer_dd'
 	* It is such as 'jer_dd' -> 'matrix' transformation building the next
@@ -1386,38 +1462,6 @@ class transform_data {
 		$ontology_tlds = array_map(function( $el ){
 			return $el->tld;
 		}, $ontology_info->active_ontologies);
-
-		// foreach ($ontology_tipos as $current_tipo) {
-
-		// 	$term			= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_STRUCTURE_LANG, false) ?? '';
-		// 	$ar_tem			= explode(' | ', $term );
-		// 	$RecordObj_dd	= new RecordObj_dd($current_tipo);
-		// 	$properties		= $RecordObj_dd->get_properties();
-		// 	$tld			= $properties->main_tld ?? null;
-
-		// 	if( empty($tld) ){
-		// 		debug_log(__METHOD__
-		// 			. "Ignored tld, empty main_tld" . PHP_EOL
-		// 			. "tipo: " . to_string( $current_tipo )
-		// 			, logger::ERROR
-		// 		);
-		// 		continue;
-		// 	}
-
-		// 	if( isset($ar_tem[1]) && $tld === $ar_tem[1] ){
-
-		// 		$ontology_tlds[] = $tld;
-
-		// 	}else{
-
-		// 		debug_log(__METHOD__
-		// 			. "Invalid tld, do not match with name" . PHP_EOL
-		// 			. "tld: " . to_string( $tld ). " - name: " . to_string( $ar_tem )
-		// 			, logger::ERROR
-		// 		);
-		// 		continue;
-		// 	}
-		// }
 
 		// add first the ontology_tlds to preserve the order
 		$sorted_tlds = $ontology_tlds;

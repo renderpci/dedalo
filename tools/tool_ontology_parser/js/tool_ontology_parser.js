@@ -17,15 +17,17 @@
 // tool_common, basic methods used by all the tools
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 // specific render of the tool
-	import {render_tool_ontology_export} from './render_tool_ontology_export.js' // self tool rendered (called from render common)
+	import {render_tool_ontology_parser} from './render_tool_ontology_parser.js' // self tool rendered (called from render common)
 
 
 
 /**
-* TOOL_ONTOLOGY_EXPORT
-* Tool to make interesting things, but nothing in particular
+* TOOL_ONTOLOGY_PARSER
+* Ontology processor, the tool export matrix data into COPY files to server to others Dédalo servers
+* and regenerate jer_dd with the matrix ontology data
+* Tool use the ontology typologies to group tld
 */
-export const tool_ontology_export = function () {
+export const tool_ontology_parser = function () {
 
 	this.id				= null
 	this.model			= null
@@ -54,11 +56,11 @@ export const tool_ontology_export = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_ontology_export.prototype.render	= tool_common.prototype.render
-	tool_ontology_export.prototype.destroy	= common.prototype.destroy
-	tool_ontology_export.prototype.refresh	= common.prototype.refresh
+	tool_ontology_parser.prototype.render	= tool_common.prototype.render
+	tool_ontology_parser.prototype.destroy	= common.prototype.destroy
+	tool_ontology_parser.prototype.refresh	= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
-	tool_ontology_export.prototype.edit		= render_tool_ontology_export.prototype.edit
+	tool_ontology_parser.prototype.edit		= render_tool_ontology_parser.prototype.edit
 
 
 
@@ -68,7 +70,7 @@ export const tool_ontology_export = function () {
 * @param object options
 * @return bool common_init
 */
-tool_ontology_export.prototype.init = async function(options) {
+tool_ontology_parser.prototype.init = async function(options) {
 
 	const self = this
 
@@ -95,7 +97,7 @@ tool_ontology_export.prototype.init = async function(options) {
 * @param bool autoload = false
 * @return bool common_build
 */
-tool_ontology_export.prototype.build = async function(autoload=false) {
+tool_ontology_parser.prototype.build = async function(autoload=false) {
 
 	const self = this
 
@@ -141,7 +143,7 @@ tool_ontology_export.prototype.build = async function(autoload=false) {
 * Call the API to process the get the list of available ontologies from main_ontology
 * @return promise response
 */
-tool_ontology_export.prototype.get_ontologies = async function() {
+tool_ontology_parser.prototype.get_ontologies = async function() {
 
 	const self = this
 
@@ -180,7 +182,7 @@ tool_ontology_export.prototype.get_ontologies = async function() {
 * Call the API to export the user selected ontologies
 * @return object|false response
 */
-tool_ontology_export.prototype.export_ontologies = async function () {
+tool_ontology_parser.prototype.export_ontologies = async function () {
 
 	const self = this
 
@@ -217,6 +219,51 @@ tool_ontology_export.prototype.export_ontologies = async function () {
 
 	return api_response
 }//end export_ontologies
+
+
+
+/**
+* REGENERATE_ONTOLOGIES
+* Call the API to export the user selected ontologies
+* @return object|false response
+*/
+tool_ontology_parser.prototype.regenerate_ontologies = async function () {
+
+	const self = this
+
+	// check self.selected_ontologies
+		if (self.selected_ontologies.length===0) {
+			console.error('Ignored empty selected ontologies:', self.selected_ontologies);
+			return false
+		}
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'regenerate_ontologies')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				selected_ontologies : self.selected_ontologies
+			}
+		}
+
+	// call to the API, fetch data and get response
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+		// debug
+		if(SHOW_DEVELOPER===true) {
+			dd_console("-> regenerate_ontologies API api_response:",'DEBUG', api_response);
+		}
+
+
+	return api_response
+}//end regenerate_ontologies
 
 
 
