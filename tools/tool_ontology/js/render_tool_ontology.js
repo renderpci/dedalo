@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
 
 
@@ -102,29 +103,14 @@ const get_content_data = async function(self) {
 					]
 					.map(el => el.classList.remove('error'))
 
-				// spinner
-					let spinner
-					const set_loading = ( set ) => {
-
-						if (set===true) {
-
-							content_data.classList.add('loading')
-							messages_container.innerHTML = ''
-
-							// spinner
-							spinner = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'spinner',
-								parent			: content_data.parentNode
-							})
-
-						}else{
-
-							content_data.classList.remove('loading')
-							spinner.remove()
-						}
-					}
-					set_loading(true)
+				// loading
+					content_data.classList.add('loading')
+					messages_container.innerHTML = ''
+					const spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner',
+						parent			: content_data.parentNode
+					})
 
 				// call API
 					const api_response = await self.set_records_in_jer_dd()
@@ -135,15 +121,20 @@ const get_content_data = async function(self) {
 						: 'Unknown error'
 
 				// reload section (caller)
-					if (api_response.result!==false) {
-						self.caller.refresh()
-					}else{
+					if (api_response.result==false) {
 						messages_container.classList.add('error')
 					}
 
-				set_loading(false)
+				content_data.classList.remove('loading')
+				spinner.remove()
 			}
 			button_generate.addEventListener('click', click_handler)
+			// focus buttons
+			dd_request_idle_callback(
+				() => {
+					button_generate.focus()
+				}
+			)
 
 	// messages_container
 		const messages_container = ui.create_dom_element({

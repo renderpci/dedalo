@@ -14,6 +14,8 @@
 
 	.spinner {
 		border-top-color: @tool_color;
+		left: calc(50% - 1.4rem);
+		top: calc(50% + 2.5rem);
 	}
 
 	>.content_data {
@@ -37,7 +39,6 @@
 
 		>.buttons_container {
 			padding: 2rem;
-			padding-left: 0px;
 			padding-bottom: 1rem;
 			display: flex;
 			align-items: center;
@@ -63,6 +64,8 @@
 			line-height: 1.25rem;
 			color: #7a7a7a;
 			font-size: 1.05rem;
+			min-height: 3.5rem;
+			text-align: center;
 
 			&.error {
 				background-color: transparent !important;
