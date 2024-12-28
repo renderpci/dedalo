@@ -1221,15 +1221,15 @@ class ontology {
 				// if tld_data is empty stop the process
 				// tld is mandatory!
 				if(empty($tld_data)){
-					return false;
+					return null;
 				}
 				// create the term_id
 				$tld = reset( $tld_data );
 				$terminoID = $tld . $section_id;
 
-			// create the RecordObj_dd with the term_id and set the tld
-				$jer_dd_record = new RecordObj_dd( $terminoID );
-				$jer_dd_record->set_tld( $tld );
+		// create the RecordObj_dd with the term_id and set the tld
+			$jer_dd_record = new RecordObj_dd( $terminoID );
+			$jer_dd_record->set_tld( $tld );
 
 		// parent
 		// parent needs to know the parent tld of the locator to build the term_id
@@ -1250,18 +1250,20 @@ class ontology {
 				// main dd nodes exception
 				if( $terminoID==='dd1' || $terminoID==='dd2' ){
 					debug_log(__METHOD__
-						. " Record without parent " . PHP_EOL
+						. " Record without parent data " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
-						. 'parent_tipo	: ' . to_string($parent_tipo)
+						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
+						. 'parent_data	: ' . to_string($parent_data)
 						, logger::WARNING
 					);
 				}else{
 					debug_log(__METHOD__
-						. " Record without parent " . PHP_EOL
+						. " Record without parent data " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
-						. 'parent_tipo	: ' . to_string($parent_tipo)
+						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
+						. 'parent_data	: ' . to_string($parent_data)
 						, logger::ERROR
 					);
 				}
