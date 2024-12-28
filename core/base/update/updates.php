@@ -121,8 +121,32 @@ $updates->$v = new stdClass();
 				WHERE \"parent\" = 'dd0';
 			");
 
+		// Add the model column to jer_dd table
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DO $$
+				BEGIN
+					IF NOT EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'jer_dd\' and column_name=\'model\')
+					THEN
+						ALTER TABLE "jer_dd"
+						ADD "model" text NULL;
+						COMMENT ON TABLE "jer_dd" IS \'Model, a typology of the tipo\';
+					END IF;
+				END $$;
+			');
+
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
+		// fill the model in the new model column in jer_dd 
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Resolve model and fill the new model column in jer_dd";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "fill_model_column_in_jer_dd";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
 			$script_obj = new stdClass();
