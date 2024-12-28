@@ -1873,6 +1873,41 @@ class ontology {
 	}//end get_main_typology_id
 
 
+
+	/**
+	* GET_MAIN_NAME_DATA
+	* get the main section from the given tld
+	* create the name component and get his full data (all languages)
+	* return his full data as `name_data`
+	* name_data is used to insert has name / term of other nodes that clone his values.
+	* @param string $tld
+	* @return object $name_data
+	*/
+	public static function get_main_name_data( string $tld ) : object {
+
+		// get main record
+			$main_record = ontology::get_ontology_main_from_tld( $tld );
+
+		// Name component
+			$tipo		= DEDALO_HIERARCHY_TERM_TIPO;
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$main_record->section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$main_record->section_tipo
+			);
+			$name_data = $component->get_dato_full();
+
+		return $name_data;
+	}//end get_main_name_data
+
+
+
+
+
 	/**
 	* DELETE_ONTOLOGY
 	* Delete all ontology references with `tld` given.
