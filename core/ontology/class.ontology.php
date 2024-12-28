@@ -678,6 +678,7 @@ class ontology {
 			$RecordObj_dd = new RecordObj_dd($terminoID);
 				$RecordObj_dd->set_parent($parent_grouper_tipo);
 				$RecordObj_dd->set_modelo('dd6');
+				$RecordObj_dd->set_model('section');
 				$RecordObj_dd->set_esmodelo('no');
 				$RecordObj_dd->set_esdescriptor('si');
 				$RecordObj_dd->set_visible('si');
@@ -769,6 +770,7 @@ class ontology {
 					$RecordObj_dd = new RecordObj_dd($parent_node_tipo);
 					$RecordObj_dd->set_parent($parent_group);
 					$RecordObj_dd->set_modelo('dd6');
+					$RecordObj_dd->set_model('section');
 					$RecordObj_dd->set_esmodelo('no');
 					$RecordObj_dd->set_esdescriptor('si');
 					$RecordObj_dd->set_visible('si');
@@ -1336,11 +1338,15 @@ class ontology {
 
 			}else{
 
-				// get the parent data
-				// use the locator
+				// set the model tipo as (dd6, dd3, etd.)
+				// using the locator of the component
+				// model will be the term_id (section_tipo & section_id)
 				$model_locator	= reset($model_data);
-				$model = ontology::get_term_id_from_locator($model_locator);
-				$jer_dd_record->set_modelo( $model );
+				$model_tipo_resolution = ontology::get_term_id_from_locator($model_locator);
+				$jer_dd_record->set_modelo( $model_tipo_resolution );
+				//set the model resolution (section, component_input_text, etc)
+				$model_resolution = RecordObj_dd::get_termino_by_tipo( $model_tipo_resolution, DEDALO_STRUCTURE_LANG );
+				$jer_dd_record->set_model( $model_resolution );
 			}
 
 		// descriptor
