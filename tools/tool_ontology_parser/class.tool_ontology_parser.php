@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 /**
-* CLASS TOOL_ONTOLOGY_EXPORT
+* CLASS TOOL_ONTOLOGY_PARSER
 *  Parse and insert section records into jer_dd table
 *
 */
-class tool_ontology_export extends tool_common {
+class tool_ontology_parser extends tool_common {
 
 
 
@@ -112,6 +112,7 @@ class tool_ontology_export extends tool_common {
 
 		// options
 			$selected_ontologies = $options->selected_ontologies ?? [];
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -167,4 +168,29 @@ class tool_ontology_export extends tool_common {
 
 
 
-}//end class tool_ontology_export
+	/**
+	* REGENERATE_ONTOLOGIES
+	* Exec a custom action called from client
+	* Note that tool config is stored in the tool section data (tools_register)
+	* @param object $options
+	* @return object $response
+	*/
+	public static function regenerate_ontologies(object $options) : object {
+
+		// options
+			$selected_ontologies = $options->selected_ontologies ?? [];
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+
+		$response = ontology::regenerate_records_in_jer_dd( $selected_ontologies );
+
+		return $response;
+	}//end regenerate_ontologies
+
+
+
+}//end class tool_ontology_parser

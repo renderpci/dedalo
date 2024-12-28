@@ -81,13 +81,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 12,
-              "hour": 19,
-              "time": 65083462981,
+              "day": 28,
+              "hour": 21,
+              "time": 65084850072,
               "year": 2024,
               "month": 12,
-              "minute": 43,
-              "second": 1
+              "minute": 1,
+              "second": 12
             }
           }
         ]
@@ -120,25 +120,25 @@
       "inf": "Label [component_input_text]",
       "dato": {
         "lg-cat": [
-          "Exportar ontologia"
+          "Processador d'ontologia"
         ],
         "lg-deu": [
-          "Ontologie exportieren"
+          "Ontologieprozessor"
         ],
         "lg-ell": [
-          "Εξαγωγή οντολογίας"
+          "Επεξεργαστής οντολογίας"
         ],
         "lg-eng": [
-          "Export ontology"
+          "Ontology parser"
         ],
         "lg-fra": [
-          "Exporter l'ontologie"
+          "Processeur d'ontologie"
         ],
         "lg-ita": [
-          "Esportare l'ontologia"
+          "Processore di ontologia"
         ],
         "lg-spa": [
-          "Exportar ontología"
+          "Procesador de ontología"
         ]
       }
     },
@@ -146,7 +146,7 @@
       "inf": "Tool name [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "tool_ontology_export"
+          "tool_ontology_parser"
         ]
       }
     },
@@ -176,6 +176,85 @@
         ]
       }
     },
+    "dd1372": {
+      "inf": "Labels [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-eng",
+              "name": "regenerate",
+              "value": "Regenerate"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "regenerate",
+              "value": "Regenerar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "regenerate",
+              "value": "Regenerar"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "regenerate",
+              "value": "Αναγεννηθείς"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "regenerate",
+              "value": "Rigenerare"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "regenerate",
+              "value": "Regenerieren"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "regenerate",
+              "value": "Régénérer"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "export",
+              "value": "Export"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "export",
+              "value": "Exportar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "export",
+              "value": "Exporta"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "export",
+              "value": "Exporter"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "export",
+              "value": "Esportare"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "export",
+              "value": "Εξαγωγή"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "export",
+              "value": "Export"
+            }
+          ]
+        ]
+      }
+    },
     "dd1644": {
       "inf": "Developer [component_input_text]",
       "dato": {
@@ -188,7 +267,7 @@
   "section_id": 32,
   "created_date": "2024-12-12 19:36:18",
   "section_tipo": "dd1340",
-  "modified_date": "2024-12-12 19:43:01",
+  "modified_date": "2024-12-28 21:01:12",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
