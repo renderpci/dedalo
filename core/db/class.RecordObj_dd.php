@@ -11,6 +11,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public $terminoID;
 	protected $parent;
 	protected $modelo;
+	protected $model;
 	protected $esmodelo;
 	protected $esdescriptor;
 	protected $visible;
@@ -46,11 +47,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$this->set_terminoID($terminoID);
 			$this->set_prefijo( get_tld_from_tipo($terminoID) );
 			$this->set_tld( get_tld_from_tipo($terminoID) );
-
-			#$prefix = dd::terminoID2prefix($terminoID);
-			#$prefix = get_tld_from_tipo($terminoID);
-			#$id 	= get_section_id_from_tipo($terminoID);
-			#$this->set_ID(intval($id));
 
 		}else if(!empty($prefijo) && strlen($prefijo)>=2) {
 
@@ -101,6 +97,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			'terminoID'		=> 'terminoID',
 			'parent'		=> 'parent',
 			'modelo'		=> 'modelo',
+			'model'			=> 'model',
 			'esmodelo'		=> 'esmodelo',
 			'esdescriptor'	=> 'esdescriptor',
 			'visible'		=> 'visible',
