@@ -98,22 +98,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// ontology_processes *
-			$item = new stdClass();
-				$item->id		= 'ontology_processes';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('ontology_processes') ?? 'Update Ontology';
-				$item->value	= (object)[
-					'current_ontology'		=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa'),
-					'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
-					'structure_server_url'	=> (defined('STRUCTURE_SERVER_URL') ? STRUCTURE_SERVER_URL : null),
-					'structure_server_code'	=> (defined('STRUCTURE_SERVER_CODE') ? STRUCTURE_SERVER_CODE : null),
-					'ontology_db'			=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
-					'body'					=> defined('ONTOLOGY_DB')
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
 		// register_tools *
 			$item = new stdClass();
 				$item->id		= 'register_tools';
