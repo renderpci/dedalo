@@ -1759,6 +1759,106 @@ class ontology {
 
 
 	/**
+	* REGENERATE_RECORDS_IN_JER_DD
+	* Insert a group of `matrix_ontology` records into `jer_dd`
+	* use a SQO given to search the group and process it.
+	* @param array $tld
+	* @return object $response
+	*/
+	public static function regenerate_records_in_jer_dd( array $tld ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// create a copy of the $tld
+			$backup = RecordObj_dd::create_bk_table( $tld );
+
+			if($backup===false){
+				$response->errors[] ='Impossible to create the jer_dd backup previous to regenerate the tlds: '.to_string( $tld );
+				return $response;
+			}
+
+		// get all section_tipo from tld
+			$section_tipo = array_map( function($el) {
+				return ontology::map_tld_to_target_section_tipo($el);
+			},$tld );
+
+		// search all nodes as matrix records
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( $section_tipo );
+				$sqo->limit = 0;
+
+			$search = search::get_instance(
+				$sqo, // object sqo
+			);
+			$search_response	= $search->search();
+			$ar_records			= $search_response->ar_records;
+
+		// create the jer_dd nodes of all matrix records
+			$jer_dd_records = [];
+			foreach ($ar_records as $current_record) {
+
+				$current_section_tipo	= $current_record->section_tipo;
+				$current_section_id		= $current_record->section_id;
+
+				$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $current_section_tipo, $current_section_id );
+
+				if( empty($jer_dd_record ) ){
+					RecordObj_dd::delete_bk_table();
+					$response->errors[] = 'Failed regenerate jer_dd with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
+					return $response;
+				}
+
+				$jer_dd_records[] = $jer_dd_record;
+			}
+
+		// delete all jer_dd nodes of the given tld, empty jer_dd table of this tld
+		// add new main section for every tld (regenerate the main section)
+			foreach ($tld as $current_tld) {
+				RecordObj_dd::delete_tld_nodes( $current_tld );
+
+				// get the information to create the main section
+				$typology_id	= ontology::get_main_typology_id( $current_tld );
+				$name_data		= ontology::get_main_name_data( $current_tld );
+
+				$file_item = new stdClass();
+					$file_item->tld					= $current_tld;
+					$file_item->typology_id			= $typology_id ?? null;
+					$file_item->name_data			= $name_data ?? null;
+
+				ontology::add_main_section( $file_item );
+			}
+
+		// insert the new nodes of the given tld
+			foreach ($jer_dd_records as $jer_dd_record) {
+
+				$insert_result = $jer_dd_record->insert();
+
+				// error inserting
+				// recovery al tld from bk table.
+				if( empty($insert_result) ){
+					RecordObj_dd::restore_from_bk_table($tld);
+					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
+
+					// delete bk table
+					RecordObj_dd::delete_bk_table();
+					return $response;
+				}
+
+			}
+
+		if( empty($response->errors) ){
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+		}
+
+		return $response;
+	}//end regenerate_records_in_jer_dd
+
+
+	/**
 	* DELETE_MAIN
 	* Delete all ontology references with `section_it` and `section_tipo` of main ontology section.
 	* It delete given main section
