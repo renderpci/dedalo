@@ -1657,4 +1657,104 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
+	/**
+	* CREATE_BK_TABLE
+	* Backup table is a copy of the given tlds
+	* Used to ensure that the jer_dd can be restore in process as regenerate it.
+	* @param array $tl
+	* @return bool
+	*/
+	public static function create_bk_table( array $tld ) : bool {
+
+		$where = implode('\' OR tld = \'', $tld);
+
+		$strQuery = '
+			DROP TABLE IF EXISTS "jer_dd_bk" CASCADE;
+			CREATE TABLE IF NOT EXISTS jer_dd_bk AS
+			SELECT * FROM jer_dd WHERE tld = \''.$where.'\';
+		';
+
+		$result = pg_query(DBi::_getConnection(), $strQuery);
+
+		if($result===false) {
+			debug_log(__METHOD__
+				. ' Failed consolidate_table jer_dd' .PHP_EOL
+				. 'strQuery: ' . to_string($strQuery)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end create_bk_table
+
+
+
+	/**
+	* DELETE_BK_TABLE
+	* Remove the backup table of jer_dd with clone rows
+	* @return bool
+	*/
+	public static function delete_bk_table() : bool {
+
+		$strQuery = '
+			DROP TABLE IF EXISTS "jer_dd_bk" CASCADE;
+		';
+
+		$result = pg_query(DBi::_getConnection(), $strQuery);
+
+		if($result===false) {
+			debug_log(__METHOD__
+				. ' Failed delete_bk_table jer_dd_bk' .PHP_EOL
+				. 'strQuery: ' . to_string($strQuery)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end delete_bk_table
+
+
+
+	/**
+	* RESTORE_FROM_BK_TABLE
+	* Delete the given tlds from `jer_dd` table
+	* Use `jer_dd_bk` table to insert his rows into `jer_dd`
+	* Note: `jer_dd_bk` is not a full backup of `jer_dd`, it's a selection tlds
+	* Do not use as full backup!
+	* @param array $tl
+	* @return bool
+	*/
+	public static function restore_from_bk_table( array $tld ) : bool {
+
+		// delete the original nodes in jer_dd
+		foreach ($tld as $current_tld) {
+			RecordObj_dd::delete_tld_nodes( $current_tld );
+		}
+
+		// restore all tld into jer_dd_bk
+		$where = implode('\' OR tld = \'', $tld);
+
+		$strQuery = '
+			INSERT INTO jer_dd
+			SELECT * FROM "jer_dd_bk" WHERE tld = \''.$where.'\';
+		';
+
+		$result = pg_query(DBi::_getConnection(), $strQuery);
+
+		if($result===false) {
+			debug_log(__METHOD__
+				. ' Failed restore_from_bk_table jer_dd_bk' .PHP_EOL
+				. 'strQuery: ' . to_string($strQuery)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end restore_from_bk_table
+
+
+
 }//end class RecordObj_dd
