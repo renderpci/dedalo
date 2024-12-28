@@ -11,13 +11,13 @@
 
 
 /**
-* RENDER_TOOL_ONTOLOGY_EXPORT
+* RENDER_TOOL_ONTOLOGY_PARSER
 * Manages the component's logic and appearance in client side
 */
-export const render_tool_ontology_export = function() {
+export const render_tool_ontology_parser = function() {
 
 	return true
-}//end render_tool_ontology_export
+}//end render_tool_ontology_parser
 
 
 
@@ -28,7 +28,7 @@ export const render_tool_ontology_export = function() {
 * @param object options
 * @return HTMLElement wrapper
 */
-render_tool_ontology_export.prototype.edit = async function(options) {
+render_tool_ontology_parser.prototype.edit = async function(options) {
 
 	const self = this
 
@@ -96,7 +96,7 @@ const get_content_data = async function(self) {
 				parent			: buttons_container
 			})
 			// click event
-			const click_handler = async (e) => {
+			const click_export_handler = async (e) => {
 				e.stopPropagation();
 
 				if (self.selected_ontologies.length===0) {
@@ -157,7 +157,72 @@ const get_content_data = async function(self) {
 
 				set_loading(false)
 			}
-			button_export.addEventListener('click', click_handler)
+			button_export.addEventListener('click', click_export_handler)
+
+		// button_regenerate
+			const button_regenerate = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning gear',
+				inner_html		: self.get_tool_label('regenerate') || 'Regenerate',
+				parent			: buttons_container
+			})
+			// click event
+			const click_regenerate_handler = async (e) => {
+				e.stopPropagation();
+
+				if (self.selected_ontologies.length===0) {
+					alert("Error: empty selection");
+					return
+				}
+
+				// messages clean
+					[
+						messages_container
+					]
+					.map(el => el.classList.remove('error'))
+
+				// spinner
+					let spinner
+					const set_loading = ( set ) => {
+
+						if (set===true) {
+
+							content_data.classList.add('loading')
+							messages_container.innerHTML = ''
+
+							// spinner
+							spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner inside',
+								parent			: content_data.parentNode
+							})
+
+						}else{
+
+							content_data.classList.remove('loading')
+							spinner.remove()
+						}
+					}
+					set_loading(true)
+
+				// call API
+					const api_response = await self.regenerate_ontologies()
+
+				// user messages
+					messages_container.innerHTML = api_response.msg
+						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
+						: 'Unknown error'
+
+				// process messages
+					process_error_container.innerHTML = ''
+					if (api_response.errors.length) {
+						process_error_container.innerHTML = api_response.errors.join('<br>')
+						process_error_container.classList.remove('hidden')
+					}
+
+				set_loading(false)
+			}
+			button_regenerate.addEventListener('click', click_regenerate_handler)
 
 	// messages_container
 		const messages_container = ui.create_dom_element({
@@ -254,7 +319,7 @@ const render_ontologies_list = function (self) {
 			ui.collapse_toggle_track({
 				toggler				: typology_label,
 				container			: children_container,
-				collapsed_id		: 'tool_ontology_export_' + typology_item.typology_id,
+				collapsed_id		: 'tool_ontology_parser_' + typology_item.typology_id,
 				collapse_callback	: () => {typology_label.classList.remove('up')},
 				expose_callback		: () => {typology_label.classList.add('up')},
 				default_state		: 'opened' // 'opened|closed'
