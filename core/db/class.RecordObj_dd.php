@@ -358,30 +358,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* GET_DEF_BY_TIPO
-	* Static version
-	*/
-	public static function get_def_by_tipo( string $terminoID, $lang=false ) : ?string {
-
-		// return self::get_descriptor_dato_by_tipo($terminoID, $lang, 'def');
-		return '';
-	}//end get_def_by_tipo
-
-
-
-	/**
-	* GET_OBS_BY_TIPO
-	* Static version
-	*/
-	public static function get_obs_by_tipo( string $terminoID, $lang=false ) : ?string {
-
-		// return self::get_descriptor_dato_by_tipo($terminoID, $lang, 'obs');
-		return '';
-	}//end get_obs_by_tipo
-
-
-
-	/**
 	* GET_MODELO_NAME
 	* Calculates the current term model name
 	* @return string $model

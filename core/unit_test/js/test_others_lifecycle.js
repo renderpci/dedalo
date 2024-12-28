@@ -209,15 +209,6 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 			value	: null
 		})
 
-		// ontology_processes
-		elements.push({
-			name	: 'ontology_processes',
-			path	: '../../area_maintenance/js/widgets/ontology_processes/ontology_processes.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
 		// php_info
 		elements.push({
 			name	: 'php_info',

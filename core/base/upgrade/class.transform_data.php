@@ -1387,38 +1387,6 @@ class transform_data {
 			return $el->tld;
 		}, $ontology_info->active_ontologies);
 
-		// foreach ($ontology_tipos as $current_tipo) {
-
-		// 	$term			= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_STRUCTURE_LANG, false) ?? '';
-		// 	$ar_tem			= explode(' | ', $term );
-		// 	$RecordObj_dd	= new RecordObj_dd($current_tipo);
-		// 	$properties		= $RecordObj_dd->get_properties();
-		// 	$tld			= $properties->main_tld ?? null;
-
-		// 	if( empty($tld) ){
-		// 		debug_log(__METHOD__
-		// 			. "Ignored tld, empty main_tld" . PHP_EOL
-		// 			. "tipo: " . to_string( $current_tipo )
-		// 			, logger::ERROR
-		// 		);
-		// 		continue;
-		// 	}
-
-		// 	if( isset($ar_tem[1]) && $tld === $ar_tem[1] ){
-
-		// 		$ontology_tlds[] = $tld;
-
-		// 	}else{
-
-		// 		debug_log(__METHOD__
-		// 			. "Invalid tld, do not match with name" . PHP_EOL
-		// 			. "tld: " . to_string( $tld ). " - name: " . to_string( $ar_tem )
-		// 			, logger::ERROR
-		// 		);
-		// 		continue;
-		// 	}
-		// }
-
 		// add first the ontology_tlds to preserve the order
 		$sorted_tlds = $ontology_tlds;
 		// add all others non already included
