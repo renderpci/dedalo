@@ -80,9 +80,9 @@ class component_security_access extends component_common {
 					if (!empty($datalist)) {
 						$this->datalist = $datalist;
 						debug_log(__METHOD__
-							. " Return already calculated and cached in file datalist. Total items: "
-							. count($datalist).' in time: '
-							. exec_time_unit($start_time,'ms').' ms'
+							. ' Return already calculated and cached in file datalist. Total items: ' . PHP_EOL
+							. ' datalist total: ' . (!empty($datalist) ? count($datalist) : 0) . PHP_EOL
+							. ' time: ' . exec_time_unit($start_time,'ms').' ms'
 							, logger::DEBUG
 						);
 						return $datalist;
