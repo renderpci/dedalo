@@ -1539,14 +1539,14 @@ final class dd_utils_api {
 
 
 	/**
-	* GET_ONTOLOGY_SERVER_READY
+	* GET_SERVER_READY_STATUS
 	* Check if the server is a ontology server or not.
 	* Ontology servers can provide specific ontology files as master
 	* Non ontology server will refuse to use his ontology files by other installations
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function get_ontology_server_ready( object $rqo ) : object {
+	public static function get_server_ready_status( object $rqo ) : object {
 
 		// session unlock
 			session_write_close();
@@ -1554,19 +1554,39 @@ final class dd_utils_api {
 		// response
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Server is not an ontology server';
+			$response->msg		= 'Error. This is not an accessible Server';
 			$response->errors	= [];
 
-		// check constants
-		// Ontology servers has a constant that able to use the server as ontology master.
-			if ( defined('IS_AN_ONTOLOGY_SERVER') &&  IS_AN_ONTOLOGY_SERVER === true ) {
-				$response->result	= true;
-				$response->msg		= 'OK. Ontology server is ready';
-				return $response;
+		//options
+			$check = $rqo->options->check ?? null;
+
+
+			switch ($check) {
+				case 'ontology_server':
+					// check constants
+					// Ontology servers has a constant that able to use the server as ontology master.
+						if ( defined('IS_AN_ONTOLOGY_SERVER') &&  IS_AN_ONTOLOGY_SERVER === true ) {
+							$response->result	= true;
+							$response->msg		= 'OK. Ontology server is ready';
+							return $response;
+						}
+					break;
+
+				case 'code_server':
+					// check constants
+					// Ontology servers has a constant that able to use the server as ontology master.
+						if ( defined('IS_A_CODE_SERVER') &&  IS_A_CODE_SERVER === true ) {
+							$response->result	= true;
+							$response->msg		= 'OK. Code server is ready';
+							return $response;
+						}
+					break;
+
+
 			}
 
 		return $response;
-	}//end get_ontology_server_ready
+	}//end get_server_ready_status
 
 
 
@@ -1651,6 +1671,95 @@ final class dd_utils_api {
 		// Client made a valid request.
 		// get the information to be provided to client
 			$response = ontology_data_io::get_ontology_update_info( $ar_version );
+
+
+		return $response;
+	}//end get_ontology_update_info
+
+
+
+
+	/**
+	* GET_CODE_UPDATE_INFO
+	* Ontology server provide information about the ontology that it can provide.
+	* Client needs to provide his version and the code for this server.
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function get_code_update_info( object $rqo ) : object {
+
+		// session unlock
+			session_write_close();
+
+		// response
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// check if the server is ontology server, if not stop the process
+		// Only ontology servers can provide his ontology files.
+			if ( !defined('IS_A_CODE_SERVER') ||  IS_A_CODE_SERVER === false ) {
+				$response->result	= false;
+				$response->msg		= 'Error. Server is not an code server';
+				return $response;
+			}
+
+		// RQO options
+		// client will send his version and the code that able to get the ontology information
+			$options = $rqo->options;
+
+		// check configuration of the ontology constants
+			if ( !defined('DEDALO_CODE_FILES_DIR') ) {
+				$response->msg		= 'Error. Dédalo is miss configured. Define DEDALO_CODE_FILES_DIR as sample.config.php defines';
+				$response->errors[]	= 'Error. Bad DEDALO_CODE_FILES_DIR';
+				return $response;
+			}
+
+		// Version
+		// client needs to provide his own version of Dédalo
+		// only compatible code files with the caller version will be provided
+		// if the client doesn't send a valid version will be refuse the call.
+			$string_version	= $options->version;
+			$ar_version 	= explode( '.', $string_version );
+
+			foreach($ar_version as $key => $version_number){
+				if($key > 2){
+					break;
+				}
+				$check = is_numeric( $version_number );
+				if (!$check) {
+					$response->msg		= 'Error. Invalid version number';
+					$response->errors[]	= 'Invalid version number';
+					return $response;
+				}
+			}
+
+		// code
+		// client needs to provide a valid code.
+		// valid code is defined in config.php constant of CODE_SERVERS
+			$code = $options->code;
+
+			$ontology_servers = defined( 'CODE_SERVERS' )
+				? CODE_SERVERS
+				: [];
+
+			$valid_code = false;
+			foreach ( $ontology_servers as $current_server_info ) {
+				if( $current_server_info['code'] === $code ){
+					$valid_code = true;
+				}
+			}
+
+			if( $valid_code === false ){
+				$response->msg		= 'Error. Invalid code';
+				$response->errors[]	= 'Invalid code';
+				return $response;
+			}
+
+		// Client made a valid request.
+		// get the information to be provided to client
+			$response = update_code::get_code_update_info( $ar_version );
 
 
 		return $response;

@@ -48,7 +48,7 @@ final class dd_manager {
 				'get_install_context',
 				'get_environment',
 				'get_ontology_update_info',
-				'get_ontology_server_ready'
+				'get_server_ready_status'
 			];
 			if (true===in_array($rqo->action, $no_login_needed_actions)) {
 				// do not check login here
