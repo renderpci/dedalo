@@ -374,66 +374,6 @@ abstract class backup {
 
 
 	/**
-	* OPTIMIZE_TABLES
-	* Exec VACUUM ANALYZE command on every received table
-	* @param array $tables
-	* @return string|bool|null $res
-	*/
-	public static function optimize_tables(array $tables) {
-
-		// command_base
-			$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
-
-		// re-index
-			$index_commands = [];
-			foreach ($tables as $current_table) {
-
-				if (!DBi::check_table_exists($current_table)) {
-					debug_log(__METHOD__
-						. " Ignored non existing table " . PHP_EOL
-						. ' table: ' . to_string($current_table)
-						, logger::ERROR
-					);
-					continue;
-				}
-
-				$index_commands[] = 'REINDEX TABLE "'.$current_table.'"';
-			}
-
-			if (empty($index_commands)) {
-				return false;
-			}
-
-			$command = $command_base . ' -c \''.implode('; ', $index_commands).';\'';
-			// exec command
-				$res = shell_exec($command);
-			// debug
-				debug_log(__METHOD__
-					. ' result: ' . to_string($res) . PHP_EOL
-					. ' command: ' . to_string($command)
-					, logger::WARNING
-				);
-
-		// VACUUM
-			// safe tables only
-			$tables = array_filter($tables, 'DBi::check_table_exists');
-			$command = $command_base . ' -c \'VACUUM ' . implode(', ', $tables) .';\'';
-			// exec command
-				$res = shell_exec($command);
-			// debug
-				debug_log(__METHOD__
-					. ' result ' . to_string($res) . PHP_EOL
-					. ' command: ' . to_string($command)
-					, logger::WARNING
-				);
-
-
-		return $res;
-	}//end optimize_tables
-
-
-
-	/**
 	* WRITE_LANG_FILE
 	* Calculated labels for given lang and write a JS file with the result
 	* @param string $lang
