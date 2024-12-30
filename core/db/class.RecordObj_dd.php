@@ -97,7 +97,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			'terminoID'		=> 'terminoID',
 			'parent'		=> 'parent',
 			'modelo'		=> 'modelo',
-			'model'			=> 'model',
+			// 'model'			=> 'model',
 			'esmodelo'		=> 'esmodelo',
 			'esdescriptor'	=> 'esdescriptor',
 			'visible'		=> 'visible',
