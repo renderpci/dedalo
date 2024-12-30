@@ -334,6 +334,7 @@ class ontology {
 				"$and": [{
 					"q_operator": "==",
 					"q": "'.$safe_tld.'",
+					"lang": "'.DEDALO_DATA_NOLAN.'",
 					"path": [{
 						"section_tipo": "'.self::$main_section_tipo.'",
 						"component_tipo": "hierarchy6"
@@ -346,6 +347,7 @@ class ontology {
 			$sqo->set_section_tipo( [self::$main_section_tipo] );
 			$sqo->set_filter( $filter );
 			$sqo->set_limit( 1 );
+			$sqo->set_skip_projects_filter(true);
 
 		$search = search::get_instance(
 			$sqo, // object sqo
@@ -378,6 +380,7 @@ class ontology {
 				"$and": [{
 					"q_operator": "==",
 					"q": "'.$safe_tipo.'",
+					"lang": "'.DEDALO_DATA_NOLAN.'",
 					"path": [{
 						"section_tipo": "'.self::$main_section_tipo.'",
 						"component_tipo": "hierarchy53"
@@ -390,6 +393,7 @@ class ontology {
 			$sqo->set_section_tipo( [self::$main_section_tipo] );
 			$sqo->set_filter( $filter );
 			$sqo->set_limit( 1 );
+			$sqo->set_skip_projects_filter(true);
 
 		$search = search::get_instance(
 			$sqo, // object sqo
@@ -659,7 +663,7 @@ class ontology {
 
 		$tld					= $file_item->tld;
 		$typology_id			= $file_item->typology_id ?? 15;
-		$name_data				= $file_item->name_data;
+		$name_data				= $file_item->name_data ?? null;
 		$parent_grouper_tipo	= $file_item->parent_grouper_tipo ?? null;
 
 		// create the parent group node
@@ -693,12 +697,14 @@ class ontology {
 					$properties->color		= '#2d8894';
 				$RecordObj_dd->set_properties($properties);
 
-
-				$term = new stdClass();
-				foreach ($name_data as $current_lang => $value) {
-					$term->$current_lang = $value[0] ?? $tld;
+				// term
+				if (!empty($name_data)) {
+					$term = new stdClass();
+					foreach ($name_data as $current_lang => $value) {
+						$term->$current_lang = $value[0] ?? $tld;
+					}
+					$RecordObj_dd->set_term( $term );
 				}
-				$RecordObj_dd->set_term( $term );
 
 			$term_id = $RecordObj_dd->insert();
 
@@ -1023,6 +1029,7 @@ class ontology {
 							}
 						],
 						"q_operator": null,
+						"lang": "'.DEDALO_DATA_NOLAN.'",
 						"path": [
 							{
 								"name": "Active",

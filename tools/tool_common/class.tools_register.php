@@ -24,7 +24,7 @@ class tools_register {
 	static $tipo_properties					= 'dd1335';
 	static $tools_configuration				= 'dd999'; // tools Configuration component_json
 	static $tools_default_configuration		= 'dd1633'; // tools default Configuration component_json
-
+	static $tipo_active						= 'dd1354'; // component_radio_button
 
 
 	/**
@@ -301,7 +301,47 @@ class tools_register {
 									, logger::ERROR
 								);
 							}
+					}//end foreach ($info_objects_parsed as $basename => $current_tool_section_data)
+
+				// remove non existing tools (in directory /tools)
+					$resource_all_section_records = section::get_resource_all_section_records_unfiltered(
+						self::$section_registered_tools_tipo,
+						'section_id'
+					);
+					while ($current_row = pg_fetch_assoc($resource_all_section_records)) {
+
+						$current_section_id = $current_row['section_id'];
+
+						// tool name
+							$component_tipo	= self::$tipo_tool_name;
+							$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$component		= component_common::get_instance(
+								$model,
+								$component_tipo,
+								$current_section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								self::$section_registered_tools_tipo,
+								true // cache
+							);
+							$value = $component->get_value(); // as  'tool_lang'
+
+						// files exists check
+							$found = array_find($info_file_processed, function($el) use($value) {
+								return $el->name === $value;
+							});
+							if ($found===null) {
+								// delete unused section
+								$section = section::get_instance(
+									$current_section_id, // string|null section_id
+									self::$section_registered_tools_tipo // string section_tipo
+								);
+								$section->Delete(
+									'delete_record' // string delete_mode
+								);
+							}
 					}
+
 			}//end if (!empty($info_objects_parsed))
 
 		// clean_cache. Remove previous stored data in session or files
