@@ -158,7 +158,7 @@ const build_widget = (item, self) => {
 		}
 
 	// widget module check. Use if exists
-		const path = './widgets/'+ item.id +'/'+ item.id + '.js'
+		const path = `../widgets/${item.id}/js/${item.id}.js`
 		import(path)
 		.then(async function(module){
 

@@ -252,4 +252,70 @@ final class dd_area_maintenance_api {
 
 
 
+	/**
+	* GET_WIDGET_VALUE
+	* Returns a widget value
+	* It is used to update widget data dynamically
+	* @param object options
+	*  sample:
+	*  {
+	* 	 name : string update_data_version
+	*  }
+	* @return object $response
+	*/
+	public static function get_widget_value( object $rqo ) : object {
+
+		// source
+			$source			= $rqo->source;
+			$class_name		= $source->model;
+			$class_method	= 'get_value';
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+				$response->errors	= [];
+
+		// include the widget class
+			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/' . $class_name . '/class.' . $class_name . '.php';
+			if( !include $widget_class_file ) {
+				$response->errors[] = 'Widget class file is unavailable';
+				return $response;
+			}
+
+		// method (static)
+			if (!method_exists($class_name, $class_method)) {
+				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
+				$response->errors[] = 'Invalid method';
+				return $response;
+			}
+
+			try {
+
+				// exec 'get_value' method from widget
+				$fn_result = call_user_func([$class_name, $class_method]);
+				// $fn_result = $class_name::$class_method();
+
+			} catch (Exception $e) { // For PHP 5
+
+				debug_log(__METHOD__
+					." Exception caught [class_request] : ". $e->getMessage()
+					, logger::ERROR
+				);
+				trigger_error($e->getMessage());
+
+				$fn_result = new stdClass();
+					$fn_result->result	= false;
+					$fn_result->msg		= 'Error. Request failed on call method: '.$class_method;
+					$response->errors[] = 'Invalid method ' . $class_method;
+			}
+
+			$response = $fn_result;
+
+
+		return $response;
+	}//end get_widget_value
+
+
+
 }//end dd_area_maintenance_api
