@@ -449,5 +449,21 @@ class update_code {
 
 
 
+	/**
+	* SET_DEVELOPMENT_PATH
+	* Set current version path for development code, nightly version
+	* Check if exist, else create it.
+	* if the directory doesn't exist it will be created.
+	* @return string|false $path
+	*/
+	public static function set_development_path() : string|false {
+
+		$base_path	= DEDALO_CODE_FILES_DIR."/development";
+		$path		= create_directory( $base_path )===false
+			? false
+			: $base_path;
+
+		return $path;
+	}//end set_development_path
 
 }//end update_code
