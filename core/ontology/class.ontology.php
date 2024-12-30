@@ -663,7 +663,7 @@ class ontology {
 
 		$tld					= $file_item->tld;
 		$typology_id			= $file_item->typology_id ?? 15;
-		$name_data				= $file_item->name_data;
+		$name_data				= $file_item->name_data ?? null;
 		$parent_grouper_tipo	= $file_item->parent_grouper_tipo ?? null;
 
 		// create the parent group node
@@ -697,12 +697,14 @@ class ontology {
 					$properties->color		= '#2d8894';
 				$RecordObj_dd->set_properties($properties);
 
-
-				$term = new stdClass();
-				foreach ($name_data as $current_lang => $value) {
-					$term->$current_lang = $value[0] ?? $tld;
+				// term
+				if (!empty($name_data)) {
+					$term = new stdClass();
+					foreach ($name_data as $current_lang => $value) {
+						$term->$current_lang = $value[0] ?? $tld;
+					}
+					$RecordObj_dd->set_term( $term );
 				}
-				$RecordObj_dd->set_term( $term );
 
 			$term_id = $RecordObj_dd->insert();
 
