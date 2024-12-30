@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
-include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
-include_once DEDALO_CORE_PATH . '/area_maintenance/class.area_maintenance_widgets_values.php';
+// include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * AREA_MAINTENANCE
 * System administrator's area with useful methods to
@@ -165,11 +164,7 @@ class area_maintenance extends area_common {
 				$item->id		= 'update_code';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
-				$item->value	= (object)[
-					'dedalo_source_version_url'			=> DEDALO_SOURCE_VERSION_URL,
-					'dedalo_source_version_local_dir'	=> DEDALO_SOURCE_VERSION_LOCAL_DIR,
-					'dedalo_source_version_url_check'	=> check_url(DEDALO_SOURCE_VERSION_URL)
-				];
+				$item->value	= null;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -334,8 +329,7 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// sequences_status *
-			require_once DEDALO_CORE_PATH.'/db/class.db_data_check.php';
-			$response = db_data_check::check_sequences();
+			$response = db_tasks::check_sequences();
 			$item = new stdClass();
 				$item->id		= 'sequences_status';
 				$item->type		= 'widget';
@@ -364,7 +358,7 @@ class area_maintenance extends area_common {
 				$item->tipo		= $this->tipo;
 				$item->label	= 'PHP INFO';
 				$item->value	= (object)[
-					'src' => DEDALO_CORE_URL.'/area_maintenance/php_info.php'
+					'src' => DEDALO_CORE_URL.'/area_maintenance/widgets/php_info/php_info.php'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -757,6 +751,21 @@ class area_maintenance extends area_common {
 	*/
 	public static function rebuild_db_indexes() : object {
 
+		$response = db_tasks::rebuild_indexes();
+
+		return $response;
+	}//end rebuild_db_indexes
+
+
+
+
+	/**
+	* CONSOLIDATE_TABLES
+	* Force to re-build the PostgreSQL main indexes, extensions and functions
+	* @return object $response
+	*/
+	public static function consolidate_tables() : object {
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ';
@@ -765,42 +774,18 @@ class area_maintenance extends area_common {
 
 		$ar_sql_query = [];
 
-		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_indexes.php';
+		$ar_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
 
 		// exec
-		foreach ($ar_sql_query as $sql_query) {
+		foreach ($ar_tables as $table) {
 
-			// debug info
-			debug_log(__METHOD__
-				. " Executing rebuild_db_indexes SQL sentence " . PHP_EOL
-				. ' sql_query: ' . trim($sql_query)
-				, logger::WARNING
-			);
+			$result = db_tasks::consolidate_table( $table );
 
-			// exec query
-			$result = pg_query(DBi::_getConnection(), $sql_query);
-			if($result===false) {
-				// error case
-				debug_log(__METHOD__
-					." Error Processing sql_query Request ". PHP_EOL
-					. pg_last_error(DBi::_getConnection()) .PHP_EOL
-					. 'sql_query: '.to_string($sql_query)
-					, logger::ERROR
-				);
-				$response->errors[] = " Error Processing sql_query Request: ". pg_last_error(DBi::_getConnection());
-				continue;
+			if($result === false){
+				$response->errors[]	= 'Consolidate table is not possible: '.$table;
+				return $response;
 			}
-
-			$response->success++;
 		}
-
-		// debug
-			debug_log(__METHOD__
-				. " Exec rebuild_db_indexes " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_sql_query) . PHP_EOL
-				, logger::DEBUG
-			);
 
 		// response OK
 		$response->result	= true;
@@ -812,7 +797,7 @@ class area_maintenance extends area_common {
 
 
 		return $response;
-	}//end rebuild_db_indexes
+	}//end consolidate_tables
 
 
 
@@ -1106,239 +1091,6 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* UPDATE_CODE
-	* Download code in zip format file from the GIT repository defined in config
-	* @param object $options
-	* @return object $response
-	*/
-	public static function update_code(object $options) : object {
-		$start_time = start_time();
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
-
-		try {
-
-			$result = new stdClass();
-
-			debug_log(__METHOD__." Start downloading file ".DEDALO_SOURCE_VERSION_URL, logger::DEBUG);
-
-			// CLI msg
-				if ( running_in_cli()===true ) {
-					print_cli((object)[
-						'msg'		=> 'Start downloading file: ' . DEDALO_SOURCE_VERSION_URL,
-						'memory'	=> dd_memory_usage()
-					]);
-				}
-
-			// Download zip file from server (master) curl mode (unified with download_remote_structure_file)
-				// data
-				$data_string = "data=" . json_encode(null);
-				// curl_request
-				$curl_response = curl_request((object)[
-					'url'				=> DEDALO_SOURCE_VERSION_URL,
-					'post'				=> true,
-					'postfields'		=> $data_string,
-					'returntransfer'	=> 1,
-					'followlocation'	=> true,
-					'header'			=> false, // bool add header to result
-					'ssl_verifypeer'	=> false,
-					'timeout'			=> 300, // int seconds
-					'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
-						? SERVER_PROXY // from Dédalo config file
-						: false // default case
-				]);
-				$contents = $curl_response->result;
-				// check contents
-				if ($contents===false) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
-					debug_log(__METHOD__
-						." $response->msg"
-						, logger::ERROR
-					);
-					return $response;
-				}
-				$result->download_file = [
-					'Downloaded file: ' . DEDALO_SOURCE_VERSION_URL,
-					'Time: ' . exec_time_unit($start_time,'sec') . ' secs'
-				];
-				debug_log(__METHOD__
-					." Downloaded file (".DEDALO_SOURCE_VERSION_URL.") in ".exec_time_unit($start_time,'sec') . ' secs'
-					, logger::DEBUG
-				);
-
-			// Save contents to local dir
-				if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
-					if( !mkdir(DEDALO_SOURCE_VERSION_LOCAL_DIR,  0775) ) {
-						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
-						debug_log(__METHOD__
-							." $response->msg"
-							, logger::ERROR
-						);
-						return $response;
-					}
-				}
-				$file_name		= 'dedalo6_code.zip';
-				$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
-				$put_contents	= file_put_contents($target_file, $contents);
-				if (!$put_contents) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
-					debug_log(__METHOD__
-						." $response->msg"
-						, logger::ERROR
-					);
-					return $response;
-				}
-				$result->write_file = [
-					"Written file: ". $target_file,
-					"File size: "	. format_size_units( filesize($target_file) )
-				];
-
-			// extract files from zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
-				// CLI msg
-				if ( running_in_cli()===true ) {
-					print_cli((object)[
-						'msg'		=> 'Extracting zip file',
-						'memory'	=> dd_memory_usage()
-					]);
-				}
-				$zip = new ZipArchive;
-				$res = $zip->open($target_file);
-				if ($res!==true) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
-					debug_log(__METHOD__
-						." $response->msg"
-						, logger::ERROR
-					);
-					return $response;
-				}
-				$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
-				$zip->close();
-				$result->extract = [
-					"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
-				];
-				debug_log(__METHOD__
-					." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR
-					, logger::DEBUG
-				);
-
-			// rsync
-				// CLI msg
-				if ( running_in_cli()===true ) {
-					print_cli((object)[
-						'msg'		=> 'Updating files',
-						'memory'	=> dd_memory_usage()
-					]);
-				}
-				$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
-					? DEDALO_SOURCE_VERSION_LOCAL_DIR .'/dedalo-master' // like 'dedalo-master'
-					: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo6_code' from 'dedalo6_code.zip'
-				$target		= DEDALO_ROOT_PATH;
-				$exclude	= ' --exclude="*/config*" --exclude="media" ';
-				$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
-				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
-				$output		= shell_exec($command);
-				if ($output===null) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing rsync command. source: '.$source;
-					debug_log(__METHOD__
-						. $response->msg  . PHP_EOL
-						. ' command: ' . to_string($command) . PHP_EOL
-						. ' output: ' . to_string($output)
-						, logger::ERROR
-					);
-					return $response;
-				}
-				$result->rsync = [
-					"command: " . $command,
-					"output: "  . str_replace(["\n","\r"], '<br>', $output),
-				];
-				debug_log(__METHOD__
-					." RSYNC command done ". PHP_EOL .to_string($command)
-					, logger::DEBUG
-				);
-
-			// remove temp used files and folders
-				$command_rm_dir		= "rm -R -f $source";
-				$output_rm_dir		= shell_exec($command_rm_dir);
-				$result->remove_dir	= [
-					"command_rm_dir: " . $command_rm_dir,
-					"output_rm_dir: "  . $output_rm_dir
-				];
-				$command_rm_file 	= "rm $target_file";
-				$output_rm_file		= shell_exec($command_rm_file);
-				$result->remove_file= [
-					"command_rm_file: " . $command_rm_file,
-					"output_rm_file: "  . $output_rm_file
-				];
-				debug_log(__METHOD__
-					." Removed temp used files and folders"
-					, logger::DEBUG
-				);
-
-			// update JAVASCRIPT labels
-				// CLI msg
-				if ( running_in_cli()===true ) {
-					print_cli((object)[
-						'msg'		=> 'Updating js lang files',
-						'memory'	=> dd_memory_usage()
-					]);
-				}
-				$ar_langs = DEDALO_APPLICATION_LANGS;
-				foreach ($ar_langs as $lang => $label) {
-					backup::write_lang_file($lang);
-				}
-
-			// version info. Get from new downloaded file 'version.inc'
-				$command = 'ddversion=`'.PHP_BIN_PATH.' << \'EOF\'
-				<?php require "'.DEDALO_CORE_PATH.'/base/version.inc"; echo DEDALO_VERSION ." Build ". DEDALO_BUILD; ?>`
-				echo $ddversion';
-				// exec command
-				$new_version_info = exec($command); // string like '6.0.0_RC6 Build 2023-08-22T19:19:35+02:00'
-
-			// response OK
-				// $response->result	= $result;
-				// $response->msg		= 'OK. Updated Dédalo code successfully. ' . $new_version_info;
-
-			// debug
-				debug_log(__METHOD__
-					.' Updated Dédalo code successfully. ' . $new_version_info
-					, logger::DEBUG
-				);
-
-			// pause and force garbage collector (prevent cached files generating errors)
-				sleep(1);
-				opcache_reset();
-				gc_collect_cycles();
-				sleep(1);
-
-			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-				logger::$obj['activity']->log_message(
-					'SAVE',
-					logger::INFO,
-					DEDALO_ROOT_TIPO,
-					NULL,
-					[
-						'msg' => 'Updated code to v. ' . $new_version_info
-					],
-					logged_user_id() // int
-				);
-
-		} catch (Exception $e) {
-
-			$response->msg = $e->getMessage();
-		}
-
-		$response->result	= true;
-		$response->msg		= 'OK. Updated Dédalo code successfully. '.__METHOD__;
-
-
-		return $response;
-	}//end update_code
-
-
-
-	/**
 	* UPDATE_DATA_VERSION
 	* Updates Dédalo data version.
 	* Allow change components data format or add new tables or index
@@ -1418,48 +1170,6 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end update_data_version
-
-
-
-	/**
-	* GET_WIDGET_VALUE
-	* Returns updated widget value
-	* It is used to update widget data dynamically
-	* @param object options
-	*  sample:
-	*  {
-	* 	 name : string update_data_version
-	*  }
-	* @return object $response
-	*/
-	public static function get_widget_value( object $options ) : object {
-		$start_time=start_time();
-
-		// options
-			$name = $options->name;
-
-		// exec widget call
-			if( method_exists('area_maintenance_widgets_values', $name) ) {
-
-				$response = call_user_func(array('area_maintenance_widgets_values', $name), []);
-
-			}else{
-				// error response
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= 'Error. Request failed. The widget is not defined: '. to_string($name);
-					$response->errors	= [];
-			}
-
-			$total_time = exec_time_unit($start_time,'ms').' ms';
-			$response->get_value_time = $total_time . 'ms';
-
-			session_write_close();
-
-
-		return $response;
-	}//end get_widget_value
-
 
 
 	/**
@@ -2055,63 +1765,16 @@ class area_maintenance extends area_common {
 				}
 			}
 
-			die();
-
-
-
-
-
-
-
 		// simple_schema_of_sections. Get current simple schema of sections before update data
 		// Will used to compare with the new schema (after update)
 			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
-		// // export. Before import, export a copy ;-)
-		// 	$db_name = 'dedalo_development_str_'.date("Y-m-d_Hi").'.custom';
-		// 	$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-		// 	if ($res_export_structure->result===false) {
 
-		// 		// error on export current DDBB
-		// 		$response->msg		= 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
-		// 		$response->errors[]	= $response->msg;
-		// 		return $response;
+		// post processing tables
+			$ar_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
 
-		// 	}else{
-		// 		// Append msg
-		// 		$ar_msg[] = $res_export_structure->msg . ' - export time: '.exec_time_unit_auto($start_time);
-		// 	}
-
-		// import
-			// $prev_time = start_time(); // reset exec time
-			// $import_structure_response = backup::import_structure(
-			// 	'dedalo_development_str.custom', // string db_name
-			// 	true, // bool check_server
-			// 	$ar_dedalo_prefix_tipos // array dedalo_prefix_tipos
-			// );
-			// if ($import_structure_response->result===false) {
-			// 	// error on import current DDBB
-			// 	$response->msg		= 'Error. Request import_structure failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
-			// 	$response->errors	= array_merge($response->errors, $import_structure_response->errors);
-			// 	return $response;
-
-			// }else{
-			// 	// errors
-			// 	if (!empty($import_structure_response->errors)) {
-			// 		$response->errors = array_merge($response->errors, $import_structure_response->errors);
-			// 		$response->msg = 'Error. Request import_structure failed 4 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
-			// 		return $response;
-			// 	}
-
-			// 	// Append msg
-			// 	$import_structure_response_ar_msg = explode(PHP_EOL, $import_structure_response->msg);
-			// 	$ar_msg		=  array_merge($ar_msg, $import_structure_response_ar_msg);
-			// 	$ar_msg[]	= 'Import time: '.exec_time_unit_auto($prev_time);
-			// }
-
-		// optimize tables
-			$ar_tables = ['jer_dd','matrix_dd','matrix_list'];
-			backup::optimize_tables($ar_tables);
+			// optimize tables
+				db_tasks::optimize_tables($ar_tables);
 
 		// delete all session data except auth
 			foreach ($_SESSION['dedalo'] as $key => $value) {
@@ -2222,6 +1885,7 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end rebuild_lang_files
+
 
 
 	/**

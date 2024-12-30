@@ -112,6 +112,116 @@ final class dd_area_maintenance_api {
 
 
 	/**
+	* widget_request
+	* Call to class method given and return and object with the response
+	* Method must be static and accept a only one object argument
+	* Method must return an object like { result: mixed, msg: string }
+	* @param object $rqo
+	* sample:
+		* {
+		* 	action: "widget_request"
+		* 	dd_api: "dd_area_maintenance_api"
+		* 	source: {
+		* 		typo: "source",
+		* 		type : 'widget',
+		* 		model : 'update_code'
+		* 		action: "build_version_from_git_master"
+		* 	},
+		* 	options: {
+		*   	skip_backup_time_range: true
+		*   }
+		* }
+	* @return object response { result: mixed, msg: string }
+	*/
+	public static function widget_request( object $rqo ) : object {
+
+		// options
+			$options			= $rqo->options ?? [];
+			$fn_arguments		= $options;
+			$background_running	= $options->background_running ?? false;
+
+		// source
+			$source			= $rqo->source;
+			$class_name		= $source->model;
+			$class_method	= $source->action;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+				$response->errors	= [];
+
+		// include the widget class
+			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/' . $class_name . '/class.' . $class_name . '.php';
+			if( !include $widget_class_file ) {
+				$response->errors[] = 'Widget class file is unavailable';
+				return $response;
+			}
+
+		// check valid options
+			if (!is_object($options)) {
+				$response->msg = 'Error. invalid options ';
+				$response->errors[] = 'Invalid options type';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' options: ' .to_string($options)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
+		// method (static)
+			if (!method_exists($class_name, $class_method)) {
+				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
+				return $response;
+			}
+			try {
+
+				// background_running / direct cases
+				switch (true) {
+					case ($background_running===true):
+
+						$cli_options = new stdClass();
+							$cli_options->class_name	= $class_name;
+							$cli_options->method_name	= $class_method;
+							$cli_options->class_file	= null; // already loaded by loader
+							$cli_options->params		= $options;
+
+						$fn_result = exec_::request_cli($cli_options);
+						break;
+
+					default:
+						// direct case
+
+						$fn_result = call_user_func(array($class_name, $class_method), $fn_arguments);
+						break;
+				}
+
+			} catch (Exception $e) { // For PHP 5
+
+				debug_log(__METHOD__
+					." Exception caught [widget_request] : ". $e->getMessage()
+					, logger::ERROR
+				);
+				trigger_error($e->getMessage());
+
+
+				$fn_result = new stdClass();
+					$fn_result->result	= false;
+					$fn_result->msg		= 'Error. Request failed on call_user_func method: '.$class_method;
+					$response->errors[] = 'Invalid method ' . $class_method;
+			}
+
+			$response = $fn_result;
+
+
+		return $response;
+	}//end widget_request
+
+
+
+
+	/**
 	* LOCK_COMPONENTS_ACTIONS
 	* Get lock components active users info
 	*
@@ -249,6 +359,72 @@ final class dd_area_maintenance_api {
 
 		return $response;
 	}//end parse_simple_schema_changes_files
+
+
+
+	/**
+	* GET_WIDGET_VALUE
+	* Returns a widget value
+	* It is used to update widget data dynamically
+	* @param object options
+	*  sample:
+	*  {
+	* 	 name : string update_data_version
+	*  }
+	* @return object $response
+	*/
+	public static function get_widget_value( object $rqo ) : object {
+
+		// source
+			$source			= $rqo->source;
+			$class_name		= $source->model;
+			$class_method	= 'get_value';
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+				$response->errors	= [];
+
+		// include the widget class
+			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/' . $class_name . '/class.' . $class_name . '.php';
+			if( !include $widget_class_file ) {
+				$response->errors[] = 'Widget class file is unavailable';
+				return $response;
+			}
+
+		// method (static)
+			if (!method_exists($class_name, $class_method)) {
+				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
+				$response->errors[] = 'Invalid method';
+				return $response;
+			}
+
+			try {
+
+				// exec 'get_value' method from widget
+				$fn_result = call_user_func([$class_name, $class_method]);
+				// $fn_result = $class_name::$class_method();
+
+			} catch (Exception $e) { // For PHP 5
+
+				debug_log(__METHOD__
+					." Exception caught [class_request] : ". $e->getMessage()
+					, logger::ERROR
+				);
+				trigger_error($e->getMessage());
+
+				$fn_result = new stdClass();
+					$fn_result->result	= false;
+					$fn_result->msg		= 'Error. Request failed on call method: '.$class_method;
+					$response->errors[] = 'Invalid method ' . $class_method;
+			}
+
+			$response = $fn_result;
+
+
+		return $response;
+	}//end get_widget_value
 
 
 
