@@ -15,8 +15,6 @@ include DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php';
 include DEDALO_CORE_PATH . '/db/class.JSON_RecordObj_matrix.php';
 include DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php';
 include DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php';
-include DEDALO_CORE_PATH . '/db/class.RecordObj_matrix_descriptors.php';
-include DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php';
 include DEDALO_CORE_PATH . '/db/class.json_handler.php';
 include DEDALO_CORE_PATH . '/backup/class.backup.php';
 include DEDALO_CORE_PATH . '/common/class.common.php';
@@ -40,9 +38,7 @@ include DEDALO_CORE_PATH . '/ontology/class.ontology_data_io.php';
 // media_engine. media auxiliary classes
 include DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php';
 include DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php';
-// include DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php';
-// include DEDALO_CORE_PATH . '/media_engine/class.AVObj.php';
-// include DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj
+// Core
 include DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'; // new 27-07-2021
 include DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'; // new 28-07-2021
 include DEDALO_CORE_PATH . '/component_common/class.component_common.php';
