@@ -19,13 +19,6 @@
 *		properties	jsonb NULL
 * 		term jsonb NULL
 *
-* 	matrix_descriptors_dd
-* 		id	integer Auto Increment [nextval('matrix_descriptors_dd_id_seq')]
-*		parent	character varying(32)
-*		dato	text NULL
-*		tipo	character varying(8)
-*		lang	character varying(8)
-*
 *	main_dd
 * 		id	integer Auto Increment [nextval('main_dd_id_seq')]
 *		tld	character varying(32) NULL
