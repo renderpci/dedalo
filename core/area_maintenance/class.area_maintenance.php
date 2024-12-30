@@ -333,8 +333,7 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// sequences_status *
-			require_once DEDALO_CORE_PATH.'/db/class.db_data_check.php';
-			$response = db_data_check::check_sequences();
+			$response = db_tasks::check_sequences();
 			$item = new stdClass();
 				$item->id		= 'sequences_status';
 				$item->type		= 'widget';
@@ -363,7 +362,7 @@ class area_maintenance extends area_common {
 				$item->tipo		= $this->tipo;
 				$item->label	= 'PHP INFO';
 				$item->value	= (object)[
-					'src' => DEDALO_CORE_URL.'/area_maintenance/php_info.php'
+					'src' => DEDALO_CORE_URL.'/area_maintenance/widgets/php_info/php_info.php'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -756,6 +755,21 @@ class area_maintenance extends area_common {
 	*/
 	public static function rebuild_db_indexes() : object {
 
+		$response = db_tasks::rebuild_indexes();
+
+		return $response;
+	}//end rebuild_db_indexes
+
+
+
+
+	/**
+	* CONSOLIDATE_TABLES
+	* Force to re-build the PostgreSQL main indexes, extensions and functions
+	* @return object $response
+	*/
+	public static function consolidate_tables() : object {
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ';
@@ -764,42 +778,18 @@ class area_maintenance extends area_common {
 
 		$ar_sql_query = [];
 
-		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_indexes.php';
+		$ar_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
 
 		// exec
-		foreach ($ar_sql_query as $sql_query) {
+		foreach ($ar_tables as $table) {
 
-			// debug info
-			debug_log(__METHOD__
-				. " Executing rebuild_db_indexes SQL sentence " . PHP_EOL
-				. ' sql_query: ' . trim($sql_query)
-				, logger::WARNING
-			);
+			$result = db_tasks::consolidate_table( $table );
 
-			// exec query
-			$result = pg_query(DBi::_getConnection(), $sql_query);
-			if($result===false) {
-				// error case
-				debug_log(__METHOD__
-					." Error Processing sql_query Request ". PHP_EOL
-					. pg_last_error(DBi::_getConnection()) .PHP_EOL
-					. 'sql_query: '.to_string($sql_query)
-					, logger::ERROR
-				);
-				$response->errors[] = " Error Processing sql_query Request: ". pg_last_error(DBi::_getConnection());
-				continue;
+			if($result === false){
+				$response->errors[]	= 'Consolidate table is not possible: '.$table;
+				return $response;
 			}
-
-			$response->success++;
 		}
-
-		// debug
-			debug_log(__METHOD__
-				. " Exec rebuild_db_indexes " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_sql_query) . PHP_EOL
-				, logger::DEBUG
-			);
 
 		// response OK
 		$response->result	= true;
@@ -811,7 +801,7 @@ class area_maintenance extends area_common {
 
 
 		return $response;
-	}//end rebuild_db_indexes
+	}//end consolidate_tables
 
 
 
@@ -1779,63 +1769,16 @@ class area_maintenance extends area_common {
 				}
 			}
 
-			die();
-
-
-
-
-
-
-
 		// simple_schema_of_sections. Get current simple schema of sections before update data
 		// Will used to compare with the new schema (after update)
 			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
-		// // export. Before import, export a copy ;-)
-		// 	$db_name = 'dedalo_development_str_'.date("Y-m-d_Hi").'.custom';
-		// 	$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-		// 	if ($res_export_structure->result===false) {
 
-		// 		// error on export current DDBB
-		// 		$response->msg		= 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
-		// 		$response->errors[]	= $response->msg;
-		// 		return $response;
+		// post processing tables
+			$ar_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
 
-		// 	}else{
-		// 		// Append msg
-		// 		$ar_msg[] = $res_export_structure->msg . ' - export time: '.exec_time_unit_auto($start_time);
-		// 	}
-
-		// import
-			// $prev_time = start_time(); // reset exec time
-			// $import_structure_response = backup::import_structure(
-			// 	'dedalo_development_str.custom', // string db_name
-			// 	true, // bool check_server
-			// 	$ar_dedalo_prefix_tipos // array dedalo_prefix_tipos
-			// );
-			// if ($import_structure_response->result===false) {
-			// 	// error on import current DDBB
-			// 	$response->msg		= 'Error. Request import_structure failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
-			// 	$response->errors	= array_merge($response->errors, $import_structure_response->errors);
-			// 	return $response;
-
-			// }else{
-			// 	// errors
-			// 	if (!empty($import_structure_response->errors)) {
-			// 		$response->errors = array_merge($response->errors, $import_structure_response->errors);
-			// 		$response->msg = 'Error. Request import_structure failed 4 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
-			// 		return $response;
-			// 	}
-
-			// 	// Append msg
-			// 	$import_structure_response_ar_msg = explode(PHP_EOL, $import_structure_response->msg);
-			// 	$ar_msg		=  array_merge($ar_msg, $import_structure_response_ar_msg);
-			// 	$ar_msg[]	= 'Import time: '.exec_time_unit_auto($prev_time);
-			// }
-
-		// optimize tables
-			$ar_tables = ['jer_dd','matrix_dd','matrix_list'];
-			backup::optimize_tables($ar_tables);
+			// optimize tables
+				db_tasks::optimize_tables($ar_tables);
 
 		// delete all session data except auth
 			foreach ($_SESSION['dedalo'] as $key => $value) {
@@ -1946,6 +1889,7 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end rebuild_lang_files
+
 
 
 	/**
