@@ -288,13 +288,40 @@ const render_build_version = function(self, content_data, body_response){
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
+				action	: 'widget_request',
 				source	: {
 					type	: 'widget',
 					model	: 'update_code',
 					action	: 'build_version_from_git_master'
 				},
-				options	: {}
+				options	: {
+					branch :'master'
+				}
+			},
+			on_done : () => {
+				// event publish
+				// listen by widget update_data_version.init
+				event_manager.publish('build_code_done', self)
+				// clean browser cache
+				reload_js_files()
+			}
+		})
+		self.caller.init_form({
+			submit_label	: 'Build Dédalo code developer',
+			confirm_text	: get_label.sure || 'Sure?',
+			body_info		: content_data,
+			body_response	: body_response,
+			trigger : {
+				dd_api	: 'dd_area_maintenance_api',
+				action	: 'widget_request',
+				source	: {
+					type	: 'widget',
+					model	: 'update_code',
+					action	: 'build_version_from_git_master'
+				},
+				options	: {
+					branch :'developer'
+				}
 			},
 			on_done : () => {
 				// event publish
