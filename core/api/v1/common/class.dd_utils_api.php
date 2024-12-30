@@ -1539,14 +1539,14 @@ final class dd_utils_api {
 
 
 	/**
-	* GET_ONTOLOGY_SERVER_READY
+	* GET_SERVER_READY_STATUS
 	* Check if the server is a ontology server or not.
 	* Ontology servers can provide specific ontology files as master
 	* Non ontology server will refuse to use his ontology files by other installations
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function get_ontology_server_ready( object $rqo ) : object {
+	public static function get_server_ready_status( object $rqo ) : object {
 
 		// session unlock
 			session_write_close();
@@ -1554,19 +1554,39 @@ final class dd_utils_api {
 		// response
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Server is not an ontology server';
+			$response->msg		= 'Error. This is not an accessible Server';
 			$response->errors	= [];
 
-		// check constants
-		// Ontology servers has a constant that able to use the server as ontology master.
-			if ( defined('IS_AN_ONTOLOGY_SERVER') &&  IS_AN_ONTOLOGY_SERVER === true ) {
-				$response->result	= true;
-				$response->msg		= 'OK. Ontology server is ready';
-				return $response;
+		//options
+			$check = $rqo->options->check ?? null;
+
+
+			switch ($check) {
+				case 'ontology_server':
+					// check constants
+					// Ontology servers has a constant that able to use the server as ontology master.
+						if ( defined('IS_AN_ONTOLOGY_SERVER') &&  IS_AN_ONTOLOGY_SERVER === true ) {
+							$response->result	= true;
+							$response->msg		= 'OK. Ontology server is ready';
+							return $response;
+						}
+					break;
+
+				case 'code_server':
+					// check constants
+					// Ontology servers has a constant that able to use the server as ontology master.
+						if ( defined('IS_A_CODE_SERVER') &&  IS_A_CODE_SERVER === true ) {
+							$response->result	= true;
+							$response->msg		= 'OK. Code server is ready';
+							return $response;
+						}
+					break;
+
+
 			}
 
 		return $response;
-	}//end get_ontology_server_ready
+	}//end get_server_ready_status
 
 
 

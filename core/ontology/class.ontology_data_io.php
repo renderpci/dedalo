@@ -577,7 +577,9 @@ class ontology_data_io {
 		// rqo
 			$rqo = new stdClass();
 				$rqo->dd_api	= "dd_utils_api";
-				$rqo->action	= "get_ontology_server_ready";
+				$rqo->action	= "get_server_ready_status";
+				$rqo->options	= new stdClass();
+					$rqo->options->check = 'ontology_server';
 
 			$rqo_string = 'rqo=' . json_encode($rqo);
 
@@ -588,13 +590,18 @@ class ontology_data_io {
 				'postfields'		=> $rqo_string,
 				'returntransfer'	=> 1,
 				'followlocation'	=> true,
-				'header'			=> true,
+				'header'			=> false,
 				'ssl_verifypeer'	=> false,
 				'timeout'			=> 5, // seconds
 				'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
 					? SERVER_PROXY // from Dédalo config file
 					: false // default case
 			]);
+
+
+			if ( !empty($response->result) ){
+				$response->result = json_decode($response->result);
+			}
 
 
 		return $response;
