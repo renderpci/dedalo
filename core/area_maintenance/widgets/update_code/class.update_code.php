@@ -447,6 +447,23 @@ class update_code {
 		return $result;
 	}
 
+	/**
+	* GET_FILE_VERSION
+	* Get current version path for code
+	* Check if exists, and return the path or false
+	* to create the path for the current version, it use major, and minor as
+	* `/dedalo/code/6/6.4/
+	* @param array|null $version = null
+	* @return string|false $path
+	*/
+	public static function get_file_version( ?array $version = null ) : string {
+
+		$dedalo_version	= $version ?? get_dedalo_version();
+		$version_path	= implode('.', $dedalo_version);
+
+		return $version_path;
+	}//end get_file_version
+
 
 
 	/**
