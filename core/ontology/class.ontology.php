@@ -334,6 +334,7 @@ class ontology {
 				"$and": [{
 					"q_operator": "==",
 					"q": "'.$safe_tld.'",
+					"lang": "'.DEDALO_DATA_NOLAN.'",
 					"path": [{
 						"section_tipo": "'.self::$main_section_tipo.'",
 						"component_tipo": "hierarchy6"
@@ -346,6 +347,7 @@ class ontology {
 			$sqo->set_section_tipo( [self::$main_section_tipo] );
 			$sqo->set_filter( $filter );
 			$sqo->set_limit( 1 );
+			$sqo->set_skip_projects_filter(true);
 
 		$search = search::get_instance(
 			$sqo, // object sqo
@@ -378,6 +380,7 @@ class ontology {
 				"$and": [{
 					"q_operator": "==",
 					"q": "'.$safe_tipo.'",
+					"lang": "'.DEDALO_DATA_NOLAN.'",
 					"path": [{
 						"section_tipo": "'.self::$main_section_tipo.'",
 						"component_tipo": "hierarchy53"
@@ -390,6 +393,7 @@ class ontology {
 			$sqo->set_section_tipo( [self::$main_section_tipo] );
 			$sqo->set_filter( $filter );
 			$sqo->set_limit( 1 );
+			$sqo->set_skip_projects_filter(true);
 
 		$search = search::get_instance(
 			$sqo, // object sqo
@@ -1023,6 +1027,7 @@ class ontology {
 							}
 						],
 						"q_operator": null,
+						"lang": "'.DEDALO_DATA_NOLAN.'",
 						"path": [
 							{
 								"name": "Active",
