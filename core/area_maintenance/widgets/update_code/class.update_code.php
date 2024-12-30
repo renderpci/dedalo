@@ -468,6 +468,29 @@ class update_code {
 		return $path;
 	}//end get_code_path
 
+
+
+	/**
+	* SET_CODE_PATH
+	* Set current version path for code
+	* Check if exist, else create it.
+	* if the directory doesn't exist it will be created.
+	* @return string|false $path
+	*/
+	public static function set_code_path() : string|false {
+
+		$dedalo_version	= get_dedalo_version();
+		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
+		$base_path		= DEDALO_CODE_FILES_DIR."/{$dedalo_version[0]}/{$version_path}";
+		$path		= create_directory( $base_path )===false
+			? false
+			: $base_path;
+
+		return $path;
+	}//end set_code_path
+
+
+
 	/**
 	* GET_FILE_VERSION
 	* Get current version path for code
