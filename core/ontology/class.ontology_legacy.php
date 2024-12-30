@@ -616,7 +616,6 @@ class ontology_legacy {
 			$new_dato = ($modelo_name==='component_input_text') ? [$value] : $value;
 			$component->set_dato($new_dato);
 			$component->Save();
-			// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd
 
 		// save ontology object too
 			$json_item = ontology_legacy::tipo_to_json_item($term_id);
