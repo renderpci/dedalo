@@ -350,6 +350,8 @@ class update_code {
 	*/
 	public static function build_version_from_git_master(object $options) : object {
 
+		$start_time = start_time();
+
 		// Write session to unlock session file
 		session_write_close();
 
@@ -359,36 +361,33 @@ class update_code {
 				$response->msg		= '';
 
 		// options
-			$options = $data;
-			$version = $options->version;
-			if (empty($version)) {
-				$response->msg = 'Version is mandatory!';
-				return $response;
-			}
 			$branch = $options->branch ?? 'master';
-
 
 		// try exec
 			try{
 
-				$output = update_code::update_head_code($response, $version, $branch);
+				$output = update_code::build_version_code( $branch );
 
 				// Append msg
-				$msg = PHP_EOL ."update_head_code shell_exec output: ". PHP_EOL. to_string($output);
-				$response->msg .= $msg;
-				debug_log(__METHOD__
-					." update_head_code output OK: $msg "
-					, logger::DEBUG
-				);
+
+				if( $output!==true ) {
+					$response->msg = ' Error, is not possible build version code shell_exec output: '. $output;
+					debug_log(__METHOD__
+						.' ERROR: build_version_code output: '.$output
+						, logger::ERROR
+					);
+					return $response;
+				}
 
 				$response->result = true;
+				$response->msg = 'Ok. code versions was built';
 
 			} catch (Exception $e) {
 
 				// Append msg
 				$response->msg .= $e->getMessage();
 				debug_log(__METHOD__
-					." update_head_code output ERROR: $response->msg " . PHP_EOL
+					." build_version_code output ERROR: $response->msg " . PHP_EOL
 					. ' response: ' . to_string($response)
 					, logger::ERROR
 				);
@@ -401,51 +400,62 @@ class update_code {
 				$response->debug = $debug;
 			}
 
-		header('Content-Type: application/json');
-		echo json_encode($response, JSON_UNESCAPED_UNICODE);
-
-
 		return $response;
 	}//end export_str
 
 
 
-	// rsync trigger code HEAD from master git
-	private static function update_head_code(object $response, int $version, string $branch) : string {
+	/**
+	* BUILD_VERSION_CODE
+	* Called from dd_list.js -> dd.build_version_from_git_master()
+	*/
+	private static function build_version_code( string $branch ) : string|true {
 
-		if ($version==6) {
-			// source
-			$source = DEDALO_6_CODE_SERVER_GIT_DIR;
-			// target
-			$target = DEDALO_6_CODE_FILES_DIR .'/dedalo'.$version.'_code.zip';
-			// branch conditional
-			if ($branch==='v6_developer') {
-				$target = DEDALO_6_CODE_FILES_DIR .'/dedalo'.$version.'_'.$branch.'_code.zip';
-			}
-			// command @see https://git-scm.com/docs/git-archive
-			$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ $branch > $target ";
+		// version
+			$version = get_dedalo_version();
+			$major_version = $version[0];
 
-		}else{
-			// source
-			$source = DEDALO_CODE_SERVER_GIT_DIR;
-			// target
-			$target = DEDALO_CODE_FILES_DIR .'/dedalo'.$version.'_code.zip';
-			// command @see https://git-scm.com/docs/git-archive
-			$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ v5 > $target ";
+		// version path
+		// to create the path for the current version, it use major, and minor as
+		// `/dedalo/code/6/6.4/
+			$target_path = update_code::set_code_path();
+
+		// build de code
+		// target
+			$file_verion = update_code::get_file_version();
+			$target = $target_path .'/dedalo_'.$file_verion.'.zip';
+
+
+		if ($branch==='developer') {
+			$development_path = update_code::set_development_path();
+			$target = $development_path .'/dedalo_development.zip';
+			$branch = 'v'.$major_version.'_developer';
 		}
 
-		$msg = "Called Dédalo update_head_code with command: " .PHP_EOL. to_string($command);
-		debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
-		$response->msg .= PHP_EOL . $msg;
+		// source
+			$source = DEDALO_CODE_SERVER_GIT_DIR;
 
-		$output_array	= null;
-		$retval			= null;
-		exec($command, $output_array, $retval);
+		// command @see https://git-scm.com/docs/git-archive
+			$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo{$major_version}_code/ $branch > $target ";
 
-		$result = 'Return:'.PHP_EOL.'status: '. ($retval ?? null). PHP_EOL . 'output: ' . json_encode($output_array, JSON_PRETTY_PRINT);
+
+		debug_log(__METHOD__
+			. " Called Dédalo build_version_code with command: " .PHP_EOL. to_string($command)
+			, logger::DEBUG
+		);
+
+		$output			= null;
+		$result_code	= null;
+		exec($command, $output, $result_code);
+
+		$result = ( $result_code===0 )
+			? true
+			: 'Return:'.PHP_EOL.'result code: '. ($result_code ?? null). PHP_EOL . 'output: ' . json_encode($output, JSON_PRETTY_PRINT);
 
 		return $result;
-	}
+	}//end build_version_code
+
+
 
 	/**
 	* GET_CODE_PATH
