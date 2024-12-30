@@ -1029,7 +1029,6 @@ class ontology {
 							}
 						],
 						"q_operator": null,
-						"lang": "'.DEDALO_DATA_NOLAN.'",
 						"path": [
 							{
 								"name": "Active",
