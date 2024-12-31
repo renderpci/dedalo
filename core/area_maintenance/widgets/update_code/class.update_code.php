@@ -1,4 +1,7 @@
 <?php declare(strict_types=1);
+
+// Include the updates definition
+	include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * UPDATE_CODE
 * Get new code from code servers
@@ -558,4 +561,207 @@ class update_code {
 
 		return $url;
 	}//end get_code_URl
+
+
+
+	/**
+	* GET_CODE_UPDATE_INFO
+	* Collect local code files and set the valid files from given code version
+	* Called by API.
+	* Merge all information in a object with the available code files
+	* @param object $options
+	* @return object $response
+	* {
+	*	result : {
+	*		info : {},
+	* 		files : [{
+	* 			version : 6.4.1,
+	* 			compatible : true,
+	* 			url : https://master.dedalo.dev/code/6/6.4/6.4.1_dedalo.zip
+	* 		}]
+	* 	}
+	* }
+	*/
+	public static function get_code_update_info( array $client_version ) : object {
+
+		$response = new stdClass();
+			$response->result	= true;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		$updates_object = update::get_updates();
+
+		$next_version				= null;
+		$next_version_update_from	= null;
+		$upper_versions				= [];
+		foreach ( $updates_object as $update ) {
+
+			// check the next valid major version
+			// only next major version is take in consideration
+			// as 7.0.0 but any other minor or path versions as 7.0.1 or 7.2.0
+			if( $update->version_major===$client_version[0]+1 &&
+				$update->version_medium===0 &&
+				$update->version_minor===0){
+					// set the next major as possible option
+					$next_version = [
+						$update->version_major,
+						$update->version_medium,
+						$update->version_minor,
+					];
+					// get the valid version from the major version can update itself.
+					$next_version_update_from = [
+						$update->update_from_major,
+						$update->update_from_medium,
+						$update->update_from_minor,
+					];
+					// reset any other major versions
+					// when client is in version 6.4.0 is not possible update to version 8.0.0
+					// only version 7.0.0 is available as a possible update.
+					$upper_versions = [];
+			}
+
+			// check the next valid minor version
+			// only next minor version is take in consideration
+			// as 6.5.0 but any other path versions as 6.5.1 or 6.6.1
+			// this check overwrite previous major check
+			if( $update->version_major===$client_version[0] &&
+				$update->version_medium===$client_version[1]+1 &&
+				$update->version_minor===0){
+					// set it as next version
+					$next_version = [
+						$update->version_major,
+						$update->version_medium,
+						$update->version_minor,
+					];
+					// get the valid version from the minor version can update itself.
+					$next_version_update_from = [
+						$update->update_from_major,
+						$update->update_from_medium,
+						$update->update_from_minor,
+					];
+				// reset any other major or minor versions
+				// when client is in version 6.2.9 is not possible update to version 7.0.0
+				// only version 6.3.0 is available as a possible update.
+				$upper_versions = [];
+			}
+			// check any other version bellow current client versions
+			// remove they as possibles. Downgrade is not available in Dédalo updates
+			// Go ahead!!!
+			$add = false;
+			// major
+			if( (int)$update->version_major > (int)$client_version[0] ){
+				$add = true;
+			}
+			// minor
+			if( $add === false &&
+				(int)$update->version_major >= (int)$client_version[0] &&
+			    (int)$update->version_medium > (int)$client_version[1]
+			){
+				$add = true;
+			}
+			// path
+			if( $add === false &&
+				(int)$update->version_major >= (int)$client_version[0] &&
+			   	(int)$update->version_medium >= (int)$client_version[1] &&
+			  	(int)$update->version_minor > (int)$client_version[2]
+			){
+				$add = true;
+			}
+			// set if the version is greater than client version.
+			if ($add===true) {
+
+				$valid_version = [
+					$update->version_major,
+					$update->version_medium,
+					$update->version_minor,
+				];
+
+				$upper_versions[] = $valid_version;
+			}
+		}
+
+		// check the upper_versions to remove the non valid options
+		// if the client is in the middle of the minor versions
+		// it will need to update until last patch of his minor version:
+		// client in 6.2.2
+		// can update to 6.2.3, 6.2.4, 6.2.5, 6.2.7, 6.2.8 and 6.2.9
+		// only when the client has the last path version can update to next minor:
+		// client in 6.2.9
+		// can update to 6.3.0
+		// only when the client has the last minor version can update to next major:
+		// client in 6.9.9
+		// can update to 7.0.0
+		$versions = [];
+		foreach ($upper_versions as $version) {
+
+			// remove the next minor versions that are greatest than next minor version.
+			if( $version[0] === $next_version[0] &&
+				$version[1] > $next_version[1]
+			){
+				continue;
+			}
+			// remove the next patch versions that are greatest than next patch version.
+			if( $version[0] === $next_version[0] &&
+				$version[1] === $next_version[1] &&
+				$version[2] > 0
+			){
+				continue;
+			}
+			// check if the current version is the next version
+			// if client has 6.2.9 the next version will be 6.3.0
+			if( $version[0] === $next_version[0] &&
+				$version[1] === $next_version[1] &&
+				$version[2] === $next_version[2]
+			){
+				// check if the client has the valid version to update to next version
+				// 6.2.9 vs 6.2.2 -> not valid
+				// 6.2.9 vs 6.2.9 -> valid
+				if( $next_version_update_from[0] !== $client_version[0] ||
+					$next_version_update_from[1] !== $client_version[1] ||
+					$next_version_update_from[2] !== $client_version[2]
+				){
+					// is not valid
+					// the client has not the correct version to update to next minor or major version.
+					continue;
+
+				}
+			}
+			$versions[] = $version;
+		}
+
+		// result
+		$result = new stdClass();
+			$result->info	= null;
+			$result->files	= [];
+
+
+
+		foreach ($versions as $valid_version) {
+
+			$code_url = update_code::get_code_url( $valid_version );
+
+			$current_version_path	= update_code::get_code_path( $valid_version );
+			$file_version			= update_code::get_file_version( $valid_version );
+
+			$file_name = $file_version.'.zip';
+			$file_path = $current_version_path.'/'.$file_name;
+
+			if(file_exists($file_path)){
+
+				$file_item = new stdClass();
+					$file_item->version	= implode('.',$valid_version );
+					$file_item->url		= DEDALO_PROTOCOL.DEDALO_HOST.$code_url.'/'. basename( $file_name );
+
+				$result->files[] = $file_item;
+			}
+
+		}
+
+		$response->result = $result;
+		$response->msg = 'OK. request done';
+
+
+		return $response;
+	}//end get_code_update_info( $ar_version )
+
 }//end update_code

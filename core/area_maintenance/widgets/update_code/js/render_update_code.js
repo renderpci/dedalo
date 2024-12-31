@@ -75,6 +75,7 @@ const get_content_data_edit = async function(self) {
 		const dedalo_source_version_local_dir	= value.dedalo_source_version_local_dir
 		const is_a_code_server					= value.is_a_code_server
 		const local_db_id						= 'process_update_code'
+		const servers							= value.servers
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -200,13 +201,72 @@ const get_content_data_edit = async function(self) {
 					body_response	: body_response,
 					trigger : {
 						dd_api	: 'dd_area_maintenance_api',
-						action	: 'class_request',
+						action	: 'widget_request',
 						source	: {
 							type	: 'widget',
 							model	: 'update_code',
 							action	: 'update_code'
 						},
-						options	: {}
+						options	: {
+							version: page_globals.dedalo_version
+						}
+					},
+					on_submit : async (e, values) => {
+
+						// server to be used
+							const server = servers.find(el => el.active === true )
+							if( !server ){
+								alert("Error: any server was selected");
+								return
+							}
+
+						// clean body_response nodes
+							while (body_response.firstChild) {
+								body_response.removeChild(body_response.firstChild);
+							}
+
+						// loading add
+							e.target.classList.add('lock')
+							const spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner'
+							})
+							body_response.prepend(spinner)
+
+						// Code information
+							const server_ontology_api_response = await data_manager.request({
+								url		: server.url,
+								body	: {
+									dd_api	: 'dd_utils_api',
+									action	: 'get_code_update_info',
+									source	: {
+										action	: 'update_ontology',
+									},
+									options : {
+										version	: page_globals.dedalo_version,
+										code	: server.code
+									}
+								}
+							})
+							// debug
+							if(SHOW_DEBUG===true) {
+								console.log('debug server_ontology_api_response:', server_ontology_api_response)
+							}
+								console.log("server:",server);
+							return;
+							const result = server_ontology_api_response?.result
+							if(!result){
+								e.target.classList.remove('lock')
+								spinner.remove()
+								ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'error',
+									inner_html		: server_ontology_api_response.msg || 'Error connecting server',
+									parent			: body_response
+								})
+								return
+							}
+
 					},
 					on_done : () => {
 						// event publish
@@ -240,6 +300,8 @@ const get_content_data_edit = async function(self) {
 * @return bool
 */
 const reload_js_files = async function () {
+	// REMOVED TEMPORALLY FOR DEVELOPMENT
+	return false;
 
 	const on_message = (event) => {
 		switch (event.data.status) {
