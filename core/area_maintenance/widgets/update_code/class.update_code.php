@@ -538,4 +538,24 @@ class update_code {
 		return $path;
 	}//end set_development_path
 
+
+
+	/**
+	* GET_CODE_URL
+	* Get the current version uri for code directory
+	* Check if exists, and return the uri or false
+	* @param array|null $version = null
+	* @return string|false $url
+	*/
+	public static function get_code_url( ?array $version = null ) : string|false {
+
+		$dedalo_version	= $version ?? get_dedalo_version();
+		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
+		$base_path		= DEDALO_CODE_FILES_DIR."/{$dedalo_version[0]}/{$version_path}";
+		$url		= is_dir( $base_path )===true
+			? DEDALO_CODE_FILES_URL."/{$dedalo_version[0]}/{$version_path}"
+			: false;
+
+		return $url;
+	}//end get_code_URl
 }//end update_code
