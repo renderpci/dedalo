@@ -122,21 +122,31 @@ class update_code {
 	public static function update_code(object $options) : object {
 		$start_time = start_time();
 
-
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		try {
 
+			$file_uri = $options->file->url ?? null;
+	dump($file_uri, '$file_uri ++ '.to_string());die();
+			if( empty($file_uri) ){
+				debug_log(__METHOD__
+					. " Error: Update code can not work without a valid url " . PHP_EOL
+					. to_string()
+					, logger::WARNING
+				);
+				return $response;
+			}
+
 			$result = new stdClass();
 
-			debug_log(__METHOD__." Start downloading file ".DEDALO_SOURCE_VERSION_URL, logger::DEBUG);
+			debug_log(__METHOD__." Start downloading file ".$file_uri, logger::DEBUG);
 
 			// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
-						'msg'		=> 'Start downloading file: ' . DEDALO_SOURCE_VERSION_URL,
+						'msg'		=> 'Start downloading file: ' . $file_uri ,
 						'memory'	=> dd_memory_usage()
 					]);
 				}
@@ -146,7 +156,7 @@ class update_code {
 				$data_string = "data=" . json_encode(null);
 				// curl_request
 				$curl_response = curl_request((object)[
-					'url'				=> DEDALO_SOURCE_VERSION_URL,
+					'url'				=> $file_uri,
 					'post'				=> true,
 					'postfields'		=> $data_string,
 					'returntransfer'	=> 1,
@@ -161,7 +171,7 @@ class update_code {
 				$contents = $curl_response->result;
 				// check contents
 				if ($contents===false) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.$file_uri;
 					debug_log(__METHOD__
 						." $response->msg"
 						, logger::ERROR
@@ -169,11 +179,11 @@ class update_code {
 					return $response;
 				}
 				$result->download_file = [
-					'Downloaded file: ' . DEDALO_SOURCE_VERSION_URL,
+					'Downloaded file: ' . $file_uri,
 					'Time: ' . exec_time_unit($start_time,'sec') . ' secs'
 				];
 				debug_log(__METHOD__
-					." Downloaded file (".DEDALO_SOURCE_VERSION_URL.") in ".exec_time_unit($start_time,'sec') . ' secs'
+					." Downloaded file (".$file_uri.") in ".exec_time_unit($start_time,'sec') . ' secs'
 					, logger::DEBUG
 				);
 
@@ -188,7 +198,7 @@ class update_code {
 						return $response;
 					}
 				}
-				$file_name		= 'dedalo6_code.zip';
+				$file_name		= 'dedalo_code.zip';
 				$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
 				$put_contents	= file_put_contents($target_file, $contents);
 				if (!$put_contents) {
@@ -240,9 +250,7 @@ class update_code {
 						'memory'	=> dd_memory_usage()
 					]);
 				}
-				$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
-					? DEDALO_SOURCE_VERSION_LOCAL_DIR .'/dedalo-master' // like 'dedalo-master'
-					: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo6_code' from 'dedalo6_code.zip'
+				$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo_code' from 'dedalo_code.zip'
 				$target		= DEDALO_ROOT_PATH;
 				$exclude	= ' --exclude="*/config*" --exclude="media" ';
 				$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
@@ -585,7 +593,7 @@ class update_code {
 	public static function get_code_update_info( array $client_version ) : object {
 
 		$response = new stdClass();
-			$response->result	= true;
+			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
@@ -731,11 +739,23 @@ class update_code {
 
 		// result
 		$result = new stdClass();
-			$result->info	= null;
+			$result->info	= new stdClass();
 			$result->files	= [];
 
+		// info
+			$date			= dd_date::get_now_as_iso_timestamp();
+			$dedalo_version	= get_dedalo_version();
+			$server_version	= implode( '.', $dedalo_version );
 
+			$result->info->version			= $server_version;
+			$result->info->date				= $date;
+			$result->info->entity_id		= DEDALO_ENTITY_ID;
+			$result->info->entity			= DEDALO_ENTITY;
+			$result->info->entity_label		= DEDALO_ENTITY_LABEL;
+			$result->info->host				= DEDALO_HOST;
 
+		// build the file_path with the valid versions
+		// client will can select what is the update that it want use.
 		foreach ($versions as $valid_version) {
 
 			$code_url = update_code::get_code_url( $valid_version );
