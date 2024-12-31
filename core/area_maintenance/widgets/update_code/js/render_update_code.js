@@ -75,6 +75,7 @@ const get_content_data_edit = async function(self) {
 		const dedalo_source_version_local_dir	= value.dedalo_source_version_local_dir
 		const is_a_code_server					= value.is_a_code_server
 		const local_db_id						= 'process_update_code'
+		const servers							= value.servers
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -191,32 +192,81 @@ const get_content_data_edit = async function(self) {
 			})
 
 		}else{
-			// form init
-			if (self.caller?.init_form) {
-				self.caller.init_form({
-					submit_label	: 'Update Dédalo code to the latest version',
-					confirm_text	: get_label.sure || 'Sure?',
-					body_info		: content_data,
-					body_response	: body_response,
-					trigger : {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'class_request',
-						source	: {
-							type	: 'widget',
-							model	: 'update_code',
-							action	: 'update_code'
-						},
-						options	: {}
-					},
-					on_done : () => {
-						// event publish
-						// listen by widget update_data_version.init
-						event_manager.publish('update_code_done', self)
-						// clean browser cache
-						reload_js_files()
+
+			// button
+			const button_label = 'Update Dédalo code to the latest version';
+			const button_submit = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_submit',
+				inner_html		: button_label,
+				parent			: content_data
+			})
+
+			button_submit.addEventListener('click', async function(e){
+				e.stopPropagation()
+
+				// server to be used
+					const server = servers.find(el => el.active === true )
+					if( !server ){
+						alert("Error: any server was selected");
+						return
 					}
-				})
-			}
+
+				// clean body_response nodes
+					while (body_response.firstChild) {
+						body_response.removeChild(body_response.firstChild);
+					}
+
+				// loading add
+					e.target.classList.add('lock')
+					const spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner'
+					})
+					body_response.prepend(spinner)
+
+				// Code information
+					const server_code_api_response = await data_manager.request({
+						url		: server.url,
+						body	: {
+							dd_api	: 'dd_utils_api',
+							action	: 'get_code_update_info',
+							source	: {
+								action	: 'update_ontology',
+							},
+							options : {
+								version	: page_globals.dedalo_version,
+								code	: server.code
+							}
+						}
+					})
+					// debug
+					if(SHOW_DEBUG===true) {
+						console.log('debug server_code_api_response:', server_code_api_response)
+					}
+
+					const result = server_code_api_response?.result
+
+					if(!result){
+						e.target.classList.remove('lock')
+						spinner.remove()
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error',
+							inner_html		: server_code_api_response.msg || 'Error connecting server',
+							parent			: body_response
+						})
+						return
+					}
+
+					// selected files
+						const selected_file = [];
+
+					// show info
+						const info_modal = render_info( result )
+					e.target.classList.remove('lock')
+					spinner.remove()
+			})
 		}
 
 	// build code version
@@ -240,6 +290,8 @@ const get_content_data_edit = async function(self) {
 * @return bool
 */
 const reload_js_files = async function () {
+	// REMOVED TEMPORALLY FOR DEVELOPMENT
+	return false;
 
 	const on_message = (event) => {
 		switch (event.data.status) {
@@ -333,5 +385,154 @@ const render_build_version = function(self, content_data, body_response){
 		})
 	}
 }//end render_build_version
+
+
+
+const render_info = function( versions_info ){
+
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			text_node		: versions_info.info.entity_label
+		})
+
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body widget_update_code'
+		})
+
+		const files_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'files_container',
+				parent			: body
+			})
+
+		const files = versions_info.files
+		const files_length = files.length
+
+		for (let i = 0; i < files_length; i++) {
+
+			const current_version = files[i];
+
+			const file_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'file_container',
+				parent			: files_container
+			})
+
+			const label = current_version.version
+			const version_label = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'version_label',
+				text_node		: label,
+				parent			: file_container
+			})
+
+			// input checkbox
+			const input_radio = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'radio',
+				name 			: 'version',
+				id				: i+1,
+				value			: current_version.url
+			})
+
+			//by default the newer version is selected
+			if(i===0){
+				input_radio.checked = true
+				current_version.active = true
+			}
+			// change event handler
+			const change_handler = (e) => {
+				files.forEach( el => delete el.active )
+				current_version.active = input_radio.checked
+				body.querySelectorAll('.label, .value').forEach( el => el.classList.remove('active') )
+				version_label.classList.add('active')
+				value_node.classList.add('active')
+			}
+			input_radio.addEventListener('change', change_handler)
+			input_radio.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+
+			// value
+			const value_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				inner_html		: current_version.url,
+				parent			: file_container
+			})
+
+			version_label.prepend(input_radio)
+
+		}// end for
+
+		const error_input = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'error',
+			text_node		: '',
+			parent			: body
+		})
+
+	// footer
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'content'
+		})
+
+		const user_option_ok = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'success',
+			inner_html		: get_label.update || 'Update',
+			parent			: footer
+		})
+		user_option_ok.addEventListener('click', async function(e){
+			e.stopPropagation()
+			const file_active = files.find(el => el.active === true)
+
+			// data_manager
+				const api_response = await data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api	: 'dd_area_maintenance_api',
+						action	: 'widget_request',
+						source	: {
+							type	: 'widget',
+							model	: 'update_code',
+							action	: 'update_code'
+						},
+						options	: {
+							file: file_active
+						}
+					}
+				})
+
+		})
+
+		const user_option_cancel = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning ',
+			inner_html		: get_label.cancel || 'Cancel',
+			parent			: footer
+		})
+		user_option_cancel.addEventListener('click', async function(e){
+			e.stopPropagation()
+			modal.close();
+		})
+
+		// modal
+		const modal = ui.attach_to_modal({
+			header		: header,
+			body		: body,
+			footer		: footer,
+			size		: 'normal',
+			callback	: (dd_modal) => {
+				dd_modal.modal_content.style.width = '50rem'
+			}
+		})
+		modal.classList.add('widget_update_code_modal')
+}//end render_info
 
 // @license-end

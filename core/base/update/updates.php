@@ -1,11 +1,39 @@
 <?php
-#
-# UPDATES CONTROL
-#
+
+/**
+* UPDATES CONTROL
+* Definition of the update process
+*
+* Every update is a object with his own defintion
+* the update key is unique combination of the version numbers
+*
+* {
+* 	# UPDATE TO
+*	 	version_major		: int
+*	 	version_medium		: int
+*	 	version_minor		: int
+*
+*	# MINIMUM UPDATE FROM
+*	 	update_from_major	: int
+*	 	update_from_medium	: int
+*	 	update_from_minor	: int
+*
+* 	# UPDATE HAS A DATA PROCESSES
+* 	 	update_data 		: bool
+*
+*	# DATA ALERT
+* 	 	alert_update 		: array
+*
+* 	# DATA PROCESSES
+* 	 	SQL_update			: array
+* 	 	run_scripts			: array
+* 	 	components_update	: array
+* }
+*
+*/
+
 global $updates;
 $updates = new stdClass();
-
-
 
 
 $v=640; #####################################################################################

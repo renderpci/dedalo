@@ -1705,6 +1705,13 @@ final class dd_utils_api {
 				return $response;
 			}
 
+		// include the widget class
+			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/update_code/class.update_code.php';
+			if( !include $widget_class_file ) {
+				$response->errors[] = 'Widget class file is unavailable';
+				return $response;
+			}
+
 		// RQO options
 		// client will send his version and the code that able to get the ontology information
 			$options = $rqo->options;
@@ -1757,13 +1764,19 @@ final class dd_utils_api {
 				return $response;
 			}
 
+			$client_version = [];
+				$client_version[0] = 6; //(int)$ar_version[0];
+				$client_version[1] = 2; //(int)$ar_version[1];
+				$client_version[2] = 0; //(int)$ar_version[2];
+
 		// Client made a valid request.
 		// get the information to be provided to client
-			$response = update_code::get_code_update_info( $ar_version );
+			$response = update_code::get_code_update_info( $client_version );
 
 
 		return $response;
 	}//end get_ontology_update_info
+
 
 
 

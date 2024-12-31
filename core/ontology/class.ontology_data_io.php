@@ -116,7 +116,7 @@ class ontology_data_io {
 	/**
 	* GET_ONTOLOGY_IO_URL
 	* Get the current version path for ontology io
-	* Check if exists, and return the path or false
+	* Check if exists, and return the uri or false
 	* @param array|null $version = null
 	* @return string|false $io_url
 	*/

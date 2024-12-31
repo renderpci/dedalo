@@ -377,7 +377,7 @@ export const render_servers_list = function (value) {
 			})
 
 		// input checkbox
-			const input_checkbox = ui.create_dom_element({
+			const input_radio = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'radio',
 				name 			: 'ontology_server',
@@ -387,13 +387,13 @@ export const render_servers_list = function (value) {
 			// change event handler
 			const change_handler = (e) => {
 				servers.forEach( el => delete el.active )
-				current_server.active = input_checkbox.checked
+				current_server.active = input_radio.checked
 				servers_grid.querySelectorAll('.label, .value').forEach( el => el.classList.remove('active') )
 				server_label.classList.add('active')
 				value_node.classList.add('active')
 			}
-			input_checkbox.addEventListener('change', change_handler)
-			input_checkbox.addEventListener('click', (e) => {
+			input_radio.addEventListener('change', change_handler)
+			input_radio.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
 
@@ -407,7 +407,7 @@ export const render_servers_list = function (value) {
 
 			// set the check box and if the status is available and URI is reachable
 			if (current_server.response_code === 200 && current_server.result?.result) {
-				// input_checkbox.checked = true
+				// input_radio.checked = true
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button icon check success',
@@ -419,9 +419,9 @@ export const render_servers_list = function (value) {
 					class_name		: 'button icon cancel error',
 					parent			: value_node
 				})
-				input_checkbox.disabled = 'disabled'
+				input_radio.disabled = 'disabled'
 			}
-			server_label.prepend(input_checkbox)
+			server_label.prepend(input_radio)
 	}
 
 
