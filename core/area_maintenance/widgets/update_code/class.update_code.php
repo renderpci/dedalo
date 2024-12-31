@@ -119,6 +119,7 @@ class update_code {
 	public static function update_code(object $options) : object {
 		$start_time = start_time();
 
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
@@ -423,7 +424,7 @@ class update_code {
 		// build de code
 		// target
 			$file_verion = update_code::get_file_version();
-			$target = $target_path .'/dedalo_'.$file_verion.'.zip';
+			$target = $target_path .'/'.$file_verion.'.zip';
 
 
 		if ($branch==='developer') {
@@ -513,9 +514,9 @@ class update_code {
 	public static function get_file_version( ?array $version = null ) : string {
 
 		$dedalo_version	= $version ?? get_dedalo_version();
-		$version_path	= implode('.', $dedalo_version);
+		$file_version	= implode('.', $dedalo_version).'_dedalo';
 
-		return $version_path;
+		return $file_version;
 	}//end get_file_version
 
 
