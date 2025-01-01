@@ -1865,7 +1865,7 @@ function get_section_id_from_tipo( string $tipo ) : string|false {
 */
 function get_tld_from_tipo( string $tipo ) : string|false {
 
-	preg_match("/[a-z]{2,}/", $tipo, $output_array);
+	preg_match("/^[a-z]{2,}/", $tipo, $output_array);
 	if (empty($output_array[0])) {
 		debug_log(__METHOD__
 			." Error: Invalid tipo received. Impossible get_tld_from_tipo this tipo :  " . PHP_EOL
