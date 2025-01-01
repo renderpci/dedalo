@@ -641,6 +641,7 @@
 
 	//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
 	define('IS_AN_ONTOLOGY_SERVER',			false);
+	// !DEPRECATED
 	// defines the valid code for clients to validate to get ontology files.
 	define('ONTOLOGY_SERVER_CODE',			'valid_code');
 
@@ -649,7 +650,7 @@
 	define('ONTOLOGY_SERVERS',	[
 		[
 			'name'	=> 'Official Dédalo Ontology server',
-			'url'	=> 'https://master.dedalo.dev/dedalo/install/import/ontology/',
+			'url'	=> 'https://master.dedalo.dev/core/api/v1/json/',
 			'code'	=> 'x3a0B4Y020Eg9w'
 		]
 	]);
