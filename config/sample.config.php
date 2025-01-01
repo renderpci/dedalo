@@ -641,6 +641,7 @@
 
 	//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
 	define('IS_AN_ONTOLOGY_SERVER',			false);
+	// !DEPRECATED
 	// defines the valid code for clients to validate to get ontology files.
 	define('ONTOLOGY_SERVER_CODE',			'valid_code');
 
@@ -649,7 +650,7 @@
 	define('ONTOLOGY_SERVERS',	[
 		[
 			'name'	=> 'Official Dédalo Ontology server',
-			'url'	=> 'https://master.dedalo.dev/dedalo/install/import/ontology/',
+			'url'	=> 'https://master.dedalo.dev/core/api/v1/json/',
 			'code'	=> 'x3a0B4Y020Eg9w'
 		]
 	]);
@@ -672,8 +673,38 @@
 
 // dedalo_code
 	// server side (master)
-		// Do not apply here. Only for master server
+
+		//Code server. Defines if the installation server can provide new code files to other Dédalo servers.
+		// if the server can provide version change to true and uncomment the `DEDALO_CODE_FILES_DIR` and `DEDALO_CODE_FILES_URL`
+		define('IS_A_CODE_SERVER',				false);
+
+		// next constants are used in the process to create new versions and provide to clients
+		// by default the Dédalo server doesn't provide code to other servers
+		// uncomment it they if you want provide code files as mirror of official Dédalo server
+
+		// Directory with the code files to be server as code versions
+		// define('DEDALO_CODE_FILES_DIR',			DEDALO_ROOT_PATH . '/code');
+
+		// URL with the code files to be server as code versions
+		// define('DEDALO_CODE_FILES_URL',			DEDALO_ROOT_WEB . '/code');
+
+		// Use only for build new version with the git repository
+		// server git files (master) like /home/dedalo/master_dedalo.git
+		// define('DEDALO_CODE_SERVER_GIT_DIR',	'/my_dedalo_git_directory');
+
 	// client side
+
+		// Remote code servers.
+		// Defines the code provider.
+		define('CODE_SERVERS',	[
+			[
+				'name'	=> 'Official Dédalo code server',
+				'url'	=> 'https://master.dedalo.dev/core/api/v1/json/',
+				'code'	=> 'x3a0B4Y020Eg9w'
+			]
+		]);
+
+		// !DEPRECATED
 		// target dir where git command send the compressed file like 'https://master.dedalo.dev/dedalo/code/dedalo5_code.zip'
 		define('DEDALO_SOURCE_VERSION_URL',			'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
 		// target dir where git command send the compressed file like 'https://master.dedalo.dev/dedalo/code/dedalo5_code.zip'
