@@ -3187,11 +3187,99 @@ define('SERVER_PROXY', '192.0.0.1:3128');
 
 ---
 
+### Defining is a code server
+
+./dedalo/config/config.php
+
+IS_A_CODE_SERVER `bool`
+
+This parameter defines id the server can provide code to other Dédalo servers. By default any Dédalo server doesn't provide code, but is possible create a mirror server to provide code versions.
+To enable process is necessary activate: `DEDALO_CODE_FILES_DIR` and `DEDALO_CODE_FILES_URL`
+
+```php
+define('IS_A_CODE_SERVER', false);
+```
+
+---
+
+### Defining is a code server directory
+
+./dedalo/config/config.php
+
+DEDALO_CODE_FILES_DIR `string`
+
+This parameter defines the path to the code files in the server. Default location in root path /code.
+Code files are organize in version directories with major / minor / version_dedalo.zip as:
+`./dedalo/code/6/6.4/6.4.1_dedalo.zip`
+
+```php
+define('DEDALO_CODE_FILES_DIR', DEDALO_ROOT_PATH . '/code');
+```
+
+---
+
+### Defining is a code server url
+
+./dedalo/config/config.php
+
+DEDALO_CODE_FILES_URL `string`
+
+This parameter defines the URL to the code files in the server. Default location in root URL /code.
+Code files are organize in version directories with major / minor / version_dedalo.zip as:
+`https://master.dedalo.dev/dedalo/code/6/6.4/6.4.1_dedalo.zip`
+
+```php
+define('DEDALO_CODE_FILES_URL', DEDALO_ROOT_WEB . '/code');
+```
+
+---
+
+### Defining is a code server build version from development git
+
+./dedalo/config/config.php
+
+DEDALO_CODE_SERVER_GIT_DIR `string`
+
+This parameter defines the path to git directory in the server. It use to build the version with for specific version.
+GIT directory is a valid git server than can provide the build version.
+This parameter is not necessary if the server will be only a mirror from official files.
+
+
+```php
+define('DEDALO_CODE_SERVER_GIT_DIR', '/my_dedalo_git_directory');
+```
+
+---
+
+### Defining is server code provider
+
+./dedalo/config/config.php
+
+CODE_SERVERS `array`
+
+This parameter defines code servers provides. By default the server defines the official Dédalo code server.
+But is possible includes other mirror servers adding new definition into the array.
+
+This parameter substitute the `DEDALO_SOURCE_VERSION_URL` in version >6.4
+
+
+```php
+define('CODE_SERVERS', [
+    [
+        'name'  => 'Official Dédalo code server',
+        'url'   => 'https://master.dedalo.dev/core/api/v1/json/',
+        'code'  => 'x3a0B4Y020Eg9w'
+    ]
+]);
+```
+
+---
+
 ### Defining source version uri
 
 ./dedalo/config/config.php
 
-DEDALO_SOURCE_VERSION_URL `string`
+DEDALO_SOURCE_VERSION_URL `string` *deprecated in v6.3; use CODE_SERVERS instead*
 
 This parameter defines the master server uri repository to get the new Dédalo code for update / upgrade.
 
