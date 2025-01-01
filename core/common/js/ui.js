@@ -1959,14 +1959,30 @@ export const ui = {
 
 	/**
 	* ATTACH_TO_MODAL
-	* Insert wrapper into a modal box
+	* Insert content into a dd-modal box
+	* Generic point of rendering a modal. Used by components, sections, widgets and tools to display
+	* temporary information such as options, validation, confirmation dialogs, etc.
+	* It is desirable to use the generic options, but if you need to customize the modal,
+	* set styles in callback for safe implementation.
 	* @param object options
 	* {
-	* 	header	: node|string,
-	* 	body	: node|string,
-	* 	footer	: node|string,
-	* 	size	: string
-	* 	remove_overlay : bool
+	* 	header : HTMLElement|string
+	* 	body : HTMLElement|string
+	* 	footer : HTMLElement|string
+	* 	size : string (normal|big|small)
+	* 	modal_parent: HTMLElement
+	* 	remove_overlay : bool (default false)
+	* 	minimizable: bool (default true)
+	* 	on_close: function|null (fired on modal close)
+	* 	callback : function|null (fired on dd-modal node is ready in DOM)
+	* }
+	* @info
+	* To set a custom width, add a callback as
+	* {
+	*	...
+	* 	callback : (dd_modal) => {
+	*		dd_modal.modal_content.style.width = '34rem'
+	* 	}
 	* }
 	* @return HTMLElement modal_container
 	*/
@@ -2002,10 +2018,10 @@ export const ui = {
 				: null
 			const size				= options.size || 'normal' // string size='normal'
 			const modal_parent		= options.modal_parent || document.querySelector('.wrapper.page') || document.body
-			const remove_overlay	= options.remove_overlay || false
+			const remove_overlay	= options.remove_overlay ?? false
 			const minimizable		= options.minimizable ?? true
-			const on_close			= options.on_close || null
-			const callback			= options.callback || null
+			const on_close			= options.on_close ?? null
+			const callback			= options.callback ?? null
 
 		// previous_component_selection. Current active component before open the modal
 			const previous_component_selection = page_globals.component_active || null
@@ -2074,6 +2090,10 @@ export const ui = {
 			}
 
 		// size. Modal special features based on property 'size'
+			// If you need a custom size, set options callback (when node is really accessible) as
+			// callback	: (dd_modal) => {
+			//		dd_modal.modal_content.style.width = '20rem'
+			// }
 			switch(size) {
 				case 'big' : {
 					// hide contents to avoid double scrollbars
@@ -2103,6 +2123,7 @@ export const ui = {
 					modal_container._showModalSmall();
 					break;
 
+				case 'normal' :
 				default :
 					modal_container._showModal();
 					break;
@@ -2124,7 +2145,7 @@ export const ui = {
 				}
 			}
 
-		// callback
+		// callback. Here the modal_container is ready and you can set styles safely
 			if (callback && typeof callback=='function') {
 				callback(modal_container)
 			}
