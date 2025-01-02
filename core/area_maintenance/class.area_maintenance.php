@@ -1026,6 +1026,11 @@ class area_maintenance extends area_common {
 	* REGISTER_TOOLS
 	* Alias of tools_register::import_tools
 	* @return object $response
+	* {
+	*	result: array|false (on success, list of imported tools objects)
+	* 	msg: string
+	* 	errors: array
+	* }
 	*/
 	public static function register_tools() : object {
 
@@ -1033,20 +1038,23 @@ class area_maintenance extends area_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$response->result	= tools_register::import_tools();
-		$response->msg		= 'OK. Request done successfully';
+		// import_tools
+			$response->result = tools_register::import_tools();
 
 		// check results errors
-		$errors = [];
-		if (!empty($response->result)) {
-			foreach ($response->result as $item) {
-				if (!empty($item->errors)) {
-					$errors = array_merge($errors, (array)$item->errors);
+			$errors = [];
+			if (!empty($response->result)) {
+				foreach ($response->result as $item) {
+					if (!empty($item->errors)) {
+						$errors = array_merge($errors, (array)$item->errors);
+					}
 				}
 			}
-			$response->msg = 'Warning. Request done with errors';
-		}
-		$response->errors = $errors;
+			$response->errors = $errors;
+
+		$response->msg = empty($errors)
+			? 'OK. Request done successfully'
+			: 'Warning. Request done with errors';
 
 
 		return $response;
