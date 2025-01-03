@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
-
 // Include the updates definition
-	include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
+include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * UPDATE_CODE
 * Get new code from code servers
 * and install it
 */
 class update_code {
+
 
 
 	/**
@@ -23,8 +23,8 @@ class update_code {
 
 		// rqo
 			$rqo = new stdClass();
-				$rqo->dd_api	= "dd_utils_api";
-				$rqo->action	= "get_server_ready_status";
+				$rqo->dd_api	= 'dd_utils_api';
+				$rqo->action	= 'get_server_ready_status';
 				$rqo->options	= new stdClass();
 					$rqo->options->check = 'code_server';
 
@@ -44,7 +44,6 @@ class update_code {
 					? SERVER_PROXY // from Dédalo config file
 					: false // default case
 			]);
-
 
 			if ( !empty($response->result) ){
 				$response->result = json_decode($response->result);
@@ -85,16 +84,21 @@ class update_code {
 		// check code servers
 			$code_servers = [];
 			foreach ($servers as $current_server) {
+
 				$server = (object)$current_server;
-				$server_ready			= update_code::check_remote_server( $server );
+
+				// check server status
+				$server_ready = update_code::check_remote_server( $server );
+
+				// add server object additional info
 				$server->msg			= $server_ready->msg;
 				$server->error			= $server_ready->error;
 				$server->response_code	= $server_ready->code;
 				$server->result			= $server_ready->result;
 				$server->code			= $server->code;
-				$code_servers[]			= $server;
-			}
 
+				$code_servers[] = $server;
+			}
 
 		$result = (object)[
 			'servers'							=> $code_servers,
@@ -117,6 +121,9 @@ class update_code {
 	* UPDATE_CODE
 	* Download code in zip format file from the GIT repository defined in config
 	* @param object $options
+	* {
+	* 	file: object
+	* }
 	* @return object $response
 	*/
 	public static function update_code(object $options) : object {
@@ -124,24 +131,30 @@ class update_code {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->msg		= 'Error. Request failed '.__METHOD__.' ';
+			$response->errors	= [];
+
+		// options
+			$file = $options->file;
 
 		try {
 
-			$file_uri = $options->file->url ?? null;
-	dump($file_uri, '$file_uri ++ '.to_string());die();
+			$file_uri = $file->url ?? null;
 			if( empty($file_uri) ){
 				debug_log(__METHOD__
 					. " Error: Update code can not work without a valid url " . PHP_EOL
 					. to_string()
 					, logger::WARNING
 				);
+				$response->errors[]	= 'Empty file URI';
 				return $response;
 			}
 
-			$result = new stdClass();
-
-			debug_log(__METHOD__." Start downloading file ".$file_uri, logger::DEBUG);
+			// debug
+				debug_log(__METHOD__
+					." Start downloading file ".$file_uri
+					, logger::DEBUG
+				);
 
 			// CLI msg
 				if ( running_in_cli()===true ) {
@@ -153,7 +166,7 @@ class update_code {
 
 			// Download zip file from server (master) curl mode (unified with download_remote_structure_file)
 				// data
-				$data_string = "data=" . json_encode(null);
+				$data_string = 'data=' . json_encode(null);
 				// curl_request
 				$curl_response = curl_request((object)[
 					'url'				=> $file_uri,
@@ -171,42 +184,49 @@ class update_code {
 				$contents = $curl_response->result;
 				// check contents
 				if ($contents===false) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.$file_uri;
+					$response->msg .= 'Contents from Dédalo code repository fail to download from: '.$file_uri;
 					debug_log(__METHOD__
 						." $response->msg"
 						, logger::ERROR
 					);
+					$response->errors[]	= 'Unable to download the file';
 					return $response;
 				}
-				$result->download_file = [
-					'Downloaded file: ' . $file_uri,
-					'Time: ' . exec_time_unit($start_time,'sec') . ' secs'
-				];
+
+				// result
+				$result = new stdClass();
+					$result->download_file = [
+						'Downloaded file: ' . $file_uri,
+						'Time: ' . exec_time_unit($start_time,'sec') . ' secs'
+					];
+
+				// debug
 				debug_log(__METHOD__
 					." Downloaded file (".$file_uri.") in ".exec_time_unit($start_time,'sec') . ' secs'
 					, logger::DEBUG
 				);
 
 			// Save contents to local dir
-				if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
-					if( !mkdir(DEDALO_SOURCE_VERSION_LOCAL_DIR,  0775) ) {
-						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
-						debug_log(__METHOD__
-							." $response->msg"
-							, logger::ERROR
-						);
-						return $response;
-					}
-				}
-				$file_name		= 'dedalo_code.zip';
-				$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
-				$put_contents	= file_put_contents($target_file, $contents);
-				if (!$put_contents) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
+				if ( !create_directory(DEDALO_SOURCE_VERSION_LOCAL_DIR) ) {
+					$response->msg .= 'Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
 					debug_log(__METHOD__
 						." $response->msg"
 						, logger::ERROR
 					);
+					$response->errors[]	= 'Unable create or access local directory ' .DEDALO_SOURCE_VERSION_LOCAL_DIR;
+					return $response;
+				}
+
+				$file_name		= 'dedalo_code.zip';
+				$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
+				$put_contents	= file_put_contents($target_file, $contents);
+				if (!$put_contents) {
+					$response->msg .= 'Contents from Dédalo code repository fail to write on : '.$target_file;
+					debug_log(__METHOD__
+						." $response->msg"
+						, logger::ERROR
+					);
+					$response->errors[]	= 'Unable to put contents into file ' .$target_file;
 					return $response;
 				}
 				$result->write_file = [
@@ -214,7 +234,7 @@ class update_code {
 					"File size: "	. format_size_units( filesize($target_file) )
 				];
 
-			// extract files from zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
+			// extract files from zip. (!) Note that 'ZipArchive' needs to be installed in PHP to allow work
 				// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
@@ -225,11 +245,12 @@ class update_code {
 				$zip = new ZipArchive;
 				$res = $zip->open($target_file);
 				if ($res!==true) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+					$response->msg .= 'ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
 					debug_log(__METHOD__
 						." $response->msg"
 						, logger::ERROR
 					);
+					$response->errors[]	= 'Unable to open ZIP file ' .$target_file;
 					return $response;
 				}
 				$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
@@ -257,13 +278,14 @@ class update_code {
 				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
 				$output		= shell_exec($command);
 				if ($output===null) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing rsync command. source: '.$source;
+					$response->msg .= 'Error executing rsync command. source: '.$source;
 					debug_log(__METHOD__
 						. $response->msg  . PHP_EOL
 						. ' command: ' . to_string($command) . PHP_EOL
 						. ' output: ' . to_string($output)
 						, logger::ERROR
 					);
+					$response->errors[]	= 'Unable run RSYNC command';
 					return $response;
 				}
 				$result->rsync = [
@@ -307,11 +329,7 @@ class update_code {
 				}
 
 			// version info. Get from new downloaded file 'version.inc'
-				$command = 'ddversion=`'.PHP_BIN_PATH.' << \'EOF\'
-				<?php require "'.DEDALO_CORE_PATH.'/base/version.inc"; echo DEDALO_VERSION ." Build ". DEDALO_BUILD; ?>`
-				echo $ddversion';
-				// exec command
-				$new_version_info = exec($command); // string like '6.0.0_RC6 Build 2023-08-22T19:19:35+02:00'
+				$new_version_info = DEDALO_VERSION . ' Build ' . DEDALO_BUILD;
 
 			// response OK
 				// $response->result	= $result;
@@ -355,10 +373,11 @@ class update_code {
 
 
 
-
 	/**
 	* BUILD_VERSION_FROM_GIT_MASTER
 	* Called from dd_list.js -> dd.build_version_from_git_master()
+	* @param object $options
+	* @return object $response
 	*/
 	public static function build_version_from_git_master(object $options) : object {
 
@@ -376,7 +395,7 @@ class update_code {
 			$branch = $options->branch ?? 'master';
 
 		// try exec
-			try{
+			try {
 
 				$output = update_code::build_version_code( $branch );
 
@@ -450,11 +469,12 @@ class update_code {
 		// command @see https://git-scm.com/docs/git-archive
 			$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo{$major_version}_code/ $branch > $target ";
 
-
-		debug_log(__METHOD__
-			. " Called Dédalo build_version_code with command: " .PHP_EOL. to_string($command)
-			, logger::DEBUG
-		);
+		// debug
+			debug_log(__METHOD__
+				. " Called Dédalo build_version_code with command: " .PHP_EOL
+				. to_string($command)
+				, logger::DEBUG
+			);
 
 		$output			= null;
 		$result_code	= null;
@@ -483,7 +503,7 @@ class update_code {
 		$dedalo_version	= $version ?? get_dedalo_version();
 		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
 		$base_path		= DEDALO_CODE_FILES_DIR."/{$dedalo_version[0]}/{$version_path}";
-		$path		= is_dir( $base_path )===true
+		$path			= is_dir( $base_path )===true
 			? $base_path
 			: false;
 
@@ -504,7 +524,7 @@ class update_code {
 		$dedalo_version	= get_dedalo_version();
 		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
 		$base_path		= DEDALO_CODE_FILES_DIR."/{$dedalo_version[0]}/{$version_path}";
-		$path		= create_directory( $base_path )===false
+		$path			= create_directory( $base_path )===false
 			? false
 			: $base_path;
 
@@ -541,7 +561,7 @@ class update_code {
 	*/
 	public static function set_development_path() : string|false {
 
-		$base_path	= DEDALO_CODE_FILES_DIR."/development";
+		$base_path	= DEDALO_CODE_FILES_DIR . '/development';
 		$path		= create_directory( $base_path )===false
 			? false
 			: $base_path;
@@ -553,18 +573,18 @@ class update_code {
 
 	/**
 	* GET_CODE_URL
-	* Get the current version uri for code directory
-	* Check if exists, and return the uri or false
+	* Get the current version URL for code directory
+	* Check if exists, and return the URL or false
 	* @param array|null $version = null
 	* @return string|false $url
 	*/
 	public static function get_code_url( ?array $version = null ) : string|false {
 
 		$dedalo_version	= $version ?? get_dedalo_version();
-		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
-		$base_path		= DEDALO_CODE_FILES_DIR."/{$dedalo_version[0]}/{$version_path}";
-		$url		= is_dir( $base_path )===true
-			? DEDALO_CODE_FILES_URL."/{$dedalo_version[0]}/{$version_path}"
+		$version_path	= $dedalo_version[0] .'.'. $dedalo_version[1];
+		$base_path		= DEDALO_CODE_FILES_DIR . "/{$dedalo_version[0]}/{$version_path}";
+		$url			= is_dir( $base_path )===true
+			? DEDALO_CODE_FILES_URL . "/{$dedalo_version[0]}/{$version_path}"
 			: false;
 
 		return $url;
@@ -731,7 +751,6 @@ class update_code {
 					// is not valid
 					// the client has not the correct version to update to next minor or major version.
 					continue;
-
 				}
 			}
 			$versions[] = $version;
@@ -747,41 +766,44 @@ class update_code {
 			$dedalo_version	= get_dedalo_version();
 			$server_version	= implode( '.', $dedalo_version );
 
-			$result->info->version			= $server_version;
-			$result->info->date				= $date;
-			$result->info->entity_id		= DEDALO_ENTITY_ID;
-			$result->info->entity			= DEDALO_ENTITY;
-			$result->info->entity_label		= DEDALO_ENTITY_LABEL;
-			$result->info->host				= DEDALO_HOST;
+			$result->info->version		= $server_version;
+			$result->info->date			= $date;
+			$result->info->entity_id	= DEDALO_ENTITY_ID;
+			$result->info->entity		= DEDALO_ENTITY;
+			$result->info->entity_label	= DEDALO_ENTITY_LABEL;
+			$result->info->host			= DEDALO_HOST;
 
-		// build the file_path with the valid versions
-		// client will can select what is the update that it want use.
-		foreach ($versions as $valid_version) {
+		// files
+			// build the file_path with the valid versions
+			// client will can select what is the update that it want use.
+			foreach ($versions as $valid_version) {
 
-			$code_url = update_code::get_code_url( $valid_version );
+				$code_url = update_code::get_code_url( $valid_version );
 
-			$current_version_path	= update_code::get_code_path( $valid_version );
-			$file_version			= update_code::get_file_version( $valid_version );
+				$current_version_path	= update_code::get_code_path( $valid_version );
+				$file_version			= update_code::get_file_version( $valid_version );
 
-			$file_name = $file_version.'.zip';
-			$file_path = $current_version_path.'/'.$file_name;
+				$file_name = $file_version.'.zip';
+				$file_path = $current_version_path.'/'.$file_name;
 
-			if(file_exists($file_path)){
+				if(file_exists($file_path)){
 
-				$file_item = new stdClass();
-					$file_item->version	= implode('.',$valid_version );
-					$file_item->url		= DEDALO_PROTOCOL.DEDALO_HOST.$code_url.'/'. basename( $file_name );
+					$file_item = new stdClass();
+						$file_item->version	= implode('.', $valid_version);
+						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $file_name );
 
-				$result->files[] = $file_item;
+					$result->files[] = $file_item;
+				}
 			}
 
-		}
-
-		$response->result = $result;
-		$response->msg = 'OK. request done';
+		// response
+		$response->result	= $result;
+		$response->msg		= 'OK. request done';
 
 
 		return $response;
 	}//end get_code_update_info( $ar_version )
+
+
 
 }//end update_code

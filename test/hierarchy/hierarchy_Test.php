@@ -175,28 +175,31 @@ final class hierarchy_test extends TestCase {
 				$response = hierarchy::generate_virtual_section(
 					$options
 				);
-					// dump($response, ' response ++ '.to_string());
 
 				$this->assertTrue(
 					gettype($response)==='object' ,
 					'expected object' . PHP_EOL
-						. gettype($response)
+						. gettype($response). PHP_EOL
+						. 'response: '. to_string($response)
 				);
 				$this->assertTrue(
 					gettype($response->result)==='boolean' ,
 					'expected boolean' . PHP_EOL
-						. gettype($response->result)
+						. gettype($response->result). PHP_EOL
+						. 'response: '. to_string($response)
 				);
 				$this->assertTrue(
 					gettype($response->msg)==='array' ,
 					'expected array' . PHP_EOL
-						. gettype($response->msg)
+						. gettype($response->msg). PHP_EOL
+						. 'response: '. to_string($response)
 				);
 				$this->assertTrue(
 					$response->result===true ,
 					'expected true' . PHP_EOL
 						. to_string($response->result) . PHP_EOL
-
+						. 'result: '  . to_string($response->result) . PHP_EOL
+						. 'response: '. to_string($response)
 				);
 			}
 	}//end test_generate_virtual_section

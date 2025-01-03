@@ -1595,6 +1595,12 @@ final class dd_utils_api {
 	* Ontology server provide information about the ontology that it can provide.
 	* Client needs to provide his version and the code for this server.
 	* @param object $rqo
+	* {
+	* 	options: {
+	* 		version: string
+	* 		code: string
+	* 	}
+	* }
 	* @return object $response
 	*/
 	public static function get_ontology_update_info( object $rqo ) : object {
@@ -1619,6 +1625,7 @@ final class dd_utils_api {
 		// RQO options
 		// client will send his version and the code that able to get the ontology information
 			$options = $rqo->options;
+
 
 		// check configuration of the ontology constants
 			if ( !defined('ONTOLOGY_DATA_IO_URL') ) {

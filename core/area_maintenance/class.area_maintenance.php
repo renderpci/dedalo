@@ -1,5 +1,4 @@
 <?php declare(strict_types=1);
-// include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * AREA_MAINTENANCE
 * System administrator's area with useful methods to

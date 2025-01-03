@@ -1563,7 +1563,6 @@ class transform_data {
 		// enable log again
 		logger_backend_activity::$enable_log = true;
 
-		die();
 
 
 		return true;
