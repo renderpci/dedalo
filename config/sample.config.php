@@ -650,7 +650,7 @@
 	define('ONTOLOGY_SERVERS',	[
 		[
 			'name'	=> 'Official Dédalo Ontology server',
-			'url'	=> 'https://master.dedalo.dev/core/api/v1/json/',
+			'url'	=> 'https://master.dedalo.dev/dedalo/core/api/v1/json/',
 			'code'	=> 'x3a0B4Y020Eg9w'
 		]
 	]);
@@ -699,7 +699,7 @@
 		define('CODE_SERVERS',	[
 			[
 				'name'	=> 'Official Dédalo code server',
-				'url'	=> 'https://master.dedalo.dev/core/api/v1/json/',
+				'url'	=> 'https://master.dedalo.dev/dedalo/core/api/v1/json/',
 				'code'	=> 'x3a0B4Y020Eg9w'
 			]
 		]);
