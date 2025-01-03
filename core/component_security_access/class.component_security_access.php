@@ -196,18 +196,25 @@ class component_security_access extends component_common {
 
 		$datalist = [];
 
-
 		// get the exclude elements defined into ontology to be remove of the datalist
-		$ar_tipo_to_be_exclude = null;
-		$ar_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, $model_name='exclude_elements', $relation_type='children', true);
+		$ar_tipo_to_be_exclude	= null;
+		$ar_exclude_elements	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$section_tipo,
+			'exclude_elements',
+			'children',
+			true
+		);
 		if (isset($ar_exclude_elements[0])) {
 			$exclude_elements_tipo = $ar_exclude_elements[0];
-			$ar_tipo_to_be_exclude = RecordObj_dd::get_ar_terminos_relacionados($exclude_elements_tipo, $cache=false, $simple=true);
+			$ar_tipo_to_be_exclude = RecordObj_dd::get_ar_terminos_relacionados(
+				$exclude_elements_tipo,
+				false,
+				true
+			);
 		}
 
 		// get all ontology nodes inside the main section (section_groups, components, tabs, sections, etc.)
 		$children_recursive = self::get_children_recursive_security_acces($section_tipo, $ar_tipo_to_be_exclude);
-
 
 		// v6
 		// see if the section has a ddo_map defined
@@ -295,7 +302,6 @@ class component_security_access extends component_common {
 		switch ($source_model) {
 
 			case 'section':
-
 				$section_tipo				= $tipo;
 				$ar_modelo_name_required	= ['section_group','section_tab','tab','button_','relation_list','time_machine_list','component_'];
 				// real section

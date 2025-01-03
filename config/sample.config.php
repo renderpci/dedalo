@@ -674,7 +674,7 @@
 // dedalo_code
 	// server side (master)
 
-		//Code server. Defines if the installation server can provide new code files to other Dédalo servers.
+		// Code server. Defines if the installation server can provide new code files to other Dédalo servers.
 		// if the server can provide version change to true and uncomment the `DEDALO_CODE_FILES_DIR` and `DEDALO_CODE_FILES_URL`
 		define('IS_A_CODE_SERVER',				false);
 

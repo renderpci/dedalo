@@ -99,8 +99,7 @@ define('DEDALO_SOURCE_VERSION_LOCAL_DIR','');
 define('IP_API',[]);
 define('DEDALO_MAINTENANCE_MODE',false);
 define('DEDALO_NOTIFICATION',[]);
-
-
+define('IS_A_CODE_SERVER',false);
 
 define('SAML_CONFIG', ['']);
 define('INIT_COOKIE_AUTH_ADDONS','');
@@ -142,6 +141,7 @@ define('DEDALO_RECOVERY_MODE','');
 define('DEDALO_BINARY_BASE_PATH','');
 define('DEDALO_INSTALL_PATH', '');
 define('DEDALO_INSTALL_URL', '');
+define('DEDALO_CODE_FILES_URL', '');
 
 function session_start_manager(){};
 function fix_cascade_config_var(){};

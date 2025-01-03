@@ -201,7 +201,6 @@ class install extends common {
 		$install_checked_default = [
 			'es', // spain
 			'fr', // france
-			// 'ds', // semantic
 			'lg', // lang
 			'ts', // thematic
 			'utoponymy'

@@ -10,6 +10,7 @@
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
+
 /**
 * UPDATE_CODE
 */
@@ -75,7 +76,7 @@ update_code.prototype.get_value = async () => {
 		}
 	})
 	if(SHOW_DEBUG===true) {
-		console.log('))) get_value update_ontology api_response:', api_response);;
+		console.log('))) get_value update_code api_response:', api_response);;
 	}
 
 	const result = api_response.result
