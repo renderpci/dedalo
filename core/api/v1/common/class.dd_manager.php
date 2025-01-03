@@ -48,6 +48,7 @@ final class dd_manager {
 				'get_install_context',
 				'get_environment',
 				'get_ontology_update_info',
+				'get_code_update_info',
 				'get_server_ready_status'
 			];
 			if (true===in_array($rqo->action, $no_login_needed_actions)) {
