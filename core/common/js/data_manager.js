@@ -120,6 +120,10 @@ data_manager.request = async function(options) {
 		const handle_errors = function(response) {
 			if (!response.ok) {
 				console.warn("-> HANDLE_ERRORS response:",response);
+				// extract response text to console
+				response.text().then(function(response_str){
+					console.error(response_str);
+				})
 				throw Error(response.statusText);
 			}
 			return response;
