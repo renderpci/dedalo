@@ -778,6 +778,32 @@
 
 
 
+// test new constants 6.4
+	$new_constants = [
+		'DEDALO_INSTALL_PATH',
+		'DEDALO_INSTALL_URL',
+		'DEDALO_API_URL',
+		'ONTOLOGY_SERVERS',
+		'ONTOLOGY_DATA_IO_DIR',
+		'ONTOLOGY_DATA_IO_URL',
+		'CODE_SERVERS',
+		'DEDALO_SOURCE_VERSION_LOCAL_DIR'
+	];
+	foreach ($new_constants as $name) {
+		if (!defined($name)) {
+			$init_response->msg[]	= 'Error Processing Request: constant: '.$name.' is not defined in config file';
+			$init_response->errors	= true;
+			debug_log(__METHOD__
+				."  ".implode(PHP_EOL, $init_response->msg)
+				, logger::ERROR
+			);
+
+			return $init_response;
+		}
+	}
+
+
+
 // cache
 	if (!defined('DEDALO_CACHE_MANAGER') || empty(DEDALO_CACHE_MANAGER)) {
 
