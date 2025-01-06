@@ -79,42 +79,17 @@ tool_time_machine.prototype.init = async function(options) {
 			const date				= data.date
 			const caller_dataframe	= data.caller_dataframe || null
 
-			// Check if the main component, caller component, has a dataframe
-			// when the main component has a dataframe, we will use the rendered node of the selected row
-			// instead create new instance and get his data,
-			// if you create new instance you can not re-create the dataframe because the dataframe data is not in time_machine DDBB
-			// data of component with dataframe is calculated and recreated matching the data from main component and his dataframe
-			// see API: build_json_rows() with action 'search'
-			// Else creates new component instance and render it.
-			if( self.main_element.properties.has_dataframe && self.main_element.properties.has_dataframe === true){
-
-				const selected_instace = data.caller.ar_instances.find(el => el.tipo===self.main_element.tipo && el.matrix_id === matrix_id)
-				if (selected_instace) {
-
-					const new_node = selected_instace.node.cloneNode(true)
-
-					// empty the preview container
-					while (self.preview_component_container.firstChild) {
-						// remove node from DOM (not component instance)
-						self.preview_component_container.removeChild(self.preview_component_container.firstChild)
-					}
-
-					// add the new node
-					self.preview_component_container.appendChild(new_node)
-				}
-			}else{
-				// render. Create and add new component to preview container
-				const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
-				add_component(
-					self,
-					self.preview_component_container,
-					self.lang,
-					date,
-					load_mode,
-					matrix_id,
-					caller_dataframe
-				)
-			}
+			// render. Create and add new component to preview container
+			const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
+			add_component(
+				self,
+				self.preview_component_container,
+				self.lang,
+				date,
+				load_mode,
+				matrix_id,
+				caller_dataframe
+			)
 
 			// fix selected matrix_id
 			self.selected_matrix_id = matrix_id
@@ -228,29 +203,6 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					view			: 'text'
 				}
 
-			// check if the main component has a dataframe associated
-			// if yes, assign the has_dataframe property
-			// has_dataframe will use in API build_json_rows() in search action to calculate the component and dataframe data
-				if(self.caller_dataframe){
-					ddo.caller_dataframe = self.caller_dataframe
-				}
-				const has_dataframe = self.main_element.properties && self.main_element.properties.has_dataframe
-					? self.main_element.properties.has_dataframe
-					: null
-				if(has_dataframe){
-					ddo.has_dataframe = self.main_element.properties.has_dataframe
-					// get the dataframe component defined in request_config to assign it to main ddo
-					const request_config = self.main_element.context.request_config || null
-					const dataframe_ddo = request_config
-						? request_config[0].show.ddo_map.find(el => el.model === 'component_dataframe')
-						: null
-					if(dataframe_ddo){
-						ddo.dataframe_ddo = dataframe_ddo
-					}
-					// the main and dataframe will use the mini view,
-					// it removes the events and functionality of the dataframe
-					ddo.view = 'mini'
-				}
 				const ddo_map = self.main_element.model==='section'
 					? self.main_element.request_config_object.show.ddo_map
 					: [ddo]
@@ -290,9 +242,6 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					template_columns	: template_columns,
 					ignore_columns		: ignore_columns,
 					ddo_map				: ddo_map
-				}
-				if(self.caller_dataframe){
-					config.caller_dataframe = self.caller_dataframe
 				}
 				const instance_options = {
 					model			: 'service_time_machine',
@@ -353,7 +302,6 @@ tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id
 			matrix_id			: matrix_id,
 			data_source			: 'tm',
 			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new on
-			caller_dataframe	: caller_dataframe
 		})
 
 	// call generic common tool build
@@ -398,26 +346,6 @@ tool_time_machine.prototype.apply_value = function(options) {
 				lang			: lang,
 				matrix_id		: matrix_id
 			}
-		}
-	// dataframe
-		const main_ddo = self.config.ddo_map.find(el => el.tipo == self.main_element.tipo)
-
-		if ( main_ddo && main_ddo.has_dataframe && main_ddo.has_dataframe === true){
-
-			const source_data = self.service_time_machine.datum.data.find(el =>
-				el.tipo === main_ddo.tipo
-				&& el.matrix_id === matrix_id
-			)
-
-			const dataframe_data = self.service_time_machine.datum.data.filter(el =>
-				el.tipo === main_ddo.dataframe_ddo.tipo
-				&& el.matrix_id === matrix_id
-			 )
-
-			rqo.options.source_data		= source_data
-			rqo.options.dataframe_data	= dataframe_data
-			rqo.options.ddo_map			= self.config.ddo_map[0]
-			rqo.options.has_dataframe	= main_ddo.has_dataframe
 		}
 
 	// dataframe caller

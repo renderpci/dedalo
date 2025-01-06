@@ -253,7 +253,7 @@ const get_content_data = async function(self) {
 *
 * @return HTMLElement|bool
 */
-export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null, caller_dataframe=null) => {
+export const add_component = async (self, component_container, lang_value, label, mode, matrix_id=null) => {
 
 	// user select blank lang_value case
 		if (!lang_value) {
@@ -274,7 +274,7 @@ export const add_component = async (self, component_container, lang_value, label
 				// component load
 					const component = matrix_id===null
 						? self.main_element
-						: await self.get_component(lang_value, mode, matrix_id, caller_dataframe)
+						: await self.get_component(lang_value, mode, matrix_id)
 
 				// set permissions as read
 					component.context.permissions = 1
