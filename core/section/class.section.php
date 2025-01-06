@@ -544,13 +544,17 @@ class section extends common {
 
 		// time machine data. We save only current component lang 'dato' in time machine
 			$save_options = new stdClass();
-				$save_options->time_machine_data	= $component_obj->get_dato_unchanged();
+				// get the time_machine data from component
+				// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
+				$save_options->time_machine_data	= $component_obj->get_time_machine_data_to_save();//$component_obj->get_dato_unchanged();
 				$save_options->time_machine_lang	= $component_lang;
 				$save_options->time_machine_tipo	= $component_tipo;
 				// previous_component_dato
 				$save_options->previous_component_dato	= $previous_component_dato;
 
 				// component_dataframe
+				// when the component is dataframe, save all information together
+				// use the main and dataframe data as locators, mix all and save with the main component tipo
 				if (get_class($component_obj)==='component_dataframe') {
 					$section_id_key = $component_obj->caller_dataframe->section_id_key ?? null;
 					if (empty($section_id_key)) {
@@ -562,10 +566,15 @@ class section extends common {
 							. ' section_id: ' . to_string($component_obj->section_id)
 							, logger::ERROR
 						);
-					}else{
-						// set save_options time_machine_section_id_key
-						$save_options->time_machine_section_id_key	= (int)$component_obj->caller_dataframe->section_id_key;
 					}
+					// set save_options time_machine_section_id_key
+					$save_options->time_machine_section_id_key = !empty($section_id_key)
+						? (int)$section_id_key
+						: null;
+					// use the main component
+					$main_tipo = $component_obj->get_main_component_tipo();
+					$save_options->time_machine_tipo	= $main_tipo;
+
 				}
 
 				if( isset($component_obj->bulk_process_id) ){
