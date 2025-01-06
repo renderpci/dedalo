@@ -962,6 +962,42 @@ abstract class component_common extends common {
 
 
 
+	# GET_TIME_MACHINE_DATA
+	# Recover component var 'dato' without change type or other custom component changes
+	public function get_time_machine_data_to_save() {
+
+		$time_machine_data_to_save = $this->dato;
+
+		$ar_component_dataframe = $this->get_dataframe_ddo();
+
+		if( empty(!$ar_component_dataframe) ){
+
+			$ar_dataframe_data = [];
+			foreach ($ar_component_dataframe as $dataframe_ddo) {
+
+				$dataframe_component = component_common::get_instance(
+					'component_dataframe', // string model
+					$dataframe_ddo->tipo, // string tipo
+					$this->get_section_id(), // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$this->get_section_tipo(), // string section_tipo,
+					false
+				);
+				$dataframe_data = $dataframe_component->get_all_data();
+
+				if( !empty($dataframe_data) ){
+					$ar_dataframe_data = array_merge( $ar_dataframe_data, $dataframe_data );
+				}
+			}
+			$time_machine_data_to_save = array_merge( $time_machine_data_to_save, $ar_dataframe_data );
+		}
+
+		return $time_machine_data_to_save;
+	}//end get_time_machine_data
+
+
+
 	/**
 	* LOAD_COMPONENT_DATO
 	* Get data once from matrix about section_id, dato
