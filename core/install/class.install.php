@@ -973,7 +973,7 @@ class install extends common {
 
 		// re-index ontology tables
 			$sql = '
-				REINDEX TABLE "jer_dd";";
+					REINDEX TABLE "jer_dd";
 			';
 			if (DBi::check_table_exists('matrix_descriptors_dd')) {
 				$sql .= '
