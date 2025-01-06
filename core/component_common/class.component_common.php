@@ -120,6 +120,10 @@ abstract class component_common extends common {
 			'component_svg',
 			'component_text_area'
 		];
+		// dataframe ddo
+		// the component_dataframe defines by the request config
+		public $ar_dataframe_ddo;
+
 
 
 
@@ -845,12 +849,43 @@ abstract class component_common extends common {
 						return null;
 					}
 
+				// If the component is a dataframe
+				// its data is saved with the main component data in time machine
+				// is those cases, tipo to search in time machine is the main component tipo of the dataframe
+				// all other is its own tipo
+					$component_tipo			=  $this->tipo;
+					$search_component_tipo	= ($this->get_model()==='component_dataframe')
+						? $this->get_main_component_tipo()
+						: $component_tipo;
+
 				// tm dato. Note that no lang or section_id is needed, only matrix_id
+				// dato_tm is a full data stored into tm row
+				// it will need to be filter to remove possible dataframe data
 					$dato_tm = component_common::get_component_tm_dato(
-						$this->tipo,
+						$search_component_tipo,
 						$this->section_tipo,
 						$this->matrix_id
 					);
+
+				// Main components with dataframe and other relation components.
+
+					$relation_components = component_relation_common::get_components_with_relations();
+					if ( is_array($dato_tm) && in_array( $this->get_model(), $relation_components) ){
+						// Get only the component data. Remove possible dataframe data
+						$dato_tm = array_values( array_filter( $dato_tm, function($el) use($component_tipo) {
+							return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+						}));
+
+						// If the component is a dataframe filter the tm data with the section_id_key also.
+						if($this->get_model()==='component_dataframe'){
+
+							$section_id_key = $this->caller_dataframe->section_id_key;
+
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key) {
+								return isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key;
+							}));
+						}
+					}
 
 					// fix dato
 					$this->dato = $dato_tm;
