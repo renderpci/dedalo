@@ -313,6 +313,23 @@ const get_content_data = function(self) {
 
 					// hide spinner and show button label
 
+					// errors handle
+					// If errors found in API response (many vars and directories are checked in 'dd_init.test' on login)
+					// the login sequence is stopped to warn the user of problems
+					if (api_response.errors && api_response.errors.length) {
+						const msg = api_response.errors.join('<br>')
+						console.error('msg:', msg);
+						ui.show_message(
+							messages_container,
+							api_response.errors.join('<br>'),
+							'error',
+							'component_message',
+							true
+						)
+						button_enter_loading.classList.add('hide')
+						return
+					}
+
 					// After API login call, it's possible to go to some different pages,
 					// handled by self.custom_action_dispatch value set on build
 					self.action_dispatch(api_response)
