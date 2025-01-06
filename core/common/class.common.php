@@ -2189,6 +2189,15 @@ abstract class common {
 									$caller_dataframe // object|null
 								);
 
+								// the the component is a dataframe and it's in time_machine call
+								// set data_source as tm, and the matreix_id from the main component
+								// it will get the correct data from the time_machine
+								// used to load the component in edit mode in time_machine tool.
+								if($model==='component_dataframe' && isset($this->matrix_id) ){
+									$related_element->data_source = 'tm';
+									$related_element->matrix_id = $this->matrix_id;
+								}
+
 								// Permissions inheritance.
 								// Get the permissions to inject to children.
 								// Situation :
