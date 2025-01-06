@@ -77,7 +77,6 @@ tool_time_machine.prototype.init = async function(options) {
 
 			const matrix_id			= data.matrix_id
 			const date				= data.date
-			const caller_dataframe	= data.caller_dataframe || null
 
 			// render. Create and add new component to preview container
 			const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
@@ -87,8 +86,7 @@ tool_time_machine.prototype.init = async function(options) {
 				self.lang,
 				date,
 				load_mode,
-				matrix_id,
-				caller_dataframe
+				matrix_id
 			)
 
 			// fix selected matrix_id
@@ -286,7 +284,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 * @param object caller_dataframe
 * @return object component_instance
 */
-tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id=null, caller_dataframe) {
+tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id=null) {
 
 	const self = this
 
