@@ -133,6 +133,7 @@ class component_relation_common extends component_common {
 			'component_select',
 			'component_select_lang',
 			'component_inverse',
+			'component_dataframe',
 		];
 
 		return $components_with_relations;
@@ -171,8 +172,8 @@ class component_relation_common extends component_common {
 		if(isset($this->dato_resolved)) {
 
 			// dato_resolved. Already resolved case
-
 			$dato_full = $this->dato_resolved;
+
 
 		}else{
 
@@ -2842,6 +2843,7 @@ class component_relation_common extends component_common {
 
 		return $component_data;
 	}//end resolve_component_data_recursively
+
 
 
 	/**

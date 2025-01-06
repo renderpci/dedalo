@@ -120,6 +120,10 @@ abstract class component_common extends common {
 			'component_svg',
 			'component_text_area'
 		];
+		// dataframe ddo
+		// the component_dataframe defines by the request config
+		public $ar_dataframe_ddo;
+
 
 
 
@@ -845,12 +849,42 @@ abstract class component_common extends common {
 						return null;
 					}
 
+				// If the component is a dataframe
+				// its data is saved with the main component data in time machine
+				// is those cases, tipo to search in time machine is the main component tipo of the dataframe
+				// all other is its own tipo
+					$component_tipo			=  $this->tipo;
+					$search_component_tipo	= ($this->get_model()==='component_dataframe')
+						? $this->get_main_component_tipo()
+						: $component_tipo;
+
 				// tm dato. Note that no lang or section_id is needed, only matrix_id
+				// dato_tm is a full data stored into tm row
+				// it will need to be filter to remove possible dataframe data
 					$dato_tm = component_common::get_component_tm_dato(
-						$this->tipo,
+						$search_component_tipo,
 						$this->section_tipo,
 						$this->matrix_id
 					);
+
+				// Main components with dataframe and other relation components.
+					$relation_components = component_relation_common::get_components_with_relations();
+					if ( is_array($dato_tm) && in_array( $this->get_model(), $relation_components) ){
+						// Get only the component data. Remove possible dataframe data
+						$dato_tm = array_values( array_filter( $dato_tm, function($el) use($component_tipo) {
+							return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+						}));
+
+						// If the component is a dataframe filter the tm data with the section_id_key also.
+						if($this->get_model()==='component_dataframe'){
+
+							$section_id_key = $this->caller_dataframe->section_id_key;
+
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key) {
+								return isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key;
+							}));
+						}
+					}
 
 					// fix dato
 					$this->dato = $dato_tm;
@@ -959,6 +993,42 @@ abstract class component_common extends common {
 
 		return $this->dato;
 	}//end get_dato_unchanged
+
+
+
+	# GET_TIME_MACHINE_DATA
+	# Recover component var 'dato' without change type or other custom component changes
+	public function get_time_machine_data_to_save() {
+
+		$time_machine_data_to_save = $this->dato;
+
+		$ar_component_dataframe = $this->get_dataframe_ddo();
+
+		if( empty(!$ar_component_dataframe) ){
+
+			$ar_dataframe_data = [];
+			foreach ($ar_component_dataframe as $dataframe_ddo) {
+
+				$dataframe_component = component_common::get_instance(
+					'component_dataframe', // string model
+					$dataframe_ddo->tipo, // string tipo
+					$this->get_section_id(), // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$this->get_section_tipo(), // string section_tipo,
+					false
+				);
+				$dataframe_data = $dataframe_component->get_all_data();
+
+				if( !empty($dataframe_data) ){
+					$ar_dataframe_data = array_merge( $ar_dataframe_data, $dataframe_data );
+				}
+			}
+			$time_machine_data_to_save = array_merge( $time_machine_data_to_save, $ar_dataframe_data );
+		}
+
+		return $time_machine_data_to_save;
+	}//end get_time_machine_data
 
 
 
@@ -2802,6 +2872,118 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_DATAFRAME_DDO
+	* get the components dataframe when they are defined in RQO
+	* if the component has not a dataframe return null
+	* @return array | null $ar_dataframe_ddo
+	*  Array of ddo objects as:
+	* [
+	*	{
+	*		"info": "uncentanty component_dataframe",
+	*		"tipo": "numisdata1448",
+	*		"view": "default",
+	*		"parent": "self",
+	*		"section_tipo": "numisdata3"
+	*	}
+	* ]
+	*/
+	public function get_dataframe_ddo() : array | null {
+
+		// cached
+			if(isset($this->ar_dataframe_ddo)) {
+				return $this->ar_dataframe_ddo;
+			}
+
+		$ar_dataframe_ddo = [];
+		// config_context. Get_config_context normalized
+			$ar_request_config = $this->get_ar_request_config();
+			foreach ($ar_request_config as $config_context_item) {
+				$ddo_map = $config_context_item->show->ddo_map;
+				foreach ($ddo_map as $ddo) {
+					$model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo);
+					if($model === 'component_dataframe'){
+						$ar_dataframe_ddo[] = $ddo;
+					}
+				}
+			}
+
+		// empty case
+			if (empty($ar_dataframe_ddo)) {
+				$ar_dataframe_ddo = null;
+			}
+
+		// Fix value
+			$this->ar_dataframe_ddo = $ar_dataframe_ddo;
+
+		return $ar_dataframe_ddo;
+	}//end get_dataframe_ddo
+
+
+
+	/**
+	* REMOVE_DATAFRAME_DATA
+	* Remove all information associate to the main component
+	* This method is called when the main component remove a row (@see update_data_value() in component_common)
+	* And is possible that his dataframe will has data
+	* Therefore, the dataframe needs to be delete as his own main caller dataframe.
+	* @param object $locator
+	* @return array | null $ar_dataframe_ddo
+	*
+	*/
+	public function remove_dataframe_data( object $locator ) : bool {
+
+		// get the component dataframe
+		$dataframe_ddo = $this->get_dataframe_ddo();
+
+		$caller_dataframe = new stdClass();
+			$caller_dataframe->section_tipo		= $this->section_tipo;
+			$caller_dataframe->section_id		= $this->section_id;
+			$caller_dataframe->section_id_key	= $locator->section_id;
+
+
+		// config_context. Get_config_context normalized
+			foreach ($dataframe_ddo as $ddo) {
+
+				$model = RecordObj_dd::get_modelo_name_by_tipo( $ddo->tipo );
+				$dataframe_component = component_common::get_instance(
+					$model, // string model
+					$ddo->tipo, // string tipo
+					$this->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$this->section_tipo, // string section_tipo
+					true,
+					$caller_dataframe
+				);
+
+
+				// Section
+				// remove dataframe data is called by the main component
+				// when the main component remove his own data
+				// therefore, the dataframe associated to the row of the component
+				// has to be removed as well.
+				// but, the dataframe component has not to create time machine data
+				// because the main component will save all information in the tm row.
+				// at this point the component section will not save time machine for the component.
+				$section = $dataframe_component->get_my_section();
+					$section->save_tm = false;
+
+				// remove the data from dataframe.
+				$dataframe_component->set_dato( null );
+				$dataframe_component->Save();
+
+				// back to set time machine to true for the next savings.
+				$section->save_tm = true;
+			}
+
+		return true;
+	}//end remove_dataframe_data
+
+
+
+
+
+	/**
 	* GET_AR_TARGET_SECTION_TIPO
 	* Section/s from which the portal/autocomplete feeds with records.
 	* Not to be confused with the section in which the portal is
@@ -3802,10 +3984,20 @@ abstract class component_common extends common {
 
 			// remove a item value from the component data array
 			case 'remove':
+
+				// get the key to be removed into data
+					$key = $changed_data->key;
+
 				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = (get_called_class()==='component_relation_related')
 					? $this->get_dato_with_references()
 					: $dato;
+
+				//dataframe
+					$dataframe_ddo = $this->get_dataframe_ddo();
+					if(!empty($dataframe_ddo) && $changed_data->key!==false ){
+						$this->remove_dataframe_data( $dato[$key] );
+					}
 
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
@@ -3842,7 +4034,6 @@ abstract class component_common extends common {
 						break;
 
 					default:
-						$key = $changed_data->key;
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
 						break;
@@ -4088,7 +4279,6 @@ abstract class component_common extends common {
 				);
 				$tm_dato = null;
 			}
-
 
 		return $tm_dato;
 	}//end get_component_tm_dato
