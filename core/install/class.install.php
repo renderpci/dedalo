@@ -161,6 +161,8 @@ class install extends common {
 			'dd',			// Dedalo core
 			'rsc',			// Dédalo resources
 			'hierarchy',	// Dédalo hierarchies
+			'ontology',		// Dédalo ontology
+			'localontology',// Dédalo local ontology
 			'lg',			// Dédalo langs
 			'oh',			// Oral History
 			// 'ich',		// Intangible Cultural Heritage
@@ -179,6 +181,8 @@ class install extends common {
 			'matrix_activity',		// Dédalo activity log data
 			'matrix_hierarchy',		// thesaurus data
 			'matrix_hierarchy_main',// hierarchy data
+			'matrix_ontology',		// ontology data
+			'matrix_ontology_main',// ontology data
 			'matrix_indexations',	// indexation data
 			'matrix_layout',		// print presets layout table
 			'matrix_list',			// public list values
