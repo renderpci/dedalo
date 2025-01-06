@@ -169,13 +169,6 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					return ddo
 				})
 
-			// check if some ddo has a dataframe associated, if yes set the source with the has_dataframe
-			// it will be use by server to calculate the dataframe of the component
-				const dataframe_ddo = self.rqo.show.ddo_map.find(el => el.has_dataframe === true)
-				if(dataframe_ddo && dataframe_ddo.has_dataframe === true){
-					self.rqo.source.has_dataframe = true
-				}
-
 			// add component info. For API navigation track info only
 			// get tipo from caller (tool_time_machine) caller (component or section)
 				self.rqo.options = {
@@ -360,10 +353,6 @@ service_time_machine.prototype.build_request_config = function() {
 							lang			: lang, // (!) used only in time machine to filter by column lang
 						}
 
-					if(self.caller.caller_dataframe){
-						current_locator.section_id_key = self.caller.caller_dataframe.section_id_key
-					}
-
 					// sqo. filter_by_locators
 						sqo.filter_by_locators = [current_locator]
 					break;
@@ -529,19 +518,7 @@ service_time_machine.prototype.get_total = async function() {
 		delete count_sqo.offset
 		delete count_sqo.select
 		delete count_sqo.generated_time
-
-		// dataframe
-		// add to the filter_by_locators the dataframe locator
-		// it will be searched as OR to get the full records in time_machine
-		if(self.rqo.source.has_dataframe === true){
-
-			const dataframe_locator = clone(count_sqo.filter_by_locators[0])
-			const main_ddo = self.config.ddo_map.find(el => el.tipo === dataframe_locator.tipo)
-			if(main_ddo && main_ddo.dataframe_ddo){
-				dataframe_locator.tipo = main_ddo.dataframe_ddo.tipo
-				count_sqo.filter_by_locators.push(dataframe_locator)
-			}
-		}
+		
 		const source	= create_source(self, null)
 		const rqo_count = {
 			action			: 'count',
