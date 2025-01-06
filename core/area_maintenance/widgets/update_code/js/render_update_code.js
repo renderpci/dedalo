@@ -201,8 +201,8 @@ const get_content_data_edit = async function(self) {
 				inner_html		: button_label,
 				parent			: content_data
 			})
-
-			button_submit.addEventListener('click', async function(e){
+			// click event
+			const click_event = async (e) => {
 				e.stopPropagation()
 
 				// server to be used
@@ -225,48 +225,44 @@ const get_content_data_edit = async function(self) {
 					})
 					body_response.prepend(spinner)
 
-				// Code information
-					const server_code_api_response = await data_manager.request({
-						url		: server.url,
-						body	: {
-							dd_api	: 'dd_utils_api',
-							action	: 'get_code_update_info',
-							source	: {
-								action	: 'update_ontology',
-							},
-							options : {
-								version	: page_globals.dedalo_version,
-								code	: server.code
+				// Code information. Call selected remote server API to get updates list
+					const server_code_api_response = await self.get_code_update_info(server)
+
+					// result check
+						const result = server_code_api_response?.result
+						const errors = server_code_api_response?.errors || []
+						if(!result || errors.length){
+							// remove spinner
+							e.target.classList.remove('lock')
+							spinner.remove()
+							// error message node add
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error',
+								inner_html		: server_code_api_response.msg || 'Error connecting server',
+								parent			: body_response
+							})
+							// additional errors
+							const errors_length = errors.length
+							for (let i = 0; i < errors_length; i++) {
+								ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'error',
+									inner_html		: errors[i],
+									parent			: body_response
+								})
 							}
+							return
 						}
-					})
-					// debug
-					if(SHOW_DEBUG===true) {
-						console.log('debug server_code_api_response:', server_code_api_response)
-					}
 
-					const result = server_code_api_response?.result
+					// show info modal
+						render_info( result )
 
-					if(!result){
-						e.target.classList.remove('lock')
-						spinner.remove()
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'error',
-							inner_html		: server_code_api_response.msg || 'Error connecting server',
-							parent			: body_response
-						})
-						return
-					}
-
-					// selected files
-						const selected_file = [];
-
-					// show info
-						const info_modal = render_info( result )
+					// remove spinner
 					e.target.classList.remove('lock')
 					spinner.remove()
-			})
+			}
+			button_submit.addEventListener('click', click_event)
 		}
 
 	// build code version
