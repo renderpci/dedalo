@@ -2847,6 +2847,73 @@ abstract class component_common extends common {
 
 		return $ar_dataframe_ddo;
 	}//end get_dataframe_ddo
+
+
+
+	/**
+	* REMOVE_DATAFRAME_DATA
+	* Remove all information associate to the main component
+	* This method is called when the main component remove a row (@see update_data_value() in component_common)
+	* And is possible that his dataframe will has data
+	* Therefore, the dataframe needs to be delete as his own main caller dataframe.
+	* @param object $locator
+	* @return array | null $ar_dataframe_ddo
+	*
+	*/
+	public function remove_dataframe_data( object $locator ) : bool {
+
+		// get the component dataframe
+		$dataframe_ddo = $this->get_dataframe_ddo();
+
+		$caller_dataframe = new stdClass();
+			$caller_dataframe->section_tipo		= $this->section_tipo;
+			$caller_dataframe->section_id		= $this->section_id;
+			$caller_dataframe->section_id_key	= $locator->section_id;
+
+
+		// config_context. Get_config_context normalized
+			foreach ($dataframe_ddo as $ddo) {
+
+				$model = RecordObj_dd::get_modelo_name_by_tipo( $ddo->tipo );
+				$dataframe_component = component_common::get_instance(
+					$model, // string model
+					$ddo->tipo, // string tipo
+					$this->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$this->section_tipo, // string section_tipo
+					true,
+					$caller_dataframe
+				);
+
+
+				// Section
+				// remove dataframe data is called by the main component
+				// when the main component remove his own data
+				// therefore, the dataframe associated to the row of the component
+				// has to be removed as well.
+				// but, the dataframe component has not to create time machine data
+				// because the main component will save all information in the tm row.
+				// at this point the component section will not save time machine for the component.
+				$section = $dataframe_component->get_my_section();
+					$section->save_tm = false;
+
+				// remove the data from dataframe.
+				$dataframe_component->set_dato( null );
+				$dataframe_component->Save();
+
+				// back to set time machine to true for the next savings.
+				$section->save_tm = true;
+			}
+
+		return true;
+	}//end remove_dataframe_data
+
+
+
+
+
+	/**
 	* GET_AR_TARGET_SECTION_TIPO
 	* Section/s from which the portal/autocomplete feeds with records.
 	* Not to be confused with the section in which the portal is
