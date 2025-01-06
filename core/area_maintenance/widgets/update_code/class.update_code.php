@@ -364,8 +364,8 @@ class update_code {
 			$response->msg = $e->getMessage();
 		}
 
-		$response->result	= true;
-		$response->msg		= 'OK. Updated Dédalo code successfully. '.__METHOD__;
+		$response->result	= $result ?? false;
+		$response->msg		= 'OK. Updated Dédalo code successfully';
 
 
 		return $response;
