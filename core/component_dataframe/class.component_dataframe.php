@@ -232,4 +232,32 @@ class component_dataframe extends component_portal {
 
 		return $main_component_tipo;
 	}//end get_main_component_tipo
+
+
+
+	/**
+	* GET_MAIN_COMPONENT_DATA
+	* Create the main component and return its data
+	* @return array $main_componenet_data
+	*/
+	public function get_main_component_data() : array {
+
+		$main_component_tipo = $this->get_main_component_tipo();
+
+		$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
+		$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		$main_component = component_common::get_instance(
+			$model, // string model
+			$main_component_tipo, // string tipo
+			$this->get_section_id(), // string section_id
+			'list', // string mode
+			$lang, // string lang
+			$this->get_section_tipo() // string section_tipo
+		);
+
+		$main_componenet_data = $main_component->get_dato_full();
+
+		return $main_componenet_data;
+	}//end get_main_component_data
+
 }//end class component_dataframe
