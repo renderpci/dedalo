@@ -868,7 +868,6 @@ abstract class component_common extends common {
 					);
 
 				// Main components with dataframe and other relation components.
-
 					$relation_components = component_relation_common::get_components_with_relations();
 					if ( is_array($dato_tm) && in_array( $this->get_model(), $relation_components) ){
 						// Get only the component data. Remove possible dataframe data
@@ -3985,10 +3984,20 @@ abstract class component_common extends common {
 
 			// remove a item value from the component data array
 			case 'remove':
+
+				// get the key to be removed into data
+					$key = $changed_data->key;
+
 				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = (get_called_class()==='component_relation_related')
 					? $this->get_dato_with_references()
 					: $dato;
+
+				//dataframe
+					$dataframe_ddo = $this->get_dataframe_ddo();
+					if(!empty($dataframe_ddo) && $changed_data->key!==false ){
+						$this->remove_dataframe_data( $dato[$key] );
+					}
 
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
@@ -4025,7 +4034,6 @@ abstract class component_common extends common {
 						break;
 
 					default:
-						$key = $changed_data->key;
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
 						break;
@@ -4271,7 +4279,6 @@ abstract class component_common extends common {
 				);
 				$tm_dato = null;
 			}
-
 
 		return $tm_dato;
 	}//end get_component_tm_dato
