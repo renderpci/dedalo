@@ -136,7 +136,7 @@ class component_dataframe extends component_portal {
 
 	/**
 	* EMPTY_FULL_DATA_ASSOCIATED_TO_MAIN_COMPONENT
-	* !not used function at 26-04-2024
+	*
 	* @return bool
 	*/
 	public function empty_full_data_associated_to_main_component() {
@@ -169,6 +169,42 @@ class component_dataframe extends component_portal {
 
 
 	/**
+	* SET_TIME_MACHINE_DATA
+	*
+	* @return bool
+	*/
+	public function set_time_machine_data( $data ) {
+
+		$section = $this->get_my_section();
+			$section->save_tm = false;
+
+		$this->empty_full_data_associated_to_main_component();
+
+		$data_size = sizeof($data);
+
+		for ($i=0; $i < $data_size; $i++) {
+
+			$locator = $data[$i];
+
+			$caller_dataframe = new stdClass();
+				$caller_dataframe->section_id_key	= $locator->section_id_key;
+				$caller_dataframe->section_tipo		= $this->section_tipo;
+
+			$this->set_caller_dataframe($caller_dataframe);
+
+			// exec remove (return bool)
+			$this->set_dato( [$locator] );
+			$this->Save();
+		}
+
+		$section->save_tm = true;
+
+		return true;
+	}//end set_time_machine_data
+
+
+
+	/**
 	* GET_DIFFUSION_VALUE
 	* @param string|null $lang = DEDALO_DATA_LANG
 	* @param object|null $option_obj = null
@@ -181,6 +217,69 @@ class component_dataframe extends component_portal {
 
 		return $diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_MAIN_COMPONENT_TIPO
+	* Get the component parent tipo of the dataframe
+	* @return string $main_component_tipo
+	*/
+	public function get_main_component_tipo() : string {
+
+		$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
+		$main_component_tipo	= $RecordObj_dd->get_parent();
+
+		return $main_component_tipo;
+	}//end get_main_component_tipo
+
+
+
+	/**
+	* GET_MAIN_COMPONENT_DATA
+	* Create the main component and return its data
+	* @return array $main_componenet_data
+	*/
+	public function get_main_component_data() : array {
+
+		$main_component_tipo = $this->get_main_component_tipo();
+
+		$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
+		$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		$main_component = component_common::get_instance(
+			$model, // string model
+			$main_component_tipo, // string tipo
+			$this->get_section_id(), // string section_id
+			'list', // string mode
+			$lang, // string lang
+			$this->get_section_tipo() // string section_tipo
+		);
+
+		$main_componenet_data = $main_component->get_dato_full();
+
+		return $main_componenet_data;
+	}//end get_main_component_data
+
+
+
+	/**
+	* GET_TIME_MACHINE_DATA_TO_SAVE
+	* 1 Get all component data, not use the section_id_key
+	* because the time_machine not save dataframe data separated from main data.
+	* 2 Get the main component data
+	* 3 mix both data and return it.
+	* @return array $time_machine_data_to_save
+	*/
+	public function get_time_machine_data_to_save() {
+
+		$dataframe_data = parent::get_all_data();
+
+		$main_component_data = $this->get_main_component_data();
+		$time_machine_data_to_save = array_merge($main_component_data, $dataframe_data);
+
+
+		return $time_machine_data_to_save;
+	}//end get_time_machine_data
 
 
 

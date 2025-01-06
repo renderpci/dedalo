@@ -117,7 +117,7 @@ const render_content_value = function(options) {
 					? rating_data.datalist.find(el => el.section_id === rating_value.section_id )
 					: {
 						hide:[{
-							literal: '#eeeeee' // gray when the datalist is empty (the rating is not set)
+							literal: '#006ed2' // gray when the datalist is empty (the rating is not set)
 						}]
 					}
 
