@@ -136,7 +136,7 @@ class component_dataframe extends component_portal {
 
 	/**
 	* EMPTY_FULL_DATA_ASSOCIATED_TO_MAIN_COMPONENT
-	* !not used function at 26-04-2024
+	*
 	* @return bool
 	*/
 	public function empty_full_data_associated_to_main_component() {
@@ -165,6 +165,42 @@ class component_dataframe extends component_portal {
 
 		return true;
 	}//end empty_full_data_associated_to_main_component
+
+
+
+	/**
+	* SET_TIME_MACHINE_DATA
+	*
+	* @return bool
+	*/
+	public function set_time_machine_data( $data ) {
+
+		$section = $this->get_my_section();
+			$section->save_tm = false;
+
+		$this->empty_full_data_associated_to_main_component();
+
+		$data_size = sizeof($data);
+
+		for ($i=0; $i < $data_size; $i++) {
+
+			$locator = $data[$i];
+
+			$caller_dataframe = new stdClass();
+				$caller_dataframe->section_id_key	= $locator->section_id_key;
+				$caller_dataframe->section_tipo		= $this->section_tipo;
+
+			$this->set_caller_dataframe($caller_dataframe);
+
+			// exec remove (return bool)
+			$this->set_dato( [$locator] );
+			$this->Save();
+		}
+
+		$section->save_tm = true;
+
+		return true;
+	}//end set_time_machine_data
 
 
 
