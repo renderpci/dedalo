@@ -2802,6 +2802,51 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_DATAFRAME_DDO
+	* get the components dataframe when they are defined in RQO
+	* if the component has not a dataframe return null
+	* @return array | null $ar_dataframe_ddo
+	*  Array of ddo objects as:
+	* [
+	*	{
+	*		"info": "uncentanty component_dataframe",
+	*		"tipo": "numisdata1448",
+	*		"view": "default",
+	*		"parent": "self",
+	*		"section_tipo": "numisdata3"
+	*	}
+	* ]
+	*/
+	public function get_dataframe_ddo() : array | null {
+
+		// cached
+			if(isset($this->ar_dataframe_ddo)) {
+				return $this->ar_dataframe_ddo;
+			}
+
+		$ar_dataframe_ddo = [];
+		// config_context. Get_config_context normalized
+			$ar_request_config = $this->get_ar_request_config();
+			foreach ($ar_request_config as $config_context_item) {
+				$ddo_map = $config_context_item->show->ddo_map;
+				foreach ($ddo_map as $ddo) {
+					$model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo);
+					if($model === 'component_dataframe'){
+						$ar_dataframe_ddo[] = $ddo;
+					}
+				}
+			}
+
+		// empty case
+			if (empty($ar_dataframe_ddo)) {
+				$ar_dataframe_ddo = null;
+			}
+
+		// Fix value
+			$this->ar_dataframe_ddo = $ar_dataframe_ddo;
+
+		return $ar_dataframe_ddo;
+	}//end get_dataframe_ddo
 	* GET_AR_TARGET_SECTION_TIPO
 	* Section/s from which the portal/autocomplete feeds with records.
 	* Not to be confused with the section in which the portal is
