@@ -220,4 +220,16 @@ class component_dataframe extends component_portal {
 
 
 
+	/**
+	* GET_MAIN_COMPONENT_TIPO
+	* Get the component parent tipo of the dataframe
+	* @return string $main_component_tipo
+	*/
+	public function get_main_component_tipo() : string {
+
+		$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
+		$main_component_tipo	= $RecordObj_dd->get_parent();
+
+		return $main_component_tipo;
+	}//end get_main_component_tipo
 }//end class component_dataframe
