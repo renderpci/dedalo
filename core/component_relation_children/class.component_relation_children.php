@@ -74,9 +74,9 @@ class component_relation_children extends component_relation_common {
 
 		// locator compound
 			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
 				$locator->set_type($this->relation_type);
+				$locator->set_section_id($section_id);
+				$locator->set_section_tipo($section_tipo);
 				$locator->set_from_component_tipo($this->tipo);
 
 		// Add children locator
@@ -99,9 +99,9 @@ class component_relation_children extends component_relation_common {
 
 		// locator compound
 			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
 				$locator->set_type($this->relation_type);
+				$locator->set_section_id($section_id);
+				$locator->set_section_tipo($section_tipo);
 				$locator->set_from_component_tipo($this->tipo);
 
 		// Remove child locator

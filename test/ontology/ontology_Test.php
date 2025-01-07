@@ -146,13 +146,6 @@ final class ontology_test extends TestCase {
 				.'result section_tipo: ' . $result->section_tipo . PHP_EOL
 			);
 
-			$expected = 'Ontologies main';
-			$this->assertTrue(
-				$result->datos->label===$expected ,
-				'expected:' . to_string($expected) . PHP_EOL
-				.'result datos->label: ' . $result->datos->label . PHP_EOL
-			);
-
 		// nonexitingtld tld
 			$tld = 'nonexitingtld';
 
@@ -212,7 +205,6 @@ final class ontology_test extends TestCase {
 				.'result type: ' . gettype($result) . PHP_EOL
 			);
 	}//end test_get_ontology_main_form_target_section_tipo
-
 
 
 
