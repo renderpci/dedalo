@@ -2447,46 +2447,34 @@ class component_relation_common extends component_common {
 					// this case is used in component_relation_children in the hierarchy section
 					// in these case the array of sections will get from the value of specific field
 					$target_values = $source_item->value; // target thesaurus like ['hierarchy53']
+
+					// sections (all hierarchy sections -hierarchy1- normally)
+						$sqo = new stdClass();
+							$sqo->section_tipo			= $caller_section_tipo;
+							$sqo->limit					= 0;
+							$sqo->offset				= 0;
+							$sqo->order					= false;
+							$sqo->skip_projects_filter	= true;
+						$sections = sections::get_instance(
+							null,
+							$sqo,
+							$caller_section_tipo, // caller tipo
+							'list',
+							DEDALO_DATA_NOLAN
+						);
+						$records = $sections->get_dato();
+
 					foreach ((array)$target_values as $current_component_tipo) {
 
 						// short vars
 							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
-						// sections (all hierarchy sections -hierarchy1- normally)
-							if (!isset($records)) {
-								// calculate once
-								$sqo = new stdClass();
-									$sqo->section_tipo			= $retrieved_section_tipo;
-									$sqo->limit					= 0;
-									$sqo->offset				= 0;
-									$sqo->order					= false;
-									$sqo->skip_projects_filter	= true;
-								$sections = sections::get_instance(
-									null,
-									$sqo,
-									$retrieved_section_tipo,
-									'list',
-									DEDALO_DATA_LANG
-								);
-								$records = $sections->get_dato();
-							}
-
 						// data
 							foreach ($records as $current_record) {
 
-								$section = section::get_instance(
-									$current_record->section_id,
-									$current_record->section_tipo,
-									'list',
-									true
-								);
-
-								// inject datos to section and set as loaded
-								$datos = $current_record->datos ?? null;
-								if (!is_null($datos)) {
-									$section->set_dato($datos);
-								}
+								// (!) do not inject section data here anytime
+								// because interferes with component_relation_cildren saving
 
 								// component
 								$component = component_common::get_instance(
