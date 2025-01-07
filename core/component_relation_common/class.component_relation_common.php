@@ -2381,58 +2381,82 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_CONFIG_CONTEXT_SECTION_TIPO
+	* GET_REQUEST_CONFIG_SECTION_TIPO
+	* Resolves section tipo from properties definition.
+	* Sometimes it is not possible to clearly define section_type,
+	* in those cases it is possible to define in properties a «resolution» with a context
+	* for example:
+	* 	self
+	* 		in toponymy «self» will be resolved by the section_tipo that call as es1, fr1, etc.
+	* 	hierarchy_types
+	* 		resolve the hierarchy type as 1 - thematic, and set all section_tipo of this type as; ts1, on1, dc1, etc...
+	*
+	* this function has two params
 	* @param array $ar_section_tipo_sources
-	* @param string|null $retrieved_section_tipo = null
+	* this param give the property configuration as:
+	* [
+	*    {
+	*        "value": [
+	*            "hierarchy53"
+	*        ],
+	*        "source": "field_value"
+	*    }
+	* ]
+	* second param is used to give the caller section_tipo, used for the resolution in some cases.
+	* @param string|null $caller_section_tipo = null
+	* 	sample: hierarchy1
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo( array $ar_section_tipo_sources, $retrieved_section_tipo=null ) : array {
-		$start_time=start_time();
+	public static function get_request_config_section_tipo( array $ar_section_tipo_sources, string $caller_section_tipo ) : array {
 
 		$ar_section_tipo = [];
 		foreach ($ar_section_tipo_sources as $source_item) {
 
-			if (is_string($source_item)) {
+			// check source_item
+				if (is_string($source_item)) {
 
-				// old self section tipo properties definitions
-					// if ($source_item==='self') {
-					// 	$source_item = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
-					// }
-					if ($source_item==='self') {
-						debug_log(__METHOD__
-							." Exception ERROR Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}]" . PHP_EOL
-							.' source_item: ' . to_string($source_item)
-							, logger::ERROR
-						);
-						if(SHOW_DEBUG===true) {
-							throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format
-								. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+					// old self section tipo properties definitions
+						// if ($source_item==='self') {
+						// 	$source_item = is_array($caller_section_tipo) ? reset($caller_section_tipo) : $caller_section_tipo;
+						// }
+						if ($source_item==='self') {
+							debug_log(__METHOD__
+								." Exception ERROR Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}]" . PHP_EOL
+								.' source_item: ' . to_string($source_item)
+								, logger::ERROR
+							);
+							if(SHOW_DEBUG===true) {
+								throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format
+									. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+							}
 						}
-					}
 
-				$ar_section_tipo[] = $source_item;
-				debug_log(__METHOD__
-					." ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
-					.' source_item: '.to_string($source_item) . PHP_EOL
-					.' ar_section_tipo_sources: '.to_string($ar_section_tipo_sources) . PHP_EOL
-					.' retrieved_section_tipo: '.to_string($retrieved_section_tipo)
-					,logger::ERROR
-				);
-				continue;
-			}
-			if (empty($source_item->source)) {
-				debug_log(__METHOD__
-					. " ++++++++++++++++++++++++++++++++++++ Ignored item with empty source ". PHP_EOL
-					. ' source_item: ' . to_string($source_item)
-					, logger::ERROR
-				);
-				continue;
-			}
+					$ar_section_tipo[] = $source_item;
+					debug_log(__METHOD__
+						." ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
+						.' source_item: '.to_string($source_item) . PHP_EOL
+						.' ar_section_tipo_sources: '.to_string($ar_section_tipo_sources) . PHP_EOL
+						.' caller_section_tipo: '.to_string($caller_section_tipo)
+						,logger::ERROR
+					);
+					continue;
+				}
+
+			// check source
+				if (empty($source_item->source)) {
+					debug_log(__METHOD__
+						. " ++++++++++++++++++++++++++++++++++++ Ignored item with empty source ". PHP_EOL
+						. ' source_item: ' . to_string($source_item)
+						, logger::ERROR
+					);
+					continue;
+				}
 
 			switch ($source_item->source) {
+
 				case 'self':
-					// $ar_section_tipo = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
-					$ar_section_tipo = is_array($retrieved_section_tipo) ? $retrieved_section_tipo : [$retrieved_section_tipo];
+					// $ar_section_tipo = is_array($caller_section_tipo) ? reset($caller_section_tipo) : $caller_section_tipo;
+					$ar_section_tipo = is_array($caller_section_tipo) ? $caller_section_tipo : [$caller_section_tipo];
 					break;
 
 				case 'hierarchy_types':
@@ -2451,12 +2475,14 @@ class component_relation_common extends component_common {
 					$target_values = $source_item->value; // target thesaurus like ['hierarchy53']
 
 					// sections (all hierarchy sections -hierarchy1- normally)
+					// Use here a custom SQO search to prevent projects filter
 						$sqo = new stdClass();
 							$sqo->section_tipo			= $caller_section_tipo;
 							$sqo->limit					= 0;
 							$sqo->offset				= 0;
 							$sqo->order					= false;
 							$sqo->skip_projects_filter	= true;
+
 						$sections = sections::get_instance(
 							null,
 							$sqo,
@@ -2489,18 +2515,27 @@ class component_relation_common extends component_common {
 								);
 
 								$component_dato = $component->get_dato();
-								if (!empty($component_dato)) {
+								if ( !empty($component_dato) ) {
 									foreach ($component_dato as $current_section_tipo) {
-										if (!empty($current_section_tipo)) {
+										if ( !empty($current_section_tipo) ) {
 											$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
-											if (!empty($section_model_name)) {
+											if ( $section_model_name==='section' ) {
 												$ar_section_tipo[] = $current_section_tipo;
+											}else{
+												debug_log(__METHOD__
+													. " target section tipo definition is ignored because is not a section " . PHP_EOL
+													. ' section_tipo ignored'. to_string($current_section_tipo) . PHP_EOL
+													. ' with model: ' . to_string($section_model_name). PHP_EOL
+													. ' in section: ' . to_string($current_record->section_tipo). PHP_EOL
+													. ' in section_id: ' . to_string($current_record->section_id). PHP_EOL
+													, logger::ERROR
+												);
 											}
 										}
 									}
 								}
 							}//end foreach ($dato as $current_record)
-					}
+					}//end foreach ((array)$target_values as $current_component_tipo)
 					break;
 
 				case 'hierarchy_terms':
