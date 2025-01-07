@@ -86,4 +86,48 @@ update_code.prototype.get_value = async () => {
 }//end get_value
 
 
+
+
+/**
+* GET_CODE_UPDATE_INFO
+* Call code remote server API and gets update info before update the ontology
+* @return object api_response
+* {
+* 	result : {
+* 		files: []
+* 		info: {version: "6.4.0", ...}
+* 	},
+* 	msg: string
+* 	errors: []
+* }
+*/
+update_code.prototype.get_code_update_info = async (server) => {
+
+	// short vars
+		const code				= server.code
+		const url				= server.url
+		const dedalo_version	= page_globals.dedalo_version
+
+	const api_response = await data_manager.request({
+		url		: url,
+		body	: {
+			dd_api	: 'dd_utils_api',
+			action	: 'get_code_update_info',
+			source	: {},
+			options : {
+				version	: dedalo_version,
+				code	: code
+			}
+		}
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) get_code_update_info update_code api_response:', api_response);;
+	}
+
+
+	return api_response
+}//end get_code_update_info
+
+
+
 // @license-end
