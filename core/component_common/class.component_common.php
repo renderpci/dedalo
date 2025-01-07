@@ -996,15 +996,17 @@ abstract class component_common extends common {
 
 
 
-	# GET_TIME_MACHINE_DATA
-	# Recover component var 'dato' without change type or other custom component changes
-	public function get_time_machine_data_to_save() {
+	/**
+	* GET_TIME_MACHINE_DATA_TO_SAVE
+	* Recover component var 'dato' without change type or other custom component changes
+	* @return array|null $time_machine_data_to_save
+	*/
+	public function get_time_machine_data_to_save() : ?array {
 
 		$time_machine_data_to_save = $this->dato;
 
 		$ar_component_dataframe = $this->get_dataframe_ddo();
-
-		if( empty(!$ar_component_dataframe) ){
+		if( !empty($ar_component_dataframe) ){
 
 			$ar_dataframe_data = [];
 			foreach ($ar_component_dataframe as $dataframe_ddo) {
@@ -1019,13 +1021,15 @@ abstract class component_common extends common {
 					false
 				);
 				$dataframe_data = $dataframe_component->get_all_data();
-
 				if( !empty($dataframe_data) ){
 					$ar_dataframe_data = array_merge( $ar_dataframe_data, $dataframe_data );
 				}
 			}
-			$time_machine_data_to_save = array_merge( $time_machine_data_to_save, $ar_dataframe_data );
+			$time_machine_data_to_save = is_array($time_machine_data_to_save)
+				? array_merge( $time_machine_data_to_save, $ar_dataframe_data )
+				: $ar_dataframe_data;
 		}
+
 
 		return $time_machine_data_to_save;
 	}//end get_time_machine_data
