@@ -226,6 +226,7 @@ final class dd_ts_api {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// short vars
 			$source					= $rqo->source;
@@ -245,6 +246,7 @@ final class dd_ts_api {
 					." $response->msg "
 					, logger::ERROR
 				);
+				$response->errors[] = 'Failed create new section from parent';
 				return $response;
 			}
 
@@ -259,6 +261,7 @@ final class dd_ts_api {
 					.' section_map: ' . to_string($section_map)
 					, logger::DEBUG
 				);
+				$response->errors[] = 'Invalid section_map \'is_descriptor\' property from section';
 			}else{
 				if ($section_map->thesaurus->is_descriptor!==false) {
 					$component_tipo	= $section_map->thesaurus->is_descriptor;
@@ -290,6 +293,7 @@ final class dd_ts_api {
 					.' section_map: ' . to_string($section_map)
 					, logger::DEBUG
 				);
+				$response->errors[] = 'Invalid section_map \'is_indexable\' property from section';
 			}else{
 				if ($section_map->thesaurus->is_indexable!==false) {
 					$component_tipo	= $section_map->thesaurus->is_indexable;
@@ -314,24 +318,24 @@ final class dd_ts_api {
 			}
 
 		// component_relation_children
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			if ($model_name!=='component_relation_children') {
 				$response->msg = 'Error on create new section from parent. Invalid model: '.$model_name.'. Expected: "component_relation_children" ';
 				debug_log(__METHOD__.
 					" $response->msg "
 					, logger::ERROR
 				);
+				$response->errors[] = 'Invalid model '.$model_name;
 				return $response;
 			}
-			$mode							= 'edit';
-			$lang							= DEDALO_DATA_NOLAN;
-			$component_relation_children	= component_common::get_instance(
+			$component_relation_children = component_common::get_instance(
 				$model_name,
-				$tipo,
+				$tipo, // normally hierarchy45
 				$section_id,
-				$mode,
-				$lang,
-				$section_tipo
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo, // normally hierarchy1
+				false
 			);
 
 		// add
@@ -343,7 +347,9 @@ final class dd_ts_api {
 
 				// All is OK. Result is new created section section_id
 				$response->result	= (int)$new_section_id;
-				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+				$response->msg		= count($response->errors)===0
+					? 'OK. Request done successfully'
+					: 'Request done with errors';
 
 				// debug
 					if(SHOW_DEBUG===true) {
