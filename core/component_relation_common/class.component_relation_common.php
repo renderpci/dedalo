@@ -855,13 +855,15 @@ class component_relation_common extends component_common {
 
 	/**
 	* ADD_LOCATOR_TO_DATO
-	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
+	* Add one locator to current 'dato'. Verify that it exists before, to avoid duplicates.
 	* @param object $locator
 	* @return bool
 	*/
 	public function add_locator_to_dato( object $locator ) : bool {
 
-		if(empty($locator)) return false;
+		if(empty($locator)) {
+			return false;
+		}
 
 		if (!is_object($locator) || !isset($locator->type)) {
 			if(SHOW_DEBUG===true) {
@@ -876,9 +878,9 @@ class component_relation_common extends component_common {
 			return false;
 		}
 
-		$current_type 	= $locator->type;
-		$dato 	  		= $this->get_dato();
-		$added 			= false;
+		// short vars
+		$dato	= $this->get_dato();
+		$added	= false;
 
 		// maintain array index after unset value. ! Important for encode JSON as array later (if keys are not correlatives, undesired object is created)
 		$dato = array_values($dato);
@@ -2517,6 +2519,7 @@ class component_relation_common extends component_common {
 						$ar_section_tipo[] = $item->section_tipo;
 					}
 					break;
+
 				case 'section':
 				default:
 					// verify the section tld, if its active in the installation

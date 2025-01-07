@@ -2208,7 +2208,9 @@ abstract class component_common extends common {
 					$response->result	= [];
 					$response->msg		= 'Error. section tipo: '.$target_section_tipo.' is not a valid section ('.$target_section_model.')';
 					debug_log(__METHOD__
-						."  ".$response->msg.to_string()
+						.' '.$response->msg . PHP_EOL
+						.' target_section_tipo'. to_string($target_section_tipo) . PHP_EOL
+						.' target_section_model'. to_string($target_section_model)
 						, logger::ERROR
 					);
 
@@ -2871,7 +2873,6 @@ abstract class component_common extends common {
 
 		return $ar_target_section_ddo;
 	}//end get_ar_target_section_ddo
-
 
 
 
