@@ -344,11 +344,14 @@ class tool_time_machine extends tool_common {
 						: $current_row['dato'];
 
 					// if the time_machine doesn't has any other register than the bulk_process_id change
-					// set it to null, to bypass the next if
+					// the change is a null data because the component has only 1 change and previous change is empty value.
+					// set current_bulk_process_id to null, to bypass the next if
+					// Set reverted_next as true, because this loop cycle is the last one.
 					// set the data as empty array to remove the component data.
 					if ($sub_n_rows===1){
-						$current_bulk_process_id = null;
-						$time_machine_data = [];
+						$current_bulk_process_id	= null;
+						$reverted_next				= true;
+						$time_machine_data			= [];
 					}
 					// check if the bulk_process_id is the same than current record of the time_machine
 					// if the row is the bulk_process_id row, the next record will be the row to be recovery.
