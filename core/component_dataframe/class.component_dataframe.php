@@ -268,14 +268,17 @@ class component_dataframe extends component_portal {
 	* because the time_machine not save dataframe data separated from main data.
 	* 2 Get the main component data
 	* 3 mix both data and return it.
-	* @return array $time_machine_data_to_save
+	* @return array|null $time_machine_data_to_save
 	*/
-	public function get_time_machine_data_to_save() {
+	public function get_time_machine_data_to_save() : ?array {
 
 		$dataframe_data = parent::get_all_data();
 
 		$main_component_data = $this->get_main_component_data();
-		$time_machine_data_to_save = array_merge($main_component_data, $dataframe_data);
+
+		$time_machine_data_to_save = is_array($main_component_data)
+			? array_merge($main_component_data, $dataframe_data)
+			: $dataframe_data;
 
 
 		return $time_machine_data_to_save;

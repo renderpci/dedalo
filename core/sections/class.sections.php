@@ -125,6 +125,7 @@ class sections extends common {
 		// fix result ar_records as dato
 			$this->dato = $rows_data->ar_records;
 
+
 		return $this->dato;
 	}//end get_dato
 
