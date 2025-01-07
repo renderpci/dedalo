@@ -63,7 +63,8 @@ class hierarchy extends ontology {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= [];
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
 
 		// options
 			$section_id		= $options->section_id;
@@ -80,17 +81,19 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato		= (array)$component->get_dato();
-			$locator	= reset($dato);
-			if( !isset($locator->section_tipo) || $locator->section_tipo!==DEDALO_SECTION_SI_NO_TIPO ||
+			$dato		= $component->get_dato();
+			$locator	= $dato[0] ?? null;
+			if( empty($locator) ||
+				!isset($locator->section_tipo) || $locator->section_tipo!==DEDALO_SECTION_SI_NO_TIPO ||
 				!isset($locator->section_id) || $locator->section_id!=NUMERICAL_MATRIX_VALUE_YES) {
 
 				// Error: Current hierarchy is not active. Stop here (!)
 
 				$response->result	= false;
-				$response->msg[]	= label::get_label('error_generate_hierarchy');
+				$response->msg		.= label::get_label('error_generate_hierarchy');
+				$response->errors[]	= 'Empty hierarchy active value: ' . $active_tipo;
 				debug_log(__METHOD__ .PHP_EOL
-					." msg: ".to_string($response->msg)
+					.' msg: ' . $response->msg
 					, logger::ERROR
 				);
 				return $response;
@@ -117,9 +120,10 @@ class hierarchy extends ontology {
 				// Error: TLD2 is mandatory
 
 				$response->result	= false;
-				$response->msg[]	= 'Error on get tld2. Empty value (tld is mandatory)';
+				$response->msg		.= 'Error on get tld2. Empty value (tld is mandatory)';
+				$response->errors[]	= 'Empty hierarchy tld value: ' . $tld2_tipo;
 				debug_log(__METHOD__ .PHP_EOL
-					." msg: ".to_string($response->msg)
+					." msg: ". $response->msg
 					, logger::ERROR
 				);
 				return $response;
@@ -135,17 +139,17 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato = $component->get_dato();
-			// check value
-			$real_section_tipo = isset($dato[0]) ? $dato[0] : false;
+			$dato				= $component->get_dato();
+			$real_section_tipo	= $dato[0] ?? false;
 			if (empty($real_section_tipo)) {
 
 				// Error: source_real_section_tipo is mandatory
 
 				$response->result	= false;
-				$response->msg[]	= 'Error on get source_real_section_tipo. Empty value (source_real_section_tipo is mandatory)';
+				$response->msg		.= 'Error on get source_real_section_tipo. Empty value (source_real_section_tipo is mandatory)';
+				$response->errors[]	= 'Empty source section_tipo value: ' . DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO;
 				debug_log(__METHOD__ .PHP_EOL
-					." msg: ".to_string($response->msg)
+					." msg: ". $response->msg
 					, logger::ERROR
 				);
 				return $response;
@@ -156,9 +160,10 @@ class hierarchy extends ontology {
 				// Error: source_real_section_tipo is not a section !
 
 				$response->result	= false;
-				$response->msg[]	= 'Error on get source_real_section_tipo. Invalid model (only sections tipo are valid)';
+				$response->msg		.= 'Error on get source_real_section_tipo. Invalid model (only sections tipo are valid)';
+				$response->errors[]	= 'Invalid source section_tipo model: ' . $real_section_model_name;
 				debug_log(__METHOD__ .PHP_EOL
-					." msg: ".to_string($response->msg)
+					." msg: ". $response->msg
 					, logger::ERROR
 				);
 				return $response;
@@ -187,9 +192,10 @@ class hierarchy extends ontology {
 				// Error: typology (select Thematic, Toponymy, etc..) is mandatory
 
 				$response->result	= false;
-				$response->msg[]	= 'Error on get typology. Empty value (typology is mandatory)';
+				$response->msg		.= 'Error on get typology. Empty value (typology is mandatory)';
+				$response->errors[]	= 'Invalid typology';
 				debug_log(__METHOD__ .PHP_EOL
-					." msg: ".to_string($response->msg)
+					." msg: ".$response->msg
 					, logger::ERROR
 				);
 				return $response;
@@ -217,16 +223,14 @@ class hierarchy extends ontology {
 			}
 			$name_data = $component->get_dato_full();
 
-		// commands sequence
+		// -------- VIRTUAL SECTION --------
 
-		// ******* VIRTUAL SECTION *******
-
-		// ontology main
+		// ontology main. Create a new ontology main section if not already exists
 			$main_options = new stdClass();
 				$main_options->tld			= $tld2;
 				$main_options->typology_id	= $typology_id;
 				$main_options->name_data	= $name_data;
-			$main_section = ontology::add_main_section( $main_options );
+			ontology::add_main_section( $main_options );
 
 		// ontology nodes
 		// Create two different nodes:
@@ -240,6 +244,16 @@ class hierarchy extends ontology {
 				// ontology table record template data
 					$section_data_string	= file_get_contents( DEDALO_CORE_PATH.'/ontology/templates/virtual_section_data.json' );
 					$section_data			= json_handler::decode( $section_data_string );
+					if (!is_object($section_data)) {
+						$response->result	= false;
+						$response->msg		.= 'Error on get section data from file virtual_section_data.json';
+						$response->errors[]	= 'Invalid JSON section data from file';
+						debug_log(__METHOD__ .PHP_EOL
+							." msg: ".$response->msg
+							, logger::ERROR
+						);
+						return $response;
+					}
 
 				// tld
 					$section_data->components->ontology7->dato->{DEDALO_DATA_NOLAN} = [$tld2];
@@ -308,7 +322,7 @@ class hierarchy extends ontology {
 					ontology::insert_jer_dd_record($tld2.'0', 1);
 
 			// virtual model section
-					// modify the section data to use it as model.
+				// modify the section data to use it as model.
 					foreach ($section_data->relations as $key => $current_locator) {
 						// replace the model locator to yes
 						if($current_locator->from_component_tipo==='ontology30' ){
@@ -325,13 +339,12 @@ class hierarchy extends ontology {
 						2, // string|null section_id
 						$tld2.'0' // string section_tipo
 					);
-
 					$model_section->forced_create_record();
 					// save section
 						$model_section->set_dato( $section_data );
 						$model_section->Save();
 
-					//parent
+					// parent
 						$parent_model_grouper_tipo = ontology::create_parent_grouper('hierarchy57', 'hierarchymtype', $typology_id);
 
 						$parent_model_tld	= get_tld_from_tipo( $parent_model_grouper_tipo );
@@ -361,8 +374,8 @@ class hierarchy extends ontology {
 
 			// set permissions. Allow current user access to created default sections
 			// as es1, es2
-				$ar_section_tipo = [$tld2.'1', $tld2.'2'];
-				$user_id = logged_user_id();
+				$ar_section_tipo	= [$tld2.'1', $tld2.'2'];
+				$user_id			= logged_user_id();
 
 				$set_permissions_result = component_security_access::set_section_permissions((object)[
 					'ar_section_tipo'	=> $ar_section_tipo,
@@ -375,12 +388,13 @@ class hierarchy extends ontology {
 						. ' ar_section_tipo: '.to_string($ar_section_tipo),
 						logger::ERROR
 					);
+					$response->errors[] = 'Error setting permissions for current user';
 				}
 
 			// target section with the created sections
 			// when the process was finished inset the target section into the components
-				$target_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;	//'hierarchy53';
-				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($target_tipo, true);
+				$target_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;	//'hierarchy53';
+				$model_name					= RecordObj_dd::get_modelo_name_by_tipo($target_tipo, true);
 				$component_target_section	= component_common::get_instance(
 					$model_name,
 					$target_tipo,
@@ -392,8 +406,8 @@ class hierarchy extends ontology {
 				$component_target_section->set_dato( $tld2.'1' );
 				$component_target_section->Save();
 
-				$target_model_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	//'hierarchy53';
-				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($target_model_tipo, true);
+				$target_model_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	//'hierarchy53';
+				$model_name						= RecordObj_dd::get_modelo_name_by_tipo($target_model_tipo, true);
 				$component_target_model_section	= component_common::get_instance(
 					$model_name,
 					$target_model_tipo,
@@ -405,205 +419,16 @@ class hierarchy extends ontology {
 				$component_target_model_section->set_dato( $tld2.'2' );
 				$component_target_model_section->Save();
 
+		// response OK
+			$response->result = true;
+			$response->msg = count($response->errors)===0
+				? 'Request done successfully'
+				: 'Request done with errors';
+
 
 		return $response;
 	}//end generate_virtual_section
 
-
-
-	/**
-	* CREATE_ROOT_TERMS
-	* @param object $request_options
-	* @return bool
-	*/
-	protected static function create_root_terms( object $request_options ) : bool {
-
-		$options = new stdClass();
-			$options->section_tipo 	= null;
-			$options->section_id 	= null;
-			$options->ar_sections 	= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		$tipo 			= DEDALO_THESAURUS_TERM_TIPO;
-		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$section_id 	= 1;
-
-		# Iterate sections (normally like ts1,ts2)
-		foreach ((array)$options->ar_sections as $key => $current_section_tipo) {
-
-			$section = section::get_instance($section_id,$current_section_tipo);
-			$section->forced_create_record();
-
-			$component = component_common::get_instance(
-				$model_name,
-				$tipo,
-				$section_id,
-				'edit',
-				DEDALO_DATA_LANG,
-				$current_section_tipo
-			);
-			$name = ($key===0) ? "Sample term" : "Sample model";
-			$component->set_dato("$name [{$current_section_tipo}-{$section_id}]");
-			$component->Save();
-
-			debug_log(__METHOD__
-				." Created first record of thesaurus section $current_section_tipo - $section_id "
-				, logger::DEBUG
-			);
-
-			# Attach as children of current hierarchy
-			$component_relation_children_tipo = ($key===0)
-				? DEDALO_HIERARCHY_CHILDREN_TIPO
-				: DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;
-			$component_relation_children = component_common::get_instance(
-				'component_relation_children',
-				$component_relation_children_tipo,
-				$options->section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$options->section_tipo
-			);
-			$component_relation_children->make_me_your_children( $current_section_tipo, $section_id );
-			$component_relation_children->Save();
-
-			debug_log(__METHOD__
-				." Added first record of thesaurus section $current_section_tipo - $section_id as children of hierarchy $component_relation_children_tipo "
-				, logger::DEBUG
-			);
-		}
-
-		return true;
-	}//end create_root_terms
-
-
-	/**
-	* CREATE_TERM
-	* Creates new structure term with request params. If term already exists, return false
-	* @param object $request_options
-	* @return object $response
-	*/
-	public static function create_term( object $request_options ) : object {
-
-		// options
-			$options = new stdClass();
-				$options->terminoID		= '';
-				$options->parent		= '';
-				$options->modelo		= '';
-				$options->esmodelo		= 'no';
-				$options->esdescriptor	= 'si';
-				$options->visible		= 'si';
-				$options->norden		= null;
-				$options->tld2			= '';
-				$options->traducible	= 'no';
-				$options->relaciones	= null;
-				$options->properties	= null;
-				$options->name			= '';
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= '';
-
-		// structure element test . Test record exits
-			$RecordObj_dd	= new RecordObj_dd($options->terminoID, $options->tld2);
-			$parent_test	= $RecordObj_dd->get_parent();
-			if (!empty($parent_test)) {
-				$response->result	= true;
-				$response->msg		= "Current hierarchy ($options->terminoID - $options->name) already exists. Term creation order ignored.";
-				debug_log(__METHOD__
-					. ' msg: '.to_string($response->msg),
-					logger::WARNING
-				);
-				return $response;
-			}
-
-		// norden
-			$ar_children	= RecordObj_dd::get_ar_childrens($options->parent);
-			$norden			= (int)count($ar_children)+1;
-
-		// Defaults
-			$RecordObj_dd->set_terminoID($options->terminoID);
-			$RecordObj_dd->set_parent($options->parent);
-			$RecordObj_dd->set_modelo($options->modelo);
-			$RecordObj_dd->set_esmodelo($options->esmodelo);
-			$RecordObj_dd->set_esdescriptor($options->esdescriptor);
-			$RecordObj_dd->set_visible($options->visible);
-			$RecordObj_dd->set_norden($norden);
-			$RecordObj_dd->set_tld($options->tld2);
-			$RecordObj_dd->set_traducible($options->traducible);
-			$RecordObj_dd->set_relaciones($options->relaciones);
-			$RecordObj_dd->set_properties($options->properties);
-
-		// term. Column term
-			$term = new stdClass();
-				$term->{DEDALO_STRUCTURE_LANG} = $options->name;
-			$RecordObj_dd->set_term($term);
-
-		// force_insert_on_save
-			$RecordObj_dd->set_force_insert_on_save(true); # important !
-
-		// SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
-			// $created_id_ts = $RecordObj_dd->save_term_and_descriptor( $options->name );
-			$created_id_ts = $RecordObj_dd->Save();
-			if ($created_id_ts) {
-				$response->result 	= true;
-				$response->msg 		= "Created record: $created_id_ts - $options->name";
-			}
-
-
-		return $response;
-	}//end create_term
-
-
-
-	/**
-	* ROW_TO_JSON_OBJ
-	* @return bool|null
-	*/
-	private static function row_to_json_obj( string $tipo, $parent, $dato=null, $lang='lg-spa', ?string $section_tipo=null ) {
-
-		if(empty($dato)){
-			debug_log(__METHOD__
-				." Error Processing Request. dato is mandatory !"
-				, logger::ERROR
-			);
-			return false;
-		}
-
-		if(empty($section_tipo)){
-			debug_log(__METHOD__
-				." Error Processing Request. section_tipo is mandatory !".to_string()
-				, logger::ERROR
-			);
-			return false;
-		}
-
-		// Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
-		$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo, true);
-		if ($section_modelo_name!=='section') {
-			throw new Exception("Error Processing Request. Section tipo '$section_tipo' do not exists in Ontology.<br>
-					Please review your Ontology data before continue working to avoid critical errors.<br>", 1);
-		}
-
-		$mode		= 'edit';
-		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$component	= component_common::get_instance(
-			$model_name,
-			$tipo,
-			$parent,
-			$mode,
-			$lang,
-			$section_tipo
-		);
-
-		$component->set_dato($dato);
-		$component->Save();
-		unset($model_name);
-		unset($component);
-
-		return null;
-	}//end row_to_json_obj
 
 
 	/**
@@ -612,11 +437,11 @@ class hierarchy extends ontology {
 	* Do a direct db search request for speed and store results in a static var for avoid resolve the same main_lang twice
 	* Speed here is very important because this method is basic for thesaurus sections defined in hierarchies
 	* @param string $section_tipo
-	* @return string|null $main_lang
+	* @return string $main_lang
 	*/
-	public static function get_main_lang( string $section_tipo ) : ?string {
+	public static function get_main_lang( string $section_tipo ) : string {
 
-		// Always fixed langs as English
+		// Always fixed langs root term as English
 			if ($section_tipo==='lg1') {
 				return 'lg-eng';
 			}
@@ -705,9 +530,10 @@ class hierarchy extends ontology {
 	}//end get_main_lang
 
 
+
 	/**
 	* GET_ALL_TABLES
-	* Return array of tables of requested hierarchy sections
+	* Return array of unique tables of requested hierarchy sections
 	* @param array $ar_section_tipo
 	* 	Format like [0] => lg1
 	*			    [2] => ts1
@@ -715,44 +541,16 @@ class hierarchy extends ontology {
 	*/
 	public static function get_all_tables( array $ar_section_tipo ) : array {
 
-		$all_tables = array();
-		foreach ((array)$ar_section_tipo as $section_tipo) {
+		$all_tables = [];
+		foreach ($ar_section_tipo as $section_tipo) {
 			$table = common::get_matrix_table_from_tipo($section_tipo);
 			if (!in_array($table, $all_tables)) {
 				$all_tables[] = $table;
 			}
 		}
 
-		return (array)$all_tables;
+		return $all_tables;
 	}//end get_all_tables
-
-
-
-	/**
-	* GET_ALL_TERM_TIPO_BY_MAP
-	* Returns array of thesaurus term by map
-	* @param array $ar_section_tipo
-	* @return array $all_term_tipo_by_map
-	*/
-	public static function get_all_term_tipo_by_map( array $ar_section_tipo ) : array {
-
-		$all_term_tipo_by_map = [];
-		foreach ((array)$ar_section_tipo as $section_tipo) {
-
-			// Matrix table
-			$table = common::get_matrix_table_from_tipo($section_tipo);
-
-			// term_tipo
-			$term_tipo = hierarchy::get_element_tipo_from_section_map($section_tipo, 'term');
-
-			if(!is_null($term_tipo)) {
-				// append non null values
-				$all_term_tipo_by_map[$table][] = $term_tipo;
-			}
-		}
-
-		return $all_term_tipo_by_map;
-	}//end get_all_term_tipo_by_map
 
 
 
@@ -811,14 +609,14 @@ class hierarchy extends ontology {
 			return $ar_elements;
 		}
 
-		static $section_map_elemets ;
-		if (isset($section_map_elemets[$section_tipo])) {
-			return $section_map_elemets[$section_tipo];
+		static $section_map_elemets_cache;
+		if (isset($section_map_elemets_cache[$section_tipo])) {
+			return $section_map_elemets_cache[$section_tipo];
 		}
 
 		// Elements are stored in current section > section_map
 		// Search element in current section
-		$ar_modelo_name_required = array('section_map');
+		$ar_modelo_name_required = ['section_map'];
 
 		// Search in current section
 		$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
@@ -829,7 +627,7 @@ class hierarchy extends ontology {
 			false, // bool recursive
 			true // bool search_exact
 		);
-		# Fallback to real section when in virtual
+		// Fallback to real section when in virtual
 		if (!isset($ar_children[0])) {
 			$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 			if ($section_tipo!==$section_real_tipo) {
@@ -844,8 +642,7 @@ class hierarchy extends ontology {
 			}
 		}//end if (!isset($ar_children[0]))
 
-
-		# If element exists (section_map) we get element 'properties' json value as array
+		// If element exists (section_map) we get element 'properties' json value as array
 		if (isset($ar_children[0])) {
 
 			$section_map_tipo = $ar_children[0];
@@ -858,7 +655,7 @@ class hierarchy extends ontology {
 		}
 
 		// Set static var for re-use
-		$section_map_elemets[$section_tipo] = $ar_elements;
+		$section_map_elemets_cache[$section_tipo] = $ar_elements;
 
 
 		return (array)$ar_elements;
@@ -922,7 +719,7 @@ class hierarchy extends ontology {
 	*	tld like 'es'
 	* @return object $response
 	*/
-	public static function get_hierarchy_by_tld(string $tld) : object {
+	public static function get_hierarchy_by_tld( string $tld ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -957,8 +754,8 @@ class hierarchy extends ontology {
 
 			return $response; // return error here !
 		}
-		$rows	= (array)pg_fetch_assoc($result);
-		$value	= reset($rows);
+		$rows	= pg_fetch_assoc($result);
+		$value	= !empty($rows) ? reset($rows) : null;
 
 		$response->result	= $value ?? null;
 		$response->msg		= 'OK. Request done';
@@ -976,7 +773,7 @@ class hierarchy extends ontology {
 	* 	Could be '*', 'all', and comma separated list too as 'ts1,es1,fr1'
 	* @return object $response
 	*/
-	public static function export_hierarchy(string $section_tipo) : object {
+	public static function export_hierarchy( string $section_tipo ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1030,6 +827,7 @@ class hierarchy extends ontology {
 			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 			$command .= ' -c "\copy (SELECT section_id, section_tipo, datos FROM matrix_hierarchy WHERE ';
 			if ($current_section_tipo==='all') {
+
 				$command .= 'section_tipo IS NOT NULL ORDER BY section_tipo, section_id ASC) ';
 				$date 	  = date('Y-m-d_His');
 				$command .= 'TO '.$current_section_tipo.'_'.$date.'.copy " ; ';
@@ -1058,7 +856,7 @@ class hierarchy extends ontology {
 
 		// response OK
 			$response->result	= true;
-			$response->msg	= 'Ok. All data is exported successfully'; // Override first message
+			$response->msg	= 'OK. All data is exported successfully'; // Override first message
 			$response->msg	.= "<br>".implode('<br>', $msg);
 			$response->msg	.= '<br>' . 'command_res: ' .$command_res;
 			$response->msg	.= '<br>' . 'To import, use a command like this: ';
@@ -1103,7 +901,6 @@ class hierarchy extends ontology {
 		$all_sections = RecordObj_dd::get_ar_all_terminoID_of_modelo_tipo('dd6', false);
 
 		$simple_schema_of_sections = [];
-
 		foreach ($all_sections as $current_section) {
 
 			$real_section = section::get_section_real_tipo_static($current_section);
@@ -1120,6 +917,7 @@ class hierarchy extends ontology {
 
 		return $simple_schema_of_sections;
 	}//end get_simple_schema_of_sections
+
 
 
 	/**
@@ -1155,6 +953,7 @@ class hierarchy extends ontology {
 
 		return $simple_schema_changes;
 	}//end build_simple_schema_changes
+
 
 
 	/**
@@ -1197,7 +996,7 @@ class hierarchy extends ontology {
 	* @param string $filename
 	* @return array $data
 	*/
-	public static function parse_simple_schema_changes_file($filename) : array {
+	public static function parse_simple_schema_changes_file( string $filename ) : array {
 
 		// file_path
 			$simple_schema_dir_path	= DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
@@ -1268,11 +1067,13 @@ class hierarchy extends ontology {
 	* Calculates and writes the simple_schema_changes file
 	* @param object options
 	* {
-	* 	name: string = 'simple_schema_changes_'.date("Y-m-d_H-i-s").'.json'
+	*	old_simple_schema_of_sections : array
+	* 	name: ?string = 'simple_schema_changes_'.date("Y-m-d_H-i-s").'.json'
+	* 	dir_path: ?string = DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/'
 	* }
 	* @return object response
 	*/
-	public static function save_simple_schema_file(object $options) : object {
+	public static function save_simple_schema_file( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1281,11 +1082,19 @@ class hierarchy extends ontology {
 
 		// options
 			// previous version of simple_schema_of_sections (normally before update Ontology)
-			$old_simple_schema_of_sections	= $options->old_simple_schema_of_sections;
+			$old_simple_schema_of_sections = $options->old_simple_schema_of_sections;
 			// target file name, normally is calculated by default with current date
 			$name = $options->name ?? 'simple_schema_changes_'.date("Y-m-d_H-i-s").'.json';
 			// dir_path. Target directory where save the file
 			$dir_path = $options->dir_path ?? DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
+
+		// target file path. Create directory if not already exists
+			$directory_is_ready = create_directory($dir_path, 0750);
+			if(!$directory_is_ready){
+				$response->result	= false;
+				$response->msg		= "Error on read or create directory. Permission denied ($dir_path)";
+				return $response;
+			}
 
 		// simple_schema_of_sections. Get updated version
 			$new_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
@@ -1295,14 +1104,6 @@ class hierarchy extends ontology {
 				$old_simple_schema_of_sections,
 				$new_simple_schema_of_sections
 			);
-
-		// target file path. Create directory if not already exists
-			$directory_is_ready = create_directory($dir_path, 0750);
-			if(!$directory_is_ready){
-				$response->result	= false;
-				$response->msg		= "Error on read or create directory. Permission denied ($dir_path)";
-				return $response;
-			}
 
 		// save changes list data to the target file
 			$filepath			= $dir_path . $name;
@@ -1331,44 +1132,20 @@ class hierarchy extends ontology {
 
 
 	/**
-	* VALID_TLD
-	* Validate tld using a regex
-	* tld are used as prefix for tipos
-	* Only lower case are accepted !
-	* @param string $tld
-	* 	Like 'dd'
-	* @return bool
-	*/
-	public static function valid_tld(string $tld) : bool {
-
-		preg_match("/^[a-z]{2,}$/", $tld, $output_array);
-		$found = $output_array[0] ?? false;
-		if (!$found) {
-			return false;
-		}
-
-		return true;
-	}//end valid_tld
-
-
-
-	/**
 	* GET_TYPOLOGY_LOCATOR_FROM_TLD
 	* Get the tld hierarchy definition and get his own typology definition
 	* @param string $tld
 	* @return object|null $typology_locator
 	*/
-	public static function get_typology_locator_from_tld( string $tld ) :?object {
+	public static function get_typology_locator_from_tld( string $tld ) : ?object {
 
 		$hierarchy_response	= hierarchy::get_hierarchy_by_tld( $tld );
-		$section_id		= $hierarchy_response->result;
-
+		$section_id			= $hierarchy_response->result;
 		if( empty($section_id) ){
 			return null;
 		}
 
 		$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
-
 		$typology_component = component_common::get_instance(
 			$model, // string model
 			DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
@@ -1381,6 +1158,7 @@ class hierarchy extends ontology {
 		$typology_data = $typology_component->get_dato();
 
 		$typology_locator = $typology_data[0] ?? null;
+
 
 		return $typology_locator;
 	}//end get_typology_locator_from_tld
