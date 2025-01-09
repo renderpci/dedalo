@@ -561,10 +561,22 @@ abstract class backup {
 
 
 	/**
-	* IMPORT_from_copy_file
-	* @param string $section_tipo
-	* 	Like 'es1'
+	* IMPORT_FROM_COPY_FILE
+	* Import copy file like 'es1.copy'
+	* @param object $options
+	* {
+	* 	section_tipo: string|null = null
+	* 	file_path: string = ''
+	* 	matrix_table: string
+	* 	delete_table: bool = false
+	* 	columns: array = ['section_id','section_tipo','datos']
+	* }
 	* @return object $response
+	* {
+	* 	result : bool,
+	* 	msg: string,
+	* 	errors: array
+	* }
 	*/
 	public static function import_from_copy_file( object $options ) : object {
 
@@ -575,19 +587,20 @@ abstract class backup {
 
 		// options
 			$section_tipo	= $options->section_tipo ?? null;
-			$file_path		= $options->file_path;
+			$file_path		= $options->file_path ?? '';
 			$matrix_table	= $options->matrix_table;
 			$delete_table	= $options->delete_table ?? false;
 			$columns		= $options->columns ?? ['section_id','section_tipo','datos'];
 
-		// uncompressed file
-			$uncompressed_file = substr( $file_path, 0, -3 );
-
 		// check if file exists
 			if (!file_exists($file_path)) {
 				$response->msg = 'Error. The required file do not exists: '.$file_path;
+				$response->errors[] = 'File do not exists';
 				return $response;
 			}
+
+		// uncompressed file
+			$uncompressed_file = substr( $file_path, 0, -3 );
 
 		// terminal gunzip command
 			$command = 'gunzip --keep --force -v '.$file_path.';'; // -k (keep original file) -f (force overwrite without prompt)
@@ -596,10 +609,8 @@ abstract class backup {
 			$command_res = shell_exec($command);
 			debug_log(__METHOD__." Exec response 1 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 
-
 		// command base. A PostgreSQL connection. used by all DDBB connections
 			$command_base = DB_BIN_PATH.'psql -d ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
-
 
 		// terminal command psql delete previous records
 			$command = $command_base
@@ -631,7 +642,6 @@ abstract class backup {
 			$command_res = shell_exec($command);
 			debug_log(__METHOD__." Exec response 4 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 
-
 		// delete uncompressed_file
 			$command  = 'rm '.$uncompressed_file.';';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
@@ -639,10 +649,9 @@ abstract class backup {
 			$command_res = shell_exec($command);
 			debug_log(__METHOD__." Exec response 5 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 
-
-
-		$response->result	= true;
-		$response->msg		= 'OK. Request done '.__METHOD__;
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done successfully [import_from_copy_file] ' . basename($file_path);
 
 
 		return $response;

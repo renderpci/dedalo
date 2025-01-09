@@ -404,7 +404,7 @@ class ontology_data_io {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
+			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
 		// file_name
@@ -483,7 +483,9 @@ class ontology_data_io {
 
 		// response
 		$response->result = true;
-		$response->msg .= ' OK. Request done successfully for file ' . $file_name;
+		$response->msg = count($response->errors)===0
+			? 'OK. Request done successfully [download_remote_ontology_file] file: ' . $file_name
+			: 'Request done with errors [download_remote_ontology_file] file: ' . $file_name;
 
 
 		return $response;

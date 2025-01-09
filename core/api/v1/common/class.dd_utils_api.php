@@ -1626,7 +1626,6 @@ final class dd_utils_api {
 		// client will send his version and the code that able to get the ontology information
 			$options = $rqo->options;
 
-
 		// check configuration of the ontology constants
 			if ( !defined('ONTOLOGY_DATA_IO_URL') ) {
 				$response->msg		= 'Error. Dédalo is miss configured. Define ONTOLOGY_DATA_IO_URL as sample.config.php defines';
@@ -1658,7 +1657,7 @@ final class dd_utils_api {
 		// valid code is defined in config.php constant of ONTOLOGY_SERVERS
 			$code = $options->code;
 
-			$ontology_servers = defined( 'ONTOLOGY_SERVERS' )
+			$ontology_servers = defined('ONTOLOGY_SERVERS') && !empty(ONTOLOGY_SERVERS)
 				? ONTOLOGY_SERVERS
 				: [['code' => STRUCTURE_SERVER_CODE]];
 
@@ -1666,6 +1665,7 @@ final class dd_utils_api {
 			foreach ( $ontology_servers as $current_server_info ) {
 				if( $current_server_info['code'] === $code ){
 					$valid_code = true;
+					break;
 				}
 			}
 
@@ -1754,14 +1754,15 @@ final class dd_utils_api {
 		// valid code is defined in config.php constant of CODE_SERVERS
 			$code = $options->code;
 
-			$ontology_servers = defined( 'CODE_SERVERS' )
+			$code_servers = defined('CODE_SERVERS') && !empty(CODE_SERVERS)
 				? CODE_SERVERS
 				: [];
 
 			$valid_code = false;
-			foreach ( $ontology_servers as $current_server_info ) {
+			foreach ( $code_servers as $current_server_info ) {
 				if( $current_server_info['code'] === $code ){
 					$valid_code = true;
+					break;
 				}
 			}
 

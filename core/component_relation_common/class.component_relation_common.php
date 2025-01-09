@@ -319,8 +319,10 @@ class component_relation_common extends component_common {
 			});
 			if (empty($ddo_direct_children)) {
 				debug_log(__METHOD__
-					. " WARNING! Empty direct_children for tipo: $this->tipo" .PHP_EOL
-					. 'ddo: ' . to_string($ddo)
+					. " WARNING! Empty ddo_direct_children for tipo: $this->tipo" .PHP_EOL
+					. 'ddo: ' . to_string($ddo) .PHP_EOL
+					. 'ddo_map: ' . to_string($ddo_map) .PHP_EOL
+					. 'tipo: ' . to_string($this->tipo)
 					, logger::WARNING
 				);
 			}
@@ -2408,6 +2410,9 @@ class component_relation_common extends component_common {
 	* @return array $ar_section_tipo
 	*/
 	public static function get_request_config_section_tipo( array $ar_section_tipo_sources, string $caller_section_tipo ) : array {
+		if(SHOW_DEBUG===true) {
+			$start_time=start_time();
+		}
 
 		$ar_section_tipo = [];
 		foreach ($ar_section_tipo_sources as $source_item) {
@@ -2515,23 +2520,26 @@ class component_relation_common extends component_common {
 								);
 
 								$component_dato = $component->get_dato();
-								if ( !empty($component_dato) ) {
-									foreach ($component_dato as $current_section_tipo) {
-										if ( !empty($current_section_tipo) ) {
-											$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
-											if ( $section_model_name==='section' ) {
-												$ar_section_tipo[] = $current_section_tipo;
-											}else{
-												debug_log(__METHOD__
-													. " target section tipo definition is ignored because is not a section " . PHP_EOL
-													. ' section_tipo ignored'. to_string($current_section_tipo) . PHP_EOL
-													. ' with model: ' . to_string($section_model_name). PHP_EOL
-													. ' in section: ' . to_string($current_record->section_tipo). PHP_EOL
-													. ' in section_id: ' . to_string($current_record->section_id). PHP_EOL
-													, logger::ERROR
-												);
-											}
-										}
+								if ( empty($component_dato) ) {
+									continue;
+								}
+
+								foreach ($component_dato as $current_section_tipo) {
+									if ( empty($current_section_tipo) ) {
+										continue;
+									}
+									$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+									if ( $section_model_name==='section' ) {
+										$ar_section_tipo[] = $current_section_tipo;
+									}else{
+										debug_log(__METHOD__
+											. " target section tipo definition is ignored because is not a section " . PHP_EOL
+											. ' section_tipo ignored: '. to_string($current_section_tipo) . PHP_EOL
+											. ' model: ' . to_string($section_model_name). PHP_EOL
+											. ' section: ' . to_string($current_record->section_tipo). PHP_EOL
+											. ' section_id: ' . to_string($current_record->section_id). PHP_EOL
+											, logger::ERROR
+										);
 									}
 								}
 							}//end foreach ($dato as $current_record)
@@ -2557,8 +2565,8 @@ class component_relation_common extends component_common {
 
 				case 'section':
 				default:
-					// verify the section tld, if its active in the installation
-						//sometimes the definition is a string, sometimes is array, mix both into array
+					// verify the section tld, if its active in the installation.
+					// Sometimes the definition is a string, sometimes is array, mix both into array
 						$current_item_values = (array)$source_item->value;
 						$valid_sections_tipo = [];
 						foreach ($current_item_values as $current_section_tipo) {
@@ -2578,7 +2586,7 @@ class component_relation_common extends component_common {
 					$ar_section_tipo = array_merge($ar_section_tipo, $valid_sections_tipo);
 					break;
 			}
-		}//end foreach ((array)$ar_section_tipo_sources as $source_item)
+		}//end foreach($ar_section_tipo_sources as $source_item)
 
 		// remove duplicates
 		$ar_section_tipo = array_values(
@@ -2588,10 +2596,10 @@ class component_relation_common extends component_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				// dump($ar_section_tipo, ' ar_section_tipo ++ '.exec_time_unit($start_time,'ms').' ms');
-				// debug_log(
-				// 	'------- resolve request_config_section_tipo ------- '.exec_time_unit($start_time,'ms').' ms',
-				// 	logger::DEBUG
-				// );
+				debug_log(
+					'------- resolve request_config_section_tipo ------- '. to_string($ar_section_tipo) .' -- ' .exec_time_unit($start_time,'ms').' ms',
+					logger::DEBUG
+				);
 			}
 
 

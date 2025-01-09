@@ -158,3 +158,4 @@ function get_base_binary_path(){};
 class Linfo{};
 class system{};
 function pg_escape_string(){};
+function get_called_class(){};
