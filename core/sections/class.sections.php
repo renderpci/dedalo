@@ -73,7 +73,7 @@ class sections extends common {
 	/**
 	* GET_DATO
 	* Get records from database using current sqo (search_query_object)
-	* @return array $this->dato ($ar_records)
+	* @return array $this->dato ($ar_records from search)
 	*/
 	public function get_dato() {
 
@@ -84,7 +84,6 @@ class sections extends common {
 
 		// sqo. Use sqo.mode to define the search class manager to run your search
 			$search_query_object = $this->search_query_object;
-			// $search_query_object = clone($this->search_query_object);
 
 		// limit check
 			if (!isset($search_query_object->limit)) {

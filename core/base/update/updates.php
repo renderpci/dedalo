@@ -166,7 +166,7 @@ $updates->$v = new stdClass();
 
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
-		// fill the model in the new model column in jer_dd 
+		// fill the model in the new model column in jer_dd
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
 			$script_obj = new stdClass();
 				$script_obj->info			= "Resolve model and fill the new model column in jer_dd";

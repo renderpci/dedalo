@@ -549,10 +549,11 @@ class ontology {
 	*/
 	public static function add_main_section( object $file_item ) : int|string|null {
 
-		$tld					= $file_item->tld;
-		$typology_id			= $file_item->typology_id ?? null;
-		$name_data				= $file_item->name_data ?? null;
-		$target_section_tipo	= $file_item->section_tipo ?? ontology::map_tld_to_target_section_tipo( $tld );
+		// file item properties
+			$tld					= $file_item->tld;
+			$typology_id			= $file_item->typology_id ?? null;
+			$name_data				= $file_item->name_data ?? null;
+			$target_section_tipo	= $file_item->section_tipo ?? ontology::map_tld_to_target_section_tipo( $tld );
 
 		// Typology fallback
 			if( empty($typology_id) ){
@@ -651,33 +652,43 @@ class ontology {
 	}//end add_main_section
 
 
+
 	/**
 	* CREATE_JER_DD_ONTOLOGY_SECTION_NODE
 	* Creates new jer_dd row with ontologytype tld for the local tlds
-	* Used for the creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc
+	* Used for the creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc.
 	* A jer_dd row is needed to represent it.
-	* @param string $tld
-	* @return string $term_id
+	* Note that action 'RecordObj_dd->insert()' delete the existing record in jer_dd, and creates a new one
+	* @param object $file_item
+	* {
+	* 	tld: string
+	* 	typology_id: int
+	* 	name_data: object
+	* 	parent_grouper_tipo: string
+	* }
+	* @return string|false|null $term_id
+	* @test true
 	*/
-	public static function create_jer_dd_ontology_section_node( object $file_item ) : string {
+	public static function create_jer_dd_ontology_section_node( object $file_item ) : string|false|null {
 
-		$tld					= $file_item->tld;
-		$typology_id			= $file_item->typology_id ?? 15;
-		$name_data				= $file_item->name_data ?? null;
-		$parent_grouper_tipo	= $file_item->parent_grouper_tipo ?? null;
+		// file item properties
+			$tld					= $file_item->tld;
+			$typology_id			= $file_item->typology_id ?? 15;
+			$name_data				= $file_item->name_data ?? null;
+			$parent_grouper_tipo	= $file_item->parent_grouper_tipo ?? null;
 
 		// create the parent group node
 		// if parent group is given, will use it, else create the parent_gruper to build the nodes.
-		if( empty($parent_grouper_tipo) ){
-			// parent group is set with his typology
-			// if typology is not set it will assign to typology 15 `others`
-			$parent_grouper_tipo = ontology::create_parent_grouper( 'ontology40', 'ontologytype', (int)$typology_id);
-		}
+			if( empty($parent_grouper_tipo) ){
+				// parent group is set with his typology
+				// if typology is not set it will assign to typology 15 `others`
+				$parent_grouper_tipo = ontology::create_parent_grouper( 'ontology40', 'ontologytype', (int)$typology_id);
+			}
 
 		// Ontology section for the given tld
 		// ontology section is the main or root node used to create the ontology nodes.
-		// it is defined as tld+0, because the nodes start with 1 as dd1, rsc1, etc
-			$terminoID = $tld.'0'; // as mdcat0, mupreva0, etc
+		// it is defined as tld+0, because the nodes start with 1 as dd1, rsc1, etc.
+			$terminoID = $tld.'0'; // as mdcat0, mupreva0, etc.
 
 			$RecordObj_dd = new RecordObj_dd($terminoID);
 				$RecordObj_dd->set_parent($parent_grouper_tipo);
@@ -716,17 +727,18 @@ class ontology {
 
 	/**
 	* CREATE_PARENT_GROUPER
-	* Create an area node with the typology information to group the nodes.
+	* Creates an area node with the typology information to group the nodes.
 	* Parent grouper organize the tld with clear structure in menu
 	* This method can create the main group nodes if doesn't exists previously,
 	* main nodes are mandatory to store the child information of the created area node:
 	* `ontologytype14` (core node) is dependent of `ontology40` (instances node)
-	* but when a rebuild the ontology as update process does, the child node can be processed before his parent exists,
-	* in those cases this method will create the main node (`ontology40`) in matrix to store the child locator.
+	* but when a rebuild the ontology as update process does, the child node can be processed before his parent exists.
+	* In those cases, this method will create the main node (`ontology40`) in matrix to store the child locator.
 	* @param string $parent_group
 	* @param string $tld
 	* @param int $typology_id
 	* @return string $parent_grouper_tipo
+	* @test true
 	*/
 	public static function create_parent_grouper( string $parent_group='ontology40', string $tld='ontologytype', int $typology_id=15 ) : string {
 
@@ -767,33 +779,35 @@ class ontology {
 		// the main instances of typology for hierarchy mocel nodes is hierarchy57`
 			$parent_tld			= get_tld_from_tipo( $parent_group );
 			$parent_section_id	= get_section_id_from_tipo( $parent_group );
+			$parent_node_tipo	= $parent_tld.'0';
 
-			$parent_node_tipo = $parent_tld.'0';
-			// check if the parent exists in jer_dd
+			// jer_dd. Check if the parent already exists in jer_dd
 				$parent_ontology_row_data = RecordObj_dd::get_row_data( $parent_node_tipo );
 				if( empty($parent_ontology_row_data) ){
 
 					$RecordObj_dd = new RecordObj_dd($parent_node_tipo);
-					$RecordObj_dd->set_parent($parent_group);
-					$RecordObj_dd->set_modelo('dd6');
-					$RecordObj_dd->set_model('section');
-					$RecordObj_dd->set_esmodelo('no');
-					$RecordObj_dd->set_esdescriptor('si');
-					$RecordObj_dd->set_visible('si');
-					$RecordObj_dd->set_tld($parent_tld);
-					$RecordObj_dd->set_traducible('no');
-					$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+						$RecordObj_dd->set_parent($parent_group);
+						$RecordObj_dd->set_modelo('dd6');
+						$RecordObj_dd->set_model('section');
+						$RecordObj_dd->set_esmodelo('no');
+						$RecordObj_dd->set_esdescriptor('si');
+						$RecordObj_dd->set_visible('si');
+						$RecordObj_dd->set_tld($parent_tld);
+						$RecordObj_dd->set_traducible('no');
+						$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 					// Properties, add main_tld as official tld definitions
 					// and local section color
-					$properties = new stdClass();
-						$properties->main_tld	= $parent_tld;
-						$properties->color		= '#2d8894';
-					$RecordObj_dd->set_properties($properties);
+						$properties = new stdClass();
+							$properties->main_tld	= $parent_tld;
+							$properties->color		= '#2d8894';
+						$RecordObj_dd->set_properties($properties);
+
+					// insert jer_dd record
 					$RecordObj_dd->insert();
 				}
 
-			// check if the parent exists in matrix
+			// matrix. Check if the parent already exists in matrix
 				$section_record_exist = section::section_record_exists( $parent_section_id, $parent_node_tipo );
 				if( $section_record_exist===false ){
 					$parent_section = section::get_instance(
@@ -813,6 +827,7 @@ class ontology {
 				'list',
 				false
 			);
+
 			// create the record in matrix_ontology table.
 				$typology_section->forced_create_record();
 
@@ -828,9 +843,9 @@ class ontology {
 				$area_grouper_data->components->ontology7->dato->{DEDALO_DATA_NOLAN} = [$tld];
 
 			// Name
-				//use the typology name.
-				$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
-				$typology_term = component_common::get_instance(
+				// use the typology name.
+				$model			= RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
+				$typology_term	= component_common::get_instance(
 					$model, // string model
 					DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
 					$typology_id, // string section_id
@@ -863,8 +878,8 @@ class ontology {
 
 				$node_locator = new locator();
 					$node_locator->set_type( DEDALO_RELATION_TYPE_CHILDREN_TIPO );
-					$node_locator->set_section_tipo( $section_tipo );
 					$node_locator->set_section_id( $typology_id );
+					$node_locator->set_section_tipo( $section_tipo );
 					$node_locator->set_from_component_tipo( $children_tipo );
 
 				$is_added = $component_children->add_child( $node_locator );
@@ -878,6 +893,7 @@ class ontology {
 		// return the parent grouper as `ontologytype14
 			$parent_grouper_tipo = $tld.$typology_id;
 
+
 		return $parent_grouper_tipo;
 	}//end create_parent_grouper
 
@@ -889,6 +905,7 @@ class ontology {
 	* dd ---> dd0
 	* @param string $tld
 	* @return string $target_section_tipo
+	* @test true
 	*/
 	public static function map_tld_to_target_section_tipo( string $tld ) : string {
 
@@ -917,6 +934,7 @@ class ontology {
 	* dd0 --> dd
 	* @param string $target_section_tipo
 	* @return string|null $tld
+	* @test true
 	*/
 	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : ?string {
 
@@ -987,9 +1005,12 @@ class ontology {
 
 	/**
 	* GET_ALL_MAIN_ONTOLOGY_RECORDS
+	* Exec a search against matrix_ontology_main filtering
+	* for main_section_tipo without limit and return all resulting records
 	* @return array $ar_records
+	* @test true
 	*/
-	public static function get_all_main_ontology_records() :array {
+	public static function get_all_main_ontology_records() : array {
 
 		// search_query_object
 			$sqo = new search_query_object();
@@ -1013,6 +1034,7 @@ class ontology {
 	* Execs a real SQL search and
 	* returns an array of current active ontologies or hierarchies
 	* @return array $active_hierarchies
+	* @test true
 	*/
 	public static function get_active_elements() : array {
 
@@ -1043,8 +1065,11 @@ class ontology {
 			}
 		');
 
+		// section tipo depends on the current class (hierarchy, ontology)
+		$section_tipo = get_called_class()::$main_section_tipo;
+
 		$sqo = new search_query_object();
-			$sqo->set_section_tipo( [get_called_class()::$main_section_tipo] );
+			$sqo->set_section_tipo( [$section_tipo] );
 			$sqo->set_limit( 0 );
 			$sqo->set_offset( 0 );
 			$sqo->set_filter( $filter );
@@ -1197,11 +1222,12 @@ class ontology {
 
 	/**
 	* PARSE_SECTION_RECORD_TO_JER_DD_RECORD
-	* Build every component in the section given ($section_tipo, $section_id)
-	* get the component_data and parse as column of jer_dd format.
+	* Build every component in the section given ($section_tipo, $section_id).
+	* Get the component_data and parse as column of jer_dd format.
 	* @param string $section_tipo
 	* @param string|int $section_id
 	* @return object|null $jer_dd_record
+	* 	returns null if section tld value is empty
 	*/
 	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?object {
 
@@ -1212,26 +1238,31 @@ class ontology {
 
 		// tld
 			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  section_id)
-				$tld_tipo		= 'ontology7';
-				$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
-				$tld_component	= component_common::get_instance(
-					$tld_model,
-					$tld_tipo ,
-					$section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$section_tipo
-				);
+			$tld_tipo		= 'ontology7';
+			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
+			$tld_component	= component_common::get_instance(
+				$tld_model,
+				$tld_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
-				$tld_data = $tld_component->get_dato();
-				// if tld_data is empty stop the process
-				// tld is mandatory!
-				if(empty($tld_data)){
-					return null;
-				}
-				// create the term_id
-				$tld = reset( $tld_data );
-				$terminoID = $tld . $section_id;
+			$tld_data = $tld_component->get_dato();
+			// tld is mandatory! if tld_data is empty stop the process
+			if(empty($tld_data)){
+				debug_log(__METHOD__
+					. " Ignored record because tld value (ontology7) is empty (mandatory) " . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($section_id)
+					, logger::ERROR
+				);
+				return null;
+			}
+			// create the term_id
+			$tld = reset( $tld_data );
+			$terminoID = $tld . $section_id;
 
 		// create the RecordObj_dd with the term_id and set the tld
 			$jer_dd_record = new RecordObj_dd( $terminoID );
@@ -1591,6 +1622,7 @@ class ontology {
 
 			$jer_dd_record->set_term( $term );
 
+
 		return $jer_dd_record;
 	}//end parse_section_record_to_jer_dd_record
 
@@ -1730,12 +1762,17 @@ class ontology {
 	* use a SQO given to search the group and process it.
 	* @param object $sqo
 	* @return object $response
+	* {
+	* 	result : bool,
+	* 	msg: string,
+	* 	errors: array
+	* }
 	*/
 	public static function set_records_in_jer_dd( object $sqo ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
+			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
 		$search = search::get_instance(
@@ -1758,7 +1795,7 @@ class ontology {
 
 		if( empty($response->errors) ){
 			$response->result	= true;
-			$response->msg		= 'OK. Request done';
+			$response->msg		= 'OK. Request done successfully [set_records_in_jer_dd] ' .to_string($sqo->section_tipo);
 		}
 
 		return $response;
@@ -2011,8 +2048,6 @@ class ontology {
 
 		return $name_data;
 	}//end get_main_name_data
-
-
 
 
 

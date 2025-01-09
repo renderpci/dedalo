@@ -1694,13 +1694,11 @@ class area_maintenance extends area_common {
 				$response->errors	= [];
 
 		// options
-			$server	= $options->server;
 			$files	= $options->files;
 			$info 	= $options->info;
 
 		// ar_msg
 			$ar_msg = [];
-
 
 		// db_system_config_verify. Test pgpass file existence and permissions
 			$pgpass_check = system::check_pgpass_file();
@@ -1712,7 +1710,6 @@ class area_maintenance extends area_common {
 
 				return $response;
 			}
-
 
 		// download files
 			$files_to_import = [];
@@ -1736,7 +1733,7 @@ class area_maintenance extends area_common {
 
 					if($current_file_item->tld === 'matrix_dd'){
 						// private lists
-						$import_response =  ontology_data_io::import_private_lists_from_file( $current_file_item );
+						$import_response = ontology_data_io::import_private_lists_from_file( $current_file_item );
 					}else{
 						// main section
 						// check if the main section exist
@@ -1744,8 +1741,10 @@ class area_maintenance extends area_common {
 						// matrix data of regular ontology
 						$import_response = ontology_data_io::import_from_file( $current_file_item );
 					}
-
-					$ar_msg[] = $import_response->msg;
+					// add messages and errors
+					if (!empty($import_response->msg)) {
+						$ar_msg[] = $import_response->msg;
+					}
 					if( !empty($import_response->errors) ){
 						$response->errors = array_merge($response->errors, $import_response->errors);
 					}
@@ -1754,7 +1753,7 @@ class area_maintenance extends area_common {
 		// update jer_dd with the imported records
 			foreach ($files_to_import as $current_file_item) {
 
-				//private list, matrix_dd, doesn't process it as jer_dd nodes
+				// private list, matrix_dd, doesn't process it as jer_dd nodes
 				if($current_file_item->tld === 'matrix_dd'){
 					continue;
 				}
@@ -1765,9 +1764,11 @@ class area_maintenance extends area_common {
 					$sqo->limit = 0;
 
 				$set_jer_dd_response = ontology::set_records_in_jer_dd( $sqo );
-
-				$ar_msg[] = $set_jer_dd_response->msg;
-				if( !empty($set_jer_dd_response->errors) ){
+				// add messages and errors
+				if (!empty($set_jer_dd_response->msg)) {
+					$ar_msg[] = $set_jer_dd_response->msg;
+				}
+				if(!empty($set_jer_dd_response->errors)){
 					$response->errors = array_merge($response->errors, $set_jer_dd_response->errors);
 				}
 			}
@@ -1776,12 +1777,10 @@ class area_maintenance extends area_common {
 		// Will used to compare with the new schema (after update)
 			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
-
 		// post processing tables
 			$ar_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
-
 			// optimize tables
-				db_tasks::optimize_tables($ar_tables);
+			db_tasks::optimize_tables($ar_tables);
 
 		// delete all session data except auth
 			foreach ($_SESSION['dedalo'] as $key => $value) {

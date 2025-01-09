@@ -1364,21 +1364,22 @@ class transform_data {
 			$model_tipo	= $row['modelo'];
 			$id			= $row['id'];
 
-			if( empty($model_tipo) ){
-				continue 1;
+			// ignore empty model tipo rows
+			if( empty($model_tipo) || $model_tipo==='null' ){
+				continue;
 			}
 
 			// matrix_descriptors_dd. delete descriptors (matrix_descriptors_dd)
 			$sql_query = 'SELECT * FROM "jer_dd" WHERE "terminoID" = \''.$model_tipo.'\' LIMIT 1 ;';
 			$model_result = pg_query(DBi::_getConnection(), $sql_query);
 
-
 			$result_count = pg_num_rows($model_result);
-
 			if($result_count !== 1) {
-				$msg = "Current model has not valid definition!!!!!. Review jer_dd for model: $model_tipo";
 				debug_log(__METHOD__
-					." ERROR: $msg "
+					.' Current model has not valid definition (1)!. Review jer_dd for this model' . PHP_EOL
+					.' model_tipo: ' . to_string($model_tipo) . PHP_EOL
+					.' sql_query: ' . $sql_query . PHP_EOL
+					.' result_count: ' . $result_count . PHP_EOL
 					, logger::ERROR
 				);
 				return false;
@@ -1386,12 +1387,13 @@ class transform_data {
 
 			$model = null;
 			while( $term = pg_fetch_assoc($model_result) ) {
-				$term_data	= json_decode ( $term['term'] );
 
+				$term_data = json_decode( $term['term'] );
 				if( empty($term_data) ) {
-					$msg = "Current model term has not valid definition!!!!!. Review jer_dd for model: $model_tipo";
 					debug_log(__METHOD__
-						." ERROR: $msg "
+						.' Current model term has not valid definition (2)!. Review jer_dd for model' . PHP_EOL
+						.' model_tipo: ' . to_string($model_tipo) . PHP_EOL
+						.' term_data: ' . to_string($term_data) . PHP_EOL
 						, logger::ERROR
 					);
 					return false;
@@ -1403,14 +1405,16 @@ class transform_data {
 			$strQuery	= "UPDATE \"jer_dd\" SET model = $1 WHERE id = $2 ";
 			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $model, $id ));
 			if($result===false) {
-				$msg = "Failed Update section_data (jer_dd) $id";
 				debug_log(__METHOD__
-					." ERROR: $msg "
+					.' Failed Update section_data (jer_dd) ' . PHP_EOL
+					.' id: ' . to_string($id) . PHP_EOL
+					.' model: ' . to_string($model) . PHP_EOL
+					.' strQuery: ' . to_string($strQuery) . PHP_EOL
 					, logger::ERROR
 				);
 				return false;
 			}
-		}
+		}//end while($row = pg_fetch_assoc($jer_dd_result))
 
 
 		return true;

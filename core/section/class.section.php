@@ -1026,8 +1026,10 @@ class section extends common {
 				if ($options->forced_create_record===false) {
 
 					// Use normal incremental counter
-					$matrix_table_counter	= (substr($matrix_table, -3)==='_dd') ? 'matrix_counter_dd' : 'matrix_counter';
-					$current_id_counter		= (int)counter::get_counter_value($tipo, $matrix_table_counter);
+					$matrix_table_counter = (!empty($matrix_table) && substr($matrix_table, -3)==='_dd')
+						? 'matrix_counter_dd'
+						: 'matrix_counter';
+					$current_id_counter = (int)counter::get_counter_value($tipo, $matrix_table_counter);
 
 					// Create a counter if not already exists
 						if ($current_id_counter===0 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {

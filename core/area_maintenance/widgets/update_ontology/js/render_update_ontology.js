@@ -280,7 +280,9 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// message
-						const msg = api_response.msg.replace(/\n/g, '<br />');
+						const msg = api_response.msg
+							? api_response.msg.replace(/\n/g, '<br />')
+							: '';
 						ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'response_node msg',
