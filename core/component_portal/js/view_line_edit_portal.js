@@ -16,6 +16,14 @@
 		render_references,
 	} from './render_edit_component_portal.js'
 
+	import {
+		on_dragstart_mosaic,
+		on_dragover,
+		on_dragleave,
+		// on_dragend,
+		on_drop, // used to reorder inside the same portal
+	} from './drag_and_drop.js'
+
 
 
 /**
@@ -153,19 +161,42 @@ const get_content_data = async function(self, ar_section_record) {
 			// const row_item = no_records_node()
 			// fragment.appendChild(row_item)
 		}else{
-
-			const ar_promises = []
+			// portal has data and render they
 			for (let i = 0; i < ar_section_record_length; i++) {
-				const render_promise = ar_section_record[i].render()
-				ar_promises.push(render_promise)
-			}
-			await Promise.all(ar_promises).then(function(values) {
-			  for (let i = 0; i < ar_section_record_length; i++) {
+				const section_record		= ar_section_record[i]
+				const section_record_node	= await ar_section_record[i].render()
 
-				const section_record = values[i]
-				fragment.appendChild(section_record)
-			  }
-			});
+				// drag and drop
+					// permissions control
+					// with read only permissions, remove drag and drop
+					if(self.permissions >= 2){
+						drag_and_drop({
+							section_record_node	: section_record_node,
+							paginated_key		: i,
+							total_records		: self.total,
+							locator 			: section_record.locator,
+							caller 				: self
+						})
+
+						// mouseenter event
+						section_record_node.addEventListener('mouseenter',function(e){
+							e.stopPropagation()
+							// const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+							// event_manager.publish(event_id, this)
+
+							section_record_node.classList.add('mosaic_over')
+						})
+
+						// mouseleave event
+						section_record_node.addEventListener('mouseleave',function(e){
+							e.stopPropagation()
+							// const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+							// event_manager.publish(event_id, this)
+							section_record_node.classList.remove('mosaic_over')
+						})
+					}
+				fragment.appendChild(section_record_node)
+			};
 		}//end if (ar_section_record_length===0)
 
 	// build references
@@ -352,6 +383,32 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 	return button_remove
 }//end render_column_remove
+
+
+/**
+* DRAG_AND_DROP
+* Set section_record_node ready to drag and drop
+* Mosaic use his own node to be dragable and dropable
+* also it uses the drag node of default behavior (dependent of section_id node)
+* but doesn't use the drop node (dependent of section_id node)
+* @param object options
+* @return bool
+*/
+const drag_and_drop = function(options) {
+
+	// options
+		const node	= options.section_record_node
+
+	// set properties/events
+		node.draggable = true
+		node.classList.add('draggable')
+		node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
+		node.addEventListener('dragover',function(e){on_dragover(this, e, options)})
+		node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
+		node.addEventListener('drop',function(e){on_drop(this, e, options)})
+
+	return true
+}//end drag_and_drop
 
 
 
