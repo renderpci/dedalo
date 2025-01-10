@@ -114,6 +114,22 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* HAS_COLUMN
+	* Check if RecordObj_dd has column X
+	* Useful in transitional updates like
+	* on add column 'model'
+	* @return bool
+	*/
+	public static function has_column( string $column ) : bool {
+		$RecordObj_dd = new RecordObj_dd(null, 'dd');
+		$relation_map = $RecordObj_dd->defineRelationMap();
+
+		return in_array($column, $relation_map);
+	}//end has_column
+
+
+
+	/**
 	* GET_PROPIEDADES
 	* Return the value of property 'properties', stored as plain text in table column 'properties'
 	* Values expected in 'propiedades' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
