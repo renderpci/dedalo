@@ -2487,6 +2487,39 @@ class component_relation_common extends component_common {
 							$sqo->offset				= 0;
 							$sqo->order					= false;
 							$sqo->skip_projects_filter	= true;
+							// filter active only to reduce the amount of sections where to search
+							// improving speed and ignoring not used (inactive) sections
+							$sqo->filter				= json_decode('
+							{
+								"$and": [
+									{
+										"q": [
+											{
+												"section_tipo": "dd64",
+												"section_id": "1",
+												"from_component_tipo": "hierarchy4"
+											}
+										],
+										"q_operator": null,
+										"path": [
+											{
+												"section_tipo": "hierarchy1",
+												"component_tipo": "hierarchy4",
+												"model": "component_radio_button",
+												"name": "Active"
+											}
+										],
+										"q_split": false,
+										"type": "jsonb",
+										"component_path": [
+											"relations"
+										],
+										"operator": "@>",
+										"q_parsed": "\'[{\"section_tipo\":\"dd64\",\"section_id\":\"1\",\"from_component_tipo\":\"hierarchy4\"}]\'"
+									}
+								]
+							}
+							');
 
 						$sections = sections::get_instance(
 							null,
