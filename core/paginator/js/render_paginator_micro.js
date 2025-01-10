@@ -145,6 +145,14 @@ const get_content_data = async function(self) {
 					}
 				}
 
+		// displayed_total_records
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'displayed_total_records',
+				inner_html		: `: ${total} `,
+				parent			: fragment
+			})
+
 		// navigation
 			const paginator_div_links = ui.create_dom_element({
 				element_type	: 'div',
@@ -254,22 +262,14 @@ const get_content_data = async function(self) {
 					class_name		: 'paginator_info',
 					parent			: fragment
 				})
-				// page_info
+				// displayed_total_records
 				ui.create_dom_element({
 					element_type	: 'span',
-					class_name		: 'page_info',
-					inner_html		: `${total}`,
+					class_name		: 'displayed_total_records',
+					inner_html		: `: ${total}`,
 					parent			: paginator_info
 				})
 		}
-
-		// displayed_records
-			// ui.create_dom_element({
-			// 	element_type	: 'span',
-			// 	class_name		: 'displayed_records',
-			// 	inner_html		: ` [${total}]`,
-			// 	parent			: paginator_info
-			// })
 
 	// content_data
 		const content_data = ui.create_dom_element({
