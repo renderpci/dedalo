@@ -1008,7 +1008,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_RELATIONS
 	* Get 'relaciones' column value and parse it as flat array
 	* for easy normalized access
-	* @see ontology_legacy::tipo_to_json_item()
+	* @see RecordObj_dd::tipo_to_json_item()
 	* @return array|null $relations
 	*/
 	public function get_relations() : ?array {
@@ -1746,6 +1746,85 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return true;
 	}//end restore_from_bk_table
+
+
+
+	/**
+	* TIPO_TO_JSON_ITEM
+	* This is a normalized Ontology JSON item.
+	* Basically, is a jerd_dd record, but with parsed JSON values and translated property names.
+	* Fills requested ontology item data resolving tipo
+	* @param string $tipo
+	* @param array $options = []
+	* @return object $item
+	*/
+	public static function tipo_to_json_item( string $tipo, array $options=[] ) : object {
+
+		// default options fallback
+		if (empty($options)) {
+			$options = [
+				'tipo',
+				'tld',
+				'is_model',
+				'model',
+				'model_tipo',
+				'parent',
+				'order',
+				'translatable',
+				'propiedades',
+				'properties',
+				'relations',
+				'term',
+				// 'label'
+			];
+		}
+
+		$RecordObj_dd = new RecordObj_dd($tipo);
+		$RecordObj_dd->use_cache = false; // (!) prevents using previous db results
+		$RecordObj_dd->get_dato();
+
+		$item = new stdClass();
+
+		foreach ($options as $property) {
+			switch ($property) {
+				case 'tipo':
+					$item->{$property} = $tipo;
+					break;
+				case 'model':
+					// $item->{$property} = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$item->{$property} = $RecordObj_dd->get_modelo_name();
+					break;
+				case 'model_tipo':
+					$item->{$property} = $RecordObj_dd->get_modelo();
+					break;
+				case 'translatable':
+					$item->{$property} = $RecordObj_dd->get_traducible()==='si';
+					break;
+				case 'propiedades':
+					$item->{$property} = $RecordObj_dd->get_propiedades(true);
+					break;
+				case 'label':
+					$term = $RecordObj_dd->get_term() ?? new stdClass();
+					$label = $term->{DEDALO_APPLICATION_LANG} ?? $term->{DEDALO_STRUCTURE_LANG} ?? null;
+					if (is_null($label)) {
+						// fallback to anything
+						foreach ($term as $value) {
+							$label = $value;
+							break;
+						}
+					}
+					$item->{$property} = $label;
+					break;
+				default:
+					$item->{$property} = $RecordObj_dd->{'get_'.$property}();
+			}
+		}
+
+
+		return $item;
+	}//end tipo_to_json_item
+
+
 
 
 
