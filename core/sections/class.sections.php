@@ -264,7 +264,7 @@ class sections extends common {
 			$permissions = $section->get_section_permissions($section_tipo, $section_tipo);
 			// debug
 			debug_log(__METHOD__
-				." to delete section. Permissions: $permissions ".to_string($section_tipo)
+				." To delete section: ($section_tipo-$section_id). Permissions: $permissions ".to_string($section_tipo)
 				, logger::DEBUG
 			);
 			if ($permissions<2) {

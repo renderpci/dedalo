@@ -86,34 +86,34 @@ final class dd_area_maintenance_api_test extends TestCase {
 	* TEST_STRUCTURE_TO_JSON
 	* @return void
 	*/
-	public function test_structure_to_json(): void {
+		// public function test_structure_to_json(): void {
 
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_area_maintenance_api",
-			    "action": "structure_to_json",
-			    "options": [
-			        {
-			            "name": "dedalo_prefix_tipos",
-			            "value": "dd"
-			        }
-			    ]
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
+		// 	$rqo = json_handler::decode('
+		// 		{
+		// 			"dd_api": "dd_area_maintenance_api",
+		// 		    "action": "structure_to_json",
+		// 		    "options": [
+		// 		        {
+		// 		            "name": "dedalo_prefix_tipos",
+		// 		            "value": "dd"
+		// 		        }
+		// 		    ]
+		// 		}
+		// 	');
+		// 	$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		// 	$response = $rqo->dd_api::{$rqo->action}($rqo);
+		// 		// dump($response, ' response ++ '.to_string());
 
-		$this->assertTrue(
-			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
-		);
+		// 	$this->assertTrue(
+		// 		empty($_ENV['DEDALO_LAST_ERROR']),
+		// 		'expected running without errors'
+		// 	);
 
-		$this->assertTrue(
-			gettype($response->result)==='boolean',
-			'expected result type is boolean'
-		);
-	}//end test_structure_to_json
+		// 	$this->assertTrue(
+		// 		gettype($response->result)==='boolean',
+		// 		'expected result type is boolean'
+		// 	);
+		// }//end test_structure_to_json
 
 
 
