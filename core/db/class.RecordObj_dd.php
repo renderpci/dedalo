@@ -1610,20 +1610,29 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* DELETE_TLD_NODES
-	* Removes all tld nodes in jer_dd
+	* Removes all tld nodes (records) in jer_dd
 	* @param string $tld
-	* @return bool true
+	* @return bool
 	*/
 	public static function delete_tld_nodes( string $tld ) : bool {
 
-		$table	= RecordObj_dd::$table; // jer_dd | jer_dd_backup
+		$table = RecordObj_dd::$table; // jer_dd | jer_dd_backup
 
-		//remove any other things than tld in the tld string
-		$safe_tld	= safe_tld($tld);
+		// remove any other things than tld in the tld string
+		$safe_tld = safe_tld($tld);
+		if ($safe_tld!==$tld) {
+			debug_log(__METHOD__
+				. " Error deleting tld from table jer_dd. tld is not safe" . PHP_EOL
+				. ' tld: ' . to_string($tld) . PHP_EOL
+				. ' safe_tld: ' . to_string($safe_tld)
+				, logger::ERROR
+			);
+			return false;
+		}
 
-		// jer_dd. delete terms (jer_dd)
+		// jer_dd. delete terms (records)
 		$sql_query = '
-			DELETE FROM "'.$table.'" WHERE "tld" = \''.$tld.'\';
+			DELETE FROM "'.$table.'" WHERE "tld" = \''.$safe_tld.'\';
 		';
 		$delete_result = pg_query(DBi::_getConnection(), $sql_query);
 		if (!$delete_result) {
