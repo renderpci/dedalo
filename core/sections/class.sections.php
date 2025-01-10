@@ -233,9 +233,9 @@ class sections extends common {
 	*										],
 	*										"limit": 1
 	*								   }
-	*	delete_diffusion_records	: true | false,
-	*	delete_with_children		: true | false,
-	*
+	*	delete_diffusion_records	: bool (false),
+	*	delete_with_children		: bool (false),
+	*	prevent_delete_main 		: bool (false)
 	* }
 	* @return object $response
 	*/
@@ -254,7 +254,7 @@ class sections extends common {
 			$sqo						= $options->sqo ?? null;
 			$delete_diffusion_records	= $options->delete_diffusion_records ?? true;
 			$delete_with_children		= $options->delete_with_children ?? false;
-
+			$prevent_delete_main		= $options->prevent_delete_main ?? false;
 
 		// permissions check (only sections area expected here)
 			$section = section::get_instance(
@@ -358,7 +358,9 @@ class sections extends common {
 
 				// Delete main section from ontology or hierarchy
 				// it will remove all nodes in jer_dd and all matrix nodes.
-					if($current_section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $current_section_tipo === DEDALO_ONTOLOGY_SECTION_TIPO){
+					if(	$prevent_delete_main===false &&
+						in_array($current_section_tipo, [DEDALO_HIERARCHY_SECTION_TIPO, DEDALO_ONTOLOGY_SECTION_TIPO])
+						){
 
 						$main_options = new stdClass();
 							$main_options->section_tipo	= $current_section_tipo;
