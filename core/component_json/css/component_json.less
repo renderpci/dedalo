@@ -48,6 +48,11 @@
 				position: relative;
 				z-index: 0;
 				min-height: var(--media_min_height); // 404px;
+
+				&.read_only{
+					overflow: auto;
+					pointer-events: initial;
+				}
 			}
 		}
 	}
