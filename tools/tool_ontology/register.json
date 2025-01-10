@@ -81,13 +81,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 28,
-              "hour": 10,
-              "time": 65084813485,
-              "year": 2024,
-              "month": 12,
-              "minute": 51,
-              "second": 25
+              "day": 10,
+              "hour": 11,
+              "time": 65085937564,
+              "year": 2025,
+              "month": 1,
+              "minute": 6,
+              "second": 4
             }
           }
         ]
@@ -108,8 +108,20 @@
         "lg-eng": [
           "<p>Handles Ontology transformation to 'jer_dd' records</p>"
         ],
+        "lg-eus": [
+          "<p>Ontologiaren eraldaketa kudeatzen du 'jer_dd' erregistroetara</p>"
+        ],
         "lg-fra": [
           "<p>Gère la transformation de l'ontologie en enregistrements hier_dd.</p>"
+        ],
+        "lg-ita": [
+          "<p>Gestisce la trasformazione dell'ontologia nei record 'jer_dd'</p>"
+        ],
+        "lg-nep": [
+          "<p>'jer_dd' रेकर्डहरूमा ओन्टोलोजी रूपान्तरण ह्यान्डल गर्दछ</p>"
+        ],
+        "lg-por": [
+          "<p>Lida com a transformação da ontologia para registos 'jer_dd'</p>"
         ],
         "lg-spa": [
           "<p>Gestiona la transformación de la ontología en registros jer_dd</p>"
@@ -120,25 +132,34 @@
       "inf": "Label [component_input_text]",
       "dato": {
         "lg-cat": [
-          "Processament dels nodes d'ontologia"
+          "Ontologia"
         ],
         "lg-deu": [
-          "Ontologieknoten verarbeiten"
+          "Ontologie"
         ],
         "lg-ell": [
-          "Επεξεργασία κόμβων οντολογίας"
+          "Οντολογία"
         ],
         "lg-eng": [
-          "Processing ontology nodes"
+          "Ontology"
+        ],
+        "lg-eus": [
+          "Ontologia"
         ],
         "lg-fra": [
-          "Traitement des nœuds d'ontologie"
+          "Ontologie"
         ],
         "lg-ita": [
-          "Elaborazione dei nodi ontologici"
+          "Ontologici"
+        ],
+        "lg-nep": [
+          "ओन्टोलजी"
+        ],
+        "lg-por": [
+          "Ontologia"
         ],
         "lg-spa": [
-          "Procesar los nodos de la ontología"
+          "Ontología"
         ]
       }
     },
@@ -154,7 +175,7 @@
       "inf": "Version [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.1"
+          "1.0.2"
         ]
       }
     },
@@ -311,7 +332,7 @@
   "section_id": 31,
   "created_date": "2024-11-24 21:14:25",
   "section_tipo": "dd1340",
-  "modified_date": "2024-12-28 10:51:25",
+  "modified_date": "2025-01-10 11:06:04",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
