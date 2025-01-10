@@ -156,15 +156,8 @@ class tools_register {
 					RecordObj_dd::delete_tld_nodes( 'tool' );
 
 				// import ontology (structure) in jer_dd
-					if (defined('ONTOLOGY_DB')) {
-						debug_log(__METHOD__
-							." !!!!! ignored ontology import (ONTOLOGY_DB is defined and this prevent to import ontology)"
-							, logger::WARNING
-						);
-					}else{
-						foreach ($ar_ontologies as $current_ontology) {
-							ontology_legacy::import($current_ontology);
-						}
+					foreach ($ar_ontologies as $current_ontology) {
+						// @TODO generate the ontology node or modify exiting one!! 10-01-2024
 					}
 
 				// update counter at end to consolidate

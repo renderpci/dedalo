@@ -113,7 +113,6 @@ define('SERVER_PROXY','');
 define('DEDALO_API_URL','');
 define('DEDALO_API_URL_UNIT_TEST','');
 define('DEDALO_IMAGE_QUALITY_DEFAULT','');
-define('ONTOLOGY_DB','');
 
 define('DEDALO_SECTION_PROJECTS_TIPO','');
 define('DEDALO_ROOT_WEB','');
