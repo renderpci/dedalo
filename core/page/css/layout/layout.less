@@ -918,46 +918,13 @@
 	}//end .content_data
 
 // json_editor
-	.jsoneditor {
-		resize: vertical;
-		overflow: hidden;
+	.jse-main {
 
-		// theming
-		&.jsoneditor-mode-code {
-			border: thin solid #c0c0c0;
-		}
+		--jse-theme-color: #949494;
+		// resize: vertical;
+		overflow: auto;
 
-		.ace-jsoneditor .ace_marker-layer .ace_active-line {
-			background-color: #f2f2f2;
-		}
-
-		>.jsoneditor-menu {
-			background-color: #949494;
-			border-bottom: 1px solid #838383;
-			display: table;
-		}
-
-		>.jsoneditor-outer {
-			// fix Firefox issue about height
-			// display: table-row;
-			display: initial;
-		}
-
-		>.jsoneditor-menu a.jsoneditor-poweredBy {
-			top: unset;
-			bottom: 0px;
-			padding: 5px;
-			color: #b3b3b3;
-		}
-
-		&.isDirty {
-			border: 1px solid @color_danger !important;
-
-			>.jsoneditor-menu {
-				background-color: @color_danger !important;
-			}
-		}
-	}//end .jsoneditor
+	}//end .jse-main
 
 // json-container. Is the JSON data viewer used to show fold-able data like
 // server messages in area_development widgets
