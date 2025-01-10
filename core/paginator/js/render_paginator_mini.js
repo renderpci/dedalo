@@ -198,19 +198,20 @@ const get_content_data = async function(self) {
 		})
 		// page_info
 		const locale			= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
-		const total_pages_label	= new Intl.NumberFormat(locale, {}).format(total_pages);
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'page_info',
-			inner_html		: (get_label.page || 'Page') + ` ${page_number} ` + (get_label.of || 'of') + ` ${total_pages_label} `,
-			parent			: paginator_info
-		})
+		const of_label = get_label.of || 'of'
+		// const total_pages_label	= new Intl.NumberFormat(locale, {}).format(total_pages);
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'page_info',
+		// 	inner_html		: (get_label.page || 'Page') + ` ${page_number} ` + (get_label.of || 'of') + ` ${total_pages_label} `,
+		// 	parent			: paginator_info
+		// })
 		// displayed_records
 		const total_label = new Intl.NumberFormat(locale, {}).format(total);
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'displayed_records',
-			inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total_label}`,
+			class_name		: 'page_info',
+			inner_html		: `${page_row_begin}-${page_row_end} ${of_label} ${total_label}`,
 			parent			: paginator_info
 		})
 

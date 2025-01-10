@@ -8,7 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {change_handler} from './component_json.js'
-
+	import { createJSONEditor } from '../../../lib/jsoneditor/dist/standalone.js'
 
 
 /**
@@ -116,87 +116,43 @@ const get_content_value = (key, current_value, self) => {
 	// load_editor and init
 		async function load_editor() {
 
-			// load editor files (JS/CSS)
-			self.load_editor_files()
-			.then(()=>{
+			const content = {json : current_value ?? null}
 
-				// button_save
-					const button_save = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'warning save button_save',
-						inner_html		: get_label.save || 'Save',
-						parent			: content_value
-					})
-					button_save.addEventListener('click', fn_save)
-					function fn_save(e) {
-						e.stopPropagation()
+			const editor = createJSONEditor({
+				target	: content_value,
+				props : {
+					content,
+					mode		: 'text',
+					onChange	: (updatedContent, previousContent, { contentErrors, patchResult }) => {
+						// content is an object { json: unknown } | { text: string }
+						// console.log('onChange-------------->', { updatedContent, previousContent, contentErrors, patchResult })
+						if(typeof contentErrors==='undefined'){
 
-						self.save_sequence(editor)
-						.then(function(){
-							editor.frame.classList.remove('isDirty')
-						})
-					}//end fn_save
+							const json_value = updatedContent.json !== undefined
+								? updatedContent.json
+								: updatedContent.text===''
+									? null
+									: JSON.parse( updatedContent.text )
 
-				// validated. Changed to false after init parse
-				let is_first_validation = true
-
-				// editor_options
-					const editor_options = {
-						mode		: 'code',
-						modes		: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-						// maxLines : 100, // Infinity,
-						onError : function (err) {
-							console.error('JSON editor error:', err);
-							alert(err.toString());
-						},
-						onValidate : function(json) {
-
-							// ignore first validation (when editor value is parsed on init)
-							if (is_first_validation===true) {
-								// next event will be already useful
-								is_first_validation = false
-								return
-							}
-
-							change_handler(self, json, key)
+							change_handler(self, json_value, key)
 						}
 					}
-
-				// create a new instance of the editor when DOM element is ready
-					const editor = new JSONEditor(
-						content_value,
-						editor_options,
-						current_value
-					)
-					self.editors.push(editor) // append current editor
-
-					// add resize content_value event to allow user to resize the map
-						new ResizeObserver( function(){
-							dd_request_idle_callback(
-								() => {
-									editor.resize();
-								}
-							)
-						})
-						.observe( content_value )
+				}
 			})
 
-			// blur event
-				// const ace_editor = editor.aceEditor
-				// ace_editor.on("blur", function(e){
-				// 	e.stopPropagation()
-				//
-				// 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
-				// 	const edited_value 	= editor.get()
-				// 	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
-				// 	if (!changed) {
-				// 		return false
-				// 	}
-				//
-				// 	if (confirm("Save json data changes?")) {
-				// 		button_save.click()
-				// 	}
-				// })
+			// button_save
+				const button_save = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'warning save button_save',
+					inner_html		: get_label.save || 'Save',
+					parent			: content_value
+				})
+				button_save.addEventListener('click', fn_save)
+				function fn_save(e) {
+					e.stopPropagation()
+					self.save_sequence(editor)
+				}//end fn_save
+
 		}//end load_editor
 
 	// observe in viewport
