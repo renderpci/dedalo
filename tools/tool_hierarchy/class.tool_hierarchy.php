@@ -20,6 +20,7 @@ class tool_hierarchy extends tool_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// options
 			$section_id			= $options->section_id;
@@ -32,6 +33,9 @@ class tool_hierarchy extends tool_common {
 					'section_id'	=> $section_id,
 					'section_tipo'	=> $section_tipo
 				]);
+				if (!empty($delete_response->errors)) {
+					$response->errors = array_merge($response->errors, $delete_response->errors);
+				}
 			}
 
 		// create a new virtual section from real
@@ -39,6 +43,9 @@ class tool_hierarchy extends tool_common {
 				'section_id'	=> $section_id,
 				'section_tipo'	=> $section_tipo
 			]);
+			if (!empty($hierarchy_response->errors)) {
+				$response->errors = array_merge($response->errors, $hierarchy_response->errors);
+			}
 
 		// response
 			$response->result	= $hierarchy_response->result;

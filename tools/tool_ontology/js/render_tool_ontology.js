@@ -116,9 +116,25 @@ const get_content_data = async function(self) {
 					const api_response = await self.set_records_in_jer_dd()
 
 				// user messages
-					messages_container.innerHTML = api_response.msg
+					const msg = api_response.msg
 						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
 						: 'Unknown error'
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'msg',
+						inner_html		: msg,
+						parent			: messages_container
+					})
+
+				// errors
+					if (api_response.errors && api_response.errors.length) {
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error',
+							inner_html		: api_response.errors.join('<br>'),
+							parent			: messages_container
+						})
+					}
 
 				// reload section (caller)
 					if (api_response.result==false) {
