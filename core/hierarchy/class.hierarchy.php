@@ -328,10 +328,6 @@ class hierarchy extends ontology {
 						if($current_locator->from_component_tipo==='ontology30' ){
 							$current_locator->section_id = (string)NUMERICAL_MATRIX_VALUE_YES;
 						}
-						// remove the model of the data (remove dd6 'section' from model/typology)
-						if($current_locator->from_component_tipo==='ontology6' ){
-							unset( $section_data->relations[$key] );
-						}
 					}
 
 				// virtual model section
