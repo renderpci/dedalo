@@ -109,7 +109,7 @@ class area extends area_common  {
 
 				// areas. Get the JSON format of the ontology
 
-					$areas[] = ontology_legacy::tipo_to_json_item($area_tipo, [
+					$areas[] = RecordObj_dd::tipo_to_json_item($area_tipo, [
 						'tipo',
 						'model',
 						'parent',
@@ -126,7 +126,7 @@ class area extends area_common  {
 						// skip the areas_deny
 						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
 
-						$areas[] = ontology_legacy::tipo_to_json_item($child_area_tipo, [
+						$areas[] = RecordObj_dd::tipo_to_json_item($child_area_tipo, [
 							'tipo',
 							'model',
 							'parent',
