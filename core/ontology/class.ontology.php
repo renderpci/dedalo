@@ -1828,7 +1828,23 @@ class ontology {
 			$section_tipo	= $current_record->section_tipo;
 			$section_id		= $current_record->section_id;
 
-			$term_id = ontology::insert_jer_dd_record( $section_tipo, $section_id );
+			if ($section_tipo===self::$main_section_tipo) {
+				// main_ontology records
+
+				$tld			= ontology::get_main_tld($section_id, $section_tipo);
+				$typology_id	= ontology::get_main_typology_id($tld);
+				$name_data		= ontology::get_main_name_data($tld);
+				$term_id		= ontology::create_jer_dd_ontology_section_node((object)[
+					'tld'					=> $tld,
+					'typology_id'			=> $typology_id,
+					'name_data'				=> $name_data,
+					'parent_grouper_tipo'	=> 'ontologytype' . $typology_id
+				]);
+
+			}else{
+				// regular matrix_ontology_records
+				$term_id = ontology::insert_jer_dd_record( $section_tipo, $section_id );
+			}
 
 			if( empty($term_id ) ){
 				$response->errors[] = 'Failed insert into jer_dd with section_tipo: ' . $section_tipo .' section_id: '. $section_id;
