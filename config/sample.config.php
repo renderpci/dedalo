@@ -301,6 +301,7 @@
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
 		'rsc',
+		'ontology',
 		'hierarchy',
 		'lg',
 		'utoponymy',
