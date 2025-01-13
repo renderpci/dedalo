@@ -66,11 +66,30 @@ const get_content_data = async function(self) {
 
 	// user_info
 		ui.create_dom_element({
-			element_type	: 'h2',
+			element_type	: 'h3',
 			class_name		: 'user_info',
-			inner_html		: self.get_tool_label('export_to_jer_dd') || 'Export to jer_dd',
+			inner_html		: (self.get_tool_label('export_to_jer_dd') || 'Export to jer_dd') + ': ',
 			parent			: fragment
 		})
+		try {
+			const tld			= self.caller.datum.data.find(el => el.tipo==='ontology7').value[0]
+			const section_id	= self.caller.data.value[0].section_id
+			const info			=  `${tld}${section_id}`
+			ui.create_dom_element({
+				element_type	: 'h3',
+				class_name		: 'user_info term_id',
+				inner_html		: info,
+				parent			: fragment
+			})
+		} catch (error) {
+			console.error(error)
+			ui.create_dom_element({
+				element_type	: 'h2',
+				class_name		: 'user_info',
+				inner_html		: 'Invalid source',
+				parent			: fragment
+			})
+		}
 
 	// components container
 		ui.create_dom_element({
@@ -86,71 +105,71 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-		// button_generate
-			const button_generate = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning gear',
-				inner_html		: self.get_tool_label('process') || 'Process',
-				parent			: buttons_container
-			})
-			// click event
-			const click_handler = async (e) => {
-				e.stopPropagation();
+	// button_generate
+		const button_generate = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning gear',
+			inner_html		: self.get_tool_label('process') || 'Process',
+			parent			: buttons_container
+		})
+		// click event
+		const click_handler = async (e) => {
+			e.stopPropagation();
 
-				// messages clean
-					[
-						messages_container
-					]
-					.map(el => el.classList.remove('error'))
+			// messages clean
+				[
+					messages_container
+				]
+				.map(el => el.classList.remove('error'))
 
-				// loading
-					content_data.classList.add('loading')
-					messages_container.innerHTML = ''
-					const spinner = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'spinner',
-						parent			: content_data.parentNode
-					})
+			// loading
+				content_data.classList.add('loading')
+				messages_container.innerHTML = ''
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: content_data.parentNode
+				})
 
-				// call API
-					const api_response = await self.set_records_in_jer_dd()
+			// call API
+				const api_response = await self.set_records_in_jer_dd()
 
-				// user messages
-					const msg = api_response.msg
-						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
-						: 'Unknown error'
+			// user messages
+				const msg = api_response.msg
+					? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
+					: 'Unknown error'
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg',
+					inner_html		: msg,
+					parent			: messages_container
+				})
+
+			// errors
+				if (api_response.errors && api_response.errors.length) {
 					ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'msg',
-						inner_html		: msg,
+						class_name		: 'error',
+						inner_html		: api_response.errors.join('<br>'),
 						parent			: messages_container
 					})
-
-				// errors
-					if (api_response.errors && api_response.errors.length) {
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'error',
-							inner_html		: api_response.errors.join('<br>'),
-							parent			: messages_container
-						})
-					}
-
-				// reload section (caller)
-					if (api_response.result==false) {
-						messages_container.classList.add('error')
-					}
-
-				content_data.classList.remove('loading')
-				spinner.remove()
-			}
-			button_generate.addEventListener('click', click_handler)
-			// focus buttons
-			dd_request_idle_callback(
-				() => {
-					button_generate.focus()
 				}
-			)
+
+			// add error class on result false
+				if (api_response.result==false) {
+					messages_container.classList.add('error')
+				}
+
+			content_data.classList.remove('loading')
+			spinner.remove()
+		}
+		button_generate.addEventListener('click', click_handler)
+		// focus buttons
+		dd_request_idle_callback(
+			() => {
+				button_generate.focus()
+			}
+		)
 
 	// messages_container
 		const messages_container = ui.create_dom_element({
