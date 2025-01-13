@@ -6,9 +6,9 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 	import {change_handler} from './component_json.js'
-	import { createJSONEditor } from '../../../lib/jsoneditor/dist/standalone.js'
+	import {createJSONEditor} from '../../../lib/jsoneditor/dist/standalone.js'
 
 
 /**
@@ -114,17 +114,15 @@ const get_content_value = (key, current_value, self) => {
 		})
 
 	// load_editor and init
-		async function load_editor() {
+		const load_editor = () => {
 
-			const content = {json : current_value ?? null}
-
+			// editor
 			const editor = createJSONEditor({
 				target	: content_value,
-				props : {
-					content,
+				props	: {
+					content		: {json : current_value ?? null},
 					mode		: 'text',
 					onChange	: (updatedContent, previousContent, { contentErrors, patchResult }) => {
-						// content is an object { json: unknown } | { text: string }
 						// console.log('onChange-------------->', { updatedContent, previousContent, contentErrors, patchResult })
 						if(typeof contentErrors==='undefined'){
 
@@ -140,30 +138,25 @@ const get_content_value = (key, current_value, self) => {
 				}
 			})
 
-			// button_save
-				const button_save = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'warning save button_save',
-					inner_html		: get_label.save || 'Save',
-					parent			: content_value
-				})
-				button_save.addEventListener('click', fn_save)
-				function fn_save(e) {
-					e.stopPropagation()
-					self.save_sequence(editor)
-				}//end fn_save
+			// set pointer
+			self.editor = editor
 
+			// button_save
+			const button_save = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning save button_save',
+				inner_html		: get_label.save || 'Save',
+				parent			: content_value
+			})
+			const click_handler = (e) => {
+				e.stopPropagation()
+				self.save_sequence(editor)
+			}
+			button_save.addEventListener('click', click_handler)
 		}//end load_editor
 
 	// observe in viewport
-		const observer = new IntersectionObserver(function(entries) {
-			const entry = entries[1] || entries[0]
-			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-				observer.disconnect();
-				load_editor()
-			}
-		}, { threshold: [0] });
-		observer.observe(content_value);
+		when_in_viewport(content_value, load_editor)
 
 
 	return content_value
