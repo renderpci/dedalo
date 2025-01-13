@@ -265,14 +265,19 @@ class sections extends common {
 			// debug
 			debug_log(__METHOD__
 				." To delete section: ($section_tipo-$section_id). Permissions: $permissions ".to_string($section_tipo)
+				.' section_tipo: ' . $section_tipo . PHP_EOL
+				.' section_id: ' . to_string($section_id) . PHP_EOL
+				.' sqo: ' . to_string($sqo)
 				, logger::DEBUG
 			);
 			if ($permissions<2) {
-				$msg = '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.'): '.$permissions;
+				$msg = '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.', section_tipo: '.$section_tipo.') permissions: '.$permissions;
 				$response->errors[] = 'insufficient permissions to delete';
 				$response->msg 	.= $msg;
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
+					.' section_id: ' . to_string($section_id) . PHP_EOL
 					.' delete options: '.to_string($options)
 					, logger::ERROR
 				);
@@ -289,6 +294,8 @@ class sections extends common {
 						$response->msg 	.= '[3] section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
 						debug_log(__METHOD__
 							." $response->msg " . PHP_EOL
+							.' section_tipo: ' . $section_tipo . PHP_EOL
+							.' section_id: ' . to_string($section_id) . PHP_EOL
 							.' delete options: '.to_string($options)
 							, logger::ERROR
 						);

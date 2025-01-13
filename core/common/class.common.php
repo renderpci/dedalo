@@ -548,6 +548,11 @@ abstract class common {
 				// model
 				$model_name = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
 				if ($model_name!=='matrix_table') {
+					debug_log(__METHOD__
+						. " Ignored non matrix_table Ontology item "
+						. ' tipo: ' . to_string($table_tipo)
+						, logger::ERROR
+					);
 					continue;
 				}
 

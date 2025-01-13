@@ -1290,7 +1290,8 @@ final class ontology_test extends TestCase {
 			$this->assertTrue(
 				!empty($response->result)===$expected,
 				'expected: ' . to_string($expected) .  PHP_EOL
-					. 'result: ' . to_string(!empty($response->result))
+					. 'result: ' . to_string(!empty($response->result)) .  PHP_EOL
+					. 'response: ' . to_string($response)
 			);
 	}//end test_delete_ontology
 
