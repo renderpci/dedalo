@@ -7,13 +7,14 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {load_json_editor_files} from '../../../js/area_maintenance.js'
+	import {when_in_viewport} from '../../../../common/js/events.js'
+	import {createJSONEditor} from '../../../../../lib/jsoneditor/dist/standalone.js'
 	import {print_response} from '../../../js/render_area_maintenance.js'
 
 
 
 /**
-* RENDER_sqo_test_environment
+* RENDER_SQO_TEST_ENVIRONMENT
 * Manages the component's logic and appearance in client side
 */
 export const render_sqo_test_environment = function() {
@@ -83,8 +84,6 @@ const get_content_data_edit = async function(self) {
 			label				: self.name,
 			callback			: async () => {
 
-				await load_json_editor_files()
-
 				// container
 					const container = new DocumentFragment()
 
@@ -106,7 +105,7 @@ const get_content_data_edit = async function(self) {
 					const click_handler = async (e) => {
 						e.stopPropagation()
 
-						const editor_text = self.editor.getText()
+						const editor_text = self.editor.get().text
 						if (editor_text.length<3) {
 							return false
 						}
@@ -149,34 +148,39 @@ const get_content_data_edit = async function(self) {
 					})
 
 				// JSON editor
-					const options = {
-						mode	: 'code',
-						modes	: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-						onError	: function (err) {
-							alert(err.toString());
-						},
-						onChange: async function () {
-							const editor_text = editor.getText()
-							if (editor_text.length<3) return
+					const load_editor = () => {
+						// localStorage
+						const sample_data	= '{"section_tipo":["rsc170"],"limit":5,"offset":0}'
+						const saved_value	= localStorage.getItem('json_editor_sqo')
+						const editor_value	= saved_value || sample_data
 
-							// check is JSON valid and store
-							try {
-								const body_options = JSON.parse(editor_text)
-								if (body_options) {
-									window.localStorage.setItem('json_editor_api', editor_text);
+						const editor = createJSONEditor({
+							target	: json_editor_api_container,
+							props	: {
+								content 	: {text : editor_value},
+								mode		: 'text',
+								onChange	: (updatedContent, previousContent, { contentErrors, patchResult }) => {
+									if(typeof contentErrors==='undefined'){
+										// check is JSON valid and store
+										try {
+											const body_options = JSON.parse(updatedContent.text)
+											if (body_options) {
+												window.localStorage.setItem('json_editor_sqo', updatedContent.text);
+											}
+										} catch (error) {
+											// console.error(error)
+										}
+									}
 								}
-							} catch (error) {
-								// console.error(error)
 							}
-						}
+						})
+
+						// set pointer
+						self.editor = editor
 					}
-					// localStorage
-					const sample_data	= {"section_tipo":["rsc170"],"limit":5,"offset":0}
-					const saved_value	= localStorage.getItem('json_editor_sqo')
-					const editor_value	= JSON.parse(saved_value) || sample_data
-					const editor		= new JSONEditor(json_editor_api_container, options, editor_value)
-					// set pointer
-					self.editor = editor
+
+					// observe in viewport
+					when_in_viewport(json_editor_api_container, load_editor)
 
 				// add at end body_response
 					const body_response = ui.create_dom_element({
