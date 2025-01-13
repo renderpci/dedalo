@@ -49,3 +49,9 @@
 			return $method->invokeArgs($obj, $args);
 		}
 	}
+
+// logout. Delete sessions and cache files
+	$user_id = TEST_USER_ID; // Defined in bootstrap
+	if (login::is_logged()) {
+		$result = login_test::logout($user_id);
+	}
