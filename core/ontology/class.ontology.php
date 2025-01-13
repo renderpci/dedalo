@@ -2231,6 +2231,12 @@ class ontology {
 				return $delete_nodes_response;
 			}
 
+		// 4 delete counter
+			counter::modify_counter(
+				$safe_tld.'0',
+				'reset'
+			);
+
 		// response OK
 			$response->result		= true;
 			$response->delete_main	= $delete_main_response;
