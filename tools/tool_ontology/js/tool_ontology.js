@@ -157,4 +157,19 @@ tool_ontology.prototype.set_records_in_jer_dd = async function() {
 
 
 
+/**
+* ON_CLOSE_ACTIONS
+* Capture modal on close event actions
+* @return bool
+*/
+tool_ontology.prototype.on_close_actions = function() {
+
+	// destroy current tool instance to allow open again
+	this.destroy(true, true, true)
+
+	return true
+}//end on_close_actions
+
+
+
 // @license-end
