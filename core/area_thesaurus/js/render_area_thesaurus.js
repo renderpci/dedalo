@@ -253,6 +253,12 @@ const render_content_data = function(self) {
 				})
 
 			// collapse typology_name->typology_container children
+				const collapse = () => {
+					typology_name.classList.remove('up')
+				}
+				const expose = () => {
+					typology_name.classList.add('up')
+				}
 				ui.collapse_toggle_track({
 					toggler				: typology_name,
 					container			: typology_container,
@@ -261,12 +267,6 @@ const render_content_data = function(self) {
 					expose_callback		: expose,
 					default_state		: 'opened'
 				})
-				function collapse() {
-					typology_name.classList.remove('up')
-				}
-				function expose() {
-					typology_name.classList.add('up')
-				}
 
 			// hierarchy sections
 				const hierarchy_sections_full = hierarchy_nodes.filter(node => parseInt(node.typology_section_id)===parseInt(typology_item.section_id))
