@@ -175,6 +175,7 @@ export const when_in_viewport = function(node, callback, once=true) {
 	);
 	observer.observe(node);
 
+
 	return observer
 }//end when_in_viewport
 
