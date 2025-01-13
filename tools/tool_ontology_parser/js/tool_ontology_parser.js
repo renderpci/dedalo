@@ -267,4 +267,19 @@ tool_ontology_parser.prototype.regenerate_ontologies = async function () {
 
 
 
+/**
+* ON_CLOSE_ACTIONS
+* Capture modal on close event actions
+* @return bool
+*/
+tool_ontology_parser.prototype.on_close_actions = function() {
+
+	// destroy current tool instance to allow open again
+	this.destroy(true, true, true)
+
+	return true
+}//end on_close_actions
+
+
+
 // @license-end
