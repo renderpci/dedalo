@@ -87,7 +87,9 @@ final class search_related_test extends TestCase {
 		$this->assertTrue(
 			$reference,
 			'expected true : ' . PHP_EOL
-				. to_string($reference)
+				. 'reference: ' . to_string($reference) . PHP_EOL
+				. 'result: ' . to_string($result) . PHP_EOL
+				. 'sqo: ' . to_string($sqo)
 		);
 	}//end test_parse_search_query_object
 
