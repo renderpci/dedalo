@@ -296,6 +296,10 @@ class ontology {
 					$new_properties->show->ddo_map = $properties;
 
 				$properties = $new_properties;
+
+				// update jer_dd record with the new properties
+				$jer_dd_row->set_properties($new_properties);
+				$jer_dd_row->insert();
 			}
 
 			if(!empty($properties)) {
