@@ -138,20 +138,22 @@
 
 
 
-// BACKUPS_ONTOLOGY_DOWNLOAD_DIR
+// ONTOLOGY_DATA_IO_DIR
 	// Target folder exists test
 	// Normally is DEDALO_BACKUP_PATH_ONTOLOGY . '/download'
-	$folder_path = ONTOLOGY_DOWNLOAD_DIR;
-	if (!system::check_directory($folder_path)) {
-		$init_response->msg[]	= "Error on read or create ONTOLOGY_DOWNLOAD_DIR directory. Permission denied (php user: $php_user)";
-		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
-			.' folder_path: ' . $folder_path
-			, logger::ERROR
-		);
+	if (defined('ONTOLOGY_DATA_IO_DIR')) {
+		$folder_path = ONTOLOGY_DATA_IO_DIR;
+		if (!system::check_directory($folder_path)) {
+			$init_response->msg[]	= "Error on read or create ONTOLOGY_DATA_IO_DIR directory. Permission denied (php user: $php_user)";
+			$init_response->errors	= true;
+			debug_log(__METHOD__
+				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				.' folder_path: ' . $folder_path
+				, logger::ERROR
+			);
 
-		return $init_response;
+			return $init_response;
+		}
 	}
 
 
@@ -170,24 +172,6 @@
 
 		return $init_response;
 	}
-
-
-
-// DEDALO_PREFIX_TIPOS
-	// Maintains consistency on defined ONTOLOGY_DATA_IO_DIR and extras folder dirs
-	$folder_path = ONTOLOGY_DATA_IO_DIR;
-	if (!system::check_directory($folder_path)) {
-		$init_response->msg[]	= "Error on read or create 'ontology i/o' directory. Permission denied (PHP user: $php_user)";
-		$init_response->errors	= true;
-		debug_log(__METHOD__
-			.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-			.' folder_path: ' .$folder_path
-			, logger::ERROR
-		);
-
-		return $init_response;
-	}
-
 
 
 
