@@ -298,8 +298,10 @@ class ontology {
 				$properties = $new_properties;
 
 				// update jer_dd record with the new properties
-				$jer_dd_row->set_properties($new_properties);
-				$jer_dd_row->insert();
+				$RecordObj_dd = new RecordObj_dd($jer_dd_row->terminoID);
+				$RecordObj_dd->get_properties(); // force load data
+				$RecordObj_dd->set_properties($new_properties);
+				$RecordObj_dd->update();
 			}
 
 			if(!empty($properties)) {
