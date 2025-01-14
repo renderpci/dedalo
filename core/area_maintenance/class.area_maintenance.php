@@ -471,7 +471,7 @@ class area_maintenance extends area_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= ['Error. Request failed '.__METHOD__];
-
+			$response->errors	= [];
 
 		// tables to propagate
 			$ar_tables = (function($tables) {
@@ -505,6 +505,7 @@ class area_maintenance extends area_common {
 				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if ($result===false) {
 					$response->msg = $response->msg[0].' - Unable to truncate table relations!';
+					$response->errors[] = 'Failed truncating table relations';
 					return $response;
 				}
 				// restart table sequence
@@ -512,6 +513,7 @@ class area_maintenance extends area_common {
 				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if ($result===false) {
 					$response->msg = $response->msg[0].' - Unable to alter SEQUENCE relations_id_seq!';
+					$response->errors[] = 'Failed changing sequence relations_id_seq';
 					return $response;
 				}
 			}
@@ -526,6 +528,7 @@ class area_maintenance extends area_common {
 				if ($result===false) {
 					$response->msg[] ='Table \''.$table.'\' not found!';
 					$response->msg 	 = implode('<br>', $response->msg);
+					$response->errors[] = 'Table not found: '.to_string($table);
 					return $response;
 				}
 				$rows = pg_fetch_assoc($result);
@@ -552,6 +555,7 @@ class area_maintenance extends area_common {
 				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
+					$response->errors[] = 'Failed Search';
 					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 					continue;
 				}
@@ -574,10 +578,11 @@ class area_maintenance extends area_common {
 									$component_dato[$current_locator->from_component_tipo][] = $current_locator;
 								}else{
 									debug_log(__METHOD__
-										." Error on get from_component_tipo from locator (table:$table) (ignored) locator:"
-										.to_string($current_locator)
+										." Error on get from_component_tipo from locator (table:$table) (ignored)" . PHP_EOL
+										.' current_locator: ' . to_string($current_locator)
 										, logger::ERROR
 									);
+									$response->errors[] = 'Error on get from_component_tipo from locator: ' . to_string($current_locator);
 								}
 							}
 
@@ -610,6 +615,7 @@ class area_maintenance extends area_common {
 							.' section_id: ' . to_string($section_id)
 							, logger::ERROR
 						);
+						$response->errors[] = 'Empty data from table' . to_string($table);
 					}
 				}
 
@@ -634,7 +640,9 @@ class area_maintenance extends area_common {
 
 		// response
 			$response->result	= true;
-			$response->msg[0]	= 'OK. All data is propagated successfully'; // Override first message
+			$response->msg[0]	= count($response->errors)===0 // Override first message
+				? 'OK. All data is propagated successfully'
+				: 'Warning: errors found in data propagation';
 
 
 		return $response;
@@ -672,6 +680,7 @@ class area_maintenance extends area_common {
 
 	/**
 	* CHECK_CONFIG
+	* Check Dédalo config files and vars
 	* @return object $response
 	*/
 	public static function check_config() : object {
