@@ -1445,19 +1445,19 @@ class transform_data {
 		$all_active_tld = RecordObj_dd::get_active_tlds();
 
 		// CLI process data
-		if ( running_in_cli()===true ) {
-			if (!isset(common::$pdata)) {
-				common::$pdata = new stdClass();
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->memory = '';
+				common::$pdata->action = '';
+				common::$pdata->total = '';
+				unset(common::$pdata->counter); // move counter property position
+				common::$pdata->counter = 0;
+				common::$pdata->tld = '';
+				common::$pdata->active_tld = $all_active_tld;
+				$base_msg = common::$pdata->msg;
 			}
-			common::$pdata->memory = '';
-			common::$pdata->action = '';
-			common::$pdata->total = '';
-			unset(common::$pdata->counter); // move counter property position
-			common::$pdata->counter = 0;
-			common::$pdata->tld = '';
-			common::$pdata->active_tld = $all_active_tld;
-			$base_msg = common::$pdata->msg;
-		}
 
 		// collect all children sections of 'ontology40' ('Instances')
 		// like 'dd', 'ontology', 'rsc', 'nexus', etc.
@@ -1508,7 +1508,7 @@ class transform_data {
 
 			// CLI process data
 				if ( running_in_cli()===true ) {
-					common::$pdata->action = 'ceate_ontology_records';
+					common::$pdata->action = 'create_ontology_records';
 					common::$pdata->memory = dd_memory_usage();
 					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
 					// send to output
@@ -1518,7 +1518,7 @@ class transform_data {
 			// ontology_records. Collects all jer_dd records for the current tld and
 			// creates a matrix record for each one
 			$jer_dd_rows = RecordObj_dd::get_all_tld_records( [$tld] );
-			ontology::ceate_ontology_records( $jer_dd_rows );
+			ontology::create_ontology_records( $jer_dd_rows );
 		}
 
 		// reset counter
