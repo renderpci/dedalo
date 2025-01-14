@@ -1569,6 +1569,17 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* UPDATE
+	* @return string|false
+	*/
+	public function update() : string|false {
+
+		return parent::Save();
+	}//end update
+
+
+
+	/**
 	* GET_LAST_SECTION_ID_FROM_TLD
 	* Find the tipo(terminioID) in jer_dd and choose the last id
 	* @return
