@@ -180,13 +180,9 @@ class tool_ontology_parser extends tool_common {
 		// options
 			$selected_ontologies = $options->selected_ontologies ?? [];
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->errors	= [];
+		// response
+			$response = ontology::regenerate_records_in_jer_dd( $selected_ontologies );
 
-
-		$response = ontology::regenerate_records_in_jer_dd( $selected_ontologies );
 
 		return $response;
 	}//end regenerate_ontologies
