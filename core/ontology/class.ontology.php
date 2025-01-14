@@ -14,14 +14,14 @@ class ontology {
 
 
 	/**
-	* CEATE_ONTOLOGY_RECORDS
+	* CREATE_ONTOLOGY_RECORDS
 	* Iterate all given $jer_dd_rows and creates a section row for each one
 	* @see transform_data::generate_all_main_ontology_sections
 	* @param array $jer_dd_rows
 	* @return bool
 	* @test true
 	*/
-	public static function ceate_ontology_records( array $jer_dd_rows ) : bool {
+	public static function create_ontology_records( array $jer_dd_rows ) : bool {
 
 		foreach ($jer_dd_rows as $jer_dd_row) {
 
@@ -47,7 +47,7 @@ class ontology {
 		}
 
 		return true;
-	}//end ceate_ontology_records
+	}//end create_ontology_records
 
 
 
