@@ -1476,6 +1476,11 @@ class transform_data {
 			}
 		}
 
+		// debug
+		if(SHOW_DEBUG===true) {
+			dump($sorted_tlds, 'generate_all_main_ontology_sections $sorted_tlds ++++++ '.to_string());
+		}
+
 		$total_tld = count($sorted_tlds);
 
 		// firs iteration. matrix records creation
@@ -1493,18 +1498,18 @@ class transform_data {
 					print_cli(common::$pdata);
 				}
 
-			$fie_item = array_find($ontology_info->active_ontologies, function( $el ) use($tld) {
+			$file_item = array_find($ontology_info->active_ontologies, function( $el ) use($tld) {
 				return $el->tld === $tld;
 			});
 
-			$fie_item = ( isset($fie_item) )
-				? $fie_item
+			$file_item = ( isset($file_item) )
+				? $file_item
 				: (object)[
 					'tld' => $tld
 				 ];
 
 			// main_section. Add one main section for each tld if not already exists
-			ontology::add_main_section( $fie_item );
+			ontology::add_main_section( $file_item );
 
 			// CLI process data
 				if ( running_in_cli()===true ) {

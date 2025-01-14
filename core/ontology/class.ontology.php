@@ -1249,11 +1249,11 @@ class ontology {
 	* Get the component_data and parse as column of jer_dd format.
 	* @param string $section_tipo
 	* @param string|int $section_id
-	* @return object|null $jer_dd_record
+	* @return RecordObj_dd|null $jer_dd_record
 	* 	returns null if section tld value is empty
 	* @test true
 	*/
-	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?object {
+	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?RecordObj_dd {
 
 		// node locator
 		$locator = new locator();
@@ -1912,6 +1912,7 @@ class ontology {
 				$current_section_tipo	= $current_record->section_tipo;
 				$current_section_id		= $current_record->section_id;
 
+				// RecordObj_dd item
 				$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $current_section_tipo, $current_section_id );
 
 				if( empty($jer_dd_record ) ){

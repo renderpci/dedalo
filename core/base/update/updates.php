@@ -110,7 +110,6 @@ $updates->$v = new stdClass();
 							'code'	=> 'x3a0B4Y020Eg9w'
 						]
 					]);
-
 			</pre>
 			<br>
 			<p>
