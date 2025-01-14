@@ -48,6 +48,32 @@
 
 
 
+// test new constants 6.4
+	$new_constants = [
+		'DEDALO_INSTALL_PATH',
+		'DEDALO_INSTALL_URL',
+		'DEDALO_API_URL',
+		'ONTOLOGY_SERVERS',
+		'ONTOLOGY_DATA_IO_DIR',
+		'ONTOLOGY_DATA_IO_URL',
+		'CODE_SERVERS',
+		'DEDALO_SOURCE_VERSION_LOCAL_DIR'
+	];
+	foreach ($new_constants as $name) {
+		if (!defined($name)) {
+			$init_response->msg[]	= 'Error Processing Request: constant: '.$name.' is not defined in config file';
+			$init_response->errors	= true;
+			debug_log(__METHOD__
+				."  ".implode(PHP_EOL, $init_response->msg)
+				, logger::ERROR
+			);
+
+			return $init_response;
+		}
+	}
+
+
+
 // MBSTRING
 	if (!function_exists('mb_internal_encoding')) {
 
@@ -773,32 +799,6 @@
 				$init_response->msg .= 'Table matrix_tools is not available. Please, login as Dédalo superuser (root) to grant access to Development Area. You need to update your Dédalo data, ontology and register the tools';
 				return $init_response;
 			}
-		}
-	}
-
-
-
-// test new constants 6.4
-	$new_constants = [
-		'DEDALO_INSTALL_PATH',
-		'DEDALO_INSTALL_URL',
-		'DEDALO_API_URL',
-		'ONTOLOGY_SERVERS',
-		'ONTOLOGY_DATA_IO_DIR',
-		'ONTOLOGY_DATA_IO_URL',
-		'CODE_SERVERS',
-		'DEDALO_SOURCE_VERSION_LOCAL_DIR'
-	];
-	foreach ($new_constants as $name) {
-		if (!defined($name)) {
-			$init_response->msg[]	= 'Error Processing Request: constant: '.$name.' is not defined in config file';
-			$init_response->errors	= true;
-			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg)
-				, logger::ERROR
-			);
-
-			return $init_response;
 		}
 	}
 
