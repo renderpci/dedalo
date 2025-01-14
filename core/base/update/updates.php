@@ -79,18 +79,37 @@ $updates->$v = new stdClass();
 				1. Constants added:
 			</p>
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
-				define('DEDALO_INSTALL_PATH',	DEDALO_ROOT_PATH . '/install');
-				define('DEDALO_INSTALL_URL',	DEDALO_ROOT_WEB . '/install');
-				define('DEDALO_API_URL',		DEDALO_CORE_URL . '/api/v1/json/');
-				define('ONTOLOGY_SERVERS',	[
-					[
-						'name'	=> 'Official Dédalo Ontology server',
-						'url'	=> 'https://master.dedalo.dev/dedalo/install/import/ontology/',
-						'code'	=> 'x3a0B4Y020Eg9w'
-					]
-				]);
-				define('ONTOLOGY_DATA_IO_DIR',			DEDALO_INSTALL_PATH . '/import/ontology');
-				define('ONTOLOGY_DATA_IO_URL',			DEDALO_INSTALL_URL . '/import/ontology');
+				// install
+					define('DEDALO_INSTALL_PATH',	DEDALO_ROOT_PATH . '/install');
+					define('DEDALO_INSTALL_URL',	DEDALO_ROOT_WEB . '/install');
+
+				// Work API
+					define('DEDALO_API_URL',	DEDALO_CORE_URL . '/api/v1/json/');
+
+				// Ontology server. Defines if current server can provide his ontology files to other Dédalo servers.
+					define('IS_AN_ONTOLOGY_SERVER', false);
+				// Ontologies providers
+					define('ONTOLOGY_SERVERS',	[
+						[
+							'name'	=> 'Official Dédalo Ontology server',
+							'url'	=> 'https://master.dedalo.dev/dedalo/core/api/v1/json/',
+							'code'	=> 'x3a0B4Y020Eg9w'
+						]
+					]);
+				// Directory to manage input/output, export/import ontology data to sync between installations
+					define('ONTOLOGY_DATA_IO_DIR',	DEDALO_INSTALL_PATH . '/import/ontology');
+					define('ONTOLOGY_DATA_IO_URL',	DEDALO_INSTALL_URL . '/import/ontology');
+
+				// Dédalo code
+					define('IS_A_CODE_SERVER', false);
+					// code providers
+					define('CODE_SERVERS',	[
+						[
+							'name'	=> 'Official Dédalo code server',
+							'url'	=> 'https://master.dedalo.dev/dedalo/core/api/v1/json/',
+							'code'	=> 'x3a0B4Y020Eg9w'
+						]
+					]);
 
 			</pre>
 			<br>
@@ -98,12 +117,11 @@ $updates->$v = new stdClass();
 				2. Constants removed:
 			</p>
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
-
-				define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
-				define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
-				define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+				define('STRUCTURE_SERVER_CODE',	'x3a0B4Y020Eg9w');
+				define('STRUCTURE_SERVER_URL',	'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
+				define('ONTOLOGY_DOWNLOAD_DIR',	DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 				define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
-
+				define('DEDALO_SOURCE_VERSION_URL',	'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
 			</pre>
 			<br>
 			<p>
@@ -116,10 +134,9 @@ $updates->$v = new stdClass();
 			</p>
 
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
-
-				//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
-				define('IS_AN_ONTOLOGY_SERVER',			false);
-				define('ONTOLOGY_SERVER_CODE',          'Here:my_valid_code_for_Ontologies');
+				// Ontology server. Defines if the installation server can provide his ontology files to other Dédalo installations.
+				define('IS_AN_ONTOLOGY_SERVER',	true);
+				define('ONTOLOGY_SERVER_CODE',	'Here:my_valid_code_for_Ontologies');
 			</pre>
 		";
 		$updates->$v->alert_update[] = $alert;
