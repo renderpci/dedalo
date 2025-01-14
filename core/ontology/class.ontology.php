@@ -1888,7 +1888,7 @@ class ontology {
 		// get all section_tipo from tld
 			$section_tipo = array_map( function($el) {
 				return ontology::map_tld_to_target_section_tipo($el);
-			},$tld );
+			}, $tld );
 
 		// 1 search all nodes as matrix records
 			$sqo = new search_query_object();
@@ -1913,16 +1913,20 @@ class ontology {
 				if( empty($jer_dd_record ) ){
 					RecordObj_dd::delete_bk_table();
 					$response->errors[] = 'Failed regenerate jer_dd with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
+					debug_log(__METHOD__
+						. " Error generating jer_dd with section_tipo " . PHP_EOL
+						. ' current_section_tipo: ' . to_string($current_section_tipo) . PHP_EOL
+						. ' current_section_id: ' . to_string($current_section_id)
+						, logger::ERROR
+					);
 					return $response;
 				}
 
 				$jer_dd_records[] = $jer_dd_record;
 			}
 
-		// 3 delete all jer_dd nodes of the given tld, empty jer_dd table of this tld
-		// add new main section for every tld (regenerate the main section)
+		// 3 add new main section for every tld (regenerate the main section)
 			foreach ($tld as $current_tld) {
-				RecordObj_dd::delete_tld_nodes( $current_tld );
 
 				// get the information to create the main section
 				$typology_id	= ontology::get_main_typology_id( $current_tld );
@@ -1933,10 +1937,27 @@ class ontology {
 					$file_item->typology_id	= $typology_id ?? null;
 					$file_item->name_data	= $name_data ?? null;
 
-				ontology::add_main_section( $file_item );
+				// add main section and records
+				$add_result = ontology::add_main_section( $file_item );
+				if (empty($add_result)) {
+					$response->errors[] = 'Failed add_main_section file_item: ' . to_string($file_item);
+					debug_log(__METHOD__
+						. " Error creating ontology main section " . PHP_EOL
+						. ' add_result: ' . to_string($add_result) . PHP_EOL
+						. ' file_item: ' . to_string($file_item)
+						, logger::ERROR
+					);
+					return $response;
+				}
 			}
 
-		// 4 insert the new nodes of the given tld
+		// 4 delete jer_dd nodes (all tld records in jer_dd)
+			foreach ($tld as $current_tld) {
+				// delete all tld records
+				RecordObj_dd::delete_tld_nodes( $current_tld );
+			}
+
+		// 5 insert the new nodes of the given tld
 			$total_insert = 0;
 			foreach ($jer_dd_records as $jer_dd_record) {
 
@@ -1947,7 +1968,6 @@ class ontology {
 				if( empty($insert_result) ){
 					RecordObj_dd::restore_from_bk_table($tld);
 					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
-
 					// delete bk table
 					RecordObj_dd::delete_bk_table();
 					return $response;
@@ -1959,7 +1979,7 @@ class ontology {
 		// response
 			if( empty($response->errors) ){
 				$response->result	= true;
-				$response->msg		= 'OK. Request done';
+				$response->msg		= 'OK. Request done successfully';
 			}
 			// total_insert jer_dd records
 			$response->total_insert = $total_insert;
