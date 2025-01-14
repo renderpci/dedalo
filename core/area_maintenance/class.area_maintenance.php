@@ -93,6 +93,9 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// update_ontology *
+			if (!in_array('ontology', $DEDALO_PREFIX_TIPOS)) {
+				$DEDALO_PREFIX_TIPOS[] = 'ontology';
+			}
 			$item = new stdClass();
 				$item->id		= 'update_ontology';
 				$item->type		= 'widget';
@@ -226,12 +229,15 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// update_code *
+			$dedalo_source_version_url = strpos(DEDALO_SOURCE_VERSION_URL, 'master.dedalo.dev')!==false
+				? 'https://master.dedalo.dev/dedalo/code/6/6.4/6.4.0_dedalo.zip'
+				: DEDALO_SOURCE_VERSION_URL;
 			$item = new stdClass();
 				$item->id		= 'update_code';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
 				$item->value	= (object)[
-					'dedalo_source_version_url'			=> DEDALO_SOURCE_VERSION_URL,
+					'dedalo_source_version_url'			=> $dedalo_source_version_url,
 					'dedalo_source_version_local_dir'	=> DEDALO_SOURCE_VERSION_LOCAL_DIR
 				];
 			$widget = $this->widget_factory($item);
@@ -1212,12 +1218,16 @@ class area_maintenance extends area_common {
 
 			$result = new stdClass();
 
-			debug_log(__METHOD__." Start downloading file ".DEDALO_SOURCE_VERSION_URL, logger::DEBUG);
+			$dedalo_source_version_url = strpos(DEDALO_SOURCE_VERSION_URL, 'master.dedalo.dev')!==false
+				? 'https://master.dedalo.dev/dedalo/code/6/6.4/6.4.0_dedalo.zip'
+				: DEDALO_SOURCE_VERSION_URL;
+
+			debug_log(__METHOD__." Start downloading file ".$dedalo_source_version_url, logger::DEBUG);
 
 			// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
-						'msg'		=> 'Start downloading file: ' . DEDALO_SOURCE_VERSION_URL,
+						'msg'		=> 'Start downloading file: ' . $dedalo_source_version_url,
 						'memory'	=> dd_memory_usage()
 					]);
 				}
@@ -1227,7 +1237,7 @@ class area_maintenance extends area_common {
 				$data_string = "data=" . json_encode(null);
 				// curl_request
 				$curl_response = curl_request((object)[
-					'url'				=> DEDALO_SOURCE_VERSION_URL,
+					'url'				=> $dedalo_source_version_url,
 					'post'				=> true,
 					'postfields'		=> $data_string,
 					'returntransfer'	=> 1,
@@ -1242,7 +1252,7 @@ class area_maintenance extends area_common {
 				$contents = $curl_response->result;
 				// check contents
 				if ($contents===false) {
-					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.$dedalo_source_version_url;
 					debug_log(__METHOD__
 						." $response->msg"
 						, logger::ERROR
@@ -1250,11 +1260,11 @@ class area_maintenance extends area_common {
 					return $response;
 				}
 				$result->download_file = [
-					'Downloaded file: ' . DEDALO_SOURCE_VERSION_URL,
+					'Downloaded file: ' . $dedalo_source_version_url,
 					'Time: ' . exec_time_unit($start_time,'sec') . ' secs'
 				];
 				debug_log(__METHOD__
-					." Downloaded file (".DEDALO_SOURCE_VERSION_URL.") in ".exec_time_unit($start_time,'sec') . ' secs'
+					." Downloaded file (".$dedalo_source_version_url.") in ".exec_time_unit($start_time,'sec') . ' secs'
 					, logger::DEBUG
 				);
 
