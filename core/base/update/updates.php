@@ -47,7 +47,7 @@ $updates->$v = new stdClass();
 	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 3;
-	$updates->$v->update_from_minor		= 0;
+	$updates->$v->update_from_minor		= 1;
 
 	// alert
 		$alert					= new stdClass();
@@ -199,6 +199,80 @@ $updates->$v = new stdClass();
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
+
+
+$v=631; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 3;
+	$updates->$v->version_minor			= 1;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 3;
+	$updates->$v->update_from_minor		= 0;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<br>This update prepares the transition to version 6.4.
+			<br>Activate ‘maintenance mode’ before proceeding.
+
+			<h1>1. Review the config definition.</h1>
+
+			It is mandatory to add the tld ‘ontology’ to your DEDALO_PREFIX_TIPOS config values and update your Ontology afterwards.
+			<p>
+				Manually add 'ontology' to your config.php file values of var 'DEDALO_PREFIX_TIPOS' as
+			</p>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				define('DEDALO_PREFIX_TIPOS', ['dd','rsc','hierarchy','ontology',..]);
+			</pre>
+
+			<h1>2. Update Ontology.</h1>
+			Update your Ontology using the panel 'Update Ontology' in this maintenance area.
+
+			<h1>3. Exec update scripts.</h1>
+			Run the script below in maintenance mode.
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// DATABASE UPDATES
+		// re check if exist matrix_ontology tables:
+		// Add the matrix_ontology_main table
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology_main
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_main_id_seq;
+				ALTER TABLE public.matrix_ontology_main ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_main_id_seq'::regclass);
+			");
+		// Add the matrix_ontology table
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_ontology
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_ontology_id_seq;
+				ALTER TABLE public.matrix_ontology ALTER COLUMN id SET DEFAULT nextval('matrix_ontology_id_seq'::regclass);
+			");
+		// Add the model column to jer_dd table
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DO $$
+				BEGIN
+					IF NOT EXISTS(SELECT *
+						FROM information_schema.columns
+						WHERE table_name=\'jer_dd\' and column_name=\'model\')
+					THEN
+						ALTER TABLE "jer_dd"
+						ADD "model" text NULL;
+						COMMENT ON TABLE "jer_dd" IS \'Model, a typology of the tipo\';
+					END IF;
+				END $$;
+			');
 
 
 
