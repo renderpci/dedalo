@@ -1471,6 +1471,15 @@ class transform_data {
 		$sorted_tlds = $ontology_tlds;
 		// add all others non already included
 		foreach ($all_active_tld as $current_tld) {
+			if ( empty($current_tld) || !safe_tld($current_tld) ) {
+				debug_log(__METHOD__
+					. " Ignored empty or invalid tld " . PHP_EOL
+					. ' tld: ' . to_string($current_tld) . PHP_EOL
+					. ' all_active_tld: ' . to_string($all_active_tld)
+					, logger::ERROR
+				);
+				continue;
+			}
 			if (!in_array($current_tld, $sorted_tlds)) {
 				$sorted_tlds[] = $current_tld;
 			}
@@ -1507,6 +1516,18 @@ class transform_data {
 				: (object)[
 					'tld' => $tld
 				 ];
+
+			// empty tld case
+				if (empty($file_item->tld) || !safe_tld($file_item->tld)) {
+					debug_log(__METHOD__
+						. " Ignored empty or invalid tld " . PHP_EOL
+						. ' tld: ' . to_string($tld) . PHP_EOL
+						. ' file_item: ' . to_string($file_item) . PHP_EOL
+						. ' ontology_info: ' . to_string($ontology_info)
+						, logger::ERROR
+					);
+					continue;
+				}
 
 			// main_section. Add one main section for each tld if not already exists
 			ontology::add_main_section( $file_item );
