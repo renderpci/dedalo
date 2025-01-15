@@ -8,8 +8,8 @@ class ontology {
 
 
 	// Table where ontology data is stored
-	static $main_table					= 'matrix_ontology_main';
-	static $main_section_tipo			= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
+	static $main_table			= 'matrix_ontology_main';
+	static $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 
 
 
@@ -830,8 +830,8 @@ class ontology {
 				$area_grouper_data->components->ontology7->dato->{DEDALO_DATA_NOLAN} = [$tld];
 
 			// Name
-				// use the typology name.
-				$model			= RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
+				// use the typology name. (component_input_text)
+				$model			= 'component_input_text'; // RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
 				$typology_term	= component_common::get_instance(
 					$model, // string model
 					DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
@@ -851,7 +851,7 @@ class ontology {
 
 			// parent
 			// save itself as child of his parent.
-				$children_tipo		= 'ontology14';
+				$children_tipo		= 'ontology14'; // RecordObj_dd::get_modelo_name_by_tipo( 'ontology14', true );
 				$children_model		= 'component_relation_children'; // don't use the jer_dd resolution here, it should not exists jet.
 				$component_children	= component_common::get_instance(
 					$children_model, // string model

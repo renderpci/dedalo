@@ -1849,6 +1849,4 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
-
-
 }//end class RecordObj_dd
