@@ -1912,7 +1912,34 @@ class ontology {
 				$jer_dd_records[] = $jer_dd_record;
 			}
 
-		// 3 add new main section for every tld (regenerate the main section)
+		// 3 delete all tld records
+			foreach ($tld as $current_tld) {
+				RecordObj_dd::delete_tld_nodes( $current_tld );
+			}
+
+		// 4 insert the new nodes of the given tld
+			$total_insert = 0;
+			foreach ($jer_dd_records as $jer_dd_record) {
+
+				$insert_result = $jer_dd_record->insert();
+				// $jer_dd_record->get_tld(); // force to load
+				// $insert_result = $jer_dd_record->update();
+
+				// error inserting
+				// recovery al tld from bk table.
+				if( empty($insert_result) ){
+					// restore the backup table
+					RecordObj_dd::restore_from_bk_table($tld);
+					// delete bk table
+					RecordObj_dd::delete_bk_table();
+					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
+					return $response;
+				}
+
+				$total_insert++;
+			}
+
+		// 5 add_main_section (overwrite existing record like 'dd0')
 			foreach ($tld as $current_tld) {
 
 				// get the information to create the main section
@@ -1927,6 +1954,10 @@ class ontology {
 				// add main section and records
 				$add_result = ontology::add_main_section( $file_item );
 				if (empty($add_result)) {
+					// restore the backup table
+					RecordObj_dd::restore_from_bk_table($tld);
+					// delete bk table
+					RecordObj_dd::delete_bk_table();
 					$response->errors[] = 'Failed add_main_section file_item: ' . to_string($file_item);
 					debug_log(__METHOD__
 						. " Error creating ontology main section " . PHP_EOL
@@ -1936,31 +1967,6 @@ class ontology {
 					);
 					return $response;
 				}
-			}
-
-		// 4 delete jer_dd nodes (all tld records in jer_dd)
-			foreach ($tld as $current_tld) {
-				// delete all tld records
-				RecordObj_dd::delete_tld_nodes( $current_tld );
-			}
-
-		// 5 insert the new nodes of the given tld
-			$total_insert = 0;
-			foreach ($jer_dd_records as $jer_dd_record) {
-
-				$insert_result = $jer_dd_record->insert();
-
-				// error inserting
-				// recovery al tld from bk table.
-				if( empty($insert_result) ){
-					RecordObj_dd::restore_from_bk_table($tld);
-					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
-					// delete bk table
-					RecordObj_dd::delete_bk_table();
-					return $response;
-				}
-
-				$total_insert++;
 			}
 
 		// response
