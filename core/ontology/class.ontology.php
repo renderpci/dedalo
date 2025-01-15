@@ -336,36 +336,26 @@ class ontology {
 
 		$safe_tld = safe_tld( $tld );
 
-		$filter = json_decode( '
-			{
-				"$and": [{
-					"q_operator": "==",
-					"q": "'.$safe_tld.'",
-					"lang": "'.DEDALO_DATA_NOLAN.'",
-					"path": [{
-						"section_tipo": "'.self::$main_section_tipo.'",
-						"component_tipo": "hierarchy6"
-					}]
-				}]
+		// SQL query
+			$strQuery  = '-- '.__METHOD__;
+			$strQuery .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
+			$strQuery .= "\n section_tipo = '".self::$main_section_tipo."' AND";
+			$strQuery .= "\n (datos#>'{components,hierarchy6,dato,".DEDALO_DATA_NOLAN."}' ? '$safe_tld')";
+			$strQuery .= "\n LIMIT 1 ;";
+
+		// search
+			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			while ($row = pg_fetch_object($result)) {
+
+				// decode JSON column 'datos'
+				if (isset($row->datos)) {
+					$row->datos = json_handler::decode($row->datos);
+				}
+
+				return $row;
 			}
-		');
 
-		$sqo = new search_query_object();
-			$sqo->set_section_tipo( [self::$main_section_tipo] );
-			$sqo->set_filter( $filter );
-			$sqo->set_limit( 1 );
-			$sqo->set_skip_projects_filter(true);
-
-		$search = search::get_instance(
-			$sqo, // object sqo
-		);
-		$response	= $search->search();
-		$ar_records	= $response->ar_records;
-
-		$row = $ar_records[0] ?? null;
-
-
-		return $row;
+		return null;
 	}//end get_ontology_main_from_tld
 
 
@@ -382,36 +372,26 @@ class ontology {
 
 		$safe_tipo = safe_tipo( $target_section_tipo );
 
-		$filter = json_decode( '
-			{
-				"$and": [{
-					"q_operator": "==",
-					"q": "'.$safe_tipo.'",
-					"lang": "'.DEDALO_DATA_NOLAN.'",
-					"path": [{
-						"section_tipo": "'.self::$main_section_tipo.'",
-						"component_tipo": "hierarchy53"
-					}]
-				}]
+		// SQL query
+			$strQuery  = '-- '.__METHOD__;
+			$strQuery .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
+			$strQuery .= "\n section_tipo = '".self::$main_section_tipo."' AND";
+			$strQuery .= "\n (datos#>'{components,hierarchy53,dato,".DEDALO_DATA_NOLAN."}' ? '$safe_tipo')";
+			$strQuery .= "\n LIMIT 1 ;";
+
+		// search
+			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			while ($row = pg_fetch_object($result)) {
+
+				// decode JSON column 'datos'
+				if (isset($row->datos)) {
+					$row->datos = json_handler::decode($row->datos);
+				}
+
+				return $row;
 			}
-		');
 
-		$sqo = new search_query_object();
-			$sqo->set_section_tipo( [self::$main_section_tipo] );
-			$sqo->set_filter( $filter );
-			$sqo->set_limit( 1 );
-			$sqo->set_skip_projects_filter(true);
-
-		$search = search::get_instance(
-			$sqo, // object sqo
-		);
-		$response	= $search->search();
-		$ar_records	= $response->ar_records;
-
-		$row = $ar_records[0] ?? null;
-
-
-		return $row;
+		return null;
 	}//end get_ontology_main_form_target_section_tipo
 
 
