@@ -97,10 +97,8 @@ const get_content_data_edit = async function(self, ar_instances) {
 				if (current_instance.status==='rendered' && current_instance.node!==null) {
 					resolve(true)
 				}else{
-
 					current_instance.render()
-					.then(function(){
-						// current_instance.instance_order_key = i
+					.then(()=>{
 						resolve(true)
 					})
 					.catch((errorMsg) => {

@@ -266,7 +266,7 @@ const get_content_data_edit = async function(self) {
 		}
 
 	// build code version
-		if(is_a_code_server){
+		if(is_a_code_server || page_globals.dedalo_entity==='development'){
 			render_build_version(self, content_data, body_response)
 		}
 
@@ -360,7 +360,7 @@ const render_build_version = function(self, content_data, body_response){
 					action	: 'build_version_from_git_master'
 				},
 				options	: {
-					branch :'master'
+					branch : 'master'
 				}
 			},
 			on_done : on_done
@@ -381,7 +381,28 @@ const render_build_version = function(self, content_data, body_response){
 					action	: 'build_version_from_git_master'
 				},
 				options	: {
-					branch :'developer'
+					branch : 'developer'
+				}
+			},
+			on_done : on_done
+		})
+
+		// button Build Dédalo code beta 6.4
+		self.caller.init_form({
+			submit_label	: 'Build Dédalo code beta 6.4',
+			confirm_text	: get_label.sure || 'Sure?',
+			body_info		: content_data,
+			body_response	: body_response,
+			trigger : {
+				dd_api	: 'dd_area_maintenance_api',
+				action	: 'widget_request',
+				source	: {
+					type	: 'widget',
+					model	: 'update_code',
+					action	: 'build_version_from_git_master'
+				},
+				options	: {
+					branch : 'v6.4.0_beta'
 				}
 			},
 			on_done : on_done

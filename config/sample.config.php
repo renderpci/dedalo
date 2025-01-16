@@ -636,18 +636,18 @@
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER',			true);
 	// !DEPRECATED
-	define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
+	// define('STRUCTURE_SERVER_CODE',		'x3a0B4Y020Eg9w');
 	// !DEPRECATED
-	define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
+	// define('STRUCTURE_SERVER_URL',		'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
 
-	//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
+	// Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
 	define('IS_AN_ONTOLOGY_SERVER',			false);
 	// !DEPRECATED
 	// defines the valid code for clients to validate to get ontology files.
-	define('ONTOLOGY_SERVER_CODE',			'valid_code');
+	// define('ONTOLOGY_SERVER_CODE',		'valid_code');
 
 	// Remote ontology servers.
-	// Defines the ontologies provider.
+	// Defines the ontologies providers
 	define('ONTOLOGY_SERVERS',	[
 		[
 			'name'	=> 'Official Dédalo Ontology server',
@@ -658,14 +658,14 @@
 
 	// Directory to backup ontology files
 	// !DEPRECATED
-	define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+	// define('ONTOLOGY_DOWNLOAD_DIR',		DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 	// Directory to manage input/output, export/import ontology data to sync between installations
 	define('ONTOLOGY_DATA_IO_DIR',			DEDALO_INSTALL_PATH . '/import/ontology');
 	define('ONTOLOGY_DATA_IO_URL',			DEDALO_INSTALL_URL . '/import/ontology');
 
 	// structure_download. When ontology is updated, download files are saved here
 	// !DEPRECATED
-	define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
+	// define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
 
 	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary
 	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128');
@@ -677,7 +677,7 @@
 
 		// Code server. Defines if the installation server can provide new code files to other Dédalo servers.
 		// if the server can provide version change to true and uncomment the `DEDALO_CODE_FILES_DIR` and `DEDALO_CODE_FILES_URL`
-		define('IS_A_CODE_SERVER',				false);
+		define('IS_A_CODE_SERVER',	false);
 
 		// next constants are used in the process to create new versions and provide to clients
 		// by default the Dédalo server doesn't provide code to other servers
@@ -707,7 +707,8 @@
 
 		// !DEPRECATED
 		// target dir where git command send the compressed file like 'https://master.dedalo.dev/dedalo/code/dedalo5_code.zip'
-		define('DEDALO_SOURCE_VERSION_URL',			'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
+		// define('DEDALO_SOURCE_VERSION_URL',		'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
+
 		// target dir where git command send the compressed file like 'https://master.dedalo.dev/dedalo/code/dedalo5_code.zip'
 		define('DEDALO_SOURCE_VERSION_LOCAL_DIR',	'/tmp/'.DEDALO_ENTITY);
 

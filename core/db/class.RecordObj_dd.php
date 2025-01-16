@@ -97,7 +97,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			'terminoID'		=> 'terminoID',
 			'parent'		=> 'parent',
 			'modelo'		=> 'modelo',
-			// 'model'			=> 'model',
+			'model'			=> 'model',
 			'esmodelo'		=> 'esmodelo',
 			'esdescriptor'	=> 'esdescriptor',
 			'visible'		=> 'visible',
@@ -400,37 +400,49 @@ class RecordObj_dd extends RecordDataBoundObject {
 				return 'component_check_box';
 			}
 
-		$modelo_tipo = $this->get_modelo();
-		if (empty($modelo_tipo)) {
-
-			// new model area_maintenance (term dd88, model dd72) not updated Ontology cases
-			if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
-				define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
-			}
-			if ($this->terminoID===DEDALO_AREA_MAINTENANCE_TIPO) {
-				debug_log(__METHOD__
-					. " WARNING. Model dd72 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL
-					. ' Fixed resolution is returned to allow all works temporally' . PHP_EOL
-					.' tipo: ' . $this->terminoID . PHP_EOL
-					.' model expected: (dd72) area_maintenance'
-					, logger::ERROR
-				);
-				return 'area_maintenance'; // temporal !
-			}
-
-			return '';
-		}
-
-		$model = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);
-
+		// new model resolution with fallback
+		$model = $this->get_model();
 		if (empty($model)) {
+
 			debug_log(__METHOD__
-				. " Empty model name !" . PHP_EOL
+				. " Falling to fallback model resolution for the term" . PHP_EOL
 				. ' terminoID: ' . to_string($this->terminoID)
-				, logger::WARNING
+				, logger::ERROR
 			);
-			return '';
-		}
+
+			// fallback to old resolution
+			$modelo_tipo = $this->get_modelo();
+			if (empty($modelo_tipo)) {
+
+				// new model area_maintenance (term dd88, model dd72) not updated Ontology cases
+				if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
+					define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
+				}
+				if ($this->terminoID===DEDALO_AREA_MAINTENANCE_TIPO) {
+					debug_log(__METHOD__
+						. " WARNING. Model dd72 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL
+						. ' Fixed resolution is returned to allow all works temporally' . PHP_EOL
+						.' tipo: ' . $this->terminoID . PHP_EOL
+						.' model expected: (dd72) area_maintenance'
+						, logger::ERROR
+					);
+					return 'area_maintenance'; // temporal !
+				}
+
+				return '';
+			}
+
+			$model = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			// empty case check
+			if (empty($model)) {
+				debug_log(__METHOD__
+					. " Empty model name !" . PHP_EOL
+					. ' terminoID: ' . to_string($this->terminoID)
+					, logger::WARNING
+				);
+				return '';
+			}
+		}//end if (empty($model))
 
 		// replace obsolete models on the fly
 			if ($model==='component_input_text_large' || $model==='component_html_text') {
@@ -1569,6 +1581,17 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* UPDATE
+	* @return string|false
+	*/
+	public function update() : string|false {
+
+		return parent::Save();
+	}//end update
+
+
+
+	/**
 	* GET_LAST_SECTION_ID_FROM_TLD
 	* Find the tipo(terminioID) in jer_dd and choose the last id
 	* @return
@@ -1823,8 +1846,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return $item;
 	}//end tipo_to_json_item
-
-
 
 
 

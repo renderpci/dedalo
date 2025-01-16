@@ -128,6 +128,7 @@ final class RecordObj_dd_test extends TestCase {
 			'terminoID'		=> 'terminoID',
 			'parent'		=> 'parent',
 			'modelo'		=> 'modelo',
+			'model'			=> 'model',
 			'esmodelo'		=> 'esmodelo',
 			'esdescriptor'	=> 'esdescriptor',
 			'visible'		=> 'visible',
