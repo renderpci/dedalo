@@ -72,7 +72,7 @@ $updates->$v = new stdClass();
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
 
 			<p>
-				Review the config definition. Some constants was added and some are removed.
+				Review the config definition. Some constants have been added and others removed.
 			</p>
 			<br>
 			<p>
@@ -85,7 +85,7 @@ $updates->$v = new stdClass();
 				define('ONTOLOGY_SERVERS',	[
 					[
 						'name'	=> 'Official Dédalo Ontology server',
-						'url'	=> 'https://master.dedalo.dev/dedalo/install/import/ontology/',
+						'url'	=> 'https://master.dedalo.dev/dedalo/core/api/v1/json/',
 						'code'	=> 'x3a0B4Y020Eg9w'
 					]
 				]);
@@ -118,8 +118,8 @@ $updates->$v = new stdClass();
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
 
 				//Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
-				define('IS_AN_ONTOLOGY_SERVER',			false);
-				define('ONTOLOGY_SERVER_CODE',          'Here:my_valid_code_for_Ontologies');
+				define('IS_AN_ONTOLOGY_SERVER',		true);
+				define('ONTOLOGY_SERVER_CODE',		'Here:my_valid_code_for_Ontologies');
 			</pre>
 		";
 		$updates->$v->alert_update[] = $alert;
