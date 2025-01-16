@@ -37,7 +37,7 @@ final class dd_core_api {
 	* Builds the start page minimum context.
 	* Normally is a menu and a section (based on url vars)
 	* This function tells to page what must to be request, based on given url vars
-	* Note that a full context is calculate for each element
+	* Note that a full context is calculated for each element
 	* @param object $options
 	* sample:
 	* {

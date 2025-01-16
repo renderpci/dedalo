@@ -1,5 +1,4 @@
-<?php
-
+<?php declare(strict_types=1);
 /**
 * UPDATES CONTROL
 * Definition of the update process
@@ -70,7 +69,6 @@ $updates->$v = new stdClass();
 
 		$alert->command .= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
-
 			<p>
 				Review the config definition. Some constants have been added and others removed.
 			</p>
@@ -79,7 +77,6 @@ $updates->$v = new stdClass();
 				1. Constants added:
 			</p>
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
-
 				// install
 					define('DEDALO_INSTALL_PATH',	DEDALO_ROOT_PATH . '/install');
 					define('DEDALO_INSTALL_URL',	DEDALO_ROOT_WEB . '/install');
@@ -132,7 +129,6 @@ $updates->$v = new stdClass();
 				In the case that you want to convert your own server as ontology provided you need to add this constant in your config.
 				And defined your server code.
 			</p>
-
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
 				// Ontology server. Defines if the installation server can provide his ontology files to other Dédalo installations.
 				define('IS_AN_ONTOLOGY_SERVER',	true);

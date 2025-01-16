@@ -966,6 +966,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATO_FULL
+	* Returns whole component data with all langs values
 	* Don't constrain type to object because compatibility
 	* with component_relation_common->get_dato_full() (array)
 	* @return object|null $dato_full
