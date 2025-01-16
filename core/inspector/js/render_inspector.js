@@ -13,7 +13,7 @@
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
+	import {when_in_viewport,dd_request_idle_callback,set_tool_event} from '../../common/js/events.js'
 	import {get_ontology_url} from '../../inspector/js/inspector.js'
 
 
@@ -242,8 +242,8 @@ const get_content_data = function(self) {
 			})
 			for (let i = 0; i < inspector_tools_length; i++) {
 				const tool_context = inspector_tools[i]
-				// button_tool
-					const button_tool = ui.create_dom_element({
+				// tool_button
+					const tool_button = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'light blank',
 						style			: {
@@ -252,14 +252,47 @@ const get_content_data = function(self) {
 						title			: tool_context.label,
 						parent			: tools_container
 					})
-					button_tool.addEventListener('mousedown', function(e){
+					const click_handler = (e) => {
 						e.stopPropagation()
 						// open_tool (tool_common)
-							open_tool({
-								tool_context	: tool_context,
-								caller			: self.caller
+						open_tool({
+							tool_context	: tool_context,
+							caller			: self.caller
+						})
+					}
+					tool_button.addEventListener('click', click_handler)
+					tool_button.addEventListener('mousedown', click_handler)
+
+				// button events. Configured in tool properties. See tool_ontology definition
+					// sample:
+					// "events": [
+					// 	{
+					// 	  "type": "keyup",
+					// 	  "action": "click",
+					// 	  "validate": [
+					// 		{
+					// 		  "key": "ctrlKey",
+					// 		  "value": true
+					// 		},
+					// 		{
+					// 		  "key": "key",
+					// 		  "value": "s"
+					// 		}
+					// 	  ]
+					// 	}
+					// ]
+					if (tool_context.properties?.events) {
+						const tool_events_length = tool_context.properties.events.length
+						for (let i = 0; i < tool_events_length; i++) {
+
+							const tool_event = tool_context.properties.events[i]
+
+							set_tool_event({
+								tool_event	: tool_event,
+								tool_button	: tool_button
 							})
-					})
+						}
+					}
 			}
 		}
 
