@@ -435,18 +435,32 @@ common.prototype.render = async function (options={}) {
 						const old_content_data_node	= wrapper.content_data
 						// warning if not found
 						if (typeof old_content_data_node==='undefined' || !old_content_data_node) {
-							console.error("Invalid content_data pointer node found in render:", typeof old_content_data_node, old_content_data_node, self);
+
+							console.error("Invalid content_data pointer node found in render ("+self.model+") :", typeof old_content_data_node, old_content_data_node, self);
+
+							// new warning content_data node is added
+								const label = 'Invalid content_data DOM node [' + self.tipo + ']'
+								const new_content_data_node = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'no_access',
+									inner_html		: label
+								})
+								self.node.appendChild(new_content_data_node)
+								// set pointers
+								self.node.content_data = new_content_data_node
+
+						}else{
+
+							// new content data node
+								const new_content_data_node = node
+									? node // use already calculated node
+									: await self[render_mode](render_options);
+
+							// replace
+								old_content_data_node.replaceWith(new_content_data_node);
+								// set pointers. Update the wrapper pointer to the new content_data node
+								self.node.content_data = new_content_data_node
 						}
-
-					// new content data node
-						const new_content_data_node = node
-							? node // use already calculated node
-							: await self[render_mode](render_options);
-
-					// replace
-						old_content_data_node.replaceWith(new_content_data_node);
-						// set pointers. Update the wrapper pointer to the new content_data node
-						self.node.content_data = new_content_data_node
 
 					// return created node (content_data)
 					return self.node

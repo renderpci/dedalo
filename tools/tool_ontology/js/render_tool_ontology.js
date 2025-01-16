@@ -74,13 +74,25 @@ const get_content_data = async function(self) {
 		try {
 			const tld			= self.caller.datum.data.find(el => el.tipo==='ontology7').value[0]
 			const section_id	= self.caller.data.value[0].section_id
-			const info			=  `${tld}${section_id}`
+			const info			= self.caller.mode==='edit'
+				? `${tld}${section_id}`
+				: self.caller.tipo
 			ui.create_dom_element({
 				element_type	: 'h3',
 				class_name		: 'user_info term_id',
 				inner_html		: info,
 				parent			: fragment
 			})
+			const total = self.caller.mode==='edit'
+				? 1
+				: (self.caller.total || 0)
+			ui.create_dom_element({
+				element_type	: 'h3',
+				class_name		: 'user_info total',
+				inner_html		: `${get_label.total}: ${total}`,
+				parent			: fragment
+			})
+
 		} catch (error) {
 			console.error(error)
 			ui.create_dom_element({

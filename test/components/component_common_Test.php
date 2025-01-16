@@ -1894,7 +1894,12 @@ final class component_common_test extends TestCase {
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors ('.$element->model.'): ' .to_string($_ENV['DEDALO_LAST_ERROR'])
+				'expected running without errors' . PHP_EOL
+					.'model: ' . to_string($element->model) . PHP_EOL
+					.'tipo: ' . to_string($element->tipo) . PHP_EOL
+					.'section_id: ' . to_string($element->section_id) . PHP_EOL
+					.'section_tipo: ' . to_string($element->section_tipo) . PHP_EOL
+					.'DEDALO_LAST_ERROR: '.to_string($_ENV['DEDALO_LAST_ERROR'])
 			);
 
 			$this->assertTrue(

@@ -192,7 +192,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			}
 
 		// id_variant . Propagate a custom instance id to children
-			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
+			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}` +'_'+ Math.random()
 			instance_options.id_variant = self.id_variant
 				? self.id_variant + '_' + section_record_id_variant
 				: section_record_id_variant
@@ -488,7 +488,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 							// it change the view and the mode to edit component in lists, if the component has data will render with the definition instead the default
 							// take a different mode and view with data.
 							if(current_ddo.with_value){
-								new_context.properties.with_value	= current_ddo.with_value
+								new_context.properties.with_value = current_ddo.with_value
 
 								if(current_data.value && current_data.value.length > 0){
 									new_context.view = current_ddo.with_value.view

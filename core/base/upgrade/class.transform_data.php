@@ -1445,19 +1445,19 @@ class transform_data {
 		$all_active_tld = RecordObj_dd::get_active_tlds();
 
 		// CLI process data
-		if ( running_in_cli()===true ) {
-			if (!isset(common::$pdata)) {
-				common::$pdata = new stdClass();
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->memory = '';
+				common::$pdata->action = '';
+				common::$pdata->total = '';
+				unset(common::$pdata->counter); // move counter property position
+				common::$pdata->counter = 0;
+				common::$pdata->tld = '';
+				common::$pdata->active_tld = $all_active_tld;
+				$base_msg = common::$pdata->msg;
 			}
-			common::$pdata->memory = '';
-			common::$pdata->action = '';
-			common::$pdata->total = '';
-			unset(common::$pdata->counter); // move counter property position
-			common::$pdata->counter = 0;
-			common::$pdata->tld = '';
-			common::$pdata->active_tld = $all_active_tld;
-			$base_msg = common::$pdata->msg;
-		}
 
 		// collect all children sections of 'ontology40' ('Instances')
 		// like 'dd', 'ontology', 'rsc', 'nexus', etc.
@@ -1471,9 +1471,23 @@ class transform_data {
 		$sorted_tlds = $ontology_tlds;
 		// add all others non already included
 		foreach ($all_active_tld as $current_tld) {
+			if ( empty($current_tld) || !safe_tld($current_tld) ) {
+				debug_log(__METHOD__
+					. " Ignored empty or invalid tld " . PHP_EOL
+					. ' tld: ' . to_string($current_tld) . PHP_EOL
+					. ' all_active_tld: ' . to_string($all_active_tld)
+					, logger::ERROR
+				);
+				continue;
+			}
 			if (!in_array($current_tld, $sorted_tlds)) {
 				$sorted_tlds[] = $current_tld;
 			}
+		}
+
+		// debug
+		if(SHOW_DEBUG===true) {
+			dump($sorted_tlds, 'generate_all_main_ontology_sections $sorted_tlds ++++++ '.to_string());
 		}
 
 		$total_tld = count($sorted_tlds);
@@ -1493,22 +1507,34 @@ class transform_data {
 					print_cli(common::$pdata);
 				}
 
-			$fie_item = array_find($ontology_info->active_ontologies, function( $el ) use($tld) {
+			$file_item = array_find($ontology_info->active_ontologies, function( $el ) use($tld) {
 				return $el->tld === $tld;
 			});
 
-			$fie_item = ( isset($fie_item) )
-				? $fie_item
+			$file_item = ( isset($file_item) )
+				? $file_item
 				: (object)[
 					'tld' => $tld
 				 ];
 
+			// empty tld case
+				if (empty($file_item->tld) || !safe_tld($file_item->tld)) {
+					debug_log(__METHOD__
+						. " Ignored empty or invalid tld " . PHP_EOL
+						. ' tld: ' . to_string($tld) . PHP_EOL
+						. ' file_item: ' . to_string($file_item) . PHP_EOL
+						. ' ontology_info: ' . to_string($ontology_info)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 			// main_section. Add one main section for each tld if not already exists
-			ontology::add_main_section( $fie_item );
+			ontology::add_main_section( $file_item );
 
 			// CLI process data
 				if ( running_in_cli()===true ) {
-					common::$pdata->action = 'ceate_ontology_records';
+					common::$pdata->action = 'create_ontology_records';
 					common::$pdata->memory = dd_memory_usage();
 					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
 					// send to output
@@ -1518,7 +1544,7 @@ class transform_data {
 			// ontology_records. Collects all jer_dd records for the current tld and
 			// creates a matrix record for each one
 			$jer_dd_rows = RecordObj_dd::get_all_tld_records( [$tld] );
-			ontology::ceate_ontology_records( $jer_dd_rows );
+			ontology::create_ontology_records( $jer_dd_rows );
 		}
 
 		// reset counter

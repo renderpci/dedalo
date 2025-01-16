@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
-	import {when_in_dom,dd_request_idle_callback} from '../../../core/common/js/events.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
 
 
@@ -99,6 +99,10 @@ const get_content_data = async function(self) {
 			const click_export_handler = async (e) => {
 				e.stopPropagation();
 
+				if (!confirm(get_label.sure || 'Sure?')) {
+					return
+				}
+
 				if (self.selected_ontologies.length===0) {
 					alert("Error: empty selection");
 					return
@@ -169,6 +173,10 @@ const get_content_data = async function(self) {
 			// click event
 			const click_regenerate_handler = async (e) => {
 				e.stopPropagation();
+
+				if (!confirm(get_label.sure || 'Sure?')) {
+					return
+				}
 
 				if (self.selected_ontologies.length===0) {
 					alert("Error: empty selection");

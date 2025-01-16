@@ -93,10 +93,10 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_ceate_ontology_records
+	* TEST_create_ontology_records
 	* @return void
 	*/
-	public function test_ceate_ontology_records() {
+	public function test_create_ontology_records() {
 
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -105,7 +105,7 @@ final class ontology_test extends TestCase {
 		// force user id needed for search (filter by projects)
 		$_SESSION['dedalo']['auth']['user_id'] = 1;
 
-		$result = ontology::ceate_ontology_records( [$sample_dd_row] );
+		$result = ontology::create_ontology_records( [$sample_dd_row] );
 
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
@@ -118,7 +118,7 @@ final class ontology_test extends TestCase {
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result: ' . to_string($result) . PHP_EOL
 		);
-	}//end test_ceate_ontology_records
+	}//end test_create_ontology_records
 
 
 

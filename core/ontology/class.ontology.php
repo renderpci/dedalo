@@ -8,20 +8,20 @@ class ontology {
 
 
 	// Table where ontology data is stored
-	static $main_table					= 'matrix_ontology_main';
-	static $main_section_tipo			= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
+	static $main_table			= 'matrix_ontology_main';
+	static $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 
 
 
 	/**
-	* CEATE_ONTOLOGY_RECORDS
+	* CREATE_ONTOLOGY_RECORDS
 	* Iterate all given $jer_dd_rows and creates a section row for each one
 	* @see transform_data::generate_all_main_ontology_sections
 	* @param array $jer_dd_rows
 	* @return bool
 	* @test true
 	*/
-	public static function ceate_ontology_records( array $jer_dd_rows ) : bool {
+	public static function create_ontology_records( array $jer_dd_rows ) : bool {
 
 		foreach ($jer_dd_rows as $jer_dd_row) {
 
@@ -47,7 +47,7 @@ class ontology {
 		}
 
 		return true;
-	}//end ceate_ontology_records
+	}//end create_ontology_records
 
 
 
@@ -296,6 +296,12 @@ class ontology {
 					$new_properties->show->ddo_map = $properties;
 
 				$properties = $new_properties;
+
+				// update jer_dd record with the new properties
+				$RecordObj_dd = new RecordObj_dd($jer_dd_row->terminoID);
+				$RecordObj_dd->get_properties(); // force load data
+				$RecordObj_dd->set_properties($new_properties);
+				$RecordObj_dd->update();
 			}
 
 			if(!empty($properties)) {
@@ -330,36 +336,26 @@ class ontology {
 
 		$safe_tld = safe_tld( $tld );
 
-		$filter = json_decode( '
-			{
-				"$and": [{
-					"q_operator": "==",
-					"q": "'.$safe_tld.'",
-					"lang": "'.DEDALO_DATA_NOLAN.'",
-					"path": [{
-						"section_tipo": "'.self::$main_section_tipo.'",
-						"component_tipo": "hierarchy6"
-					}]
-				}]
+		// SQL query
+			$strQuery  = '-- '.__METHOD__;
+			$strQuery .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
+			$strQuery .= "\n section_tipo = '".self::$main_section_tipo."' AND";
+			$strQuery .= "\n (datos#>'{components,hierarchy6,dato,".DEDALO_DATA_NOLAN."}' ? '$safe_tld')";
+			$strQuery .= "\n LIMIT 1 ;";
+
+		// search
+			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			while ($row = pg_fetch_object($result)) {
+
+				// decode JSON column 'datos'
+				if (isset($row->datos)) {
+					$row->datos = json_handler::decode($row->datos);
+				}
+
+				return $row;
 			}
-		');
 
-		$sqo = new search_query_object();
-			$sqo->set_section_tipo( [self::$main_section_tipo] );
-			$sqo->set_filter( $filter );
-			$sqo->set_limit( 1 );
-			$sqo->set_skip_projects_filter(true);
-
-		$search = search::get_instance(
-			$sqo, // object sqo
-		);
-		$response	= $search->search();
-		$ar_records	= $response->ar_records;
-
-		$row = $ar_records[0] ?? null;
-
-
-		return $row;
+		return null;
 	}//end get_ontology_main_from_tld
 
 
@@ -376,36 +372,26 @@ class ontology {
 
 		$safe_tipo = safe_tipo( $target_section_tipo );
 
-		$filter = json_decode( '
-			{
-				"$and": [{
-					"q_operator": "==",
-					"q": "'.$safe_tipo.'",
-					"lang": "'.DEDALO_DATA_NOLAN.'",
-					"path": [{
-						"section_tipo": "'.self::$main_section_tipo.'",
-						"component_tipo": "hierarchy53"
-					}]
-				}]
+		// SQL query
+			$strQuery  = '-- '.__METHOD__;
+			$strQuery .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
+			$strQuery .= "\n section_tipo = '".self::$main_section_tipo."' AND";
+			$strQuery .= "\n (datos#>'{components,hierarchy53,dato,".DEDALO_DATA_NOLAN."}' ? '$safe_tipo')";
+			$strQuery .= "\n LIMIT 1 ;";
+
+		// search
+			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			while ($row = pg_fetch_object($result)) {
+
+				// decode JSON column 'datos'
+				if (isset($row->datos)) {
+					$row->datos = json_handler::decode($row->datos);
+				}
+
+				return $row;
 			}
-		');
 
-		$sqo = new search_query_object();
-			$sqo->set_section_tipo( [self::$main_section_tipo] );
-			$sqo->set_filter( $filter );
-			$sqo->set_limit( 1 );
-			$sqo->set_skip_projects_filter(true);
-
-		$search = search::get_instance(
-			$sqo, // object sqo
-		);
-		$response	= $search->search();
-		$ar_records	= $response->ar_records;
-
-		$row = $ar_records[0] ?? null;
-
-
-		return $row;
+		return null;
 	}//end get_ontology_main_form_target_section_tipo
 
 
@@ -844,8 +830,8 @@ class ontology {
 				$area_grouper_data->components->ontology7->dato->{DEDALO_DATA_NOLAN} = [$tld];
 
 			// Name
-				// use the typology name.
-				$model			= RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
+				// use the typology name. (component_input_text)
+				$model			= 'component_input_text'; // RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
 				$typology_term	= component_common::get_instance(
 					$model, // string model
 					DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
@@ -865,7 +851,7 @@ class ontology {
 
 			// parent
 			// save itself as child of his parent.
-				$children_tipo		= 'ontology14';
+				$children_tipo		= 'ontology14'; // RecordObj_dd::get_modelo_name_by_tipo( 'ontology14', true );
 				$children_model		= 'component_relation_children'; // don't use the jer_dd resolution here, it should not exists jet.
 				$component_children	= component_common::get_instance(
 					$children_model, // string model
@@ -1245,11 +1231,11 @@ class ontology {
 	* Get the component_data and parse as column of jer_dd format.
 	* @param string $section_tipo
 	* @param string|int $section_id
-	* @return object|null $jer_dd_record
+	* @return RecordObj_dd|null $jer_dd_record
 	* 	returns null if section tld value is empty
 	* @test true
 	*/
-	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?object {
+	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?RecordObj_dd {
 
 		// node locator
 		$locator = new locator();
@@ -1305,9 +1291,9 @@ class ontology {
 
 			if( empty($parent_data) || empty($parent_data[0]) ){
 				// main dd nodes exception
-				if( $terminoID==='dd1' || $terminoID==='dd2' ){
+				if( $terminoID==='dd1' || $terminoID==='dd2' || get_section_id_from_tipo($section_tipo)==='0' ){
 					debug_log(__METHOD__
-						. " Record without parent data " . PHP_EOL
+						. " Record without parent data [1] " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
 						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
@@ -1316,7 +1302,7 @@ class ontology {
 					);
 				}else{
 					debug_log(__METHOD__
-						. " Record without parent data " . PHP_EOL
+						. " Record without parent data [2] " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
 						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
@@ -1888,7 +1874,7 @@ class ontology {
 		// get all section_tipo from tld
 			$section_tipo = array_map( function($el) {
 				return ontology::map_tld_to_target_section_tipo($el);
-			},$tld );
+			}, $tld );
 
 		// 1 search all nodes as matrix records
 			$sqo = new search_query_object();
@@ -1908,21 +1894,53 @@ class ontology {
 				$current_section_tipo	= $current_record->section_tipo;
 				$current_section_id		= $current_record->section_id;
 
+				// RecordObj_dd item
 				$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $current_section_tipo, $current_section_id );
 
 				if( empty($jer_dd_record ) ){
 					RecordObj_dd::delete_bk_table();
 					$response->errors[] = 'Failed regenerate jer_dd with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
+					debug_log(__METHOD__
+						. " Error generating jer_dd with section_tipo " . PHP_EOL
+						. ' current_section_tipo: ' . to_string($current_section_tipo) . PHP_EOL
+						. ' current_section_id: ' . to_string($current_section_id)
+						, logger::ERROR
+					);
 					return $response;
 				}
 
 				$jer_dd_records[] = $jer_dd_record;
 			}
 
-		// 3 delete all jer_dd nodes of the given tld, empty jer_dd table of this tld
-		// add new main section for every tld (regenerate the main section)
+		// 3 delete all tld records
 			foreach ($tld as $current_tld) {
 				RecordObj_dd::delete_tld_nodes( $current_tld );
+			}
+
+		// 4 insert the new nodes of the given tld
+			$total_insert = 0;
+			foreach ($jer_dd_records as $jer_dd_record) {
+
+				$insert_result = $jer_dd_record->insert();
+				// $jer_dd_record->get_tld(); // force to load
+				// $insert_result = $jer_dd_record->update();
+
+				// error inserting
+				// recovery al tld from bk table.
+				if( empty($insert_result) ){
+					// restore the backup table
+					RecordObj_dd::restore_from_bk_table($tld);
+					// delete bk table
+					RecordObj_dd::delete_bk_table();
+					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
+					return $response;
+				}
+
+				$total_insert++;
+			}
+
+		// 5 add_main_section (overwrite existing record like 'dd0')
+			foreach ($tld as $current_tld) {
 
 				// get the information to create the main section
 				$typology_id	= ontology::get_main_typology_id( $current_tld );
@@ -1933,33 +1951,28 @@ class ontology {
 					$file_item->typology_id	= $typology_id ?? null;
 					$file_item->name_data	= $name_data ?? null;
 
-				ontology::add_main_section( $file_item );
-			}
-
-		// 4 insert the new nodes of the given tld
-			$total_insert = 0;
-			foreach ($jer_dd_records as $jer_dd_record) {
-
-				$insert_result = $jer_dd_record->insert();
-
-				// error inserting
-				// recovery al tld from bk table.
-				if( empty($insert_result) ){
+				// add main section and records
+				$add_result = ontology::add_main_section( $file_item );
+				if (empty($add_result)) {
+					// restore the backup table
 					RecordObj_dd::restore_from_bk_table($tld);
-					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
-
 					// delete bk table
 					RecordObj_dd::delete_bk_table();
+					$response->errors[] = 'Failed add_main_section file_item: ' . to_string($file_item);
+					debug_log(__METHOD__
+						. " Error creating ontology main section " . PHP_EOL
+						. ' add_result: ' . to_string($add_result) . PHP_EOL
+						. ' file_item: ' . to_string($file_item)
+						, logger::ERROR
+					);
 					return $response;
 				}
-
-				$total_insert++;
 			}
 
 		// response
 			if( empty($response->errors) ){
 				$response->result	= true;
-				$response->msg		= 'OK. Request done';
+				$response->msg		= 'OK. Request done successfully';
 			}
 			// total_insert jer_dd records
 			$response->total_insert = $total_insert;
