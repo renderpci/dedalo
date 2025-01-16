@@ -192,7 +192,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			}
 
 		// id_variant . Propagate a custom instance id to children
-			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
+			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}` +'_'+ Math.random()
 			instance_options.id_variant = self.id_variant
 				? self.id_variant + '_' + section_record_id_variant
 				: section_record_id_variant
