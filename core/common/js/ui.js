@@ -9,7 +9,7 @@
 		strip_tags,
 		prevent_open_new_window
 	} from '../../common/js/utils/index.js'
-	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
+	import {when_in_dom,dd_request_idle_callback,set_tool_event} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
@@ -1374,7 +1374,7 @@ export const ui = {
 				tool_button.insertAdjacentHTML('beforeend', tool_context.label)
 
 			// Events
-				const mousedown_handler = (e) => {
+				const click_handler = (e) => {
 					e.stopPropagation()
 
 					// open_tool (tool_common)
@@ -1383,8 +1383,8 @@ export const ui = {
 							caller			: self
 						})
 				}
-				tool_button.addEventListener('mousedown', mousedown_handler)
-
+				tool_button.addEventListener('click', click_handler)
+				tool_button.addEventListener('mousedown', click_handler)
 
 			return tool_button
 		},//build_section_tool_button
@@ -1649,17 +1649,50 @@ export const ui = {
 
 		for (let i = 0; i < tools_length; i++) {
 
+			const tool_context = tools[i]
+
 			// avoid self tool inside tool
-			if (self.caller && self.caller.model===tools[i].name) {
+			if (self.caller && self.caller.model===tool_context.name) {
 				continue;
 			}
 
-			const tool_node = (self.type==='component')
-				? ui.tool.build_component_tool_button(tools[i], self)
-				: ui.tool.build_section_tool_button(tools[i], self)
+			const tool_button = (self.type==='component')
+				? ui.tool.build_component_tool_button(tool_context, self)
+				: ui.tool.build_section_tool_button(tool_context, self)
 
-			if (tool_node) {
-				buttons_container.appendChild(tool_node)
+			if (tool_button) {
+				buttons_container.appendChild(tool_button)
+
+				// button events. Configured in tool properties. See tool_ontology definition
+					// sample:
+					// "events": [
+					// 	{
+					// 	  "type": "keyup",
+					// 	  "action": "click",
+					// 	  "validate": [
+					// 		{
+					// 		  "key": "ctrlKey",
+					// 		  "value": true
+					// 		},
+					// 		{
+					// 		  "key": "key",
+					// 		  "value": "s"
+					// 		}
+					// 	  ]
+					// 	}
+					// ]
+					if (tool_context.properties?.events) {
+						const tool_events_length = tool_context.properties.events.length
+						for (let i = 0; i < tool_events_length; i++) {
+
+							const tool_event = tool_context.properties.events[i]
+
+							set_tool_event({
+								tool_event	: tool_event,
+								tool_button	: tool_button
+							})
+						}
+					}
 			}
 		}
 
