@@ -11,6 +11,7 @@
 	import {createJSONEditor} from '../../../lib/jsoneditor/dist/standalone.js'
 
 
+
 /**
 * VIEW_DEFAULT_EDIT_JSON
 * Manage the components logic and appearance in client side
@@ -153,6 +154,7 @@ const get_content_value = (key, current_value, self) => {
 				inner_html		: get_label.save || 'Save',
 				parent			: content_value
 			})
+			// click event
 			const click_handler = (e) => {
 				e.stopPropagation()
 				self.save_sequence(editor)
@@ -221,7 +223,7 @@ const get_buttons = (self) => {
 			ui.add_tools(self, fragment)
 		}
 
-	// button_download . Force automatic download of component data value
+	// button_download. Force automatic download of component data value
 		const button_download = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button download',
@@ -267,10 +269,12 @@ const get_buttons = (self) => {
 				title			: get_label.full_screen || 'Full screen',
 				parent			: fragment
 			})
-			button_fullscreen.addEventListener('click', function(e) {
+			// click event
+			const click_handler = (e) => {
 				e.stopPropagation()
 				ui.enter_fullscreen(self.node)
-			})
+			}
+			button_fullscreen.addEventListener('click', click_handler)
 		}
 
 	// buttons container
