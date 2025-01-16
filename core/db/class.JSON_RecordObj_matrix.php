@@ -354,9 +354,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	*		}
 	*	]
 	* }
-	* @return int $time_machine_id
+	* @return int|null $time_machine_id
 	*/
-	public function save_time_machine( object $save_options ) : int {
+	public function save_time_machine( object $save_options ) : ?int {
 
 		// options
 			$tipo						= $save_options->time_machine_tipo ?? null;
@@ -368,6 +368,12 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$previous_component_dato	= $save_options->previous_component_dato ?? null;
 			$time_machine_date			= $save_options->time_machine_date ?? dd_date::get_timestamp_now_for_db();
 			$bulk_process_id			= $save_options->time_machine_bulk_process_id ?? null;
+
+		// save_time_machine_version. To disable time machine save, set: RecordObj_time_machine::$save_time_machine_version = false;
+		// This is useful for some bulk operations like 'portalize'
+			if (RecordObj_time_machine::$save_time_machine_version===false) {
+				return null;
+			}
 
 		// short vars
 			// $section_tipo = $this->get_section_tipo();
