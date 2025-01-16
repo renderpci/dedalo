@@ -488,7 +488,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 							// it change the view and the mode to edit component in lists, if the component has data will render with the definition instead the default
 							// take a different mode and view with data.
 							if(current_ddo.with_value){
-								new_context.properties.with_value	= current_ddo.with_value
+								new_context.properties.with_value = current_ddo.with_value
 
 								if(current_data.value && current_data.value.length > 0){
 									new_context.view = current_ddo.with_value.view

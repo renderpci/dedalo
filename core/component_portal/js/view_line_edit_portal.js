@@ -8,7 +8,6 @@
 	import {ui} from '../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {get_section_records} from '../../section/js/section.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {
 		render_column_component_info,
 		activate_autocomplete,
@@ -102,7 +101,7 @@ view_line_edit_portal.render = async function(self, options) {
 		wrapper.addEventListener('click', click_handler)
 
 	// change_mode
-		wrapper.addEventListener('dblclick', function(e) {
+		const dblclick_handler = (e) => {
 			e.stopPropagation()
 			e.preventDefault()
 
@@ -119,7 +118,6 @@ view_line_edit_portal.render = async function(self, options) {
 				: true // in inside a portal and the edit is not available
 
 			const change_mode = 'list'
-
 			const change_view = 'line'
 
 			// if the test get the component inside the main section do not perform the change mode
@@ -129,7 +127,8 @@ view_line_edit_portal.render = async function(self, options) {
 					view	: change_view
 				})
 			}
-		})//end event dblclick
+		}
+		wrapper.addEventListener('dblclick', dblclick_handler)
 
 
 	return wrapper
@@ -161,10 +160,13 @@ const get_content_data = async function(self, ar_section_record) {
 			// const row_item = no_records_node()
 			// fragment.appendChild(row_item)
 		}else{
-			// portal has data and render they
+			// The portal has data. We render the section_record instances
 			for (let i = 0; i < ar_section_record_length; i++) {
-				const section_record		= ar_section_record[i]
-				const section_record_node	= await ar_section_record[i].render()
+
+				const section_record = ar_section_record[i]
+
+				// render section_record and await to preserve the order
+				const section_record_node = await ar_section_record[i].render()
 
 				// drag and drop
 					// permissions control
@@ -179,24 +181,27 @@ const get_content_data = async function(self, ar_section_record) {
 						})
 
 						// mouseenter event
-						section_record_node.addEventListener('mouseenter',function(e){
+						const mouseenter_handler = (e) => {
 							e.stopPropagation()
 							// const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 							// event_manager.publish(event_id, this)
-
 							section_record_node.classList.add('mosaic_over')
-						})
+						}
+						section_record_node.addEventListener('mouseenter', mouseenter_handler)
 
 						// mouseleave event
-						section_record_node.addEventListener('mouseleave',function(e){
+						const mouseleave_handler = (e) => {
 							e.stopPropagation()
 							// const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 							// event_manager.publish(event_id, this)
 							section_record_node.classList.remove('mosaic_over')
-						})
+						}
+						section_record_node.addEventListener('mouseleave', mouseleave_handler)
 					}
+
+				// add in synchronous sequential order
 				fragment.appendChild(section_record_node)
-			};
+			}//end for (let i = 0; i < ar_section_record_length; i++)
 		}//end if (ar_section_record_length===0)
 
 	// build references
@@ -388,7 +393,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 /**
 * DRAG_AND_DROP
 * Set section_record_node ready to drag and drop
-* Mosaic use his own node to be dragable and dropable
+* Mosaic use his own node to be draggable and droppable
 * also it uses the drag node of default behavior (dependent of section_id node)
 * but doesn't use the drop node (dependent of section_id node)
 * @param object options

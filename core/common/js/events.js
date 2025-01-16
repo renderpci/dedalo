@@ -197,7 +197,7 @@ export const dd_request_idle_callback = function (callback) {
 	} else {
 		// Fallback for browsers without requestIdleCallback support like Safari
 		window.requestAnimationFrame(callback)
-        // setTimeout(callback, 1);
+		// setTimeout(callback, 1);
 	}
 }//end dd_request_idle_callback
 
