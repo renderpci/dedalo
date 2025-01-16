@@ -116,11 +116,16 @@ const get_content_value = (key, current_value, self) => {
 	// load_editor and init
 		const load_editor = () => {
 
+			// value for editor
+			const content = current_value
+				? {json : current_value}
+				: {text : ''}
+
 			// editor
 			const editor = createJSONEditor({
 				target	: content_value,
 				props	: {
-					content		: {json : current_value ?? null},
+					content		: content,
 					mode		: 'text',
 					onChange	: (updatedContent, previousContent, { contentErrors, patchResult }) => {
 						// console.log('onChange-------------->', { updatedContent, previousContent, contentErrors, patchResult })
