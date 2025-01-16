@@ -1291,9 +1291,9 @@ class ontology {
 
 			if( empty($parent_data) || empty($parent_data[0]) ){
 				// main dd nodes exception
-				if( $terminoID==='dd1' || $terminoID==='dd2' ){
+				if( $terminoID==='dd1' || $terminoID==='dd2' || get_section_id_from_tipo($section_tipo)==='0' ){
 					debug_log(__METHOD__
-						. " Record without parent data " . PHP_EOL
+						. " Record without parent data [1] " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
 						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
@@ -1302,7 +1302,7 @@ class ontology {
 					);
 				}else{
 					debug_log(__METHOD__
-						. " Record without parent data " . PHP_EOL
+						. " Record without parent data [2] " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
 						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
