@@ -58,7 +58,9 @@ class tool_ontology extends tool_common {
 						return $response;
 					}
 					$sqo = clone($sqo_session);
-					$sqo->order	= false;
+					$sqo->order		= false;
+					$sqo->limit		= 0;
+					$sqo->offset	= 0;
 				}
 
 		// Process ontology node/s and change jer_dd rows
