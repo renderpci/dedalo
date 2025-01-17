@@ -1,0 +1,158 @@
+[
+	{
+		"components": [
+			{
+				"source_tipo": "qdp191",
+				"target_tipo": "tch191",
+				"info": "Forma de ingreso"
+			},
+			{
+				"source_tipo": "qdp187",
+				"target_tipo": "tch187",
+				"info": "Colector/a"
+			},
+			{
+				"source_tipo": "qdp190",
+				"target_tipo": "tch190",
+				"info": "Fuente de ingreso"
+			},
+			{
+				"source_tipo": "qdp182",
+				"target_tipo": "tch243",
+				"info": "Lugar de recuperación"
+			},
+			{
+				"source_tipo": "qdp194",
+				"target_tipo": "tch194",
+				"info": "Fecha de ingreso/referencia recuperación"
+			},
+			{
+				"source_tipo": "qdp154",
+				"target_tipo": "tch154",
+				"info": "Observaciones"
+			},
+			{
+				"source_tipo": "qdp438",
+				"target_tipo": "tch438",
+				"info": "Notas"
+			},
+			{
+				"source_tipo": "qdp245",
+				"target_tipo": "tch245",
+				"info": "Municipio"
+			},
+			{
+				"source_tipo": "qdp243",
+				"target_tipo": "tch243",
+				"info": "Geolocalizaciones (recuperación, uso, fabricación, ...)"
+			},
+			{
+				"source_tipo": "qdp244",
+				"target_tipo": "tch244",
+				"info": "Geolocalización"
+			},
+			{
+				"source_tipo": "qdp193",
+				"target_tipo": "tch193",
+				"info": "Documentación de recuperación"
+			}
+		],
+		"portal": "tch551",
+		"source_section": "qdp1",
+		"target_section": "tch10"
+	},
+	{
+		"components": [
+			{
+				"source_tipo": "qdp446",
+				"target_tipo": "rsc1354",
+				"info": "Uso"
+			},
+			{
+				"source_tipo": "qdp445",
+				"target_tipo": "rsc1353",
+				"info": "Precisiones de uso"
+			},
+			{
+				"source_tipo": "qdp447",
+				"target_tipo": "rsc1344",
+				"info": "¿Cómo se usa?"
+			},
+			{
+				"source_tipo": "qdp444",
+				"target_tipo": "rsc1352",
+				"info": "Contexto de uso"
+			},
+			{
+				"source_tipo": "qdp449",
+				"target_tipo": "rsc1346",
+				"info": "¿Quien lo usa?"
+			},
+			{
+				"source_tipo": "qdp450",
+				"target_tipo": "rsc1347",
+				"info": "¿Cuando se usa?"
+			},
+			{
+				"source_tipo": "qdp451",
+				"target_tipo": "rsc1345",
+				"info": "¿Donde se usa?"
+			},
+			{
+				"source_tipo": "qdp448",
+				"target_tipo": "rsc1392",
+				"info": "Fuente de información"
+			}
+		],
+		"portal": "tch443",
+		"source_section": "qdp1",
+		"target_section": "rsc1340"
+	},
+	{
+		"components": [
+			{
+				"source_tipo": "qdp497",
+				"target_tipo": "rsc943",
+				"info": "Estado de conservación inicial"
+			},
+			{
+				"source_tipo": "qdp498",
+				"target_tipo": "tch498",
+				"info": "Interveciones histórica"
+			},
+			{
+				"source_tipo": "qdp504",
+				"target_tipo": "rsc980",
+				"info": "Técnico"
+			},
+			{
+				"source_tipo": "qdp499",
+				"target_tipo": "rsc946",
+				"info": "Descripción de las alteraciones"
+			},
+			{
+				"source_tipo": "qdp500",
+				"target_tipo": "rsc981",
+				"info": "Descripción de antiguas intervenciones"
+			},
+			{
+				"source_tipo": "qdp501",
+				"target_tipo": "rsc984",
+				"info": "Documentación técnica"
+			},
+			{
+				"source_tipo": "qdp502",
+				"target_tipo": "rsc983",
+				"info": "Imágenes"
+			},
+			{
+				"source_tipo": "qdp503",
+				"target_tipo": "rsc985",
+				"info": "Audiovisuales"
+			}
+		],
+		"portal": "tch507",
+		"source_section": "qdp1",
+		"target_section": "rsc976"
+	}
+]
