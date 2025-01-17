@@ -219,7 +219,7 @@ class security {
 					security::$permissions_table_cache = $permissions_table;
 
 					debug_log(__METHOD__
-						." Returning permissions_table from cache disk file"
+						." Returning permissions_table from cache file: $cache_file_name. Time: " . exec_time_unit($start_time, 'ms') . ' ms'
 						, logger::DEBUG
 					);
 
