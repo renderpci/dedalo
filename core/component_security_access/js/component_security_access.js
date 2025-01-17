@@ -102,6 +102,7 @@ component_security_access.prototype.init = async function(options) {
 * 	Resolve bool
 */
 component_security_access.prototype.build = async function(options) {
+	const t0 = performance.now()
 
 	const self = this
 
@@ -111,30 +112,43 @@ component_security_access.prototype.build = async function(options) {
 	// fill value zero on data.
 	// Note that items with value 0 will not be saved in DDBB, but they will need to be added to data
 	// to be processed by client interface (to propagate values)
-		const filled_value		= []
-		const data				= self.data || {}
-		const value				= data.value || []
-		const datalist			= data.datalist || []
-		const datalist_length	= datalist.length
-		for (let i = datalist_length - 1; i >= 0; i--) {
+		// const filled_value		= []
+		// const data				= self.data || {}
+		// const value				= data.value || []
+		// const datalist			= data.datalist || []
+		// const datalist_length	= datalist.length
+		// for (let i = datalist_length - 1; i >= 0; i--) {
 
-			const item	= data.datalist[i]
-			const found	= value.find(el =>
-				el.tipo===item.tipo &&
-				el.section_tipo===item.section_tipo
-			)
-			if (found) {
-				filled_value.push(found)
-			}else{
-				filled_value.push({
-					tipo			: item.tipo,
-					section_tipo	: item.section_tipo,
-					value			: 0
-				})
-			}
-		}
-		// replace value
-		self.filled_value = filled_value
+		// 	const item	= data.datalist[i]
+		// 	const found	= value.find(el =>
+		// 		el.tipo===item.tipo &&
+		// 		el.section_tipo===item.section_tipo
+		// 	)
+		// 	if (found) {
+		// 		filled_value.push(found)
+		// 	}else{
+		// 		filled_value.push({
+		// 			tipo			: item.tipo,
+		// 			section_tipo	: item.section_tipo,
+		// 			value			: 0
+		// 		})
+		// 	}
+		// }
+		// // replace value
+		// self.filled_value = filled_value
+
+		// optimized version using map
+		const data		= self.data || {};
+		const datalist	= data.datalist || [];
+		const value_map	= new Map(data.value?.map(item => [`${item.tipo}-${item.section_tipo}`, item]) || []);
+
+		self.filled_value = datalist.map(item => {
+			const key = `${item.tipo}-${item.section_tipo}`;
+			return value_map.has(key) ? value_map.get(key) : { tipo: item.tipo, section_tipo: item.section_tipo, value: 0 };
+		});
+
+	// debug
+		console.log(`__Time to build ${self.model} ${Math.round(performance.now()-t0)} ms`);
 
 
 	return common_build
