@@ -432,6 +432,7 @@ function curl_request(object $options) : object {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
 
 	// open connection
 		$ch = curl_init();
@@ -481,14 +482,17 @@ function curl_request(object $options) : object {
 				case 401:
 					$debug_level = logger::ERROR;
 					$msg .= "Error. Unauthorized code";
+					$response->errors[] = 'Unauthorized code ['.$httpcode.']';
 					break;
 				case 400:
 					$debug_level = logger::WARNING;
 					$msg .= "Error. Bad Request. Server has problems connecting to file";
+					$response->errors[] = 'Server error ['.$httpcode.']';
 					break;
 				default:
 					$debug_level = logger::ERROR;
 					$msg .= "Error. check_remote_server problem found";
+					$response->errors[] = 'Server error code: ['.$httpcode.']';
 					break;
 			}
 			debug_log(__METHOD__
@@ -507,6 +511,7 @@ function curl_request(object $options) : object {
 			if(curl_errno($ch)) {
 				$error_info	 = curl_error($ch);
 				$msg		.= '. curl_request Curl error: ' . $error_info;
+				$response->errors[] = 'curl_error: '.$error_info;
 				debug_log(__METHOD__
 					.' '.$url.' error_info: '.$error_info
 					, logger::ERROR
@@ -521,6 +526,7 @@ function curl_request(object $options) : object {
 			}
 		} catch (Exception $e) {
 			$msg .= '. curl_request Caught exception: ' . $e->getMessage();
+			$response->errors[] = 'exception: '.$e->getMessage();
 			debug_log(__METHOD__
 				.' curl_request Caught exception: ' . $e->getMessage()
 				, logger::ERROR

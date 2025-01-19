@@ -10,14 +10,15 @@ class ontology_data_io {
 
 
 
-	public static $dd_tables = ['matrix_dd',"matrix_counter_dd","matrix_layout_dd"];
+	public static $dd_tables = ['matrix_dd','matrix_counter_dd','matrix_layout_dd'];
 
 
 
 	/**
 	* EXPORT_ONTOLOGY_INFO
-	*
+	* Collects dd1 data properties and save value to a 'ontology.json' file
 	* @return object $response
+	* @test true
 	*/
 	public static function export_ontology_info() : object {
 
@@ -27,11 +28,11 @@ class ontology_data_io {
 			$response->errors	= [];
 
 		// properties component (dd1)
-			$section_tipo	= 'dd0';
-			$section_id		= '1';
-			$tipo			= 'ontology18';
-			$model			= RecordObj_dd::get_modelo_name_by_tipo( $tipo );
-			$properties_component = component_common::get_instance(
+			$section_tipo			= 'dd0';
+			$section_id				= '1';
+			$tipo					= 'ontology18';
+			$model					= RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+			$properties_component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
 				$section_id, // string section_id
@@ -64,6 +65,11 @@ class ontology_data_io {
 		$response->result	= true;
 		$response->msg		= 'OK. Request done';
 
+		// debug
+		$response->data			= $data;
+		$response->path_file	= $path_file;
+		$response->saved		= $saved;
+
 
 		return $response;
 	}//end export_ontology_info
@@ -76,6 +82,7 @@ class ontology_data_io {
 	* Check if exist, else create it.
 	* if the directory doesn't exist it will be created.
 	* @return string|false $io_path
+	* @test true
 	*/
 	public static function set_ontology_io_path() : string|false {
 
@@ -97,6 +104,7 @@ class ontology_data_io {
 	* Check if exists, and return the path or false
 	* @param array|null $version = null
 	* @return string|false $io_path
+	* @test true
 	*/
 	public static function get_ontology_io_path( ?array $version = null ) : string|false {
 
@@ -112,26 +120,25 @@ class ontology_data_io {
 
 
 
-
 	/**
 	* GET_ONTOLOGY_IO_URL
 	* Get the current version path for ontology io
 	* Check if exists, and return the uri or false
 	* @param array|null $version = null
 	* @return string|false $io_url
+	* @test true
 	*/
 	public static function get_ontology_io_url( ?array $version = null ) : string|false {
 
 		$dedalo_version	= $version ?? get_dedalo_version();
 		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
 		$base_path		= ONTOLOGY_DATA_IO_DIR."/{$version_path}";
-		$io_url		= is_dir( $base_path )===true
+		$io_url			= is_dir( $base_path )===true
 			? ONTOLOGY_DATA_IO_URL."/{$version_path}"
 			: false;
 
 		return $io_url;
 	}//end get_ontology_io_URl
-
 
 
 
@@ -141,6 +148,7 @@ class ontology_data_io {
 	* to be saved into the info properties of the component.
 	* This information will be provided to control the ontology changes.
 	* @return bool
+	* @test true
 	*/
 	public static function update_ontology_info() : bool {
 
@@ -164,7 +172,7 @@ class ontology_data_io {
 		$dedalo_version	= get_dedalo_version();
 		$version		= implode( '.', $dedalo_version );
 
-		//hierarchy typology
+		// hierarchy typology
 		$active_ontologies = array_map(function( $el ){
 			$active_ontology = new stdClass();
 				$active_ontology->tld			= strtolower($el->tld);
@@ -201,6 +209,7 @@ class ontology_data_io {
 	* Copy is made using psql daemon
 	* @param string $tld
 	* @return object $response
+	* @test true
 	*/
 	public static function export_to_file( string $tld ) : object {
 
@@ -225,7 +234,7 @@ class ontology_data_io {
 				$response->errors[]	= 'Unable to create directory: '.$ontology_io_path;
 				return $response;
 			}
-			$path_file  = "{$ontology_io_path}/{$tld}.copy.gz";
+			$file_path = "{$ontology_io_path}/{$tld}.copy.gz";
 
 		// get section_tipo
 			$section_tipo = ontology::map_tld_to_target_section_tipo( $tld );
@@ -233,16 +242,15 @@ class ontology_data_io {
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
-				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip > {$path_file}';\" ";
-
+				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip > {$file_path}';\" ";
 
 		// exec command in terminal
 			$command_result = shell_exec($command);
 
 		// check created file
-			if (!file_exists($path_file)) {
-				throw new Exception("Error Processing Request. File $path_file not created!", 1);
-				$response->msg		= 'Error Processing Request. File '.$path_file.' not created!';
+			if (!file_exists($file_path)) {
+				throw new Exception("Error Processing Request. File $file_path not created!", 1);
+				$response->msg		= 'Error Processing Request. File '.$file_path.' not created!';
 				$response->errors[]	= 'Target file was not created. Not found: '.$section_tipo;
 				return $response;
 			}
@@ -251,6 +259,10 @@ class ontology_data_io {
 			$response->result			= true;
 			$response->msg				= 'OK. Request done: ' . $section_tipo;
 			$response->command_result	= $command_result;
+			// debug
+			$response->debug = (object)[
+				'file_path' => $file_path
+			];
 
 
 		return $response;
@@ -262,7 +274,9 @@ class ontology_data_io {
 	* EXPORT_PRIVATE_LISTS_TO_FILE
 	* Copy rows from matrix_dd table and save it into a copy file
 	* Copy is made using psql daemon
+	* Generates a file like '../dedalo/install/import/ontology/6.4/matrix_dd.copy.gz'
 	* @return object $response
+	* @test true
 	*/
 	public static function export_private_lists_to_file() : object {
 
@@ -278,20 +292,20 @@ class ontology_data_io {
 				$response->errors[]	= 'Unable to create directory: '.$ontology_io_path;
 				return $response;
 			}
-			$path_file  = "{$ontology_io_path}/matrix_dd.copy.gz";
+			$file_path = "{$ontology_io_path}/matrix_dd.copy.gz";
 
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
-				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_dd\") TO PROGRAM 'gzip > {$path_file}';\" ";
+				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_dd\") TO PROGRAM 'gzip > {$file_path}';\" ";
 
 		// exec command in terminal
 			$command_result = shell_exec($command);
 
 		// check created file
-			if (!file_exists($path_file)) {
-				throw new Exception("Error Processing Request. File $path_file not created!", 1);
-				$response->msg		= 'Error Processing Request. File '.$path_file.' not created!';
+			if (!file_exists($file_path)) {
+				throw new Exception("Error Processing Request. File $file_path not created!", 1);
+				$response->msg		= 'Error Processing Request. File '.$file_path.' not created!';
 				$response->errors[]	= 'Target file was not created. Not found: matrix_dd.copy.gz';
 				return $response;
 			}
@@ -300,6 +314,10 @@ class ontology_data_io {
 			$response->result			= true;
 			$response->msg				= 'OK. Request done';
 			$response->command_result	= $command_result;
+			// debug
+			$response->debug = (object)[
+				'file_path' => $file_path
+			];
 
 
 		return $response;
@@ -313,11 +331,12 @@ class ontology_data_io {
 	* And import into the matrix_ontology table.
 	* @param object $file_item
 	* {
-	*  "section_tipo" 	: "dd0",
-	*  "tld" 			: "dd"
-	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/dd0_dd.copy.gz"
+	*	"section_tipo" : "dd0",
+	*	"tld" : "dd"
+	*	"url" : "https://master.dedalo.dev/import/ontology/6.4/dd0_dd.copy.gz"
 	* }
 	* @return object $import_response
+	* @test true
 	*/
 	public static function import_from_file( object $file_item ) : object {
 
@@ -343,6 +362,12 @@ class ontology_data_io {
 		// this delete existing data of current section_tipo and copy all file pg data
 			$import_response = backup::import_from_copy_file( $options );
 
+		// debug
+			$import_response->debug = (object)[
+				'file_path' => $file_path
+			];
+
+
 		return $import_response;
 	}//end import_from_file
 
@@ -351,7 +376,8 @@ class ontology_data_io {
 	/**
 	* IMPORT_PRIVATE_LISTS_FROM_FILE
 	* Get ontology file in copy format from ontology server
-	* And import into the matrix_ontology table.
+	* and import into the matrix_ontology table.
+	* Normally imports file 'matrix_dd.copy.gz'
 	* @param object $file_item
 	* {
 	*  "section_tipo" 	: "dd0",
@@ -359,13 +385,14 @@ class ontology_data_io {
 	*  "url" 			: "https://master.dedalo.dev/import/ontology/6.4/matrix_dd.copy.gz"
 	* }
 	* @return object $import_response
+	* @test true
 	*/
 	public static function import_private_lists_from_file( object $file_item ) : object {
 
 		// options
 			$url = $file_item->url;
 
-		// file_name
+		// file_name. Only file base name is used from URL
 			$file_name = basename( $url );
 
 		// import ontology path
@@ -380,6 +407,11 @@ class ontology_data_io {
 				$options->delete_table	= true;
 
 			$import_response = backup::import_from_copy_file( $options );
+
+			// debug
+			$import_response->debug = (object)[
+				'file_path' => $file_path
+			];
 
 
 		return $import_response;
@@ -398,6 +430,7 @@ class ontology_data_io {
 	* 	msg: string
 	* 	errors: array
 	* }
+	* @test true
 	*/
 	public static function download_remote_ontology_file( string $url ) : object {
 		$start_time = start_time();
@@ -434,7 +467,7 @@ class ontology_data_io {
 			if ($curl_response->code!=200) {
 				// error connecting to master server
 				// Do not add debug error here because it is already handled by curl_request
-				$response->errors[] = 'bad server response code: ' . $curl_response->code . ' (' .$curl_response->msg.')' ;
+				$response->errors[] = 'bad server response code: ' . $curl_response->code . ' (' .$curl_response->msg.') ' . $url;
 				$response->msg .= ' Code is not as expected (200). Response code: ' . to_string($curl_response->code);
 				return $response;
 			}
@@ -498,7 +531,8 @@ class ontology_data_io {
 	* Collect local ontology files and ontology info json file
 	* Called by API.
 	* Merge all information in a object with the available ontology files
-	* @param object $options
+	* @param array $version
+	* 	like: [6,4,0]
 	* @return object $response
 	* {
 	*	result : {
@@ -510,6 +544,7 @@ class ontology_data_io {
 	* 		}]
 	* 	}
 	* }
+	* @test true
 	*/
 	public static function get_ontology_update_info( array $version ) : object {
 
@@ -573,6 +608,20 @@ class ontology_data_io {
 	* 	url: https://master.dedalo.dev/dedalo/core/api/v1/json/
 	* }
 	* @return object $response
+	* {
+	*	"result": {
+	*		"result": true,
+	*		"msg": "OK. Ontology server is ready",
+	*		"errors": [],
+	*		"action": "get_server_ready_status",
+	*		"dedalo_last_error": null
+	*	},
+	*	"msg": "OK. check_remote_server passed successfully",
+	*	"errors": [],
+	*	"error": false,
+	*	"code": 200
+	* }
+	* @test true
 	*/
 	public static function check_remote_server( object $server ) : object {
 
@@ -599,7 +648,6 @@ class ontology_data_io {
 					? SERVER_PROXY // from Dédalo config file
 					: false // default case
 			]);
-
 
 			if ( !empty($response->result) ){
 				$response->result = json_decode($response->result);

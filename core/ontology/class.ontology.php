@@ -87,26 +87,25 @@ class ontology {
 		$model					= $jer_dd_row->modelo;
 		$is_model				= $jer_dd_row->esmodelo;
 		$is_descriptor			= $jer_dd_row->esdescriptor;
-		$visible				= $jer_dd_row->visible;
 		$translatable			= $jer_dd_row->traducible;
 		$relations				= !empty ( $jer_dd_row->relaciones )
 			? (json_handler::decode( $jer_dd_row->relaciones ) ?? [])
 			: [];
-		$properties_v5			= !empty ( $jer_dd_row->propiedades ) ? json_decode( $jer_dd_row->propiedades ) : new stdClass();
+		$properties_v5			= !empty ( $jer_dd_row->propiedades ) ? json_decode( $jer_dd_row->propiedades ) : null;
 		$properties				= !empty ( $jer_dd_row->properties ) ? json_decode( $jer_dd_row->properties ) : new stdClass();
 		$term					= !empty ( $jer_dd_row->term ) ? json_decode( $jer_dd_row->term ) : new stdClass();
 
 
-		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc
+		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc.
 		$section_id = get_section_id_from_tipo( $node_tipo );
 
 		// Section, create new section
-		$section = section::get_instance(
-			$section_id,
-			$target_section_tipo
-		);
+			$section = section::get_instance(
+				$section_id,
+				$target_section_tipo
+			);
 
-		$section->forced_create_record();
+			$section->forced_create_record();
 
 		// tld
 			$tld_tipo		= 'ontology7';
@@ -120,7 +119,8 @@ class ontology {
 				$target_section_tipo
 			);
 
-			$tld_component->set_dato( [$tld] );
+			$dato = empty($tld) ? null : [$tld];
+			$tld_component->set_dato( $dato );
 			$tld_component->Save();
 
 		// model. Get the model tld and id
@@ -144,7 +144,8 @@ class ontology {
 					$target_section_tipo
 				);
 
-				$model_component->set_dato( [$model_locator] );
+				$dato = empty($model_locator) ? null : [$model_locator];
+				$model_component->set_dato( $dato );
 				$model_component->Save();
 			}
 
@@ -164,7 +165,8 @@ class ontology {
 				$descriptor_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 				$descriptor_locator->set_section_id($is_descriptor === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
-			$is_descriptor_component->set_dato( [$descriptor_locator] );
+			$dato = [$descriptor_locator];
+			$is_descriptor_component->set_dato( $dato );
 			$is_descriptor_component->Save();
 
 		// is model
@@ -183,7 +185,8 @@ class ontology {
 				$is_model_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 				$is_model_locator->set_section_id($is_model === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
-			$is_model_component->set_dato( [$is_model_locator] );
+			$dato = [$is_model_locator];
+			$is_model_component->set_dato( $dato );
 			$is_model_component->Save();
 
 		// translatable
@@ -202,7 +205,8 @@ class ontology {
 				$translatable_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 				$translatable_locator->set_section_id($translatable === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
-			$translatable_component->set_dato( [$translatable_locator] );
+			$dato = [$translatable_locator];
+			$translatable_component->set_dato( $dato );
 			$translatable_component->Save();
 
 		// term
@@ -236,7 +240,8 @@ class ontology {
 				$target_section_tipo
 			);
 
-			$properties_v5_component->set_dato( [$properties_v5] );
+			$dato = empty($properties_v5) ? null : [$properties_v5];
+			$properties_v5_component->set_dato( $dato );
 			$properties_v5_component->Save();
 
 		// properties CSS
@@ -253,7 +258,8 @@ class ontology {
 
 			$properties_css = $properties->css ?? null;
 
-			$properties_css_component->set_dato( [$properties_css] );
+			$dato = [$properties_css];
+			$properties_css_component->set_dato( $dato );
 			$properties_css_component->Save();
 
 		// properties RQO
@@ -270,7 +276,8 @@ class ontology {
 
 			$properties_rqo = $properties->source ?? null;
 
-			$properties_rqo_component->set_dato( [$properties_rqo] );
+			$dato = [$properties_rqo];
+			$properties_rqo_component->set_dato( $dato );
 			$properties_rqo_component->Save();
 
 		// properties

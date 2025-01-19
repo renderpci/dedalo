@@ -186,7 +186,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// form init
-		self.caller.init_form({
+		self.caller?.init_form({
 			submit_label	: 'Move locators',
 			// confirm_text	: confirm_text,
 			body_info		: content_data,
