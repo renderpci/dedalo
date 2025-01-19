@@ -83,230 +83,45 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 
 		const elements = [];
 
-		// add_hierarchy
-		elements.push({
-			name	: 'add_hierarchy',
-			path	: '../../area_maintenance/js/widgets/add_hierarchy/add_hierarchy.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
+		const add = (name) => {
+			elements.push({
+				name	: name,
+				path	: '../../area_maintenance/widgets/'+name+'/js/'+name+'.js',
+				mode	: mode,
+				lang	: lang,
+				value	: null
+			})
+		}
 
-		// build_install_version
-		elements.push({
-			name	: 'build_install_version',
-			path	: '../../area_maintenance/js/widgets/build_install_version/build_install_version.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
+		// area maintenance widgets
+		[
+			'add_hierarchy',
+			'build_install_version',
+			'check_config',
+			'counters_status',
+			'database_info',
+			'dedalo_api_test_environment',
+			'dedalo_version',
+			'environment',
+			'export_hierarchy',
+			'lock_components',
+			'make_backup',
+			'move_locator',
+			'move_tld',
+			'php_info',
+			'php_user',
+			'publication_api',
+			'regenerate_relations',
+			'register_tools',
+			'sequences_status',
+			'sqo_test_environment',
+			'system_info',
+			'unit_test',
+			'update_code',
+			'update_data_version',
+			'update_ontology'
+		].map(add)
 
-		// check_config
-		elements.push({
-			name	: 'check_config',
-			path	: '../../area_maintenance/js/widgets/check_config/check_config.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// counters_status
-		elements.push({
-			name	: 'counters_status',
-			path	: '../../area_maintenance/js/widgets/counters_status/counters_status.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// database_info
-		elements.push({
-			name	: 'database_info',
-			path	: '../../area_maintenance/js/widgets/database_info/database_info.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// dedalo_api_test_environment
-		elements.push({
-			name	: 'dedalo_api_test_environment',
-			path	: '../../area_maintenance/js/widgets/dedalo_api_test_environment/dedalo_api_test_environment.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// dedalo_version
-		elements.push({
-			name	: 'dedalo_version',
-			path	: '../../area_maintenance/js/widgets/dedalo_version/dedalo_version.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// environment
-		elements.push({
-			name	: 'environment',
-			path	: '../../area_maintenance/js/widgets/environment/environment.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// export_hierarchy
-		elements.push({
-			name	: 'export_hierarchy',
-			path	: '../../area_maintenance/js/widgets/export_hierarchy/export_hierarchy.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// export_ontology_to_json
-		elements.push({
-			name	: 'export_ontology_to_json',
-			path	: '../../area_maintenance/js/widgets/export_ontology_to_json/export_ontology_to_json.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// import_ontology_from_json
-		elements.push({
-			name	: 'import_ontology_from_json',
-			path	: '../../area_maintenance/js/widgets/import_ontology_from_json/import_ontology_from_json.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// lock_components
-		elements.push({
-			name	: 'lock_components',
-			path	: '../../area_maintenance/js/widgets/lock_components/lock_components.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// make_backup
-		elements.push({
-			name	: 'make_backup',
-			path	: '../../area_maintenance/js/widgets/make_backup/make_backup.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// move_tld
-		elements.push({
-			name	: 'move_tld',
-			path	: '../../area_maintenance/js/widgets/move_tld/move_tld.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// php_info
-		elements.push({
-			name	: 'php_info',
-			path	: '../../area_maintenance/js/widgets/php_info/php_info.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// php_user
-		elements.push({
-			name	: 'php_user',
-			path	: '../../area_maintenance/js/widgets/php_user/php_user.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// publication_api
-		elements.push({
-			name	: 'publication_api',
-			path	: '../../area_maintenance/js/widgets/publication_api/publication_api.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// regenerate_relations
-		elements.push({
-			name	: 'regenerate_relations',
-			path	: '../../area_maintenance/js/widgets/regenerate_relations/regenerate_relations.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// register_tools
-		elements.push({
-			name	: 'register_tools',
-			path	: '../../area_maintenance/js/widgets/register_tools/register_tools.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// sequences_status
-		elements.push({
-			name	: 'sequences_status',
-			path	: '../../area_maintenance/js/widgets/sequences_status/sequences_status.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// sqo_test_environment
-		elements.push({
-			name	: 'sqo_test_environment',
-			path	: '../../area_maintenance/js/widgets/sqo_test_environment/sqo_test_environment.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// unit_test
-		elements.push({
-			name	: 'unit_test',
-			path	: '../../area_maintenance/js/widgets/unit_test/unit_test.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// update_code
-		elements.push({
-			name	: 'update_code',
-			path	: '../../area_maintenance/js/widgets/update_code/update_code.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// update_data_version
-		elements.push({
-			name	: 'update_data_version',
-			path	: '../../area_maintenance/js/widgets/update_data_version/update_data_version.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
-
-		// update_ontology
-		elements.push({
-			name	: 'update_ontology',
-			path	: '../../area_maintenance/js/widgets/update_ontology/update_ontology.js',
-			mode	: mode,
-			lang	: lang,
-			value	: null
-		})
 
 		return elements
 	}//end get_widgets
