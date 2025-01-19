@@ -404,12 +404,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$model = $this->get_model();
 		if (empty($model)) {
 
-			debug_log(__METHOD__
-				. " Falling to fallback model resolution for the term" . PHP_EOL
-				. ' terminoID: ' . to_string($this->terminoID)
-				, logger::ERROR
-			);
-
 			// fallback to old resolution
 			$modelo_tipo = $this->get_modelo();
 			if (empty($modelo_tipo)) {
@@ -431,6 +425,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 				return '';
 			}
+
+			debug_log(__METHOD__
+				. " Falling to fallback model resolution for the term" . PHP_EOL
+				. ' terminoID: ' . to_string($this->terminoID)
+				, logger::ERROR
+			);
 
 			$model = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			// empty case check
