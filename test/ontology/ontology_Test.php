@@ -1203,6 +1203,19 @@ final class ontology_test extends TestCase {
 			];
 			$section_id = ontology::add_main_section($file_item);
 
+		// set permissions. Allow current user access to created default sections
+			$set_permissions_result = component_security_access::set_section_permissions((object)[
+				'ar_section_tipo'	=> [$section_tipo],
+				'user_id'			=> TEST_USER_ID,
+				'permissions'		=> 2
+			]);
+			$expected = true;
+			$this->assertTrue(
+				!empty($set_permissions_result)===$expected,
+				'expected: ' . to_string($expected) .  PHP_EOL
+					. 'set_permissions_result: ' . to_string(!empty($set_permissions_result))
+			);
+
 		// matrix_ontology
 			$ar_id = [];
 			for ($i=0; $i < 5; $i++) {
