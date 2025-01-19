@@ -61,7 +61,7 @@ final class dd_manager {
 					$response = new stdClass();
 						$response->result	= false;
 						$response->msg		= 'Error. user is not logged ! [action:'.$rqo->action.']';
-						$response->error	= 'not_logged';
+						$response->errors[]	= 'not_logged';
 					return $response;
 				}
 			}
@@ -72,7 +72,7 @@ final class dd_manager {
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= "Invalid action var (not found in rqo)";
-					$response->error	= 'Undefined method';
+					$response->errors[]	= 'Undefined method';
 
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 
@@ -87,7 +87,7 @@ final class dd_manager {
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= "Error. Undefined $dd_api_type method (action) : ".$rqo->action;
-					$response->error	= 'Undefined method';
+					$response->errors[]	= 'Undefined method';
 					$response->action	= $rqo->action;
 			}else{
 				// success
@@ -98,7 +98,7 @@ final class dd_manager {
 						$response = new stdClass();
 							$response->result	= false;
 							$response->msg		= 'Error. user has not permissions ! [action:'.$rqo->action.']';
-							$response->error	= 'permissions error';
+							$response->errors[]	= 'permissions error';
 						return $response;
 					}
 				}
