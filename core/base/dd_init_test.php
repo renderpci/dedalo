@@ -900,7 +900,7 @@
 // jer_dd_recovery. Create it if not already exists
 	$jer_dd_recovery_exists	= DBi::check_table_exists('jer_dd_recovery');
 	if (!$jer_dd_recovery_exists) {
-		area_maintenance::create_jer_dd_recovery();
+		install::restore_jer_dd_recovery_from_file();
 	}
 
 

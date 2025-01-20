@@ -2604,4 +2604,151 @@ class install extends common {
 
 
 
+	/**
+	* BUILD_RECOVERY_VERSION_FILE
+	* Creates the recovery file 'jer_dd_recovery.sql' from current 'jer_dd' table
+	* @return object $response
+	*/
+	public static function build_recovery_version_file() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// preserve_tld list
+			$preserve_tld = [
+				'dd',
+				'rsc',
+				'lg',
+				'hierarchy',
+				'ontology',
+				'ontologytype'
+			];
+			$preserve_tld_string = "'".implode("','", $preserve_tld)."'";
+
+		// clone jer_dd table to jer_dd_recovery
+			$sql = '
+				DROP TABLE IF EXISTS "jer_dd_recovery" CASCADE;
+				CREATE TABLE "jer_dd_recovery" ( LIKE "jer_dd" INCLUDING ALL );
+				INSERT INTO "jer_dd_recovery" SELECT * FROM "jer_dd" WHERE tld IN ('.$preserve_tld_string.');
+			';
+			$result	= pg_query(DBi::_getConnection(), $sql);
+			if (!$result) {
+				$msg = " Error on db execution (clone table jer_dd): ".pg_last_error(DBi::_getConnection());
+				debug_log(__METHOD__
+					. $msg . PHP_EOL
+					. $sql
+					, logger::ERROR
+				);
+				$response->msg = $msg;
+				$response->errors[] = 'failed creating jer_dd_recovery table';
+
+				return $response; // return error here !
+			}
+
+		// export to file
+			// terminal command pg_dump
+			$config		= self::get_config();
+			$sql_file	= DEDALO_ROOT_PATH . '/install/db/jer_dd_recovery.sql.gz';
+			$command	= DB_BIN_PATH . 'pg_dump -d '.DEDALO_DATABASE_CONN.' '.$config->host_line.' '.$config->port_line
+						  .' -U '.DEDALO_USERNAME_CONN.' -t jer_dd_recovery | gzip > '.$sql_file;
+
+			debug_log(__METHOD__
+				." Executing terminal DB command " . PHP_EOL
+				.to_string($command) . PHP_EOL
+				, logger::WARNING
+			);
+
+			$command_res = shell_exec($command);
+			debug_log(__METHOD__." Exec response (shell_exec) ".to_string($command_res), logger::DEBUG);
+
+		// delete temp table
+			$sql = '
+				DROP TABLE IF EXISTS "jer_dd_recovery" CASCADE;
+			';
+			$result	= pg_query(DBi::_getConnection(), $sql);
+			if (!$result) {
+				$msg = " Error on db execution (delete table jer_dd_recovery): ".pg_last_error(DBi::_getConnection());
+				debug_log(__METHOD__
+					. $msg . PHP_EOL
+					. $sql
+					, logger::ERROR
+				);
+				$response->msg = $msg;
+				$response->errors[] = 'failed deleting jer_dd_recovery table';
+
+				return $response; // return error here !
+			}
+
+		// response OK
+			$response->result		= true;
+			$response->msg			= 'OK. Request done successfully';
+			$response->file_size	= filesize($sql_file) . ' Bytes';
+
+
+		return $response;
+	}//end build_recovery_version_file
+
+
+
+	/**
+	* RESTORE_JER_DD_RECOVERY_FROM_FILE
+	* Import the SQL file creating table 'jer_dd_recovery'
+	* Source file is a SQL string file located at /dedalo/install/db/jer_dd_recovery.sql
+	* @return object $response
+	*/
+	public static function restore_jer_dd_recovery_from_file() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// config
+			$config = self::get_config();
+
+		// sql_file: jer_dd_recovery.sql
+			$sql_file = DEDALO_ROOT_PATH . '/install/db/jer_dd_recovery.sql.gz';
+			if (!file_exists($sql_file)) {
+				$msg = " Error on table restore. File do not exists: ".pg_last_error(DBi::_getConnection());
+				debug_log(__METHOD__
+					. $msg . PHP_EOL
+					. 'sql_file: ' . $sql_file
+					, logger::ERROR
+				);
+				$response->msg = $msg;
+				$response->errors[] = 'source sql_file do not exists';
+
+				return $response; // return error here !
+			}
+
+		// command
+			$command = 'gunzip -c ' . $sql_file . ' | '
+					  . DB_BIN_PATH . 'psql -d '.DEDALO_DATABASE_CONN.' '.$config->host_line.' '.$config->port_line. ' -U '.DEDALO_USERNAME_CONN;
+
+			debug_log(__METHOD__
+				." Executing terminal DB command " . PHP_EOL
+				.to_string($command) . PHP_EOL
+				, logger::WARNING
+			);
+
+			// exec command
+			$command_res = shell_exec($command);
+
+			debug_log(__METHOD__
+				." Exec response (shell_exec) " . PHP_EOL
+				.to_string($command_res) . PHP_EOL
+				, logger::WARNING
+			);
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done successfully';
+
+
+		return $response;
+	}//end restore_jer_dd_recovery_from_file
+
+
+
 }//end class install
