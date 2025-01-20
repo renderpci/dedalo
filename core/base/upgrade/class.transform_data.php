@@ -2371,4 +2371,105 @@ class transform_data {
 	}//end portalize_data
 
 
+
+	/**
+	* MOVE_DATA_BETWEEN_MATRIX_TABLES
+	* Get specific data from a table and insert in other table
+	* Delete previous data.
+	* @param array $json_files
+	* [
+	*	"utoponymy1_to_hierarchy.json", ..
+	* ]
+	* @return bool
+	*/
+	public static function move_data_between_matrix_tables( array $json_files) : bool {
+
+
+		debug_log(__METHOD__ . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			. " CONVERTING ... " . PHP_EOL
+			. " move_data_between_matrix_tables - json_files: " . json_encode($json_files) . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			, logger::WARNING
+		);
+
+		$path = DEDALO_CORE_PATH.'/base/transform_definition_files/move_to_table/';
+		// get transform map from files
+			// [{
+			//		"section_tipo": "utoponymy1",
+			//		"source_table": "matrix_list",
+			//		"target_table": "matrix_hierarchy"
+			//	}]
+			$ar_transform_map = [];
+			foreach ($json_files as $current_json_file) {
+				$contents			= file_get_contents($path.$current_json_file);
+				$transform_map		= json_decode($contents);
+				foreach ($transform_map as $transform_object) {
+					$ar_transform_map[] = $transform_object;
+				}
+			}
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->table = '';
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
+		// iterate items
+		foreach ($ar_transform_map as $item) {
+
+			$section_tipo	= $item->section_tipo;
+			$source_table	= $item->source_table;
+			$target_table	= $item->target_table;
+
+			// Move rows between tables
+				// select only section_id, section_tipo and datos, id columns could exist in the target_table and the constrain would fail.
+				$str_query = PHP_EOL.sanitize_query("
+					INSERT INTO $target_table(\"section_id\", \"section_tipo\", \"datos\")
+					(
+						SELECT \"section_id\", \"section_tipo\", \"datos\"
+						FROM $source_table
+						WHERE \"section_tipo\" = '$section_tipo'
+					);
+				");
+
+				$result = pg_query(DBi::_getConnection(), $str_query);
+				if($result===false) {
+					// error case
+					debug_log(__METHOD__
+						." Error Processing SQL request in move_data_between_matrix_tables ". PHP_EOL
+						. pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. 'str_query: '.to_string($str_query)
+						, logger::ERROR
+					);
+					return false;
+				}
+
+			// Delete the origin data
+				$delete_str_query = PHP_EOL.sanitize_query("
+					DELETE FROM $source_table
+					WHERE \"section_tipo\" = '$section_tipo';
+				");
+
+				$result = pg_query(DBi::_getConnection(), $delete_str_query);
+				if($result===false) {
+					// error case
+					debug_log(__METHOD__
+						." Error Processing SQL request in move_data_between_matrix_tables ". PHP_EOL
+						. pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. 'delete_str_query: '.to_string($delete_str_query)
+						, logger::ERROR
+					);
+					return false;
+				}
+		}//end foreach ($ar_transform_map as $item)
+
+		return true;
+	}//end move_data_between_matrix_tables
+
+
 }//end class transform_data
