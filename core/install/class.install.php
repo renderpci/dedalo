@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * INSTALL
 *
@@ -364,7 +364,7 @@ class install extends common {
 	* TO_UPDATE
 	* @return object $response
 	*/
-	public static function to_update() {
+	public static function to_update() : object {
 
 		$response = install::set_install_status('installed');
 
@@ -379,7 +379,7 @@ class install extends common {
 	* Creates a clean install database and file
 	* @return object $response
 	*/
-	public static function build_install_version() {
+	public static function build_install_version() : object {
 
 		// set timeout in seconds
 		set_time_limit(600); // 10 minutes (10*60)
@@ -387,6 +387,7 @@ class install extends common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
 
 		// CLI msg
 			if ( running_in_cli()===true ) {
@@ -410,6 +411,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// clean ontology (structure)
 			// CLI msg
@@ -421,6 +425,9 @@ class install extends common {
 			$call_response = install::clean_ontology();
 			if ($call_response->result===false) {
 				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
 			}
 
 		// clean counters (truncate all counters to force re-create later)
@@ -434,6 +441,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// clean general tables ($to_clean_tables)
 			// CLI msg
@@ -446,6 +456,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// create extensions (unaccent, pg_trgm ..)
 			// CLI msg
@@ -457,6 +470,9 @@ class install extends common {
 			$call_response = install::create_extensions();
 			if ($call_response->result===false) {
 				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
 			}
 
 		// clean table matrix_hierarchy (remove non to-preserve TLD's)
@@ -476,6 +492,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// create default main project
 			// CLI msg
@@ -487,6 +506,9 @@ class install extends common {
 			$call_response = install::create_main_project();
 			if ($call_response->result===false) {
 				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
 			}
 
 		// create default main profiles
@@ -500,6 +522,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// create default test_record
 			// CLI msg
@@ -512,6 +537,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// import_hierarchy_main_records (matrix_hierarchy_main records)
 			// CLI msg
@@ -523,6 +551,9 @@ class install extends common {
 			$call_response = install::import_hierarchy_main_records();
 			if ($call_response->result===false) {
 				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
 			}
 
 		// import toponymy hierarchies
@@ -581,6 +612,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// build install DDBB to default compressed psql file
 			// CLI msg
@@ -593,10 +627,15 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// response
 			$response->result	= true;
-			$response->msg		= 'OK. The current database \''.DEDALO_DATABASE_CONN.'\' has been cloned to \''.$config->db_install_name.'\' and exported a install copy to \''.$config->target_file_path_compress.'\'';
+			$response->msg		= empty($response->errors)
+				? 'OK. The current database \''.DEDALO_DATABASE_CONN.'\' has been cloned to \''.$config->db_install_name.'\' and exported a install copy to \''.$config->target_file_path_compress.'\''
+				: 'Warning: Request done with errors';
 
 
 		return $response;
@@ -608,7 +647,7 @@ class install extends common {
 	* OPTIMIZE_DATABASE
 	* @return object $response
 	*/
-	public static function optimize_database() {
+	public static function optimize_database() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1854,6 +1893,7 @@ class install extends common {
 
 		return $response;
 	}//end build_install_db_file
+
 
 
 	/**

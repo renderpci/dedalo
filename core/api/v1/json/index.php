@@ -123,7 +123,7 @@ $global_start_time = hrtime(true);
 	}
 
 
-// recovery mode
+// recovery mode (fixed in in config_core)
 	// rqo->recovery_mode is set automatically by data_manager.request_config from environment page_globals
 	// to preserve the recovery status across API calls
 	// @see dd_core_api->start

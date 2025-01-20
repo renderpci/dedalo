@@ -947,6 +947,20 @@ class section extends common {
 
 		// matrix table. Note that this function fallback to real section if virtual section don't have table defined
 			$matrix_table = common::get_matrix_table_from_tipo($tipo);
+			if (empty($matrix_table)) {
+				debug_log(__METHOD__
+					. " Error on save: invalid matrix_table! . Ignored order" . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' section_tipo: ' . $this->tipo . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $this->mode . PHP_EOL
+					. ' lang: ' . $this->lang
+					, logger::ERROR
+				);
+				throw new Exception("Error Processing Request. Unable to get matrix_table from tipo ($this->tipo - $this->section_id)", 1);
+				return null;
+			}
 
 
 		if (!empty($this->section_id) && (int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD

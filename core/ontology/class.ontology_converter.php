@@ -414,8 +414,8 @@ class ontology_converter {
 
 		// model. Get the model tld and id
 			if( !empty($model) && $model!=='null' ){
-				$model_section_id	= RecordObj_dd::get_id_from_tipo( $model );
-				$model_tld			= RecordObj_dd::get_prefix_from_tipo( $model );
+				$model_section_id	= get_section_id_from_tipo( $model );
+				$model_tld			= get_tld_from_tipo( $model );
 				$model_section_tipo	= ontology::map_tld_to_target_section_tipo( $model_tld );
 
 				$model_locator = new locator();
