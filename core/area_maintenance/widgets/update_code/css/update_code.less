@@ -63,27 +63,24 @@
 }//end update_code
 
 
-//modal styles
+// modal styles
+.widget_update_code_modal {
 
-
-.widget_update_code_modal{
-
-	.modal_content{
+	.modal_content {
 		width: 500px;
+		max-width: 100%;
 	}
 
-	.widget_update_code {
-		font-size: 1.3rem;
-	}
-
-	.body{
+	.body {
 		display: flex;
 		justify-content: center;
-		.files_container{
+		font-size: 1.2rem;
+
+		.files_container {
 			text-align: left;
 			margin-top: 3rem;
 
-			.file_container{
+			.file_container {
 				padding-top: .5rem;
 				padding-bottom: .5rem;
 				border-bottom: 1px #dddddd solid;
@@ -94,37 +91,33 @@
 						margin-right: 0.5rem;
 					}
 				}
-				.value{
+				.value {
 					color: #a4a4a4;
 				}
 			}
 
-			.file_container:last-child{
+			.file_container:last-child {
 				border-bottom: none;
 			}
 		}
 	}
 
-	.footer{
+	.footer {
+		position: relative;
+		display: block;
 		text-align: center;
 		margin-top: 2rem;
+		min-height: 5rem;
+
+		pre {
+			text-align: left;
+			margin: 2rem;
+			display: inline-flex;
+		}
+
+		.spinner {
+			margin: 0px;
+			top: 2rem;
+		}
 	}
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
