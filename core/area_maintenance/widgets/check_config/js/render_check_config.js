@@ -380,6 +380,9 @@ const render_recovery_mode = (self) => {
 								build_autoload	: false,
 								destroy			: false
 							})
+							// refresh URL (remove possible recovery param to prevent infinite loop)
+							const URL = window.location.href.split("recovery")[0];
+							window.history.pushState({}, document.title, URL );
 						}
 					)
 				}
