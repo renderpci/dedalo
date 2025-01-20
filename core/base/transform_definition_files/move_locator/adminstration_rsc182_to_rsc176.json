@@ -1,0 +1,27 @@
+[{
+	"old":"rsc182",
+	"new": "rsc176",
+	"type":"section",
+	"perform":["move_tld"],
+	"add_data_to_new_section":[
+		{
+			"fn":"transform_data::set_move_identification_value",
+			"options":{
+				"action"				: "new_only_once",
+				"section_tipo"			: "rsc740",
+				"from_component_tipo"	: "rsc24",
+				"type"					: "dd151",
+				"component_tipo"		: "rsc743",
+				"value": {
+					"lg-cat": ["Document administratiu"],
+					"lg-deu": ["Administratives Dossier"],
+					"lg-ell": ["διοικητική ρεκόρ"],
+					"lg-eng": ["Administrative record"],
+					"lg-fra": ["Dossier administratif"],
+					"lg-ita": ["Fascicolo amministrativo"],
+					"lg-spa": ["Expediente administrativo"]
+				}
+			}
+		}],
+	"info": "Old Administrative record section => New Document section"
+}]
