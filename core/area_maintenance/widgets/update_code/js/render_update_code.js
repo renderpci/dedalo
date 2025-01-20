@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {run_service_worker,run_worker_cache} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 
@@ -256,7 +257,7 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// show info modal
-						render_info( result )
+						render_info_modal( self, result )
 
 					// remove spinner
 					e.target.classList.remove('lock')
@@ -413,12 +414,17 @@ const render_build_version = function(self, content_data, body_response){
 
 
 /**
-* RENDER_INFO
+* RENDER_INFO_MODAL
 * Render modal with the options list
+* @param object self
+* 	widget instance
 * @param object versions_info
 * @return HTMLElement modal
 */
-const render_info = function( versions_info ){
+const render_info_modal = function( self, versions_info ){
+
+	// blur any selection
+		document.activeElement.blur();
 
 	// header
 		const header = ui.create_dom_element({
@@ -439,6 +445,7 @@ const render_info = function( versions_info ){
 			parent			: body
 		})
 
+	// files
 		const files = versions_info.files
 		const files_length = files.length
 		for (let i = 0; i < files_length; i++) {
@@ -495,15 +502,7 @@ const render_info = function( versions_info ){
 			})
 
 			version_label.prepend(input_radio)
-		}//end for
-
-		// error input
-		const error_input = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'error',
-			text_node		: '',
-			parent			: body
-		})
+		}//end for (let i = 0; i < files_length; i++)
 
 	// footer
 		const footer = ui.create_dom_element({
@@ -511,48 +510,100 @@ const render_info = function( versions_info ){
 			class_name 		: 'content'
 		})
 
-		// Update button
-			const user_option_ok = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'success',
-				inner_html		: get_label.update || 'Update',
-				parent			: footer
+		// response
+		const response = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'response content'
+		})
+
+		if (files_length===0) {
+
+			// No updated found
+
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'content',
+				inner_html		: 'No updates available for your version.',
+				parent			: response
 			})
-			const click_handler = async (e) => {
-				e.stopPropagation()
 
-				const file_active = files.find(el => el.active === true)
+			ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'content',
+				inner_html		: JSON.stringify(versions_info, null, 2),
+				parent			: response
+			})
 
-				// data_manager
-				const api_response = await data_manager.request({
-					use_worker	: true,
-					body		: {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'widget_request',
-						source	: {
-							type	: 'widget',
-							model	: 'update_code',
-							action	: 'update_code'
-						},
-						options	: {
-							file: file_active
-						}
-					}
+		}else{
+
+			// button_update
+				const button_update = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'success',
+					inner_html		: get_label.update || 'Update',
+					parent			: footer
 				})
-			}
-			user_option_ok.addEventListener('click', click_handler)
+				const click_handler = async (e) => {
+					e.stopPropagation()
 
-		// cancel button
-			const user_option_cancel = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning ',
-				inner_html		: get_label.cancel || 'Cancel',
-				parent			: footer
-			})
-			user_option_cancel.addEventListener('click', async function(e){
-				e.stopPropagation()
-				modal.close();
-			})
+					if (!confirm(get_label.sure || 'Sure?')) {
+						return
+					}
+
+					const file_active = files.find(el => el.active === true)
+
+					button_update.classList.add('hide')
+					body.classList.add('loading')
+
+					// spinner
+					const spinner = ui.create_dom_element({
+						element_type	: 'pre',
+						class_name		: 'spinner',
+						parent			: footer
+					})
+
+					response.innerHTML = 'Updating. Please wait'
+
+					// update_code
+					const api_response = await self.update_code(file_active)
+
+					button_update.classList.remove('hide')
+					body.classList.remove('loading')
+
+					// spinner
+					spinner.remove()
+
+					if (!api_response.result || api_response.errors?.length) {
+						response.innerHTML = api_response.errors.length
+							? api_response.errors.join('<br>')
+							: api_response.msg || 'Unknown error on API update_code'
+					}else{
+						response.innerHTML = api_response.msg || 'OK'
+					}
+				}
+				button_update.addEventListener('click', click_handler)
+				dd_request_idle_callback(
+					() => {
+						button_update.focus()
+					}
+				)
+
+			// cancel_button
+				// const cancel_button = ui.create_dom_element({
+				// 	element_type	: 'button',
+				// 	class_name		: 'warning ',
+				// 	inner_html		: get_label.cancel || 'Cancel',
+				// 	parent			: footer
+				// })
+				// const click_cancel_handler = (e) => {
+				// 	e.stopPropagation()
+				// 	modal.close();
+				// }
+				// cancel_button.addEventListener('click', click_cancel_handler)
+		}
+
+	// response add at end (after buttons)
+		footer.appendChild(response)
 
 	// modal
 		const modal = ui.attach_to_modal({
@@ -568,7 +619,7 @@ const render_info = function( versions_info ){
 
 
 	return modal
-}//end render_info
+}//end render_info_modal
 
 
 

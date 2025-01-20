@@ -121,12 +121,44 @@ update_code.prototype.get_code_update_info = async (server) => {
 		}
 	})
 	if(SHOW_DEBUG===true) {
-		console.log('))) get_code_update_info update_code api_response:', api_response);;
+		console.log('))) get_code_update_info update_code api_response:', api_response);
 	}
 
 
 	return api_response
 }//end get_code_update_info
+
+
+
+/**
+* UPDATE_CODE
+* Call code remote server API and update the code passing the selected file info
+* @return object api_response
+*/
+update_code.prototype.update_code = async (file_active) => {
+
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'widget_request',
+			source	: {
+				type	: 'widget',
+				model	: 'update_code',
+				action	: 'update_code'
+			},
+			options	: {
+				file: file_active
+			}
+		}
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) update_code update_code api_response:', api_response);
+	}
+
+
+	return api_response
+}//end update_code
 
 
 
