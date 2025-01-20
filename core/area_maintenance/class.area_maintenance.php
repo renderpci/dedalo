@@ -168,6 +168,19 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
+		// move_to_portal
+			$item = new stdClass();
+				$item->id		= 'move_to_portal';
+				$item->type		= 'widget';
+				$item->label	= 'Move to portal';
+				$item->value	= (object)[
+					'body' => 'Move locator defined map items from source (e.g. rsc194) to target (e.g. rsc197) adding new section_id based in the last section_id of destiny.<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
+							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+					'files' => area_maintenance::get_definitions_files( 'move_to_portal' )
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 		// build_structure_css
 			// $item = new stdClass();
@@ -1886,6 +1899,66 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end move_locator
+
+
+
+	/**
+	* MOVE_TO_PORTAL
+	* Transform Dédalo data from all tables replacing tipos
+	* using selected JSON file map
+	* Is called from widget 'move_to_portal' as process
+	* @param object $options
+	* {
+	* 	files_selected : array ['finds_numisdata279_to_tchi1.json']
+	* }
+	* @return object $response
+	*/
+	public static function move_to_portal(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// options
+			$files_selected = $options->files_selected;
+			if (empty($files_selected)) {
+				$response->errors[] = 'empty files_selected';
+				return $response;
+			}
+
+		// files
+			$definitions_files	= area_maintenance::get_definitions_files( 'move_to_portal' );
+
+			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
+				return in_array($el->file_name, $files_selected);
+			});
+			if (empty($json_files)) {
+				$response->errors[] = 'json_files not found';
+				return $response;
+			}
+
+			// ar_file_name
+			$ar_file_name = array_values(
+				array_map(function($el){
+					return $el->file_name;
+				}, $json_files)
+			);
+
+
+			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
+			$result = transform_data::portalize_data(
+				$ar_file_name
+			);
+
+		$response->result	= $result;
+		$response->msg		= ($result===false)
+			? 'Error. changes_in_locators failed'
+			: 'OK. request done successfully';
+
+
+		return $response;
+	}//end move_to_portal
 
 
 
