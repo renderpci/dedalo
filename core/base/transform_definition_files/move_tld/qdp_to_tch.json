@@ -17,16 +17,25 @@
 	{"old":"qdp168"	,"new": "tch168"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Técnica"},
 	{"old":"qdp50"	,"new": "tch50"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Proyecto"},
 
-
 	{"old":"qdp192"	,"new": "tch192"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Conservador/a"},
 
 	{"old":"qdp440"	,"new": "tch440"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Valoración"},
 	{"old":"qdp58"	,"new": "tch58"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Descripción relevante"},
+
 	{"old":"qdp24"	,"new": "tch24"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Inscripciones"},
+
+	{"old":"qdp427"	,"new": "rsc1093"	,"type":"section"	,"perform":["replace_tipo"]	,"info":"Inscripciones"},
+	{"old":"qdp429"	,"new": "rsc1095"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"id"},
+	{"old":"qdp422"	,"new": "rsc1096"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Publico"},
+	{"old":"qdp432"	,"new": "rsc1097"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Proyecto"},
+	{"old":"qdp430"	,"new": "rsc1098"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Posición"},
+	{"old":"qdp431"	,"new": "rsc1099"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Inscripción"},
+	{"old":"qdp433"	,"new": "rsc1104"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Observaciones"},
+	{"old":"qdp421"	,"new": "rsc1100"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Imagen"},
+
 	{"old":"qdp55"	,"new": "tch55"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Personas"},
 	{"old":"qdp180"	,"new": "tch180"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Observaciones"},
 	{"old":"qdp234"	,"new": "tch234"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Marca"},
-
 
 	{"old":"qdp149"	,"new": "tch149"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Medidas"},
 
@@ -55,6 +64,8 @@
 
 	{"old":"qdp170"	,"new": "tch170"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Autor del registro"},
 
+	{"old":"qdp179"	,"new": "tch179"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Partes del conjunto, bienes relacionados"},
+
 	{"old":"rsc941"	,"new": "rsc978"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Intervención número"},
 	{"old":"rsc942"	,"new": "rsc979"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Fecha"},
 	{"old":"rsc943"	,"new": "rsc943"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"--Estado de conservación"},
@@ -62,6 +73,8 @@
 	{"old":"rsc944"	,"new": "rsc944"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"--Urgencia de intervención"},
 	{"old":"rsc945"	,"new": "rsc945"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"--Patologías"},
 	{"old":"rsc947"	,"new": "rsc986"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Proyecto"},
+	{"old":"qdp506"	,"new": "tch507"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Estado de conservación"},
+
 	{"old":"qdp507"	,"new": "tch507"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Inspecciones / Estado de conservación"},
 	{"old":"qdp508"	,"new": "tch508"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Recomendaciones y parámetros de conservación preventiva (HR, Tª, Lux...)"},
 	{"old":"qdp150"	,"new": "tch150"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Restaurada"},
@@ -94,9 +107,48 @@
 	{"old":"qdp455"	,"new": "hierarchy92"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Localización"},
 	{"old":"qdp200"	,"new": "hierarchy42"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"marco espacial"},
 	{"old":"qdp201"	,"new": "hierarchy31"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"geolocation"},
-
+	{"old":"qdp233"	,"new": "hierarchy55"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"Proyecto"},
 
 	{"old":"rsc669"	,"new": "trademark1"	,"type":"section"	,"perform":["replace_tipo"]	,"info":"Marcas"},
 	{"old":"rsc671"	,"new": "hierarchy22"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"id"},
-	{"old":"rsc672"	,"new": "hierarchy25"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"marca"}
+	{"old":"rsc672"	,"new": "hierarchy25"	,"type":"component"	,"perform":["replace_tipo"]	,"info":"marca"},
+
+
+	{"old":"qdp191"	,"new": "tch191"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Forma de ingreso"},
+	{"old":"qdp187"	,"new": "tch187"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Colector/a"},
+	{"old":"qdp190"	,"new": "tch190"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Fuente de ingreso"},
+	{"old":"qdp182"	,"new": "tch163"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Lugar de recuperación"},
+	{"old":"qdp194"	,"new": "tch194"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Fecha de ingreso/referencia recuperación"},
+	{"old":"qdp154"	,"new": "tch154"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Observaciones"},
+	{"old":"qdp438"	,"new": "tch438"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Notas"},
+	{"old":"qdp245"	,"new": "tch245"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Municipio"},
+	{"old":"qdp243"	,"new": "tch243"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Geolocalizaciones (recuperación, uso, fabricación, ...)"},
+	{"old":"qdp244"	,"new": "tch244"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Geolocalización"},
+	{"old":"qdp193"	,"new": "tch193"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Documentación de recuperación"},
+
+	{"old":"qdp212"	,"new": "rsc1303"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Fabricante"}
+	,
+	{"old":"qdp242"	,"new": "rsc1332"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Graduación / escala / ratio"},
+
+	{"old":"qdp231"	,"new": "rsc368"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Publicación"},
+	{"old":"qdp446"	,"new": "rsc1354"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Uso"},
+	{"old":"qdp445"	,"new": "rsc1353"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Precisiones de uso"},
+	{"old":"qdp447"	,"new": "rsc1344"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "¿Cómo se usa?"},
+	{"old":"qdp444"	,"new": "rsc1352"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Contexto de uso"},
+	{"old":"qdp449"	,"new": "rsc1346"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "¿Quien lo usa?"},
+	{"old":"qdp450"	,"new": "rsc1347"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "¿Cuando se usa?"},
+	{"old":"qdp451"	,"new": "rsc1345"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "¿Donde se usa?"},
+	{"old":"qdp448"	,"new": "rsc1392"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Fuente de información"},
+
+	{"old":"qdp147"	,"new": "rsc965"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Recomendaciones y parámetros de conservación preventiva (HR, Tª, Lux...)"},
+
+	{"old":"qdp497"	,"new": "rsc943"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Estado de conservación inicial"},
+	{"old":"qdp498"	,"new": "tch498"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Interveciones histórica"},
+	{"old":"qdp504"	,"new": "rsc980"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Técnico"},
+	{"old":"qdp499"	,"new": "rsc946"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Descripción de las alteraciones"},
+	{"old":"qdp500"	,"new": "rsc981"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Descripción de antiguas intervenciones"},
+	{"old":"qdp501"	,"new": "rsc984"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Documentación técnica"},
+	{"old":"qdp502"	,"new": "rsc983"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Imágenes"},
+	{"old":"qdp503"	,"new": "rsc985"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Audiovisuales"}
+
 ]
