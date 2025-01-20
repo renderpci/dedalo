@@ -6,8 +6,8 @@
 
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
-	import {render_update_ontology} from './render_update_ontology.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {render_update_ontology} from './render_update_ontology.js'
 
 
 
