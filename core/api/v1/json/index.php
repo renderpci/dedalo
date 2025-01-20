@@ -33,7 +33,7 @@ $global_start_time = hrtime(true);
 	if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD']==='OPTIONS') {
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Ignored call ' . $_SERVER['REQUEST_METHOD'];
+			$response->msg		= 'Ignored preflight call ' . $_SERVER['REQUEST_METHOD'];
 		error_log('Error: '.$response->msg);
 		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		exit( 0 );
