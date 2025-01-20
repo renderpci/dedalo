@@ -1,0 +1,8 @@
+[{
+	"old":"rsc939",
+	"new": "rsc976",
+	"type":"section",
+	"perform":["move_tld"],
+	"add_data_to_new_section": null,
+	"info": "Old Conservation state record section => New Inspection section"
+}]
