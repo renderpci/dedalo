@@ -2337,8 +2337,8 @@ class transform_data {
 								$id		= $row['id'];
 								// update his time_machine with the new section
 								$strQuery	= "UPDATE $table SET tipo = $1, section_id = $2, section_tipo = $3 WHERE id = $4 ";
-								$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $target_tipo, $new_section_id, $target_section, $id ));
-								if($result===false) {
+								$change_result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $target_tipo, $new_section_id, $target_section, $id ));
+								if($change_result===false) {
 									$msg = "Failed to update time machine data ($table) - $id";
 									debug_log(__METHOD__
 										." ERROR: $msg " . PHP_EOL
