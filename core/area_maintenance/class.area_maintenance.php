@@ -146,7 +146,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->label	= 'Move TLD';
 				$item->value	= (object)[
-					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
+					'body' => 'Move TLD defined map items from source (ex. numisdata279) to target (ex. tchi1).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_tld.<br>
 							   Note that this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_tld' )
@@ -160,7 +160,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->label	= 'Move locator';
 				$item->value	= (object)[
-					'body' => 'Move locator defined map items from source (e.g. rsc194) to target (e.g. rsc197) adding new section_id based in the last section_id of destiny.<br>
+					'body' => 'Move locator defined map items from source (ex. rsc194) to target (ex. rsc197) adding new section_id based in the last section_id of destiny.<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_locator.<br>
 							   Note that this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_locator' )
@@ -174,13 +174,27 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->label	= 'Move to portal';
 				$item->value	= (object)[
-					'body' => 'Move locator defined map items from source (e.g. rsc194) to target (e.g. rsc197) adding new section_id based in the last section_id of destiny.<br>
+					'body' => 'Move data from a section to other linked section and link together with a portal (ex: Use and function components behind qdp443 to section rsc1340).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
 							   Note that this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_to_portal' )
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
+
+		// move_to_table
+			$item = new stdClass();
+				$item->id		= 'move_to_table';
+				$item->type		= 'widget';
+				$item->label	= 'Move to table';
+				$item->value	= (object)[
+					'body' => 'Move data from a table to other table (ex: move utoponymy1 to matrix_hierarchy).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_table.<br>',
+					'files' => area_maintenance::get_definitions_files( 'move_to_table' )
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
 
 		// build_structure_css
 			// $item = new stdClass();
@@ -1822,7 +1836,7 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* MOVE_locator
+	* MOVE_LOCATOR
 	* Transform Dédalo data from all tables replacing tipos
 	* using selected JSON file map
 	* Is called from widget 'move_locator' as process
@@ -1959,6 +1973,67 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end move_to_portal
+
+
+
+	/**
+	* MOVE_TO_TABLE
+	* Move data from a table to other as `utoponymy1` to `matrix_hierarchy`
+	* using selected JSON file map
+	* Is called from widget 'move_to_table' as process
+	* @param object $options
+	* {
+	* 	files_selected : array ['location_ubication1_to_hierarchy.json']
+	* }
+	* @return object $response
+	*/
+	public static function move_to_table(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// options
+			$files_selected = $options->files_selected;
+			if (empty($files_selected)) {
+				$response->errors[] = 'empty files_selected';
+				return $response;
+			}
+
+		// files
+			$definitions_files	= area_maintenance::get_definitions_files( 'move_to_table' );
+
+			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
+				return in_array($el->file_name, $files_selected);
+			});
+			if (empty($json_files)) {
+				$response->errors[] = 'json_files not found';
+				return $response;
+			}
+
+			// ar_file_name
+			$ar_file_name = array_values(
+				array_map(function($el){
+					return $el->file_name;
+				}, $json_files)
+			);
+
+
+			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
+			$result = transform_data::move_data_between_matrix_tables(
+				$ar_file_name
+			);
+
+		$response->result	= $result;
+		$response->msg		= ($result===false)
+			? 'Error. changes_in_locators failed'
+			: 'OK. request done successfully';
+
+
+		return $response;
+	}//end move_to_table
+
 
 
 
