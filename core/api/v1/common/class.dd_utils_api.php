@@ -1773,9 +1773,9 @@ final class dd_utils_api {
 			}
 
 			$client_version = [];
-				$client_version[0] = 6; //(int)$ar_version[0];
-				$client_version[1] = 2; //(int)$ar_version[1];
-				$client_version[2] = 0; //(int)$ar_version[2];
+				$client_version[0] = (int)$ar_version[0];
+				$client_version[1] = (int)$ar_version[1];
+				$client_version[2] = (int)$ar_version[2];
 
 		// Client made a valid request.
 		// get the information to be provided to client
