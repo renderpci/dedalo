@@ -147,17 +147,12 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// build_install_version *
+		// build_database_version *
 			$item = new stdClass();
-				$item->id		= 'build_install_version';
+				$item->id		= 'build_database_version';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('build_install_version') ?? 'Build install version';
-				$item->value	= (object)[
-					'source_db'		=> DEDALO_DATABASE_CONN,
-					'target_db'		=> install::$db_install_name,
-					'target_file'	=> '/install/db/'.install::$db_install_name.'.pgsql.gz'
-				];
+				$item->label	= label::get_label('build_database_version') ?? 'Build database version';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -1980,57 +1975,28 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* CREATE_JER_DD_RECOVERY
-	* Creates (delete previous if already exists) the recovery table 'jer_dd_recovery'
-	* containing only 'dd' tld for use in 'recovery_mode'
+	* BUILD_RECOVERY_VERSION_FILE
+	* Alias of install::build_recovery_version_file
+	* Creates the recovery file 'jer_dd_recovery.sql' from current 'jer_dd' table
+	* @return object $response
+	*/
+	public static function build_recovery_version_file() {
+
+		return install::build_recovery_version_file();
+	}//end build_recovery_version_file
+
+
+
+	/**
+	* RESTORE_JER_DD_RECOVERY_FROM_FILE
+	* Alias of install::restore_jer_dd_recovery_from_file
 	* Source file is a SQL string file located at /dedalo/install/db/jer_dd_recovery.sql
 	* @return object $response
 	*/
-	public static function create_jer_dd_recovery() {
+	public static function restore_jer_dd_recovery_from_file() {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-			$response->errors	= [];
-
-		try {
-
-			$sql_file	= DEDALO_ROOT_PATH . '/install/db/jer_dd_recovery.sql';
-			$sql_string	= file_get_contents($sql_file);
-			if (!$sql_string) {
-				$response->msg = 'Error getting jer_dd_recovery.sql file from install directory';
-				debug_log(__METHOD__
-					. " $response->msg " . PHP_EOL
-					. ' sql_file:' . to_string($sql_file)
-					, logger::ERROR
-				);
-				$response->errors[] = 'File unavailable';
-				return $response;
-			}
-
-			$result = pg_query(DBi::_getConnection(), $sql_string);
-			if (!$result) {
-				$response->msg = 'Error getting executing jer_dd_recovery.sql file';
-				debug_log(__METHOD__
-					. " $response->msg " . PHP_EOL
-					. ' sql_string:' . to_string($sql_string)
-					, logger::ERROR
-				);
-				$response->errors[] = 'File unavailable';
-				return $response;
-			}
-
-			$response->result	= true;
-			$response->msg		= 'OK. Request done successfully';
-
-		} catch (Exception $e) {
-			$response->msg = 'Caught exception: ' . $e->getMessage();
-			$response->errors[] = 'Exception occurred';
-		}
-
-
-		return $response;
-	}//end create_jer_dd_recovery
+		return install::restore_jer_dd_recovery_from_file();
+	}//end restore_jer_dd_recovery_from_file
 
 
 
