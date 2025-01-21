@@ -236,12 +236,12 @@ class update_code {
 
 			// extract files from zip. (!) Note that 'ZipArchive' needs to be installed in PHP to allow work
 				// CLI msg
-				if ( running_in_cli()===true ) {
-					print_cli((object)[
-						'msg'		=> 'Extracting zip file',
-						'memory'	=> dd_memory_usage()
-					]);
-				}
+					if ( running_in_cli()===true ) {
+						print_cli((object)[
+							'msg'		=> 'Extracting zip file',
+							'memory'	=> dd_memory_usage()
+						]);
+					}
 				$zip = new ZipArchive;
 				$res = $zip->open($target_file);
 				if ($res!==true) {
@@ -265,12 +265,12 @@ class update_code {
 
 			// rsync
 				// CLI msg
-				if ( running_in_cli()===true ) {
-					print_cli((object)[
-						'msg'		=> 'Updating files',
-						'memory'	=> dd_memory_usage()
-					]);
-				}
+					if ( running_in_cli()===true ) {
+						print_cli((object)[
+							'msg'		=> 'Updating files',
+							'memory'	=> dd_memory_usage()
+						]);
+					}
 				// source: unzip directory name. Note that this folder was zip using `build_version_code` method
 				// resulting file is: 6.4.0_dedalo.zip (server) => dedalo_code.zip (downloaded) => /dedalo_code (unzipped)
 				$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. 'dedalo_code';
@@ -280,7 +280,7 @@ class update_code {
 				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
 				$output		= shell_exec($command);
 				if ($output===null) {
-					$response->msg .= 'Error executing rsync command. source: '.$source;
+					$response->msg .= 'Error executing RSYNC command. source: '.$source;
 					debug_log(__METHOD__
 						. $response->msg  . PHP_EOL
 						. ' command: ' . to_string($command) . PHP_EOL
@@ -319,12 +319,12 @@ class update_code {
 
 			// update JAVASCRIPT labels
 				// CLI msg
-				if ( running_in_cli()===true ) {
-					print_cli((object)[
-						'msg'		=> 'Updating js lang files',
-						'memory'	=> dd_memory_usage()
-					]);
-				}
+					if ( running_in_cli()===true ) {
+						print_cli((object)[
+							'msg'		=> 'Updating js lang files',
+							'memory'	=> dd_memory_usage()
+						]);
+					}
 				$ar_langs = DEDALO_APPLICATION_LANGS;
 				foreach ($ar_langs as $lang => $label) {
 					backup::write_lang_file($lang);
@@ -332,10 +332,6 @@ class update_code {
 
 			// version info. Get from new downloaded file 'version.inc'
 				$new_version_info = DEDALO_VERSION . ' Build ' . DEDALO_BUILD;
-
-			// response OK
-				// $response->result	= $result;
-				// $response->msg		= 'OK. Updated Dédalo code successfully. ' . $new_version_info;
 
 			// debug
 				debug_log(__METHOD__
@@ -377,11 +373,11 @@ class update_code {
 
 	/**
 	* BUILD_VERSION_FROM_GIT_MASTER
-	* Called from dd_list.js -> dd.build_version_from_git_master()
+	* Called by client widget code via the API
 	* @param object $options
 	* @return object $response
 	*/
-	public static function build_version_from_git_master(object $options) : object {
+	public static function build_version_from_git_master( object $options ) : object {
 
 		$start_time = start_time();
 
@@ -392,6 +388,7 @@ class update_code {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= '';
+				$response->errors	= [];
 
 		// options
 			$branch = $options->branch ?? 'master';
@@ -409,11 +406,12 @@ class update_code {
 						.' ERROR: build_version_code output: '.$output
 						, logger::ERROR
 					);
+					$response->errors[] = 'shell_exec execution failed';
 					return $response;
 				}
 
 				$response->result = true;
-				$response->msg = 'Ok. code versions was built';
+				$response->msg = 'OK. code versions was built';
 
 			} catch (Exception $e) {
 
@@ -424,6 +422,7 @@ class update_code {
 					. ' response: ' . to_string($response)
 					, logger::ERROR
 				);
+				$response->errors[] = 'Exception occurred: '.$e->getMessage();
 			}
 
 		// debug
@@ -433,14 +432,20 @@ class update_code {
 				$response->debug = $debug;
 			}
 
+
 		return $response;
-	}//end export_str
+	}//end build_version_from_git_master
 
 
 
 	/**
 	* BUILD_VERSION_CODE
-	* Called from dd_list.js -> dd.build_version_from_git_master()
+	* Creates the GIT archive form given branch
+	* executing a custom PHP command
+	* Private: do not call directly from API
+	* @see update_code::build_version_from_git_master
+	* @param string $branch
+	* @return string|true
 	*/
 	private static function build_version_code( string $branch ) : string|true {
 
@@ -453,17 +458,16 @@ class update_code {
 		// `/dedalo/code/6/6.4/
 			$target_path = update_code::set_code_path();
 
-		// build de code
-		// target
-			$file_verion = update_code::get_file_version();
-			$target = $target_path .'/'.$file_verion.'.zip';
+		// build code target
+			$file_verion	= update_code::get_file_version();
+			$target			= $target_path .'/'.$file_verion.'.zip';
 
-
-		if ($branch==='developer') {
-			$development_path = update_code::set_development_path();
-			$target = $development_path .'/dedalo_development.zip';
-			$branch = 'v'.$major_version.'_developer';
-		}
+		// developer branch case
+			if ($branch==='developer') {
+				$development_path	= update_code::set_development_path();
+				$target				= $development_path .'/dedalo_development.zip';
+				$branch				= 'v'.$major_version.'_developer';
+			}
 
 		// source
 			$source = DEDALO_CODE_SERVER_GIT_DIR;
@@ -486,6 +490,7 @@ class update_code {
 			? true
 			: 'Return:'.PHP_EOL.'result code: '. ($result_code ?? null). PHP_EOL . 'output: ' . json_encode($output, JSON_PRETTY_PRINT);
 
+
 		return $result;
 	}//end build_version_code
 
@@ -494,9 +499,9 @@ class update_code {
 	/**
 	* GET_CODE_PATH
 	* Get current version path for code
-	* Check if exists, and return the path or false
-	* to create the path for the current version, it use major, and minor as
-	* `/dedalo/code/6/6.4/
+	* Check if exists, and return the path or false.
+	* To create the path for the current version, it uses major, and minor
+	* such as /dedalo/code/6/6.4/
 	* @param array|null $version = null
 	* @return string|false $path
 	*/
@@ -517,8 +522,7 @@ class update_code {
 	/**
 	* SET_CODE_PATH
 	* Set current version path for code
-	* Check if exist, else create it.
-	* if the directory doesn't exist it will be created.
+	* Check if it exists, otherwise create it
 	* @return string|false $path
 	*/
 	public static function set_code_path() : string|false {
@@ -538,9 +542,9 @@ class update_code {
 	/**
 	* GET_FILE_VERSION
 	* Get current version path for code
-	* Check if exists, and return the path or false
-	* to create the path for the current version, it use major, and minor as
-	* `/dedalo/code/6/6.4/
+	* Check if exists, and return the path or false.
+	* To create the path for the current version, it use major, and minor
+	* such as /dedalo/code/6/6.4/
 	* @param array|null $version = null
 	* @return string|false $path
 	*/
@@ -558,7 +562,6 @@ class update_code {
 	* SET_DEVELOPMENT_PATH
 	* Set current version path for development code, nightly version
 	* Check if exist, else create it.
-	* if the directory doesn't exist it will be created.
 	* @return string|false $path
 	*/
 	public static function set_development_path() : string|false {
@@ -598,8 +601,8 @@ class update_code {
 	* GET_CODE_UPDATE_INFO
 	* Collect local code files and set the valid files from given code version
 	* Called by API.
-	* Merge all information in a object with the available code files
-	* @param object $options
+	* Merge all information into one object using the available code files
+	* @param array $client_version
 	* @return object $response
 	* {
 	*	result : {
@@ -759,9 +762,9 @@ class update_code {
 		}
 
 		// result
-		$result = new stdClass();
-			$result->info	= new stdClass();
-			$result->files	= [];
+			$result = new stdClass();
+				$result->info	= new stdClass();
+				$result->files	= [];
 
 		// info
 			$date			= dd_date::get_now_as_iso_timestamp();
@@ -800,7 +803,7 @@ class update_code {
 
 		// response
 		$response->result	= $result;
-		$response->msg		= 'OK. request done';
+		$response->msg		= 'OK. Request done successfully';
 
 
 		return $response;
