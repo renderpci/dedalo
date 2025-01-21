@@ -145,6 +145,7 @@ core/common/css/structure.css
 # core/common/js/lang/*
 
 .vscode
+.venv
 libs_dev
 
 package-lock.json
