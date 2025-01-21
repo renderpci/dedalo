@@ -148,16 +148,18 @@ const get_content_data = function(self) {
 		})
 
 		// button_search. Show and hide all search elements
-			const button_search = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light search',
-				title			: get_label.find || "Search",
-				parent			: buttons_container
-			})
-			button_search.addEventListener('mousedown', function(e){
-				e.stopPropagation()
-				event_manager.publish('toggle_search_panel_' + self.caller.id)
-			})
+			if (self.caller?.session_save) {
+				const button_search = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light search',
+					title			: get_label.find || "Search",
+					parent			: buttons_container
+				})
+				button_search.addEventListener('mousedown', function(e){
+					e.stopPropagation()
+					event_manager.publish('toggle_search_panel_' + self.caller.id)
+				})
+			}
 
 		// button_new . Call API to create new section and navigate to the new record
 			const section_button_new = section_buttons.find(el => el.model==='button_new')
