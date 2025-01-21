@@ -2,6 +2,7 @@
 	{"old":"qdp7"	,"new": "tch7" 		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Section real"},
 	{"old":"qdp1"	,"new": "tch1" 		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Objetos"},
 	{"old":"qdp100"	,"new": "tch100" 	,"type":"section"	,"perform":["replace_tipo"]	,"info":"Fotografías"},
+	{"old":"qdp178"	,"new": "tch178" 	,"type":"section"	,"perform":["replace_tipo"]	,"info":"Conjuntos Obsoleto"},
 	{"old":"qdp47"	,"new": "tch47"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"id"},
 	{"old":"qdp48"	,"new": "tch48"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Publicable"},
 	{"old":"qdp62"	,"new": "tch62"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Estado de revisión"},
