@@ -1040,6 +1040,7 @@ abstract class component_common extends common {
 	/**
 	* LOAD_COMPONENT_DATO
 	* Get data once from matrix about section_id, dato
+	* @see component_relation_common->load_component_dato()
 	* @return bool
 	*/
 	protected function load_component_dato() : bool {

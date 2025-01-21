@@ -949,7 +949,7 @@ class section extends common {
 			$matrix_table = common::get_matrix_table_from_tipo($tipo);
 			if (empty($matrix_table)) {
 				debug_log(__METHOD__
-					. " Error on save: invalid matrix_table! . Ignored order" . PHP_EOL
+					. " Error on save: invalid matrix_table! Ignored save order" . PHP_EOL
 					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
 					. ' section_tipo: ' . $this->tipo . PHP_EOL
 					. ' tipo: ' . $this->tipo . PHP_EOL
@@ -958,7 +958,7 @@ class section extends common {
 					. ' lang: ' . $this->lang
 					, logger::ERROR
 				);
-				throw new Exception("Error Processing Request. Unable to get matrix_table from tipo ($this->tipo - $this->section_id)", 1);
+				throw new Exception("Error Processing Request. Unable to get matrix_table from tipo ($tipo - $this->section_id)", 1);
 				return null;
 			}
 
