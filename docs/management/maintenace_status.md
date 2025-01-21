@@ -1,4 +1,6 @@
-# Momentarily disable Dédalo access to user interface
+# Maintenance mode
+
+### Temporarily disable Dédalo access to the user interface
 
 Before a new installation or database upgrade of Dédalo server, it is highly recommended to change the Dédalo state to "maintenance" to prevent data changes, conflicts or user interaction with the new features before it is ready.
 
