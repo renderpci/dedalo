@@ -45,9 +45,16 @@ $updates->$v = new stdClass();
 			<h1>3. Exec update scripts.</h1>
 			Run the script below in maintenance mode.
 
-			<h1>4. Move data for qdp installations to tch.</h1>
+			<h1>4. Only for qdp installations: Move data for qdp installations to tch.</h1>
 			If you have qdp tld defined in your configuration file, this update will move your data to the standard tch model.<br>
-			If you want to continue using qdp instead tch, uncheck the update scripts.(run_scipts 1 to 5)<br>
+			Review your config definition before run the update, is <strong>mandatory</strong> to add the tld ‘tch’ to your DEDALO_PREFIX_TIPOS config values and update your Ontology afterwards.<br><br>
+			<p>
+				Manually add 'ontology' to your config.php file values of var 'DEDALO_PREFIX_TIPOS' as
+			</p>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				define('DEDALO_PREFIX_TIPOS', ['dd',...,'tch']);
+			</pre><br>
+			Note: If you want to continue using qdp instead tch, uncheck the update scripts. (run_scipts from 1 to 5)<br>
 			In future releases the qdp definition will not be supported by the community, you can use and maintain this ontology on your own.<br>
 		";
 		$updates->$v->alert_update[] = $alert;
