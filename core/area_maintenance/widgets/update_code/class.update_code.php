@@ -271,7 +271,9 @@ class update_code {
 						'memory'	=> dd_memory_usage()
 					]);
 				}
-				$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo_code' from 'dedalo_code.zip'
+				// source: unzip directory name. Note that this folder was zip using `build_version_code` method
+				// resulting file is: 6.4.0_dedalo.zip (server) => dedalo_code.zip (downloaded) => /dedalo_code (unzipped)
+				$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. 'dedalo_code';
 				$target		= DEDALO_ROOT_PATH;
 				$exclude	= ' --exclude="*/config*" --exclude="media" ';
 				$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
@@ -467,7 +469,7 @@ class update_code {
 			$source = DEDALO_CODE_SERVER_GIT_DIR;
 
 		// command @see https://git-scm.com/docs/git-archive
-			$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo{$major_version}_code/ $branch > $target ";
+			$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo_code/ $branch > $target ";
 
 		// debug
 			debug_log(__METHOD__
