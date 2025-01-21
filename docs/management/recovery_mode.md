@@ -1,11 +1,13 @@
 # Recovery mode
 
+!!! info "Support version >= 6.4.0"
+
 The Dédalo Ontology is the core of the application. If it is damaged or misconfigured for any reason, it can cause the application to crash and the administrator will not have the working interface to fix it.
 For these cases, Dédalo implements a special mode called "recovery mode" that bypasses the current ontology definition with a minimal emergency version that is enough to accomplish technical administrative tasks.
 
 ## Activate recovery mode
 
-!!! The Recovery status is saved in config_core file as: `define('DEDALO_RECOVERY_MODE', true);`
+!!! note "The recovery status is saved in config_core file as: `define('DEDALO_RECOVERY_MODE', true);`"
 
 #### 1. From area maintenance
 If you have access to area maintenance panel, you can activate recovery mode from `Check config' tab.
@@ -15,7 +17,7 @@ If you have access to area maintenance panel, you can activate recovery mode fro
 #### 2. Forcing from URL
 If yo do not have access to Area admin panel, you can force the recovery mode building a URL with the recovery key as parameter, like:
 
-`https://mydomain/dedalo/core/page/?tipo=dd88&recovery=MyRecoveryKey`
+> `https://mydomain/dedalo/core/page/?tipo=dd88&recovery=MyRecoveryKey`
 
 To allow force recovery mode, you must have access to the configuration file and set the DEDALO_RECOVERY_KEY to a safe value like:
 ```php
