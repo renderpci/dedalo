@@ -204,6 +204,7 @@ class component_relation_common extends component_common {
 	/**
 	* LOAD MATRIX DATA
 	* Get data once from matrix about parent, dato
+	* Overwrites component_common->load_componen_dato()
 	* @return bool
 	*/
 	protected function load_component_dato() : bool {
