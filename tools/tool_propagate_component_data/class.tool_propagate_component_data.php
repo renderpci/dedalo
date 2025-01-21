@@ -19,7 +19,8 @@ class tool_propagate_component_data extends tool_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.'] ';
+			$response->errors	= [];
 
 		// options
 			$section_tipo			= $options->section_tipo;
@@ -28,39 +29,27 @@ class tool_propagate_component_data extends tool_common {
 			$lang					= $options->lang;
 			$propagate_data_value	= $options->propagate_data_value ?? null;
 			$bulk_process_label		= $options->bulk_process_label ?? null;
+			$sqo					= $options->sqo ?? null;
+
+		// sqo check
+			if (empty($sqo)) {
+				$response->errors[] = 'Invalid sqo';
+				$response->msg		.= 'Empty options sqo property';
+				return $response;
+			}
 
 		// short vars
-			$mode			= 'list';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$with_relations	= in_array($model, component_relation_common::get_components_with_relations());
 
 		// components mono-value case. Prevent to propagate 'add'
 			if ($action==='add' && in_array($model, component_common::$components_monovalue)) {
+				$response->errors[] = 'Invalid add action for component';
 				$response->msg = 'Sorry, action \'add\' is not allowed for this component';
 				return $response;
 			}
 
-		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= section::build_sqo_id($section_tipo);
-			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-
-				// sqo create
-					$sqo = new search_query_object();
-						$sqo->set_mode($mode);
-						$sqo->set_section_tipo([$section_tipo]);
-
-				debug_log(__METHOD__
-					. " Auto-created SQO from section: $section_tipo" . PHP_EOL
-					. to_string($sqo)
-					, logger::WARNING
-				);
-
-			}else{
-
-				// sqo from session
-				$original_sqo	= $_SESSION['dedalo']['config']['sqo'][$sqo_id];
-				$sqo			= clone($original_sqo);
-			}
+		// RECORDS. Search records with given SQO
 			// reset sqo limit/offset
 			$sqo->limit		= 0;
 			$sqo->offset	= 0;
@@ -203,7 +192,9 @@ class tool_propagate_component_data extends tool_common {
 
 		// response
 			$response->result			= true;
-			$response->msg				= "$action data of '$component_label' in section '$section_tipo' successfully.";
+			$response->msg				= empty($response->errors)
+				? "$action data of '$component_label' in section '$section_tipo' successfully."
+				: "Warning: $action data of '$component_label' in section '$section_tipo' done with errors.";
 			$response->action			= $action;
 			$response->section_label	= $section_label;
 			$response->total			= $total;

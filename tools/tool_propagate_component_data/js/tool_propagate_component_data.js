@@ -5,7 +5,7 @@
 
 
 // import needed modules
-	import { dd_console} from '../../../core/common/js/utils/index.js'
+	import {dd_console,clone} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
@@ -180,6 +180,22 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'propagate_component_data')
 
+	// section. Get current SQO
+		const section	= self.caller.caller?.caller
+		const sqo		= section.rqo && section.rqo.sqo
+			? clone(section.rqo.sqo)
+			: null
+
+		if (!sqo) {
+			console.error('Invalid SQO from section:', section);
+			alert("Error. Invalid SQO");
+			return
+		}
+
+		// clean sqo
+		sqo.offset	= 0
+		sqo.limit	= 0
+
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
@@ -193,7 +209,8 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 				action					: action,
 				lang					: lang,
 				propagate_data_value	: propagate_data_value,
-				bulk_process_label 		: bulk_process_label
+				bulk_process_label		: bulk_process_label,
+				sqo						: sqo
 			}
 		}
 
