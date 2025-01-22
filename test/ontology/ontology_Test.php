@@ -1355,6 +1355,80 @@ final class ontology_test extends TestCase {
 
 
 
+	/**
+	* TEST_compare_jer_dd_to_matrix
+	* This test compares jer_dd data to equivalent in Ontology matrix
+	* to check the integrity of the Ontology data across all pipe line
+	* @return void
+	* @todo WORKING PROGRESS !
+	*/
+		// public function DES_test_compare_jer_dd_to_matrix() {
+
+		// 	$section_tipo	= 'ontology40';
+		// 	$section_id		= 78;
+
+		// 	$response		= ontology_converter::matrix_to_jer_dd($section_tipo, $section_id);
+		// 	$jer_dd_row		= $response->result;
+		// 	$RecordObj_dd	= new RecordObj_dd($jer_dd_row->terminoID);
+		// 	foreach ($jer_dd_row as $key => $value) {
+		// 		if ($key==='terminoID') {
+		// 			continue;
+		// 		}
+		// 		$method = 'set_' . $key;
+		// 		$RecordObj_dd->{$method}($value);
+		// 	}
+
+		// 	$response = ontology_converter::jer_dd_to_matrix($jer_dd_row, DEDALO_SECTION_ID_TEMP.'1');
+		// 	$section = $response->result;
+
+		// 		// dump($section->dato, ' section->dato ++ '.to_string());
+		// 		// dump($response, ' --------------- /// jer_dd_to_matrix response ++ '.to_string());
+
+		// 	// $sql = 'SELECT * FROM "matrix_ontology" WHERE section_id = '.$section_id.' AND section_tipo = \''.$section_tipo.'\'';
+		// 	// $matrix_result = pg_query(DBi::_getConnection(), $sql);
+		// 	// while($matrix_row = pg_fetch_object($matrix_result)) {break;}
+
+
+
+		// 	/*
+		// 	$sql_query		= 'SELECT * FROM "jer_dd" ORDER BY tld, "terminoID" ';
+		// 	$jer_dd_result	= pg_query(DBi::_getConnection(), $sql_query);
+
+		// 	while($jer_dd_row = pg_fetch_object($jer_dd_result)) {
+
+		// 		$tld		= get_tld_from_tipo($jer_dd_row->terminoID);
+		// 		$section_id	= get_section_id_from_tipo($jer_dd_row->terminoID);
+
+		// 		$sql = 'SELECT * FROM "matrix_ontology" WHERE section_id = '.$section_id.' AND datos#>>\'{components,ontology7,dato,lg-nolan}\' = \'["'.$tld.'"]\' LIMIT 1';
+		// 		$term_result = pg_query(DBi::_getConnection(), $sql);
+		// 		while($matrix_row = pg_fetch_object($term_result)) {break;}
+		// 		if (!isset($matrix_row)) {
+		// 			debug_log(__METHOD__
+		// 				. " Error. term $tld - $section_id not found in matrix_ontology" . PHP_EOL
+		// 				. ' terminoID: ' . to_string($jer_dd_row->terminoID) . PHP_EOL
+		// 				. ' tld: ' . to_string($tld) . PHP_EOL
+		// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
+		// 				, logger::DEBUG
+		// 			);
+		// 			continue;
+		// 		}
+		// 		dump($matrix_row, ' matrix_row ++ '.to_string());
+		// 		$datos = json_decode($matrix_row->datos);
+		// 				dump($datos, ' datos ++ '.to_string());
+
+		// 		// parent
+		// 			$jer_dd_parent = $jer_dd_row->parent;
+		// 			$matrix_parent = array_find($matrix_row->relations ?? [], function($el){
+		// 				return $el->from_component_tipo==='ontology15';
+		// 			});
+
+
+		// 		break;
+
+		// 	}//end while
+		// 	*/
+		// }//end test_compare_jer_dd_to_matrix
+
 
 
 }//end class

@@ -3,7 +3,7 @@
 * ONTOLOGY_CONVERTER
 * Manages the ontology format conversions.
 * Used to move data from matrix to jer_dd or vice-versa
-* WORKING PROGRESS !
+* @todo WORKING PROGRESS !
 */
 class ontology_converter {
 
