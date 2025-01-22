@@ -9,7 +9,7 @@
 			{
 				"source_tipo": "qdp187",
 				"target_tipo": "tch187",
-				"info": "Colector/a"
+				"info": "Colector"
 			},
 			{
 				"source_tipo": "qdp190",
@@ -18,13 +18,13 @@
 			},
 			{
 				"source_tipo": "qdp182",
-				"target_tipo": "tch243",
+				"target_tipo": "tch163",
 				"info": "Lugar de recuperación"
 			},
 			{
 				"source_tipo": "qdp194",
 				"target_tipo": "tch194",
-				"info": "Fecha de ingreso/referencia recuperación"
+				"info": "Fecha de ingreso referencia recuperación"
 			},
 			{
 				"source_tipo": "qdp154",
@@ -60,6 +60,42 @@
 		"portal": "tch551",
 		"source_section": "qdp1",
 		"target_section": "tch10"
+	},
+	{
+		"components": [
+			{
+				"source_tipo": "qdp212",
+				"target_tipo": "rsc1303",
+				"info": "Fabricante"
+			}
+		],
+		"portal": "tch212",
+		"source_section": "qdp1",
+		"target_section": "rsc1299"
+	},
+	{
+		"components": [
+			{
+				"source_tipo": "qdp242",
+				"target_tipo": "rsc1332",
+				"info": "Graduación / escala / ratio"
+			}
+		],
+		"portal": "tch242",
+		"source_section": "qdp1",
+		"target_section": "rsc1327"
+	},
+	{
+		"components": [
+			{
+				"source_tipo": "qdp231",
+				"target_tipo": "rsc368",
+				"info": "Publicación"
+			}
+		],
+		"portal": "tch172",
+		"source_section": "qdp1",
+		"target_section": "rsc332"
 	},
 	{
 		"components": [
@@ -111,6 +147,18 @@
 	{
 		"components": [
 			{
+				"source_tipo": "qdp147",
+				"target_tipo": "rsc965",
+				"info": "Recomendaciones y parámetros de conservación preventiva (HR, Tª, Lux...)"
+			}
+		],
+		"portal": "tch508",
+		"source_section": "qdp1",
+		"target_section": "rsc949"
+	},
+	{
+		"components": [
+			{
 				"source_tipo": "qdp497",
 				"target_tipo": "rsc943",
 				"info": "Estado de conservación inicial"
@@ -154,5 +202,17 @@
 		"portal": "tch507",
 		"source_section": "qdp1",
 		"target_section": "rsc976"
+	},
+	{
+		"components": [
+			{
+				"source_tipo": "qdp538",
+				"target_tipo": "rsc1226",
+				"info": "Otros codigos"
+			}
+		],
+		"portal": "tch538",
+		"source_section": "qdp1",
+		"target_section": "rsc1221"
 	}
 ]
