@@ -1306,7 +1306,7 @@ class area_maintenance extends area_common {
 						return $response;
 					}
 				}
-				$file_name		= 'dedalo6_code.zip';
+				$file_name		= 'dedalo_code.zip';
 				$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
 				$put_contents	= file_put_contents($target_file, $contents);
 				if (!$put_contents) {
@@ -1360,7 +1360,7 @@ class area_maintenance extends area_common {
 				}
 				$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
 					? DEDALO_SOURCE_VERSION_LOCAL_DIR .'/dedalo-master' // like 'dedalo-master'
-					: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo6_code' from 'dedalo6_code.zip'
+					: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo_code' from 'dedalo_code.zip'
 				$target		= DEDALO_ROOT_PATH;
 				$exclude	= ' --exclude="*/config*" --exclude="media" ';
 				$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
