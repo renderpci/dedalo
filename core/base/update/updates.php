@@ -236,9 +236,9 @@ $updates->$v = new stdClass();
 			<br>This update prepares the transition to version 6.4.
 			<br>Activate ‘maintenance mode’ before proceeding.
 
-			<h1>1. Review the config definition.</h1>
+			<h1>1. Review the config definition before run the update.</h1>
 
-			It is mandatory to add the tld ‘ontology’ to your DEDALO_PREFIX_TIPOS config values and update your Ontology afterwards.
+			It is <strong>mandatory</strong> to add the tld ‘ontology’ to your DEDALO_PREFIX_TIPOS config values and update your Ontology afterwards.
 			<p>
 				Manually add 'ontology' to your config.php file values of var 'DEDALO_PREFIX_TIPOS' as
 			</p>
@@ -251,6 +251,18 @@ $updates->$v = new stdClass();
 
 			<h1>3. Exec update scripts.</h1>
 			Run the script below in maintenance mode.
+
+			<h1>4. Only for qdp installations: Move data for qdp installations to tch.</h1>
+			If you have qdp tld defined in your configuration file, this update will move your data to the standard tch model.<br>
+			Review your config definition before run the update, is <strong>mandatory</strong> to add the tld ‘tch’ to your DEDALO_PREFIX_TIPOS config values and update your Ontology afterwards.<br><br>
+			<p>
+				Manually add 'tch' to your config.php file values of var 'DEDALO_PREFIX_TIPOS' as
+			</p>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				define('DEDALO_PREFIX_TIPOS', ['dd',...,'tch']);
+			</pre><br>
+			Note: If you want to continue using qdp instead tch, uncheck the update scripts. (run_scipts from 1 to 5)<br>
+			In future releases the qdp definition will not be supported by the community, you can use and maintain this ontology on your own.<br>
 		";
 		$updates->$v->alert_update[] = $alert;
 
@@ -287,6 +299,124 @@ $updates->$v = new stdClass();
 				END $$;
 			');
 
+		// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+
+			// QDP tld to TCH, show it only if the installation has qpd in its config.
+			$tld = DEDALO_PREFIX_TIPOS;
+			if( in_array('qdp', $tld) ){
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+
+				$ar_tables = [
+					// 'new_matrix'
+					'matrix',
+					'matrix_activities',
+					'matrix_activity',
+					'matrix_counter',
+					'matrix_dataframe',
+					'matrix_dd',
+					'matrix_hierarchy',
+					'matrix_hierarchy_main',
+					'matrix_indexations',
+					'matrix_layout',
+					'matrix_layout_dd',
+					'matrix_list',
+					'matrix_nexus',
+					'matrix_nexus_main',
+					'matrix_notes',
+					'matrix_profiles',
+					'matrix_projects',
+					'matrix_stats',
+					'matrix_time_machine'
+				];
+
+				// 1 move data to other sections and portalize the new section
+
+					$json_files =[
+						'qdp_portalize_to_tch.json'
+					];
+
+					$script_obj = new stdClass();
+						$script_obj->info			= "Move data from qdp portals to tch new model";
+						$script_obj->script_class	= "transform_data";
+						$script_obj->script_method	= "portalize_data";
+						$script_obj->script_vars	= [
+							$json_files
+						]; // Note that only ONE argument encoded is sent
+
+					$updates->$v->run_scripts[] = $script_obj;
+
+				// 2 move locators to other sections
+					$json_files =[
+						'adminstration_rsc182_to_rsc176.json',
+						'restoration_to_inspections_rsc939_to_rsc976.json'
+					];
+
+					$script_obj = new stdClass();
+						$script_obj->info			= "Move data from qdp locators to tch new model";
+						$script_obj->script_class	= "transform_data";
+						$script_obj->script_method	= "changes_in_locators";
+						$script_obj->script_vars	= [
+							$ar_tables,
+							$json_files
+						]; // Note that only ONE argument encoded is sent
+
+					$updates->$v->run_scripts[] = $script_obj;
+
+				// 3 move tld's from qdp to tch
+					$json_files =[
+						'administrative_to_document_rsc182_to_rsc176.json',
+						'qdp_to_tch.json'
+					];
+
+					$script_obj = new stdClass();
+						$script_obj->info			= "Change tld's from qdp portals to tch";
+						$script_obj->script_class	= "transform_data";
+						$script_obj->script_method	= "changes_in_tipos";
+						$script_obj->script_vars	= [
+							$ar_tables,
+							$json_files
+						]; // Note that only ONE argument encoded is sent
+					$updates->$v->run_scripts[] = $script_obj;
+
+				// 4 move data between matrix
+					$json_files =[
+						'utoponymy1_to_matrix_hierachy.json'
+					];
+					require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+					$script_obj = new stdClass();
+						$script_obj->info			= "Move data between matrix tables as utoponymy1";
+						$script_obj->script_class	= "transform_data";
+						$script_obj->script_method	= "move_data_between_matrix_tables";
+						$script_obj->script_vars	= [
+							$json_files
+						]; // Note that only ONE argument encoded is sent
+					$updates->$v->run_scripts[] = $script_obj;
+
+				// Update the relations table
+					$ar_tables_to_update = [
+						'matrix',
+						'matrix_activities',
+						'matrix_dataframe',
+						'matrix_dd',
+						'matrix_hierarchy',
+						'matrix_indexations',
+						'matrix_list',
+						'matrix_nexus',
+						'matrix_notes',
+						'matrix_projects'
+					];
+					$table_to_update = new stdClass();
+						$table_to_update->tables =  implode(',', $ar_tables_to_update);
+					$script_obj = new stdClass();
+						$script_obj->info			= "Recreate the relations table with new tipos";
+						$script_obj->script_class	= "area_maintenance";
+						$script_obj->script_method	= "regenerate_relations";
+						$script_obj->script_vars	= [
+							$table_to_update
+						]; // Note that only ONE argument encoded is sent
+					$updates->$v->run_scripts[] = $script_obj;
+			}//end if( in_array('qdp', $tld) )
 
 
 $v=630; #####################################################################################
