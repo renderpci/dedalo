@@ -96,7 +96,7 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 		// area maintenance widgets
 		[
 			'add_hierarchy',
-			'build_install_version',
+			'build_database_version',
 			'check_config',
 			'counters_status',
 			'database_info',
