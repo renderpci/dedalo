@@ -49,7 +49,7 @@ $updates->$v = new stdClass();
 			If you have qdp tld defined in your configuration file, this update will move your data to the standard tch model.<br>
 			Review your config definition before run the update, is <strong>mandatory</strong> to add the tld ‘tch’ to your DEDALO_PREFIX_TIPOS config values and update your Ontology afterwards.<br><br>
 			<p>
-				Manually add 'ontology' to your config.php file values of var 'DEDALO_PREFIX_TIPOS' as
+				Manually add 'tch' to your config.php file values of var 'DEDALO_PREFIX_TIPOS' as
 			</p>
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
 				define('DEDALO_PREFIX_TIPOS', ['dd',...,'tch']);
