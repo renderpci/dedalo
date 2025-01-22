@@ -202,5 +202,17 @@
 		"portal": "tch507",
 		"source_section": "qdp1",
 		"target_section": "rsc976"
+	},
+	{
+		"components": [
+			{
+				"source_tipo": "qdp538",
+				"target_tipo": "rsc1226",
+				"info": "Otros codigos"
+			}
+		],
+		"portal": "tch538",
+		"source_section": "qdp1",
+		"target_section": "rsc1221"
 	}
 ]
