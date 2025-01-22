@@ -111,7 +111,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->label	= 'Move TLD';
 				$item->value	= (object)[
-					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
+					'body' => 'Move TLD defined map items from source (ex. numisdata279) to target (ex. tchi1).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_tld.<br>
 							   Note that this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_tld' )
@@ -125,7 +125,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->label	= 'Move locator';
 				$item->value	= (object)[
-					'body' => 'Move locator defined map items from source (e.g. rsc194) to target (e.g. rsc197) adding new section_id based in the last section_id of destiny.<br>
+					'body' => 'Move locator defined map items from source (ex. rsc194) to target (ex. rsc197) adding new section_id based in the last section_id of destiny.<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_locator.<br>
 							   Note that this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_locator' )
@@ -137,9 +137,9 @@ class area_maintenance extends area_common {
 			$item = new stdClass();
 				$item->id		= 'move_to_portal';
 				$item->type		= 'widget';
-				$item->label	= 'Move locator';
+				$item->label	= 'Move to portal';
 				$item->value	= (object)[
-					'body' => 'Move locator defined map items from source (e.g. rsc194) to target (e.g. rsc197) adding new section_id based in the last section_id of destiny.<br>
+					'body' => 'Move data from a section to other linked section and link together with a portal (ex: Use and function components behind qdp443 to section rsc1340).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
 							   Note that this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_to_portal' )
