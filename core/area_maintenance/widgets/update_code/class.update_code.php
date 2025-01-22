@@ -263,7 +263,7 @@ class update_code {
 					, logger::DEBUG
 				);
 
-			// rsync
+			// Install the new code
 				// CLI msg
 					if ( running_in_cli()===true ) {
 						print_cli((object)[
@@ -275,29 +275,217 @@ class update_code {
 				// resulting file is: 6.4.0_dedalo.zip (server) => dedalo_code.zip (downloaded) => /dedalo_code (unzipped)
 				$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. 'dedalo_code';
 				$target		= DEDALO_ROOT_PATH;
-				$exclude	= ' --exclude="*/config*" --exclude="media" ';
-				$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
-				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
-				$output		= shell_exec($command);
-				if ($output===null) {
-					$response->msg .= 'Error executing RSYNC command. source: '.$source;
+
+				// upgrade files
+				// copy downloaded folder to httpdocs like ../tmp/dedalo_code => ../httpdocs/dedalo_code
+					$command = "cp -R {$source} {$target}_code";
+					exec($command, $output, $result_code);
+					if ($result_code!=0) {
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+						debug_log(__METHOD__
+							. $response->msg  . PHP_EOL
+							. ' command: ' . to_string($command) . PHP_EOL
+							. ' output: ' . to_string($output) . PHP_EOL
+							. ' result_code: ' . to_string($result_code)
+							, logger::ERROR
+						);
+						return $response;
+					}
 					debug_log(__METHOD__
-						. $response->msg  . PHP_EOL
-						. ' command: ' . to_string($command) . PHP_EOL
-						. ' output: ' . to_string($output)
-						, logger::ERROR
+						. " exec command" . PHP_EOL
+						. " command " . to_string($command) . PHP_EOL
+						. " output " . to_string($output) . PHP_EOL
+						. " result_code type " . gettype($result_code) . PHP_EOL
+						. " result_code " . to_string($result_code)
+						, logger::WARNING
 					);
-					$response->errors[]	= 'Unable run RSYNC command';
-					return $response;
-				}
-				$result->rsync = [
-					"command: " . $command,
-					"output: "  . str_replace(["\n","\r"], '<br>', $output),
-				];
-				debug_log(__METHOD__
-					." RSYNC command done ". PHP_EOL .to_string($command)
-					, logger::DEBUG
-				);
+
+				// copy config files
+					$files_to_copy = [
+						'config/config.php',
+						'config/config_db.php',
+						'config/config_areas.php',
+						'config/config_core.php'
+					];
+					foreach ($files_to_copy as $file_name) {
+
+						if (!copy("{$target}/$file_name", "{$target}_code/{$file_name}")){
+							$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error on copy file: '.$file_name;
+							debug_log(__METHOD__
+								. " copy file error " . PHP_EOL
+								. " source " . "{$target}/$file_name" . PHP_EOL
+								. " target " . "{$target}_code/{$file_name}"
+								, logger::ERROR
+							);
+							return $response;
+						}else{
+							debug_log(__METHOD__
+								. " copy file success " . PHP_EOL
+								. " source " . "{$target}/$file_name" . PHP_EOL
+								. " target " . "{$target}_code/{$file_name}"
+								, logger::WARNING
+							);
+						}
+					}
+
+				// move media directory
+					$command = "mv {$target}/media {$target}_code/media";
+					exec($command, $output, $result_code);
+					if ($result_code!=0) {
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+						debug_log(__METHOD__
+							. $response->msg  . PHP_EOL
+							. ' command: ' . to_string($command) . PHP_EOL
+							. ' output: ' . to_string($output) . PHP_EOL
+							. ' result_code: ' . to_string($result_code)
+							, logger::ERROR
+						);
+						return $response;
+					}
+					debug_log(__METHOD__
+						. " exec command" . PHP_EOL
+						. " command " . to_string($command) . PHP_EOL
+						. " output " . to_string($output) . PHP_EOL
+						. " result_code type " . gettype($result_code) . PHP_EOL
+						. " result_code " . to_string($result_code)
+						, logger::WARNING
+					);
+
+				// tools
+					$dd_tools = [
+						'tool_cataloging',
+						'tool_common',
+						'tool_dd_label',
+						'tool_dev_template',
+						'tool_diffusion',
+						'tool_export',
+						'tool_hierarchy',
+						'tool_image_rotation',
+						'tool_import_dedalo_csv',
+						'tool_import_files',
+						'tool_import_marc21',
+						'tool_import_rdf',
+						'tool_import_zotero',
+						'tool_indexation',
+						'tool_lang',
+						'tool_lang_multi',
+						'tool_media_versions',
+						'tool_numisdata_epigraphy',
+						'tool_numisdata_order_coins',
+						'tool_pdf_extractor',
+						'tool_posterframe',
+						'tool_propagate_component_data',
+						'tool_qr',
+						'tool_subtitles',
+						'tool_tc',
+						'tool_time_machine',
+						'tool_tr_print',
+						'tool_transcription',
+						'tool_update_cache',
+						'tool_upload',
+						'tool_user_admin'
+					];
+
+					$tools_src = "{$target}/tools";
+					$old_tools = dir($tools_src);
+					while(($file = $old_tools->read()) !== false) {
+						if($file === "." || $file === "..") continue;
+						if( is_dir($tools_src .'/'. $file) && !in_array($file, $dd_tools) ) {
+
+							$command = "cp -R {$tools_src}/{$file} {$target}_code/tools/{$file}";
+							exec($command, $output, $result_code);
+							if ($result_code!=0) {
+								$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+								debug_log(__METHOD__
+									. $response->msg  . PHP_EOL
+									. ' command: ' . to_string($command) . PHP_EOL
+									. ' output: ' . to_string($output) . PHP_EOL
+									. ' result_code: ' . to_string($result_code)
+									, logger::ERROR
+								);
+								return $response;
+							}
+							debug_log(__METHOD__
+								. " exec command" . PHP_EOL
+								. " command " . to_string($command) . PHP_EOL
+								. " output " . to_string($output) . PHP_EOL
+								. " result_code type " . gettype($result_code) . PHP_EOL
+								. " result_code " . to_string($result_code)
+								, logger::WARNING
+							);
+						}
+					}
+
+				// rename directory old version such as 'dedalo' => '../backup/code/dedalo_6.3.1'
+					$backup_code_path = DEDALO_BACKUP_PATH . '/code';
+					create_directory($backup_code_path);
+					$command = "mv $target {$backup_code_path}/dedalo_" .DEDALO_VERSION;
+					exec($command, $output, $result_code);
+					if ($result_code!=0) {
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+						debug_log(__METHOD__
+							. $response->msg  . PHP_EOL
+							. ' command: ' . to_string($command) . PHP_EOL
+							. ' output: ' . to_string($output) . PHP_EOL
+							. ' result_code: ' . to_string($result_code)
+							, logger::ERROR
+						);
+						return $response;
+					}
+					debug_log(__METHOD__
+						. " exec command" . PHP_EOL
+						. " command " . to_string($command) . PHP_EOL
+						. " output " . to_string($output) . PHP_EOL
+						. " result_code type " . gettype($result_code) . PHP_EOL
+						. " result_code " . to_string($result_code)
+						, logger::WARNING
+					);
+
+				// rename new version directory to final dir such as 'dedalo_code' => 'dedalo'
+					$command = "mv {$target}_code {$target}";
+					exec($command, $output, $result_code);
+					if ($result_code!=0) {
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+						debug_log(__METHOD__
+							. $response->msg  . PHP_EOL
+							. ' command: ' . to_string($command) . PHP_EOL
+							. ' output: ' . to_string($output) . PHP_EOL
+							. ' result_code: ' . to_string($result_code)
+							, logger::ERROR
+						);
+						return $response;
+					}
+					debug_log(__METHOD__
+						. " exec command" . PHP_EOL
+						. " command " . to_string($command) . PHP_EOL
+						. " output " . to_string($output) . PHP_EOL
+						. " result_code type " . gettype($result_code) . PHP_EOL
+						. " result_code " . to_string($result_code)
+						, logger::WARNING
+					);
+
+				// set permissions
+					$command = "chmod -R 750 {$target}";
+					exec($command, $output, $result_code);
+					if ($result_code!=0) {
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+						debug_log(__METHOD__
+							. $response->msg  . PHP_EOL
+							. ' command: ' . to_string($command) . PHP_EOL
+							. ' output: ' . to_string($output) . PHP_EOL
+							. ' result_code: ' . to_string($result_code)
+							, logger::ERROR
+						);
+						return $response;
+					}
+					debug_log(__METHOD__
+						. " exec command" . PHP_EOL
+						. " command " . to_string($command) . PHP_EOL
+						. " output " . to_string($output) . PHP_EOL
+						. " result_code type " . gettype($result_code) . PHP_EOL
+						. " result_code " . to_string($result_code)
+						, logger::WARNING
+					);
 
 			// remove temp used files and folders
 				$command_rm_dir		= "rm -R -f $source";
