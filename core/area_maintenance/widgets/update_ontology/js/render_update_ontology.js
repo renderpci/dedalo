@@ -249,7 +249,7 @@ const get_content_data_edit = async function(self) {
 						}
 
 					// version compatibility check
-						const required_version = api_response.root_info?.properties?.version
+						const required_version = api_response.root_info?.properties?.version || null
 						if (!required_version) {
 							api_response.errors.push('Unable to get required_version from Ontology')
 						}else{
