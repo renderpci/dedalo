@@ -214,24 +214,11 @@ const get_content_data_edit = async function(self) {
 						selected_files.push(...files_filtered)
 
 					// API call
-						const api_response = await data_manager.request({
-							body		: {
-								dd_api	: 'dd_area_maintenance_api',
-								action	: 'class_request',
-								source	: {
-									action	: 'update_ontology',
-								},
-								options : {
-									server	: server,
-									files	: selected_files,
-									info 	: result.info
-								}
-							}
+						const api_response = await self.update_ontology({
+							server	: server,
+							files	: selected_files,
+							info	: result.info
 						})
-						// debug
-						if(SHOW_DEBUG===true) {
-							console.log('debug update_ontology api_response:', api_response);
-						}
 
 					// loading  remove
 						spinner.remove()
