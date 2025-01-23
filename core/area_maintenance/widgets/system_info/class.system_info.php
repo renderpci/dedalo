@@ -23,21 +23,23 @@ class system_info {
 
 			$requeriments_list = [];
 
-			// Ontology server (master.dedalo.dev)
-			$check = backup::check_remote_server();
-			$code = $check->code ?? null;
-			$requeriments_list[] = (object)[
-				'name'	=> 'Available Ontology master server',
-				'value'	=> $code===200,
-				'info'	=> 'Code: ' . $code
-			];
+			// moved to update ontology widget !
+				// Ontology server (master.dedalo.dev)
+				// $check = backup::check_remote_server();
+				// $code = $check->code ?? null;
+				// $requeriments_list[] = (object)[
+				// 	'name'	=> 'Available Ontology master server',
+				// 	'value'	=> $code===200,
+				// 	'info'	=> 'Code: ' . $code
+				// ];
 
-			// Code server (master.dedalo.dev)
-			$requeriments_list[] = (object)[
-				'name'	=> 'Available Dédalo master code server',
-				'value'	=> check_url(DEDALO_SOURCE_VERSION_URL),
-				'info'	=> 'URL: '.DEDALO_SOURCE_VERSION_URL
-			];
+			// moved to update code widget !
+				// Code server (master.dedalo.dev)
+				// $requeriments_list[] = (object)[
+				// 	'name'	=> 'Available Dédalo master code server',
+				// 	'value'	=> check_url(DEDALO_SOURCE_VERSION_URL),
+				// 	'info'	=> 'URL: '.DEDALO_SOURCE_VERSION_URL
+				// ];
 
 			// RAM
 			$total_gb	= system::get_ram();
