@@ -119,4 +119,38 @@ update_ontology.prototype.get_widget_value = async () => {
 
 
 
+/**
+* UPDATE_ONTOLOGY
+*
+* @param object options
+* {
+* 	server	: server,
+	files	: selected_files,
+	info	: result.info
+* }
+* @return object api_response
+*/
+update_ontology.prototype.update_ontology = async (options) => {
+
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'class_request',
+			source	: {
+				action	: 'update_ontology',
+			},
+			options : options
+		}
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) update_ontology update_ontology api_response:', api_response);;
+	}
+
+
+	return api_response
+}//end update_ontology
+
+
+
 // @license-end
