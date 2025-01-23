@@ -305,7 +305,7 @@ class component_geolocation extends component_common {
 	/**
 	* GET_LATITUDE
 	* Get the latitude of the component, if the data has the default data, return null
-	* @return object $diffusion_value_socrata
+	* @return float $latitude
 	*/
 	public function get_latitude() : ?float {
 
@@ -332,7 +332,7 @@ class component_geolocation extends component_common {
 	/**
 	* GET_LONGITUDE
 	* Get the longitude of the component, if the data has the default data, return null
-	* @return object $diffusion_value_socrata
+	* @return float $longitude
 	*/
 	public function get_longitude() : ?float {
 
