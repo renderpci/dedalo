@@ -326,6 +326,37 @@ class component_geolocation extends component_common {
 
 		return $latitude;
 	}//end get_latitude
+
+
+
+	/**
+	* GET_LONGITUDE
+	* Get the longitude of the component, if the data has the default data, return null
+	* @return object $diffusion_value_socrata
+	*/
+	public function get_longitude() : ?float {
+
+		$dato = $this->get_dato();
+		if (empty($dato) || empty($dato[0]) ) {
+			return null;
+		}
+
+		$dato			= $dato[0];
+		$data_longitude	= $dato->long ?? null;
+
+		if(empty($data_longitude)){
+			return null;
+		}
+		$longitude	= strval($data_longitude)==='-0.376295'
+			? null
+			: floatval($data_longitude);
+
+		return $longitude;
+	}//end get_longitude
+
+
+
+	/**
 	* GET_DIFFUSION_VALUE_SOCRATA
 	* Calculate current component diffusion value for target field in socrata
 	* Used for diffusion_mysql to unify components diffusion value call to publish in socrata
