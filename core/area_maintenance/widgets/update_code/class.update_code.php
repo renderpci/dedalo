@@ -791,6 +791,7 @@ class update_code {
 	* Called by API.
 	* Merge all information into one object using the available code files
 	* @param array $client_version
+	* 	as [6.4.0]
 	* @return object $response
 	* {
 	*	result : {
@@ -810,96 +811,98 @@ class update_code {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
-		$updates_object = update::get_updates();
+		// updates
+		// reads 'update.php' file object
+			$updates_object = update::get_updates();
 
-		$next_version				= null;
-		$next_version_update_from	= null;
-		$upper_versions				= [];
-		foreach ( $updates_object as $update ) {
+			$next_version				= null;
+			$next_version_update_from	= null;
+			$upper_versions				= [];
+			foreach ( $updates_object as $update ) {
 
-			// check the next valid major version
-			// only next major version is take in consideration
-			// as 7.0.0 but any other minor or path versions as 7.0.1 or 7.2.0
-			if( $update->version_major===$client_version[0]+1 &&
-				$update->version_medium===0 &&
-				$update->version_minor===0){
-					// set the next major as possible option
-					$next_version = [
-						$update->version_major,
-						$update->version_medium,
-						$update->version_minor,
-					];
-					// get the valid version from the major version can update itself.
-					$next_version_update_from = [
-						$update->update_from_major,
-						$update->update_from_medium,
-						$update->update_from_minor,
-					];
-					// reset any other major versions
-					// when client is in version 6.4.0 is not possible update to version 8.0.0
-					// only version 7.0.0 is available as a possible update.
+				// check the next valid major version
+				// only next major version is take in consideration
+				// as 7.0.0 but any other minor or path versions as 7.0.1 or 7.2.0
+				if( $update->version_major===$client_version[0]+1 &&
+					$update->version_medium===0 &&
+					$update->version_minor===0){
+						// set the next major as possible option
+						$next_version = [
+							$update->version_major,
+							$update->version_medium,
+							$update->version_minor,
+						];
+						// get the valid version from the major version can update itself.
+						$next_version_update_from = [
+							$update->update_from_major,
+							$update->update_from_medium,
+							$update->update_from_minor,
+						];
+						// reset any other major versions
+						// when client is in version 6.4.0 is not possible update to version 8.0.0
+						// only version 7.0.0 is available as a possible update.
+						$upper_versions = [];
+				}
+
+				// check the next valid minor version
+				// only next minor version is take in consideration
+				// as 6.5.0 but any other path versions as 6.5.1 or 6.6.1
+				// this check overwrite previous major check
+				if( $update->version_major===$client_version[0] &&
+					$update->version_medium===$client_version[1]+1 &&
+					$update->version_minor===0){
+						// set it as next version
+						$next_version = [
+							$update->version_major,
+							$update->version_medium,
+							$update->version_minor,
+						];
+						// get the valid version from the minor version can update itself.
+						$next_version_update_from = [
+							$update->update_from_major,
+							$update->update_from_medium,
+							$update->update_from_minor,
+						];
+					// reset any other major or minor versions
+					// when client is in version 6.2.9 is not possible update to version 7.0.0
+					// only version 6.3.0 is available as a possible update.
 					$upper_versions = [];
-			}
+				}
+				// check any other version bellow current client versions
+				// remove they as possibles. Downgrade is not available in Dédalo updates
+				// Go ahead!!!
+				$add = false;
+				// major
+				if( (int)$update->version_major > (int)$client_version[0] ){
+					$add = true;
+				}
+				// minor
+				if( $add === false &&
+					(int)$update->version_major >= (int)$client_version[0] &&
+				    (int)$update->version_medium > (int)$client_version[1]
+				){
+					$add = true;
+				}
+				// path
+				if( $add === false &&
+					(int)$update->version_major >= (int)$client_version[0] &&
+				   	(int)$update->version_medium >= (int)$client_version[1] &&
+				  	(int)$update->version_minor > (int)$client_version[2]
+				){
+					$add = true;
+				}
+				// set if the version is greater than client version.
+				if ($add===true) {
 
-			// check the next valid minor version
-			// only next minor version is take in consideration
-			// as 6.5.0 but any other path versions as 6.5.1 or 6.6.1
-			// this check overwrite previous major check
-			if( $update->version_major===$client_version[0] &&
-				$update->version_medium===$client_version[1]+1 &&
-				$update->version_minor===0){
-					// set it as next version
-					$next_version = [
+					$valid_version = [
 						$update->version_major,
 						$update->version_medium,
 						$update->version_minor,
 					];
-					// get the valid version from the minor version can update itself.
-					$next_version_update_from = [
-						$update->update_from_major,
-						$update->update_from_medium,
-						$update->update_from_minor,
-					];
-				// reset any other major or minor versions
-				// when client is in version 6.2.9 is not possible update to version 7.0.0
-				// only version 6.3.0 is available as a possible update.
-				$upper_versions = [];
-			}
-			// check any other version bellow current client versions
-			// remove they as possibles. Downgrade is not available in Dédalo updates
-			// Go ahead!!!
-			$add = false;
-			// major
-			if( (int)$update->version_major > (int)$client_version[0] ){
-				$add = true;
-			}
-			// minor
-			if( $add === false &&
-				(int)$update->version_major >= (int)$client_version[0] &&
-			    (int)$update->version_medium > (int)$client_version[1]
-			){
-				$add = true;
-			}
-			// path
-			if( $add === false &&
-				(int)$update->version_major >= (int)$client_version[0] &&
-			   	(int)$update->version_medium >= (int)$client_version[1] &&
-			  	(int)$update->version_minor > (int)$client_version[2]
-			){
-				$add = true;
-			}
-			// set if the version is greater than client version.
-			if ($add===true) {
 
-				$valid_version = [
-					$update->version_major,
-					$update->version_medium,
-					$update->version_minor,
-				];
-
-				$upper_versions[] = $valid_version;
+					$upper_versions[] = $valid_version;
+				}
 			}
-		}
 
 		// check the upper_versions to remove the non valid options
 		// if the client is in the middle of the minor versions
