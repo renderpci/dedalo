@@ -2296,18 +2296,28 @@ class ontology {
 			return false;
 		}
 
-		// Get date from term info (previous 6.4 versions)
-		// sample: 'Dédalo 2024-12-31T00:00:00+01:00 Benimamet'
-		preg_match('/[0-9]{4}-[0-9]{2}-[0-9]{2}/', $term_value, $output_array);
+		// check properties (new way to declare date)
+		$properties = $RecordObj_dd->get_properties() ?? new stdClass();
+		if (isset($properties->date)) {
 
-		$date = $output_array[0] ?? ''; // as 2024-11-24
-		if (empty($date)) {
-			debug_log(__METHOD__
-				. " Unable to get date from dd1 term (2) " . PHP_EOL
-				. ' term_value: ' . to_string($term_value)
-				, logger::ERROR
-			);
-			return false;
+			// >=6.4 model
+			$date = $properties->date;
+
+		}else{
+
+			// Get date from term info (previous 6.4 versions)
+			// sample: 'Dédalo 2024-12-31T00:00:00+01:00 Benimamet'
+			preg_match('/[0-9]{4}-[0-9]{2}-[0-9]{2}/', $term_value, $output_array);
+
+			$date = $output_array[0] ?? ''; // as 2024-11-24
+			if (empty($date)) {
+				debug_log(__METHOD__
+					. " Unable to get date from dd1 term (2) " . PHP_EOL
+					. ' term_value: ' . to_string($term_value)
+					, logger::ERROR
+				);
+				return false;
+			}
 		}
 
 		$ontology_date	= new DateTime($date);
