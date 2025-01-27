@@ -883,9 +883,14 @@ final class RecordObj_dd_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_ar_parents_of_this(): void {
+		// $start_time=start_time();
 
 		$RecordObj_dd	= new RecordObj_dd('rsc85');
 		$result			= $RecordObj_dd->get_ar_parents_of_this();
+
+		// $total = exec_time_unit($start_time,'ms').' ms';
+		// dump($total, ' total time ++ '.to_string());
+		// dump($result, ' result ++ '.to_string());
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
