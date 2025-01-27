@@ -599,7 +599,7 @@ class update_code {
 				}
 
 				$response->result = true;
-				$response->msg = 'OK. code versions was built';
+				$response->msg = 'OK. The code version has been created successfully';
 
 			} catch (Exception $e) {
 

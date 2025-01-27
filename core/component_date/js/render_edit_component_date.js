@@ -289,6 +289,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			})
 		// keydown event. Prevent to fire page events like open search panel
 			input.addEventListener('keydown', function(e) {
+				e.stopPropagation()
 				if(e.key==='Tab' ){
 					ui.component.deactivate(self)
 				}
@@ -393,6 +394,7 @@ export const get_input_time_node = (i, mode, input_value, self) => {
 			})
 		// keydown event. Prevent to fire page events like open search panel
 			input.addEventListener('keydown', function(e) {
+				e.stopPropagation()
 				if(e.key==='Tab'){
 					ui.component.deactivate(self)
 					return
