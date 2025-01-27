@@ -1,8 +1,7 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestDox;
+// use PHPUnit\Framework\Attributes\TestDox;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -679,11 +678,11 @@ final class dd_api_Test extends TestCase {
 			// direct exec
 				$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 				$response = dd_core_api::{$rqo->action}($rqo);
-					// dump($response, ' test_get_relation_list response  1 ++ '.to_string());
 
 				$this->assertTrue(
 					empty($_ENV['DEDALO_LAST_ERROR']),
-					'expected running without errors'
+					'expected running without errors' . PHP_EOL
+					  .'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
 				);
 
 				$this->assertTrue(
@@ -705,7 +704,6 @@ final class dd_api_Test extends TestCase {
 					gettype($response->result->data)==='array',
 					'expected response result data type is array'
 				);
-
 	}//end test_read
 
 
@@ -927,7 +925,7 @@ final class dd_api_Test extends TestCase {
 		$section_tipo	= 'test3';
 
 		// first, create the section if not already exists
-			$current_section_id_exists = section::section_id_exists( $section_id, $section_tipo );
+			$current_section_id_exists = section::section_record_exists( $section_id, $section_tipo );
 			if ($current_section_id_exists===false) {
 				// new section
 				$section = section::get_instance(

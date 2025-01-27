@@ -13,6 +13,7 @@ return array(
     'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-message/src'),
     'PhpParser\\' => array($vendorDir . '/nikic/php-parser/lib/PhpParser'),
     'OneLogin\\' => array($vendorDir . '/onelogin/php-saml/src'),
+    'Linfo\\' => array($vendorDir . '/linfo/linfo/src/Linfo'),
     'EasyRdf\\' => array($vendorDir . '/sweetrdf/easyrdf/lib'),
     'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
 );

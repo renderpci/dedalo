@@ -10,7 +10,7 @@
 	import {open_window} from '../../common/js/utils/index.js'
 	import {quit} from '../../login/js/login.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {render_menu} from './render_menu.js'
+	import {render_menu, render_section_label} from './render_menu.js'
 
 
 
@@ -45,7 +45,7 @@ export const menu = function(){
 	// lifecycle
 	menu.prototype.render				= common.prototype.render
 	menu.prototype.destroy				= common.prototype.destroy
-	menu.prototype.refresh				= common.prototype.refresh
+	// menu.prototype.refresh			= common.prototype.refresh
 
 	// render
 	menu.prototype.list					= render_menu.prototype.edit
@@ -76,7 +76,7 @@ menu.prototype.init = function(options) {
 	// status update
 		self.status = 'initializing'
 
-	self.tipo						= options.tipo
+	self.tipo						= options.tipo || 'dd85'
 	self.model						= options.model
 	self.node						= null
 	self.li_nodes					= []
@@ -191,6 +191,33 @@ menu.prototype.build = async function(autoload=true) {
 
 
 /**
+* REFRESH
+* Deletes the local menu database and call common refresh
+* @param object options
+* @return bool
+*/
+menu.prototype.refresh = async function(options) {
+
+	const self = this
+
+	// options
+		const build_autoload = options.build_autoload ?? true
+
+	// delete local DB data to force re-create the menu
+		if (build_autoload===true) {
+			await self.delete_menu_local_db_data()
+		}
+
+	// call the generic common refresh
+		const common_init = await common.prototype.refresh.call(this, options);
+
+
+	return common_init
+}//end refresh
+
+
+
+/**
 * OPEN_ONTOLOGY
 * Shared function to manage open Ontology window
 * from regular menu and mobile menu
@@ -259,11 +286,9 @@ menu.prototype.delete_menu_local_db_data = async function() {
 /**
 * OPEN_TOOL_USER_ADMIN_HANDLER
 * Shared function to manage open tool tool_user_admin
-* @param object event e
 * @return void
 */
-menu.prototype.open_tool_user_admin_handler = function(e) {
-	e.stopPropagation();
+menu.prototype.open_tool_user_admin_handler = function() {
 
 	const self = this
 
@@ -301,12 +326,125 @@ menu.prototype.build_local_db_id = function(lang) {
 	// lang cascade fallback
 	lang = lang || page_globals?.dedalo_application_lang || ''
 
+	const version = page_globals.dedalo_version || 'unknown'
+
 	// id composition
-	const id = `${self.model}_${self.tipo}_${lang}_${user_id}`
+	const id = `${self.model}_${self.tipo}_${lang}_${version}_${user_id}`
 
 
 	return id
 }//end build_local_db_id
+
+
+
+/**
+* UPDATE_SECTION_LABEL
+* Change the menu section label value
+* Is called from section when rendering is finished
+* @param object options
+* {
+*  value : string as 'Oral History',
+*  mode : string as 'edit',
+*  section_label_on_click : callback function
+* }
+* @return bool
+*/
+menu.prototype.update_section_label = function(options) {
+
+	const self = this
+
+	// options
+		const value						= options.value || ''
+		const mode						= options.mode
+		const section_label_on_click	= options.section_label_on_click
+
+	// check availability
+		const update_section_label_n_try = self.update_section_label_n_try ?? 0
+		if (!self.node) {
+			if (update_section_label_n_try>=3) {
+				console.warn('Error: menu node is not available.', self);
+				return
+			}
+			self.update_section_label_n_try++
+			console.warn('Warning: menu node is not available yet. Trying again ', update_section_label_n_try);
+			setTimeout(function(){
+				self.update_section_label(options)
+			}, 1000)
+			return false
+		}
+		if (!self.node.content_data.section_label) {
+			console.warn('Warning: Invalid menu node section_label.', self.node.content_data.section_label);
+			return false
+		}
+
+	// reset self.update_section_label_n_try
+		self.update_section_label_n_try = 0
+
+	// pointers get
+		const section_label				= self.node.content_data.section_label
+		const button_toggle_inspector	= self.node.content_data.button_toggle_inspector
+
+	// new_section_label
+		const new_section_label = render_section_label(self)
+		new_section_label.insertAdjacentHTML('afterbegin', value);
+		section_label.replaceWith(new_section_label);
+		// re-set pointers
+		self.node.content_data.section_label = new_section_label
+
+	// toggle inspector view
+		if (mode==='edit') {
+			if (typeof section_label_on_click==='function') {
+				new_section_label.addEventListener('mousedown', section_label_on_click)
+			}
+			// hide button inspector
+			button_toggle_inspector.classList.remove('no_visible')
+			// enable section_label user click
+			new_section_label.classList.remove('inactive')
+		}else{
+			// show button inspector
+			button_toggle_inspector.classList.add('no_visible')
+			// disable section_label user click
+			new_section_label.classList.add('inactive')
+		}
+
+
+	return true
+}//end update_section_label
+
+
+
+/**
+* CHANGE_LANG
+* Exec API request of selected lang (e.target.value)
+* @param object options
+* 	{
+* 		lang_type	: 'dedalo_data_lang',
+*		lang_value	: 'lg-spa'
+* 	}
+* @return promise
+* 	API request response
+*/
+menu.prototype.change_lang = async function(options) {
+
+	// options
+		const lang_type		= options.lang_type
+		const lang_value	= options.lang_value
+
+	// api call
+		const api_response = await data_manager.request({
+			use_worker	: true,
+			body		: {
+				action	: 'change_lang',
+				dd_api	: 'dd_utils_api',
+				options	: {
+					[lang_type] : lang_value
+				}
+			}
+		})
+
+
+	return api_response
+}//end change_lang
 
 
 

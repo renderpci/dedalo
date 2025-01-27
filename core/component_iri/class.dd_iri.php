@@ -1,31 +1,24 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS DD_IRI
-
-	Format:
-	*[
-	*	{
-	*    "iri": "http://www.render.es/dedalo",
-	*    "title": "dedalo"
-	* 	}
-	*]
-	$iri->iri						= (string)$iri; //mandatory
-	$iri->title						= (string)$title; //aditional no mandatory
-
-	Note that properties can exists or not (are created on the fly). Final result object only contain set properties and iri object can be empty or partially set.
-	For example, one link with title have only $iri
-
+*
+*	Format:
+*	[
+*	  {
+*	    "iri": "http://www.render.es/dedalo",
+*	    "title": "dedalo"
+*	   }
+*	]
+*	$iri->iri	= (string)$iri; //mandatory
+*	$iri->title	= (string)$title; //aditional no mandatory
+*
+*	(!) Note that properties can exists or not (are created on the fly).
+* 	The resulting object contains only the properties assigned to it and IRI object can be empty or partially set.
+*	For example, one link with title have only $iri property
 */
 class dd_iri extends stdClass {
 
-	/* Created on the fly
-		private $iri;
-		private $title;
-	*/
 
-	# Mandatory and protected (use set/get to access)
-	#protected $iri;
-	#protected $title;
 
 	const DELIMITER = '_';
 
@@ -150,15 +143,6 @@ class dd_iri extends stdClass {
 			return false;
 		}
 	}
-
-
-	/**
-	* DESTRUCT
-	* On destruct object, test if minimum data is set or not
-	*/
-	function __destruct() {
-
-	}//end __destruct
 
 
 

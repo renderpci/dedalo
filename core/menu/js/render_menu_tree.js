@@ -39,12 +39,9 @@ export const render_tree = (options) => {
 		})
 
 	// click . Manages global click action on the menu items
-		container.addEventListener('click', fn_click)
-		function fn_click(e) {
-			// e.stopPropagation()
-			// e.preventDefault()
+		const click_handler = (e) => {
 
-			// first menu items only (when the ul is the main menu)
+			// first menu items only (when the UL is the main menu)
 
 			// close all menu items when the menu change to inactive
 			if (self.menu_active===true) {
@@ -55,9 +52,7 @@ export const render_tree = (options) => {
 			}else{
 				// close_all_drop_menu(self);
 				// get the main li nodes
-				const main_li			= e.target.parentNode
-				const nodes_li			= self.li_nodes
-				const nodes_li_length	= nodes_li.length
+				const main_li	= e.target.parentNode
 				// get the main ul nodes
 				const open_id =  main_li.dataset.children
 				if (open_id) {
@@ -71,6 +66,8 @@ export const render_tree = (options) => {
 					}
 				}
 
+				const nodes_li	= self.li_nodes
+				const nodes_li_length	= nodes_li.length
 				for (let i = nodes_li_length - 1; i >= 0; i--) {
 					// inactive all li nodes
 					nodes_li[i].classList.add('menu_li_inactive');
@@ -84,11 +81,11 @@ export const render_tree = (options) => {
 				}
 				self.menu_active = true
 			}// end if (self.menu_active===true)
-		}//end container.addEventListener('click'
+		}
+		container.addEventListener('click', click_handler)
 
 	// mousedown. document. do global click action on the document body
-		document.addEventListener('mousedown', fn_mousedown)
-		function fn_mousedown(e) {
+		const mousedown_handler = (e) => {
 			e.stopPropagation()
 			// if the menu is inactive nothing to do
 			if(self.menu_active===false) {
@@ -98,11 +95,11 @@ export const render_tree = (options) => {
 			if (e.target.tagName.toLowerCase()!=='a') {
 				close_all_drop_menu(self)
 			}
-		}//end fn_mousedown
+		}
+		document.addEventListener('mousedown', mousedown_handler)
 
 	// keydown. set the escape key to close al menu nodes
-		document.addEventListener('keydown', fn_keydown)
-		function fn_keydown(e) {
+		const keydown_event = (e) => {
 			if(self.menu_active===false) {
 				return false
 			}
@@ -110,6 +107,7 @@ export const render_tree = (options) => {
 				close_all_drop_menu(self);
 			}
 		}
+		document.addEventListener('keydown', keydown_event)
 
 
 	return true
@@ -176,6 +174,12 @@ const render_item_hierarchy = (options) => {
 		const item			= options.item
 		const current_tipo	= options.current_tipo
 
+	// item label check
+		if (!item.label) {
+			console.error('item without label:', item);
+			item.label = item.tipo || 'Unknown'
+		}
+
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
@@ -187,14 +191,7 @@ const render_item_hierarchy = (options) => {
 
 	// events
 		// mouseenter
-			li.addEventListener('mouseenter', fn_mouseenter)
-			// li.addEventListener('touchstart', fn_mouseenter)
-			function fn_mouseenter(e) {
-				// e.stopPropagation();
-
-				// if (e.type==='touchstart' && self.menu_active!==false) {
-				// 	e.preventDefault()
-				// }
+			const mouseenter_handler = (e) => {
 
 				if(self.menu_active===false) {
 					return false
@@ -266,18 +263,16 @@ const render_item_hierarchy = (options) => {
 
 					}//end if(nodes_li[i] == active_li)
 				}//end for
-			}//end fn_mouseenter
+			}
+			li.addEventListener('mouseenter', mouseenter_handler)
 
 		// mouseleave
-			li.addEventListener('mouseleave', fn_mouseleave)
-			function fn_mouseleave(e) {
-				// li.addEventListener('touchleave', (e) => {
+			const mouseleave_handler = (e) => {
 				if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
 					close_all_drop_menu(self);
 				}
-
-				return true
-			}//end mouseleave
+			}
+			li.addEventListener('mouseleave', mouseleave_handler)
 
 		// remove the html <mark> sent by the server
 		// when the label is not in the current language
@@ -303,14 +298,13 @@ const render_item_hierarchy = (options) => {
 		// click
 		// when the user do click publish the tipo to go and set the mode in list
 		// the action can be executed mainly in page, but it can be used for any instance.
-			link.addEventListener('click', fn_click)
-			async function fn_click(e) {
+			const click_handler = async (e) => {
 				e.preventDefault()
 
 				// nonactive menu case
-				if (self.menu_active===false) {
-					return false
-				}
+					if (self.menu_active===false) {
+						return false
+					}
 
 				// safe_item. Clone menu item before use it
 					const safe_item = clone(item)
@@ -318,6 +312,12 @@ const render_item_hierarchy = (options) => {
 				// swap_tipo
 					if (safe_item.config && safe_item.config.swap_tipo) {
 						safe_item.tipo = safe_item.config.swap_tipo
+					}
+
+				// api_errors case. On existing api_errors, force  to reload the page to refresh the page instance
+					if (page_globals.api_errors && page_globals.api_errors.length) {
+						window.location.href = url
+						return
 					}
 
 				if (e.altKey===true) {
@@ -337,9 +337,8 @@ const render_item_hierarchy = (options) => {
 						}
 					})
 				}
-
-				return true
-			}//end fn_click
+			}
+			link.addEventListener('click', click_handler)
 
 	// children_item. recursive generation of children nodes of the current li node.
 		const children_item	= datalist.find(children_item => children_item.parent===item.tipo)

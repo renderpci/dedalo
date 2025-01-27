@@ -1,0 +1,56 @@
+/**
+* register_tools
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.register_tools {
+
+	.datalist_container {
+		position: relative;
+		min-height: 20rem;
+	}
+
+	.tool_item {
+		display: grid;
+		grid-template-columns: 1.2fr 1.1fr 3rem 4rem 1.5fr;
+		gap: 0.5rem;
+		line-height: 1.1rem;
+		border-bottom: 1px solid @color_grey_dark;
+		margin-bottom: 0.25rem;
+		padding-bottom: 0.25rem;
+
+		&.header {
+			color: #000;
+			padding: 0.25rem;
+			padding-left: 0;
+			font-weight: 400;
+
+			.tool_warning {
+				color: unset;
+			}
+		}
+
+		.tool_name {
+			word-break: break-all;
+		}
+		.tool_version {
+			text-align: right;
+		}
+		.tool_installed_version {
+			text-align: right;
+		}
+		.developer {
+			word-break: break-all;
+		}
+		.tool_warning {
+			color: @color_orange_dedalo;
+		}
+	}
+
+	// errors
+	.info_text {
+		padding: 1rem;
+		border-radius: 4px;
+		margin-top: 1rem;
+	}
+}//end register_tools

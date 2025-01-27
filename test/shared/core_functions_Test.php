@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
 // use PHPUnit\Framework\Attributes\TestDox;
@@ -670,6 +669,7 @@ final class core_functions_test extends TestCase {
 				. to_string( $eq )
 		);
 	}//end test_array_key_path
+
 
 
 	/**
@@ -1763,7 +1763,7 @@ final class core_functions_test extends TestCase {
 	*/
 	public function test_test_php_version_supported() {
 
-		$result = test_php_version_supported(
+		$result = system::test_php_version_supported(
 			'8.2.0'
 		);
 

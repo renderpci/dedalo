@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS LOGIN
 *
@@ -60,6 +59,16 @@ class login extends common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed [Login]';
+
+		// column term check
+			$column_term_exists = DBi::check_column_exists('jer_dd', 'term');
+			if (!$column_term_exists) {
+				// creates the column
+				DBi::add_column('jer_dd', 'term', 'jsonb NULL', 'Term and translations');
+				// fill values
+				require_once DEDALO_CORE_PATH .'/base/upgrade/class.transform_data.php';
+				$copy = transform_data::copy_descriptors_to_jer_dd();
+			}
 
 		// options
 			$username = $options->username;
@@ -929,27 +938,6 @@ class login extends common {
 
 			debug_log(__METHOD__." data 2 New data ".to_string($data), logger::DEBUG);
 
-			// APACHE 2.2
-				// 	$htaccess_text  = '';
-
-				// 	$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
-				// 	$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
-				// 	$htaccess_text .= 'Order allow,deny'.PHP_EOL;
-				// 	$htaccess_text .= '</FilesMatch>'.PHP_EOL;
-
-				// 	$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
-				// 	$htaccess_text .= 'AuthType Basic'.PHP_EOL;
-				// 	$htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
-				// 	$htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
-				// 	$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
-				// 	$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
-				// 	$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
-				// 	$htaccess_text .= 'Order deny,allow'.PHP_EOL;
-				// 	$htaccess_text .= 'Deny from all'.PHP_EOL;
-				// 	$htaccess_text .= 'Allow from env=PASS'.PHP_EOL;
-				// 	$htaccess_text .= 'Require valid-user'.PHP_EOL;
-				// 	$htaccess_text .= 'Satisfy any'.PHP_EOL;
-
 			// APACHE 2.4
 				$htaccess_text  = '';
 
@@ -1340,7 +1328,7 @@ class login extends common {
 
 		// short vars
 			$model	= 'login';
-			$tipo	= $this->get_tipo();
+			$tipo	= $this->get_tipo(); // get_login_tipo dd229
 			$mode	= $this->get_mode();
 			$label	= $this->get_label();
 			$lang	= $this->get_lang();

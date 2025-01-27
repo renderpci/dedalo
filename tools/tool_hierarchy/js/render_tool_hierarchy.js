@@ -8,6 +8,7 @@
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {pause} from '../../../core/common/js/utils/index.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
 
 
@@ -166,7 +167,8 @@ const get_content_data = async function(self) {
 				inner_html		: self.get_tool_label('generate'),
 				parent			: buttons_container
 			})
-			button_generate.addEventListener('click', async function(e){
+			// click event
+			const click_handler = async (e) => {
 				e.stopPropagation();
 
 				// reset component error class
@@ -182,27 +184,28 @@ const get_content_data = async function(self) {
 					]
 					.map(el => el.classList.remove('error'))
 
-				let spinner
-				function set_loading( set ) {
+				// set_loading
+					let spinner
+					const set_loading = ( set ) => {
 
-					if (set===true) {
+						if (set===true) {
 
-						content_data.classList.add('loading')
-						messages_container.innerHTML = ''
+							content_data.classList.add('loading')
+							messages_container.innerHTML = ''
 
-						// spinner
-						spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner',
-							parent			: content_data.parentNode
-						})
+							// spinner
+							spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner',
+								parent			: content_data.parentNode
+							})
 
-					}else{
+						}else{
 
-						content_data.classList.remove('loading')
-						spinner.remove()
+							content_data.classList.remove('loading')
+							spinner.remove()
+						}
 					}
-				}
 
 				// check value
 					if (!real_st_component_instance.data.value || !real_st_component_instance.data.value[0]?.length) {
@@ -231,17 +234,32 @@ const get_content_data = async function(self) {
 					}
 
 				set_loading(true)
-				await pause(3000)
 
 				self.generate_virtual_section({
 					force_to_create : check_force_to_create.checked
 				})
-				.then(function(api_response){
+				.then((api_response)=>{
 
-					// user messages
-						messages_container.innerHTML = api_response.msg
+					// messages
+						const msg = api_response.msg
 							? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
 							: 'Unknown error'
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'messages',
+							inner_html		: msg,
+							parent			: messages_container
+						})
+
+					// errors
+						if (api_response.errors && api_response.errors.length) {
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error',
+								inner_html		: api_response.errors.join('<br>'),
+								parent			: messages_container
+							})
+						}
 
 					// reload section (caller)
 						if (api_response.result!==false) {
@@ -252,21 +270,27 @@ const get_content_data = async function(self) {
 
 					set_loading(false)
 				})
-			})//end button_generate.addEventListener('click'
+			}
+			button_generate.addEventListener('click', click_handler)
+			// focus buttons
+			dd_request_idle_callback(
+				() => {
+					button_generate.focus()
+				}
+			)
 
 		// check box force to create
-
 			const label_field_check_box = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'checkbox-label',
-					inner_html		: self.get_tool_label('force_to_create') || 'Force to create',
-					parent			: buttons_container
-				})
-				const check_force_to_create = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'checkbox',
-					parent			: label_field_check_box
-				})
+				element_type	: 'span',
+				class_name		: 'checkbox-label',
+				inner_html		: self.get_tool_label('force_to_create') || 'Force to create',
+				parent			: buttons_container
+			})
+			const check_force_to_create = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				parent			: label_field_check_box
+			})
 
 	// messages_container
 		const messages_container = ui.create_dom_element({

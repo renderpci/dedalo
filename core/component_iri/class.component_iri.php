@@ -1,6 +1,5 @@
-<?php
-declare(strict_types=1);
-include dirname(__FILE__) . "/class.dd_iri.php";
+<?php declare(strict_types=1);
+include dirname(__FILE__) . '/class.dd_iri.php';
 /**
 * CLASS COMPONENT_IRI
 *
@@ -1011,7 +1010,6 @@ class component_iri extends component_common {
 				}
 			}
 		}//end if(!empty($import_value))
-
 
 		$response->result	= $value;
 		$response->msg		= 'OK';

@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS COMPONENT TEXT AREA
 *
@@ -327,7 +326,7 @@ class component_text_area extends component_common {
 		}
 
 
-		 return $value_fragment;
+		return $value_fragment;
 	}//end get_value_fragment
 
 
@@ -356,7 +355,7 @@ class component_text_area extends component_common {
 			if ($clean_text && !empty($dato_current)) {
 				foreach ($dato_current as $key => $current_value) {
 					if (!empty($current_value)) {
-						$dato_current[$key] = TR::comform_tr_data($current_value);
+						$dato_current[$key] = TR::conform_tr_data($current_value);
 					}
 				}
 			}
@@ -1238,7 +1237,8 @@ class component_text_area extends component_common {
 				}
 
 			// change p by br to preserve v5 compatibility (ck/tiny)
-				$diffusion_value = preg_replace('/(<p>)/i', '<br>', $diffusion_value);
+				// $diffusion_value = preg_replace('/(<p>)/i', '<br>', $diffusion_value);
+				$diffusion_value = preg_replace('/<p( style=".*?")?>/i', '<br>', $diffusion_value);
 				$diffusion_value = preg_replace('/(<\/p>)/i', '', $diffusion_value);
 
 			// Remove first br

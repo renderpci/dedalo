@@ -13,7 +13,7 @@
 
 /**
 * VIEW_DEFAULT_TIME_MACHINE_LIST
-* Manages the component's logic and appearance in client side
+* Manages the service's logic and appearance in client side
 */
 export const view_default_time_machine_list = function() {
 

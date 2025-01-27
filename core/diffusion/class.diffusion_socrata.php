@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 // include composer lib soda-php
 require DEDALO_LIB_PATH . '/vendor/soda-php/public/socrata.php';
 

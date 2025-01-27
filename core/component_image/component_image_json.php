@@ -2,6 +2,7 @@
 // JSON data component controller
 
 
+
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();

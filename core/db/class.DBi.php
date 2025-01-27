@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * DBI
 * DB CONNECTION
@@ -295,6 +294,77 @@ abstract class DBi {
 
 		return $mysqli;
 	}//end _getConnection_mysql
+
+
+
+	/**
+	* CHECK_TABLE_EXISTS
+	* Verify is the given table already exists in Dédalo DDBB
+	* @param string $table
+	* @return bool
+	*/
+	public static function check_table_exists( string $table ) : bool {
+
+		$sql = '
+			SELECT EXISTS (SELECT table_name FROM information_schema.tables WHERE table_name = \''.$table.'\');
+		';
+		$result	= pg_query(DBi::_getConnection(), $sql);
+		$row	= pg_fetch_object($result);
+		$exists	= ($row->exists==='t');
+
+		return $exists;
+	}//end check_table_exists
+
+
+
+	/**
+	* CHECK_COLUMN_EXISTS
+	* Verify is the given column already exists in Dédalo DDBB
+	* @param string $table
+	* @param string $column
+	* @return bool
+	*/
+	public static function check_column_exists( string $table, string $column ) : bool {
+
+		$sql = '
+			SELECT EXISTS (SELECT 1
+			FROM information_schema.columns
+			WHERE table_name = \''.$table.'\' and column_name = \''.$column.'\');
+		';
+		$result	= pg_query(DBi::_getConnection(), $sql);
+		$row	= pg_fetch_object($result);
+		$exists	= ($row->exists==='t');
+
+		return $exists;
+	}//end check_column_exists
+
+
+
+	/**
+	* ADD_COLUMN
+	* Verify is the given column already exists in Dédalo DDBB
+	* @param string $table
+	* @param string $column
+	* @return bool
+	*/
+	public static function add_column( string $table, string $column, $type='jsonb NULL', $comment='' ) : bool {
+
+		// check if column already exists before
+		if (true===DBi::check_column_exists($table, $column)) {
+			return true;
+		}
+
+		$sql = '
+			ALTER TABLE "'.$table.'"
+			ADD "'.$column.'" '.$type.';
+			COMMENT ON TABLE "'.$table.'" IS \''.$comment.'\';
+		';
+		$result	= pg_query(DBi::_getConnection(), $sql);
+
+		$added = ($result!==false);
+
+		return $added;
+	}//end add_column
 
 
 

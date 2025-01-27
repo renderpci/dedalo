@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
@@ -57,8 +56,8 @@ final class search_related_test extends TestCase {
 			    "order_custom": null,
 			    "filter_by_locators": [
 			        {
-			            "section_tipo": "test3",
-			            "section_id": "2"
+			            "section_tipo": "dd922",
+			            "section_id": "1"
 			        }
 			    ],
 			    "allow_sub_select_by_id": null,
@@ -84,11 +83,13 @@ final class search_related_test extends TestCase {
 				. gettype($result)
 		);
 
-		$reference = strpos($result, 'matrix_test')!==false;
+		$reference = strpos($result, 'matrix_list')!==false;
 		$this->assertTrue(
 			$reference,
-			'expected true : ' . PHP_EOL
-				. to_string($reference)
+			'expected true for matrix_list exists in result : ' . PHP_EOL
+				. 'reference: ' . to_string($reference) . PHP_EOL
+				. 'result: ' . to_string($result) . PHP_EOL
+				. 'sqo: ' . to_string($sqo)
 		);
 	}//end test_parse_search_query_object
 

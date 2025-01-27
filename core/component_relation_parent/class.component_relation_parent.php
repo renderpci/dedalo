@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * COMPONENT_RELATION_PARENT
 * Class to manage parent relation between section.
@@ -598,7 +597,7 @@ class component_relation_parent extends component_relation_common {
 
 			debug_log(__METHOD__
 				." Error: component_relation_children not found in this section" . PHP_EOL
-				.' component_tipo: '. $component_tipo . PHP_EOL
+				.' model_name: '. $model_name . PHP_EOL
 				.' component_tipo: '. $component_tipo . PHP_EOL
 				, logger::ERROR
 			);
@@ -683,6 +682,8 @@ class component_relation_parent extends component_relation_common {
 		// options
 			// search_in_main_hierarchy. Enable to add parents from hierarchy section (hierarchy1)
 			$search_in_main_hierarchy = $options->search_in_main_hierarchy ?? false;
+			// main_table
+			$main_table = $options->main_table ?? ( ( strpos($section_tipo,'ontology')!==false ) ? ontology::$main_table : hierarchy::$main_table );
 			// hierarchy_from_component_tipo. When 'search_in_main_hierarchy' is true, it allows to select the component_reation_children component to be searched.
 			$hierarchy_from_component_tipo = $options->hierarchy_from_component_tipo ?? DEDALO_HIERARCHY_CHILDREN_TIPO;
 
@@ -754,8 +755,7 @@ class component_relation_parent extends component_relation_common {
 				$main_filter	= ",\"from_component_tipo\":\"$hierarchy_from_component_tipo\"";
 				$main_compare	= "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$main_filter."}";
 				$sql_where		= "datos#>'{relations}' @> '[$main_compare]'::jsonb";
-				$table			= hierarchy::$table;
-				$strQuery	   .= "\nUNION ALL \nSELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+				$strQuery	   .= "\nUNION ALL \nSELECT $sql_select FROM \"$main_table\" WHERE $sql_where ";
 			}
 
 		// Set order to maintain results stable
@@ -976,6 +976,7 @@ class component_relation_parent extends component_relation_common {
 
 		return $parents_recursive;
 	}//end get_parents_recursive
+
 
 
 	/**

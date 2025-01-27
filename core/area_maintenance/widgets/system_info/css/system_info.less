@@ -1,0 +1,84 @@
+/**
+* system_info
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.system_info {
+
+	.datalist_container {
+		position: relative;
+		min-height: 5rem;
+
+		// common list container
+		>.list_container {
+			margin-top: 0.5rem;
+			margin-bottom: 2rem;
+
+			.info_item {
+				display: grid;
+				border-bottom: 1px solid @color_white;
+				gap: 0.5rem;
+				padding: 1rem;
+
+				&:last-of-type, &:first-of-type {
+					border: none;
+				}
+
+				&.header {
+					background-color: @color_grey_darken;
+					color: @color_white;
+					padding-top: 0.5rem;
+					padding-bottom: 0.5rem;
+				}
+
+				>.name {
+					font-weight: 600;
+					// font-size: 1.2rem;
+					// margin-top: 2rem;
+					// margin-bottom: 0.66rem;
+					text-transform: uppercase;
+				}
+
+				>.value {
+					background-color: transparent;
+					margin: 0px;
+					padding: 0px;
+
+					&.success {
+						font-weight: 700;
+						color: @color_success;
+					}
+					&.failed {
+						font-weight: 700;
+						color: @color_danger;
+					}
+				}
+
+				>.info {
+					// padding-left: 1rem;
+				}
+			}
+		}
+
+		>.requeriments_list_container {
+			>.info_item {
+				display: grid;
+				grid-template-columns: 25rem 7rem 2fr;
+			}
+		}
+
+		>.system_list_container {
+			>.info_item {
+				display: grid;
+				grid-template-columns: 25rem 3fr;
+			}
+		}
+	}
+
+	// errors
+	.info_text {
+		padding: 1rem;
+		border-radius: 4px;
+		margin-top: 1rem;
+	}
+}//end system_info

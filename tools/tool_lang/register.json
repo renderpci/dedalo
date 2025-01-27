@@ -80,13 +80,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057518700,
+              "day": 24,
+              "hour": 21,
+              "time": 65081829447,
               "year": 2024,
-              "month": 2,
-              "minute": 58,
-              "second": 20
+              "month": 11,
+              "minute": 57,
+              "second": 27
             }
           }
         ]
@@ -177,22 +177,29 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.2"
+          "2.0.3"
         ]
       }
     },
     "dd1328": {
       "dato": {
         "lg-nolan": [
-          "6.0.0"
+          "6.3.0"
         ]
       }
     },
     "dd1334": {
+      "inf": "Ontology [component_json]",
       "dato": {
         "lg-nolan": [
           {
             "tld": "tool_dev",
+            "term": {
+              "lg-cat": "Llistat",
+              "lg-eng": "List",
+              "lg-ita": "Elenco",
+              "lg-spa": "Listado"
+            },
             "tipo": "tool_dev2",
             "model": "section_list",
             "order": 1,
@@ -223,28 +230,6 @@
             ],
             "model_tipo": "dd91",
             "properties": null,
-            "descriptors": [
-              {
-                "lang": "lg-ita",
-                "type": "term",
-                "value": "Elenco"
-              },
-              {
-                "lang": "lg-spa",
-                "type": "term",
-                "value": "Listado"
-              },
-              {
-                "lang": "lg-cat",
-                "type": "term",
-                "value": "Llistat"
-              },
-              {
-                "lang": "lg-eng",
-                "type": "term",
-                "value": "List"
-              }
-            ],
             "translatable": false
           }
         ]
@@ -275,7 +260,7 @@
     "dd1362": {
       "dato": {
         "lg-nolan": [
-          "<p>To config the tool, create a tool config record with name: 'tool_lang'</p><p>Sample config:</p><p>&nbsp;</p><p>{</p><p>&nbsp;\"translator_config\": {</p><p>&nbsp; &nbsp;\"type\": \"array\",</p><p>&nbsp; &nbsp;\"value\": [</p><p>&nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"key\": \"9Fre!ksadas132aPlsdiugJKAH\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"uri\": \"https://babel.render.es/babel_engine/\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"name\": \"babel\"</p><p>&nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"key\": \"69Fgsre!kLsMyehdIuyh56JKAH\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"uri\": \"https://google.com/translator\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"name\": \"google_translation\"</p><p>&nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp;],</p><p>&nbsp; &nbsp;\"client\": false</p><p>&nbsp;},</p><p>&nbsp;\"translator_engine\": {</p><p>&nbsp; &nbsp;\"type\": \"array\",</p><p>&nbsp; &nbsp;\"value\": [</p><p>&nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"name\": \"babel\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Babel\"</p><p>&nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"name\": \"google_translation\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Google translator\"</p><p>&nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp;],</p><p>&nbsp; &nbsp;\"client\": true,</p><p>&nbsp; &nbsp;\"default\": []</p><p>&nbsp;}</p><p>}</p>"
+          "<p>You can define the URI for external API service that will use in the translation tool. External services provide different APIs and URIs that can be configured here.</p><p></p><p>You will need an account in the external service. Dédalo has full integration with [Apertium](<u>https://www.apertium.org</u>) server (open source machine translation). Other external services, like Google translation, IBM Watson, etc will need a developer integration of his API.</p><p>&nbsp;</p><p>If you want to use a machine translation for developer proposes, you can talk with [Render](<u>https://render.es</u>), that support the Dédalo development to get a free account to his machine translation server.</p><p>&nbsp;</p><p>To config the tool, create a tool config record with name: 'tool_lang'</p><p>Sample config:</p><p>&nbsp;</p><p>{</p><p>&nbsp;\"translator_config\": {</p><p>&nbsp; &nbsp;\"type\": \"array\",</p><p>&nbsp; &nbsp;\"value\": [</p><p>&nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"key\": \"9Fre!ksadas132aPlsdiugJKAH\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"uri\": \"https://babel.render.es/babel_engine/\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"name\": \"babel\"</p><p>&nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"key\": \"69Fgsre!kLsMyehdIuyh56JKAH\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"uri\": \"https://google.com/translator\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"name\": \"google_translation\"</p><p>&nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp;],</p><p>&nbsp; &nbsp;\"client\": false</p><p>&nbsp;},</p><p>&nbsp;\"translator_engine\": {</p><p>&nbsp; &nbsp;\"type\": \"array\",</p><p>&nbsp; &nbsp;\"value\": [</p><p>&nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"name\": \"babel\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Babel\"</p><p>&nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"name\": \"google_translation\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp;\"label\": \"Google translator\"</p><p>&nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp;],</p><p>&nbsp; &nbsp;\"client\": true,</p><p>&nbsp; &nbsp;\"default\": []</p><p>&nbsp;}</p><p>}</p>"
         ]
       }
     },
@@ -474,7 +459,7 @@
   "section_id": 1,
   "created_date": "2019-11-05 16:06:56",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:58:20",
+  "modified_date": "2024-11-24 21:57:27",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

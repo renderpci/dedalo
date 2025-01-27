@@ -5,7 +5,7 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
@@ -170,9 +170,11 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		process_file_info.classList.add('success')
 
 	// hide service_upload elements. To upload again, user must to reload the page
-		setTimeout(function(){
-			[self.service_upload.form, self.service_upload.progress_bar_container].map(el => el.classList.add('hide'));
-		}, 1)
+		dd_request_idle_callback(
+			() => {
+				[self.service_upload.form, self.service_upload.progress_bar_container].map(el => el.classList.add('hide'));
+			}
+		)
 
 	// preview_component_container
 		if (self.caller.type==='component') {

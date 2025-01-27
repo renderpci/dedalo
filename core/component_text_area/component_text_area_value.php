@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 // Process different values of the component_text_area
 // split the dato into columns, it depends of the format_column.

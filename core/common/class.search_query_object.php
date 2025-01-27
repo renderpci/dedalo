@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
 * SEARCH QUERY OBJECT (SQO)
 * Defines object with normalized properties and checks.

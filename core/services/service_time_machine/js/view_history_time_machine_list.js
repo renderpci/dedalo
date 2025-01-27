@@ -13,7 +13,7 @@
 
 /**
 * VIEW_HISTORY_TIME_MACHINE_LIST
-* Manages the component's logic and appearance in client side
+* Manages the service's logic and appearance in client side
 */
 export const view_history_time_machine_list = function() {
 
@@ -26,6 +26,7 @@ export const view_history_time_machine_list = function() {
 * RENDER
 * Renders main element wrapper for current view
 * @param object self
+* 	service instance
 * @param object options
 * @return HTMLElement wrapper
 */

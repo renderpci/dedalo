@@ -88,14 +88,16 @@ view_text_section_record.render = async function(self, options) {
 						const current_instance = ar_instances[k]
 
 						// already rendered case
-						if (current_instance.node!==null) {
+						if (current_instance.status==='rendered' && current_instance.node!==null) {
 							resolve(true)
 						}else{
 							current_instance.render()
-							.then(function(){
+							.then(()=>{
 								resolve(true)
-							}).catch((errorMsg) => {
+							})
+							.catch((errorMsg) => {
 								console.error(errorMsg);
+								resolve(false)
 							})
 						}
 					})

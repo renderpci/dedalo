@@ -1298,7 +1298,7 @@ component_text_area.prototype.add_component_history_note = async function(option
 * 	caller: object (component_text_area_instance),
 * 	text_editor: object (service_ckedito instance)
 * }
-* @return
+* @return void
 */
 component_text_area.prototype.build_tag = function(options) {
 
@@ -1328,36 +1328,45 @@ component_text_area.prototype.build_tag = function(options) {
 		data_tag.tag_id = tag_id
 
 		switch(data_tag.type) {
+
 			case ('draw'):
+				// open layer selector
 				const layer_selector = render_layer_selector({
 					self		: self,
 					data_tag	: data_tag,
 					text_editor	: text_editor,
 					callback	: self.create_draw_tag.bind(self)
 				})
-				self.node.appendChild(layer_selector)
+				if (layer_selector) {
+					self.node.appendChild(layer_selector)
+				}
 				break;
+
 			case ('geo'): {
+				// open layer selector
 				 const layer_selector = render_layer_selector({
 					self		: self,
 					data_tag	: data_tag,
 					text_editor	: text_editor,
 					callback	: self.create_geo_tag.bind(self)
 				})
-				 self.node.appendChild(layer_selector)
+				if (layer_selector) {
+				 	self.node.appendChild(layer_selector)
+				}
 				break;
 			}
-			case ('page'): {
 
+			case ('page'): {
 				// modal selector
 				render_page_selector(self, data_tag, tag_id, text_editor)
 				break;
 			}
+
 			default: {
-
 				const tag = self.build_view_tag_obj(data_tag, tag_id)
-
-				text_editor.set_content(tag)
+				if (tag) {
+					text_editor.set_content(tag)
+				}
 				break;
 			}
 		}// end switch

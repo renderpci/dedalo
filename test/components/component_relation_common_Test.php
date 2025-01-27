@@ -1,8 +1,7 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestDox;
+// use PHPUnit\Framework\Attributes\TestDox;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -804,7 +803,8 @@ final class component_relation_common_test extends TestCase {
 		');
 
 		$value = component_relation_common::get_request_config_section_tipo(
-			$ar_section_tipo_sources
+			$ar_section_tipo_sources,
+			'test3'
 		);
 
 		$this->assertTrue(
