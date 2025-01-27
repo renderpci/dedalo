@@ -35,6 +35,30 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
+	// array of RecordObj_dd instances
+	private static $instances = [];
+
+
+
+	/**
+	* GET_INSTANCE
+	* @param ?string $terminoID = null
+	* @param ?string $prefijo = null
+	* @return self
+	*/
+	public static function get_instance(?string $terminoID = null, ?string $prefijo = null): self {
+
+		$key = md5(serialize([$terminoID, $prefijo]));
+
+		if (!isset(self::$instances[$key])) {
+			self::$instances[$key] = new self($terminoID, $prefijo);
+		}
+
+		return self::$instances[$key];
+	}//end get_instance
+
+
+
 	/**
 	* __CONSTRUCT
 	*/
