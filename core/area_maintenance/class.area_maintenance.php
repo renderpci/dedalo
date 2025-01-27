@@ -88,9 +88,6 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// update_ontology *
-			if (!in_array('ontology', $DEDALO_PREFIX_TIPOS)) {
-				$DEDALO_PREFIX_TIPOS[] = 'ontology';
-			}
 			$item = new stdClass();
 				$item->id		= 'update_ontology';
 				$item->type		= 'widget';
