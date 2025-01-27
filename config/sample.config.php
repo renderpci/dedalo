@@ -693,10 +693,11 @@
 		// server git files (master) like /home/dedalo/master_dedalo.git
 		// define('DEDALO_CODE_SERVER_GIT_DIR',	'/my_dedalo_git_directory');
 
-	// client side
-
 		// Remote code servers.
+		// As client:
 		// Defines the code provider.
+		// As server provider:
+		// If your installation will provide dedalo code, the `code` parameter will be used by clients to validate them.
 		define('CODE_SERVERS',	[
 			[
 				'name'	=> 'Official Dédalo code server',
