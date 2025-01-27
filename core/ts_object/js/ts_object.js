@@ -46,7 +46,6 @@ export const ts_object = new function() {
 	*/
 	this.get_children = function(children_element, pagination, clean_children_container) {
 
-
 		// short vars
 			const tipo					= children_element.dataset.tipo
 			const wrap					= children_element.parentNode.parentNode
@@ -497,7 +496,11 @@ export const ts_object = new function() {
 				);
 
 			// save_opened_elements
-			self.save_opened_elements(link_children_element,'add')
+			dd_request_idle_callback(
+				() => {
+					self.save_opened_elements(link_children_element,'add')
+				}
+			)
 
 		}else{
 
@@ -516,7 +519,11 @@ export const ts_object = new function() {
 					}
 
 				// save_opened_elements
-				self.save_opened_elements(link_children_element,'add')
+				dd_request_idle_callback(
+					() => {
+						self.save_opened_elements(link_children_element,'add')
+					}
+				)
 
 			}else{
 
@@ -524,7 +531,11 @@ export const ts_object = new function() {
 				link_children_element.firstChild.classList.remove('ts_object_children_arrow_icon_open');
 
 				// save_opened_elements
-				self.save_opened_elements(link_children_element,'remove')
+				dd_request_idle_callback(
+					() => {
+						self.save_opened_elements(link_children_element,'remove')
+					}
+				)
 			}
 		}
 
@@ -536,7 +547,10 @@ export const ts_object = new function() {
 
 	/**
 	* SAVE_OPENED_ELEMENTS
-	* @return
+	* Saves and track given element open status
+	* @param HTMLElement link_children_element
+	* @param string action
+	* @return bool
 	*/
 	this.opened_elements = {}
 	this.save_opened_elements = function(link_children_element, action) {
@@ -549,6 +563,8 @@ export const ts_object = new function() {
 		const key	= wrap.dataset.section_tipo +'_'+ wrap.dataset.section_id
 
 		if (action==='add') {
+
+			// add
 
 			const open_children_elements = wrap.getElementsByClassName('ts_object_children_arrow_icon_open')
 			const len = open_children_elements.length
@@ -563,9 +579,13 @@ export const ts_object = new function() {
 			}
 
 		}else{
+
+			// remove
+
 			delete this.opened_elements[key]
 			this.remove_children_from_opened_elements(key)
 		}
+
 
 		return true
 	}//end save_opened_elements
