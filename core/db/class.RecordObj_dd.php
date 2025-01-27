@@ -382,22 +382,23 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		// forced models in v6 (while we are using structure v5)
-			if ($this->terminoID===DEDALO_SECURITY_ADMINISTRATOR_TIPO) {
-				return 'component_radio_button';
-			}elseif ($this->terminoID===DEDALO_USER_PROFILE_TIPO) {
-				return 'component_select';
-			}elseif ($this->terminoID==='dd546') { // activity where
-				return 'component_input_text';
-			}elseif ($this->terminoID==='dd545') { // activity what
-				return 'component_select';
-			}elseif ($this->terminoID==='dd544') { // activity ip
-				return 'component_input_text';
-			}elseif ($this->terminoID==='dd551') { // activity 'dato'
-				return 'component_json';
-			}elseif ($this->terminoID==='hierarchy48') { // hierarchy 'order'
-				return 'component_number';
-			}elseif ($this->terminoID==='dd1067') { // tools component_security_tools
-				return 'component_check_box';
+			switch ($this->terminoID) {
+				case DEDALO_SECURITY_ADMINISTRATOR_TIPO:
+					return 'component_radio_button';
+				case DEDALO_USER_PROFILE_TIPO:
+					return 'component_select';
+				case 'dd546': // activity where
+					return 'component_input_text';
+				case 'dd545': // activity what
+					return 'component_select';
+				case 'dd544': // activity ip
+					return 'component_input_text';
+				case 'dd551': // activity 'dato'
+					return 'component_json';
+				case 'hierarchy48': // hierarchy 'order'
+					return 'component_number';
+				case 'dd1067': // tools component_security_tools
+					return 'component_check_box';
 			}
 
 		// new model resolution with fallback
@@ -426,51 +427,45 @@ class RecordObj_dd extends RecordDataBoundObject {
 				return '';
 			}
 
+			$model = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);
+
+			// error log
 			debug_log(__METHOD__
 				. " Falling to fallback model resolution for the term" . PHP_EOL
-				. ' terminoID: ' . to_string($this->terminoID)
+				. ' terminoID: ' . to_string($this->terminoID) . PHP_EOL
+				. ' model: ' . to_string($model)
 				, logger::ERROR
 			);
 
-			$model = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			// empty case check
 			if (empty($model)) {
+
 				debug_log(__METHOD__
 					. " Empty model name !" . PHP_EOL
 					. ' terminoID: ' . to_string($this->terminoID)
-					, logger::WARNING
+					, logger::ERROR
 				);
 				return '';
 			}
 		}//end if (empty($model))
 
-		// replace obsolete models on the fly
-			if ($model==='component_input_text_large' || $model==='component_html_text') {
-				$model='component_text_area';
-			}
-			elseif ($model==='component_autocomplete' || $model==='component_autocomplete_hi') {
-				$model='component_portal';
-			}
-			elseif ($model==='component_state' || $model==='component_calculation') {
-				$model='component_info';
-			}
-			elseif ($model==='section_group_div') {
-				$model='section_group';
-			}
-			elseif ($model==='tab') {
-				$model='section_tab';
-			}
-			elseif ($model==='component_relation_struct') {
-				$model='box elements';
-			}
-			elseif ($model==='component_security_tools') {
-				$model='component_check_box';
-			}
-			elseif ($model==='dataframe') {
-				$model='box elements';
-			}
+		// Model replacements (obsolete models)
+			$model_map = [
+				'component_input_text_large'	=> 'component_text_area',
+				'component_html_text'			=> 'component_text_area',
+				'component_autocomplete'		=> 'component_portal',
+				'component_autocomplete_hi'		=> 'component_portal',
+				'component_state'				=> 'component_info',
+				'component_calculation'			=> 'component_info',
+				'section_group_div'				=> 'section_group',
+				'tab'							=> 'section_tab',
+				'component_relation_struct'		=> 'box elements',
+				'component_security_tools'		=> 'component_check_box',
+				'dataframe'						=> 'box elements',
+			];
 
-		return $model;
+
+		return $model_map[$model] ?? $model;
 	}//end get_modelo_name
 
 
