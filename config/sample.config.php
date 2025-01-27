@@ -75,7 +75,12 @@
 		define('DEDALO_EXTRAS_PATH',	DEDALO_CORE_PATH . '/extras');
 		define('DEDALO_EXTRAS_URL',		DEDALO_CORE_URL . '/extras');
 
+	// install
+		define('DEDALO_INSTALL_PATH',	DEDALO_ROOT_PATH . '/install');
+		define('DEDALO_INSTALL_URL',	DEDALO_ROOT_WEB . '/install');
 
+	// Work API
+		define('DEDALO_API_URL',		DEDALO_CORE_URL . '/api/v1/json/');
 
 // Dedalo information
 	// string to use in Dédalo cryptography
@@ -100,6 +105,11 @@
 	// mdy = USA way order moth/day/year
 	// ymd = China, Japan, Korean, Iran way year/month/day
 	define('DEDALO_DATE_ORDER', 'dmy');
+
+
+
+// internal encoding
+	mb_internal_encoding('UTF-8');
 
 
 
@@ -291,6 +301,7 @@
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
 		'rsc',
+		'ontology',
 		'hierarchy',
 		'lg',
 		'utoponymy',
@@ -609,13 +620,14 @@
 	// diffusion_custom
 	// Optional custom class to manipulate diffusion options. string|bool . Default: false
 	define('DIFFUSION_CUSTOM', false);
-	// api (publication). This definition is used in administration panels to auto-fill main vars
+	// api (publication). This definition is used only in area maintenance to auto-fill main vars
 	// Note that in the public server config file, you need to define again this values because
 	// the public API files could be place in another location/server as independent files
 	define('API_WEB_USER_CODE_MULTIPLE', [
 		[
 			'db_name'	=> '', // like web_my_entity
-			'code'		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+			'code'		=> '',  // like asd38kjlkasd6gadsg2fasdoijQks
+			'api_ui'	=> null // optional api ui URL. Used only when publication is in another server like 'https://dedalo.dev/dedalo/publication/server_api/v1/docu/ui/'
 		]
 	]);
 
@@ -623,11 +635,38 @@
 
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER',			true);
-	define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
-	define('STRUCTURE_SERVER_URL',			'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
-	define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+	// !DEPRECATED
+	// define('STRUCTURE_SERVER_CODE',		'x3a0B4Y020Eg9w');
+	// !DEPRECATED
+	// define('STRUCTURE_SERVER_URL',		'https://master.dedalo.dev/dedalo/core/extras/str_manager/');
+
+	// Ontology server. Defines if the installation server can provide his ontology files to other Dédalo servers.
+	define('IS_AN_ONTOLOGY_SERVER',			false);
+	// !DEPRECATED
+	// defines the valid code for clients to validate to get ontology files.
+	// define('ONTOLOGY_SERVER_CODE',		'valid_code');
+
+	// Remote ontology servers.
+	// Defines the ontologies providers
+	define('ONTOLOGY_SERVERS',	[
+		[
+			'name'	=> 'Official Dédalo Ontology server',
+			'url'	=> 'https://master.dedalo.dev/dedalo/core/api/v1/json/',
+			'code'	=> 'x3a0B4Y020Eg9w'
+		]
+	]);
+
+	// Directory to backup ontology files
+	// !DEPRECATED
+	// define('ONTOLOGY_DOWNLOAD_DIR',		DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
+	// Directory to manage input/output, export/import ontology data to sync between installations
+	define('ONTOLOGY_DATA_IO_DIR',			DEDALO_INSTALL_PATH . '/import/ontology');
+	define('ONTOLOGY_DATA_IO_URL',			DEDALO_INSTALL_URL . '/import/ontology');
+
 	// structure_download. When ontology is updated, download files are saved here
-	define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
+	// !DEPRECATED
+	// define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
+
 	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary
 	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128');
 
@@ -635,10 +674,42 @@
 
 // dedalo_code
 	// server side (master)
-		// Do not apply here. Only for master server
-	// client side
+
+		// Code server. Defines if the installation server can provide new code files to other Dédalo servers.
+		// if the server can provide version change to true and uncomment the `DEDALO_CODE_FILES_DIR` and `DEDALO_CODE_FILES_URL`
+		define('IS_A_CODE_SERVER',	false);
+
+		// next constants are used in the process to create new versions and provide to clients
+		// by default the Dédalo server doesn't provide code to other servers
+		// uncomment it they if you want provide code files as mirror of official Dédalo server
+
+		// Directory with the code files to be server as code versions
+		// define('DEDALO_CODE_FILES_DIR',			DEDALO_ROOT_PATH . '/code');
+
+		// URL with the code files to be server as code versions
+		// define('DEDALO_CODE_FILES_URL',			DEDALO_ROOT_WEB . '/code');
+
+		// Use only for build new version with the git repository
+		// server git files (master) like /home/dedalo/master_dedalo.git
+		// define('DEDALO_CODE_SERVER_GIT_DIR',	'/my_dedalo_git_directory');
+
+		// Remote code servers.
+		// As client:
+		// Defines the code provider.
+		// As server provider:
+		// If your installation will provide dedalo code, the `code` parameter will be used by clients to validate them.
+		define('CODE_SERVERS',	[
+			[
+				'name'	=> 'Official Dédalo code server',
+				'url'	=> 'https://master.dedalo.dev/dedalo/core/api/v1/json/',
+				'code'	=> 'x3a0B4Y020Eg9w'
+			]
+		]);
+
+		// !DEPRECATED
 		// target dir where git command send the compressed file like 'https://master.dedalo.dev/dedalo/code/dedalo5_code.zip'
-		define('DEDALO_SOURCE_VERSION_URL',			'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
+		// define('DEDALO_SOURCE_VERSION_URL',		'https://master.dedalo.dev/dedalo/code/dedalo6_code.zip');
+
 		// target dir where git command send the compressed file like 'https://master.dedalo.dev/dedalo/code/dedalo5_code.zip'
 		define('DEDALO_SOURCE_VERSION_LOCAL_DIR',	'/tmp/'.DEDALO_ENTITY);
 

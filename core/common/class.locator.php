@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS LOCATOR
 *
@@ -161,7 +160,7 @@ class locator extends stdClass {
 	* @return bool
 	*/
 	public function set_section_top_tipo(string $value) : bool {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			debug_log(__METHOD__
 				. ' Invalid section_top_tipo' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -204,7 +203,7 @@ class locator extends stdClass {
 	* @return bool
 	*/
 	public function set_from_component_top_tipo(string $value) : bool {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			debug_log(__METHOD__
 				. ' Invalid from_component_tipo' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -251,7 +250,7 @@ class locator extends stdClass {
 	* @return bool
 	*/
 	public function set_section_tipo(string $value) : bool {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			debug_log(__METHOD__
 				. ' Invalid section_tipo' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -272,7 +271,7 @@ class locator extends stdClass {
 	* @return bool
 	*/
 	public function set_component_tipo(string $value) : bool {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			debug_log(__METHOD__
 				. ' Invalid component_tipo' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -293,7 +292,7 @@ class locator extends stdClass {
 	* @return bool
 	*/
 	public function set_from_component_tipo(string $value) : bool {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			debug_log(__METHOD__
 				. ' Invalid from_component_tipo' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -341,7 +340,7 @@ class locator extends stdClass {
 	* @return bool
 	*/
 	public function set_tag_type(string $value) : bool {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			debug_log(__METHOD__
 				. ' Invalid from_component_tipo' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -364,7 +363,7 @@ class locator extends stdClass {
 	* @return bool
 	*/
 	public function set_tag_component_tipo(string $value) : bool {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			debug_log(__METHOD__
 				. ' Invalid component_tipo' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -419,7 +418,7 @@ class locator extends stdClass {
 	* @return
 	*/
 	public function set_tipo_key(string $value) {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid tipo_key: $value", 1);
 		}
 		$this->tipo_key = $value;
@@ -433,7 +432,7 @@ class locator extends stdClass {
 	* @return bool
 	*/
 	public function set_tipo(string $value) : bool {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			debug_log(__METHOD__
 				. ' Invalid tipo' . PHP_EOL
 				. ' value: ' . to_string($value)

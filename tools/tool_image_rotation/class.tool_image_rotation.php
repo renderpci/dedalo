@@ -1,16 +1,15 @@
 <?php
 /**
 * CLASS TOOL_IMAGE_ROTATION
-* Manages component_av posterframe works.
-* Requires FFMPEG library
-* Ported from Dédalo v5
+* Handle the images rotation tool logic
 */
 class tool_image_rotation extends tool_common {
 
 
 
 	/**
-	* apply_rotation
+	* APPLY_ROTATION
+	* Render the image file using the user selected rotation parameters
 	* @param object $options
 	* @return object $response
 	*/
@@ -76,7 +75,6 @@ class tool_image_rotation extends tool_common {
 		$response->msg		= ($result === true)
 			? 'Success. Request done.'
 			: 'Error on rotate file.';
-
 
 
 		return $response;

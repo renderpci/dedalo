@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * DD_CORE_API
 * Manage API REST data with Dédalo
@@ -38,7 +37,7 @@ final class dd_core_api {
 	* Builds the start page minimum context.
 	* Normally is a menu and a section (based on url vars)
 	* This function tells to page what must to be request, based on given url vars
-	* Note that a full context is calculate for each element
+	* Note that a full context is calculated for each element
 	* @param object $options
 	* sample:
 	* {
@@ -69,31 +68,58 @@ final class dd_core_api {
 	public static function start(object $rqo) : object {
 
 		// test jer_dd without term data catch 22 situation
-			try {
-				$RecordObj_dd = new RecordObj_dd('dd1', 'dd');
-				$term = $RecordObj_dd->get_term();
-				if (empty($term)) {
-					$result = area_maintenance::recover_jer_dd_column();
-					if ($result===false) {
-						debug_log(__METHOD__
-							. " Error recovering term column from jer_dd table" . PHP_EOL
-							, logger::ERROR
-						);
-					}
-				}
-			} catch (Exception $e) {
-				debug_log(__METHOD__
-					. " Error (exception) on check term jer_dd_column" . PHP_EOL
-					. ' Caught exception: ' . $e->getMessage()
-					, logger::ERROR
-				);
-			}
+			// if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
+			// 	try {
+			// 		$RecordObj_dd = new RecordObj_dd('dd1', 'dd');
+			// 		$term = $RecordObj_dd->get_term();
+			// 		if (empty($term)) {
+			// 			$result = area_maintenance::recover_jer_dd_column();
+			// 			if ($result===false) {
+			// 				debug_log(__METHOD__
+			// 					. " Error recovering term column from jer_dd table" . PHP_EOL
+			// 					, logger::ERROR
+			// 				);
+			// 			}
+			// 		}
+			// 	} catch (Exception $e) {
+			// 		debug_log(__METHOD__
+			// 			. " Error (exception) on check term jer_dd_column" . PHP_EOL
+			// 			. ' Caught exception: ' . $e->getMessage()
+			// 			, logger::ERROR
+			// 		);
+			// 	}
+			// }
 
 		// options
 			$options	= $rqo->options ?? new StdClass();
 			$search_obj	= $options->search_obj ?? new StdClass(); // url vars
 			$menu		= $options->menu ?? false;
 			// (!) properties 'sqo' and 'source' could be received too, but they are not used here but in common->build_request_config
+
+		// recovery mode. Note that GET vars are inside $options->search_obj
+		// If a URL recovery param is received as ?recovery=XXX and the value matches
+		// the config DEDALO_RECOVERY_KEY, the system enters in recovery and maintenance modes
+		// to allow root user login and fix the Ontology problem
+			if (isset($search_obj->recovery)) {
+				$dedalo_recovery_key = defined('DEDALO_RECOVERY_KEY') ? DEDALO_RECOVERY_KEY : null;
+				if (!empty($dedalo_recovery_key) && $search_obj->recovery===$dedalo_recovery_key) {
+					// set recovery mode (modifies config_core)
+					area_maintenance::set_recovery_mode((object)[
+						'value' => true
+					]);
+					// set maintenance mode too (modifies config_core)
+					area_maintenance::set_maintenance_mode((object)[
+						'value' => true
+					]);
+				}else{
+					// return error. Prevent to calculate the environment here
+					$response = new stdClass();
+						$response->result	= false;
+						$response->msg		= 'Error. Invalid recovery key';
+						$response->error	= null;
+					return $response;
+				}
+			}
 
 		// response
 			$response = new stdClass();
@@ -200,13 +226,13 @@ final class dd_core_api {
 						$login_context = $login->get_structure_context();
 					} catch (Exception $e) {
 						debug_log(__METHOD__
-							." Caught exception: Error on get login context: " . PHP_EOL
+							. ' Caught exception: Error on get login context: ' . PHP_EOL
 							. ' exception message: '. $e->getMessage()
 							, logger::ERROR
 						);
 					}
 					if (empty($login_context) ||
-						empty($login_context->properties->login_items) // indicates table matrix_descriptors serious problem
+						empty($login_context->properties->login_items) // indicates Ontology tables serious problem
 						) {
 
 						// Warning: running with database problems. Load installer context instead login context
@@ -811,29 +837,32 @@ final class dd_core_api {
 	* @param object $rqo
 	* sample:
 		* {
-		*    "action": "delete",
-		*    "source": {	*
-		*        "action": "delete",
-		*        "model": "section",
-		*        "tipo": "oh1",
-		*        "section_tipo": "oh1",
-		*        "section_id": null,
-		*        "mode": "list",
-		*        "lang": "lg-eng",
-		*        "delete_mode": "delete_record"
-		*    },
-		*    "sqo": {
-		*        "section_tipo": [
-		*            "oh1"
-		*        ],
-		*        "filter_by_locators": [
-		*            {
-		*                "section_tipo": "oh1",
-		*                "section_id": "127"
-		*            }
-		*        ],
-		*        "limit": 1
-		*    }
+		*	"action": "delete",
+		*	"source": {	*
+		*		"action": "delete",
+		*		"model": "section",
+		*		"tipo": "oh1",
+		*		"section_tipo": "oh1",
+		*		"section_id": null,
+		*		"mode": "list",
+		*		"lang": "lg-eng",
+		*		"delete_mode": "delete_record"
+		* 	},
+		*	"options": {
+		*		"delete_diffusion_records": true
+		*	},
+		*	"sqo": {
+		*		"section_tipo": [
+		*		"oh1"
+		*		],
+		*		"filter_by_locators": [
+		*			{
+		*				"section_tipo": "oh1",
+		*				"section_id": "127"
+		*			}
+		*		],
+		*		"limit": 1
+		*		}
 		* }
 	* @return object $response
 	*/
@@ -853,11 +882,8 @@ final class dd_core_api {
 			}
 
 		// source vars
-			$delete_mode	= $ddo_source->delete_mode ?? 'delete_data'; // delete_record|delete_data*
-			$section_tipo	= $ddo_source->section_tipo ?? $ddo_source->tipo;
-			$section_id		= $ddo_source->section_id ?? null;
-			$tipo			= $ddo_source->tipo;
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$tipo	= $ddo_source->tipo;
+			$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			// Ensure model is 'section'
 			if($model!=='section') {
 				$response->errors[] = 'invalid model';
@@ -869,191 +895,20 @@ final class dd_core_api {
 				);
 				return $response;
 			}
-			$caller_dataframe = $ddo_source->caller_dataframe ?? null;
 
 		// options
-			$options = $rqo->options ?? null;
+			$options = new stdClass();
+				$options->delete_mode				= $ddo_source->delete_mode ?? 'delete_data';
+				$options->section_tipo				= $ddo_source->section_tipo ?? $tipo;
+				$options->section_id				= $ddo_source->section_id ?? null;
+				$options->caller_dataframe			= $ddo_source->caller_dataframe ?? null;
+				$options->sqo						= $rqo->sqo ?? null;
+				$options->delete_diffusion_records	= $rqo->options->delete_diffusion_records ?? null;
+				$options->delete_with_children		= $rqo->options->delete_with_children ?? false;
 
-		// permissions check (only sections area expected here)
-			$section = section::get_instance(
-				$section_id, // string|null section_id
-				$section_tipo // string section_tipo
-			);
-			$permissions = $section->get_section_permissions($section_tipo, $section_tipo);
-			// debug
-			debug_log(__METHOD__
-				." to delete section. Permissions: $permissions ".to_string($section_tipo)
-				, logger::DEBUG
-			);
-			if ($permissions<2) {
-				$msg = '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.'): '.$permissions;
-				$response->errors[] = 'insufficient permissions to delete';
-				$response->msg 	.= $msg;
-				debug_log(__METHOD__
-					." $response->msg " . PHP_EOL
-					.' rqo: '.to_string($rqo)
-					, logger::ERROR
-				);
-				return $response;
-			}
-
-		// sqo. search_query_object. If empty, we will create a new one with default values
-			$sqo = $rqo->sqo ?? null;
-			if(empty($sqo)){
-				// we build a new sqo based on the current source section_id
-
-				// section_id check (is mandatory when no sqo is received)
-					if (empty($section_id)) {
-						$response->errors[] = 'empty sqo section_id';
-						$response->msg 	.= '[3] section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
-						debug_log(__METHOD__
-							." $response->msg " . PHP_EOL
-							.' rqo: '.to_string($rqo)
-							, logger::ERROR
-						);
-						return $response;
-					}
-
-				// Build sqo if not provided
-					$self_locator = new locator();
-						$self_locator->set_section_tipo($section_tipo);
-						$self_locator->set_section_id($section_id);
-					$sqo = new search_query_object();
-						$sqo->set_section_tipo([$section_tipo]);
-						$sqo->set_filter_by_locators([$self_locator]);
-			}
-
-		// search the sections to delete
-			$sqo->offset	= 0;
-			$sqo->limit		= 0; // prevent pagination affects to deleted records
-			$search			= search::get_instance($sqo);
-			$rows_data		= $search->search();
-			$ar_records		= $rows_data->ar_records;
-			// check empty records
-			if (empty($ar_records)) {
-				$response->result = [];
-				$response->msg 	.= 'No records found to delete ';
-				debug_log(__METHOD__
-					." $response->msg " . PHP_EOL
-					.' rqo: '.to_string($rqo)
-					, logger::ERROR
-				);
-				return $response;
-			}
-
-		// check delete multiple
-		// only global admins can perform multiple deletes
-			$records_len = count($ar_records);
-			if($records_len > 1 && security::is_global_admin( logged_user_id() ) === false){
-				$response->result = [];
-				$response->msg 	.= 'forbidden delete multiple for this user';
-				debug_log(__METHOD__
-					." $response->msg " . PHP_EOL
-					.' rqo: '.to_string($rqo)
-					, logger::ERROR);
-				return $response;
-			}
-
-		// component_relation_children check (thesaurus cases)
-			$relation_children_tipo = null;
-			if ($delete_mode==='delete_record') {
-				$relation_children_model	= 'component_relation_children';
-				$ar_children_tipo			= section::get_ar_children_tipo_by_model_name_in_section(
-					$section_tipo,
-					[$relation_children_model],
-					true, // bool from_cache
-					true, // bool resolve_virtual
-					true, // bool recursive
-					true // bool search_exact
-				);
-				$relation_children_tipo = $ar_children_tipo[0] ?? null;
-			}
-
-		// Determine if diffusion records should be deleted
-			$delete_diffusion_records = is_object($options) && isset($options->delete_diffusion_records)
-				? (bool)$options->delete_diffusion_records
-				: true; // default is true
-
-		// Perform delete on each record
-			foreach ($ar_records as $record) {
-
-				$current_section_tipo	= $record->section_tipo;
-				$current_section_id		= $record->section_id;
-
-				// Check if section has children and skip deletion if it does
-					if ($delete_mode==='delete_record' && !empty($relation_children_tipo)) {
-						$component_relation_children = component_common::get_instance(
-							$relation_children_model,
-							$relation_children_tipo,
-							$current_section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$current_section_tipo
-						);
-						$dato = $component_relation_children->get_dato();
-						if (!empty($dato)) {
-							$children = array_map(function($el){
-								return $el->section_id;
-							}, $dato);
-							$response->errors[] = (label::get_label('skip_deletion_cause_children') ?? 'skipped record deletion because he has children')
-								.' : ' . to_string($current_section_id). ' ['.join(',',$children).']';
-							continue;
-						}
-					}
-
-				// Delete the section
-					$section	= section::get_instance($current_section_id, $current_section_tipo, 'list', true, $caller_dataframe);
-					$deleted	= $section->Delete($delete_mode, $delete_diffusion_records);
-					if ($deleted!==true) {
-						$response->errors[] = 'unable to delete record: '.to_string($current_section_id);
-					}else{
-						// remove_parent_references
-						if ($delete_mode==='delete_record' && !empty($relation_children_tipo)) {
-							// references. Calculate component parent and removes references to current section
-							component_relation_common::remove_parent_references(
-								$current_section_tipo,
-								$current_section_id,
-								null
-							);
-						}
-					}
-			}
-
-		// ar_delete section_id
-			$ar_delete_section_id = array_map(function($record){
-				return $record->section_id;
-			}, $ar_records);
-
-		// check deleted all found sections. Exec the same search again expecting to obtain zero records
-			if ($delete_mode==='delete_record') {
-
-				$check_search		= search::get_instance($sqo);
-				$check_rows_data	= $check_search->search();
-				$check_ar_records	= $check_rows_data->ar_records;
-				if(count($check_ar_records)>0) {
-
-					$check_ar_section_id = array_map(function($record){
-						return $record->section_id;
-					}, $check_ar_records);
-
-					$response->errors[] = 'record not deleted: '.to_string($check_ar_section_id);
-					$response->msg 	.= '[4] Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
-					debug_log(__METHOD__
-						." $response->msg " . PHP_EOL
-						.' rqo: '.to_string($rqo) . PHP_EOL
-						.' errors: ' . json_encode($response->errors, JSON_PRETTY_PRINT)
-						, logger::ERROR
-					);
-					return $response;
-				}
-			}
-
-		// response OK
-			$response->result		= $ar_delete_section_id;
-			$response->delete_mode	= $delete_mode;
-			$response->msg			= !empty($errors)
-				? 'Some errors occurred when delete sections.'
-				: 'OK. Request done successfully.';
+		// Delete in sections
+			$sections = sections::get_instance( null, null );
+			$response = $sections->delete( $options );
 
 
 		return $response;
@@ -1453,6 +1308,7 @@ final class dd_core_api {
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
+			$simple			= $rqo->simple ?? false; // simple context response
 
 		// response
 			$response = new stdClass();
@@ -1551,14 +1407,28 @@ final class dd_core_api {
 					break;
 			}
 
-		// element JSON
-			$get_json_options = new stdClass();
-				$get_json_options->get_context	= true;
-				$get_json_options->get_data		= false;
-			$element_json = $element->get_json($get_json_options);
 
-		// context add
-			$context = $element_json->context;
+		// context
+			if ($simple===true) {
+
+				// simple context case
+
+				$context = $element->get_structure_context_simple(
+					1, // permissions
+					false // add_request_config
+				);
+			}else{
+
+				// default case
+
+				// element JSON
+					$get_json_options = new stdClass();
+						$get_json_options->get_context	= true;
+						$get_json_options->get_data		= false;
+					$element_json = $element->get_json($get_json_options);
+
+				$context = $element_json->context;
+			}
 
 		// response
 			$response->result	= $context;
@@ -1641,75 +1511,6 @@ final class dd_core_api {
 
 
 	// search methods ///////////////////////////////////
-
-
-
-	/**
-	* FILTER_SET_EDITING_PRESET (!) Deactivated 01-30-2023 because nobody uses it
-	* Saves given filter in temp preset section
-	* @param object $options
-	* @return object $response
-	*/
-		// public static function filter_set_editing_preset(object $options) : object {
-
-		// 	// options
-		// 		$section_tipo	= $options->section_tipo;
-		// 		$filter_obj		= $options->filter_obj;
-
-		// 	$response = new stdClass();
-		// 		$response->result	= false;
-		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-		// 		$response->error	= null;
-
-		// 	// save_temp_preset
-		// 		$result = search::save_temp_preset(
-		// 			logged_user_id(),
-		// 			$section_tipo,
-		// 			$filter_obj
-		// 		);
-
-		// 	// response
-		// 		$response->result	= $result;
-		// 		$response->msg		= 'OK. Request done';
-
-
-		// 	return $response;
-		// }//end filter_set_editing_preset
-
-
-
-	/**
-	* ONTOLOGY_GET_CHILDREN_RECURSIVE (!) Deactivated 01-30-2023 because nobody uses it
-	* Calculate recursively the children of given term
-	* @param object $options
-	* @return object $response
-	*/
-		// public static function ontology_get_children_recursive(object $options) : object {
-
-		// 	// session_write_close();
-
-		// 	// options
-		// 		$target_tipo = $options->target_tipo;
-
-		// 	$response = new stdClass();
-		// 		$response->result	= false;
-		// 		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-		// 		$response->error	= null;
-
-		// 	// ontology call
-		// 		$children = ontology_legacy::get_children_recursive($target_tipo);
-
-		// 	// response
-		// 		$response->result	= $children;
-		// 		$response->msg		= 'OK. Request done';
-
-
-		// 	return $response;
-		// }//end ontology_get_children_recursive
-
-
-
-	// private methods ///////////////////////////////////
 
 
 
@@ -1869,111 +1670,111 @@ final class dd_core_api {
 					// check if the search has a dataframe associated (time_machine of the component with dataframe)
 					// when the component has a dataframe need to be re_created using his own data with the dataframe data
 					// it will be showed as an unique component, the main component and his dataframe
-						if( $ddo_source->mode === 'tm'
-							&& isset($ddo_source->has_dataframe)
-							&& $ddo_source->has_dataframe=== true ){
+						// if( $ddo_source->mode === 'tm'
+						// 	&& isset($ddo_source->has_dataframe)
+						// 	&& $ddo_source->has_dataframe=== true ){
 
-							$original_limit		= $sqo->limit;
-							$original_offset	= $sqo->offset;
-							// set the limit and offset to 0 to search all data in time_machine
-							$sqo->limit = 0;
-							$sqo->offset = 0;
-							$full_data = [];
+						// 	$original_limit		= $sqo->limit;
+						// 	$original_offset	= $sqo->offset;
+						// 	// set the limit and offset to 0 to search all data in time_machine
+						// 	$sqo->limit = 0;
+						// 	$sqo->offset = 0;
+						// 	$full_data = [];
 
-							// 1 first get the data of the main component
-							// using the sqo sent by the client
-								$source_sections  = sections::get_instance(
-									null, // ?array $ar_locators
-									$sqo, // object $search_query_object = null
-									$tipo, // string $caller_tipo = null (section/portal)
-									$mode, // string $mode = 'list'
-									$lang // string $lang = DEDALO_DATA_NOLAN
-								);
-								$full_data = array_merge($full_data, $source_sections->get_dato());
+						// 	// 1 first get the data of the main component
+						// 	// using the sqo sent by the client
+						// 		$source_sections  = sections::get_instance(
+						// 			null, // ?array $ar_locators
+						// 			$sqo, // object $search_query_object = null
+						// 			$tipo, // string $caller_tipo = null (section/portal)
+						// 			$mode, // string $mode = 'list'
+						// 			$lang // string $lang = DEDALO_DATA_NOLAN
+						// 		);
+						// 		$full_data = array_merge($full_data, $source_sections->get_dato());
 
-							// 2 get the data of his dataframe
-								$original_ddo = array_find($rqo->show->ddo_map ?? [], function($item){
-									return isset($item->has_dataframe) && $item->has_dataframe===true;
-								});
-								if (!is_object($original_ddo)) {
-									debug_log(__METHOD__
-										. " Error: original_ddo (has_dataframe) not found in ddo_map!  " . PHP_EOL
-										. ' $rqo->show->ddo_map: ' . to_string($rqo->show->ddo_map)
-										, logger::ERROR
-									);
-								}else if ( isset($original_ddo->dataframe_ddo) ) {
-									$dataframe_ddo = $original_ddo->dataframe_ddo;
-									// clone the $sqo to change without changes the original
-									// the sqo will be set with the dataframe tipo and lg-nolan as lang
-									// dataframe always are portals.
-									$dataframe_sqo = json_decode(json_encode($sqo));
-									foreach ($dataframe_sqo->filter_by_locators as $current_filter_by_locator) {
-											$current_filter_by_locator->tipo = $dataframe_ddo->tipo;
-											$current_filter_by_locator->lang = DEDALO_DATA_NOLAN;
-									}
+						// 	// 2 get the data of his dataframe
+						// 		$original_ddo = array_find($rqo->show->ddo_map ?? [], function($item){
+						// 			return isset($item->has_dataframe) && $item->has_dataframe===true;
+						// 		});
+						// 		if (!is_object($original_ddo)) {
+						// 			debug_log(__METHOD__
+						// 				. " Error: original_ddo (has_dataframe) not found in ddo_map!  " . PHP_EOL
+						// 				. ' $rqo->show->ddo_map: ' . to_string($rqo->show->ddo_map)
+						// 				, logger::ERROR
+						// 			);
+						// 		}else if ( isset($original_ddo->dataframe_ddo) ) {
+						// 			$dataframe_ddo = $original_ddo->dataframe_ddo;
+						// 			// clone the $sqo to change without changes the original
+						// 			// the sqo will be set with the dataframe tipo and lg-nolan as lang
+						// 			// dataframe always are portals.
+						// 			$dataframe_sqo = json_decode(json_encode($sqo));
+						// 			foreach ($dataframe_sqo->filter_by_locators as $current_filter_by_locator) {
+						// 					$current_filter_by_locator->tipo = $dataframe_ddo->tipo;
+						// 					$current_filter_by_locator->lang = DEDALO_DATA_NOLAN;
+						// 			}
 
-									// get the data of the dataframe component
-									// using the sqo sent by the client
-										$dataframe_sections = sections::get_instance(
-											null, // ?array $ar_locators
-											$dataframe_sqo, // object $search_query_object = null
-											$tipo, // string $caller_tipo = null (section/portal)
-											$mode, // string $mode = 'list'
-											$lang // string $lang = DEDALO_DATA_NOLAN
-										);
-									$full_data = array_merge($full_data, $dataframe_sections->get_dato());
-								}
-								// order the full data ASC by date
-								usort($full_data, function($a, $b) {
-									return strtotime($a->timestamp) - strtotime($b->timestamp);
-								});
+						// 			// get the data of the dataframe component
+						// 			// using the sqo sent by the client
+						// 				$dataframe_sections = sections::get_instance(
+						// 					null, // ?array $ar_locators
+						// 					$dataframe_sqo, // object $search_query_object = null
+						// 					$tipo, // string $caller_tipo = null (section/portal)
+						// 					$mode, // string $mode = 'list'
+						// 					$lang // string $lang = DEDALO_DATA_NOLAN
+						// 				);
+						// 			$full_data = array_merge($full_data, $dataframe_sections->get_dato());
+						// 		}
+						// 		// order the full data ASC by date
+						// 		usort($full_data, function($a, $b) {
+						// 			return strtotime($a->timestamp) - strtotime($b->timestamp);
+						// 		});
 
-							// 3 mix the both data into one
-							// the source_data will be the data of the main component
-							// dataframe_data will be the data of the dataframe
-							// when the source_data changes will be set with the previous dataframe_data
-							// when the dataframe changes it will be set with previous source_data
-							// dataframe_data has a array with the key of his section_id_key, it will
-							// used to identify the value associated to the source_data and recreate it
-								$source_data	= null;
-								$dataframe_data	= [null];
-								if (is_object($original_ddo)) {
-									foreach ($full_data as $current_data) {
-										if($current_data->tipo === $original_ddo->tipo ){
-											$source_data = $current_data->dato;
-										}
-										if($current_data->tipo === $original_ddo->dataframe_ddo->tipo ){
-											$dataframe_data[$current_data->section_id_key] = $current_data->dato;
-										}
-										$current_data->dato				= $source_data;
-										$current_data->dataframe_data	= $dataframe_data;
-										$current_data->tipo				= $original_ddo->tipo;
-										$current_data->dataframe_tipo	= $original_ddo->dataframe_ddo->tipo ;
-									}
-								}
+						// 	// 3 mix the both data into one
+						// 	// the source_data will be the data of the main component
+						// 	// dataframe_data will be the data of the dataframe
+						// 	// when the source_data changes will be set with the previous dataframe_data
+						// 	// when the dataframe changes it will be set with previous source_data
+						// 	// dataframe_data has a array with the key of his section_id_key, it will
+						// 	// used to identify the value associated to the source_data and recreate it
+						// 		$source_data	= null;
+						// 		$dataframe_data	= [null];
+						// 		if (is_object($original_ddo)) {
+						// 			foreach ($full_data as $current_data) {
+						// 				if($current_data->tipo === $original_ddo->tipo ){
+						// 					$source_data = $current_data->dato;
+						// 				}
+						// 				if($current_data->tipo === $original_ddo->dataframe_ddo->tipo ){
+						// 					$dataframe_data[$current_data->section_id_key] = $current_data->dato;
+						// 				}
+						// 				$current_data->dato				= $source_data;
+						// 				$current_data->dataframe_data	= $dataframe_data;
+						// 				$current_data->tipo				= $original_ddo->tipo;
+						// 				$current_data->dataframe_tipo	= $original_ddo->dataframe_ddo->tipo ;
+						// 			}
+						// 		}
 
-								// order the full data DESC by date
-								usort($full_data, function($a, $b) {
-									return strtotime($b->timestamp) - strtotime($a->timestamp);
-								});
+						// 		// order the full data DESC by date
+						// 		usort($full_data, function($a, $b) {
+						// 			return strtotime($b->timestamp) - strtotime($a->timestamp);
+						// 		});
 
-								// remove paginated rows as original sqo set
-								$offset	= (int)$original_offset;
-								$limit	= (int)$original_limit;
+						// 		// remove paginated rows as original sqo set
+						// 		$offset	= (int)$original_offset;
+						// 		$limit	= (int)$original_limit;
 
-								$sqo->limit = $original_limit;
-								$full_data = array_slice($full_data, $offset, $limit);
+						// 		$sqo->limit = $original_limit;
+						// 		$full_data = array_slice($full_data, $offset, $limit);
 
-							// 4 get the data of the main component with the full data
-								$element  = sections::get_instance(
-									null, // ?array $ar_locators
-									$sqo, // object $search_query_object = null
-									$tipo, // string $caller_tipo = null (section/portal)
-									$mode, // string $mode = 'list'
-									$lang // string $lang = DEDALO_DATA_NOLAN
-								);
-								$element->set_dato( $full_data );
-						}else{
+						// 	// 4 get the data of the main component with the full data
+						// 		$element  = sections::get_instance(
+						// 			null, // ?array $ar_locators
+						// 			$sqo, // object $search_query_object = null
+						// 			$tipo, // string $caller_tipo = null (section/portal)
+						// 			$mode, // string $mode = 'list'
+						// 			$lang // string $lang = DEDALO_DATA_NOLAN
+						// 		);
+						// 		$element->set_dato( $full_data );
+						// }else{
 
 							// prevent edit mode set limit greater than 1
 								if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || (int)$sqo->limit > 1)) {
@@ -1988,7 +1789,7 @@ final class dd_core_api {
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
-						}
+						// }
 
 					// session sqo. Store section SQO in session.
 					// It's not used to main navigation, but it's needed by some tools like tool_export
@@ -2700,9 +2501,11 @@ final class dd_core_api {
 			$obj->maintenance_mode				= defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
 				? DEDALO_MAINTENANCE_MODE_CUSTOM
 				: (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : false);
-			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION_CUSTOM')
+			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION_CUSTOM') && !empty(DEDALO_NOTIFICATION_CUSTOM)
 				? DEDALO_NOTIFICATION_CUSTOM
 				: (defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : false);
+			// recovery mode
+			$obj->recovery_mode					= $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
 
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
@@ -2803,6 +2606,44 @@ final class dd_core_api {
 
 		return $lang_labels;
 	}//end get_lang_labels
+
+
+
+	/**
+	* GET_ONTOLOGY_INFO
+	* Transform tipo like 'dd1' to an ontology section_tipo, section_id object
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function get_ontology_info( object $rqo ) : object|false {
+
+		// tipo
+		$tipo = $rqo->tipo;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// tipo check
+			if ( safe_tipo($tipo)===false ) {
+				$response->msg		= 'Error. Invalid tipo: '.to_string($tipo);
+				$response->errors[] = 'Bad tipo';
+				return $response;
+			}
+
+		$section_id				= get_section_id_from_tipo($tipo);
+		$tld					= get_tld_from_tipo($tipo);
+		$target_section_tipo	= ontology::map_tld_to_target_section_tipo($tld);
+
+		$response->result = (object)[
+			'section_tipo'	=> $target_section_tipo,
+			'section_id'	=> $section_id
+		];
+
+
+		return $response;
+	}//end get_ontology_info
 
 
 

@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1); // TEST NOT FINISHED !
+<?php declare(strict_types=1); // TEST NOT FINISHED !
 /**
 * DD_AREA_MAINTENANCE_API
 * Manage API REST data flow of the area with Dédalo
@@ -7,7 +6,6 @@ declare(strict_types=1); // TEST NOT FINISHED !
 * a normalized RQO (Request Query Object)
 * Note that only authorized users (Global Admins, Developer and root users)
 * can access this methods (permissions checked in dd_manager)
-*
 */
 final class dd_area_maintenance_api {
 
@@ -33,7 +31,7 @@ final class dd_area_maintenance_api {
 		* }
 	* @return object response { result: mixed, msg: string }
 	*/
-	public static function class_request(object $rqo) : object {
+	public static function class_request( object $rqo ) : object {
 
 		// options
 			$options			= $rqo->options ?? [];
@@ -114,123 +112,186 @@ final class dd_area_maintenance_api {
 
 
 	/**
-	* STRUCTURE_TO_JSON
+	* WIDGET_REQUEST
+	* Call to class method given and return and object with the response
+	* Method must be static and accept a only one object argument
+	* Method must return an object like { result: mixed, msg: string }
 	* @param object $rqo
-	* @return object $response
+	* sample:
+		* {
+		* 	action: "widget_request"
+		* 	dd_api: "dd_area_maintenance_api"
+		* 	source: {
+		* 		typo: "source",
+		* 		type : 'widget',
+		* 		model : 'update_code'
+		* 		action: "build_version_from_git_master"
+		* 	},
+		* 	options: {
+		*   	skip_backup_time_range: true
+		*   }
+		* }
+	* @return object response { result: mixed, msg: string }
 	*/
-	public static function structure_to_json(object $rqo) : object {
-
-		// session_write_close();
+	public static function widget_request( object $rqo ) : object {
 
 		// options
-			$options = $rqo->options ?? [];
+			$options			= $rqo->options ?? [];
+			$fn_arguments		= $options;
+			$background_running	= $options->background_running ?? false;
+
+		// source
+			$source			= $rqo->source;
+			$class_name		= $source->model;
+			$class_method	= $source->action;
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+				$response->errors	= [];
 
-		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos_item = array_find((array)$options, function($item){
-				return $item->name==='dedalo_prefix_tipos';
-			});
-			$dedalo_prefix_tipos = isset($dedalo_prefix_tipos_item) && is_object($dedalo_prefix_tipos_item)
-				? $dedalo_prefix_tipos_item->value ?? ''
-				: '';
-			$ar_dedalo_prefix_tipos = array_map(function($item){
-				return trim($item);
-			}, explode(',', $dedalo_prefix_tipos));
-			if (empty($ar_dedalo_prefix_tipos)) {
-				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
+		// include the widget class
+			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/' . $class_name . '/class.' . $class_name . '.php';
+			if( !include $widget_class_file ) {
+				$response->errors[] = 'Widget class file is unavailable';
 				return $response;
 			}
 
-		$ar_tld		= $ar_dedalo_prefix_tipos;
-		$json_data	= backup::structure_to_json($ar_tld);
+		// check valid options
+			if (!is_object($options)) {
+				$response->msg = 'Error. invalid options ';
+				$response->errors[] = 'Invalid options type';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' options: ' .to_string($options)
+					, logger::ERROR
+				);
+				return $response;
+			}
 
-		$file_name	= 'structure.json';
-		$file_dir	= defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR;
-		$file_path	= $file_dir .'/'. $file_name;
+		// method (static)
+			if (!method_exists($class_name, $class_method)) {
+				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
+				return $response;
+			}
+			try {
 
-		if(!file_put_contents($file_path, json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
-			// write error occurred
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']. Impossible to write JSON file';
-			return $response;
-		}
+				// background_running / direct cases
+				switch (true) {
+					case ($background_running===true):
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+						$cli_options = new stdClass();
+							$cli_options->class_name	= $class_name;
+							$cli_options->method_name	= $class_method;
+							$cli_options->class_file	= null; // already loaded by loader
+							$cli_options->params		= $options;
+
+						$fn_result = exec_::request_cli($cli_options);
+						break;
+
+					default:
+						// direct case
+
+						$fn_result = call_user_func(array($class_name, $class_method), $fn_arguments);
+						break;
+				}
+
+			} catch (Exception $e) { // For PHP 5
+
+				debug_log(__METHOD__
+					." Exception caught [widget_request] : ". $e->getMessage()
+					, logger::ERROR
+				);
+				trigger_error($e->getMessage());
+
+
+				$fn_result = new stdClass();
+					$fn_result->result	= false;
+					$fn_result->msg		= 'Error. Request failed on call_user_func method: '.$class_method;
+					$response->errors[] = 'Invalid method ' . $class_method;
+			}
+
+			$response = $fn_result;
 
 
 		return $response;
-	}//end structure_to_json
+	}//end widget_request
 
 
 
 	/**
-	* IMPORT_STRUCTURE_FROM_JSON
+	* GET_WIDGET_VALUE
+	* Returns a widget value
+	* It is used to update widget data dynamically
 	* @param object $rqo
+	* {
+	* 	..
+	* 	source : {
+	* 		model: string
+	* 	}
+	* }
 	* @return object $response
 	*/
-	public static function import_structure_from_json(object $rqo) : object {
+	public static function get_widget_value( object $rqo ) : object {
 
-		// session_write_close();
-
-		// options
-			$options = $rqo->options ?? [];
+		// source
+			$source			= $rqo->source;
+			$class_name		= $source->model;
+			$class_method	= 'get_value';
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+				$response->errors	= [];
 
-		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos_item = array_find($options, function($item) {
-				return $item->name === 'dedalo_prefix_tipos';
-			});
-			$dedalo_prefix_tipos	= is_object($dedalo_prefix_tipos_item) ? $dedalo_prefix_tipos_item->value : '';
-			$ar_dedalo_prefix_tipos	= array_map('trim', explode(',', $dedalo_prefix_tipos));
-
-		// file contents
-			$file_name	= 'structure.json';
-			$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR) . '/' . $file_name;
-			if (!file_exists($file_path)) {
-				$response->msg .= ' - File not found: '.$file_name;
+		// include the widget class
+			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/' . $class_name . '/class.' . $class_name . '.php';
+			if( !include $widget_class_file ) {
+				$response->errors[] = 'Widget class file is unavailable';
 				return $response;
 			}
 
-			$json_content = file_get_contents($file_path);
-			if ($json_content === false) {
-				$response->msg .= ' - Error reading file: '.$file_name;
+		// method (static)
+			if (!method_exists($class_name, $class_method)) {
+				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
+				$response->errors[] = 'Invalid method';
 				return $response;
 			}
 
-			$data = json_decode($json_content);
-			if (json_last_error() !== JSON_ERROR_NONE) {
-				$response->msg .= ' - Invalid JSON in file: '.$file_name;
-				return $response;
+			try {
+
+				// exec 'get_value' method from widget
+				$fn_result = call_user_func([$class_name, $class_method]);
+				// $fn_result = $class_name::$class_method();
+
+			} catch (Exception $e) { // For PHP 5
+
+				debug_log(__METHOD__
+					." Exception caught [class_request] : ". $e->getMessage()
+					, logger::ERROR
+				);
+				trigger_error($e->getMessage());
+
+				$fn_result = new stdClass();
+					$fn_result->result	= false;
+					$fn_result->msg		= 'Error. Request failed on call method: '.$class_method;
+					$response->errors[] = 'Invalid method ' . $class_method;
 			}
 
-		// import
-			$ar_tld		= empty($ar_dedalo_prefix_tipos) ? [] : $ar_dedalo_prefix_tipos;
-			$response	= backup::import_structure_json_data(
-				$data,
-				$ar_tld
-			);
+			$response = $fn_result;
 
 
 		return $response;
-	}//end import_structure_from_json
+	}//end get_widget_value
 
 
 
 	/**
 	* LOCK_COMPONENTS_ACTIONS
 	* Get lock components active users info
-	*
 	* @param object $rqo
-	* 	Sample:
 	* {
 	* 	action	: "lock_components_actions",
 	*	dd_api	: 'dd_area_maintenance_api',
@@ -240,7 +301,7 @@ final class dd_area_maintenance_api {
 	* }
 	* @return object $response
 	*/
-	public static function lock_components_actions(object $rqo) : object {
+	public static function lock_components_actions( object $rqo ) : object {
 
 		// response
 			$response = new stdClass();
@@ -281,7 +342,7 @@ final class dd_area_maintenance_api {
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function modify_counter(object $rqo) : object {
+	public static function modify_counter( object $rqo ) : object {
 
 		session_write_close();
 
@@ -342,13 +403,14 @@ final class dd_area_maintenance_api {
 
 	/**
 	* PARSE_SIMPLE_SCHEMA_CHANGES_FILES
-	* Used to call the hierarchy function by client
+	* Used to call the hierarchy function by client in 'component_security_access'
 	* get the parse data of specific file send by client in the rqo->options->filename
+	* @see component_security_access.js request
 	* @param object $rqo
 	* @return object $response
 	* response>result will be the array of changes/additions into the ontology since last update section by section.
 	*/
-	public static function parse_simple_schema_changes_files(object $rqo) : object {
+	public static function parse_simple_schema_changes_files( object $rqo ) : object {
 
 		// options
 			$options	= $rqo->options;

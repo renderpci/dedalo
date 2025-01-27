@@ -1,8 +1,7 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS MENU
-*
-*
+* Handles menu logic
 */
 class menu extends common {
 
@@ -19,7 +18,7 @@ class menu extends common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct(string $mode='edit') {
+	public function __construct( string $mode='edit' ) {
 
 		$this->id			= null;
 		$this->tipo			= 'dd85'; // string class menu (dd85)
@@ -215,19 +214,10 @@ class menu extends common {
 	* Recursive find parent area function
 	* @param object $area
 	* @param array $skip_parents
-	* @return object $parent
-	* Sample:
-	* {
-	*	"tipo": "test1",
-	*	"model": "area",
-	*	"parent": "dd88",
-	*	"properties": {
-	*		"mykey2": 2
-	*	},
-	*	"label": "<mark>AREA DE PRUEBAS (TESTS) YYYY</mark>"
-	* }
+	* @return string|null $parent
+	* Sample: 'tch188'
 	*/
-	private static function get_my_parent( object $area, array $skip_parents ) {
+	private static function get_my_parent( object $area, array $skip_parents ) : ?string  {
 
 		// find if the my parent is in skip parents
 		$current_parent = array_find($skip_parents, function($item) use ($area){
@@ -239,7 +229,7 @@ class menu extends common {
 			return self::get_my_parent($current_parent, $skip_parents);
 		}
 
-		$parent = $area->parent;
+		$parent = $area->parent ?? null;
 
 
 		return $parent;
@@ -295,7 +285,7 @@ class menu extends common {
 	* @param bool $add_request_config = false
 	* @return dd_object $dd_object
 	*/
-	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
+	public function get_structure_context( int $permissions=1, bool $add_request_config=false ) : dd_object {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();

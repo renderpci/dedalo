@@ -8,7 +8,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
-	import {strip_tags} from '../../../core/common/js/utils/index.js'
+	import {strip_tags, url_vars_to_object} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -121,11 +121,12 @@ const get_content_data = function(self) {
 			class_name		: 'login_form',
 			parent			: fragment
 		})
-		form.addEventListener('submit', (e) => {
+		const submit_handler = (e) => {
 			e.preventDefault()
 			// fire button enter mousedown event
 			button_enter.dispatchEvent(new Event('mousedown'));
-		})
+		}
+		form.addEventListener('submit', submit_handler)
 
 	// login_items
 		const login_items = self.context.properties.login_items
@@ -133,9 +134,25 @@ const get_content_data = function(self) {
 	// check login_items. If there were problems with type resolution, maybe the Ontology tables are not reachable
 		if (!login_items || !login_items.find(el => el.tipo==='dd255')) {
 
+			// URL vars. Check for 'recovery' GET param
+			const url_vars = url_vars_to_object()
+			if (url_vars.recovery) {
+				// refresh the window to force read DEDALO_MAINTENANCE_MODE in server side
+				setTimeout(function(){
+					// Refresh the page and bypass the cache
+					location.reload(true);
+				}, 3000)
+				return ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'content_data error_message warning',
+					inner_html		: '🥵 Trying to recover from a serious problem in the Ontology. Please wait.. or reload the page',
+					parent			: fragment
+				})
+			}
+
 			return ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'content_data error',
+				class_name		: 'content_data error_message error',
 				inner_html		: 'Error on create login form. login_items are invalid. Check your database connection and integrity or reinstall Dédalo',
 				parent			: fragment
 			})
@@ -227,12 +244,11 @@ const get_content_data = function(self) {
 			const button_enter_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button_enter_label',
-				inner_html		: strip_tags(login_item_enter.label),
+				inner_html		: strip_tags(login_item_enter.label || 'Enter'),
 				parent			: button_enter
 			})
 		// event click
-		button_enter.addEventListener('mousedown', fn_submit)
-		function fn_submit(e) {
+		const click_handler = async (e) => {
 			e.stopPropagation()
 			e.preventDefault()
 
@@ -266,54 +282,63 @@ const get_content_data = function(self) {
 				button_enter.classList.add('white')
 				button_enter.blur()
 
-			// data_manager API call
-				data_manager.request({
-					body : {
-						action	: 'login',
-						dd_api	: 'dd_utils_api',
-						options	: {
-							username	: username,
-							auth		: auth
-						}
-					}
+			// login : data_manager API call
+				const api_response = await self.login({
+					username	: username,
+					auth		: auth
 				})
-				.then((api_response)=>{
-					if(SHOW_DEBUG===true) {
-						console.log('api_response:', api_response);
-					}
 
-					if (api_response.result===false) {
+				if (api_response.result===false) {
 
-						// errors found
+					// errors found
 
-						const message	= api_response.errors && api_response.errors.length>0
-							? api_response.errors
-							: api_response.msg || ['Unknown login error happen']
-						const msg_type	= 'error'
-						ui.show_message(messages_container, message, msg_type, 'component_message', true)
+					const message	= api_response.errors && api_response.errors.length>0
+						? api_response.errors
+						: api_response.msg || ['Unknown login error happen']
+					const msg_type	= 'error'
+					ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
-						// hide spinner and show button label
-						button_enter_label.classList.remove('hide')
+					// hide spinner and show button label
+					button_enter_label.classList.remove('hide')
+					button_enter_loading.classList.add('hide')
+					button_enter.classList.remove('white')
+
+				}else{
+
+					// success case
+
+					const message	= api_response.msg
+					const msg_type	= 'ok';
+					ui.show_message(messages_container, message, msg_type, 'component_message', true)
+
+					// hide spinner and show button label
+
+					// errors handle
+					// If errors found in API response (many vars and directories are checked in 'dd_init.test' on login)
+					// the login sequence is stopped to warn the user of problems
+					if (api_response.errors && api_response.errors.length) {
+						const msg = api_response.errors.join('<br>')
+						console.error('msg:', msg);
+						ui.show_message(
+							messages_container,
+							api_response.errors.join('<br>'),
+							'error',
+							'component_message',
+							true
+						)
 						button_enter_loading.classList.add('hide')
-						button_enter.classList.remove('white')
-
-					}else{
-
-						// success case
-
-						const message	= api_response.msg
-						const msg_type	= 'ok';
-						ui.show_message(messages_container, message, msg_type, 'component_message', true)
-
-						// hide spinner and show button label
-
-						self.action_dispatch(api_response)
+						return
 					}
 
-					// status update
-						self.status = 'rendered'
-				})
-		}//end fn_submit
+					// After API login call, it's possible to go to some different pages,
+					// handled by self.custom_action_dispatch value set on build
+					self.action_dispatch(api_response)
+				}
+
+				// status update
+					self.status = 'rendered'
+		}
+		button_enter.addEventListener('mousedown', click_handler)
 
 	// info
 		// web version add
@@ -528,11 +553,9 @@ const validate_browser = function() {
 * RENDER_FILES_LOADER
 * Creates the files loader nodes
 * @see login.action_dispatch
-* @return DOM DocumentFragment
+* @return HTMLElement cont
 */
 export const render_files_loader = function() {
-
-	const fragment = new DocumentFragment()
 
 	// cont
 		const cont = ui.create_dom_element({
@@ -541,8 +564,7 @@ export const render_files_loader = function() {
 			class_name		: 'cont',
 			dataset			: {
 				pct : 'Loading..'
-			},
-			parent			: fragment
+			}
 		})
 
 	// svg circle
@@ -558,7 +580,7 @@ export const render_files_loader = function() {
 
 	// update. receive worker messages data
 		let loaded = 0
-		fragment.update = function( data ) {
+		cont.update = function( data ) {
 
 			const total_files	= data.total_files
 			const rate			= data.status==='loading'
@@ -578,10 +600,10 @@ export const render_files_loader = function() {
 		}
 
 	// bar_circle animation
-		const bar_circle	= svg.querySelector('#bar')
-		const radio			= bar_circle.getAttribute('r');
-		const cst			= Math.PI*(radio*2);
-		function animate_circle(value) {
+		const bar_circle		= svg.querySelector('#bar')
+		const radio				= bar_circle.getAttribute('r');
+		const cst				= Math.PI*(radio*2);
+		const animate_circle	= (value) => {
 
 			if (value>0 && bar_circle.classList.contains('hide')) {
 				bar_circle.classList.remove('hide')
@@ -605,11 +627,11 @@ export const render_files_loader = function() {
 			element_type	: 'h2',
 			class_name		: 'loader_label',
 			inner_html		: get_label.loading_dedalo_files || 'Loading Dédalo files',
-			parent			: fragment
+			parent			: cont
 		})
 
 
-	return fragment
+	return cont
 }//end render_files_loader
 
 

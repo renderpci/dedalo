@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * LABEL
 * Manage all labels and messages of Dedalo
@@ -9,45 +8,48 @@ abstract class label {
 
 
 
- 	static $ar_label;
+	static $ar_label;
 
 
 
- 	/**
- 	* GET AR LABEL
- 	* Class static array
- 	* Priority:
- 	* 1 - Class static
- 	* 2 - Session ['config']['ar_label']
- 	* 3 - Calculate method 'set_static_label_vars'
- 	* @param string $lang = DEDALO_APPLICATION_LANG
- 	* @return array $ar_label
- 	*/
- 	public static function get_ar_label( string $lang=DEDALO_APPLICATION_LANG ) : array {
+	/**
+	* GET AR LABEL
+	* Class static array
+	* Priority:
+	* 1 - Class static
+	* 2 - Session ['config']['ar_label']
+	* 3 - Calculate method 'set_static_label_vars'
+	* @param string $lang = DEDALO_APPLICATION_LANG
+	* @param bool $use_file_cache = true
+	* @return array $ar_label
+	*/
+	public static function get_ar_label( string $lang=DEDALO_APPLICATION_LANG, bool $use_file_cache=true ) : array {
 
- 		// lang vlca fallback
-	 		if ($lang==='lg-vlca') {
+		// lang vlca fallback
+			if ($lang==='lg-vlca') {
 				$lang = 'lg-cat';
 			}
 
 		// static cache case
-	 		if(isset(label::$ar_label[$lang])) {
-	 			return label::$ar_label[$lang];
-	 		}
+			if(isset(label::$ar_label[$lang])) {
+				return label::$ar_label[$lang];
+			}
 
-	 	// cache file
-	 		$file_cache = dd_cache::cache_from_file((object)[
-				'file_name'	=> 'cache_labels_'.$lang.'.json'
-			]);
-			if (!empty($file_cache)) {
+		// cache file
+			if ($use_file_cache===true) {
+				$file_cache = dd_cache::cache_from_file((object)[
+					'file_name'	=> label::build_cache_file_name($lang)
+				]);
+				if (!empty($file_cache)) {
 
-				// read from file encoded JSON
-					$ar_label = json_handler::decode($file_cache, true);
+					// read from file encoded JSON
+						$ar_label = json_handler::decode($file_cache, true);
 
-				// cache static
-					label::$ar_label[$lang] = $ar_label;
+					// cache static
+						label::$ar_label[$lang] = $ar_label;
 
-				return $ar_label;
+					return $ar_label;
+				}
 			}
 
 		// Calculate label for current lang and store
@@ -57,14 +59,16 @@ abstract class label {
 			label::$ar_label[$lang] = $ar_label;
 
 		// cache file
-			dd_cache::cache_to_file((object)[
-				'data'		=> $ar_label,
-				'file_name'	=> 'cache_labels_'.$lang.'.json'
-			]);
+			if ($use_file_cache===true) {
+				dd_cache::cache_to_file((object)[
+					'data'		=> $ar_label,
+					'file_name'	=> label::build_cache_file_name($lang)
+				]);
+			}
 
 
 		return $ar_label;
- 	}//end get_ar_label
+	}//end get_ar_label
 
 
 
@@ -84,15 +88,12 @@ abstract class label {
 		}
 
 		// Calculate values (is calculated once)
-		self::get_ar_label($lang);
+		label::get_ar_label($lang);
 
 		$label = (!isset(label::$ar_label[$lang][$name]))
 			? component_common::decore_untranslated($name)
 			: label::$ar_label[$lang][$name];
 
-		if(!isset(label::$ar_label[$lang][$name])) {
-			return component_common::decore_untranslated($name);
-		}
 
 		return $label;
 	}//end get_label
@@ -114,7 +115,7 @@ abstract class label {
 		}
 
 		// Calculate values (is calculated once)
-		self::get_ar_label($lang);
+		label::get_ar_label($lang);
 
 		if(!isset(label::$ar_label[$lang])) {
 			return null;
@@ -237,6 +238,19 @@ abstract class label {
 
 		return $terminoID;
 	}//end get_terminoID_from_label
+
+
+
+	/**
+	* BUILD_CACHE_FILE_NAME
+	* Unified method to build the lang file cache name
+	* @param string $lang
+	* @return string
+	*/
+	public static function build_cache_file_name( string $lang ) : string {
+
+		return 'cache_labels_' . $lang . '.json';
+	}//end build_cache_file_name
 
 
 

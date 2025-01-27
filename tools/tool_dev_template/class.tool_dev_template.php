@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS TOOL_DEV_TEMPLATE
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.

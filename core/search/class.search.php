@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS SEARCH
 *
@@ -1859,15 +1858,20 @@ class search {
 		# alias . Sort version of main_section_tipo
 		$main_section_tipo_alias = $this->main_section_tipo_alias;
 
-		$ar_sentences = array();
+		// previous model
+			// $ar_sentences = array();
+			// // section_tipo
+			// 	foreach ($ar_section_tipo as $current_section_tipo) {
+			// 		$ar_sentences[] = $main_section_tipo_alias.'.section_tipo=\''. $current_section_tipo.'\'';
+			// 	}
 
-		// section_tipo
-			foreach ($ar_section_tipo as $current_section_tipo) {
-				$ar_sentences[] = $main_section_tipo_alias.'.section_tipo=\''. $current_section_tipo.'\'';
-			}
+			// // flat query string
+			// 	$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
 
-		// flat query string
-			$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';
+		// IN model query
+			$main_where_sql = count($ar_section_tipo) > 1
+				? '(' . $main_section_tipo_alias.'.section_tipo IN (\'' . implode('\',\'', $ar_section_tipo) . '\'))'
+				: '(' . $main_section_tipo_alias.'.section_tipo = \'' . $ar_section_tipo[0] . '\')';
 
 		// avoid root user is showed except for root
 			if (!isset($this->include_negative) || $this->include_negative!==true) {
@@ -2277,7 +2281,7 @@ class search {
 
 		// match regex
 			preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
-			if (empty($matches) || empty($matches[1]) || empty($matches[2]) ) {
+			if (empty($matches) || empty($matches[1]) || (empty($matches[2]) && $matches[2]!=0) ) {
 				debug_log(__METHOD__
 					." Error on preg match tipo: $tipo ". PHP_EOL
 					.'tipo: '.to_string($tipo)

@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 
 
 
@@ -322,19 +323,23 @@ const get_content_data = async function(self) {
 		content_data.appendChild(fragment)
 
 	// total. get from DDBB
-		self.get_total()
-		.then(() => {
-			// fire all active_values functions
-			const active_values_length = active_values.length
-			for (let i = 0; i < active_values_length; i++) {
-				const item = active_values[i]
-				// value is from self assigned vars like 'self.total'
-				const value = self[item.name]
-				// execute function passing selected value as param
-				item.callback(value)
+		dd_request_idle_callback(
+			() => {
+				self.get_total()
+				.then(() => {
+					// fire all active_values functions
+					const active_values_length = active_values.length
+					for (let i = 0; i < active_values_length; i++) {
+						const item = active_values[i]
+						// value is from self assigned vars like 'self.total'
+						const value = self[item.name]
+						// execute function passing selected value as param
+						item.callback(value)
+					}
+					page_node.classList.remove('inactive')
+				})
 			}
-			page_node.classList.remove('inactive')
-		})
+		)
 
 
 	return content_data

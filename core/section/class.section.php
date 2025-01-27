@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS SECTION
 *
@@ -137,6 +136,10 @@ class section extends common {
 					. ' model: ' . to_string($model)
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace();
+					dump($bt, ' bt ++ '.to_string());
+				}
 			}
 
 		// cache
@@ -211,7 +214,7 @@ class section extends common {
 
 		// check tipo
 			if (empty($tipo)) {
-				throw new Exception("Error: on construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
+				throw new Exception("Error: on __construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
 			}
 
 		// uid
@@ -545,13 +548,17 @@ class section extends common {
 
 		// time machine data. We save only current component lang 'dato' in time machine
 			$save_options = new stdClass();
-				$save_options->time_machine_data	= $component_obj->get_dato_unchanged();
+				// get the time_machine data from component
+				// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
+				$save_options->time_machine_data	= $component_obj->get_time_machine_data_to_save();//$component_obj->get_dato_unchanged();
 				$save_options->time_machine_lang	= $component_lang;
 				$save_options->time_machine_tipo	= $component_tipo;
 				// previous_component_dato
 				$save_options->previous_component_dato	= $previous_component_dato;
 
 				// component_dataframe
+				// when the component is dataframe, save all information together
+				// use the main and dataframe data as locators, mix all and save with the main component tipo
 				if (get_class($component_obj)==='component_dataframe') {
 					$section_id_key = $component_obj->caller_dataframe->section_id_key ?? null;
 					if (empty($section_id_key)) {
@@ -563,10 +570,15 @@ class section extends common {
 							. ' section_id: ' . to_string($component_obj->section_id)
 							, logger::ERROR
 						);
-					}else{
-						// set save_options time_machine_section_id_key
-						$save_options->time_machine_section_id_key	= (int)$component_obj->caller_dataframe->section_id_key;
 					}
+					// set save_options time_machine_section_id_key
+					$save_options->time_machine_section_id_key = !empty($section_id_key)
+						? (int)$section_id_key
+						: null;
+					// use the main component
+					$main_tipo = $component_obj->get_main_component_tipo();
+					$save_options->time_machine_tipo	= $main_tipo;
+
 				}
 
 				if( isset($component_obj->bulk_process_id) ){
@@ -935,6 +947,20 @@ class section extends common {
 
 		// matrix table. Note that this function fallback to real section if virtual section don't have table defined
 			$matrix_table = common::get_matrix_table_from_tipo($tipo);
+			if (empty($matrix_table)) {
+				debug_log(__METHOD__
+					. " Error on save: invalid matrix_table! Ignored save order" . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' section_tipo: ' . $this->tipo . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' model: ' . get_class($this) . PHP_EOL
+					. ' mode: ' . $this->mode . PHP_EOL
+					. ' lang: ' . $this->lang
+					, logger::ERROR
+				);
+				throw new Exception("Error Processing Request. Unable to get matrix_table from tipo ($tipo - $this->section_id)", 1);
+				return null;
+			}
 
 
 		if (!empty($this->section_id) && (int)$this->section_id>=1 && $options->forced_create_record===false) { # UPDATE RECORD
@@ -1018,8 +1044,10 @@ class section extends common {
 				if ($options->forced_create_record===false) {
 
 					// Use normal incremental counter
-					$matrix_table_counter	= (substr($matrix_table, -3)==='_dd') ? 'matrix_counter_dd' : 'matrix_counter';
-					$current_id_counter		= (int)counter::get_counter_value($tipo, $matrix_table_counter);
+					$matrix_table_counter = (!empty($matrix_table) && substr($matrix_table, -3)==='_dd')
+						? 'matrix_counter_dd'
+						: 'matrix_counter';
+					$current_id_counter = (int)counter::get_counter_value($tipo, $matrix_table_counter);
 
 					// Create a counter if not already exists
 						if ($current_id_counter===0 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
@@ -2406,6 +2434,10 @@ class section extends common {
 
 	/**
 	* GET_RESOURCE_ALL_SECTION_RECORDS_UNFILTERED
+	* Iterate result as:
+	* while ($rows = pg_fetch_assoc($result)) {
+	*	$current_id = $rows['section_id'];
+	* }
 	* @param string $section_tipo
 	* @param string $select = 'section_id'
 	* @return PgSql\Result|bool $result
@@ -2588,9 +2620,9 @@ class section extends common {
 		}else{
 
 			// Check if section_id already exists
-				$current_section_id_exists = section::section_id_exists( $this->section_id, $this->tipo );
+				$current_section_record_exists = section::section_record_exists( $this->section_id, $this->tipo );
 				// Record already exists. Not continue
-				if($current_section_id_exists===true) {
+				if($current_section_record_exists===true) {
 					debug_log(__METHOD__
 						." Record already exists, ignored !!!! ($this->section_id, $this->tipo)"
 						, logger::WARNING
@@ -2610,14 +2642,14 @@ class section extends common {
 
 
 	/**
-	* SECTION_ID_EXISTS
+	* SECTION_RECORD_EXISTS
 	* Search in current matrix_table the section_id given for current section_tipo
 	* @param int|string $section_id
 	* 	Will be cast to int into the search
 	* @param string $section_tipo
 	* @return bool $result
 	*/
-	public static function section_id_exists( int|string $section_id, string $section_tipo ) : bool {
+	public static function section_record_exists( int|string $section_id, string $section_tipo ) : bool {
 
 		// Check if section_id already exists
 		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
@@ -2631,7 +2663,7 @@ class section extends common {
 
 
 		return $result;
-	}//end section_id_exists
+	}//end section_record_exists
 
 
 
@@ -3970,6 +4002,18 @@ class section extends common {
 												return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
 											  })));
 
+									// has dataframe
+									// if the component has a dataframe
+									// the time machine data will has both data, the main data from the main component
+									// and the dataframe data.
+									// to inject the correct main data is necessary filter it with the from_component_tipo
+										$dataframe_ddo = $current_component->get_dataframe_ddo();
+										if( !empty($dataframe_ddo) && !empty($dato) ){
+											$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
+												return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
+											}));
+										}
+
 									// inject current_dato
 										$current_component->set_dato($current_dato);
 
@@ -4022,7 +4066,6 @@ class section extends common {
 									// mix ar_subcontext
 										$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
 
-
 									// empty data case. Generate and add a empty value item
 										if (empty($element_json->data) && $model!=='component_section_id') {
 											$data_item = $current_component->get_data_item(null);
@@ -4031,55 +4074,69 @@ class section extends common {
 											$element_json->data = [$data_item];
 										}
 									// has_dataframe
-										if( isset($ddo->has_dataframe) &&  $ddo->has_dataframe=== true ){
-											$dataframe_ddo = $ddo->dataframe_ddo;
+										// if the component has a dataframe create new component and inject his own data
+										// dataframe data is saved by the main dataframe and is part of the row data
+										if( !empty($dataframe_ddo) ){
 
-											$dataframe_data = $db_record->dataframe_data;
-											foreach ($dataframe_data as $key => $current_dataframe_data) {
+											foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
 
-												// if($current_dataframe_data === null){
-												// 	continue;
-												// }
+												$dataframe_tipo = $current_dataframe_ddo->tipo;
 
-												$new_caller_dataframe = new stdClass();
-													// $new_caller_dataframe->tipo_key		= $component_tipo;
-													$new_caller_dataframe->section_id_key	= isset($current_dataframe_data[0])
-														? $current_dataframe_data[0]->section_id_key
-														: null;
-													$new_caller_dataframe->section_tipo			= $section_tipo;
-												// // create the dataframe component
-												$dataframe_component = component_common::get_instance(
-													$dataframe_ddo->model,
-													$dataframe_ddo->tipo,
-													$section_id,
-													$mode, // the component always in tm because the edit could fire a save with the dato_default
-													$lang,
-													$dataframe_ddo->section_tipo,
-													true,
-													$new_caller_dataframe
-												);
-
-												$dataframe_component->set_dato( $current_dataframe_data );
-												// permissions. Set to allow all users read
-												$dataframe_component->set_permissions(1);
-												// get component JSON data
-												$dataframe_json = $dataframe_component->get_json((object)[
-													'get_context'	=> true,
-													'get_data'		=> true
-												]);
-
-												// parse component_data. Add matrix_id and unify output value
-												$dataframe_data	= array_map(function($data_item) use($id) {
-													$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
-													return $data_item;
-												}, $dataframe_json->data);
-
-												$ar_subdata = array_merge($ar_subdata, $dataframe_data);
-
+												// 1 remove dataframe data created by the main component in his subdatum process
+												// when the main component create his own subdatum it can get incorrect dataframe data
+												// because the main component use the time machine data but not the dataframe data by itself.
+												// and it can meet his data with the current dataframe data.
+												// to avoid it, remove the dataframe data from the main component.
 												foreach ($element_json->data as $key => $current_source_data) {
-													if($current_source_data->tipo === $dataframe_ddo->tipo || $current_source_data->from_component_tipo === $dataframe_ddo->tipo){
+													if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
 														unset($element_json->data[$key]);
 													}
+												}
+
+												// 2 get the dataframe data from dato, filtering by dataframe_tipo
+												if( !empty($dato) ){
+													$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
+														return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
+													}));
+												}
+
+
+												// 3 get the component dataframe data with time machine data
+												$dataframe_model = RecordObj_dd::get_modelo_name_by_tipo($dataframe_tipo);
+												foreach ($dataframe_data as $key => $current_dataframe_data) {
+													// create the caller_dataframe with the current data information
+													$new_caller_dataframe = new stdClass();
+														$new_caller_dataframe->section_id_key	= $current_dataframe_data->section_id_key;
+														$new_caller_dataframe->section_tipo		= $section_tipo;
+
+													// // create the dataframe component
+													$dataframe_component = component_common::get_instance(
+														$dataframe_model,
+														$dataframe_tipo,
+														$section_id,
+														$mode, // the component always in tm because the edit could fire a save with the dato_default
+														$lang,
+														$section_tipo,
+														true,
+														$new_caller_dataframe
+													);
+													// inject the current data
+													$dataframe_component->set_dato( [$current_dataframe_data] );
+													// permissions. Set to allow all users read
+													$dataframe_component->set_permissions(1);
+													// get component JSON data
+													$dataframe_json = $dataframe_component->get_json((object)[
+														'get_context'	=> true,
+														'get_data'		=> true
+													]);
+
+													// parse component_data. Add matrix_id and unify output value
+													$dataframe_data	= array_map(function($data_item) use($id) {
+														$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
+														return $data_item;
+													}, $dataframe_json->data);
+													// mix dataframe data with the current main data
+													$ar_subdata = array_merge($ar_subdata, $dataframe_data);
 												}
 											}
 										}
@@ -4163,8 +4220,12 @@ class section extends common {
 
 	/**
 	* POST_SAVE_COMPONENT_PROCESSES
-	* Executed on component save (when save script is complete)
+	* Executed on component save (when section save script is complete)
+	* This is a hook to allow custom action after section saves
 	* @param object $options
+	* {
+	* 	component : object
+	* }
 	* @return bool
 	*/
 	public function post_save_component_processes(object $options) : bool {
@@ -4172,73 +4233,7 @@ class section extends common {
 		// options
 			$component = $options->component;
 
-		// short vars
-			$section_tipo	= $this->tipo;
-			$section_id		= $this->section_id;
-			$lang			= $component->get_lang();
-			$component_tipo	= $component->get_tipo();
-
-		// ontology sync. Synchronize this section values with equivalents in table 'matrix_descriptors_dd'. Only master server
-			if (// defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true &&
-				defined('ONTOLOGY_SECTION_TIPOS') && ONTOLOGY_SECTION_TIPOS['section_tipo']===$section_tipo) {
-
-				$ar_update_tipos = [
-					ONTOLOGY_SECTION_TIPOS['term'],
-					// ONTOLOGY_SECTION_TIPOS['definition']
-				];
-
-				if (in_array($component_tipo, $ar_update_tipos)) {
-
-					// term_id
-						$term_id = (function() use($section_id, $section_tipo){
-
-							$component_tipo	= ONTOLOGY_SECTION_TIPOS['term_id'];
-							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-							$component		= component_common::get_instance(
-								$model_name,
-								$component_tipo,
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
-							);
-							$dato		= $component->get_dato();
-							$term_id	= reset($dato);
-
-							return $term_id;
-						})();
-
-					if (empty($term_id)) {
-						debug_log(__METHOD__." term_id value is mandatory. Nothing is propagated to descriptors ".to_string($term_id), logger::ERROR);
-					}else{
-
-						$dato_tipo = (function() use($component_tipo){
-							switch ($component_tipo) {
-								case ONTOLOGY_SECTION_TIPOS['term']:			return 'termino';	break;
-								// case ONTOLOGY_SECTION_TIPOS['definition']:	return 'def';		break;
-								// case ONTOLOGY_SECTION_TIPOS['observations']:	return 'obs';		break;
-							}
-							return null;
-						})();
-
-						if (!empty($dato_tipo)) {
-
-							$value = $component->get_valor();
-
-							// set and save the value to descriptors dd
-								$RecordObj = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, null, $term_id, $lang, $dato_tipo);
-								$RecordObj->set_dato($value);
-								$RecordObj->Save();
-
-								debug_log(__METHOD__
-									." Updated descriptors_dd 'termino' [$term_id] - dato_tipo : $dato_tipo". PHP_EOL
-									.' value: ' . json_encode($value, JSON_PRETTY_PRINT)
-									, logger::DEBUG
-								);
-						}
-					}
-				}
-			}//end ontology sync
+		// Hook only. Not used at now
 
 
 		return true;

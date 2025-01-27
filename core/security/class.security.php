@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS SECURITY
 *
@@ -66,7 +65,7 @@ class security {
 	* 	tipo of element (usually component)
 	* @return int $permissions
 	*/
-	public static function get_security_permissions(string $parent_tipo, string $tipo) : int {
+	public static function get_security_permissions( string $parent_tipo, string $tipo ) : int {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -179,8 +178,13 @@ class security {
 	/**
 	* PERMISSIONS TABLE
 	* Calculated once and stored in cache
-	* Optional stored in $_SESSION['dedalo']['auth']['permissions_table']
-	*
+	* Cached as custom file for each user as 'development_1_cache_permissions_table.json'
+	* containing an JSON object with key => value as
+	* {
+	* 	"test38_test122": 2,
+	*	"test38_test207": 2,
+	* 	..
+	* }
 	* @return array $permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
 	*/
@@ -192,16 +196,18 @@ class security {
 				return security::$permissions_table_cache;
 			}
 
-		// cache file (do NOT use the cache file here because the gain is not worth it)
-			$use_cache = DEVELOPMENT_SERVER ? false : true;
+		// cache file
+			$use_cache = true;
 			if ($use_cache===true) {
 
 				$cache_file_name = 'cache_permissions_table.json';
 
-				// cache file
+				// cache file check
 				$cache_data	= dd_cache::cache_from_file((object)[
 					'file_name' => $cache_file_name
 				]);
+
+				// existing value case returns from cache file
 				if (!empty($cache_data)) {
 
 					$permissions_table = json_decode(
@@ -213,7 +219,7 @@ class security {
 					security::$permissions_table_cache = $permissions_table;
 
 					debug_log(__METHOD__
-						." Returning permissions_table from cache disk file"
+						." Returning permissions_table from cache file: $cache_file_name. Time: " . exec_time_unit($start_time, 'ms') . ' ms'
 						, logger::DEBUG
 					);
 
@@ -226,7 +232,6 @@ class security {
 			$component_security_access = security::get_user_security_access($user_id);
 
 		// dato_access. is the first value of the result array if not empty
-		// $dato_access = is_object($component_security_access) ? (array)$component_security_access->get_dato() : null;
 			$dato = !empty($component_security_access)
 				? ($component_security_access->get_dato() ?? [])
 				: [];
@@ -243,10 +248,10 @@ class security {
 
 		// cache file
 			if ($use_cache===true) {
-				// cache to file
+				// write cache data to file
 				dd_cache::cache_to_file((object)[
 					'file_name'	=> $cache_file_name,
-					'data'		=> $permissions_table // will be convert to JSON object
+					'data'		=> $permissions_table // assoc array will be convert to JSON object
 				]);
 			}
 
@@ -375,6 +380,8 @@ class security {
 
 	/**
 	* CLEAN_CACHE
+	* Removes PHP session permissions_table and
+	* security static vars 'permissions_table_cache'
 	* @return bool
 	*/
 	public static function clean_cache() {

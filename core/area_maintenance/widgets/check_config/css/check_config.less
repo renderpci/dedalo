@@ -1,0 +1,175 @@
+/**
+* check_config
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.check_config {
+
+	.errors_container {
+		display: block;
+		padding: 0.66rem;
+		color: @color_danger;
+		font-weight: 500;
+		line-height: 1.1rem;
+		--icon-path : url('../../../core/themes/default/icons/warning.svg');
+		&:before {
+			background-color: @color_danger;
+			content: ' ';
+			display: inline-block;
+			height: 1.5em;
+			width: 1.5em;
+			margin-right: 0.5rem;
+			opacity: 1;
+			vertical-align: bottom;
+			// .fn_add_mask(@icon_name);
+			-webkit-mask-image: var(--icon-path);
+					mask-image: var(--icon-path);
+			-webkit-mask-size: contain;
+					mask-size: contain;
+			-webkit-mask-repeat: no-repeat;
+					mask-repeat: no-repeat;
+			-webkit-mask-position: center;
+					mask-position: center;
+
+			@media screen and (max-width: @width_break_point_1) {
+				margin-right: 0px;
+			}
+		}
+
+		>.error_pre {
+			background-color: unset;
+		}
+	}
+
+	// maintenance_mode & notifications
+	.container {
+		width: 100%;
+		padding-bottom: 1.5rem;
+
+		>.label {
+			font-weight: 600;
+			font-size: 1.1rem;
+			padding: 0px;
+			padding-left: 0.5rem;
+			padding-bottom: 0.75rem;
+			text-transform: uppercase;
+		}
+
+		>.form_container {
+			padding: 0px;
+
+			.button_submit {
+
+				&.danger {
+					color: @color_white_dirty !important;
+					background-color: @color_danger;
+					font-weight: unset;
+				}
+			}
+		}
+		>.body_response {
+			padding: 0.5rem;
+		}
+
+		&.maintenance_mode_container {
+
+		}
+	}//end >.container
+
+	.tables {
+		width: 100%;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.missing_container, .obsolete_container {
+		display: grid;
+		grid-auto-rows: auto 1fr 1fr minmax(1ch,10ch);
+
+		>.label {
+			font-weight: 600;
+			font-size: 1.1rem;
+			padding: 0px;
+			padding-left: 0.5rem;
+			padding-bottom: 0.75rem;
+			text-transform: uppercase;
+		}
+
+		>.file_container {
+
+			>.label {
+				padding: 0.5rem;
+				border-bottom: 1px solid #c2c2c2;
+			}
+
+			>.data {
+				padding: 0.5rem;
+				line-height: 1.2rem;
+				color: @color_green_success;
+
+				&.missing {
+					color: @color_danger;
+					font-weight: 600;
+				}
+
+				&.obsolete {
+					color: @color_orange_dedalo;
+					font-weight: 400;
+				}
+			}
+		}
+	}
+
+	.datalist_container {
+		margin-bottom: 0.5rem;
+
+		&.show_list {
+			cursor: pointer;
+			user-select: none;
+			vertical-align: bottom;
+			width: 100%;
+
+			>.icon {
+				vertical-align: bottom;
+			}
+		}
+
+		.datalist_item_container {
+			display: grid;
+			align-items: center;
+			gap: 0.5rem;
+			line-height: 1.1rem;
+			margin-bottom: 0.25rem;
+			padding-bottom: 0.25rem;
+
+			&.header {
+				color: #000;
+				padding: 0.25rem;
+				padding-left: 0;
+				font-weight: 500;
+			}
+
+			>.item_column {
+				display: block;
+
+				&.right {
+					text-align: right;
+					padding-right: 0.5rem;
+
+					&.header {
+						padding-right: 0px;
+					}
+				}
+
+				&.center {
+					text-align: center;
+				}
+
+				&.non_defined {
+					color: @color_danger;
+					font-weight: bold;
+				}
+			}
+		}
+	}
+}//end check_config

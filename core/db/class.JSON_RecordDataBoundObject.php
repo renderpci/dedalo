@@ -1,8 +1,6 @@
-<?php
-// declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
-* JSON_RecordDataBoundObject
-*
+* JSON_RECORDDATABOUNDOBJECT
 *
 */
 abstract class JSON_RecordDataBoundObject {
@@ -53,17 +51,18 @@ abstract class JSON_RecordDataBoundObject {
 
 	# GET_DATO : GET DATO UNIFICADO (JSON)
 	public function get_dato() {
+
 		if($this->blIsLoaded!==true) {
 			$this->Load();
 		}
-		// if(!isset($this->dato)) return null;
+
 		return $this->dato ?? null;
 	}//end get_dato
 
 
 
 	# SET_DATO : SET DATO UNIFICADO (JSON)
-	public function set_dato($dato) {
+	public function set_dato( mixed $dato ) : void {
 
 		# Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
@@ -231,6 +230,7 @@ abstract class JSON_RecordDataBoundObject {
 				// static $totaltime_static2;
 				// $totaltime_static2 = $totaltime_static2 + $totaltime;
 				// debug_log(__METHOD__." Total: $totaltime ms - $strQuery + sum ms: $totaltime_static2 ".to_string(), logger::DEBUG);
+				// error_log( json_encode($ar_JSON_RecordDataObject_load_query_cache) );
 			}
 
 
@@ -335,7 +335,7 @@ abstract class JSON_RecordDataBoundObject {
 							$debug_strQuery = preg_replace_callback(
 								'/\$(\d+)\b/',
 								function($match) use ($params) {
-									$key=($match[1]-1); return ( is_null($params[$key])?'NULL':pg_escape_literal(DBi::_getConnection(), $params[$key]) );
+									$key=($match[1]-1); return ( is_null($params[$key])?'NULL':pg_escape_literal(DBi::_getConnection(), to_string($params[$key])) );
 								},
 								$strQuery
 							);
@@ -351,7 +351,7 @@ abstract class JSON_RecordDataBoundObject {
 						$this->ID = $id;
 					}elseif($this->ID!=$id) {
 						debug_log(__METHOD__
-							.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id
+							.' Error. [1] ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id
 							, logger::ERROR
 						);
 						// throw new Exception('Error. ID received after update is different from current ID. this ID: '.$this->ID.' received id: '.$id , 1);
@@ -376,7 +376,7 @@ abstract class JSON_RecordDataBoundObject {
 					$section_id = pg_fetch_result($result,0,'section_id');
 					if ($section_id===false) {
 						debug_log(__METHOD__
-							.' Error. ID received after update is different from current ID. this ID: '.$this->ID.' '
+							.' Error (matrix_activity). ID received after update is different from current ID. this ID: '.$this->ID.' '
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
@@ -463,8 +463,9 @@ abstract class JSON_RecordDataBoundObject {
 
 	/**
 	* GET_AR_EDITABLE_FIELDS
+	* @return array|false $ar_editable_fields
 	*/
-	public function get_ar_editable_fields() {
+	public function get_ar_editable_fields() : array|false {
 
 		static $ar_editable_fields;
 
@@ -474,11 +475,14 @@ abstract class JSON_RecordDataBoundObject {
 
 		if(is_array($this->arRelationMap)) {
 
+			$ar_editable_fields = [];
 			foreach($this->arRelationMap as $field_name => $property_name) {
 
-				if($property_name!=='ID') $ar_editable_fields[] = $field_name ;
+				if($property_name!=='ID') {
+					$ar_editable_fields[] = $field_name;
+				}
 			}
-			return $ar_editable_fields ;
+			return $ar_editable_fields;
 		}
 
 		return false;
@@ -493,11 +497,11 @@ abstract class JSON_RecordDataBoundObject {
 	* 	Full SQL query like "SELECT id FROM table WHERE id>0"
 	* @param bool $wait
 	* 	to set syc/async exec. Default us true
-	* @return PgSql\Result|bool $result
+	* @return PgSql\Result|false $result
 	*   resource (PHP<8) OR object (PHP>=8) | false $result
 	* 	Database resource/object from exec query
 	*/
-	public static function search_free(string $strQuery, bool $wait=true) {
+	public static function search_free( string $strQuery, bool $wait=true ) : PgSql\Result|false {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -929,7 +933,7 @@ abstract class JSON_RecordDataBoundObject {
 		return false;
 	}
 	# ACCESSORS SET
-	private function SetAccessor(string $strMember, $strNewValue) {
+	private function SetAccessor(string $strMember, mixed $strNewValue) {
 
 		if(property_exists($this, $strMember)) {
 

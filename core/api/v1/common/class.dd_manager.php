@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * DD_MANAGER
 * Manage API web
@@ -47,19 +46,22 @@ final class dd_manager {
 				'get_login_context',
 				'install',
 				'get_install_context',
-				'get_environment'
+				'get_environment',
+				'get_ontology_update_info',
+				'get_code_update_info',
+				'get_server_ready_status'
 			];
 			if (true===in_array($rqo->action, $no_login_needed_actions)) {
 				// do not check login here
 			}else{
 				if (login::is_logged()!==true) {
 
-					debug_log(__METHOD__." User is not logged ", logger::ERROR);
+					debug_log(__METHOD__." User is not logged [action:$rqo->action]", logger::ERROR);
 
 					$response = new stdClass();
 						$response->result	= false;
 						$response->msg		= 'Error. user is not logged ! [action:'.$rqo->action.']';
-						$response->error	= 'not_logged';
+						$response->errors[]	= 'not_logged';
 					return $response;
 				}
 			}
@@ -70,7 +72,7 @@ final class dd_manager {
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= "Invalid action var (not found in rqo)";
-					$response->error	= 'Undefined method';
+					$response->errors[]	= 'Undefined method';
 
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 
@@ -85,7 +87,7 @@ final class dd_manager {
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= "Error. Undefined $dd_api_type method (action) : ".$rqo->action;
-					$response->error	= 'Undefined method';
+					$response->errors[]	= 'Undefined method';
 					$response->action	= $rqo->action;
 			}else{
 				// success
@@ -96,7 +98,7 @@ final class dd_manager {
 						$response = new stdClass();
 							$response->result	= false;
 							$response->msg		= 'Error. user has not permissions ! [action:'.$rqo->action.']';
-							$response->error	= 'permissions error';
+							$response->errors[]	= 'permissions error';
 						return $response;
 					}
 				}

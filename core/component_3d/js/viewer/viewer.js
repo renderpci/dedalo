@@ -4,6 +4,7 @@
 
 
 // imports
+	import {dd_request_idle_callback} from '../../../common/js/events.js'
 	// used a importmap define in page/index.html to resolve directories
 	// the main addons is /lib/threejs/jsm/ has to be mapped as three/
 	import {
@@ -214,16 +215,17 @@ viewer.resize = function() {
 
 	// set timeout to disengage the container new size calculation
 	// and the render making resize more fluid
-	setTimeout(function(){
+	dd_request_idle_callback(
+		() => {
+			self.default_camera.aspect = clientWidth / clientHeight;
+			self.default_camera.updateProjectionMatrix();
+			self.renderer.setSize(clientWidth, clientHeight);
 
-		self.default_camera.aspect = clientWidth / clientHeight;
-		self.default_camera.updateProjectionMatrix();
-		self.renderer.setSize(clientWidth, clientHeight);
-
-		self.axes_camera.aspect = self.axes_div.clientWidth / self.axes_div.clientHeight;
-		self.axes_camera.updateProjectionMatrix();
-		self.axes_renderer.setSize(self.axes_div.clientWidth, self.axes_div.clientHeight);
-	}, 1)
+			self.axes_camera.aspect = self.axes_div.clientWidth / self.axes_div.clientHeight;
+			self.axes_camera.updateProjectionMatrix();
+			self.axes_renderer.setSize(self.axes_div.clientWidth, self.axes_div.clientHeight);
+		}
+	)
 }//end resize
 
 

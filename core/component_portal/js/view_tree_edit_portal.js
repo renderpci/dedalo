@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
@@ -114,16 +115,17 @@ view_tree_edit_portal.render = async function(self, options) {
 export const add_events = function(self, wrapper) {
 
 	// click delegated
-		wrapper.addEventListener('click', fn_wrapper_click)
-		function fn_wrapper_click(e){
+		const click_handler = (e) => {
 			e.stopPropagation()
 
 			// active autocomplete
-			setTimeout(function(){
-				if (self.active) {
-					activate_autocomplete(self, wrapper)
-				}
-			}, 1)
+				dd_request_idle_callback(
+					() => {
+						if (self.active) {
+							activate_autocomplete(self, wrapper)
+						}
+					}
+				)
 
 			// remove row
 				if(e.target.matches('.button.remove')) {
@@ -139,19 +141,21 @@ export const add_events = function(self, wrapper) {
 						}
 						const label = ar_label.join(', ')
 
-					const changed_data = [Object.freeze({
-						action	: 'remove',
-						key		: JSON.parse(e.target.dataset.key),
-						value	: null
-					})]
+					// changed_data
+						const changed_data = [Object.freeze({
+							action	: 'remove',
+							key		: JSON.parse(e.target.dataset.key),
+							value	: null
+						})]
 
-					const changed = self.change_value({
+					// change_value execution
+					self.change_value({
 						changed_data	: changed_data,
 						label			: label,
 						refresh			: false,
 						build_autoload	: false
 					})
-					changed.then(async (api_response)=>{
+					.then(async (api_response) => {
 
 						// update pagination offset
 							self.update_pagination_values('remove')
@@ -173,7 +177,8 @@ export const add_events = function(self, wrapper) {
 
 					return true
 				}//end if(e.target.matches('.button.remove'))
-		}//end fn_wrapper_click
+		}
+		wrapper.addEventListener('click', click_handler)
 
 
 	return true

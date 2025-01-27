@@ -1,0 +1,123 @@
+/**
+* update_code
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.update_code {
+
+	>.content_data {
+
+		.config_grid {
+			grid-template-columns: 3fr 6fr;
+			gap: 0.25rem;
+
+			.label {
+				display: flex;
+				align-items: flex-start;
+				flex-wrap: nowrap;
+
+				&.bold {
+					padding-bottom: 0.5rem !important;
+				}
+			}
+
+			&.servers_grid {
+
+				.label {
+					display: block;
+					cursor: pointer;
+					padding-bottom: 0px;
+					padding-top: 0.2rem;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+
+					input[type="radio"] {
+						cursor: pointer;
+						width: unset;
+						height: unset;
+						padding: 0;
+						margin: 0 .5em .5em 0;
+						vertical-align: text-top;
+					}
+				}
+
+				.value {
+					padding: 0.5rem;
+					padding-bottom: 0px;
+					padding-top: 0.2rem;
+
+					.icon {
+						margin-left: 0.5rem;
+					}
+				}
+
+				.active {
+					color: black;
+					font-weight: 500;
+				}
+			}
+		}
+	}
+
+}//end update_code
+
+
+// modal styles
+.widget_update_code_modal {
+
+	.modal_content {
+		width: 500px;
+		max-width: 100%;
+	}
+
+	.body {
+		display: flex;
+		justify-content: center;
+		font-size: 1.2rem;
+
+		.files_container {
+			text-align: left;
+			margin-top: 3rem;
+
+			.file_container {
+				padding-top: .5rem;
+				padding-bottom: .5rem;
+				border-bottom: 1px #dddddd solid;
+				.version_label {
+					margin-right: 1.3rem;
+
+					input{
+						margin-right: 0.5rem;
+					}
+				}
+				.value {
+					color: #a4a4a4;
+				}
+			}
+
+			.file_container:last-child {
+				border-bottom: none;
+			}
+		}
+	}
+
+	.footer {
+		position: relative;
+		display: block;
+		text-align: center;
+		margin-top: 2rem;
+		min-height: 5rem;
+
+		pre {
+			text-align: left;
+			margin: 2rem;
+			display: inline-flex;
+		}
+
+		.spinner {
+			margin: 0px;
+			top: 2rem;
+		}
+	}
+}

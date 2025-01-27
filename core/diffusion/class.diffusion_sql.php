@@ -4593,6 +4593,33 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* MAP_TO_URL
+	* Creates a full URL to access websites file like
+	* 'https://monedaiberica.org/type/' + '1542'
+	* @param object $options
+	* @param mixed $dato
+	* 	Usually a int (section_id)
+	* @return string
+	*/
+	public static function map_to_url(object $options, $dato) {
+
+		// base_url as 'https://monedaiberica.org/type/'
+		$base_url = $options->properties->process_dato_arguments->base_url ?? '';
+
+		// add as '1542'
+		$add = !empty($dato)
+			? to_string($dato)
+			: '';
+
+		// value composition
+		$value = $base_url . $add;
+
+		return $value;
+	}//end map_to_url
+
+
+
+	/**
 	* OBJECT_TO_STRING
 	* @return string
 	*/

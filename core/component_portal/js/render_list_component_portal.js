@@ -14,6 +14,7 @@
 	import {view_mini_list_dataframe} from '../../component_dataframe/js/view_mini_list_dataframe.js'
 
 
+
 /**
 * RENDER_LIST_COMPONENT_PORTAL
 * Manages the component's logic and appearance in client side

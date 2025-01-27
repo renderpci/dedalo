@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
@@ -8,7 +7,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class tools_register_Test extends TestCase {
+final class tools_register_test extends TestCase {
 
 
 
@@ -345,13 +344,7 @@ final class tools_register_Test extends TestCase {
 				.' and is : '.to_string($result)
 		);
 
-		$this->assertTrue(
-			isset($_SESSION['dedalo']['registered_tools'])===false,
-			'expected false isset($_SESSION[\'dedalo\'][\'registered_tools\'])'
-				.' and is : '.to_string(isset($_SESSION['dedalo']['registered_tools']))
-		);
-
-		$file_name		= 'cache_registered_tools.json';
+		$file_name		= tools_register::get_cache_user_tools_file_name(); //	like 'cache_user_tools.json'
 		$base_path		= DEDALO_CACHE_MANAGER['files_path'];
 		$file_path		= $base_path .'/'. $file_name;
 		$file_exists	= (file_exists($file_path));

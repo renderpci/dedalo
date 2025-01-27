@@ -12,11 +12,18 @@
 		right: 0px;
 		top: 1px;
 		z-index: 1;
-		height: 35px;
+		height: 30px;
 		margin: 0;
 		background-color: transparent;
 		border-color: transparent;
+
+		&:hover{
+			background-color: #32323247;
+			border-color: #32323247;
+		}
 	}//end .button_save
+
+
 
 	//.edit
 	&.edit {
@@ -25,12 +32,10 @@
 			// Note that height is always the media min height (392px)
 			// (!) Do not use max o min height here to prevent to affect canvas reference size
 			height: var(--media_min_height);
-			display: table;
 
 			justify-content: center;
 			max-height: var(--media_max_height);
 			min-height: var(--media_min_height);
-			overflow: hidden;
 
 			@media screen and (max-width: @width_break_point_1) {
 				min-height: unset;
@@ -43,17 +48,10 @@
 				position: relative;
 				z-index: 0;
 				min-height: var(--media_min_height); // 404px;
-				display: table;
 
-				>.button_save {
-
-				}
-
-				>.jsoneditor {
-					display: table;
-					width: 100%;
-					height: 100%;
-					min-height: var(--media_min_height); // 404px;
+				&.read_only{
+					overflow: auto;
+					pointer-events: initial;
 				}
 			}
 		}

@@ -63,54 +63,78 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 
 /**
 * RENDER_LAYER_SELECTOR
-* Used from component_image
+* Creates the user layers selection nodes
+* Used from component_image and component_geoocation
+* @param options
+* {
+*	self: object (component_text_area instance sent by published event)
+* 	text_editor: object (service_ckeditor instance)
+* 	callback: function (to call in for each layer click event)
+* 	data_tag: object as {data:"",label:"",layers:[{},{}],type:"geo"}
+* }
 * @return HTMLElement layer_selector
 */
 export const render_layer_selector = function(options){
 
-	const self			= options.self
-	const text_editor	= options.text_editor
-	const callback		= options.callback
-	const data_tag		= options.data_tag
-	const ar_layers		= data_tag.layers
+	// options
+		const self			= options.self
+		const text_editor	= options.text_editor
+		const callback		= options.callback
+		const data_tag		= options.data_tag
+
+	// prevent open already created selector
+		if (self.node.layer_selector) {
+			return null
+		}
 
 	const fragment = new DocumentFragment()
 
-	// // add_layer button
-	// 	const add_layer = ui.create_dom_element({
-	// 		element_type	: 'span',
-	// 		class_name		: 'button add',
-	// 		title			: get_label.new || 'New',
-	// 		parent			: fragment
-	// 	})
-	// 	add_layer.addEventListener('click', (e) =>{
-	// 		e.preventDefault()
-	// 		e.stopPropagation()
-	// 		data_tag.data = [data_tag.last_layer_id]
-	// 		const tag 	= self.build_view_tag_obj(data_tag, tag_id)
-	// 		text_editor.set_content(tag)
-	// 		layer_selector.remove()
-	// 	})
+	// add_layer button
+		// const add_layer = ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'button add',
+		// 	title			: get_label.new || 'New',
+		// 	parent			: fragment
+		// })
+		// add_layer.addEventListener('click', (e) =>{
+		// 	e.preventDefault()
+		// 	e.stopPropagation()
+		// 	data_tag.data = [data_tag.last_layer_id]
+		// 	const tag 	= self.build_view_tag_obj(data_tag, tag_id)
+		// 	text_editor.set_content(tag)
+		// 	layer_selector.remove()
+		// })
 
-	// layer_icon
+	// layer_selector_header
+		const layer_selector_header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'layer_selector_header',
+			parent			: fragment
+		})
+
+		// layer_icon
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'layer_icon',
-			parent			: fragment,
-			text_node		: data_tag.type
+			text_node		: data_tag.type + ': ' + (get_label.layer_selector || 'Layer selector'),
+			parent			: layer_selector_header,
 		})
 
-	// close button
+		// close button
 		const close = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button close',
-			parent			: fragment
+			parent			: layer_selector_header
 		})
-		close.addEventListener('click', (e) =>{
+		const click_handler = (e) => {
 			e.preventDefault()
 			e.stopPropagation()
+			// remove pointer
+			self.node.layer_selector = null
+			// remove node
 			layer_selector.remove()
-		})
+		}
+		close.addEventListener('click', click_handler)
 
 	// inputs container
 		const layer_ul = ui.create_dom_element({
@@ -118,15 +142,17 @@ export const render_layer_selector = function(options){
 			class_name		: 'layer_ul',
 			parent			: fragment
 		})
-
+		// iterate all layers
+		const ar_layers = data_tag.layers
 		for (let i = 0; i < ar_layers.length; i++) {
+
 			const layer = ar_layers[i]
 
 			const layer_li = ui.create_dom_element({
 				element_type	: 'li',
 				parent			: layer_ul
 			})
-			layer_li.addEventListener('click', (e) =>{
+			const click_handler = (e) => {
 				e.preventDefault()
 				e.stopPropagation()
 
@@ -138,10 +164,12 @@ export const render_layer_selector = function(options){
 					text_editor	: text_editor
 				})
 
-				// const tag = self.build_view_tag_obj(data_tag, tag_id)
-				// text_editor.set_content(tag)
+				// remove pointer
+				self.node.layer_selector = null
+				// remove node
 				layer_selector.remove()
-			})
+			}
+			layer_li.addEventListener('click', click_handler)
 
 			// layer_id
 				ui.create_dom_element({
@@ -172,13 +200,16 @@ export const render_layer_selector = function(options){
 				// layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined'
 				// 	? layer.layer_color
 				// 	: 'black'
-		}//end for
+		}//end for (let i = 0; i < ar_layers.length; i++)
 
 	const layer_selector = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'layer_selector'
 	})
 	layer_selector.appendChild(fragment)
+
+	// fix pointer
+	self.node.layer_selector = layer_selector
 
 
 	return layer_selector

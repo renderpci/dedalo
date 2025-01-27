@@ -1,22 +1,22 @@
-<?php
+<?php declare(strict_types=1);
 /*
 	FIXED CLASSES TO LOAD
 */
 include DEDALO_CORE_PATH . '/base/class.Error.php';
 include DEDALO_CORE_PATH . '/base/class.dd_cache.php';
 include DEDALO_CORE_PATH . '/base/class.processes.php';
+include DEDALO_CORE_PATH . '/base/class.system.php';
 include DEDALO_CORE_PATH . '/logger/class.logger.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend_activity.php';
 include DEDALO_CORE_PATH . '/db/class.DBi.php';
 include DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php';
-include DEDALO_CORE_PATH . '/db/class.RecordObj_matrix.php';
 include DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php';
 include DEDALO_CORE_PATH . '/db/class.JSON_RecordObj_matrix.php';
 include DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php';
 include DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php';
-include DEDALO_CORE_PATH . '/db/class.RecordObj_descriptors_dd.php';
 include DEDALO_CORE_PATH . '/db/class.json_handler.php';
+include DEDALO_CORE_PATH . '/db/class.db_tasks.php';
 include DEDALO_CORE_PATH . '/backup/class.backup.php';
 include DEDALO_CORE_PATH . '/common/class.common.php';
 include DEDALO_CORE_PATH . '/common/class.lang.php';
@@ -34,12 +34,12 @@ include DEDALO_CORE_PATH . '/common/class.request_config_object.php'; // new 16-
 include DEDALO_CORE_PATH . '/common/class.search_query_object.php'; // new 30-06-2021
 include DEDALO_CORE_PATH . '/common/class.metrics.php'; // new 20-03-2024
 include DEDALO_CORE_PATH . '/section/class.section.php';
+// Ontology
+include DEDALO_CORE_PATH . '/ontology/class.ontology_data_io.php';
 // media_engine. media auxiliary classes
 include DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php';
 include DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php';
-include DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php';
-// include DEDALO_CORE_PATH . '/media_engine/class.AVObj.php';
-include DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php';
+// Core
 include DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'; // new 27-07-2021
 include DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'; // new 28-07-2021
 include DEDALO_CORE_PATH . '/component_common/class.component_common.php';
@@ -67,11 +67,6 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_av_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_info.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_3d_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_area_maintenance_api.php';
-// others
-include DEDALO_CORE_PATH . '/ontology/class.ontology_legacy.php';
-// legacy classes (used only by v5 shared Ontology)
-// include DEDALO_CORE_PATH . '/legacy/class.css.php';
-// include DEDALO_CORE_PATH . '/legacy/class.js.php';
 // tools
 include DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php';
 // include the shared classes

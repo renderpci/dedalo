@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * TOOLS_REGISTER
 * Manages tools registration process, from /tools directory elements to the
@@ -25,7 +24,7 @@ class tools_register {
 	static $tipo_properties					= 'dd1335';
 	static $tools_configuration				= 'dd999'; // tools Configuration component_json
 	static $tools_default_configuration		= 'dd1633'; // tools default Configuration component_json
-
+	static $tipo_active						= 'dd1354'; // component_radio_button
 
 
 	/**
@@ -154,18 +153,11 @@ class tools_register {
 			if (!empty($ar_ontologies)) {
 
 				// Clean. remove structure records in the database
-					ontology_legacy::clean_structure_data('tool');
+					RecordObj_dd::delete_tld_nodes( 'tool' );
 
 				// import ontology (structure) in jer_dd
-					if (defined('ONTOLOGY_DB')) {
-						debug_log(__METHOD__
-							." !!!!! ignored ontology import (ONTOLOGY_DB is defined and this prevent to import ontology)"
-							, logger::WARNING
-						);
-					}else{
-						foreach ($ar_ontologies as $current_ontology) {
-							ontology_legacy::import($current_ontology);
-						}
+					foreach ($ar_ontologies as $current_ontology) {
+						// @TODO generate the ontology node or modify exiting one!! 10-01-2024
 					}
 
 				// update counter at end to consolidate
@@ -302,11 +294,58 @@ class tools_register {
 									, logger::ERROR
 								);
 							}
+					}//end foreach ($info_objects_parsed as $basename => $current_tool_section_data)
+
+				// remove non existing tools (in directory /tools)
+					$resource_all_section_records = section::get_resource_all_section_records_unfiltered(
+						self::$section_registered_tools_tipo,
+						'section_id'
+					);
+					while ($current_row = pg_fetch_assoc($resource_all_section_records)) {
+
+						$current_section_id = $current_row['section_id'];
+
+						// tool name
+							$component_tipo	= self::$tipo_tool_name;
+							$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$component		= component_common::get_instance(
+								$model,
+								$component_tipo,
+								$current_section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								self::$section_registered_tools_tipo,
+								true // cache
+							);
+							$value = $component->get_value(); // as  'tool_lang'
+
+						// files exists check
+							$found = array_find($info_file_processed, function($el) use($value) {
+								return $el->name === $value;
+							});
+							if ($found===null) {
+								// delete unused section
+								$section = section::get_instance(
+									$current_section_id, // string|null section_id
+									self::$section_registered_tools_tipo // string section_tipo
+								);
+								$section->Delete(
+									'delete_record' // string delete_mode
+								);
+							}
 					}
+
 			}//end if (!empty($info_objects_parsed))
 
 		// clean_cache. Remove previous stored data in session or files
-			tools_register::clean_cache();
+			$deleted = tools_register::clean_cache();
+			if (!$deleted) {
+				debug_log(__METHOD__
+					. " Error deleting tools cache " . PHP_EOL
+					. ' deleted: ' . to_string($deleted)
+					, logger::ERROR
+				);
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1271,19 +1310,15 @@ class tools_register {
 	/**
 	* CLEAN_CACHE
 	* Delete session and cache files from tools
+	* The file is saved in sessions directory as
+	*  'development_1_cache_user_tools.json'
 	* @return bool
 	*/
 	public static function clean_cache() {
 
-		// session. Remove previous stored data in session
-			// cache of already calculated tools
-			if (isset($_SESSION['dedalo']['registered_tools'])) {
-				unset($_SESSION['dedalo']['registered_tools']);
-			}
-
 		// delete_cache_files
 			$deleted_files = dd_cache::delete_cache_files([
-				'cache_registered_tools.json'
+				tools_register::get_cache_user_tools_file_name() //	like 'cache_user_tools.json'
 			]);
 			if ($deleted_files===true) {
 				return true;
@@ -1292,6 +1327,20 @@ class tools_register {
 
 		return false;
 	}//end clean_cache
+
+
+
+	/**
+	* GET_CACHE_USER_TOOLS_FILE_NAME
+	* Normalized cache tool name
+	* Note that on save by dd_cache, file will be customized as
+	* 	'development_1_' + 'cache_user_tools.json'
+	* @return string
+	*/
+	public static function get_cache_user_tools_file_name() : string {
+
+		return 'cache_user_tools.json';
+	}//end get_cache_user_tools_file_name
 
 
 

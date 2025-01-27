@@ -107,11 +107,6 @@ const get_content_data = async function(self) {
 		const offset_next		= self.offset_next
 		const offset_last		= self.offset_last
 
-		if(SHOW_DEBUG===true) {
-			// const model = self.id.split("_")[1] +" "+ self.id.split("_")[2]
-			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset: ${offset}, offset_first: ${offset_first}, model: ${model} `);
-		}
-
 	// display none with empty case, or when pages are <2 and show_all_status is not set
 		if((!total_pages || total_pages<2) && !self.show_all_status) {
 			const wrap_rows_paginator = ui.create_dom_element({
@@ -149,6 +144,14 @@ const get_content_data = async function(self) {
 						show_all_button.addEventListener('mousedown', mousedown_handler)
 					}
 				}
+
+		// displayed_total_records
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'displayed_total_records',
+				inner_html		: `: ${total} `,
+				parent			: fragment
+			})
 
 		// navigation
 			const paginator_div_links = ui.create_dom_element({
@@ -259,22 +262,14 @@ const get_content_data = async function(self) {
 					class_name		: 'paginator_info',
 					parent			: fragment
 				})
-				// page_info
+				// displayed_total_records
 				ui.create_dom_element({
 					element_type	: 'span',
-					class_name		: 'page_info',
-					inner_html		: `${total}`,
+					class_name		: 'displayed_total_records',
+					inner_html		: `: ${total}`,
 					parent			: paginator_info
 				})
 		}
-
-		// displayed_records
-			// ui.create_dom_element({
-			// 	element_type	: 'span',
-			// 	class_name		: 'displayed_records',
-			// 	inner_html		: ` [${total}]`,
-			// 	parent			: paginator_info
-			// })
 
 	// content_data
 		const content_data = ui.create_dom_element({

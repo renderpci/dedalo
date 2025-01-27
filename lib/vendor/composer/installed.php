@@ -3,7 +3,7 @@
         'name' => 'dedalo/dedalo_libs',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => '7caf09151d7713ee3cfce4668fa6350f41965adb',
+        'reference' => '573dad82ae125d92c64c46ea369ab7e94277736a',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'dedalo/dedalo_libs' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '7caf09151d7713ee3cfce4668fa6350f41965adb',
+            'reference' => '573dad82ae125d92c64c46ea369ab7e94277736a',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -24,6 +24,15 @@
             'replaced' => array(
                 0 => '1.1.*',
             ),
+        ),
+        'linfo/linfo' => array(
+            'pretty_version' => 'v4.0.8',
+            'version' => '4.0.8.0',
+            'reference' => '69c76c4613932d4a3ca36c36faebb122093522f6',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../linfo/linfo',
+            'aliases' => array(),
+            'dev_requirement' => false,
         ),
         'myclabs/deep-copy' => array(
             'pretty_version' => '1.12.0',

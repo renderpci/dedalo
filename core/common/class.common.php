@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * COMMON (ABSTRACT CLASS)
 * Shared methods by sections and components
@@ -435,6 +434,17 @@ abstract class common {
 				return null;
 			}
 
+		// ONTOLOGY SECTIONS. Important exception. Introduced in v6.4
+		// Ontology sections has a tipo with 0 in his own definition.
+		// Sometimes this sections can be caller by other nodes of the ontology
+		// but the section is not loaded (mistake or because is not used)
+		// it happens with local definitions, to avoid the error
+		// will return matrix_ontolog as table for all this sections.
+			$section_id = get_section_id_from_tipo( $tipo );
+			if( $section_id === '0' ){
+				return 'matrix_ontology';
+			}
+
 		// model
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			// empty model case
@@ -538,6 +548,11 @@ abstract class common {
 				// model
 				$model_name = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
 				if ($model_name!=='matrix_table') {
+					debug_log(__METHOD__
+						. " Ignored non matrix_table Ontology item "
+						. ' tipo: ' . to_string($table_tipo)
+						, logger::ERROR
+					);
 					continue;
 				}
 
@@ -1375,7 +1390,6 @@ abstract class common {
 			// controller include
 				$json = include( $path );
 
-
 		// Debug
 			if(SHOW_DEBUG===true) {
 
@@ -1607,7 +1621,7 @@ abstract class common {
 			// get the component tools in edit
 			// (!) Note that some tools like 'tool_upload' are used in list mode,
 			// but they can load tools using only the name if needed
-			if(($model==='section' && $this->mode==='list') || ($this->mode!=='list')){
+			if(( ($model==='section' || strpos($model, 'area')===0) && $this->mode==='list') || ($this->mode!=='list')){
 				$tools_list	= $this->get_tools();
 				foreach ($tools_list as $tool_object) {
 
@@ -1760,9 +1774,6 @@ abstract class common {
 						$dd_object->new_dataframe = (!empty($new_dataframe))
 							? $new_dataframe[0]
 							: null;
-
-						// component info from Ontology (!) For now it is not used because it affects speed.
-						// $dd_object->ontology_info = $this->get_ontology_info();
 					}
 
 					// set the show_interface of shared sections
@@ -2182,6 +2193,15 @@ abstract class common {
 									true,
 									$caller_dataframe // object|null
 								);
+
+								// the the component is a dataframe and it's in time_machine call
+								// set data_source as tm, and the matreix_id from the main component
+								// it will get the correct data from the time_machine
+								// used to load the component in edit mode in time_machine tool.
+								if($model==='component_dataframe' && isset($this->matrix_id) ){
+									$related_element->data_source = 'tm';
+									$related_element->matrix_id = $this->matrix_id;
+								}
 
 								// Permissions inheritance.
 								// Get the permissions to inject to children.
@@ -4555,14 +4575,14 @@ abstract class common {
 				$in_properties				= $properties->tool_config->{$tool->name} ?? null;
 
 				if(		in_array($model, $affected_models)
-					||	in_array($tipo,  $affected_tipos)
+					||	tipo_in_array($tipo,  $affected_tipos)
 					||	($is_component===true && in_array('all_components', $affected_models))
 					||	!is_null($in_properties)
 				  ) {
 
 					// affected_tipos specific restriction like tool_indexation (only 'rsc36')
 						if (!empty($affected_tipos[0])) {
-							if(!in_array($tipo, $affected_tipos)) {
+							if(!tipo_in_array($tipo, $affected_tipos)) {
 								continue;
 							}
 						}
