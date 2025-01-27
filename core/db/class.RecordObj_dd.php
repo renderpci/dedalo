@@ -949,7 +949,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		} while ( !empty($parent) && ($parent !== $parent_zero) && $parent !== $parent_inicial );
 
-
 		// we reverse order the parents
 		if($ksort===true) {
 			krsort($ar_parents_of_this);

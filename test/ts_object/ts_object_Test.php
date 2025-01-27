@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestDox;
+// use PHPUnit\Framework\Attributes\TestDox;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -75,7 +75,6 @@ final class ts_object_test extends TestCase {
 		);
 
 		$result = $ts_object->get_child_data();
-		// dump($result, ' result ++ '.to_string( gettype($result) ));
 
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
