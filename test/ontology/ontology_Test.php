@@ -1316,7 +1316,7 @@ final class ontology_test extends TestCase {
 	*/
 	public function test_jer_dd_version_is_valid() {
 
-		$min_date = '2025-01-01';
+		$min_date = '2025-11-01';
 
 		$result = ontology::jer_dd_version_is_valid(
 			$min_date
