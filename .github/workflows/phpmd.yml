@@ -17,10 +17,10 @@ name: PHPMD
 
 on:
   push:
-    branches: [ "fortify.com" ]
+    branches: [ "v6_developer" ]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ "fortify.com" ]
+    branches: [ "v6_developer" ]
   schedule:
     - cron: '40 22 * * 1'
 
