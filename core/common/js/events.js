@@ -204,6 +204,29 @@ export const dd_request_idle_callback = function (callback) {
 
 
 /**
+* DD_REQUEST_IDLE_CALLBACK
+* The yield() method of the Scheduler interface is used for yielding to the main thread
+* during a task and continuing execution later, with the continuation scheduled as a prioritized task.
+* This allows long-running work to be broken up so the browser stays responsive.
+* @see https://developer.mozilla.org/en-US/docs/Web/API/Scheduler/yield#browser_compatibility
+* @see https://web.dev/articles/optimize-long-tasks?utm_source=devtools
+* Version with fallback to allow Safari and Firefox use
+* @return promise
+*/
+function yield_to_main () {
+	if (globalThis.scheduler?.yield) {
+		return scheduler.yield()
+	}
+
+	// Fall back to yielding with setTimeout.
+	return new Promise(resolve => {
+		setTimeout(resolve, 0);
+	})
+}//end yield_to_main
+
+
+
+/**
 * SET_TOOL_EVENT
 * Apply a tool event configuration to current tool button
 * It is used in tool_ontology for example, to attach a keyup event
