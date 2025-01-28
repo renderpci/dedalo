@@ -572,41 +572,42 @@ final class ontology_data_io_test extends TestCase {
 
 		// bad URL
 		$server = (object)[
-			'url' => 'https://master.dedalo.dev/dedalo/core/api/v1/json/'
+			'url' => 'https://master.render.es/dedalo'
 		];
 
 		$response = ontology_data_io::check_remote_server( $server );
-			dump($response, ' test_check_remote_server response 1 ++ '.to_string());
+			// dump($response, ' test_check_remote_server response 1 ++ '.to_string());
 
 		$expected = 'object';
 		$this->assertTrue(
 			gettype($response)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'response type: ' . gettype($response) . PHP_EOL
+			.'response: ' . to_string($response) . PHP_EOL
 		);
 
-		$expected = 'object';
+		$expected = 'NULL';
 		$this->assertTrue(
 			gettype($response->result)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'response type: ' . gettype($response->result) . PHP_EOL
+			.'response: ' . to_string($response) . PHP_EOL
 		);
 
-		$expected = false;
+		$expected = NULL;
 		$this->assertTrue(
-			$response->result->result===$expected ,
+			$response->result===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
-			.'response->result: ' . to_string($response->result) . PHP_EOL
 			.'response: ' . to_string($response) . PHP_EOL
 		);
 
 		// good URL
 		$server = (object)[
-			'url' => 'https://master.dedalo.dev/6.4/core/api/v1/json/'
+			'url' => 'https://master.dedalo.dev/dedalo/core/api/v1/json/'
 		];
 
 		$response = ontology_data_io::check_remote_server( $server );
-			dump($response, ' test_check_remote_server response 2 ++ '.to_string());
+			// dump($response, ' test_check_remote_server response 2 ++ '.to_string());
 
 		$expected = true;
 		$this->assertTrue(
