@@ -462,7 +462,7 @@ component_security_access.prototype.get_changes_data = async function(filename) 
 			dd_api	: 'dd_area_maintenance_api',
 			action	: 'parse_simple_schema_changes_files',
 			options	: {
-				filename	: filename
+				filename : filename
 			}
 		}
 	})
