@@ -29,11 +29,13 @@ class update_ontology {
 			}
 
 		// local files
-			$servers[] = (object)[
-				'name'	=> 'Local files',
-				'url'	=> DEDALO_PROTOCOL.DEDALO_HOST.DEDALO_API_URL,
-				'code'	=> 'localhost'
-			];
+			if (IS_AN_ONTOLOGY_SERVER===true) {
+				$servers[] = (object)[
+					'name'	=> 'Local files',
+					'url'	=> DEDALO_PROTOCOL.DEDALO_HOST.DEDALO_API_URL,
+					'code'	=> 'localhost'
+				];
+			}
 
 		// check ontology servers
 			$ontology_servers = [];

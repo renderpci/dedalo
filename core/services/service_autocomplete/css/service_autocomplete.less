@@ -111,6 +111,25 @@
 		>.inputs_list {
 			background-color: @color_grey_light;
 			padding: 0.5em;
+
+			>.input_group {
+				position: relative;
+
+				>input {
+					margin: 0px;
+					margin-bottom: 2px;
+				}
+
+				// label showing the same that placeholder to allow to know what we are editing
+				>label {
+					position: absolute;
+					right: 1rem;
+					top: 0.5rem;
+					opacity: 0.5;
+					z-index: 2;
+				}
+			}
+
 		}
 
 		// search_operators_div
