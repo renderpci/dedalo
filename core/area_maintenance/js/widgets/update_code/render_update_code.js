@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {run_service_worker,run_worker_cache} from '../../../../login/js/login.js'
+	import {quit,run_service_worker,run_worker_cache} from '../../../../login/js/login.js'
 
 
 
@@ -145,8 +145,10 @@ const get_content_data_edit = async function(self) {
 
 					// on_done event (called once at finish or cancel the stream read)
 					const on_done = () => {
+
 						// is triggered at the reader's closing
 						render_stream_response.done()
+
 						// reload JS files
 						reload_js_files()
 						.then(function(){
@@ -206,7 +208,19 @@ const get_content_data_edit = async function(self) {
 					},
 					options	: {}
 				},
-				on_done : reload_js_files // clean browser cache
+				on_done : (response) => {
+
+					// failed case
+					if (!response?.result) {
+						const msg = response?.msg || 'Error updating code'
+						alert(msg);
+						console.error('API response:', response)
+						return
+					}
+
+					// OK. clean browser cache
+					reload_js_files()
+				}
 			})
 		}
 
@@ -225,41 +239,54 @@ const get_content_data_edit = async function(self) {
 * @see login.run_service_worker, login.run_worker_cache
 * @return bool
 */
-const reload_js_files = async function () {
+const reload_js_files = async function() {
 
-	const on_message = (event) => {
-		switch (event.data.status) {
-			case 'ready':
-				console.log(`Loading total_files: ${event.data.total_files}`);
-				break;
-			case 'finish':
-				console.log(`Updated total_files: ${event.data.total_files}`, event.data.api_response);
-				break;
-		}
-	}
+	alert('You must exit and login again to continue.');
 
-	run_service_worker({
-		on_message	: on_message
-	})
-	.then(function(response){
-		// on service worker registration error (not https support for example)
-		// fallback to the former method of loading cache files
-		if (response===false) {
+	// force exit Dédalo (login quit)
+	await quit()
 
-			// notify error
-				const error = location.protocol==='http:'
-					? `register_service_worker fails. Protocol '${location.protocol}' is not supported by service workers. Retrying with run_worker_cache.`
-					: `register_service_worker fails (${location.protocol}). Retrying with run_worker_cache.`
-				console.error(error);
+	return true
 
-			// launch worker cache (uses regular browser memory cache)
-				run_worker_cache({
-					on_message	: on_message
-				})
-		}
+	// try {
 
-		return true
-	})
+	// 	const on_message = (event) => {
+	// 		switch (event.data.status) {
+	// 			case 'ready':
+	// 				console.log(`Loading total_files: ${event.data.total_files}`);
+	// 				break;
+	// 			case 'finish':
+	// 				console.log(`Updated total_files: ${event.data.total_files}`, event.data.api_response);
+	// 				break;
+	// 		}
+	// 	}
+
+	// 	const response = await run_service_worker({
+	// 		on_message : on_message
+	// 	})
+
+	// 	// on service worker registration error (not https support for example)
+	// 	// fallback to the former method of loading cache files
+	// 	if (response===false) {
+
+	// 		// notify error
+	// 			const error = location.protocol==='http:'
+	// 				? `register_service_worker fails. Protocol '${location.protocol}' is not supported by service workers. Retrying with run_worker_cache.`
+	// 				: `register_service_worker fails (${location.protocol}). Retrying with run_worker_cache.`
+	// 			console.error(error);
+
+	// 		// launch worker cache (uses regular browser memory cache)
+	// 			run_worker_cache({
+	// 				on_message	: on_message
+	// 			})
+	// 	}
+
+	// 	return true
+
+	// } catch (error) {
+	// 	console.error(error)
+	// 	return false
+	// }
 }//end reload_js_files
 
 
