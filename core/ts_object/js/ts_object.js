@@ -1557,8 +1557,13 @@ export const ts_object = new function() {
 			// keydown event
 			const keydown_handler = (e) => {
 				e.stopPropagation()
+				// Enter key
 				if (e.keyCode === 13) {
 					ts_object.save_order(button_obj, parseInt(input.value) )
+				}
+				// esc key
+				if (e.keyCode===27) {
+					input.blur()
 				}
 			}
 			input.addEventListener('keydown', keydown_handler);
