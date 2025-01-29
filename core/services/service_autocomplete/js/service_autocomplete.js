@@ -147,7 +147,16 @@ service_autocomplete.prototype.build = async function(options={}) {
 		self.list_name			= 's_'+new Date().getUTCMilliseconds()
 		self.search_fired		= false
 
-	// operator
+	// operator.
+		// (!) To change the operator default value, edit the request_config adding "sqo_config" to "show":
+		// {
+		// 	"show": {
+		// 		"sqo_config": {
+		// 			"operator": "$or"
+		// 		},
+		// 		"ddo_map": [...]
+		// 	}
+		// }
 		self.operator = self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
 			? self.request_config_object.search.sqo_config.operator
 			: self.request_config_object.show && self.request_config_object.show.sqo_config && self.request_config_object.show.sqo_config.operator
@@ -570,16 +579,16 @@ service_autocomplete.prototype.split_q = function(q) {
 	let m;
 
 	while ((m = regex.exec(str)) !== null) {
-	    // This is necessary to avoid infinite loops with zero-width matches
-	    if (m.index === regex.lastIndex) {
-	        regex.lastIndex++;
-	    }
+		// This is necessary to avoid infinite loops with zero-width matches
+		if (m.index === regex.lastIndex) {
+			regex.lastIndex++;
+		}
 
-	    // The result can be accessed through the `m`-variable.
-	    m.forEach((match, groupIndex) => {
-	        //console.log(`Found match, group ${groupIndex}: ${match}`);
-	        ar_q.push(match.trim())
-	    });
+		// The result can be accessed through the `m`-variable.
+		m.forEach((match, groupIndex) => {
+			//console.log(`Found match, group ${groupIndex}: ${match}`);
+			ar_q.push(match.trim())
+		});
 	}
 
 	const divisor = (q.indexOf('|')!==-1) ? '|' : false
