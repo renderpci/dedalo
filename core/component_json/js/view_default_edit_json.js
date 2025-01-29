@@ -7,7 +7,6 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport} from '../../common/js/events.js'
-	import {change_handler} from './component_json.js'
 	import {createJSONEditor} from '../../../lib/jsoneditor/dist/standalone.js'
 
 
@@ -138,14 +137,14 @@ const get_content_value = (key, current_value, self) => {
 									? null
 									: JSON.parse( updatedContent.text )
 
-							change_handler(self, json_value, key)
+							self.set_value(json_value, key)
 						}
 					}
 				}
 			})
 
 			// set pointer
-			self.editor = editor
+			self.editors[key] = editor
 
 			// button_save
 			const button_save = ui.create_dom_element({

@@ -85,33 +85,6 @@ component_json.prototype.set_value = async function(value, key=0) {
 
 	const self = this
 
-	const editor = self.editors[key]
-
-	await editor.set(value)
-
-	await editor.refresh({
-		build_autoload	: false,
-		render_level	: 'content'
-	});
-
-	change_handler(self, value, key)
-
-	return true
-}//end set_value
-
-
-
-/**
-* CHANGE_HANDLER
-* Updates component changed_data value
-* @param object self
-* @param mixed value
-* 	JSON editor content as JSON format
-* @param int key
-* @return bool changed
-*/
-export const change_handler = function(self, value, key) {
-
 	// change data
 		const changed_data_item = Object.freeze({
 			action	: 'update',
@@ -123,7 +96,7 @@ export const change_handler = function(self, value, key) {
 		const changed = self.set_changed_data(changed_data_item)
 
 	return changed
-}//end change_handler
+}//end set_value
 
 
 
