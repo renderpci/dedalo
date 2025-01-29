@@ -1553,18 +1553,24 @@ export const ts_object = new function() {
 			const input = document.createElement('input')
 			input.classList.add('id_column_link','input_order')
 			input.value = old_value
-			input.addEventListener("keyup", function(e){
-				e.preventDefault()
+
+			// keydown event
+			const keydown_handler = (e) => {
+				e.stopPropagation()
 				if (e.keyCode === 13) {
-					ts_object.save_order(button_obj, parseInt(this.value) )
-					// this.remove()
+					ts_object.save_order(button_obj, parseInt(input.value) )
 				}
-			});
-			input.addEventListener("blur", function(e){
+			}
+			input.addEventListener('keydown', keydown_handler);
+
+			// blur event
+			const blur_handler = (e) => {
+				e.stopPropagation()
 				e.preventDefault()
-				this.remove()
+				input.remove()
 				button_obj.style.display = ''
-			});
+			}
+			input.addEventListener('blur', blur_handler);
 
 		// Add input element after
 			button_obj.parentNode.insertBefore(input, button_obj.nextSibling);
