@@ -8,7 +8,7 @@
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
-	import {run_service_worker,run_worker_cache} from '../../../../login/js/login.js'
+	import {quit} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 
 
@@ -32,7 +32,7 @@ export const render_update_code = function() {
 * 	Sample:
 * 	{
 *		render_level : "full"
-		render_mode : "list"
+*		render_mode : "list"
 *   }
 * @return HTMLElement wrapper
 * 	To append to the widget body node (area_maintenance)
@@ -146,15 +146,12 @@ const get_content_data_edit = async function(self) {
 
 					// on_done event (called once at finish or cancel the stream read)
 					const on_done = () => {
+
 						// is triggered at the reader's closing
 						render_stream_response.done()
-						// reload JS files
-						reload_js_files()
-						.then(function(){
-							if( confirm('It is recommended to refresh the page to avoid cache problems. Do you wish to continue to do so?') ) {
-								location.reload(true);
-							}
-						})
+
+						// force quit to reload JS files
+						force_quit()
 					}
 
 					// read stream. Creates ReadableStream that fire
@@ -281,49 +278,20 @@ const get_content_data_edit = async function(self) {
 
 
 /**
-* RELOAD_JS_FILES
-* Force to clean cache of Dédalo main JS files
-* @see login.run_service_worker, login.run_worker_cache
+* FORCE_QUIT
+* Force log out to clean cache of Dédalo main JS files
+* @see login.quit
 * @return bool
 */
-const reload_js_files = async function () {
-	// REMOVED TEMPORALLY FOR DEVELOPMENT
-	return false;
+const force_quit = async function () {
 
-	const on_message = (event) => {
-		switch (event.data.status) {
-			case 'ready':
-				console.log(`Loading total_files: ${event.data.total_files}`);
-				break;
-			case 'finish':
-				console.log(`Updated total_files: ${event.data.total_files}`, event.data.api_response);
-				break;
-		}
-	}
+	alert('You must exit and login again to continue.');
 
-	run_service_worker({
-		on_message	: on_message
-	})
-	.then(function(response){
-		// on service worker registration error (not https support for example)
-		// fallback to the former method of loading cache files
-		if (response===false) {
+	// force exit Dédalo (login quit)
+	await quit()
 
-			// notify error
-				const error = location.protocol==='http:'
-					? `register_service_worker fails. Protocol '${location.protocol}' is not supported by service workers. Retrying with run_worker_cache.`
-					: `register_service_worker fails (${location.protocol}). Retrying with run_worker_cache.`
-				console.error(error);
-
-			// launch worker cache (uses regular browser memory cache)
-				run_worker_cache({
-					on_message	: on_message
-				})
-		}
-
-		return true
-	})
-}//end reload_js_files
+	return true
+}//end force_quit
 
 
 
@@ -337,20 +305,37 @@ const render_build_version = function(self, content_data, body_response){
 
 	if (self.caller?.init_form) {
 
+		// build_version_group
+		const build_version_group = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'build_version_group',
+			parent			: content_data
+		})
+
+		// info_text
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label bold',
+			inner_html		: 'Code builders from GIT',
+			parent			: build_version_group
+		})
+
 		// on_done. On button press, execute this function
 		const on_done = () => {
+
 			// event publish
 			// listen by widget update_data_version.init
 			event_manager.publish('build_code_done', self)
-			// clean browser cache
-			reload_js_files()
+
+			// force quit to clean browser cache
+			force_quit()
 		}
 
-		// button Build Dédalo code
+		// button Build Dédalo code MASTER branch
 		self.caller.init_form({
-			submit_label	: 'Build Dédalo code',
+			submit_label	: 'Build Dédalo code master',
 			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
+			body_info		: build_version_group,
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
@@ -367,11 +352,11 @@ const render_build_version = function(self, content_data, body_response){
 			on_done : on_done
 		})
 
-		// button Build Dédalo code developer
+		// button Build Dédalo code DEVELOPER branch
 		self.caller.init_form({
 			submit_label	: 'Build Dédalo code developer',
 			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
+			body_info		: build_version_group,
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
@@ -388,11 +373,11 @@ const render_build_version = function(self, content_data, body_response){
 			on_done : on_done
 		})
 
-		// button Build Dédalo code beta 6.4
+		// button Build Dédalo code beta 6.4 branch
 		self.caller.init_form({
 			submit_label	: 'Build Dédalo code beta 6.4',
 			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
+			body_info		: build_version_group,
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
@@ -543,6 +528,7 @@ const render_info_modal = function( self, versions_info ){
 					inner_html		: get_label.update || 'Update',
 					parent			: footer
 				})
+				// click event
 				const click_handler = async (e) => {
 					e.stopPropagation()
 
@@ -567,17 +553,21 @@ const render_info_modal = function( self, versions_info ){
 					// update_code
 					const api_response = await self.update_code(file_active)
 
-					button_update.classList.remove('hide')
 					body.classList.remove('loading')
 
 					// spinner
 					spinner.remove()
 
 					if (!api_response.result || api_response.errors?.length) {
+
 						response.innerHTML = api_response.errors.length
 							? api_response.errors.join('<br>')
 							: api_response.msg || 'Unknown error on API update_code'
+
+						button_update.classList.remove('hide')
+
 					}else{
+
 						response.innerHTML = api_response.msg || 'OK'
 					}
 				}
