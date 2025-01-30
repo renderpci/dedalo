@@ -587,19 +587,6 @@ const render_info_modal = function( self, versions_info ){
 						button_update.focus()
 					}
 				)
-
-			// cancel_button
-				// const cancel_button = ui.create_dom_element({
-				// 	element_type	: 'button',
-				// 	class_name		: 'warning ',
-				// 	inner_html		: get_label.cancel || 'Cancel',
-				// 	parent			: footer
-				// })
-				// const click_cancel_handler = (e) => {
-				// 	e.stopPropagation()
-				// 	modal.close();
-				// }
-				// cancel_button.addEventListener('click', click_cancel_handler)
 		}
 
 	// response add at end (after buttons)
