@@ -52,7 +52,8 @@
 		.inline_common;
 		width: 100%;
 		height: 0px;
-		padding-left: 2rem;
+		// padding-left: 2rem;
+		padding-left: 1.75rem;
 	}
 
 	&.hierarchy_root_node {
@@ -71,11 +72,15 @@
 	}
 
 	.id_column_link {
-		display: inline-table;
-		float: left;
+		// display: inline-table;
+		// float: left;
+		display: inline-block;
 		height: 1.4em;
 		line-height: 1.5rem;
 		z-index: 1; // overlap term hilite
+
+		width: 1.5rem;
+		margin-right: 0.25rem;
 
 		&:active {
 			opacity: 0.5;
@@ -131,8 +136,9 @@
 
 	 // order_number
 	.ts_object_order_number {
+		width: 1rem;
 		min-width: 14px;
-		text-align: right;
+		text-align: center;
 		padding-top: 0px;
 		margin-right: 3px;
 		font-size: 9px;
@@ -175,7 +181,7 @@
 		.ts_object_edit_icon {
 			background-image: url('../../themes/default/icons/edit.svg');
 			background-repeat: no-repeat;
-			background-size: 70%;
+			background-size: 65%;
 			background-position: center;
 			float: left;
 			width: 24px;
