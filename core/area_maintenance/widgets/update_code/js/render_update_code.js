@@ -326,9 +326,6 @@ const render_build_version = function(self, content_data, body_response){
 			// event publish
 			// listen by widget update_data_version.init
 			event_manager.publish('build_code_done', self)
-
-			// force quit to clean browser cache
-			force_quit()
 		}
 
 		// button Build Dédalo code MASTER branch
@@ -569,6 +566,11 @@ const render_info_modal = function( self, versions_info ){
 					}else{
 
 						response.innerHTML = api_response.msg || 'OK'
+
+						// force quit to clean browser cache
+						setTimeout(function(){
+							force_quit()
+						}, 1000)
 					}
 				}
 				button_update.addEventListener('click', click_handler)
