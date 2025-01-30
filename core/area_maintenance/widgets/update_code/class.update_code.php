@@ -995,6 +995,19 @@ class update_code {
 				}
 			}
 
+			// development version file
+				$development_path	= update_code::set_development_path();
+				$development_file	= $development_path .'/dedalo_development.zip';
+				if (file_exists($development_file)) {
+					$code_url = DEDALO_CODE_FILES_URL . '/development';
+					$file_item = new stdClass();
+						$file_item->version	= 'development';
+						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $development_file );
+
+					$result->files[] = $file_item;
+				}
+
+
 		// response
 		$response->result	= $result;
 		$response->msg		= 'OK. Request done successfully';
