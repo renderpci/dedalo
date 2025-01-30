@@ -396,7 +396,7 @@ class update_code {
 				// move directory old version to backups as '../httpdocs/dedalo' => '../backup/code/dedalo_6.3.1'
 					$backup_code_path = DEDALO_BACKUP_PATH . '/code';
 					create_directory($backup_code_path);
-					$old_copy_final_path = "{$backup_code_path}/dedalo_" .DEDALO_VERSION;
+					$old_copy_final_path = "{$backup_code_path}/dedalo_" .DEDALO_VERSION . '_' . date('Y-m-d_his');
 					$command = "mv $target $old_copy_final_path";
 					exec($command, $output, $result_code);
 					if ($result_code!=0) {
@@ -662,7 +662,9 @@ class update_code {
 			$source = DEDALO_CODE_SERVER_GIT_DIR;
 
 		// command @see https://git-scm.com/docs/git-archive
-			$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo_code/ $branch > $target ";
+			$command = strpos($source, 'ssh://')!==false
+				? "git archive --remote=$source --verbose --format=zip --prefix=dedalo_code/ $branch > $target" // remote GIT
+				: "cd $source; git archive --verbose --format=zip --prefix=dedalo_code/ $branch > $target "; // local GIT
 
 		// debug
 			debug_log(__METHOD__
