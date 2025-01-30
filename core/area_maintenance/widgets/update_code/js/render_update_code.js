@@ -179,89 +179,76 @@ const get_content_data_edit = async function(self) {
 		}
 		check_process_data()
 
-	// dedalo_entity check
-		if (page_globals.dedalo_entity==='development') {
-			// message development
-			ui.create_dom_element({
-				element_type	: 'div',
-				inner_html		: 'The development site does not allow updating the code',
-				class_name		: 'info_text comment',
-				parent			: content_data
-			})
+	// button_submit
+		const button_label = 'Update Dédalo code to the latest version';
+		const button_submit = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_submit',
+			inner_html		: button_label,
+			parent			: content_data
+		})
+		// click event
+		const click_event = async (e) => {
+			e.stopPropagation()
 
-		}else{
+			// server to be used
+				const server = servers.find(el => el.active === true )
+				if( !server ){
+					alert("Error: any server was selected");
+					return
+				}
 
-			// button
-			const button_label = 'Update Dédalo code to the latest version';
-			const button_submit = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light button_submit',
-				inner_html		: button_label,
-				parent			: content_data
-			})
-			// click event
-			const click_event = async (e) => {
-				e.stopPropagation()
+			// clean body_response nodes
+				while (body_response.firstChild) {
+					body_response.removeChild(body_response.firstChild);
+				}
 
-				// server to be used
-					const server = servers.find(el => el.active === true )
-					if( !server ){
-						alert("Error: any server was selected");
-						return
-					}
+			// loading add
+				e.target.classList.add('lock')
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner'
+				})
+				body_response.prepend(spinner)
 
-				// clean body_response nodes
-					while (body_response.firstChild) {
-						body_response.removeChild(body_response.firstChild);
-					}
+			// Code information. Call selected remote server API to get updates list
+				const server_code_api_response = await self.get_code_update_info(server)
 
-				// loading add
-					e.target.classList.add('lock')
-					const spinner = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'spinner'
-					})
-					body_response.prepend(spinner)
-
-				// Code information. Call selected remote server API to get updates list
-					const server_code_api_response = await self.get_code_update_info(server)
-
-					// result check
-						const result = server_code_api_response?.result
-						const errors = server_code_api_response?.errors || []
-						if(!result || errors.length){
-							// remove spinner
-							e.target.classList.remove('lock')
-							spinner.remove()
-							// error message node add
+				// result check
+					const result = server_code_api_response?.result
+					const errors = server_code_api_response?.errors || []
+					if(!result || errors.length){
+						// remove spinner
+						e.target.classList.remove('lock')
+						spinner.remove()
+						// error message node add
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error',
+							inner_html		: server_code_api_response.msg || 'Error connecting server',
+							parent			: body_response
+						})
+						// additional errors
+						const errors_length = errors.length
+						for (let i = 0; i < errors_length; i++) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error',
-								inner_html		: server_code_api_response.msg || 'Error connecting server',
+								inner_html		: errors[i],
 								parent			: body_response
 							})
-							// additional errors
-							const errors_length = errors.length
-							for (let i = 0; i < errors_length; i++) {
-								ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'error',
-									inner_html		: errors[i],
-									parent			: body_response
-								})
-							}
-							return
 						}
+						return
+					}
 
-					// show info modal
-						render_info_modal( self, result )
+				// show info modal
+					render_info_modal( self, result )
 
-					// remove spinner
-					e.target.classList.remove('lock')
-					spinner.remove()
-			}
-			button_submit.addEventListener('click', click_event)
+				// remove spinner
+				e.target.classList.remove('lock')
+				spinner.remove()
 		}
+		button_submit.addEventListener('click', click_event)
 
 	// build code version
 		if(is_a_code_server || page_globals.dedalo_entity==='development'){
@@ -421,6 +408,42 @@ const render_info_modal = function( self, versions_info ){
 			class_name		: 'body widget_update_code'
 		})
 
+	// beta updates on/off
+		const beta_updates_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'beta_updates_container',
+			parent			: body
+		})
+		const beta_updates_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'version_label',
+			text_node		: 'Beta updates',
+			parent			: beta_updates_container
+		})
+		const beta_update_radio = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			name			: 'beta_updates',
+			value			: true
+		})
+		// change event
+		const change_handler = (e) => {
+			// fix checked value
+			self.beta_update = beta_update_radio.checked
+			// hide/show available development versions (betas)
+			body.querySelectorAll('.development')
+			.forEach( el => {
+				if (self.beta_update) {
+					el.classList.remove('hide')
+				}else{
+					el.classList.add('hide')
+				}
+			})
+		}
+		beta_update_radio.addEventListener('change', change_handler)
+		beta_updates_label.prepend(beta_update_radio)
+
+	// files_container
 		const files_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'files_container',
@@ -435,24 +458,19 @@ const render_info_modal = function( self, versions_info ){
 
 			const current_version = files[i];
 
-			// DEVELOPMENT_SERVER. On false, hide development version as option
-			if (current_version.version==='development' &&
-				(typeof DEVELOPMENT_SERVER==='undefined' || !DEVELOPMENT_SERVER)
-				) {
-				console.log('! Excluded development version because your config is not DEVELOPMENT_SERVER. current_version: ', current_version);
-				continue;
-			}
-
 			const file_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_container',
+				class_name		: 'file_container ' + current_version.version,
 				parent			: files_container
 			})
+			if (current_version.version==='development' && !self.beta_update) {
+				file_container.classList.add('hide')
+			}
 
 			const label = current_version.version
 			const version_label = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'version_label',
+				element_type	: 'label',
+				class_name		: 'version_label unselectable',
 				text_node		: label,
 				parent			: file_container
 			})
@@ -467,7 +485,7 @@ const render_info_modal = function( self, versions_info ){
 			})
 
 			// by default, the newer version is selected
-			if(i===0){
+			if(i===0 && current_version.version!=='development'){
 				input_radio.checked = true
 				current_version.active = true
 			}
@@ -541,11 +559,21 @@ const render_info_modal = function( self, versions_info ){
 				const click_handler = async (e) => {
 					e.stopPropagation()
 
+					const file_active = files.find(el => el.active === true)
+					if (!file_active) {
+						alert(get_label.empty_selection || 'Empty selection');
+						return
+					}
+
 					if (!confirm(get_label.sure || 'Sure?')) {
 						return
 					}
 
-					const file_active = files.find(el => el.active === true)
+					if (page_globals.dedalo_entity==='development') {
+						// message development
+						alert('To avoid accidental overwrites, the development installation does not allow updating the code.');
+						return
+					}
 
 					button_update.classList.add('hide')
 					body.classList.add('loading')
