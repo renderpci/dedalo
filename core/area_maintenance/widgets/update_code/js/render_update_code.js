@@ -430,9 +430,18 @@ const render_info_modal = function( self, versions_info ){
 	// files
 		const files = versions_info.files
 		const files_length = files.length
+		const valid_files = []
 		for (let i = 0; i < files_length; i++) {
 
 			const current_version = files[i];
+
+			// DEVELOPMENT_SERVER. On false, hide development version as option
+			if (current_version.version==='development' &&
+				(typeof DEVELOPMENT_SERVER==='undefined' || !DEVELOPMENT_SERVER)
+				) {
+				console.log('! Excluded development version because your config is not DEVELOPMENT_SERVER. current_version: ', current_version);
+				continue;
+			}
 
 			const file_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -484,6 +493,9 @@ const render_info_modal = function( self, versions_info ){
 			})
 
 			version_label.prepend(input_radio)
+
+			// add to valid_files
+			valid_files.push(current_version)
 		}//end for (let i = 0; i < files_length; i++)
 
 	// footer
@@ -498,14 +510,14 @@ const render_info_modal = function( self, versions_info ){
 			class_name		: 'response content'
 		})
 
-		if (files_length===0) {
+		if (valid_files.length===0) {
 
 			// No updated found
 
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'content',
-				inner_html		: 'No updates available for your version.',
+				inner_html		: 'There are no valid updates available for your version.',
 				parent			: response
 			})
 
