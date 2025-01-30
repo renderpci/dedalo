@@ -27,6 +27,9 @@ export const update_code = function() {
 
 	this.node
 
+	// bool beta_update
+	this.beta_update
+
 	this.events_tokens	= []
 	this.ar_instances	= []
 
