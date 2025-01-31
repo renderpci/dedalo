@@ -77,10 +77,11 @@ const get_content_data = function(self) {
 	const fragment = new DocumentFragment()
 
 	// widgets
-		const widgets_length = self.widgets.length
+		const widgets = self.widgets || []
+		const widgets_length = widgets.length
 		for (let i = 0; i < widgets_length; i++) {
 
-			const widget = self.widgets[i]
+			const widget = widgets[i]
 
 			const widget_dom = build_widget(widget, self);
 			fragment.appendChild(widget_dom)

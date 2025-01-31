@@ -151,7 +151,7 @@ menu.prototype.build = async function(autoload=true) {
 						return false
 					}
 					// server: bad build context
-					if(!api_response.result.context.length){
+					if(!api_response.result.context?.length){
 						console.error("Error!!!!, menu without context:", api_response);
 						return false
 					}

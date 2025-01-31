@@ -315,7 +315,7 @@ const render_item_hierarchy = (options) => {
 					}
 
 				// api_errors case. On existing api_errors, force  to reload the page to refresh the page instance
-					if (page_globals.api_errors && page_globals.api_errors.length) {
+					if (page_globals.api_errors?.length) {
 						window.location.href = url
 						return
 					}

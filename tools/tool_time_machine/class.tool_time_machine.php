@@ -31,7 +31,6 @@ class tool_time_machine extends tool_common {
 				$options->matrix_id			= $request_options->matrix_id ?? null;
 				$options->caller_dataframe	= $request_options->caller_dataframe ?? null;
 
-
 		// short vars
 			$section_tipo		= $options->section_tipo;
 			$section_id			= $options->section_id;
@@ -176,7 +175,7 @@ class tool_time_machine extends tool_common {
 
 
 					if ( is_array($dato_time_machine) && in_array( $model, component_relation_common::get_components_with_relations()) ){
-						//Main component and other components without dataframe
+						// Main component and other components without dataframe
 						$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) use($tipo) {
 							return isset($el->from_component_tipo) && $el->from_component_tipo===$tipo;
 						}));
@@ -192,7 +191,6 @@ class tool_time_machine extends tool_common {
 
 					// Save the component with a new updated data from time machine
 						$result = $element->Save();
-
 
 					// LOGGER ACTIVITY
 						$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
@@ -241,7 +239,7 @@ class tool_time_machine extends tool_common {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end apply_value
 
 
@@ -339,7 +337,7 @@ class tool_time_machine extends tool_common {
 					section_id 		= '$section_id'
 					ORDER BY id DESC"
 				;
-				$sub_result		= JSON_RecordDataBoundObject::search_free($sub_strQuery);
+				$sub_result	= JSON_RecordDataBoundObject::search_free($sub_strQuery);
 				// get the total changes,
 				// if the component has only 1 change, it will be the bulk change
 				// in those cases the data to save into the component will be a empty array

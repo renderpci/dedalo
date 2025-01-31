@@ -291,7 +291,8 @@ class tool_import_dedalo_csv extends tool_common {
 				$section_tipo		= $current_file_obj->section_tipo; // string like 'oh1'
 				$ar_columns_map		= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
 				$bulk_process_label	= $current_file_obj->bulk_process_label; // string like 'exported_oral-history_-1-oh1.csv'
-				// print the process_info
+
+				// CLI. print the process_info
 					if ( running_in_cli()===true ) {
 						$process_info->msg			= label::get_label('reading');
 						$process_info->current_file	= $current_file;
