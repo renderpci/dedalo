@@ -24,7 +24,11 @@
 self.onmessage = function(e) {
 	const t1 = performance.now()
 
-	const response = {}
+	const response = {
+		result	: false,
+		msg		: 'onmessage error',
+		errors	: []
+	}
 
 	// options
 		const fn		= e.data.fn // function name
@@ -34,9 +38,9 @@ self.onmessage = function(e) {
 		if (typeof self[fn]!=='function') {
 			// error
 			response.result	= false
-			response.error	= 'Invalid target function name! ' + fn
+			response.errors.push('Invalid target function name! ' + fn)
 			response.msg	= 'Task rejected'
-			console.error("Worker error:", response.error);
+			console.error("Worker errors:", response.errors);
 			self.postMessage(response);
 			return
 		}
@@ -51,7 +55,7 @@ self.onmessage = function(e) {
 				result = self.get_parents(...params)
 				break;
 			default:
-				response.error	= 'Invalid target function name! ' + fn
+				response.errors.push('Invalid target function name! ' + fn)
 				break;
 		}
 

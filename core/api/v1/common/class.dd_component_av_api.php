@@ -54,7 +54,7 @@ final class dd_component_av_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
-				$response->error	= null;
+				$response->errors	= [];
 
 		// component
 			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -228,7 +228,7 @@ final class dd_component_av_api {
 			$response = new stdClass();
 				$response->result	= $media_streams;
 				$response->msg		= ['OK. Request done'];
-				$response->error	= null;
+				$response->errors	= [];
 
 
 		return $response;

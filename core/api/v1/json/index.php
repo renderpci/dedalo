@@ -184,6 +184,7 @@ $global_start_time = hrtime(true);
 	// 		$response->msg	= (SHOW_DEBUG===true)
 	// 			? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
 	// 			: 'Throwable Exception when calling Dédalo API. Contact with your admin';
+	// 		$response->errors	= ['Throwable Exception when calling Dédalo API'];
 	// 		$response->debug	= (object)[
 	// 			'rqo' => $rqo
 	// 		];
@@ -197,6 +198,7 @@ $global_start_time = hrtime(true);
 	// 		$response->msg	= (SHOW_DEBUG===true)
 	// 			? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
 	// 			: 'Exception when calling Dédalo API. Contact with your admin';
+	// 		$response->errors	= ['Exception when calling Dédalo API'];
 	// 		$response->debug	= (object)[
 	// 			'rqo' => $rqo
 	// 		];

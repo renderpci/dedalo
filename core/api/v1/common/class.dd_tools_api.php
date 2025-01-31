@@ -26,8 +26,8 @@ final class dd_tools_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
-			$response->error	= null;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// options
 			$options = $rqo->options;
@@ -52,7 +52,9 @@ final class dd_tools_api {
 
 		// response
 			$response->result	= $result;
-			$response->msg		= 'Ok. Request done: '.__METHOD__;
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 
 		return $response;

@@ -19,7 +19,8 @@ class tool_time_machine extends tool_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// options get and set
 			$options = new stdClass();
@@ -79,6 +80,9 @@ class tool_time_machine extends tool_common {
 									$RecordObj_time_machine->set_state('recovered');
 
 								$tm_result = $RecordObj_time_machine->Save();
+								if ($tm_result===false) {
+									$response->errors[] = 'failed time machine save';
+								}
 
 							// reset section session sqo
 								$sqo_id	= section::build_sqo_id($section_tipo);
@@ -89,6 +93,7 @@ class tool_time_machine extends tool_common {
 							// section recover media files. Expected array, null on fails
 								$restored_result = $element->restore_deleted_section_media_files();
 								if (is_null($restored_result)) {
+									$response->errors[] = 'failed time machine restore deleted media files';
 									debug_log(__METHOD__." Error on restore deleted media files ".to_string(), logger::ERROR);
 								}
 								// add to response
@@ -212,18 +217,21 @@ class tool_time_machine extends tool_common {
 					// invalid model
 
 					// error response
-						$msg = ' Error on set time machine data. Model is not valid: '.to_string($model);
-						debug_log(__METHOD__. $msg, logger::ERROR);
-						$response->msg		= $msg;
-						$response->error	= $msg;
+					$msg = ' Error on set time machine data. Model is not valid: '.to_string($model);
+					debug_log(__METHOD__. $msg, logger::ERROR);
+
+					$response->msg		= $msg;
+					$response->errors[]	= 'invalid model';
 
 					return $response;
 					break;
 			}
 
-
-		$response->result	= true;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+		// response
+			$response->result	= true;
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -253,7 +261,8 @@ class tool_time_machine extends tool_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// options get and set
 			$options = new stdClass();
@@ -286,7 +295,10 @@ class tool_time_machine extends tool_common {
 			}
 			$n_rows = pg_num_rows($result);
 
-			if ($n_rows<1) return $response;
+			if ($n_rows<1) {
+				$response->errors[] = 'empty result from matrix_time_machine search';
+				return $response;
+			}
 		// for every found record in time_machine get all component changes saved.
 		// 1. create the revert process
 
@@ -384,6 +396,9 @@ class tool_time_machine extends tool_common {
 
 					// Save the component with a new updated data from time machine
 						$saved_id = $element->Save();
+						if ($saved_id===false) {
+							$response->errors[] = 'failed element save';
+						}
 
 					// LOGGER ACTIVITY
 						$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
@@ -407,8 +422,11 @@ class tool_time_machine extends tool_common {
 				}
 			}// end while
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+		// response OK
+			$response->result	= true;
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -417,7 +435,8 @@ class tool_time_machine extends tool_common {
 				$response->debug = $debug;
 			}
 
-		return (object)$response;
+
+		return $response;
 	}//end bulk_revert_process
 
 

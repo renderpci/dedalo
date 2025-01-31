@@ -155,12 +155,16 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		process_file_info.classList.remove('failed')
 		process_file_info.classList.remove('success')
 
-	// response ERROR case
+	// response failed case
 		if (!response.result) {
 
 			// ERROR case
 			process_file_info.innerHTML = response.msg || 'Error on processing file!'
 			process_file_info.classList.add('failed')
+
+			if (api_response.errors?.length) {
+				alert(api_response.errors.join(' | '));
+			}
 
 			return false
 		}

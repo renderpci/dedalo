@@ -37,8 +37,8 @@ final class dd_ts_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$source					= $rqo->source;
@@ -172,14 +172,18 @@ final class dd_ts_api {
 			}
 
 			// response
-				$response->result		= (array)$children_data;
-				$response->msg			= 'OK. Request done [get_children_data]';
+				$response->result		= $children_data;
 				$response->pagination	= $current_pagination ?? null;
+				$response->msg			= empty($response->errors)
+					? 'OK. Request done successfully'
+					: 'Warning! Request done with errors';
+
 
 		}catch(Exception $e) {
 
 			$response->result	= false;
 			$response->msg		= 'Error. Caught exception: '.$e->getMessage();
+			$response->errors[] = 'caught exception';
 		}
 
 		// debug
@@ -347,9 +351,9 @@ final class dd_ts_api {
 
 				// All is OK. Result is new created section section_id
 				$response->result	= (int)$new_section_id;
-				$response->msg		= count($response->errors)===0
+				$response->msg		= empty($response->errors)
 					? 'OK. Request done successfully'
-					: 'Request done with errors';
+					: 'Warning! Request done with errors';
 
 				// debug
 					if(SHOW_DEBUG===true) {
@@ -497,7 +501,8 @@ final class dd_ts_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$source						= $rqo->source;
@@ -549,10 +554,20 @@ final class dd_ts_api {
 					, logger::DEBUG
 				);
 
-				# All is ok. Result is new created section section_id
-				$response->result	= true;
-				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+				// All is OK. Result is new created section section_id
+				$response->result = true;
+
+			}else{
+
+				$response->result = false;
+				$response->errors[] = 'failed adding children';
+
 			}//end if ($added===true)
+
+		// response
+			$response->msg = empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -641,7 +656,8 @@ final class dd_ts_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$source			= $rqo->source;
@@ -674,11 +690,16 @@ final class dd_ts_api {
 			// Current component dato is replaced completely with the new dato
 			// This action returns the dato parsed with method component_relation_common->set_dato()
 			$component_relation_children->set_dato($dato);
-			$result = $component_relation_children->Save();
+			$result = $component_relation_children->Save(); // return int|null
+			if (empty($result)) {
+				$response->errors[] = 'failed save';
+			}
 
 		// response OK
 			$response->result	= $result;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 		// debug
 			if(SHOW_DEBUG===true) {

@@ -67,6 +67,11 @@ final class dd_core_api {
 	*/
 	public static function start(object $rqo) : object {
 
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
 		// test jer_dd without term data catch 22 situation
 			// if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 			// 	try {
@@ -113,20 +118,15 @@ final class dd_core_api {
 					]);
 				}else{
 					// return error. Prevent to calculate the environment here
-					$response = new stdClass();
-						$response->result	= false;
-						$response->msg		= 'Error. Invalid recovery key';
-						$response->error	= null;
+					$response->msg		= 'Error. Invalid recovery key';
+					$response->errors[]	= 'invalid recovery key';
+
 					return $response;
 				}
 			}
 
-		// response
-			$response = new stdClass();
-				$response->result		= false;
-				$response->msg			= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error		= null;
-				$response->environment	= dd_core_api::get_environment();
+		// response environment
+			$response->environment = dd_core_api::get_environment();
 
 		// fix rqo
 		// Note that this RQO is used later in common->build_request_config to recover SQO and source if they exists
@@ -212,7 +212,7 @@ final class dd_core_api {
 					if ($is_system_ready->result===false) {
 						$msg = 'System is not ready. check_basic_system returns errors';
 						$response->result	= false;
-						$response->error	= $msg;
+						$response->errors[]	= 'system not ready';
 						$response->msg		= $msg;
 
 						return $response;
@@ -246,8 +246,9 @@ final class dd_core_api {
 									, logger::ERROR
 								);
 								$response->result	= false;
-								$response->error	= $msg;
+								$response->errors[]	= 'ontology tables not available';
 								$response->msg		= $msg;
+
 								return $response;
 
 							}else{
@@ -530,7 +531,7 @@ final class dd_core_api {
 							// This case could be caused by database connection error
 							// such as PostgreSQL unavailable
 							// Normally comes from RecordDataBoundObject::get_connection
-							$response->error = 'Invalid database connection. Check that PostgreSQL is running and is available.';
+							$response->errors[] = 'Invalid database connection. Check that PostgreSQL is running and is available.';
 							break;
 
 						default:
@@ -543,7 +544,7 @@ final class dd_core_api {
 									. ' tipo: ' . to_string($tipo)
 									, logger::ERROR
 								);
-								$response->error = 'Invalid tipo ' . $tipo;
+								$response->errors[] = 'Invalid tipo ' . $tipo;
 							}
 							break;
 					}//end switch (true)
@@ -560,9 +561,9 @@ final class dd_core_api {
 				'context'	=> $context,
 				'data'		=> []
 			];
-			$response->msg = empty($response->error)
+			$response->msg = empty($response->errors)
 				? 'OK. Request done'
-				: 'Error: ' . to_string($response->error);
+				: 'Warning! Request done with errors. ' . to_string($response->errors);
 
 
 		return $response;
@@ -615,19 +616,24 @@ final class dd_core_api {
 	*/
 	public static function read(object $rqo) : object {
 
+		// response
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
 
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= 'Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
-					$response->error	= null;
+				$response->msg		= 'Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				$response->errors[]	= 'empty source section_tipo';
 
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
 					.' rqo: ' . to_string($rqo)
 					, logger::ERROR
 				);
+
 				return $response;
 			}
 
@@ -687,12 +693,13 @@ final class dd_core_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.'] ';
+			$response->errors	= [];
 
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
 				$response->msg = 'API Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+				$response->errors[] = 'empty source section_tipo';
 				return $response;
 			}
 
@@ -702,7 +709,8 @@ final class dd_core_api {
 
 		// safe section_id
 			if ( (int)$section_id<1 ) {
-				$response->msg .= ' Invalid section_id/section_tipo';
+				$response->msg .= 'Invalid section_id: '.to_string($section_id);
+				$response->errors[] = 'invalid section_id';
 				return $response;
 			}
 
@@ -713,7 +721,9 @@ final class dd_core_api {
 		// response success
 			$response->result	= $dato;
 			$response->table	= common::get_matrix_table_from_tipo($section_tipo);
-			$response->msg		= 'OK. Request done';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done'
+				: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -769,7 +779,9 @@ final class dd_core_api {
 				// }
 
 		$response->result	= $section_id;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+		$response->msg		= empty($response->errors)
+			? 'OK. Request done'
+			: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -796,7 +808,7 @@ final class dd_core_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.'] ';
 			$response->errors	= [];
 
 		// short vars
@@ -807,6 +819,7 @@ final class dd_core_api {
 		// section_tipo
 			if (empty($section_tipo)) {
 				$response->msg = 'API Error: ('.__FUNCTION__.') Empty section_tipo (is mandatory)';
+				$response->errors[] = 'empty section tipo';
 				return $response;
 			}
 
@@ -820,7 +833,9 @@ final class dd_core_api {
 			}
 
 		$response->result	= $section_id;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+		$response->msg		= empty($response->errors)
+			? 'OK. Request done'
+			: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -971,11 +986,10 @@ final class dd_core_api {
 	public static function save(object $rqo) : object {
 		$start_time = start_time();
 
-		// response. Create the default save response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error	= null;
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// rqo vars
 			$source	= $rqo->source;
@@ -996,6 +1010,7 @@ final class dd_core_api {
 		// activity section check
 			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && strpos($section_id, 'search_')===false) {
 				$response->msg = 'Error. Illegal save to activity';
+				$response->errors[] = 'illegal section tipo';
 				debug_log(__METHOD__
 					. " $response->msg "
 					, logger::ERROR
@@ -1028,7 +1043,7 @@ final class dd_core_api {
 				// permissions. Get the component permissions and check if the user can update the component
 					$permissions = $component->get_component_permissions();
 					if($permissions < 2) {
-						$response->error	= 1;
+						$response->errors[]	= 'insufficient permissions';
 						$response->msg		= 'Error. You don\'t have enough permissions to edit this component ('.$tipo.'). permissions:'.to_string($permissions);
 						debug_log(__METHOD__
 							. " $response->msg " . PHP_EOL
@@ -1041,6 +1056,7 @@ final class dd_core_api {
 				// changed_data is array always. Check to safe value
 					if (!is_array($changed_data)) {
 						$changed_data = [$changed_data];
+						$response->errors[]	= 'changed_data must be array';
 						debug_log(__METHOD__
 							." ERROR. var 'changed_data' expected to be array. Received type: " . PHP_EOL
 							.' type: ' 			. gettype($changed_data) . PHP_EOL
@@ -1065,7 +1081,7 @@ final class dd_core_api {
 							// update the dato with the changed data sent by the client
 							$update_result = (bool)$component->update_data_value($changed_data_item);
 							if ($update_result===false) {
-								$response->error	 = 2;
+								$response->errors[]	 = 'update_data_value failed';
 								$response->msg		.= ' Error on update_data_value. New data it\'s not saved! ';
 								debug_log(__METHOD__
 									. " $response->msg " . PHP_EOL
@@ -1085,7 +1101,7 @@ final class dd_core_api {
 						);
 						$save_result = $component->Save();
 						if (is_null($save_result)) {
-							$response->error	 = 3;
+							$response->errors[]	 = 'error on save';
 							$response->msg		.= ' Error on component Save. data it\'s not saved! ';
 							debug_log(__METHOD__
 								. " $response->msg " . PHP_EOL
@@ -1185,10 +1201,10 @@ final class dd_core_api {
 		}//end switch ($type)
 
 		// result. If the process is successful, we return the $element_json as result to client
-			$response->result = $result ?? false;
-			if (empty($response->error)) {
-				$response->msg = 'OK. Request save done successfully';
-			}
+			$response->result	= $result ?? false;
+			$response->msg		= empty($response->errors)
+				? 'OK. Request save done successfully'
+				: 'Warning! Request save done with errors';
 
 
 		return $response;
@@ -1223,6 +1239,11 @@ final class dd_core_api {
 	*/
 	public static function count(object $rqo) : object {
 
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
 		// rqo vars
 			$tipo	= $rqo->source->tipo;
 			$model	= $rqo->source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -1233,12 +1254,6 @@ final class dd_core_api {
 			if (!isset($rqo->prevent_lock)) {
 				session_write_close();
 			}
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error	= null;
 
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
 			$ar_section_tipo = $sqo->section_tipo;
@@ -1271,7 +1286,6 @@ final class dd_core_api {
 				$sqo->filter_by_locators = $sqo_session->filter_by_locators;
 			}
 
-
 		// search
 			if (!isset($result)) {
 				$search	= search::get_instance($sqo);
@@ -1280,9 +1294,9 @@ final class dd_core_api {
 
 		// response OK
 			$response->result	= $result;
-			$response->msg		= empty($response->error)
+			$response->msg		= empty($response->errors)
 				? 'OK. Request done successfully'
-				: $response->msg;
+				: 'Warning! Request done with errors. ' . $response->msg;
 
 
 		return $response;
@@ -1300,6 +1314,11 @@ final class dd_core_api {
 
 		session_write_close();
 
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
 		// rqo vars
 			$source			= $rqo->source;
 			$tipo			= $source->tipo ?? null;
@@ -1309,12 +1328,6 @@ final class dd_core_api {
 			$mode			= $source->mode ?? 'list';
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
 			$simple			= $rqo->simple ?? false; // simple context response
-
-		// response
-			$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
 
 		// build element
 			switch (true) {
@@ -1379,6 +1392,8 @@ final class dd_core_api {
 								, logger::ERROR
 							);
 							$response->msg = 'Error. tool not found: '.$model;
+							$response->errors[] = 'tool not found';
+
 							return $response;
 						}
 
@@ -1402,6 +1417,7 @@ final class dd_core_api {
 							, logger::ERROR
 						);
 						$response->msg = 'Error. model not found: '.$model;
+						$response->errors[] = 'model not found';
 						return $response;
 					}
 					break;
@@ -1432,7 +1448,9 @@ final class dd_core_api {
 
 		// response
 			$response->result	= $context;
-			$response->msg		= 'OK. Request done successfully';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -1470,6 +1488,11 @@ final class dd_core_api {
 	*/
 	public static function get_section_elements_context(object $rqo) : object {
 
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
 		// options
 			$options				= $rqo->options;
 			$context_type			= $options->context_type;
@@ -1477,12 +1500,6 @@ final class dd_core_api {
 			$use_real_sections		= $options->use_real_sections ?? false;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
 			$skip_permissions		= $options->skip_permissions ?? false;
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error	= null;
 
 		// section_elements_context_options
 			$section_elements_context_options = (object)[
@@ -1502,7 +1519,9 @@ final class dd_core_api {
 
 		// response
 			$response->result	= $filtered_components;
-			$response->msg		= 'OK. Request done';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -1524,11 +1543,10 @@ final class dd_core_api {
 	private static function build_json_rows(object $rqo) : object {
 		$start_time	= start_time();
 
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error	= null;
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// default result
 			$result = new stdClass();
@@ -1859,6 +1877,8 @@ final class dd_core_api {
 								. to_string($section_id)
 								, logger::WARNING
 							);
+							$response->errors[] = 'invalid section_id';
+
 						}else{
 
 							// component
@@ -1907,7 +1927,7 @@ final class dd_core_api {
 											$pagination->offset	= $rqo->sqo->offset;
 										}
 										if( isset($rqo->sqo->total) ){
-											$pagination->total	= $rqo->sqo->total;
+											$pagination->total = $rqo->sqo->total;
 										}
 									$element->pagination = $pagination;
 								}
@@ -1945,6 +1965,7 @@ final class dd_core_api {
 						// $element = section::get_instance($section_id, $section_tipo);
 						// (!) Not used anymore
 						debug_log(__METHOD__." WARNING data:get_data model section skip. Use action 'search' instead.", logger::WARNING);
+						$response->errors[] = 'invalid action for section';
 
 					}else if (class_exists($model)) {
 
@@ -1957,6 +1978,7 @@ final class dd_core_api {
 						// others
 							// get data model not defined
 							debug_log(__METHOD__." WARNING data:get_data model not defined for tipo: $tipo - model: $model", logger::WARNING);
+							$response->errors[] = 'unimplemented model [get_data]';
 					}
 					break;
 
@@ -1998,6 +2020,7 @@ final class dd_core_api {
 						// others
 							// resolve_data model not defined
 							debug_log(__METHOD__." WARNING data:resolve_data model not defined for tipo: $tipo - model: $model", logger::WARNING);
+							$response->errors[] = 'unimplemented model [resolve_data]';
 					}
 					break;
 
@@ -2015,6 +2038,7 @@ final class dd_core_api {
 				default:
 					// not defined model from context / data
 					debug_log(__METHOD__." 1. Ignored action '$action' - tipo: $tipo ", logger::WARNING);
+					$response->errors[] = 'unimplemented model [default]';
 					break;
 			}//end switch($action)
 
@@ -2045,6 +2069,7 @@ final class dd_core_api {
 				}//end if (isset($element))
 				else {
 					debug_log(__METHOD__." Ignored action '$action' - tipo: $tipo (No element was generated) ", logger::WARNING);
+					$response->errors[] = 'invalid element';
 					$context = $data = [];
 				}
 
@@ -2086,7 +2111,9 @@ final class dd_core_api {
 
 		// response
 			$response->result	= $result;
-			$response->msg		= 'OK. Request done successfully';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -2174,6 +2201,11 @@ final class dd_core_api {
 	*/
 	private static function get_component_value(object $rqo) : object {
 
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
 		session_write_close();
 
 		// rqo vars
@@ -2184,12 +2216,6 @@ final class dd_core_api {
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error	= null;
 
 		// build element
 			switch (true) {
@@ -2217,6 +2243,7 @@ final class dd_core_api {
 						, logger::ERROR
 					);
 					$response->msg = 'Error. model not valid: '.$model;
+					$response->errors[] = 'invalid model';
 					return $response;
 			}
 
@@ -2225,7 +2252,9 @@ final class dd_core_api {
 
 		// response
 			$response->result	= $value;
-			$response->msg		= 'OK. Request done successfully';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -2255,6 +2284,11 @@ final class dd_core_api {
 	*/
 	public static function get_indexation_grid(object $rqo) : object {
 
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
 		// rqo vars
 			// ddo_source
 			$ddo_source		= $rqo->source;
@@ -2263,20 +2297,13 @@ final class dd_core_api {
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo ?? null;
 			$value			= $ddo_source->value ?? null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
-
 			// pagination
 			$sqo			= $rqo->sqo ?? new stdClass();
-
-			// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error	= null;
 
 		// validate input data
 			if (empty($rqo->source->section_tipo) || empty($rqo->source->tipo) || empty($rqo->source->section_id)) {
 				$response->msg .= ' Trigger Error: ('.__FUNCTION__.') Empty source properties (section_tipo, section_id, tipo are mandatory)';
-				$response->error = 1;
+				$response->errors[] = 'invalid rqo source';
 
 				debug_log(__METHOD__
 					. " $response->msg " .PHP_EOL
@@ -2292,8 +2319,10 @@ final class dd_core_api {
 			$index_grid			= $indexation_grid->build_indexation_grid($sqo);
 
 		// response OK
-			$response->msg		= 'OK. Request done successfully';
 			$response->result	= $index_grid;
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -2334,7 +2363,7 @@ final class dd_core_api {
 		// 	$response = new stdClass();
 		// 		$response->result	= false;
 		// 		$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
-		// 		$response->error	= null;
+		// 		$response->errors	= [];
 
 		// 	// short vars
 		// 		$source			= $rqo->source;
@@ -2389,11 +2418,10 @@ final class dd_core_api {
 	public static function get_environment() : object {
 		$start_time = start_time();
 
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error	= null;
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// page_globals
 			$page_globals = dd_core_api::get_page_globals(); // return object
@@ -2415,7 +2443,9 @@ final class dd_core_api {
 
 		// response
 			$response->result	= $environment;
-			$response->msg		= 'OK. Request done';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 		// metrics
 			$metrics = [
@@ -2640,6 +2670,9 @@ final class dd_core_api {
 			'section_tipo'	=> $target_section_tipo,
 			'section_id'	=> $section_id
 		];
+		$response->msg = empty($response->errors)
+			? 'OK. Request done successfully'
+			: 'Warning! Request done with errors';
 
 
 		return $response;

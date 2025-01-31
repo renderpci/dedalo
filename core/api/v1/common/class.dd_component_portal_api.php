@@ -39,7 +39,7 @@ final class dd_component_portal_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
-				$response->error	= null;
+				$response->errors	= [];
 
 		// source
 			$source			= $rqo->source;

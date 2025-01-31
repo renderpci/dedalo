@@ -806,6 +806,9 @@ class login extends common {
 					'skip_backup_time_range'	=> false
 				]);
 				$backup_info = $make_backup_response->msg;
+				if (!empty($make_backup_response->errors)) {
+					$response->errors = array_merge($response->errors, $make_backup_response->errors);
+				}
 
 			}else{
 				$backup_info = 'Deactivated "on login backup" for this domain';
@@ -879,7 +882,9 @@ class login extends common {
 
 		// OK response
 			$response->result	= true;
-			$response->msg		= 'OK init_user_login_sequence is done';
+			$response->msg		= empty($response->errors)
+				? 'OK init_user_login_sequence is done'
+				: 'Warning! init_user_login_sequence is done with some errors';
 
 
 		return $response;
