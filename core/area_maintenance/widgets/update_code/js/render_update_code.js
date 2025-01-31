@@ -631,7 +631,10 @@ const render_info_modal = function( self, versions_info ){
 			footer		: footer,
 			size		: 'normal',
 			callback	: (dd_modal) => {
-				dd_modal.modal_content.style.width = '50rem'
+				dd_modal.modal_content.style.width = '60rem'
+			},
+			on_close : () => {
+				self.beta_update = false
 			}
 		})
 		modal.classList.add('widget_update_code_modal')
