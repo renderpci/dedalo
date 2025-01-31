@@ -178,6 +178,10 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 	// status update
 		self.status = 'building'
 
+	// ts_object. Set from global var
+		self.ts_object = ts_object
+		self.ts_object.mode = self.mode
+
 	// self.datum. On building, if datum is not created, creation is needed
 		self.datum = self.datum || {
 			data	: [],
@@ -302,10 +306,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			})
 			// self.filter.build()
 		}
-
-	// ts_object. Set from global var
-		self.ts_object = ts_object
-		self.ts_object.mode = self.mode
 
 	// debug
 		if(SHOW_DEBUG===true) {

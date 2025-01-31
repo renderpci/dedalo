@@ -181,7 +181,7 @@ $global_start_time = hrtime(true);
 
 	// 	$response = new stdClass();
 	// 		$response->result	= false;
-	// 		$response->msg	= (SHOW_DEBUG===true)
+	// 		$response->msg		= (SHOW_DEBUG===true)
 	// 			? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
 	// 			: 'Throwable Exception when calling Dédalo API. Contact with your admin';
 	// 		$response->errors	= ['Throwable Exception when calling Dédalo API'];
