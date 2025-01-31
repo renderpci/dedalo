@@ -39,7 +39,7 @@ final class dd_component_text_area_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
-				$response->error	= null;
+				$response->errors	= [];
 
 		// source
 			$source			= $rqo->source;
@@ -160,7 +160,7 @@ final class dd_component_text_area_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
-				$response->error	= null;
+				$response->errors	= [];
 
 		// source
 			$source			= $rqo->source;

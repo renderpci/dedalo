@@ -58,7 +58,7 @@ abstract class backup {
 						#throw new Exception(" Error on read or create backup directory. Permission denied");
 						$response->result	= false;
 						$response->msg		= 'Error on read or create backup directory. Permission denied '.__METHOD__;
-						$response->error[]	= 'Error: unable to create backups folder';
+						$response->errors[]	= 'Error: unable to create backups folder';
 						debug_log(__METHOD__
 							. " $response->msg " . PHP_EOL
 							. ' file_path: ' . to_string($file_path)
@@ -159,7 +159,7 @@ abstract class backup {
 			// response error
 				$response->result	= false;
 				$response->msg		= "Exception: $msg";
-				$response->errors[] = $e->getMessage();
+				$response->errors[]	= $e->getMessage();
 
 			return $response; // stop here
 		}
@@ -168,7 +168,9 @@ abstract class backup {
 			$response->result	= true;
 			$response->pid		= $pid ?? null;
 			$response->pfile	= $pfile ?? null;
-			$response->msg		= 'OK. backup process running for db: ' . $db_name;
+			$response->msg		= empty($response->errors)
+				? 'OK. backup process running for db: ' . $db_name
+				: 'Warning! backup done with some errors';
 
 
 		return $response;

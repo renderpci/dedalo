@@ -173,7 +173,7 @@ data_manager.request = async function(options) {
 						// api_errors. store api_errors. Used to render error page_globals
 							page_globals.api_errors.push(
 								{
-									error	: api_response.error || 'data_manager', // error type
+									error	: api_response?.errors?.length ? api_response.errors.join(' | ') : 'data_manager', // error type
 									msg		: msg,
 									trace	: 'data_manager json_parsed'
 								}
@@ -194,7 +194,7 @@ data_manager.request = async function(options) {
 			// api_errors. store api_errors. Used to render error page_globals
 				page_globals.api_errors.push(
 					{
-						error	: api_response?.error || 'data_manager', // error type
+						error	: api_response?.errors?.length ? api_response.errors.join(' | ') : 'data_manager', // error type
 						msg		: (api_response?.msg || api_response?.error || error),
 						trace	: 'data_manager catch error'
 					}

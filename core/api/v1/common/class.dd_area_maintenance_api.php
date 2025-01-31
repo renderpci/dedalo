@@ -307,7 +307,7 @@ final class dd_area_maintenance_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
-				$response->error	= null;
+				$response->errors	= [];
 
 		// options
 			$fn_action	= $rqo->options->fn_action;

@@ -138,7 +138,7 @@ dd_grid.prototype.get_total = async function() {
 	})
 
 	// API error case
-		if ( api_count_response.result===false || api_count_response.error ) {
+		if ( api_count_response.result===false || api_count_response.errors?.length ) {
 			console.error('Error on count total : api_count_response:', api_count_response);
 			return
 		}
