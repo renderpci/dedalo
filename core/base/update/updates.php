@@ -71,6 +71,13 @@ $updates->$v = new stdClass();
 		$alert->command .= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
 			<p>
+			<strong>A new ontology model.</strong>
+			</p>
+			<p>
+				This update change your ontology definitions to create new schema for manage the ontology nodes.
+				<strong>Backup your database before run it.</strong>
+			</p>
+			<p>
 				Review the config definition. Some constants have been added and others removed.
 			</p>
 			<br>
