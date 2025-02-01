@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS INDEXATION_GRID
 * Manage the indexations of the thesaurus term

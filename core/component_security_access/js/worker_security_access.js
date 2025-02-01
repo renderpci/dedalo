@@ -24,7 +24,11 @@
 self.onmessage = function(e) {
 	const t1 = performance.now()
 
-	const response = {}
+	const response = {
+		result	: false,
+		msg		: 'onmessage error',
+		errors	: []
+	}
 
 	// options
 		const fn		= e.data.fn // function name
@@ -34,9 +38,9 @@ self.onmessage = function(e) {
 		if (typeof self[fn]!=='function') {
 			// error
 			response.result	= false
-			response.error	= 'Invalid target function name! ' + fn
+			response.errors.push('Invalid target function name! ' + fn)
 			response.msg	= 'Task rejected'
-			console.error("Worker error:", response.error);
+			console.error("Worker errors:", response.errors);
 			self.postMessage(response);
 			return
 		}
@@ -51,7 +55,7 @@ self.onmessage = function(e) {
 				result = self.get_parents(...params)
 				break;
 			default:
-				response.error	= 'Invalid target function name! ' + fn
+				response.errors.push('Invalid target function name! ' + fn)
 				break;
 		}
 
@@ -80,29 +84,42 @@ self.onmessage = function(e) {
 * @return array ar_children
 */
 self.get_children = function(item, datalist) {
-	// console.log('datalist_map:', datalist_map);
-
-	const ar_children = []
 
 	// old way
-		const children = (item.tipo===item.section_tipo)
-			? datalist.filter(el => el.parent === item.tipo) // section / area case
-			: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
-		const children_length = children.length
-		if(children_length>0){
-			// add
-			ar_children.push(...children)
-			// recursion
-			for (let i = 0; i < children_length; i++) {
-				const recursive_children = self.get_children( children[i], datalist )
-				ar_children.push(...recursive_children)
-			}
+		// const ar_children = []
+		// const children = (item.tipo===item.section_tipo)
+		// 	? datalist.filter(el => el.parent === item.tipo) // section / area case
+		// 	: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
+		// const children_length = children.length
+		// if(children_length>0){
+		// 	// add
+		// 	ar_children.push(...children)
+		// 	// recursion
+		// 	for (let i = 0; i < children_length; i++) {
+		// 		const recursive_children = self.get_children( children[i], datalist )
+		// 		ar_children.push(...recursive_children)
+		// 	}
+		// }
+
+	// optimized (stack way)
+		const children = (item.tipo === item.section_tipo)
+			? datalist.filter(el => el.parent === item.tipo)
+			: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo);
+
+		const ar_children = [];
+		const stack = [...children];
+
+		while (stack.length > 0) {
+			const current = stack.pop();
+			ar_children.push(current);
+
+			const grandchildren = (current.tipo === current.section_tipo)
+				? datalist.filter(el => el.parent === current.tipo)
+				: datalist.filter(el => el.parent === current.tipo && el.section_tipo === current.section_tipo);
+
+			stack.push(...grandchildren);
 		}
 
-	// by generator
-		// for (const el of children_generator(item, datalist)) {
-		// 	ar_children.push(el)
-		// }
 
 	return ar_children
 }//end get_children
@@ -153,22 +170,42 @@ const children_generator = function*(item, datalist) {
 */
 self.get_parents = function(item, datalist) {
 
-	const ar_parents = []
+	// old way
+		// const ar_parents = []
+		// const parents = (item.tipo===item.section_tipo)
+		// 	? datalist.filter(el => el.tipo === item.parent)
+		// 	: datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
+		// const parents_length = parents.length
+		// if(parents_length>0){
+		// 	// add
+		// 	ar_parents.push(...parents)
+		// 	for (let i = 0; i < parents_length; i++) {
+		// 		const recursive_parents = self.get_parents( parents[i], datalist )
+		// 		ar_parents.push(...recursive_parents)
+		// 	}
+		// }
 
-		const parents = (item.tipo===item.section_tipo)
+	// optimized (stack way)
+		const parents = (item.tipo === item.section_tipo)
 			? datalist.filter(el => el.tipo === item.parent)
-			: datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
-		const parents_length = parents.length
-		if(parents_length>0){
-			// add
-			ar_parents.push(...parents)
-			for (let i = 0; i < parents_length; i++) {
-				const recursive_parents = self.get_parents( parents[i], datalist )
-				ar_parents.push(...recursive_parents)
-			}
+			: datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo);
+
+		const ar_parents = [];
+		const stack = [...parents];
+
+		while (stack.length > 0) {
+			const current = stack.pop();
+			ar_parents.push(current);
+
+			const parentFilter = (current.tipo === current.section_tipo)
+				? (el) => el.tipo === current.parent
+				: (el) => el.tipo === current.parent && el.section_tipo === current.section_tipo;
+
+			stack.push(...datalist.filter(parentFilter));
 		}
 
-	return ar_parents
+
+	return ar_parents;
 }//end get_parents
 
 

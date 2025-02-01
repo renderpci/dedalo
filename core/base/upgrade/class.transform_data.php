@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 require_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * CLASS TRANSFORM_DATA
@@ -747,8 +747,8 @@ class transform_data {
 			, logger::WARNING
 		);
 
-		$path = DEDALO_CORE_PATH.'/base/transform_definition_files/move_tld/';
 		// get transform map from files
+			$path = DEDALO_CORE_PATH.'/base/transform_definition_files/move_tld/';
 			$ar_transform_map = [];
 			foreach ($json_files as $current_json_file) {
 				$contents			= file_get_contents($path.$current_json_file);
@@ -783,6 +783,7 @@ class transform_data {
 				common::$pdata->counter = 0;
 			}
 
+		// iterate tables
 		update::tables_rows_iterator(
 			$ar_tables, // array of tables to iterate
 			function($row, $table, $max) use($ar_transform_map, $ar_old_section_tipo, $skip_virtuals) { // callback function
@@ -1282,11 +1283,20 @@ class transform_data {
 
 	/**
 	* COPY_DESCRIPTORS_TO_JER_DD
-	* Called by the update to 6.3.0, it copy the table descriptors as object of lang:term
+	* Called by the update to 6.3.0, copy the table descriptors as object of lang:term
 	* and insert it into the term column in jer_dd
 	* @return bool
 	*/
 	public static function copy_descriptors_to_jer_dd() : bool {
+
+		// check 'matrix_descriptors_dd' table before
+			if (!DBi::check_table_exists('matrix_descriptors_dd')) {
+				debug_log(__METHOD__
+					. " Error. Unable to get matrix_descriptors_dd records because the table do not exists" . PHP_EOL
+					, logger::ERROR
+				);
+				return false;
+			}
 
 		// jer_dd. delete terms (jer_dd)
 			$sql_query = '
@@ -1330,6 +1340,263 @@ class transform_data {
 
 		return true;
 	}//end copy_descriptors_to_jer_dd
+
+
+
+	/**
+	* FILL_MODEL_COLUMN_IN_JER_DD
+	* Called by the update to 6.4.0, resolve the model tipo with his name
+	* insert it into the model column in jer_dd
+	* @return bool
+	*/
+	public static function fill_model_column_in_jer_dd() : bool {
+
+		// jer_dd. select all records in jer_dd
+			$sql_query = '
+				SELECT * FROM "jer_dd"
+				WHERE "modelo" IS NOT NULL;
+			';
+			$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		// iterate jer_dd_result row
+		while($row = pg_fetch_assoc($jer_dd_result)) {
+
+			$model_tipo	= $row['modelo'];
+			$id			= $row['id'];
+
+			// ignore empty model tipo rows
+			if( empty($model_tipo) || $model_tipo==='null' ){
+				continue;
+			}
+
+			// matrix_descriptors_dd. delete descriptors (matrix_descriptors_dd)
+			$sql_query = 'SELECT * FROM "jer_dd" WHERE "terminoID" = \''.$model_tipo.'\' LIMIT 1 ;';
+			$model_result = pg_query(DBi::_getConnection(), $sql_query);
+
+			$result_count = pg_num_rows($model_result);
+			if($result_count !== 1) {
+				debug_log(__METHOD__
+					.' Current model has not valid definition (1)!. Review jer_dd for this model' . PHP_EOL
+					.' model_tipo: ' . to_string($model_tipo) . PHP_EOL
+					.' sql_query: ' . $sql_query . PHP_EOL
+					.' result_count: ' . $result_count . PHP_EOL
+					, logger::ERROR
+				);
+				return false;
+			}
+
+			$model = null;
+			while( $term = pg_fetch_assoc($model_result) ) {
+
+				$term_data = json_decode( $term['term'] );
+				if( empty($term_data) ) {
+					debug_log(__METHOD__
+						.' Current model term has not valid definition (2)!. Review jer_dd for model' . PHP_EOL
+						.' model_tipo: ' . to_string($model_tipo) . PHP_EOL
+						.' term_data: ' . to_string($term_data) . PHP_EOL
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				$model = $term_data->{DEDALO_STRUCTURE_LANG};
+			}
+
+			$strQuery	= "UPDATE \"jer_dd\" SET model = $1 WHERE id = $2 ";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $model, $id ));
+			if($result===false) {
+				debug_log(__METHOD__
+					.' Failed Update section_data (jer_dd) ' . PHP_EOL
+					.' id: ' . to_string($id) . PHP_EOL
+					.' model: ' . to_string($model) . PHP_EOL
+					.' strQuery: ' . to_string($strQuery) . PHP_EOL
+					, logger::ERROR
+				);
+				return false;
+			}
+		}//end while($row = pg_fetch_assoc($jer_dd_result))
+
+
+		return true;
+	}//end fill_model_column_in_jer_dd
+
+
+
+
+	/**
+	* GENERATE_ALL_MAIN_ONTOLOGY_SECTIONS
+	* Creates the matrix ontology records (main and regular) from 'jer_dd'
+	* It is such as 'jer_dd' -> 'matrix' transformation building the next
+	* Ontology edit ecosystem based in regular sections and records instead a
+	* monolithic jer_dd table that will be used as read only parsed ontology
+	* @return bool
+	*/
+	public static function generate_all_main_ontology_sections() : bool {
+
+		// disable log
+		logger_backend_activity::$enable_log = false;
+
+		//official ontologies
+
+		$ontology_file_content = file_get_contents( dirname(dirname(__FILE__)) .'/include/6-4-0_ontology.json' );
+		$ontology_info = json_decode( $ontology_file_content );
+
+		// collect all existing tld in 'jer_dd' table
+		$all_active_tld = RecordObj_dd::get_active_tlds();
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->memory = '';
+				common::$pdata->action = '';
+				common::$pdata->total = '';
+				unset(common::$pdata->counter); // move counter property position
+				common::$pdata->counter = 0;
+				common::$pdata->tld = '';
+				common::$pdata->active_tld = $all_active_tld;
+				$base_msg = common::$pdata->msg;
+			}
+
+		// collect all children sections of 'ontology40' ('Instances')
+		// like 'dd', 'ontology', 'rsc', 'nexus', etc.
+
+		// $ontology_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology40','section','children_recursive' );
+		$ontology_tlds = array_map(function( $el ){
+			return $el->tld;
+		}, $ontology_info->active_ontologies);
+
+		// add first the ontology_tlds to preserve the order
+		$sorted_tlds = $ontology_tlds;
+		// add all others non already included
+		foreach ($all_active_tld as $current_tld) {
+			if ( empty($current_tld) || !safe_tld($current_tld) ) {
+				debug_log(__METHOD__
+					. " Ignored empty or invalid tld " . PHP_EOL
+					. ' tld: ' . to_string($current_tld) . PHP_EOL
+					. ' all_active_tld: ' . to_string($all_active_tld)
+					, logger::ERROR
+				);
+				continue;
+			}
+			if (!in_array($current_tld, $sorted_tlds)) {
+				$sorted_tlds[] = $current_tld;
+			}
+		}
+
+		// debug
+		if(SHOW_DEBUG===true) {
+			dump($sorted_tlds, 'generate_all_main_ontology_sections $sorted_tlds ++++++ '.to_string());
+		}
+
+		$total_tld = count($sorted_tlds);
+
+		// firs iteration. matrix records creation
+		foreach ($sorted_tlds as $tld) {
+
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->action = 'add_main_section ';
+					common::$pdata->tld = $tld;
+					common::$pdata->memory = dd_memory_usage();
+					common::$pdata->counter++;
+					common::$pdata->total = $total_tld;
+					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
+					// send to output
+					print_cli(common::$pdata);
+				}
+
+			$file_item = array_find($ontology_info->active_ontologies, function( $el ) use($tld) {
+				return $el->tld === $tld;
+			});
+
+			$file_item = ( isset($file_item) )
+				? $file_item
+				: (object)[
+					'tld' => $tld
+				 ];
+
+			// empty tld case
+				if (empty($file_item->tld) || !safe_tld($file_item->tld)) {
+					debug_log(__METHOD__
+						. " Ignored empty or invalid tld " . PHP_EOL
+						. ' tld: ' . to_string($tld) . PHP_EOL
+						. ' file_item: ' . to_string($file_item) . PHP_EOL
+						. ' ontology_info: ' . to_string($ontology_info)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+			// main_section. Add one main section for each tld if not already exists
+			ontology::add_main_section( $file_item );
+
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->action = 'create_ontology_records';
+					common::$pdata->memory = dd_memory_usage();
+					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
+					// send to output
+					print_cli(common::$pdata);
+				}
+
+			// ontology_records. Collects all jer_dd records for the current tld and
+			// creates a matrix record for each one
+			$jer_dd_rows = RecordObj_dd::get_all_tld_records( [$tld] );
+			ontology::create_ontology_records( $jer_dd_rows );
+		}
+
+		// reset counter
+		common::$pdata->counter = 0;
+
+		// second iteration. After all records have been created
+		// we can assign relationships and set the order of children
+		foreach ($sorted_tlds as $tld) {
+
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->action = 'assign_relations_from_jer_dd';
+					common::$pdata->tld = $tld;
+					common::$pdata->memory = dd_memory_usage();
+					common::$pdata->counter++;
+					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
+					// send to output
+					print_cli(common::$pdata);
+				}
+
+			// assign relationships between records (from jer_dd column 'relaciones')
+			ontology::assign_relations_from_jer_dd( $tld );
+
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->action = 'reorder_nodes_from_jer_dd';
+					common::$pdata->memory = dd_memory_usage();
+					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
+					// send to output
+					print_cli(common::$pdata);
+				}
+
+			// set child order (from jer_dd column 'norden')
+			ontology::reorder_nodes_from_jer_dd( $tld );
+		}
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				common::$pdata->action = 'generate_all_main_ontology_sections done!';
+				common::$pdata->memory = dd_memory_usage();
+				common::$pdata->msg = $base_msg . ' done!';
+				// send to output
+				print_cli(common::$pdata);
+			}
+
+		// enable log again
+		logger_backend_activity::$enable_log = true;
+
+
+
+		return true;
+	}//end generate_all_main_ontology_sections
 
 
 
@@ -2470,6 +2737,8 @@ class transform_data {
 
 		return true;
 	}//end move_data_between_matrix_tables
+
+
 
 
 }//end class transform_data

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * DD_TS_API
 * Manage API REST data of area_thesaurus and ts_object with Dédalo
@@ -37,8 +37,8 @@ final class dd_ts_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$source					= $rqo->source;
@@ -172,14 +172,18 @@ final class dd_ts_api {
 			}
 
 			// response
-				$response->result		= (array)$children_data;
-				$response->msg			= 'OK. Request done [get_children_data]';
+				$response->result		= $children_data;
 				$response->pagination	= $current_pagination ?? null;
+				$response->msg			= empty($response->errors)
+					? 'OK. Request done successfully'
+					: 'Warning! Request done with errors';
+
 
 		}catch(Exception $e) {
 
 			$response->result	= false;
 			$response->msg		= 'Error. Caught exception: '.$e->getMessage();
+			$response->errors[] = 'caught exception';
 		}
 
 		// debug
@@ -226,6 +230,7 @@ final class dd_ts_api {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// short vars
 			$source					= $rqo->source;
@@ -245,6 +250,7 @@ final class dd_ts_api {
 					." $response->msg "
 					, logger::ERROR
 				);
+				$response->errors[] = 'Failed create new section from parent';
 				return $response;
 			}
 
@@ -259,6 +265,7 @@ final class dd_ts_api {
 					.' section_map: ' . to_string($section_map)
 					, logger::DEBUG
 				);
+				$response->errors[] = 'Invalid section_map \'is_descriptor\' property from section';
 			}else{
 				if ($section_map->thesaurus->is_descriptor!==false) {
 					$component_tipo	= $section_map->thesaurus->is_descriptor;
@@ -290,6 +297,7 @@ final class dd_ts_api {
 					.' section_map: ' . to_string($section_map)
 					, logger::DEBUG
 				);
+				$response->errors[] = 'Invalid section_map \'is_indexable\' property from section';
 			}else{
 				if ($section_map->thesaurus->is_indexable!==false) {
 					$component_tipo	= $section_map->thesaurus->is_indexable;
@@ -314,24 +322,24 @@ final class dd_ts_api {
 			}
 
 		// component_relation_children
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			if ($model_name!=='component_relation_children') {
 				$response->msg = 'Error on create new section from parent. Invalid model: '.$model_name.'. Expected: "component_relation_children" ';
 				debug_log(__METHOD__.
 					" $response->msg "
 					, logger::ERROR
 				);
+				$response->errors[] = 'Invalid model '.$model_name;
 				return $response;
 			}
-			$mode							= 'edit';
-			$lang							= DEDALO_DATA_NOLAN;
-			$component_relation_children	= component_common::get_instance(
+			$component_relation_children = component_common::get_instance(
 				$model_name,
-				$tipo,
+				$tipo, // normally hierarchy45
 				$section_id,
-				$mode,
-				$lang,
-				$section_tipo
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo, // normally hierarchy1
+				false
 			);
 
 		// add
@@ -343,7 +351,9 @@ final class dd_ts_api {
 
 				// All is OK. Result is new created section section_id
 				$response->result	= (int)$new_section_id;
-				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+				$response->msg		= empty($response->errors)
+					? 'OK. Request done successfully'
+					: 'Warning! Request done with errors';
 
 				// debug
 					if(SHOW_DEBUG===true) {
@@ -491,7 +501,8 @@ final class dd_ts_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$source						= $rqo->source;
@@ -543,10 +554,20 @@ final class dd_ts_api {
 					, logger::DEBUG
 				);
 
-				# All is ok. Result is new created section section_id
-				$response->result	= true;
-				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+				// All is OK. Result is new created section section_id
+				$response->result = true;
+
+			}else{
+
+				$response->result = false;
+				$response->errors[] = 'failed adding children';
+
 			}//end if ($added===true)
+
+		// response
+			$response->msg = empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -635,7 +656,8 @@ final class dd_ts_api {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$source			= $rqo->source;
@@ -668,11 +690,16 @@ final class dd_ts_api {
 			// Current component dato is replaced completely with the new dato
 			// This action returns the dato parsed with method component_relation_common->set_dato()
 			$component_relation_children->set_dato($dato);
-			$result = $component_relation_children->Save();
+			$result = $component_relation_children->Save(); // return int|null
+			if (empty($result)) {
+				$response->errors[] = 'failed save';
+			}
 
 		// response OK
 			$response->result	= $result;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
 
 		// debug
 			if(SHOW_DEBUG===true) {

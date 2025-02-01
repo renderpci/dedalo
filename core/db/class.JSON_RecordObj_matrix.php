@@ -1,5 +1,4 @@
-<?php
-// declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * JSON_RECORDOBJ_MATRIX
 *
@@ -168,25 +167,25 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 
 
-	# define current table (tr for this obj)
-	protected function defineTableName() {
-		return ( $this->matrix_table );
+	// define current table (tr for this obj)
+	protected function defineTableName() : string {
+		return $this->matrix_table;
 	}
-	# define PrimaryKeyName (id)
-	protected function definePrimaryKeyName() {
-		return ('id');
+	// define PrimaryKeyName (id)
+	protected function definePrimaryKeyName() : string {
+		return 'id';
 	}
-	# array of pairs db field name, obj property name like fieldName => propertyName
+	// array of pairs db field name, obj property name like fieldName => propertyName
 	protected function defineRelationMap() : array {
-		return (array(
+		return [
 			# db field-name	   # property name
-			"id"			=> "ID",
-			"section_id"	=> "section_id",
-			"section_tipo"	=> "section_tipo",
-			"datos"			=> "datos"
-		));
+			'id'			=> 'ID',
+			'section_id'	=> 'section_id',
+			'section_tipo'	=> 'section_tipo',
+			'datos'			=> 'datos'
+		];
 	}
-	# get_ID
+	// get_ID
 	public function get_id() : ?int {
 		return parent::get_ID();
 	}
@@ -309,10 +308,10 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 					, logger::ERROR
 				);
 			}else{
-				debug_log(__METHOD__
-					." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms'
-					, logger::DEBUG
-				);
+				// debug_log(__METHOD__
+				// 	." Saved record ($this->matrix_table - $this->section_tipo - $this->section_id): ".exec_time_unit($start_time).' ms'
+				// 	, logger::DEBUG
+				// );
 			}
 
 
@@ -355,9 +354,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	*		}
 	*	]
 	* }
-	* @return int $time_machine_id
+	* @return int|null $time_machine_id
 	*/
-	public function save_time_machine( object $save_options ) : int {
+	public function save_time_machine( object $save_options ) : ?int {
 
 		// options
 			$tipo						= $save_options->time_machine_tipo ?? null;
@@ -369,6 +368,12 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$previous_component_dato	= $save_options->previous_component_dato ?? null;
 			$time_machine_date			= $save_options->time_machine_date ?? dd_date::get_timestamp_now_for_db();
 			$bulk_process_id			= $save_options->time_machine_bulk_process_id ?? null;
+
+		// save_time_machine_version. To disable time machine save, set: RecordObj_time_machine::$save_time_machine_version = false;
+		// This is useful for some bulk operations like 'portalize'
+			if (RecordObj_time_machine::$save_time_machine_version===false) {
+				return null;
+			}
 
 		// short vars
 			// $section_tipo = $this->get_section_tipo();

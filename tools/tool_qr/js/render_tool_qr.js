@@ -12,6 +12,7 @@
 
 
 
+
 /**
 * RENDER_TOOL_QR
 * Manages the component's logic and appearance in client side

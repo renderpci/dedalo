@@ -1,0 +1,56 @@
+{
+	"relations": [
+		{
+			"type": "dd675",
+			"section_id": "1",
+			"section_tipo": "dd153",
+			"from_component_tipo": "hierarchy54"
+		},
+		{
+			"type": "dd151",
+			"section_id": "2",
+			"section_tipo": "dd64",
+			"from_component_tipo": "hierarchy125"
+		},
+		{
+			"type": "dd151",
+			"section_id": "17344",
+			"section_tipo": "lg1",
+			"from_component_tipo": "hierarchy8"
+		},
+		{
+			"type": "dd151",
+			"section_id": "1",
+			"section_tipo": "dd64",
+			"from_component_tipo": "hierarchy4"
+		}
+	],
+	"components": {
+		"hierarchy5": {
+			"inf": "Name [component_input_text]",
+			"dato": {
+				"lg-spa": []
+			}
+		},
+		"hierarchy6": {
+			"inf": "TLD [component_input_text]",
+			"dato": {
+				"lg-nolan": []
+			}
+		},
+		"hierarchy53": {
+			"inf": "Target section tipo [component_input_text]",
+			"dato": {
+				"lg-nolan": []
+			}
+		},
+		"hierarchy109": {
+			"inf": "Real section tipo [component_input_text]",
+			"dato": {
+				"lg-nolan": [
+					"ontology1"
+				]
+			}
+		}
+	}
+}

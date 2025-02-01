@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * LOGGER BACKEND ACTIVITY CLASS
 * Manages activity records write to matrix_activity table
@@ -78,7 +78,7 @@ class logger_backend_activity extends logger_backend {
 	* Require url_data string like: 'mysql://user:password@host/database?table=matrix_activity' for compatibility
 	* @param array|null $url_data
 	*/
-	public function __construct(?array $url_data) {
+	public function __construct( ?array $url_data ) {
 
 		// FIX ARRAY ar_elements_activity_tipo
 		logger_backend_activity::$ar_elements_activity_tipo = [
@@ -101,7 +101,7 @@ class logger_backend_activity extends logger_backend {
 	* @param object $options
 	* @return int|null section_id
 	*/
-	public function log_message_defer(object $options) : ?int {
+	public function log_message_defer( object $options ) : ?int {
 
 		// options
 			$message	= $options->message;
@@ -112,11 +112,6 @@ class logger_backend_activity extends logger_backend {
 			$user_id	= $options->user_id;
 
 		// check values
-
-			// disable log
-				if(logger_backend_activity::$enable_log===false) {
-					return null;
-				}
 
 			// if the type of activity is not sent, it is not possible to generate log
 				if (empty($tipo_where)) {
@@ -355,7 +350,12 @@ class logger_backend_activity extends logger_backend {
 		?string $operations=null,
 		?array $datos=null,
 		?int $user_id=null
-		) {
+		) : void {
+
+		// disable log
+			if(logger_backend_activity::$enable_log===false) {
+				return;
+			}
 
 		$options = (object)[
 			'message'		=> $message,
@@ -368,6 +368,7 @@ class logger_backend_activity extends logger_backend {
 
 		register_shutdown_function([logger::$obj['activity'],'log_message_defer'], $options);
 	}//end log_message
+
 
 
 }//end class logger_backend_activity

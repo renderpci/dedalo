@@ -41,6 +41,12 @@ class update {
 				if($current_version[1] == $version_to_update->update_from_medium){
 					if($current_version[2] == $version_to_update->update_from_minor){
 
+							// check if the update has data processes
+							// if not the update is not included in the data process.
+							if(isset($version_to_update->update_data) && $version_to_update->update_data===false){
+								continue;
+							}
+
 							$update_version[0] = $version_to_update->version_major;
 							$update_version[1] = $version_to_update->version_medium;
 							$update_version[2] = $version_to_update->version_minor;
@@ -105,8 +111,8 @@ class update {
 				}
 			}
 			if (empty($update)) {
-				$response->msg		= 'Unable to get proper update. Check current version: '.$current_version;
-				$response->errors[]	= 'Update item not found for version '.$current_version;
+				$response->msg		= 'Unable to get proper update. Check current version: '.to_string($current_version);
+				$response->errors[]	= 'Update item not found for version '.to_string($current_version);
 				return $response;
 			}
 

@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * COMPONENT_COMMON
 * Common methods of all components
@@ -121,6 +120,10 @@ abstract class component_common extends common {
 			'component_svg',
 			'component_text_area'
 		];
+		// dataframe ddo
+		// the component_dataframe defines by the request config
+		public $ar_dataframe_ddo;
+
 
 
 
@@ -220,7 +223,7 @@ abstract class component_common extends common {
 						throw new Exception("Error Processing Request. section or ($component_name) intended to load as component", 1);
 					}
 				// tipo format check
-					if ( is_numeric($tipo) || !is_string($tipo) || !RecordObj_dd::get_prefix_from_tipo($tipo) ) {
+					if ( is_numeric($tipo) || !is_string($tipo) || !get_tld_from_tipo($tipo) ) {
 						dump($tipo," tipo");
 						throw new Exception("Error Processing Request. trying to use wrong var: '$tipo' as tipo to load as component", 1);
 					}
@@ -846,12 +849,42 @@ abstract class component_common extends common {
 						return null;
 					}
 
+				// If the component is a dataframe
+				// its data is saved with the main component data in time machine
+				// is those cases, tipo to search in time machine is the main component tipo of the dataframe
+				// all other is its own tipo
+					$component_tipo			=  $this->tipo;
+					$search_component_tipo	= ($this->get_model()==='component_dataframe')
+						? $this->get_main_component_tipo()
+						: $component_tipo;
+
 				// tm dato. Note that no lang or section_id is needed, only matrix_id
+				// dato_tm is a full data stored into tm row
+				// it will need to be filter to remove possible dataframe data
 					$dato_tm = component_common::get_component_tm_dato(
-						$this->tipo,
+						$search_component_tipo,
 						$this->section_tipo,
 						$this->matrix_id
 					);
+
+				// Main components with dataframe and other relation components.
+					$relation_components = component_relation_common::get_components_with_relations();
+					if ( is_array($dato_tm) && in_array( $this->get_model(), $relation_components) ){
+						// Get only the component data. Remove possible dataframe data
+						$dato_tm = array_values( array_filter( $dato_tm, function($el) use($component_tipo) {
+							return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+						}));
+
+						// If the component is a dataframe filter the tm data with the section_id_key also.
+						if($this->get_model()==='component_dataframe'){
+
+							$section_id_key = $this->caller_dataframe->section_id_key;
+
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key) {
+								return isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key;
+							}));
+						}
+					}
 
 					// fix dato
 					$this->dato = $dato_tm;
@@ -933,6 +966,9 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATO_FULL
+	* Returns whole component data with all langs values
+	* Don't constrain type to object because compatibility
+	* with component_relation_common->get_dato_full() (array)
 	* @return object|null $dato_full
 	* 	sample: {
 	*	    "lg-spa": [
@@ -962,8 +998,49 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_TIME_MACHINE_DATA_TO_SAVE
+	* Recover component var 'dato' without change type or other custom component changes
+	* @return array|null $time_machine_data_to_save
+	*/
+	public function get_time_machine_data_to_save() : ?array {
+
+		$time_machine_data_to_save = $this->dato;
+
+		$ar_component_dataframe = $this->get_dataframe_ddo();
+		if( !empty($ar_component_dataframe) ){
+
+			$ar_dataframe_data = [];
+			foreach ($ar_component_dataframe as $dataframe_ddo) {
+
+				$dataframe_component = component_common::get_instance(
+					'component_dataframe', // string model
+					$dataframe_ddo->tipo, // string tipo
+					$this->get_section_id(), // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$this->get_section_tipo(), // string section_tipo,
+					false
+				);
+				$dataframe_data = $dataframe_component->get_all_data();
+				if( !empty($dataframe_data) ){
+					$ar_dataframe_data = array_merge( $ar_dataframe_data, $dataframe_data );
+				}
+			}
+			$time_machine_data_to_save = is_array($time_machine_data_to_save)
+				? array_merge( $time_machine_data_to_save, $ar_dataframe_data )
+				: $ar_dataframe_data;
+		}
+
+
+		return $time_machine_data_to_save;
+	}//end get_time_machine_data
+
+
+
+	/**
 	* LOAD_COMPONENT_DATO
 	* Get data once from matrix about section_id, dato
+	* @see component_relation_common->load_component_dato()
 	* @return bool
 	*/
 	protected function load_component_dato() : bool {
@@ -2133,7 +2210,9 @@ abstract class component_common extends common {
 					$response->result	= [];
 					$response->msg		= 'Error. section tipo: '.$target_section_tipo.' is not a valid section ('.$target_section_model.')';
 					debug_log(__METHOD__
-						."  ".$response->msg.to_string()
+						.' '.$response->msg . PHP_EOL
+						.' target_section_tipo'. to_string($target_section_tipo) . PHP_EOL
+						.' target_section_model'. to_string($target_section_model)
 						, logger::ERROR
 					);
 
@@ -2318,24 +2397,29 @@ abstract class component_common extends common {
 	/**
 	* GET_LIST_OF_VALUES
 	* Retrieves all records of the target section and creates an object with the literal and his locator of the value.
-	* It will use by component_select, component_check_box, component_radio_button .. to show the possibles values of the component
+	* It is used by component_select, component_check_box, component_radio_button ... to show the possible values of the component.
 	* Use the request_config of the component to get the ddo_map to show and the ddo_map to hide (use as internal data values)
-	* @param string $lang used to resolve the literal
+	* Sample of use with fixed_filter: 'mdcat3223'
+	* @param string $lang
+	* 	Used to resolve the literal
 	* @return object $response
 	*/
-	public function get_list_of_values(string $lang) : object {
-
-			$start_time = start_time();
+	public function get_list_of_values( string $lang ) : object {
+		$start_time = start_time();
 
 		// response
 			$response = new stdClass();
 				$response->result	= [];
-				$response->msg		= __METHOD__ . ' Error. Request failed';
+				$response->msg		= __METHOD__ . ' Error. Request failed ';
+				$response->errors	= [];
+
+		// cache of the list_of_values, if the list was already calculated, return it
+			static $list_of_values_data_cache = [];
 
 		// request config (mandatory)
 			$request_config = $this->request_config ?? [];
 
-		// fix ddo_map (dd_core_api static var)
+		// dedalo_request_config
 			$dedalo_request_config = array_find($request_config, function($el){
 				return isset($el->api_engine) && $el->api_engine==='dedalo';
 			});
@@ -2344,66 +2428,73 @@ abstract class component_common extends common {
 				? $dedalo_request_config
 				: $this->build_request_config()[0];
 
-		$result = [];
+		// empty request config case (ERROR). Stop execution
+			if (empty($dedalo_request_config)) {
+				debug_log(__METHOD__
+					. " Error: component without request_config!!!" .PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_id: '. $this->section_id .PHP_EOL
+					. ' section_tipo: '. $this->section_tipo
+					, logger::ERROR
+				);
+				$response->errors[] = 'Empty dedalo_request_config';
+				return $response;
+			}
 
-		if (!empty($dedalo_request_config)) {
+		// 1 search all sections in the target list
+			$ar_target_section = $dedalo_request_config->sqo->section_tipo;
 
-			// 1 search all sections in the target list
-				$ar_target_section = $dedalo_request_config->sqo->section_tipo;
-
-				// get all target sections defined in sqo
+			// ar_sections_tipo. Get all target sections defined in sqo
 				$ar_sections_tipo = [];
 				foreach ($ar_target_section as $current_section) {
 					$ar_sections_tipo[] = $current_section->tipo;
 				}
 
-				// cache of the list_of_values, if the list was calculated return it
-					static $list_of_values_data = [];
+			// cache of the list_of_values, if the list was already calculated, return it
+				$hash_id = isset($dedalo_request_config->sqo->filter)
+					? md5(json_encode($dedalo_request_config->sqo->filter))
+					: 'full';
 
-					$hash_id = isset($dedalo_request_config->sqo->filter)
-						? md5(json_encode($dedalo_request_config->sqo->filter))
-						: 'full';
+				$uid = !empty($ar_sections_tipo)
+					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id
+					: $this->tipo .'_'. $lang . '_'. $hash_id;
 
-					$uid = !empty($ar_sections_tipo)
-						? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id
-						: $this->tipo .'_'. $lang . '_'. $hash_id;
-					if (isset($list_of_values_data[$uid])) {
+				if (isset($list_of_values_data_cache[$uid])) {
 
-						if(SHOW_DEBUG===true) {
-							// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-							$list_of_values_data[$uid]->debug	= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
-						}
-
-						// response OK from cache
-							$response = $list_of_values_data[$uid];
-
-						// return $response;
+					if(SHOW_DEBUG===true) {
+						// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+						$list_of_values_data_cache[$uid]->debug	= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 					}
 
+					// response OK from cache
+					return $list_of_values_data_cache[$uid];
+				}
+
+			// sqo create and search
 				// set the limit 0 to retrieve all records of the target section
 				$limit = 0;
-				// sqo create
-					$sqo = new search_query_object();
-						$sqo->set_section_tipo($ar_sections_tipo);
-						$sqo->set_limit($limit);
-						if(!empty($dedalo_request_config->sqo->fixed_filter)){
-							$fixed_filter = $dedalo_request_config->sqo->fixed_filter[0] ?? null;
-							if (is_object($fixed_filter)) {
-								$sqo->set_filter($fixed_filter);
-							}else{
-								debug_log(__METHOD__
-									. " Ignored fixed filter. Bad format " . PHP_EOL
-									. to_string($dedalo_request_config->sqo->fixed_filter)
-									, logger::ERROR
-								);
-							}
+				// search_query_object
+				$sqo = new search_query_object();
+					$sqo->set_section_tipo($ar_sections_tipo);
+					$sqo->set_limit($limit);
+					if(!empty($dedalo_request_config->sqo->fixed_filter)){
+						$fixed_filter = $dedalo_request_config->sqo->fixed_filter[0] ?? null;
+						if (is_object($fixed_filter)) {
+							$sqo->set_filter($fixed_filter);
+						}else{
+							debug_log(__METHOD__
+								. " Ignored fixed filter. Bad format " . PHP_EOL
+								. to_string($dedalo_request_config->sqo->fixed_filter)
+								, logger::ERROR
+							);
 						}
+					}
 
-				$search = search::get_instance($sqo);
-				$search_result = $search->search();
+			$search = search::get_instance($sqo);
+			$search_result = $search->search();
 
-			//2 with the all section create the list_of values
-
+		// 2 with all sections, create the list_of values
+			$result = [];
 			foreach ($search_result->ar_records as $row) {
 
 				// create the section instance and set current row as his own data
@@ -2449,10 +2540,9 @@ abstract class component_common extends common {
 					$ar_label[] = $current_component->get_value();
 				}
 
-				// get the values of the hide components
+				// ar_hide. Get the values of the hide components
 				// hide component are used as internal data of the component, it doesn't show into the list.
 				$ar_hide = [];
-
 				if(isset($dedalo_request_config->hide)){
 					$hide_ddo_map = $dedalo_request_config->hide->ddo_map;
 
@@ -2478,7 +2568,7 @@ abstract class component_common extends common {
 					}
 				}
 				// for the literals to show, create a label with the fields_separator
-				$label = implode(" | ", $ar_label);
+				$label = implode(' | ', $ar_label);
 
 				$item = new stdClass();
 					$item->value		= $locator;
@@ -2488,18 +2578,6 @@ abstract class component_common extends common {
 
 				$result[] = $item;
 			}
-
-		}else{
-
-			debug_log(__METHOD__
-				. " Error: component without request_config!!!" .PHP_EOL
-				. ' tipo: ' . $this->tipo . PHP_EOL
-				. ' section_id: '. $this->section_id .PHP_EOL
-				. ' section_tipo: '. $this->section_tipo
-				, logger::ERROR
-			);
-			return $response;
-		}
 
 		// Sort result for easy user select
 			if(isset($this->properties->sort_by)){
@@ -2521,15 +2599,15 @@ abstract class component_common extends common {
 			}
 
 		// response OK
-			$response->result	= (array)$result;
-			$response->msg		= 'Ok';
+			$response->result	= $result;
+			$response->msg		= 'OK';
 			if(SHOW_DEBUG===true) {
 				// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				$response->debug = 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 			}
 
 		// cache adds the response to cache to be reused
-			$list_of_values_data[$uid] = $response;
+			$list_of_values_data_cache[$uid] = $response;
 
 
 		return $response;
@@ -2796,6 +2874,117 @@ abstract class component_common extends common {
 
 		return $ar_target_section_ddo;
 	}//end get_ar_target_section_ddo
+
+
+
+	/**
+	* GET_DATAFRAME_DDO
+	* get the components dataframe when they are defined in RQO
+	* if the component has not a dataframe return null
+	* @return array | null $ar_dataframe_ddo
+	*  Array of ddo objects as:
+	* [
+	*	{
+	*		"info": "uncentanty component_dataframe",
+	*		"tipo": "numisdata1448",
+	*		"view": "default",
+	*		"parent": "self",
+	*		"section_tipo": "numisdata3"
+	*	}
+	* ]
+	*/
+	public function get_dataframe_ddo() : array | null {
+
+		// cached
+			if(isset($this->ar_dataframe_ddo)) {
+				return $this->ar_dataframe_ddo;
+			}
+
+		$ar_dataframe_ddo = [];
+		// config_context. Get_config_context normalized
+			$ar_request_config = $this->get_ar_request_config();
+			foreach ($ar_request_config as $config_context_item) {
+				$ddo_map = $config_context_item->show->ddo_map;
+				foreach ($ddo_map as $ddo) {
+					$model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo);
+					if($model === 'component_dataframe'){
+						$ar_dataframe_ddo[] = $ddo;
+					}
+				}
+			}
+
+		// empty case
+			if (empty($ar_dataframe_ddo)) {
+				$ar_dataframe_ddo = null;
+			}
+
+		// Fix value
+			$this->ar_dataframe_ddo = $ar_dataframe_ddo;
+
+		return $ar_dataframe_ddo;
+	}//end get_dataframe_ddo
+
+
+
+	/**
+	* REMOVE_DATAFRAME_DATA
+	* Remove all information associate to the main component
+	* This method is called when the main component remove a row (@see update_data_value() in component_common)
+	* And is possible that his dataframe will has data
+	* Therefore, the dataframe needs to be delete as his own main caller dataframe.
+	* @param object $locator
+	* @return array | null $ar_dataframe_ddo
+	*
+	*/
+	public function remove_dataframe_data( object $locator ) : bool {
+
+		// get the component dataframe
+		$dataframe_ddo = $this->get_dataframe_ddo();
+
+		$caller_dataframe = new stdClass();
+			$caller_dataframe->section_tipo		= $this->section_tipo;
+			$caller_dataframe->section_id		= $this->section_id;
+			$caller_dataframe->section_id_key	= $locator->section_id;
+
+
+		// config_context. Get_config_context normalized
+			foreach ($dataframe_ddo as $ddo) {
+
+				$model = RecordObj_dd::get_modelo_name_by_tipo( $ddo->tipo );
+				$dataframe_component = component_common::get_instance(
+					$model, // string model
+					$ddo->tipo, // string tipo
+					$this->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$this->section_tipo, // string section_tipo
+					true,
+					$caller_dataframe
+				);
+
+
+				// Section
+				// remove dataframe data is called by the main component
+				// when the main component remove his own data
+				// therefore, the dataframe associated to the row of the component
+				// has to be removed as well.
+				// but, the dataframe component has not to create time machine data
+				// because the main component will save all information in the tm row.
+				// at this point the component section will not save time machine for the component.
+				$section = $dataframe_component->get_my_section();
+					$section->save_tm = false;
+
+				// remove the data from dataframe.
+				$dataframe_component->set_dato( null );
+				$dataframe_component->Save();
+
+				// back to set time machine to true for the next savings.
+				$section->save_tm = true;
+			}
+
+		return true;
+	}//end remove_dataframe_data
+
 
 
 
@@ -3801,10 +3990,20 @@ abstract class component_common extends common {
 
 			// remove a item value from the component data array
 			case 'remove':
+
+				// get the key to be removed into data
+					$key = $changed_data->key;
+
 				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = (get_called_class()==='component_relation_related')
 					? $this->get_dato_with_references()
 					: $dato;
+
+				//dataframe
+					$dataframe_ddo = $this->get_dataframe_ddo();
+					if(!empty($dataframe_ddo) && $changed_data->key!==false ){
+						$this->remove_dataframe_data( $dato[$key] );
+					}
 
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
@@ -3841,7 +4040,6 @@ abstract class component_common extends common {
 						break;
 
 					default:
-						$key = $changed_data->key;
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
 						break;
@@ -4088,7 +4286,6 @@ abstract class component_common extends common {
 				$tm_dato = null;
 			}
 
-
 		return $tm_dato;
 	}//end get_component_tm_dato
 
@@ -4228,38 +4425,6 @@ abstract class component_common extends common {
 
 		return $response;
 	}//end conform_import_data
-
-
-
-	/**
-	* GET_ONTOLOGY_INFO
-	* Get the component information (former 'def', now 'Definition') from the Ontology
-	* for current component term_id
-	* @return string|null $ontology_info
-	*/
-	public function get_ontology_info() : ?string {
-
-		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
-
-		$section_id = ontology_legacy::get_section_id_by_term_id($this->tipo);
-
-		$component_tipo	= ONTOLOGY_SECTION_TIPOS['definition']; // expected dd1478
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_text_area
-		$component		= component_common::get_instance(
-			$model,
-			$component_tipo,
-			$section_id,
-			'list',
-			DEDALO_APPLICATION_LANG,
-			$section_tipo
-		);
-		$dato = $component->get_dato();
-
-		$ontology_info = $dato[0] ?? null;
-
-
-		return $ontology_info;
-	}//end get_ontology_info
 
 
 

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * INSTALL
 *
@@ -132,7 +132,7 @@ class install extends common {
 
 		// check php version
 			$properties->php_version			= PHP_VERSION;
-			$properties->php_version_supported	= test_php_version_supported(); // >= 8.1.0
+			$properties->php_version_supported	= system::test_php_version_supported(); // >= 8.1.0
 
 		// max_execution_time
 			$max_execution_time = ini_get('max_execution_time');
@@ -161,6 +161,8 @@ class install extends common {
 			'dd',			// Dedalo core
 			'rsc',			// Dédalo resources
 			'hierarchy',	// Dédalo hierarchies
+			'ontology',		// Dédalo ontology
+			'localontology',// Dédalo local ontology
 			'lg',			// Dédalo langs
 			'oh',			// Oral History
 			// 'ich',		// Intangible Cultural Heritage
@@ -179,6 +181,8 @@ class install extends common {
 			'matrix_activity',		// Dédalo activity log data
 			'matrix_hierarchy',		// thesaurus data
 			'matrix_hierarchy_main',// hierarchy data
+			'matrix_ontology',		// ontology data
+			'matrix_ontology_main',// ontology data
 			'matrix_indexations',	// indexation data
 			'matrix_layout',		// print presets layout table
 			'matrix_list',			// public list values
@@ -201,7 +205,6 @@ class install extends common {
 		$install_checked_default = [
 			'es', // spain
 			'fr', // france
-			// 'ds', // semantic
 			'lg', // lang
 			'ts', // thematic
 			'utoponymy'
@@ -361,7 +364,7 @@ class install extends common {
 	* TO_UPDATE
 	* @return object $response
 	*/
-	public static function to_update() {
+	public static function to_update() : object {
 
 		$response = install::set_install_status('installed');
 
@@ -376,7 +379,7 @@ class install extends common {
 	* Creates a clean install database and file
 	* @return object $response
 	*/
-	public static function build_install_version() {
+	public static function build_install_version() : object {
 
 		// set timeout in seconds
 		set_time_limit(600); // 10 minutes (10*60)
@@ -384,6 +387,7 @@ class install extends common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
 
 		// CLI msg
 			if ( running_in_cli()===true ) {
@@ -407,6 +411,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// clean ontology (structure)
 			// CLI msg
@@ -418,6 +425,9 @@ class install extends common {
 			$call_response = install::clean_ontology();
 			if ($call_response->result===false) {
 				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
 			}
 
 		// clean counters (truncate all counters to force re-create later)
@@ -431,6 +441,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// clean general tables ($to_clean_tables)
 			// CLI msg
@@ -443,6 +456,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// create extensions (unaccent, pg_trgm ..)
 			// CLI msg
@@ -454,6 +470,9 @@ class install extends common {
 			$call_response = install::create_extensions();
 			if ($call_response->result===false) {
 				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
 			}
 
 		// clean table matrix_hierarchy (remove non to-preserve TLD's)
@@ -473,6 +492,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// create default main project
 			// CLI msg
@@ -484,6 +506,9 @@ class install extends common {
 			$call_response = install::create_main_project();
 			if ($call_response->result===false) {
 				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
 			}
 
 		// create default main profiles
@@ -497,6 +522,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// create default test_record
 			// CLI msg
@@ -509,6 +537,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// import_hierarchy_main_records (matrix_hierarchy_main records)
 			// CLI msg
@@ -520,6 +551,9 @@ class install extends common {
 			$call_response = install::import_hierarchy_main_records();
 			if ($call_response->result===false) {
 				return $call_response;
+			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
 			}
 
 		// import toponymy hierarchies
@@ -578,6 +612,9 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// build install DDBB to default compressed psql file
 			// CLI msg
@@ -590,10 +627,15 @@ class install extends common {
 			if ($call_response->result===false) {
 				return $call_response;
 			}
+			if (!empty($call_response->errors)) {
+				$response->errors = array_merge($response->errors, $call_response->errors);
+			}
 
 		// response
 			$response->result	= true;
-			$response->msg		= 'OK. The current database \''.DEDALO_DATABASE_CONN.'\' has been cloned to \''.$config->db_install_name.'\' and exported a install copy to \''.$config->target_file_path_compress.'\'';
+			$response->msg		= empty($response->errors)
+				? 'OK. The current database \''.DEDALO_DATABASE_CONN.'\' has been cloned to \''.$config->db_install_name.'\' and exported a install copy to \''.$config->target_file_path_compress.'\''
+				: 'Warning: Request done with errors';
 
 
 		return $response;
@@ -605,7 +647,7 @@ class install extends common {
 	* OPTIMIZE_DATABASE
 	* @return object $response
 	*/
-	public static function optimize_database() {
+	public static function optimize_database() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -949,31 +991,38 @@ class install extends common {
 			}
 
 		// clean matrix_descriptors_dd
-			$items	= array_map(function($el){
-				return 'parent !~ \'^'.$el.'[0-9]+\'';
-			}, $config->to_preserve_tld);
-			$line	= implode(' AND ', $items);
-			$sql = '
-				DELETE
-				FROM "matrix_descriptors_dd"
-				WHERE
-				'.$line.';
-			';
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
-			if ($exec) {
-				$result   = pg_query($db_install_conn, $sql);
-				if (!$result) {
-					$msg = " Error on db execution (matrix_descriptors_dd): ".pg_last_error(DBi::_getConnection());
-					debug_log(__METHOD__.$msg, logger::ERROR);
-					$response->msg = $msg;
-					return $response;
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				$items	= array_map(function($el){
+					return 'parent !~ \'^'.$el.'[0-9]+\'';
+				}, $config->to_preserve_tld);
+				$line	= implode(' AND ', $items);
+				$sql = '
+					DELETE
+					FROM "matrix_descriptors_dd"
+					WHERE
+					'.$line.';
+				';
+				debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+				if ($exec) {
+					$result   = pg_query($db_install_conn, $sql);
+					if (!$result) {
+						$msg = " Error on db execution (matrix_descriptors_dd): ".pg_last_error(DBi::_getConnection());
+						debug_log(__METHOD__.$msg, logger::ERROR);
+						$response->msg = $msg;
+						return $response;
+					}
 				}
 			}
 
 		// re-index ontology tables
 			$sql = '
-				REINDEX TABLE "jer_dd"; REINDEX TABLE "matrix_descriptors_dd";
+					REINDEX TABLE "jer_dd";
 			';
+			if (DBi::check_table_exists('matrix_descriptors_dd')) {
+				$sql .= '
+					REINDEX TABLE "matrix_descriptors_dd";
+				';
+			}
 			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
@@ -1026,24 +1075,26 @@ class install extends common {
 			}
 
 		// clean main_dd (Ontology counters)
-			$items = array_map(function($el){
-				return '\''.$el.'\'';
-			}, $to_preserve_tld);
-			$line	= implode(',', $items);
-			$sql = '
-				DELETE
-				FROM "main_dd"
-				WHERE
-				tld NOT IN('.$line.');
-			';
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
-			if ($exec) {
-				$result   = pg_query($db_install_conn, $sql);
-				if (!$result) {
-					$msg = " Error on db execution (main_dd): ".pg_last_error(DBi::_getConnection());
-					debug_log(__METHOD__.$msg, logger::ERROR);
-					$response->msg = $msg;
-					return $response;
+			if (DBi::check_table_exists('main_dd')) {
+				$items = array_map(function($el){
+					return '\''.$el.'\'';
+				}, $to_preserve_tld);
+				$line	= implode(',', $items);
+				$sql = '
+					DELETE
+					FROM "main_dd"
+					WHERE
+					tld NOT IN('.$line.');
+				';
+				debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+				if ($exec) {
+					$result   = pg_query($db_install_conn, $sql);
+					if (!$result) {
+						$msg = " Error on db execution (main_dd): ".pg_last_error(DBi::_getConnection());
+						debug_log(__METHOD__.$msg, logger::ERROR);
+						$response->msg = $msg;
+						return $response;
+					}
 				}
 			}
 
@@ -1846,85 +1897,6 @@ class install extends common {
 
 
 	/**
-	* IMPORT_HIERARCHY_FILE
-	* @param string $section_tipo
-	* 	Like 'es1'
-	* @return object $response
-	*/
-	public static function import_hierarchy_file(string $section_tipo) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
-
-		// short vars
-			$config					= self::get_config();
-			$hierarchy_path			= $config->hierarchy_files_dir_path;
-			$source_data_file_path	= $hierarchy_path.'/'.$section_tipo.'.copy.gz'; // country data file
-			$uncompressed_file		= $hierarchy_path.'/'.$section_tipo.'.copy'; // uncompressed version
-			$matrix_table			= 'matrix_hierarchy';
-			$exec					= true;
-
-
-		// check if file exists
-			if (!file_exists($source_data_file_path)) {
-				$response->msg = 'Error. The required file do not exists: '.$source_data_file_path;
-				return $response;
-			}
-
-		// terminal gunzip command
-			$command = 'gunzip --keep --force -v '.$source_data_file_path.';'; // -k (keep original file) -f (force overwrite without prompt)
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 1 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-		// terminal command psql delete previous records
-			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "DELETE FROM "'.$matrix_table.'" WHERE section_tipo = \''.$section_tipo.'\';";';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-		// terminal command psql copy data from file
-			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "\copy '.$matrix_table.'(section_id, section_tipo, datos) from '.$uncompressed_file.'";';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 3 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-		// update sequence value
-			$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';
-			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors '
-				.'-c "'.$query.';";';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 4 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-		// delete uncompressed_file
-			$command  = 'rm '.$uncompressed_file.';';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-			if ($exec) {
-				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 5 (shell_exec): ".json_encode($command_res), logger::DEBUG);
-			}
-
-
-		$response->result	= true;
-		$response->msg		= 'OK. Request done '.__METHOD__;
-
-
-		return $response;
-	}//end import_hierarchy_file
-
-
-
-	/**
 	* ACTIVATE_HIERARCHY
 	* Activate thesaurus hierarchy by tld2
 	* @param object $options
@@ -2403,8 +2375,21 @@ class install extends common {
 			foreach ($selected_hierarchies as $item) {
 
 				// import records from file *.copy.gz
-				// this delete existing data of current tld and copy all file pg data
-				$ar_responses[] = install::import_hierarchy_file($item->section_tipo);
+				// this delete existing data of current section_tipo and copy all file pg data
+				$section_tipo	= $item->section_tipo;
+				$config			= self::get_config();
+				$hierarchy_path	= $config->hierarchy_files_dir_path;
+				$file_path		= $hierarchy_path.'/'.$section_tipo.'.copy.gz'; // country data file
+
+				$options = new stdClass();
+					$options->section_tipo	= $section_tipo;
+					$options->file_path		= $file_path;
+					$options->matrix_table	= 'matrix_hierarchy';
+
+				// import file
+				$ar_responses[] = backup::import_from_copy_file( $options );
+
+				// $ar_responses[] = install::import_hierarchy_file($item->section_tipo);
 
 				// ignore models for creating hierarchy
 				if ($item->type!=='term') {
@@ -2440,12 +2425,7 @@ class install extends common {
 		try {
 
 			// table exists check
-				$sql = '
-					SELECT EXISTS (SELECT table_name FROM information_schema.tables WHERE table_name = \'matrix_users\');
-				';
-				$result	= pg_query(DBi::_getConnection(), $sql);
-				$row	= pg_fetch_object($result);
-				$exists	= ($row->exists==='t');
+				$exists	= DBi::check_table_exists('matrix_users');
 
 				if ($exists===false) {
 					$response->result	= false;
@@ -2477,69 +2457,6 @@ class install extends common {
 
 		return $response;
 	}//end system_is_already_installed
-
-
-
-	/**
-	* CHECK_PGPASS
-	* @return object $response
-	*/
-		// public static function check_pgpass() {
-
-		// 	$response = new stdClass();
-		// 		$response->result 	= false;
-		// 		$response->msg 		= 'Error. Request failed';
-
-		// 	// short vars
-		// 		$config = self::get_config();
-
-		// 	try {
-
-		// 		// psql -h host -U someuser somedb
-		// 		$command = DB_BIN_PATH.'psql -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "VACUUM dedalo_install_test" '; // DEDALO_DATABASE_CONN
-		// 		debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
-		// 		$command_res = shell_exec($command);
-		// 		error_log( PHP_EOL.'command: '.$command.PHP_EOL);
-		// 		error_log( PHP_EOL.'command_res: '.$command_res.PHP_EOL);
-		// 		debug_log(__METHOD__." Exec response (shell_exec): ".json_encode($command_res), logger::DEBUG);
-		// 		if (empty($command_res)) {
-		// 			$response->msg = 'Error. Database connection failed across pgpass file! Verify your .pgpass config';
-		// 			trigger_error($response->msg);
-		// 			return $response;
-		// 		}
-
-		// 	} catch (Exception $e) {
-
-		// 		trigger_error('Error on exec psql command. '. $e->getMessage());
-		// 	}
-
-		// 	$response->result	= true;
-		// 	$response->msg		= 'OK. .pgpass id ready';
-
-		// 	return $response;
-		// }//end check_pgpass
-
-
-
-	/**
-	* GET_INSTALLED_HIERARCHIES
-	* @return object $response
-	*/
-		// public static function get_installed_hierarchies() {
-
-		// 	$response = new stdClass();
-		// 		$response->result	= false;
-		// 		$response->msg		= 'Error. Request failed '.__METHOD__;
-
-
-		// 	$hierarchy_sections = area_thesaurus::get_all_hierarchy_sections();
-
-		// 	$response->result	= $hierarchy_sections;
-		// 	$response->msg		= 'OK. Request done '.__METHOD__;
-
-		// 	return $response;
-		// }//end get_installed_hierarchies
-
 
 
 	/**
@@ -2724,6 +2641,153 @@ class install extends common {
 
 		return $response;
 	}//end set_install_status
+
+
+
+	/**
+	* BUILD_RECOVERY_VERSION_FILE
+	* Creates the recovery file 'jer_dd_recovery.sql' from current 'jer_dd' table
+	* @return object $response
+	*/
+	public static function build_recovery_version_file() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// preserve_tld list
+			$preserve_tld = [
+				'dd',
+				'rsc',
+				'lg',
+				'hierarchy',
+				'ontology',
+				'ontologytype'
+			];
+			$preserve_tld_string = "'".implode("','", $preserve_tld)."'";
+
+		// clone jer_dd table to jer_dd_recovery
+			$sql = '
+				DROP TABLE IF EXISTS "jer_dd_recovery" CASCADE;
+				CREATE TABLE "jer_dd_recovery" ( LIKE "jer_dd" INCLUDING ALL );
+				INSERT INTO "jer_dd_recovery" SELECT * FROM "jer_dd" WHERE tld IN ('.$preserve_tld_string.');
+			';
+			$result	= pg_query(DBi::_getConnection(), $sql);
+			if (!$result) {
+				$msg = " Error on db execution (clone table jer_dd): ".pg_last_error(DBi::_getConnection());
+				debug_log(__METHOD__
+					. $msg . PHP_EOL
+					. $sql
+					, logger::ERROR
+				);
+				$response->msg = $msg;
+				$response->errors[] = 'failed creating jer_dd_recovery table';
+
+				return $response; // return error here !
+			}
+
+		// export to file
+			// terminal command pg_dump
+			$config		= self::get_config();
+			$sql_file	= DEDALO_ROOT_PATH . '/install/db/jer_dd_recovery.sql.gz';
+			$command	= DB_BIN_PATH . 'pg_dump -d '.DEDALO_DATABASE_CONN.' '.$config->host_line.' '.$config->port_line
+						  .' -U '.DEDALO_USERNAME_CONN.' -t jer_dd_recovery | gzip > '.$sql_file;
+
+			debug_log(__METHOD__
+				." Executing terminal DB command " . PHP_EOL
+				.to_string($command) . PHP_EOL
+				, logger::WARNING
+			);
+
+			$command_res = shell_exec($command);
+			debug_log(__METHOD__." Exec response (shell_exec) ".to_string($command_res), logger::DEBUG);
+
+		// delete temp table
+			$sql = '
+				DROP TABLE IF EXISTS "jer_dd_recovery" CASCADE;
+			';
+			$result	= pg_query(DBi::_getConnection(), $sql);
+			if (!$result) {
+				$msg = " Error on db execution (delete table jer_dd_recovery): ".pg_last_error(DBi::_getConnection());
+				debug_log(__METHOD__
+					. $msg . PHP_EOL
+					. $sql
+					, logger::ERROR
+				);
+				$response->msg = $msg;
+				$response->errors[] = 'failed deleting jer_dd_recovery table';
+
+				return $response; // return error here !
+			}
+
+		// response OK
+			$response->result		= true;
+			$response->msg			= 'OK. Request done successfully';
+			$response->file_size	= filesize($sql_file) . ' Bytes';
+
+
+		return $response;
+	}//end build_recovery_version_file
+
+
+
+	/**
+	* RESTORE_JER_DD_RECOVERY_FROM_FILE
+	* Import the SQL file creating table 'jer_dd_recovery'
+	* Source file is a SQL string file located at /dedalo/install/db/jer_dd_recovery.sql
+	* @return object $response
+	*/
+	public static function restore_jer_dd_recovery_from_file() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// config
+			$config = self::get_config();
+
+		// sql_file: jer_dd_recovery.sql
+			$sql_file = DEDALO_ROOT_PATH . '/install/db/jer_dd_recovery.sql.gz';
+			if (!file_exists($sql_file)) {
+				$msg = " Error on table restore. File do not exists: ".pg_last_error(DBi::_getConnection());
+				debug_log(__METHOD__
+					. $msg . PHP_EOL
+					. 'sql_file: ' . $sql_file
+					, logger::ERROR
+				);
+				$response->msg = $msg;
+				$response->errors[] = 'source sql_file do not exists';
+
+				return $response; // return error here !
+			}
+
+		// command
+			$command = 'gunzip -c ' . $sql_file . ' | '
+					  . DB_BIN_PATH . 'psql -d '.DEDALO_DATABASE_CONN.' '.$config->host_line.' '.$config->port_line. ' -U '.DEDALO_USERNAME_CONN;
+
+			debug_log(__METHOD__
+				." Executing terminal DB command " . PHP_EOL
+				.to_string($command) . PHP_EOL
+				, logger::WARNING
+			);
+
+			// exec command
+			$command_res = shell_exec($command);
+
+			debug_log(__METHOD__
+				." Exec response (shell_exec) " . PHP_EOL
+				.to_string($command_res) . PHP_EOL
+				, logger::WARNING
+			);
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done successfully';
+
+
+		return $response;
+	}//end restore_jer_dd_recovery_from_file
 
 
 

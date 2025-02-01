@@ -44,7 +44,7 @@ define('DEDALO_BACKUP_PATH_TEMP','');
 define('DEDALO_BACKUP_PATH_DB','');
 define('DEDALO_BACKUP_PATH_ONTOLOGY','');
 define('LOGGER_LEVEL',8);
-define('UPDATE_LOG_FILE'.'');
+define('UPDATE_LOG_FILE','');
 define('DEDALO_STRUCTURE_LANG','');
 define('DEDALO_APPLICATION_LANGS',[]);
 define('DEDALO_APPLICATION_LANGS_DEFAULT','');
@@ -99,8 +99,7 @@ define('DEDALO_SOURCE_VERSION_LOCAL_DIR','');
 define('IP_API',[]);
 define('DEDALO_MAINTENANCE_MODE',false);
 define('DEDALO_NOTIFICATION',[]);
-
-
+define('IS_A_CODE_SERVER',false);
 
 define('SAML_CONFIG', ['']);
 define('INIT_COOKIE_AUTH_ADDONS','');
@@ -114,7 +113,6 @@ define('SERVER_PROXY','');
 define('DEDALO_API_URL','');
 define('DEDALO_API_URL_UNIT_TEST','');
 define('DEDALO_IMAGE_QUALITY_DEFAULT','');
-define('ONTOLOGY_DB','');
 
 define('DEDALO_SECTION_PROJECTS_TIPO','');
 define('DEDALO_ROOT_WEB','');
@@ -124,7 +122,6 @@ define('DEDALO_SUPERUSER','');
 define('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS','');
 define('MYSQL_DB_BIN_PATH','');
 
-define('DEDALO_NOTIFICATION',[]);
 define('EXPORT_HIERARCHY_PATH','');
 define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS','');
 define('DEDALO_NOTIFICATION_CUSTOM','');
@@ -138,6 +135,13 @@ define('SOCRATA_CONFIG',[]);
 
 define('PDF_OCR_ENGINE','');
 
+define('DEDALO_RECOVERY_KEY','');
+define('DEDALO_RECOVERY_MODE','');
+define('DEDALO_BINARY_BASE_PATH','');
+define('DEDALO_INSTALL_PATH', '');
+define('DEDALO_INSTALL_URL', '');
+define('DEDALO_CODE_FILES_URL', '');
+
 function session_start_manager(){};
 function fix_cascade_config_var(){};
 class logger{};
@@ -145,6 +149,12 @@ function custom_postprocessing_image(){};
 // function logged_user_id() : ?int {};
 function logged_user_is_developer() {};
 // function array_find(?array $ar_value=null, callable $fn);
-class Socrata(){function post(){}};
+class Socrata{};
 $options = new stdClass();
+function apcu_enabled(){};
+function logger_backend_activity(){};
+function get_base_binary_path(){};
+class Linfo{};
+class system{};
 function pg_escape_string(){};
+function get_called_class(){};

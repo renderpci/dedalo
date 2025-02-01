@@ -13,7 +13,8 @@
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {when_in_viewport,dd_request_idle_callback,set_tool_event} from '../../common/js/events.js'
+	import {get_ontology_url} from '../../inspector/js/inspector.js'
 
 
 
@@ -67,6 +68,13 @@ render_inspector.prototype.edit = async function(options) {
 		function expose() {
 			label.classList.add('up')
 		}
+		const observer = new IntersectionObserver(
+			([e]) => e.target.classList.toggle('is_pinned', e.intersectionRatio < 1),
+			{ threshold: [1] }
+		);
+		when_in_viewport(label, () => {
+			observer.observe(label);
+		})
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -82,9 +90,11 @@ render_inspector.prototype.edit = async function(options) {
 		wrapper.appendChild(content_data)
 
 	// tooltip
-		setTimeout(function(){
-			ui.activate_tooltips(wrapper)
-		}, 1)
+		dd_request_idle_callback(
+			() => {
+				ui.activate_tooltips(wrapper)
+			}
+		)
 
 
 	return wrapper
@@ -222,7 +232,7 @@ const get_content_data = function(self) {
 			}
 
 	// tools_container. Section tools buttons
-		const inspector_tools			= self.caller.context.tools.filter(el => el.show_in_inspector && el.properties && el.properties?.mode==='edit')
+		const inspector_tools			= self.caller.context.tools.filter( el => el.show_in_inspector )
 		const inspector_tools_length	= inspector_tools.length
 		if (inspector_tools_length>0) {
 			const tools_container = ui.create_dom_element({
@@ -232,8 +242,8 @@ const get_content_data = function(self) {
 			})
 			for (let i = 0; i < inspector_tools_length; i++) {
 				const tool_context = inspector_tools[i]
-				// button_tool
-					const button_tool = ui.create_dom_element({
+				// tool_button
+					const tool_button = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'light blank',
 						style			: {
@@ -242,14 +252,47 @@ const get_content_data = function(self) {
 						title			: tool_context.label,
 						parent			: tools_container
 					})
-					button_tool.addEventListener('mousedown', function(e){
+					const click_handler = (e) => {
 						e.stopPropagation()
 						// open_tool (tool_common)
-							open_tool({
-								tool_context	: tool_context,
-								caller			: self.caller
+						open_tool({
+							tool_context	: tool_context,
+							caller			: self.caller
+						})
+					}
+					tool_button.addEventListener('click', click_handler)
+					tool_button.addEventListener('mousedown', click_handler)
+
+				// button events. Configured in tool properties. See tool_ontology definition
+					// sample:
+					// "events": [
+					// 	{
+					// 	  "type": "keyup",
+					// 	  "action": "click",
+					// 	  "validate": [
+					// 		{
+					// 		  "key": "ctrlKey",
+					// 		  "value": true
+					// 		},
+					// 		{
+					// 		  "key": "key",
+					// 		  "value": "s"
+					// 		}
+					// 	  ]
+					// 	}
+					// ]
+					if (tool_context.properties?.events) {
+						const tool_events_length = tool_context.properties.events.length
+						for (let i = 0; i < tool_events_length; i++) {
+
+							const tool_event = tool_context.properties.events[i]
+
+							set_tool_event({
+								tool_event	: tool_event,
+								tool_button	: tool_button
 							})
-					})
+						}
+					}
 			}
 		}
 
@@ -1583,7 +1626,7 @@ export const open_ontology_window = function(self, url, docu_type, focus=false) 
 		}
 	}else{
 		// create a window from scratch
-		const window_width	= 1001
+		const window_width	= 1310
 		const screen_width	= window.screen.width
 		const screen_height	= window.screen.height
 		const left = screen_width - window_width
@@ -1619,14 +1662,16 @@ const render_docu_links = function(self, tipo) {
 			title			: 'Documentation',
 			parent			: fragment
 		})
-		docu_link.addEventListener('mousedown', function(e) {
+		// mousedown event
+		const mousedown_handler_docu = (e) => {
 			e.stopPropagation()
 			open_ontology_window(
 				self,
 				'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang,
 				'docu_link'
 			)
-		})
+		}
+		docu_link.addEventListener('mousedown', mousedown_handler_docu)
 
 	if (SHOW_DEVELOPER===true) {
 
@@ -1637,14 +1682,24 @@ const render_docu_links = function(self, tipo) {
 				title			: 'Local Ontology',
 				parent			: fragment
 			})
-			local_ontology.addEventListener('mousedown', function(e) {
+			// mousedown event
+			const mousedown_handler_local = async (e) => {
 				e.stopPropagation()
+
+				const docu_type	= 'local_ontology'
+				const url		= await get_ontology_url(tipo, docu_type)
+				if (!url) {
+					console.error('Error. Invalid ontology info for tipo:', tipo);
+					return
+				}
+				// open window like https://localhost/dedalo/core/page/?tipo=dd0&section_id=1
 				open_ontology_window(
 					self,
-					DEDALO_CORE_URL + '/ontology/v5/dd_edit.php?terminoID=' + tipo,
-					'local_ontology'
+					url,
+					docu_type
 				)
-			})
+			}
+			local_ontology.addEventListener('mousedown', mousedown_handler_local)
 
 		// local ontology tree search
 			const local_ontology_search = ui.create_dom_element({
@@ -1653,14 +1708,16 @@ const render_docu_links = function(self, tipo) {
 				title			: 'Local Ontology tree search',
 				parent			: fragment
 			})
-			local_ontology_search.addEventListener('mousedown', function(e) {
+			// mousedown event
+			const mousedown_handler_tree = (e) => {
 				e.stopPropagation()
 				open_ontology_window(
 					self,
-					DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
+					`${DEDALO_CORE_URL}/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
 					'local_ontology_search'
 				)
-			})
+			}
+			local_ontology_search.addEventListener('mousedown', mousedown_handler_tree)
 
 		// master_ontology
 			const master_ontology = ui.create_dom_element({
@@ -1669,14 +1726,16 @@ const render_docu_links = function(self, tipo) {
 				title			: 'Master Ontology',
 				parent			: fragment
 			})
-			master_ontology.addEventListener('mousedown', function(e) {
+			// mousedown event
+			const mousedown_handler_master = (e) => {
 				e.stopPropagation()
 				open_ontology_window(
 					self,
 					'https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=' + tipo,
 					'master_ontology'
 				)
-			})
+			}
+			master_ontology.addEventListener('mousedown', mousedown_handler_master)
 
 	}//end if (SHOW_DEVELOPER===true)
 

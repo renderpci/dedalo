@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS DD_OBJECT (ddo)
 * Defines object with normalized properties and checks
@@ -250,7 +249,7 @@ class dd_object extends stdClass {
 	*/
 	public function set_tipo(string $value) : bool  {
 
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 
 			$msg = 'Value is not allowed (invalid prefix) : '.to_string($value);
 
@@ -323,7 +322,7 @@ class dd_object extends stdClass {
 	*/
 	public function set_parent(?string $value) : bool {
 
-		if(!is_null($value) && !RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!is_null($value) && !get_tld_from_tipo($value)) {
 
 			$msg = 'Value is not allowed (invalid prefix) : '.to_string($value);
 
@@ -363,7 +362,7 @@ class dd_object extends stdClass {
 	*/
 	public function set_parent_grouper(?string $value) : bool {
 
-		if(!is_null($value) && !RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!is_null($value) && !get_tld_from_tipo($value)) {
 
 			$msg = 'Value is not allowed (invalid prefix) : '.to_string($value);
 

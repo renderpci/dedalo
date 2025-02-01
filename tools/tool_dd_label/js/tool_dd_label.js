@@ -70,13 +70,16 @@ tool_dd_label.prototype.init = async function(options) {
 			// Get directly from editor instead from component. This allow get the current
 			// edited version even when user has not saved
 			const editor_data = (function(){
-				let e_data
-				try {
-					e_data = editor.get()
-				} catch (error) {
-					e_data = [{}]
-				}
-				return e_data
+
+				const data		= editor.get()
+				// editor can get json object or stringify json (it depends of process status and it can not controlled)
+				const json_data	= data.json !== undefined
+					? data.json
+					: data.text===''
+						? {}
+						: JSON.parse( data.text )
+
+				return json_data
 			})()
 
 			const ar_data = Array.isArray(editor_data)
@@ -111,7 +114,9 @@ tool_dd_label.prototype.update_data = function() {
 
 	// editor
 		const editor = self.caller.editors[0]
-		editor.set(self.ar_data)
+		editor.set({
+			json : self.ar_data
+		})
 
 
 	return true

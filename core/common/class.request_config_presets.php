@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS REQUEST_CONFIG_PRESETS
 *
@@ -152,7 +152,7 @@ class request_config_presets {
 				// 		: [];
 
 			// direct from section data
-				$dato = reset($ar_records);
+				$dato = $ar_records[0] ?? new stdClass();
 				if (isset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN})) {
 
 					$json_data		= reset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN});

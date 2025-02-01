@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * DD_COMPONENT_INFO
 * Manage API REST data flow of the component with Dédalo
@@ -48,7 +48,7 @@ final class dd_component_info {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
-				$response->error	= null;
+				$response->errors	= [];
 
 		// component
 			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);

@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS TOOL_IMPORT_DEDALO_CSV
 * Tool to import data into Dédalo.
@@ -41,7 +40,7 @@ class tool_import_dedalo_csv extends tool_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
+			$response->errors	= [];
 
 		// options
 			$dir = $options->files_path ?? tool_import_dedalo_csv::get_files_path();
@@ -75,6 +74,7 @@ class tool_import_dedalo_csv extends tool_common {
 							. ' file: ' .to_string($file)
 							, logger::ERROR
 						);
+						$response->errors[] = 'error reading file';
 						continue;
 					}
 
@@ -93,7 +93,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 				} catch (Exception $e) {
 
-					$response->error =  'Error on read file: '.to_string($file);
+					$response->errors[] =  'Error on read file: '.to_string($file);
 
 					debug_log(__METHOD__
 						. ' Error on read file 2:  The file will be ignored' .PHP_EOL
@@ -177,9 +177,6 @@ class tool_import_dedalo_csv extends tool_common {
 			$response->msg		= !empty($files_info)
 				? "Found ".count($files_info)." files"
 				: "No files found at $dir";
-			$response->error	= isset($error)
-				? $error
-				: null;
 
 
 		return $response;
@@ -205,7 +202,8 @@ class tool_import_dedalo_csv extends tool_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// options
 			$file_name	= $options->file_name ?? '';
@@ -218,6 +216,7 @@ class tool_import_dedalo_csv extends tool_common {
 				// check is file (prevent to delete directories accidentally)
 				if (!is_file($file_full_path)) {
 					$response->msg = 'Error. This path does not correspond to a file. Ignored delete_csv_file action';
+					$response->errors[] = 'invalid file path';
 					debug_log(__METHOD__
 						." response->msg: $response->msg" . PHP_EOL
 						.' file_full_path: ' .$file_full_path
@@ -238,6 +237,7 @@ class tool_import_dedalo_csv extends tool_common {
 				}else{
 
 					$response->msg = 'Error. File exists but you don\'t have permissions to delete this file';
+					$response->errors[] = 'insufficient permissions';
 					debug_log(__METHOD__
 						." response->msg: $response->msg" . PHP_EOL
 						.' file_full_path: ' .$file_full_path
@@ -291,7 +291,8 @@ class tool_import_dedalo_csv extends tool_common {
 				$section_tipo		= $current_file_obj->section_tipo; // string like 'oh1'
 				$ar_columns_map		= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
 				$bulk_process_label	= $current_file_obj->bulk_process_label; // string like 'exported_oral-history_-1-oh1.csv'
-				// print the process_info
+
+				// CLI. print the process_info
 					if ( running_in_cli()===true ) {
 						$process_info->msg			= label::get_label('reading');
 						$process_info->current_file	= $current_file;

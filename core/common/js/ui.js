@@ -9,7 +9,7 @@
 		strip_tags,
 		prevent_open_new_window
 	} from '../../common/js/utils/index.js'
-	import {when_in_dom} from '../../common/js/events.js'
+	import {when_in_dom,dd_request_idle_callback,set_tool_event} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
@@ -25,6 +25,7 @@
 * UI
 */
 export const ui = {
+
 
 
 	/**
@@ -361,7 +362,7 @@ export const ui = {
 				class_name		: 'button close button_exit_edit show_on_active'
 			})
 			// click event
-			const fn_click = async function(e) {
+			const click_handler = async function(e) {
 				e.stopPropagation()
 
 				await ui.component.deactivate(instance)
@@ -372,7 +373,7 @@ export const ui = {
 					autoload	: autoload
 				})
 			}
-			button_close_node.addEventListener('click', fn_click)
+			button_close_node.addEventListener('click', click_handler)
 
 
 			return button_close_node;
@@ -696,23 +697,23 @@ export const ui = {
 										? component.node.content_data[0].querySelector('input, select')
 										: null;
 								if (first_input) {
-									setTimeout(function(){
-										if (component.active && first_input !== document.activeElement) {
+									dd_request_idle_callback(
+										() => {
+											if (component.active && first_input !== document.activeElement) {
 
-											// check another focus elements like q_operator
-											if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
-												return
+												// check another focus elements like q_operator
+												if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
+													return
+												}
+
+												first_input.focus()
 											}
-
-											first_input.focus()
 										}
-									}, 25)
+									)
 								}
 							}//end if (!already_focus)
 					}
 				}
-
-
 
 			// fix component as active
 				page_globals.component_active = component
@@ -1031,34 +1032,35 @@ export const ui = {
 						self.node.classList.remove('save_success')
 					}
 
-				setTimeout(()=>{
-
-					// success. add save_success class to component wrappers (green line animation)
-						if (self.node) {
-							self.node.classList.add('save_success')
-							// animationPlayState sets
-							self.node.style.animationPlayState			= 'running';
-							self.node.style.webkitAnimationPlayState	= 'running';
-						}
-
-					// remove save_success. after 2000 ms, remove wrapper class to avoid issues on refresh
-						setTimeout(()=>{
-
+				dd_request_idle_callback(
+					() => {
+						// success. add save_success class to component wrappers (green line animation)
 							if (self.node) {
-
-								// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
-								self.node.style.animationPlayState			= 'paused';
-								self.node.style.webkitAnimationPlayState	= 'paused';
-
-								// remove animation style
-								if (self.node.classList.contains('save_success')) {
-									self.node.classList.remove('save_success')
-								}
+								self.node.classList.add('save_success')
+								// animationPlayState sets
+								self.node.style.animationPlayState			= 'running';
+								self.node.style.webkitAnimationPlayState	= 'running';
 							}
 
-							resolve(true)
-						}, 2000)
-				}, 25)
+						// remove save_success. after 2000 ms, remove wrapper class to avoid issues on refresh
+							setTimeout(()=>{
+
+								if (self.node) {
+
+									// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
+									self.node.style.animationPlayState			= 'paused';
+									self.node.style.webkitAnimationPlayState	= 'paused';
+
+									// remove animation style
+									if (self.node.classList.contains('save_success')) {
+										self.node.classList.remove('save_success')
+									}
+								}
+
+								resolve(true)
+							}, 2000)
+					}
+				)//end dd_request_idle_callback
 			})
 		}//end exec_save_successfully_animation
 
@@ -1265,7 +1267,6 @@ export const ui = {
 						})
 					}
 
-
 				// tool_buttons_container
 					const tool_buttons_container = ui.create_dom_element({
 						element_type	: 'div',
@@ -1290,13 +1291,16 @@ export const ui = {
 						class_name		: 'button close white',
 						parent			: tool_header
 					})
-					button_close.addEventListener('click', function(){
+					const click_handler = (e) => {
+						e.stopPropagation()
+
 						if (prevent_open_new_window()===true) {
 							history.back();
 						}else{
 							window.close();
 						}
-					})
+					}
+					button_close.addEventListener('click', click_handler)
 			}//end if (mode!=='mini')
 
 			// content_data
@@ -1369,9 +1373,8 @@ export const ui = {
 				})
 				tool_button.insertAdjacentHTML('beforeend', tool_context.label)
 
-
 			// Events
-				tool_button.addEventListener('mousedown', function(e){
+				const click_handler = (e) => {
 					e.stopPropagation()
 
 					// open_tool (tool_common)
@@ -1379,8 +1382,9 @@ export const ui = {
 							tool_context	: tool_context,
 							caller			: self
 						})
-				})
-
+				}
+				tool_button.addEventListener('click', click_handler)
+				tool_button.addEventListener('mousedown', click_handler)
 
 			return tool_button
 		},//build_section_tool_button
@@ -1416,7 +1420,7 @@ export const ui = {
 				})
 
 			// Events
-				tool_button.addEventListener('mousedown', function(e){
+				const mousedown_handler = (e) => {
 					e.stopPropagation();
 
 					// open_tool (tool_common)
@@ -1424,7 +1428,8 @@ export const ui = {
 							tool_context	: tool_context,
 							caller			: self
 						})
-				})
+				}
+				tool_button.addEventListener('mousedown', mousedown_handler)
 
 
 			return tool_button
@@ -1644,17 +1649,50 @@ export const ui = {
 
 		for (let i = 0; i < tools_length; i++) {
 
+			const tool_context = tools[i]
+
 			// avoid self tool inside tool
-			if (self.caller && self.caller.model===tools[i].name) {
+			if (self.caller && self.caller.model===tool_context.name) {
 				continue;
 			}
 
-			const tool_node = (self.type==='component')
-				? ui.tool.build_component_tool_button(tools[i], self)
-				: ui.tool.build_section_tool_button(tools[i], self)
+			const tool_button = (self.type==='component')
+				? ui.tool.build_component_tool_button(tool_context, self)
+				: ui.tool.build_section_tool_button(tool_context, self)
 
-			if (tool_node) {
-				buttons_container.appendChild(tool_node)
+			if (tool_button) {
+				buttons_container.appendChild(tool_button)
+
+				// button events. Configured in tool properties. See tool_ontology definition
+					// sample:
+					// "events": [
+					// 	{
+					// 	  "type": "keyup",
+					// 	  "action": "click",
+					// 	  "validate": [
+					// 		{
+					// 		  "key": "ctrlKey",
+					// 		  "value": true
+					// 		},
+					// 		{
+					// 		  "key": "key",
+					// 		  "value": "s"
+					// 		}
+					// 	  ]
+					// 	}
+					// ]
+					if (tool_context.properties?.events) {
+						const tool_events_length = tool_context.properties.events.length
+						for (let i = 0; i < tool_events_length; i++) {
+
+							const tool_event = tool_context.properties.events[i]
+
+							set_tool_event({
+								tool_event	: tool_event,
+								tool_button	: tool_button
+							})
+						}
+					}
 			}
 		}
 
@@ -1729,6 +1767,7 @@ export const ui = {
 
 	/**
 	* TOGGLE_INSPECTOR
+	* Show/hide the section inspector when it exists
 	* @return void
 	*/
 	toggle_inspector : () => {
@@ -1737,6 +1776,9 @@ export const ui = {
 		if (inspector_wrapper) {
 
 			const wrapper_section = document.querySelector('.wrapper_section.edit')
+			if (!wrapper_section) {
+				return
+			}
 
 			if (inspector_wrapper.classList.contains('hide')) {
 				inspector_wrapper.classList.remove('hide')
@@ -1950,14 +1992,30 @@ export const ui = {
 
 	/**
 	* ATTACH_TO_MODAL
-	* Insert wrapper into a modal box
+	* Insert content into a dd-modal box
+	* Generic point of rendering a modal. Used by components, sections, widgets and tools to display
+	* temporary information such as options, validation, confirmation dialogs, etc.
+	* It is desirable to use the generic options, but if you need to customize the modal,
+	* set styles in callback for safe implementation.
 	* @param object options
 	* {
-	* 	header	: node|string,
-	* 	body	: node|string,
-	* 	footer	: node|string,
-	* 	size	: string
-	* 	remove_overlay : bool
+	* 	header : HTMLElement|string
+	* 	body : HTMLElement|string
+	* 	footer : HTMLElement|string
+	* 	size : string (normal|big|small)
+	* 	modal_parent: HTMLElement
+	* 	remove_overlay : bool (default false)
+	* 	minimizable: bool (default true)
+	* 	on_close: function|null (fired on modal close)
+	* 	callback : function|null (fired on dd-modal node is ready in DOM)
+	* }
+	* @info
+	* To set a custom width, add a callback as
+	* {
+	*	...
+	* 	callback : (dd_modal) => {
+	*		dd_modal.modal_content.style.width = '34rem'
+	* 	}
 	* }
 	* @return HTMLElement modal_container
 	*/
@@ -1993,10 +2051,10 @@ export const ui = {
 				: null
 			const size				= options.size || 'normal' // string size='normal'
 			const modal_parent		= options.modal_parent || document.querySelector('.wrapper.page') || document.body
-			const remove_overlay	= options.remove_overlay || false
+			const remove_overlay	= options.remove_overlay ?? false
 			const minimizable		= options.minimizable ?? true
-			const on_close			= options.on_close || null
-			const callback			= options.callback || null
+			const on_close			= options.on_close ?? null
+			const callback			= options.callback ?? null
 
 		// previous_component_selection. Current active component before open the modal
 			const previous_component_selection = page_globals.component_active || null
@@ -2065,6 +2123,10 @@ export const ui = {
 			}
 
 		// size. Modal special features based on property 'size'
+			// If you need a custom size, set options callback (when node is really accessible) as
+			// callback	: (dd_modal) => {
+			//		dd_modal.modal_content.style.width = '20rem'
+			// }
 			switch(size) {
 				case 'big' : {
 					// hide contents to avoid double scrollbars
@@ -2094,6 +2156,7 @@ export const ui = {
 					modal_container._showModalSmall();
 					break;
 
+				case 'normal' :
 				default :
 					modal_container._showModal();
 					break;
@@ -2101,7 +2164,9 @@ export const ui = {
 
 		// remove on close
 			modal_container.on_close = () => {
+
 				modal_container.remove()
+
 				if (typeof on_close==='function') {
 					// exec callback
 					on_close()
@@ -2113,7 +2178,7 @@ export const ui = {
 				}
 			}
 
-		// callback
+		// callback. Here the modal_container is ready and you can set styles safely
 			if (callback && typeof callback=='function') {
 				callback(modal_container)
 			}
@@ -2848,7 +2913,7 @@ export const ui = {
 			class_name		: 'exit_button',
 			parent			: node
 		})
-		const fn_click = function(e) {
+		const click_handler = function(e) {
 			e.stopPropagation()
 
 			node.classList.remove('fullscreen')
@@ -2858,7 +2923,7 @@ export const ui = {
 				exit_callback()
 			}
 		}
-		exit_button.addEventListener('click', fn_click)
+		exit_button.addEventListener('click', click_handler)
 
 		// set exit event
 		const exit_fullscreen = function(e) {
@@ -2983,12 +3048,16 @@ export const ui = {
 				}
 
 				// Replace container or placeholder with result_node
-				if (replace_container) {
-					container.replaceWith(result_node);
-				} else {
-					// default
-					container_placeholder.replaceWith(result_node);
-				}
+				requestAnimationFrame(
+					() => {
+						if (replace_container) {
+							container.replaceWith(result_node);
+						} else {
+							// default
+							container_placeholder.replaceWith(result_node);
+						}
+					}
+				)
 
 				return result_node;
 			} catch (error) {

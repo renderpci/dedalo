@@ -192,12 +192,11 @@ paginator.prototype.destroy = async function() {
 */
 paginator.loading_total_status = null
 paginator.prototype.get_total = async function() {
-	// const t0 = performance.now()
 
 	const self = this
 
 	// queue. Prevent double resolution calls to API
-		if (paginator.loading_total_status==='resolving') {
+		if (self.loading_total_status==='resolving') {
 			return new Promise(function(resolve){
 				setTimeout(function(){
 					resolve( self.get_total() )
@@ -205,17 +204,11 @@ paginator.prototype.get_total = async function() {
 			})
 		}
 
-	paginator.loading_total_status = 'resolving'
-
-	// const total = (Boolean(this.caller.total && typeof this.caller.total.then==="function"))
-	// const total = (this.caller.total && typeof this.caller.total==="function")
-	// 	? await this.caller.total()
-	// 	: this.caller.total
+	self.loading_total_status = 'resolving'
 
 	const total = await self.caller.get_total()
 
-	paginator.loading_total_status = 'resolved'
-
+	self.loading_total_status = 'resolved'
 
 	// short vars
 		const limit				= self.get_limit()
@@ -238,9 +231,6 @@ paginator.prototype.get_total = async function() {
 		self.offset_prev		= (offset>limit) ? offset - limit : 0
 		self.offset_next		= offset + limit
 		self.offset_last		= limit * (self.total_pages -1)
-
-	// debug
-		// console.log("))) __Time to get_total", self.caller.model, self.caller.tipo, "(ms):", performance.now()-t0);
 
 
 	return total

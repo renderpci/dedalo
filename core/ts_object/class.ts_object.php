@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS TS_OBJECT
 * Manage thesaurus hierarchical elements. Every element is a section used as thesaurus term
@@ -109,86 +108,26 @@ class ts_object {
 			}//end if (!isset($ar_children[0]))
 
 		// If element exists (section_list_thesaurus) we get element 'properties' JSON value as array
-			if ( !empty($ar_properties) ) {
+			if ( isset($ar_properties->show) && isset($ar_properties->show->ddo_map) ) {
 
-				// DES
-					// # SUBSTITUTION : When is set $this->options->model as true, we substitute structure properties link_children with link_children_model
-					// # for look children in other hierarchy component children
-					// if (isset($this->options->model) && $this->options->model===true) {
-					// 	foreach ($ar_elements as $key => $value_obj) {
-					// 		if ($value_obj->type==='link_children') {
-					// 			unset($ar_elements[$key]);
-					// 		}elseif ($value_obj->type==='link_children_model') {
-					// 			$value_obj->type = 'link_children';
-					// 		}
-					// 	}
-					// }
+				$ddo_map = $ar_properties->show->ddo_map;
+				foreach ($ddo_map as $current_ddo) {
 
-					// [
-					//   {
-					//     "tipo": "hierarchy5",
-					//     "type": "term"
-					//   },
-					//   {
-					//     "tipo": "hierarchy45",
-					//     "type": "link_children"
-					//   },
-					//   {
-					//     "tipo": "hierarchy59",
-					//     "type": "link_children_model"
-					//   }
-					// ]
+					$type = $current_ddo->type ?? null;
 
-					// if (isset($this->options->model) && $this->options->model===true) {
-
-					// 	$element_children = new stdClass();
-					// 		$element_children->type = 'link_children';
-					// 		$element_children->tipo = null;
-
-					// 		foreach ($ar_properties as $key => $value_obj) {
-					// 			if($value_obj->type === 'link_children_model'){
-					// 				$element_children->tipo = $value_obj->tipo;
-					// 				break;
-					// 			}
-					// 		}
-
-					// 	$ar_elements = array();
-					// 	foreach ($ar_properties as $key => $value_obj) {
-					// 		if($value_obj->type === 'link_children' || $value_obj->type === 'link_children_model'){
-					// 			#unset($ar_properties[$key]);
-					// 		}else{
-					// 			$ar_elements[] = $value_obj;
-					// 		}
-					// 	}
-
-					// 	$ar_elements[] = $element_children;
-					// }else{
-					// 	$ar_elements = $ar_properties;
-					// }
-					// debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
-
-				foreach ($ar_properties as $value_obj) {
-
-					$type = $value_obj->type ?? null;
-
-					// link_children. optional model variations
-						if ($model===false && ($type==='link_childrens_model' || $type==='link_children_model')) {
-							// unset($ar_properties[$key]);
+					// link children exception
+						if ($model===false && $type==='link_children_model') {
 							continue;
 						}else if ($model===true) {
-							if (($type==='link_childrens' || $type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+							if ( $type==='link_children' && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo===DEDALO_ONTOLOGY_SECTION_TIPO) ) {
 								// unset($ar_properties[$key]);
 								continue;
-							}else if ($type==='link_childrens_model' || $type==='link_children_model') {
-								$value_obj->type = 'link_children';
+							}else if ( $type==='link_children_model' ) {
+								$current_ddo->type = 'link_children';
 							}
 						}
-						if ($type==='link_childrens_model' || $type==='link_childrens') {
-							$value_obj->type = 'link_children';
-						}
-
 					// add
-					$ar_elements[] = $value_obj;
+					$ar_elements[] = $current_ddo;
 				}//end foreach ($ar_properties as $key => $value_obj)
 				// $ar_elements = array_values($ar_properties);
 			}
@@ -558,7 +497,7 @@ class ts_object {
 	*/
 	public static function is_indexable( string $section_tipo, int|string $section_id ) : bool {
 
-		if (strpos($section_tipo, 'hierarchy')===0) {
+		if (strpos($section_tipo, 'hierarchy')===0 || strpos($section_tipo, 'ontology')===0) {
 			// Root hierarchies are always false
 			return false;
 		}
@@ -673,13 +612,16 @@ class ts_object {
 	* @param object $locator
 	* @return array|null $final_value
 	*/
-	public static function get_term_dato_by_locator(object $locator) : ?array {
+	public static function get_term_dato_by_locator( object $locator ) : ?array {
 
 		// check valid object
 			if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
 				if(SHOW_DEBUG===true) {
 					#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
-					debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
+					debug_log(__METHOD__
+						." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !"
+						, logger::ERROR
+					);
 				}
 				return null;
 			}
@@ -728,7 +670,7 @@ class ts_object {
 	*
 	* @return string|null $valor
 	*/
-	public static function get_term_by_locator(object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false) : ?string {
+	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) : ?string {
 
 		$valor = null;
 
@@ -736,7 +678,10 @@ class ts_object {
 			if (!property_exists($locator, 'section_tipo')) {
 				if(SHOW_DEBUG===true) {
 					#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
-					debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
+					debug_log(__METHOD__
+						." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !"
+						, logger::ERROR
+					);
 				}
 				return $valor; // null
 			}
@@ -829,7 +774,7 @@ class ts_object {
 	* Alias of get_term_by_locator
 	* @return string|null $valor
 	*/
-	public function resolve_locator(object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false) {
+	public function resolve_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) {
 		return ts_object::get_term_by_locator($locator, $lang, $from_cache);
 	}//end resolve_locator
 
@@ -932,7 +877,7 @@ class ts_object {
 	* }
 	* @return object $count_data_group_by
 	*/
-	public function get_count_data_group_by(object $component, object $section_list_thesaurus_item) : object {
+	public function get_count_data_group_by( object $component, object $section_list_thesaurus_item ) : object {
 
 		// cache
 			static $resolved_child;

@@ -1,7 +1,9 @@
 <?php
+declare(strict_types=1);
 /**
-* Ffmpeg
+* CLASS Ffmpeg
 * Manages audiovisual processing actions using FFMPEG library
+*
 */
 final class Ffmpeg {
 
@@ -24,6 +26,74 @@ final class Ffmpeg {
 
 		return DEDALO_AV_FFMPEG_PATH;
 	}//end get_ffmpeg_installed_path
+
+
+
+	/**
+	* GET_FFPROVE_INSTALLED_PATH
+	* @return string
+	*/
+	public static function get_ffprove_installed_path() : string {
+
+		return DEDALO_AV_FFPROBE_PATH;
+	}//end get_ffprove_installed_path
+
+
+
+	/**
+	* GET_VERSION
+	* Get binary version
+	* @return string
+	*/
+	public static function get_version() : string {
+
+		$cmd  = Ffmpeg::get_ffmpeg_installed_path();
+		$cmd .= ' -version | sed -n "s/ffmpeg version \([-0-9.]*\).*/\1/p;" ';
+
+		$version = trim(shell_exec($cmd));
+
+		return $version;
+	}//end get_version
+
+
+
+	/**
+	* GET_FFPROVE_VERSION
+	* Get binary version
+	* @return string
+	*/
+	public static function get_ffprove_version() : string {
+
+		$cmd  = Ffmpeg::get_ffprove_installed_path();
+		$cmd .= ' -version | sed -n "s/ffprobe version \([-0-9.]*\).*/\1/p;" ';
+
+		$version = trim(shell_exec($cmd));
+
+		return $version;
+	}//end get_ffprove_version
+
+
+
+	/**
+	* CHECK_LIB
+	* Checks if given library is installed with ffmpeg
+	* like 'libx264'
+	* @return string
+	*/
+	public static function check_lib( string $name ) : bool {
+
+		$cmd  = Ffmpeg::get_ffmpeg_installed_path();
+		$cmd .= ' -version';
+
+		$version = shell_exec($cmd);
+
+		$search = "--enable-{$name}";
+		preg_match('/' . $search . '/', $version, $output_array);
+
+		$result = !empty($output_array);
+
+		return $result;
+	}//end check_lib
 
 
 
@@ -51,7 +121,7 @@ final class Ffmpeg {
 
 	/**
 	* GET_AR_SETTINGS
-	* Array list of setting files inside dir 'ffmpeg_settings'
+	* Array list of setting files inside dir '/dedalo/core/media_engine/ffmpeg_settings'
 	* @return array|null $ar_settings
 	*/
 	public static function get_ar_settings() : ?array {
@@ -1125,7 +1195,9 @@ final class Ffmpeg {
 	*/
 	public static function get_media_attributes( string $source_file ) : ?object {
 
-		$command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -print_format json -show_format ' . $source_file . ' 2>&1';
+		$ffprove_path = Ffmpeg::get_ffprove_installed_path();
+
+		$command = $ffprove_path . ' -v quiet -print_format json -show_format ' . $source_file . ' 2>&1';
 		$output  = json_decode( shell_exec($command) );
 
 		return $output;
@@ -1178,9 +1250,15 @@ final class Ffmpeg {
 				return $media_streams_cache[$key];
 			}
 
+		// ffprove_path
+			$ffprove_path = Ffmpeg::get_ffprove_installed_path();
+
 		// exec command
-			$command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
-			$output  = json_decode( shell_exec($command) );
+			$command	= $ffprove_path . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
+			$result		= shell_exec($command);
+			$output		= !empty($result)
+				? json_decode( $result )
+				: null;
 
 		// cache
 			$media_streams_cache[$key] = $output;

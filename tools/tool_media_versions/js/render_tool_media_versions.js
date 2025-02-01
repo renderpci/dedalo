@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {bytes_format, download_file, open_window} from '../../../core/common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -958,7 +959,7 @@ const render_build_version = function(quality, self) {
 								build_autoload : false
 							})
 						}else{
-							// check again after 5 sec
+							// check again after 2 sec
 							self.timer = setTimeout(async function(){
 								check_file()
 							}, 2000)
@@ -966,11 +967,13 @@ const render_build_version = function(quality, self) {
 					}
 					check_file()
 				}else{
-					setTimeout(async function(){
-						self.refresh({
-							build_autoload : false
-						})
-					}, 1)
+					dd_request_idle_callback(
+						() => {
+							self.refresh({
+								build_autoload : false
+							})
+						}
+					)
 				}
 			}
 			self.node.classList.remove('loading')

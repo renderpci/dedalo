@@ -66,6 +66,14 @@ class activity_v5_to_v6 extends v5_to_v6 {
 				$dato->components->dd545 = $dato->components->dd545 ?? (object)['dato' => new StdClass()];
 				$activity_what_dato = $dato->components->dd545->dato->{DEDALO_DATA_NOLAN} ?? null;
 				if (!empty($activity_what_dato)) {
+
+					if(is_array($activity_what_dato)){
+						$actv_current_section_id = $activity_what_dato[0]->section_id ?? null;
+						$activity_what_dato = !empty($actv_current_section_id)
+							? 'dd' . $actv_current_section_id
+							: 'invalid';
+					}
+
 					if (isset(self::$what_conversion_values[$activity_what_dato])) {
 
 						$new_section_id = self::$what_conversion_values[$activity_what_dato];

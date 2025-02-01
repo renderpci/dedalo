@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * DD_DATE CLASS
 * Build dd_date objects like common dates but without restrictions/limitations of
@@ -1001,6 +1000,22 @@ class dd_date extends stdClass {
 
 		return $unix_timestamp;
 	}//end get_now_as_unix_timestamp
+
+
+
+	/**
+	* GET_NOW_AS_ISO_TIMESTAMP
+	* Get current time and return it as ISO timestamp
+	* ex: 2024-12-04T10:57:57+01:00
+	* @return string $iso_timestamp
+	*/
+	public static function get_now_as_iso_timestamp() : string {
+
+		$datetime = new DateTime();
+		$iso_timestamp	= $datetime->format('c');
+
+		return $iso_timestamp;
+	}//end get_now_as_iso_timestamp
 
 
 

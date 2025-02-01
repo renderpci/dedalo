@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * DD_COMPONENT_PORTAL_API
 * Manage API REST data flow of the component with Dédalo
@@ -39,7 +39,7 @@ final class dd_component_portal_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
-				$response->error	= null;
+				$response->errors	= [];
 
 		// source
 			$source			= $rqo->source;

@@ -1,8 +1,7 @@
-<?php
-// declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * RecordDataBoundObject
-* Connect with Ontology an matrix_time_machine tables in PostgreSQL:
+* Connect with Ontology tables in PostgreSQL:
 * Note that, for speed, all DB
 * 	jer_dd
 * 		id	integer Auto Increment [nextval('jer_dd_id_seq')]
@@ -18,13 +17,7 @@
 *		relaciones	text NULL
 *		propiedades	text NULL
 *		properties	jsonb NULL
-*
-* 	matrix_descriptors_dd
-* 		id	integer Auto Increment [nextval('matrix_descriptors_dd_id_seq')]
-*		parent	character varying(32)
-*		dato	text NULL
-*		tipo	character varying(8)
-*		lang	character varying(8)
+* 		term jsonb NULL
 *
 *	main_dd
 * 		id	integer Auto Increment [nextval('main_dd_id_seq')]
@@ -89,40 +82,6 @@ abstract class RecordDataBoundObject {
 	*/
 	private function get_connection() : PgSql\Connection|bool {
 
-		$ontology_tables = [
-			'jer_dd',
-			'matrix_descriptors_dd',
-			'main_dd'
-		];
-
-		// ONTOLOGY_DB case. Used to easy layout design in master
-			if (defined('ONTOLOGY_DB') && true===in_array($this->strTableName, $ontology_tables)) {
-
-				static $ontology_pg_conn;
-				if(isset($ontology_pg_conn)) {
-					return($ontology_pg_conn);
-				}
-
-				$ontology_pg_conn = DBi::_getConnection(
-					ONTOLOGY_DB['DEDALO_HOSTNAME_CONN'], // host
-					ONTOLOGY_DB['DEDALO_USERNAME_CONN'], // user
-					ONTOLOGY_DB['DEDALO_PASSWORD_CONN'], // password
-					ONTOLOGY_DB['DEDALO_DATABASE_CONN'], // database name
-					ONTOLOGY_DB['DEDALO_DB_PORT_CONN'], // port
-					ONTOLOGY_DB['DEDALO_SOCKET_CONN'], // socket
-					false // use cache
-				);
-				if($ontology_pg_conn===false) {
-					debug_log(__METHOD__
-						." Invalid DDBB connection. Unable to connect (52-2)"
-						, logger::ERROR
-					);
-					throw new Exception("Error. Could not connect to database (52-2)", 1);
-				}
-
-				return $ontology_pg_conn;
-			}
-
 		$connection = DBi::_getConnection(
 			DEDALO_HOSTNAME_CONN, // string host
 			DEDALO_USERNAME_CONN, // string user
@@ -167,8 +126,9 @@ abstract class RecordDataBoundObject {
 	/**
 	* SET_DATO :
 	* Set dato unified method (JSON)
+	* @param mixed $dato
 	*/
-	public function set_dato($dato, bool $raw=false) {
+	public function set_dato( mixed $dato ) : void {
 
 		// Always set dato as modified
 		$this->arModifiedRelations['dato'] = 1;
@@ -299,7 +259,7 @@ abstract class RecordDataBoundObject {
 					//     "propiedades": "{\r\n  \"inverse_relations\": false\r\n}",
 					//     "properties": "{\"inverse_relations\": false}"
 					// }
-				if($row===false)	{
+				if ($row===false) {
 					// if(SHOW_DEBUG===true) {
 					// 	// dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
 					// 	// throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);
@@ -338,7 +298,6 @@ abstract class RecordDataBoundObject {
 		// Fix loaded state
 			$this->blIsLoaded = true;
 
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
@@ -365,12 +324,11 @@ abstract class RecordDataBoundObject {
 	* SAVE
 	* Update current record
 	* @return mixed $this->ID
-	* 	string|bool
+	* 	string|false
 	*/
 	public function Save() {
 
 		# SAVE UPDATE
-		#if(isset($this->ID) && $this->ID>0 && $this->force_insert_on_save!=true) {
 		if(isset($this->ID) && strlen($this->ID)>0 && $this->force_insert_on_save!==true) {
 
 			$strQuery		= ' UPDATE "'.$this->strTableName.'" SET ' ;
@@ -378,7 +336,7 @@ abstract class RecordDataBoundObject {
 
 			foreach($this->arRelationMap as $key => $value) {
 
-				$actualVal = & $this->$value ;
+				$actualVal = & $this->$value;
 
 				if(array_key_exists($value, $this->arModifiedRelations)) {
 
@@ -393,9 +351,7 @@ abstract class RecordDataBoundObject {
 					}else if(is_int($current_val)) { // changed  from is_numeric to is_int (06-06-2016)
 						$strQuery_set .= "\"$key\" = $current_val, ";
 					}else{
-						#$strQuery_set .= "\"$key\" = '".pg_escape_string($current_val)."', ";	# Escape the text data
 						$strQuery_set .= "\"$key\" = " . pg_escape_literal($this->get_connection(), $current_val) . ", ";
-						#$strQuery_set .= "\"$key\" = '".$current_val."', ";	# Escape the text data
 					}
 				}
 			}
@@ -408,7 +364,6 @@ abstract class RecordDataBoundObject {
 					dump($strQuery, ' strQuery');
 				}
 				trigger_error($msg);
-				#throw new Exception($msg, 1); #die($msg);
 
 				// Because is not an error, only a impossible save query, notify and return normally
 				return $this->ID;
@@ -459,10 +414,16 @@ abstract class RecordDataBoundObject {
 							$actualVal = json_handler::encode($actualVal);
 						}
 
-						$strValueList .= (is_int($actualVal) && $this->strTableName!=='matrix_time_machine')
-							? $actualVal . ', '
-							// : "'".pg_escape_string($this->get_connection(), (string)$actualVal)."', "; // Escape the text data
-							: pg_escape_literal($this->get_connection(), $actualVal) . ', '; // Escape the text data
+						// $strValueList .= (is_int($actualVal) && $this->strTableName!=='matrix_time_machine')
+						// 	? $actualVal . ', '
+						// 	// : "'".pg_escape_string($this->get_connection(), (string)$actualVal)."', "; // Escape the text data
+						// 	: pg_escape_literal($this->get_connection(), $actualVal) . ', '; // Escape the text data
+
+						$safe_value = is_string($actualVal)
+							? pg_escape_literal($this->get_connection(), $actualVal) // Escape the text data
+							: $actualVal;
+
+						$strValueList .= $safe_value . ', ';
 					}
 				}
 			}
@@ -502,7 +463,7 @@ abstract class RecordDataBoundObject {
 				);
 				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
-					throw new Exception("Error Processing Request (1-b): ".pg_last_error(DBi::_getConnection()), 1);
+					throw new Exception("Error Processing Request (1-b): ". pg_last_error(DBi::_getConnection()), 1);
 				}
 			}
 			// Fix new received id
@@ -570,6 +531,10 @@ abstract class RecordDataBoundObject {
 		// matrix_table. Optionally change table temporally for search
 			if (!empty($matrix_table)) {
 				$this->strTableName = $matrix_table;
+			}else{
+				// forces to recalculate the table name
+				// Note that in recovery_mode changes on the fly
+				$this->strTableName = $this->defineTableName();
 			}
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;

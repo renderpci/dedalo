@@ -133,6 +133,7 @@ const get_content_value = (i, current_value, self) => {
 			})
 		// keydown event
 			input.addEventListener('keydown', function(e) {
+				e.stopPropagation()
 				if(e.key==='Tab'){
 					ui.component.deactivate(self)
 					return

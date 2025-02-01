@@ -1,10 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * AREA
 *
-*
 */
 class area extends area_common  {
+
 
 
 	static $ar_ts_children_all_areas_hierarchized;
@@ -58,8 +58,9 @@ class area extends area_common  {
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
+
 			// area_graph. check (if user do not have the Ontology updated)
-			$area_graph			= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_graph');
+			$area_graph = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_graph');
 			if (isset($area_graph[0])) {
 				$ar_root_areas[] = $area_graph[0];
 			}else{
@@ -68,9 +69,10 @@ class area extends area_common  {
 					, logger::WARNING
 				);
 			}
-			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
+			$ar_root_areas[] = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
+
 			// area_maintenance. Temporal check (if user do not have the Ontology updated, error is given here)
-			$area_maintenance	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_maintenance');
+			$area_maintenance = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_maintenance');
 			if (isset($area_maintenance[0])) {
 				$ar_root_areas[] = $area_maintenance[0]; // dd88
 			}else{
@@ -85,7 +87,19 @@ class area extends area_common  {
 				$ar_root_areas[] = DEDALO_AREA_MAINTENANCE_TIPO; // dd88
 			}
 
+			// area_development
 			$ar_root_areas[] = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development')[0];
+
+			// area_ontology. check (if user do not have the Ontology updated)
+			$area_ontology = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_ontology');
+			if (isset($area_ontology[0])) {
+				$ar_root_areas[] = $area_ontology[0];
+			}else{
+				debug_log(__METHOD__
+					. " WARNING. Model 'area_ontology' is not defined! Update your Ontology ASAP "
+					, logger::WARNING
+				);
+			}
 
 			$areas = [];
 			foreach ($ar_root_areas as $area_tipo) {
@@ -94,19 +108,13 @@ class area extends area_common  {
 					if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 
 				// areas. Get the JSON format of the ontology
-					$areas[] = ontology_legacy::tipo_to_json_item($area_tipo, [
-						'tipo'			=> true,
-						'tld'			=> false,
-						'is_model'		=> false,
-						'model'			=> true,
-						'model_tipo'	=> false,
-						'parent'		=> true,
-						'order'			=> false,
-						'translatable'	=> false,
-						'properties'	=> true,
-						'relations'		=> false,
-						'descriptors'	=> false,
-						'label'			=> true
+
+					$areas[] = RecordObj_dd::tipo_to_json_item($area_tipo, [
+						'tipo',
+						'model',
+						'parent',
+						'properties',
+						'label'
 					]);
 
 				// group_areas. get the all children areas and sections of current
@@ -118,19 +126,12 @@ class area extends area_common  {
 						// skip the areas_deny
 						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
 
-						$areas[] = ontology_legacy::tipo_to_json_item($child_area_tipo, [
-							'tipo'			=> true,
-							'tld'			=> false,
-							'is_model'		=> false,
-							'model'			=> true,
-							'model_tipo'	=> false,
-							'parent'		=> true,
-							'order'			=> false,
-							'translatable'	=> false,
-							'properties'	=> true,
-							'relations'		=> false,
-							'descriptors'	=> false,
-							'label'			=> true
+						$areas[] = RecordObj_dd::tipo_to_json_item($child_area_tipo, [
+							'tipo',
+							'model',
+							'parent',
+							'properties',
+							'label'
 						]);
 					}
 			}//end foreach ($ar_root_areas as $area_tipo)
@@ -152,17 +153,17 @@ class area extends area_common  {
 
 
 	/**
-	* GET AR CHILDREN AREAS RECURSIVE
+	* GET_AR_CHILDREN_AREAS_RECURSIVE
 	* Get all children areas (and sections) of current area (example: area_root)
 	* Look structure thesaurus for find children with valid model name
 	* @see get_ar_ts_children_areas
 	*
 	* @param $terminoID
 	*	tipo (First tipo is null in recursion)
-	* @return $ar_ts_children_areas
+	* @return array $ar_ts_children_areas
 	*	array recursive of thesaurus structure children filtered by accepted model name
 	*/
-	protected static function get_ar_children_areas_recursive(string $terminoID) : array {
+	protected static function get_ar_children_areas_recursive( string $terminoID ) : array {
 
 		// default value
 		$ar_children_areas_recursive = [];
@@ -206,7 +207,7 @@ class area extends area_common  {
 
 
 	/**
-	* AREA_TO_REMOVE
+	* GET_CONFIG_AREAS
 	* Read file 'config_areas.php' from config and set
 	* areas_deny and areas_allow array values
 	* @return object $config_areas

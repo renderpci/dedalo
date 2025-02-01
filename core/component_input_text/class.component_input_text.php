@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_INPUT_TEXT
 * Manage specific component input text logic

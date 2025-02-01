@@ -109,25 +109,61 @@ const get_input_element_search = (i, current_value, self) => {
 			value			: current_value,
 			parent			: content_value
 		})
-		input.addEventListener('change', function() {
 
-			// parsed_value
-				const parsed_value = (input.value.length>0) ? input.value : null
+		// paste event
+			const paste_handler = (e) => {
+				e.preventDefault();
 
-			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: parsed_value
-				})
+				const paste = (e.clipboardData || window.clipboardData).getData("text");
+				if (paste) {
 
-			// update the instance data (previous to save)
-				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
-			// publish search. Event to update the dom elements of the instance
-				event_manager.publish('change_search_element', self)
-		})//end event change
+					const beats = paste.split('\n')
+					const beats_length = beats.length
+
+					if (beats_length<2) {
+						e.target.value = value;
+						return
+					}
+
+					const parts = []
+					for (let i = 0; i < beats_length; i++) {
+						const item = beats[i]
+						if (item && item.length) {
+							const el = parseInt(item.trim())
+							if (el && el>0) {
+								parts.push(el)
+							}
+						}
+					}
+
+					// change \n by , (paste list of section_id from import cases)
+					const value = parts.join(',')
+
+					e.target.value = value;
+				}
+			}
+			input.addEventListener('paste', paste_handler)
+
+		// change event
+			const change_handler = () => {
+				// parsed_value
+					const parsed_value = (input.value.length>0) ? input.value : null
+
+				// changed_data
+					const changed_data_item = Object.freeze({
+						action	: 'update',
+						key		: i,
+						value	: parsed_value
+					})
+
+				// update the instance data (previous to save)
+					self.update_data_value(changed_data_item)
+				// set data.changed_data. The change_data to the instance
+					// self.data.changed_data = changed_data
+				// publish search. Event to update the DOM elements of the instance
+					event_manager.publish('change_search_element', self)
+			}
+			input.addEventListener('change', change_handler)
 
 
 	return content_value

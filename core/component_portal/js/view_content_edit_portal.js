@@ -7,6 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
 		activate_autocomplete,
@@ -30,6 +31,9 @@ export const view_content_edit_portal = function() {
 /**
 * RENDER
 * Manages the component's logic and appearance in client side
+* @param object
+* 	component instance
+* @param object options
 * @return HTMLElement wrapper
 */
 view_content_edit_portal.render = async function(self, options) {
@@ -97,15 +101,18 @@ view_content_edit_portal.render = async function(self, options) {
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
 
-	// autocomplete
-		wrapper.addEventListener('click', function(e) {
+	// service autocomplete
+		const click_handler = (e) => {
 			e.stopPropagation()
-			setTimeout(function(){
-				if (self.active) {
-					activate_autocomplete(self, wrapper)
+			dd_request_idle_callback(
+				() => {
+					if (self.active) {
+						activate_autocomplete(self, wrapper)
+					}
 				}
-			}, 1)
-		})
+			)
+		}
+		wrapper.addEventListener('click', click_handler)
 
 
 	return wrapper
@@ -117,8 +124,9 @@ view_content_edit_portal.render = async function(self, options) {
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
 * @param object self
+* 	component instance
 * @param array ar_section_record
-* @return HTMLelement content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -164,6 +172,7 @@ const get_content_data = async function(self, ar_section_record) {
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_records
 * @param object self
+* 	component instance
 * @return array columns_map
 */
 const rebuild_columns_map = async function(self) {

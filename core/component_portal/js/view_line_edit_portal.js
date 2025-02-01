@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {
 		render_column_component_info,
@@ -13,7 +14,14 @@
 		get_buttons,
 		render_references,
 	} from './render_edit_component_portal.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
+
+	import {
+		on_dragstart_mosaic,
+		on_dragover,
+		on_dragleave,
+		// on_dragend,
+		on_drop, // used to reorder inside the same portal
+	} from './drag_and_drop.js'
 
 
 
@@ -79,18 +87,21 @@ view_line_edit_portal.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// autocomplete
-		wrapper.addEventListener('click', function(e) {
+	// service autocomplete
+		const click_handler = (e) => {
 			e.stopPropagation()
-			setTimeout(function(){
-				if (self.active) {
-					activate_autocomplete(self, wrapper)
+			dd_request_idle_callback(
+				() => {
+					if (self.active) {
+						activate_autocomplete(self, wrapper)
+					}
 				}
-			}, 1)
-		})
+			)
+		}
+		wrapper.addEventListener('click', click_handler)
 
 	// change_mode
-		wrapper.addEventListener('dblclick', function(e) {
+		const dblclick_handler = (e) => {
 			e.stopPropagation()
 			e.preventDefault()
 
@@ -107,7 +118,6 @@ view_line_edit_portal.render = async function(self, options) {
 				: true // in inside a portal and the edit is not available
 
 			const change_mode = 'list'
-
 			const change_view = 'line'
 
 			// if the test get the component inside the main section do not perform the change mode
@@ -117,7 +127,8 @@ view_line_edit_portal.render = async function(self, options) {
 					view	: change_view
 				})
 			}
-		})//end event dblclick
+		}
+		wrapper.addEventListener('dblclick', dblclick_handler)
 
 
 	return wrapper
@@ -149,19 +160,48 @@ const get_content_data = async function(self, ar_section_record) {
 			// const row_item = no_records_node()
 			// fragment.appendChild(row_item)
 		}else{
-
-			const ar_promises = []
+			// The portal has data. We render the section_record instances
 			for (let i = 0; i < ar_section_record_length; i++) {
-				const render_promise = ar_section_record[i].render()
-				ar_promises.push(render_promise)
-			}
-			await Promise.all(ar_promises).then(function(values) {
-			  for (let i = 0; i < ar_section_record_length; i++) {
 
-				const section_record = values[i]
-				fragment.appendChild(section_record)
-			  }
-			});
+				const section_record = ar_section_record[i]
+
+				// render section_record and await to preserve the order
+				const section_record_node = await ar_section_record[i].render()
+
+				// drag and drop
+					// permissions control
+					// with read only permissions, remove drag and drop
+					if(self.permissions >= 2){
+						drag_and_drop({
+							section_record_node	: section_record_node,
+							paginated_key		: i,
+							total_records		: self.total,
+							locator 			: section_record.locator,
+							caller 				: self
+						})
+
+						// mouseenter event
+						const mouseenter_handler = (e) => {
+							e.stopPropagation()
+							// const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+							// event_manager.publish(event_id, this)
+							section_record_node.classList.add('mosaic_over')
+						}
+						section_record_node.addEventListener('mouseenter', mouseenter_handler)
+
+						// mouseleave event
+						const mouseleave_handler = (e) => {
+							e.stopPropagation()
+							// const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+							// event_manager.publish(event_id, this)
+							section_record_node.classList.remove('mosaic_over')
+						}
+						section_record_node.addEventListener('mouseleave', mouseleave_handler)
+					}
+
+				// add in synchronous sequential order
+				fragment.appendChild(section_record_node)
+			}//end for (let i = 0; i < ar_section_record_length; i++)
 		}//end if (ar_section_record_length===0)
 
 	// build references
@@ -256,14 +296,16 @@ view_line_edit_portal.render_column_id = function(options) {
 			class_name		: 'button_edit button_view_' + self.context.view,
 			parent			: fragment
 		})
-		button_edit.addEventListener('click', function(e) {
+		// click event
+		const click_handler = (e) => {
 			e.stopPropagation()
 			// edit_record_handler
 			self.edit_record_handler({
 				section_tipo	: section_tipo,
 				section_id		: section_id
 			})
-		})
+		}
+		button_edit.addEventListener('mousedown', click_handler)
 
 	// edit icon
 		const pen_title = SHOW_DEBUG
@@ -305,8 +347,8 @@ view_line_edit_portal.render_column_remove = function(options) {
 			element_type	: 'button',
 			class_name		: 'button_remove'
 		})
-		button_remove.addEventListener('click', fn_remove)
-		async function fn_remove(e) {
+		// click event
+		const click_handler = async (e) => {
 			e.stopPropagation()
 
 			// stop if the user does not confirm
@@ -323,16 +365,6 @@ view_line_edit_portal.render_column_remove = function(options) {
 						? next_offset
 						: 0
 				}
-			// delete_dataframe_record
-				await delete_dataframe({
-					self			: self,
-					section_id		: self.section_id,
-					section_tipo	: self.section_tipo,
-					section_id_key	: section_id,
-					// tipo_key		: self.tipo,
-					paginated_key	: paginated_key,
-					row_key			: false,
-				})
 
 
 			// fire the unlink_record method
@@ -342,7 +374,8 @@ view_line_edit_portal.render_column_remove = function(options) {
 					row_key			: row_key,
 					section_id		: section_id
 				})
-		}//end fn_remove
+		}
+		button_remove.addEventListener('click', click_handler)
 
 	// remove_icon
 		ui.create_dom_element({
@@ -355,6 +388,32 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 	return button_remove
 }//end render_column_remove
+
+
+/**
+* DRAG_AND_DROP
+* Set section_record_node ready to drag and drop
+* Mosaic use his own node to be draggable and droppable
+* also it uses the drag node of default behavior (dependent of section_id node)
+* but doesn't use the drop node (dependent of section_id node)
+* @param object options
+* @return bool
+*/
+const drag_and_drop = function(options) {
+
+	// options
+		const node	= options.section_record_node
+
+	// set properties/events
+		node.draggable = true
+		node.classList.add('draggable')
+		node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
+		node.addEventListener('dragover',function(e){on_dragover(this, e, options)})
+		node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
+		node.addEventListener('drop',function(e){on_drop(this, e, options)})
+
+	return true
+}//end drag_and_drop
 
 
 

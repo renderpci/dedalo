@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * DD_COMPONENT_AV_API
 * Manage API REST data flow of the component with Dédalo
@@ -54,7 +54,7 @@ final class dd_component_av_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
-				$response->error	= null;
+				$response->errors	= [];
 
 		// component
 			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -228,7 +228,7 @@ final class dd_component_av_api {
 			$response = new stdClass();
 				$response->result	= $media_streams;
 				$response->msg		= ['OK. Request done'];
-				$response->error	= null;
+				$response->errors	= [];
 
 
 		return $response;
