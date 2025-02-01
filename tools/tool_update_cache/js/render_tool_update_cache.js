@@ -141,10 +141,13 @@ const get_content_data = async function(self) {
 			// API request
 				const api_response = await self.update_cache()
 
-			// response error case
+			// response failed case
 				if (api_response.result===false) {
 					button_apply.classList.remove('loading')
 					response_message.innerHTML = api_response.msg || 'Unknown error. Perhaps a timeout occurred'
+					if (api_response.errors?.length) {
+						alert(api_response.errors.join(' | '));
+					}
 					return
 				}
 

@@ -1,5 +1,5 @@
-<?php
-/*
+<?php declare(strict_types=1);
+/**
 * CLASS DDO_MAP_OBJECT
 * Defines object with normalized properties and checks
 *
@@ -69,7 +69,7 @@ class ddo_map_object extends stdClass {
 	* @return void
 	*/
 	public function set_tipo(string $value) : void {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
 		}
 		$this->tipo = $value;
@@ -86,7 +86,7 @@ class ddo_map_object extends stdClass {
 		if (!isset($this->model)) {
 			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
 		}
-		if(strpos($this->model, 'area')!==0 && !RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(strpos($this->model, 'area')!==0 && !get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
 		}
 		$this->section_tipo = $value;
@@ -100,7 +100,7 @@ class ddo_map_object extends stdClass {
 	* @return void
 	*/
 	public function set_parent(string $value) : void {
-		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+		if(!get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
 		}
 		$this->parent = $value;

@@ -116,11 +116,6 @@ area_maintenance.prototype.build = async function(autoload=true) {
 					return false
 				}
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					console.log('area_maintenance build api_response:', api_response);
-				}
-
 			// set the result to the datum
 				self.datum	= api_response.result
 
@@ -193,30 +188,6 @@ area_maintenance.prototype.render = async function(options={}) {
 
 	return result_node
 }//end render
-
-
-
-/**
-* LOAD_JSON_EDITOR_FILES
-* @return Promise
-*/
-export const load_json_editor_files = function() {
-
-	// load dependencies js/css
-	const load_promises = []
-
-	const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
-	load_promises.push( common.prototype.load_style(lib_css_file) )
-
-	// load_promises.push( common.prototype.load_script(lib_js_file) )
-	const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
-	load_promises.push( load_promise )
-
-	const load_all = Promise.all(load_promises)
-
-
-	return load_all
-}//end load_json_editor_files
 
 
 

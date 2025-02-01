@@ -41,8 +41,8 @@
 
 		// short vars
 			$section_id	= $this->get_section_id();
-			$limit		= $this->pagination->limit;
-			$offset		= $this->pagination->offset;
+			$limit		= $this->pagination->limit ?? 10;
+			$offset		= $this->pagination->offset ?? 0;
 
 		$dato = $this->get_dato();
 

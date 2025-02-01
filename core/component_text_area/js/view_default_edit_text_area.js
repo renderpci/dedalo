@@ -10,6 +10,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {pause, url_vars_to_object} from '../../common/js/utils/index.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
 	import {render_draw} from './render_draw.js'
 
@@ -261,28 +262,30 @@ const get_content_value = (i, current_value, self) => {
 				)
 
 			// tag selected case (URL) Normally from dd_grid indexation tag button
-				setTimeout(function() {
-					const url_vars = url_vars_to_object(window.location.search)
-					const raw_data = url_vars.raw_data ?? null
-					if(raw_data) {
+				dd_request_idle_callback(
+					() => {
+						const url_vars = url_vars_to_object(window.location.search)
+						const raw_data = url_vars.raw_data ?? null
+						if(raw_data) {
 
-						const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
-						const url_data_object	= JSON.parse(url_data_string)
-						const tag_id			= url_data_object.caller_options?.tag_id || null
-						if(tag_id) {
+							const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
+							const url_data_object	= JSON.parse(url_data_string)
+							const tag_id			= url_data_object.caller_options?.tag_id || null
+							if(tag_id) {
 
-							// tag. Get the tag object selecting the tag into the text_area editor (get the tag attributes)
-							// needed to get the tag state, to show the tag info inside the tool_indexation
-							const tag = current_service_text_editor.get_view_tag_attributes({
-								type	: 'indexIn',
-								tag_id	: tag_id
-							})
+								// tag. Get the tag object selecting the tag into the text_area editor (get the tag attributes)
+								// needed to get the tag state, to show the tag info inside the tool_indexation
+								const tag = current_service_text_editor.get_view_tag_attributes({
+									type	: 'indexIn',
+									tag_id	: tag_id
+								})
 
-							// fire the event to select tag
-							event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag})
+								// fire the event to select tag
+								event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag})
+							}
 						}
 					}
-				}, 1)
+				)//end dd_request_idle_callback
 
 
 			return current_service_text_editor
@@ -299,22 +302,21 @@ const get_content_value = (i, current_value, self) => {
 			if (auto_init_editor===true) {
 
 				// activate now
-
 				value_container.classList.add('loading')
 				// use timeout only to force real async execution
-				setTimeout(function(){
-					init_current_service_text_editor()
-					// .then(()=>{
+				dd_request_idle_callback(
+					() => {
+						init_current_service_text_editor()
 						value_container.classList.remove('loading')
-					// })
-				}, 35)
+					}
+				)
 
 			}else{
 
 				// activate on user click
 
 				// click event
-				const fn_click_init = function(e) {
+				const click_handler = function(e) {
 					e.stopPropagation()
 
 					value_container.classList.add('loading')
@@ -331,9 +333,9 @@ const get_content_value = (i, current_value, self) => {
 						}
 					})
 					// once only. Remove event to prevent duplicates
-					content_value.removeEventListener('mousedown', fn_click_init)
-				}//end fn_click_init
-				content_value.addEventListener('mousedown', fn_click_init)
+					content_value.removeEventListener('mousedown', click_handler)
+				}//end click_handler
+				content_value.addEventListener('mousedown', click_handler)
 			}
 		}//end if (self.show_interface.read_only!==true)
 

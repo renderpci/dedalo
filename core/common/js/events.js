@@ -35,9 +35,6 @@ export const events_init = function() {
 			if (document.visibilityState==='hidden' && window.unsaved_data===true) {
 
 				await saving
-				// setTimeout(function(){
-				// 	console.log("saved:", saved);
-				// },100)
 			}
 		}
 
@@ -178,6 +175,7 @@ export const when_in_viewport = function(node, callback, once=true) {
 	);
 	observer.observe(node);
 
+
 	return observer
 }//end when_in_viewport
 
@@ -197,11 +195,113 @@ export const dd_request_idle_callback = function (callback) {
 		// Use requestIdleCallback to schedule work if available
 		requestIdleCallback(callback, { timeout: 1000 })
 	} else {
-		// window.requestAnimationFrame(callback)
 		// Fallback for browsers without requestIdleCallback support like Safari
-        setTimeout(callback, 1);
+		// window.requestAnimationFrame(callback)
+		setTimeout(callback, 1);
 	}
 }//end dd_request_idle_callback
+
+
+
+/**
+* DD_REQUEST_IDLE_CALLBACK
+* The yield() method of the Scheduler interface is used for yielding to the main thread
+* during a task and continuing execution later, with the continuation scheduled as a prioritized task.
+* This allows long-running work to be broken up so the browser stays responsive.
+* @see https://developer.mozilla.org/en-US/docs/Web/API/Scheduler/yield#browser_compatibility
+* @see https://web.dev/articles/optimize-long-tasks?utm_source=devtools
+* Version with fallback to allow Safari and Firefox use
+* @return promise
+*/
+function yield_to_main () {
+	if (globalThis.scheduler?.yield) {
+		return scheduler.yield()
+	}
+
+	// Fall back to yielding with setTimeout.
+	return new Promise(resolve => {
+		setTimeout(resolve, 0);
+	})
+}//end yield_to_main
+
+
+
+/**
+* SET_TOOL_EVENT
+* Apply a tool event configuration to current tool button
+* It is used in tool_ontology for example, to attach a keyup event
+* to the document and allow to use keyboard keys as Control + s
+* to open the tool easily.
+* @param object options
+* {
+* 	tool_event: object,
+* 	tool_button: HTMLElement
+* }
+* @return bool
+*/
+export const set_tool_event = function (options) {
+
+	// options
+		const tool_event	= options.tool_event
+		const tool_button	= options.tool_button
+
+	// tool_event
+		// tool_event sample:
+		// {
+		//   "type": "keyup",
+		//   "validate": [
+		// 	{
+		// 	  "key": "ctrlKey",
+		// 	  "value": true
+		// 	},
+		// 	{
+		// 	  "key": "key",
+		// 	  "value": "s"
+		// 	}
+		//   ]
+		// }
+		const type		= tool_event.type // as keyup
+		const validate	= tool_event.validate || [] // array o validations
+		const action	= tool_event.action
+
+	// event_handler
+		const event_handler = (e) => {
+			e.preventDefault()
+
+			// if button is not connected to the DOM, remove the event
+			if (!tool_button.isConnected) {
+				document.removeEventListener(type, event_handler)
+				return
+			}
+
+			// validations
+			const validate_length = validate.length
+			for (let i = 0; i < validate_length; i++) {
+				const item = validate[i]
+				if (e[item.key]!==item.value) {
+					// stop here
+					return
+				}
+			}
+
+			switch (action) {
+
+				case 'click':
+					tool_button.click()
+					break;
+
+				default:
+					console.warn('Undefined action. options:', options);
+					break;
+			}
+		}
+
+	// listener
+	document.addEventListener(type, event_handler)
+
+
+	return true
+}//end set_tool_event
 
 
 

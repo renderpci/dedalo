@@ -259,13 +259,13 @@ const render_row = async function(self, ar_langs, header, name, key) {
 */
 const render_language_label = async function(self, current_lang, header, name, key) {
 
-	// data
-		let data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
+	// get the current data for the node
+		const curernt_data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
 
 	// label
-		const label_value = typeof data!=='undefined'
-			? data.value || ''
-			: ''
+		const label_value = typeof curernt_data!=='undefined'
+			? curernt_data.value || null
+			: null
 		const placeholder = name || ''
 
 	// language_label
@@ -277,23 +277,37 @@ const render_language_label = async function(self, current_lang, header, name, k
 			contenteditable	: header===true ? false : true
 		})
 
-		// change event
-			// language_label.addEventListener("change", async (e) =>{
-			// 	data.value = language_label.value
-			// 	console.log("data", data);
-			// })
-
-		// mouseup event. When the user has double click in the text we active the edit text box
-			// language_label.addEventListener("mouseup", (e) =>{
-			// 	language_label.focus();
-			// })
-
 		const save_sequence = function() {
+
+			// data
+			const data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
+
+			// empty value and has not previous data set
+			if( !language_label.textContent && typeof data==='undefined' ){
+				return
+			}
+			// empty value with previous data set
+			if( !language_label.textContent && typeof data!=='undefined'){
+
+				const index = self.ar_data.findIndex( item => item.name===name && item.lang===current_lang.value )
+
+				if(index === -1){
+					return
+				}
+
+				self.ar_data.splice(index, 1)
+
+				// update_data. Updates caller data
+				// update the data into the instance, prepared to save
+				// (but is not saved directly, the user need click in the save button)
+			 	self.update_data()
+				return
+			}
 
 			if(typeof data!=='undefined'){
 
 				// update data value
-				data.value = language_label.innerText
+				data.value = language_label.textContent
 
 			}else{
 
@@ -304,9 +318,6 @@ const render_language_label = async function(self, current_lang, header, name, k
 					value	: language_label.innerText
 				}
 				self.ar_data.push(new_data)
-
-				// update current data
-				data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
 			}
 
 			// update_data. Updates caller data

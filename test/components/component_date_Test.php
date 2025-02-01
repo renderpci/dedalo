@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
@@ -8,7 +7,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_date_Test extends TestCase {
+final class component_date_test extends TestCase {
 
 
 

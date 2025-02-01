@@ -7,7 +7,7 @@
 // imports
 	import {clone, dd_console, is_equal} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {set_before_unload} from '../../common/js/events.js'
+	import {set_before_unload,dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import {set_context_vars, create_source} from '../../common/js/common.js'
@@ -1506,25 +1506,29 @@ export const deactivate_components = function(e) {
 
 		// lock_component. launch worker
 			if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
-				data_manager.request({
-					use_worker	: true,
-					body		: {
-						dd_api	: 'dd_utils_api',
-						action	: 'update_lock_components_state',
-						options	: {
-							component_tipo	: component_instance.tipo,
-							section_tipo	: component_instance.section_tipo,
-							section_id		: component_instance.section_id,
-							action			: 'blur' // delete_user_section_locks | blur | focus
-						}
+				dd_request_idle_callback(
+					() => {
+						data_manager.request({
+							use_worker	: true,
+							body		: {
+								dd_api	: 'dd_utils_api',
+								action	: 'update_lock_components_state',
+								options	: {
+									component_tipo	: component_instance.tipo,
+									section_tipo	: component_instance.section_tipo,
+									section_id		: component_instance.section_id,
+									action			: 'blur' // delete_user_section_locks | blur | focus
+								}
+							}
+						})
+						.then(function(api_response) {
+							// update page_globals
+							page_globals.dedalo_notification = api_response.dedalo_notification || null
+							// dedalo_notification from config file
+							event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+						})
 					}
-				})
-				.then(function(api_response) {
-					// update page_globals
-					page_globals.dedalo_notification = api_response.dedalo_notification || null
-					// dedalo_notification from config file
-					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
-				})
+				)
 			}
 
 		// deactivate

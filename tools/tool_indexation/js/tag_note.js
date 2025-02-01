@@ -276,8 +276,11 @@ const new_tag_note = async function(tag, section_tipo) {
 		if (!api_response.result || api_response.result<1) {
 
 			// something wrong happens
-			alert(api_response.error || 'Unknown error on create new_tag_note for tag '+tag.tag_id);
-			console.error('api_response.error:', api_response.error);
+			const error_text = api_response.errors?.length
+				? api_response.errors.join(' | ')
+				: 'Unknown error on create new_tag_note for tag ' + tag.tag_id
+			alert(error_text);
+			console.error('api_response.errors:', api_response.errors);
 			return null;
 		}
 

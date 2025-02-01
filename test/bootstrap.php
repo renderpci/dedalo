@@ -1,11 +1,10 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 // require __DIR__ . '/../src/autoload.php';
 // require __DIR__ . '/autoload.php';
 
 // SHOW_DEBUG. Overwrite config SHOW_DEBUG
-	define('SHOW_DEBUG', false);
+	define('SHOW_DEBUG', true);
 
 // TEST_USER_ID: [
 	// 	-1, // root development user
@@ -49,4 +48,10 @@ declare(strict_types=1);
 			// $method->setAccessible(true); // Use this if you are running PHP older than 8.1.0
 			return $method->invokeArgs($obj, $args);
 		}
+	}
+
+// logout. Delete sessions and cache files
+	$user_id = TEST_USER_ID; // Defined in bootstrap
+	if (login::is_logged()) {
+		$result = login_test::logout($user_id);
 	}

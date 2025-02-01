@@ -42,5 +42,21 @@
 	{
 		"typology": 11,
 		"label": "Typology"
+	},
+	{
+		"typology": 12,
+		"label": "Activities"
+	},
+	{
+		"typology": 13,
+		"label": "Onomastics"
+	},
+	{
+		"typology": 14,
+		"label": "Core"
+	},
+	{
+		"typology": 15,
+		"label": "Others"
 	}
 ]

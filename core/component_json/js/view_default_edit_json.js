@@ -6,7 +6,8 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {change_handler} from './component_json.js'
+	import {when_in_viewport} from '../../common/js/events.js'
+	import {createJSONEditor} from '../../../lib/jsoneditor/dist/standalone.js'
 
 
 
@@ -113,98 +114,55 @@ const get_content_value = (key, current_value, self) => {
 		})
 
 	// load_editor and init
-		async function load_editor() {
+		const load_editor = () => {
 
-			// load editor files (JS/CSS)
-			self.load_editor_files()
-			.then(()=>{
+			// value for editor
+			const content = current_value
+				? {json : current_value}
+				: {text : ''}
 
-				// button_save
-					const button_save = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'warning save button_save',
-						inner_html		: get_label.save || 'Save',
-						parent			: content_value
-					})
-					button_save.addEventListener('click', fn_save)
-					function fn_save(e) {
-						e.stopPropagation()
+			// editor
+			const editor = createJSONEditor({
+				target	: content_value,
+				props	: {
+					content		: content,
+					mode		: 'text',
+					onChange	: (updatedContent, previousContent, { contentErrors, patchResult }) => {
+						// console.log('onChange-------------->', { updatedContent, previousContent, contentErrors, patchResult })
+						if(typeof contentErrors==='undefined'){
 
-						self.save_sequence(editor)
-						.then(function(){
-							editor.frame.classList.remove('isDirty')
-						})
-					}//end fn_save
+							const json_value = updatedContent.json !== undefined
+								? updatedContent.json
+								: updatedContent.text===''
+									? null
+									: JSON.parse( updatedContent.text )
 
-				// validated. Changed to false after init parse
-				let is_first_validation = true
-
-				// editor_options
-					const editor_options = {
-						mode		: 'code',
-						modes		: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
-						// maxLines : 100, // Infinity,
-						onError : function (err) {
-							console.error('JSON editor error:', err);
-							alert(err.toString());
-						},
-						onValidate : function(json) {
-
-							// ignore first validation (when editor value is parsed on init)
-							if (is_first_validation===true) {
-								// next event will be already useful
-								is_first_validation = false
-								return
-							}
-
-							change_handler(self, json, key)
+							self.set_value(json_value, key)
 						}
 					}
-
-				// create a new instance of the editor when DOM element is ready
-					const editor = new JSONEditor(
-						content_value,
-						editor_options,
-						current_value
-					)
-					self.editors.push(editor) // append current editor
-
-					// add resize content_value event to allow user to resize the map
-						new ResizeObserver( function(){
-							setTimeout(function(){
-								editor.resize();
-							}, 3)
-						})
-						.observe( content_value )
+				}
 			})
 
-			// blur event
-				// const ace_editor = editor.aceEditor
-				// ace_editor.on("blur", function(e){
-				// 	e.stopPropagation()
-				//
-				// 	const db_value 		= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
-				// 	const edited_value 	= editor.get()
-				// 	const changed 		= JSON.stringify(db_value)!==JSON.stringify(edited_value)
-				// 	if (!changed) {
-				// 		return false
-				// 	}
-				//
-				// 	if (confirm("Save json data changes?")) {
-				// 		button_save.click()
-				// 	}
-				// })
+			// set pointer
+			self.editors[key] = editor
+
+			// button_save
+			const button_save = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning save button_save',
+				inner_html		: get_label.save || 'Save',
+				parent			: content_value
+			})
+			// click event
+			const click_handler = (e) => {
+				e.stopPropagation()
+				self.save_sequence(editor)
+			}
+			button_save.addEventListener('click', click_handler)
 		}//end load_editor
 
 	// observe in viewport
-		const observer = new IntersectionObserver(function(entries) {
-			const entry = entries[1] || entries[0]
-			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
-				observer.disconnect();
-				load_editor()
-			}
-		}, { threshold: [0] });
-		observer.observe(content_value);
+		when_in_viewport(content_value, load_editor)
 
 
 	return content_value
@@ -264,7 +222,7 @@ const get_buttons = (self) => {
 			ui.add_tools(self, fragment)
 		}
 
-	// button_download . Force automatic download of component data value
+	// button_download. Force automatic download of component data value
 		const button_download = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button download',
@@ -310,10 +268,12 @@ const get_buttons = (self) => {
 				title			: get_label.full_screen || 'Full screen',
 				parent			: fragment
 			})
-			button_fullscreen.addEventListener('click', function(e) {
+			// click event
+			const click_handler = (e) => {
 				e.stopPropagation()
 				ui.enter_fullscreen(self.node)
-			})
+			}
+			button_fullscreen.addEventListener('click', click_handler)
 		}
 
 	// buttons container

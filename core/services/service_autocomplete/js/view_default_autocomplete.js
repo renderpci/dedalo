@@ -896,26 +896,55 @@ const render_inputs_list = function(self) {
 
 			const filter_item = filter_group[i]
 
-			const current_ddo = filter_item.path[filter_item.path.length-1]
+			const current_ddo		= filter_item.path[filter_item.path.length-1]
+			const component_label	= current_ddo.label.replace(/(<([^>]+)>)/ig, '');
 
+			// input_group
+			const input_group = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'input_group',
+				parent			: inputs_list
+			})
+
+			// input
 			const component_input = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
-				parent			: inputs_list
+				parent			: input_group
 			})
-			// placeholder
-			const component_label = current_ddo.label.replace(/(<([^>]+)>)/ig,"");
-			component_input.setAttribute('placeholder', component_label )
+
+			// placeholder (replaced by the label to allow to know what we are editing anytime)
+				// component_input.setAttribute('placeholder', component_label )
+
+			// label
+			ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: component_label,
+				parent			: input_group
+			})
 
 			// set pointer
 			component_input.filter_item = filter_item
 
 			// change event
-			component_input.addEventListener('change',async function () {
+			const change_handler = async () => {
+				// update filter_item q value from input
 				filter_item.q = component_input.value
-				const api_response	= await self.autocomplete_search()
+				// force search
+				const api_response = await self.autocomplete_search()
+				// refresh datalist
 				render_datalist(self, api_response.result)
-			})
+			}
+			component_input.addEventListener('change', change_handler)
+
+			// keyup event
+			const keyup_handler = (e) => {
+				e.stopPropagation()
+				if (e.key==='Enter') {
+					change_handler()
+				}
+			}
+			component_input.addEventListener('keyup', keyup_handler)
 
 			// add node
 			self.filter_free_nodes.push(component_input)

@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * INTERFACE COMPONENT_MEDIA_COMMON
 * Used as common base from all components that works with media

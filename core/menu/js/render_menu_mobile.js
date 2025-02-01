@@ -42,14 +42,14 @@ export const render_menu = (options) => {
 		}
 	}
 
-	// ontology button
-	if (self.ontology_link) {
-		const cloned_node = self.ontology_link.cloneNode(true);
-		cloned_node.classList.remove('top_item')
-		cloned_node.classList.add('menu_mobile_item')
-		cloned_node.addEventListener('click', self.open_ontology)
-		wrapper.append(cloned_node)
-	}
+	// // ontology button
+	// if (self.ontology_link) {
+	// 	const cloned_node = self.ontology_link.cloneNode(true);
+	// 	cloned_node.classList.remove('top_item')
+	// 	cloned_node.classList.add('menu_mobile_item')
+	// 	cloned_node.addEventListener('click', self.open_ontology)
+	// 	wrapper.append(cloned_node)
+	// }
 
 
 	return wrapper
@@ -80,10 +80,7 @@ const render_menu_node = (item, datalist) => {
 			inner_html		: item.label,
 			parent			: fragment
 		})
-		menu_item.addEventListener('mousedown', fn_touch)
-		// menu_item.addEventListener('touchstart', fn_touch)
-		function fn_touch(e) {
-
+		const mousedown_handler = function(e) {
 			if (this.classList.contains('with_children')) {
 				if (this.classList.contains('active')) {
 					this.children_container.classList.add('hide')
@@ -93,7 +90,6 @@ const render_menu_node = (item, datalist) => {
 					this.classList.add('active')
 				}
 			}else{
-
 				// safe_item. Clone menu item before use it
 					const safe_item = clone(item)
 
@@ -113,7 +109,8 @@ const render_menu_node = (item, datalist) => {
 					}
 				})
 			}
-		}//end fn_touch
+		}
+		menu_item.addEventListener('mousedown', mousedown_handler)
 
 	// children
 		const children = datalist.filter(el => el.parent===item.tipo)
@@ -136,7 +133,7 @@ const render_menu_node = (item, datalist) => {
 			// add a copy of menu_item click-able
 				const clone = menu_item.cloneNode(true);
 				clone.classList.remove('with_children')
-				clone.addEventListener('mousedown', fn_touch)
+				clone.addEventListener('mousedown', mousedown_handler)
 				children_container.append(clone)
 
 			// children iterate

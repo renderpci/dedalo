@@ -5,6 +5,10 @@ Version 6 is a complete rebuild version. Lot of code has been rebuilt from scrat
 !!! warning "Upgrading from versions prior to v5"
     V6 only can be update from v5, previous versions (v4, v3, v2, v1, v0) need to be update it to v5 prior to update to version 6.
 
+!!! note "V6 version to use for update"
+    The upgrade process from v5 is only supported up to v6.3.1, newer versions use a different ontology schema and the upgrade process does not support it.
+    To upgrade from v5 to the latest v6 version you must first upgrade v5 to v6.3.1 and then upgrade via the maintenance panel.
+
 Before you start upgrading to update it is important to be aware of some of these changes in data and Dédalo definitions.
 
 ## Important changes from v5
@@ -122,12 +126,14 @@ Ready to update.
 
 2. Download the v6 from our repository and add it to ./httpdocs dir.
 
+    The last compatible version with the v5 model is 6.3.1.
+
     You can use git, wget or download and upload with ftp.
     Example using wget:
 
     ```shell
     cd ../httpdocs
-    wget https://github.com/renderpci/dedalo/archive/refs/heads/master.zip
+    wget https://github.com/renderpci/dedalo/archive/refs/tags/v6.3.1.zip
     unzip master.zip
     mv dedalo-master dedalo
     ```
@@ -152,7 +158,7 @@ Ready to update.
 
     ```shell
     cd ../httpdocs
-    cp dedalo_v5/media dedalo/
+    cp -R dedalo_v5/media dedalo/
     ```
 
 5. Assign the correct permissions to all /dedalo directories and files.

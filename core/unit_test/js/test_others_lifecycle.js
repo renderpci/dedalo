@@ -16,7 +16,6 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	const lang			= 'lg-eng'
 	const permissions	= 2
 
-
 // get_elelemnts
 	function get_elelemnts(){
 
@@ -63,107 +62,247 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 				// }
 			})
 
+		// menu
+			elements.push({
+				model	: 'menu',
+				lang	: lang
+			})
+
+		// page
 			elements.push({
 				model	: 'page',
 				menu	: true
 			})
 
+
 		return elements
 	}//end get_elelemnts
-	// throw "exit";
+
+// get_widgets
+	function get_widgets(){
+
+		const elements = [];
+
+		const add = (name) => {
+			elements.push({
+				name	: name,
+				path	: '../../area_maintenance/widgets/'+name+'/js/'+name+'.js',
+				mode	: mode,
+				lang	: lang,
+				value	: null
+			})
+		}
+
+		// area maintenance widgets
+		[
+			'add_hierarchy',
+			'build_database_version',
+			'check_config',
+			'counters_status',
+			'database_info',
+			'dedalo_api_test_environment',
+			'dedalo_version',
+			'environment',
+			'export_hierarchy',
+			'lock_components',
+			'make_backup',
+			'move_locator',
+			'move_tld',
+			'php_info',
+			'php_user',
+			'publication_api',
+			'regenerate_relations',
+			'register_tools',
+			'sequences_status',
+			'sqo_test_environment',
+			'system_info',
+			'unit_test',
+			'update_code',
+			'update_data_version',
+			'update_ontology'
+		].map(add)
 
 
+		return elements
+	}//end get_widgets
 
 
 
 describe("OTHERS LIFE-CYCLE", async function() {
 
-	const elements =  get_elelemnts()
+	describe('Regular elements', function() {
 
-	for (let i = 0; i < elements.length; i++) {
+		// regular elements
+		const elements = get_elelemnts()
+		const elements_length = elements.length
+		for (let i = 0; i < elements_length; i++) {
 
-		const element = elements[i]
-		// console.log('-- element:', i, element.model, element);
+			const element = elements[i]
+			// console.log('-- element:', i, element.model, element);
+
+			describe(element.model, async function() {
+
+				let new_instance = null
+
+				it(`${element.model} INIT`, async function() {
+
+					const expected = 'initialized'
+
+					// context function case. Call and wait here
+						if (element.context && typeof element.context==='function') {
+							element.context = await element.context()
+						}
+
+						const options = {
+							id_variant		: Math.random() + '-' + Math.random(),
+							lang			: element.lang,
+							mode			: 'edit',
+							model			: element.model,
+							section_id		: element.section_id,
+							section_tipo	: element.section_tipo,
+							tipo			: element.tipo,
+							view			: element.view,
+							context			: element.context || null
+						}
+
+					// init instance
+						new_instance = await get_instance(options)
+						// console.log('init new_instance:', new_instance);
+
+					assert.equal(new_instance.status, expected);
+				});
+
+				it(`${element.model} BUILD (autoload=true)`, async function() {
+
+					const expected = 'built'
+
+					// build instance
+						await new_instance.build(true)
+						console.log('build new_instance:', new_instance);
+						if (element.context) {
+							new_instance.context = element.context
+						}
+
+					assert.equal(new_instance.status, expected);
+				});
+
+				it(`${element.model} RENDER`, async function() {
+
+					const expected = 'rendered'
+
+					// render instance
+						await new_instance.render()
+						// console.log('render new_instance:', new_instance);
+
+					assert.equal(new_instance.status, expected);
+				});
+
+				it(`${element.model} DESTROY`, async function() {
+
+					const expected = 'destroyed'
+
+					// destroy instance
+						await new_instance.destroy(
+							true,  // delete_self . default true
+							true, // delete_dependencies . default false
+							true // remove_dom . default false
+						)
+
+					const all_instances = get_all_instances()
+
+					assert.equal(new_instance.status, expected)
+					assert.deepEqual(new_instance.ar_instances, [])
+					assert.deepEqual(new_instance.node, null)
+					assert.deepEqual(new_instance.events_tokens, [])
+					assert.deepEqual(all_instances, [])
+				});
+			});//end describe(element.model, function()
+		}//end for (let i = 0; i < elements.length; i++)
+
+	});
 
 
-		describe(element.model, async function() {
+	describe('Widgets', function() {
 
-			let new_instance = null
+		// widgets
+		const widgets = get_widgets()
+		const widgets_length = widgets.length
+		for (let i = 0; i < widgets_length; i++) {
 
-			it(`${element.model} INIT`, async function() {
+			const element = widgets[i]
 
-				const expected = 'initialized'
+			describe(element.name, async function() {
 
-				// context function case. Call and wait here
-					if (element.context && typeof element.context==='function') {
-						element.context = await element.context()
-					}
+				let new_instance = null
 
-					const options = {
+				it(`${element.name} INIT`, async function() {
+
+					const expected = 'initialized'
+
+					// load element
+					const module = await import(element.path)
+
+					// instance widget
+					new_instance = await new module[element.name]()
+
+					// init widget
+					await new_instance.init({
 						id_variant		: Math.random() + '-' + Math.random(),
 						lang			: element.lang,
-						mode			: 'edit',
-						model			: element.model,
-						section_id		: element.section_id,
-						section_tipo	: element.section_tipo,
-						tipo			: element.tipo,
-						view			: element.view,
-						context			: element.context || null
-					}
+						mode			: element.mode, // list
+						model			: 'widget',
+						name			: element.name,
+						value			: element.value,
+						caller			: null
+					})
 
-				// init instance
-					new_instance = await get_instance(options)
-					// console.log('init new_instance:', new_instance);
+					assert.equal(new_instance.status, expected);
+				});
 
-				assert.equal(new_instance.status, expected);
-			});
+				it(`${element.name} BUILD (autoload=true)`, async function() {
 
-			it(`${element.model} BUILD (autoload=true)`, async function() {
+					const expected = 'built'
 
-				const expected = 'built'
-
-				// init instance
+					// build instance
 					await new_instance.build(true)
-					console.log('build new_instance:', new_instance);
-					if (element.context) {
-						new_instance.context = element.context
-					}
 
-				assert.equal(new_instance.status, expected);
-			});
+					assert.equal(new_instance.status, expected);
+				});
 
-			it(`${element.model} RENDER`, async function() {
+				it(`${element.name} RENDER`, async function() {
 
-				const expected = 'rendered'
+					const expected = 'rendered'
 
-				// init instance
-					await new_instance.render()
-					// console.log('render new_instance:', new_instance);
+					// render instance
+						await new_instance.render()
+						// console.log('render new_instance:', new_instance);
 
-				assert.equal(new_instance.status, expected);
-			});
+					assert.equal(new_instance.status, expected);
+				});
 
-			it(`${element.model} DESTROY`, async function() {
+				it(`${element.name} DESTROY`, async function() {
 
-				const expected = 'destroyed'
+					const expected = 'destroyed'
 
-				// init instance
-					await new_instance.destroy(
-						true,  // delete_self . default true
-						true, // delete_dependencies . default false
-						true // remove_dom . default false
-					)
+					// destroy instance
+						await new_instance.destroy(
+							true,  // delete_self . default true
+							true, // delete_dependencies . default false
+							true // remove_dom . default false
+						)
 
-				const all_instances = get_all_instances()
+					assert.equal(new_instance.status, expected)
+					assert.deepEqual(new_instance.ar_instances, [])
+					assert.deepEqual(new_instance.node, null)
+					assert.deepEqual(new_instance.events_tokens, [])
+					// assert.deepEqual(all_instances, [])
+				});
+			});//end describe(element.name, function()
 
-				assert.equal(new_instance.status, expected)
-				assert.deepEqual(new_instance.ar_instances, [])
-				assert.deepEqual(new_instance.node, null)
-				assert.deepEqual(new_instance.events_tokens, [])
-				assert.deepEqual(all_instances, [])
-			});
-		});//end describe(element.model, function()
-	}//end for (let i = 0; i < elements.length; i++)
+		}//end for (let i = 0; i < widgets_length; i++)
+
+	});
+
 });
 
 

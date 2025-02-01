@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {
 		render_login,
 		render_files_loader
@@ -173,6 +174,57 @@ login.prototype.build = async function(autoload=false) {
 
 
 /**
+* LOGIN
+* Exec the login action against the API
+* @param object options
+* {
+* 	username: string
+* 	auth: string
+* }
+* @return object response
+*/
+login.prototype.login = async function(options) {
+
+	// options
+		const username	= options.username
+		const auth		= options.auth
+
+	// request
+		const api_response = await data_manager.request({
+			body : {
+				action	: 'login',
+				dd_api	: 'dd_utils_api',
+				options	: {
+					username	: username,
+					auth		: auth
+				}
+			}
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('login api_response:', api_response);
+		}
+
+	// delete dedalo_files caches (only HTTPS)
+		if ('serviceWorker' in navigator) {
+			try {
+
+				// delete dedalo_files caches
+				await caches.delete('dedalo_files');
+
+			} catch (error) {
+				console.error('ServiceWorker delete caches failed:', error);
+			}
+		}
+
+
+	return api_response
+}//end login
+
+
+
+/**
 * QUIT
 * Close current user session
 * (!) Note that quit menu event removes local indexedDB menu data before quit
@@ -250,15 +302,17 @@ export const quit = async function(options={}) {
 
 				}else{
 
-					setTimeout(()=>{
-						if (is_developer) {
-							// reload window to show the login form without loosing the current URL
-							window.location.replace(window.location.href);
-						}else{
-							// redirect to Dédalo base URL to force access to default user section
-							window.location.href = DEDALO_ROOT_WEB
+					dd_request_idle_callback(
+						() => {
+							if (is_developer) {
+								// reload window to show the login form without loosing the current URL
+								window.location.replace(window.location.href);
+							}else{
+								// redirect to Dédalo base URL to force access to default user section
+								window.location.href = DEDALO_ROOT_WEB
+							}
 						}
-					}, 1)
+					)
 				}
 
 			}else{
@@ -360,9 +414,11 @@ login.prototype.action_dispatch = async function(api_response) {
 					// It's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
 					if (api_response.result_options?.redirect) {
 
-						setTimeout(() => {
-							window.location.replace( api_response.result_options.redirect )
-						}, 1)
+						dd_request_idle_callback(
+							() => {
+								window.location.replace( api_response.result_options.redirect )
+							}
+						)
 						return
 					}
 
@@ -414,9 +470,11 @@ login.prototype.action_dispatch = async function(api_response) {
 				// Usually when all files are loaded
 					const finish_handler = () => {
 						// login continue
-						setTimeout(()=>{
-							load_finish()
-						}, 40);
+						dd_request_idle_callback(
+							() => {
+								load_finish()
+							}
+						)
 					}
 			// on_message. Handle worker message events
 				const on_message = (event) => {

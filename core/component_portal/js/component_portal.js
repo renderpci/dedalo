@@ -1293,7 +1293,7 @@ component_portal.prototype.unlink_record = async function(options) {
 
 	// the user has selected cancel from delete dialog
 		if (api_response===false || api_response.result===false) {
-			console.warn("// unlink_record api_response error ", api_response);
+			console.warn("// unlink_record api_response failed ", api_response);
 			return false
 		}
 

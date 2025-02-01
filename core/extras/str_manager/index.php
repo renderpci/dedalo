@@ -49,9 +49,137 @@ session_write_close();
 		exit();
 	}
 
+
+/**
+* GET_ONTOLOGY_FILE_LIST
+* Calculate the list of files needed to update the Ontology
+* using main files and main tld plus the given $ar_tld
+* If no value if provided, the whole DEDALO_PREFIX_TIPOS will be used
+* @param array|null $ar_tld = null
+* @return array $ar_files
+*	Array of objects
+*/
+function get_ontology_file_list( ?array $ar_tld=null ) : array {
+
+	// cache results
+		static $ar_files;
+		if (isset($ar_files)) {
+			debug_log(__METHOD__
+				." Returning previous calculated values "
+				, logger::DEBUG
+			);
+			return $ar_files;
+		}
+
+	// safe ar_tld format as ['dd','rsc','hierarchy','oh','ich','test']
+		if (empty($ar_tld)) {
+			$ar_tld = (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
+		}
+
+	// files to download
+		$ar_files = [];
+
+	// BASE - Files
+
+		// Always includes main files
+		// dedalo_development_str
+		$obj = new stdClass();
+			$obj->type = 'main_file';
+			$obj->name = 'dedalo_development_str.custom.backup';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY;
+		$ar_files[] = $obj;
+
+		// core str file
+		// jer_dd_dd
+		$obj = new stdClass();
+			$obj->type = 'jer_file';
+			$obj->name = 'jer_dd_dd.copy';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+		$ar_files[] = $obj;
+		// matrix_descriptors_dd_dd
+		$obj = new stdClass();
+			$obj->type = 'descriptors_file';
+			$obj->name = 'matrix_descriptors_dd_dd.copy';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+		$ar_files[] = $obj;
+
+		// resources str file
+		// jer_dd_rsc
+		$obj = new stdClass();
+			$obj->type = 'jer_file';
+			$obj->name = 'jer_dd_rsc.copy';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+		$ar_files[] = $obj;
+		// matrix_descriptors_dd_rsc
+		$obj = new stdClass();
+			$obj->type = 'descriptors_file';
+			$obj->name = 'matrix_descriptors_dd_rsc.copy';
+			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+		$ar_files[] = $obj;
+
+		// private list of values
+		// matrix_dd
+		$obj = new stdClass();
+			$obj->type  = 'matrix_dd_file';
+			$obj->name  = 'matrix_dd.copy';
+			$obj->table = 'matrix_dd';
+			$obj->tld 	= 'dd';
+			$obj->path  = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+		$ar_files[] = $obj;
+
+	// EXTRAS - Files
+
+	// Check extras folder coherence with config ar_tld
+		foreach ($ar_tld as $current_tld) {
+			$folder_path	= DEDALO_EXTRAS_PATH .'/'. $current_tld;
+			$dir_ready		= create_directory($folder_path);
+			if( !$dir_ready ) {
+				return false;
+			}
+		}
+
+	// Get extras folders array list filtering existing directories
+		$all_extras_folders	= (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
+		$extras_folders		= [];
+		foreach ($all_extras_folders as $current_dir) {
+			$base_dir = basename($current_dir);
+			// ar_tld : config tipos verify. 'tipos' not defined in config, will be ignored
+			if (!in_array($base_dir, $ar_tld)) {
+				continue; // Filter load prefix from config 'ar_tld'
+			}
+			$extras_folders[] = $base_dir;
+		}
+
+	// add every TLD to ar_files list (jer_dd and matrix_descriptors_dd parts)
+		foreach ($extras_folders as $folder_name) {
+			// jer_dd
+			$obj = new stdClass();
+				$obj->type  = 'extras_jer_file';
+				$obj->table = 'jer_dd';
+				$obj->tld 	= $folder_name;
+				$obj->name  = 'jer_dd_' . $folder_name . '.copy';
+				$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
+			$ar_files[] = $obj;
+			// matrix_descriptors_dd
+			$obj = new stdClass();
+				$obj->type  = 'extras_descriptors_file';
+				$obj->table = 'matrix_descriptors_dd';
+				$obj->tld 	= $folder_name;
+				$obj->name  = 'matrix_descriptors_dd_' . $folder_name . '.copy';
+				$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
+			$ar_files[] = $obj;
+		}
+
+
+	return $ar_files;
+}//end get_ontology_file_list
+
+
+
 // SELECTED_OBJ. Get local str files info (paths, names, etc.) to find the requested
 	$selected_obj	= null;
-	$all_str_files	= backup::get_ontology_file_list();
+	// $all_str_files	= backup::get_ontology_file_list();
+	$all_str_files	= get_ontology_file_list();
 	foreach ($all_str_files as $key => $obj) {
 		if ($data->name === $obj->name) {
 			$selected_obj = $all_str_files[$key];

@@ -9,7 +9,7 @@
 	import {get_section_records} from '../../../../core/section/js/section.js'
 	import {set_element_css} from '../../../../core/page/js/css.js'
 	import {event_manager} from '../../../../core/common/js/event_manager.js'
-	import {when_in_dom} from '../../../../core/common/js/events.js'
+	import {when_in_dom,dd_request_idle_callback} from '../../../../core/common/js/events.js'
 	import {
 		get_content_data
 	} from './render_service_time_machine_list.js'
@@ -18,7 +18,7 @@
 
 /**
 * VIEW_TOOL_TIME_MACHINE_LIST
-* Manages the section's appearance in client side
+* Manages the service's appearance in client side
 */
 export const view_tool_time_machine_list = function() {
 
@@ -31,6 +31,7 @@ export const view_tool_time_machine_list = function() {
 * RENDER
 * Renders main element wrapper for current view
 * @param object self
+* 	service instance
 * @param object options
 * @return HTMLElement wrapper
 */
@@ -65,10 +66,12 @@ view_tool_time_machine_list.render = async function(self, options) {
 			class_name		: 'paginator_container',
 			parent			: fragment
 		})
-		await self.paginator.build()
-		self.paginator.render()
-		.then(paginator_wrapper =>{
-			paginator_div.appendChild(paginator_wrapper)
+		self.paginator.build()
+		.then(()=>{
+			self.paginator.render()
+			.then(paginator_wrapper =>{
+				paginator_div.appendChild(paginator_wrapper)
+			})
 		})
 
 	// list_body
@@ -119,7 +122,9 @@ view_tool_time_machine_list.render = async function(self, options) {
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
-* @return obj columns_map
+* @param object self
+* 	service instance
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -153,12 +158,12 @@ const rebuild_columns_map = async function(self) {
 			// map names to tipo (columns already parse id for another uses)
 			.map(el => {
 				switch (el) {
-					case 'matrix_id'	: return 'dd1573';
+					case 'matrix_id'		: return 'dd1573';
 					case 'bulk_process_id'	: return 'dd1371';
-					case 'when'			: return 'dd547';
-					case 'who'			: return 'dd543';
-					case 'where'		: return 'dd546';
-					default				: return el;
+					case 'when'				: return 'dd547';
+					case 'who'				: return 'dd543';
+					case 'where'			: return 'dd546';
+					default					: return el;
 				}
 			})
 
@@ -187,8 +192,9 @@ const rebuild_columns_map = async function(self) {
 
 /**
 * RENDER_COLUMN_ID
+* Creates the column id DOM nodes and events
 * @param object options
-* @return HTMLElement DocumentFragment
+* @return DocumentFragment
 */
 const render_column_id = async function(options) {
 
@@ -211,7 +217,7 @@ const render_column_id = async function(options) {
 			class_name		: 'button_view',
 			parent			: fragment
 		})
-		button_view.addEventListener('click', function(e) {
+		const click_handler = (e) => {
 			e.stopPropagation()
 
 			if (main_caller.model==='section') {
@@ -257,29 +263,30 @@ const render_column_id = async function(options) {
 						mode			: 'tm',
 						caller			: options
 					}
-					if(service_time_machine.config.caller_dataframe){
-						data.caller_dataframe = service_time_machine.config.caller_dataframe
-					}
 					event_manager.publish('tm_edit_record', data)
-					const dom_buttons_view = document.querySelectorAll('.button_view')
-					for (let i = dom_buttons_view.length - 1; i >= 0; i--) {
+					// reset buttons
+					const dom_buttons_view			= document.querySelectorAll('.button_view')
+					const dom_buttons_view_length	= dom_buttons_view.length
+					for (let i = dom_buttons_view_length - 1; i >= 0; i--) {
 						dom_buttons_view[i].classList.remove('warning')
 					}
 					button_view.classList.add('warning')
 			}
-		})
+		}
+		button_view.addEventListener('mousedown', click_handler)
 		// siblings can use click too to easy set preview value
-		when_in_dom(button_view, () => {
-			const children = button_view.parentNode.parentNode.children
-			for (let i = children.length - 1; i >= 0; i--) {
-				if(children[i]!==button_view) {
-					children[i].classList.add('link')
-					children[i].addEventListener('click', function(e) {
-						button_view.click()
-					})
+		dd_request_idle_callback(
+			() => {
+				const children			= button_view.parentNode.parentNode.children
+				const children_length	= children.length
+				for (let i = children_length - 1; i >= 0; i--) {
+					if(children[i]!==button_view) {
+						children[i].classList.add('link')
+						children[i].addEventListener('mousedown', click_handler)
+					}
 				}
 			}
-		})
+		)
 
 	// section_id
 		ui.create_dom_element({

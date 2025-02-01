@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
 * REQUEST QUERY OBJECT (RQO)
 * Defines an object with normalized properties and checks

@@ -5,7 +5,7 @@
 
 
 // imports
-	import {when_in_viewport} from '../../common/js/events.js'
+	import {when_in_dom, when_in_viewport, dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
@@ -77,10 +77,11 @@ const get_content_data = function(self) {
 	const fragment = new DocumentFragment()
 
 	// widgets
-		const widgets_length = self.widgets.length
+		const widgets = self.widgets || []
+		const widgets_length = widgets.length
 		for (let i = 0; i < widgets_length; i++) {
 
-			const widget = self.widgets[i]
+			const widget = widgets[i]
 
 			const widget_dom = build_widget(widget, self);
 			fragment.appendChild(widget_dom)
@@ -93,9 +94,11 @@ const get_content_data = function(self) {
 
 		 // remove invisible class to prevent flickering
 			when_in_viewport(content_data, ()=>{
-				setTimeout(function(){
-					content_data.classList.remove('invisible')
-				}, 75)
+				dd_request_idle_callback(
+					() => {
+						content_data.classList.remove('invisible')
+					}
+				)
 			})
 
 
@@ -156,35 +159,45 @@ const build_widget = (item, self) => {
 		}
 
 	// widget module check. Use if exists
-		const path = './widgets/'+ item.id +'/'+ item.id + '.js'
+		const path = `../widgets/${item.id}/js/${item.id}.js`
 		import(path)
 		.then(async function(module){
 
 			// instance widget
-				const widget = new module[item.id]()
+			const widget = new module[item.id]()
 
 			// init widget
-				await widget.init({
-					id				: item.id,
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					lang			: self.lang,
-					mode			: self.mode, // list
-					model			: 'widget',
-					name			: item.label,
-					value			: item.value,
-					caller			: self
-				})
-			// build
-				await widget.build(false)
-			// render
-				widget.render()
-				.then(function(node){
-					if (node) {
-						node.classList.add('body_info')
-						body.appendChild(node)
-					}
-				})
+			await widget.init({
+				id				: item.id,
+				section_tipo	: self.section_tipo,
+				section_id		: self.section_id,
+				lang			: self.lang,
+				mode			: self.mode, // list
+				model			: 'widget',
+				name			: item.label,
+				value			: item.value,
+				caller			: self
+			})
+
+			// render and append widget node
+			ui.load_item_with_spinner({
+				container			: body,
+				preserve_content	: false,
+				label				: item.id,
+				callback			: async () => {
+
+					// build
+					await widget.build(false)
+
+					// render
+					const node = await widget.render()
+
+					// add CSS class for selection
+					node.classList.add('body_info')
+
+					return node
+				}
+			});
 		})
 		.catch((err) => {
 			console.error(err)
@@ -396,6 +409,40 @@ export const build_form = function(widget_object) {
 
 	return form_container
 }//end build_form
+
+
+
+/**
+* SET_WIDGET_LABEL_STYLE
+* Locate widget_container and set (add/remove) the given style
+* If the node is not ready, wait until is available in the DOM
+* @param object self
+* @param string style (as 'danger')
+* @param mode string add|remove
+* @param HTMLElement ref_node (to observe node)
+* @return void
+*/
+export const set_widget_label_style = function (self, style, mode, ref_node) {
+
+	if (!self.node) {
+		const when_in_dom_handler = () => {
+			set_widget_label_style(self, style, mode, ref_node)
+		}
+		when_in_dom(ref_node, when_in_dom_handler)
+		return
+	}
+
+	const wrapper = self.node
+	const widget_container = wrapper.parentNode?.parentNode
+	if (widget_container) {
+
+		if (mode==='remove') {
+			widget_container.classList.remove(style)
+		}else{
+			widget_container.classList.add(style)
+		}
+	}
+}//end set_widget_label_style
 
 
 

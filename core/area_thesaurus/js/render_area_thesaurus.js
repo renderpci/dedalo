@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -42,7 +43,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 		self.ts_object.linker = self.linker // usually a portal component instance
 
 		// parse data
-		const data = self.data.find(item => item.tipo==='dd100')
+		const data = self.data.find(item => item.tipo==='dd100' || item.tipo==='dd5') || {}
 
 	// content_data
 		if (render_level==='content') {
@@ -65,13 +66,16 @@ render_area_thesaurus.prototype.list = async function(options) {
 					}
 
 				// render. parse_search_result with ts_object
-					setTimeout(function(){
-						self.ts_object.parse_search_result(
-							data.ts_search.result, // object data
-							null, // HTMLElement main_div
-							false // bool is_recursion
-						)
-					}, 1)
+					dd_request_idle_callback(
+						() => {
+							self.ts_object.parse_search_result(
+								data.ts_search.result, // object data
+								data.ts_search.found, // to hilite
+								null, // HTMLElement main_div
+								false // bool is_recursion
+							)
+						}
+					)
 
 				return content_data
 
@@ -97,6 +101,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 				class_name		: 'search_container',
 				parent			: fragment
 			})
+			// set pointers
 			self.search_container = search_container
 		}
 
@@ -109,17 +114,74 @@ render_area_thesaurus.prototype.list = async function(options) {
 			label			: null
 		})
 		wrapper.prepend(fragment)
+		// set pointers
 		wrapper.content_data = content_data
 
 	// ts_search case
 		if (data.ts_search) {
 			const render_handler = () => {
-				self.ts_object.parse_search_result(data.ts_search.result, null, false)
+				self.ts_object.parse_search_result(
+					data.ts_search.result,
+					data.ts_search.found, // to hilite
+					null,
+					false
+				)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('render_'+self.filter.id, render_handler)
 			)
 		}
+
+	// event keydown
+	// swap between title (section info as 'dd0') and title (tld as '[dd222]')
+		let id_info_mode = 'tld' // tld|section
+		const keydown_handler
+		= (
+			e) => {
+
+				// submit search on Enter press
+				if (e.key==='Enter') {
+					if (self.filter.search_panel_is_open===true) {
+							// always blur active component to force set dato (!)
+								document.activeElement.blur()
+							// exec search
+								self.filter.exec_search()
+						}
+						// toggle filter container
+							event_manager.publish('toggle_search_panel_'+self.id)
+				}
+			if (e.key==='s' && e.ctrlKey===true) {
+				dd_request_idle_callback
+				(
+					() => {
+						const id_infos = document.querySelectorAll('.id_info.ontology')
+						const id_infos_length = id_infos.length
+					for (let i = 0; i < id_infos_length; i++) {
+
+							const item = id_infos[
+								i]
+
+							if (id_info_mode===
+								'tld'
+								) {
+								item.innerHTML	= item.dataset.section
+								item.title		= item.dataset.term_id
+								item.classList.add('show_section')
+							}else{
+								item.innerHTML	= item.dataset.term_id
+								item.title		= item.dataset.section
+								item.classList.remove('show_section')
+							}
+						}
+						id_info_mode = (
+							id_info_mode==='tld') ? 'section' : 'tld'
+						}
+			)
+
+				}
+		}
+		document.removeEventListener('keydown', keydown_handler)
+		document.addEventListener('keydown', keydown_handler)
 
 
 	return wrapper
@@ -144,13 +206,16 @@ const render_content_data = function(self) {
 			parent			: fragment
 		})
 
+	// get the ontology node to define is the caller is ontology or thesaurus
+		const is_ontology = self.data.find(item => item.tipo==='dd5') ? true : false;
+
 	// elements
-		const data				= self.data.find(item => item.tipo==='dd100')
-		const ts_nodes			= data.value
-		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy')
+		const data				= self.data.find(item => item.tipo==='dd100' || item.tipo==='dd5') || {}
+		const ts_nodes			= data.value || []
+		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy' && node.active_in_thesaurus === true )
 
 	// typology_nodes. sort typologies by order field
-		const typology_nodes	= ts_nodes.filter(node => node.type==='typology' )
+		const typology_nodes	= ts_nodes.filter(node => node.type==='typology')
 		typology_nodes.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
 
 	// iterate typology_nodes
@@ -188,6 +253,12 @@ const render_content_data = function(self) {
 				})
 
 			// collapse typology_name->typology_container children
+				const collapse = () => {
+					typology_name.classList.remove('up')
+				}
+				const expose = () => {
+					typology_name.classList.add('up')
+				}
 				ui.collapse_toggle_track({
 					toggler				: typology_name,
 					container			: typology_container,
@@ -196,15 +267,9 @@ const render_content_data = function(self) {
 					expose_callback		: expose,
 					default_state		: 'opened'
 				})
-				function collapse() {
-					typology_name.classList.remove('up')
-				}
-				function expose() {
-					typology_name.classList.add('up')
-				}
 
 			// hierarchy sections
-				const hierarchy_sections_full = hierarchy_nodes.filter(node => node.typology_section_id===typology_item.section_id)
+				const hierarchy_sections_full = hierarchy_nodes.filter(node => parseInt(node.typology_section_id)===parseInt(typology_item.section_id))
 				// sort hierarchy_nodes by order value and alphabetic. First those with a order value and then the rest.
 				const ordered		= hierarchy_sections_full.filter(obj => obj.order !== 0).sort(sort_root_terms)
 				const disordered	= hierarchy_sections_full.filter(obj => obj.order === 0).sort(sort_root_terms);
@@ -254,6 +319,8 @@ const render_content_data = function(self) {
 							parent			: hierarchy_elements_container
 						})
 
+						// link_children.node_type = 'hierarchy_node';
+
 					// ts_object Get from API and render element
 						self.ts_object.get_children(link_children)
 						.then(()=>{
@@ -301,7 +368,7 @@ const sort_root_terms = function (a, b) {
 const get_buttons = function(self) {
 
 	// ar_buttons list from context
-		const ar_buttons = self.context.buttons
+		const ar_buttons = self.context?.buttons
 		if(!ar_buttons) {
 			return null;
 		}
@@ -316,24 +383,33 @@ const get_buttons = function(self) {
 			parent			: fragment
 		})
 
-		// filter button (search) . Show and hide all search elements
-			const filter_button	= ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning search',
-				inner_html		: get_label.find || 'Search',
-				parent			: buttons_container
-			})
-			filter_button.addEventListener('mousedown', function(e) {
-				e.stopPropagation()
-				event_manager.publish('toggle_search_panel_'+self.id)
-			})
-			// ui.create_dom_element({
-			// 	element_type	: 'span',
-			// 	class_name		: 'button white search',
-			// 	parent			: filter_button
-			// })
-			// filter_button.insertAdjacentHTML('beforeend', get_label.find)
+	// filter button (search) . Show and hide all search elements
+		const filter_button	= ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning search',
+			inner_html		: get_label.find || 'Search',
+			parent			: buttons_container
+		})
+		const mousedown_handler = (e) => {
+			e.stopPropagation()
+			event_manager.publish('toggle_search_panel_'+self.id)
+		}
+		filter_button.addEventListener('mousedown', mousedown_handler)
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'button white search',
+		// 	parent			: filter_button
+		// })
+		// filter_button.insertAdjacentHTML('beforeend', get_label.find)
 
+	// other_buttons_block
+		const other_buttons_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'other_buttons_block',
+			parent			: buttons_container
+		})
+
+	// other buttons
 		const ar_buttons_length = ar_buttons.length;
 		for (let i = 0; i < ar_buttons_length; i++) {
 
@@ -347,9 +423,9 @@ const get_buttons = function(self) {
 					element_type	: 'button',
 					class_name		: class_name,
 					inner_html		: current_button.label,
-					parent			: buttons_container
+					parent			: other_buttons_block
 				})
-				button_node.addEventListener('click', (e) => {
+				const click_handler = (e) => {
 					e.stopPropagation()
 
 					switch(current_button.model){
@@ -366,11 +442,12 @@ const get_buttons = function(self) {
 							event_manager.publish('click_' + current_button.model)
 							break;
 					}
-				})
+				}
+				button_node.addEventListener('click', click_handler)
 		}//end for (let i = 0; i < ar_buttons_length; i++)
 
 	// tools
-		ui.add_tools(self, buttons_container)
+		ui.add_tools(self, other_buttons_block)
 
 
 	return fragment

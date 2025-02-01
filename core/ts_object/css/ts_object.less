@@ -18,6 +18,9 @@
 
 	// local vars
 	@ts_object_line_height: 20px;
+	@grey_color: #c3c3c3;
+	@grey_dark_color: #252525;
+	@yellow_color: #b5a83a;
 
 	// mixins
 		// inline_common
@@ -49,7 +52,8 @@
 		.inline_common;
 		width: 100%;
 		height: 0px;
-		padding-left: 2rem;
+		// padding-left: 2rem;
+		padding-left: 1.75rem;
 	}
 
 	&.hierarchy_root_node {
@@ -68,11 +72,15 @@
 	}
 
 	.id_column_link {
-		display: inline-table;
-		float: left;
+		// display: inline-table;
+		// float: left;
+		display: inline-block;
 		height: 1.4em;
 		line-height: 1.5rem;
 		z-index: 1; // overlap term hilite
+
+		width: 1.5rem;
+		margin-right: 0.25rem;
 
 		&:active {
 			opacity: 0.5;
@@ -88,7 +96,7 @@
 		.ts_icons_all;
 		background-image: url('../../themes/default/icons/add_light.svg');
 		&:hover {
-			background-color: #b5a83a;
+			background-color: @yellow_color;
 			border-radius: 3px;
 			filter: invert(100%);
 		}
@@ -103,7 +111,7 @@
 		background-image: url('../../themes/default/icons/move.svg');
 
 		&:hover {
-			background-color: #b5a83a;
+			background-color: @yellow_color;
 			border-radius: 3px;
 			filter: invert(100%);
 		}
@@ -128,8 +136,9 @@
 
 	 // order_number
 	.ts_object_order_number {
+		width: 1rem;
 		min-width: 14px;
-		text-align: right;
+		text-align: center;
 		padding-top: 0px;
 		margin-right: 3px;
 		font-size: 9px;
@@ -172,7 +181,7 @@
 		.ts_object_edit_icon {
 			background-image: url('../../themes/default/icons/edit.svg');
 			background-repeat: no-repeat;
-			background-size: 70%;
+			background-size: 65%;
 			background-position: center;
 			float: left;
 			width: 24px;
@@ -213,8 +222,7 @@
 			padding-right: 5px;
 			font-size: 1.1em;
 			text-align: center;
-			cursor: pointer;
-			border-left: 1px solid #c3c3c3;
+			border-left: 1px solid @grey_color;
 			opacity: 0.3;
 			width: 29px;
 			vertical-align: top;
@@ -224,13 +232,8 @@
 				opacity: 1;
 			}
 
-			&:hover {
-				color: #ef7d00 !important;
-				opacity: 1;
-			}
-
 			mark {
-				color: #333333 !important;
+				color: @color_grey_ultradark !important;
 				font-style: italic;
 			}
 
@@ -274,6 +277,15 @@
 			overflow-wrap: break-word;
 			hyphens: auto;
 
+			>.term_text {
+				cursor: pointer;
+
+				&:hover {
+					color: @color_orange_dedalo !important;
+					opacity: 1;
+				}
+			}
+
 			&.loading {
 
 				>span {
@@ -303,7 +315,7 @@
 		}
 
 		.element_hilite > span {
-			background-color: #FFEF3D;
+			background-color: @color_hilite_yellow;
 			color: #000000;
 			padding-left: 7px;
 			padding-right: 7px;
@@ -318,6 +330,10 @@
 			padding-right: 0.25rem;
 			user-select: auto;
 			line-height: 1.4rem;
+
+			&.show_section {
+				color: @color_orange_dedalo;
+			}
 		}
 
 		// indexations
@@ -339,9 +355,55 @@
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
+			cursor: pointer;
 
 			&.default {
 
+			}
+
+			// area_ontology elements common
+			.area_ontology & {
+				min-width: 1.16rem;
+				background-color: @grey_color;
+				color: @grey_dark_color;
+				padding: 3px;
+				border-radius: 1px;
+				height: 1.2rem;
+				font-size: 11px;
+				vertical-align: bottom;
+				top: 2px;
+			}
+
+			// ontology CSS properties
+			&.ontology16 {
+				background-color: #826b85;
+				color: white;
+			}
+
+			// ontology RQO properties
+			&.ontology17 {
+				background-color: #9d4a4a;
+				color: white;
+			}
+
+			// ontology properties
+			&.ontology18 {
+				background-color: #1b531f;
+				color: white;
+			}
+
+			// ontology v5 properties
+			&.ontology19 {
+				background-color: #e9dd9f;
+				color: @grey_dark_color;
+				&:hover {
+					color: @grey_dark_color !important;
+				}
+			}
+
+			// ontology model
+			&.ontology6 {
+				// background-color: @grey_color;
 			}
 
 			&:hover {
@@ -375,6 +437,33 @@
 			}
 		}
 
+		.button_duplicate {
+			background-color: @grey_color;
+			color: @grey_dark_color;
+			margin: 0;
+			width: 1.1rem;
+			display: inline-block;
+			text-align: center;
+			line-height: 1.23rem;
+			vertical-align: text-top;
+			font-size: 80%;
+			font-size: 1rem;
+			margin-left: 2px;
+			border-radius: 1px;
+			cursor: pointer;
+			padding: 0px;
+			opacity: 0.6;
+
+			&:hover {
+				opacity: 1;
+				color: @color_white;
+			}
+
+			>span {
+				position: relative;
+				top: -1px;
+			}
+		}
 
 		.list_thesaurus_element.button_recusive_indexations{
 			font-size: 1.5rem;
@@ -404,9 +493,15 @@
 			height: 1.4em;
 			position: static;
 			width: 1.4em;
-			margin: 3px;
+			margin: 2px;
 			.triangle_right;
 			opacity: 0.6;
+			cursor: pointer;
+
+			// ontology children arrow
+			.area_ontology & {
+				border-color: transparent transparent transparent #373737;
+			}
 
 			&:hover {
 				opacity: 1;
@@ -415,8 +510,14 @@
 
 		.ts_object_children_arrow_icon_open {
 			.triangle_down;
+			position: relative;
 			left: -2px;
-			top: 1px;
+			top: 2px;
+
+			// ontology children arrow
+			.area_ontology & {
+				border-color: #373737 transparent transparent;
+			}
 
 			&.arrow_spinner {
 				border-color: transparent;
@@ -450,8 +551,10 @@
 			content: " ";
 			display: block;
 			position: absolute;
-			top: 0.17rem;
-			left: 0.27rem;
+			// top: 0.17rem;
+			// left: 0.27rem;
+			top: -13px;
+			left: -6px;
 			width: 1.1rem;
 			height: 1.1rem;
 			border: 2px solid @color_grey_medium_1;
@@ -462,6 +565,12 @@
 			@media screen and (max-width: @width_break_point_0) {
 				top: 0.10rem;
 				left: 0.17rem;
+			}
+		}
+
+		.area_ontology & {
+			&:after {
+				border-top-color: @color_grey_dark_3;
 			}
 		}
 	}
@@ -567,7 +676,11 @@
 	.drag_over > .elements_container {
 		background-color: #4a57c5;
 		border-radius: 3px;
-		color: @color_white;
+		color: @color_white !important;
+
+		mark {
+			color: @color_white !important;
+		}
 	}
 
 	// no_descriptor term span
@@ -580,7 +693,7 @@
 	}
 
 	.wrap_ts_object_nd {
-		color: #797979;
+		color: @color_grey_darken;
 		padding: 2px;
 		padding-left: 0px;
 		padding-right: 0px;

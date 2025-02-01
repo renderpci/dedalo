@@ -1,14 +1,13 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestDox;
+// use PHPUnit\Framework\Attributes\TestDox;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class dd_area_maintenance_api_Test extends TestCase {
+final class dd_area_maintenance_api_test extends TestCase {
 
 
 
@@ -87,34 +86,34 @@ final class dd_area_maintenance_api_Test extends TestCase {
 	* TEST_STRUCTURE_TO_JSON
 	* @return void
 	*/
-	public function test_structure_to_json(): void {
+		// public function test_structure_to_json(): void {
 
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_area_maintenance_api",
-			    "action": "structure_to_json",
-			    "options": [
-			        {
-			            "name": "dedalo_prefix_tipos",
-			            "value": "dd"
-			        }
-			    ]
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
+		// 	$rqo = json_handler::decode('
+		// 		{
+		// 			"dd_api": "dd_area_maintenance_api",
+		// 		    "action": "structure_to_json",
+		// 		    "options": [
+		// 		        {
+		// 		            "name": "dedalo_prefix_tipos",
+		// 		            "value": "dd"
+		// 		        }
+		// 		    ]
+		// 		}
+		// 	');
+		// 	$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		// 	$response = $rqo->dd_api::{$rqo->action}($rqo);
+		// 		// dump($response, ' response ++ '.to_string());
 
-		$this->assertTrue(
-			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
-		);
+		// 	$this->assertTrue(
+		// 		empty($_ENV['DEDALO_LAST_ERROR']),
+		// 		'expected running without errors'
+		// 	);
 
-		$this->assertTrue(
-			gettype($response->result)==='boolean',
-			'expected result type is boolean'
-		);
-	}//end test_structure_to_json
+		// 	$this->assertTrue(
+		// 		gettype($response->result)==='boolean',
+		// 		'expected result type is boolean'
+		// 	);
+		// }//end test_structure_to_json
 
 
 

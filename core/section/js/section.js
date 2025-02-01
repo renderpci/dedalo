@@ -497,12 +497,14 @@ section.prototype.build = async function(autoload=false) {
 				mode	: self.mode
 			})
 			.then(function(){
-				// preload search (experimental disable)
+				// preload search (experimental disable now)
 				const pre_built_search = false
 				if (pre_built_search && self.mode==='list') {
-					setTimeout(function(){
-						self.filter.build()
-					}, 100)
+					dd_request_idle_callback(
+						() => {
+							self.filter.build()
+						}
+					)
 				}
 			})
 		}
@@ -1186,29 +1188,30 @@ section.prototype.navigate = async function(options) {
 		}
 
 	// clean previous locks of current user in current section
-		const clean_lock = () => {
-			data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api	: 'dd_utils_api',
-					action	: 'update_lock_components_state',
-					options	: {
-						component_tipo	: null,
-						section_tipo	: self.tipo,
-						section_id		: null,
-						action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
+		dd_request_idle_callback(
+			() => {
+				data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api	: 'dd_utils_api',
+						action	: 'update_lock_components_state',
+						options	: {
+							component_tipo	: null,
+							section_tipo	: self.tipo,
+							section_id		: null,
+							action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
+						}
 					}
-				}
-			})
-			.then(function(api_response){
-				// dedalo_notification from config file
-				// update page_globals
-				page_globals.dedalo_notification = api_response.dedalo_notification || null
-				// dedalo_notification from config file
-				event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
-			})
-		}
-		dd_request_idle_callback(clean_lock)
+				})
+				.then(function(api_response){
+					// dedalo_notification from config file
+					// update page_globals
+					page_globals.dedalo_notification = api_response.dedalo_notification || null
+					// dedalo_notification from config file
+					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+				})
+			}
+		)
 
 
 	return true
@@ -1437,7 +1440,7 @@ section.prototype.get_total = async function() {
 		})
 
 	// API error case
-		if ( api_count_response.result===false || api_count_response.error ) {
+		if ( api_count_response.result===false || api_count_response.errors?.length ) {
 			console.error('Error on count total : api_count_response:', api_count_response);
 			return
 		}

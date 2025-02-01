@@ -7,7 +7,7 @@
 // import
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
-	import {dd_console} from '../../../common/js/utils/index.js'
+	import {dd_console,JSON_parse_safely} from '../../../common/js/utils/index.js'
 	import {common} from '../../../common/js/common.js'
 	import {render_edit_service_upload} from './render_edit_service_upload.js'
 
@@ -281,70 +281,56 @@ export const upload = async function(options) {
 			const count_uploaded	= []
 			const xhr_load = function(evt) {
 
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.log('xhr_load evt:', evt);
+					}
+
 				// parse response string as JSON
-					// let response = null
-					// try {
-						const api_response = JSON.parse(evt.target.response);
-
-						if (!api_response) {
-							console.error("Error in XMLHttpRequest load response. Invalid response is received");
-							resolve(response)
-							return false
+					const api_response = JSON_parse_safely(evt.target.response);
+					if (!api_response) {
+						console.error("Error in XMLHttpRequest load response. Invalid response is received");
+						if (evt.target.responseText) {
+							response.msg = evt.target.responseText
 						}
-						// debug
-							if(SHOW_DEBUG===true) {
-								// console.log("upload_file.XMLHttpRequest load response:", api_response);
-							}
+						resolve(response)
+						return false
+					}
 
-						// check if the file uploaded is a chunk
-						const file_data = api_response.file_data
-						// if upload is chunked is necessary join the files in the server before resolve the upload
-						if(file_data && file_data.chunked) {
-							// get the index
-							const chunk_index = file_data.chunk_index
+				// check if the file uploaded is a chunk
+					const file_data = api_response.file_data
+					// if upload is chunked it is necessary join the files in the server before resolve the upload
+					if(file_data && file_data.chunked) {
+						// get the index
+						const chunk_index = file_data.chunk_index
 
-							files_chunked[chunk_index] = file_data.tmp_name
-							count_uploaded.push(file_data.chunk_index)
-							// get filename of every chunk
-							const total_chunks = parseInt( file_data.total_chunks)
-							// finished upload all chunks
-							if(count_uploaded.length === total_chunks){
+						files_chunked[chunk_index] = file_data.tmp_name
+						count_uploaded.push(file_data.chunk_index)
+						// get filename of every chunk
+						const total_chunks = parseInt( file_data.total_chunks)
+						// finished upload all chunks
+						if(count_uploaded.length === total_chunks){
 
-								service_upload.prototype.join_chunked_files({
-									file_data		: file_data,
-									files_chunked	: files_chunked
-								}).then(function(api_response){
-
-									resolve(api_response) //api_response
-									return true
-								})
-							}
-
-						}else{
-							resolve(api_response) //api_response
-							return true
+							service_upload.prototype.join_chunked_files({
+								file_data		: file_data,
+								files_chunked	: files_chunked
+							})
+							.then(function(api_response){
+								resolve(api_response)
+								return true
+							})
 						}
-
-
-					// } catch (error) {
-						// alert(evt.target.response)
-						// console.warn("response:",evt.target.response);
-						// console.error(error)
-
-						// resolve(response)
-						// return false
-					// }
-
-				// print message
-					// response_msg.innerHTML = response.msg
-
+					}else{
+						resolve(api_response)
+						return true
+					}
 			}//end xhr_load
 
 		// chunk_file
 			const chunk_file = function (file) {
 
 				const file_size		= file.size;
-				//break into xMB chunks
+				// break into xMB chunks
 				const size			= DEDALO_UPLOAD_SERVICE_CHUNK_FILES || 80; // maximum size for chunks
 				const chunk_size	= size*1024*1024;
 				let start			= 0;
@@ -495,7 +481,7 @@ export const upload = async function(options) {
 					xhr.addEventListener("load", xhr_load, false);
 
 				xhr.send(formdata);
-			}
+			}//end send
 
 		// chunk_file on end, else send next chunk
 			if (DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0) {
@@ -503,38 +489,6 @@ export const upload = async function(options) {
 			}else{
 				send()
 			}
-
-		// XMLHttpRequest
-			// 		const xhr = new XMLHttpRequest();
-
-			// 		// upload
-			// 			// upload_loadstart (the upload begins)
-			// 			xhr.upload.addEventListener("loadstart", upload_loadstart, false);
-
-			// 			// upload_load file (the upload ends successfully)
-			// 			xhr.upload.addEventListener("load", upload_load, false);
-
-			// 			// upload_error (the upload ends in error)
-			// 			xhr.upload.addEventListener("error", upload_error, false);
-
-			// 			// upload_abort (the upload has been aborted by the user)
-			// 			xhr.upload.addEventListener("abort", upload_abort, false);
-
-			// 			// progress
-			// 			xhr.upload.addEventListener("progress", upload_progress, false);
-
-			// 		// hxr
-			// 			// xhr_load (the XMLHttpRequest ends successfully)
-			// 			xhr.addEventListener("load", xhr_load, false);
-
-			// 			// open connection
-			// 			xhr.open("POST", api_url, true);
-
-			// 			// request header
-			// 			xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
-
-			// 		// send data
-			// 			xhr.send(fd);
 	})//end promise
 }//end upload
 

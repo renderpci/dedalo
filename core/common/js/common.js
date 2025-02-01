@@ -9,6 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_elements_css_object} from '../../page/js/css.js'
 	import {render_relogin} from '../../login/js/render_login.js'
@@ -434,18 +435,32 @@ common.prototype.render = async function (options={}) {
 						const old_content_data_node	= wrapper.content_data
 						// warning if not found
 						if (typeof old_content_data_node==='undefined' || !old_content_data_node) {
-							console.error("Invalid content_data pointer node found in render:", typeof old_content_data_node, old_content_data_node, self);
+
+							console.error("Invalid content_data pointer node found in render ("+self.model+") :", typeof old_content_data_node, old_content_data_node, self);
+
+							// new warning content_data node is added
+								const label = 'Invalid content_data DOM node [' + self.tipo + ']'
+								const new_content_data_node = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'no_access',
+									inner_html		: label
+								})
+								self.node.appendChild(new_content_data_node)
+								// set pointers
+								self.node.content_data = new_content_data_node
+
+						}else{
+
+							// new content data node
+								const new_content_data_node = node
+									? node // use already calculated node
+									: await self[render_mode](render_options);
+
+							// replace
+								old_content_data_node.replaceWith(new_content_data_node);
+								// set pointers. Update the wrapper pointer to the new content_data node
+								self.node.content_data = new_content_data_node
 						}
-
-					// new content data node
-						const new_content_data_node = node
-							? node // use already calculated node
-							: await self[render_mode](render_options);
-
-					// replace
-						old_content_data_node.replaceWith(new_content_data_node);
-						// set pointers. Update the wrapper pointer to the new content_data node
-						self.node.content_data = new_content_data_node
 
 					// return created node (content_data)
 					return self.node
@@ -497,9 +512,11 @@ common.prototype.render = async function (options={}) {
 
 	// activate_tooltips
 		if (self.mode==='edit') {
-			setTimeout(function(){
-				ui.activate_tooltips(result_node)
-			}, 1)
+			dd_request_idle_callback(
+				() => {
+					ui.activate_tooltips(result_node)
+				}
+			)
 		}
 
 	// debug
@@ -2811,7 +2828,11 @@ export const build_autoload = async function(self) {
 
 	// debug last server error. Only for development
 		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
-			console.log(`${self.model} build api_response:`, JSON.parse( JSON.stringify(api_response) ) );
+			if (api_response.errors?.length) {
+				console.error(`${self.model} build api_response with errors:`, JSON.parse( JSON.stringify(api_response) ) );
+			}else{
+				console.log(`${self.model} build api_response:`, JSON.parse( JSON.stringify(api_response) ) );
+			}
 			if (api_response && api_response.dedalo_last_error) {
 				console.error('SERVER: api_response.dedalo_last_error:', api_response.dedalo_last_error);
 			}

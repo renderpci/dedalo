@@ -7,6 +7,7 @@
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 	import {common} from '../../../core/common/js/common.js'
 	import {LZString as lzstring} from '../../../core/common/js/utils/lzstring.js'
 	import {ui} from '../../../core/common/js/ui.js'
@@ -617,8 +618,9 @@ export const open_tool = async (options) => {
 const view_modal = async function(options) {
 
 	// options
-		const tool_context	= options.tool_context || {}
-		const caller		= options.caller
+		const tool_context		= options.tool_context || {}
+		const caller			= options.caller
+		const windowFeatures	= options.windowFeatures || null
 
 	// tool context additional properties
 		tool_context.lang		= caller.lang
@@ -741,9 +743,11 @@ const view_modal = async function(options) {
 				tool_instance.on_close_actions('modal')
 				// re-select the caller component
 				if (caller.type==='component') {
-					setTimeout(()=>{
-						ui.component.activate(caller)
-					}, 1)
+					dd_request_idle_callback(
+						() => {
+							ui.component.activate(caller)
+						}
+					)
 				}
 
 			}else{
@@ -753,13 +757,21 @@ const view_modal = async function(options) {
 				})
 				.then(()=>{
 					// re-select the caller component
-					if (caller.type==='component') {
-						setTimeout(()=>{
+					dd_request_idle_callback(
+						() => {
 							ui.component.activate(caller)
-						}, 1)
-					}
+						}
+					)
 				})
 				tool_instance.destroy(true, true, true)
+			}
+		}
+
+	// windowFeatures. To customize the modal size in a tool, set tool properties
+	// `windowFeatures` like `{"windowFeatures":{"width":"34rem","maxWidth":"100%"}}`
+		if (windowFeatures) {
+			for (let [key, value] of Object.entries(windowFeatures)) {
+				modal.modal_content.style[key] = value
 			}
 		}
 

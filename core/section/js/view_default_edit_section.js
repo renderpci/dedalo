@@ -56,6 +56,7 @@ view_default_edit_section.render = async function(self, options) {
 		if (self.inspector) {
 			const inspector_container = ui.create_dom_element({
 				element_type	: 'div',
+				id				: 'inspector_container',
 				class_name		: 'inspector_container',
 				parent			: fragment
 			})

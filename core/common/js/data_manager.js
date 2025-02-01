@@ -43,6 +43,12 @@ data_manager.request = async function(options) {
 		this.body			= options.body // body data type must match "Content-Type" header
 		this.use_worker		= options.use_worker ?? false
 
+	// recovery mode. Auto add if environment recovery_mode is true
+	// On set to true, it is passed across all API request calls preserving the mode
+		if (page_globals.recovery_mode) {
+			this.body.recovery_mode = true
+		}
+
 	// reset page_globals.api_errors
 		page_globals.api_errors = []
 
@@ -114,6 +120,10 @@ data_manager.request = async function(options) {
 		const handle_errors = function(response) {
 			if (!response.ok) {
 				console.warn("-> HANDLE_ERRORS response:",response);
+				// extract response text to console
+				response.text().then(function(response_str){
+					console.error(response_str);
+				})
 				throw Error(response.statusText);
 			}
 			return response;
@@ -163,7 +173,7 @@ data_manager.request = async function(options) {
 						// api_errors. store api_errors. Used to render error page_globals
 							page_globals.api_errors.push(
 								{
-									error	: api_response.error || 'data_manager', // error type
+									error	: api_response?.errors?.length ? api_response.errors.join(' | ') : 'data_manager', // error type
 									msg		: msg,
 									trace	: 'data_manager json_parsed'
 								}
@@ -184,7 +194,7 @@ data_manager.request = async function(options) {
 			// api_errors. store api_errors. Used to render error page_globals
 				page_globals.api_errors.push(
 					{
-						error	: api_response?.error || 'data_manager', // error type
+						error	: api_response?.errors?.length ? api_response.errors.join(' | ') : 'data_manager', // error type
 						msg		: (api_response?.msg || api_response?.error || error),
 						trace	: 'data_manager catch error'
 					}
@@ -193,7 +203,8 @@ data_manager.request = async function(options) {
 			return {
 				result	: false,
 				msg		: error.message || null,
-				error	: error
+				error	: error,
+				errors  : [error.message || null]
 			}
 		});
 
@@ -419,6 +430,86 @@ data_manager.get_element_context = async function(source) {
 
 	return api_response
 }//end get_element_context
+
+
+
+/**
+* RESOLVE_MODEL
+* Resolves element simple context and extract the model
+* from the response object
+* Used in ts_object.js to resolve components model to load
+* @param string tipo
+* @param string section_tipo
+* @return string|null model
+*/
+data_manager.resolve_model = async function(tipo, section_tipo) {
+
+	// cache from page_globals
+		const cache_key = tipo
+		page_globals.models = page_globals.models || {}
+		if (page_globals.models[cache_key]) {
+			return page_globals.models[cache_key]
+		}
+
+	// api request
+		const api_response = await this.request({
+			body : {
+				action	: 'get_element_context',
+				simple	: true, // force simple context here
+				source	: {
+					tipo			: tipo,
+					section_tipo	: section_tipo
+				}
+			}
+		})
+
+	// model from context simple response
+		const model = api_response.result?.model || null
+
+	// store in cache
+		page_globals.models[cache_key] = model
+
+
+	return model
+}//end resolve_model
+
+
+
+/**
+* GET_ONTOLOGY_INFO
+* Request API info about current tipo, resolving
+* section_tipo and section_id from given tipo
+* @param string tipo
+* @return object ontology_info
+*/
+data_manager.get_ontology_info = async function(tipo) {
+
+	// cache from page_globals
+		const cache_key = tipo
+		page_globals.ontology_info = page_globals.ontology_info || {}
+		if (page_globals.ontology_info[cache_key]) {
+			return page_globals.ontology_info[cache_key]
+		}
+
+	// load data from API
+		const rqo = {
+			action			: 'get_ontology_info',
+			prevent_lock	: true,
+			tipo			: tipo
+		}
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+	// ontology_info response
+		const ontology_info = api_response?.result || false
+
+	// store in cache
+		page_globals.ontology_info[cache_key] = ontology_info
+
+
+	return ontology_info
+}//end get_ontology_info
 
 
 

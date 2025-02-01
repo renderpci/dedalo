@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
  * CORE FUNCTIONS
  * Moved from core/base/core_functions.php to shared/core_functions.php
@@ -35,8 +34,9 @@ function dump( mixed $val=null, ?string $var_name=null, ?array $arguments=null )
 		array_pop($bts);
 
 	// msg
+		$root_path = defined('DEDALO_ROOT_PATH') ? DEDALO_ROOT_PATH : dirname(dirname(__FILE__));
 		$msg  = ' DUMP ' . PHP_EOL
-			   .' Caller: ' . str_replace(DEDALO_ROOT_PATH, '', $bt[0]['file']) . PHP_EOL
+			   .' Caller: ' . str_replace($root_path, '', $bt[0]['file']) . PHP_EOL
 			   .' Line: ' . @$bt[0]['line'];
 
 	// LEVEL 1
@@ -330,25 +330,21 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 			break;
 
 		case logger::WARNING:
-			if ( running_in_cli()===true ) {
 
-				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+			$base_msg = 'DEBUG_LOG ['.$level_string.'] ' . $info . PHP_EOL
+				. '[seq]: '  . implode(' > ', $bts);
 
-			}else{
-
-				$base_msg = 'DEBUG_LOG ['.$level_string.'] ' . $info . PHP_EOL
-					. '[seq]: '  . implode(' > ', $bts);
-
-				$msg = sprintf($colorFormats['cyan'], $base_msg);
-			}
+			$msg = running_in_cli()===true
+				? $base_msg
+				: sprintf($colorFormats['cyan'], $base_msg);
 			break;
 
 		case logger::ERROR:
-			if ( running_in_cli()===true ) {
+			// if ( running_in_cli()===true ) {
 
-				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+			// 	$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
 
-			}else{
+			// }else{
 
 				$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
 					. ' ' . $info .' '. PHP_EOL
@@ -357,7 +353,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 					. ' [seq]: '  . implode(' > ', $bts);
 
 				$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
-			}
+			// }
 
 			// DEDALO_ERRORS ADD
 			$_ENV['DEDALO_LAST_ERROR'] = $info;
@@ -436,6 +432,7 @@ function curl_request(object $options) : object {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
 
 	// open connection
 		$ch = curl_init();
@@ -485,14 +482,17 @@ function curl_request(object $options) : object {
 				case 401:
 					$debug_level = logger::ERROR;
 					$msg .= "Error. Unauthorized code";
+					$response->errors[] = 'Unauthorized code ['.$httpcode.']';
 					break;
 				case 400:
 					$debug_level = logger::WARNING;
 					$msg .= "Error. Bad Request. Server has problems connecting to file";
+					$response->errors[] = 'Server error ['.$httpcode.']';
 					break;
 				default:
 					$debug_level = logger::ERROR;
 					$msg .= "Error. check_remote_server problem found";
+					$response->errors[] = 'Server error code: ['.$httpcode.']';
 					break;
 			}
 			debug_log(__METHOD__
@@ -511,6 +511,7 @@ function curl_request(object $options) : object {
 			if(curl_errno($ch)) {
 				$error_info	 = curl_error($ch);
 				$msg		.= '. curl_request Curl error: ' . $error_info;
+				$response->errors[] = 'curl_error: '.$error_info;
 				debug_log(__METHOD__
 					.' '.$url.' error_info: '.$error_info
 					, logger::ERROR
@@ -525,6 +526,7 @@ function curl_request(object $options) : object {
 			}
 		} catch (Exception $e) {
 			$msg .= '. curl_request Caught exception: ' . $e->getMessage();
+			$response->errors[] = 'exception: '.$e->getMessage();
 			debug_log(__METHOD__
 				.' curl_request Caught exception: ' . $e->getMessage()
 				, logger::ERROR
@@ -535,10 +537,10 @@ function curl_request(object $options) : object {
 		curl_close($ch);
 
 	// response
-		$response->msg		= $msg;
-		$response->error	= $error_info;
-		$response->code		= $httpcode;
-		$response->result	= $result;
+		$response->msg			= $msg;
+		$response->error_info	= $error_info;
+		$response->code			= $httpcode;
+		$response->result		= $result;
 
 
 	return $response;
@@ -1776,6 +1778,25 @@ function safe_lang(string $lang) : string|bool {
 
 
 /**
+* SAFE_TLD
+* Remove extra malicious code
+* Only small caps are admitted
+* @param string $tld
+* @return string|bool $tld
+*/
+function safe_tld(string $tld) : string|bool {
+
+	preg_match("/^[a-z]{2,}$/", $tld, $output_array);
+	if (empty($output_array[0])) {
+		return false;
+	}
+
+	return $tld;
+}//end safe_tld
+
+
+
+/**
 * SAFE_TIPO
 * Remove extra malicious code
 * @param string $tipo
@@ -1783,7 +1804,7 @@ function safe_lang(string $lang) : string|bool {
 */
 function safe_tipo(string $tipo) : string|bool {
 
-	preg_match("/^[a-z]+[0-9]+$/", $tipo, $output_array);
+	preg_match("/^[a-z]{2,}[0-9]+$/", $tipo, $output_array);
 	if (empty($output_array[0])) {
 		return false;
 	}
@@ -1813,6 +1834,92 @@ function safe_section_id( string|int $section_id ) : string|int|bool {
 
 	return $section_id;
 }//end safe_section_id
+
+
+
+/**
+* GET_SECTION_ID_FROM_TIPO
+* Extract the section_id from given tipo
+* like '1' from 'rsc1'
+* @param string $tipo
+* @return string|false
+*/
+function get_section_id_from_tipo( string $tipo ) : string|false {
+
+	preg_match("/[0-9]+/", $tipo, $output_array);
+	if (empty($output_array[0]) && $output_array[0]!=0 ) {
+		debug_log(__METHOD__
+			." Error: Invalid tipo received. Impossible get_section_id_from_tipo this tipo :  " . PHP_EOL
+			.' tipo: ' . to_string($tipo)
+			, logger::ERROR
+		);
+
+		return false;
+	}
+
+	return $output_array[0];
+}//end get_section_id_from_tipo
+
+
+
+/**
+* GET_TLD_FROM_TIPO
+* Extract the tld from given tipo
+* like 'rsc' from 'rsc1'
+* @param string $tipo
+* @return string|false
+*/
+function get_tld_from_tipo( string $tipo ) : string|false {
+
+	preg_match("/^[a-z]{2,}/", $tipo, $output_array);
+	if (empty($output_array[0])) {
+		debug_log(__METHOD__
+			." Error: Invalid tipo received. Impossible get_tld_from_tipo this tipo :  " . PHP_EOL
+			.' tipo: ' . to_string($tipo)
+			, logger::ERROR
+		);
+		return false;
+	}
+
+	return $output_array[0];
+}//end get_tld_from_tipo
+
+
+
+/**
+* TIPO_IN_ARRAY
+* Check if the tipo is in array
+* The given array could has a tld with '*' wildcard to indicate that all tipos of the tld are accepted.
+* ex: ontology40 will be accepted if in the array has a tld with * as: [ontology*]
+* if the array has not wildcards will be check the full string.
+* Is used in common to get tools and check the affected sections/components/etc...
+* see: tool_ontology definition.
+* @param string $tipo
+* @param array $array
+* @return bool
+*/
+function tipo_in_array( string $tipo, array $array ) : bool {
+
+	foreach ($array as $current_value) {
+		if( strpos($current_value, '*') !== false ){
+
+			$tipo_tld			= get_tld_from_tipo( $tipo );
+			$current_value_tld	= get_tld_from_tipo( $current_value );
+
+			if($tipo_tld === $current_value_tld){
+				return true;
+			}
+		}
+		if( strpos($current_value, '/') !== false ){
+			preg_match($current_value, $tipo, $output_array);
+			if( !empty($output_array) ){
+				return true;
+			}
+		}
+	}
+
+	return in_array( $tipo, $array );
+}//end tipo_in_array
 
 
 
@@ -2158,27 +2265,6 @@ function get_base_binary_path() : string {
 
 
 /**
-* TEST_PHP_VERSION_SUPPORTED
-* Test if PHP version is supported
-* @param string $minimum_php_version = '8.1.0'
-* @return bool
-*/
-function test_php_version_supported(string $minimum_php_version='8.1.0') : bool {
-
-	if (version_compare(PHP_VERSION, $minimum_php_version) >= 0) {
-		return true;
-	}else{
-		debug_log(__METHOD__
-			." This PHP version (".PHP_VERSION.") is not supported ! Please update your PHP to $minimum_php_version or higher ASAP "
-			, logger::ERROR
-		);
-		return false;
-	}
-}//end test_php_version_supported
-
-
-
-/**
 * SANITIZE_FILE_NAME
 * Sanitize filenames for user uploaded files
 * From Sean Vieira
@@ -2298,6 +2384,14 @@ function is_empty_dato(mixed $dato) : bool {
 
 	switch (true) {
 
+		case is_object($dato):
+
+			$value = (array)$dato;
+			if (!is_empty_dato($value)) {
+				return false;
+			}
+			return true;
+
 		case is_array($dato):
 
 			foreach ($dato as $value) {
@@ -2414,7 +2508,7 @@ function get_cookie_properties() : object {
 * 	true when directory already exists or is created successfully
 * 	false when not exists and is not possible to create it for any reason
 */
-function create_directory(string $folder_path, int $create_dir_permissions=0750) {
+function create_directory(string $folder_path, int $create_dir_permissions=0750) : bool {
 
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
@@ -2455,7 +2549,7 @@ function get_backtrace_sequence() : array  {
 
 	$bt = debug_backtrace();
 	$seq = [];
-	foreach ([1,2,3,4,5,6,7,8] as $key) {
+	foreach ([1,2,3,4,5,6,7,8,9,10] as $key) {
 
 		$name_function	= $bt[$key]['function'] ?? null;
 		$name_class		= $bt[$key]['class'] ?? null;
@@ -2478,3 +2572,72 @@ function get_backtrace_sequence() : array  {
 
 	return $seq;
 }//end get_backtrace_sequence
+
+
+
+/**
+* CHECK_URL
+* Exec a PHP header request to verify if URL is reachable
+* Only 200 code in response is interpreted as reachable
+* @param string $url
+* @return bool
+*/
+function check_url( string $url ) : bool {
+
+	try {
+
+		$context = stream_context_create(
+			[
+				'http' => array(
+					'method' => 'HEAD'
+				)
+			]
+		);
+
+		$headers = get_headers($url, false, $context);
+
+		$first_line = $headers[0] ?? '';
+
+		if ( strpos($first_line, ' 200 ')!==false) {
+			return true;
+		}
+
+	} catch (Exception $e) {
+
+		debug_log(__METHOD__
+			. " Exception checking URL: $url " . PHP_EOL
+			. ' Caught exception: ' . $e->getMessage()
+			, logger::DEBUG
+		);
+	}
+
+
+	return false;
+}//end check_url
+
+
+
+/**
+* IS_ONTOLOGY_AVAILABLE
+* Check if Ontology (jer_dd) is reachable
+* @return bool
+*/
+function is_ontology_available() {
+
+ 	try {
+
+		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
+		$term			= $RecordObj_dd->get_term();
+
+		return is_object($term);
+
+	} catch (Exception $e) {
+		debug_log(__METHOD__
+			. " Error (exception) on check term jer_dd_column" . PHP_EOL
+			. ' Caught exception: ' . $e->getMessage()
+			, logger::ERROR
+		);
+
+		return false;
+	}
+ }//end is_ontology_available

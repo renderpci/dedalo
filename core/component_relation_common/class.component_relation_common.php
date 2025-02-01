@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /*
 * CLASS COMPONENT_RELATION_COMMON
 * Used as common base from all components that works from section relations data, instead standard component dato
@@ -134,6 +133,7 @@ class component_relation_common extends component_common {
 			'component_select',
 			'component_select_lang',
 			'component_inverse',
+			'component_dataframe',
 		];
 
 		return $components_with_relations;
@@ -172,8 +172,8 @@ class component_relation_common extends component_common {
 		if(isset($this->dato_resolved)) {
 
 			// dato_resolved. Already resolved case
-
 			$dato_full = $this->dato_resolved;
+
 
 		}else{
 
@@ -204,6 +204,7 @@ class component_relation_common extends component_common {
 	/**
 	* LOAD MATRIX DATA
 	* Get data once from matrix about parent, dato
+	* Overwrites component_common->load_componen_dato()
 	* @return bool
 	*/
 	protected function load_component_dato() : bool {
@@ -319,8 +320,10 @@ class component_relation_common extends component_common {
 			});
 			if (empty($ddo_direct_children)) {
 				debug_log(__METHOD__
-					. " WARNING! Empty direct_children for tipo: $this->tipo" .PHP_EOL
-					. 'ddo: ' . to_string($ddo)
+					. " WARNING! Empty ddo_direct_children for tipo: $this->tipo" .PHP_EOL
+					. 'ddo: ' . to_string($ddo) .PHP_EOL
+					. 'ddo_map: ' . to_string($ddo_map) .PHP_EOL
+					. 'tipo: ' . to_string($this->tipo)
 					, logger::WARNING
 				);
 			}
@@ -720,10 +723,10 @@ class component_relation_common extends component_common {
 
 					// type
 						if (!isset($locator_copy->type)) {
-							debug_log(__METHOD__
-								." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
-								, logger::WARNING
-							);
+							// debug_log(__METHOD__
+							// 	." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
+							// 	, logger::DEBUG
+							// );
 							$locator_copy->type = $relation_type;
 						}
 
@@ -855,13 +858,15 @@ class component_relation_common extends component_common {
 
 	/**
 	* ADD_LOCATOR_TO_DATO
-	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
+	* Add one locator to current 'dato'. Verify that it exists before, to avoid duplicates.
 	* @param object $locator
 	* @return bool
 	*/
 	public function add_locator_to_dato( object $locator ) : bool {
 
-		if(empty($locator)) return false;
+		if(empty($locator)) {
+			return false;
+		}
 
 		if (!is_object($locator) || !isset($locator->type)) {
 			if(SHOW_DEBUG===true) {
@@ -876,9 +881,9 @@ class component_relation_common extends component_common {
 			return false;
 		}
 
-		$current_type 	= $locator->type;
-		$dato 	  		= $this->get_dato();
-		$added 			= false;
+		// short vars
+		$dato	= $this->get_dato();
+		$added	= false;
 
 		// maintain array index after unset value. ! Important for encode JSON as array later (if keys are not correlatives, undesired object is created)
 		$dato = array_values($dato);
@@ -894,7 +899,7 @@ class component_relation_common extends component_common {
 			debug_log(__METHOD__
 				." Ignored add locator action because already exists. Tested properties: " . PHP_EOL
 				.' locator: ' . json_encode($locator)
-				, logger::ERROR
+				, logger::WARNING
 			);
 		}
 
@@ -1216,10 +1221,10 @@ class component_relation_common extends component_common {
 				$response->msg		= '';
 
 		// short vars
-			$section_table		= common::get_matrix_table_from_tipo($section_tipo); // Normally 'matrix_hierarchy'
-			$hierarchy_table	= hierarchy::$table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
-			$ar_tables			= [$section_table, $hierarchy_table];
-			$parents			= component_relation_parent::get_parents(
+			$section_table	= common::get_matrix_table_from_tipo($section_tipo); // Normally 'matrix_hierarchy'
+			$main_table		= ( strpos($section_tipo,'ontology')!==false ) ? ontology::$main_table : hierarchy::$main_table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
+			$ar_tables		= [$section_table, $main_table];
+			$parents		= component_relation_parent::get_parents(
 				$section_id,
 				$section_tipo,
 				null, // string|null from_component_tipo
@@ -1399,7 +1404,7 @@ class component_relation_common extends component_common {
 
 		// q . Object locator is expected
 		$q = $query_object->q;
-		if (!is_object($q)) {
+		if (!is_object($q) && $q!=='only_operator') {
 			debug_log(__METHOD__
 				. " Expected q type is object " . PHP_EOL
 				. ' type: ' . gettype($q) . PHP_EOL
@@ -1442,8 +1447,8 @@ class component_relation_common extends component_common {
 				}else{
 					$q_obj = new stdClass();
 						$q_obj->from_component_tipo = $component_tipo ;
-					$ar_q 	  = array($q_obj);
-					$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
+					$ar_q		= array($q_obj);
+					$q_clean	= '\''.json_encode($ar_q).'\'::jsonb IS DISTINCT FROM TRUE';
 				}
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
@@ -2379,58 +2384,85 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_CONFIG_CONTEXT_SECTION_TIPO
+	* GET_REQUEST_CONFIG_SECTION_TIPO
+	* Resolves section tipo from properties definition.
+	* Sometimes it is not possible to clearly define section_type,
+	* in those cases it is possible to define in properties a «resolution» with a context
+	* for example:
+	* 	self
+	* 		in toponymy «self» will be resolved by the section_tipo that call as es1, fr1, etc.
+	* 	hierarchy_types
+	* 		resolve the hierarchy type as 1 - thematic, and set all section_tipo of this type as; ts1, on1, dc1, etc...
+	*
+	* this function has two params
 	* @param array $ar_section_tipo_sources
-	* @param string|null $retrieved_section_tipo = null
+	* this param give the property configuration as:
+	* [
+	*    {
+	*        "value": [
+	*            "hierarchy53"
+	*        ],
+	*        "source": "field_value"
+	*    }
+	* ]
+	* second param is used to give the caller section_tipo, used for the resolution in some cases.
+	* @param string|null $caller_section_tipo = null
+	* 	sample: hierarchy1
 	* @return array $ar_section_tipo
 	*/
-	public static function get_request_config_section_tipo( array $ar_section_tipo_sources, $retrieved_section_tipo=null ) : array {
-		$start_time=start_time();
+	public static function get_request_config_section_tipo( array $ar_section_tipo_sources, string $caller_section_tipo ) : array {
+		if(SHOW_DEBUG===true) {
+			$start_time=start_time();
+		}
 
 		$ar_section_tipo = [];
 		foreach ($ar_section_tipo_sources as $source_item) {
 
-			if (is_string($source_item)) {
+			// check source_item
+				if (is_string($source_item)) {
 
-				// old self section tipo properties definitions
-					// if ($source_item==='self') {
-					// 	$source_item = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
-					// }
-					if ($source_item==='self') {
-						debug_log(__METHOD__
-							." Exception ERROR Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}]" . PHP_EOL
-							.' source_item: ' . to_string($source_item)
-							, logger::ERROR
-						);
-						if(SHOW_DEBUG===true) {
-							throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format
-								. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+					// old self section tipo properties definitions
+						// if ($source_item==='self') {
+						// 	$source_item = is_array($caller_section_tipo) ? reset($caller_section_tipo) : $caller_section_tipo;
+						// }
+						if ($source_item==='self') {
+							debug_log(__METHOD__
+								." Exception ERROR Processing get_request_config_section_tipo (1) invalid section_tipo format. Use an object like \"section_tipo\": [{\"source\": \"self\"}]" . PHP_EOL
+								.' source_item: ' . to_string($source_item)
+								, logger::ERROR
+							);
+							if(SHOW_DEBUG===true) {
+								throw new Exception("***** Error Processing get_request_config_section_tipo (1) invalid section_tipo format
+									. Use an object like \"section_tipo\": [{\"source\": \"self\"}] . ".to_string($source_item), 1);
+							}
 						}
-					}
 
-				$ar_section_tipo[] = $source_item;
-				debug_log(__METHOD__
-					." ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
-					.' source_item: '.to_string($source_item) . PHP_EOL
-					.' ar_section_tipo_sources: '.to_string($ar_section_tipo_sources) . PHP_EOL
-					.' retrieved_section_tipo: '.to_string($retrieved_section_tipo)
-					,logger::ERROR
-				);
-				continue;
-			}
-			if (empty($source_item->source)) {
-				debug_log(__METHOD__
-					. " ++++++++++++++++++++++++++++++++++++ Ignored item with empty source ". PHP_EOL
-					. ' source_item: ' . to_string($source_item)
-					, logger::ERROR
-				);
-				continue;
-			}
+					$ar_section_tipo[] = $source_item;
+					debug_log(__METHOD__
+						." ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
+						.' source_item: '.to_string($source_item) . PHP_EOL
+						.' ar_section_tipo_sources: '.to_string($ar_section_tipo_sources) . PHP_EOL
+						.' caller_section_tipo: '.to_string($caller_section_tipo)
+						,logger::ERROR
+					);
+					continue;
+				}
+
+			// check source
+				if (empty($source_item->source)) {
+					debug_log(__METHOD__
+						. " ++++++++++++++++++++++++++++++++++++ Ignored item with empty source ". PHP_EOL
+						. ' source_item: ' . to_string($source_item)
+						, logger::ERROR
+					);
+					continue;
+				}
 
 			switch ($source_item->source) {
+
 				case 'self':
-					// $ar_section_tipo = is_array($retrieved_section_tipo) ? reset($retrieved_section_tipo) : $retrieved_section_tipo;
-					$ar_section_tipo = is_array($retrieved_section_tipo) ? $retrieved_section_tipo : [$retrieved_section_tipo];
+					// $ar_section_tipo = is_array($caller_section_tipo) ? reset($caller_section_tipo) : $caller_section_tipo;
+					$ar_section_tipo = is_array($caller_section_tipo) ? $caller_section_tipo : [$caller_section_tipo];
 					break;
 
 				case 'hierarchy_types':
@@ -2438,50 +2470,78 @@ class component_relation_common extends component_common {
 					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
 					break;
 
+				case 'ontology_sections':
+					$ontolgoy_sections = ontology::get_all_ontology_sections();
+					$ar_section_tipo = array_merge($ar_section_tipo, $ontolgoy_sections);
+					break;
+
 				case 'field_value':
 					// this case is used in component_relation_children in the hierarchy section
 					// in these case the array of sections will get from the value of specific field
 					$target_values = $source_item->value; // target thesaurus like ['hierarchy53']
+
+					// sections (all hierarchy sections -hierarchy1- normally)
+					// Use here a custom SQO search to prevent projects filter
+						$sqo = new stdClass();
+							$sqo->section_tipo			= $caller_section_tipo;
+							$sqo->limit					= 0;
+							$sqo->offset				= 0;
+							$sqo->order					= false;
+							$sqo->skip_projects_filter	= true;
+							// filter active only to reduce the amount of sections where to search
+							// improving speed and ignoring not used (inactive) sections
+							$sqo->filter				= json_decode('
+							{
+								"$and": [
+									{
+										"q": [
+											{
+												"section_tipo": "dd64",
+												"section_id": "1",
+												"from_component_tipo": "hierarchy4"
+											}
+										],
+										"q_operator": null,
+										"path": [
+											{
+												"section_tipo": "hierarchy1",
+												"component_tipo": "hierarchy4",
+												"model": "component_radio_button",
+												"name": "Active"
+											}
+										],
+										"q_split": false,
+										"type": "jsonb",
+										"component_path": [
+											"relations"
+										],
+										"operator": "@>",
+										"q_parsed": "\'[{\"section_tipo\":\"dd64\",\"section_id\":\"1\",\"from_component_tipo\":\"hierarchy4\"}]\'"
+									}
+								]
+							}
+							');
+
+						$sections = sections::get_instance(
+							null,
+							$sqo,
+							$caller_section_tipo, // caller tipo
+							'list',
+							DEDALO_DATA_NOLAN
+						);
+						$records = $sections->get_dato();
+
 					foreach ((array)$target_values as $current_component_tipo) {
 
 						// short vars
 							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
-						// sections (all hierarchy sections -hierarchy1- normally)
-							if (!isset($records)) {
-								// calculate once
-								$sqo = new stdClass();
-									$sqo->section_tipo			= $retrieved_section_tipo;
-									$sqo->limit					= 0;
-									$sqo->offset				= 0;
-									$sqo->order					= false;
-									$sqo->skip_projects_filter	= true;
-								$sections = sections::get_instance(
-									null,
-									$sqo,
-									$retrieved_section_tipo,
-									'list',
-									DEDALO_DATA_LANG
-								);
-								$records = $sections->get_dato();
-							}
-
 						// data
 							foreach ($records as $current_record) {
 
-								$section = section::get_instance(
-									$current_record->section_id,
-									$current_record->section_tipo,
-									'list',
-									true
-								);
-
-								// inject datos to section and set as loaded
-								$datos = $current_record->datos ?? null;
-								if (!is_null($datos)) {
-									$section->set_dato($datos);
-								}
+								// (!) do not inject section data here anytime
+								// because interferes with component_relation_cildren saving
 
 								// component
 								$component = component_common::get_instance(
@@ -2494,18 +2554,30 @@ class component_relation_common extends component_common {
 								);
 
 								$component_dato = $component->get_dato();
-								if (!empty($component_dato)) {
-									foreach ($component_dato as $current_section_tipo) {
-										if (!empty($current_section_tipo)) {
-											$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
-											if (!empty($section_model_name)) {
-												$ar_section_tipo[] = $current_section_tipo;
-											}
-										}
+								if ( empty($component_dato) ) {
+									continue;
+								}
+
+								foreach ($component_dato as $current_section_tipo) {
+									if ( empty($current_section_tipo) ) {
+										continue;
+									}
+									$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+									if ( $section_model_name==='section' ) {
+										$ar_section_tipo[] = $current_section_tipo;
+									}else{
+										debug_log(__METHOD__
+											. " target section tipo definition is ignored because is not a section " . PHP_EOL
+											. ' section_tipo ignored: '. to_string($current_section_tipo) . PHP_EOL
+											. ' model: ' . to_string($section_model_name). PHP_EOL
+											. ' section: ' . to_string($current_record->section_tipo). PHP_EOL
+											. ' section_id: ' . to_string($current_record->section_id). PHP_EOL
+											, logger::ERROR
+										);
 									}
 								}
 							}//end foreach ($dato as $current_record)
-					}
+					}//end foreach ((array)$target_values as $current_component_tipo)
 					break;
 
 				case 'hierarchy_terms':
@@ -2524,10 +2596,11 @@ class component_relation_common extends component_common {
 						$ar_section_tipo[] = $item->section_tipo;
 					}
 					break;
+
 				case 'section':
 				default:
-					// verify the section tld, if its active in the installation
-						//sometimes the definition is a string, sometimes is array, mix both into array
+					// verify the section tld, if its active in the installation.
+					// Sometimes the definition is a string, sometimes is array, mix both into array
 						$current_item_values = (array)$source_item->value;
 						$valid_sections_tipo = [];
 						foreach ($current_item_values as $current_section_tipo) {
@@ -2547,7 +2620,7 @@ class component_relation_common extends component_common {
 					$ar_section_tipo = array_merge($ar_section_tipo, $valid_sections_tipo);
 					break;
 			}
-		}//end foreach ((array)$ar_section_tipo_sources as $source_item)
+		}//end foreach($ar_section_tipo_sources as $source_item)
 
 		// remove duplicates
 		$ar_section_tipo = array_values(
@@ -2557,10 +2630,10 @@ class component_relation_common extends component_common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				// dump($ar_section_tipo, ' ar_section_tipo ++ '.exec_time_unit($start_time,'ms').' ms');
-				// debug_log(
-				// 	'------- resolve request_config_section_tipo ------- '.exec_time_unit($start_time,'ms').' ms',
-				// 	logger::DEBUG
-				// );
+				debug_log(
+					'------- resolve request_config_section_tipo ------- '. to_string($ar_section_tipo) .' -- ' .exec_time_unit($start_time,'ms').' ms',
+					logger::DEBUG
+				);
 			}
 
 
@@ -2838,6 +2911,7 @@ class component_relation_common extends component_common {
 
 		return $component_data;
 	}//end resolve_component_data_recursively
+
 
 
 	/**

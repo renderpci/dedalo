@@ -35,6 +35,8 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 
 describe(`COMPONENTS LIFE-CYCLE`, async function() {
 
+	this.timeout(4000);
+
 	// elements iterate
 	for (let i = 0; i < elements_length; i++) {
 

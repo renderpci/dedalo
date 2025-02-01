@@ -637,7 +637,9 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					}
 
 					const layer_selector = this.render_layer_selector(self, this.active_layer)
-					layer_selector_container.appendChild(layer_selector)
+					if (layer_selector) {
+						layer_selector_container.appendChild(layer_selector)
+					}
 
 					activate_status(layer_selector_button)
 				})

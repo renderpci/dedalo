@@ -64,8 +64,9 @@ const t0 = performance.now()
 		lastScrollY = window.scrollY;
 
 		// Prevent multiple rAF callbacks.
-		if (scheduledAnimationFrame)
-		return;
+		if (scheduledAnimationFrame) {
+			return;
+		}
 
 		scheduledAnimationFrame = true;
 		requestAnimationFrame(readAndUpdatePage);
