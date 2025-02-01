@@ -487,7 +487,6 @@ class update_code {
 							. ' result_code: ' . to_string($result_code)
 							, logger::ERROR
 						);
-						return $response;
 					}
 					debug_log(__METHOD__
 						. " exec command" . PHP_EOL
