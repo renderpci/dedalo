@@ -285,6 +285,7 @@ class update_code {
 					exec($command, $output, $result_code);
 					if ($result_code!=0) {
 						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+						$response->errors[]	= 'copy downloaded folder failed';
 						debug_log(__METHOD__
 							. $response->msg  . PHP_EOL
 							. ' command: ' . to_string($command) . PHP_EOL
@@ -313,6 +314,7 @@ class update_code {
 					foreach ($files_to_copy as $file_name) {
 
 						if (!copy("{$target}/$file_name", "{$target}_code/{$file_name}")){
+							$response->errors[]	= 'copy config files failed';
 							$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error on copy file: '.$file_name;
 							debug_log(__METHOD__
 								. " copy file error " . PHP_EOL
@@ -375,6 +377,7 @@ class update_code {
 							$command = "cp -R {$tools_src}/{$file} {$target}_code/tools/{$file}";
 							exec($command, $output, $result_code);
 							if ($result_code!=0) {
+								$response->errors[]	= 'copy tools files failed';
 								$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
 								debug_log(__METHOD__
 									. $response->msg  . PHP_EOL
@@ -403,6 +406,7 @@ class update_code {
 					$command = "mv $target $old_copy_final_path";
 					exec($command, $output, $result_code);
 					if ($result_code!=0) {
+						$response->errors[]	= 'move old version to code backups failed';
 						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
 						debug_log(__METHOD__
 							. $response->msg  . PHP_EOL
@@ -426,6 +430,7 @@ class update_code {
 					$command = "mv {$old_copy_final_path}/media {$target}_code/media";
 					exec($command, $output, $result_code);
 					if ($result_code!=0) {
+						$response->errors[]	= 'move media dir failed';
 						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
 						debug_log(__METHOD__
 							. $response->msg  . PHP_EOL
@@ -449,6 +454,7 @@ class update_code {
 					$command = "mv {$target}_code {$target}";
 					exec($command, $output, $result_code);
 					if ($result_code!=0) {
+						$response->errors[]	= 'rename new version failed';
 						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
 						debug_log(__METHOD__
 							. $response->msg  . PHP_EOL
@@ -472,6 +478,7 @@ class update_code {
 					$command = "chmod -R 750 {$target}";
 					exec($command, $output, $result_code);
 					if ($result_code!=0) {
+						$response->errors[]	= 'set permissions failed';
 						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
 						debug_log(__METHOD__
 							. $response->msg  . PHP_EOL
