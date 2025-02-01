@@ -114,13 +114,15 @@ final class ontology_data_io_test extends TestCase {
 			gettype($response->data)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'response type: ' . gettype($response->data) . PHP_EOL
+			.' response: ' . to_string($response)
 		);
 
 		$expected = DEDALO_ENTITY;
 		$this->assertTrue(
 			$response->data->entity===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
-			.'response type: ' . to_string($response->data->entity) . PHP_EOL
+			.'response->data->entity type: ' . gettype($response->data->entity) . PHP_EOL
+			.' response: ' . to_string($response)
 		);
 
 		$expected = 'string';
@@ -128,6 +130,7 @@ final class ontology_data_io_test extends TestCase {
 			gettype($response->path_file)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'response type: ' . gettype($response->path_file) . PHP_EOL
+			.' response: ' . to_string($response)
 		);
 
 		$expected = 'integer';
@@ -135,6 +138,7 @@ final class ontology_data_io_test extends TestCase {
 			gettype($response->saved)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'response type: ' . gettype($response->saved) . PHP_EOL
+			.' response: ' . to_string($response)
 		);
 	}//end test_export_ontology_info
 
@@ -165,6 +169,7 @@ final class ontology_data_io_test extends TestCase {
 			$base_name===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'base_name: ' . to_string($base_name) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 	}//end test_set_ontology_io_path
 
@@ -183,6 +188,7 @@ final class ontology_data_io_test extends TestCase {
 			gettype($result)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 		$dedalo_version	= get_dedalo_version();
@@ -195,6 +201,7 @@ final class ontology_data_io_test extends TestCase {
 			$base_name===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'base_name: ' . to_string($base_name) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 
@@ -206,6 +213,7 @@ final class ontology_data_io_test extends TestCase {
 			$result===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 	}//end test_get_ontology_io_path
 
@@ -236,6 +244,7 @@ final class ontology_data_io_test extends TestCase {
 			$base_name===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'base_name: ' . to_string($base_name) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 
@@ -247,6 +256,7 @@ final class ontology_data_io_test extends TestCase {
 			$result===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 	}//end test_get_ontology_io_url
 
@@ -266,6 +276,7 @@ final class ontology_data_io_test extends TestCase {
 			gettype($result)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 		$expected = true;
@@ -273,6 +284,7 @@ final class ontology_data_io_test extends TestCase {
 			$result===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 	}//end test_update_ontology_info
 
@@ -294,6 +306,7 @@ final class ontology_data_io_test extends TestCase {
 			gettype($result)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 		$base_name = basename($result->debug->file_path);
@@ -303,6 +316,7 @@ final class ontology_data_io_test extends TestCase {
 			$base_name===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'base_name: ' . to_string($base_name) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 	}//end test_export_to_file
 
@@ -322,6 +336,7 @@ final class ontology_data_io_test extends TestCase {
 			gettype($result)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 		$base_name = basename($result->debug->file_path);
@@ -331,6 +346,7 @@ final class ontology_data_io_test extends TestCase {
 			$base_name===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'base_name: ' . to_string($base_name) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 	}//end test_export_private_lists_to_file
 
@@ -356,6 +372,7 @@ final class ontology_data_io_test extends TestCase {
 			gettype($result)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 
@@ -390,12 +407,12 @@ final class ontology_data_io_test extends TestCase {
 
 		$result = ontology_data_io::import_private_lists_from_file($file_item);
 
-
 		$expected = 'object';
 		$this->assertTrue(
 			gettype($result)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 		$expected = true;
@@ -441,6 +458,7 @@ final class ontology_data_io_test extends TestCase {
 			gettype($result)===$expected ,
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result type: ' . gettype($result) . PHP_EOL
+			.' result: ' . to_string($result)
 		);
 
 		$expected = false;

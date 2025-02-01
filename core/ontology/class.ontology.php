@@ -1382,7 +1382,7 @@ class ontology {
 						. " Record without model " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
 						. 'section_id	: ' . to_string($section_id). PHP_EOL
-						. 'model_tipo	: ' . to_string($model_tipo). PHP_EOL
+						. 'component storing model tipo	: ' . to_string($model_tipo). PHP_EOL
 						. 'is_model	: ' . to_string($is_model)
 						, logger::ERROR
 					);
