@@ -43,7 +43,7 @@ class update_ontology {
 				$server = (object)$current_server;
 				$server_ready			= ontology_data_io::check_remote_server( $server );
 				$server->msg			= $server_ready->msg;
-				$server->error			= $server_ready->error;
+				$server->errors			= $server_ready->errors;
 				$server->response_code	= $server_ready->code;
 				$server->result			= $server_ready->result;
 				$server->code			= $server->code;

@@ -92,7 +92,7 @@ class update_code {
 
 				// add server object additional info
 				$server->msg			= $server_ready->msg;
-				$server->error			= $server_ready->error;
+				$server->errors			= $server_ready->errors;
 				$server->response_code	= $server_ready->code;
 				$server->result			= $server_ready->result;
 				$server->code			= $server->code;
