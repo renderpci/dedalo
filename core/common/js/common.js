@@ -2828,7 +2828,7 @@ export const build_autoload = async function(self) {
 
 	// debug last server error. Only for development
 		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
-			if (api_response.errors) {
+			if (api_response.errors?.length) {
 				console.error(`${self.model} build api_response with errors:`, JSON.parse( JSON.stringify(api_response) ) );
 			}else{
 				console.log(`${self.model} build api_response:`, JSON.parse( JSON.stringify(api_response) ) );
