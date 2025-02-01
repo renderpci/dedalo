@@ -181,9 +181,6 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// update_code *
-			$dedalo_source_version_url = strpos(DEDALO_SOURCE_VERSION_URL, 'master.dedalo.dev')!==false
-				? 'https://master.dedalo.dev/dedalo/code/6/6.4/6.4.0_dedalo.zip'
-				: DEDALO_SOURCE_VERSION_URL;
 			$item = new stdClass();
 				$item->id		= 'update_code';
 				$item->type		= 'widget';
