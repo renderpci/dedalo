@@ -328,29 +328,6 @@ class update_code {
 						}
 					}
 
-				// move media directory
-					$command = "mv {$target}/media {$target}_code/media";
-					exec($command, $output, $result_code);
-					if ($result_code!=0) {
-						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
-						debug_log(__METHOD__
-							. $response->msg  . PHP_EOL
-							. ' command: ' . to_string($command) . PHP_EOL
-							. ' output: ' . to_string($output) . PHP_EOL
-							. ' result_code: ' . to_string($result_code)
-							, logger::ERROR
-						);
-						return $response;
-					}
-					debug_log(__METHOD__
-						. " exec command" . PHP_EOL
-						. " command " . to_string($command) . PHP_EOL
-						. " output " . to_string($output) . PHP_EOL
-						. " result_code type " . gettype($result_code) . PHP_EOL
-						. " result_code " . to_string($result_code)
-						, logger::WARNING
-					);
-
 				// tools
 					$dd_tools = [
 						'tool_cataloging',
@@ -416,10 +393,34 @@ class update_code {
 						}
 					}
 
-				// rename directory old version such as 'dedalo' => '../backup/code/dedalo_6.3.1'
+				// move directory old version to backups as '../httpdocs/dedalo' => '../backup/code/dedalo_6.3.1'
 					$backup_code_path = DEDALO_BACKUP_PATH . '/code';
 					create_directory($backup_code_path);
-					$command = "mv $target {$backup_code_path}/dedalo_" .DEDALO_VERSION;
+					$old_copy_final_path = "{$backup_code_path}/dedalo_" .DEDALO_VERSION . '_' . date('Y-m-d_his');
+					$command = "mv $target $old_copy_final_path";
+					exec($command, $output, $result_code);
+					if ($result_code!=0) {
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+						debug_log(__METHOD__
+							. $response->msg  . PHP_EOL
+							. ' command: ' . to_string($command) . PHP_EOL
+							. ' output: ' . to_string($output) . PHP_EOL
+							. ' result_code: ' . to_string($result_code)
+							, logger::ERROR
+						);
+						return $response;
+					}
+					debug_log(__METHOD__
+						. " exec command" . PHP_EOL
+						. " command " . to_string($command) . PHP_EOL
+						. " output " . to_string($output) . PHP_EOL
+						. " result_code type " . gettype($result_code) . PHP_EOL
+						. " result_code " . to_string($result_code)
+						, logger::WARNING
+					);
+
+				// move media directory from old to the new directory like '../backup/code/dedalo_6.3.1/media' => '../httpdocs/dedalo_code/media'
+					$command = "mv {$old_copy_final_path}/media {$target}_code/media";
 					exec($command, $output, $result_code);
 					if ($result_code!=0) {
 						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
@@ -661,7 +662,9 @@ class update_code {
 			$source = DEDALO_CODE_SERVER_GIT_DIR;
 
 		// command @see https://git-scm.com/docs/git-archive
-			$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo_code/ $branch > $target ";
+			$command = strpos($source, 'ssh://')!==false
+				? "git archive --remote=$source --verbose --format=zip --prefix=dedalo_code/ $branch > $target" // remote GIT
+				: "cd $source; git archive --verbose --format=zip --prefix=dedalo_code/ $branch > $target "; // local GIT
 
 		// debug
 			debug_log(__METHOD__
@@ -991,6 +994,19 @@ class update_code {
 					$result->files[] = $file_item;
 				}
 			}
+
+			// development version file
+				$development_path	= update_code::set_development_path();
+				$development_file	= $development_path .'/dedalo_development.zip';
+				if (file_exists($development_file)) {
+					$code_url = DEDALO_CODE_FILES_URL . '/development';
+					$file_item = new stdClass();
+						$file_item->version	= 'development';
+						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $development_file );
+
+					$result->files[] = $file_item;
+				}
+
 
 		// response
 		$response->result	= $result;

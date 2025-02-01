@@ -8,7 +8,7 @@
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
-	import {run_service_worker,run_worker_cache} from '../../../../login/js/login.js'
+	import {quit} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 
 
@@ -32,7 +32,7 @@ export const render_update_code = function() {
 * 	Sample:
 * 	{
 *		render_level : "full"
-		render_mode : "list"
+*		render_mode : "list"
 *   }
 * @return HTMLElement wrapper
 * 	To append to the widget body node (area_maintenance)
@@ -146,15 +146,12 @@ const get_content_data_edit = async function(self) {
 
 					// on_done event (called once at finish or cancel the stream read)
 					const on_done = () => {
+
 						// is triggered at the reader's closing
 						render_stream_response.done()
-						// reload JS files
-						reload_js_files()
-						.then(function(){
-							if( confirm('It is recommended to refresh the page to avoid cache problems. Do you wish to continue to do so?') ) {
-								location.reload(true);
-							}
-						})
+
+						// force quit to reload JS files
+						force_quit()
 					}
 
 					// read stream. Creates ReadableStream that fire
@@ -182,89 +179,76 @@ const get_content_data_edit = async function(self) {
 		}
 		check_process_data()
 
-	// dedalo_entity check
-		if (page_globals.dedalo_entity==='development') {
-			// message development
-			ui.create_dom_element({
-				element_type	: 'div',
-				inner_html		: 'The development site does not allow updating the code',
-				class_name		: 'info_text comment',
-				parent			: content_data
-			})
+	// button_submit
+		const button_label = 'Update Dédalo code to the latest version';
+		const button_submit = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_submit',
+			inner_html		: button_label,
+			parent			: content_data
+		})
+		// click event
+		const click_event = async (e) => {
+			e.stopPropagation()
 
-		}else{
+			// server to be used
+				const server = servers.find(el => el.active === true )
+				if( !server ){
+					alert("Error: any server was selected");
+					return
+				}
 
-			// button
-			const button_label = 'Update Dédalo code to the latest version';
-			const button_submit = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light button_submit',
-				inner_html		: button_label,
-				parent			: content_data
-			})
-			// click event
-			const click_event = async (e) => {
-				e.stopPropagation()
+			// clean body_response nodes
+				while (body_response.firstChild) {
+					body_response.removeChild(body_response.firstChild);
+				}
 
-				// server to be used
-					const server = servers.find(el => el.active === true )
-					if( !server ){
-						alert("Error: any server was selected");
-						return
-					}
+			// loading add
+				e.target.classList.add('lock')
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner'
+				})
+				body_response.prepend(spinner)
 
-				// clean body_response nodes
-					while (body_response.firstChild) {
-						body_response.removeChild(body_response.firstChild);
-					}
+			// Code information. Call selected remote server API to get updates list
+				const server_code_api_response = await self.get_code_update_info(server)
 
-				// loading add
-					e.target.classList.add('lock')
-					const spinner = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'spinner'
-					})
-					body_response.prepend(spinner)
-
-				// Code information. Call selected remote server API to get updates list
-					const server_code_api_response = await self.get_code_update_info(server)
-
-					// result check
-						const result = server_code_api_response?.result
-						const errors = server_code_api_response?.errors || []
-						if(!result || errors.length){
-							// remove spinner
-							e.target.classList.remove('lock')
-							spinner.remove()
-							// error message node add
+				// result check
+					const result = server_code_api_response?.result
+					const errors = server_code_api_response?.errors || []
+					if(!result || errors.length){
+						// remove spinner
+						e.target.classList.remove('lock')
+						spinner.remove()
+						// error message node add
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error',
+							inner_html		: server_code_api_response.msg || 'Error connecting server',
+							parent			: body_response
+						})
+						// additional errors
+						const errors_length = errors.length
+						for (let i = 0; i < errors_length; i++) {
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error',
-								inner_html		: server_code_api_response.msg || 'Error connecting server',
+								inner_html		: errors[i],
 								parent			: body_response
 							})
-							// additional errors
-							const errors_length = errors.length
-							for (let i = 0; i < errors_length; i++) {
-								ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'error',
-									inner_html		: errors[i],
-									parent			: body_response
-								})
-							}
-							return
 						}
+						return
+					}
 
-					// show info modal
-						render_info_modal( self, result )
+				// show info modal
+					render_info_modal( self, result )
 
-					// remove spinner
-					e.target.classList.remove('lock')
-					spinner.remove()
-			}
-			button_submit.addEventListener('click', click_event)
+				// remove spinner
+				e.target.classList.remove('lock')
+				spinner.remove()
 		}
+		button_submit.addEventListener('click', click_event)
 
 	// build code version
 		if(is_a_code_server || page_globals.dedalo_entity==='development'){
@@ -281,49 +265,20 @@ const get_content_data_edit = async function(self) {
 
 
 /**
-* RELOAD_JS_FILES
-* Force to clean cache of Dédalo main JS files
-* @see login.run_service_worker, login.run_worker_cache
+* FORCE_QUIT
+* Force log out to clean cache of Dédalo main JS files
+* @see login.quit
 * @return bool
 */
-const reload_js_files = async function () {
-	// REMOVED TEMPORALLY FOR DEVELOPMENT
-	return false;
+const force_quit = async function () {
 
-	const on_message = (event) => {
-		switch (event.data.status) {
-			case 'ready':
-				console.log(`Loading total_files: ${event.data.total_files}`);
-				break;
-			case 'finish':
-				console.log(`Updated total_files: ${event.data.total_files}`, event.data.api_response);
-				break;
-		}
-	}
+	alert('You must exit and login again to continue.');
 
-	run_service_worker({
-		on_message	: on_message
-	})
-	.then(function(response){
-		// on service worker registration error (not https support for example)
-		// fallback to the former method of loading cache files
-		if (response===false) {
+	// force exit Dédalo (login quit)
+	await quit()
 
-			// notify error
-				const error = location.protocol==='http:'
-					? `register_service_worker fails. Protocol '${location.protocol}' is not supported by service workers. Retrying with run_worker_cache.`
-					: `register_service_worker fails (${location.protocol}). Retrying with run_worker_cache.`
-				console.error(error);
-
-			// launch worker cache (uses regular browser memory cache)
-				run_worker_cache({
-					on_message	: on_message
-				})
-		}
-
-		return true
-	})
-}//end reload_js_files
+	return true
+}//end force_quit
 
 
 
@@ -337,20 +292,34 @@ const render_build_version = function(self, content_data, body_response){
 
 	if (self.caller?.init_form) {
 
+		// build_version_group
+		const build_version_group = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'build_version_group',
+			parent			: content_data
+		})
+
+		// info_text
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label bold',
+			inner_html		: 'Code builders from GIT',
+			parent			: build_version_group
+		})
+
 		// on_done. On button press, execute this function
 		const on_done = () => {
+
 			// event publish
 			// listen by widget update_data_version.init
 			event_manager.publish('build_code_done', self)
-			// clean browser cache
-			reload_js_files()
 		}
 
-		// button Build Dédalo code
+		// button Build Dédalo code MASTER branch
 		self.caller.init_form({
-			submit_label	: 'Build Dédalo code',
+			submit_label	: 'Build Dédalo code master',
 			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
+			body_info		: build_version_group,
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
@@ -367,11 +336,11 @@ const render_build_version = function(self, content_data, body_response){
 			on_done : on_done
 		})
 
-		// button Build Dédalo code developer
+		// button Build Dédalo code DEVELOPER branch
 		self.caller.init_form({
 			submit_label	: 'Build Dédalo code developer',
 			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
+			body_info		: build_version_group,
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
@@ -388,11 +357,11 @@ const render_build_version = function(self, content_data, body_response){
 			on_done : on_done
 		})
 
-		// button Build Dédalo code beta 6.4
+		// button Build Dédalo code beta 6.4 branch
 		self.caller.init_form({
 			submit_label	: 'Build Dédalo code beta 6.4',
 			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
+			body_info		: build_version_group,
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
@@ -439,6 +408,42 @@ const render_info_modal = function( self, versions_info ){
 			class_name		: 'body widget_update_code'
 		})
 
+	// beta updates on/off
+		const beta_updates_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'beta_updates_container',
+			parent			: body
+		})
+		const beta_updates_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'version_label',
+			text_node		: 'Beta updates',
+			parent			: beta_updates_container
+		})
+		const beta_update_radio = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			name			: 'beta_updates',
+			value			: true
+		})
+		// change event
+		const change_handler = (e) => {
+			// fix checked value
+			self.beta_update = beta_update_radio.checked
+			// hide/show available development versions (betas)
+			body.querySelectorAll('.development')
+			.forEach( el => {
+				if (self.beta_update) {
+					el.classList.remove('hide')
+				}else{
+					el.classList.add('hide')
+				}
+			})
+		}
+		beta_update_radio.addEventListener('change', change_handler)
+		beta_updates_label.prepend(beta_update_radio)
+
+	// files_container
 		const files_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'files_container',
@@ -448,20 +453,24 @@ const render_info_modal = function( self, versions_info ){
 	// files
 		const files = versions_info.files
 		const files_length = files.length
+		const valid_files = []
 		for (let i = 0; i < files_length; i++) {
 
 			const current_version = files[i];
 
 			const file_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_container',
+				class_name		: 'file_container ' + current_version.version,
 				parent			: files_container
 			})
+			if (current_version.version==='development' && !self.beta_update) {
+				file_container.classList.add('hide')
+			}
 
 			const label = current_version.version
 			const version_label = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'version_label',
+				element_type	: 'label',
+				class_name		: 'version_label unselectable',
 				text_node		: label,
 				parent			: file_container
 			})
@@ -476,7 +485,7 @@ const render_info_modal = function( self, versions_info ){
 			})
 
 			// by default, the newer version is selected
-			if(i===0){
+			if(i===0 && current_version.version!=='development'){
 				input_radio.checked = true
 				current_version.active = true
 			}
@@ -502,6 +511,9 @@ const render_info_modal = function( self, versions_info ){
 			})
 
 			version_label.prepend(input_radio)
+
+			// add to valid_files
+			valid_files.push(current_version)
 		}//end for (let i = 0; i < files_length; i++)
 
 	// footer
@@ -516,14 +528,14 @@ const render_info_modal = function( self, versions_info ){
 			class_name		: 'response content'
 		})
 
-		if (files_length===0) {
+		if (valid_files.length===0) {
 
 			// No updated found
 
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'content',
-				inner_html		: 'No updates available for your version.',
+				inner_html		: 'There are no valid updates available for your version.',
 				parent			: response
 			})
 
@@ -543,14 +555,25 @@ const render_info_modal = function( self, versions_info ){
 					inner_html		: get_label.update || 'Update',
 					parent			: footer
 				})
+				// click event
 				const click_handler = async (e) => {
 					e.stopPropagation()
+
+					const file_active = files.find(el => el.active === true)
+					if (!file_active) {
+						alert(get_label.empty_selection || 'Empty selection');
+						return
+					}
 
 					if (!confirm(get_label.sure || 'Sure?')) {
 						return
 					}
 
-					const file_active = files.find(el => el.active === true)
+					if (page_globals.dedalo_entity==='development') {
+						// message development
+						alert('To avoid accidental overwrites, the development installation does not allow updating the code.');
+						return
+					}
 
 					button_update.classList.add('hide')
 					body.classList.add('loading')
@@ -567,18 +590,27 @@ const render_info_modal = function( self, versions_info ){
 					// update_code
 					const api_response = await self.update_code(file_active)
 
-					button_update.classList.remove('hide')
 					body.classList.remove('loading')
 
 					// spinner
 					spinner.remove()
 
 					if (!api_response.result || api_response.errors?.length) {
+
 						response.innerHTML = api_response.errors.length
 							? api_response.errors.join('<br>')
 							: api_response.msg || 'Unknown error on API update_code'
+
+						button_update.classList.remove('hide')
+
 					}else{
+
 						response.innerHTML = api_response.msg || 'OK'
+
+						// force quit to clean browser cache
+						setTimeout(function(){
+							force_quit()
+						}, 1000)
 					}
 				}
 				button_update.addEventListener('click', click_handler)
@@ -587,19 +619,6 @@ const render_info_modal = function( self, versions_info ){
 						button_update.focus()
 					}
 				)
-
-			// cancel_button
-				// const cancel_button = ui.create_dom_element({
-				// 	element_type	: 'button',
-				// 	class_name		: 'warning ',
-				// 	inner_html		: get_label.cancel || 'Cancel',
-				// 	parent			: footer
-				// })
-				// const click_cancel_handler = (e) => {
-				// 	e.stopPropagation()
-				// 	modal.close();
-				// }
-				// cancel_button.addEventListener('click', click_cancel_handler)
 		}
 
 	// response add at end (after buttons)
