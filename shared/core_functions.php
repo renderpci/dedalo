@@ -537,10 +537,10 @@ function curl_request(object $options) : object {
 		curl_close($ch);
 
 	// response
-		$response->msg		= $msg;
-		$response->error	= $error_info;
-		$response->code		= $httpcode;
-		$response->result	= $result;
+		$response->msg			= $msg;
+		$response->error_info	= $error_info;
+		$response->code			= $httpcode;
+		$response->result		= $result;
 
 
 	return $response;

@@ -182,6 +182,9 @@ class update_code {
 						: false // default case
 				]);
 				$contents = $curl_response->result;
+				if (!empty($curl_response->errors)) {
+					$response->errors = array_merge($response->errors, $curl_response->errors);
+				}
 				// check contents
 				if ($contents===false) {
 					$response->msg .= 'Contents from Dédalo code repository fail to download from: '.$file_uri;
