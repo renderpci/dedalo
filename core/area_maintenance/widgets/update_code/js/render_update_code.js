@@ -64,7 +64,9 @@ render_update_code.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* Renders content data div
 * @param object self
+* 	widget instance
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
@@ -284,11 +286,15 @@ const force_quit = async function () {
 
 /**
 * RENDER_BUILD_VERSION
-* Render buttons
+* Render GIT build buttons for versions: master|developer
 * @see login.run_service_worker, login.run_worker_cache
+* @param object self
+* 	widget instance
+* @param HTMLElement content_data
+* @param HTMLElement body_response
 * @return bool
 */
-const render_build_version = function(self, content_data, body_response){
+const render_build_version = function(self, content_data, body_response) {
 
 	if (self.caller?.init_form) {
 
@@ -356,27 +362,6 @@ const render_build_version = function(self, content_data, body_response){
 			},
 			on_done : on_done
 		})
-
-		// button Build Dédalo code beta 6.4 branch
-		self.caller.init_form({
-			submit_label	: 'Build Dédalo code beta 6.4',
-			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: build_version_group,
-			body_response	: body_response,
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'widget_request',
-				source	: {
-					type	: 'widget',
-					model	: 'update_code',
-					action	: 'build_version_from_git_master'
-				},
-				options	: {
-					branch : 'v6.4.0_beta'
-				}
-			},
-			on_done : on_done
-		})
 	}
 }//end render_build_version
 
@@ -390,7 +375,7 @@ const render_build_version = function(self, content_data, body_response){
 * @param object versions_info
 * @return HTMLElement modal
 */
-const render_info_modal = function( self, versions_info ){
+const render_info_modal = function( self, versions_info ) {
 
 	// blur any selection
 		document.activeElement.blur();
