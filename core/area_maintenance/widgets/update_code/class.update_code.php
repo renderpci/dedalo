@@ -309,9 +309,21 @@ class update_code {
 						'config/config.php',
 						'config/config_db.php',
 						'config/config_areas.php',
-						'config/config_core.php'
+						'config/config_core.php',
+						'publication/server_api/v1/config_api/server_config_api.php',
+						'publication/server_api/v1/config_api/server_config_headers.php'
 					];
 					foreach ($files_to_copy as $file_name) {
+
+						if (!file_exists("{$target}/$file_name")) {
+							debug_log(__METHOD__
+								. " Ignored file  " . PHP_EOL
+								. ' file_name: ' . to_string($file_name) . PHP_EOL
+								. ' source: ' . "{$target}/$file_name"
+								, logger::ERROR
+							);
+							continue;
+						}
 
 						if (!copy("{$target}/$file_name", "{$target}_code/{$file_name}")){
 							$response->errors[]	= 'copy config files failed';
