@@ -461,9 +461,12 @@ class ontology_data_io {
 			// {
 			// 	"result": "",
 			// 	"msg": "Error. Bad Request. Server has problems connecting to file (status code: 400)",
-			// 	"error": false,
+			// 	"errors": [],
 			// 	"code": 400
 			// }
+			if (!empty($curl_response->errors)) {
+				$response->errors = array_merge($response->errors, $curl_response->errors);
+			}
 			if ($curl_response->code!=200) {
 				// error connecting to master server
 				// Do not add debug error here because it is already handled by curl_request

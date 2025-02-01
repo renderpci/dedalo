@@ -43,12 +43,12 @@ class babel {
 			];
 
 		// curl request (core functions)
-			$request = curl_request((object)[
+			$curl_response = curl_request((object)[
 				'url'			=> $url,
 				'postfields'	=> $fields,
 				'header'		=> false
 			]);
-			$result = $request->result;
+			$result = $curl_response->result;
 
 		// raw result
 			$raw_result = $result;
