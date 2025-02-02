@@ -327,6 +327,20 @@ const get_content_data = function(self) {
 							true
 						)
 						button_enter_loading.classList.add('hide')
+
+						const button_continue = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'button_continue warning white',
+							inner_html		: get_label.continue || 'Continue',
+							parent			: messages_container
+						})
+						// click event
+						const continue_click_handler = (e) => {
+							e.stopPropagation()
+							self.action_dispatch(api_response)
+						}
+						button_continue.addEventListener('click', continue_click_handler)
+
 						return
 					}
 
