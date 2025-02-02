@@ -31,7 +31,7 @@
 
 // PHP VERSION
 	$minimum = '8.1.0';
-	if (system::test_php_version_supported()===false) {
+	if (system::test_php_version_supported( $minimum )===false) {
 
 		$init_response->msg[]	= 'Error. This php version '.PHP_VERSION.' is not supported by Dédalo. Update PHP to '.$minimum.' or higher ASAP';
 		$init_response->errors	= true;
