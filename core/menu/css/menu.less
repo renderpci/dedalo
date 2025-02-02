@@ -10,6 +10,13 @@
 @menu_bg_color_active: #ffa43d;
 @menu_box_shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
 
+// v6.3.1 compatibility only
+// Only to prevent issues on updates from 6.3.1 to 6.4
+// Adding of 'content_data' to the menu in v6.4 creates a CSS problem if the administrator
+// do not logout and login from Dédalo when exec updates from v6.3.1 or earlier.
+// This is a temporal hack to fix this situation
+@import (once) 'menu-6.3';
+
 .menu {
 	margin: 0px;
 	padding: 0px;
