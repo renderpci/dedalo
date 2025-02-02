@@ -4007,11 +4007,25 @@ class section extends common {
 									// the time machine data will has both data, the main data from the main component
 									// and the dataframe data.
 									// to inject the correct main data is necessary filter it with the from_component_tipo
-										$dataframe_ddo = $current_component->get_dataframe_ddo();
-										if( !empty($dataframe_ddo) && !empty($dato) ){
-											$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
-												return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
-											}));
+										if ( strpos($source_model, 'component_')!==false ) {
+											$dataframe_ddo = $current_component->get_dataframe_ddo();
+											if( !empty($dataframe_ddo) && !empty($dato) && $source_model!=='section'){
+												if (is_array($dato)) {
+													$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
+														return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
+													}));
+												}else{
+													debug_log(__METHOD__
+														. " [has dataframe] dato expected type is array " . PHP_EOL
+														. ' dato type: ' . gettype($dato) . PHP_EOL
+														. ' dato: ' . to_string($dato) . PHP_EOL
+														. ' section_tipo: ' . to_string($this->tipo) . PHP_EOL
+														. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+														. ' dataframe_ddo: ' . to_string($dataframe_ddo) . PHP_EOL
+														, logger::ERROR
+													);
+												}
+											}
 										}
 
 									// inject current_dato
@@ -4076,67 +4090,68 @@ class section extends common {
 									// has_dataframe
 										// if the component has a dataframe create new component and inject his own data
 										// dataframe data is saved by the main dataframe and is part of the row data
-										if( !empty($dataframe_ddo) ){
+										if ( strpos($source_model, 'component_')!==false ) {
+											if( !empty($dataframe_ddo) ){
+												foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
 
-											foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
+													$dataframe_tipo = $current_dataframe_ddo->tipo;
 
-												$dataframe_tipo = $current_dataframe_ddo->tipo;
-
-												// 1 remove dataframe data created by the main component in his subdatum process
-												// when the main component create his own subdatum it can get incorrect dataframe data
-												// because the main component use the time machine data but not the dataframe data by itself.
-												// and it can meet his data with the current dataframe data.
-												// to avoid it, remove the dataframe data from the main component.
-												foreach ($element_json->data as $key => $current_source_data) {
-													if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
-														unset($element_json->data[$key]);
+													// 1 remove dataframe data created by the main component in his subdatum process
+													// when the main component create his own subdatum it can get incorrect dataframe data
+													// because the main component use the time machine data but not the dataframe data by itself.
+													// and it can meet his data with the current dataframe data.
+													// to avoid it, remove the dataframe data from the main component.
+													foreach ($element_json->data as $key => $current_source_data) {
+														if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
+															unset($element_json->data[$key]);
+														}
 													}
-												}
 
-												// 2 get the dataframe data from dato, filtering by dataframe_tipo
-												if( !empty($dato) ){
-													$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
-														return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
-													}));
-												}
+													// 2 get the dataframe data from dato, filtering by dataframe_tipo
+													if( !empty($dato) ){
+														$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
+															return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
+														}));
+													}
 
 
-												// 3 get the component dataframe data with time machine data
-												$dataframe_model = RecordObj_dd::get_modelo_name_by_tipo($dataframe_tipo);
-												foreach ($dataframe_data as $key => $current_dataframe_data) {
-													// create the caller_dataframe with the current data information
-													$new_caller_dataframe = new stdClass();
-														$new_caller_dataframe->section_id_key	= $current_dataframe_data->section_id_key;
-														$new_caller_dataframe->section_tipo		= $section_tipo;
+													// 3 get the component dataframe data with time machine data
+													$dataframe_model = RecordObj_dd::get_modelo_name_by_tipo($dataframe_tipo);
+													foreach ($dataframe_data as $key => $current_dataframe_data) {
+														// create the caller_dataframe with the current data information
+														$new_caller_dataframe = new stdClass();
+															$new_caller_dataframe->section_id_key	= $current_dataframe_data->section_id_key;
+															$new_caller_dataframe->section_tipo		= $section_tipo;
 
-													// // create the dataframe component
-													$dataframe_component = component_common::get_instance(
-														$dataframe_model,
-														$dataframe_tipo,
-														$section_id,
-														$mode, // the component always in tm because the edit could fire a save with the dato_default
-														$lang,
-														$section_tipo,
-														true,
-														$new_caller_dataframe
-													);
-													// inject the current data
-													$dataframe_component->set_dato( [$current_dataframe_data] );
-													// permissions. Set to allow all users read
-													$dataframe_component->set_permissions(1);
-													// get component JSON data
-													$dataframe_json = $dataframe_component->get_json((object)[
-														'get_context'	=> true,
-														'get_data'		=> true
-													]);
+														// // create the dataframe component
+														$dataframe_component = component_common::get_instance(
+															$dataframe_model,
+															$dataframe_tipo,
+															$section_id,
+															$mode, // the component always in tm because the edit could fire a save with the dato_default
+															$lang,
+															$section_tipo,
+															true,
+															$new_caller_dataframe
+														);
+														// inject the current data
+														$dataframe_component->set_dato( [$current_dataframe_data] );
+														// permissions. Set to allow all users read
+														$dataframe_component->set_permissions(1);
+														// get component JSON data
+														$dataframe_json = $dataframe_component->get_json((object)[
+															'get_context'	=> true,
+															'get_data'		=> true
+														]);
 
-													// parse component_data. Add matrix_id and unify output value
-													$dataframe_data	= array_map(function($data_item) use($id) {
-														$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
-														return $data_item;
-													}, $dataframe_json->data);
-													// mix dataframe data with the current main data
-													$ar_subdata = array_merge($ar_subdata, $dataframe_data);
+														// parse component_data. Add matrix_id and unify output value
+														$dataframe_data	= array_map(function($data_item) use($id) {
+															$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
+															return $data_item;
+														}, $dataframe_json->data);
+														// mix dataframe data with the current main data
+														$ar_subdata = array_merge($ar_subdata, $dataframe_data);
+													}
 												}
 											}
 										}
