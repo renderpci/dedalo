@@ -6,5 +6,5 @@
 		$DEDALO_VERSION .= '.dev';
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '2025-02-02T19:31:09+01:00');
+	define('DEDALO_BUILD'	, '2025-02-04T17:05:32+01:00');
 	define('DEDALO_MAJOR_VERSION', '6');
