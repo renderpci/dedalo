@@ -41,13 +41,13 @@ final class dd_init_test_test extends TestCase {
 	public function test_include_file() {
 
 		// dd_init_test
-			$init_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
-
+			$dd_init_test_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
 
 		$this->assertTrue(
-			$init_response->result===true,
-			'expected true for init_response->result' . PHP_EOL
-				. to_string($init_response->result)
+			$dd_init_test_response->result===true,
+			'expected true for dd_init_test_response->result' . PHP_EOL
+			 . ' dd_init_test_response->result: ' .  to_string($dd_init_test_response->result)
+			 . ' dd_init_test_response: ' .  to_string($dd_init_test_response)
 		);
 	}//end test_include_file
 
