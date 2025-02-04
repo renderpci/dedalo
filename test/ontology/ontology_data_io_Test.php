@@ -120,8 +120,9 @@ final class ontology_data_io_test extends TestCase {
 		$expected = DEDALO_ENTITY;
 		$this->assertTrue(
 			$response->data->entity===$expected ,
-			'expected:' . to_string($expected) . PHP_EOL
-			.'response->data->entity type: ' . gettype($response->data->entity) . PHP_EOL
+			 ' expected: ' . to_string($expected) . PHP_EOL
+			.' response->data->entity: ' . to_string($response->data->entity) . PHP_EOL
+			.' response->data->entity type: ' . gettype($response->data->entity) . PHP_EOL
 			.' response: ' . to_string($response)
 		);
 
