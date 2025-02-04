@@ -613,17 +613,23 @@ page.prototype.add_events = function() {
 								return
 							}
 						}
-					// search with current section filter
-						const section = self.ar_instances.find(el => el.model==='section')
-						if (section && section.mode==='list' && section.filter) {
-							if (section.filter.search_panel_is_open===true) {
+					// active component case
+						if (page_globals.component_active) {
+							// stop here if a component is active
+							return
+						}
+					// search with current section/area_thesaurus/area_graph/area_ontology filter
+						const with_filter_models	= ['section','area_thesaurus','area_graph','area_ontology']
+						const with_filter_instance	= self.ar_instances.find(el => with_filter_models.includes(el.model))
+						if (with_filter_instance && with_filter_instance.filter && with_filter_instance.mode==='list') {
+							if (with_filter_instance.filter.search_panel_is_open===true) {
 								// always blur active component to force set dato (!)
-									document.activeElement.blur()
+								document.activeElement.blur()
 								// exec search
-									section.filter.exec_search()
+								with_filter_instance.filter.exec_search()
 							}
 							// toggle filter container
-								event_manager.publish('toggle_search_panel_'+section.id)
+								event_manager.publish('toggle_search_panel_'+with_filter_instance.id)
 						}
 					break;
 				}

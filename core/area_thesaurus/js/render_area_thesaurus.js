@@ -135,35 +135,18 @@ render_area_thesaurus.prototype.list = async function(options) {
 	// event keydown
 	// swap between title (section info as 'dd0') and title (tld as '[dd222]')
 		let id_info_mode = 'tld' // tld|section
-		const keydown_handler
-		= (
-			e) => {
+		const keydown_handler = (e) => {
 
-				// submit search on Enter press
-				if (e.key==='Enter') {
-					if (self.filter.search_panel_is_open===true) {
-							// always blur active component to force set dato (!)
-								document.activeElement.blur()
-							// exec search
-								self.filter.exec_search()
-						}
-						// toggle filter container
-							event_manager.publish('toggle_search_panel_'+self.id)
-				}
 			if (e.key==='s' && e.ctrlKey===true) {
-				dd_request_idle_callback
-				(
+				dd_request_idle_callback(
 					() => {
 						const id_infos = document.querySelectorAll('.id_info.ontology')
 						const id_infos_length = id_infos.length
-					for (let i = 0; i < id_infos_length; i++) {
+						for (let i = 0; i < id_infos_length; i++) {
 
-							const item = id_infos[
-								i]
+							const item = id_infos[i]
 
-							if (id_info_mode===
-								'tld'
-								) {
+							if (id_info_mode==='tld') {
 								item.innerHTML	= item.dataset.section
 								item.title		= item.dataset.term_id
 								item.classList.add('show_section')
@@ -173,12 +156,10 @@ render_area_thesaurus.prototype.list = async function(options) {
 								item.classList.remove('show_section')
 							}
 						}
-						id_info_mode = (
-							id_info_mode==='tld') ? 'section' : 'tld'
-						}
-			)
-
-				}
+						id_info_mode = (id_info_mode==='tld') ? 'section' : 'tld'
+					}
+				)
+			}
 		}
 		document.removeEventListener('keydown', keydown_handler)
 		document.addEventListener('keydown', keydown_handler)
