@@ -4828,8 +4828,21 @@ class diffusion_sql extends diffusion  {
 			// process_dato (added 03-02-2021) @see mdcat3713 and actv108
 				if ( isset($process_dato_arguments->process_dato) ) {
 					$process_dato_arguments_inside = $process_dato_arguments->process_dato_arguments; // is a object
+
 					$ar_parsed_values = [];
-					foreach ($process_dato_arguments_inside as $c_value) {
+
+					// (!) add options as FIRST ARRAY ELEMENT to preserve the expected functions params order
+					// When Ontology manager is updated (v6.4) the v5 properties are transformed from STRING to JSON
+					// This cause that the order of the properties declaration changes in some cases (PostgreSQL JSON binary store)
+					if (property_exists($process_dato_arguments_inside, 'options')) {
+						$ar_parsed_values[] = $process_dato_arguments_inside->options;
+					}
+
+					foreach ($process_dato_arguments_inside as $ckey => $c_value) {
+						if ($ckey==='options') {
+							// (!) skip already added as first element bellow
+							continue;
+						}
 						switch ($c_value) {
 							case '$options':
 								$ar_parsed_values[] = $options;
