@@ -169,12 +169,39 @@ class search {
 		// matrix_table (for time machine if always fixed 'matrix_time_machine', not calculated)
 		if (get_class($this)!=='search_tm' && get_class($this)!=='search_related') {
 			// get first reliable table from ar_section_tipo (skip non existing sections)
+			// Note that in autocompletes, no all RQO config sections are always available
+			// in current installation (for example 'dc1' in monedaiberica)
 			foreach ($this->ar_section_tipo as $current_tipo) {
-				$current_matrix_table = common::get_matrix_table_from_tipo($current_tipo);
-				if (!empty($current_matrix_table)) {
-					$this->matrix_table = $current_matrix_table;
-					break;
+
+				$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+
+				// check model (some RQO config tipos could be not installed)
+				if (empty($model_name)) {
+					debug_log(__METHOD__
+						. " Ignored section tipo without model " . PHP_EOL
+						. ' current_tipo: ' . to_string($current_tipo)
+						, logger::WARNING
+					);
+					continue;
 				}
+
+				$current_matrix_table = common::get_matrix_table_from_tipo($current_tipo);
+
+				// Ignore invalid empty matrix tables
+				if (empty($current_matrix_table)) {
+					debug_log(__METHOD__
+						. " Ignored section tipo without matrix table " . PHP_EOL
+						. ' current_tipo: ' . to_string($current_tipo)
+						, logger::WARNING
+					);
+					continue;
+				}
+
+				// add the first reliable table
+				$this->matrix_table = $current_matrix_table;
+
+				// only one is set here. Stop the loop
+				break;
 			}
 		}
 
@@ -1235,6 +1262,19 @@ class search {
 		// Calculate matrix tables based on section tipos
 		$this->ar_matrix_tables = [];
 		foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
+
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo, true);
+
+			// check model (some RQO config tipos could be not installed)
+			if (empty($model_name)) {
+				debug_log(__METHOD__
+					. " Ignored section tipo without model " . PHP_EOL
+					. ' current_section_tipo: ' . to_string($current_section_tipo)
+					, logger::WARNING
+				);
+				continue;
+			}
+
 			$current_matrix_table = common::get_matrix_table_from_tipo($current_section_tipo);
 
 			// Ignore invalid empty matrix tables
