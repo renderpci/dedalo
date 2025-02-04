@@ -166,7 +166,7 @@ const get_content_data = async function(self) {
 		// button_regenerate
 			const button_regenerate = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning gear',
+				class_name		: 'warning repair',
 				inner_html		: self.get_tool_label('regenerate') || 'Regenerate',
 				parent			: buttons_container
 			})
@@ -275,7 +275,12 @@ const render_ontologies_list = function (self) {
 	const unique_typologies = [...new Map(ontologies.map(el => [el[key], el] )).values()];
 
 	const sorted_typologies = unique_typologies
-		.sort( (a,b) => (a.typology_id < b.typology_id) ? -1 : 0)
+		.sort( (a,b) => {
+			if (!a.typology_id) {
+				return 0
+			}
+			return a.typology_id < b.typology_id ? -1 : 0
+		})
 
 	const fragment = new DocumentFragment()
 
@@ -288,7 +293,7 @@ const render_ontologies_list = function (self) {
 			const typology_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'item_label typology_label unselectable icon_arrow',
-				inner_html		: typology_item.typology_name,
+				inner_html		: typology_item.typology_name || 'Without typology',
 				parent			: fragment
 			})
 			typology_label.addEventListener('click', (e) => {
@@ -348,6 +353,7 @@ const render_ontologies_list = function (self) {
 					element_type	: 'label',
 					class_name		: 'item_label',
 					inner_html		: child.name,
+					title			: child.tld,
 					parent			: children_container
 				})
 
