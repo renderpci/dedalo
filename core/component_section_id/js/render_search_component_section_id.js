@@ -121,7 +121,8 @@ const get_input_element_search = (i, current_value, self) => {
 					const beats_length = beats.length
 
 					if (beats_length<2) {
-						e.target.value = value;
+						e.target.value = paste;
+						change_handler()
 						return
 					}
 
@@ -140,6 +141,7 @@ const get_input_element_search = (i, current_value, self) => {
 					const value = parts.join(',')
 
 					e.target.value = value;
+					change_handler()
 				}
 			}
 			input.addEventListener('paste', paste_handler)
