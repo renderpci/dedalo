@@ -4838,7 +4838,8 @@ class diffusion_sql extends diffusion  {
 					// When Ontology manager is updated (v6.4) the v5 properties are transformed from STRING to JSON
 					// This cause that the order of the properties declaration changes in some cases (PostgreSQL JSON binary store)
 					if (property_exists($process_dato_arguments_inside, 'options')) {
-						$ar_parsed_values[] = $process_dato_arguments_inside->options;
+						// $ar_parsed_values[] = $process_dato_arguments_inside->options;
+						$ar_parsed_values[] = $options;
 					}
 
 					foreach ($process_dato_arguments_inside as $ckey => $c_value) {
