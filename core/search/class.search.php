@@ -458,7 +458,9 @@ class search {
 
 				$ar_sections = (array)$this->search_query_object->section_tipo;
 				$ar_sections = array_map(function($section_tipo){
-					return $section_tipo .' - '. RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
+					return $section_tipo==='all'
+						? $section_tipo
+						: $section_tipo .' - '. RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 				}, $ar_sections);
 
 				// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
