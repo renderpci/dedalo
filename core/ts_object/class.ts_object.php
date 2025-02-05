@@ -512,6 +512,16 @@ class ts_object {
 			return false;
 		}
 
+		$model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+		if (empty($model)) {
+			debug_log(__METHOD__
+				. " Ignored non resolved model for section: $section_tipo" . PHP_EOL
+				. ' Maybe is a non installed TLD : ' . get_tld_from_tipo($section_tipo)
+				, logger::ERROR
+			);
+			return false;
+		}
+
 		$section_map = section::get_section_map( $section_tipo );
 		if (!isset($section_map->thesaurus->is_indexable)) {
 			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::ERROR);
