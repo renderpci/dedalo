@@ -285,6 +285,8 @@ class area_thesaurus extends area_common {
 
 	/**
 	* SEARCH_THESAURUS
+	* Exec the given SQO search adding recursive parents as path for each term
+	* In Area Ontology calls, all parents children are added to the result for easy edit
 	* @param object $search_query_object
 	* @return object $response
 	*/
@@ -295,6 +297,7 @@ class area_thesaurus extends area_common {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= '';
+				$response->errors	= [];
 
 		// terms_are_model. This value comes from rqo->source->build_options->terms_are_model
 			// sent by the client from area_thesaurus when building and self.thesaurus_view_mode==='model'
@@ -355,6 +358,20 @@ class area_thesaurus extends area_common {
 							);
 							// add
 							$ar_path = array_reverse($ar_parents);
+
+							// add parents direct children (only area_ontology for now)
+							if (get_called_class()==='area_ontology') {
+								// resolve every children (one level) of current term parents
+								$ar_path_mix = array_merge(
+									$ar_path_mix,
+									$this->get_parents_children(
+										$ar_parents,
+										$section_tipo,
+										$section_id,
+										$hierarchy_from_component_tipo
+									)
+								);
+							}
 							break;
 					}//end switch (true)
 
@@ -391,6 +408,70 @@ class area_thesaurus extends area_common {
 
 		return $response;
 	}//end search_thesaurus
+
+
+
+	/**
+	* GET_PARENTS_CHILDREN
+	* Resolve term parents children (first level only) creating
+	* a standard path usable in thesaurus search results.
+	* It is used by Area Ontology search only, to allow display
+	* a useful list of parents for easy edit like v5 editor do.
+	* This resolution is slow. But it is worth it for ontology.
+	* @param array $ar_parents
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @param string $hierarchy_from_component_tipo
+	* @return array $ar_path_mix
+	*/
+	private function get_parents_children( array $ar_parents, string $section_tipo, string|int $section_id, string $hierarchy_from_component_tipo) : array {
+
+		$ar_path_mix = [];
+
+		foreach ($ar_parents as $current_parent) {
+
+			$ar_children = component_relation_children::get_children(
+				$current_parent->section_id,
+				$current_parent->section_tipo,
+				null,
+				false
+			);
+
+			foreach ($ar_children as $current_child) {
+
+				// exclude already added self term
+				if ($current_child->section_tipo===$section_tipo && $current_child->section_id==$section_id) {
+					continue;
+				}
+
+				$ar_child_parents = component_relation_parent::get_parents_recursive(
+					$current_child->section_id,
+					$current_child->section_tipo,
+					(object)[
+						'skip_root'						=> false,
+						'search_in_main_hierarchy'		=> true,
+						'main_table'					=> $this->get_main_table(),
+						'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo
+					]
+				);
+
+				// reverse order to create a compatible search results path
+				$child_array = array_reverse($ar_child_parents);
+
+				// add self
+					$locator = new locator();
+						$locator->set_section_tipo($current_child->section_tipo);
+						$locator->set_section_id($current_child->section_id);
+					$child_array[] = $locator;
+
+				// add child array group
+				$ar_path_mix[] = $child_array;
+			}
+		}
+
+
+		return $ar_path_mix;
+	}//end get_parents_children
 
 
 
