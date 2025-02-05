@@ -425,16 +425,18 @@ class area_thesaurus extends area_common {
 	* @return array $ar_path_mix
 	*/
 	private function get_parents_children( array $ar_parents, string $section_tipo, string|int $section_id, string $hierarchy_from_component_tipo) : array {
+		$start_time=start_time();
 
 		$ar_path_mix = [];
 
 		foreach ($ar_parents as $current_parent) {
 
+			// get first level children of each parent
 			$ar_children = component_relation_children::get_children(
 				$current_parent->section_id,
 				$current_parent->section_tipo,
-				null,
-				false
+				null, // component_tipo
+				false // recursive
 			);
 
 			foreach ($ar_children as $current_child) {
@@ -444,6 +446,7 @@ class area_thesaurus extends area_common {
 					continue;
 				}
 
+				// get parents recursive of each child to fill the path
 				$ar_child_parents = component_relation_parent::get_parents_recursive(
 					$current_child->section_id,
 					$current_child->section_tipo,
@@ -468,6 +471,17 @@ class area_thesaurus extends area_common {
 				$ar_path_mix[] = $child_array;
 			}
 		}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__
+					. " time to resolve parents children: "
+					. exec_time_unit($start_time).' ms' . PHP_EOL
+					.' total parents: ' . count($ar_parents) . PHP_EOL
+					.' total ar_path_mix: ' . count($ar_path_mix)
+					, logger::DEBUG
+				);
+			}
 
 
 		return $ar_path_mix;
