@@ -614,7 +614,7 @@ page.prototype.add_events = function() {
 							}
 						}
 					// active component case
-						if (page_globals.component_active) {
+						if (page_globals.component_active && page_globals.component_active.mode!=='search') {
 							// stop here if a component is active
 							return
 						}
