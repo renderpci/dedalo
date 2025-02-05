@@ -2769,22 +2769,22 @@ class diffusion_sql extends diffusion  {
 			#}
 
 			# Propiedades
-			$table_obj 			= new RecordObj_dd($current_table_tipo);
-			$table_properties 	= $table_obj->get_propiedades(true);
+			$table_obj			= new RecordObj_dd($current_table_tipo);
+			$table_properties	= $table_obj->get_propiedades(true);
 
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
 			switch ($model_name) {
 
 				case 'table':
-					# Direct relation
-					$real_table				= $current_table_tipo;
-					$ar_related_sections	= common::get_ar_related_by_model('section', $real_table);
-					if (!empty($ar_related_sections)) {
-						$section_tipo	= reset($ar_related_sections);
-						$name			= RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
+					// Direct relation
+					$related_section = self::get_related_section($current_table_tipo);
+
+					if (!empty($related_section)) {
+						$section_tipo	= $related_section;
+						$name			= RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 						$data = new stdClass();
-							$data->table			= $real_table;
+							$data->table			= $current_table_tipo;
 							$data->name				= $name;
 							$data->database_name	= $database_name;
 							$data->database_tipo	= $database_tipo;
@@ -2796,7 +2796,7 @@ class diffusion_sql extends diffusion  {
 					break;
 
 				case 'table_alias':
-					# Indirect relation
+					// Indirect relation
 					$ar_related_tables	= common::get_ar_related_by_model('table', $current_table_tipo);
 					$real_table			= $ar_related_tables[0] ?? null;
 
@@ -2813,29 +2813,26 @@ class diffusion_sql extends diffusion  {
 						continue 2;
 					}
 
-					# RELATED_SECTION . Direct related section case
-					$ar_direct_related_sections = common::get_ar_related_by_model('section', $current_table_tipo);
-					if (!empty($ar_direct_related_sections)) {
-						# Overwrite mode. Section is located in alias table diffusion element
-						$ar_related_sections = $ar_direct_related_sections;
-						# Overwrite default real_table calculation
-						#
-					}else{
-						# Default mode. Section is located in real table diffusion element
-						$ar_related_sections = common::get_ar_related_by_model('section', $real_table);
+					// RELATED_SECTION . Direct related section case
+					// try with tale_alias
+					$related_section = self::get_related_section($current_table_tipo);
+					if (empty($related_section)) {
+						// try with real table
+						$related_section = self::get_related_section($real_table);
 					}
 
-					if (!empty($ar_related_sections)) {
-						$section_tipo 		 = reset($ar_related_sections);
+					if (!empty($related_section)) {
+						// $section_tipo	= reset($ar_related_sections);
+						$section_tipo = $related_section;
 						# Table name is taken from real_table tipo (only one mysql table for all table alias)
-						#$name 				 = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
+						#$name = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
 						# Table name is taken from current_table_tipo tipo (one mysql table for each table alias)
-						$name 				 = RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						$name = RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 						if (empty($table_properties)) {
 							# Try with real table when alias is empty
-							$table_obj 			= new RecordObj_dd($real_table);
-							$table_properties 	= $table_obj->get_propiedades(true);
+							$table_obj			= new RecordObj_dd($real_table);
+							$table_properties	= $table_obj->get_propiedades(true);
 						}
 						$data = new stdClass();
 							$data->table			= $real_table;
@@ -2848,9 +2845,15 @@ class diffusion_sql extends diffusion  {
 						$diffusion_element_tables_map->$section_tipo = $data;
 					}else{
 						// bad structure configuration for current diffusion element
+							$RecordObj_dd	= new RecordObj_dd($real_table);
+							$properties		= $RecordObj_dd->get_propiedades(true);
 							debug_log(__METHOD__
-								." ERROR: Bad structure/ontology configuration for current diffusion element. Expected a section related for tipo: " . PHP_EOL
-								.' real_table tipo: ' . to_string($real_table)
+								." ERROR: Bad structure/ontology configuration for current diffusion element. Expected a section related but empty related section" . PHP_EOL
+								.' current_table_tipo: ' . to_string($current_table_tipo) . PHP_EOL
+								.' model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true) . PHP_EOL
+								.' related_section: ' . to_string($related_section) . PHP_EOL
+								.' real_table tipo: ' . to_string($real_table) . PHP_EOL
+								.' properties: ' . json_encode($properties, JSON_PRETTY_PRINT) . PHP_EOL
 								, logger::ERROR
 							);
 					}
@@ -5178,18 +5181,47 @@ class diffusion_sql extends diffusion  {
 				$ar_table_tipo = diffusion::parse_database_alias_tables($ar_table_tipo, $database_alias_tipo);
 			}
 
-
 		foreach ($ar_table_tipo as $current_table_tipo) {
 
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			$related_section = diffusion_sql::get_related_section($current_table_tipo);
+			if (!empty($related_section)) {
+				$ar_diffusion_sections[] = $related_section;
+			}
+		}
+
+
+		return $ar_diffusion_sections;
+	}//end get_diffusion_sections_from_diffusion_element
+
+
+
+	/**
+	* GET_RELATED_SECTION
+	* Resolves target section_tipo from diffusion table
+	* Allows v5 properties definition (used for special Ontology sections as 'rsc0')
+	* @return string|null $related_section
+	*/
+	public static function get_related_section(string $table_tipo) : ?string {
+
+		// properties way (implemented to allow Ontology sections like 'dd0')
+			$RecordObj_dd	= new RecordObj_dd($table_tipo);
+			$properties		= $RecordObj_dd->get_propiedades(true);
+			$target_section = $properties->target_section ?? null;
+			if (!empty($target_section)) {
+				// resolved section tipo
+				return $target_section;
+			}
+
+		// relation way (default)
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
 			switch ($model_name) {
 
 				case 'table_alias':
 					// First try section (thesaurus needed)
-					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
+					$ar_related = common::get_ar_related_by_model('section', $table_tipo);
 					if (!isset($ar_related[0])) {
 						// If not, We search 'table' now
-						$ar_table = common::get_ar_related_by_model('table', $current_table_tipo);
+						$ar_table = common::get_ar_related_by_model('table', $table_tipo);
 						if (isset($ar_table[0])) {
 							$ar_related = common::get_ar_related_by_model('section', $ar_table[0]);
 						}
@@ -5199,18 +5231,15 @@ class diffusion_sql extends diffusion  {
 				case 'table':
 				default:
 					// Pointer to section
-					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
+					$ar_related = common::get_ar_related_by_model('section', $table_tipo);
 					break;
 			}
 
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}
-		}
+			$related_section = $ar_related[0] ?? null;
 
 
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
+		return $related_section;
+	}//end get_related_section
 
 
 
