@@ -452,6 +452,16 @@ class ts_object {
 
 		foreach($ar_children as $current_locator) {
 
+			$model = RecordObj_dd::get_modelo_name_by_tipo($current_locator->section_tipo,true);
+			if (empty($model)) {
+				debug_log(__METHOD__
+					. " Ignored non resolved model for section: $current_locator->section_tipo" . PHP_EOL
+					. ' Maybe is a non installed TLD : ' . get_tld_from_tipo($current_locator->section_tipo)
+					, logger::ERROR
+				);
+				continue;
+			}
+
 			$section_map = section::get_section_map( $current_locator->section_tipo );
 			if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
 				debug_log(__METHOD__

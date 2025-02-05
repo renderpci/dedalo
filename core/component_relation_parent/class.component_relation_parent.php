@@ -885,7 +885,7 @@ class component_relation_parent extends component_relation_common {
 			$hierarchy_from_component_tipo = $options->hierarchy_from_component_tipo ?? DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 		// cache key_resolve
-			static $parents_recursive_resolved = [];
+			static $parents_recursive_resolved;
 			$key_resolve = $section_tipo.'_'.$section_id.'_'.(int)$skip_root.'_'.(int)$search_in_main_hierarchy.'_'.(int)$hierarchy_from_component_tipo;
 			if (isset($parents_recursive_resolved[$key_resolve])) {
 				return $parents_recursive_resolved[$key_resolve];
