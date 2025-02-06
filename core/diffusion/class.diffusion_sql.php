@@ -963,21 +963,23 @@ class diffusion_sql extends diffusion  {
 							// delete global table record
 							// Note that 'custom' argument is used to select the proper
 							// column and value to delete in special global tables
-							$deleted = diffusion_mysql::delete_sql_record(
-								$section_id,
-								$database_name,
-								$current_table_name,
-								$section_tipo,
-								(object)[ // custom
-									'field_name'	=> ['section_id'],
-									'field_value'	=> [$section_tipo .'_'. $section_id]
-								]
-							);
-							if (!$deleted) {
-								debug_log(__METHOD__
-									." Error deleting global_table $current_table_name record {$section_tipo}_{$section_id} (publication=no)"
-									, logger::ERROR
+							if (diffusion_mysql::table_exits($database_name, $current_table_name)) {
+								$deleted = diffusion_mysql::delete_sql_record(
+									$section_id,
+									$database_name,
+									$current_table_name,
+									$section_tipo,
+									(object)[ // custom
+										'field_name'	=> ['section_id'],
+										'field_value'	=> [$section_tipo .'_'. $section_id]
+									]
 								);
+								if (!$deleted) {
+									debug_log(__METHOD__
+										." Error deleting global_table $current_table_name record {$section_tipo}_{$section_id} (publication=no)"
+										, logger::ERROR
+									);
+								}
 							}
 						}
 					}
