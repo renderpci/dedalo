@@ -3533,73 +3533,101 @@ class diffusion_sql extends diffusion  {
 	/**
 	* MAP_LOCATOR_TO_TERMINOID
 	* Returns map first locator to plain "terminoID" like "es_2"
-	* @return string $terminoID
+	* @param object $options
+	* {
+	*	properties : {
+	* 		"process_dato": "diffusion_sql::map_locator_to_terminoID",
+	*       "process_dato_arguments:": {
+	*            "dato_splice": [ 2 ]
+	*        }
+	* 	},
+	* 	...
+	* }
+	* @param array|null $dato
+	* [
+	* 	{
+	*		"section_tipo": "dd0",
+    *		"section_id": "5",
+    *		"from_component_tipo": "ontology15"
+    * 	}
+	* ]
+	* @return string|null $terminoID
 	*/
-	public static function map_locator_to_terminoID($options, $dato) {
+	public static function map_locator_to_terminoID($options, $dato) : ?string {
 
-		//debug_log(__METHOD__." options ".to_string($options), logger::DEBUG);
-		$ar_filter = false;
-		if (isset($options->properties->process_dato_arguments->filtered_dato_by)) {
-			$ar_filter = $options->properties->process_dato_arguments->filtered_dato_by;
-		}
-		#debug_log(__METHOD__." ar_filter ".to_string($ar_filter), logger::DEBUG);
-
-		if (isset($options->properties->process_dato_arguments->use_parent)) {
-			$use_parent = $options->properties->process_dato_arguments->use_parent;
-		}else{
-			$use_parent = false;
+		if (empty($dato)) {
+			return null;
 		}
 
-		$terminoID = null;
+		$properties = $options->properties ?? new stdClass();
+		$process_dato_arguments	= $properties->process_dato_arguments ?? new stdClass();
 
-		if (!empty($dato)) {
-			$terminoID = array();
+		// ar_filter : process_dato_arguments->filtered_dato_by
+		$ar_filter = $process_dato_arguments->filtered_dato_by ?? false;
 
-			foreach ((array)$dato as $current_locator) {
+		// use_parent
+		$use_parent = $process_dato_arguments->use_parent ?? false;
 
-				if ($ar_filter!==false) foreach ($ar_filter as $filter_obj) {
-					foreach ($filter_obj as $f_property => $f_value) {
-						if (!property_exists($current_locator, $f_property) || $current_locator->{$f_property} != $f_value) {
-							continue 3; // Ignore
-						}
+		// dato_key. Selects a item from array based on array key (@see sample at dd828)
+		$dato_key = $process_dato_arguments->dato_key ?? false;
+
+		$ar_terminoID = [];
+		foreach ((array)$dato as $current_locator) {
+
+			if ($ar_filter!==false) foreach ($ar_filter as $filter_obj) {
+				foreach ($filter_obj as $f_property => $f_value) {
+					if (!property_exists($current_locator, $f_property) || $current_locator->{$f_property} != $f_value) {
+						continue 3; // Ignore
 					}
 				}
-				if($use_parent===true) {
-					$ar_parents = component_relation_parent::get_parents(
-						$current_locator->section_id,
-						$current_locator->section_tipo
-					);
-					$current_locator = $ar_parents[0];
-				}
-
-				$section_tipo	= $current_locator->section_tipo;
-				$section_id		= $current_locator->section_id;
-
-				$terminoID[] = $section_tipo .'_'. $section_id;
-
-
-				// add parents option
-				// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
-					if (isset($options->properties->process_dato_arguments->custom_arguments->add_parents) && $options->properties->process_dato_arguments->custom_arguments->add_parents===true) {
-						# calculate parents and add to dato
-						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-						$ar_parents = component_relation_parent::get_parents_recursive(
-							$current_locator->section_id,
-							$current_locator->section_tipo,
-							(object)[
-								'skip_root' => true,
-								'search_in_main_hierarchy' => true
-							]
-						);
-						foreach ($ar_parents as $parent_locator) {
-							$terminoID[] = $parent_locator->section_tipo .'_'. $parent_locator->section_id;
-						}
-					}
+			}
+			if($use_parent===true) {
+				$ar_parents = component_relation_parent::get_parents(
+					$current_locator->section_id,
+					$current_locator->section_tipo
+				);
+				$current_locator = $ar_parents[0];
 			}
 
+			$section_tipo	= $current_locator->section_tipo;
+			$section_id		= $current_locator->section_id;
 
-			$terminoID = json_encode($terminoID);
+			$ar_terminoID[] = $section_tipo .'_'. $section_id;
+
+			// add parents option
+			// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
+				if (isset($process_dato_arguments->custom_arguments->add_parents) && $process_dato_arguments->custom_arguments->add_parents===true) {
+					# calculate parents and add to dato
+					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+					$ar_parents = component_relation_parent::get_parents_recursive(
+						$current_locator->section_id,
+						$current_locator->section_tipo,
+						(object)[
+							'skip_root' => true,
+							'search_in_main_hierarchy' => true
+						]
+					);
+					foreach ($ar_parents as $parent_locator) {
+						$ar_terminoID[] = $parent_locator->section_tipo .'_'. $parent_locator->section_id;
+					}
+				}
 		}
+
+		// empty case
+		if (empty($ar_terminoID)) {
+			return null;
+		}
+
+		// dato_key. Selects a item from array based on array key
+		if ($dato_key!==false) {
+
+			$terminoID = $ar_terminoID[$dato_key] ?? null;
+
+			return $terminoID;
+		}
+
+		// encode as JSON string
+		$terminoID = json_encode($ar_terminoID);
 
 
 		return $terminoID;
