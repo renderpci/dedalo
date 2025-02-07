@@ -949,6 +949,17 @@ class diffusion_sql extends diffusion  {
 					}
 
 				// save_global_table_data (new)
+					if (!isset($table_properties->global_table_maps) && isset($diffusion_element_tables_map->{$section_tipo}->from_alias)) {
+
+						$table_tipo = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
+						// try from real
+						$RecordObj_dd		= new RecordObj_dd($table_tipo);
+						$target_properties	= $RecordObj_dd->get_propiedades(true);
+						if (is_object($target_properties) && isset($target_properties->global_table_maps)) {
+							// overwrite global_table_maps
+							$table_properties->global_table_maps = $target_properties->global_table_maps;
+						}
+					}
 					if (isset($table_properties->global_table_maps)) {
 						foreach ($table_properties->global_table_maps as $current_global_table_map) {
 
@@ -1634,6 +1645,16 @@ class diffusion_sql extends diffusion  {
 						}//end if (isset($table_properties->global_search_map))
 
 					// save_global_table_data
+						if (!isset($table_properties->global_table_maps)) {
+
+							// try from real
+							$RecordObj_dd		= new RecordObj_dd($table_tipo);
+							$target_properties	= $RecordObj_dd->get_propiedades(true);
+							if (is_object($target_properties) && isset($target_properties->global_table_maps)) {
+								// overwrite global_table_maps
+								$table_properties->global_table_maps = $target_properties->global_table_maps;
+							}
+						}
 						if (isset($table_properties->global_table_maps)) {
 
 							foreach ($table_properties->global_table_maps as $current_global_table_map) {
