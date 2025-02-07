@@ -310,6 +310,7 @@ class update_code {
 						'config/config_db.php',
 						'config/config_areas.php',
 						'config/config_core.php',
+						'config/config_defaults.json',
 						'publication/server_api/v1/config_api/server_config_api.php',
 						'publication/server_api/v1/config_api/server_config_headers.php'
 					];
