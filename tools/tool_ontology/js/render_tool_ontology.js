@@ -177,11 +177,9 @@ const get_content_data = async function(self) {
 		}
 		button_generate.addEventListener('click', click_handler)
 		// focus buttons
-		dd_request_idle_callback(
-			() => {
-				button_generate.focus()
-			}
-		)
+		setTimeout(function(){
+			button_generate.focus()
+		}, 40)
 
 	// messages_container
 		const messages_container = ui.create_dom_element({
