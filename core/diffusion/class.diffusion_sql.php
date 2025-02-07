@@ -3594,8 +3594,57 @@ class diffusion_sql extends diffusion  {
 		// dato_key. Selects a item from array based on array key (@see sample at dd828)
 		$dato_key = $process_dato_arguments->dato_key ?? false;
 
+		// replace
+		$replace = $process_dato_arguments->replace ?? false;
+
+		// prepend_parents
+		// used in Ontology web. See 'dd0_1189'
+		$prepend_parents = $process_dato_arguments->prepend_parents ?? false;
+		if ($prepend_parents===true) {
+			$ar_parents = [];
+			foreach ((array)$dato as $current_locator) {
+				$parents = component_relation_parent::get_parents_recursive(
+					$current_locator->section_id,
+					$current_locator->section_tipo,
+					(object)[
+						'skip_root' => true,
+						'search_in_main_hierarchy' => true
+					]
+				);
+				$ar_parents = array_merge($ar_parents, $parents);
+			}
+			$dato = array_merge( array_reverse($ar_parents), $dato);
+		}
+
+		// add_parents
+		// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
+		$add_parents = $process_dato_arguments->add_parents ?? false;
+		if ($add_parents===true) {
+			$ar_parents = [];
+			foreach ((array)$dato as $current_locator) {
+				$parents = component_relation_parent::get_parents_recursive(
+					$current_locator->section_id,
+					$current_locator->section_tipo,
+					(object)[
+						'skip_root' => true,
+						'search_in_main_hierarchy' => true
+					]
+				);
+				$ar_parents = array_merge($ar_parents, $parents);
+			}
+			$dato = array_merge($dato, $ar_parents);
+		}
+
 		$ar_terminoID = [];
 		foreach ((array)$dato as $current_locator) {
+
+			// data from component section_id data cases, compound a virtual locator
+			if (is_integer($current_locator)) {
+				$current_section_id = $current_locator;
+				$current_locator = new locator();
+					$current_locator->set_section_tipo($options->section_tipo);
+					$current_locator->set_section_id($current_section_id);
+			}
 
 			if ($ar_filter!==false) foreach ($ar_filter as $filter_obj) {
 				foreach ($filter_obj as $f_property => $f_value) {
@@ -3609,31 +3658,28 @@ class diffusion_sql extends diffusion  {
 					$current_locator->section_id,
 					$current_locator->section_tipo
 				);
-				$current_locator = $ar_parents[0];
+				$current_locator = $ar_parents[0] ?? null;
+				if (empty($current_locator)) {
+					debug_log(__METHOD__
+						. " Skipped empty parent value from locator " . PHP_EOL
+						. ' current_locator: ' . to_string($current_locator)
+						, logger::WARNING
+					);
+					continue;
+				}
 			}
 
 			$section_tipo	= $current_locator->section_tipo;
 			$section_id		= $current_locator->section_id;
 
-			$ar_terminoID[] = $section_tipo .'_'. $section_id;
+			$term_id = $section_tipo .'_'. $section_id;
 
-			// add parents option
-			// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
-				if (isset($process_dato_arguments->custom_arguments->add_parents) && $process_dato_arguments->custom_arguments->add_parents===true) {
-					# calculate parents and add to dato
-					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-					$ar_parents = component_relation_parent::get_parents_recursive(
-						$current_locator->section_id,
-						$current_locator->section_tipo,
-						(object)[
-							'skip_root' => true,
-							'search_in_main_hierarchy' => true
-						]
-					);
-					foreach ($ar_parents as $parent_locator) {
-						$ar_terminoID[] = $parent_locator->section_tipo .'_'. $parent_locator->section_id;
-					}
-				}
+			// replace (sample at dd805)
+			if ($replace!==false) {
+				$term_id = preg_replace('/'.$replace->regex.'/', $replace->replacement, $term_id);
+			}
+
+			$ar_terminoID[] = $term_id;
 		}
 
 		// empty case
