@@ -178,9 +178,18 @@ class system {
 			$version	= shell_exec($cmd);
 		}
 
+		// try using client psql
+		if (empty($version)) {
+			$name		= 'psql';
+			$cmd		= $name.' --version | sed -n "s/psql (PostgreSQL) \([-0-9.]*\).*/\1/p;" ';
+			$version	= shell_exec($cmd);
+		}
+
 		if (empty($version)) {
 			debug_log(__METHOD__
-				." PostgreSQL ($name) not found "
+				." PostgreSQL ($name) not found " . PHP_EOL
+				.' command: ' . $cmd . PHP_EOL
+				.' binary_base_path: ' . $binary_base_path
 				, logger::ERROR
 			);
 			return '';
