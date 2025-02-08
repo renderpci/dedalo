@@ -2256,6 +2256,7 @@ function get_base_binary_path() : string {
 		case 'Linux':
 		default:
 			$binary_base_path = '/usr/bin';
+			// ! Note that Red Hat uses '/usr/sbin'. Please define the path in config: DEDALO_BINARY_BASE_PATH
 			break;
 	}
 

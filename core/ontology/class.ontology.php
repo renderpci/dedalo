@@ -1567,9 +1567,20 @@ class ontology {
 			);
 			$properties_data = $properties_component->get_dato();
 
-			if( !empty($properties_data) ){
-				$properties = reset($properties_data);
-			}else{
+			// properties
+			$properties = !empty($properties_data)
+				? ($properties_data[0] ?? new stdClass())
+				: new stdClass();
+
+			if (!is_object($properties)) {
+				debug_log(__METHOD__
+					. " Invalid properties value. Expected object. review  " . PHP_EOL
+					. ' $properties type: ' . gettype($properties) . PHP_EOL
+					. ' $properties: ' . to_string($properties) . PHP_EOL
+					. ' locator: ' . to_string($locator) . PHP_EOL
+					, logger::ERROR
+				);
+				// force object to allow continue
 				$properties = new stdClass();
 			}
 
