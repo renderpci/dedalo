@@ -149,7 +149,9 @@ class system {
 
 		if (empty($version)) {
 			debug_log(__METHOD__
-				." Apache ($name) not found "
+				." Apache ($name) not found " . PHP_EOL
+				.' command: ' . $cmd . PHP_EOL
+				.' binary_base_path: ' . $binary_base_path
 				, logger::ERROR
 			);
 			return '';
@@ -679,6 +681,8 @@ class system {
 	/**
 	* GET_DISK_FREE_SPACE
 	* Get the main disk free space in megabytes
+	* ! Note: This function will not work on remote files as the file to be
+	* examined must be accessible via the server's filesystem.
 	* @return int|null $megabytes
 	*/
 	public static function get_disk_free_space() : ?int {
