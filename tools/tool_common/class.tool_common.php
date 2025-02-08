@@ -597,6 +597,55 @@ class tool_common {
 
 		return $active_tools;
 	}//end get_active_tools
+
+
+
+	/**
+	* GET_ACTIVE_TOOL_NAMES
+	* Get active tools in tool section and return only the names as: ["tool_lang", "tool_time_machine"]
+	* Used in update code to get the tool list from the master
+	* @return array $tool_names
+	*/
+	public static function get_active_tool_names() {
+
+		$active_tools = tool_common::get_active_tools();
+
+		$tool_names = [];
+		foreach ($active_tools as $current_tool_row) {
+
+			$section_tipo	= $current_tool_row->section_tipo;
+			$section_id		= $current_tool_row->section_id;
+
+		// name
+		// create the component to get his value
+			$component_tipo	= tools_register::$tipo_tool_name; // 'dd1326';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			// get value as 'tool_lang'
+			$name = $component->get_value();
+
+			// check it, if nothing isset continue to next one.
+			if( empty($name) ){
+				continue;
+			}
+
+			$tool_names[] = $name;
+		}
+
+
+		return $tool_names;
+	}//end get_active_tool_names
+
+
+
+	/**
 	* GET_CONFIG
 	* Get given tool config if isset
 	* @param string $tool_name
