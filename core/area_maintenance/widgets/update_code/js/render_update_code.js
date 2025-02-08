@@ -606,6 +606,7 @@ const render_info_modal = function( self, versions_info ) {
 					}
 
 					button_update.classList.add('hide')
+					update_mode_container.classList.add('hide')
 					body.classList.add('loading')
 
 					// spinner
@@ -636,6 +637,7 @@ const render_info_modal = function( self, versions_info ) {
 							: api_response.msg || 'Unknown error on API update_code'
 
 						button_update.classList.remove('hide')
+						update_mode_container.classList.remove('hide')
 
 					}else{
 
