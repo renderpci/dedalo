@@ -30,6 +30,9 @@ export const update_code = function() {
 	// bool beta_update
 	this.beta_update
 
+	// string update_mode : incremental | clean
+	this.update_mode
+
 	this.events_tokens	= []
 	this.ar_instances	= []
 
@@ -60,8 +63,8 @@ export const update_code = function() {
 * The options 'name' property is the class method name
 * @return result
 * {
-    "datalist": array as [{"name":"cpu","value":"Linux",..}]
-    "errors": array|null
+	"datalist": array as [{"name":"cpu","value":"Linux",..}]
+	"errors": array|null
   }
 */
 update_code.prototype.get_value = async () => {
@@ -94,6 +97,11 @@ update_code.prototype.get_value = async () => {
 /**
 * GET_CODE_UPDATE_INFO
 * Call code remote server API and gets update info before update the ontology
+* @param object server
+* {
+* 	code: string,
+* 	url : string
+* }
 * @return object api_response
 * {
 * 	result : {
@@ -104,7 +112,7 @@ update_code.prototype.get_value = async () => {
 * 	errors: []
 * }
 */
-update_code.prototype.get_code_update_info = async (server) => {
+update_code.prototype.get_code_update_info = async ( server ) => {
 
 	// short vars
 		const code				= server.code
@@ -136,9 +144,33 @@ update_code.prototype.get_code_update_info = async (server) => {
 /**
 * UPDATE_CODE
 * Call code remote server API and update the code passing the selected file info
+* @param object options
+* {
+*	info : {
+*		"version": "6.4.0",
+*		"date": "2025-02-08T11:53:15+01:00",
+*		"entity_id": 10,
+*		"entity": "dedalo",
+*		"entity_label": "Dédalo master",
+*		"host": "dedalo.dev",
+*		"tool_names": [
+*			"tool_lang"
+*		]
+*	},
+*	file_active: {
+*		"version": "development",
+*		"url": "https://dedalo.dev/dedalo/code/development/dedalo_development.zip",
+*		"active": true
+*	}
+* }
 * @return object api_response
 */
-update_code.prototype.update_code = async (file_active) => {
+update_code.prototype.update_code = async ( options ) => {
+
+	// options
+	const file_active	= options.file_active
+	const update_mode	= options.update_mode
+	const info			= options.info
 
 	const api_response = await data_manager.request({
 		use_worker	: true,
@@ -151,7 +183,9 @@ update_code.prototype.update_code = async (file_active) => {
 				action	: 'update_code'
 			},
 			options	: {
-				file: file_active
+				file		: file_active,
+				update_mode	: update_mode,
+				info		: info
 			}
 		}
 	})

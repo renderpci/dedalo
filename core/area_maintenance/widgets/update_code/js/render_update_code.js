@@ -533,6 +533,46 @@ const render_info_modal = function( self, versions_info ) {
 
 		}else{
 
+			// update_mode: incremental | clean
+				const update_mode_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'update_mode_container',
+					parent			: footer
+				})
+				const change_mode_handler = (e)=> {
+					self.update_mode = e.target.value;
+				}
+				// option incremental
+				const incremental_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'incremental_label unselectable',
+					text_node		: get_label.incremental || 'Incremental',
+					parent			: update_mode_container
+				})
+				const incremental_radio = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'radio',
+					name			: 'update_mode',
+					value			: 'incremental'
+				})
+				incremental_radio.addEventListener('change', change_mode_handler)
+				incremental_label.prepend(incremental_radio)
+				// option clean
+				const clean_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'clean_label unselectable',
+					text_node		: get_label.clean || 'Clean',
+					parent			: update_mode_container
+				})
+				const clean_radio = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'radio',
+					name			: 'update_mode',
+					value			: 'clean'
+				})
+				clean_radio.addEventListener('change', change_mode_handler)
+				clean_label.prepend(clean_radio)
+
 			// button_update
 				const button_update = ui.create_dom_element({
 					element_type	: 'button',
@@ -547,6 +587,11 @@ const render_info_modal = function( self, versions_info ) {
 					const file_active = files.find(el => el.active === true)
 					if (!file_active) {
 						alert(get_label.empty_selection || 'Empty selection');
+						return
+					}
+
+					if (!self.update_mode) {
+						alert(get_label.update_mode_mandatory || 'Update mode is mandatory');
 						return
 					}
 
@@ -573,7 +618,11 @@ const render_info_modal = function( self, versions_info ) {
 					response.innerHTML = 'Updating. Please wait'
 
 					// update_code
-					const api_response = await self.update_code(file_active)
+					const api_response = await self.update_code({
+						info		: versions_info.info,
+						file_active	: file_active,
+						update_mode	: self.update_mode
+					})
 
 					body.classList.remove('loading')
 

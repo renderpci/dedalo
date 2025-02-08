@@ -135,7 +135,9 @@ class update_code {
 			$response->errors	= [];
 
 		// options
-			$file = $options->file;
+			$file			= $options->file;
+			$update_mode	= $options->update_mode;
+			$info			= $options->info;
 
 		try {
 
@@ -279,236 +281,29 @@ class update_code {
 				$source		= DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. 'dedalo_code';
 				$target		= DEDALO_ROOT_PATH;
 
-				// upgrade files
-				// copy downloaded folder to httpdocs like ../tmp/dedalo_code => ../httpdocs/dedalo_code
-					$command = "cp -R {$source} {$target}_code";
-					exec($command, $output, $result_code);
-					if ($result_code!=0) {
-						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
-						$response->errors[]	= 'copy downloaded folder failed';
-						debug_log(__METHOD__
-							. $response->msg  . PHP_EOL
-							. ' command: ' . to_string($command) . PHP_EOL
-							. ' output: ' . to_string($output) . PHP_EOL
-							. ' result_code: ' . to_string($result_code)
-							, logger::ERROR
-						);
-						return $response;
-					}
-					debug_log(__METHOD__
-						. " exec command" . PHP_EOL
-						. " command " . to_string($command) . PHP_EOL
-						. " output " . to_string($output) . PHP_EOL
-						. " result_code type " . gettype($result_code) . PHP_EOL
-						. " result_code " . to_string($result_code)
-						, logger::WARNING
-					);
+				// update execution
+				$update_options = new stdClass();
+					$update_options->source	= $source;
+					$update_options->target	= $target;
+					$update_options->info	= $info;
 
-				// copy config files
-					$files_to_copy = [
-						'config/config.php',
-						'config/config_db.php',
-						'config/config_areas.php',
-						'config/config_core.php',
-						'config/config_defaults.json',
-						'publication/server_api/v1/config_api/server_config_api.php',
-						'publication/server_api/v1/config_api/server_config_headers.php'
-					];
-					foreach ($files_to_copy as $file_name) {
+				switch ($update_mode) {
+					case 'clean':
+						$update_response = update_code::update_clean( $update_options );
+						break;
 
-						if (!file_exists("{$target}/$file_name")) {
-							debug_log(__METHOD__
-								. " Ignored file  " . PHP_EOL
-								. ' file_name: ' . to_string($file_name) . PHP_EOL
-								. ' source: ' . "{$target}/$file_name"
-								, logger::ERROR
-							);
-							continue;
-						}
+					case 'incremental':
+					default:
+						$update_response = update_code::update_incremental( $update_options );
+						break;
+				}
 
-						if (!copy("{$target}/$file_name", "{$target}_code/{$file_name}")){
-							$response->errors[]	= 'copy config files failed';
-							$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error on copy file: '.$file_name;
-							debug_log(__METHOD__
-								. " copy file error " . PHP_EOL
-								. " source " . "{$target}/$file_name" . PHP_EOL
-								. " target " . "{$target}_code/{$file_name}"
-								, logger::ERROR
-							);
-							return $response;
-						}else{
-							debug_log(__METHOD__
-								. " copy file success " . PHP_EOL
-								. " source " . "{$target}/$file_name" . PHP_EOL
-								. " target " . "{$target}_code/{$file_name}"
-								, logger::WARNING
-							);
-						}
-					}
+				$response->errors	= array_merge($response->errors, $update_response->errors);
+				$response->msg		.= ' '.$update_response->msg;
 
-				// tools
-					$dd_tools = [
-						'tool_cataloging',
-						'tool_common',
-						'tool_dd_label',
-						'tool_dev_template',
-						'tool_diffusion',
-						'tool_export',
-						'tool_hierarchy',
-						'tool_image_rotation',
-						'tool_import_dedalo_csv',
-						'tool_import_files',
-						'tool_import_marc21',
-						'tool_import_rdf',
-						'tool_import_zotero',
-						'tool_indexation',
-						'tool_lang',
-						'tool_lang_multi',
-						'tool_media_versions',
-						'tool_numisdata_epigraphy',
-						'tool_numisdata_order_coins',
-						'tool_pdf_extractor',
-						'tool_posterframe',
-						'tool_propagate_component_data',
-						'tool_qr',
-						'tool_subtitles',
-						'tool_tc',
-						'tool_time_machine',
-						'tool_tr_print',
-						'tool_transcription',
-						'tool_update_cache',
-						'tool_upload',
-						'tool_user_admin'
-					];
-
-					$tools_src = "{$target}/tools";
-					$old_tools = dir($tools_src);
-					while(($file = $old_tools->read()) !== false) {
-						if($file === "." || $file === "..") continue;
-						if( is_dir($tools_src .'/'. $file) && !in_array($file, $dd_tools) ) {
-
-							$command = "cp -R {$tools_src}/{$file} {$target}_code/tools/{$file}";
-							exec($command, $output, $result_code);
-							if ($result_code!=0) {
-								$response->errors[]	= 'copy tools files failed';
-								$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
-								debug_log(__METHOD__
-									. $response->msg  . PHP_EOL
-									. ' command: ' . to_string($command) . PHP_EOL
-									. ' output: ' . to_string($output) . PHP_EOL
-									. ' result_code: ' . to_string($result_code)
-									, logger::ERROR
-								);
-								return $response;
-							}
-							debug_log(__METHOD__
-								. " exec command" . PHP_EOL
-								. " command " . to_string($command) . PHP_EOL
-								. " output " . to_string($output) . PHP_EOL
-								. " result_code type " . gettype($result_code) . PHP_EOL
-								. " result_code " . to_string($result_code)
-								, logger::WARNING
-							);
-						}
-					}
-
-				// move directory old version to backups as '../httpdocs/dedalo' => '../backup/code/dedalo_6.3.1'
-					$backup_code_path = DEDALO_BACKUP_PATH . '/code';
-					create_directory($backup_code_path);
-					$old_copy_final_path = "{$backup_code_path}/dedalo_" .DEDALO_VERSION . '_' . date('Y-m-d_his');
-					$command = "mv $target $old_copy_final_path";
-					exec($command, $output, $result_code);
-					if ($result_code!=0) {
-						$response->errors[]	= 'move old version to code backups failed';
-						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
-						debug_log(__METHOD__
-							. $response->msg  . PHP_EOL
-							. ' command: ' . to_string($command) . PHP_EOL
-							. ' output: ' . to_string($output) . PHP_EOL
-							. ' result_code: ' . to_string($result_code)
-							, logger::ERROR
-						);
-						return $response;
-					}
-					debug_log(__METHOD__
-						. " exec command" . PHP_EOL
-						. " command " . to_string($command) . PHP_EOL
-						. " output " . to_string($output) . PHP_EOL
-						. " result_code type " . gettype($result_code) . PHP_EOL
-						. " result_code " . to_string($result_code)
-						, logger::WARNING
-					);
-
-				// move media directory from old to the new directory like '../backup/code/dedalo_6.3.1/media' => '../httpdocs/dedalo_code/media'
-					$command = "mv {$old_copy_final_path}/media {$target}_code/media";
-					exec($command, $output, $result_code);
-					if ($result_code!=0) {
-						$response->errors[]	= 'move media dir failed';
-						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
-						debug_log(__METHOD__
-							. $response->msg  . PHP_EOL
-							. ' command: ' . to_string($command) . PHP_EOL
-							. ' output: ' . to_string($output) . PHP_EOL
-							. ' result_code: ' . to_string($result_code)
-							, logger::ERROR
-						);
-						return $response;
-					}
-					debug_log(__METHOD__
-						. " exec command" . PHP_EOL
-						. " command " . to_string($command) . PHP_EOL
-						. " output " . to_string($output) . PHP_EOL
-						. " result_code type " . gettype($result_code) . PHP_EOL
-						. " result_code " . to_string($result_code)
-						, logger::WARNING
-					);
-
-				// rename new version directory to final dir such as 'dedalo_code' => 'dedalo'
-					$command = "mv {$target}_code {$target}";
-					exec($command, $output, $result_code);
-					if ($result_code!=0) {
-						$response->errors[]	= 'rename new version failed';
-						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
-						debug_log(__METHOD__
-							. $response->msg  . PHP_EOL
-							. ' command: ' . to_string($command) . PHP_EOL
-							. ' output: ' . to_string($output) . PHP_EOL
-							. ' result_code: ' . to_string($result_code)
-							, logger::ERROR
-						);
-						return $response;
-					}
-					debug_log(__METHOD__
-						. " exec command" . PHP_EOL
-						. " command " . to_string($command) . PHP_EOL
-						. " output " . to_string($output) . PHP_EOL
-						. " result_code type " . gettype($result_code) . PHP_EOL
-						. " result_code " . to_string($result_code)
-						, logger::WARNING
-					);
-
-				// set permissions
-					$command = "chmod -R 750 {$target}";
-					exec($command, $output, $result_code);
-					if ($result_code!=0) {
-						$response->errors[]	= 'set permissions failed';
-						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
-						debug_log(__METHOD__
-							. $response->msg  . PHP_EOL
-							. ' command: ' . to_string($command) . PHP_EOL
-							. ' output: ' . to_string($output) . PHP_EOL
-							. ' result_code: ' . to_string($result_code)
-							, logger::ERROR
-						);
-					}
-					debug_log(__METHOD__
-						. " exec command" . PHP_EOL
-						. " command " . to_string($command) . PHP_EOL
-						. " output " . to_string($output) . PHP_EOL
-						. " result_code type " . gettype($result_code) . PHP_EOL
-						. " result_code " . to_string($result_code)
-						, logger::WARNING
-					);
+				if( $update_response->result === false){
+					return $response;
+				}
 
 			// remove temp used files and folders
 				$command_rm_dir		= "rm -R -f $source";
@@ -571,14 +366,344 @@ class update_code {
 		} catch (Exception $e) {
 
 			$response->msg = $e->getMessage();
+			$response->errors[]	= 'exception updating files';
+			debug_log(__METHOD__
+				. ' Exception updating files ' . PHP_EOL
+				. 'exception: ' . $e->getMessage()
+				, logger::ERROR
+			);
 		}
 
 		$response->result	= $result ?? false;
-		$response->msg		= 'OK. Updated Dédalo code successfully';
+		$response->msg		= !empty($response->errors)
+			? 'Warning! Updated Dédalo code with errors'
+			: 'OK. Updated Dédalo code successfully';
 
 
 		return $response;
 	}//end update_code
+
+
+
+	/**
+	* UPDATE_INCREMENTAL
+	* Exec a incremental update adding the new files to current dedalo directory
+	* and replacing the new files (don't touch the config and media files)
+	* @param object $options
+	* @return object $response
+	*/
+	public static function update_incremental( object $options ) : object {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed '.__METHOD__.' ';
+				$response->errors	= [];
+
+		// options
+			$source	= $options->source;
+			$target	= $options->target;
+
+		// exec sync files using RSYNC
+			$exclude	= ' --exclude="*/config*" --exclude="media" ';
+			$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
+			$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
+			$output		= shell_exec($command);
+			if ($output===null) {
+				$response->msg .= 'Error executing RSYNC command. source: '.$source;
+
+				debug_log(__METHOD__
+					. $response->msg  . PHP_EOL
+					. ' command: ' . to_string($command) . PHP_EOL
+					. ' output: ' . to_string($output)
+					, logger::ERROR
+
+				);
+				$response->errors[]	= 'Unable run RSYNC command';
+				return $response;
+			}
+
+		// debug
+			$result = [
+				"command: " . $command,
+				"output: "  . str_replace(["\n","\r"], '<br>', $output),
+			];
+			debug_log(__METHOD__
+				." RSYNC executed done ". PHP_EOL .to_string($result)
+				, logger::WARNING
+			);
+
+		// response
+			$response->result	= true;
+			$response->msg		= !empty($response->errors)
+				? 'Warning! Updated Dédalo code with errors'
+				: 'OK. Updated Dédalo code successfully';
+
+
+		return $response;
+	}//end update_incremental
+
+
+
+	/**
+	* UPDATE_CLEAN
+	* Exec a clean update moving current dedalo directory to a code backup
+	* moving the media directory and copying the config files to the fresh version
+	* @param object $options
+	* @return object $response
+	*/
+	public static function update_clean( object $options ) : object {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed '.__METHOD__.' ';
+				$response->errors	= [];
+
+		// options
+			$source	= $options->source;
+			$target	= $options->target;
+			$info	= $options->info;
+
+		// upgrade files
+		// copy downloaded folder to httpdocs like ../tmp/dedalo_code => ../httpdocs/dedalo_code
+			$command = "cp -R {$source} {$target}_code";
+			exec($command, $output, $result_code);
+			if ($result_code!=0) {
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+				$response->errors[]	= 'copy downloaded folder failed';
+				debug_log(__METHOD__
+					. $response->msg  . PHP_EOL
+					. ' command: ' . to_string($command) . PHP_EOL
+					. ' output: ' . to_string($output) . PHP_EOL
+					. ' result_code: ' . to_string($result_code)
+					, logger::ERROR
+				);
+				return $response;
+			}
+			debug_log(__METHOD__
+				. " exec command" . PHP_EOL
+				. " command " . to_string($command) . PHP_EOL
+				. " output " . to_string($output) . PHP_EOL
+				. " result_code type " . gettype($result_code) . PHP_EOL
+				. " result_code " . to_string($result_code)
+				, logger::WARNING
+			);
+
+		// copy config files
+			$files_to_copy = [
+				'config/config.php',
+				'config/config_db.php',
+				'config/config_areas.php',
+				'config/config_core.php',
+				'config/config_defaults.json',
+				'publication/server_api/v1/config_api/server_config_api.php',
+				'publication/server_api/v1/config_api/server_config_headers.php'
+			];
+			foreach ($files_to_copy as $file_name) {
+
+				if (!file_exists("{$target}/$file_name")) {
+					debug_log(__METHOD__
+						. " Ignored file  " . PHP_EOL
+						. ' file_name: ' . to_string($file_name) . PHP_EOL
+						. ' source: ' . "{$target}/$file_name"
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				if (!copy("{$target}/$file_name", "{$target}_code/{$file_name}")){
+					$response->errors[]	= 'copy config files failed';
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error on copy file: '.$file_name;
+					debug_log(__METHOD__
+						. " copy file error " . PHP_EOL
+						. " source " . "{$target}/$file_name" . PHP_EOL
+						. " target " . "{$target}_code/{$file_name}"
+						, logger::ERROR
+					);
+					return $response;
+				}else{
+					debug_log(__METHOD__
+						. " copy file success " . PHP_EOL
+						. " source " . "{$target}/$file_name" . PHP_EOL
+						. " target " . "{$target}_code/{$file_name}"
+						, logger::WARNING
+					);
+				}
+			}
+
+		// tools
+			$dd_tools = $info->tool_names ?? [
+				'tool_cataloging',
+				'tool_dd_label',
+				'tool_dev_template',
+				'tool_diffusion',
+				'tool_export',
+				'tool_hierarchy',
+				'tool_image_rotation',
+				'tool_import_dedalo_csv',
+				'tool_import_files',
+				'tool_import_marc21',
+				'tool_import_rdf',
+				'tool_import_zotero',
+				'tool_indexation',
+				'tool_lang',
+				'tool_lang_multi',
+				'tool_media_versions',
+				'tool_numisdata_epigraphy',
+				'tool_numisdata_order_coins',
+				'tool_pdf_extractor',
+				'tool_posterframe',
+				'tool_propagate_component_data',
+				'tool_qr',
+				'tool_subtitles',
+				'tool_tc',
+				'tool_time_machine',
+				'tool_tr_print',
+				'tool_transcription',
+				'tool_update_cache',
+				'tool_upload',
+				'tool_user_admin'
+			];
+
+			$tools_src = "{$target}/tools";
+			$old_tools = dir($tools_src);
+			while(($file = $old_tools->read()) !== false) {
+				if($file === "." || $file === "..") continue;
+				if( is_dir($tools_src .'/'. $file) && !in_array($file, $dd_tools) ) {
+
+					$command = "cp -R {$tools_src}/{$file} {$target}_code/tools/{$file}";
+					exec($command, $output, $result_code);
+					if ($result_code!=0) {
+						$response->errors[]	= 'copy tools files failed';
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+						debug_log(__METHOD__
+							. $response->msg  . PHP_EOL
+							. ' command: ' . to_string($command) . PHP_EOL
+							. ' output: ' . to_string($output) . PHP_EOL
+							. ' result_code: ' . to_string($result_code)
+							, logger::ERROR
+						);
+						return $response;
+					}
+					debug_log(__METHOD__
+						. " exec command" . PHP_EOL
+						. " command " . to_string($command) . PHP_EOL
+						. " output " . to_string($output) . PHP_EOL
+						. " result_code type " . gettype($result_code) . PHP_EOL
+						. " result_code " . to_string($result_code)
+						, logger::WARNING
+					);
+				}
+			}
+
+		// move directory old version to backups as '../httpdocs/dedalo' => '../backup/code/dedalo_6.3.1'
+			$backup_code_path = DEDALO_BACKUP_PATH . '/code';
+			create_directory($backup_code_path);
+			$old_copy_final_path = "{$backup_code_path}/dedalo_" .DEDALO_VERSION . '_' . date('Y-m-d_his');
+			$command = "mv $target $old_copy_final_path";
+			exec($command, $output, $result_code);
+			if ($result_code!=0) {
+				$response->errors[]	= 'move old version to code backups failed';
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+				debug_log(__METHOD__
+					. $response->msg  . PHP_EOL
+					. ' command: ' . to_string($command) . PHP_EOL
+					. ' output: ' . to_string($output) . PHP_EOL
+					. ' result_code: ' . to_string($result_code)
+					, logger::ERROR
+				);
+				return $response;
+			}
+			debug_log(__METHOD__
+				. " exec command" . PHP_EOL
+				. " command " . to_string($command) . PHP_EOL
+				. " output " . to_string($output) . PHP_EOL
+				. " result_code type " . gettype($result_code) . PHP_EOL
+				. " result_code " . to_string($result_code)
+				, logger::WARNING
+			);
+
+		// move media directory from old to the new directory like '../backup/code/dedalo_6.3.1/media' => '../httpdocs/dedalo_code/media'
+			$command = "mv {$old_copy_final_path}/media {$target}_code/media";
+			exec($command, $output, $result_code);
+			if ($result_code!=0) {
+				$response->errors[]	= 'move media dir failed';
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+				debug_log(__METHOD__
+					. $response->msg  . PHP_EOL
+					. ' command: ' . to_string($command) . PHP_EOL
+					. ' output: ' . to_string($output) . PHP_EOL
+					. ' result_code: ' . to_string($result_code)
+					, logger::ERROR
+				);
+				return $response;
+			}
+			debug_log(__METHOD__
+				. " exec command" . PHP_EOL
+				. " command " . to_string($command) . PHP_EOL
+				. " output " . to_string($output) . PHP_EOL
+				. " result_code type " . gettype($result_code) . PHP_EOL
+				. " result_code " . to_string($result_code)
+				, logger::WARNING
+			);
+
+		// rename new version directory to final dir such as 'dedalo_code' => 'dedalo'
+			$command = "mv {$target}_code {$target}";
+			exec($command, $output, $result_code);
+			if ($result_code!=0) {
+				$response->errors[]	= 'rename new version failed';
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+				debug_log(__METHOD__
+					. $response->msg  . PHP_EOL
+					. ' command: ' . to_string($command) . PHP_EOL
+					. ' output: ' . to_string($output) . PHP_EOL
+					. ' result_code: ' . to_string($result_code)
+					, logger::ERROR
+				);
+				return $response;
+			}
+			debug_log(__METHOD__
+				. " exec command" . PHP_EOL
+				. " command " . to_string($command) . PHP_EOL
+				. " output " . to_string($output) . PHP_EOL
+				. " result_code type " . gettype($result_code) . PHP_EOL
+				. " result_code " . to_string($result_code)
+				, logger::WARNING
+			);
+
+		// set permissions
+			$command = "chmod -R 750 {$target}";
+			exec($command, $output, $result_code);
+			if ($result_code!=0) {
+				$response->errors[]	= 'set permissions failed';
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+				debug_log(__METHOD__
+					. $response->msg  . PHP_EOL
+					. ' command: ' . to_string($command) . PHP_EOL
+					. ' output: ' . to_string($output) . PHP_EOL
+					. ' result_code: ' . to_string($result_code)
+					, logger::ERROR
+				);
+			}
+			debug_log(__METHOD__
+				. " exec command" . PHP_EOL
+				. " command " . to_string($command) . PHP_EOL
+				. " output " . to_string($output) . PHP_EOL
+				. " result_code type " . gettype($result_code) . PHP_EOL
+				. " result_code " . to_string($result_code)
+				, logger::WARNING
+			);
+
+		// response
+			$response->result	= true;
+			$response->msg		= !empty($response->errors)
+				? 'Warning! Updated Dédalo code with errors'
+				: 'OK. Updated Dédalo code successfully';
+
+
+		return $response;
+	}//end update_clean
 
 
 
@@ -982,6 +1107,13 @@ class update_code {
 				$result->info	= new stdClass();
 				$result->files	= [];
 
+		// Official tool names
+		// master servers must provide their own active tools as official tools,
+		// clients may have other tools provided by 3 parties.
+		// the update code will check the names of the tools against the tools installed on the client.
+		// to replace/upgrade only the official tools
+			$tool_names = tool_common::get_active_tool_names();
+
 		// info
 			$date			= dd_date::get_now_as_iso_timestamp();
 			$dedalo_version	= get_dedalo_version();
@@ -993,6 +1125,7 @@ class update_code {
 			$result->info->entity		= DEDALO_ENTITY;
 			$result->info->entity_label	= DEDALO_ENTITY_LABEL;
 			$result->info->host			= DEDALO_HOST;
+			$result->info->tool_names	= $tool_names;
 
 		// files
 			// build the file_path with the valid versions
@@ -1029,10 +1162,11 @@ class update_code {
 					$result->files[] = $file_item;
 				}
 
-
 		// response
-		$response->result	= $result;
-		$response->msg		= 'OK. Request done successfully';
+			$response->result	= $result;
+			$response->msg		= !empty($response->errors)
+				? 'Warning! Request done with errors'
+				: 'OK. Request done successfully';
 
 
 		return $response;
