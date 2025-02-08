@@ -35,6 +35,19 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=641; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 4;
+	$updates->$v->version_minor			= 1;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 4;
+	$updates->$v->update_from_minor		= 0;
+
 
 $v=640; #####################################################################################
 $updates->$v = new stdClass();
