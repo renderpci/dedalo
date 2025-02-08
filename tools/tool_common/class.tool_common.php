@@ -471,34 +471,7 @@ class tool_common {
 		// all_registered_tools_records
 			static $all_registered_tools_records;
 			if(!isset($all_registered_tools_records)) {
-
-				// get all active and registered tools
-					$sqo_tool_active = json_decode('{
-						"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
-						"limit": 0,
-						"filter": {
-							"$and": [
-								{
-									"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
-									"q_operator": null,
-									"path": [
-										{
-											"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
-											"component_tipo": "dd1354",
-											"model": "component_radio_button",
-											"name": "Active"
-										}
-									]
-								}
-							]
-						},
-						"full_count": false
-					}');
-					$search	= search::get_instance($sqo_tool_active);
-					$result	= $search->search();
-
-					// fix cache static
-					$all_registered_tools_records = $result->ar_records;
+				$all_registered_tools_records = tool_common::get_active_tools();
 			}
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
@@ -588,6 +561,42 @@ class tool_common {
 
 
 	/**
+	* GET_ACTIVE_TOOLS
+	* Search all active tools in registered tools section
+	* @return array $active_tools
+	*/
+	public static function get_active_tools() : array {
+
+		// get all active and registered tools
+			$sqo_tool_active = json_decode('{
+				"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
+				"limit": 0,
+				"filter": {
+					"$and": [
+						{
+							"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
+							"q_operator": null,
+							"path": [
+								{
+									"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
+									"component_tipo": "dd1354",
+									"model": "component_radio_button",
+									"name": "Active"
+								}
+							]
+						}
+					]
+				},
+				"full_count": false
+			}');
+			$search	= search::get_instance($sqo_tool_active);
+			$result	= $search->search();
+
+		$active_tools = $result->ar_records;
+
+
+		return $active_tools;
+	}//end get_active_tools
 	* GET_CONFIG
 	* Get given tool config if isset
 	* @param string $tool_name
