@@ -544,7 +544,7 @@ class tools_register {
 				$component_tipo,
 				$section_id,
 				'list',
-				DEDALO_DATA_LANG,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
 			$dato	= $component->get_dato();
