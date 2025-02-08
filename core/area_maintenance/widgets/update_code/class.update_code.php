@@ -424,12 +424,10 @@ class update_code {
 			}
 
 		// debug
-			$result = [
-				"command: " . $command,
-				"output: "  . str_replace(["\n","\r"], '<br>', $output),
-			];
 			debug_log(__METHOD__
-				." RSYNC executed done ". PHP_EOL .to_string($result)
+				.' RSYNC execution done '. PHP_EOL
+				.' command: ' . $command . PHP_EOL
+				.' output: ' . $output
 				, logger::WARNING
 			);
 
