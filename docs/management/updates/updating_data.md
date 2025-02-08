@@ -30,7 +30,7 @@ Not all code updates has implicit a data update. They updates process are indepe
 
 4. Update Ontology and Code
 
-    Previous to update data is mantadory to update the ontology and code to the last versions:
+    Previous to update data is mandatory to update the ontology and code to the last versions:
 
     Follow [this guide](updating_ontology.md) to update ontology
     Follow [this guide](updating_code.md) to update code
