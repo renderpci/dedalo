@@ -35,6 +35,7 @@ global $updates;
 $updates = new stdClass();
 
 
+
 $v=641; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -47,6 +48,18 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 4;
 	$updates->$v->update_from_minor		= 0;
+
+	// Re-index and vacuum tables
+		$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+			REINDEX TABLE public.matrix_dd;
+			REINDEX TABLE public.jer_dd;
+		');
+		$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+			VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
+			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
+			VACUUM FULL VERBOSE ANALYZE matrix_activity;
+		');
+
 
 
 $v=640; #####################################################################################
