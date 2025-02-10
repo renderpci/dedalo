@@ -50,13 +50,19 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor		= 0;
 
 	// Re-index and vacuum tables
-		$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			REINDEX TABLE public.matrix_dd;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			REINDEX TABLE public.jer_dd;
 		');
-		$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_activity;
 		');
 
