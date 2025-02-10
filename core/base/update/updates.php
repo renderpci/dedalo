@@ -57,7 +57,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
 			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
-			VACUUM FULL VERBOSE ANALYZE matrix_activity;
+			VACUUM FULL VERBOSE ANALYZE public.matrix_activity;
 		');
 
 
