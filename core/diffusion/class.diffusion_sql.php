@@ -3618,7 +3618,7 @@ class diffusion_sql extends diffusion  {
 
 		// add_parents
 		// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
-		$add_parents = $process_dato_arguments->add_parents ?? false;
+		$add_parents = $process_dato_arguments->add_parents ?? $process_dato_arguments->custom_arguments->add_parents ?? false;
 		if ($add_parents===true) {
 			$ar_parents = [];
 			foreach ((array)$dato as $current_locator) {
