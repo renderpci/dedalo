@@ -24,9 +24,9 @@ class logger_backend_activity extends logger_backend {
 			'DOWNLOAD'			=>	10, // dd1080 download file by tool av / image / pdf
 			'UPLOAD COMPLETE'	=>	11, // dd1094 upload file by tool upload
 			'DELETE FILE'		=>	12, // dd1095 delete file by tool
-			'RECOVER SECTION'	=>	13, // dd1092 recuperar sección
-			'RECOVER COMPONENT'	=>	14, // dd1091 recuperar componente
-			'STATS'				=>	15, // dd1098 estadisticas
+			'RECOVER SECTION'	=>	13, // dd1092 recover section
+			'RECOVER COMPONENT'	=>	14, // dd1091 recover component
+			'STATS'				=>	15, // dd1098 statistics
 			'NEW VERSION'		=>	16  // dd1081 new version file
 		];
 
@@ -116,7 +116,8 @@ class logger_backend_activity extends logger_backend {
 			// if the type of activity is not sent, it is not possible to generate log
 				if (empty($tipo_where)) {
 					debug_log(__METHOD__
-						." Error on log_message (var 'tipo_donde' is empty) "
+						. " Error on log_message (var 'tipo_where' is empty) " . PHP_EOL
+						. ' options: ' . to_string($options)
 						, logger::ERROR
 					);
 					return null;
