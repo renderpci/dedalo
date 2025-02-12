@@ -49,7 +49,7 @@ function dump( mixed $val=null, ?string $var_name=null, ?array $arguments=null )
 
 		// var_name
 			if (isset($var_name)) {
-				$msg .= PHP_EOL . ' ' .str_repeat("-=", 32) . ' // '.$var_name.' // ' . str_repeat("-=", 32);
+				$msg .= PHP_EOL . ' ' .str_repeat('-=', 32) . ' // '.$var_name.' // ' . str_repeat('-=', 32);
 			}
 
 		// arguments (optional)
@@ -2070,7 +2070,7 @@ function get_dedalo_version() : array {
 
 	$current_version = [];
 
-	$ar_version = explode(".", DEDALO_VERSION);
+	$ar_version = explode('.', DEDALO_VERSION);
 
 	$current_version[0]	= (int)$ar_version[0];
 	$current_version[1]	= (int)$ar_version[1];
@@ -2099,7 +2099,7 @@ function check_basic_system() : object {
 			if(!mkdir($folder_path, 0777,true)) {
 				$response->msg = 'Error on read or create js/lang directory. Permission denied';
 				debug_log(__METHOD__
-					. " ".$response->msg
+					. ' '.$response->msg
 					, logger::ERROR
 				);
 				return $response;

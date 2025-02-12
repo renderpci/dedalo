@@ -440,7 +440,7 @@ class login extends common {
 
 						}//end if(!security::is_global_admin($section_id))
 
-					// LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK
+					// LOGIN (ALL IS OK) - INIT LOGIN SEQUENCE WHEN ALL IS OK
 
 						// User name
 							$username = login::logged_user_username($section_id);
