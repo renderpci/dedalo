@@ -49,6 +49,16 @@ class system_info {
 				'info'	=> 'RAM: '.$total_gb .' GB - minimum: 16 GB'
 			];
 
+			// MHz
+			$mhz = system::get_mhz();
+			if ($mhz) {
+				$requeriments_list[] = (object)[
+					'name'	=> 'System processor clock speed',
+					'value'	=> ($mhz >= 3500),
+					'info'	=> 'MHz: ' . $mhz . ' - minimum: 3500'
+				];
+			}
+
 			// PHP version
 			$requeriments_list[] = (object)[
 				'name'	=> 'PHP Supported version',
