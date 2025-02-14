@@ -167,6 +167,11 @@ class diffusion_socrata extends diffusion  {
 				return $row;
 			}, $ar_rows);
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					// dump($ar_socrata_rows, ' ar_socrata_rows ++ '.to_string()); die();
+				}
+
 		// debug
 			// dump($table_properties, ' table_properties ++ '.to_string());
 			// dump($ar_rows, ' ar_rows ++ '.to_string());

@@ -323,7 +323,7 @@ const render_build_version = function(self, content_data, body_response) {
 
 		// button Build Dédalo code MASTER branch
 		self.caller.init_form({
-			submit_label	: 'Build Dédalo code master',
+			submit_label	: 'Build Dédalo code master branch',
 			confirm_text	: get_label.sure || 'Sure?',
 			body_info		: build_version_group,
 			body_response	: body_response,
@@ -344,7 +344,7 @@ const render_build_version = function(self, content_data, body_response) {
 
 		// button Build Dédalo code DEVELOPER branch
 		self.caller.init_form({
-			submit_label	: 'Build Dédalo code developer',
+			submit_label	: 'Build Dédalo code developer branch',
 			confirm_text	: get_label.sure || 'Sure?',
 			body_info		: build_version_group,
 			body_response	: body_response,
