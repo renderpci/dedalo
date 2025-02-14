@@ -110,6 +110,27 @@
 				border-bottom: 1px #dddddd solid;
 				padding: 0.5rem;
 				border-radius: 3px;
+				display: flex;
+				gap: 1rem;
+				margin-bottom: 0.5rem;
+
+				&:active {
+					opacity: 0.7;
+				}
+
+				.version_label {
+					cursor: pointer;
+					display: contents;
+
+					input {
+						vertical-align: bottom;
+						cursor: pointer;
+					}
+				}
+				.value {
+					font-weight: 300;
+					color: #a4a4a4;
+				}
 
 				&.development {
 					background-color: @color_orange_dedalo;
@@ -119,23 +140,11 @@
 						color: @color_white;
 					}
 				}
-
-				.version_label {
-					margin-right: 1.3rem;
-
-					input{
-						margin-right: 0.5rem;
-						vertical-align: bottom;
-					}
-				}
-				.value {
-					font-weight: 300;
-					color: #a4a4a4;
-				}
 			}
 
 			.file_container:last-child {
 				border-bottom: none;
+				margin-bottom: 0px;
 			}
 		}
 	}
