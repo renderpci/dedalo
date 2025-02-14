@@ -18,11 +18,16 @@ class system {
 	*/
 	public static function get_info() : object {
 
+		static $info_instance;
+		if (isset($info_instance)) {
+			return $info_instance;
+		}
+
 		include_once DEDALO_LIB_PATH . '/vendor/autoload.php';
-		$info = new \Linfo\Linfo;
+		$info_instance = new \Linfo\Linfo;
 
 
-		return $info;
+		return $info_instance;
 	}//end get_info
 
 
