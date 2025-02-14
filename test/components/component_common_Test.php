@@ -1346,30 +1346,30 @@ final class component_common_test extends TestCase {
 
 
 	/**
-	* TEST_DECORE_UNTRANSLATED
+	* TEST_decorate_untranslated
 	* @return void
 	*/
-	public function test_decore_untranslated() {
+	public function test_decorate_untranslated() {
 
-		$response = component_common::decore_untranslated("I'm a automatic test string");
+		$response = component_common::decorate_untranslated("I'm a automatic test string");
 
 		$this->assertTrue(
 			gettype($response)==='string',
-			'response type expected string. current type: ' .gettype($response) .' - component_common::test_decore_untranslated'
+			'response type expected string. current type: ' .gettype($response) .' - component_common::test_decorate_untranslated'
 		);
 
 		$this->assertTrue(
 			strpos($response, '<mark>')===0,
-			'response expected to contains <mark> - component_common::test_decore_untranslated - ' . $response
+			'response expected to contains <mark> - component_common::test_decorate_untranslated - ' . $response
 		);
 
-		$response = component_common::decore_untranslated(null);
+		$response = component_common::decorate_untranslated(null);
 
 		$this->assertTrue(
 			gettype($response)==='NULL',
-			'response type expected NULL. current type: ' .gettype($response) .' - component_common::test_decore_untranslated'
+			'response type expected NULL. current type: ' .gettype($response) .' - component_common::test_decorate_untranslated'
 		);
-	}//end test_decore_untranslated
+	}//end test_decorate_untranslated
 
 
 
