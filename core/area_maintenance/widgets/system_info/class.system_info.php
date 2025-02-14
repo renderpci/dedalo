@@ -55,7 +55,7 @@ class system_info {
 				$requeriments_list[] = (object)[
 					'name'	=> 'System processor clock speed',
 					'value'	=> ($mhz >= 3500),
-					'info'	=> 'MHz: ' . $mhz . ' - minimum: 3500'
+					'info'	=> 'MHz: ' . $mhz . ' - minimum: 3500 MHz'
 				];
 			}
 
