@@ -396,7 +396,7 @@ const render_info_modal = function( self, versions_info ) {
 	// beta updates on/off
 		const beta_updates_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'beta_updates_container',
+			class_name		: 'beta_updates_container unselectable',
 			parent			: body
 		})
 		const beta_updates_label = ui.create_dom_element({
@@ -481,18 +481,27 @@ const render_info_modal = function( self, versions_info ) {
 				body.querySelectorAll('.label, .value').forEach( el => el.classList.remove('active') )
 				version_label.classList.add('active')
 				value_node.classList.add('active')
+				date_node.classList.add('active')
 			}
 			input_radio.addEventListener('change', change_handler)
 			input_radio.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
 
-			// value
+			// value (URL)
 			const value_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
 				inner_html		: current_version.url,
-				parent			: file_container
+				parent			: version_label
+			})
+
+			// date
+			const date_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value date',
+				inner_html		: current_version.date || '',
+				parent			: version_label
 			})
 
 			version_label.prepend(input_radio)
@@ -667,7 +676,7 @@ const render_info_modal = function( self, versions_info ) {
 			footer		: footer,
 			size		: 'normal',
 			callback	: (dd_modal) => {
-				dd_modal.modal_content.style.width = '60rem'
+				dd_modal.modal_content.style.width = '65rem'
 			},
 			on_close : () => {
 				self.beta_update = false

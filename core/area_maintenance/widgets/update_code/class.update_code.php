@@ -1135,14 +1135,16 @@ class update_code {
 				$current_version_path	= update_code::get_code_path( $valid_version );
 				$file_version			= update_code::get_file_version( $valid_version );
 
-				$file_name = $file_version.'.zip';
-				$file_path = $current_version_path.'/'.$file_name;
+				$file_name	= $file_version.'.zip';
+				$file_path	= $current_version_path.'/'.$file_name;
+				$file_date	= date("Y-m-d H:i:s", filemtime($file_path));
 
 				if(file_exists($file_path)){
 
 					$file_item = new stdClass();
 						$file_item->version	= implode('.', $valid_version);
 						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $file_name );
+						$file_item->date	= $file_date;
 
 					$result->files[] = $file_item;
 				}
@@ -1152,10 +1154,14 @@ class update_code {
 				$development_path	= update_code::set_development_path();
 				$development_file	= $development_path .'/dedalo_development.zip';
 				if (file_exists($development_file)) {
-					$code_url = DEDALO_CODE_FILES_URL . '/development';
+
+					$code_url	= DEDALO_CODE_FILES_URL . '/development';
+					$file_date	= date("Y-m-d H:i:s", filemtime($development_file));
+
 					$file_item = new stdClass();
 						$file_item->version	= 'development';
 						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $development_file );
+						$file_item->date	= $file_date;
 
 					$result->files[] = $file_item;
 				}
