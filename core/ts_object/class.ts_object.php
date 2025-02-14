@@ -753,7 +753,7 @@ class ts_object {
 					if (empty($current_value)) {
 						$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
 						$dato_full = $component->get_dato_full();
-						// get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
+						// get_value_with_fallback_from_dato_full( $dato_full_json, $decorate_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
 						$current_value = component_common::get_value_with_fallback_from_dato_full(
 							$dato_full,
 							true,
