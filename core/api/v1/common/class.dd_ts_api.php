@@ -168,6 +168,15 @@ final class dd_ts_api {
 				$ts_object		= new ts_object( $section_id, $section_tipo, $ts_object_options );
 				$child_object	= $ts_object->get_child_data();
 
+				if (empty($child_object->ar_elements)) {
+					$tld = get_tld_from_tipo($locator->section_tipo);
+					debug_log(__METHOD__
+						. " Empty ar_elements child. Maybe this tld ($tld) is not installed " . PHP_EOL
+						. ' locator: ' . to_string($locator)
+						, logger::ERROR
+					);
+				}
+
 				$children_data[] = $child_object;
 			}
 
