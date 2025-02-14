@@ -46,6 +46,44 @@ class system {
 
 
 	/**
+	* GET_MHZ
+	* Get the system processor clock frequency if is available
+	* in Mega Hertz. If is not resolved, null is returned.
+	* like: 3600
+	* @return int|null $total_mhz
+	*/
+	public static function get_mhz() : ?int {
+
+		$info		= system::get_info();
+		$cpu_info	= $info->getCPU();
+
+		// sample data
+		// $cpu_info = json_decode('[
+		//   {
+		// 	"Vendor": "GenuineIntel",
+		// 	"Model": "Intel(R) Xeon(R) CPU E3-1230 v6 @ 3.50GHz",
+		// 	"MHz": "3500.000"
+		//   },
+		//   {
+		// 	"Model": "Intel(R) Xeon(R) CPU E3-1230 v6 @ 3.50GHz",
+		// 	"Vendor": "GenuineIntel",
+		// 	"MHz": "3500.000"
+		//   }
+		// ]');
+
+		preg_match_all('/.*"MHz": "([0-9]+)\.[0-9]+".*/', to_string($cpu_info), $output_array);
+
+		$total_mhz = isset($output_array[1][0])
+			? (int)$output_array[1][0]
+			: null;
+
+
+		return $total_mhz;
+	}//end get_mhz
+
+
+
+	/**
 	* TEST_PHP_VERSION_SUPPORTED
 	* Test if PHP version is supported
 	* @param string $minimum_php_version = '8.1.0'
