@@ -342,7 +342,7 @@ class component_geolocation extends component_common {
 		}
 
 		$dato			= $dato[0];
-		$data_longitude	= $dato->long ?? null;
+		$data_longitude	= $dato->lon ?? null;
 
 		if(empty($data_longitude)){
 			return null;
