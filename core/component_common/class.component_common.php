@@ -2163,12 +2163,37 @@ abstract class component_common extends common {
 			}
 
 		// 1 search all sections in the target list
-			$ar_target_section = $dedalo_request_config->sqo->section_tipo;
 
-			// ar_sections_tipo. Get all target sections defined in sqo
+			// Note for component_relation_model, it uses the request config ONLY to get the component to be showed
+			// is NOT possible to define all situations in the request config definition
+			// (same definition for multiple virtual sections with multiple hierarchy_types combination, toponymy, thematic, etc)
+			// its section_tipo is defined by the its mode: edit, list, search or search in thesaurus tree (multiple selection of possibilities)
+			// edit, list and search modes in its own section it will be the own specific virtual section
+			// for ex: ["es2"]
+			// search in thesaurus tree will be the sections that user has selected in the typology sections in filter
+			// for ex: toponymy selection would be ["es2","fr2"]
+			// for any other components will be the request config definition in sqo.
+			$ar_target_section = $this->get_model()==='component_relation_model'
+				? $this->get_ar_target_section_tipo()
+				: $dedalo_request_config->sqo->section_tipo;
+
+				// ar_sections_tipo. All target sections defined
 				$ar_sections_tipo = [];
+
+				// check if the sections exist by checking his model resolution.
+				// if the section doesn't' exist, it is not included in the resolution.
 				foreach ($ar_target_section as $current_section) {
-					$ar_sections_tipo[] = $current_section->tipo;
+					$current_sections_tipo = $current_section->tipo ?? $current_section;
+					$model = RecordObj_dd::get_modelo_name_by_tipo($current_sections_tipo);
+					if( empty($model) ){
+						debug_log(__METHOD__
+							. " Skipped section it doesn't exists: " . to_string( $current_sections_tipo )
+							, logger::WARNING
+						);
+						continue;
+					}
+					// valid section are added
+					$ar_sections_tipo[] = $current_sections_tipo;
 				}
 
 			// cache of the list_of_values, if the list was already calculated, return it
