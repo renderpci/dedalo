@@ -619,14 +619,15 @@ render_search.prototype.build_search_component = async function(options) {
 
 		// component_instance. Get functional component, build and returns it ready to render
 			const component_instance = await self.get_component_instance({
-				section_id		: section_id,
-				section_tipo	: last_item.section_tipo,
-				component_tipo	: last_item.component_tipo,
-				model			: last_item.model,
-				mode			: 'search',
-				value			: current_value || null, // value will be injected
-				q_operator		: q_operator || null,
-				path			: path
+				section_id				: section_id,
+				section_tipo			: last_item.section_tipo,
+				component_tipo			: last_item.component_tipo,
+				model					: last_item.model,
+				ar_target_section_tipo	: last_item.ar_target_section_tipo || null,
+				mode					: 'search',
+				value					: current_value || null, // value will be injected
+				q_operator				: q_operator || null,
+				path					: path
 			})
 
 		// render component

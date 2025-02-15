@@ -919,6 +919,19 @@ export const create_source = function (self, action) {
 			lang			: self.lang
 		}
 
+	// add the properties defined by the component instance to be parsed
+	// used by component_relation_model to add ar_target_section_tipo into the source to build the read API call.
+		if(self.source_add){
+			// get all properties defined by component instance
+			const add_source_keys = Object.keys(self.source_add)
+			const source_keys_len = add_source_keys.length
+			for (let i = 0; i < source_keys_len; i++) {
+				// assign instance properties to source object.
+				source[add_source_keys[i]] = self.source_add[add_source_keys[i]]
+			}
+		}
+
+
 	// matrix_id optional (used in time machine mode)
 		if (true===self.hasOwnProperty('matrix_id') && self.matrix_id) {
 			source.matrix_id = self.matrix_id
@@ -2697,10 +2710,11 @@ common.prototype.calculate_component_path = function(component_context, path) {
 
 	// Add component path data
 	calculate_component_path.push({
-		section_tipo	: component_context.section_tipo,
-		component_tipo	: component_context.tipo,
-		model			: component_context.model,
-		name			: component_context.label.replace(/<[^>]+>/g, '')
+		section_tipo			: component_context.section_tipo,
+		component_tipo			: component_context.tipo,
+		ar_target_section_tipo	: component_context.ar_target_section_tipo,
+		model					: component_context.model,
+		name					: component_context.label.replace(/<[^>]+>/g, '')
 	})
 
 	return calculate_component_path
