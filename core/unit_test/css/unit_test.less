@@ -3,9 +3,15 @@
 *
 */
 
-body {
+html {
+	// from mocha css depending on dark mode
+	// background-color: var(--mocha-bg-color);
 	background-color: transparent;
-	    // display: contents;
+}
+
+body {
+	// background-color: transparent;
+	// display: contents;
 }
 
 #content {
@@ -13,8 +19,23 @@ body {
 	padding-top: 0px;
 	margin-top: 60px;
 }
+
 #mocha .test pre.error {
 	background-color: #fafafa !important;
+	// background-color: #808080;
+}
+
+.wrapper_component {
+	@media (prefers-color-scheme: dark) {
+		background-color: white;
+	}
+	color: var(--mocha-color);
+}
+
+.wrapper.page {
+	@media (prefers-color-scheme: dark) {
+		background-color: white;
+	}
 }
 
 .pair_container {
@@ -22,6 +43,7 @@ body {
 	border-top: 1px solid #7f7f7f;
 	margin-bottom: 4rem;
 	display: block;
+	background-color: white;
 
 	>.wrapper_component {
 		margin-bottom: 2rem;
