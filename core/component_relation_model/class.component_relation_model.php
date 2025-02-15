@@ -123,7 +123,7 @@ class component_relation_model extends component_relation_common {
 		switch ($target_mode) {
 
 			case 'free':
-				// Defined in structure
+				// Defined in ontology
 				$ar_target_section_tipo = (array)$this->properties->target_values;
 				break;
 
