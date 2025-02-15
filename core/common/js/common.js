@@ -2710,10 +2710,11 @@ common.prototype.calculate_component_path = function(component_context, path) {
 
 	// Add component path data
 	calculate_component_path.push({
-		section_tipo	: component_context.section_tipo,
-		component_tipo	: component_context.tipo,
-		model			: component_context.model,
-		name			: component_context.label.replace(/<[^>]+>/g, '')
+		section_tipo			: component_context.section_tipo,
+		component_tipo			: component_context.tipo,
+		ar_target_section_tipo	: component_context.ar_target_section_tipo,
+		model					: component_context.model,
+		name					: component_context.label.replace(/<[^>]+>/g, '')
 	})
 
 	return calculate_component_path
