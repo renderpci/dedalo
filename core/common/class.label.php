@@ -91,7 +91,7 @@ abstract class label {
 		label::get_ar_label($lang);
 
 		$label = (!isset(label::$ar_label[$lang][$name]))
-			? component_common::decore_untranslated($name)
+			? component_common::decorate_untranslated($name)
 			: label::$ar_label[$lang][$name];
 
 
