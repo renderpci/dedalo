@@ -324,7 +324,12 @@ const render_build_version = function(self, content_data, body_response) {
 		// button Build Dédalo code MASTER branch
 		self.caller.init_form({
 			submit_label	: 'Build Dédalo code master branch',
-			confirm_text	: get_label.sure || 'Sure?',
+			confirm_text	: (()=>{
+								const ar_version	= page_globals.dedalo_version.split('.')
+								const major_version	= ar_version[0]
+								const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
+								return `A file using current version (${version}) will be created as: \n\n/dedalo/code/${major_version}/${version}/${version}_dedalo.zip\n`
+							  })(),
 			body_info		: build_version_group,
 			body_response	: body_response,
 			trigger : {
@@ -345,7 +350,12 @@ const render_build_version = function(self, content_data, body_response) {
 		// button Build Dédalo code DEVELOPER branch
 		self.caller.init_form({
 			submit_label	: 'Build Dédalo code developer branch',
-			confirm_text	: get_label.sure || 'Sure?',
+			confirm_text	: (()=>{
+								const ar_version	= page_globals.dedalo_version.split('.')
+								const major_version	= ar_version[0]
+								const version		= [ar_version[0],ar_version[1],ar_version[2]].join('.')
+								return `A file will be created as: \n\n/dedalo/code/development/dedalo_development.zip\n`
+							  })(),
 			body_info		: build_version_group,
 			body_response	: body_response,
 			trigger : {
