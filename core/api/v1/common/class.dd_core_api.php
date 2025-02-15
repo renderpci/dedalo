@@ -1932,6 +1932,11 @@ final class dd_core_api {
 									$element->pagination = $pagination;
 								}
 
+							// ar_target_section_tipo
+								if( isset($ddo_source->ar_target_section_tipo) ){
+									$element->ar_target_section_tipo = $ddo_source->ar_target_section_tipo;
+								}
+
 						}//end if ($section_id>=1)
 
 					}else if (strpos($model, 'area')===0) {

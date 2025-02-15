@@ -58,7 +58,7 @@
 				case 'edit':
 				default:
 					$value				= $this->get_dato();
-					$ar_list_of_values	= $this->get_ar_list_of_values();
+					$ar_list_of_values	= $this->get_list_of_values( DEDALO_DATA_LANG );
 					break;
 			}
 

@@ -4497,6 +4497,35 @@ abstract class common {
 						$ddo->target_section_tipo = $target_section_tipo;
 					}
 
+				// component_relation_model
+				// for component_relation_model section_tipo is multiple when is used in thesaurus tree ($use_real_sections===true)
+				// in this case, set the ar_target_section_tipo with the resolution of the sections selected by user in the filter
+				// the component will check every selected section_tipo to get his model in hierarchy section.
+				// note that the component will be created with the real section
+				// but it will use the ar_target_section_tipo to obtain the list of values (possible values to search)
+					if( $model==='component_relation_model' && $use_real_sections===true ){
+
+						$ar_el_target_section_tipo = [];
+						// create the component with every section_tipo selected by user to obtain his model
+						foreach ((array)$ar_section_tipo as $el_section_tipo) {
+							$element		= component_common::get_instance(
+								$model,
+								$element_tipo,
+								null,
+								'search',
+								$current_lang,
+								$el_section_tipo
+							);
+
+							$ar_el_target_section_tipo = array_merge( $ar_el_target_section_tipo, $element->get_ar_target_section_tipo() );
+						}
+						// add all target_section possibilities to the ddo
+						// see in get_component_instance() in search.js
+						// see get_list_of_values() in class.component_common.php
+						$ddo = reset($item_context);
+						$ddo->ar_target_section_tipo = $ar_el_target_section_tipo;
+					}
+
 				// context add
 					$context = array_merge($context, $item_context);
 
