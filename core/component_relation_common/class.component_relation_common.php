@@ -2262,10 +2262,12 @@ class component_relation_common extends component_common {
 	/**
 	* GET_HIERARCHY_SECTIONS_FROM_TYPES
 	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
+	* $comopnent_tipo set the target component to get the section_tipo, by default id the target section component, but is possible get the target model section.
 	* @param array $hierarchy_types
+	* @param string $component_tipo, by default uses DEDALO_HIERARCHY_TARGET_SECTION_TIPO (hierarchy53)
 	* @return array $hierarchy_sections_from_types
 	*/
-	public static function get_hierarchy_sections_from_types( array $hierarchy_types ) : array {
+	public static function get_hierarchy_sections_from_types( array $hierarchy_types, string $component_tipo=DEDALO_HIERARCHY_TARGET_SECTION_TIPO ) : array {
 
 		// cache
 			static $cache_hierarchy_sections_from_types;
@@ -2349,7 +2351,7 @@ class component_relation_common extends component_common {
 			$hierarchy_sections_from_types = [];
 			foreach ($result->ar_records as $row) {
 
-				if (empty($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN})) {
+				if (empty($row->datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN})) {
 					debug_log(__METHOD__
 						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string()
 						, logger::ERROR
@@ -2357,7 +2359,7 @@ class component_relation_common extends component_common {
 					continue;
 				}
 
-				$target_dato			= $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN};
+				$target_dato			= $row->datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN};
 				$target_section_tipo	= $target_dato[0] ?? null;
 
 				if (empty($target_section_tipo)) {
