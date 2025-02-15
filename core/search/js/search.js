@@ -470,13 +470,14 @@ search.prototype.get_component_instance = async function(options) {
 	const self = this
 
 	// options
-		const section_id		= options.section_id
-		const section_tipo		= options.section_tipo
-		const component_tipo	= options.component_tipo
-		const model				= options.model
-		const value				= options.value || []
-		const q_operator		= options.q_operator
-		const path				= options.path
+		const section_id				= options.section_id
+		const section_tipo				= options.section_tipo
+		const component_tipo			= options.component_tipo
+		const model						= options.model
+		const value						= options.value || []
+		const q_operator				= options.q_operator
+		const path						= options.path
+		const ar_target_section_tipo	= options.ar_target_section_tipo
 
 	// instance
 		// instance key. Custom to get unique key
@@ -508,6 +509,12 @@ search.prototype.get_component_instance = async function(options) {
 	// data. Inject value from search user preset before build is needed for portal 'resolve_data' API call
 		component_instance.data = {
 			value : value
+		}
+
+	// Include ar_target_section_tipo to the source to get the specific sections define by the selection of the user
+	// used by component_relation_model to define his own sections.
+		component_instance.source_add = {
+			ar_target_section_tipo : ar_target_section_tipo
 		}
 
 	// build component to force load datalist, portal resolve_data etc.
