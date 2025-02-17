@@ -44,6 +44,23 @@ class tool_diffusion extends tool_common {
 
 				$diffusion_element_tipo = $diffusion_items[0]->element_tipo; // like oh63 - Historia oral web
 
+				// config: based on class_name and config.php definitions
+					$class_name = $diffusion_items[0]->class_name ?? null;
+					switch ($class_name) {
+						case 'diffusion_socrata':
+							// add config values
+							if (defined('SOCRATA_CONFIG') && is_array(SOCRATA_CONFIG)) {
+								$config = (object)[
+									'server'	=> SOCRATA_CONFIG['server'] ?? null,
+									'mode'		=> SOCRATA_CONFIG['mode'] ?? null
+								];
+							}
+							break;
+						default:
+							$config = null;
+							break;
+					}
+
 				// section_tables_map
 					$diffusion_element_tables_map	= diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 					$section_tables_map				= $diffusion_element_tables_map->{$section_tipo} ?? (object)[
@@ -81,7 +98,8 @@ class tool_diffusion extends tool_common {
 					'table'					=> $section_tables_map->name,
 					'fields'				=> $table_fields,
 					'section_tables_map'	=> $section_tables_map,
-					'table_fields_info'		=> $table_fields_info
+					'table_fields_info'		=> $table_fields_info,
+					'config'				=> $config
 				];
 				$ar_data[] = $data_item;
 			}

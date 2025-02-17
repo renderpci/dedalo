@@ -224,6 +224,9 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_PUBLICATION_ITEMS
+* Every publication item is a diffusion server (multiple configurations could have more than one)
+* Sample: 'Publication web', 'Publication web PRE', 'Socrata', etc.
+* It consists of a header and a drop-down body.
 * @param object self
 * @return HTMLElement publication_items
 */
@@ -374,7 +377,7 @@ export const render_publication_items = function(self) {
 				if (data_item.table_fields_info && data_item.table_fields_info.length>0) {
 					const fields_value = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'value link icon_arrow',
+						class_name		: 'value link icon_arrow unselectable',
 						inner_html		: get_label.show || 'Show',
 						parent			: publication_items_grid
 					})
@@ -475,6 +478,78 @@ export const render_publication_items = function(self) {
 						element_type	: 'div',
 						class_name		: 'value',
 						inner_html		: 'not used',
+						parent			: publication_items_grid
+					})
+				}
+
+			// properties (section_tables_map)
+				const properties = data_item.section_tables_map.properties || null
+				if (properties) {
+					// label
+					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: (get_label.properties || 'Properties'),
+						class_name		: 'label',
+						parent			: publication_items_grid
+					})
+					// value
+					const fields_value = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'value link icon_arrow unselectable',
+						inner_html		: get_label.show || 'Show',
+						parent			: publication_items_grid
+					})
+					fields_value.addEventListener('click', function(e) {
+						properties_label.classList.toggle('hide')
+						properties_node.classList.toggle('hide')
+						this.classList.toggle('up')
+					})
+					const properties_label = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'label hide',
+						inner_html		: `table tipo: ${data_item.section_tables_map.table}`,
+						parent			: publication_items_grid
+					})
+					const properties_node = ui.create_dom_element({
+						element_type	: 'pre',
+						class_name		: 'pre hide',
+						inner_html		: JSON.stringify(properties, null, 2),
+						parent			: publication_items_grid
+					})
+				}
+
+			// config (from config.php definitions)
+				const config = data_item.config || null
+				if (config) {
+					// label
+					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: (get_label.config || 'Config'),
+						class_name		: 'label',
+						parent			: publication_items_grid
+					})
+					// value
+					const fields_value = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'value link icon_arrow unselectable',
+						inner_html		: get_label.show || 'Show',
+						parent			: publication_items_grid
+					})
+					fields_value.addEventListener('click', function(e) {
+						properties_label.classList.toggle('hide')
+						properties_node.classList.toggle('hide')
+						this.classList.toggle('up')
+					})
+					const properties_label = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'label hide',
+						inner_html		: '',
+						parent			: publication_items_grid
+					})
+					const properties_node = ui.create_dom_element({
+						element_type	: 'pre',
+						class_name		: 'pre hide',
+						inner_html		: JSON.stringify(config, null, 2),
 						parent			: publication_items_grid
 					})
 				}
