@@ -126,6 +126,7 @@ Locator defines the source with the prefix *from*:
 - **tag_component_tipo** : `string` component that has the tag in the same section | ex : rsc36
 - **type** : `string` defines the locator relation type (link, external link, parent, child, related, model ) | ex : dd151
 - **section_id_key** : `int` data-frame index array number of the data that reference | ex : 1
+- **section_tipo_key** : `string` data-frame index array tipo of the data that reference | ex : rsc197
 - **section_top_tipo** : `string` source section_tipo  **Deprecated** use *from_section_tipo* | ex : oh1
 - **section_top_id** : `string` source section_id **Deprecated** use *from_section_id* | ex : 1
 
