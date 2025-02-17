@@ -1750,7 +1750,7 @@ function session_start_manager(array $options) : bool {
 function safe_table(string $table) : string|bool {
 
 	preg_match("/^[a-zA-Z_]+$/", $table, $output_array);
-	if (empty($output_array) || empty($output_array[0])) {
+	if ( empty($output_array) || empty($output_array[0]) ) {
 		return false;
 	}
 
@@ -1768,7 +1768,7 @@ function safe_table(string $table) : string|bool {
 function safe_lang(string $lang) : string|bool {
 
 	preg_match("/^lg-[a-z]{2,8}$/", $lang, $output_array);
-	if (empty($output_array[0])) {
+	if ( empty($output_array) || empty($output_array[0]) ) {
 		return false;
 	}
 
@@ -1787,7 +1787,7 @@ function safe_lang(string $lang) : string|bool {
 function safe_tld(string $tld) : string|bool {
 
 	preg_match("/^[a-z]{2,}$/", $tld, $output_array);
-	if (empty($output_array[0])) {
+	if ( empty($output_array) || empty($output_array[0]) ) {
 		return false;
 	}
 
@@ -1805,7 +1805,7 @@ function safe_tld(string $tld) : string|bool {
 function safe_tipo(string $tipo) : string|bool {
 
 	preg_match("/^[a-z]{2,}[0-9]+$/", $tipo, $output_array);
-	if (empty($output_array) || empty($output_array[0])) {
+	if ( empty($output_array) || empty($output_array[0]) ) {
 		return false;
 	}
 
