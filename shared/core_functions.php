@@ -1750,7 +1750,7 @@ function session_start_manager(array $options) : bool {
 function safe_table(string $table) : string|bool {
 
 	preg_match("/^[a-zA-Z_]+$/", $table, $output_array);
-	if (empty($output_array[0])) {
+	if (empty($output_array) || empty($output_array[0])) {
 		return false;
 	}
 
@@ -1805,7 +1805,7 @@ function safe_tld(string $tld) : string|bool {
 function safe_tipo(string $tipo) : string|bool {
 
 	preg_match("/^[a-z]{2,}[0-9]+$/", $tipo, $output_array);
-	if (empty($output_array[0])) {
+	if (empty($output_array) || empty($output_array[0])) {
 		return false;
 	}
 
@@ -1828,7 +1828,7 @@ function safe_section_id( string|int $section_id ) : string|int|bool {
 	}
 
 	preg_match("/^[0-9]+$/", (string)$section_id, $output_array);
-	if (empty($output_array[0])) {
+	if ( empty($output_array) || empty($output_array[0]) ) {
 		return false;
 	}
 
@@ -1847,7 +1847,7 @@ function safe_section_id( string|int $section_id ) : string|int|bool {
 function get_section_id_from_tipo( string $tipo ) : string|false {
 
 	preg_match("/[0-9]+/", $tipo, $output_array);
-	if (empty($output_array[0]) && $output_array[0]!=0 ) {
+	if ( empty($output_array) || ( empty($output_array[0]) && $output_array[0]!=0 ) ){
 		debug_log(__METHOD__
 			." Error: Invalid tipo received. Impossible get_section_id_from_tipo this tipo :  " . PHP_EOL
 			.' tipo: ' . to_string($tipo)
@@ -1872,7 +1872,7 @@ function get_section_id_from_tipo( string $tipo ) : string|false {
 function get_tld_from_tipo( string $tipo ) : string|false {
 
 	preg_match("/^[a-z]{2,}/", $tipo, $output_array);
-	if (empty($output_array[0])) {
+	if ( empty($output_array) || empty($output_array[0]) ) {
 		debug_log(__METHOD__
 			." Error: Invalid tipo received. Impossible get_tld_from_tipo this tipo :  " . PHP_EOL
 			.' tipo: ' . to_string($tipo)
