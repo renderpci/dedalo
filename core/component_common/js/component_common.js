@@ -726,10 +726,10 @@ component_common.prototype.update_datum = async function(new_datum) {
 						&& parseInt(el.section_id) 	=== parseInt(self.section_id)
 						&& el.mode 					=== self.mode
 						){
-						// if the new data provides by dataframe it will has section_id_key
+						// if the new data provides by dataframe it will has section_id_key and section_tipo_key
 						// in this case check the previous data in datum has correspondence with section_id_key and his tipo_key
-						const to_delete = (el.section_id_key)
-							 ? parseInt(el.section_id_key) === parseInt(self.section_id_key)
+						const to_delete = (el.section_id_key && el.section_tipo_key)
+							 ? parseInt(el.section_id_key) === parseInt(self.section_id_key) && el.section_tipo_key === self.section_tipo_key
 							 : true
 
 						if(to_delete){
@@ -752,12 +752,12 @@ component_common.prototype.update_datum = async function(new_datum) {
 							&& parseInt(el.section_id) 	=== parseInt(data_item.section_id)
 							&& el.mode 					=== data_item.mode
 							){
-							// if the new data provides by dataframe it will has section_id_key
-							// in this case check the previous data in datum has correspondence with section_id_key and his tipo_key
-							if(el.section_id_key){
+							// if the new data provides by dataframe it will has section_id_key && section_tipo_key
+							// in this case check the previous data in datum has correspondence with section_id_key and his section_tipo_key
+							if(el.section_id_key && el.section_tipo_key){
 								return (
 									parseInt(el.section_id_key)	=== parseInt(data_item.section_id_key)
-									// && el.tipo_key				=== data_item.tipo_key
+									&& el.section_tipo_key		=== data_item.section_tipo_key
 								)
 							}
 							return true
@@ -1564,8 +1564,8 @@ export const get_dataframe = async function(options) {
 
 	const section_id		= options.section_id
 	// const section_tipo	= options.section_tipo
-	// const tipo_key		= options.tipo_key
 	const section_id_key	= options.section_id_key
+	const section_tipo_key	= options.section_tipo_key
 	const view				= options.view
 
 	const request_config = self.context.request_config || null
@@ -1582,7 +1582,7 @@ export const get_dataframe = async function(options) {
 	// instance_options
 	const instance_options = clone(original_dataframe_ddo)
 	instance_options.section_id	= section_id
-	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_id_key}`
+	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_tipo_key}_${section_id_key}`
 	instance_options.standalone	= false
 
 	// component_dataframe init instance
@@ -1599,15 +1599,15 @@ export const get_dataframe = async function(options) {
 				if( el.matrix_id && self.matrix_id){
 					return (
 						parseInt(el.matrix_id)			=== parseInt(self.matrix_id)
-						// && el.tipo_key				=== tipo_key
+						&& el.section_tipo_key			=== section_tipo_key
 						&& parseInt(el.section_id_key)	=== parseInt(section_id_key)
 					)
 				}
 				// normal case
 				if( !self.matrix_id ){
 					return (
-						 parseInt(el.section_id_key)	=== parseInt(section_id_key)
-						// && el.tipo_key				=== tipo_key
+						parseInt(el.section_id_key)	=== parseInt(section_id_key)
+						&& el.section_tipo_key		=== section_tipo_key
 
 					)
 				}
@@ -1617,8 +1617,8 @@ export const get_dataframe = async function(options) {
 	const dataframe_data = data
 		? data
 		: {
-			// tipo_key		: tipo_key,
-			section_id_key	: section_id_key
+			section_tipo_key	: section_tipo_key,
+			section_id_key		: section_id_key
 		}
 
 	// context
@@ -1666,7 +1666,7 @@ export const delete_dataframe = async function(options) {
 		const section_id		= options.section_id
 		const section_tipo		= options.section_tipo
 		const section_id_key	= options.section_id_key
-		// const tipo_key			= options.tipo_key
+		const section_tipo_key	= options.section_tipo_key
 		const paginated_key		= options.paginated_key || false
 		const row_key			= options.row_key || false
 
@@ -1684,8 +1684,8 @@ export const delete_dataframe = async function(options) {
 			&& el.tipo							=== ddo_dataframe.tipo
 			&& el.section_tipo					=== ddo_dataframe.section_tipo
 			&& parseInt(el.section_id)			=== parseInt(section_id)
+			&& el.data.section_tipo_key			=== section_tipo_key
 			&& parseInt(el.data.section_id_key)	=== parseInt(section_id_key)
-			// && el.data.tipo_key				=== tipo_key
 		)
 
 	if(!component_dataframe){

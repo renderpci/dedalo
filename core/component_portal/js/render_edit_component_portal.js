@@ -549,10 +549,11 @@ export const render_column_remove = function(options) {
 
 								// delete_dataframe_record. if it is not dataframe it will be ignored						)
 								await delete_dataframe({
-									self			: self,
-									section_id		: self.section_id,
-									section_tipo	: self.section_tipo,
-									section_id_key	: section_id
+									self				: self,
+									section_id			: self.section_id,
+									section_tipo		: self.section_tipo,
+									section_id_key		: section_id,
+									section_tipo_key	: section_tipo
 								})
 
 								// refresh the component. Don't wait here
@@ -616,10 +617,11 @@ export const render_column_remove = function(options) {
 
 						// delete_dataframe_record. if it is not dataframe it will be ignored
 						await delete_dataframe({
-							self			: self,
-							section_id		: self.section_id,
-							section_tipo	: self.section_tipo,
-							section_id_key	: section_id
+							self				: self,
+							section_id			: self.section_id,
+							section_tipo		: self.section_tipo,
+							section_id_key		: section_id,
+							section_tipo_key	: section_tipo
 						})
 
 						// close modal

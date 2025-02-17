@@ -209,7 +209,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 
 		// dataframe
 			instance_options.id_variant = (instance_options.model==='component_dataframe')
-				? `${section_record_id_variant}_${current_data.section_id_key}`
+				? `${section_record_id_variant}_${current_data.section_tipo_key}_${current_data.section_id_key}`
 				: instance_options.id_variant
 
 	// component / section group. Create the instance options for build it, the instance is reflect of the context and section_id
@@ -546,6 +546,12 @@ section_record.prototype.get_component_data = function(options) {
 			? ddo.caller_dataframe.section_id_key
 			: self.section_id
 
+	// section_tipo_key
+		const section_tipo_key = (ddo.caller_dataframe)
+			? ddo.caller_dataframe.section_tipo_key
+			: self.section_tipo
+
+
 	// no data elements case (groupers)
 		if (ddo.model==='section_group') {
 			return null;
@@ -567,6 +573,7 @@ section_record.prototype.get_component_data = function(options) {
 
 						return (
 							parseInt(el.matrix_id)		=== parseInt(matrix_id)	&&
+							el.section_tipo_key			=== section_tipo_key &&
 							parseInt(el.section_id_key)	=== parseInt(section_id_key)
 						)
 					}
@@ -578,12 +585,12 @@ section_record.prototype.get_component_data = function(options) {
 				// if ddo is inside a dataframe get his data matching row_section_id of ddo with the section_id of the caller and his own section_tipo and section_id
 				// ex: portal with section_tipo = numisdata3 and section_id = 1
 				// has a dataframe with section_tipo = numisdata_1016 and section_id_8
-				// the match for components inside numisdata_1016 has to be ddo row_section_id === caller (portal) section_id
+				// the match for components inside numisdata_1016 has to be ddo row_section_id === caller (portal) section_id ans row_section_tipo === caller (portal) section_tipo
 				// data of components inside dataframe sections are conditioned by his caller section_tipo and section_id and his own section_tipo and section_id
 
 				if (ddo.model==='component_dataframe') {
 
-					return parseInt(el.section_id_key)===parseInt(section_id_key)
+					return parseInt(el.section_id_key)===parseInt(section_id_key) && el.section_tipo_key === section_tipo_key
 				}
 
 				return true
@@ -606,8 +613,9 @@ section_record.prototype.get_component_data = function(options) {
 			}
 
 			if (ddo.model==='component_dataframe') {
-				// add section_id_key
-				empty_data.section_id_key = section_id_key
+				// add section_id_key and section_tipo_key
+				empty_data.section_id_key	= section_id_key
+				empty_data.section_tipo_key	= section_tipo_key
 
 			}
 			return empty_data
@@ -629,8 +637,9 @@ section_record.prototype.get_component_info = function() {
 	const self = this
 
 	const component_info = self.datum.data.find(item => item.tipo==='ddinfo'
-													 && item.section_id===self.section_id
-													 && item.section_tipo===self.section_tipo)
+		&& item.section_id===self.section_id
+		&& item.section_tipo===self.section_tipo
+	)
 
 	return component_info
 }//end get_component_info

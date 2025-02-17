@@ -718,7 +718,7 @@ component_portal.prototype.add_value = async function(value) {
 	// dataframe case
 		if(self.model === 'component_dataframe'){
 			value.section_id_key	= self.data.section_id_key
-			// value.tipo_key			= self.data.tipo_key
+			value.section_tipo_key	= self.data.section_tipo_key
 		}
 
 	// changed_data

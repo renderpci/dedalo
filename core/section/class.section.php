@@ -166,7 +166,7 @@ class section extends common {
 				$cache_key = implode('_', [$section_id, $tipo, $mode]);
 				if(isset($caller_dataframe)){
 					// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key;
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key;
 
 				}
 				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
@@ -492,7 +492,9 @@ class section extends common {
 					$previous_component_dato = array_values(
 						array_filter($this->get_relations(), function($el) use ($component_tipo, $component_obj){
 							$previous_dato = (get_class($component_obj)==='component_dataframe')
-								? (isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo) && (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
+								? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
+									&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
+									&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
 								: isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
 
 							 return $previous_dato;
@@ -3159,9 +3161,10 @@ class section extends common {
 			// dataframe case
 			if($model === 'component_dataframe') {
 
-				if ((isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
-					&& (isset($current_locator->section_id_key) && intval($current_locator->section_id_key)===intval($caller_dataframe->section_id_key))
-					// && (isset($current_locator->tipo_key) && $current_locator->tipo_key===$caller_dataframe->tipo_key)
+				if (
+					( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
+					&& ( isset($current_locator->section_id_key) && intval($current_locator->section_id_key)===intval($caller_dataframe->section_id_key) )
+					&& ( isset($current_locator->section_tipo_key) && $current_locator->section_tipo_key===$caller_dataframe->section_tipo_key)
 					){
 						$ar_deleted_locators[] = $current_locator;
 
@@ -4098,6 +4101,7 @@ class section extends common {
 														// create the caller_dataframe with the current data information
 														$new_caller_dataframe = new stdClass();
 															$new_caller_dataframe->section_id_key	= $current_dataframe_data->section_id_key;
+															$new_caller_dataframe->section_tipo_key	= $current_dataframe_data->section_tipo_key;
 															$new_caller_dataframe->section_tipo		= $section_tipo;
 
 														// // create the dataframe component
