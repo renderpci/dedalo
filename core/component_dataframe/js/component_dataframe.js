@@ -26,11 +26,12 @@
 * @param object options
 * {
 * 	data: {
-* 		section_id		: "1",
-* 		section_tipo	: "numisdata4",
-* 		section_id_key	: "66",
-* 		tipo_key		: "numisdata161",
-* 		value 			: [{locator}] \ null
+* 		section_id			: "1",
+* 		section_tipo		: "numisdata4",
+* 		section_id_key		: "66",
+*		section_tipo_key 	: "oh25"
+* 		tipo_key			: "numisdata161",
+* 		value 				: [{locator}] \ null
 * 	}
 *
 * }
@@ -64,6 +65,7 @@ component_dataframe.prototype.create_new_section = async function(options) {
 			section_tipo		: target_section_tipo,
 			section_id			: section_id,
 			section_id_key		: data.section_id_key,
+			section_tipo_key	: data.section_tipo_key,
 			from_component_tipo	: self.tipo
 		}
 

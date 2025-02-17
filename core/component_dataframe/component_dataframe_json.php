@@ -12,7 +12,7 @@
 	$properties			= $this->get_properties() ?? new stdClass();
 	$caller_dataframe	= $this->get_caller_dataframe();
 	// debug. Check caller_dataframe
-	if ($mode!=='search' && (empty($caller_dataframe) || !isset($caller_dataframe->section_id_key))) {
+	if ( $mode!=='search' && ( empty($caller_dataframe) || !isset($caller_dataframe->section_id_key) || !isset($caller_dataframe->section_tipo_key) ) ){
 		$bt = debug_backtrace();
 		debug_log(__METHOD__
 			. " Mandatory caller_dataframe not found " . PHP_EOL
@@ -89,8 +89,9 @@
 					'offset'	=> $offset
 				];
 				// specific properties for dataframe
-				if (!empty($caller_dataframe) && isset($caller_dataframe->section_id_key)) {
-					$item->section_id_key = $caller_dataframe->section_id_key;
+				if ( !empty($caller_dataframe) && isset($caller_dataframe->section_id_key) && isset($caller_dataframe->section_tipo_key) ) {
+					$item->section_id_key	= $caller_dataframe->section_id_key;
+					$item->section_tipo_key	= $caller_dataframe->section_tipo_key;
 				}
 
 			$data[] = $item;
