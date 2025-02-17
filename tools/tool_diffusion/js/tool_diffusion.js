@@ -139,7 +139,9 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 				body : rqo
 			})
 			.then(function(response){
-				// dd_console("-> get_diffusion_info API response:",'DEBUG',response);
+				if(SHOW_DEBUG===true) {
+					console.log('-> get_diffusion_info API response:', response);
+				}
 
 				const result = response.result // array of objects
 
