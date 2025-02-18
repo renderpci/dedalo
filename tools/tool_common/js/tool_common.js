@@ -833,9 +833,10 @@ const view_window = async function(options) {
 	// caller_dataframe . Used for dataframe
 		if(caller.model==='component_dataframe'){
 			caller_ddo.caller_dataframe = {
-				section_tipo	: caller.section_tipo,
-				section_id		: caller.section_id,
-				section_id_key	: caller.data.section_id_key
+				section_tipo		: caller.section_tipo,
+				section_id			: caller.section_id,
+				section_id_key		: caller.data.section_id_key,
+				section_tipo_key	: caller.data.section_tipo_key
 			}
 		}
 

@@ -64,10 +64,10 @@ class component_dataframe extends component_portal {
 
 			if(	isset($locator->from_component_tipo)
 				&& isset($locator->section_id_key)
-				// && isset($locator->tipo_key)
+				&& isset($locator->section_tipo_key)
 				&& $locator->from_component_tipo	=== $this->tipo
 				&& (int)$locator->section_id_key	=== (int)$caller_dataframe->section_id_key
-				// && $locator->tipo_key			=== $caller_dataframe->tipo_key
+				&& $locator->section_tipo_key		=== $caller_dataframe->section_tipo_key
 			) {
 				$all_data[] = $locator;
 			}
@@ -104,8 +104,8 @@ class component_dataframe extends component_portal {
 			}
 
 		// locator_to_remove. add custom properties from caller_dataframe
-			$locator_to_remove->section_id_key	= $caller_dataframe->section_id_key;
-			// $locator_to_remove->tipo_key		= $caller_dataframe->tipo_key;
+			$locator_to_remove->section_id_key		= $caller_dataframe->section_id_key;
+			$locator_to_remove->section_tipo_key	= $caller_dataframe->section_tipo_key;
 
 		// locator_properties_to_check
 			$locator_properties_to_check = $this->get_locator_properties_to_check();
@@ -129,7 +129,7 @@ class component_dataframe extends component_portal {
 	*/
 	public function get_locator_properties_to_check() {
 
-		return ['type','section_id','section_tipo','from_component_tipo','section_id_key'];
+		return ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
 	}//end get_locator_properties_to_check
 
 
@@ -152,6 +152,7 @@ class component_dataframe extends component_portal {
 
 			$caller_dataframe = new stdClass();
 				$caller_dataframe->section_id_key	= $locator->section_id_key;
+				$caller_dataframe->section_tipo_key	= $locator->section_tipo_key;
 				$caller_dataframe->section_tipo		= $this->section_tipo;
 
 			$this->set_caller_dataframe($caller_dataframe);
@@ -188,6 +189,7 @@ class component_dataframe extends component_portal {
 
 			$caller_dataframe = new stdClass();
 				$caller_dataframe->section_id_key	= $locator->section_id_key;
+				$caller_dataframe->section_tipo_key	= $locator->section_tipo_key;
 				$caller_dataframe->section_tipo		= $this->section_tipo;
 
 			$this->set_caller_dataframe($caller_dataframe);

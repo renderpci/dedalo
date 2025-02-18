@@ -393,7 +393,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 				// "userID"			=> "userID", 		// integer
 				// "state"			=> "state",			// string char 32
 				// "dato"			=> "dato",			// jsonb format
-				// "section_id_key"	=> "section_id_key" // integer
+				// "section_id_key"	=> "section_id_key" // integer TODO; to delete now the dataframe is saved with main data
 
 		// time_machine save before.
 		// This allow safe time machine save data not already saved (old imports case for example)
