@@ -567,12 +567,6 @@ class tool_import_dedalo_csv extends tool_common {
 							continue;
 						}
 
-					// caller_dataframe cases
-						$caller_dataframe = (object)[
-							'section_id_key'=> $section_id_key,
-							'section_tipo'	=> $section_tipo
-						];
-
 					// component base
 						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 						$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
@@ -585,7 +579,6 @@ class tool_import_dedalo_csv extends tool_common {
 							$lang,
 							$section_tipo,
 							false, // cache
-							$caller_dataframe
 						);
 						// set the bulk_process_id to save it into time_machine
 						// this allow to revert the bulk import
