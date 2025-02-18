@@ -9,6 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {common} from '../../common/js/common.js'
+	import {get_tld_from_tipo,get_section_id_from_tipo} from '../../common/js/utils/index.js'
 	import {
 		render_inspector,
 		render_section_info,
@@ -273,13 +274,15 @@ export const get_ontology_url = async function (tipo, target) {
 		case 'local_ontology':
 			const ontology_info = await data_manager.get_ontology_info(tipo)
 			if (ontology_info) {
-				return `${DEDALO_CORE_URL}/page/?tipo=${ontology_info.section_tipo}&section_id=${ontology_info.section_id}&menu=false`
+				return `${DEDALO_CORE_URL}/page/?tipo=${ontology_info.section_tipo}&section_id=${ontology_info.section_id}&session_save=false&menu=false`
 			}
 		case 'local_ontology_search':
 			return DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
 
 		case 'master_ontology':
-			return `https://master.dedalo.dev/dedalo/core/ontology/v5/dd_edit.php?terminoID=${tipo}`
+			const section_tipo_base	= get_tld_from_tipo(tipo) + '0'; // as 'tch0'
+			const section_id_base	= get_section_id_from_tipo(tipo); // as '38'
+			return `https://master.dedalo.dev/dedalo/core/page/?tipo=${section_tipo_base}&section_id=${section_id_base}&session_save=false&menu=false`
 	}
 
 
