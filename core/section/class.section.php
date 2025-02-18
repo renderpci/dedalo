@@ -549,21 +549,6 @@ class section extends common {
 				// when the component is dataframe, save all information together
 				// use the main and dataframe data as locators, mix all and save with the main component tipo
 				if (get_class($component_obj)==='component_dataframe') {
-					$section_id_key = $component_obj->caller_dataframe->section_id_key ?? null;
-					if (empty($section_id_key)) {
-						debug_log(__METHOD__
-							. " Skipped set section_id_key to dataframe. Empty section_id_key" . PHP_EOL
-							. ' model: ' . get_class($component_obj) . PHP_EOL
-							. ' tipo: ' . to_string($component_obj->tipo) . PHP_EOL
-							. ' section_tipo: ' . to_string($component_obj->section_tipo) . PHP_EOL
-							. ' section_id: ' . to_string($component_obj->section_id)
-							, logger::ERROR
-						);
-					}
-					// set save_options time_machine_section_id_key
-					$save_options->time_machine_section_id_key = !empty($section_id_key)
-						? (int)$section_id_key
-						: null;
 					// use the main component
 					$main_tipo = $component_obj->get_main_component_tipo();
 					$save_options->time_machine_tipo	= $main_tipo;
