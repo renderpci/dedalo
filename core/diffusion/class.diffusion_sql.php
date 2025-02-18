@@ -1712,7 +1712,7 @@ class diffusion_sql extends diffusion  {
 
 		// references. Resolve references until reach max_recursions level
 			$max_recursions = diffusion::get_resolve_levels();
-			// subtract one to cohere key (recursion level and max_recursions)
+			// subtract one for key coherence (recursion level and max_recursions)
 			$max_recursions--;
 
 			if ($recursion_level >= $max_recursions) {
