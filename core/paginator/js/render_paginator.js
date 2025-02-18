@@ -288,7 +288,6 @@ const get_content_data = async function(self) {
 			const displayed_records_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'displayed_records',
-				// inner_html	: displayed_records_label,
 				parent			: paginator_info
 			})
 			// active_value
@@ -297,7 +296,7 @@ const get_content_data = async function(self) {
 				// displayed_records_label . Using legacy format label from v5 in PHP
 				const displayed_records_label = get_label.records_displayed
 					? (() => {
-						// ref: Registros mostrados de X a Y de Z.
+						// ref: Records shown from X to Y of Z.
 						const map = {
 							X	: new Intl.NumberFormat(locale, {}).format(self.page_row_begin),
 							Y	: new Intl.NumberFormat(locale, {}).format(self.page_row_end),
