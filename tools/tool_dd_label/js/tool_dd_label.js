@@ -28,6 +28,9 @@ export const tool_dd_label = function () {
 	this.type
 	this.caller
 
+	// string last value. Stringified JSON value stored to check new values before save
+	this.last_value
+
 	return true
 }//end page
 
@@ -71,12 +74,12 @@ tool_dd_label.prototype.init = async function(options) {
 			// edited version even when user has not saved
 			const editor_data = (function(){
 
-				const data		= editor.get()
+				const data = editor.get()
 				// editor can get json object or stringify json (it depends of process status and it can not controlled)
 				const json_data	= data.json !== undefined
 					? data.json
 					: data.text===''
-						? {}
+						? null
 						: JSON.parse( data.text )
 
 				return json_data
@@ -84,7 +87,9 @@ tool_dd_label.prototype.init = async function(options) {
 
 			const ar_data = Array.isArray(editor_data)
 				? editor_data
-				: [editor_data]
+				: editor_data
+					? [editor_data]
+					: []
 
 		// fix ar_data
 			self.ar_data = ar_data
@@ -112,11 +117,25 @@ tool_dd_label.prototype.update_data = function() {
 
 	const self = this
 
+	// inmutable_value. JSON editor prefers immutable
+		const inmutable_value = JSON.parse(JSON.stringify(self.ar_data))
+
+	// not changed value case
+		if (self.last_value===JSON.stringify(inmutable_value)) {
+			return
+		}
+
 	// editor
 		const editor = self.caller.editors[0]
 		editor.set({
-			json : self.ar_data
+			json : inmutable_value
 		})
+
+	// update caller (component_json) value
+		self.caller.set_value(inmutable_value, 0)
+
+	// last value. Set to compare with new calls
+		self.last_value = JSON.stringify(inmutable_value)
 
 
 	return true
@@ -142,6 +161,73 @@ tool_dd_label.prototype.on_close_actions = async function(open_as) {
 
 	return true
 }//end on_close_actions
+
+
+
+/**
+* SAVE_LABEL_LANG_SEQUENCE
+* Manages the update and save values process en every content editable change
+* @param string value
+* 	as 'Hello'
+* @param int key
+* 	as 0
+* @param string lang
+* 	as 'lg-spa'
+* @return void
+*/
+tool_dd_label.prototype.save_label_lang_sequence = function (value, key, lang) {
+
+	const self = this
+
+	// key name
+	const name = self.ar_names[key]
+
+	// data
+	const data = self.ar_data.find(item => item.name===name && item.lang===lang )
+
+	// empty value and has not previous data set
+	if( !value && typeof data==='undefined' ){
+		return
+	}
+
+	// empty value with previous data set
+	if( !value && typeof data!=='undefined' ){
+
+		const index = self.ar_data.findIndex( item => item.name===name && item.lang===lang )
+
+		if(index === -1){
+			return
+		}
+
+		self.ar_data.splice(index, 1)
+
+		// update_data. Updates caller data
+		// update the data into the instance, prepared to save
+		// (but is not saved directly, the user need click in the save button)
+		self.update_data()
+		return
+	}
+
+	if(typeof data!=='undefined'){
+
+		// update data value
+		data.value = value
+
+	}else{
+
+		const new_data = {
+			lang	: lang,
+			name	: name,
+			value	: value
+		}
+		self.ar_data.push(new_data)
+	}
+
+	// update_data. Updates caller data
+	// update the data into the instance, prepared to save
+	// (but is not saved directly, the user needs click the save button)
+	self.update_data()
+}//end save_label_lang_sequence
 
 
 

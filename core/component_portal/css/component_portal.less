@@ -139,6 +139,21 @@
 		}
 
 	&.search {
+		.input_value {
+			width: calc(100% - 4rem);
+			// background image search lens
+			background: #fff url(../../themes/default/icons/search.svg);
+			background-position: bottom 6px right 8px;
+			background-repeat: no-repeat;
+			background-size: auto 60%;
+
+			&.input_disable {
+				@duration : 0.2s;
+				visibility: hidden;
+				opacity: 0;
+				transition: visibility 0s @duration, opacity @duration linear;
+			}
+		}
 		.section_record.list {
 			display: flex;
 			align-items: center;

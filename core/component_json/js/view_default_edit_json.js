@@ -137,7 +137,9 @@ const get_content_value = (key, current_value, self) => {
 									? null
 									: JSON.parse( updatedContent.text )
 
-							self.set_value(json_value, key)
+							const inmutable_value = JSON.parse(JSON.stringify(json_value))
+
+							self.set_value(inmutable_value, key)
 						}
 					}
 				}
