@@ -161,8 +161,10 @@ export const render_ts_line = function(options) {
 
 							button_show_indexations.classList.add('loading')
 
+							const uid = child_data.ar_elements[j].tipo +'_'+ child_data.section_tipo +'_'+ child_data.section_id
+
 							self.show_indexations({
-								uid 				: child_data.ar_elements[j].tipo,
+								uid 				: uid,
 								button_obj			: button_show_indexations,
 								event				: e,
 								section_tipo		: child_data.section_tipo,
