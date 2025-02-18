@@ -720,7 +720,7 @@ abstract class RecordDataBoundObject {
 
 		// strQuery
 		$strQuery = trim('SELECT '. $SQL_CACHE .'"'.$strPrimaryKeyName. '" FROM "'.$this->strTableName.'" WHERE '. $strQuery . $strQuery_limit . $strQuery_offset);
-		// error_log('------ '.$strQuery);
+		// error_log('------ strQuery >>>> '.$strQuery);
 
 		# CACHE : Static var
 		# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTARÁ CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
