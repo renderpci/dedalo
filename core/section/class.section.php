@@ -491,7 +491,13 @@ class section extends common {
 					// previous component dato from unchanged section dato
 					$previous_component_dato = array_values(
 						array_filter($this->get_relations(), function($el) use ($component_tipo, $component_obj){
-							$previous_dato = (get_class($component_obj)==='component_dataframe')
+
+							// dataframe case
+							// by default, component_dataframe is built with caller_dataframe except when import data.
+							// When import data from CSV files, the component is built without dataframe
+							// because is not possible to create different instances for every dataframe data.
+							// In those cases the component_dataframe manage its data as other components with whole data.
+							$previous_dato = (get_class($component_obj)==='component_dataframe' && isset($component_obj->caller_dataframe) )
 								? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
 									&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
 									&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
@@ -3159,7 +3165,11 @@ class section extends common {
 		foreach ($relations as $current_locator) {
 
 			// dataframe case
-			if($model === 'component_dataframe') {
+			// by default, component_dataframe is built with caller_dataframe except when import data.
+			// When import data from CSV files, the component is built without dataframe
+			// because is not possible to create different instances for every dataframe data.
+			// In those cases the component_dataframe manage its data as other components with whole data.
+			if($model === 'component_dataframe' && isset($caller_dataframe) ) {
 
 				if (
 					( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
