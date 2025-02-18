@@ -755,4 +755,46 @@ export const get_json_langs = async function () {
 
 
 
+/**
+* GET_TLD_FROM_TIPO
+* Extract the tld from given tipo
+* like 'rsc' from 'rsc1'
+* @param string $tipo
+* @return string|false
+*/
+export const get_tld_from_tipo = function (tipo) {
+
+	const match = tipo.match(/^[a-z]{2,}/);
+
+	if (!match || !match[0]) {
+		console.error(`Error: Invalid tipo received. Impossible get_tld_from_tipo this tipo: ${tipo}`);
+		return false;
+	}
+
+  return match[0];
+}//end get_tld_from_tipo
+
+
+
+/**
+* GET_SECTION_ID_FROM_TIPO
+* Extract the section_id from given tipo
+* like '1' from 'rsc1'
+* @param string tipo
+* @returns string|false
+*/
+export const get_section_id_from_tipo = function (tipo) {
+
+	const match = tipo.match(/[0-9]+/);
+
+	if (!match || (match[0] === '' && match[0] !== 0)) {
+		console.error(`Error: Invalid tipo received. Impossible get_section_id_from_tipo this tipo: ${tipo}`);
+		return false;
+	}
+
+  return match[0];
+}//end get_section_id_from_tipo
+
+
+
 // @license-end

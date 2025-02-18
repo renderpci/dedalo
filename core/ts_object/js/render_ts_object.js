@@ -140,10 +140,6 @@ export const render_ts_line = function(options) {
 				case (  child_data.ar_elements[j].model==='component_relation_index'
 					&& !child_data.ar_elements[j].show_data): {
 
-					// if (   child_data.ar_elements[j].tipo==='hierarchy40' && child_data.permissions_indexation>=1
-					// 	|| child_data.ar_elements[j].tipo==='ww34' && child_data.permissions_indexation>=1
-					// 	|| child_data.ar_elements[j].tipo==='hierarchy91' && child_data.permissions_structuration>=1
-					// 	) {
 					const total = parseInt( child_data.ar_elements[j].count_result.total )
 
 					if(total > 0){
@@ -161,8 +157,10 @@ export const render_ts_line = function(options) {
 
 							button_show_indexations.classList.add('loading')
 
+							const uid = child_data.ar_elements[j].tipo +'_'+ child_data.section_tipo +'_'+ child_data.section_id
+
 							self.show_indexations({
-								uid 				: child_data.ar_elements[j].tipo,
+								uid 				: uid,
 								button_obj			: button_show_indexations,
 								event				: e,
 								section_tipo		: child_data.section_tipo,
@@ -320,7 +318,8 @@ export const render_ts_pagination = function(options) {
 			inner_html		: get_label.show_more || 'Show more',
 			parent			: children_container
 		})
-		button_show_more.addEventListener('mousedown', function(e) {
+		// mousedown event
+		const mousedown_handler = (e) => {
 			e.stopPropagation()
 
 			// loading
@@ -343,7 +342,8 @@ export const render_ts_pagination = function(options) {
 			.then(function(){
 				button_show_more.remove()
 			})
-		})//end click
+		}
+		button_show_more.addEventListener('mousedown', mousedown_handler)//end click
 
 
 	return button_show_more

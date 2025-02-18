@@ -172,6 +172,7 @@
 
 	&.micro >.content_data {
 		font-size: 0.8rem;
+		flex-wrap: nowrap;
 
 		// buttons (nav_buttons)
 		>.nav_buttons {
@@ -185,9 +186,14 @@
 			}
 		}//end .nav_buttons
 
-		// text
+		.displayed_total_records {
+			padding: 0.25rem;
+		}
+
+		// text as '3-11'
 		>.paginator_info {
-			min-width: 2.6rem;
+			// min-width: 2.75rem;
+			min-width: fit-content;
 			min-height: unset;
 		}//end .paginator_info
 	}//end .content_data
