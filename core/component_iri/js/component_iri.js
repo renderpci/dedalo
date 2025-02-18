@@ -98,47 +98,31 @@ component_iri.prototype.build_value = function(key) {
 
 
 /**
-* KEYUP_HANDLER
+* CHANGE_HANDLER
 * Store current value in self.data.changed_data
-* If key pressed is 'Enter', force save the value
-* @param event e
+* deactivate() event is listen to the changed data of the instance
+* If key pressed is 'Enter', deactivate will force to save the value
 * @param int key
 * @param object self
 * @return bool
 */
-component_iri.prototype.keyup_handler = function(e, key, current_value, self) {
-	e.preventDefault()
+component_iri.prototype.change_handler = function(key, current_value) {
 
-	// tab/shift case catch
-		if (e.key==='Tab' || e.key==='Shift') {
-			return
-		}
+	const self = this
 
-	// Enter key force to save changes
-		if (e.key==='Enter') {
+	// change data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: current_value // full object value as {title: xx, uri: xxx}
+		})
 
-			// force to save current input if changed
-				const changed_data = self.data.changed_data || []
-				// change_value (save data)
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-		}else{
-			// change data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: key,
-					value	: current_value // full object value as {title: xx, uri: xxx}
-				})
-
-			// fix instance changed_data
-				self.set_changed_data(changed_data_item)
-		}
+	// fix instance changed_data
+		self.set_changed_data(changed_data_item)
 
 
 	return true
-}//end keyup_handler
+}//end change_handler
 
 
 
@@ -182,6 +166,28 @@ component_iri.prototype.focus_first_input = function() {
 
 	return true
 }//end focus_first_input
+
+
+
+/**
+* check_iri_value
+* Overwrites default behavior set in ui.component.activate
+* @return bool
+*/
+component_iri.prototype.check_iri_value = function( input_iri_value ) {
+
+	const self = this
+
+	// check if url is valid
+		const regex = /(https?)?:\/\/.*\..+/;
+
+		if(input_iri_value && !input_iri_value.match(regex)){
+			return false
+		}
+
+	return true
+}//end check_iri_value
+
 
 
 

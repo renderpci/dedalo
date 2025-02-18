@@ -138,15 +138,13 @@ const get_content_value = (i, current_value, self) => {
 					value			: title,
 					parent			: content_value
 				})
-				// keyup event
-					input_title.addEventListener('keyup', fn_keyup)
-					function fn_keyup(e) {
-						// update property title
-							current_value.title = input_title.value
-
-						// update_value(self, i, current_value)
-							self.keyup_handler(e, i, current_value, self)
-					}//end keyup
+				// change event
+				const change_title_handler = (e) => {
+					// update_value(self, i, current_value)
+					current_value.title = input_title.value
+					self.change_handler(i, current_value)
+				}
+				input_title.addEventListener('change', change_title_handler)
 				// focus event
 					input_title.addEventListener('focus', function() {
 						// force activate on input focus (tabulating case)
@@ -174,20 +172,19 @@ const get_content_value = (i, current_value, self) => {
 			value			: iri,
 			parent			: content_value
 		})
-		// keyup event
-			input_iri.addEventListener('keyup', fn_keyup)
-			function fn_keyup(e) {
-
-				// check if url is valid
-					const regex = /(https?)?:\/\/.*\..+/;
-					const value = input_iri.value
-
-					if(value && !value.match(regex)){
-						input_iri.classList.add('error')
-						return false
-					}
+		// change event
+			const change_iri_handler = (e) => {
+				// check if the new value is valid
+				// only uris with protocol (http || https) and valid domain are validated
+				const valid_value = self.check_iri_value( input_iri.value )
+				// if the value is not valid stop the change and show error style
+				if( !valid_value ){
+					input_iri.classList.add('error')
+					return false
+				}
 
 				// clean error class if exists
+				// if the new value is valid, remove previous error style
 					if (input_iri.classList.contains('error')) {
 						input_iri.classList.remove('error')
 					}
@@ -196,8 +193,11 @@ const get_content_value = (i, current_value, self) => {
 					current_value.iri = input_iri.value
 
 				// update_value(self, i, current_value)
-					self.keyup_handler(e, i, current_value, self)
+					self.change_handler(i, current_value)
+
 			}//end keyup
+			input_iri.addEventListener('change', change_iri_handler)
+
 		// focus event
 			input_iri.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)

@@ -57,26 +57,6 @@ class section extends common {
 		*________________________
 		*/
 			/**
-			* @param string $source
-			* Define if the section get data from his record in DDBB or the section get data from the components in other section (section doesn't has record in DDBB get parts of other section)
-			* by default source should be DDBB, but for dataframe (context of data) the section can get his data from other section, and in those cases (source='caller_section')
-			* the section will need to create the caller section to get, set or save data.
-			* When dataframe section is saved, it add the property: section_id_key to the data as:
-			* {
-			*	 	"type": "dd151",
-			*	 	"section_id": "1",
-			*	 	"section_tipo":	"rolejob1",
-			*	 	"section_id_key": 4,
-			* 		"tipo_key": 4,
-			* 		"from_component_tipo": "oh89"
-			* 	}
-			* section_id_key property is the link the section_id of the portal.
-			* The locator of the portal with section_id = 4 will have the link with section_id_key = 4 of the dataframe section.
-			* Dataframe sections doesn't has record in the DDBB, it create his data doing getting data with the caller_dataframe section and filtering with section_id_key.
-			*/
-			public $source;
-
-			/**
 			* @param object $caller_dataframe
 			* locator (section_id, section_tipo)
 			* The section that has data in DDBB, it's the section of the portal with the data that need to be data-framed with roles, uncertainty or any other dataframe.
@@ -237,9 +217,6 @@ class section extends common {
 					// fix active_section_id
 						section::$active_section_id = $this->get_section_id();
 			}
-
-		// set source from properties when section doesn't use record in database. Get the data from another section.
-			$this->source = $this->properties->source ?? null;
 
 		// pagination. Set defaults
 			$this->pagination = new stdClass();
