@@ -112,6 +112,30 @@ const get_content_data = async function(self) {
 			inner_html		: get_label.levels || 'Levels',
 			parent			: resolve_levels_container
 		})
+		// note about levels
+		const note_about_levels = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'note_about_levels',
+			inner_html		: '?',
+			title			: 'info',
+			parent			: resolve_levels_container
+		})
+		// click
+		const note_about_levels_click_handler = (e) => {
+			e.stopPropagation()
+			const text = (self.get_tool_label('levels_note') || 'levels_note')
+				.replace(/\n/g,'<br>')
+			// modal
+			ui.attach_to_modal({
+				header			: self.get_tool_label('depth_levels') || ' ? ',
+				body			: text,
+				footer			: null,
+				size			: 'small',
+				remove_overlay	: true
+			})
+		}
+		note_about_levels.addEventListener('click', note_about_levels_click_handler)
+
 		// resolve_levels_input
 		const resolve_levels_input = ui.create_dom_element({
 			element_type	: 'input',

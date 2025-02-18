@@ -89,6 +89,8 @@ render_search_component_portal.prototype.search = async function(options) {
 */
 const render_content_data = async function(self, ar_section_record) {
 
+	const ar_section_record_length = ar_section_record.length
+
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
@@ -103,6 +105,7 @@ const render_content_data = async function(self, ar_section_record) {
 				type			: 'text',
 				value			: q_operator,
 				class_name		: 'q_operator',
+				title			: get_label.operator || 'Operator',
 				parent			: fragment
 			})
 			input_q_operator.addEventListener('click', function(e){
@@ -118,8 +121,33 @@ const render_content_data = async function(self, ar_section_record) {
 			})
 		}
 
+	// input value
+		if (ar_section_record_length===0) {
+			const input_value = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'text',
+				class_name		: 'input_value noevents',
+				parent			: fragment
+			})
+			input_value.setAttribute('readonly', true);
+			// click event
+			const click_handler = (e) => {
+				e.preventDefault()
+			}
+			input_value.addEventListener('click', click_handler)
+			// activate_component event
+			const activate_component_handler = () => {
+				input_value.classList.add('input_disable')
+			}
+			event_manager.subscribe('activate_component', activate_component_handler)
+			// deactivate_component event
+			const deactivate_component_handler = () => {
+				input_value.classList.remove('input_disable')
+			}
+			event_manager.subscribe('deactivate_component', deactivate_component_handler)
+		}
+
 	// ar_section_record
-		const ar_section_record_length = ar_section_record.length
 		for (let i = 0; i < ar_section_record_length; i++) {
 			// section_record
 			const section_record_node = await ar_section_record[i].render()
