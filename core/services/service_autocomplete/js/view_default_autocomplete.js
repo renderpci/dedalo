@@ -63,6 +63,10 @@ view_default_autocomplete.render = async function (self, options) {
 			e.stopPropagation()
 		})
 
+		if(self.caller.mode === 'search'){
+			wrapper.classList.add('search')
+		}
+
 	// position calculate based on caller node (usually a component_portal wrapper)
 		if (self.caller.node) {
 
