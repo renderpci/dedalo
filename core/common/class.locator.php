@@ -15,8 +15,8 @@
 * 		$locator->tag_type				= (string)$tag_type; // reference to the type of the tag that the locator is referenced
 * 		$locator->type					= (string)$type;
 * 		$locator->type_rel				= (string)$type_rel; // type of rel (like unidirectional, bidirectional, multi directional, etc..) (used by component_relation_related)
-*		$locator->section_id_key		= (int)$section_id_key; // dataframe index array number of the data that reference
-*		$locator->tipo_key				= (string)$tipo_key; // dataframe tipo of the main component (component that has dataframe)
+*		$locator->section_id_key		= (int)$section_id_key; // dataframe, link to section_id of the main data or index array number of the data that reference
+*		$locator->section_tipo_key		= (string)$section_tipo_key; // dataframe section_tipo of the main component data (component that has dataframe)
 *
 *	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
 *	For example, component portal only use section_tipo an section_id in many cases.
@@ -414,15 +414,15 @@ class locator extends stdClass {
 
 
 	/**
-	* SET_TIPO_KEY
+	* SET_SECTION_TIPO_KEY
 	* @return
 	*/
-	public function set_tipo_key(string $value) {
+	public function set_section_tipo_key(string $value) {
 		if(!get_tld_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid tipo_key: $value", 1);
+			throw new Exception("Error Processing Request. Invalid section_tipo_key: $value", 1);
 		}
-		$this->tipo_key = $value;
-	}//end set_tipo_key
+		$this->section_tipo_key = $value;
+	}//end set_section_tipo_key
 
 
 	/**

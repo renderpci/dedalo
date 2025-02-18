@@ -166,7 +166,7 @@ class section extends common {
 				$cache_key = implode('_', [$section_id, $tipo, $mode]);
 				if(isset($caller_dataframe)){
 					// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key;
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key;
 
 				}
 				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
@@ -489,10 +489,22 @@ class section extends common {
 
 				// relation components
 					// previous component dato from unchanged section dato
+					// previous component is used to check time_machine data
+					// when time_machine has not previous data of the component, because was a explicit not time_machine save
+					// the previous_component_dato will used to set as previous time_machine_data.
+					// It prevent lost the previous changes in data.
 					$previous_component_dato = array_values(
 						array_filter($this->get_relations(), function($el) use ($component_tipo, $component_obj){
-							$previous_dato = (get_class($component_obj)==='component_dataframe')
-								? (isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo) && (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
+
+							// dataframe case
+							// by default, component_dataframe is built with caller_dataframe except when import data.
+							// When import data from CSV files, the component is built without dataframe
+							// because is not possible to create different instances for every dataframe data.
+							// In those cases the component_dataframe manage its data as other components with whole data.
+							$previous_dato = (get_class($component_obj)==='component_dataframe' && isset($component_obj->caller_dataframe) )
+								? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
+									&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
+									&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
 								: isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
 
 							 return $previous_dato;
@@ -537,21 +549,6 @@ class section extends common {
 				// when the component is dataframe, save all information together
 				// use the main and dataframe data as locators, mix all and save with the main component tipo
 				if (get_class($component_obj)==='component_dataframe') {
-					$section_id_key = $component_obj->caller_dataframe->section_id_key ?? null;
-					if (empty($section_id_key)) {
-						debug_log(__METHOD__
-							. " Skipped set section_id_key to dataframe. Empty section_id_key" . PHP_EOL
-							. ' model: ' . get_class($component_obj) . PHP_EOL
-							. ' tipo: ' . to_string($component_obj->tipo) . PHP_EOL
-							. ' section_tipo: ' . to_string($component_obj->section_tipo) . PHP_EOL
-							. ' section_id: ' . to_string($component_obj->section_id)
-							, logger::ERROR
-						);
-					}
-					// set save_options time_machine_section_id_key
-					$save_options->time_machine_section_id_key = !empty($section_id_key)
-						? (int)$section_id_key
-						: null;
 					// use the main component
 					$main_tipo = $component_obj->get_main_component_tipo();
 					$save_options->time_machine_tipo	= $main_tipo;
@@ -3157,11 +3154,16 @@ class section extends common {
 		foreach ($relations as $current_locator) {
 
 			// dataframe case
-			if($model === 'component_dataframe') {
+			// by default, component_dataframe is built with caller_dataframe except when import data.
+			// When import data from CSV files, the component is built without dataframe
+			// because is not possible to create different instances for every dataframe data.
+			// In those cases the component_dataframe manage its data as other components with whole data.
+			if($model === 'component_dataframe' && isset($caller_dataframe) ) {
 
-				if ((isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
-					&& (isset($current_locator->section_id_key) && intval($current_locator->section_id_key)===intval($caller_dataframe->section_id_key))
-					// && (isset($current_locator->tipo_key) && $current_locator->tipo_key===$caller_dataframe->tipo_key)
+				if (
+					( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
+					&& ( isset($current_locator->section_id_key) && intval($current_locator->section_id_key)===intval($caller_dataframe->section_id_key) )
+					&& ( isset($current_locator->section_tipo_key) && $current_locator->section_tipo_key===$caller_dataframe->section_tipo_key)
 					){
 						$ar_deleted_locators[] = $current_locator;
 
@@ -4098,6 +4100,7 @@ class section extends common {
 														// create the caller_dataframe with the current data information
 														$new_caller_dataframe = new stdClass();
 															$new_caller_dataframe->section_id_key	= $current_dataframe_data->section_id_key;
+															$new_caller_dataframe->section_tipo_key	= $current_dataframe_data->section_tipo_key;
 															$new_caller_dataframe->section_tipo		= $section_tipo;
 
 														// // create the dataframe component

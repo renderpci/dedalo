@@ -2035,9 +2035,10 @@ abstract class common {
 						continue;
 					}
 
-				$section_id		= $current_locator->section_id;
-				$section_tipo	= $current_locator->section_tipo;
-				$section_id_key	= $current_locator->section_id;
+				$section_id			= $current_locator->section_id;
+				$section_tipo		= $current_locator->section_tipo;
+				$section_id_key		= $current_locator->section_id;
+				$section_tipo_key	= $current_locator->section_tipo;
 
 				// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
 				// but when the ddo is a component_dataframe (used as sub section as data frame of the locator) get include it.
@@ -2082,14 +2083,16 @@ abstract class common {
 								? reset($dd_object->section_tipo)
 								: $dd_object->section_tipo;
 
-							$section_id_key	= $current_locator->section_id; // section_id_key link the dataframe data to the main locator
-							$section_id		= $this->get_section_id(); // the section that call to component, not the component
+							$section_id_key		= $current_locator->section_id; // section_id_key link the dataframe data to the main locator
+							$section_tipo_key	= $current_locator->section_tipo; // section_tipo_key link the dataframe data to the main locator
+							$section_id			= $this->get_section_id(); // the section that call to component, not the component
 
 						}else{
 							// standard use of the locator to get data of the ddo
-							$section_id		= $current_locator->section_id;
-							$section_tipo	= $current_locator->section_tipo;
-							$section_id_key	= $current_locator->section_id;
+							$section_id			= $current_locator->section_id;
+							$section_tipo		= $current_locator->section_tipo;
+							$section_id_key		= $current_locator->section_id;
+							$section_tipo_key	= $current_locator->section_tipo;
 						}
 
 						$current_section_tipo = $section_tipo;
@@ -2176,8 +2179,9 @@ abstract class common {
 								// caller_dataframe cases
 								$caller_dataframe = (strpos($source_model, 'component_')===0)
 									? (object)[
-										'section_id_key'=> $section_id_key,
-										'section_tipo'	=> $this->get_section_tipo()
+										'section_id_key'	=> $section_id_key,
+										'section_tipo_key'	=> $section_tipo_key,
+										'section_tipo'		=> $this->get_section_tipo()
 									  ]
 									: null;
 

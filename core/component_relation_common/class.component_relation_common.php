@@ -401,6 +401,7 @@ class component_relation_common extends component_common {
 					? (object)[
 						'section_tipo'		=> $ddo->section_tipo,
 						'section_id_key'	=> $locator->section_id,
+						'section_tipo_key'	=> $locator->section_tipo_key
 					]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
@@ -1054,7 +1055,7 @@ class component_relation_common extends component_common {
 		// relations table links update (default is true)
 			if ($this->save_to_database_relations===true) {
 				// Dataframe
-				// When the component is a dataframe it get only the section_id_key
+				// When the component is a dataframe it get only the section_id_key and section_tipo_key
 				// but to save in relations will need the full data (all locators of the component) to replace relations rows
 				// so remove the caller_dataframe for the component and all caches (dato_resolved and bl_loaded_matrix_data)
 				// to get the full data of the component.

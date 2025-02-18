@@ -382,7 +382,7 @@ abstract class component_common extends common {
 				$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
 				if(isset($caller_dataframe)) {
 					// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key;
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->section_tipo_key;
 				}
 				if ( !isset(self::$ar_component_instances[$cache_key]) ) {
 					// instance new component
@@ -787,10 +787,12 @@ abstract class component_common extends common {
 						// If the component is a dataframe filter the tm data with the section_id_key also.
 						if($this->get_model()==='component_dataframe'){
 
-							$section_id_key = $this->caller_dataframe->section_id_key;
+							$section_id_key		= $this->caller_dataframe->section_id_key;
+							$section_tipo_key	= $this->caller_dataframe->section_tipo_key;
 
-							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key) {
-								return isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key;
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key, $section_tipo_key) {
+								return ( isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key )
+									&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key );
 							}));
 						}
 					}
@@ -2582,6 +2584,7 @@ abstract class component_common extends common {
 			$caller_dataframe->section_tipo		= $this->section_tipo;
 			$caller_dataframe->section_id		= $this->section_id;
 			$caller_dataframe->section_id_key	= $locator->section_id;
+			$caller_dataframe->section_tipo_key	= $locator->section_tipo;
 
 
 		// config_context. Get_config_context normalized

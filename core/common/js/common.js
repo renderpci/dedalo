@@ -948,10 +948,10 @@ export const create_source = function (self, action) {
 			source.caller_dataframe = self.caller_dataframe
 				? self.caller_dataframe
 				: {
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
-					section_id_key	: self.data.section_id_key,
-					// tipo_key		: self.data.tipo_key
+					section_tipo		: self.section_tipo,
+					section_id			: self.section_id,
+					section_id_key		: self.data.section_id_key,
+					section_tipo_key	: self.data.section_tipo_key
 				}
 		}
 
