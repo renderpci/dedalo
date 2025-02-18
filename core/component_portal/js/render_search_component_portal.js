@@ -121,8 +121,11 @@ const render_content_data = async function(self, ar_section_record) {
 			})
 		}
 
-	// input value
-		if (ar_section_record_length===0) {
+	// Input value fake
+	// show a field with magnify glass to be used to indicate where click
+	// users will click in it in the middle of the component
+	// to activate the autocomplete service
+		if (ar_section_record_length===0 && self.show_interface.show_autocomplete===true ) {
 			const input_value = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
@@ -136,12 +139,18 @@ const render_content_data = async function(self, ar_section_record) {
 			}
 			input_value.addEventListener('click', click_handler)
 			// activate_component event
-			const activate_component_handler = () => {
+			const activate_component_handler = (component) => {
+				if(component.id !== self.id){
+					return
+				}
 				input_value.classList.add('input_disable')
 			}
 			event_manager.subscribe('activate_component', activate_component_handler)
 			// deactivate_component event
-			const deactivate_component_handler = () => {
+			const deactivate_component_handler = (component) => {
+				if(component.id !== self.id){
+					return
+				}
 				input_value.classList.remove('input_disable')
 			}
 			event_manager.subscribe('deactivate_component', deactivate_component_handler)
