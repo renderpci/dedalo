@@ -489,6 +489,10 @@ class section extends common {
 
 				// relation components
 					// previous component dato from unchanged section dato
+					// previous component is used to check time_machine data
+					// when time_machine has not previous data of the component, because was a explicit not time_machine save
+					// the previous_component_dato will used to set as previous time_machine_data.
+					// It prevent lost the previous changes in data.
 					$previous_component_dato = array_values(
 						array_filter($this->get_relations(), function($el) use ($component_tipo, $component_obj){
 
