@@ -449,7 +449,8 @@ final class dd_api_Test extends TestCase {
 				        "caller_dataframe": {
 				            "section_tipo": "test3",
 				            "section_id": "1",
-				            "section_id_key": 1
+				            "section_id_key": 1,
+				            "section_tipo_key": "rsc1242"
 				        },
 				        "properties": {}
 				    }
