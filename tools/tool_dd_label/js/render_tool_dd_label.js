@@ -169,6 +169,11 @@ const render_row = async function(self, ar_langs, header, name, key) {
 			remove_button.addEventListener('click', async (e) =>{
 				e.stopPropagation()
 
+				// confirm remove
+					if (!confirm(get_label.sure || 'Sure?')) {
+						return
+					}
+
 				// safe key
 					const rows_list = li.parentNode.querySelectorAll('.label_data')
 					const safe_key = [...rows_list].findIndex(el => el==li)
@@ -201,33 +206,41 @@ const render_row = async function(self, ar_langs, header, name, key) {
 			contenteditable	: header===true ? false : true,
 			parent			: li
 		})
-		label_name.addEventListener('blur', function(){
+		// save_label_value
+		const save_label_value = () => {
 
 			const old_value		= self.ar_names[key]
-			const dirty_value	= label_name.innerText
+			const dirty_value	= label_name.textContent
 			const lower_value	= dirty_value.replace(/\w/g, u => u.toLowerCase())
-			const value			= lower_value.replace(/\s/g, '_')
+			const value			= lower_value.trim().replace(/\s/g, '_')
 
+			// update names
 			const data = self.ar_data.filter(item => item.name===old_value)
 			for (let i = 0; i < data.length; i++) {
 				data[i].name = value
 			}
 
-			self.ar_names[key]		= value
-			label_name.innerText	= value
+			// update ar_names element
+			self.ar_names[key] = value
+
+			// update normalized value in content editable
+			label_name.innerText = value
 
 			// update the data into the instance, prepared to save
-			// (but is not saved directly, the user need click in the save button)
+			// (but is not saved directly, the user needs to do click in the save button)
 			self.update_data()
-		})
-		// event keydown. If the user press return key = 13, we blur the text box
-		label_name.addEventListener('keydown', (e) =>{
+		}
+		// event blur
+		label_name.addEventListener('blur', save_label_value)
+		// event keydown. If the user press return key = 13, we save the value
+		const keydown_handler = (e) => {
 			if(e.keyCode === 13) {
 				e.stopPropagation()
 				e.preventDefault()
-				label_name.blur()
+				save_label_value()
 			}
-		})
+		}
+		label_name.addEventListener('keydown', keydown_handler)
 
 	// add language_label nodes
 		for (let i = 0; i < lang_length; i++) {
@@ -268,7 +281,7 @@ const render_language_label = async function(self, current_lang, header, name, k
 			: null
 		const placeholder = name || ''
 
-	// language_label
+	// language_label. Content editable div to write lang value
 		const language_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
@@ -277,65 +290,14 @@ const render_language_label = async function(self, current_lang, header, name, k
 			contenteditable	: header===true ? false : true
 		})
 
-		const save_sequence = function() {
-
-			// data
-			const data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
-
-			// empty value and has not previous data set
-			if( !language_label.textContent && typeof data==='undefined' ){
-				return
-			}
-			// empty value with previous data set
-			if( !language_label.textContent && typeof data!=='undefined'){
-
-				const index = self.ar_data.findIndex( item => item.name===name && item.lang===current_lang.value )
-
-				if(index === -1){
-					return
-				}
-
-				self.ar_data.splice(index, 1)
-
-				// update_data. Updates caller data
-				// update the data into the instance, prepared to save
-				// (but is not saved directly, the user need click in the save button)
-			 	self.update_data()
-				return
-			}
-
-			if(typeof data!=='undefined'){
-
-				// update data value
-				data.value = language_label.textContent
-
-			}else{
-
-				const name		= self.ar_names[key]
-				const new_data	= {
-					lang	: current_lang.value,
-					name	: name,
-					value	: language_label.innerText
-				}
-				self.ar_data.push(new_data)
-			}
-
-			// update_data. Updates caller data
-			// update the data into the instance, prepared to save
-			// (but is not saved directly, the user need click in the save button)
-		 	self.update_data()
-		}
-
 		// blur event. When the user blur the text box save the name into the layer structure
 			language_label.addEventListener('blur', (e)=> {
-				save_sequence()
-			})
-
-		// keyup event
-			language_label.addEventListener('keyup', (e)=> {
-				// e.preventDefault()
-				// e.stopPropagation()
-				save_sequence()
+				// save
+				self.save_label_lang_sequence(
+					language_label.textContent,
+					key,
+					current_lang.value
+				)
 			})
 
 		// keydown event. If the user press return key = 13, we blur the text box
@@ -343,7 +305,12 @@ const render_language_label = async function(self, current_lang, header, name, k
 				if(e.keyCode === 13) {
 					e.preventDefault()
 					e.stopPropagation()
-					language_label.blur()
+					// save
+					self.save_label_lang_sequence(
+						language_label.textContent,
+						key,
+						current_lang.value
+					)
 				}
 			})
 
