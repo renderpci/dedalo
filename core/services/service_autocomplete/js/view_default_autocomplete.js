@@ -255,13 +255,15 @@ const get_content_data = function(self) {
 			options_container.classList.toggle('visible');
 		})
 
-	// datalist
-		const datalist = ui.create_dom_element({
+	// datalist_node
+		const datalist_node = ui.create_dom_element({
 			element_type	: 'ul',
 			id				: self.list_name,
 			class_name		: 'autocomplete_data',
 			parent			: fragment
 		})
+
+		// keydown event (document)
 		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
 		function fn_service_autocomplete_keys(e) {
 			// deactivate when the caller is not focused, it block keydown of other components.
@@ -282,7 +284,7 @@ const get_content_data = function(self) {
 
 	// fix main nodes pointers
 		self.search_input		= search_input
-		self.datalist			= datalist
+		self.datalist			= datalist_node
 		self.options_container	= options_container
 
 
@@ -1187,57 +1189,9 @@ const render_datalist = async function(self, result) {
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-	// iterate the section_records
-		const ar_section_record_length = ar_section_record.length
-		for (let i = 0; i < ar_section_record_length; i++) {
-
-			// section_record
-				const current_section_record = ar_section_record[i]
-
-			// locator
-				const locator = current_section_record.locator
-
-			// id_variant add to force unique components before render
-				// current_section_record.id_variant = locator.section_tipo + '_' + locator.section_id
-
-			// get data that mach with the current section from the global data sent by the API
-			// get the full row with all items in the ddo that mach with the section_id
-			// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
-				// const section_record_node = await current_section_record.render()
-
-			// li_node container
-				const li_node = ui.create_dom_element({
-					element_type	: 'li',
-					class_name		: 'autocomplete_data_li',
-					title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
-					parent			: datalist
-				})
-				li_node.locator = locator
-				// click event. When the user do click in one row send the data to the caller_instance for save it.
-				li_node.addEventListener('click', function(e){
-					e.stopPropagation()
-					click_handler({
-						e						: e,
-						current_section_record	: current_section_record,
-						locator					: this.locator,
-						datalist				: datalist
-					})
-				})
-				// mouseenter event
-				li_node.addEventListener('mouseenter', mouseenter_handler)
-				// mouseleave event
-				li_node.addEventListener('mouseleave', mouseleave_handler);
-
-			// render and add section_record_node
-				// li_node.appendChild(section_record_node)
-				current_section_record.render()
-				.then(function(section_record_node){
-					li_node.appendChild(section_record_node)
-				})
-		}//end for of current_section (section_tipo)
-
 	// mouseenter_handler
-		async function mouseenter_handler(e){
+		const mouseenter_handler = async (e) => {
+			e.stopPropagation()
 			// reset
 				const children = e.target.parentNode.children || [];
 				[...children].map((el)=>{
@@ -1247,16 +1201,16 @@ const render_datalist = async function(self, result) {
 				})
 			// set as selected
 				e.target.classList.add('selected')
-		}//end mouseenter_handler
+		}
 
 	// mouseleave_handler
-		async function mouseleave_handler(e){
+		const mouseleave_handler = async (e) => {
+			e.stopPropagation()
 			e.target.classList.remove('selected')
-		}//end mouseleave_handler
+		}
 
-	// click_handler
-		async function click_handler(options) {
-
+	// selection_handler
+		const selection_handler = async (options) => {
 			// options
 				const e							= options.e
 				const current_section_record	= options.current_section_record
@@ -1318,7 +1272,57 @@ const render_datalist = async function(self, result) {
 					// hide service
 						self.hide()
 				}
-		}//end click_handler
+		}//end selection_handler
+
+	// iterate the section_records
+		const ar_section_record_length = ar_section_record.length
+		for (let i = 0; i < ar_section_record_length; i++) {
+
+			// section_record
+				const current_section_record = ar_section_record[i]
+
+			// locator
+				const locator = current_section_record.locator
+
+			// id_variant add to force unique components before render
+				// current_section_record.id_variant = locator.section_tipo + '_' + locator.section_id
+
+			// get data that mach with the current section from the global data sent by the API
+			// get the full row with all items in the ddo that mach with the section_id
+			// const current_row = data.filter((item)=> item.section_tipo===section_tipo && item.section_id===section_id )
+				// const section_record_node = await current_section_record.render()
+
+			// li_node container
+				const li_node = ui.create_dom_element({
+					element_type	: 'li',
+					class_name		: 'autocomplete_data_li',
+					title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
+					parent			: datalist
+				})
+				li_node.locator = locator
+				// click event. When the user do click in one row send the data to the caller_instance for save it.
+				const click_handler = function(e) {
+					e.stopPropagation()
+					selection_handler({
+						e						: e,
+						current_section_record	: current_section_record,
+						locator					: this.locator,
+						datalist				: datalist
+					})
+				}
+				li_node.addEventListener('click', click_handler)
+				// mouseenter event
+				li_node.addEventListener('mouseenter', mouseenter_handler)
+				// mouseleave event
+				li_node.addEventListener('mouseleave', mouseleave_handler);
+
+			// render and add section_record_node
+				// li_node.appendChild(section_record_node)
+				current_section_record.render()
+				.then(function(section_record_node){
+					li_node.appendChild(section_record_node)
+				})
+		}//end for of current_section (section_tipo)
 
 
 	return datalist
