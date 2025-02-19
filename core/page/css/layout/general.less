@@ -690,21 +690,24 @@
 		white-space: pre;
 	}
 
-// tool tip
+// tool tip. Note that this tooltips are used on search components, NOT for buttons
 	.tooltip_toggle {
 		position: relative;
 
-		.hidden_tooltip {
-			opacity: 0;
-			visibility: hidden;
+		&:hover {
+
+			>.tooltip.hidden_tooltip {
+				transition-delay: 1s; // delay show after hover component wrapper
+				opacity: 1;
+				visibility: visible;
+			}
 		}
 
-		.tooltip {
+		>.tooltip {
 			transition: all 0.5s ease;
 			position: absolute;
 			top: calc(100% + 1em);
 			right: 1em;
-			z-index: 4;
 			background-color: rgba(0, 0, 0, 0.9);
 			color: @color_white;
 			padding: 1em;
@@ -713,15 +716,11 @@
 			font-size: 0.8em;
 			width: 100%;
 			max-width: 20em;
+			z-index: 1;
 
-			>.search_options_title_item {
-				display: grid;
-				grid-template-columns: 1fr 3fr;
-
-				>span:first-of-type {
-					text-align: center;
-					font-weight: bold;
-				}
+			&.hidden_tooltip {
+				opacity: 0;
+				visibility: hidden;
 			}
 
 			&:after {
@@ -737,12 +736,16 @@
 				border-width: 10px;
 				margin-left: -10px;
 			}
-		}
 
-		&:hover .tooltip {
-			transition-delay: 1s; // delay show after hover component wrapper
-			opacity: 1;
-			visibility: visible;
+			>.search_options_title_item {
+				display: grid;
+				grid-template-columns: 1fr 3fr;
+
+				>span:first-of-type {
+					text-align: center;
+					font-weight: bold;
+				}
+			}
 		}
 
 	}//end .tooltip_toggle
