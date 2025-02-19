@@ -123,19 +123,15 @@ component_filter.prototype.get_changed_key = function(action, value) {
 */
 component_filter.prototype.change_handler = async function(options) {
 
-	// options
-		const self				= options.self
-		const e					= options.e // event
-		const datalist_value	= options.datalist_value
-		const input_checkbox	= options.input_checkbox
+	const self = this
 
-	// prevent event default
-		e.preventDefault()
+	// options
+		const datalist_value	= options.datalist_value
+		const action			= options.action
 
 	// change data vars
-		const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
 		// changed key. Find the data.value key (could be different of datalist key)
-		const changed_key	= self.get_changed_key(
+		const changed_key = self.get_changed_key(
 			action,
 			datalist_value,
 			self.data.value
