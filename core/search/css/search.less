@@ -16,6 +16,11 @@
 		flex: 0 1 32.8%;
 		flex-wrap: wrap;
 
+		// allow to view tooltip over other components
+		&:hover {
+			z-index: 2;
+		}
+
 		>.wrapper_component {
 			flex-grow: 1;
 			display: grid;
