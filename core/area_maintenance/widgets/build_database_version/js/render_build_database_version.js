@@ -292,7 +292,9 @@ const render_build_recovery_version_file = function (self, value) {
 			// build_recovery_version
 			const api_response = await self.build_recovery_version_file()
 
-			console.log('**** render_build_recovery_version_file api_response:', api_response);
+			if(SHOW_DEBUG===true) {
+				console.log('**** render_build_recovery_version_file api_response:', api_response);
+			}
 
 			// locks the button submit
 			button_process.classList.remove('loading')
