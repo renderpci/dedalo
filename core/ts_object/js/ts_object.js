@@ -96,7 +96,7 @@ export const ts_object = new function() {
 			// API call
 			const rqo = {
 				dd_api			: 'dd_ts_api',
-				prevent_lock	: true,
+				prevent_lock	: false, // set false to allow session cache in ontology
 				action			: 'get_children_data',
 				source			: {
 					section_id			: parent_section_id,

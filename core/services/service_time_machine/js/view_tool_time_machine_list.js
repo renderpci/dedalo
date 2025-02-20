@@ -9,7 +9,7 @@
 	import {get_section_records} from '../../../../core/section/js/section.js'
 	import {set_element_css} from '../../../../core/page/js/css.js'
 	import {event_manager} from '../../../../core/common/js/event_manager.js'
-	import {when_in_dom,dd_request_idle_callback} from '../../../../core/common/js/events.js'
+	import {dd_request_idle_callback} from '../../../../core/common/js/events.js'
 	import {
 		get_content_data
 	} from './render_service_time_machine_list.js'
@@ -66,13 +66,17 @@ view_tool_time_machine_list.render = async function(self, options) {
 			class_name		: 'paginator_container',
 			parent			: fragment
 		})
-		self.paginator.build()
-		.then(()=>{
-			self.paginator.render()
-			.then(paginator_wrapper =>{
-				paginator_div.appendChild(paginator_wrapper)
+		if (self.paginator) {
+			self.paginator.build()
+			.then(()=>{
+				self.paginator.render()
+				.then(paginator_wrapper =>{
+					paginator_div.appendChild(paginator_wrapper)
+				})
 			})
-		})
+		}else{
+			console.error('Error: paginator not found in current service_time_machine instance: ', self);
+		}
 
 	// list_body
 		const list_body = ui.create_dom_element({

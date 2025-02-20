@@ -395,11 +395,21 @@ class component_portal extends component_relation_common {
 		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
-		include $path;
+		if( !include $path ) {
+			debug_log(__METHOD__
+				. " Undefined legacy model closure file. Using JSON encoded dato instead." . PHP_EOL
+				. ' tipo: ' . to_string($this->tipo). PHP_EOL
+				. ' section_tipo: ' . to_string($this->section_tipo). PHP_EOL
+				. ' section_id: ' . to_string($this->section_id). PHP_EOL
+				. ' model: ' . get_called_class()
+				, logger::WARNING
+			);
+			return json_encode( $this->get_dato() );
+		}
 
 		$data_to_be_used = 'dato';
 
-		$valor =  Closure::bind($_get_valor, $this)($lang, $format, $fields_separator, $records_separator, $ar_related_terms, $data_to_be_used);
+		$valor = Closure::bind($_get_valor, $this)($lang, $format, $fields_separator, $records_separator, $ar_related_terms, $data_to_be_used);
 
 
 		return $valor;

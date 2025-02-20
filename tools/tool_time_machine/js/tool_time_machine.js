@@ -255,7 +255,10 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				self.service_time_machine = await get_instance(instance_options)
 
 			// build service_time_machine
-				await self.service_time_machine.build(true)
+				const build_result = await self.service_time_machine.build(true)
+				if (!build_result) {
+					throw 'Invalid service_time_machine build. See server log for details.'
+				}
 
 			// add to self instances list
 				self.ar_instances.push(self.service_time_machine)

@@ -158,6 +158,20 @@ final class dd_ts_api {
 				}
 			}
 
+		// active ontologies list. Calculate once by session (445 ms)
+			if(isset($_SESSION['dedalo']['config']['active_elements'])) {
+				$active_elements = $_SESSION['dedalo']['config']['active_elements'];
+			}else{
+				$active_elements = array_map(function($el) {
+					return (object)[
+						'tld'					=> $el->tld,
+						'section_tipo'			=> $el->section_tipo,
+						'target_section_tipo'	=> $el->target_section_tipo
+					];
+				}, ontology::get_active_elements());
+				$_SESSION['dedalo']['config']['active_elements'] = $active_elements;
+			}
+
 		try {
 
 			$children_data = [];
@@ -169,18 +183,20 @@ final class dd_ts_api {
 				// remove the inactive ontologies in main ontology
 				// some children defined in ontology node could be not active and loaded
 				// remove they from the children_data to prevent to show it in the tree.
-				if($area_model==='area_ontology'){
-					$active_element = ontology::get_active_elements();
+				if ($area_model==='area_ontology') {
 
-					$found = array_find($active_element, function($el) use($section_tipo){
-							return $el->target_section_tipo===$section_tipo || $el->section_tipo===$section_tipo;
+					$found = array_find($active_elements, function($el) use($section_tipo){
+						return $el->target_section_tipo===$section_tipo || $el->section_tipo===$section_tipo;
 					});
-					if(empty($found)){
+					if (empty($found)) {
+						// remove from pagination total count
+						if (isset($current_pagination->total)) {
+							$current_pagination->total--;
+						}
+						// ignore this non active tld item
 						continue;
 					}
-
 				}
-
 
 				$ts_object		= new ts_object( $section_id, $section_tipo, $ts_object_options );
 				$child_object	= $ts_object->get_child_data();
@@ -228,7 +244,7 @@ final class dd_ts_api {
 
 
 		return $response;
-	}//end get_ar_children_data
+	}//end get_children_data
 
 
 
