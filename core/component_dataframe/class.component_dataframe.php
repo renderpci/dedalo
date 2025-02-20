@@ -149,8 +149,9 @@ class component_dataframe extends component_portal {
 
 		$all_data = parent::get_all_data();
 
-		$all_data_size = sizeof($all_data);
+		$to_save = false;
 
+		$all_data_size = sizeof($all_data);
 		for ($i=0; $i < $all_data_size; $i++) {
 
 			$locator = $all_data[$i];
@@ -167,6 +168,13 @@ class component_dataframe extends component_portal {
 			$removed = $this->remove_locator_from_dato(
 				$locator
 			);
+
+			if ($removed) {
+				$to_save = true;
+			}
+		}
+
+		if ($to_save) {
 			$this->Save();
 		}
 
