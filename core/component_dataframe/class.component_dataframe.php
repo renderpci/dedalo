@@ -1,9 +1,14 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_DATAFRAME
-* former component_portal
+* extends component_portal
 */
 class component_dataframe extends component_portal {
+
+
+
+	// test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
 
 
 
@@ -98,7 +103,7 @@ class component_dataframe extends component_portal {
 					. ' tipo: '. $this->tipo . PHP_EOL
 					. ' section_tipo: '. $this->section_tipo . PHP_EOL
 					. ' section_id: '. $this->section_id . PHP_EOL
-					, logger::DEBUG
+					, logger::ERROR
 				);
 				return false;
 			}
@@ -129,22 +134,24 @@ class component_dataframe extends component_portal {
 	*/
 	public function get_locator_properties_to_check() {
 
-		return ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
+		// return ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
+		return $this->test_equal_properties;
 	}//end get_locator_properties_to_check
 
 
 
 	/**
 	* EMPTY_FULL_DATA_ASSOCIATED_TO_MAIN_COMPONENT
-	*
-	* @return bool
+	* Removes all dataframe locators and save
+	* @return true
 	*/
-	public function empty_full_data_associated_to_main_component() {
+	public function empty_full_data_associated_to_main_component() : true {
 
 		$all_data = parent::get_all_data();
 
-		$all_data_size = sizeof($all_data);
+		$to_save = false;
 
+		$all_data_size = sizeof($all_data);
 		for ($i=0; $i < $all_data_size; $i++) {
 
 			$locator = $all_data[$i];
@@ -161,8 +168,16 @@ class component_dataframe extends component_portal {
 			$removed = $this->remove_locator_from_dato(
 				$locator
 			);
+
+			if ($removed) {
+				$to_save = true;
+			}
+		}
+
+		if ($to_save) {
 			$this->Save();
 		}
+
 
 		return true;
 	}//end empty_full_data_associated_to_main_component
@@ -174,7 +189,7 @@ class component_dataframe extends component_portal {
 	*
 	* @return bool
 	*/
-	public function set_time_machine_data( $data ) {
+	public function set_time_machine_data( array $data ) : bool {
 
 		$section = $this->get_my_section();
 			$section->save_tm = false;
@@ -182,7 +197,6 @@ class component_dataframe extends component_portal {
 		$this->empty_full_data_associated_to_main_component();
 
 		$data_size = sizeof($data);
-
 		for ($i=0; $i < $data_size; $i++) {
 
 			$locator = $data[$i];
@@ -200,6 +214,7 @@ class component_dataframe extends component_portal {
 		}
 
 		$section->save_tm = true;
+
 
 		return true;
 	}//end set_time_machine_data
@@ -232,6 +247,7 @@ class component_dataframe extends component_portal {
 		$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
 		$main_component_tipo	= $RecordObj_dd->get_parent();
 
+
 		return $main_component_tipo;
 	}//end get_main_component_tipo
 
@@ -258,6 +274,7 @@ class component_dataframe extends component_portal {
 		);
 
 		$main_componenet_data = $main_component->get_dato_full();
+
 
 		return $main_componenet_data;
 	}//end get_main_component_data

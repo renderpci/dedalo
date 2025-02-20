@@ -79,8 +79,8 @@
 				}
 			}else{
 				$fields=array();
-				$ar_locators = $options->ar_locators;
-				foreach ($options->ar_locators as $current_locator) {
+				$ar_locators = is_array($options->ar_locators) ? $options->ar_locators : [];
+				foreach ($ar_locators as $current_locator) {
 					$fields[] = $current_locator->component_tipo;
 					$current_section_tipo = $current_locator->section_tipo;
 				}
