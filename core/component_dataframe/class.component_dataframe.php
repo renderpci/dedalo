@@ -98,7 +98,7 @@ class component_dataframe extends component_portal {
 					. ' tipo: '. $this->tipo . PHP_EOL
 					. ' section_tipo: '. $this->section_tipo . PHP_EOL
 					. ' section_id: '. $this->section_id . PHP_EOL
-					, logger::DEBUG
+					, logger::ERROR
 				);
 				return false;
 			}
@@ -136,10 +136,10 @@ class component_dataframe extends component_portal {
 
 	/**
 	* EMPTY_FULL_DATA_ASSOCIATED_TO_MAIN_COMPONENT
-	*
-	* @return bool
+	* Removes all dataframe locators and save
+	* @return true
 	*/
-	public function empty_full_data_associated_to_main_component() {
+	public function empty_full_data_associated_to_main_component() : true {
 
 		$all_data = parent::get_all_data();
 
@@ -163,6 +163,7 @@ class component_dataframe extends component_portal {
 			);
 			$this->Save();
 		}
+
 
 		return true;
 	}//end empty_full_data_associated_to_main_component
