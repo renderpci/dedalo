@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_DATAFRAME
-* former component_portal
+* extends component_portal
 */
 class component_dataframe extends component_portal {
 
@@ -189,7 +189,7 @@ class component_dataframe extends component_portal {
 	*
 	* @return bool
 	*/
-	public function set_time_machine_data( $data ) {
+	public function set_time_machine_data( array $data ) : bool {
 
 		$section = $this->get_my_section();
 			$section->save_tm = false;
@@ -197,7 +197,6 @@ class component_dataframe extends component_portal {
 		$this->empty_full_data_associated_to_main_component();
 
 		$data_size = sizeof($data);
-
 		for ($i=0; $i < $data_size; $i++) {
 
 			$locator = $data[$i];
@@ -215,6 +214,7 @@ class component_dataframe extends component_portal {
 		}
 
 		$section->save_tm = true;
+
 
 		return true;
 	}//end set_time_machine_data
@@ -247,6 +247,7 @@ class component_dataframe extends component_portal {
 		$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
 		$main_component_tipo	= $RecordObj_dd->get_parent();
 
+
 		return $main_component_tipo;
 	}//end get_main_component_tipo
 
@@ -273,6 +274,7 @@ class component_dataframe extends component_portal {
 		);
 
 		$main_componenet_data = $main_component->get_dato_full();
+
 
 		return $main_componenet_data;
 	}//end get_main_component_data
