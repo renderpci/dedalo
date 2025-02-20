@@ -35,6 +35,38 @@ global $updates;
 $updates = new stdClass();
 
 
+
+$v=643; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 4;
+	$updates->$v->version_minor			= 3;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 4;
+	$updates->$v->update_from_minor		= 2;
+
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_dataframe'
+		];	// Force convert from string to array
+
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// update time machine data. Update 'data' of time_machine for comopnent_dataframe
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Update data of time_machine of component_dataframe, add section_tipo_key to its data";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "update_dataframe_tm_to_v6_4_3";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+
+
 $v=642; #####################################################################################
 $updates->$v = new stdClass();
 
