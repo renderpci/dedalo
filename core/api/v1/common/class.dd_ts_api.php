@@ -244,7 +244,7 @@ final class dd_ts_api {
 
 
 		return $response;
-	}//end get_ar_children_data
+	}//end get_children_data
 
 
 
