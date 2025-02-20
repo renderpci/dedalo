@@ -3226,6 +3226,10 @@ export const ui = {
 		}
 		const tooltip = ui.tooltip
 
+		const mouseover_handler = (e) => {
+			e.target.title = ''
+		}
+
 		const buttons = wrapper.querySelectorAll(selector)
 		const buttons_length = buttons.length
 		for (let i = 0; i < buttons_length; i++) {
@@ -3244,9 +3248,7 @@ export const ui = {
 				placement: 'top',
 				delay: 150
 			})
-			button.addEventListener('mouseover', function(e) {
-				button.title = ''
-			})
+			button.addEventListener('mouseover', mouseover_handler)
 
 			// set as active to prevent double activation
 			button.active_tooltip = true

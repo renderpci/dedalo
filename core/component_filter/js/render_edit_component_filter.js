@@ -108,8 +108,8 @@ export const get_content_data = function(self) {
 		const root_elements		= datalist.filter(el => el.parent === null)
 		const root_elements_len	= root_elements.length
 		for (let i = 0; i < root_elements_len; i++) {
-			const current_element = root_elements[i]
-			const element_node = get_children_node(current_element)
+			const current_element	= root_elements[i]
+			const element_node		= get_children_node(current_element)
 			ul_branch.appendChild(element_node)
 		}
 
@@ -154,20 +154,9 @@ export const get_input_element = (element, self) => {
 			class_name		: 'item_input',
 			parent			: li
 		})
-		input_node.addEventListener('change',function(e) {
-
-			// const action		= (input_node.checked===true) ? 'insert' : 'remove'
-			// const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-			// const changed_value	= (action==='insert') ? datalist_value : null
-
-			// const changed_data_item = Object.freeze({
-			// 	action	: action,
-			// 	key		: changed_key,
-			// 	value	: changed_value
-			// })
-
-			// fix instance changed_data
-			// 	self.set_changed_data(changed_data_item)
+		// change event
+		const input_change_handler = (e) => {
+			e.preventDefault()
 
 			// check all values
 				const checked_items = []
@@ -184,27 +173,26 @@ export const get_input_element = (element, self) => {
 					return
 				}
 
+			// common change handler
 			self.change_handler({
-				self			: self,
-				e				: e, // event
 				datalist_value	: datalist_value,
-				input_checkbox	: input_node
+				action			: (input_node.checked===true) ? 'insert' : 'remove'
 			})
-		})//end change event
-
-		input_node.addEventListener('mousedown',function(e) {
+		}
+		input_node.addEventListener('change', input_change_handler)
+		// mousedown event
+		const mousedown_handler = (e) => {
 			e.stopPropagation()
-		})
+		}
+		input_node.addEventListener('mousedown', mousedown_handler)
 
 
 	// label
-		const label_string = (SHOW_DEBUG===true)
-			? label + ' [' + section_id + ']'
-			: label
-		const label_node = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'item_label',
-			inner_html		: label_string,
+			inner_html		: label,
+			title			: 'ID: ' + section_id,
 			parent			: li
 		})
 
@@ -233,15 +221,13 @@ export const get_input_element = (element, self) => {
 					toggler				: icon_arrow,
 					container			: branch,
 					collapsed_id		: 'collapsed_component_filter_group_' + key,
-					collapse_callback	: collapse,
-					expose_callback		: expose
+					collapse_callback	: () => {
+						icon_arrow.classList.remove('up')
+					},
+					expose_callback		: () => {
+						icon_arrow.classList.add('up')
+					}
 				})
-				function collapse() {
-					li.classList.remove('up')
-				}
-				function expose() {
-					li.classList.add('up')
-				}
 		}
 
 		// checked option set on match
@@ -261,7 +247,7 @@ export const get_input_element = (element, self) => {
 
 
 /**
-* GET_INPUT_ELEMENT_read
+* GET_INPUT_ELEMENT_READ
 * Render li node with given element data and value in read only mode
 * @param object element
 * 	sample: {type: 'project', label: 'Camino de la Justicia', section_tipo: 'dd153', section_id: '9', value: {…}, …}
@@ -272,11 +258,8 @@ export const get_input_element_read = (element, self) => {
 
 	// short vars
 		const value				= self.data.value || []
-		const value_length		= value.length
 		const datalist_value	= element.value
 		const label				= element.label || (element.section_tipo+'_'+element.section_id)
-		const section_id		= element.section_id
-		const section_tipo		= element.section_tipo
 
 	// checked option set on match
 		const found = value.find(el => datalist_value &&
@@ -339,7 +322,7 @@ export const get_buttons = (self) => {
 	// fragment
 		const fragment = new DocumentFragment()
 
-	// button edit (go to target section)
+	// button edit (go to target section: Projects)
 		if(show_interface.button_list === true){
 
 			const target_sections			= self.context.target_sections
@@ -358,26 +341,28 @@ export const get_buttons = (self) => {
 					title			: label,
 					parent			: fragment
 				})
-				button_list.addEventListener('mousedown', function(e){
+				// mousedown event
+				const mousedown_handler = (e) => {
 					e.stopPropagation()
 
 					// open a new window
-						const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-							tipo	: item.tipo,
-							mode	: 'list',
-							menu	: false
-						})
-						open_window({
-							url		: url,
-							name	: 'section_view',
-							on_blur : () => {
-								// refresh current instance
-								self.refresh({
-									build_autoload : true
-								})
-							}
-						})
-				})
+					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+						tipo	: item.tipo,
+						mode	: 'list',
+						menu	: false
+					})
+					open_window({
+						url		: url,
+						name	: 'section_view',
+						on_blur : () => {
+							// refresh current instance
+							self.refresh({
+								build_autoload : true
+							})
+						}
+					})
+				}
+				button_list.addEventListener('mousedown', mousedown_handler)
 			}
 		}
 
@@ -389,9 +374,15 @@ export const get_buttons = (self) => {
 				class_name		: 'button reset',
 				parent			: fragment
 			})
-			button_reset.addEventListener('click', function() {
+			button_reset.addEventListener('click', function(e) {
+				e.stopPropagation()
+
 				if (self.data.value.length===0) {
 					return true
+				}
+
+				if (!confirm(get_label.sure || 'Sure?')) {
+					return
 				}
 
 				const changed_data = [Object.freeze({
@@ -422,10 +413,12 @@ export const get_buttons = (self) => {
 				title			: get_label.full_screen || 'Full screen',
 				parent			: fragment
 			})
-			button_fullscreen.addEventListener('click', function(e) {
+			// click event
+			const click_handler = (e) => {
 				e.stopPropagation()
 				ui.enter_fullscreen(self.node)
-			})
+			}
+			button_fullscreen.addEventListener('click', click_handler)
 		}
 
 	// buttons container
