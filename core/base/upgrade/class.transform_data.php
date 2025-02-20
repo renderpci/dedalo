@@ -2740,5 +2740,120 @@ class transform_data {
 
 
 
+	/**
+	* UPDATE_DATAFRAME_TM_TO_V6_4_3
+	* Check all main component data to review if its own dataframe require add section_tipo_key
+	* dataframe in version >=6.4.3 define the section_tipo_key to bind the dataframe data to main data
+	* used in multiple target_section components as Collection (numisdata159) that call People (rsc197) and Entities(rsc106)
+	* @return bool
+	*/
+	public static function update_dataframe_tm_to_v6_4_3() : bool {
+
+		$tm_ar_changed = [];
+		// get all component_dataframe in ontology
+		$components_dataframe = RecordObj_dd::get_ar_terminoID_by_modelo_name( 'component_dataframe' );
+
+		foreach($components_dataframe as $dataframe_tipo){
+			// get its own main component
+			$RecordObj_dd			= new RecordObj_dd($dataframe_tipo);
+			$main_component_tipo	= $RecordObj_dd->get_parent();
+
+			$strQuery = "
+				SELECT * FROM matrix_time_machine
+				WHERE tipo = '$main_component_tipo'
+				ORDER BY id ASC
+			";
+			$result = JSON_RecordDataBoundObject::search_free($strQuery);
+			// query error case
+			if($result===false){
+				return false;
+			}
+
+			while($row = pg_fetch_assoc($result)) {
+
+				$id				= $row['id'];
+				$section_id		= $row['section_id'];
+				$section_tipo	= $row['section_tipo'];
+				$dato			= !empty($row['dato']) ? json_decode($row['dato']) : null;
+
+				$to_save = false;
+				if (!empty($dato)) {
+					// get the target_section_tipo of the main component to be used as section_tipo_key
+					$section_tipo_key = transform_data::get_section_tipo_key_from_main_component( $section_tipo, $section_id, $dataframe_tipo );
+
+					foreach ($dato as $current_locator) {
+						if( !isset($current_locator->section_id_key) || isset($current_locator->section_tipo_key) ){
+							continue;
+						}
+						$current_locator->section_tipo_key = $section_tipo_key;
+						unset( $current_locator->tipo_key );
+						$to_save = true;
+					}
+				}
+
+				if( $to_save===false ){
+					continue;
+				}
+
+				// data_encoded : JSON ENCODE ALWAYS !!!
+				$data_encoded = json_handler::encode($dato);
+				// prevent null encoded errors
+				$safe_data = str_replace(['\\u0000','\u0000'], ' ', $data_encoded);
+
+				// set the result into time_machine record
+				$strQuery2	= "UPDATE matrix_time_machine SET dato = $1 WHERE id = $2 ";
+				$result2	= pg_query_params(DBi::_getConnection(), $strQuery2, [$safe_data, $id]);
+				if($result2===false) {
+					$msg = "Failed Update section_data $id";
+					debug_log(__METHOD__
+						." ERROR: $msg ". PHP_EOL
+						.' strQuery: ' . $strQuery
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				$tm_ar_changed[] = $id;
+			}
+		}
+
+		return true;
+	}//end update_dataframe_tm_to_v6_4_3
+
+
+
+	/**
+	* GET_SECTION_TIPO_KEY_FROM_MAIN_COMPONENT
+	* Create an main component instance of the current dataframe
+	* and return his target section tipo
+	* @param string $section_tipo
+	* @param int|string $section_id,
+	* @param string $dataframe_tipo | tipo of the component_dataframe
+	* @return string $section_tipo_key
+	*/
+	private static function get_section_tipo_key_from_main_component( string $section_tipo, int|string $section_id, string $dataframe_tipo ) : string {
+
+		$RecordObj_dd			= new RecordObj_dd($dataframe_tipo);
+		$main_component_tipo	= $RecordObj_dd->get_parent();
+
+		// create the main component to obtain his data
+			$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
+			$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$main_component = component_common::get_instance(
+				$model, // string model
+				$main_component_tipo, // string tipo
+				$section_id, // string section_id
+				'list', // string mode
+				$lang, // string lang
+				$section_tipo // string section_tipo
+			);
+
+			$section_tipo_key = $main_component->get_ar_target_section_tipo()[0];
+
+
+		return $section_tipo_key;
+	}//end get_section_tipo_key_from_main_component
+
+
 
 }//end class transform_data
