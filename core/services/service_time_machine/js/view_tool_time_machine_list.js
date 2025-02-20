@@ -66,13 +66,17 @@ view_tool_time_machine_list.render = async function(self, options) {
 			class_name		: 'paginator_container',
 			parent			: fragment
 		})
-		self.paginator.build()
-		.then(()=>{
-			self.paginator.render()
-			.then(paginator_wrapper =>{
-				paginator_div.appendChild(paginator_wrapper)
+		if (self.paginator) {
+			self.paginator.build()
+			.then(()=>{
+				self.paginator.render()
+				.then(paginator_wrapper =>{
+					paginator_div.appendChild(paginator_wrapper)
+				})
 			})
-		})
+		}else{
+			console.error('Error: paginator not found in current service_time_machine instance: ', self);
+		}
 
 	// list_body
 		const list_body = ui.create_dom_element({
