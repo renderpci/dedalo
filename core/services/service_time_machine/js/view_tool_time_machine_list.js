@@ -9,7 +9,7 @@
 	import {get_section_records} from '../../../../core/section/js/section.js'
 	import {set_element_css} from '../../../../core/page/js/css.js'
 	import {event_manager} from '../../../../core/common/js/event_manager.js'
-	import {when_in_dom,dd_request_idle_callback} from '../../../../core/common/js/events.js'
+	import {dd_request_idle_callback} from '../../../../core/common/js/events.js'
 	import {
 		get_content_data
 	} from './render_service_time_machine_list.js'
