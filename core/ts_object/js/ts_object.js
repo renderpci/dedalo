@@ -104,6 +104,7 @@ export const ts_object = new function() {
 					node_type			: node_type,
 					target_section_tipo	: target_section_tipo,
 					tipo				: tipo,
+					model 				: caller.model,
 					build_options : {
 						terms_are_model : self.thesaurus_view_mode==='model'
 					}

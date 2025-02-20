@@ -46,6 +46,7 @@ final class dd_ts_api {
 			$section_id				= $source->section_id;
 			$node_type				= $source->node_type;
 			$tipo					= $source->tipo;
+			$area_model				= $source->model ?? 'area_thesaurus';
 			$options				= $rqo->options;
 			$pagination				= $options->pagination ?? null;
 			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
@@ -159,11 +160,27 @@ final class dd_ts_api {
 
 		try {
 
-			$children_data = array();
+			$children_data = [];
 			foreach ((array)$children as $locator) {
 
 				$section_id		= $locator->section_id;
 				$section_tipo	= $locator->section_tipo;
+
+				// remove the inactive ontologies in main ontology
+				// some children defined in ontology node could be not active and loaded
+				// remove they from the children_data to prevent to show it in the tree.
+				if($area_model==='area_ontology'){
+					$active_element = ontology::get_active_elements();
+
+					$found = array_find($active_element, function($el) use($section_tipo){
+							return $el->target_section_tipo===$section_tipo || $el->section_tipo===$section_tipo;
+					});
+					if(empty($found)){
+						continue;
+					}
+
+				}
+
 
 				$ts_object		= new ts_object( $section_id, $section_tipo, $ts_object_options );
 				$child_object	= $ts_object->get_child_data();
