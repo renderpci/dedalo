@@ -20,17 +20,18 @@
 			// ul branch
 			.branch {
 				display: block;
+				max-height: unset;
 
 				// li item_li
 				>.item_li {
-					margin-top: 0.33rem;
+					margin-top: 0.30rem;
 					margin-left: 1.25rem;
 					align-items: stretch;
-					line-height: 1.4rem;
+					line-height: 1.1rem;
 
 					// checkbox option
 					.item_input {
-						margin-right: 0.33rem;
+						margin-right: 0.25rem;
 						vertical-align: text-bottom;
 						cursor: pointer;
 					}
@@ -51,6 +52,15 @@
 				width: auto;
 				display: block;
 
+				>.item_label {
+					text-overflow: ellipsis;
+					overflow: hidden;
+					max-width: calc(100% - 3rem);
+					display: inline-block;
+					white-space: nowrap;
+					vertical-align: bottom;
+				}
+
 				>.grouper_label {
 					width: fit-content;
 					padding-left: 0px;
@@ -61,15 +71,44 @@
 					font-size: 0.82em;
 				}
 			}
+
+			.icon_arrow {
+				position: relative;
+				top: 2px;
+				left: 1px;
+			}
 		}
 
 	}//end .edit
 
-	&.search  {
+	&.search {
+
 		>.content_data {
 			display: flex;
-			max-height: 7.5rem;
+			max-height: 16rem;
+
+			>.q_operator {
+
+			}
+
+			// ul first level
+			>.branch {
+				width: calc(100% - 3.5rem);
+				font-size: 0.9rem;
+				line-height: 0.9rem;
+
+				.item_li {
+					line-height: 1.2rem;
+				}
+			}
+
+			.icon_arrow {
+				position: relative;
+				top: 3px;
+				left: 1px;
+			}
 		}
+
 	}
 
 	&.view_collapse {

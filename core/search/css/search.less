@@ -16,6 +16,11 @@
 		flex: 0 1 32.8%;
 		flex-wrap: wrap;
 
+		// allow to view tooltip over other components
+		&:hover {
+			z-index: 2;
+		}
+
 		>.wrapper_component {
 			flex-grow: 1;
 			display: grid;
@@ -26,13 +31,18 @@
 			>.content_data {
 				padding: 0.5em !important;
 			}
+
+			// disable column edit change mode (portals)
+			.column_component_portal {
+				pointer-events: none !important;
+			}
 		}
 
 		>.button.close {
 			position: absolute;
 			right: 0px;
 			top: 3px;
-			z-index: 2;
+			z-index: 1;
 
 			&:active {
 				opacity: 0.5;

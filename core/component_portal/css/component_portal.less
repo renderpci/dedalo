@@ -139,14 +139,23 @@
 		}
 
 	&.search {
-		.content_data{
-			padding-top: 1.1rem !important;
-			align-items: center !important;
+
+		// removed tooltip re-position because service_autocomplete is moved up
+			// &.active {
+			// 	.tooltip {
+			// 		top: calc(100% + 4rem);
+			// 		z-index: 0;
+			// 	}
+			// }
+
+		.content_data {
+			min-height: 3.15rem;
 
 			.section_record {
 				width: calc(100% - 50px);
 			}
 		}
+
 		.input_value {
 			width: calc(100% - 4rem);
 			// background image search lens
@@ -162,17 +171,11 @@
 				transition: visibility 0s @duration, opacity @duration linear;
 			}
 		}
+
 		.section_record.list {
 			display: flex;
 			align-items: center;
 			white-space: pre-wrap;
-		}
-
-		&.active {
-			.tooltip {
-				top: calc(100% + 4rem);
-				z-index: 0;
-			}
 		}
 	}
 
