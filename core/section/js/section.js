@@ -486,6 +486,20 @@ section.prototype.build = async function(autoload=false) {
 				action,  // string action like 'search'
 				add_show // bool add_show
 			)
+
+			// add session SQO when is present in the context
+			// @see server `get_structure_context` sqo_session property addition
+			if (self.context?.sqo_session) {
+
+				// request_config_object
+				// Update on every build to preserve sync with the server section session
+				self.request_config_object.sqo = self.context.sqo_session
+
+				// rqo
+				// Note that rqo is calculated once and need to be updated when build autoload is made
+				// and the context is loaded / updated
+				self.rqo.sqo = self.context.sqo_session
+			}
 		}
 		await generate_rqo()
 
