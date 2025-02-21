@@ -435,6 +435,13 @@ const render_options_container = function (self, content_data) {
 				class_name		: 'tool_name_match_options'+class_name_configuration,
 				parent			: options_container
 			})
+			const replace_existing_images_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label title',
+				inner_html		: self.get_tool_label('replace_existing_files') || 'Replace existing files',
+				parent			: tool_name_match_options
+			})
+
 			const tool_name_match_label = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'label match',
@@ -569,6 +576,13 @@ const render_options_container = function (self, content_data) {
 				element_type	: 'span',
 				class_name		: 'tool_configuration_options'+class_name_configuration,
 				parent			: options_container
+			})
+
+			const new_files_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label title',
+				inner_html		: self.get_tool_label('new_files') || 'New files',
+				parent			: tool_configuration_options
 			})
 
 			// name_control_field
