@@ -323,6 +323,11 @@ relation_list.prototype.get_related_records = async function(section_tipo) {
 			.filter(el => el.component_tipo==='id')
 			.map(el => el.section_id)
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('))) get_related_records ar_section_id:', ar_section_id);
+		}
+
 
 	return ar_section_id
 }//end get_related_records

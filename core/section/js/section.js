@@ -465,7 +465,7 @@ section.prototype.build = async function(autoload=false) {
 					: {}
 			}else{
 				// request_config_object. get the request_config_object from context
-				self.request_config_object	= self.context && self.context.request_config
+				self.request_config_object = self.context && self.context.request_config
 					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}
