@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS TOOL_PROPAGATE_COMPONENT_DATA
 * Manages Dédalo propagation data
