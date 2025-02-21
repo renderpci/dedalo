@@ -1815,6 +1815,7 @@ class ontology {
 	* @test true
 	*/
 	public static function set_records_in_jer_dd( object $sqo ) : object {
+		$start_time=start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1858,8 +1859,10 @@ class ontology {
 		if( empty($response->errors) ){
 			$response->result	= true;
 			$response->msg		= 'OK. Request done successfully [set_records_in_jer_dd] ' .to_string($sqo->section_tipo);
+			$response->msg	   .= ' | '. exec_time_unit($start_time,'ms').' ms';
 			$response->total	= count($ar_records);
 		}
+
 
 		return $response;
 	}//end set_records_in_jer_dd
