@@ -154,6 +154,7 @@ const get_content_data = async function(self) {
 
 	// info_text
 		const total				= await section.get_total()
+		self.total				= total // fix total to check before propagate changes in server
 		const tipo_label		= '<strong>'+self.caller.label+'</strong>'
 		const all_records_label	= self.get_tool_label('all_records') || 'All'
 		const total_label		= (filter_empty === false)
@@ -182,33 +183,32 @@ const get_content_data = async function(self) {
 			// deactivate current component
 				await ui.component.deactivate(self.component_to_propagate)
 
-			// alert user before execute
+			// propagate_component_data
+				const confirm_msg = 'Action to do: ' + action
+				+ '\n ' + (get_label.total || 'Total') + ': '  + total
+				+ '\n' + (get_label.sure || 'Sure?')
+				if (!confirm(confirm_msg)) {
+					return
+				}
+
+			// warning user before execute when no filter is used
 				if(filter_empty === true){
-					const msg = (self.get_tool_label('will_replaced_all_records') || 'All records will be replaced')
-					+ ' ' + (get_label.total || 'Total') + ': '  + total
-					+ '\n' + 'action: ' + action
+					const msg = 'WARNING!'
+					+ '\n' + (self.get_tool_label('will_replaced_all_records') || 'Data will be replaced in absolutely all records in this section.')
 					if (!confirm(msg)){
 						return false
 					}
 				}
 
-			// propagate_component_data
-			const confirm_msg = 'Action to do: ' + action +'\n'+ (get_label.sure || 'Sure?')
-			if (confirm(confirm_msg)) {
-
-				// loading class
+			// loading class
 				content_data.classList.add('loading')
 
-				// API request to propagate_component_data
+			// API request to propagate_component_data
 				self.propagate_component_data(action)
 				.then(function(api_response){
 
 					// loading class
 					content_data.classList.remove('loading')
-
-					// response text. Old
-						// const response_node = create_response(self, response_message, api_response, replace_label)
-						// response_message.appendChild(response_node)
 
 					// fire update_process_status
 					update_process_status({
@@ -219,7 +219,6 @@ const get_content_data = async function(self) {
 						lock_items	: lock_items
 					})
 				})
-			}
 		}//end click_handler
 
 	// button_replace

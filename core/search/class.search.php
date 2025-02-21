@@ -836,7 +836,7 @@ class search {
 			}else{
 
 				// Case object is a end search object
-				if (isset($search_object->format) && $search_object->format==='column') {
+				if (isset($search_object->format) && $search_object->format==='column' && isset($search_object->q_parsed)) {
 
 					$ar_query_object = [$search_object];
 

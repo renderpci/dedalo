@@ -1840,6 +1840,11 @@ abstract class common {
 
 					// section matrix_table
 						$dd_object->matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
+
+					// sqo from session. Add to sync client and server sqo across calls (propagation data problem)
+					// this sqo will be injected into the section instance 'request_config_object' and 'rqo' when it is built
+						$sqo_id = section::build_sqo_id($this->tipo);
+						$dd_object->sqo_session = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 				}
 
 			// view, all components has view, used to change the render view.

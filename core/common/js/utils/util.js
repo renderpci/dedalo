@@ -515,7 +515,7 @@ export function open_window(options) {
 
 	// options
 		const url		= options.url
-		const target	= options.target || options.name || 'New window'
+		const target	= options.target || options.name || 'new_window'
 		const features	= options.features || null
 		const width		= options.width && (options.width < window.screen.width)
 			? options.width
