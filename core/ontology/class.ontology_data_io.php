@@ -522,7 +522,7 @@ class ontology_data_io {
 		$response->msg = count($response->errors)===0
 			? 'OK. Request done successfully [download_remote_ontology_file] file: ' . $file_name
 			: 'Request done with errors [download_remote_ontology_file] file: ' . $file_name;
-
+		$response->msg .= ' | '. exec_time_unit($start_time,'ms').' ms';
 
 		return $response;
 	}//end download_remote_ontology_file

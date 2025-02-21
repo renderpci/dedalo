@@ -581,6 +581,7 @@ abstract class backup {
 	* }
 	*/
 	public static function import_from_copy_file( object $options ) : object {
+		$start_time=start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -654,6 +655,7 @@ abstract class backup {
 		// response
 			$response->result	= true;
 			$response->msg		= 'OK. Request done successfully [import_from_copy_file] ' . basename($file_path);
+			$response->msg	   .= ' | '. exec_time_unit($start_time,'ms').' ms';
 
 
 		return $response;
