@@ -304,5 +304,151 @@ class component_dataframe extends component_portal {
 	}//end get_time_machine_data
 
 
+	/**
+	* UPDATE_DATO_VERSION
+	* Is fired by area_maintenance update_data to transform
+	* component data between different versions or upgrades
+	* @see update::components_update
+	* @param object $options
+	* {
+	* 	update_version: array
+	* 	dato_unchanged: mixed
+	* 	reference_id: string|int
+	* 	tipo: string
+	* 	section_id: string|int
+	* 	section_tipo: string
+	* 	context: string (default: 'update_component_dato')
+	* }
+	* @return object $response
+	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 1; // the component do the update"
+	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*/
+	public static function update_dato_version( object $options ) : object {
+
+		// options
+			$update_version	= $options->update_version ?? null;
+			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$reference_id	= $options->reference_id ?? null;
+			$tipo			= $options->tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$context		= $options->context ?? 'update_component_dato';
+
+
+
+		$update_version = implode(".", $update_version);
+		switch ($update_version) {
+
+			case '6.4.3':
+				// Update the locator to add section_tipo_key to previous data dataframe .
+				// in version <6.4.3 the component_dataframe is linked to components that only point to 1 section
+				// in those cases the bound between main and dataframe is set by section_id_key
+				// in 6.4.3 the dataframe is updated to link with section_id_key and section_tipo_key
+				// it able to create components dataframe for components with multiple target section_tipo
+				// this update get the target_section of the main component to assign it to the dataframe data.
+				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+					$RecordObj_dd			= new RecordObj_dd($tipo);
+					$main_component_tipo	= $RecordObj_dd->get_parent();
+
+					// create the main component to obtain his data
+						$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
+						$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$main_component = component_common::get_instance(
+							$model, // string model
+							$main_component_tipo, // string tipo
+							$section_id, // string section_id
+							'list', // string mode
+							$lang, // string lang
+							$section_tipo // string section_tipo
+						);
+						// get the main component data
+						$main_componenet_data = $main_component->get_dato_full();
+
+						if(empty($main_componenet_data)){
+							debug_log(__METHOD__
+								. " The main component doesn't has data ------||----- using target_section_tipo. " . PHP_EOL
+								. ' main tipo without data: '  . to_string($main_component_tipo) . PHP_EOL
+								. ' options: '  . to_string($options)
+								, logger::ERROR
+							);
+
+							$section_tipo_key = $main_component->get_ar_target_section_tipo()[0];
+
+						}else{
+							$section_tipo_key = $main_componenet_data[0]->section_tipo;
+						}
+
+
+					$new_dato		= [];
+					$need_to_be_updated	= false;
+					foreach ((array)$dato_unchanged as $current_locator) {
+						// id the data has section_tipo_key do not change
+						if(isset($current_locator->section_tipo_key)){
+							continue;
+						}
+
+						$current_locator->section_tipo_key = $section_tipo_key;
+						// remove the old tipo_key not used anymore
+						unset( $current_locator->tipo_key );
+
+						$need_to_be_updated = true;
+
+						$new_dato[] = $current_locator;
+					}//end foreach ((array)$dato_unchanged as $key => $current_locator)
+
+
+					if ($need_to_be_updated === true) {
+
+						// section update and save locators
+							$section_to_save = section::get_instance(
+								$section_id, // string|null section_id
+								$section_tipo, // string section_tipo
+								'list', // string mode
+								false // bool bool
+							);
+							$remove_options = new stdClass();
+								$remove_options->component_tipo			= $tipo;
+								$remove_options->relations_container	= 'relations';
+
+							$section_to_save->remove_relations_from_component_tipo( $remove_options );
+							foreach ($new_dato as $current_locator) {
+								$section_to_save->add_relation($current_locator);
+							}
+							$section_to_save->Save();
+							debug_log(__METHOD__." ----> Saved ($section_tipo - $section_id) ".to_string($new_dato), logger::WARNING);
+
+						$response = new stdClass();
+							$response->result	= 3;
+							$response->new_dato	= $new_dato;
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+					}else{
+
+						$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+
+					}// end if($need_to_be_updated === true)
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+				break;
+
+			default:
+				$response = new stdClass();
+					$response->result	= 0;
+					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
+				break;
+		}//end switch ($update_version)
+
+
+		return $response;
+	}//end update_dato_version
+
+
+
 
 }//end class component_dataframe

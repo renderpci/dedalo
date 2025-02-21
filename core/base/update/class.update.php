@@ -479,67 +479,67 @@ class update {
 				}
 
 			// Skip sections
-				$ar_section_skip = [
+				// $ar_section_skip = [
 
-					'lg1', // lenguajes
-					'on1', // omomasticos
-					'dc1', // cronologicos
-					'ts1', // tematicos
-					#'hu1', // hungria
-					#'cu1', // cuba
-					"es1",
-					"fr1",
-					"dz1",
-					"pt1",
-					"lg1",
-					"ma1",
-					"mupreva2434",
-					"mupreva2435",
-					"mupreva2436",
-					"mupreva2437",
-					"mupreva2438",
-					"mupreva357",
-					"mupreva123",
-					"mupreva21",
-					"mupreva22",
-					"mupreva1",
-					"mupreva120",
-					"mupreva1258",
-					"mupreva1385",
-					"mupreva156",
-					"mupreva159",
-					"mupreva162",
-					"mupreva20",
-					"mupreva2384",
-					"mupreva2541",
-					"mupreva268",
-					"mupreva380",
-					"mupreva398",
-					"mupreva473",
-					"mupreva500",
-					"mupreva770",
-					"dd1500",
-					"material1",
-					"numisdata4",
-					"hierarchy1",
-					"technique1",
-					"rsc332",
-					"rsc170",
-					"rsc205",
-					"mdcat1957",
-					"nexus1",
-					"mdcat2605",
-					"mdcat1957",
-					"dd1266",
-					"dd1324",
-					"dd1000",
-					"tchi1",
-					"mdcat2608"
-					/**/
-				];
-				if (in_array($current_section_tipo, $ar_section_skip)) {
-					continue;
-				}
+				// 	'lg1', // lenguajes
+				// 	'on1', // omomasticos
+				// 	'dc1', // cronologicos
+				// 	'ts1', // tematicos
+				// 	#'hu1', // hungria
+				// 	#'cu1', // cuba
+				// 	"es1",
+				// 	"fr1",
+				// 	"dz1",
+				// 	"pt1",
+				// 	"lg1",
+				// 	"ma1",
+				// 	"mupreva2434",
+				// 	"mupreva2435",
+				// 	"mupreva2436",
+				// 	"mupreva2437",
+				// 	"mupreva2438",
+				// 	"mupreva357",
+				// 	"mupreva123",
+				// 	"mupreva21",
+				// 	"mupreva22",
+				// 	"mupreva1",
+				// 	"mupreva120",
+				// 	"mupreva1258",
+				// 	"mupreva1385",
+				// 	"mupreva156",
+				// 	"mupreva159",
+				// 	"mupreva162",
+				// 	"mupreva20",
+				// 	"mupreva2384",
+				// 	"mupreva2541",
+				// 	"mupreva268",
+				// 	"mupreva380",
+				// 	"mupreva398",
+				// 	"mupreva473",
+				// 	"mupreva500",
+				// 	"mupreva770",
+				// 	"dd1500",
+				// 	"material1",
+				// 	"numisdata4",
+				// 	"hierarchy1",
+				// 	"technique1",
+				// 	"rsc332",
+				// 	"rsc170",
+				// 	"rsc205",
+				// 	"mdcat1957",
+				// 	"nexus1",
+				// 	"mdcat2605",
+				// 	"mdcat1957",
+				// 	"dd1266",
+				// 	"dd1324",
+				// 	"dd1000",
+				// 	"tchi1",
+				// 	"mdcat2608"
+				// 	/**/
+				// ];
+				// if (in_array($current_section_tipo, $ar_section_skip)) {
+				// 	continue;
+				// }
 
 			// current_table. Test if target table exists (avoid errors on update components of "too much updated" structures)
 				$current_table = common::get_matrix_table_from_tipo($current_section_tipo);
