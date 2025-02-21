@@ -93,10 +93,13 @@ export const ts_object = new function() {
 
 		return new Promise(function(resolve){
 
+			// set false on 'area_ontology' to allow session cache in ontology
+			const prevent_lock = caller.model==='area_ontology' ? false : true
+
 			// API call
 			const rqo = {
 				dd_api			: 'dd_ts_api',
-				prevent_lock	: false, // set false to allow session cache in ontology
+				prevent_lock	: prevent_lock,
 				action			: 'get_children_data',
 				source			: {
 					section_id			: parent_section_id,
