@@ -1035,6 +1035,11 @@ class ontology {
 	*/
 	public static function get_active_elements() : array {
 
+		static $active_elements_cache;
+		if (isset($active_elements_cache)) {
+			return $active_elements_cache;
+		}
+
 		// main filter
 		$filter = json_decode('
 			{
@@ -1081,6 +1086,9 @@ class ontology {
 			'ontology::row_to_element',
 			$result->ar_records
 		);
+
+		// cache
+		$active_elements_cache = $active_elements;
 
 
 		return $active_elements;
