@@ -30,6 +30,7 @@ class tool_propagate_component_data extends tool_common {
 			$propagate_data_value	= $options->propagate_data_value ?? null;
 			$bulk_process_label		= $options->bulk_process_label ?? null;
 			$sqo					= $options->sqo ?? null;
+			$total					= $options->total ?? null; // used to match with records to change
 
 		// sqo check
 			if (empty($sqo)) {
@@ -60,9 +61,18 @@ class tool_propagate_component_data extends tool_common {
 
 		// short vars
 			$counter			= 0;
-			$total				= count($rows_data->ar_records);
+			$total_records		= count($rows_data->ar_records);
 			$section_label		= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 			$component_label	= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_APPLICATION_LANG, true);
+
+		// check match totals. If totals do not match, something wrong happens. Stop execution in that case.
+		// Note that client total value is calculated from the section instance currently viewed and the sqo
+		// is updated with context session sqo in every section build. This should keep the sqo synchronized between the client and the server.
+			if ($total_records!==$total) {
+				$response->errors[] = 'Totals do not match';
+				$response->msg = "Error. The total number of records does not match the number required from the tool ($total = $total_records). The process has been stopped for security.";
+				return $response;
+			}
 
 		// CLI process data
 			if ( running_in_cli()===true ) {

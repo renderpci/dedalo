@@ -192,6 +192,12 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 			return
 		}
 
+		if (!self.total) {
+			console.error('Invalid total from section:', section);
+			alert("Error. Invalid total");
+			return
+		}
+
 		// clean sqo
 		sqo.offset	= 0
 		sqo.limit	= 0
@@ -210,7 +216,8 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 				lang					: lang,
 				propagate_data_value	: propagate_data_value,
 				bulk_process_label		: bulk_process_label,
-				sqo						: sqo
+				sqo						: sqo,
+				total					: self.total
 			}
 		}
 
