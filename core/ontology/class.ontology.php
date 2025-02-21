@@ -46,6 +46,7 @@ class ontology {
 			}
 		}
 
+
 		return true;
 	}//end create_ontology_records
 
@@ -362,6 +363,7 @@ class ontology {
 				return $row;
 			}
 
+
 		return null;
 	}//end get_ontology_main_from_tld
 
@@ -397,6 +399,7 @@ class ontology {
 
 				return $row;
 			}
+
 
 		return null;
 	}//end get_ontology_main_form_target_section_tipo
@@ -917,6 +920,7 @@ class ontology {
 
 		$target_section_tipo = $safe_tld.'0';
 
+
 		return $target_section_tipo;
 	}//end map_tld_to_target_section_tipo
 
@@ -933,6 +937,7 @@ class ontology {
 	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : ?string {
 
 		$tld = get_tld_from_tipo( $target_section_tipo );
+
 
 		return $tld;
 	}//end map_target_section_tipo_to_tld
@@ -1363,7 +1368,7 @@ class ontology {
 
 			}else{
 
-				$is_model_locator	= reset($is_model_data);
+				$is_model_locator = reset($is_model_data);
 				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
 				$jer_dd_record->set_esmodelo( $is_model );
 			}
@@ -1500,7 +1505,7 @@ class ontology {
 				);
 
 			}else{
-				$translatable_data_locator	= reset($translatable_data);
+				$translatable_data_locator = reset($translatable_data);
 				$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
 				$jer_dd_record->set_traducible( $translatable );
 			}
@@ -1717,6 +1722,7 @@ class ontology {
 
 		$term_id = $tld . $locator->section_id;
 
+
 		return $term_id;
 	}//end get_term_id_from_locator
 
@@ -1742,6 +1748,7 @@ class ontology {
 				break;
 			}
 		}
+
 
 		return $order;
 	}//end get_order_from_locator
@@ -1772,6 +1779,7 @@ class ontology {
 
 		// siblings will be the children component data.
 		$siblings_data = $children_component->get_dato() ?? [];
+
 
 		return $siblings_data;
 	}//end get_siblings
