@@ -346,44 +346,123 @@ class component_relation_children extends component_relation_common {
 
 		return $dato;
 	}//end get_dato_full
+
+
+	/**
+	* SET_DATO
+	* Note that current component DON´T STORE DATA.
+	* Instead, is inserted in the related 'component_relation_parent' the link to self
+	* Don't use this method regularly, is preferable use 'add_children' method for every new relation
+	* @param array|string $dato
+	*	When dato is string is because is a JSON encoded dato
 	* @return bool
 	*/
-	public function remove_me_as_your_child( string $section_tipo, string|int $section_id ) : bool {
+	public function set_dato( $dato ) : bool {
 
-		// locator compound
-			$locator = new locator();
-				$locator->set_type($this->relation_type);
-				$locator->set_section_id($section_id);
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_from_component_tipo($this->tipo);
-
-		// Remove child locator
-			if (!$this->remove_child($locator)) {
-				return false;
+		// dato format check
+			if (is_string($dato)) { // Tool Time machine case, dato is string
+				$dato = json_handler::decode($dato);
+			}
+			if (is_object($dato)) {
+				$dato = [$dato];
+			}
+			// Ensures is a real non-associative array (avoid JSON encode as object)
+			if (!is_null($dato)) {
+				$dato = is_array($dato)
+					? array_values($dato)
+					: (array)$dato;
 			}
 
-		return true;
-	}//end remove_me_as_your_child
+		// remove previous dato
+			$previous_dato = $this->get_dato();
+			if (!empty($previous_dato)) {
+				foreach ($previous_dato as $locator) {
 
+					$exist = locator::in_array_locator( $locator, $dato, ['section_tipo','section_id','from_component_tipo']);
+					if($exist===true){
+						continue;
+					}
+
+					$result = (bool)$this->remove_child(
+						$locator->section_tipo,
+						$locator->section_id
+					);
+					if (!$result) {
+						debug_log(__METHOD__
+							. " Error on remove children" . PHP_EOL
+							. 'result: ' . to_string($result) . PHP_EOL
+							. 'locator: ' . to_string($locator)
+							, logger::ERROR
+						);
+					}
+				}
+			}
+
+		// add the new one if any
+			if (!empty($dato)) {
+				foreach ($dato as $locator) {
+
+					$exist = locator::in_array_locator( $locator, $previous_dato, ['section_tipo','section_id','from_component_tipo']);
+					if($exist===true){
+						continue;
+					}
+
+					$result	= (bool)$this->add_child(
+						$locator->section_tipo,
+						$locator->section_id
+					);
+					if (!$result) {
+						debug_log(__METHOD__
+							. " Error on add children" . PHP_EOL
+							. 'result: ' . to_string($result) . PHP_EOL
+							. 'locator: ' . to_string($locator)
+							, logger::ERROR
+						);
+					}
+				}
+			}
+
+		// $this->update_parents($dato);
+
+		// force read the new value on get_dato (prevent cache inconsistency)
+			unset($this->dato_resolved); //  = null;
+
+
+		return true;
+	}//end set_dato
 
 
 	/**
 	* ADD_CHILD
-	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
-	* NOTE: This method updates component 'dato' and save
-	* @param locator $locator
+	* Alias of update_parent with specific action 'add'
+	* @param string $parent_section_tipo
+	* @param mixed $parent_section_id
+	* @param string|null $parent_tipo = null
 	* @return bool
 	*/
-	public function add_child( locator $locator ) : bool {
+	public function add_child( string $parent_section_tipo, mixed $parent_section_id, ?string $parent_tipo=null ) : bool {
 
-		// reference self case
-			if ($locator->section_tipo===$this->section_tipo && $locator->section_id==$this->parent) {
-				debug_log(__METHOD__
-					. " Error: Ignored invalid locator received to add child (auto-reference) " . PHP_EOL
-					. ' locator: ' . to_string($locator)
-					, logger::ERROR
-				);
-				return false; // Avoid auto-references
+		$action = 'add';
+
+		return $this->update_parent($action, $parent_section_tipo, $parent_section_id, $parent_tipo);
+	}//end add_child
+
+
+
+	/**
+	* REMOVE_child
+	* Alias of update_parent with specific action 'remove'
+	* @param string $parent_section_tipo
+	* @param mixed $parent_section_id
+	* @param string|null $parent_tipo = null
+	* @return bool
+	*/
+	public function remove_child( string $parent_section_tipo, mixed $parent_section_id, ?string $parent_tipo=null ) : bool {
+
+		$action = 'remove';
+
+		return $this->update_parent($action, $parent_section_tipo, $parent_section_id, $parent_tipo);
+	}//end remove_child
 			}
 
 		// from_component_tipo check
