@@ -4323,12 +4323,7 @@ class section extends common {
 					// calls to current section as child from another sections
 					$parents_data = component_relation_parent::get_parents(
 						$this->get_section_id(),
-						$section_tipo,
-						null, // from_component_tipo
-						null, // ar_tables
-						(object)[
-							'search_in_main_hierarchy' => true
-						]
+						$section_tipo
 					);
 					if (!empty($parents_data)) {
 

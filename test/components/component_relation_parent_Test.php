@@ -609,12 +609,7 @@ final class component_relation_parent_test extends TestCase {
 
 		$result = component_relation_parent::get_parents(
 			$section_id,
-			self::$section_tipo,
-			null,
-			null,
-			(object)[
-				'search_in_main_hierarchy' => true
-			]
+			self::$section_tipo
 		);
 
 		$this->assertTrue(

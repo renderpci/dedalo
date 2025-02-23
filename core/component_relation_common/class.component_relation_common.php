@@ -1222,17 +1222,9 @@ class component_relation_common extends component_common {
 				$response->msg		= '';
 
 		// short vars
-			$section_table	= common::get_matrix_table_from_tipo($section_tipo); // Normally 'matrix_hierarchy'
-			$main_table		= ( strpos($section_tipo,'ontology')!==false ) ? ontology::$main_table : hierarchy::$main_table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
-			$ar_tables		= [$section_table, $main_table];
 			$parents		= component_relation_parent::get_parents(
 				$section_id,
-				$section_tipo,
-				null, // string|null from_component_tipo
-				$ar_tables,
-				(object)[
-					'search_in_main_hierarchy' => true
-				]
+				$section_tipo
 			);
 
 		// parents to remove
