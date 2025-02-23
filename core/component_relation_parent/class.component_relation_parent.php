@@ -23,206 +23,206 @@ class component_relation_parent extends component_relation_common {
 
 
 
-	/**
-	* SAVE
-	* Overwrite relation common action
-	* @return int|null $section_id
-	*/
-	public function Save() : ?int {
-		// Noting to do. This component don`t save
+	// /**
+	// * SAVE
+	// * Overwrite relation common action
+	// * @return int|null $section_id
+	// */
+	// public function Save() : ?int {
+	// 	// Noting to do. This component don`t save
 
-		$section_id = !empty($this->section_id)
-			? (int)$this->section_id
-			: null;
+	// 	$section_id = !empty($this->section_id)
+	// 		? (int)$this->section_id
+	// 		: null;
 
-		// return section id
-		return $section_id;
-	}//end Save
-
-
-
-	/**
-	* GET DATO
-	* This component don't store data, only manages calculated data from component_relation_children generated data
-	* stored in section 'relations' container
-	* @return array|null $dato
-	*	$dato is always an array of locators
-	*/
-	public function get_dato() : ?array {
-
-		// dato_resolved. Already resolved case
-			if(isset($this->dato_resolved)) {
-				return $this->dato_resolved;
-			}
-
-		// search mode
-			if ($this->mode==='search') {
-				return $this->dato ?? null;
-			}
-
-		// always get dato calculated from my parents
-			$dato = $this->get_my_parents();
-
-		// check dato format
-			if (!empty($dato) && !is_array($dato)) {
-				debug_log(__METHOD__
-					." Re-saved invalid dato. Array expected and type: ". gettype($dato)
-					." is received for tipo: $this->tipo, parent: $this->parent"
-					, logger::ERROR
-				);
-				$dato = array();
-				$this->set_dato( $dato );
-				$this->Save();
-			}
-
-		// rebuild dato option
-			if (empty($dato)) {
-				$dato_fixed = $dato;
-			}else{
-				$tipo			= $this->get_tipo();
-				$dato_fixed		= [];
-				$dato_length	= sizeof($dato);
-				for ($i=0; $i < $dato_length; $i++) {
-
-					$item = &$dato[$i];
-					// create a new locator and change from component tipo. Note that this component don't have relation type (!)
-					$locator = new locator();
-						$locator->set_section_tipo($item->section_tipo);
-						$locator->set_section_id($item->section_id);
-						$locator->set_from_component_tipo($tipo);
-
-					$dato_fixed[] = $locator;
-				}
-			}
-
-		// fix resolved dato
-			// parent::set_dato($dato_fixed);
-
-		// fix dato.
-			$this->dato = $dato_fixed;
-
-		// @experimental.
-			$this->dato_resolved = $this->dato;
-
-		// Set as loaded.
-			$this->bl_loaded_matrix_data = true;
-
-
-		return $this->dato;
-	}//end get_dato
+	// 	// return section id
+	// 	return $section_id;
+	// }//end Save
 
 
 
-	/**
-	* GET_DATO_FULL
-	* @return array $dato_export
-	*/
-	public function get_dato_full() : array {
+	// /**
+	// * GET DATO
+	// * This component don't store data, only manages calculated data from component_relation_children generated data
+	// * stored in section 'relations' container
+	// * @return array|null $dato
+	// *	$dato is always an array of locators
+	// */
+	// public function get_dato() : ?array {
 
-		$dato = $this->get_dato();
-		$tipo = $this->get_tipo();
+	// 	// dato_resolved. Already resolved case
+	// 		if(isset($this->dato_resolved)) {
+	// 			return $this->dato_resolved;
+	// 		}
 
-		if (empty($dato)) {
-			$dato_export = $dato;
-		}else{
-			$dato_export	= [];
-			$dato_length	= sizeof($dato);
-			for ($i=0; $i < $dato_length; $i++) {
+	// 	// search mode
+	// 		if ($this->mode==='search') {
+	// 			return $this->dato ?? null;
+	// 		}
 
-				$item = $dato[$i];
-				// create a new locator and change from component tipo. Note that this component dont have relation type (!)
-				$locator = new locator();
-					$locator->set_section_tipo($item->section_tipo);
-					$locator->set_section_id($item->section_id);
-					$locator->set_from_component_tipo($tipo);
+	// 	// always get dato calculated from my parents
+	// 		$dato = $this->get_my_parents();
 
-				$dato_export[] = $locator;
-			}
-		}
+	// 	// check dato format
+	// 		if (!empty($dato) && !is_array($dato)) {
+	// 			debug_log(__METHOD__
+	// 				." Re-saved invalid dato. Array expected and type: ". gettype($dato)
+	// 				." is received for tipo: $this->tipo, parent: $this->parent"
+	// 				, logger::ERROR
+	// 			);
+	// 			$dato = array();
+	// 			$this->set_dato( $dato );
+	// 			$this->Save();
+	// 		}
 
-		return $dato_export;
-	}//end get_dato_full
+	// 	// rebuild dato option
+	// 		if (empty($dato)) {
+	// 			$dato_fixed = $dato;
+	// 		}else{
+	// 			$tipo			= $this->get_tipo();
+	// 			$dato_fixed		= [];
+	// 			$dato_length	= sizeof($dato);
+	// 			for ($i=0; $i < $dato_length; $i++) {
 
+	// 				$item = &$dato[$i];
+	// 				// create a new locator and change from component tipo. Note that this component don't have relation type (!)
+	// 				$locator = new locator();
+	// 					$locator->set_section_tipo($item->section_tipo);
+	// 					$locator->set_section_id($item->section_id);
+	// 					$locator->set_from_component_tipo($tipo);
 
+	// 				$dato_fixed[] = $locator;
+	// 			}
+	// 		}
 
-	/**
-	* SET_DATO
-	* Note that current component DON´T STORE DATA.
-	* Instead, is inserted in the related 'component_relation_children' the link to self
-	* Don't use this method regularly, is preferable use 'add_parent' method for every new relation
-	* @param array|string $dato
-	*	When dato is string is because is a JSON encoded dato
-	* @return bool
-	*/
-	public function set_dato($dato) : bool {
+	// 	// fix resolved dato
+	// 		// parent::set_dato($dato_fixed);
 
-		// dato format check
-			if (is_string($dato)) { // Tool Time machine case, dato is string
-				$dato = json_handler::decode($dato);
-			}
-			if (is_object($dato)) {
-				$dato = [$dato];
-			}
-			// Ensures is a real non-associative array (avoid JSON encode as object)
-			if (!is_null($dato)) {
-				$dato = is_array($dato)
-					? array_values($dato)
-					: (array)$dato;
-			}
+	// 	// fix dato.
+	// 		$this->dato = $dato_fixed;
 
-		// search mode
-			if ($this->mode==='search') {
-				// Fix dato
-				$this->dato = $dato;
+	// 	// @experimental.
+	// 		$this->dato_resolved = $this->dato;
 
-				return true;
-			}
-
-		// remove previous dato
-			$previous_dato = $this->get_dato();
-			if (!empty($previous_dato)) {
-				foreach ($previous_dato as $locator) {
-					$result = (bool)$this->remove_parent(
-						$locator->section_tipo,
-						$locator->section_id
-					);
-					if (!$result) {
-						debug_log(__METHOD__
-							. " Error on remove parent" . PHP_EOL
-							. 'result: ' . to_string($result) . PHP_EOL
-							. 'locator: ' . to_string($locator)
-							, logger::ERROR
-						);
-					}
-				}
-			}
-
-		// add the new one if any
-			if (!empty($dato)) {
-				foreach ($dato as $locator) {
-					$result	= (bool)$this->add_parent(
-						$locator->section_tipo,
-						$locator->section_id
-					);
-					if (!$result) {
-						debug_log(__METHOD__
-							. " Error on add parent" . PHP_EOL
-							. 'result: ' . to_string($result) . PHP_EOL
-							. 'locator: ' . to_string($locator)
-							, logger::ERROR
-						);
-					}
-				}
-			}
-
-		// $this->update_parents($dato);
-
-		// force read the new value on get_dato (prevent cache inconsistency)
-			unset($this->dato_resolved); //  = null;
+	// 	// Set as loaded.
+	// 		$this->bl_loaded_matrix_data = true;
 
 
-		return true;
-	}//end set_dato
+	// 	return $this->dato;
+	// }//end get_dato
+
+
+
+	// /**
+	// * GET_DATO_FULL
+	// * @return array $dato_export
+	// */
+	// public function get_dato_full() : array {
+
+	// 	$dato = $this->get_dato();
+	// 	$tipo = $this->get_tipo();
+
+	// 	if (empty($dato)) {
+	// 		$dato_export = $dato;
+	// 	}else{
+	// 		$dato_export	= [];
+	// 		$dato_length	= sizeof($dato);
+	// 		for ($i=0; $i < $dato_length; $i++) {
+
+	// 			$item = $dato[$i];
+	// 			// create a new locator and change from component tipo. Note that this component dont have relation type (!)
+	// 			$locator = new locator();
+	// 				$locator->set_section_tipo($item->section_tipo);
+	// 				$locator->set_section_id($item->section_id);
+	// 				$locator->set_from_component_tipo($tipo);
+
+	// 			$dato_export[] = $locator;
+	// 		}
+	// 	}
+
+	// 	return $dato_export;
+	// }//end get_dato_full
+
+
+
+	// /**
+	// * SET_DATO
+	// * Note that current component DON´T STORE DATA.
+	// * Instead, is inserted in the related 'component_relation_children' the link to self
+	// * Don't use this method regularly, is preferable use 'add_parent' method for every new relation
+	// * @param array|string $dato
+	// *	When dato is string is because is a JSON encoded dato
+	// * @return bool
+	// */
+	// public function set_dato($dato) : bool {
+
+	// 	// dato format check
+	// 		if (is_string($dato)) { // Tool Time machine case, dato is string
+	// 			$dato = json_handler::decode($dato);
+	// 		}
+	// 		if (is_object($dato)) {
+	// 			$dato = [$dato];
+	// 		}
+	// 		// Ensures is a real non-associative array (avoid JSON encode as object)
+	// 		if (!is_null($dato)) {
+	// 			$dato = is_array($dato)
+	// 				? array_values($dato)
+	// 				: (array)$dato;
+	// 		}
+
+	// 	// search mode
+	// 		if ($this->mode==='search') {
+	// 			// Fix dato
+	// 			$this->dato = $dato;
+
+	// 			return true;
+	// 		}
+
+	// 	// remove previous dato
+	// 		$previous_dato = $this->get_dato();
+	// 		if (!empty($previous_dato)) {
+	// 			foreach ($previous_dato as $locator) {
+	// 				$result = (bool)$this->remove_parent(
+	// 					$locator->section_tipo,
+	// 					$locator->section_id
+	// 				);
+	// 				if (!$result) {
+	// 					debug_log(__METHOD__
+	// 						. " Error on remove parent" . PHP_EOL
+	// 						. 'result: ' . to_string($result) . PHP_EOL
+	// 						. 'locator: ' . to_string($locator)
+	// 						, logger::ERROR
+	// 					);
+	// 				}
+	// 			}
+	// 		}
+
+	// 	// add the new one if any
+	// 		if (!empty($dato)) {
+	// 			foreach ($dato as $locator) {
+	// 				$result	= (bool)$this->add_parent(
+	// 					$locator->section_tipo,
+	// 					$locator->section_id
+	// 				);
+	// 				if (!$result) {
+	// 					debug_log(__METHOD__
+	// 						. " Error on add parent" . PHP_EOL
+	// 						. 'result: ' . to_string($result) . PHP_EOL
+	// 						. 'locator: ' . to_string($locator)
+	// 						, logger::ERROR
+	// 					);
+	// 				}
+	// 			}
+	// 		}
+
+	// 	// $this->update_parents($dato);
+
+	// 	// force read the new value on get_dato (prevent cache inconsistency)
+	// 		unset($this->dato_resolved); //  = null;
+
+
+	// 	return true;
+	// }//end set_dato
 
 
 
@@ -446,106 +446,106 @@ class component_relation_parent extends component_relation_common {
 
 
 
-	/**
-	* UPDATE_CHILDREN
-	* Locate current section component_relation_children and remove given children_section_id, children_section_tipo combination from data
-	* @param string $action
-	* 	remove|add
-	* @param string $children_section_tipo
-	* @param int|string $children_section_id
-	* @param string|null $component_relation_children_tipo = null
-	*
-	* @return bool $result
-	*/
-	private function update_children( string $action, string $children_section_tipo, int|string $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
+	// /**
+	// * UPDATE_CHILDREN
+	// * Locate current section component_relation_children and remove given children_section_id, children_section_tipo combination from data
+	// * @param string $action
+	// * 	remove|add
+	// * @param string $children_section_tipo
+	// * @param int|string $children_section_id
+	// * @param string|null $component_relation_children_tipo = null
+	// *
+	// * @return bool $result
+	// */
+	// private function update_children( string $action, string $children_section_tipo, int|string $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
 
-		// default bool 	result
-			$result = false;
+	// 	// default bool 	result
+	// 		$result = false;
 
-		// short vars
-			$tipo			= $this->tipo;
-			$section_tipo	= $this->section_tipo;
-			$section_id		= $this->section_id;
+	// 	// short vars
+	// 		$tipo			= $this->tipo;
+	// 		$section_tipo	= $this->section_tipo;
+	// 		$section_id		= $this->section_id;
 
-		// component_relation_children_tipo. Resolve if null
-			if (empty($component_relation_children_tipo)) {
-				$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($tipo);
-				// not found case
-				if (empty($component_relation_children_tipo)) {
-					debug_log(__METHOD__
-						." ERROR: Unable to resolve component_relation_children_tipo" . PHP_EOL
-						.' current tipo:  ' . $tipo
-						, logger::ERROR
-					);
-					return false;
-				}
-			}
+	// 	// component_relation_children_tipo. Resolve if null
+	// 		if (empty($component_relation_children_tipo)) {
+	// 			$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($tipo);
+	// 			// not found case
+	// 			if (empty($component_relation_children_tipo)) {
+	// 				debug_log(__METHOD__
+	// 					." ERROR: Unable to resolve component_relation_children_tipo" . PHP_EOL
+	// 					.' current tipo:  ' . $tipo
+	// 					, logger::ERROR
+	// 				);
+	// 				return false;
+	// 			}
+	// 		}
 
-		// model. Expected 'component_relation_children'
-			$model = RecordObj_dd::get_modelo_name_by_tipo($component_relation_children_tipo, true);
-			if ($model!=='component_relation_children') {
-				// wrong model case
-				debug_log(__METHOD__
-					." Wrong target model. Expected 'component_relation_children" . PHP_EOL
-					.' current model: ' . $model . PHP_EOL
-					.' current tipo:  ' . $component_relation_children_tipo
-					, logger::ERROR
-				);
-				return false;
-			}
+	// 	// model. Expected 'component_relation_children'
+	// 		$model = RecordObj_dd::get_modelo_name_by_tipo($component_relation_children_tipo, true);
+	// 		if ($model!=='component_relation_children') {
+	// 			// wrong model case
+	// 			debug_log(__METHOD__
+	// 				." Wrong target model. Expected 'component_relation_children" . PHP_EOL
+	// 				.' current model: ' . $model . PHP_EOL
+	// 				.' current tipo:  ' . $component_relation_children_tipo
+	// 				, logger::ERROR
+	// 			);
+	// 			return false;
+	// 		}
 
-		// component instance
-			$component_relation_children = component_common::get_instance(
-				$model,
-				$component_relation_children_tipo,
-				$children_section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$children_section_tipo
-			);
+	// 	// component instance
+	// 		$component_relation_children = component_common::get_instance(
+	// 			$model,
+	// 			$component_relation_children_tipo,
+	// 			$children_section_id,
+	// 			'edit',
+	// 			DEDALO_DATA_NOLAN,
+	// 			$children_section_tipo
+	// 		);
 
-		// change link to me in relation_children
-			switch ($action) {
-				case 'remove':
-					$changed = (bool)$component_relation_children->remove_me_as_your_child(
-						$section_tipo,
-						$section_id
-					);
-					break;
+	// 	// change link to me in relation_children
+	// 		switch ($action) {
+	// 			case 'remove':
+	// 				$changed = (bool)$component_relation_children->remove_me_as_your_child(
+	// 					$section_tipo,
+	// 					$section_id
+	// 				);
+	// 				break;
 
-				case 'add':
-					$changed = (bool)$component_relation_children->make_me_your_child(
-						$section_tipo,
-						$section_id
-					);
-					break;
+	// 			case 'add':
+	// 				$changed = (bool)$component_relation_children->make_me_your_child(
+	// 					$section_tipo,
+	// 					$section_id
+	// 				);
+	// 				break;
 
-				default:
-					$changed = false;
-					debug_log(__METHOD__
-						." Error on update_children. Invalid action ". PHP_EOL
-						.' action: ' .$action
-						, logger::ERROR
-					);
-					break;
-			}
+	// 			default:
+	// 				$changed = false;
+	// 				debug_log(__METHOD__
+	// 					." Error on update_children. Invalid action ". PHP_EOL
+	// 					.' action: ' .$action
+	// 					, logger::ERROR
+	// 				);
+	// 				break;
+	// 		}
 
-		// save if changed
-			if ($changed===true) {
+	// 	// save if changed
+	// 		if ($changed===true) {
 
-				$saved = $component_relation_children->Save();
-				if ($saved && $saved>0) {
-					$result = true;
-				}
+	// 			$saved = $component_relation_children->Save();
+	// 			if ($saved && $saved>0) {
+	// 				$result = true;
+	// 			}
 
-				// force read the new value on get_dato (prevent cache inconsistency)
-				$this->dato_resolved = null;
-				$this->get_dato();
-			}
+	// 			// force read the new value on get_dato (prevent cache inconsistency)
+	// 			$this->dato_resolved = null;
+	// 			$this->get_dato();
+	// 		}
 
 
-		return (bool)$result;
-	}//end update_children
+	// 	return (bool)$result;
+	// }//end update_children
 
 
 
