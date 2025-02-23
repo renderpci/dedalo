@@ -379,12 +379,10 @@ class search {
 
 				$ar_row_children = [];
 				foreach ($ar_records as $row) {
-					$row_children = component_relation_children::get_children(
+					$row_children = component_relation_children::get_children_recursive(
 						$row->section_id, // string section_id
 						$row->section_tipo, // string section_tipo
-						null, // string|null component_tipo
-						true, // bool recursive
-						false // bool is_recursion
+						null // string|null component_tipo
 					);
 
 					$ar_row_children = array_merge($ar_row_children, $row_children);

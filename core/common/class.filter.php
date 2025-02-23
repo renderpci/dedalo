@@ -107,12 +107,10 @@ abstract class filter {
 			// children
 				foreach ($user_projects as $current_locator) {
 
-					$children_data = component_relation_children::get_children(
+					$children_data = component_relation_children::get_children_recursive(
 						$current_locator->section_id,
 						$current_locator->section_tipo,
-						DEDALO_PROJECTS_CHILDREN_TIPO,
-						true, // bool recursive
-						false // bool is_recursion
+						DEDALO_PROJECTS_CHILDREN_TIPO
 					);
 
 					foreach ($children_data as $child_locator) {

@@ -436,7 +436,6 @@ class area_thesaurus extends area_common {
 				$current_parent->section_id,
 				$current_parent->section_tipo,
 				null, // component_tipo
-				false // recursive
 			);
 
 			foreach ($ar_children as $current_child) {
