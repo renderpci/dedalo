@@ -681,18 +681,40 @@ class component_relation_parent extends component_relation_common {
 
 
 
+
 	/**
-	* GET_MY_PARENTS
-	* @return array $parents
+	* GET_PARENT_TIPO
+	* get ontology tipo for component_relation_parent of the section_tipo given
+	* @param string $section_tipo
+	* @return string|null $children_tipo
 	*/
-	protected function get_my_parents() : array {
+	public static function get_parent_tipo( string $section_tipo ) : ?string {
 
-		$parents = [];
+		$children_tipo = null;
 
-		// empty section_id case
-			if(empty($this->section_id)){
-				return $parents;
+		// Locate component children in section when is not received
+		// Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
+			$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+				$section_tipo, // string section_tipo
+				['component_relation_parent'], // array ar_model_name_required
+				true, // bool from_cache
+				true, // bool resolve_virtual
+				true, // bool recursive
+				true, // bool search_exact
+				false // bool|array ar_tipo_exclude_elements
+			);
+			if (empty($ar_parent_tipo)) {
+				debug_log(__METHOD__
+					." Ignored search get_parent because this section ($section_tipo) do not have any component of model: component_relation_parent "
+					, logger::ERROR
+				);
+				return $children_tipo;
 			}
+			$children_tipo = reset($ar_parent_tipo);
+
+
+		return $children_tipo;
+	}//end get_parent_tipo
 
 		$target_component_children_tipos = component_relation_parent::get_target_component_children_tipos($this->tipo);
 
