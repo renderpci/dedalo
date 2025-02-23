@@ -842,9 +842,18 @@ class search {
 
 					$path				= $search_object->path;
 					$search_component	= end($path);
-					// model (with fallback if not exists)
+					// model (with fallback if do not exists)
 					if (!isset($search_component->model)) {
 						$search_component->model = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo, true);
+					}
+					// check for empty models like elements that this installation don't have (e.g. 'numisdata303' from request config fixed filter in Objects -tch1-)
+					if (empty($search_component->model)) {
+						debug_log(__METHOD__
+							. " Error resolving component model. Ignored search element " . PHP_EOL
+							. ' tipo: ' . to_string($search_component->component_tipo)
+							, logger::ERROR
+						);
+						continue;
 					}
 					$model_name = $search_component->model;
 

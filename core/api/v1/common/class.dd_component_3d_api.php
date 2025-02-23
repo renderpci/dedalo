@@ -14,7 +14,6 @@ final class dd_component_3d_api {
 	* MOVE_FILE_TO_DIR
 	* Move a file from one location to another
 	* Usually used to move posterframe image
-	*
 	* @param object $rqo
 	* 	Sample:
 	* {
@@ -54,6 +53,7 @@ final class dd_component_3d_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed '.__METHOD__;
+				$response->errors   = [];
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -68,10 +68,10 @@ final class dd_component_3d_api {
 
 		// move file
 			$user_id = logged_user_id();
-			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $file_data->key_dir;
+			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/' . $user_id . '/' . $file_data->key_dir;
 
 			$source_file_path	= $tmp_dir . '/' . $file_data->tmp_name;
-			$target_file_path	= $component->get_media_path_dir($target_dir). '/' . $file_data->name;
+			$target_file_path	= $component->get_media_path_dir($target_dir) . '/' . $file_data->name;
 
 			// debug info
 				debug_log(__METHOD__
@@ -86,27 +86,30 @@ final class dd_component_3d_api {
 				$full_target_dir = dirname($target_file_path);
 				if(!create_directory($full_target_dir, 0750)) {
 					$response->msg .= ' Error creating directory';
+					$response->errors[] = 'create_directory failed';
 					return $response;
 				}
 
-			$result = rename($source_file_path, $target_file_path);
-			if ($result===false) {
-				debug_log(__METHOD__
-					. " Error moving file from  " . PHP_EOL
-					. ' - ' . $source_file_path .PHP_EOL
-					. ' - to' .PHP_EOL
-					. ' - ' . $target_file_path .PHP_EOL
-					. ' rqo: ' . to_string($rqo)
-					, logger::ERROR
-				);
+			// rename file (move)
+				$result = rename($source_file_path, $target_file_path);
+				if ($result===false) {
+					debug_log(__METHOD__
+						. " Error moving file from  " . PHP_EOL
+						. ' - ' . $source_file_path .PHP_EOL
+						. ' - to' .PHP_EOL
+						. ' - ' . $target_file_path .PHP_EOL
+						. ' rqo: ' . to_string($rqo)
+						, logger::ERROR
+					);
 
-				$response->msg .= ' Error creating directory';
-				debug_log(__METHOD__
-					. ' '.$response->msg
-					, logger::ERROR
-				);
-				return $response;
-			}
+					$response->msg .= ' Error creating directory';
+					$response->errors[] = 'rename failed';
+					debug_log(__METHOD__
+						. ' '.$response->msg
+						, logger::ERROR
+					);
+					return $response;
+				}
 
 		// thumb. Create thumb from posterframe
 			if ($target_dir==='posterframe') {
@@ -116,7 +119,9 @@ final class dd_component_3d_api {
 
 		// response
 			$response->result	= $result;
-			$response->msg		= 'OK. Request done '.__METHOD__;
+			$response->msg		= $result===true
+				? 'OK. Request done successfully '.__METHOD__
+				: $response->msg;
 
 
 		return $response;
@@ -127,7 +132,6 @@ final class dd_component_3d_api {
 	/**
 	* DELETE_POSTERFRAME
 	* Deletes posterframe file
-	*
 	* @param object $rqo
 	* 	Sample:
 	* {
@@ -153,6 +157,7 @@ final class dd_component_3d_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed '.__METHOD__;
+				$response->errors   = [];
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -170,7 +175,9 @@ final class dd_component_3d_api {
 
 		// response
 			$response->result	= $result;
-			$response->msg		= 'OK. Request done '.__METHOD__;
+			$response->msg		= $result===true
+				? 'OK. Request done successfully '.__METHOD__
+				: $response->msg;
 
 
 		return $response;
