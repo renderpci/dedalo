@@ -34,6 +34,30 @@
 global $updates;
 $updates = new stdClass();
 
+$v=650; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 5;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 4;
+	$updates->$v->update_from_minor		= 3;
+
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// update time machine data. Update 'data' of time_machine for comopnent_dataframe
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data_v6_5_0.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Set component parent data with the component children data. Set all thesaurus data as parent relation model, able to be independent hierarchies to implement local ontologies";
+				$script_obj->script_class	= "transform_data_v6_5_0";
+				$script_obj->script_method	= "update_parent_with_children_data";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
 
 
 $v=643; #####################################################################################
