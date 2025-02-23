@@ -485,62 +485,141 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* REMOVE_CHILD
-	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
-	* NOTE: This method updates component 'dato'
-	* @param locator $locator
-	* @return bool
+	* GET_MY_DATA
+	* @return array $data
 	*/
-	public function remove_child( locator $locator ) : bool {
+	private function get_my_data() : array {
 
-		// remove current locator from component dato
-		if (!$this->remove_locator_from_dato($locator, ['section_id','section_tipo','type'])) {
-			return false;
+		$data = [];
+
+		// empty section_id case
+			if(empty($this->section_id)){
+				return $data;
+			}
+
+		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
+		$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $this->tipo, $this->section_tipo);
+
+		if( empty($ar_parent_tipo) ){
+
+			debug_log(__METHOD__
+				. " component children without parent associated " . PHP_EOL
+				. 'tipo: ' . to_string($this->tipo) . PHP_EOL
+				. 'section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+				. 'section_id: ' . to_string($this->section_id)
+				, logger::ERROR
+			);
+
+			return $data;
 		}
 
-		return true;
-	}//end remove_child
+		foreach ($ar_parent_tipo as $parent_tipo) {
+			$data = array_merge(
+				$data,
+				component_relation_children::get_children(
+					$this->section_id,
+					$this->section_tipo,
+					$parent_tipo,
+					null,
+					(object)[
+						'search_in_main_hierarchy' => true
+					]
+				)
+			);
+		}
+
+
+		return $data;
+	}//end get_my_data
 
 
 
 	/**
 	* GET_CHILDREN
-	*  Recursive get children function
-	* @param string|int $section_id
+	* Get children data of current section.
+	* This component has not real data, to obtain its data search the component_related_parent that call this section
+	* the found sections will be the children_data.
+	* @param int|string $section_id
 	* @param string $section_tipo
 	* @param string|null $component_tipo = null
-	* @param bool $recursive = true
-	* @param bool $is_recursion = false
-	*
-	* @return array $ar_children_recursive
+	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
+	* @return array $parents
+	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
-	public static function get_children( string|int $section_id, string $section_tipo, ?string $component_tipo=null, bool $recursive=true, bool $is_recursion=false ) : array {
+	public static function get_children( int|string $section_id, string $section_tipo, ?string $component_tipo=null ) : array {
 
-		static $locators_resolved = array();
+		$children = [];
 
-		// reset ar_resolved on first call
-			if ($is_recursion===false) {
-				$locators_resolved = [];
-			}
-
-		$ar_children_recursive = [];
-
-		// Infinite loops prevention
-			$pseudo_locator = $section_id .'_'. $section_tipo;
-			if (in_array($pseudo_locator, $locators_resolved)) {
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." Skipped already resolved locator ".to_string($pseudo_locator), logger::DEBUG);
-				}
-				return [];
-			}
-
-		// Locate component children in current section when is not received
+		// Locate component children in section when is not received
 		// Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
-		// $section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false
 			if (empty($component_tipo)) {
-				$ar_tipos = section::get_ar_children_tipo_by_model_name_in_section(
-					$section_tipo, // string section_tipo
-					[get_called_class()], // array ar_model_name_required
+				$component_tipo = component_relation_children::get_children_tipo($section_tipo);
+			}
+
+		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
+			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo);
+
+			if( empty($ar_parent_tipo) ){
+				return $children;
+			}
+			$parent_tipo = $ar_parent_tipo[0];
+
+			$filter_locator = new locator();
+				$filter_locator->set_section_tipo($section_tipo);
+				$filter_locator->set_section_id($section_id);
+				$filter_locator->set_from_component_tipo($parent_tipo);
+				$filter_locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
+
+		// new way done in relations field with standard sqo
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( [$section_tipo] );
+				$sqo->set_mode( 'related' );
+				$sqo->set_full_count( false );
+				$sqo->set_filter_by_locators( [$filter_locator] );
+
+			$search		= search::get_instance($sqo);
+			$rows_data	= $search->search();
+			// fix result ar_records as dato
+			$result	= $rows_data->ar_records;
+
+			$children = array_map( function($row) use($component_tipo){
+
+				$locator = new locator();
+					$locator->set_section_tipo($row->section_tipo);
+					$locator->set_section_id($row->section_id);
+					$locator->set_from_component_tipo($component_tipo);
+					$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+
+				return $locator;
+
+			}, $result);
+
+
+		return $children;
+	}//end get_children
+
+
+
+	/**
+	* GET_CHILDREN_RECURSIVE
+	* @param int|string $section_id
+	* @param string $section_tipo
+	* @param ?string $component_tipo
+	* @return
+	*/
+	public static function get_children_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null) : array {
+
+		$all_children = component_relation_children::get_children($section_id, $section_tipo, $component_tipo);
+
+		foreach ($all_children as $child) {
+			$descendants = component_relation_children::get_children_recursive($child->section_id, $child->section_tipo, $component_tipo); // Recursively get descendants
+			$all_children = array_merge($all_children, $descendants);
+		}
+
+		return $all_children;
+	}//end get_children_recursive
+
+
 
 	/**
 	* GET_AR_RELATED_PARENT_TIPO
@@ -586,7 +665,6 @@ class component_relation_children extends component_relation_common {
 		return $ar_parent_tipo;
 	}//end get_ar_related_parent_tipo
 
-				if (!empty($dato)) {
 
 
 	/**
