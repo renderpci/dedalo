@@ -578,30 +578,41 @@ class component_relation_children extends component_relation_common {
 
 				if (!empty($dato)) {
 
-					$ar_children_recursive = array_merge($ar_children_recursive, $dato);
 
-					// Set as resolved to avoid loops
-					$locators_resolved[] = $section_id .'_'. $section_tipo;
+	/**
+	* GET_CHILDREN_TIPO
+	* get ontology tipo for component_related_children of the section_tipo given
+	* @param string $section_tipo
+	* @return string|null $children_tipo
+	*/
+	public static function get_children_tipo( string $section_tipo ) : ?string {
 
-					foreach ((array)$dato as $current_locator) {
+		$children_tipo = null;
 
-						$ar_children_recursive = array_merge(
-							$ar_children_recursive,
-							self::get_children(
-								$current_locator->section_id,
-								$current_locator->section_tipo,
-								$component_tipo,
-								$recursive,
-								true // is_recursion
-							)
-						);
-					}
-				}
+		// Locate component children in section when is not received
+		// Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
+			$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+				$section_tipo, // string section_tipo
+				['component_relation_children'], // array ar_model_name_required
+				true, // bool from_cache
+				true, // bool resolve_virtual
+				true, // bool recursive
+				true, // bool search_exact
+				false // bool|array ar_tipo_exclude_elements
+			);
+			if (empty($ar_children_tipo)) {
+				debug_log(__METHOD__
+					." Ignored search get_children because this section ($section_tipo) do not have any component of model: component_relation_children "
+					, logger::ERROR
+				);
+				return $children_tipo;
 			}
+			$children_tipo = reset($ar_children_tipo);
 
 
-		return $ar_children_recursive;
-	}//end get_children
+		return $children_tipo;
+	}//end get_children_tipo
+
 
 
 
