@@ -550,18 +550,39 @@ class component_relation_parent extends component_relation_common {
 
 
 	/**
-	* ADD_PARENT
-	* Alias of update_children with specific action 'add'
-	* @param string $children_section_tipo
-	* @param mixed $children_section_id
-	* @param string|null $component_relation_children_tipo = null
+	* add_parent
+	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
+	* NOTE: This method updates component 'dato' and save
+	* @param locator $locator
 	* @return bool
 	*/
-	public function add_parent( string $children_section_tipo, mixed $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
+	public function add_parent( locator $locator ) : bool {
 
-		$action = 'add';
+		// reference self case
+			if ($locator->section_tipo===$this->section_tipo && $locator->section_id==$this->section_id) {
+				debug_log(__METHOD__
+					. " Error: Ignored invalid locator received to add parent (auto-reference) " . PHP_EOL
+					. ' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+				return false; // Avoid auto-references
+			}
 
-		return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
+		// from_component_tipo check
+			if (!isset($locator->from_component_tipo)) {
+				debug_log(__METHOD__
+					.' ERROR. ignored action. Property "from_component_tipo" is mandatory '
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// Add current locator to component dato
+			if (!$this->add_locator_to_dato($locator)) {
+				return false;
+			}
+
+		return true;
 	}//end add_parent
 
 
@@ -583,6 +604,20 @@ class component_relation_parent extends component_relation_common {
 
 
 
+	// /**
+	// * ADD_PARENT
+	// * Alias of update_children with specific action 'add'
+	// * @param string $children_section_tipo
+	// * @param mixed $children_section_id
+	// * @param string|null $component_relation_children_tipo = null
+	// * @return bool
+	// */
+	// public function add_parent( string $children_section_tipo, mixed $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
+
+	// 	$action = 'add';
+
+	// 	return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
+	// }//end add_parent
 	/**
 	* GET_COMPONENT_RELATION_CHILDREN_TIPO
 	* @param string $component_tipo
