@@ -716,27 +716,42 @@ class component_relation_parent extends component_relation_common {
 		return $children_tipo;
 	}//end get_parent_tipo
 
-		$target_component_children_tipos = component_relation_parent::get_target_component_children_tipos($this->tipo);
 
-		if (!empty($target_component_children_tipos)) {
-			foreach ($target_component_children_tipos as $children_component_tipo) {
-				$parents = array_merge(
-					$parents,
-					component_relation_parent::get_parents(
-						$this->section_id,
-						$this->section_tipo,
-						$children_component_tipo,
-						null,
-						(object)[
-							'search_in_main_hierarchy' => true
-						]
-					)
-				);
-			}
-		}
 
-		return $parents;
-	}//end get_my_parents
+	// /**
+	// * GET_MY_PARENTS
+	// * @return array $parents
+	// */
+	// protected function get_my_parents() : array {
+
+	// 	$parents = [];
+
+	// 	// empty section_id case
+	// 		if(empty($this->section_id)){
+	// 			return $parents;
+	// 		}
+
+	// 	$target_component_children_tipos = component_relation_parent::get_target_component_children_tipos($this->tipo);
+
+	// 	if (!empty($target_component_children_tipos)) {
+	// 		foreach ($target_component_children_tipos as $children_component_tipo) {
+	// 			$parents = array_merge(
+	// 				$parents,
+	// 				component_relation_parent::get_parents(
+	// 					$this->section_id,
+	// 					$this->section_tipo,
+	// 					$children_component_tipo,
+	// 					null,
+	// 					(object)[
+	// 						'search_in_main_hierarchy' => true
+	// 					]
+	// 				)
+	// 			);
+	// 		}
+	// 	}
+
+	// 	return $parents;
+	// }//end get_my_parents
 
 
 
@@ -755,51 +770,23 @@ class component_relation_parent extends component_relation_common {
 	* @return array $parents
 	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
-	public static function get_parents( int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null, ?object $options=null ) : array {
-		$start_time=start_time();
+	public static function get_parents( int|string $section_id, string $section_tipo, ?string $from_component_tipo=null ) : array {
 
-		// options
-			// search_in_main_hierarchy. Enable to add parents from hierarchy section (hierarchy1)
-			$search_in_main_hierarchy = $options->search_in_main_hierarchy ?? false;
-			// main_table
-			$main_table = $options->main_table ?? ( ( strpos($section_tipo,'ontology')!==false ) ? ontology::$main_table : hierarchy::$main_table );
-			// hierarchy_from_component_tipo. When 'search_in_main_hierarchy' is true, it allows to select the component_reation_children component to be searched.
-			$hierarchy_from_component_tipo = $options->hierarchy_from_component_tipo ?? DEDALO_HIERARCHY_CHILDREN_TIPO;
+		$component_tipo = $from_component_tipo ?? component_relation_parent::get_parent_tipo( $section_tipo );
+		$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$parent_component = component_common::get_instance(
+			$model, // string model
+			$component_tipo, // string tipo
+			$section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$section_tipo // string section_tipo
+		);
 
-			// debug
-				// if ($search_in_main_hierarchy===false) {
-				// 	$bt = debug_backtrace();
-				// 	dump($bt[1], ' bt[1] ++ '.to_string($options));
-				// }
+		$parents = $parent_component->get_dato();
 
-		// parents array container
-			$parents = [];
-
-		// hierarchy1 case (root)
-			if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-				return $parents; // We are in last level of parent 'hierarchy1'
-			}
-
-		// from_component_tipo filter option
-			$filter = '';
-			if (!is_null($from_component_tipo)) {
-				/*
-					# Locate current section component parent tipo
-					$ar_model_name_required = array('component_relation_parent');
-					$ar_children_tipo 	 	 = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
-					$component_parent_tipo 	 = reset($ar_children_tipo);
-					# Calculate current target component_relation_children_tipo from structure
-					$from_component_tipo 	 = component_relation_parent::get_component_relation_children_tipo($component_parent_tipo);
-					*/
-				$filter = ',"from_component_tipo":"'.$from_component_tipo.'"';
-			}
-
-		// compare
-			$type		= DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-			$compare	= '{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.$type.'"'.$filter.'}';
-
-		// tables query
-			$strQuery	= '';
+		return $parents;
+	}//end get_parents
 			$sql_select	= 'section_tipo, section_id, datos#>\'{relations}\' AS relations';
 			$sql_where	= 'datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
 			if (is_null($ar_tables)) {
@@ -937,7 +924,204 @@ class component_relation_parent extends component_relation_common {
 
 
 		return $parents;
-	}//end get_parents
+	// /**
+	// * GET_PARENTS
+	// * Get parents of current section
+	// * If you call this method from component_relation_parent, always send $from_component_tipo var to avoid recreate the component statically
+	// * @param int|string $section_id
+	// * @param string $section_tipo
+	// * @param string|null $from_component_tipo = null
+	// *	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
+	// * @param array $ar_tables
+	// *	Optional. If set, union tables search is made over all tables received
+	// * @param object|null $options
+	// *	Optional parameter to enable additional calculations like hierarchy section search for parents (Thesaurus case)
+	// * @return array $parents
+	// *	Array of stClass objects with properties: section_tipo, section_id, component_tipo
+	// */
+	// public static function get_parents( int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null, ?object $options=null ) : array {
+	// 	$start_time=start_time();
+
+	// 	// options
+	// 		// search_in_main_hierarchy. Enable to add parents from hierarchy section (hierarchy1)
+	// 		$search_in_main_hierarchy = $options->search_in_main_hierarchy ?? false;
+	// 		// main_table
+	// 		$main_table = $options->main_table ?? ( ( strpos($section_tipo,'ontology')!==false ) ? ontology::$main_table : hierarchy::$main_table );
+	// 		// hierarchy_from_component_tipo. When 'search_in_main_hierarchy' is true, it allows to select the component_reation_children component to be searched.
+	// 		$hierarchy_from_component_tipo = $options->hierarchy_from_component_tipo ?? DEDALO_HIERARCHY_CHILDREN_TIPO;
+
+	// 		// debug
+	// 			// if ($search_in_main_hierarchy===false) {
+	// 			// 	$bt = debug_backtrace();
+	// 			// 	dump($bt[1], ' bt[1] ++ '.to_string($options));
+	// 			// }
+
+	// 	// parents array container
+	// 		$parents = [];
+
+	// 	// hierarchy1 case (root)
+	// 		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+	// 			return $parents; // We are in last level of parent 'hierarchy1'
+	// 		}
+
+	// 	// from_component_tipo filter option
+	// 		$filter = '';
+	// 		if (!is_null($from_component_tipo)) {
+	// 			/*
+	// 				# Locate current section component parent tipo
+	// 				$ar_model_name_required = array('component_relation_parent');
+	// 				$ar_children_tipo 	 	 = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+	// 				$component_parent_tipo 	 = reset($ar_children_tipo);
+	// 				# Calculate current target component_relation_children_tipo from structure
+	// 				$from_component_tipo 	 = component_relation_parent::get_component_relation_children_tipo($component_parent_tipo);
+	// 				*/
+	// 			$filter = ',"from_component_tipo":"'.$from_component_tipo.'"';
+	// 		}
+
+	// 	// compare
+	// 		$type		= DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+	// 		$compare	= '{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.$type.'"'.$filter.'}';
+
+	// 	// tables query
+	// 		$strQuery	= '';
+	// 		$sql_select	= 'section_tipo, section_id, datos#>\'{relations}\' AS relations';
+	// 		$sql_where	= 'datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
+	// 		if (is_null($ar_tables)) {
+	// 			// Calculated from section_tipo (only search in current table)
+	// 			$table = common::get_matrix_table_from_tipo($section_tipo);
+	// 			if (empty($table)) {
+	// 				debug_log(__METHOD__
+	// 					. " Error on get table from section. Empty result is received. Empty parents will be return" . PHP_EOL
+	// 					. ' Check that section "' .$section_tipo . '" already exists. If not, check hierarchies to create it' . PHP_EOL
+	// 					. ' section_id: ' . to_string($section_id) . PHP_EOL
+	// 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+	// 					. ' from_component_tipo: ' . to_string($from_component_tipo)
+	// 					, logger::ERROR
+	// 				);
+	// 				return [];
+	// 			}
+	// 			$strQuery  .= "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+	// 		}else{
+	// 			// Iterate tables and make union search
+	// 			$ar_query = array();
+	// 			foreach ($ar_tables as $table) {
+	// 				$ar_query[] = "SELECT $sql_select FROM \"$table\" WHERE $sql_where ";
+	// 			}
+	// 			$strQuery .= implode(" UNION ALL ", $ar_query);
+	// 		}
+
+	// 	// search_in_main_hierarchy. Add hierarchy main parents
+	// 	// By default, only self section is searched. When in case parent is a hierarchy (like 'hierarchy256')
+	// 	// we also need to search in main_hierarchy table the "target" parent
+	// 		// $search_in_main_hierarchy = true;
+	// 		if($search_in_main_hierarchy===true) {
+	// 			$main_filter	= ",\"from_component_tipo\":\"$hierarchy_from_component_tipo\"";
+	// 			$main_compare	= "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$main_filter."}";
+	// 			$sql_where		= "datos#>'{relations}' @> '[$main_compare]'::jsonb";
+	// 			$strQuery	   .= "\nUNION ALL \nSELECT $sql_select FROM \"$main_table\" WHERE $sql_where ";
+	// 		}
+
+	// 	// Set order to maintain results stable
+	// 		$strQuery .= ' ORDER BY section_id ASC';
+
+	// 	// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			// store query
+	// 			component_relation_parent::$get_parents_query = $strQuery;
+	// 		}
+
+	// 	// search exec
+	// 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
+	// 		if ($result===false) {
+	// 			debug_log(__METHOD__
+	// 				. " Error on get search free result. False result is received " . PHP_EOL
+	// 				. ' strQuery: ' . $strQuery . PHP_EOL
+	// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
+	// 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+	// 				. ' from_component_tipo: ' . to_string($from_component_tipo) . PHP_EOL
+	// 				. ' ar_tables: ' . to_string($ar_tables)
+	// 				, logger::ERROR
+	// 			);
+	// 		}else{
+
+	// 			// debug
+	// 				if(SHOW_DEVELOPER===true) {
+	// 					$exec_time = exec_time_unit($start_time,'ms');
+	// 					if (!empty(dd_core_api::$rqo)) {
+	// 						dd_core_api::$sql_query_search[] = '-- [get_parents] TIME ms: '. $exec_time . PHP_EOL . $strQuery;
+	// 					}
+	// 				}
+
+	// 			while ($row = pg_fetch_object($result)) {
+
+	// 				$current_section_id		= $row->section_id;
+	// 				$current_section_tipo	= $row->section_tipo;
+	// 				$current_relations		= json_decode($row->relations);
+
+	// 				// check infinite loop
+	// 					if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
+	// 						debug_log(__METHOD__
+	// 							." ERROR: Error on get parent. Parent is set a itself parent creating a infinite loop. Ignored locator"
+	// 							.' section_id: ' .$section_id . PHP_EOL
+	// 							.' section_tipo: ' .$section_tipo . PHP_EOL
+	// 							, logger::ERROR
+	// 						);
+	// 						continue;
+	// 					}
+
+	// 				// Hierarchy parent case locator, force from_component_tipo
+	// 					if ($current_section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) { // 'hierarchy1'
+	// 						$from_component_tipo = DEDALO_HIERARCHY_CHILDREN_TIPO;
+	// 					}
+
+	// 				// from_component_tipo. Calculated_from_component_tipo on empty. Search 'from_component_tipo' in locators when no is received
+	// 					if (empty($from_component_tipo)) {
+
+	// 						$reference_locator = new locator();
+	// 							$reference_locator->set_section_tipo($section_tipo);
+	// 							$reference_locator->set_section_id($section_id);
+	// 							$reference_locator->set_type($type);
+
+	// 						foreach ((array)$current_relations as $current_locator) {
+	// 							if(true===locator::compare_locators($current_locator, $reference_locator, ['section_tipo','section_id','type'])) {
+	// 								if (!isset($current_locator->from_component_tipo)) {
+	// 									dump($current_locator, "Bad locator.'from_component_tipo' property not found in locator (get_parents: $section_id, $section_tipo)");
+	// 									debug_log(__METHOD__
+	// 										." Bad locator.'from_component_tipo' property not found in locator (get_parents: $section_id, $section_tipo)" . PHP_EOL
+	// 										.' current_locator:' . json_encode($current_locator, JSON_PRETTY_PRINT)
+	// 										, logger::ERROR
+	// 									);
+	// 								}
+	// 								// calculated_from_component_tipo overwrite empty value
+	// 								$from_component_tipo = $current_locator->from_component_tipo;
+	// 								break;
+	// 							}
+	// 						}
+	// 					}//end if (empty($from_component_tipo))
+
+	// 				// parent_locator
+	// 					$parent_locator = new locator();
+	// 						$parent_locator->set_section_tipo($current_section_tipo);
+	// 						$parent_locator->set_section_id($current_section_id);
+	// 						$parent_locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+	// 						$parent_locator->set_from_component_tipo($from_component_tipo);
+
+	// 				// parents add locator
+	// 					$parents[] = $parent_locator;
+	// 			}//end while
+	// 		}
+
+	// 	// debug
+	// 		if(SHOW_DEBUG===true) {
+	// 			// $total=round(start_time()-$start_time,3);
+	// 			// debug_log(__METHOD__." section_id:$section_id, section_tipo:$section_tipo, from_component_tipo:$from_component_tipo, ar_tables:$ar_tables - $strQuery ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
+	// 			// $total = exec_time_unit($start_time,'ms')." ms";
+	// 			// dump($total, ' ///////// total ++ '.to_string("$section_id, $section_tipo, $from_component_tipo, $ar_tables") .PHP_EOL. " $strQuery");
+	// 		}
+
+
+	// 	return $parents;
+	// }//end get_parents
 
 
 
