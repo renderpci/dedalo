@@ -627,15 +627,76 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* GET_SORTABLE
-	* @return bool
-	* 	Default is false. Override when component is sortable
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
+	* @return object $query_object
 	*/
-	public function get_sortable() : bool {
+	public static function resolve_query_object_sql(object $query_object) : object {
 
-		return true;
-	}//end get_sortable
+		// q
+			$q = $query_object->q;
+			// q sample :
+			// [
+			//     {
+			//         "section_tipo": "test3",
+			//         "section_id": "7974",
+			//         "from_component_tipo": "test71"
+			//     }
+			// ]
 
+		// children_locators
+			$children_locators = is_string($q)
+				? json_decode($q)
+				: $q;
+			if (!is_array($children_locators)) {
+				$children_locators = [$children_locators];
+			}
+
+		// children
+			$ar_parent = [];
+			foreach ($children_locators as $current_locator) {
+
+				$child_compnent_tipo	= $current_locator->from_component_tipo;
+				$ar_target_parent_tipo		= component_relation_children::get_ar_related_parent_tipo(
+					$child_compnent_tipo, 'hierarchy20' //ITS NOT CORRECT, but is not possible know the section_tipo here
+				);
+				if (!empty($ar_target_parent_tipo)) {
+					foreach ($ar_target_parent_tipo as $children_component_tipo) {
+
+						$model_name	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
+						$component	= component_common::get_instance(
+							$model_name,
+							$children_component_tipo,
+							$current_locator->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$current_locator->section_tipo
+						);
+						$component_parent_dato = $component->get_dato();
+						foreach ($component_parent_dato as $parent_locator) {
+							$ar_parent[] = $parent_locator->section_id;
+						}
+					}//end foreach ($ar_target_parent_tipo as $children_component_tipo)
+				}
+			}
+
+		// q_clean
+			$q_clean = array_map(function($el){
+				return (int)$el;
+			}, $ar_parent);
+
+		// query_object
+			$query_object->operator			= 'IN';
+			$query_object->q_parsed			= implode(',', $q_clean);
+			$query_object->format			= 'in_column';
+			$query_object->type				= 'number';
+			$query_object->column_name		= 'section_id';
+			$query_object->component_path	= ['section_id'];
+			$query_object->unaccent			= false;
+
+
+		return $query_object;
+	}//end resolve_query_object_sql
 
 
 }//end component_relation_children
