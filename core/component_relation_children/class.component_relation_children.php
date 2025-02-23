@@ -282,26 +282,28 @@ class component_relation_children extends component_relation_common {
 
 	// 	return true;
 	// }//end get_sortable
+
+
+
+
+
+	/**********************************************
+
 	/**
-	* MAKE_ME_YOUR_CHILD
-	* Add one locator to current 'dato' from parent side
-	* NOTE: This method updates component 'dato' and save
-	* @param string $section_tipo
-	* @param string|int $section_id
-	* @return bool
+	* SAVE
+	* Overwrite relation common action
+	* @return int|null $section_id
 	*/
-	public function make_me_your_child( string $section_tipo, string|int $section_id ) : bool {
+	public function Save() : ?int {
+		// Noting to do. This component don`t save
 
-		// locator compound
-			$locator = new locator();
-				$locator->set_type($this->relation_type);
-				$locator->set_section_id($section_id);
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_from_component_tipo($this->tipo);
+		$section_id = !empty($this->section_id)
+			? (int)$this->section_id
+			: null;
 
-		// Add children locator
-			if (!$this->add_child( $locator )) {
-				return false;
+		// return section id
+		return $section_id;
+	}//end Save
 			}
 
 		return true;
