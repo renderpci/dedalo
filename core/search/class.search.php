@@ -844,7 +844,7 @@ class search {
 
 					$path				= $search_object->path;
 					$search_component	= end($path);
-					// model (with fallback if not exists)
+					// model (with fallback if do not exists)
 					if (!isset($search_component->model)) {
 						$search_component->model = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo, true);
 					}
