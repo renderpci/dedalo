@@ -109,8 +109,6 @@ class transform_data_v6_5_0 {
 					// children locators are not used anymore
 					unset($datos->relations[$key]);
 					$to_save = true;
-
-
 				}//end if(isset($locator->section_id_key))
 
 			}//end foreach ($relations as $locator)
