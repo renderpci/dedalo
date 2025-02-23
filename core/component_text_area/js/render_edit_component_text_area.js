@@ -64,7 +64,7 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 /**
 * RENDER_LAYER_SELECTOR
 * Creates the user layers selection nodes
-* Used from component_image and component_geoocation
+* Used from component_image and component_geolocation
 * @param options
 * {
 *	self: object (component_text_area instance sent by published event)
