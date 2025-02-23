@@ -72,7 +72,8 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 		try {
-			const tld			= self.caller.datum.data.find(el => el.tipo==='ontology7').value[0]
+			// tld from hierarchy6 - component_input_text - TLD
+			const tld			= self.caller.datum.data.find(el => el.tipo==='hierarchy6').value[0]
 			const section_id	= self.caller.data.value[0].section_id
 			const info			= self.caller.mode==='edit'
 				? `${tld}${section_id}`
@@ -98,7 +99,7 @@ const get_content_data = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'h2',
 				class_name		: 'user_info',
-				inner_html		: 'Invalid source',
+				inner_html		: 'Invalid source (hierarchy6)',
 				parent			: fragment
 			})
 		}

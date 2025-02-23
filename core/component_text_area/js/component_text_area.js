@@ -788,7 +788,7 @@ component_text_area.prototype.update_tag = async function(options) {
 		const key			= options.key || 0
 		// const save		= options.save || false  (Unified component_text_area change-tag method. This method has been unified to allow to use different services in the same way (service_ckeditor, service_tinymce))
 
-	// ar_type. Could be one like ['tc'] or a pair like ['indeIn','indexOut']
+	// ar_type. Could be one like ['tc'] or a pair like ['indexIn','indexOut']
 		const ar_type = (type.indexOf('In')!==-1 || type.indexOf('Out')!==-1)
 			? (()=>{
 				const type_in = (type.indexOf('Out')!==-1)
@@ -898,7 +898,7 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 		? '[/'
 		: '['
 
-	// Removes sufixes 'In' and 'Out'
+	// Removes suffixes 'In' and 'Out'
 	const type_name = type.replace(/In|Out/, '');
 
 	const src = (type==='tc')
@@ -1296,7 +1296,7 @@ component_text_area.prototype.add_component_history_note = async function(option
 * @param object options
 * {
 * 	caller: object (component_text_area_instance),
-* 	text_editor: object (service_ckedito instance)
+* 	text_editor: object (service_ckeditor instance)
 * }
 * @return void
 */

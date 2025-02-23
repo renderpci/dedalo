@@ -907,7 +907,9 @@ const render_inputs_list = function(self) {
 			const filter_item = filter_group[i]
 
 			const current_ddo		= filter_item.path[filter_item.path.length-1]
-			const component_label	= current_ddo.label.replace(/(<([^>]+)>)/ig, '');
+			const component_label	= current_ddo.label
+				? current_ddo.label.replace(/(<([^>]+)>)/ig, '')
+				: '';
 
 			// input_group
 			const input_group = ui.create_dom_element({
