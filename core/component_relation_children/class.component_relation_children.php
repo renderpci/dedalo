@@ -541,40 +541,50 @@ class component_relation_children extends component_relation_common {
 				$ar_tipos = section::get_ar_children_tipo_by_model_name_in_section(
 					$section_tipo, // string section_tipo
 					[get_called_class()], // array ar_model_name_required
+
+	/**
+	* GET_AR_RELATED_PARENT_TIPO
+	* Get the parent node in ontology related to the component_related_children
+	* @param string $tipo
+	* @param string $section_tipo
+	* @return array $ar_parent_tipo
+	*/
+	public static function get_ar_related_parent_tipo( string $tipo, string $section_tipo ) : array {
+
+		static $ar_parent_tipo_cache;
+
+		if( isset($ar_parent_tipo_cache) ){
+			return $ar_parent_tipo_cache;
+		}
+
+		// get ontology related parent
+		$ar_parent_tipo = common::get_ar_related_by_model( 'component_relation_parent', $tipo );
+
+		// fallback; to search the parent related tipo in the section components
+		if( empty($ar_parent_tipo) ){
+
+			debug_log(__METHOD__
+				. " Bad definition in ontology, this related_children has not related his parent, please assign the component_relation_parent to it. ---||--- using section_tipo to resolve it " . PHP_EOL
+				. 'children tipo: ' . to_string($tipo)
+				, logger::ERROR
+			);
+			// Look component parent across related section
+			// Resolve parent component tipo from children_section_tipo
+				$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+					$section_tipo, // string $section_tipo
+					['component_relation_parent'], // array $ar_model_name_required
 					true, // bool from_cache
 					true, // bool resolve_virtual
 					true, // bool recursive
 					true, // bool search_exact
-					false // bool|array ar_tipo_exclude_elements
+					false // array|bool ar_tipo_exclude_elements
 				);
-				if (empty($ar_tipos)) {
-					debug_log(__METHOD__
-						." Ignored search get_children because this section ($section_tipo) do not have any component of model: component_relation_children "
-						, logger::WARNING
-					);
-					return $ar_children_recursive;
-				}
-				$component_tipo = reset($ar_tipos);
-			}
+		}
 
-		// Create first component to get dato
-			$component = component_common::get_instance(
-				get_called_class(),
-				$component_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_LANG,
-				$section_tipo,
-				false // bool cache
-			);
-			$dato = $component->get_dato();
+		$ar_parent_tipo_cache = $ar_parent_tipo;
 
-		// ar_children_recursive
-			if ($recursive!==true) {
-
-				$ar_children_recursive = $dato;
-
-			}else{
+		return $ar_parent_tipo;
+	}//end get_ar_related_parent_tipo
 
 				if (!empty($dato)) {
 
