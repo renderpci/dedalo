@@ -1,0 +1,290 @@
+<?php declare(strict_types=1);
+require_once DEDALO_CORE_PATH . '/base/update/class.update.php';
+/**
+* CLASS TRANSFORM_DATA
+* This class is used to transform existing data, e.g. to migrate
+* portals with dataframe v5 to other models such as Bibliographic references
+*
+*/
+class transform_data_v6_5_0 {
+
+	/**
+	* UPDATE_SET_PARENT_WITH_CHILDREN
+	* @return bool
+	*/
+	public static function update_parent_with_children_data() : bool {
+
+		$ar_tables = [
+			// 'new_matrix'
+			'matrix',
+			'matrix_activities',
+			// 'matrix_dataframe',
+			// 'matrix_activity',
+			// 'matrix_dd',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			// 'matrix_indexations',
+			'matrix_langs',
+			// 'matrix_layout',
+			// 'matrix_layout_dd',
+			// 'matrix_list',
+			'matrix_nexus',
+			'matrix_nexus_main',
+			// 'matrix_notes',
+			'matrix_ontology',
+			'matrix_ontology_main',
+			// 'matrix_profiles',
+			'matrix_projects',
+			// 'matrix_stats',
+			// 'matrix_structurations',
+			// 'matrix_test',
+			// 'matrix_tools',
+			// 'matrix_users'
+			];
+		$action = 'transform_data_v6_5_0::set_parent_data_from_children_data';
+
+		update::convert_table_data($ar_tables, $action);
+
+		return true;
+	}//end update_set_parent_with_children
+
+
+
+	/**
+	* SET_PARENT_DATA_FROM_CHILDREN_DATA
+	* Updates dataframe matrix and time machine data
+	* @param object|null $datos
+	* @return object|null $datos
+	*/
+	public static function set_parent_data_from_children_data(?object $datos) : ?object {
+
+
+		// empty relations cases
+			if (empty($datos->relations)) {
+				return null;
+			}
+
+		// dataframe_to_save initial is false
+			$to_save = false;
+
+		// get the tipo
+			$ar_components_parent_tipo		= self::get_all_compnent_parent();
+			$ar_components_children_tipo	= self::get_all_compnent_children();
+
+
+		// resolve the change using relations container
+			$section_id		= $datos->section_id;
+			$section_tipo	= $datos->section_tipo;
+			$relations		= $datos->relations ?? []; 	// relations container iteration
+			foreach ($relations as $key => $locator) {
+				// check if the section has any children data
+				if( $locator->type===DEDALO_RELATION_TYPE_CHILDREN_TIPO
+					&& in_array($locator->from_component_tipo, $ar_components_children_tipo )
+				) {
+					// hierarchy|ontology main section exception
+					if($locator->from_component_tipo === 'hierarchy59' || $locator->from_component_tipo === 'hierarchy45'){
+						$locator->type = DEDALO_RELATION_TYPE_LINK;
+						$to_save = true;
+						continue;
+					}
+
+					$parent_section_tipo	= $locator->section_tipo;
+					$parent_section_id		= $locator->section_id;
+					$ar_parent_tipo			= component_relation_children::get_ar_related_parent_tipo($locator->from_component_tipo, $section_tipo);
+					$parent_tipo			= $ar_parent_tipo[0];
+
+					$parent_locator_data = new locator();
+						$parent_locator_data->set_section_tipo( $section_tipo );
+						$parent_locator_data->set_section_id( $section_id );
+						$parent_locator_data->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
+						$parent_locator_data->set_from_component_tipo( $parent_tipo );
+
+
+					$parent_set_result = self::set_parent_data($parent_section_tipo, $parent_section_id, $parent_locator_data);
+
+					if($parent_set_result===false){
+						return null;
+					}
+					// remove current locator
+					// children locators are not used anymore
+					unset($datos->relations[$key]);
+					$to_save = true;
+
+
+				}//end if(isset($locator->section_id_key))
+
+			}//end foreach ($relations as $locator)
+			// remove the keys ans consolidate the relations array as locators
+			$datos->relations = array_values($datos->relations);
+
+		// no changes case
+			if($to_save === false){
+				return null;
+			}
+
+
+		return $datos;
+	}//end set_parent_data_from_children_data
+
+
+
+	/**
+	* GET_ALL_COMPNENT_PARENT
+	* @return
+	*/
+	private static function get_all_compnent_parent() {
+
+		static $ar_components_parent_tipo;
+
+		if(isset($ar_components_parent_tipo) ){
+			return $ar_components_parent_tipo;
+		}
+
+		$ar_components_parent_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name( 'component_relation_parent' );
+
+		return $ar_components_parent_tipo;
+	}//end get_all_compnent_parent
+
+
+
+	/**
+	* GET_ALL_COMPNENT_CHILDREN
+	* @return
+	*/
+	private static function get_all_compnent_children() {
+
+		static $ar_components_children_tipo;
+
+		if(isset($ar_components_children_tipo) ){
+			return $ar_components_children_tipo;
+		}
+
+		$ar_components_children_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name( 'component_relation_children' );
+
+		return $ar_components_children_tipo;
+	}//end get_all_compnent_children
+
+
+	/**
+	* SET_PARENT_DATA
+	* Update matrix_table with the new parent locator
+	* @param string $parent_section_tipo
+	* @param string|int $parent_section_id
+	* @param locator $parent_locator_data
+	* @return bool
+	*/
+	private static function set_parent_data( string $parent_section_tipo, string|int $parent_section_id, locator $parent_locator_data) : bool {
+
+		$matrix_table = section::get_matrix_table_from_tipo( $parent_section_tipo );
+
+		if($matrix_table===false){
+			$msg = "Failed to set parent locator, impossible to determinate table ----------------------- review your database";
+			debug_log(__METHOD__
+				." ERROR: $msg ". PHP_EOL
+				." The parent has not be assigned, but the child will be removed because is inconsistent maintain locators pointing to nowhere ". PHP_EOL
+				.' section_tipo: ' . $parent_section_tipo . PHP_EOL
+				.' section_id: ' . $parent_section_id . PHP_EOL
+				.' parent data: ' . json_encode( $parent_locator_data ) . PHP_EOL
+				.' matrix_table: ' . $matrix_table
+				, logger::ERROR
+			);
+			return true;// the parent is not assigned, but the children locator need to be deleted.
+		}
+		// cast to int
+		$parent_section_id = (int)$parent_section_id;
+
+		$strQuery = "
+			SELECT * FROM $matrix_table
+			WHERE section_id = '$parent_section_id' AND section_tipo = '$parent_section_tipo'
+		";
+		$result = JSON_RecordDataBoundObject::search_free($strQuery);
+		// query error case
+		if($result===false){
+			$msg = "Failed to set parent locator, inconsistent data ----------------------- review your database";
+			debug_log(__METHOD__
+				." ERROR: $msg ". PHP_EOL
+				.' strQuery: ' . $strQuery . PHP_EOL
+				.' section_tipo: ' . $parent_section_tipo . PHP_EOL
+				.' section_id: ' . $parent_section_id . PHP_EOL
+				.' parent data: ' . json_encode( $parent_locator_data )
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// empty records case
+		// generate new section and inject the data into de component
+		// it save time machine for both.
+		$n_rows = pg_num_rows($result);
+		if ($n_rows<1) {
+			//create new section
+			$section = section::get_instance(
+				$parent_section_id, // string|null section_id
+				$parent_section_tipo // string section_tipo
+			);
+			$section->Save();
+
+			// create new component with parent data
+			$component_tipo = $parent_locator_data->from_component_tipo;
+			$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+			$parent_component = component_common::get_instance(
+				$model, // string model
+				$component_tipo, // string tipo
+				$parent_section_id, // string section_id
+				'edit', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$parent_section_tipo // string section_tipo
+			);
+			$parent_component->set_dato( [$parent_locator_data] );
+			$parent_component->Save();
+
+			return true;
+		}
+
+		while($row = pg_fetch_assoc($result)) {
+
+			$id				= $row['id'];
+			$datos			= !empty($row['datos']) ? json_decode($row['datos']) : null;
+
+			if( empty($datos) ){
+				$datos = new stdClass();
+			}
+
+			if( !isset($datos->relations) ){
+				$datos->relations = [];
+			}
+
+			$exist = locator::in_array_locator( $parent_locator_data, $datos->relations, ['section_tipo','section_id','from_component_tipo','type']);
+			if($exist===true){
+				continue;
+			}
+
+			$datos->relations[] = $parent_locator_data;
+
+			// data_encoded : JSON ENCODE ALWAYS !!!
+			$data_encoded = json_handler::encode($datos);
+			// prevent null encoded errors
+			$safe_data = str_replace(['\\u0000','\u0000'], ' ', $data_encoded);
+
+			// set the result into time_machine record
+			$strQuery2	= "UPDATE $matrix_table SET datos = $1 WHERE id = $2 ";
+			$result2	= pg_query_params(DBi::_getConnection(), $strQuery2, [$safe_data, $id]);
+			if($result2===false) {
+				$msg = "Failed Update section_data $id";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					.' strQuery: ' . $strQuery . PHP_EOL
+					.' section_tipo: ' . $parent_section_tipo . PHP_EOL
+					.' section_id: ' . $parent_section_id
+					, logger::ERROR
+				);
+				continue;
+			}
+		}
+
+		return true;
+	}//end set_parent_data
+
+
+
+}
