@@ -463,24 +463,110 @@ class component_relation_children extends component_relation_common {
 
 		return $this->update_parent($action, $parent_section_tipo, $parent_section_id, $parent_tipo);
 	}//end remove_child
+
+
+
+	/**
+	* UPDATE_parent
+	* Locate current section component_relation_children and remove given parent_section_id, parent_section_tipo combination from data
+	* @param string $action
+	* 	remove|add
+	* @param string $parent_section_tipo
+	* @param int|string $parent_section_id
+	* @param string|null $parent_tipo = null
+	*
+	* @return bool $result
+	*/
+	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {
+
+		// default bool 	result
+			$result = false;
+
+		// short vars
+			$tipo			= $this->tipo;
+			$section_tipo	= $this->section_tipo;
+			$section_id		= $this->section_id;
+
+		// parent_tipo. Resolve if null
+			if (empty($parent_tipo)) {
+				$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo($tipo, $section_tipo);
+				// not found case
+				if (empty($parent_tipo)) {
+					debug_log(__METHOD__
+						." ERROR: Unable to resolve parent_tipo" . PHP_EOL
+						.' current tipo:  ' . $tipo
+						, logger::ERROR
+					);
+					return false;
+				}
+				$parent_tipo = $ar_parent_tipo[0];
 			}
 
-		// from_component_tipo check
-			if (!isset($locator->from_component_tipo)) {
+		// model. Expected 'component_relation_parent'
+			$model = RecordObj_dd::get_modelo_name_by_tipo($parent_tipo, true);
+			if ($model!=='component_relation_parent') {
+				// wrong model case
 				debug_log(__METHOD__
-					.' ERROR. ignored action. Property "from_component_tipo" is mandatory '
+					." Wrong target model. Expected 'component_relation_parent" . PHP_EOL
+					.' current model: ' . $model . PHP_EOL
+					.' current tipo:  ' . $parent_tipo
 					, logger::ERROR
 				);
 				return false;
 			}
 
-		// Add current locator to component dato
-			if (!$this->add_locator_to_dato($locator)) {
-				return false;
+		// component instance
+			$component_relation_parent = component_common::get_instance(
+				$model,
+				$parent_tipo,
+				$parent_section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$parent_section_tipo
+			);
+
+		// change link to me in relation_children
+			switch ($action) {
+				case 'remove':
+					$changed = (bool)$component_relation_parent->make_me_your_parent(
+						$section_tipo,
+						$section_id
+					);
+					break;
+
+				case 'add':
+					$changed = (bool)$component_relation_parent->remove_me_as_your_parent(
+						$section_tipo,
+						$section_id
+					);
+					break;
+
+				default:
+					$changed = false;
+					debug_log(__METHOD__
+						." Error on update_parent. Invalid action ". PHP_EOL
+						.' action: ' .$action
+						, logger::ERROR
+					);
+					break;
 			}
 
-		return true;
-	}//end add_child
+		// save if changed
+			if ($changed===true) {
+
+				$saved = $component_relation_parent->Save();
+				if ($saved && $saved>0) {
+					$result = true;
+				}
+
+				// force read the new value on get_dato (prevent cache inconsistency)
+				$this->dato_resolved = null;
+				$this->get_dato();
+			}
+
+
+		return (bool)$result;
+	}//end update_parent
 
 
 
