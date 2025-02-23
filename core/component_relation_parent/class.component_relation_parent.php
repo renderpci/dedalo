@@ -589,17 +589,19 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* REMOVE_PARENT
-	* 	Alias of update_children with specific action 'remove'
-	* @param string $children_section_tipo
-	* @param mixed $children_section_id
-	* @param string|null $component_relation_children_tipo = null
+	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
+	* NOTE: This method updates component 'dato'
+	* @param locator $locator
 	* @return bool
 	*/
-	public function remove_parent( string $children_section_tipo, mixed $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
+	public function remove_parent( locator $locator ) : bool {
 
-		$action = 'remove';
+		// remove current locator from component dato
+		if (!$this->remove_locator_from_dato($locator)) {
+			return false;
+		}
 
-		return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
+		return true;
 	}//end remove_parent
 
 
@@ -618,6 +620,26 @@ class component_relation_parent extends component_relation_common {
 
 	// 	return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
 	// }//end add_parent
+
+
+
+	// /**
+	// * REMOVE_PARENT
+	// * 	Alias of update_children with specific action 'remove'
+	// * @param string $children_section_tipo
+	// * @param mixed $children_section_id
+	// * @param string|null $component_relation_children_tipo = null
+	// * @return bool
+	// */
+	// public function remove_parent( string $children_section_tipo, mixed $children_section_id, ?string $component_relation_children_tipo=null ) : bool {
+
+	// 	$action = 'remove';
+
+	// 	return $this->update_children($action, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
+	// }//end remove_parent
+
+
+
 	/**
 	* GET_COMPONENT_RELATION_CHILDREN_TIPO
 	* @param string $component_tipo
