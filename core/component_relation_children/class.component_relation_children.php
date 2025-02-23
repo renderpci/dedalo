@@ -304,17 +304,48 @@ class component_relation_children extends component_relation_common {
 		// return section id
 		return $section_id;
 	}//end Save
-			}
-
-		return true;
-	}//end make_me_your_child
-
 
 
 	/**
-	* REMOVE_ME_AS_YOUR_CHILD
-	* @param string $section_tipo
-	* @param string|int $section_id
+	* GET DATO
+	* This component don't store data, only manages calculated data from component_relation_parent generated data
+	* stored in section 'relations' container
+	* @return array $dato
+	*	$dato is always an array of locators
+	*/
+	public function get_dato() : array {
+
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
+			}
+
+		// always get dato calculated from my parents that call the current section
+			$dato = $this->get_my_data();
+
+		// fix dato.
+			$this->dato = $dato;
+
+		// set dato_resolve and cache it
+			$this->dato_resolved = $this->dato;
+
+		// Set as loaded.
+			$this->bl_loaded_matrix_data = true;
+
+
+		return $dato;
+	}//end get_dato
+
+	/**
+	* GET_DATO_FULL
+	* @return array|null $dato
+	*/
+	public function get_dato_full() : ?array {
+
+		$dato = $this->get_dato();
+
+		return $dato;
+	}//end get_dato_full
 	* @return bool
 	*/
 	public function remove_me_as_your_child( string $section_tipo, string|int $section_id ) : bool {
