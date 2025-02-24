@@ -44,7 +44,6 @@
 	if($options->get_data===true && $permissions>0){
 
 		// hierarchy_sections - get the hierarchy configuration nodes to build the root terms
-
 			// properties optional values
 			$hierarchy_types_filter		= $properties->hierarchy_types ?? null;
 			$hierarchy_sections_filter	= $properties->hierarchy_sections ?? null;
@@ -57,7 +56,7 @@
 				$hierarchy_types_filter, // hierarchy_types_filter
 				$hierarchy_sections_filter, // hierarchy_sections_filter
 				$terms_are_model // terms_are_model bool
-			); // $this->get_data_items();
+			);
 
 		// typologies
 			$ar_tipologies_section_id = [];
