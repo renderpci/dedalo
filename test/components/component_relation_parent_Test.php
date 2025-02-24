@@ -632,9 +632,9 @@ final class component_relation_parent_test extends TestCase {
 		$result = component_relation_parent::get_parents_recursive(
 			$section_id,
 			self::$section_tipo,
-			(object)[
-				'skip_root' => false
-			]
+			// (object)[
+			// 	'skip_root' => false
+			// ]
 		);
 
 		$this->assertTrue(

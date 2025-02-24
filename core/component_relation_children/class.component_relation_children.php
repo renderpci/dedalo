@@ -306,6 +306,7 @@ class component_relation_children extends component_relation_common {
 	}//end Save
 
 
+
 	/**
 	* GET DATO
 	* This component don't store data, only manages calculated data from component_relation_parent generated data
@@ -336,6 +337,8 @@ class component_relation_children extends component_relation_common {
 		return $dato;
 	}//end get_dato
 
+
+
 	/**
 	* GET_DATO_FULL
 	* @return array|null $dato
@@ -346,6 +349,7 @@ class component_relation_children extends component_relation_common {
 
 		return $dato;
 	}//end get_dato_full
+
 
 
 	/**
@@ -432,6 +436,7 @@ class component_relation_children extends component_relation_common {
 	}//end set_dato
 
 
+
 	/**
 	* ADD_CHILD
 	* Alias of update_parent with specific action 'add'
@@ -450,7 +455,7 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* REMOVE_child
+	* REMOVE_CHILD
 	* Alias of update_parent with specific action 'remove'
 	* @param string $parent_section_tipo
 	* @param mixed $parent_section_id
@@ -467,19 +472,18 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* UPDATE_parent
+	* UPDATE_PARENT
 	* Locate current section component_relation_children and remove given parent_section_id, parent_section_tipo combination from data
 	* @param string $action
 	* 	remove|add
 	* @param string $parent_section_tipo
 	* @param int|string $parent_section_id
 	* @param string|null $parent_tipo = null
-	*
 	* @return bool $result
 	*/
 	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {
 
-		// default bool 	result
+		// default bool result
 			$result = false;
 
 		// short vars
@@ -789,7 +793,6 @@ class component_relation_children extends component_relation_common {
 
 
 
-
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
@@ -861,6 +864,7 @@ class component_relation_children extends component_relation_common {
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
 
 
 }//end component_relation_children

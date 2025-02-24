@@ -349,12 +349,12 @@ class area_thesaurus extends area_common {
 							$ar_parents = component_relation_parent::get_parents_recursive(
 								$section_id,
 								$section_tipo,
-								(object)[
-									'skip_root'						=> false,
-									'search_in_main_hierarchy'		=> true,
-									'main_table'					=> $this->get_main_table(),
-									'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo
-								]
+								// (object)[
+								// 	'skip_root'						=> false,
+								// 	'search_in_main_hierarchy'		=> true,
+								// 	'main_table'					=> $this->get_main_table(),
+								// 	'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo
+								// ]
 							);
 							// add
 							$ar_path = array_reverse($ar_parents);
@@ -449,12 +449,12 @@ class area_thesaurus extends area_common {
 				$ar_child_parents = component_relation_parent::get_parents_recursive(
 					$current_child->section_id,
 					$current_child->section_tipo,
-					(object)[
-						'skip_root'						=> false,
-						'search_in_main_hierarchy'		=> true,
-						'main_table'					=> $this->get_main_table(),
-						'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo
-					]
+					// (object)[
+					// 	'skip_root'						=> false,
+					// 	'search_in_main_hierarchy'		=> true,
+					// 	'main_table'					=> $this->get_main_table(),
+					// 	'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo
+					// ]
 				);
 
 				// reverse order to create a compatible search results path
