@@ -24,7 +24,11 @@ export const render_area_thesaurus = function() {
 
 /**
 * LIST
-* Alias of edit
+* Render the area thesaurus in list mode
+* @param object options
+* {
+* 	render_level: string default: 'full'
+* }
 * @return HTMLElement
 */
 render_area_thesaurus.prototype.list = async function(options) {
