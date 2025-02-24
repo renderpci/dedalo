@@ -1173,10 +1173,7 @@ class component_relation_common extends component_common {
 				// parents_recursive
 				$ar_parents = component_relation_parent::get_parents_recursive(
 					$locator->section_id,
-					$locator->section_tipo,
-					(object)[
-						'skip_root' => true
-					]
+					$locator->section_tipo
 				);
 				foreach ($ar_parents as $current_locator) {
 
@@ -2020,10 +2017,7 @@ class component_relation_common extends component_common {
 
 				$parents_recursive = component_relation_parent::get_parents_recursive(
 					$section_id, // string section_id
-					$section_tipo, // string section_tipo
-					(object)[
-						'skip_root' => true
-					]
+					$section_tipo // string section_tipo
 				);
 
 				foreach ($parents_recursive as $parent_locator) {
@@ -3290,8 +3284,7 @@ class component_relation_common extends component_common {
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 						$ar_parents = component_relation_parent::get_parents_recursive(
 							$current_locator->section_id,
-							$current_locator->section_tipo,
-							null
+							$current_locator->section_tipo
 						);
 						foreach ($ar_parents as $parent_locator) {
 							$new_dato[] = $parent_locator;

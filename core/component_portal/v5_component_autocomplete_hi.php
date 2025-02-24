@@ -242,10 +242,7 @@
 					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 						$ar_parents = component_relation_parent::get_parents_recursive(
 							$current_locator->section_id,
-							$current_locator->section_tipo,
-							(object)[
-								'skip_root' => true
-							]
+							$current_locator->section_tipo
 						);
 
 					$skip = true;
@@ -341,10 +338,7 @@
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 							$ar_parents = component_relation_parent::get_parents_recursive(
 								$current_locator->section_id,
-								$current_locator->section_tipo,
-								(object)[
-									'skip_root' => true
-								]
+								$current_locator->section_tipo
 							);
 
 						// iterate parents

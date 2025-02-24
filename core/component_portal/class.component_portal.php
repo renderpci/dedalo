@@ -585,8 +585,7 @@ class component_portal extends component_relation_common {
 						// search in parents recursive
 							$parents_recursive = component_relation_parent::get_parents_recursive(
 								$locator->section_id,
-								$locator->section_tipo,
-								null // options
+								$locator->section_tipo
 							);
 							foreach ($parents_recursive as $current_parent_locator) {
 								if (true===$compare_model($current_parent_locator->section_tipo, $current_parent_locator->section_id, $component_model_tipo, $current_map)) {

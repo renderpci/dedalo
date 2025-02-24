@@ -1693,10 +1693,10 @@ class diffusion_sql extends diffusion  {
 					$parents_recursive = component_relation_parent::get_parents_recursive(
 						$section_id,
 						$section_tipo,
-						(object)[
-							'skip_root' => true,
-							'search_in_main_hierarchy' => true
-						]
+						// (object)[
+						// 	'skip_root' => true,
+						// 	'search_in_main_hierarchy' => true
+						// ]
 					);
 					foreach ($parents_recursive as $parents_recursive_locator) {
 
@@ -3455,10 +3455,10 @@ class diffusion_sql extends diffusion  {
 					$ar_parents = component_relation_parent::get_parents_recursive(
 						$current_locator->section_id,
 						$current_locator->section_tipo,
-						(object)[
-							'skip_root' => true,
-							'search_in_main_hierarchy' => true
-						]
+						// (object)[
+						// 	'skip_root' => true,
+						// 	'search_in_main_hierarchy' => true
+						// ]
 					);
 					foreach ($ar_parents as $parent_locator) {
 						$value[] = (string)$parent_locator->section_id;
@@ -3606,10 +3606,10 @@ class diffusion_sql extends diffusion  {
 				$parents = component_relation_parent::get_parents_recursive(
 					$current_locator->section_id,
 					$current_locator->section_tipo,
-					(object)[
-						'skip_root' => true,
-						'search_in_main_hierarchy' => true
-					]
+					// (object)[
+					// 	'skip_root' => true,
+					// 	'search_in_main_hierarchy' => true
+					// ]
 				);
 				$ar_parents = array_merge($ar_parents, $parents);
 			}
@@ -3625,10 +3625,10 @@ class diffusion_sql extends diffusion  {
 				$parents = component_relation_parent::get_parents_recursive(
 					$current_locator->section_id,
 					$current_locator->section_tipo,
-					(object)[
-						'skip_root' => true,
-						'search_in_main_hierarchy' => true
-					]
+					// (object)[
+					// 	'skip_root' => true,
+					// 	'search_in_main_hierarchy' => true
+					// ]
 				);
 				$ar_parents = array_merge($ar_parents, $parents);
 			}
@@ -3767,10 +3767,10 @@ class diffusion_sql extends diffusion  {
 						$ar_parents = component_relation_parent::get_parents_recursive(
 							$current_locator->section_id,
 							$current_locator->section_tipo,
-							(object)[
-								'skip_root' => true,
-								'search_in_main_hierarchy' => true
-							]
+							// (object)[
+							// 	'skip_root' => true,
+							// 	'search_in_main_hierarchy' => true
+							// ]
 						);
 						foreach ($ar_parents as $parent_locator) {
 							$section_tipo[] = $parent_locator->section_tipo;

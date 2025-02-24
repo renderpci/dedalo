@@ -462,8 +462,7 @@ class area_graph extends area_common {
 
 				$ar_parents = component_relation_parent::get_parents_recursive(
 					$section_id,
-					$section_tipo,
-					null // options
+					$section_tipo
 				);
 
 				$locator = new locator();

@@ -318,10 +318,7 @@ abstract class filter {
 
 				$ar_all_parents = component_relation_parent::get_parents_recursive(
 					$current_locator->section_id,
-					$current_locator->section_tipo,
-					(object)[
-						'skip_root' => true
-					]
+					$current_locator->section_tipo
 				);
 				foreach ($ar_all_parents as $current_parent) {
 
