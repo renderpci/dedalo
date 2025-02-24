@@ -730,6 +730,11 @@ class component_relation_common extends component_common {
 							// );
 							$locator_copy->type = $relation_type;
 						}
+						if(SHOW_DEBUG===true) {
+							if (empty($locator_copy->type)) {
+								dump($locator_copy, ' locator_copy. Empty locator type ++////++ $relation_type '.to_string($relation_type));
+							}
+						}
 
 					// from_component_tipo
 						if (!isset($locator_copy->from_component_tipo)) {
