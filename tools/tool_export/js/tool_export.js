@@ -365,7 +365,7 @@ tool_export.prototype.export_table_with_xlsx_lib = async function( options ) {
 	const table		= options.table.firstChild
 	const filename	= options.filename
 
-	const workbook = XLSX.utils.table_to_book(table)
+	const workbook = XLSX.utils.table_to_book(table, {"raw":true})
 
 	// Export the workbook to Excel file
 	XLSX.writeFile(workbook, filename);
