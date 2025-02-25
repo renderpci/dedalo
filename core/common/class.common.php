@@ -3079,7 +3079,7 @@ abstract class common {
 								// check without tipo case
 									if (!isset($current_ddo->tipo)) {
 										debug_log(__METHOD__
-											.' ERROR. Ignored current_ddo don\'t have tipo: '
+											.' ERROR. Ignored current_ddo: don\'t have tipo: '
 											.' tipo: ' . to_string($tipo) . PHP_EOL
 											.' current_ddo: ' . to_string($current_ddo) . PHP_EOL
 											.' ar_ddo_map type: ' . gettype($ar_ddo_map) . PHP_EOL
