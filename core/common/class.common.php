@@ -3122,7 +3122,7 @@ abstract class common {
 									// if the component_dataframe is in `numisdata4` his target section is `numisdata4`
 									// but if the section is a virtual section need to be defined as self, in those cases resolve it as main section_tipo.
 									if ($current_ddo->section_tipo==='self') {
-										$current_ddo->section_tipo = ($current_ddo->model==='component_dataframe') ? $section_tipo : $ar_section_tipo;
+										$current_ddo->section_tipo = ($current_ddo->model==='component_dataframe') ? [$section_tipo] : $ar_section_tipo;
 									}
 
 								// parent. Set the default "self" value to the current tipo (the parent)
