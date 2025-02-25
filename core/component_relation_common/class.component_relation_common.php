@@ -332,6 +332,19 @@ class component_relation_common extends component_common {
 
 		foreach($data as $current_key => $locator) {
 
+			// check locator target section is valid
+			// Validates old data without active TLD
+				$tipo_is_valid = RecordObj_dd::check_tipo_is_valid($locator->section_tipo);
+				if (!$tipo_is_valid) {
+					debug_log(__METHOD__
+						. " Ignored locator with invalid target section. Install the missing TLD (".get_tld_from_tipo($locator->section_tipo).") or remove this locator from dato " . PHP_EOL
+						. ' section_tipo: ' . to_string($locator->section_tipo) . PHP_EOL
+						. ' locator: ' . to_string($locator)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 			// component_relation_index case, it doesn't has request_config and it's necessary calculate it
 			// get the locator to build pointed section and get his request config of relation_list.
 			// if($this->model==='dd432' && empty($ddo_direct_children)) {
