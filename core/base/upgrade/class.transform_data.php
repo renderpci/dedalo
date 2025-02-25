@@ -129,6 +129,16 @@ class transform_data {
 				})->tipo;
 
 			$table = common::get_matrix_table_from_tipo($original_section_tipo);
+			if (empty($table)) {
+				$response->msg = 'Invalid table from tipo: '.$original_section_tipo.'. Check your Ontology for configuration errors';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' original_section_tipo: ' . to_string($original_section_tipo)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 			$created_records = 0;
 
 		// section records
@@ -277,6 +287,14 @@ class transform_data {
 
 		// Retrieve the matrix table associated with the given section_tipo.
 		$table = common::get_matrix_table_from_tipo($section_tipo);
+		if (empty($table)) {
+			debug_log(__METHOD__
+				. ' Invalid table from tipo. Check your Ontology for configuration errors' . PHP_EOL
+				. ' section_tipo: ' . to_string($section_tipo)
+				, logger::ERROR
+			);
+			return false;
+		}
 
 		$current_result	= JSON_RecordDataBoundObject::search_free(
 			"SELECT id, section_id, datos FROM $table WHERE section_tipo = '$section_tipo' AND  section_id = $section_id"
@@ -2546,6 +2564,14 @@ class transform_data {
 						$new_section->delete( 'delete_record', false );
 						// set the counter to last valid section_id, to avoid empty section records
 						$matrix_table	= common::get_matrix_table_from_tipo( $target_section );
+						if (empty($matrix_table)) {
+							debug_log(__METHOD__
+								. ' Invalid matrix_table from tipo. Check your Ontology for configuration errors' . PHP_EOL
+								. ' target_section: ' . to_string($target_section)
+								, logger::ERROR
+							);
+							return false;
+						}
 						counter::consolidate_counter(
 							$target_section,
 							$matrix_table,
