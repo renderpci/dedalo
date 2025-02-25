@@ -2966,6 +2966,23 @@ abstract class common {
 								? component_relation_common::get_request_config_section_tipo($parsed_item->sqo->section_tipo, $section_tipo)
 								: [$section_tipo];
 
+							// safe_ar_section_tipo (check invalid tipos before continue)
+							$safe_ar_section_tipo = [];
+							foreach ((array)$ar_section_tipo as $current_section_tipo) {
+								// check_tipo_is_valid
+								$tipo_is_valid = RecordObj_dd::check_tipo_is_valid($current_section_tipo);
+								if ($tipo_is_valid===false) {
+									debug_log(__METHOD__
+										. " Ignored non valid section_tipo. Maybe the TLD is not installed. " . PHP_EOL
+										. ' current_section_tipo: ' . to_string($current_section_tipo)
+										, logger::ERROR
+									);
+									continue;
+								}
+								$safe_ar_section_tipo[] = $current_section_tipo;
+							}
+							$ar_section_tipo = $safe_ar_section_tipo;
+
 						// parsed_item (section_tipo). normalized ddo with tipo and label
 							$parsed_item->sqo->section_tipo = array_map(function($current_section_tipo){
 								$ddo = new dd_object();
