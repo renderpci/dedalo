@@ -3092,6 +3092,24 @@ abstract class common {
 										continue;
 									}
 
+								// check valid tipo (The model is unsolvable)
+									$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_ddo->tipo );
+									if ( $tipo_is_valid === false ) {
+										debug_log(__METHOD__
+											.' ERROR. Ignored current_ddo: is invalid '
+											.' current_ddo->tipo: ' . to_string($current_ddo->tipo) . PHP_EOL
+											.' current_ddo: ' . to_string($current_ddo) . PHP_EOL
+											.' ar_ddo_map type: ' . gettype($ar_ddo_map) . PHP_EOL
+											.' ar_ddo_map: ' . json_encode($ar_ddo_map, JSON_PRETTY_PRINT) . PHP_EOL
+											.' this->tipo: ' . $this->tipo . PHP_EOL
+											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
+											.' this->section_id: ' . $this->section_id . PHP_EOL
+											.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo)
+											, logger::ERROR
+										);
+										continue;
+									}
+
 								// check if the ddo is active into the ontology
 									$is_active = RecordObj_dd::check_active_tld($current_ddo->tipo);
 									if( $is_active === false ){
@@ -3261,6 +3279,25 @@ abstract class common {
 											);
 											continue;
 										}
+
+									// check valid tipo (The model is unsolvable)
+										$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_search_ddo_map->tipo );
+										if ( $tipo_is_valid === false ) {
+											debug_log(__METHOD__
+												.' ERROR. Ignored current_search_ddo_map: don\'t have model: '
+												.' current_search_ddo_map->tipo: ' . to_string($current_search_ddo_map->tipo) . PHP_EOL
+												.' current_search_ddo_map: ' . to_string($current_search_ddo_map) . PHP_EOL
+												.' ar_search_ddo_map type: ' . gettype($ar_search_ddo_map) . PHP_EOL
+												.' ar_search_ddo_map: ' . json_encode($ar_search_ddo_map, JSON_PRETTY_PRINT) . PHP_EOL
+												.' this->tipo: ' . $this->tipo . PHP_EOL
+												.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
+												.' this->section_id: ' . $this->section_id . PHP_EOL
+												.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_search_ddo_map->tipo)
+												, logger::ERROR
+											);
+											continue;
+										}
+
 									// model. Calculated always to prevent errors
 										$current_search_ddo_map->model = RecordObj_dd::get_modelo_name_by_tipo($current_search_ddo_map->tipo, true);
 
@@ -3343,6 +3380,24 @@ abstract class common {
 											. " Removed ddo from ddo_map->choose definition because the tld is not installed " . PHP_EOL
 											. to_string($current_choose_ddo)
 											, logger::WARNING
+										);
+										continue;
+									}
+
+								// check valid tipo (The model is unsolvable)
+									$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_choose_ddo->tipo );
+									if ( $tipo_is_valid === false ) {
+										debug_log(__METHOD__
+											.' ERROR. Ignored current_choose_ddo: don\'t have model: '
+											.' current_choose_ddo->tipo: ' . to_string($current_choose_ddo->tipo) . PHP_EOL
+											.' current_choose_ddo: ' . to_string($current_choose_ddo) . PHP_EOL
+											.' ar_search_ddo_map type: ' . gettype($ar_search_ddo_map) . PHP_EOL
+											.' ar_search_ddo_map: ' . json_encode($ar_search_ddo_map, JSON_PRETTY_PRINT) . PHP_EOL
+											.' this->tipo: ' . $this->tipo . PHP_EOL
+											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
+											.' this->section_id: ' . $this->section_id . PHP_EOL
+											.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_choose_ddo->tipo)
+											, logger::ERROR
 										);
 										continue;
 									}
