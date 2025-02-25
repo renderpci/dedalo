@@ -58,6 +58,15 @@ $updates->$v = new stdClass();
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
+		//add new root node with hierarchy data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data_v6_5_0.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Add new node in the hierarchies that has multiple root nodes, unify the criteria of the thesaurus";
+				$script_obj->script_class	= "transform_data_v6_5_0";
+				$script_obj->script_method	= "add_root_node";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
 
 
 $v=643; #####################################################################################

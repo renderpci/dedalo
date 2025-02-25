@@ -8,6 +8,7 @@ require_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 */
 class transform_data_v6_5_0 {
 
+
 	/**
 	* UPDATE_SET_PARENT_WITH_CHILDREN
 	* @return bool
@@ -285,4 +286,89 @@ class transform_data_v6_5_0 {
 
 
 
+	/**
+	* ADD_ROOT_NODE
+	* @return
+	*/
+	public function add_root_node() {
+
+		$hierarchies_records = hierarchy::get_all_main_ontology_records();
+
+		foreach ($hierarchies_records as $row) {
+
+			$hierarchy_section_id	= $row->section_id;
+			$hierarchy_section_tipo	= $row->section_tipo;
+
+			$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_CHILDREN_TIPO);
+			$component_term = component_common::get_instance(
+				$model, // string model
+				DEDALO_HIERARCHY_CHILDREN_TIPO, // string tipo
+				$hierarchy_section_id, // string section_id
+				'edit', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$hierarchy_section_tipo // string section_tipo
+			);
+
+			$term_data = $component_term->get_dato();
+
+			$total = count($term_data);
+
+			if($total > 1){
+
+				// create the target section component
+					$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO);
+					$destination_section_component = component_common::get_instance(
+						$model, // string model
+						DEDALO_HIERARCHY_TARGET_SECTION_TIPO, // string tipo
+						$hierarchy_section_id, // string section_id
+						'edit', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$hierarchy_section_tipo // string section_tipo
+					);
+
+				// create new section as top term
+					$target_section = $destination_section_component->get_value();
+
+					$new_section = section::get_instance(
+						null, // string|null section_id
+						$target_section // string section_tipo
+					);
+
+					$new_section_id = $new_section->Save();
+
+				// create the child nodes of every locator and inject the new data
+					foreach ($term_data as $children_locator) {
+
+						$component_tipo = component_relation_parent::get_parent_tipo( $children_locator->section_tipo );
+
+						$parent_locator_data = new locator();
+							$parent_locator_data->set_section_tipo( $target_section );
+							$parent_locator_data->set_section_id( $new_section_id );
+							$parent_locator_data->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
+							$parent_locator_data->set_from_component_tipo( $component_tipo );
+
+						// create new component with parent data
+						$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+						$parent_component = component_common::get_instance(
+							$model, // string model
+							$component_tipo, // string tipo
+							$children_locator->section_id, // string section_id
+							'edit', // string mode
+							DEDALO_DATA_NOLAN, // string lang
+							$children_locator->section_tipo // string section_tipo
+						);
+						$parent_component->set_dato( $parent_locator_data );
+						$parent_component->Save();
+					}
+
+				// assign the new term data as term component
+					$locator_data = new locator();
+							$locator_data->set_section_tipo( $target_section );
+							$locator_data->set_section_id( $new_section_id );
+
+					$destination_section_component->set_dato([$locator_data]);
+					$destination_section_component->Save();
+			}
+		}
+	}//end add_root_node
 }
