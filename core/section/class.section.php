@@ -248,7 +248,6 @@ class section extends common {
 
 
 
-
 	/**
 	* SET_BL_LOADED_MATRIX_DATA
 	* Pass bl_loaded_matrix_data to own $JSON_RecordObj_matrix instance
@@ -1394,7 +1393,15 @@ class section extends common {
 			$user_id = logged_user_id();
 			// matrix_table
 			$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
-
+			// Ignore invalid empty matrix tables
+			if (empty($matrix_table)) {
+				debug_log(__METHOD__
+					. " ERROR: invalid empty matrix table " . PHP_EOL
+					. ' section_tipo: ' . $section_tipo
+					, logger::ERROR
+				);
+				return false;
+			}
 
 		// delete_mode based actions
 			switch($delete_mode) {
@@ -2419,6 +2426,15 @@ class section extends common {
 	public static function get_resource_all_section_records_unfiltered( string $section_tipo, string $select='section_id' ) {
 
 		$matrix_table	= common::get_matrix_table_from_tipo($section_tipo);
+		// Ignore invalid empty matrix tables
+		if (empty($matrix_table)) {
+			debug_log(__METHOD__
+				. " ERROR: invalid empty matrix table " . PHP_EOL
+				. ' section_tipo: ' . $section_tipo
+				, logger::ERROR
+			);
+			return false;
+		}
 		$strQuery		= "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE section_tipo = '$section_tipo' ORDER BY section_id ASC ";
 		$result			= JSON_RecordObj_matrix::search_free($strQuery);
 
@@ -2627,6 +2643,15 @@ class section extends common {
 
 		// Check if section_id already exists
 		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+		// Ignore invalid empty matrix tables
+		if (empty($matrix_table)) {
+			debug_log(__METHOD__
+				. " ERROR: invalid empty matrix table. Unable to resolve section_record_exists! " . PHP_EOL
+				. ' section_tipo: ' . $section_tipo
+				, logger::ERROR
+			);
+			return false;
+		}
 
 		$strQuery	= "SELECT section_id FROM \"$matrix_table\" WHERE section_id = ".(int)$section_id." AND section_tipo = '$section_tipo' ";
 		$result		= JSON_RecordObj_matrix::search_free($strQuery);

@@ -1245,6 +1245,17 @@ class component_relation_common extends component_common {
 
 		// short vars
 			$section_table	= common::get_matrix_table_from_tipo($section_tipo); // Normally 'matrix_hierarchy'
+			// check matrix_table is valid
+			if (empty($section_table)) {
+				$response->msg = ' Invalid matrix_table from tipo. Check your Ontology for configuration errors';
+				debug_log(__METHOD__
+					. ' Invalid matrix_table from tipo. Check your Ontology for configuration errors' . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 			$main_table		= ( strpos($section_tipo,'ontology')!==false ) ? ontology::$main_table : hierarchy::$main_table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
 			$ar_tables		= [$section_table, $main_table];
 			$parents		= component_relation_parent::get_parents(

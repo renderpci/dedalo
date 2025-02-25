@@ -85,8 +85,18 @@
 					$current_section_tipo = $current_locator->section_tipo;
 				}
 				$matrix_table = common::get_matrix_table_from_tipo( $current_section_tipo );
-
 			}// end if(!isset($options->ar_locators))
+
+			// check matrix_table is valid
+				if (empty($matrix_table)) {
+					$sorce_tipo = $current_section_tipo ?? $section_tipo ?? 'unknown';
+					debug_log(__METHOD__
+						. ' Invalid matrix_table from tipo. Check your Ontology for configuration errors' . PHP_EOL
+						. ' section_tipo: ' . to_string($sorce_tipo)
+						, logger::ERROR
+					);
+					return null;
+				}
 
 
 			# Selector de terminos relacionados en DB

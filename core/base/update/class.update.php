@@ -543,7 +543,7 @@ class update {
 
 			// current_table. Test if target table exists (avoid errors on update components of "too much updated" structures)
 				$current_table = common::get_matrix_table_from_tipo($current_section_tipo);
-				if (!in_array($current_table, $tables) ) {
+				if (empty($current_table) || !in_array($current_table, $tables) ) {
 					debug_log(__METHOD__
 						." Skipped section ($current_section_tipo) because table ($current_table) do not exists " .PHP_EOL
 						.' updating component: ' . $model_name
