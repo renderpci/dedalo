@@ -389,6 +389,15 @@ class component_relation_common extends component_common {
 						, logger::WARNING
 					);
 				}
+				if (empty($ddo->model)) {
+					debug_log(__METHOD__
+						. " Ignored non existing ddo element (model is empty). Maybe the TLD is not installed " . PHP_EOL
+						. ' tipo: ' . to_string($ddo->tipo) . PHP_EOL
+						. ' ddo: ' . to_string($ddo) . PHP_EOL
+						, logger::WARNING
+					);
+					continue;
+				}
 
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
 				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
