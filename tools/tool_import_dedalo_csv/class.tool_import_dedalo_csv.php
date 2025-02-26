@@ -317,8 +317,19 @@ class tool_import_dedalo_csv extends tool_common {
 					);
 
 				// counter. Consolidate counter. Set counter value to last section_id in section
+					$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+					// Ignore invalid empty matrix tables
+					if (empty($matrix_table)) {
+						debug_log(__METHOD__
+							. " ERROR: Ignored invalid empty matrix table. Unable to resolve section_record_exists! " . PHP_EOL
+							. ' section_tipo: ' . $section_tipo . PHP_EOL
+							. ' current_file_obj: ' . to_string($current_file_obj)
+							, logger::ERROR
+						);
+						continue;
+					}
 					counter::consolidate_counter(
-						$section_tipo, common::get_matrix_table_from_tipo($section_tipo)
+						$section_tipo, $matrix_table
 					);
 
 				// import exec

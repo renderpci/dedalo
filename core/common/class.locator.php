@@ -497,6 +497,7 @@ class locator extends stdClass {
 				return $response;
 			}
 
+
 		// safe section_tipo
 			if (!safe_tipo($this->section_tipo)) {
 
@@ -514,6 +515,23 @@ class locator extends stdClass {
 				}
 
 				return $response;
+			}
+
+		// check valid section_tipo
+			$tipo_is_valid = RecordObj_dd::check_tipo_is_valid($this->section_tipo);
+			if ($tipo_is_valid===false) {
+				$response->result	= false;
+				$response->errors[] = 'Invalid locator target section_tipo.';
+				$response->msg		= 'Invalid locator: locator section_tipo is invalid';
+
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace()[1];
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' backtrace 1: ' . to_string($bt)
+						, logger::ERROR
+					);
+				}
 			}
 
 		// section_id mandatory

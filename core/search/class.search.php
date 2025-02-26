@@ -2258,6 +2258,15 @@ class search {
 				: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 
 			$matrix_table		= common::get_matrix_table_from_tipo($step_object->section_tipo);
+			// Ignore invalid empty matrix tables
+			if (empty($matrix_table)) {
+				debug_log(__METHOD__
+					. " Ignored invalid empty matrix table " . PHP_EOL
+					. ' step_object->section_tipo: ' . $step_object->section_tipo
+					, logger::ERROR
+				);
+				continue;
+			}
 			$last_section_tipo	= $step_object->section_tipo;
 			$t_name				= implode('_', $ar_key_join);
 			$t_relation			= 'r_'.$t_name ;
@@ -3066,6 +3075,15 @@ class search {
 			$section_tipo	= $options->section_tipo ?? null; // string like oh1
 
 		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+		// Ignore invalid empty matrix tables
+		if (empty($matrix_table)) {
+			debug_log(__METHOD__
+				. " ERROR: invalid empty matrix table " . PHP_EOL
+				. ' section_tipo: ' . $section_tipo
+				, logger::ERROR
+			);
+			return [];
+		}
 
 		$strQuery = '
 		SELECT
