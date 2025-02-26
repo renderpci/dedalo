@@ -65,7 +65,7 @@ final class dd_ts_api {
 		// limit
 			$default_limit = 300;
 
-		// children
+		// children. Usually is calculated from given locator, but, for root nodes, if provided already resolved
 			if($node_type==='hierarchy_node') {
 
 				// hierarchy_node: hierarchy case
@@ -128,7 +128,8 @@ final class dd_ts_api {
 				}else{
 
 					// Calculate children from parent
-						$model							= 'component_relation_children';
+						// $model						= 'component_relation_children';
+						$model							= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 						$mode							= 'list_thesaurus';
 						$lang							= DEDALO_DATA_NOLAN;
 						$component_relation_children	= component_common::get_instance(
@@ -159,17 +160,19 @@ final class dd_ts_api {
 			}
 
 		// active ontologies list. Calculate once by session (445 ms)
-			if(isset($_SESSION['dedalo']['config']['active_elements'])) {
-				$active_elements = $_SESSION['dedalo']['config']['active_elements'];
-			}else{
-				$active_elements = array_map(function($el) {
-					return (object)[
-						'tld'					=> $el->tld,
-						'section_tipo'			=> $el->section_tipo,
-						'target_section_tipo'	=> $el->target_section_tipo
-					];
-				}, ontology::get_active_elements());
-				$_SESSION['dedalo']['config']['active_elements'] = $active_elements;
+			if ($area_model==='area_ontology') {
+				if(isset($_SESSION['dedalo']['config']['active_elements'])) {
+					$active_elements = $_SESSION['dedalo']['config']['active_elements'];
+				}else{
+					$active_elements = array_map(function($el) {
+						return (object)[
+							'tld'					=> $el->tld,
+							'section_tipo'			=> $el->section_tipo,
+							'target_section_tipo'	=> $el->target_section_tipo
+						];
+					}, ontology::get_active_elements());
+					$_SESSION['dedalo']['config']['active_elements'] = $active_elements;
+				}
 			}
 
 		try {

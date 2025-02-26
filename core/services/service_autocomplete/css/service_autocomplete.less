@@ -122,16 +122,13 @@
 			width: 100%;
 
 			>li {
+				display: inline-block;
 				color: white;
-				direction: rtl;
-				display: flex;
-				float: left;
-				justify-content: flex-end;
 				margin-top: 1px;
 				overflow: hidden;
 				padding: 0.25em;
 				white-space: nowrap;
-				width: 33.2%;
+				width: 50%;
 
 				&.all_selector {
 					width: 100%;
@@ -142,9 +139,17 @@
 				}
 
 				label {
-					line-height: 0.75em;
-					padding-left: 0.5em;
-					padding-right: 0.5em;
+					display: block;
+					font-size: 0.97rem;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					cursor: pointer;
+
+					>input {
+						vertical-align: top;
+						cursor: pointer;
+						margin-right: 0.25rem;
+					}
 				}
 			}
 		}
@@ -170,7 +175,6 @@
 					z-index: 2;
 				}
 			}
-
 		}
 
 		// search_operators_div
