@@ -326,7 +326,7 @@ class area_thesaurus extends area_common {
 					'section_id'	=> $section_id
 				];
 
-				// properties children_search check (case rsc197 persons)
+				// properties children_search check (case rsc197 People)
 					$RecordObj_dd		= new RecordObj_dd($section_tipo);
 					$section_properties	= $RecordObj_dd->get_properties();
 
