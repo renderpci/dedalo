@@ -1496,7 +1496,7 @@ export const ts_object = new function() {
 			// hilite current term
 				const term_hilite = to_hilite.find(el => el.section_id==element.section_id && el.section_tipo===element.section_tipo)
 				if (term_hilite) {
-					dd_request_idle_callback(
+					requestAnimationFrame(
 						() => {
 							const term_node = document.querySelector(`.term[data-section_tipo="${element.section_tipo}"][data-section_id="${element.section_id}"]`)
 							if (term_node) {
