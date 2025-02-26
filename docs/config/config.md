@@ -590,14 +590,14 @@ In a Ubuntu server, the path to the sessions directory will be located into the 
 ```bash
 ├── home
 │    ├── dedalo_user
-│    │    ├── sessions
-│    │    ├── httpdocs
+│    │    ├── sessions
+│    │    ├── httpdocs
 │    │    │    ├──dedalo
 │    │    │    │    ├──core
 │    │    │    │    ├──lib
 │    │    │    │    ├──...
 │    │    ├── backups
-│    │    └── logs
+│    │    └── logs
 ```
 
 In this configuration, Apache `DocumentRoot` and `<Directory>` directives would point to `httpdocs` directory
@@ -3251,7 +3251,7 @@ define('DEDALO_CODE_SERVER_GIT_DIR', '/my_dedalo_git_directory');
 
 ---
 
-### Defining is server code provider
+### Defining server code provider
 
 ./dedalo/config/config.php
 
