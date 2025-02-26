@@ -1501,6 +1501,34 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
+	* CHECK_TIPO_IS_VALID
+	* Checks if given tipo is usable trying to resolve model from tipo
+	* If model is empty, the tipo is not available because jer_dd is
+	* damaged or the TLD is not installed.
+	* It is also used to validate old data pointing to a non active TLD.
+	* @param string $tipo
+	* 	Could be a component tipo or a section / area tipo.
+	* @return bool
+	*/
+	public static function check_tipo_is_valid( string $tipo ) : bool {
+
+		// check tipo is safe. Exclude bad formed tipos
+		if (!safe_tipo($tipo)) {
+			return false;
+		}
+
+		// try to resolve model. If empty, the tipo do not exists in jer_dd
+		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		if (empty($model)) {
+			return false;
+		}
+
+		return true;
+	}//end check_tipo_is_valid
+
+
+
+	/**
 	* SAVE
 	* PASADA A RecordObj_dd (Pública. Esta carpeta es privada de momento 28-08-2016)
 	* @return string|false $terminoID

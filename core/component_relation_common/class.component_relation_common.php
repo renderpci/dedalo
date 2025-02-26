@@ -332,6 +332,19 @@ class component_relation_common extends component_common {
 
 		foreach($data as $current_key => $locator) {
 
+			// check locator target section is valid
+			// Validates old data without active TLD
+				$tipo_is_valid = RecordObj_dd::check_tipo_is_valid($locator->section_tipo);
+				if (!$tipo_is_valid) {
+					debug_log(__METHOD__
+						. " Ignored locator with invalid target section. Install the missing TLD (".get_tld_from_tipo($locator->section_tipo).") or remove this locator from dato " . PHP_EOL
+						. ' section_tipo: ' . to_string($locator->section_tipo) . PHP_EOL
+						. ' locator: ' . to_string($locator)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 			// component_relation_index case, it doesn't has request_config and it's necessary calculate it
 			// get the locator to build pointed section and get his request config of relation_list.
 			// if($this->model==='dd432' && empty($ddo_direct_children)) {
@@ -388,6 +401,15 @@ class component_relation_common extends component_common {
 						. ' bt[1]: ' . to_string( debug_backtrace()[1] )
 						, logger::WARNING
 					);
+				}
+				if (empty($ddo->model)) {
+					debug_log(__METHOD__
+						. " Ignored non existing ddo element (model is empty). Maybe the TLD is not installed " . PHP_EOL
+						. ' tipo: ' . to_string($ddo->tipo) . PHP_EOL
+						. ' ddo: ' . to_string($ddo) . PHP_EOL
+						, logger::WARNING
+					);
+					continue;
 				}
 
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
@@ -1224,7 +1246,7 @@ class component_relation_common extends component_common {
 				$response->msg		= '';
 
 		// short vars
-			$parents		= component_relation_parent::get_parents(
+			$parents = component_relation_parent::get_parents(
 				$section_id,
 				$section_tipo
 			);

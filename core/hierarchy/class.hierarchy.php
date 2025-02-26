@@ -540,7 +540,7 @@ class hierarchy extends ontology {
 		$all_tables = [];
 		foreach ($ar_section_tipo as $section_tipo) {
 			$table = common::get_matrix_table_from_tipo($section_tipo);
-			if (!in_array($table, $all_tables)) {
+			if (!empty($table) && !in_array($table, $all_tables)) {
 				$all_tables[] = $table;
 			}
 		}
