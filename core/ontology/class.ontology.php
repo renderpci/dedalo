@@ -1844,26 +1844,63 @@ class ontology {
 		$search_response	= $search->search();
 		$ar_records			= $search_response->ar_records;
 
+		// active_elements: current active main sections
+		$active_tld = array_map(function($el){
+			return $el->tld;
+		}, ontology::get_active_elements());
+
 		foreach ($ar_records as $current_record) {
 
 			$section_tipo	= $current_record->section_tipo;
 			$section_id		= $current_record->section_id;
 
 			if ($section_tipo===self::$main_section_tipo) {
-				// main_ontology records
 
-				$tld			= ontology::get_main_tld($section_id, $section_tipo);
-				$typology_id	= ontology::get_main_typology_id($tld);
-				$name_data		= ontology::get_main_name_data($tld);
-				$term_id		= ontology::create_jer_dd_ontology_section_node((object)[
-					'tld'					=> $tld,
-					'typology_id'			=> $typology_id,
-					'name_data'				=> $name_data,
-					'parent_grouper_tipo'	=> 'ontologytype' . $typology_id
-				]);
+				// main_ontology records (ontology35)
+
+				$tld = ontology::get_main_tld($section_id, $section_tipo);
+
+				// if current ontology is not active (is not in the active tld list)
+				// all tld records must be deleted from 'jer_dd' table
+				if (!in_array($tld, $active_tld)) {
+
+					// remove. To delete all jer_ddd records for this tld
+
+					// Inactive main ontology TLD nodes must be deleted to prevent inconsistent resolutions
+					// in request config, SQO etc.
+
+					// remove any other things than tld.
+						$safe_tld = safe_tld( $tld );
+
+					// Delete the jer_dd nodes
+						$deleted_jer_dd_nodes = RecordObj_dd::delete_tld_nodes( $safe_tld );
+
+						if ( $deleted_jer_dd_nodes===false ) {
+							$response->errors[] = 'unable to delete tld';
+							$response->msg .= 'Error deleting jer_dd [1] for the tld: '.$tld;
+							return $response;
+						}
+
+					$term_id = $safe_tld . '0';
+
+				}else{
+
+					// add / update
+
+					$typology_id	= ontology::get_main_typology_id($tld);
+					$name_data		= ontology::get_main_name_data($tld);
+					$term_id		= ontology::create_jer_dd_ontology_section_node((object)[
+						'tld'					=> $tld,
+						'typology_id'			=> $typology_id,
+						'name_data'				=> $name_data,
+						'parent_grouper_tipo'	=> 'ontologytype' . $typology_id
+					]);
+				}
 
 			}else{
+
 				// regular matrix_ontology_records
+
 				$term_id = ontology::insert_jer_dd_record( $section_tipo, $section_id );
 			}
 
