@@ -728,24 +728,21 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 			inner_html		: label + ' ' + filter_name,
 			parent			: all_selector
 		})
-		all_section_label.setAttribute('for', filter_id + '_all')
 
 	// all_section_checkbox
 		const all_section_checkbox = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'checkbox',
-			id				: filter_id + '_all',
-			parent			: all_selector
+			id				: filter_id + '_all'
 		})
 		all_section_checkbox.checked = false
-		all_section_checkbox.addEventListener('change', function(e){
-
+		// change event
+		const change_handler = (e) => {
 			// reset search cache
 			self.search_cache = []
 
 			const checked_value	= e.target.checked
-			const container		= e.target.parentNode.parentNode
-			const inputs		= container.querySelectorAll('input')
+			const inputs		= filter_node.querySelectorAll('input')
 			for (let i = 0; i < inputs.length; i++) {
 				if (inputs[i]==all_section_checkbox) continue;
 				if (inputs[i].checked!==checked_value) {
@@ -753,13 +750,16 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 					inputs[i].dispatchEvent(new Event('change'));
 				}
 			}
-		});
+		}
+		all_section_checkbox.addEventListener('change', change_handler);
+		// prepend
+		all_section_label.prepend(all_section_checkbox)
 
 	// items
-		for (let i = 0; i < filter_items.length; i++) {
-			const chekbox_node = render_option_checkbox(self, filter_items[i])
+		filter_items.map(filter_item => {
+			const chekbox_node = render_option_checkbox(self, filter_item)
 			filter_node.appendChild(chekbox_node)
-		}
+		})
 
 
 	return filter_node
@@ -783,23 +783,23 @@ const render_option_checkbox = function(self, datalist_item) {
 
 	// li container
 		const li = ui.create_dom_element({
-			element_type	: 'li'
+			element_type : 'li'
 		})
 
 	// label
 		const section_label = ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: label,
+			title			: label,
 			parent			: li
 		})
-		section_label.setAttribute('for', id)
 
 	// input_checkbox
 		const input_checkbox = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'checkbox',
-			id				: id,
-			parent			: li
+			id				: id
+
 		})
 		input_checkbox.checked	= true; // default value is true
 		input_checkbox.dd_value	= value
@@ -824,8 +824,7 @@ const render_option_checkbox = function(self, datalist_item) {
 			}
 
 		// event change
-			input_checkbox.addEventListener('change', async function(){
-
+			const change_handler = async function(e) {
 				// reset search cache
 				self.search_cache = []
 
@@ -836,24 +835,8 @@ const render_option_checkbox = function(self, datalist_item) {
 				// force re-search with new options
 					const api_response	= await self.autocomplete_search()
 					render_datalist(self, api_response.result)
-
-				// des
-					// if (self.search_fired===false) {
-					// 	// search fire is delayed to enable multiple simultaneous selections
-					// 	// get final value (input events are fired one by one)
-					// 	setTimeout(()=>{
-					// 		self.search_fired = true
-					// 		self.search_input.dispatchEvent(new Event('input'))
-
-					// 		// restore state after 250 milliseconds.
-					// 		// prevents fire multiple events when user selects 'All' option
-					// 		// setTimeout(()=>{
-					// 			self.search_fired = false
-					// 		// },250)
-					// 		console.log('///// fired:');
-					// 	},250)
-					// }
-			});
+			}
+			input_checkbox.addEventListener('change', change_handler);
 
 		// local_storage update
 			const update_local_storage_ar_id = function(element) {
@@ -878,6 +861,9 @@ const render_option_checkbox = function(self, datalist_item) {
 
 				return false
 			}
+
+		// prepend
+		section_label.prepend(input_checkbox)
 
 
 	return li
