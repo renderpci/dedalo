@@ -491,7 +491,6 @@ abstract class common {
 					break;
 
 				default:
-
 					// try related. If section have TR of model name 'matrix_table' takes its matrix_table value
 						$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
 						if ( isset($ar_related[0]) ) {
@@ -514,6 +513,11 @@ abstract class common {
 
 					// fallback to default
 						if (!isset($matrix_table)) {
+							debug_log(__METHOD__
+								. ' Using fallback to default table (matrix)'. PHP_EOL
+								. ' tipo: ' . to_string($tipo)
+								, logger::WARNING
+							);
 							$matrix_table = 'matrix';
 						}
 			}//end switch
@@ -2973,9 +2977,9 @@ abstract class common {
 								$tipo_is_valid = RecordObj_dd::check_tipo_is_valid($current_section_tipo);
 								if ($tipo_is_valid===false) {
 									debug_log(__METHOD__
-										. " Ignored non valid section_tipo. Maybe the TLD is not installed. " . PHP_EOL
+										. " WARNING. Ignored non valid section_tipo. Maybe the TLD is not installed. " . PHP_EOL
 										. ' current_section_tipo: ' . to_string($current_section_tipo)
-										, logger::ERROR
+										, logger::WARNING
 									);
 									continue;
 								}
@@ -3113,7 +3117,7 @@ abstract class common {
 									$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_ddo->tipo );
 									if ( $tipo_is_valid === false ) {
 										debug_log(__METHOD__
-											.' ERROR. Ignored current_ddo: is invalid '
+											.' WARNING. Ignored current_ddo: is invalid '
 											.' current_ddo->tipo: ' . to_string($current_ddo->tipo) . PHP_EOL
 											.' current_ddo: ' . to_string($current_ddo) . PHP_EOL
 											.' ar_ddo_map type: ' . gettype($ar_ddo_map) . PHP_EOL
@@ -3122,7 +3126,7 @@ abstract class common {
 											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 											.' this->section_id: ' . $this->section_id . PHP_EOL
 											.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo)
-											, logger::ERROR
+											, logger::WARNING
 										);
 										continue;
 									}
@@ -3305,7 +3309,7 @@ abstract class common {
 										$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_search_ddo_map->tipo );
 										if ( $tipo_is_valid === false ) {
 											debug_log(__METHOD__
-												.' ERROR. Ignored current_search_ddo_map: don\'t have model: '
+												.' WARNING. Ignored current_search_ddo_map: don\'t have model: '
 												.' current_search_ddo_map->tipo: ' . to_string($current_search_ddo_map->tipo) . PHP_EOL
 												.' current_search_ddo_map: ' . to_string($current_search_ddo_map) . PHP_EOL
 												.' ar_search_ddo_map type: ' . gettype($ar_search_ddo_map) . PHP_EOL
@@ -3314,7 +3318,7 @@ abstract class common {
 												.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 												.' this->section_id: ' . $this->section_id . PHP_EOL
 												.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_search_ddo_map->tipo)
-												, logger::ERROR
+												, logger::WARNING
 											);
 											continue;
 										}
@@ -3409,7 +3413,7 @@ abstract class common {
 									$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_choose_ddo->tipo );
 									if ( $tipo_is_valid === false ) {
 										debug_log(__METHOD__
-											.' ERROR. Ignored current_choose_ddo: don\'t have model: '
+											.' WARNING. Ignored current_choose_ddo: tipo is invalid (maybe TLD is not installed): '
 											.' current_choose_ddo->tipo: ' . to_string($current_choose_ddo->tipo) . PHP_EOL
 											.' current_choose_ddo: ' . to_string($current_choose_ddo) . PHP_EOL
 											.' ar_search_ddo_map type: ' . gettype($ar_search_ddo_map) . PHP_EOL
@@ -3418,7 +3422,7 @@ abstract class common {
 											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 											.' this->section_id: ' . $this->section_id . PHP_EOL
 											.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_choose_ddo->tipo)
-											, logger::ERROR
+											, logger::WARNING
 										);
 										continue;
 									}
