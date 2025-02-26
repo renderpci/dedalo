@@ -824,8 +824,9 @@ class component_relation_children extends component_relation_common {
 			foreach ($children_locators as $current_locator) {
 
 				$child_compnent_tipo	= $current_locator->from_component_tipo;
-				$ar_target_parent_tipo		= component_relation_children::get_ar_related_parent_tipo(
-					$child_compnent_tipo, 'hierarchy20' //ITS NOT CORRECT, but is not possible know the section_tipo here
+				$ar_target_parent_tipo	= component_relation_children::get_ar_related_parent_tipo(
+					$child_compnent_tipo,
+					'hierarchy20' // ITS NOT CORRECT, but is not possible know the section_tipo here
 				);
 				if (!empty($ar_target_parent_tipo)) {
 					foreach ($ar_target_parent_tipo as $children_component_tipo) {
