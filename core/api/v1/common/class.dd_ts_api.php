@@ -159,16 +159,20 @@ final class dd_ts_api {
 			}
 
 		// active ontologies list. Calculate once by session (445 ms)
+		// Include only ontologies that have 'active_in_thesaurus' as true
 			if(isset($_SESSION['dedalo']['config']['active_elements'])) {
 				$active_elements = $_SESSION['dedalo']['config']['active_elements'];
 			}else{
-				$active_elements = array_map(function($el) {
-					return (object)[
-						'tld'					=> $el->tld,
-						'section_tipo'			=> $el->section_tipo,
-						'target_section_tipo'	=> $el->target_section_tipo
-					];
-				}, ontology::get_active_elements());
+				$active_elements = [];
+				foreach (ontology::get_active_elements() as $el) {
+					if ($el->active_in_thesaurus===true) {
+						$active_elements[] = (object)[
+							'tld'					=> $el->tld,
+							'section_tipo'			=> $el->section_tipo,
+							'target_section_tipo'	=> $el->target_section_tipo
+						];
+					}
+				}
 				$_SESSION['dedalo']['config']['active_elements'] = $active_elements;
 			}
 
