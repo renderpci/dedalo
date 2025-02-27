@@ -266,7 +266,7 @@ class relation_list extends common {
 
 		// cache
 			static $diffusion_dato_cache;
-			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$process_dato_arguments_key;
+			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$process_dato_arguments_key.'_'.to_string($filter_section).'_'.to_string($filter_component);
 			if (isset($diffusion_dato_cache[$cache_key])) {
 				return $diffusion_dato_cache[$cache_key];
 			}
