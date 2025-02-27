@@ -127,10 +127,7 @@ const get_content_data_edit = async function(self) {
 			// empty_space drag and drop events
 			empty_space.addEventListener('dragover', function(e){self.on_dragover(user_selection_list,e)})
 			empty_space.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
-			// empty_space.addEventListener('dragend', function(e){self.on_drag_end(this,e)})
 			empty_space.addEventListener('drop', function(e){self.on_drop(user_selection_list,e)})
-
-
 
 		// read saved ddo in local DB and restore elements if found
 			const id = 'tool_export_config'
