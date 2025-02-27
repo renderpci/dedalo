@@ -232,7 +232,7 @@ class relation_list extends common {
 	/**
 	* GET_DIFFUSION_DATO
 	* Calculates the diffusion dato of current relation_list using inverse locators
-	* @see numisdata1021 (relations_coins)
+	* @see numisdata1021 (relations_coins) or 'dmmgobes28' (graves_data)
 	* @return array $ar_values
 	*/
 	public function get_diffusion_dato() : array {
@@ -240,6 +240,13 @@ class relation_list extends common {
 		// Properties of diffusion element that references this component
 		// (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
 		// 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
+		// sample v5 properties:
+		// {
+		//   "data_to_be_used": "dato",
+		//   "process_dato_arguments": {
+		//     "filter_section": ["dmm480"]
+		//   }
+		// }
 		$diffusion_properties	= $this->get_diffusion_properties();
 		$process_dato_arguments	= isset($diffusion_properties->process_dato_arguments)
 			? $diffusion_properties->process_dato_arguments
@@ -248,6 +255,14 @@ class relation_list extends common {
 		$process_dato_arguments_key = !empty($process_dato_arguments)
 			? json_encode($process_dato_arguments)
 			: '';
+
+		$filter_section = isset($process_dato_arguments->filter_section)
+			? (array)$process_dato_arguments->filter_section
+			: null;
+
+		$filter_component = isset($process_dato_arguments->filter_component)
+			? (array)$process_dato_arguments->filter_component
+			: null;
 
 		// cache
 			static $diffusion_dato_cache;
@@ -315,15 +330,15 @@ class relation_list extends common {
 		foreach ($ar_locators as $current_locator) {
 
 			// filter_section
-				if (isset($process_dato_arguments->filter_section)) {
-					if (!in_array($current_locator->from_section_tipo, $process_dato_arguments->filter_section)) {
+				if (!empty($filter_section)) {
+					if (!in_array($current_locator->from_section_tipo, $filter_section)) {
 						continue;
 					}
 				}
 
 			// filter_component
-				if (isset($process_dato_arguments->filter_component)) {
-					if (!in_array($current_locator->from_component_tipo, $process_dato_arguments->filter_component)) {
+				if (!empty($filter_component)) {
+					if (!in_array($current_locator->from_component_tipo, $filter_component)) {
 						continue;
 					}
 				}
