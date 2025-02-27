@@ -743,23 +743,69 @@ class relation_list extends common {
 					$target_component_tipo	= $diffusion_properties->process_dato_arguments->target_component_tipo;
 					$output					= $diffusion_properties->process_dato_arguments->output ?? 'array';
 					$separator				= $diffusion_properties->process_dato_arguments->separator ?? ' | ';
+					$direct_value			= $diffusion_properties->process_dato_arguments->direct_value ?? false;
+					$component_method		= $diffusion_properties->process_dato_arguments->component_method ?? null;
+					$options				= $diffusion_properties->process_dato_arguments->options ?? null;
 
 				// ar_value. Iterate locators and store component processed value
 					$ar_value = [];
 					foreach ($diffusion_value as $current_locator) {
 
-						$modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
-						$current_component	= component_common::get_instance(
-							$modelo_name,
-							$target_component_tipo,
-							$this->section_id,
-							'list',
-							DEDALO_DATA_LANG,
-							$this->section_tipo
-						);
-						$current_component->set_dato($current_locator); // force set dato
-						// $ar_value[] = $current_component->get_valor();
-						$ar_value[] = $current_component->get_value();
+						$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+
+						if ($direct_value===true) {
+
+							// direct component value case (@see 'dmmgobes29')
+
+							$current_component = component_common::get_instance(
+								$model,
+								$target_component_tipo,
+								$current_locator->section_id,
+								'list',
+								DEDALO_DATA_LANG,
+								$current_locator->section_tipo
+							);
+
+							if (isset($component_method) && $component_method==='get_diffusion_value') {
+								// sample at 'dmmgobes31'
+								// {
+								//   "data_to_be_used": "filtered_values",
+								//   "process_dato_arguments": {
+								//     "output": "string",
+								//     "direct_value": true,
+								//     "filter_section": "dmm480",
+								//     "target_component_tipo": "dmm500",
+								//     "component_method": "get_diffusion_value",
+								//     "options": {
+								//       "custom_parents": {
+								//         "info": " Select by model code (province '8870' from es2)",
+								//         "select_model": [
+								//           "es2_8870"
+								//         ]
+								//       }
+								//     }
+								//   }
+								// }
+								$ar_value[] = $current_component->{$component_method}(DEDALO_DATA_LANG, $options);
+							}else{
+								$ar_value[] = $current_component->get_value();
+							}
+
+						}else{
+
+							// default related value case (portals, etc.)
+
+							$current_component = component_common::get_instance(
+								$model,
+								$target_component_tipo,
+								$this->section_id,
+								'list',
+								DEDALO_DATA_LANG,
+								$this->section_tipo
+							);
+							$current_component->set_dato($current_locator); // force set dato
+							$ar_value[] = $current_component->get_value();
+						}
 					}
 
 				// diffusion_value as string or array (default array)
