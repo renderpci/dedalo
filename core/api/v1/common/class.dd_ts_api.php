@@ -186,7 +186,9 @@ final class dd_ts_api {
 				if ($area_model==='area_ontology') {
 
 					$found = array_find($active_elements, function($el) use($section_tipo){
-						return $el->target_section_tipo===$section_tipo || $el->section_tipo===$section_tipo;
+						return $el->target_section_tipo===$section_tipo
+							|| $el->section_tipo===$section_tipo
+							|| get_tld_from_tipo($section_tipo)===$el->tld;
 					});
 					if (empty($found)) {
 						// remove from pagination total count
