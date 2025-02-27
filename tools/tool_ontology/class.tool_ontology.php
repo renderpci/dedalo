@@ -66,6 +66,11 @@ class tool_ontology extends tool_common {
 		// Process ontology node/s and change jer_dd rows
 			$ontology_response = ontology::set_records_in_jer_dd( $sqo );
 
+		// reset active elements session. It is used in dd_ts_api::get_children_data()
+			if (isset($_SESSION['dedalo']['config']['active_elements'])) {
+				unset($_SESSION['dedalo']['config']['active_elements']);
+			}
+
 		// response
 			$response->result	= $ontology_response->result;
 			$response->msg		= $ontology_response->msg;
