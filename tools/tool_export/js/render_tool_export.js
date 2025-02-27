@@ -82,19 +82,19 @@ const get_content_data_edit = async function(self) {
 			// 	parent			: components_list_container
 			// })
 		// components_list. render section component list [left]
+			const ar_components_exclude = ['component_password']
 			const section_elements = await self.get_section_elements_context({
 				section_tipo			: self.target_section_tipo,
-				ar_components_exclude	: [
-					'component_password'
-				]
+				ar_components_exclude	: ar_components_exclude
 			})
 			// render_components_list (common shared render by render_common.js)
 			const ar_components = render_components_list({
-				self				: self,
-				section_tipo		: self.target_section_tipo,
-				target_div			: components_list_container,
-				path				: [],
-				section_elements	: section_elements
+				self					: self,
+				section_tipo			: self.target_section_tipo,
+				target_div				: components_list_container,
+				path					: [],
+				section_elements		: section_elements,
+				ar_components_exclude	: ar_components_exclude
 			})
 
 	// user_selection_list (right side)
@@ -103,7 +103,6 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'selection_list_contaniner',
 			parent			: grid_top
 		})
-
 			// title
 			ui.create_dom_element({
 				element_type	: 'h1',
