@@ -4507,7 +4507,7 @@ abstract class common {
 
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-					if (in_array($model, $ar_components_exclude)) {
+					if (in_array($model, $ar_components_exclude) || $model==='component_password') {
 						continue;
 					}
 					if ($model==='section_group') {
