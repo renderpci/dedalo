@@ -812,6 +812,10 @@ class relation_list extends common {
 					$diffusion_value = ($output==='string')
 						? implode($separator, $ar_value)
 						: $ar_value;
+					// unify empty values to null
+					if (empty($diffusion_value) && $diffusion_value!==null) {
+						$diffusion_value = null;
+					}
 				break;
 
 			case 'dato':
