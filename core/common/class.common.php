@@ -123,6 +123,10 @@ abstract class common {
 		// Note that on get_structure_context_simple case, is set to [] to prevent calculate it
 		public $buttons_context;
 
+		// Caller. name of the caller class. String 'tool_export'
+		// used to identify the caller that made the instance.
+		public $caller;
+
 		// required methods
 			// abstract protected function define_id($id);
 			// abstract protected function define_tipo();
@@ -4507,7 +4511,7 @@ abstract class common {
 
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-					if (in_array($model, $ar_components_exclude)) {
+					if (in_array($model, $ar_components_exclude) || $model==='component_password') {
 						continue;
 					}
 					if ($model==='section_group') {
