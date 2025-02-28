@@ -165,13 +165,13 @@ final class dd_ts_api {
 			}else{
 				$active_elements = [];
 				foreach (ontology::get_active_elements() as $el) {
-					if ($el->active_in_thesaurus===true) {
+					// if ($el->active_in_thesaurus===true) {
 						$active_elements[] = (object)[
 							'tld'					=> $el->tld,
 							'section_tipo'			=> $el->section_tipo,
 							'target_section_tipo'	=> $el->target_section_tipo
 						];
-					}
+					// }
 				}
 				$_SESSION['dedalo']['config']['active_elements'] = $active_elements;
 			}
