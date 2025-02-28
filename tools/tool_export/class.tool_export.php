@@ -381,6 +381,8 @@ class tool_export extends tool_common {
 				);
 				// set the locator to the new component it will be used to know; who create me.
 				$current_component->set_locator($locator);
+				// set the caller
+				$current_component->set_caller('tool_export');
 				// set the first id of the column_obj, if the component is a related component it will used to create a path of the deeper components
 				$column_obj = new stdClass();
 					$column_obj->id = $ddo->section_tipo.'_'.$ddo->component_tipo;
