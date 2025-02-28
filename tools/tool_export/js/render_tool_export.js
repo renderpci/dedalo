@@ -346,9 +346,11 @@ const get_content_data_edit = async function(self) {
 					}
 					const dd_grid				= await self.get_export_grid(export_grid_options)
 					const dd_grid_export_node	= await dd_grid.render()
+
+					const clone_node = dd_grid_export_node.cloneNode(true)
 					if (dd_grid_export_node) {
 						data_spinner.remove()
-						export_data_container.appendChild(dd_grid_export_node)
+						export_data_container.appendChild(clone_node)
 						// export_data_container.scrollIntoView(true)
 						export_buttons_options.scrollIntoView(true)
 					}
@@ -507,12 +509,17 @@ const get_content_data_edit = async function(self) {
 				inner_html		: (get_label.download || 'Export') + ' ODS',
 				parent			: export_buttons_options
 			})
-			button_export_ods.addEventListener('click', function() {
+			button_export_ods.addEventListener('click', async function() {
 				// Download it
 					const file	= filename+ '.ods';
 
+					const dd_grid		= self.dd_grid
+					dd_grid.view		= 'table_export'
+					await dd_grid.build(false)
+					const table_export	= await dd_grid.render()
+
 					self.export_table_with_xlsx_lib({
-						table		: export_data_container,
+						table		: table_export, //export_data_container,
 						filename	: file
 					})
 			})
@@ -524,12 +531,17 @@ const get_content_data_edit = async function(self) {
 				inner_html		: (get_label.download || 'Export') + ' XLSX',
 				parent			: export_buttons_options
 			})
-			button_export_excel.addEventListener('click', function() {
+			button_export_excel.addEventListener('click', async function() {
 				// Download it
 					const file	= filename+ '.xlsx';
 
+					const dd_grid		= self.dd_grid
+					dd_grid.view		= 'table_export'
+					await dd_grid.build(false)
+					const table_export	= await dd_grid.render()
+
 					self.export_table_with_xlsx_lib({
-						table		: export_data_container,
+						table		: table_export, //export_data_container,
 						filename	: file
 					})
 			})
