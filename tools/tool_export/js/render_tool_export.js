@@ -558,10 +558,26 @@ const get_content_data_edit = async function(self) {
 				// Download it
 					const file	= filename + '.html';
 
-					self.export_table_with_xlsx_lib({
-						table		: export_data_container,
-						filename	: file
-					})
+					const html	= document.createElement('html');
+					const head	= document.createElement('head');
+					const meta	= document.createElement('meta');
+					meta.setAttribute('charset', 'utf-8');
+					const body	= document.createElement('body');
+
+					html.appendChild(head);
+					head.appendChild(meta);
+					head.appendChild(body);
+					body.appendChild(export_data_container);
+
+					// Download it
+					const link	= document.createElement('a');
+					link.style.display = 'none';
+					link.setAttribute('target', '_blank');
+					link.setAttribute('href', 'data	:text/text;charset=utf-8,' + html.outerHTML);
+					link.setAttribute('download', file);
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
 			})
 
 		// print. button export print
