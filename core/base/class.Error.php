@@ -38,6 +38,7 @@ class dd_error {
 					'msg'		=> $message ?? 'Unknown error',
 					'errors'	=> ['captureError']
 				]);
+				// error_log($message, 3, '/home/www/vhosts/mydomain/logs/php_error_log');
 			}
 
 		// error_log('ERROR [dd_error::captureError]: '. print_r($error, true));

@@ -315,13 +315,20 @@ const get_av_column = function(current_data) {
 */
 const get_img_column = function(current_data) {
 
-	// url (absolute)
+	// image url
 		const url = current_data.value[0]
-			? window.location.origin + current_data.value[0]
-			: ''
+
+	// append current domain and protocol only in local images, excluding
+	// external like 'https://gallica.bnf.fr/ark:/12148/btv1b8498948z/f1.highres'
+		const final_value = (!url)
+			? ''
+			: url.indexOf('http')===0
+				? url
+				: window.location.origin + url
+
 
 	// value
-		const value = url
+		const value = final_value
 
 	return value
 }//end get_img_column
