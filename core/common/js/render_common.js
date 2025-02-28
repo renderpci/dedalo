@@ -30,6 +30,7 @@ export const render_components_list = function(options) {
 		const target_div			= options.target_div
 		const path					= options.path
 		const section_elements		= options.section_elements
+		const ar_components_exclude = options.ar_components_exclude || null
 
 	// clean target_div
 		while (target_div.hasChildNodes()) {
@@ -150,7 +151,7 @@ export const render_components_list = function(options) {
 							// section_elements_context
 								const current_section_elements = await self.get_section_elements_context({
 									section_tipo			: target_section,
-									ar_components_exclude	: null // use defaults from server
+									ar_components_exclude	: ar_components_exclude
 								})
 
 							// recursion render_components_list

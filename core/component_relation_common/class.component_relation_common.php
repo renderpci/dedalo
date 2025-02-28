@@ -448,6 +448,9 @@ class component_relation_common extends component_common {
 				// set the locator to the new component, it will used in the next loop
 				$current_component->set_locator($this->locator);
 
+				// set the caller class name of the portal (who instantiate the portal) to the new component. as 'tool_export', 'tool_publication' etc.
+				$current_component->set_caller($this->caller);
+
 				// get the ddo path for inject to the next component level resolution.
 				$sub_ddo_map = get_children_recursive($ddo_map, $ddo);
 

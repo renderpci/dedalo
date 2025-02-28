@@ -160,17 +160,21 @@ final class dd_ts_api {
 			}
 
 		// active ontologies list. Calculate once by session (445 ms)
+		// Include only ontologies that have 'active_in_thesaurus' as true
 			if ($area_model==='area_ontology') {
 				if(isset($_SESSION['dedalo']['config']['active_elements'])) {
 					$active_elements = $_SESSION['dedalo']['config']['active_elements'];
 				}else{
-					$active_elements = array_map(function($el) {
-						return (object)[
-							'tld'					=> $el->tld,
-							'section_tipo'			=> $el->section_tipo,
-							'target_section_tipo'	=> $el->target_section_tipo
-						];
-					}, ontology::get_active_elements());
+					$active_elements = [];
+					foreach (ontology::get_active_elements() as $el) {
+						// if ($el->active_in_thesaurus===true) {
+							$active_elements[] = (object)[
+								'tld'					=> $el->tld,
+								'section_tipo'			=> $el->section_tipo,
+								'target_section_tipo'	=> $el->target_section_tipo
+							];
+						// }
+					}
 					$_SESSION['dedalo']['config']['active_elements'] = $active_elements;
 				}
 			}
@@ -189,7 +193,9 @@ final class dd_ts_api {
 				if ($area_model==='area_ontology') {
 
 					$found = array_find($active_elements, function($el) use($section_tipo){
-						return $el->target_section_tipo===$section_tipo || $el->section_tipo===$section_tipo;
+						return $el->target_section_tipo===$section_tipo
+							|| $el->section_tipo===$section_tipo
+							|| get_tld_from_tipo($section_tipo)===$el->tld;
 					});
 					if (empty($found)) {
 						// remove from pagination total count
