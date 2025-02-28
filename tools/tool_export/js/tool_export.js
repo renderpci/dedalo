@@ -312,13 +312,13 @@ tool_export.prototype.get_export_xsl = async function (options) {
  	// 	// const workbook = XLSX.read(table, {type:'string'});
 	// XLSX.writeFile(workbook, 'out.csv' );
 
-	const table		= options.export_data.firstChild //.outerHTML
+	const table		= options.table.firstChild //.outerHTML
 	const name		= self.caller.section_tipo
-	const filename	= self.caller.section_tipo
+	const filename	= options.filename
 
 	// function tableToExcel(table, name, filename) {
 	const uri = 'data:application/vnd.ms-excel;base64,',
-	template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta charset="utf-8"/><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>',
+	template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta charset="UTF-8"/><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>',
 	base64 = function(head_nodes) {
 		return window.btoa(decodeURIComponent(encodeURIComponent(head_nodes)))
 	},
