@@ -362,7 +362,7 @@ tool_export.prototype.export_table_with_xlsx_lib = async function( options ) {
 	// downloaded library from https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs
   	const XLSX = await import( DEDALO_ROOT_WEB+"/lib/xlsx/build/xlsx.js" );
 
-	const table		= options.table.firstChild
+	const table		= options.table
 	const filename	= options.filename
 
 	const workbook = XLSX.utils.table_to_book(table, {"raw":true})
