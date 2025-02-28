@@ -82,19 +82,19 @@ const get_content_data_edit = async function(self) {
 			// 	parent			: components_list_container
 			// })
 		// components_list. render section component list [left]
+			const ar_components_exclude = ['component_password']
 			const section_elements = await self.get_section_elements_context({
 				section_tipo			: self.target_section_tipo,
-				ar_components_exclude	: [
-					'component_password'
-				]
+				ar_components_exclude	: ar_components_exclude
 			})
 			// render_components_list (common shared render by render_common.js)
 			const ar_components = render_components_list({
-				self				: self,
-				section_tipo		: self.target_section_tipo,
-				target_div			: components_list_container,
-				path				: [],
-				section_elements	: section_elements
+				self					: self,
+				section_tipo			: self.target_section_tipo,
+				target_div				: components_list_container,
+				path					: [],
+				section_elements		: section_elements,
+				ar_components_exclude	: ar_components_exclude
 			})
 
 	// user_selection_list (right side)
@@ -103,7 +103,6 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'selection_list_contaniner',
 			parent			: grid_top
 		})
-
 			// title
 			ui.create_dom_element({
 				element_type	: 'h1',
@@ -128,10 +127,7 @@ const get_content_data_edit = async function(self) {
 			// empty_space drag and drop events
 			empty_space.addEventListener('dragover', function(e){self.on_dragover(user_selection_list,e)})
 			empty_space.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
-			// empty_space.addEventListener('dragend', function(e){self.on_drag_end(this,e)})
 			empty_space.addEventListener('drop', function(e){self.on_drop(user_selection_list,e)})
-
-
 
 		// read saved ddo in local DB and restore elements if found
 			const id = 'tool_export_config'
@@ -350,9 +346,11 @@ const get_content_data_edit = async function(self) {
 					}
 					const dd_grid				= await self.get_export_grid(export_grid_options)
 					const dd_grid_export_node	= await dd_grid.render()
+
+					const clone_node = dd_grid_export_node.cloneNode(true)
 					if (dd_grid_export_node) {
 						data_spinner.remove()
-						export_data_container.appendChild(dd_grid_export_node)
+						export_data_container.appendChild(clone_node)
 						// export_data_container.scrollIntoView(true)
 						export_buttons_options.scrollIntoView(true)
 					}
@@ -511,12 +509,17 @@ const get_content_data_edit = async function(self) {
 				inner_html		: (get_label.download || 'Export') + ' ODS',
 				parent			: export_buttons_options
 			})
-			button_export_ods.addEventListener('click', function() {
+			button_export_ods.addEventListener('click', async function() {
 				// Download it
 					const file	= filename+ '.ods';
 
+					const dd_grid		= self.dd_grid
+					dd_grid.view		= 'table_export'
+					await dd_grid.build(false)
+					const table_export	= await dd_grid.render()
+
 					self.export_table_with_xlsx_lib({
-						table		: export_data_container,
+						table		: table_export, //export_data_container,
 						filename	: file
 					})
 			})
@@ -528,12 +531,17 @@ const get_content_data_edit = async function(self) {
 				inner_html		: (get_label.download || 'Export') + ' XLSX',
 				parent			: export_buttons_options
 			})
-			button_export_excel.addEventListener('click', function() {
+			button_export_excel.addEventListener('click', async function() {
 				// Download it
 					const file	= filename+ '.xlsx';
 
+					const dd_grid		= self.dd_grid
+					dd_grid.view		= 'table_export'
+					await dd_grid.build(false)
+					const table_export	= await dd_grid.render()
+
 					self.export_table_with_xlsx_lib({
-						table		: export_data_container,
+						table		: table_export, //export_data_container,
 						filename	: file
 					})
 			})
@@ -550,10 +558,26 @@ const get_content_data_edit = async function(self) {
 				// Download it
 					const file	= filename + '.html';
 
-					self.export_table_with_xlsx_lib({
-						table		: export_data_container,
-						filename	: file
-					})
+					const html	= document.createElement('html');
+					const head	= document.createElement('head');
+					const meta	= document.createElement('meta');
+					meta.setAttribute('charset', 'utf-8');
+					const body	= document.createElement('body');
+
+					html.appendChild(head);
+					head.appendChild(meta);
+					head.appendChild(body);
+					body.appendChild(export_data_container);
+
+					// Download it
+					const link	= document.createElement('a');
+					link.style.display = 'none';
+					link.setAttribute('target', '_blank');
+					link.setAttribute('href', 'data	:text/text;charset=utf-8,' + html.outerHTML);
+					link.setAttribute('download', file);
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
 			})
 
 		// print. button export print

@@ -9,6 +9,7 @@
 	import {view_csv_dd_grid} from './view_csv_dd_grid.js'
 	import {view_tsv_dd_grid} from './view_tsv_dd_grid.js'
 	import {view_table_dd_grid} from './view_table_dd_grid.js'
+	import {view_table_export_dd_grid} from './view_table_export_dd_grid.js'
 	import {view_default_dd_grid} from './view_default_dd_grid.js'
 	import {view_mini_dd_grid} from './view_mini_dd_grid.js'
 	import {view_indexation_dd_grid} from './view_indexation_dd_grid.js'
@@ -55,6 +56,9 @@ render_list_dd_grid.prototype.list = async function(options) {
 
 		case 'table':
 			return view_table_dd_grid.render(self, options)
+
+		case 'table_export':
+			return view_table_export_dd_grid.render(self, options)
 
 		case 'mini':
 			return view_mini_dd_grid.render(self, options)
