@@ -424,10 +424,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 				case 'dd1067': // tools component_security_tools
 					return 'component_check_box';
 				// temporal 6.4.5
-					case 'hierarchy45':
-					case 'hierarchy59':
-					case 'hierarchy49':
-					case 'ontology14';
+					case 'hierarchy45': // hierarchy main: General term
+					case 'hierarchy59': // hierarchy main: General term model
+					// case 'hierarchy49':
+					// case 'ontology14';
 						return 'component_portal';
 
 			}
