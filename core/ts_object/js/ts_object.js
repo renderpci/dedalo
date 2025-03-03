@@ -44,7 +44,7 @@ export const ts_object = new function() {
 	* @param HTMLElement children_element
 	* @return promise
 	*/
-	this.get_children = function(children_element, pagination, clean_children_container) {
+	this.get_children_OLD = function(children_element, pagination, clean_children_container) {
 
 		// short vars
 			const tipo					= children_element.dataset.tipo
@@ -138,6 +138,127 @@ export const ts_object = new function() {
 							ar_children_data,
 							children_container,
 							options
+						)
+
+					// fix children_element pagination (used on refresh_element to get current pagination status)
+						children_element.pagination = response.pagination
+
+					// updates arrow
+						if (children_element && children_element.firstChild && children_element.dataset.type) {
+							// remove spinner
+							children_element.firstChild.classList.remove('arrow_spinner');
+							// set arrow icon as opened
+							const add_class = (children_element.dataset.type==='link_children_nd')
+								? 'ts_object_children_arrow_icon_open_nd'
+								: 'ts_object_children_arrow_icon_open'
+
+							children_element.firstChild.classList.add(add_class)
+							// Update arrow state
+							// ts_object.update_arrow_state(children_element, true) // disabled temporally
+						}
+
+					resolve(result)
+
+				}else{
+
+					// error case
+
+					console.warn("[ts_object.get_children] Error, response is null");
+
+					resolve(false)
+				}
+			})
+		})
+	}//end get_children
+
+
+
+	/**
+	* GET_CHILDREN
+	* Get the JSON data from the server. When data is loaded, render DOM element
+	* Data is built from parent node info (current object section_tipo and section_id)
+	* @param HTMLElement children_element
+	* @return promise
+	*/
+	this.get_children = function(options) {
+
+		// options
+			const children_element			= options.children_element
+			const section_tipo				= options.section_tipo
+			const section_id				= options.section_id
+			const pagination				= options.pagination
+			const clean_children_container	= options.clean_children_container ?? false
+
+		// short vars
+			const caller				= this.caller
+			const thesaurus_view_mode	= caller.thesaurus_view_mode
+
+		// children_container. Is the div container inside current ts_object
+			// const children_container = (()=>{
+
+			// 	const wrap_children		= wrap.childNodes
+			// 	const wrap_children_len	= wrap_children.length
+			// 	for (let i = wrap_children_len - 1; i >= 0; i--) {
+			// 		if(wrap_children[i].dataset.role && wrap_children[i].dataset.role==="children_container") {
+			// 			return wrap_children[i]
+			// 		}
+			// 	}
+
+			// 	return null
+			// })()
+			const children_container = children_element.parentNode
+			if (children_container===null) {
+				alert("[ts_object.get_children] Error on select children_container");
+				return Promise.resolve(false);
+			}
+
+		return new Promise(function(resolve){
+
+			// set false on 'area_ontology' to allow session cache in ontology
+			const prevent_lock = caller.model==='area_ontology' ? false : true
+
+			// API call
+			const rqo = {
+				dd_api			: 'dd_ts_api',
+				prevent_lock	: prevent_lock,
+				action			: 'get_children_data',
+				source			: {
+					section_id		: section_id,
+					section_tipo	: section_tipo,
+					model			: caller.model,
+					build_options	: {
+						terms_are_model : self.thesaurus_view_mode==='model'
+					}
+				},
+				options : {
+					pagination			: pagination,
+					thesaurus_view_mode	: thesaurus_view_mode
+				}
+			}
+			data_manager.request({
+				body : rqo
+			})
+			.then(async function(response) {
+				if(SHOW_DEBUG===true) {
+					console.log('get_children_data response:', response);
+				}
+
+				if (response && response.result) {
+
+					// success case
+
+					// dom_parse_children
+						const ar_children_data = response.result
+						const parse_options = {
+							target_section_tipo			: target_section_tipo,
+							node_type					: node_type,
+							clean_children_container	: clean_children_container,
+							pagination					: response.pagination
+						}
+						const result = await ts_object.dom_parse_children(
+							ar_children_data,
+							children_container,
+							parse_options
 						)
 
 					// fix children_element pagination (used on refresh_element to get current pagination status)
@@ -920,6 +1041,7 @@ export const ts_object = new function() {
 	* @return api_response
 	*/
 	this.add_child = async function(options) {
+		console.log('options:', options); return
 
 		// options
 			const section_id	= options.section_id
