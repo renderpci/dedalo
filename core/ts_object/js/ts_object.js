@@ -911,105 +911,67 @@ export const ts_object = new function() {
 
 	/**
 	* ADD_CHILD
-	* Call to API to create a new record and add it to the current element as child
-	* @param HTMLElement button_obj
-	* @return promise
+	* Call to API to create a new record and add the current element his parent
+	* @param object options
+	* {
+	* 	section_id : string|int
+	* 	section_tipo: string
+	* }
+	* @return api_response
 	*/
-	this.add_child = function(button_obj) {
+	this.add_child = async function(options) {
 
-		// wrap
-			const wrap = button_obj.parentNode.parentNode;
+		// options
+			const section_id	= options.section_id
+			const section_tipo	= options.section_tipo
 
-			//const wrap = find_ancestor(button_obj, "wrap_ts_object")
-			if(!wrap || !wrap.classList.contains('wrap_ts_object')) {
-				console.log("[add_child] Error on find wrap");
-				return Promise.resolve(false);
-			}
-
-		// children_element
-			const children_element = ts_object.get_link_children_from_wrap(wrap)
-			if(!children_element) {
-				console.log("[ts_object.add_child] Error on find children_element 'link_children'");
-				return Promise.resolve(false);
-			}
-
-		// short vars
-			// const mode				= button_obj.dataset.mode || 'add_child'
-			const section_id			= wrap.dataset.section_id
-			const section_tipo			= wrap.dataset.section_tipo
-			const target_section_tipo	= wrap.dataset.target_section_tipo
-			const node_type				= wrap.dataset.node_type || null
-			const is_hierarchy_node		= JSON.parse( wrap.dataset.is_hierarchy_node ) || false
-			const tipo					= children_element.dataset.tipo
-
-		// target_section_tipo check on add_child_from_hierarchy mode
-			if (!target_section_tipo) {
-				alert("Please, define a target_section_tipo in current hierarchy before add terms")
-				console.log("[ts_object.add_child] Error on find target_section_tipo dataset on wrap");
-				return Promise.resolve(false);
-			}
-
-
-		return new Promise(function(resolve) {
-
-			const source = {
-				section_id			: section_id,
-				section_tipo		: section_tipo,
-				target_section_tipo	: (is_hierarchy_node===true) ? target_section_tipo : section_tipo,
-				node_type			: node_type,
-				tipo				: tipo
-			}
-
-			// API call
-				const rqo = {
-					dd_api			: 'dd_ts_api',
-					prevent_lock	: true,
-					action			: 'add_child',
-					source			: source
+		// mandatory options check
+			const mandatory = ['section_id','section_tipo']
+			mandatory.map(el => {
+				if (!options[el]) {
+					alert(`Error: var ${el} is mandatory!`);
+					throw 'Mandatory vars check fail: ' + el
 				}
-				data_manager.request({
-					body : rqo
-				})
-				.then(function(response) {
-					if(SHOW_DEBUG===true) {
-						console.log("[ts_object.add_child] response",response)
-					}
+			})
 
-					if (response===null) {
+		// source
+			const source = {
+				section_id		: section_id,
+				section_tipo	: section_tipo
+			}
 
-						// Server script error
-							alert("Error on add_child. See server log for details");
+		// API call
+			const rqo = {
+				dd_api	: 'dd_ts_api',
+				action	: 'add_child',
+				source	: source
+			}
 
-					}else{
+		// API request
+			const api_response = await data_manager.request({
+				body : rqo
+			})
 
-						if (response.result===false) {
+			// debug
+			if(SHOW_DEBUG===true) {
+				console.log('[ts_object.add_child] response', api_response)
+			}
 
-							// Problems found on add
-								alert(response.msg);
+			if (!api_response) {
 
-						}else{
+				// Server script error
+				alert('Error on add_child. See server log for details');
 
-							// All is OK
+			}else{
 
-							// Refresh children container
-									// ts_object.get_children(children_element).then(function(){
-									// 	// On children refresh is done, trigger edit button
-									// 	console.log("[ts_object.add_child] update_children_promise done");
-									// 	//console.log(response);
-									// 	// Open edit window
-									// 	let new_section_id = response.result
-									// 	ts_object.edit(button_obj, null, new_section_id, wrap.dataset.section_tipo)
-									// })
+				if (api_response.result===false) {
+					// Problems found on add
+					alert(api_response.msg);
+				}
+			}
 
-							// Add some vars tipo to the response
-								response.wrap 		= wrap
-								response.button_obj = button_obj
-						}
-					}
 
-					resolve(response)
-				})
-		})
+		return api_response
 	}//end add_child
 
 

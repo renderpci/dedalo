@@ -650,33 +650,34 @@ const render_id_column = function(options) {
 							e.stopPropagation()
 
 							// mode set in dataset
-								this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
+								link_add.dataset.mode = 'add_child'
+
+							// wrap
+								const wrap = id_column_content.parentNode
+
+							// children_element
+								const children_element = ts_object.get_link_children_from_wrap(wrap)
+								if(!children_element) {
+									console.log("Error on find children_element");
+									return
+								}
+
+							// short vars
+								const section_id	= wrap.dataset.section_id
+								const section_tipo	= wrap.dataset.section_tipo
 
 							// add_child
-								self.add_child(this)
-								.then(function(response){
+								self.add_child({
+									section_id		: section_id,
+									section_tipo	: section_tipo
+								})
+								.then((response)=>{
 
-									// response is an object as
-									// {
-									// 	API response ...
-									// 	result: 40
-									//  button_obj: a.id_column_link.ts_object_add
-									// 	wrap: div.wrap_ts_object
-									// }
-									// vars from response
-										// check if the node is hierarchy or not
-											const is_hierarchy_node = JSON.parse( response.wrap.dataset.is_hierarchy_node )
-										// new_section_id . Generated as response by the trigger add_child
-											const new_section_id 	= response.result
-										// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
-											const section_tipo 	  	= ( is_hierarchy_node === true ) ? response.wrap.dataset.target_section_tipo : response.wrap.dataset.section_tipo //response.wrap.dataset.target_section_tipo || response.wrap.dataset.section_tipo
-										// button_obj. button plus that user clicks
-											const button_obj 		= response.button_obj
-										// children_element. list_thesaurus_element of current wrapper
-											const children_element 	= self.get_link_children_from_wrap(response.wrap)
-											if(!children_element) {
-												return console.error("[ts_object.add_child] Error on find children_element 'link_children'");
-											}
+									// new_section_id . Generated as response by the trigger add_child
+										const new_section_id = response.result
+										if (!new_section_id) {
+											return
+										}
 
 									// refresh children container
 										self.get_children(
@@ -688,7 +689,7 @@ const render_id_column = function(options) {
 											// result could be an array of children_container nodes or bool false
 											// Open editor in new window
 											if (result) {
-												self.edit(button_obj, null, new_section_id, section_tipo)
+												self.edit(link_add, null, new_section_id, section_tipo)
 											}
 										})
 								})

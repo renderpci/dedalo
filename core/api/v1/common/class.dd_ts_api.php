@@ -284,16 +284,12 @@ final class dd_ts_api {
 			$response->errors	= [];
 
 		// short vars
-			$source					= $rqo->source;
-			$section_tipo			= $source->section_tipo;
-			$section_id				= $source->section_id;
-			// target_section_tipo. (!) Note that when child_from_hierarchy is added, this value is different
-			// else is the same value as section_tipo
-			$target_section_tipo	= $source->target_section_tipo;
-			$tipo					= $source->tipo;
+			$source			= $rqo->source;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
 
 		// new section. Create a new empty section
-			$new_section	= section::get_instance(null, $target_section_tipo);
+			$new_section	= section::get_instance(null, $section_tipo);
 			$new_section_id	= $new_section->Save();
 			if (empty($new_section_id)) {
 				$response->msg = 'Error on create new section from parent. Stopped add_child process !';
@@ -306,13 +302,13 @@ final class dd_ts_api {
 			}
 
 		// section map
-			$section_map = section::get_section_map( $target_section_tipo );
+			$section_map = section::get_section_map( $section_tipo );
 
-		// set new section component 'is_descriptor' value
+		// is_descriptor: set new section component 'is_descriptor' value
 			if (!isset($section_map->thesaurus->is_descriptor)) {
 				debug_log(__METHOD__.
 					" Invalid section_map 'is_descriptor' property from section:" . PHP_EOL
-					.' target_section_tipo: ' . $target_section_tipo . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
 					.' section_map: ' . to_string($section_map)
 					, logger::DEBUG
 				);
@@ -327,7 +323,7 @@ final class dd_ts_api {
 						$new_section_id,
 						'edit', // note mode edit autosave default value
 						DEDALO_DATA_NOLAN,
-						$target_section_tipo
+						$section_tipo
 					);
 					$component->get_dato();
 					debug_log(__METHOD__
@@ -340,11 +336,11 @@ final class dd_ts_api {
 				}
 			}
 
-		// is_indexable default value set
+		// is_indexable: set is_indexable default value
 			if (!isset($section_map->thesaurus->is_indexable)) {
 				debug_log(__METHOD__
 					." Invalid section_map 'is_indexable' property from section." . PHP_EOL
-					.' target_section_tipo: ' . $target_section_tipo . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
 					.' section_map: ' . to_string($section_map)
 					, logger::DEBUG
 				);
@@ -359,7 +355,7 @@ final class dd_ts_api {
 						$new_section_id,
 						'edit', // note mode edit autosave default value
 						DEDALO_DATA_NOLAN,
-						$target_section_tipo
+						$section_tipo
 					);
 					$component->get_dato();
 					debug_log(__METHOD__
@@ -372,33 +368,42 @@ final class dd_ts_api {
 				}
 			}
 
-		// component_relation_children
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-			if ($model_name!=='component_relation_children') {
-				$response->msg = 'Error on create new section from parent. Invalid model: '.$model_name.'. Expected: "component_relation_children" ';
+		// component_relation_parent
+		// Is created in the new created record and the current section_id is added as parent
+			$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true);
+			$component_relation_parent_tipo = $ar_parent_tipo[0] ?? null;
+			if (empty($component_relation_parent_tipo)) {
+				$response->msg = 'Error on get component_relation_parent from section. Model does not exists';
 				debug_log(__METHOD__.
 					" $response->msg "
 					, logger::ERROR
 				);
-				$response->errors[] = 'Invalid model '.$model_name;
+				$response->errors[] = 'Invalid component_relation_parent from section '.$section_tipo;
 				return $response;
 			}
-			$component_relation_children = component_common::get_instance(
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_relation_parent_tipo, true);
+			$component_relation_parent = component_common::get_instance(
 				$model_name,
-				$tipo, // normally hierarchy45
-				$section_id,
+				$component_relation_parent_tipo,
+				$new_section_id,
 				'list',
 				DEDALO_DATA_NOLAN,
-				$section_tipo, // normally hierarchy1
+				$section_tipo,
 				false
 			);
 
 		// add
-			$added = (bool)$component_relation_children->make_me_your_child( $target_section_tipo, $new_section_id );
+			$locator = new locator();
+				$locator->set_section_tipo($section_tipo);
+				$locator->set_section_id($section_id);
+				$locator->set_from_component_tipo($component_relation_parent_tipo);
+				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
+
+			$added = (bool)$component_relation_parent->add_locator_to_dato( $locator );
 			if ($added===true) {
 
 				// Save relation children data
-				$component_relation_children->Save();
+				$component_relation_parent->Save();
 
 				// All is OK. Result is new created section section_id
 				$response->result	= (int)$new_section_id;
