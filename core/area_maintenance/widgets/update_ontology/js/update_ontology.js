@@ -144,7 +144,7 @@ update_ontology.prototype.update_ontology = async (options) => {
 		}
 	})
 	if(SHOW_DEBUG===true) {
-		console.log('))) update_ontology update_ontology api_response:', api_response);;
+		console.log('))) update_ontology api_response:', api_response);
 	}
 
 
