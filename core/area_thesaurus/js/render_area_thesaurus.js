@@ -295,22 +295,26 @@ const render_content_data = function(self) {
 							element_type	: 'div',
 							parent			: hierarchy_wrapper
 						})
-						// link_children
-						const link_children = ui.create_dom_element({
+						// children_element
+						const children_element = ui.create_dom_element({
 							element_type	: 'div',
 							dataset			: {
-								tipo : hierarchy_sections_item.children_tipo
+								// tipo : hierarchy_sections_item.children_tipo
 							},
 							parent			: hierarchy_elements_container
 						})
 
-						// link_children.node_type = 'hierarchy_node';
+						// children_element.node_type = 'hierarchy_node';
 
 					// ts_object Get from API and render element
-						self.ts_object.get_children(link_children)
-						.then(()=>{
-							hierarchy_elements_container.remove()
-						})
+						// self.ts_object.get_children({
+						// 	children_element	: children_element,
+						// 	section_tipo		: hierarchy_sections_item.target_section_tipo,
+						// 	section_id			: hierarchy_sections_item.section_id
+						// })
+						// .then(()=>{
+						// 	hierarchy_elements_container.remove()
+						// })
 				}
 		}//end for (let i = 0; i < typology_length; i++)
 
