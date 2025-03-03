@@ -265,6 +265,10 @@ class ts_object {
 					// re-format dato in some cases:
 						switch (true) {
 
+							case (in_array($element_tipo, hierarchy::$hierarchy_portals_tipo)):
+								// Do not change main hierarchy portals data
+								break;
+
 							case ($model_name==='component_autocomplete_hi' || $model_name==='component_portal'):
 								if (!empty($dato)) {
 									$values = [];
