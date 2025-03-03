@@ -174,7 +174,7 @@ const get_content_data_edit = async function(self) {
 						})
 						// debug
 						if(SHOW_DEBUG===true) {
-							console.log('debug server_ontology_api_response:', server_ontology_api_response)
+							console.log('))) get_ontology_update_info server_api_response:', server_ontology_api_response)
 						}
 
 						const result = server_ontology_api_response?.result
@@ -189,6 +189,14 @@ const get_content_data_edit = async function(self) {
 							})
 							return
 						}
+
+					// OK get_ontology_update_info
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'ok',
+							inner_html		: 'Get ontology update_info: ' + (server_ontology_api_response.msg || 'success'),
+							parent			: body_response
+						})
 
 					// selected files
 						const selected_files = []
@@ -213,7 +221,7 @@ const get_content_data_edit = async function(self) {
 						// add all ontology filtered
 						selected_files.push(...files_filtered)
 
-					// API call
+					// API call update_ontology
 						const api_response = await self.update_ontology({
 							server	: server,
 							files	: selected_files,
@@ -225,14 +233,25 @@ const get_content_data_edit = async function(self) {
 						e.target.classList.remove('lock')
 
 					// fail case
-						if(!api_response){
+						if(!api_response?.result){
 							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'error',
-								inner_html		: server_ontology_api_response.msg || 'Error connecting server',
+								inner_html		: 'Updating Ontology: ' + api_response.msg || 'Error updating from server',
 								parent			: body_response
 							})
 							return
+						}
+
+					// errors node
+						const errors = api_response.errors || [api_response.error] || []
+						if (errors.length>0) {
+							ui.create_dom_element({
+								element_type	: 'pre',
+								class_name		: 'error',
+								inner_html		: errors.join('<br />'),
+								parent			: body_response
+							})
 						}
 
 					// version compatibility check
@@ -254,16 +273,6 @@ const get_content_data_edit = async function(self) {
 									parent			: body_response
 								})
 							}
-						}
-
-					// errors node
-						if (api_response.errors.length>0) {
-							ui.create_dom_element({
-								element_type	: 'pre',
-								class_name		: 'error',
-								inner_html		: api_response.errors.join('<br />'),
-								parent			: body_response
-							})
 						}
 
 					// message
