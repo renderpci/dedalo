@@ -82,6 +82,11 @@ class area_thesaurus extends area_common {
 		$ar_items = [];
 		foreach ($active_elements as $element) {
 
+			// active_in_thesaurus check
+				if ($element->active_in_thesaurus===false) {
+					// skip non active in thesaurus sections
+					continue;
+				}
 			// typology data
 				if (empty($element->typology_id)) {
 					debug_log(__METHOD__." Skipped hierarchy without defined typology. section_id: $element->section_id ", logger::WARNING);
