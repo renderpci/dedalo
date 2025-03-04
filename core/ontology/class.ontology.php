@@ -860,28 +860,28 @@ class ontology {
 				$typology_section->Save();
 
 			// parent
-			// save itself as child of his parent.
-				$children_tipo		= 'ontology14'; // RecordObj_dd::get_modelo_name_by_tipo( 'ontology14', true );
-				$children_model		= 'component_relation_children'; // don't use the jer_dd resolution here, it should not exists jet.
-				$component_children	= component_common::get_instance(
-					$children_model, // string model
-					$children_tipo, // string tipo
-					$parent_section_id, // string section_id
+			// new way v6.5. Save parent directly
+				$parent_tipo		= 'ontology15';
+				$parent_model		= 'component_relation_parent'; // don't use the jer_dd resolution here, may not exist yet.
+				$component_parent	= component_common::get_instance(
+					$parent_model, // string model
+					$parent_tipo, // string tipo
+					$typology_id, // string section_id
 					'list', // string mode
 					DEDALO_DATA_NOLAN, // string lang
-					$parent_node_tipo, // string section_tipo
+					$section_tipo, // string section_tipo
 					false
 				);
 
 				$node_locator = new locator();
-					$node_locator->set_type( DEDALO_RELATION_TYPE_CHILDREN_TIPO );
-					$node_locator->set_section_id( $typology_id );
-					$node_locator->set_section_tipo( $section_tipo );
-					$node_locator->set_from_component_tipo( $children_tipo );
+					$node_locator->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
+					$node_locator->set_section_id( $parent_section_id );
+					$node_locator->set_section_tipo( $parent_node_tipo );
+					$node_locator->set_from_component_tipo( $parent_tipo );
 
-				$is_added = $component_children->add_child( $node_locator );
+				$is_added = $component_parent->add_parent( $node_locator );
 				if( $is_added === true){
-					$component_children->Save();
+					$component_parent->Save();
 				}
 
 		// create the jer_dd node
