@@ -662,7 +662,7 @@ class component_relation_children extends component_relation_common {
 
 		// new way done in relations field with standard sqo
 			$sqo = new search_query_object();
-				$sqo->set_section_tipo( [$section_tipo] );
+			$sqo->set_section_tipo( ['all'] ); // open wide for Ontology cross section parents
 				$sqo->set_mode( 'related' );
 				$sqo->set_full_count( false );
 				$sqo->set_filter_by_locators( [$filter_locator] );
