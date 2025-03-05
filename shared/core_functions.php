@@ -2642,3 +2642,26 @@ function is_ontology_available() {
 		return false;
 	}
  }//end is_ontology_available
+
+
+
+ /**
+ * GET_RELATION_NAME
+ * Resolves tipo to constant name for relations
+ * @param string|null $tipo
+ * @return string
+ */
+function get_relation_name( ?string $tipo ) : string {
+
+	switch ($tipo) {
+		case 'dd151':	return 'DEDALO_RELATION_TYPE_LINK';
+		case 'dd48':	return 'DEDALO_RELATION_TYPE_CHILDREN_TIPO';
+		case 'dd47':	return 'DEDALO_RELATION_TYPE_PARENT_TIPO';
+		case 'dd96':	return 'DEDALO_RELATION_TYPE_INDEX_TIPO';
+		case 'dd675':	return 'DEDALO_RELATION_TYPE_FILTER';
+		case 'dd77':	return 'DEDALO_RELATION_TYPE_ONTOLOGY';
+		case 'dd98':	return 'DEDALO_RELATION_TYPE_MODEL_TIPO';
+		case 'dd490':	return 'DEDALO_RELATION_TYPE_STRUCT_TIPO';
+		default:		return 'Not defined';
+	}
+ }//end get_relation_name
