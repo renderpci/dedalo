@@ -666,6 +666,7 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_mode( 'related' );
 				$sqo->set_full_count( false );
 				$sqo->set_filter_by_locators( [$filter_locator] );
+				$sqo->set_limit( 1000 ); // set limit for security. Overwrite when needed.
 
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
