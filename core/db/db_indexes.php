@@ -1584,6 +1584,158 @@
 		TABLESPACE pg_default;
 	';
 
+// matrix_ontology
+	$ar_sql_query[] = '
+		CREATE INDEX IF NOT EXISTS matrix_ontology_datos_idx
+		ON public.matrix_ontology USING gin
+		(datos jsonb_path_ops)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_id_idx
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_id_idx;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_id_idx
+		ON public.matrix_ontology USING btree
+		(id ASC NULLS FIRST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_id_idx1
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_id_idx1;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_id_idx1
+		ON public.matrix_ontology USING btree
+		(id DESC NULLS LAST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_relations_flat_fct_st_si
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_relations_flat_fct_st_si;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_fct_st_si
+		ON public.matrix_ontology USING gin
+		(relations_flat_fct_st_si(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_relations_flat_st_si
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_relations_flat_st_si;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_st_si
+		ON public.matrix_ontology USING gin
+		(relations_flat_st_si(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_relations_flat_ty_st
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_relations_flat_ty_st;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_ty_st
+		ON public.matrix_ontology USING gin
+		(relations_flat_ty_st(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_relations_flat_ty_st_si
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_relations_flat_ty_st_si;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_ty_st_si
+		ON public.matrix_ontology USING gin
+		(relations_flat_ty_st_si(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_relations_idx
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_relations_idx;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_relations_idx
+		ON public.matrix_ontology USING gin
+		((datos #> \'{relations}\'::text[]) jsonb_path_ops)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_section_id_idx
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_section_id_idx;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_section_id_idx
+		ON public.matrix_ontology USING btree
+		(section_id ASC NULLS LAST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_section_tipo_idx
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_section_tipo_idx;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_section_tipo_idx
+		ON public.matrix_ontology USING btree
+		(section_tipo COLLATE pg_catalog."default" ASC NULLS LAST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_section_tipo_section_id
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_section_tipo_section_id;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_section_tipo_section_id
+		ON public.matrix_ontology USING btree
+		(section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog."default" ASC NULLS LAST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_section_tipo_section_id_desc
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_section_tipo_section_id_desc;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_section_tipo_section_id_desc
+		ON public.matrix_ontology USING btree
+		(section_tipo COLLATE pg_catalog."default" ASC NULLS LAST, section_id DESC NULLS FIRST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_term
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_term;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_term
+		ON public.matrix_ontology USING gin
+		(f_unaccent(datos #>> \'{components,hierarchy25,dato}\'::text[]) COLLATE pg_catalog."default" gin_trgm_ops)
+		TABLESPACE pg_default;
+	';
+
+// matrix_ontology_main
+	$ar_sql_query[] = '
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_datos_idx
+		ON public.matrix_ontology_main USING gin
+		(datos jsonb_path_ops)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_main_id_idx
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_main_id_idx;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_id_idx
+		ON public.matrix_ontology_main USING btree
+		(id ASC NULLS FIRST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_main_id_idx1
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_main_id_idx1;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_id_idx1
+		ON public.matrix_ontology_main USING btree
+		(id DESC NULLS LAST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_main_relations_idx
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_main_relations_idx;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_relations_idx
+		ON public.matrix_ontology_main USING gin
+		((datos #> \'{relations}\'::text[]) jsonb_path_ops)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_main_section_id_idx
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_main_section_id_idx;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_section_id_idx
+		ON public.matrix_ontology_main USING btree
+		(section_id ASC NULLS LAST)
+		TABLESPACE pg_default;
+		-- Index: matrix_ontology_main_section_tipo_idx
+
+		-- DROP INDEX IF EXISTS public.matrix_ontology_main_section_tipo_idx;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_section_tipo_idx
+		ON public.matrix_ontology_main USING btree
+		(section_tipo COLLATE pg_catalog."default" ASC NULLS LAST)
+		TABLESPACE pg_default;
+	';
+
 // People special indexes (name [rsc85], surname [rsc86])
 	$ar_sql_query[] = '
 		CREATE INDEX IF NOT EXISTS matrix_rsc85_gin ON matrix USING gin(f_unaccent(datos#>>\'{components, rsc85, dato}\') gin_trgm_ops);
