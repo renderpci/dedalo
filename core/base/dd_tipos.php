@@ -137,6 +137,7 @@ define('DEDALO_RELATION_TYPE_STRUCT_TIPO',				'dd490');
 define('DEDALO_RELATION_TYPE_MODEL_TIPO',				'dd98');
 define('DEDALO_RELATION_TYPE_FILTER',					'dd675');
 define('DEDALO_RELATION_TYPE_ONTOLOGY',					'dd77');
+// update core_functions 'get_relation_name' on relation types updates (!)
 
 // define('DEDALO_RELATION_TYPE_EQUIVALENT_TIPO',		'dd47');
 define('DEDALO_RELATION_TYPE_RELATED_TIPO',				'dd89');
