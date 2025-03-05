@@ -47,6 +47,38 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium	= 4;
 	$updates->$v->update_from_minor		= 3;
 
+	// Create matrix_ontology indexes. Mandatory to resolve children data
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_fct_st_si
+			ON public.matrix_ontology USING gin
+			(relations_flat_fct_st_si(datos) jsonb_path_ops)
+			TABLESPACE pg_default;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_st_si
+			ON public.matrix_ontology USING gin
+			(relations_flat_st_si(datos) jsonb_path_ops)
+			TABLESPACE pg_default;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_ty_st
+			ON public.matrix_ontology USING gin
+			(relations_flat_ty_st(datos) jsonb_path_ops)
+			TABLESPACE pg_default;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_ty_st_si
+			ON public.matrix_ontology USING gin
+			(relations_flat_ty_st_si(datos) jsonb_path_ops)
+			TABLESPACE pg_default;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_ontology_term
+			ON public.matrix_ontology USING gin
+			(f_unaccent(datos #>> \'{components,hierarchy25,dato}\'::text[]) COLLATE pg_catalog."default" gin_trgm_ops)
+			TABLESPACE pg_default;
+		');
+
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
 		// update time machine data. Update 'data' of time_machine for comopnent_dataframe
