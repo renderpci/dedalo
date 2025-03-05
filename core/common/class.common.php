@@ -599,6 +599,11 @@ abstract class common {
 				];
 			}
 
+		// v6.5 mandatory tables
+			if (!in_array('matrix_ontology', $ar_tables_with_relations)) {
+				$ar_tables_with_relations[] = 'matrix_ontology';
+			}
+
 		// cache
 			$ar_tables_with_relations_cache = $ar_tables_with_relations;
 
