@@ -21,6 +21,87 @@
 
 
 /**
+* RENDER_CHILDREN
+* Get the JSON data from the server. When data is loaded, render DOM element
+* Data is built from parent node info (current object section_tipo and section_id)
+* @param HTMLElement children_element
+* @return promise
+*/
+// this.render_children_OLD = function(children_element, pagination, clean_children_container) {
+// this.render_children = async function(children_element, pagination, clean_children_container, solved_children_data) {
+export const render_children = async function(options) {
+
+	// options
+		const link_children_element		= options.link_children_element
+		const section_tipo				= options.section_tipo
+		const section_id				= options.section_id
+		const pagination				= options.pagination
+		const clean_children_container	= options.clean_children_container ?? false
+		const solved_children_data		= options.children_data
+		const children_tipo				= options.children_tipo
+
+	// children_container. Is the div container inside current ts_object
+		const children_container = ts_object.get_my_parent_container(link_children_element, 'children_container')
+		if (children_container===null) {
+			alert("[ts_object.render_children] Error on select children_container");
+			return false;
+		}
+
+	// children_data - render_children_data from API
+		const children_data = solved_children_data || await ts_object.get_children_data({
+			section_id		: section_id,
+			section_tipo	: section_tipo,
+			children_tipo	: children_tipo,
+			pagination		: pagination
+		})
+		if (!children_data) {
+
+			// error case
+
+			console.warn("[ts_object.render_children] Error, children_data is null");
+
+			return false
+		}
+
+		const ar_children_data			= children_data.ar_children_data
+		const children_data_pagination	= children_data.pagination
+
+	// dom_parse_children
+		const parse_options = {
+			target_section_tipo			: section_tipo,
+			// node_type				: node_type,
+			clean_children_container	: clean_children_container,
+			pagination					: children_data_pagination
+		}
+		const result = await ts_object.dom_parse_children(
+			ar_children_data,
+			children_container,
+			parse_options
+		)
+
+	// fix link_children_element pagination (used on refresh_element to get current pagination status)
+		link_children_element.pagination = children_data_pagination
+
+	// updates arrow
+		if (link_children_element && link_children_element.firstChild && link_children_element.dataset.type) {
+			// remove spinner
+			link_children_element.firstChild.classList.remove('arrow_spinner');
+			// set arrow icon as opened
+			const add_class = (link_children_element.dataset.type==='link_children_nd')
+				? 'ts_object_children_arrow_icon_open_nd'
+				: 'ts_object_children_arrow_icon_open'
+
+			link_children_element.firstChild.classList.add(add_class)
+			// Update arrow state
+			// ts_object.update_arrow_state(link_children_element, true) // disabled temporally
+		}
+
+	return result
+}//end render_children
+
+
+
+/**
 * RENDER_TS_LINE
 * Render standardized complete ts line with term ans buttons
 * @param object options
@@ -80,7 +161,7 @@ export const render_ts_line = function(options) {
 
 					const element_children_nd = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: class_for_all + ' default term nd',
+						class_name		: 'link_children_nd ' + class_for_all + ' default term nd',
 						data_set		: children_dataset,
 						text_node		: child_data.ar_elements[j].value,
 						parent			: fragment
@@ -104,35 +185,14 @@ export const render_ts_line = function(options) {
 			// ARROW ICON
 				case (child_data.ar_elements[j].type==='link_children'): {
 
-					// button wrapper
-						// Case link open children (arrow)
-						const element_link_children = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: class_for_all + ' arrow_icon',
-							data_set		: children_dataset,
-							parent			: fragment
+					// button arrow link children
+						const link_children = render_link_children({
+							add_class			: class_for_all,
+							children_dataset	: children_dataset,
+							child_data_item		: child_data.ar_elements[j],
+							show_arrow_opened	: show_arrow_opened
 						})
-						// mousedown event
-						const mousedown_handler = (e) => {
-							e.stopPropagation()
-							self.toggle_view_children(element_link_children, e)
-						}
-						element_link_children.addEventListener('mousedown', mousedown_handler)
-
-					// arrow_icon
-						const ar_class = ['ts_object_children_arrow_icon']
-						if (child_data.ar_elements[j].value==='button show children unactive') {
-							// not children case
-							ar_class.push('arrow_unactive')
-						}else if (show_arrow_opened===true){
-							// opened case
-							ar_class.push('ts_object_children_arrow_icon_open')
-						}
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: ar_class.join(' '),
-							parent			: element_link_children
-						})
+						fragment.appendChild(link_children)
 					break;
 				}
 
@@ -326,19 +386,25 @@ export const render_ts_pagination = function(options) {
 			button_show_more.classList.add('arrow_spinner')
 
 			// nodes selection
-			const wrapper			= children_container.parentNode
-			const elements_container= [...wrapper.childNodes].find(el => el.classList.contains('elements_container'))
-			const children_element	= [...elements_container.childNodes].find(el => el.classList.contains('arrow_icon'))
+			const wrapper				= children_container.parentNode
+			const elements_container	= [...wrapper.childNodes].find(el => el.classList.contains('elements_container'))
+			const link_children_element	= [...elements_container.childNodes].find(el => el.classList.contains('arrow_icon'))
 
 			// increase offset pagination on get children call
 			pagination.offset = (pagination.offset + pagination.limit)
 
+			const section_tipo	= wrapper.dataset.section_tipo
+			const section_id	= wrapper.dataset.section_id
+			const children_tipo	= wrapper.dataset.children_tipo
+
 			// render children
-			ts_object.get_children(
-				children_element,
-				pagination, // object|null pagination
-				false // bool clean_children_container
-			)
+			render_children({
+				link_children_element	: link_children_element,
+				section_tipo			: section_tipo,
+				section_id				: section_id,
+				pagination				: pagination,
+				children_tipo			: children_tipo
+			})
 			.then(function(){
 				button_show_more.remove()
 			})
@@ -353,21 +419,20 @@ export const render_ts_pagination = function(options) {
 
 /**
 * RENDER_CHILDREN_LIST
-* Render a list of child nodes
+* Render a list of child nodes (child containers)
 * @param object options
 * {
+* 	self: object
 * 	ar_children_data: array [{ar_elements:[{}], has_descriptor_children:true, is_descriptor:true, ..}],
+* 	node_type: string as 'hierarchy_node'
 * 	children_container: HTMLElement,
+* 	parent_nd_container: string|null
 *	children_container_is_loaded: bool
-*	mode: string as 'list'
-*	next_node_type: string as "hierarchy_node"
-*	node_type: string as 'hierarchy_node'
-*	parent_nd_container: string|null
-*	self: object
 * 	show_arrow_opened: bool
-*	target_section_tipo: string
+*	mode: string as 'list'
 * }
 * @return array ar_children_c
+* 	children container list
 */
 export const render_children_list = function(options) {
 
@@ -375,8 +440,6 @@ export const render_children_list = function(options) {
 		const self							= options.self
 		const ar_children_data				= options.ar_children_data
 		const node_type						= options.node_type
-		let next_node_type					= options.next_node_type
-		const target_section_tipo			= options.target_section_tipo
 		const children_container			= options.children_container
 		const parent_nd_container			= options.parent_nd_container
 		const children_container_is_loaded	= options.children_container_is_loaded
@@ -388,69 +451,28 @@ export const render_children_list = function(options) {
 	const ar_children_data_len = ar_children_data.length
 	for (let i = 0; i < ar_children_data_len; i++) {
 
-		// ch_len. Calculated once. Used in various calls
-			// const ch_len = ar_children_data[i].ar_elements.length
+		const item = ar_children_data[i]
+
+		const current_section_id	= item.section_id
+		const current_section_tipo	= item.section_tipo
+		const children_tipo			= item.children_tipo
 
 		// is_descriptor element is descriptor check
-			const is_descriptor = ar_children_data[i].is_descriptor
+			const is_descriptor = item.is_descriptor
 
 		// is_indexable element is index-able check
-			const is_indexable = ar_children_data[i].is_indexable
+			const is_indexable = item.is_indexable
 
 		// wrap_ts_object . ts_object wrapper
-			if (node_type==='hierarchy_node') {
-				next_node_type = 'thesaurus_node'
-			}
-
-			// dataset
-				const current_section_id	= ar_children_data[i].section_id
-				const current_section_tipo	= ar_children_data[i].section_tipo
-				const dataset = {
-					section_tipo		: current_section_tipo,
-					section_id			: current_section_id,
-					node_type			: next_node_type,
-					is_hierarchy_node	: (node_type==='hierarchy_node') ? true : false
-				}
-				if (target_section_tipo) {
-					dataset.target_section_tipo = target_section_tipo
-				}
-
-			// wrap_ts_object
-				const wrap_ts_object = ui.create_dom_element({
-					element_type	: 'div',
-					parent			: is_descriptor===true ? children_container : parent_nd_container,
-					class_name		: is_descriptor===true ? "wrap_ts_object" : "wrap_ts_object wrap_ts_object_nd",
-					data_set		: dataset,
-					draggable		: true
-				})
-				// drag events attach
-				if (is_descriptor===true) {
-					// dragstart event
-					const dragstart_handler = (e) => {
-						on_dragstart(self, e)
-					}
-					wrap_ts_object.addEventListener('dragstart', dragstart_handler)
-					// dragend event
-					const dragend_handler = (e) => {
-						on_dragend(self, e)
-					}
-					wrap_ts_object.addEventListener('dragend', dragend_handler)
-					// drop event
-					const drop_event = (e) => {
-						on_drop(self, e)
-					}
-					wrap_ts_object.addEventListener('drop', drop_event)
-					// dragover event
-					const dragover_handler = (e) => {
-						on_dragover(self, e)
-					}
-					wrap_ts_object.addEventListener('dragover', dragover_handler)
-					// dragleave
-					const dragleave_handler = (e) => {
-						on_dragleave(self, e)
-					}
-					wrap_ts_object.addEventListener('dragleave', dragleave_handler)
-				}
+		// wrap_ts_object unified
+			const wrap_ts_object = render_wrapper({
+				section_id		: current_section_id,
+				section_tipo	: current_section_tipo,
+				children_tipo	: children_tipo,
+				is_descriptor	: is_descriptor
+			})
+			const parent_node = (is_descriptor===true) ? children_container : parent_nd_container
+			parent_node.appendChild(wrap_ts_object)
 
 		// ID COLUMN . id column content
 			const id_column_node = render_id_column({
@@ -460,7 +482,7 @@ export const render_children_list = function(options) {
 				node_type		: node_type,
 				is_descriptor	: is_descriptor,
 				is_indexable	: is_indexable,
-				children_data	: ar_children_data[i],
+				children_data	: item,
 				mode			: mode,
 				key				: i
 			})
@@ -483,7 +505,7 @@ export const render_children_list = function(options) {
 			})
 
 		// INDEXATIONS CONTAINER
-			const indexations_container_id = 'u' + ar_children_data[i].section_tipo + '_' + ar_children_data[i].section_id +'_'+ (new Date()).getTime()
+			const indexations_container_id = 'u' + item.section_tipo + '_' + item.section_id +'_'+ (new Date()).getTime()
 			ui.create_dom_element({
 				element_type	: 'div',
 				id				: indexations_container_id,
@@ -510,8 +532,7 @@ export const render_children_list = function(options) {
 					element_type	: 'div',
 					class_name		: children_c_class_name,
 					data_set		: {
-						role		:'children_container',
-						section_id	: ar_children_data[i].section_id
+						role :'children_container'
 					},
 					parent			: wrap_ts_object
 				})
@@ -524,10 +545,9 @@ export const render_children_list = function(options) {
 			}//end if (is_descriptor===true)
 
 		// LIST_THESAURUS_ELEMENTS
-			// const ts_line_node = build_ts_line( ar_children_data[i], indexations_container_id )
 			const ts_line_node = render_ts_line({
 				self						: self,
-				child_data					: ar_children_data[i],
+				child_data					: item,
 				indexations_container_id	: indexations_container_id,
 				show_arrow_opened			: show_arrow_opened,
 				is_descriptor				: is_descriptor
@@ -655,16 +675,17 @@ const render_id_column = function(options) {
 							// wrap
 								const wrap = id_column_content.parentNode
 
-							// children_element
-								const children_element = ts_object.get_link_children_from_wrap(wrap)
-								if(!children_element) {
-									console.log("Error on find children_element");
+							// link_children_element
+								const link_children_element = ts_object.get_link_children_from_wrap(wrap)
+								if(!link_children_element) {
+									console.log("Error on find link_children_element");
 									return
 								}
 
 							// short vars
 								const section_id	= wrap.dataset.section_id
 								const section_tipo	= wrap.dataset.section_tipo
+								const children_tipo	= wrap.dataset.children_tipo
 
 							// add_child
 								self.add_child({
@@ -680,11 +701,14 @@ const render_id_column = function(options) {
 										}
 
 									// refresh children container
-										self.get_children(
-											children_element, // current node arrow (is the father of the new created item)
-											null, // object|null pagination
-											true // bool clean_children_container
-										)
+										render_children({
+											link_children_element		: link_children_element,
+											section_tipo				: section_tipo,
+											section_id					: section_id,
+											pagination					: null,
+											clean_children_container	: true,
+											children_tipo				: children_tipo
+										})
 										.then(function(result){
 											// result could be an array of children_container nodes or bool false
 											// Open editor in new window
@@ -1261,6 +1285,191 @@ const render_ontology_term = function(options) {
 
 	return term_node
 }//end render_ontology_term
+
+
+
+/**
+* RENDER_WRAPPER
+* Normalized wrapper render
+* @param object options
+* @return HTMLElement wrap_ts_object
+*/
+export const render_wrapper = function(options) {
+
+	const self = ts_object
+
+	// options
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+		const children_tipo	= options.children_tipo
+		const is_descriptor = options.is_descriptor
+
+	// dataset
+		const dataset = {
+			section_id		: section_id,
+			section_tipo	: section_tipo,
+			children_tipo	: children_tipo
+		}
+
+	// class_name
+		const class_name = is_descriptor===true ? 'wrap_ts_object' : 'wrap_ts_object wrap_ts_object_nd'
+
+	// wrap_ts_object
+		const wrap_ts_object = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: class_name,
+			data_set		: dataset,
+			draggable		: true
+		})
+		// drag events attach
+		if (is_descriptor===true) {
+			// dragstart event
+			const dragstart_handler = (e) => {
+				on_dragstart(self, e)
+			}
+			wrap_ts_object.addEventListener('dragstart', dragstart_handler)
+			// dragend event
+			const dragend_handler = (e) => {
+				on_dragend(self, e)
+			}
+			wrap_ts_object.addEventListener('dragend', dragend_handler)
+			// drop event
+			const drop_event = (e) => {
+				on_drop(self, e)
+			}
+			wrap_ts_object.addEventListener('drop', drop_event)
+			// dragover event
+			const dragover_handler = (e) => {
+				on_dragover(self, e)
+			}
+			wrap_ts_object.addEventListener('dragover', dragover_handler)
+			// dragleave
+			const dragleave_handler = (e) => {
+				on_dragleave(self, e)
+			}
+			wrap_ts_object.addEventListener('dragleave', dragleave_handler)
+		}
+
+
+	return wrap_ts_object
+}//end render_wrapper
+
+
+
+/**
+* RENDER_ROOT_WRAPPER
+* Creates the first level nodes for root terms
+* @param object options
+* {
+* 	section_tipo: string
+* 	section_id: string|int
+* 	children_tipo: string
+* 	target_section_tipo: string
+* }
+* @return HTMLElement hierarchy_wrapper
+*/
+export const render_root_wrapper = function (options) {
+
+	// options
+		const section_tipo			= options.section_tipo
+		const section_id			= options.section_id
+		const children_tipo			= options.children_tipo
+		const target_section_tipo	= options.target_section_tipo
+
+	// hierarchy_wrapper (hierarchy_root_node)
+		const hierarchy_wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrap_ts_object hierarchy_root_node ' + target_section_tipo,
+			dataset			: {
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				children_tipo		: children_tipo
+			}
+		})
+
+	// children_container
+		hierarchy_wrapper.children_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'children_container',
+			dataset			: {
+				role : 'children_container'
+			},
+			parent			: hierarchy_wrapper
+		})
+
+	// temporal fake items to preserve ts_objec->get_children flow. After finish, remove elements
+		// hierarchy_elements_container
+		const hierarchy_elements_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'hierarchy_elements_container',
+			parent			: hierarchy_wrapper
+		})
+		// link_children
+		hierarchy_wrapper.link_children = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'link_children',
+			parent			: hierarchy_elements_container
+		})
+
+
+	return hierarchy_wrapper
+}//end render_root_wrapper
+
+
+
+/**
+* RENDER_LINK_CHILDREN
+* Builds normalized link children HTMLElement
+* @param object options
+* {
+* 	add_class : string
+* 	children_dataset: object
+* 	child_data_item: object
+* 	show_arrow_opened: bool
+* }
+* @return HTMLElement element_link_children
+*/
+export const render_link_children = function (options) {
+
+	const self = ts_object
+
+	// options
+		const add_class			= options.add_class
+		const children_dataset	= options.children_dataset
+		const child_data_item	= options.child_data_item
+		const show_arrow_opened	= options.show_arrow_opened
+
+	// Case link open children (arrow)
+	const element_link_children = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'link_children ' + add_class + ' arrow_icon',
+		data_set		: children_dataset
+	})
+	// mousedown event
+	const mousedown_handler = (e) => {
+		e.stopPropagation()
+		self.toggle_view_children(element_link_children, e)
+	}
+	element_link_children.addEventListener('mousedown', mousedown_handler)
+
+// arrow_icon
+	const ar_class = ['ts_object_children_arrow_icon']
+	if (child_data_item.value==='button show children unactive') {
+		// not children case
+		ar_class.push('arrow_unactive')
+	}else if (show_arrow_opened===true){
+		// opened case
+		ar_class.push('ts_object_children_arrow_icon_open')
+	}
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: ar_class.join(' '),
+		parent			: element_link_children
+	})
+
+
+	return element_link_children
+}//end render_link_children
 
 
 

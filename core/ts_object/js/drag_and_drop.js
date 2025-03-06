@@ -131,8 +131,10 @@ export const on_drop = async function(self, event) {
 
 						// new_section_id . Generated as response by the trigger add_child
 							const new_section_id = response.result
-						// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
-							const section_tipo = wrap_target.dataset.target_section_tipo || wrap_target.dataset.section_tipo
+
+						// short vars
+							const section_tipo	= wrap_target.dataset.section_tipo
+							const children_tipo	= wrap_target.dataset.children_tipo
 
 						// fire the event to update the component used as term in the new section
 							event_manager.publish('ts_add_child_' + data_obj.caller, {
@@ -158,6 +160,14 @@ export const on_drop = async function(self, event) {
 										null, // object|null pagination
 										true // bool clean_children_container
 									)
+									render_children({
+										link_children_element		: link_children_element,
+										section_tipo				: section_tipo,
+										section_id					: new_section_id,
+										pagination					: null,
+										clean_children_container	: true,
+										children_tipo				: children_tipo
+									})
 									.then(function(){
 										// update parent arrow button
 										 // self.update_arrow_state(link_children_element, true)
@@ -186,7 +196,46 @@ export const on_drop = async function(self, event) {
 		div_children.appendChild(wrap_source)
 
 	// Update parent data (returns a promise after HTTP request finish)
-		const response = await self.update_parent_data(wrap_source)
+		// const response = await self.update_parent_data(wrap_source)
+
+		// Old parent wrap (previous parent)
+			const old_parent_wrap = self.old_parent_wrap
+			if (!old_parent_wrap) {
+				console.error("[ts_object.update_parent_data] Error on find old_parent_wrap");
+				return false
+			}
+
+		// parent wrap (current drooped new parent)
+			const parent_wrap = wrap_source.parentNode.parentNode;
+			if(!parent_wrap) {
+				console.error("[ts_object.update_parent_data] Error on find parent_wrap");
+				return false
+			}
+
+		// If old and new wrappers are the same, no is necessary update data
+			if (old_parent_wrap===parent_wrap) {
+				console.error("[ts_object.update_parent_data] New target and old target elements are the same. No is necessary update data");
+				return false
+			}
+
+		// short vars
+			const section_id				= wrap_source.dataset.section_id
+			const section_tipo				= wrap_source.dataset.section_tipo
+			// old parent
+			const old_parent_section_id		= old_parent_wrap.dataset.section_id
+			const old_parent_section_tipo	= old_parent_wrap.dataset.section_tipo
+			// new parent
+			const new_parent_section_id		= parent_wrap.dataset.section_id
+			const new_parent_section_tipo	= parent_wrap.dataset.section_tipo
+
+		const response = await self.update_parent_data({
+			section_id				: section_id,
+			section_tipo			: section_tipo,
+			old_parent_section_id	: old_parent_section_id,
+			old_parent_section_tipo	: old_parent_section_tipo,
+			new_parent_section_id	: new_parent_section_id,
+			new_parent_section_tipo	: new_parent_section_tipo
+		})
 
 	// Updates element_children_target
 		// self.update_arrow_state(element_children_target, true) // Not necessary ?

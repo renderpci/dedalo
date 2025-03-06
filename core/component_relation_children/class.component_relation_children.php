@@ -418,10 +418,18 @@ class component_relation_children extends component_relation_common {
 					if (!$result) {
 						debug_log(__METHOD__
 							. " Error on add children" . PHP_EOL
-							. 'result: ' . to_string($result) . PHP_EOL
-							. 'locator: ' . to_string($locator)
+							. ' result: ' . to_string($result) . PHP_EOL
+							. ' section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+							. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+							. ' result: ' . to_string($result) . PHP_EOL
+							. ' locator: ' . to_string($locator) . PHP_EOL
+							. ' locator type: ' .  get_relation_name($locator->type) . PHP_EOL
+							. ' from_component_tipo model: ' . RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true) . PHP_EOL
 							, logger::ERROR
 						);
+						if(SHOW_DEBUG===true) {
+							dump($dato, ' dato ++ '.to_string());
+						}
 					}
 				}
 			}
@@ -495,10 +503,15 @@ class component_relation_children extends component_relation_common {
 			if (empty($parent_tipo)) {
 				$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo($tipo, $section_tipo);
 				// not found case
-				if (empty($parent_tipo)) {
+				if (empty($ar_parent_tipo)) {
 					debug_log(__METHOD__
 						." ERROR: Unable to resolve parent_tipo" . PHP_EOL
-						.' current tipo:  ' . $tipo
+						.' tipo: ' . to_string($tipo) . PHP_EOL
+						.' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+						.' section_id: ' . to_string($section_id) . PHP_EOL
+						.' parent_section_tipo: ' . to_string($parent_section_tipo) . PHP_EOL
+						.' parent_section_id: ' . to_string($parent_section_id) . PHP_EOL
+						.' parent_tipo: ' . to_string($parent_tipo)
 						, logger::ERROR
 					);
 					return false;

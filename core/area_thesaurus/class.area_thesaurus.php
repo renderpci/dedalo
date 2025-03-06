@@ -64,6 +64,8 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_HIERARCHY_SECTIONS
+	* Resolves the list of hierarchy section active in thesaurus from the active hierarchies/ontologies.
+	* Skips hierarchies/ontologies without root terms.
 	* @param array|null $hierarchy_types_filter = null
 	* @param array|null $hierarchy_sections_filter = null
 	* @param bool $terms_are_model = false
@@ -72,8 +74,6 @@ class area_thesaurus extends area_common {
 	* @return array $ar_items
 	*/
 	public function get_hierarchy_sections( ?array $hierarchy_types_filter=null, ?array $hierarchy_sections_filter=null, bool $terms_are_model=false ) : array {
-
-		$hierarchy_children_tipo = $terms_are_model ? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO : DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 		// get all hierarchy sections
 		$class_name = get_called_class()=== 'area_thesaurus' ? 'hierarchy' : 'ontology';
@@ -87,6 +87,7 @@ class area_thesaurus extends area_common {
 					// skip non active in thesaurus sections
 					continue;
 				}
+
 			// typology data
 				if (empty($element->typology_id)) {
 					debug_log(__METHOD__." Skipped hierarchy without defined typology. section_id: $element->section_id ", logger::WARNING);
@@ -103,17 +104,28 @@ class area_thesaurus extends area_common {
 					continue; // Skip
 				}
 
+			// root terms. The target section elements added to 'General term' portal
+				$root_terms = $class_name::get_root_terms( $element->section_tipo, $element->section_id, $terms_are_model );
+				if (empty($root_terms)) {
+					// skip hierarchies without root terms
+					continue;
+				}
+
+			// children tipo. It is used for fast resolution across API class form client.
+				$children_tipo = section::get_ar_children_tipo_by_model_name_in_section($element->target_section_tipo, ['component_relation_children'], true, true, true, true)[0] ?? null;
+
 			// item
 				$item = new stdClass();
 					$item->section_id			= $element->section_id; //*
 					$item->section_tipo			= $element->section_tipo; //*
 					$item->target_section_tipo	= $element->target_section_tipo;//*
 					$item->target_section_name	= $element->name;//*
+					$item->children_tipo		= $children_tipo;
 					$item->typology_section_id	= $class_name==='ontology' ? '14' : $element->typology_id;//*
 					$item->order				= $element->order;//*
 					$item->type					= 'hierarchy';
-					$item->children_tipo		= $hierarchy_children_tipo;
 					$item->active_in_thesaurus	= $element->active_in_thesaurus;
+					$item->root_terms			= $root_terms;
 
 			$ar_items[] = $item;
 		}//end foreach ($active_elements as $key => $row)
@@ -121,6 +133,7 @@ class area_thesaurus extends area_common {
 
 		return $ar_items;
 	}//end get_hierarchy_sections
+
 
 
 	/**

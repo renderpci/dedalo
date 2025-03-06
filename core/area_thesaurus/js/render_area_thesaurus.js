@@ -47,6 +47,12 @@ render_area_thesaurus.prototype.list = async function(options) {
 		self.ts_object.linker = self.linker // usually a portal component instance
 
 		// parse data
+		// sample data:
+		// {
+		// 	  tipo: "dd100",
+		// 	  typologies: [{},...],
+		// 	  value: [{},..]
+		// }
 		const data = self.data.find(item => item.tipo==='dd100' || item.tipo==='dd5') || {}
 
 	// content_data
@@ -60,14 +66,14 @@ render_area_thesaurus.prototype.list = async function(options) {
 					const content_data = self.node.content_data
 
 				// clean children_container nodes (inside categories)
-					const children_container = content_data.querySelectorAll('[data-role="children_container"]')
-					const children_container_length = children_container.length
-					for (let i = 0; i < children_container_length; i++) {
-						const item = children_container[i]
-						while (item.firstChild) {
-							item.removeChild(item.firstChild);
-						}
-					}
+					// const children_container = content_data.querySelectorAll('[data-role="children_container"]')
+					// const children_container_length = children_container.length
+					// for (let i = 0; i < children_container_length; i++) {
+					// 	const item = children_container[i]
+					// 	while (item.firstChild) {
+					// 		item.removeChild(item.firstChild);
+					// 	}
+					// }
 
 				// render. parse_search_result with ts_object
 					dd_request_idle_callback(
@@ -191,16 +197,12 @@ const render_content_data = function(self) {
 			parent			: fragment
 		})
 
-	// get the ontology node to define is the caller is ontology or thesaurus
-		const is_ontology = self.data.find(item => item.tipo==='dd5') ? true : false;
-
 	// elements
 		const data				= self.data.find(item => item.tipo==='dd100' || item.tipo==='dd5') || {}
-		const ts_nodes			= data.value || []
-		const hierarchy_nodes	= ts_nodes.filter(node => node.type==='hierarchy' && node.active_in_thesaurus === true )
+		const hierarchy_nodes	= data.value || []
+		const typology_nodes	= data.typologies || []
 
 	// typology_nodes. sort typologies by order field
-		const typology_nodes	= ts_nodes.filter(node => node.type==='typology')
 		typology_nodes.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
 
 	// iterate typology_nodes
@@ -208,6 +210,20 @@ const render_content_data = function(self) {
 		for (let i = 0; i < typology_length; i++) {
 
 			const typology_item = typology_nodes[i]
+
+			// check if typology items are empty
+				// hierarchy sections
+				const hierarchy_sections_full	= hierarchy_nodes.filter(el => parseInt(el.typology_section_id)===parseInt(typology_item.section_id))
+				const hierarchy_sections_length	= hierarchy_sections_full.length
+				if (hierarchy_sections_length<1) {
+					// skip empty typologies (without hierarchy nodes)
+					continue
+				}
+				// skip empty root_terms hierarchies
+				const root_terms_length = hierarchy_sections_full.map(el => el.root_terms.length).reduce((a, b) => a + b, 0)
+				if (root_terms_length===0) {
+					continue;
+				}
 
 			// thesaurus_type_block li
 				const add_css = self.thesaurus_view_mode==='model'
@@ -222,7 +238,7 @@ const render_content_data = function(self) {
 			// typology_name
 				const typology_name = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		:'typology_name icon_arrow',
+					class_name		: 'typology_name icon_arrow',
 					dataset			: {
 						section_id	: typology_item.section_id
 					},
@@ -253,70 +269,69 @@ const render_content_data = function(self) {
 					default_state		: 'opened'
 				})
 
-			// hierarchy sections
-				const hierarchy_sections_full = hierarchy_nodes.filter(node => parseInt(node.typology_section_id)===parseInt(typology_item.section_id))
 				// sort hierarchy_nodes by order value and alphabetic. First those with a order value and then the rest.
 				const ordered		= hierarchy_sections_full.filter(obj => obj.order !== 0).sort(sort_root_terms)
-				const disordered	= hierarchy_sections_full.filter(obj => obj.order === 0).sort(sort_root_terms);
+				const disordered	= hierarchy_sections_full.filter(obj => obj.order === 0).sort(sort_root_terms)
 				// concatenate all values, ordered and disordered
 				const hierarchy_sections = ordered.concat(disordered)
-				const hierarchy_sections_length = hierarchy_sections.length
 				for (let j = 0; j < hierarchy_sections_length; j++) {
 
 					const hierarchy_sections_item = hierarchy_sections[j]
 
-					// hierarchy_wrapper (hierarchy_root_node)
-						const hierarchy_wrapper = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'wrap_ts_object hierarchy_root_node',
-							dataset			: {
-								// node_type			: 'hierarchy_node',
-								section_tipo			: hierarchy_sections_item.target_section_tipo, //hierarchy_sections_item.section_tipo,
-								section_id				: hierarchy_sections_item.section_id,
-								// target_section_tipo	: hierarchy_sections_item.target_section_tipo
-							},
-							parent			: typology_container
-						})
+					const section_tipo			= hierarchy_sections_item.section_tipo
+					const section_id			= hierarchy_sections_item.section_id
+					const children_tipo			= hierarchy_sections_item.children_tipo
+					const target_section_tipo	= hierarchy_sections_item.target_section_tipo
+					const root_terms			= hierarchy_sections_item.root_terms
+					if (root_terms.length<1) {
+						continue;
+					}
 
-					// hierarchy children_container
-						const children_container = ui.create_dom_element({
+					// hierarchy_wrapper node
+						const hierarchy_wrapper = self.ts_object.render_root_wrapper({
+							section_tipo		: section_tipo,
+							section_id			: section_id,
+							children_tipo		: children_tipo,
+							target_section_tipo	: target_section_tipo
+
+						})
+						typology_container.appendChild(hierarchy_wrapper)
+
+						// loading
+						const loading_node = ui.create_dom_element({
 							element_type	: 'div',
-							class_name		:'children_container',
-							dataset			: {
-								// section_id	: hierarchy_sections_item.section_id,
-								role		: 'children_container'
-							},
+							class_name		: 'elements_container loading',
+							inner_html		: `Loading ${root_terms[0].section_tipo}`,
 							parent			: hierarchy_wrapper
 						})
 
-					// temporal fake items to preserve ts_objec->get_children flow. After finish, remove elements
-						// hierarchy_elements_container
-						const hierarchy_elements_container = ui.create_dom_element({
-							element_type	: 'div',
-							parent			: hierarchy_wrapper
+					// get_children_data. Resolves thesaurus data of current root nodes
+						self.ts_object.get_children_data({
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							children_tipo	: children_tipo, // already resolved children
+							children		: root_terms
 						})
-						// children_element
-						const children_element = ui.create_dom_element({
-							element_type	: 'div',
-							dataset			: {
-								// tipo : hierarchy_sections_item.children_tipo
-							},
-							parent			: hierarchy_elements_container
+						.then(function(children_data){
+
+							requestAnimationFrame(
+								() => {
+									// ts_object: render element
+									self.ts_object.render_children({
+										link_children_element		: hierarchy_wrapper.link_children,
+										section_tipo				: section_tipo,
+										section_id					: section_id,
+										pagination					: null,
+										clean_children_container	: null,
+										children_data				: children_data
+									})
+									// remove loading
+									loading_node.remove()
+								}
+							)
 						})
-
-						// children_element.node_type = 'hierarchy_node';
-
-					// ts_object Get from API and render element
-						// self.ts_object.get_children({
-						// 	children_element	: children_element,
-						// 	section_tipo		: hierarchy_sections_item.target_section_tipo,
-						// 	section_id			: hierarchy_sections_item.section_id
-						// })
-						// .then(()=>{
-						// 	hierarchy_elements_container.remove()
-						// })
-				}
-		}//end for (let i = 0; i < typology_length; i++)
+				}//end iterate hierarchy_sections
+		}//end for (let i = 0; i < typology_length; i++) typology_nodes
 
 	// content_data
 		const content_data = document.createElement('div')
