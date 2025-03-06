@@ -35,6 +35,9 @@ class search_related extends search {
 		// group_by
 			$group_by = $this->search_query_object->group_by ?? null;
 
+		// order
+			$sql_query_order = $this->build_sql_query_order();
+
 		// reference locator is the locator of the source section that will be
 		// used to obtain the sections with calls to it.
 			$ar_locators = $this->filter_by_locators;
@@ -70,6 +73,14 @@ class search_related extends search {
 				$query	.= ($full_count===true)
 					? 'COUNT(*) as full_count'
 					: 'section_tipo, section_id, datos';
+
+				// columns
+				if (!empty($this->order_columns)) {
+					foreach ((array)$this->order_columns as $select_line) {
+						// $ar_sql_select[] = $select_line;
+						$query	.= PHP_EOL .','. $select_line;
+					}
+				}
 
 				// FROM
 				$query	.= PHP_EOL . 'FROM "'.$table.'"';
@@ -129,7 +140,15 @@ class search_related extends search {
 		// establish order to maintain stable results
 		// count and pagination are optional
 			if($full_count===false) {
-				$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
+
+				// order
+				if (!empty($sql_query_order)) {
+					$str_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
+				}else{
+					$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
+				}
+
+				// limit
 				if(!empty($limit)){
 					$str_query .= PHP_EOL . 'LIMIT '.$limit;
 					if($offset !== false){
