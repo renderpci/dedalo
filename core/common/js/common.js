@@ -1231,7 +1231,8 @@ export const get_columns_map = function(options) {
 							: {
 								id		: dd_object.tipo,
 								label	: dd_object.tipo,
-								model	: dd_object.model
+								model	: dd_object.model,
+								tipo	: dd_object.tipo,
 							  }
 
 					// column width set
@@ -1262,6 +1263,7 @@ export const get_columns_map = function(options) {
 								const column = {
 									id		: tipo,
 									label	: tipo,
+									tipo	: tipo,
 									model	: dd_object.model
 								}
 
@@ -1287,6 +1289,7 @@ export const get_columns_map = function(options) {
 									label		: dd_object.tipo,
 									in_mosaic	: dd_object.in_mosaic,
 									hover		: dd_object.hover,
+									tipo		: dd_object.tipo,
 									model		: dd_object.model
 								}
 							)
@@ -1299,7 +1302,8 @@ export const get_columns_map = function(options) {
 								{
 									id		: dd_object.tipo,
 									label	: dd_object.tipo,
-									model	: dd_object.model
+									model	: dd_object.model,
+									tipo	: dd_object.tipo
 								}
 							)
 
@@ -1321,7 +1325,8 @@ export const get_columns_map = function(options) {
 				const column_item = columns_map[i]
 
 				// all columns has a label property that point to the ddo tipo to use, finding the ddo it is possible obtain the label to use in the column.
-					const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label)
+				// when the column was built the columns will has tipo, therefore the ddo_object is possible to get from tipo in the column
+					const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label || el.tipo===column_item.tipo)
 
 				// add tipo always
 					column_item.tipo = ddo_object
