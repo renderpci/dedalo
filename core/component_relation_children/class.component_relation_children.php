@@ -668,6 +668,30 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_filter_by_locators( [$filter_locator] );
 				$sqo->set_limit( 1000 ); // set limit for security. Overwrite when needed.
 
+			// order. It is defined in section 'section_map' item as {"order":"ontology41"}
+			// This tipo is used to build the JSON path for the search
+			// sample:
+			// SELECT ... ,jsonb_path_query_first(datos, \'strict $.components.ontology41.dato."lg-nolan"[0]\', silent => true) as ontology41_order
+			// WHERE ...
+			// ORDER BY ontology41_order ASC NULLS LAST , section_id ASC
+				$section_map = section::get_section_map( $section_tipo );
+				if (isset($section_map->order)) {
+					$order_component_tipo = $section_map->order; // 'ontology41' for Ontology
+					$path = [
+						(object)[
+							'component_tipo'	=> $order_component_tipo,
+							'model'				=> SHOW_DEBUG===true ? RecordObj_dd::get_modelo_name_by_tipo($order_component_tipo,true) : $order_component_tipo,
+							'name'				=> SHOW_DEBUG===true ? RecordObj_dd::get_termino_by_tipo($order_component_tipo) : $order_component_tipo,
+							'section_tipo'		=> $section_tipo,
+							'column'			=> "jsonb_path_query_first(datos, 'strict $.components.{$order_component_tipo}.dato.\"lg-nolan\"[0]', silent => true)"
+						]
+					];
+					$order_obj = (object)[
+						'direction'	=> 'ASC',
+						'path'		=> $path
+					];
+					$sqo->set_order( [$order_obj] );
+				}
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
 			// fix result ar_records as dato
