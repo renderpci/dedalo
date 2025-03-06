@@ -1552,8 +1552,8 @@ export const deactivate_components = function(e) {
 * {
 * 	section_id: int|string|null
 * 	section_tipo: string
-* 	tipo_key: string
 *	section_id_key: int
+* 	section_tipo_key: string
 * 	view: string|null
 * }
 * @return object|null component_dataframe
@@ -1669,6 +1669,7 @@ export const delete_dataframe = async function(options) {
 		const section_tipo_key	= options.section_tipo_key
 		const paginated_key		= options.paginated_key || false
 		const row_key			= options.row_key || false
+		const delete_instace	= options.delete_instace || false
 
 	// ddo_dataframe.
 	// check if the show has any ddo that call to any dataframe section.
@@ -1718,11 +1719,20 @@ export const delete_dataframe = async function(options) {
 
 	// soft delete (default)
 	// unlink the section, delete the locator from his data, but don't delete the target section
-		component_dataframe.unlink_record({
+		await component_dataframe.unlink_record({
 			paginated_key	: row_key,
 			row_key			: row_key,
 			section_id		: section_id
 		})
+
+	// remove the instance
+		if(delete_instace===true){
+			component_dataframe.destroy(
+				true, // delete_self
+				true, // delete_dependencies
+				true // remove_dom
+			)
+		}
 
 	return true
 }//end delete_dataframe
