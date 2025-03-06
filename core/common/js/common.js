@@ -1388,10 +1388,25 @@ export const get_columns_map = function(options) {
 	// column component_info
 		const value_with_parents = full_ddo_map.find(el => el.value_with_parents === true)
 		if (value_with_parents) {
-			columns_map.push({
-				id			: 'ddinfo',
-				label		: 'Info'
-			})
+			// check if the component with parents has specific column
+			// if it has columns add the column with ddinfo after the component with parents
+			// else the `ddinfo` will go to the last position
+			// is used to put the component_dataframe before the `ddinfo` column
+			// or used when the component has more than 1 component with `ddinfo`.
+			// See behavior and the ontology definition of `tch555
+			const index = columns_map.findIndex(el => el.tipo === value_with_parents.tipo)
+			if(index>=0){
+				columns_map.splice(index+1,0,{
+					id			: 'ddinfo',
+					label		: 'Info'
+				})
+			}else{
+				columns_map.push({
+					id			: 'ddinfo',
+					label		: 'Info'
+				})
+			}
+
 		}
 
 	// debug

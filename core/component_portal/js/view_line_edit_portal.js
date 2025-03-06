@@ -245,17 +245,20 @@ const rebuild_columns_map = async function(self) {
 
 	// base_columns_map
 		const base_columns_map = await self.columns_map
-		columns_map.push(...base_columns_map)
 
-	// column component_info
+	// if the component has compnent_info its parents
+	// add its own render column, the `ddinfo`,
+	// columns exists because is added into common.js get_columns_map()
+	// here only added the rendered callback
 		if (self.add_component_info===true) {
-			columns_map.push({
-				id			: 'ddinfo',
-				label		: 'Info',
-				callback	: render_column_component_info
+			base_columns_map.map(el => {
+				if(el.id==='ddinfo'){
+					el.callback	= render_column_component_info
+				}
 			})
 		}
-
+		columns_map.push(...base_columns_map)
+		
 	// column remove
 		if ( self.context.properties.source?.mode !== 'external' && self.permissions > 1) {
 			columns_map.push({
