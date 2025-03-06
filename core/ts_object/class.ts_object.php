@@ -455,6 +455,12 @@ class ts_object {
 
 							case ($element_obj->type==='link_children'):
 
+								// fix children_tipo
+								$child_data->children_tipo = $element_tipo;
+
+								// fix children dato
+								$child_data->children = $dato;
+
 								// set has_descriptor_children value
 								$child_data->has_descriptor_children = $this->has_children_of_type($dato, 'descriptor')===true;
 

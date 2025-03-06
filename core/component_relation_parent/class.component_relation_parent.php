@@ -768,8 +768,19 @@ class component_relation_parent extends component_relation_common {
 	public static function get_parents( int|string $section_id, string $section_tipo, ?string $from_component_tipo=null ) : array {
 
 		$component_tipo = $from_component_tipo ?? component_relation_parent::get_parent_tipo( $section_tipo );
-		$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-		$parent_component = component_common::get_instance(
+		if (empty($component_tipo)) {
+			debug_log(__METHOD__
+				. " Error! Unable to resolve component_tipo. Returning empty array" . PHP_EOL
+				. ' section_id: ' . to_string($section_id) . PHP_EOL
+				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+				. ' from_component_tipo: ' . to_string($from_component_tipo) . PHP_EOL
+				. ' component_tipo: ' . to_string($component_tipo) . PHP_EOL
+				, logger::ERROR
+			);
+			return [];
+		}
+		$model				= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$parent_component	= component_common::get_instance(
 			$model, // string model
 			$component_tipo, // string tipo
 			$section_id, // string section_id

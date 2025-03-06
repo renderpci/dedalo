@@ -321,8 +321,17 @@ class component_relation_children extends component_relation_common {
 				return $this->dato_resolved;
 			}
 
+		// empty section_id case
+			if(empty($this->section_id)){
+				return [];
+			}
+
 		// always get dato calculated from my parents that call the current section
-			$dato = $this->get_my_data();
+			$dato = component_relation_children::get_children(
+				$this->section_id,
+				$this->section_tipo,
+				$this->tipo
+			);
 
 		// fix dato.
 			$this->dato = $dato;
@@ -544,14 +553,14 @@ class component_relation_children extends component_relation_common {
 
 		// change link to me in relation_children
 			switch ($action) {
-				case 'remove':
+				case 'add':
 					$changed = (bool)$component_relation_parent->make_me_your_parent(
 						$section_tipo,
 						$section_id
 					);
 					break;
 
-				case 'add':
+				case 'remove':
 					$changed = (bool)$component_relation_parent->remove_me_as_your_parent(
 						$section_tipo,
 						$section_id
@@ -584,56 +593,6 @@ class component_relation_children extends component_relation_common {
 
 		return (bool)$result;
 	}//end update_parent
-
-
-
-	/**
-	* GET_MY_DATA
-	* @return array $data
-	*/
-	private function get_my_data() : array {
-
-		$data = [];
-
-		// empty section_id case
-			if(empty($this->section_id)){
-				return $data;
-			}
-
-		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
-		$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $this->tipo, $this->section_tipo);
-
-		if( empty($ar_parent_tipo) ){
-
-			debug_log(__METHOD__
-				. " component children without parent associated " . PHP_EOL
-				. 'tipo: ' . to_string($this->tipo) . PHP_EOL
-				. 'section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
-				. 'section_id: ' . to_string($this->section_id)
-				, logger::ERROR
-			);
-
-			return $data;
-		}
-
-		foreach ($ar_parent_tipo as $parent_tipo) {
-			$data = array_merge(
-				$data,
-				component_relation_children::get_children(
-					$this->section_id,
-					$this->section_tipo,
-					$parent_tipo,
-					null,
-					(object)[
-						'search_in_main_hierarchy' => true
-					]
-				)
-			);
-		}
-
-
-		return $data;
-	}//end get_my_data
 
 
 
@@ -777,7 +736,6 @@ class component_relation_children extends component_relation_common {
 				. ' model: ' . to_string($model)
 				, logger::ERROR
 			);
-
 		}
 
 		// get ontology related parent
@@ -785,12 +743,6 @@ class component_relation_children extends component_relation_common {
 
 		// fallback: search the parent related tipo in the section components
 		if( empty($ar_parent_tipo) ){
-
-			debug_log(__METHOD__
-				. " Bad definition in ontology, this related_children has not related his parent, please assign the component_relation_parent to it. ---||--- using section_tipo to resolve it " . PHP_EOL
-				. 'children tipo: ' . to_string($tipo)
-				, logger::ERROR
-			);
 
 			// Look component parent across related section
 			// Resolve parent component tipo from section_tipo
@@ -802,6 +754,15 @@ class component_relation_children extends component_relation_common {
 					true, // bool recursive
 					true // bool search_exact
 				);
+
+				debug_log(__METHOD__
+					. " Bad definition in ontology, this related_children has not related his parent, please assign the component_relation_parent to it. ---||--- using section_tipo to resolve it " . PHP_EOL
+					. ' children tipo: ' . to_string($tipo) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' calculated parent tipo: ' . to_string($ar_parent_tipo)
+					, logger::ERROR
+				);
+
 				if( empty($ar_parent_tipo) ){
 					debug_log(__METHOD__
 						. " Error! Unable to resolve related_parent_tipo from get_ar_children_tipo_by_model_name_in_section " . PHP_EOL
@@ -929,6 +890,74 @@ class component_relation_children extends component_relation_common {
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* SORT_CHILDREN
+	* Update all component_relation_parent affected by
+	* the order change in this component 'value'
+	* The order is provided by a list of locators, usually from
+	* dd_ts_api in a Thesaurus API call
+	* @param string $section_tipo
+	* @param array $locators
+	* 	ascending order locators
+	* @return array|false $changed
+	* @see dd_ts_api::save_order
+	*/
+	public static function sort_children( string $section_tipo, array $locators ) : array|false {
+
+		$changed = [];
+
+		$section_map = section::get_section_map( $section_tipo );
+		if (!isset($section_map->order)) {
+			debug_log(__METHOD__
+				. " Error. Invalid section map. order property not found in section list of section '$section_tipo'. Ignored sort_children action." . PHP_EOL
+				. ' section_map: ' . to_string($section_map)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// component commons
+		$component_tipo	= $section_map->order;
+		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // component_number expected
+
+		$order = 0;
+		foreach ($locators as $locator) {
+
+			$order++;
+
+			$component = component_common::get_instance(
+				$model, // string model
+				$component_tipo, // string tipo
+				$locator->section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$locator->section_tipo // string section_tipo
+			);
+
+			$value = $component->get_value();
+
+			// check if value changes
+			if ((int)$value===$order) {
+				// remains unchanged
+				continue;
+			}
+
+			// save changed value
+			$component->set_dato([$order]);
+			$component->Save();
+
+			$changed[] = (object)[
+				'value'		=> $order,
+				'locator'	=> $locator
+			];
+		}
+
+
+		return $changed;
+	}//end sort_children
 
 
 

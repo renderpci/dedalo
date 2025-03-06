@@ -143,7 +143,7 @@ export const on_drop = async function(self, event) {
 									section_id		: new_section_id,
 									section_tipo	: section_tipo
 								},
-								callback : function() {
+								callback : () => {
 
 									// link_children_element. list_thesaurus_element of current wrapper
 									const link_children_element = self.get_link_children_from_wrap(wrap_target)
@@ -152,28 +152,30 @@ export const on_drop = async function(self, event) {
 										return false
 									}
 
+									const children_list = link_children_element.children_list
+
 									// self.update_arrow_state(link_children_element, true)
 
-								// refresh children container
-									self.get_children(
-										link_children_element,
-										null, // object|null pagination
-										true // bool clean_children_container
-									)
-									render_children({
-										link_children_element		: link_children_element,
-										section_tipo				: section_tipo,
-										section_id					: new_section_id,
-										pagination					: null,
-										clean_children_container	: true,
-										children_tipo				: children_tipo
-									})
-									.then(function(){
-										// update parent arrow button
-										 // self.update_arrow_state(link_children_element, true)
-										self.update_arrow_state(link_children_element, false)
-									})
-
+									// refresh children container
+										// self.get_children(
+										// 	link_children_element,
+										// 	null, // object|null pagination
+										// 	true // bool clean_children_container
+										// )
+										render_children({
+											link_children_element		: link_children_element,
+											section_tipo				: section_tipo,
+											section_id					: new_section_id,
+											pagination					: null,
+											clean_children_container	: true,
+											children_tipo				: children_tipo,
+											children_list				: children_list
+										})
+										.then(()=>{
+											// update parent arrow button
+											 // self.update_arrow_state(link_children_element, true)
+											self.update_arrow_state(link_children_element, false)
+										})
 								}
 							})
 					}//end if (data_obj.caller)

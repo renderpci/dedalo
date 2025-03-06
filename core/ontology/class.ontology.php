@@ -619,7 +619,7 @@ class ontology {
 
 				// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
 				foreach($section_data->relations as $locator){
-					if($locator->from_component_tipo === 'hierarchy125'){
+					if($locator->from_component_tipo === DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO){ // 'hierarchy125'
 						$locator->section_id = '1';
 					}
 				}
@@ -1453,31 +1453,61 @@ class ontology {
 			$jer_dd_record->set_visible( 'si' );
 
 		// order
-			if( !empty($parent_locator) ){
-				// use the parent data to get the children data and calculate the order.
-				$siblings	= ontology::get_siblings( $parent_locator );
-				$order		= ontology::get_order_from_locator( $locator, $siblings );
+			// if( !empty($parent_locator) ){
+			// 	// use the parent data to get the children data and calculate the order.
+			// 	$siblings	= ontology::get_siblings( $parent_locator );
+			// 	$order		= ontology::get_order_from_locator( $locator, $siblings );
 
-				// as every node can change his order position related to other nodes
-				// every sibling of the node need update his own order.
-				// the order is save in the common parent node
-				// and is the array key of the locator sibling
-				foreach ($siblings as $key => $sibling_locator) {
-					// don't update when the sibling is the current node
-					// it will update when it will saved.
-					if($sibling_locator->section_tipo === $section_tipo
-						&& (int)$sibling_locator->section_id === (int)$section_id){
-						continue;
-					}
-					// get the term_id of the sibling used to get update jer_dd row
-					// and save with his position (array key +1)
-					$sibling_term_id	= ontology::get_term_id_from_locator( $sibling_locator );
-					$sibling_node		= new RecordObj_dd( $sibling_term_id );
-					$sibling_node->set_norden( $key+1 );
-					$sibling_node->Save();
-				}
+			// 	// as every node can change his order position related to other nodes
+			// 	// every sibling of the node need update his own order.
+			// 	// the order is save in the common parent node
+			// 	// and is the array key of the locator sibling
+			// 	foreach ($siblings as $key => $sibling_locator) {
+			// 		// don't update when the sibling is the current node
+			// 		// it will update when it will saved.
+			// 		if($sibling_locator->section_tipo === $section_tipo
+			// 			&& (int)$sibling_locator->section_id === (int)$section_id){
+			// 			continue;
+			// 		}
+			// 		// get the term_id of the sibling used to get update jer_dd row
+			// 		// and save with his position (array key +1)
+			// 		$sibling_term_id	= ontology::get_term_id_from_locator( $sibling_locator );
+			// 		$sibling_node		= new RecordObj_dd( $sibling_term_id );
+			// 		$sibling_node->set_norden( $key+1 );
+			// 		$sibling_node->Save();
+			// 	}
 
-				$jer_dd_record->set_norden( $order );
+			// 	$jer_dd_record->set_norden( $order );
+			// }
+
+		// order v6.5
+			$order_tipo			= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
+			$order_model		= RecordObj_dd::get_modelo_name_by_tipo( $order_tipo  );
+			$order_component	= component_common::get_instance(
+				$order_model,
+				$order_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+			$order_data = $order_component->get_dato();
+
+			if(empty($order_data)){
+
+				debug_log(__METHOD__
+					. " Record without order_data " . PHP_EOL
+					. ' section_tipo		: ' . to_string($section_tipo). PHP_EOL
+					. ' section_id		: ' . to_string($section_id). PHP_EOL
+					. ' order_tipo	: ' . to_string($order_tipo)
+					, logger::DEBUG
+				);
+
+			}else{
+
+				$order_value = reset($order_data);
+				$jer_dd_record->set_norden( (int)$order_value );
 			}
 
 		// translatable
@@ -2397,6 +2427,38 @@ class ontology {
 
 		return true;
 	}//end jer_dd_version_is_valid
+
+
+
+	/**
+	* GET_ROOT_TERMS
+	* Get initial term to start the thesaurus tree view
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @param ?bool $is_model=false
+	* @return array $root_terms
+	*/
+	public static function get_root_terms( string $section_tipo, string|int $section_id, ?bool $is_model=false ) : array {
+
+		// source tipo
+		$tipo = $is_model===true
+			? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO // 'hierarchy59'
+			: DEDALO_HIERARCHY_CHILDREN_TIPO; // 'hierarchy45'
+
+		$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$componnent	= component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$section_tipo // string section_tipo
+		);
+
+		$root_terms = $componnent->get_dato();
+
+		return $root_terms;
+	}//end get_root_terms
 
 
 
