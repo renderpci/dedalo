@@ -11,6 +11,13 @@ class hierarchy extends ontology {
 	static $main_table = 'matrix_hierarchy_main';
 	static $main_section_tipo = 'hierarchy1';
 
+	// array hierarchy_portals_tipo
+	// store hierarchy portals data (former component_relation_children, now component_portal)
+	static $hierarchy_portals_tipo = [
+		DEDALO_HIERARCHY_CHILDREN_TIPO, // hierarchy45 hierarchy main: General term
+		DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO // hierarchy59 hierarchy main: General term model
+	];
+
 
 	/**
 	* GET_DEFAULT_SECTION_TIPO_TERM

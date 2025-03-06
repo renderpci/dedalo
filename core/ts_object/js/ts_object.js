@@ -13,8 +13,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
 		render_children,
-		render_ts_pagination,
-		render_children_list,
+		dom_parse_children,
 		render_root_wrapper
 	} from './render_ts_object.js'
 
@@ -227,96 +226,6 @@ export const ts_object = new function() {
 
 
 	/**
-	* DOM_PARSE_CHILDREN
-	* @param array ar_children_data
-	*	Array of children of current term from JSON source trigger
-	* @param DOM object children_container
-	*	children_container is 'children_container'
-	* @param object options
-	*
-	* @return promise
-	*/
-	this.dom_parse_children = function(ar_children_data, children_container, options) {
-
-		const self = this
-
-		// check vars
-			if (!ar_children_data) {
-				console.warn("[dom_parse_children] Error. No ar_children_data received. Nothing is parsed")
-				return Promise.resolve(false);
-			}
-			if (!children_container) {
-				console.warn("[dom_parse_children] Error. No children_container received. Nothing is parsed");
-				return Promise.resolve(false);
-			}
-
-		// options set values
-			const clean_children_container		= typeof options.clean_children_container!=='undefined' ? options.clean_children_container : true
-			const node_type						= typeof options.node_type!=='undefined' ? options.node_type : 'thesaurus_node'
-			let next_node_type					= node_type
-			const children_container_is_loaded	= typeof options.children_container_is_loaded!=='undefined' ? options.children_container_is_loaded : false
-			const show_arrow_opened				= typeof options.show_arrow_opened!=='undefined' ? options.show_arrow_opened : false
-			const pagination					= options.pagination || {}
-			const mode							= options.mode || 'list'
-
-		// Clean children container before build contents
-			if (clean_children_container===true) {
-				while (children_container.hasChildNodes()) {
-					children_container.removeChild(children_container.lastChild);
-				}
-			}
-
-		// nd_container
-			let parent_nd_container		= null
-			const wrapper_children		= children_container.parentNode.children
-			const wrapper_children_len	= wrapper_children.length
-			for (let i = wrapper_children_len - 1; i >= 0; i--) {
-				if (wrapper_children[i].dataset.role==='nd_container') {
-					parent_nd_container = wrapper_children[i];
-					break
-				}
-			}
-			// Clean always
-			while (parent_nd_container && parent_nd_container.hasChildNodes()) {
-				parent_nd_container.removeChild(parent_nd_container.lastChild);
-			}
-
-		// Build DOM elements iterating ar_children_data
-		return new Promise(function(resolve) {
-
-			// build_ts_list
-				const ar_children_c = render_children_list({
-					self							: self,
-					ar_children_data				: ar_children_data,
-					children_container				: children_container,
-					parent_nd_container				: parent_nd_container,
-					children_container_is_loaded	: children_container_is_loaded,
-					node_type						: node_type,
-					next_node_type					: next_node_type,
-					show_arrow_opened				: show_arrow_opened,
-					mode							: mode
-				})
-
-			// pagination
-				if (pagination.total &&
-					pagination.limit &&
-					pagination.total > pagination.limit &&
-					(pagination.offset + pagination.limit) < pagination.total
-					) {
-
-					render_ts_pagination({
-						children_container	: children_container,
-						pagination			: pagination
-					})
-				}
-
-			resolve(ar_children_c);
-		})
-	}//end dom_parse_children
-
-
-
-	/**
 	* FIND_UP_TAG
 	* Search parent with given CSS selector looking up recursively
 	* @param HTMLElement el
@@ -382,7 +291,8 @@ export const ts_object = new function() {
 
 	/**
 	* TOGGLE_VIEW_CHILDREN
-	* @param DOM object link_children_element
+	* Show/hide the children container of current term
+	* @param HTMLElement link_children_element
 	* @param event
 	* @return bool
 	*/
@@ -395,6 +305,7 @@ export const ts_object = new function() {
 			const section_tipo	= wrapper.dataset.section_tipo
 			const section_id	= wrapper.dataset.section_id
 			const children_tipo	= wrapper.dataset.children_tipo
+			const children_list	= link_children_element.children_list
 
 		const children_container = self.get_my_parent_container(link_children_element, 'children_container')
 
@@ -411,8 +322,8 @@ export const ts_object = new function() {
 					section_id					: section_id,
 					pagination					: null,
 					clean_children_container	: false, // bool clean_children_container
-					children_data				: null,
-					children_tipo				: children_tipo
+					children_tipo				: children_tipo,
+					children_list				: children_list
 				});
 
 			// save_opened_elements
@@ -437,8 +348,8 @@ export const ts_object = new function() {
 							section_id					: section_id,
 							pagination					: null,
 							clean_children_container	: true, // bool clean_children_container
-							children_data				: null,
-							children_tipo				: children_tipo
+							children_tipo				: children_tipo,
+							children_list				: children_list
 						});
 					}
 
@@ -1363,18 +1274,17 @@ export const ts_object = new function() {
 						  ar_children_data.push(element)
 
 					// render children. dom_parse_children (returns a promise)
-						const render_options = {
+						const ar_children_container = dom_parse_children({
+							self							: self,
+							ar_children_data				: ar_children_data,
+							children_container				: main_div,
+							// render options
 							clean_children_container		: false, // Elements are added to existing main_div instead replace
 							children_container_is_loaded	: false, // Set children container as loaded
 							show_arrow_opened				: false, // Set icon arrow as opened
 							target_section_tipo				: target_section_tipo, // add always !
 							mode							: 'search'
-						}
-						self.dom_parse_children(
-							ar_children_data,
-							main_div,
-							render_options
-						)
+						})
 				}
 
 			// hilite current term
@@ -1487,7 +1397,7 @@ export const ts_object = new function() {
 	* @param mixed new_value
 	* @return promise
 	*/
-	this.save_order = function(button_obj, new_value) {
+	this.save_order = async function(button_obj, new_value) {
 
 		const self = this
 
@@ -1564,7 +1474,7 @@ export const ts_object = new function() {
 				  array[pos2] = tmp;
 				}
 				return array
-			}
+			}//end move_locator
 
 		// order_ar_locators
 			const from	= parseInt(old_value)-1
@@ -1572,43 +1482,48 @@ export const ts_object = new function() {
 			move_locator(ar_locators, from, to)
 
 		// short vars
-			const section_id	= wrap.dataset.section_id
 			const section_tipo	= wrap.dataset.section_tipo
-			const children_tipo	= wrap.dataset.children_tipo
 
+		// loading
+			wrap.classList.add('loading')
 
-		return new Promise(function(resolve){
-
-			// API call
-				const rqo = {
-					dd_api			: 'dd_ts_api',
-					prevent_lock	: true,
-					action			: 'save_order',
-					source			: {
-						section_tipo	: section_tipo,
-						ar_locators		: ar_locators
-					}
+		// API request
+			const rqo = {
+				dd_api			: 'dd_ts_api',
+				prevent_lock	: true,
+				action			: 'save_order',
+				source			: {
+					section_tipo	: section_tipo,
+					ar_locators		: ar_locators
 				}
-				data_manager.request({
-					body : rqo
-				})
-				.then(function(response){
+			}
+			// API request
+			const api_response = await data_manager.request({
+				body : rqo
+			})
 
-					// debug
-						if(SHOW_DEBUG===true) {
-							console.log("[ts_object.save_order] response", response)
-						}
+			// debug
+				if(SHOW_DEBUG===true) {
+					console.log("[ts_object.save_order] api_response", api_response)
+				}
 
-					if (response.result && response.result!==false) {
-						// Refresh element
-						self.refresh_element( element_section_tipo, element_section_id )
-					}else{
-						alert("[ts_object.save_order] Error on save order. \n\n"+ response.msg )
+			if (api_response.result && api_response.result!==false) {
+				// Refresh element
+				self.refresh_element(
+					element_section_tipo,
+					element_section_id,
+					true, // hilite
+					() => {
+						// callback executed after refresh is done
+						wrap.classList.remove('loading')
 					}
+				)
+			}else{
+				alert("[ts_object.save_order] Error on save order. \n\n"+ api_response.msg )
+			}
 
-					resolve(response)
-				})
-		})
+
+		return api_response
 	}//end save_order
 
 

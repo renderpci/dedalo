@@ -297,7 +297,7 @@ const render_content_data = function(self) {
 						})
 						typology_container.appendChild(hierarchy_wrapper)
 
-						// loading
+					// loading
 						const loading_node = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'elements_container loading',
@@ -305,30 +305,20 @@ const render_content_data = function(self) {
 							parent			: hierarchy_wrapper
 						})
 
-					// get_children_data. Resolves thesaurus data of current root nodes
-						self.ts_object.get_children_data({
-							section_tipo	: section_tipo,
-							section_id		: section_id,
-							children_tipo	: children_tipo, // already resolved children
-							children		: root_terms
+					// ts_object: render element
+						self.ts_object.render_children({
+							link_children_element		: hierarchy_wrapper.link_children,
+							section_tipo				: section_tipo,
+							section_id					: section_id,
+							pagination					: null,
+							clean_children_container	: null,
+							// children_data			: children_data,
+							children_tipo				: children_tipo,
+							children_list				: root_terms
 						})
-						.then(function(children_data){
-
-							requestAnimationFrame(
-								() => {
-									// ts_object: render element
-									self.ts_object.render_children({
-										link_children_element		: hierarchy_wrapper.link_children,
-										section_tipo				: section_tipo,
-										section_id					: section_id,
-										pagination					: null,
-										clean_children_container	: null,
-										children_data				: children_data
-									})
-									// remove loading
-									loading_node.remove()
-								}
-							)
+						.then(()=>{
+							// remove loading
+							loading_node.remove()
 						})
 				}//end iterate hierarchy_sections
 		}//end for (let i = 0; i < typology_length; i++) typology_nodes
