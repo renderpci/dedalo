@@ -215,6 +215,9 @@ const get_content_data_edit = async function(self) {
 
 			// Code information. Call selected remote server API to get updates list
 				const server_code_api_response = await self.get_code_update_info(server)
+				if(SHOW_DEBUG===true) {
+					console.log('))) get_content_data_edit server_code_api_response:', server_code_api_response);
+				}
 
 				// result check
 					const result = server_code_api_response?.result

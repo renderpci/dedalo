@@ -115,7 +115,7 @@ search.prototype.init = async function(options) {
 
 
 	// sections_selector_data
-		self.sections_selector_data = typeof self.caller.get_sections_selector_data!=="undefined"
+		self.sections_selector_data = typeof self.caller.get_sections_selector_data!=='undefined'
 			? self.caller.get_sections_selector_data()
 			: null
 

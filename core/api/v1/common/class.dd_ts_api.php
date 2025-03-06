@@ -14,26 +14,30 @@ final class dd_ts_api {
 	* @param object $rqo
 	* Sample:
 	* {
-	* 	dd_api			: 'dd_ts_api',
-	* 	prevent_lock	: true,
-	* 	action			: 'get_children_data',
-	* 	source			: {
-	* 		section_id		: parent_section_id,
-	* 		section_tipo	: parent_section_tipo,
-	* 		node_type		: node_type,
-	* 		tipo			: tipo
+	* 	dd_api : 'dd_ts_api',
+	* 	prevent_lock : true,
+	* 	action : 'get_children_data',
+	* 	source : {
+	* 		section_tipo : string,
+	* 		section_id : string|int,
+	* 		children_tipo : string,
+	* 		model : string|null,
+	* 		children : array|null
+	* 		node_type : node_type
 	* 	},
 	* 	options : {
 	* 		pagination: {
 	* 			limit: 100,
 	* 			offset: 0,
 	* 			total: 150
-	* 		}
+	* 		},
+	* 		thesaurus_view_mode: string 'default'
 	* 	}
 	* }
 	* @return object $response
 	*/
 	public static function get_children_data(object $rqo) : object {
+		// $start_time=start_time();
 
 		$response = new stdClass();
 			$response->result	= false;

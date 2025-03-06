@@ -172,9 +172,6 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 	const self = this
 
-	// call the generic common build
-		// const common_build = await area_common.prototype.build.call(this, options);
-
 	// status update
 		self.status = 'building'
 

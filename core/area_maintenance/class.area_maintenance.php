@@ -1999,9 +1999,11 @@ class area_maintenance extends area_common {
 			];
 
 		// response
-			$response->result	= true;
-			array_unshift( $ar_msg, 'OK. Request done '.__METHOD__);
-			$response->msg = implode(PHP_EOL, $ar_msg);
+			$response->result = true;
+			$msg = empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
+			$response->msg = $msg .' '. implode(PHP_EOL, $ar_msg);
 			$response->root_info = $root_info;
 
 

@@ -33,7 +33,7 @@ class search_related extends search {
 			$offset	= $this->search_query_object->offset;
 
 		// group_by
-			$group_by	= $this->search_query_object->group_by ?? null;
+			$group_by = $this->search_query_object->group_by ?? null;
 
 		// reference locator is the locator of the source section that will be
 		// used to obtain the sections with calls to it.
