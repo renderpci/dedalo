@@ -130,7 +130,7 @@ render_search.prototype.render_base = function() {
 		self.search_global_container = search_global_container
 
 	// thesaurus add on
-		if (self.caller.model==='area_thesaurus' || self.caller.model === 'area_ontology') {
+		if (self.caller.model==='area_thesaurus' || self.caller.model==='area_ontology') {
 			const thesaurus_options_node = render_sections_selector(self)
 			search_global_container.appendChild(thesaurus_options_node)
 		}

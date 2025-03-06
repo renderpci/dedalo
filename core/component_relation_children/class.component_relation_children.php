@@ -660,13 +660,13 @@ class component_relation_children extends component_relation_common {
 			}
 
 		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
-			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo);
-
+			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo );
 			if( empty($ar_parent_tipo) ){
 				return $children;
 			}
 			$parent_tipo = $ar_parent_tipo[0];
 
+		// filter locator
 			$filter_locator = new locator();
 				$filter_locator->set_section_tipo($section_tipo);
 				$filter_locator->set_section_id($section_id);
@@ -705,8 +705,10 @@ class component_relation_children extends component_relation_common {
 					];
 					$sqo->set_order( [$order_obj] );
 				}
+
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
+
 			// fix result ar_records as dato
 			$result	= $rows_data->ar_records;
 
@@ -758,16 +760,30 @@ class component_relation_children extends component_relation_common {
 	*/
 	public static function get_ar_related_parent_tipo( string $tipo, string $section_tipo ) : array {
 
+		// cache
 		static $ar_parent_tipo_cache;
+		$cache_key = $tipo . '_' . $section_tipo;
+		if( isset($ar_parent_tipo_cache[$cache_key]) ){
+			return $ar_parent_tipo_cache[$cache_key];
+		}
 
-		if( isset($ar_parent_tipo_cache) ){
-			return $ar_parent_tipo_cache;
+		// debug
+		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		if ($model!==get_called_class()) {
+			debug_log(__METHOD__
+				. " Error! Calling get_ar_related_by_model expected 'component_relation_children' but resolved: " .$model . PHP_EOL
+				. ' children tipo: ' . to_string($tipo) . PHP_EOL
+				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+				. ' model: ' . to_string($model)
+				, logger::ERROR
+			);
+
 		}
 
 		// get ontology related parent
 		$ar_parent_tipo = common::get_ar_related_by_model( 'component_relation_parent', $tipo );
 
-		// fallback; to search the parent related tipo in the section components
+		// fallback: search the parent related tipo in the section components
 		if( empty($ar_parent_tipo) ){
 
 			debug_log(__METHOD__
@@ -775,20 +791,30 @@ class component_relation_children extends component_relation_common {
 				. 'children tipo: ' . to_string($tipo)
 				, logger::ERROR
 			);
+
 			// Look component parent across related section
-			// Resolve parent component tipo from children_section_tipo
+			// Resolve parent component tipo from section_tipo
 				$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 					$section_tipo, // string $section_tipo
 					['component_relation_parent'], // array $ar_model_name_required
 					true, // bool from_cache
 					true, // bool resolve_virtual
 					true, // bool recursive
-					true, // bool search_exact
-					false // array|bool ar_tipo_exclude_elements
+					true // bool search_exact
 				);
+				if( empty($ar_parent_tipo) ){
+					debug_log(__METHOD__
+						. " Error! Unable to resolve related_parent_tipo from get_ar_children_tipo_by_model_name_in_section " . PHP_EOL
+						. ' children tipo: ' . to_string($tipo) . PHP_EOL
+						. ' section_tipo: ' . to_string($section_tipo)
+						, logger::ERROR
+					);
+				}
 		}
 
-		$ar_parent_tipo_cache = $ar_parent_tipo;
+		// cache
+		$ar_parent_tipo_cache[$cache_key] = $ar_parent_tipo;
+
 
 		return $ar_parent_tipo;
 	}//end get_ar_related_parent_tipo

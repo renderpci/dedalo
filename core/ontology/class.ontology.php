@@ -1497,10 +1497,10 @@ class ontology {
 			if(empty($translatable_data)){
 
 				debug_log(__METHOD__
-					. "Record without translatable_data " . PHP_EOL
-					. 'section_tipo			: ' . to_string($section_tipo). PHP_EOL
-					. 'section_id			: ' . to_string($section_id). PHP_EOL
-					. 'translatable_tipo	: ' . to_string($translatable_tipo)
+					. " Record without translatable_data " . PHP_EOL
+					. ' section_tipo			: ' . to_string($section_tipo). PHP_EOL
+					. ' section_id			: ' . to_string($section_id). PHP_EOL
+					. ' translatable_tipo	: ' . to_string($translatable_tipo)
 					, logger::DEBUG
 				);
 
