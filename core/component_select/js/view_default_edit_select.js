@@ -12,7 +12,8 @@
 	import {
 		get_content_data
 	} from './render_edit_component_select.js'
-
+	import {get_dataframe} from '../../component_common/js/component_common.js'
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 
 
 /**
@@ -112,7 +113,7 @@ const get_content_value = (i, current_value, self) => {
 				e.stopPropagation()
 			})
 		// change event
-			select.addEventListener('change', function(e){
+			select.addEventListener('change', async function(e){
 
 				const value = this.value
 					? JSON.parse(this.value)
@@ -121,6 +122,18 @@ const get_content_value = (i, current_value, self) => {
 				const parsed_value	= (select.value.length>0)
 					? JSON.parse(select.value)
 					: null
+
+				// when user change the value of the select, remove its dataframe
+				if(self.data.value[0]?.section_id){
+					delete_dataframe({
+						self				: self,
+						section_id			: self.section_id,
+						section_tipo		: self.section_tipo,
+						section_id_key		: self.data.value[0].section_id,
+						section_tipo_key	: self.data.value[0].section_tipo,
+						delete_instace 		: true
+					})
+				}
 
 				// change data
 					const changed_data_item	= Object.freeze({
@@ -133,7 +146,7 @@ const get_content_value = (i, current_value, self) => {
 					self.set_changed_data(changed_data_item)
 
 				// force to save on every change
-					self.change_value({
+					await self.change_value({
 						changed_data	: [changed_data_item],
 						refresh			: false,
 						remove_dialog	: false
@@ -143,6 +156,31 @@ const get_content_value = (i, current_value, self) => {
 					if (select.button_edit) {
 						if (value) {
 							select.button_edit.classList.remove('hide')
+
+							const section_id	= parsed_value.section_id
+							const section_tipo	= parsed_value.section_tipo
+
+								const component_dataframe = get_dataframe({
+									self				: self,
+									section_id			: self.section_id,
+									section_tipo		: self.section_tipo,
+									section_id_key		: section_id,
+									section_tipo_key	: section_tipo,
+									view				: 'default'
+								}).then(async function(component_dataframe){
+
+									if(component_dataframe){
+
+										self.ar_instances.push(component_dataframe)
+										const dataframe_node = await component_dataframe.render()
+
+										content_value.appendChild(dataframe_node)
+										// set pointers
+										select.dataframe = dataframe_node
+									}
+								})
+
+
 						}else{
 							select.button_edit.classList.add('hide')
 						}
@@ -252,6 +290,27 @@ const get_content_value = (i, current_value, self) => {
 			}
 		}
 
+	// first dataframe load if the component has data
+		if(current_value){
+
+			const component_dataframe = get_dataframe({
+				self				: self,
+				section_id			: self.section_id,
+				section_tipo		: self.section_tipo,
+				section_id_key		: current_value.section_id,
+				section_tipo_key	: current_value.section_tipo,
+				view				: 'default'
+			}).then(async function(component_dataframe){
+
+				if(component_dataframe){
+
+					self.ar_instances.push(component_dataframe)
+					const dataframe_node = await component_dataframe.render()
+
+					content_value.appendChild(dataframe_node)
+				}
+			})
+		}
 
 	return content_value
 }//end get_content_value

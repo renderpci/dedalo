@@ -18,12 +18,12 @@
 			case 'simple':
 
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$item_context = $this->get_structure_context_simple($permissions, true);
+				$this->context = $this->get_structure_context_simple($permissions, true);
 				break;
 
 			default:
-				// item_context
-					$item_context = $this->get_structure_context(
+				// this->context
+					$this->context = $this->get_structure_context(
 						$permissions,
 						true // bool add_request_config
 					);
@@ -40,11 +40,11 @@
 							];
 						}
 					}
-					$item_context->target_sections = $target_sections;
+					$this->context->target_sections = $target_sections;
 				break;
 		}
 
-		$context[] = $item_context;
+		$context[] = $this->context;
 	}//end if($options->get_context===true)
 
 
@@ -79,7 +79,34 @@
 				$item->datalist = $datalist;
 			}
 
-		$data[] = $item;
+		// add item to data
+			$data[] = $item;
+
+		// subdatum
+		// subdatum is necessary only for components that has dataframe
+			if ( !empty($value) && !empty($this->context->request_config) ) {
+				$request_config = $this->context->request_config;
+				$has_dataframe = array_find($request_config[0]->show->ddo_map, function( $item ){
+					return $item->model === 'component_dataframe';
+				});
+
+				if(!empty($has_dataframe)){
+
+					// subdatum
+					$subdatum = $this->get_subdatum($this->tipo, $value);
+
+					$ar_subcontext = $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
+
+					$ar_subdata = $subdatum->data;
+					foreach ($ar_subdata as $sub_value) {
+						$data[] = $sub_value;
+					}
+				}
+			}
+
 	}//end if($options->get_data===true && $permissions>0)
 
 
