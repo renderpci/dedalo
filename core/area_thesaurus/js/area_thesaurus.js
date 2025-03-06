@@ -348,16 +348,14 @@ area_thesaurus.prototype.render = async function(options={}) {
 
 /**
 * GET_SECTIONS_SELECTOR_DATA
-* @return array of objects sections_selector_data
+* Used by search 'sections_selector_data' to draw the typologies and sections list
+* @return object|null sections_selector_value
 */
 area_thesaurus.prototype.get_sections_selector_data = function() {
 
 	const self = this
 
-	const area_data = self.data.find(item => item.tipo===self.tipo)
-	const sections_selector_value = area_data
-		? area_data.value
-		: null
+	const sections_selector_value = self.data.find(item => item.tipo===self.tipo)
 
 	return sections_selector_value
 }//end get_sections_selector_data

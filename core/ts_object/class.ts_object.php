@@ -139,6 +139,82 @@ class ts_object {
 
 
 	/**
+	* PARSE_CHILD_DATA
+	* Auxiliary function used in dd_ts_api
+	* Iterates locators extracting the child data of each one
+	* @see get_child_data
+	* @param array $locators
+	* @param string $area_model='area_thesaurus'
+	* @return array $child_data
+	*/
+	public static function parse_child_data( array $locators, string $area_model='area_thesaurus', ?object $ts_object_options=null ) : array {
+
+		$children_data = [];
+
+		foreach ($locators as $locator) {
+
+			$section_id		= $locator->section_id;
+			$section_tipo	= $locator->section_tipo;
+
+			// remove the inactive ontologies in main ontology
+			// some children defined in ontology node could be not active and loaded
+			// remove they from the children_data to prevent to show it in the tree.
+			if ($area_model==='area_ontology') {
+
+				// active ontologies list. Calculate once by session (445 ms)
+				if(isset($_SESSION['dedalo']['config']['active_elements'])) {
+					$active_elements = $_SESSION['dedalo']['config']['active_elements'];
+				}else{
+					$active_elements = [];
+					foreach (ontology::get_active_elements() as $el) {
+						// if ($el->active_in_thesaurus===true) {
+							$active_elements[] = (object)[
+								'tld'					=> $el->tld,
+								'section_tipo'			=> $el->section_tipo,
+								'target_section_tipo'	=> $el->target_section_tipo
+							];
+						// }
+					}
+					$_SESSION['dedalo']['config']['active_elements'] = $active_elements;
+				}
+
+				$found = array_find($active_elements, function($el) use($section_tipo){
+					return $el->target_section_tipo===$section_tipo
+						|| $el->section_tipo===$section_tipo
+						|| get_tld_from_tipo($section_tipo)===$el->tld;
+				});
+				if (empty($found)) {
+					// remove from pagination total count
+					if (isset($current_pagination->total)) {
+						$current_pagination->total--;
+					}
+					// ignore this non active tld item
+					continue;
+				}
+			}
+
+			$ts_object		= new ts_object( $section_id, $section_tipo, $ts_object_options );
+			$child_object	= $ts_object->get_child_data();
+
+			if (empty($child_object->ar_elements)) {
+				$tld = get_tld_from_tipo($locator->section_tipo);
+				debug_log(__METHOD__
+					. " Empty ar_elements child. Maybe this tld ($tld) is not installed " . PHP_EOL
+					. ' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+			}
+
+			$children_data[] = $child_object;
+		}
+
+
+		return $children_data;
+	}//end parse_child_data
+
+
+
+	/**
 	* GET_CHILD_DATA
 	* @return object $child_data
 	*/

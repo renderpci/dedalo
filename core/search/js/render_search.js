@@ -863,7 +863,7 @@ const render_sections_selector = (self) => {
 		self.wrapper_sections_selector = wrapper_sections_selector
 
 	// typologies
-		const typologies = self.sections_selector_data.filter(item => item.type === 'typology')
+		const typologies = self.sections_selector_data.typologies || []
 		// typologies.sort((a, b) => new Intl.Collator().compare(a.label, b.label));
 		typologies.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
 
@@ -936,8 +936,12 @@ const render_sections_selector = (self) => {
 */
 const build_sections_check_boxes = (self, typology_id, parent) => {
 
-	const ar_sections	= self.sections_selector_data.filter(item => item.typology_section_id===typology_id)
-	const ul			= parent
+	// sections list
+		const all_sections	= self.sections_selector_data.value || []
+		const ar_sections	= all_sections.filter(item => item.typology_section_id===typology_id)
+
+	// ul node
+		const ul = parent
 
 	// reset the sqo sections
 		self.target_section_tipo.splice(0,self.target_section_tipo.length)

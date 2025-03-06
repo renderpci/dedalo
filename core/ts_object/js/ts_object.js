@@ -12,8 +12,10 @@
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
+		render_children,
 		render_ts_pagination,
-		render_children_list
+		render_children_list,
+		render_root_wrapper
 	} from './render_ts_object.js'
 
 
@@ -38,186 +40,31 @@ export const ts_object = new function() {
 
 
 	/**
-	* GET_CHILDREN
-	* Get the JSON data from the server. When data is loaded, render DOM element
+	* GET_CHILDREN_DATA
+	* Get the JSON data from the server.
 	* Data is built from parent node info (current object section_tipo and section_id)
 	* @param HTMLElement children_element
 	* @return promise
 	*/
-	this.get_children_OLD = function(children_element, pagination, clean_children_container) {
-
-		// short vars
-			const tipo					= children_element.dataset.tipo
-			const wrap					= children_element.parentNode.parentNode
-			const parent_section_id		= wrap.dataset.section_id
-			const parent_section_tipo	= wrap.dataset.section_tipo
-			const node_type				= wrap.dataset.node_type || null
-			const target_section_tipo	= wrap.dataset.target_section_tipo
-			const caller				= this.caller
-			const thesaurus_view_mode	= caller.thesaurus_view_mode
-
-		// check vars
-			if (!parent_section_tipo || typeof parent_section_tipo==="undefined") {
-				console.log("[get_children] Error. parent_section_tipo is not defined");
-				return Promise.resolve(false);
-			}
-			if (!parent_section_id || typeof parent_section_id==="undefined") {
-				console.log("[get_children] Error. parent_section_id is not defined");
-				return Promise.resolve(false);
-			}
-			if (!tipo || typeof tipo==="undefined") {
-				if (SHOW_DEBUG===true) {
-					console.log(new Error().stack);
-				}
-				console.error("[get_children] Error. tipo is not defined");
-				return Promise.resolve(false);
-			}
-
-		// children_container. Is the div container inside current ts_object
-			const children_container = (()=>{
-
-				const wrap_children		= wrap.childNodes
-				const wrap_children_len	= wrap_children.length
-				for (let i = wrap_children_len - 1; i >= 0; i--) {
-					if(wrap_children[i].dataset.role && wrap_children[i].dataset.role==="children_container") {
-						return wrap_children[i]
-					}
-				}
-
-				return null
-			})()
-			if (children_container===null) {
-				alert("[ts_object.get_children] Error on select children_container");
-				return Promise.resolve(false);
-			}
-
-		return new Promise(function(resolve){
-
-			// set false on 'area_ontology' to allow session cache in ontology
-			const prevent_lock = caller.model==='area_ontology' ? false : true
-
-			// API call
-			const rqo = {
-				dd_api			: 'dd_ts_api',
-				prevent_lock	: prevent_lock,
-				action			: 'get_children_data',
-				source			: {
-					section_id			: parent_section_id,
-					section_tipo		: parent_section_tipo,
-					node_type			: node_type,
-					target_section_tipo	: target_section_tipo,
-					tipo				: tipo,
-					model 				: caller.model,
-					build_options : {
-						terms_are_model : self.thesaurus_view_mode==='model'
-					}
-				},
-				options : {
-					pagination			: pagination,
-					thesaurus_view_mode	: thesaurus_view_mode
-				}
-			}
-			data_manager.request({
-				body : rqo
-			})
-			.then(async function(response) {
-
-				if (response && response.result) {
-
-					// success case
-
-					// dom_parse_children
-						const ar_children_data = response.result
-						const options = {
-							target_section_tipo			: target_section_tipo,
-							node_type					: node_type,
-							clean_children_container	: clean_children_container ?? false,
-							pagination					: response.pagination
-						}
-						const result = await ts_object.dom_parse_children(
-							ar_children_data,
-							children_container,
-							options
-						)
-
-					// fix children_element pagination (used on refresh_element to get current pagination status)
-						children_element.pagination = response.pagination
-
-					// updates arrow
-						if (children_element && children_element.firstChild && children_element.dataset.type) {
-							// remove spinner
-							children_element.firstChild.classList.remove('arrow_spinner');
-							// set arrow icon as opened
-							const add_class = (children_element.dataset.type==='link_children_nd')
-								? 'ts_object_children_arrow_icon_open_nd'
-								: 'ts_object_children_arrow_icon_open'
-
-							children_element.firstChild.classList.add(add_class)
-							// Update arrow state
-							// ts_object.update_arrow_state(children_element, true) // disabled temporally
-						}
-
-					resolve(result)
-
-				}else{
-
-					// error case
-
-					console.warn("[ts_object.get_children] Error, response is null");
-
-					resolve(false)
-				}
-			})
-		})
-	}//end get_children
-
-
-
-	/**
-	* GET_CHILDREN
-	* Get the JSON data from the server. When data is loaded, render DOM element
-	* Data is built from parent node info (current object section_tipo and section_id)
-	* @param HTMLElement children_element
-	* @return promise
-	*/
-	this.get_children = function(options) {
+	this.get_children_data = async function(options) {
 
 		// options
-			const children_element			= options.children_element
-			const section_tipo				= options.section_tipo
-			const section_id				= options.section_id
-			const pagination				= options.pagination
-			const clean_children_container	= options.clean_children_container ?? false
+			const section_id	= options.section_id
+			const section_tipo	= options.section_tipo
+			const children_tipo	= options.children_tipo
+			const pagination	= options.pagination || null
+			const children		= options.children || null
 
 		// short vars
 			const caller				= this.caller
+			const model					= caller.model
 			const thesaurus_view_mode	= caller.thesaurus_view_mode
+			const terms_are_model		= thesaurus_view_mode==='model'
 
-		// children_container. Is the div container inside current ts_object
-			// const children_container = (()=>{
-
-			// 	const wrap_children		= wrap.childNodes
-			// 	const wrap_children_len	= wrap_children.length
-			// 	for (let i = wrap_children_len - 1; i >= 0; i--) {
-			// 		if(wrap_children[i].dataset.role && wrap_children[i].dataset.role==="children_container") {
-			// 			return wrap_children[i]
-			// 		}
-			// 	}
-
-			// 	return null
-			// })()
-			const children_container = children_element.parentNode
-			if (children_container===null) {
-				alert("[ts_object.get_children] Error on select children_container");
-				return Promise.resolve(false);
-			}
-
-		return new Promise(function(resolve){
-
-			// set false on 'area_ontology' to allow session cache in ontology
+		// prevent_lock: set false on 'area_ontology' to allow session cache in ontology
 			const prevent_lock = caller.model==='area_ontology' ? false : true
 
-			// API call
+		// API call
 			const rqo = {
 				dd_api			: 'dd_ts_api',
 				prevent_lock	: prevent_lock,
@@ -225,9 +72,11 @@ export const ts_object = new function() {
 				source			: {
 					section_id		: section_id,
 					section_tipo	: section_tipo,
-					model			: caller.model,
+					children_tipo	: children_tipo,
+					model			: model,
+					children		: children,
 					build_options	: {
-						terms_are_model : self.thesaurus_view_mode==='model'
+						terms_are_model : terms_are_model
 					}
 				},
 				options : {
@@ -235,62 +84,31 @@ export const ts_object = new function() {
 					thesaurus_view_mode	: thesaurus_view_mode
 				}
 			}
-			data_manager.request({
+
+			const api_response = await data_manager.request({
 				body : rqo
 			})
-			.then(async function(response) {
-				if(SHOW_DEBUG===true) {
-					console.log('get_children_data response:', response);
-				}
+			// debug
+			if(SHOW_DEBUG===true) {
+				console.log('get_children_data api_response:', api_response);
+			}
 
-				if (response && response.result) {
+			if (api_response && api_response.result) {
 
-					// success case
+				// success case
 
-					// dom_parse_children
-						const ar_children_data = response.result
-						const parse_options = {
-							target_section_tipo			: target_section_tipo,
-							node_type					: node_type,
-							clean_children_container	: clean_children_container,
-							pagination					: response.pagination
-						}
-						const result = await ts_object.dom_parse_children(
-							ar_children_data,
-							children_container,
-							parse_options
-						)
+				return api_response.result
 
-					// fix children_element pagination (used on refresh_element to get current pagination status)
-						children_element.pagination = response.pagination
+			}else{
 
-					// updates arrow
-						if (children_element && children_element.firstChild && children_element.dataset.type) {
-							// remove spinner
-							children_element.firstChild.classList.remove('arrow_spinner');
-							// set arrow icon as opened
-							const add_class = (children_element.dataset.type==='link_children_nd')
-								? 'ts_object_children_arrow_icon_open_nd'
-								: 'ts_object_children_arrow_icon_open'
+				// error case
 
-							children_element.firstChild.classList.add(add_class)
-							// Update arrow state
-							// ts_object.update_arrow_state(children_element, true) // disabled temporally
-						}
+				console.warn("[ts_object.get_children_data] Error, api_response is null");
+			}
 
-					resolve(result)
 
-				}else{
-
-					// error case
-
-					console.warn("[ts_object.get_children] Error, response is null");
-
-					resolve(false)
-				}
-			})
-		})
-	}//end get_children
+		return false
+	}//end get_children_data
 
 
 
@@ -434,7 +252,6 @@ export const ts_object = new function() {
 
 		// options set values
 			const clean_children_container		= typeof options.clean_children_container!=='undefined' ? options.clean_children_container : true
-			const target_section_tipo			= typeof options.target_section_tipo!=='undefined' ? options.target_section_tipo : null
 			const node_type						= typeof options.node_type!=='undefined' ? options.node_type : 'thesaurus_node'
 			let next_node_type					= node_type
 			const children_container_is_loaded	= typeof options.children_container_is_loaded!=='undefined' ? options.children_container_is_loaded : false
@@ -464,7 +281,6 @@ export const ts_object = new function() {
 				parent_nd_container.removeChild(parent_nd_container.lastChild);
 			}
 
-
 		// Build DOM elements iterating ar_children_data
 		return new Promise(function(resolve) {
 
@@ -472,7 +288,6 @@ export const ts_object = new function() {
 				const ar_children_c = render_children_list({
 					self							: self,
 					ar_children_data				: ar_children_data,
-					target_section_tipo				: target_section_tipo,
 					children_container				: children_container,
 					parent_nd_container				: parent_nd_container,
 					children_container_is_loaded	: children_container_is_loaded,
@@ -527,45 +342,19 @@ export const ts_object = new function() {
 	* @param HTMLElement wrap_ts_object
 	* @return promise
 	*/
-	this.update_parent_data = function(wrap_ts_object) {
+	this.update_parent_data = async function(options) {
+
+		const section_id				= options.section_id
+		const section_tipo				= options.section_tipo
+		const old_parent_section_id		= options.old_parent_section_id
+		const old_parent_section_tipo	= options.old_parent_section_tipo
+		const new_parent_section_id		= options.new_parent_section_id
+		const new_parent_section_tipo	= options.new_parent_section_tipo
 
 		/* NOTA:
 			QUEDA PENDIENTE RESETEAR EL ESTADO DE LAS FLECHAS SHOW CHILDREN DE LOS HIJOS CUANDO SE ACTUALZA EL PADRE
 			PORQUE SI NO NO SE PUEDE VOLVER A ABRIR UN LISTADO DE HIJOS (FLECHA)
 		*/
-
-		// Old parent wrap (previous parent)
-			const old_parent_wrap = ts_object.old_parent_wrap
-			if (!old_parent_wrap) {
-				console.log("[ts_object.update_parent_data] Error on find old_parent_wrap");
-				return Promise.resolve(function(){return false});
-			}
-
-		// parent wrap (current drooped new parent)
-			const parent_wrap = wrap_ts_object.parentNode.parentNode;
-			if(!parent_wrap) {
-				console.log("[ts_object.update_parent_data] Error on find parent_wrap");
-				return Promise.resolve(function(){return false});
-			}
-
-		// element_children
-			const element_children = ts_object.get_link_children_from_wrap(parent_wrap)
-
-		// If old and new wrappers are the same, no is necessary update data
-			if (old_parent_wrap===parent_wrap) {
-				console.log("[ts_object.update_parent_data] New target and old target elements are the same. No is necessary update data");
-				return Promise.resolve(function(){return false});
-			}
-
-		// short vars
-			const section_id				= wrap_ts_object.dataset.section_id
-			const section_tipo				= wrap_ts_object.dataset.section_tipo
-			const old_parent_section_id		= old_parent_wrap.dataset.section_id
-			const old_parent_section_tipo	= old_parent_wrap.dataset.section_tipo
-			const parent_section_id			= parent_wrap.dataset.section_id
-			const parent_section_tipo		= parent_wrap.dataset.section_tipo
-			const parent_node_type			= parent_wrap.dataset.node_type
-			const tipo						= element_children.dataset.tipo
 
 		// API call
 			const rqo = {
@@ -577,18 +366,16 @@ export const ts_object = new function() {
 					section_tipo			: section_tipo,
 					old_parent_section_id	: old_parent_section_id,
 					old_parent_section_tipo	: old_parent_section_tipo,
-					parent_section_id		: parent_section_id,
-					parent_section_tipo		: parent_section_tipo,
-					parent_node_type		: parent_node_type,
-					tipo					: tipo
+					new_parent_section_id	: new_parent_section_id,
+					new_parent_section_tipo	: new_parent_section_tipo
 				}
 			}
-			const js_promise = data_manager.request({
+			const api_response = data_manager.request({
 				body : rqo
 			})
 
 
-		return js_promise
+		return api_response
 	}//end update_parent_data
 
 
@@ -597,13 +384,17 @@ export const ts_object = new function() {
 	* TOGGLE_VIEW_CHILDREN
 	* @param DOM object link_children_element
 	* @param event
-	* @return promise|null
+	* @return bool
 	*/
 	this.toggle_view_children = function(link_children_element, event) {
 
 		const self = this
 
-		let result = null
+		// short vars
+			const wrapper		= link_children_element.parentNode.parentNode
+			const section_tipo	= wrapper.dataset.section_tipo
+			const section_id	= wrapper.dataset.section_id
+			const children_tipo	= wrapper.dataset.children_tipo
 
 		const children_container = self.get_my_parent_container(link_children_element, 'children_container')
 
@@ -614,11 +405,15 @@ export const ts_object = new function() {
 			link_children_element.firstChild.classList.add('ts_object_children_arrow_icon_open', 'arrow_spinner');
 
 			// Load element by AJAX
-				result = self.get_children(
-					link_children_element,
-					null, // object|null pagination
-					false // bool clean_children_container
-				);
+				self.render_children({
+					link_children_element		: link_children_element,
+					section_tipo				: section_tipo,
+					section_id					: section_id,
+					pagination					: null,
+					clean_children_container	: false, // bool clean_children_container
+					children_data				: null,
+					children_tipo				: children_tipo
+				});
 
 			// save_opened_elements
 			dd_request_idle_callback(
@@ -636,11 +431,15 @@ export const ts_object = new function() {
 
 				// Load element by AJAX
 					if (typeof event!=="undefined" && event.altKey===true) {
-						result = self.get_children(
-							link_children_element,
-							null, // object pagination
-							true // bool clean_children_container
-						);
+						self.render_children({
+							link_children_element		: link_children_element,
+							section_tipo				: section_tipo,
+							section_id					: section_id,
+							pagination					: null,
+							clean_children_container	: true, // bool clean_children_container
+							children_data				: null,
+							children_tipo				: children_tipo
+						});
 					}
 
 				// save_opened_elements
@@ -665,7 +464,7 @@ export const ts_object = new function() {
 		}
 
 
-		return result
+		return true
 	}//end toggle_view_children
 
 
@@ -839,15 +638,21 @@ export const ts_object = new function() {
 
 			const term_node = matches[i]
 
-			const parent_wrap		= term_node.parentNode.parentNode.parentNode.parentNode
-			const element_children	= ts_object.get_link_children_from_wrap(parent_wrap)
-			const is_open			= element_children?.firstChild.classList.contains('ts_object_children_arrow_icon_open')
+			const parent_wrap			= term_node.parentNode.parentNode.parentNode.parentNode
+			const link_children_element	= ts_object.get_link_children_from_wrap(parent_wrap)
+			const is_open				= link_children_element?.firstChild.classList.contains('ts_object_children_arrow_icon_open')
 
-			if(element_children && is_open) {
+			// short vars
+			const wrapper		= link_children_element.parentNode.parentNode
+			const section_tipo	= wrapper.dataset.section_tipo
+			const section_id	= wrapper.dataset.section_id
+			const children_tipo	= wrapper.dataset.children_tipo
 
-				// pagination is set in DOM element_children from API response in get_children call
-					const pagination = element_children.pagination
-						? element_children.pagination
+			if(link_children_element && is_open) {
+
+				// pagination is set in DOM link_children_element from API response in get_children call
+					const pagination = link_children_element.pagination
+						? link_children_element.pagination
 						: null
 
 					const edit_pagination = (pagination && pagination.offset>0)
@@ -866,21 +671,20 @@ export const ts_object = new function() {
 						: pagination
 
 				// load children data and build nodes
-					ts_object.get_children(
-						element_children,
-						edit_pagination, // object pagination
-						true // bool clean_children_container
-					)
+					self.render_children({
+						link_children_element		: link_children_element,
+						section_tipo				: section_tipo,
+						section_id					: section_id,
+						pagination					: null,
+						clean_children_container	: true, // bool clean_children_container
+						children_data				: null,
+						children_tipo				: children_tipo
+					})
 					.then(function() {
-						// const arrow_div = element_children.querySelector('.ts_object_children_arrow_icon')
-						// if (arrow_div && arrow_div.classList.contains('ts_object_children_arrow_icon_open')===false) {
-						// 	// Reopen arrow children
-						// 	//ts_object.toggle_view_children(element_children)
-						// }
 
 						// element to hilite
 						if (hilite) {
-							dd_request_idle_callback(
+							requestAnimationFrame(
 								() => {
 									self.hilite_element(term_node)
 								}
@@ -892,11 +696,11 @@ export const ts_object = new function() {
 							callback(term_node)
 						}
 					})
-			}else if(!element_children){
+			}else if(!link_children_element){
 				if (SHOW_DEBUG===true) {
 					console.log(new Error().stack);
 				}
-				console.log("[refresh_element] Error on find element_children for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
+				console.log("[refresh_element] Error on find link_children_element for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
 			}else{
 
 				// children_container. Reset to force load again
@@ -1041,7 +845,6 @@ export const ts_object = new function() {
 	* @return api_response
 	*/
 	this.add_child = async function(options) {
-		console.log('options:', options); return
 
 		// options
 			const section_id	= options.section_id
@@ -1524,15 +1327,13 @@ export const ts_object = new function() {
 			const element = data[key]
 
 			// target section_tipo
-				const target_section_tipo = self.is_root(element.section_tipo)
-					? Object.values(element.heritage)[0].section_tipo
-					: element.section_tipo
+				const target_section_tipo = element.section_tipo
 
 			// clean div container
 				if(is_recursion===false) {
 					// Calculate main div of each root element
 					// Search children place
-					main_div = document.querySelector('.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container')
+					main_div = document.querySelector(`.hierarchy_root_node.${element.section_tipo}>.children_container`)
 					if (main_div) {
 
 						// Clean main div (Clean previous nodes from root)
@@ -1541,13 +1342,13 @@ export const ts_object = new function() {
 						}
 
 					}else{
-						// console.log("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')
+						console.error("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')
 
-						// not parent elements case, attach to root node
-						// It search result node don't have parent, use root node as parent to allow display the term
-						if (!element.heritage) {
-							main_div = document.querySelector('.hierarchy_root_node[data-target_section_tipo="'+target_section_tipo+'"]>.children_container')
-						}
+						// // not parent elements case, attach to root node
+						// // It search result node don't have parent, use root node as parent to allow display the term
+						// if (!element.heritage) {
+						// 	main_div = document.querySelector('.hierarchy_root_node[data-target_section_tipo="'+target_section_tipo+'"]>.children_container')
+						// }
 					}
 				}
 
@@ -1561,15 +1362,14 @@ export const ts_object = new function() {
 					const ar_children_data = []
 						  ar_children_data.push(element)
 
-					const render_options = {
-						clean_children_container		: false, // Elements are added to existing main_div instead replace
-						children_container_is_loaded	: false, // Set children container as loaded
-						show_arrow_opened				: false, // Set icon arrow as opened
-						target_section_tipo				: target_section_tipo, // add always !
-						mode							: 'search'
-					}
-
 					// render children. dom_parse_children (returns a promise)
+						const render_options = {
+							clean_children_container		: false, // Elements are added to existing main_div instead replace
+							children_container_is_loaded	: false, // Set children container as loaded
+							show_arrow_opened				: false, // Set icon arrow as opened
+							target_section_tipo				: target_section_tipo, // add always !
+							mode							: 'search'
+						}
 						self.dom_parse_children(
 							ar_children_data,
 							main_div,
@@ -1772,9 +1572,9 @@ export const ts_object = new function() {
 			move_locator(ar_locators, from, to)
 
 		// short vars
-			const section_id		= wrap.dataset.section_id
-			const section_tipo		= wrap.dataset.section_tipo
-			const component_tipo	= link_children.dataset.tipo
+			const section_id	= wrap.dataset.section_id
+			const section_tipo	= wrap.dataset.section_tipo
+			const children_tipo	= wrap.dataset.children_tipo
 
 
 		return new Promise(function(resolve){
@@ -1785,9 +1585,7 @@ export const ts_object = new function() {
 					prevent_lock	: true,
 					action			: 'save_order',
 					source			: {
-						section_id		: section_id,
 						section_tipo	: section_tipo,
-						component_tipo	: component_tipo,
 						ar_locators		: ar_locators
 					}
 				}
@@ -1805,7 +1603,7 @@ export const ts_object = new function() {
 						// Refresh element
 						self.refresh_element( element_section_tipo, element_section_id )
 					}else{
-						alert("[ts_object.save_order] Error on save order. "+ self.msg )
+						alert("[ts_object.save_order] Error on save order. \n\n"+ response.msg )
 					}
 
 					resolve(response)
@@ -1833,19 +1631,26 @@ export const ts_object = new function() {
 
 		// nodes
 			const children_container	= ts_object.get_my_parent_container(button_obj, 'children_container')
-			const wrap					= button_obj.parentNode.parentNode
-			const link_children_element	= ts_object.get_link_children_from_wrap(wrap)
+			const wrapper				= button_obj.parentNode.parentNode
+			const link_children_element	= ts_object.get_link_children_from_wrap(wrapper)
+			const section_tipo			= wrapper.dataset.section_tipo
+			const section_id			= wrapper.dataset.section_id
+			const children_tipo			= wrapper.dataset.children_tipo
 
 		//console.log(nd_container.style.display);
 		if (!nd_container.style.display || nd_container.style.display==='none') {
 
 			// Load all children and hide descriptors
 				// Load element by AJAX. Result is an array on HTMLElements
-				ts_object.get_children(
-					button_obj,
-					null, // object|null pagination
-					false // bool clean_children_container
-				)
+				self.render_children({
+					link_children_element		: link_children_element,
+					section_tipo				: section_tipo,
+					section_id					: section_id,
+					pagination					: null,
+					clean_children_container	: false, // bool clean_children_container
+					children_data				: null,
+					children_tipo				: children_tipo
+				})
 				.then(function() {
 
 					// Show hidden nd_container
@@ -1883,12 +1688,17 @@ export const ts_object = new function() {
 	*/
 	this.get_my_parent_container = function(button_obj, role) {
 
+		if (!button_obj) {
+			console.error("Error on get thesaurus_node wrapper !!! empty button_obj ", button_obj);
+			return null;
+		}
+
 		let parent_container = null
 
 		// wrapper
 			const wrapper = button_obj.parentNode.parentNode
-			if (wrapper.dataset.node_type!=='thesaurus_node') {
-				console.log("Error on get thesaurus_node wrapper !!!");
+			if (!wrapper.classList.contains('wrap_ts_object')) {
+				console.error("Error on get thesaurus_node wrapper !!!");
 				return parent_container;
 			}
 
@@ -1975,6 +1785,12 @@ export const ts_object = new function() {
 
 		return ar_root_tipo.includes(tipo)
 	}//end is_root
+
+
+
+	// render alias
+	this.render_root_wrapper	= render_root_wrapper
+	this.render_children		= render_children
 
 
 

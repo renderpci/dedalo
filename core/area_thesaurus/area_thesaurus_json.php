@@ -80,14 +80,12 @@
 				}
 			}
 
-		// value . Vertical array with typologies and sections
-			$value = array_merge($ar_typologies, $hierarchy_sections);
-
 		$item = new stdClass();
-			$item->tipo		= $this->get_tipo();
-			$item->value	= $value;
+			$item->tipo			= $this->get_tipo();
+			$item->value		= $hierarchy_sections;
+			$item->typologies	= $ar_typologies;
 
-		// hierarchy_terms
+		// ts_search : hierarchy_terms (search)
 			$hierarchy_terms = $properties->hierarchy_terms ?? null;
 			if(!empty($hierarchy_terms)) {
 				$sqo	= $this->get_hierarchy_terms_sqo($hierarchy_terms);
