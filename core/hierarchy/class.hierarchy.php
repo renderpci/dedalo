@@ -1168,4 +1168,16 @@ class hierarchy extends ontology {
 
 
 
+	/**
+	* GET_ALL_MAIN_HIERARCHY_RECORDS
+	* Alias of ontology::get_all_main_ontology_records
+	* @return array $ar_records
+	*/
+	public static function get_all_main_hierarchy_records() : array {
+
+		return ontology::get_all_main_ontology_records();
+	}//end get_all_main_hierarchy_records
+
+
+
 }//end class hierarchy
