@@ -68,7 +68,7 @@ class tool_propagate_component_data extends tool_common {
 		// check match totals. If totals do not match, something wrong happens. Stop execution in that case.
 		// Note that client total value is calculated from the section instance currently viewed and the sqo
 		// is updated with context session sqo in every section build. This should keep the sqo synchronized between the client and the server.
-			if ($total_records!==$total) {
+			if ( (int)$total_records > (int)$total ) {
 				$response->errors[] = 'Totals do not match';
 				$response->msg = "Error. The total number of records does not match the number required from the tool ($total = $total_records). The process has been stopped for security.";
 				return $response;

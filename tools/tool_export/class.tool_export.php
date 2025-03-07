@@ -25,7 +25,7 @@ class tool_export extends tool_common {
 
 	/**
 	* SETUP
-	* Fix main class vars to de accessible
+	* Fix main class vars to be accessible
 	* @param object options
 	* @return void
 	*/
@@ -43,7 +43,6 @@ class tool_export extends tool_common {
 
 		// fix ar_ddo_map
 			$this->ar_ddo_map = $ar_ddo_map;
-
 		// fix sqo
 			// add filter from saved session if exists
 			$sqo_id = section::build_sqo_id($section_tipo);

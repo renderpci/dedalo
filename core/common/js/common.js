@@ -1231,7 +1231,8 @@ export const get_columns_map = function(options) {
 							: {
 								id		: dd_object.tipo,
 								label	: dd_object.tipo,
-								model	: dd_object.model
+								model	: dd_object.model,
+								tipo	: dd_object.tipo,
 							  }
 
 					// column width set
@@ -1262,6 +1263,7 @@ export const get_columns_map = function(options) {
 								const column = {
 									id		: tipo,
 									label	: tipo,
+									tipo	: tipo,
 									model	: dd_object.model
 								}
 
@@ -1287,6 +1289,7 @@ export const get_columns_map = function(options) {
 									label		: dd_object.tipo,
 									in_mosaic	: dd_object.in_mosaic,
 									hover		: dd_object.hover,
+									tipo		: dd_object.tipo,
 									model		: dd_object.model
 								}
 							)
@@ -1299,7 +1302,8 @@ export const get_columns_map = function(options) {
 								{
 									id		: dd_object.tipo,
 									label	: dd_object.tipo,
-									model	: dd_object.model
+									model	: dd_object.model,
+									tipo	: dd_object.tipo
 								}
 							)
 
@@ -1321,7 +1325,8 @@ export const get_columns_map = function(options) {
 				const column_item = columns_map[i]
 
 				// all columns has a label property that point to the ddo tipo to use, finding the ddo it is possible obtain the label to use in the column.
-					const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label)
+				// when the column was built the columns will has tipo, therefore the ddo_object is possible to get from tipo in the column
+					const ddo_object = full_ddo_map.find(el => el.tipo===column_item.label || el.tipo===column_item.tipo)
 
 				// add tipo always
 					column_item.tipo = ddo_object
@@ -1383,10 +1388,25 @@ export const get_columns_map = function(options) {
 	// column component_info
 		const value_with_parents = full_ddo_map.find(el => el.value_with_parents === true)
 		if (value_with_parents) {
-			columns_map.push({
-				id			: 'ddinfo',
-				label		: 'Info'
-			})
+			// check if the component with parents has specific column
+			// if it has columns add the column with ddinfo after the component with parents
+			// else the `ddinfo` will go to the last position
+			// is used to put the component_dataframe before the `ddinfo` column
+			// or used when the component has more than 1 component with `ddinfo`.
+			// See behavior and the ontology definition of `tch555
+			const index = columns_map.findIndex(el => el.tipo === value_with_parents.tipo)
+			if(index>=0){
+				columns_map.splice(index+1,0,{
+					id			: 'ddinfo',
+					label		: 'Info'
+				})
+			}else{
+				columns_map.push({
+					id			: 'ddinfo',
+					label		: 'Info'
+				})
+			}
+
 		}
 
 	// debug
