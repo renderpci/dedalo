@@ -911,7 +911,7 @@ class ontology {
 		if( $safe_tld === false){
 			debug_log(__METHOD__
 				. " Error. current tld is not valid " . PHP_EOL
-				. to_string( $tld )
+				. ' tld: ' . to_string( $tld )
 				, logger::ERROR
 			);
 
@@ -1360,9 +1360,9 @@ class ontology {
 
 				debug_log(__METHOD__
 					. " Record without is_model_data " . PHP_EOL
-					. 'section_tipo		: ' . to_string($section_tipo). PHP_EOL
-					. 'section_id		: ' . to_string($section_id). PHP_EOL
-					. 'is_model_tipo	: ' . to_string($is_model_tipo)
+					. ' section_tipo  : ' . to_string($section_tipo). PHP_EOL
+					. ' section_id    : ' . to_string($section_id). PHP_EOL
+					. ' is_model_tipo : ' . to_string($is_model_tipo)
 					, logger::DEBUG
 				);
 
@@ -1437,9 +1437,9 @@ class ontology {
 
 				debug_log(__METHOD__
 					. " Record without is_descriptor_data " . PHP_EOL
-					. 'section_tipo		: ' . to_string($section_tipo). PHP_EOL
-					. 'section_id		: ' . to_string($section_id). PHP_EOL
-					. 'is_descriptor_tipo	: ' . to_string($is_descriptor_tipo)
+					. ' section_tipo       : ' . to_string($section_tipo). PHP_EOL
+					. ' section_id         : ' . to_string($section_id). PHP_EOL
+					. ' is_descriptor_tipo : ' . to_string($is_descriptor_tipo)
 					, logger::DEBUG
 				);
 
@@ -1497,10 +1497,10 @@ class ontology {
 			if(empty($order_data)){
 
 				debug_log(__METHOD__
-					. " Record without order_data " . PHP_EOL
-					. ' section_tipo		: ' . to_string($section_tipo). PHP_EOL
-					. ' section_id		: ' . to_string($section_id). PHP_EOL
-					. ' order_tipo	: ' . to_string($order_tipo)
+					. ' Record without order_data ' . PHP_EOL
+					. ' section_tipo : ' . to_string($section_tipo). PHP_EOL
+					. ' section_id   : ' . to_string($section_id). PHP_EOL
+					. ' order_tipo   : ' . to_string($order_tipo)
 					, logger::DEBUG
 				);
 
@@ -1528,9 +1528,9 @@ class ontology {
 
 				debug_log(__METHOD__
 					. " Record without translatable_data " . PHP_EOL
-					. ' section_tipo			: ' . to_string($section_tipo). PHP_EOL
-					. ' section_id			: ' . to_string($section_id). PHP_EOL
-					. ' translatable_tipo	: ' . to_string($translatable_tipo)
+					. ' section_tipo      : ' . to_string($section_tipo). PHP_EOL
+					. ' section_id        : ' . to_string($section_id). PHP_EOL
+					. ' translatable_tipo : ' . to_string($translatable_tipo)
 					, logger::DEBUG
 				);
 
@@ -1718,8 +1718,8 @@ class ontology {
 
 			debug_log(__METHOD__
 				. " Empty tld from locator " . PHP_EOL
-				. 'locator: ' . to_string( $locator )
-				. 'The section_tipo needs to exist in the main ontology!'
+				. ' locator: ' . to_string( $locator )
+				. ' The section_tipo needs to exist in the main ontology!'
 				, logger::WARNING
 			);
 
@@ -1742,7 +1742,7 @@ class ontology {
 
 				debug_log(__METHOD__
 					. " Empty tld from locator " . PHP_EOL
-					. 'locator: ' . to_string($locator )
+					. ' locator: ' . to_string($locator )
 					, logger::ERROR
 				);
 

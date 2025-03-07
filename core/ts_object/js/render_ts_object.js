@@ -1049,7 +1049,11 @@ const render_delete_record_dialog = function (options) {
 					}
 
 					// refresh wrap
-					ts_object.refresh_element(section_tipo, section_id)
+					ts_object.refresh_element(
+						section_tipo,
+						section_id,
+						false
+					)
 
 					// close modal
 					modal.close()

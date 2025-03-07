@@ -63,7 +63,7 @@ class ts_object {
 	*/
 	public static function get_ar_elements( string $section_tipo, ?bool $model=false ) : array {
 
-		$ar_elements = array();
+		$ar_elements = [];
 
 		// Elements are stored in current section > section_list_thesaurus
 		// Search element in current section
@@ -128,8 +128,7 @@ class ts_object {
 						}
 					// add
 					$ar_elements[] = $current_ddo;
-				}//end foreach ($ar_properties as $key => $value_obj)
-				// $ar_elements = array_values($ar_properties);
+				}//end foreach ($properties as $key => $value_obj)
 			}
 
 
@@ -240,7 +239,7 @@ class ts_object {
 		// short vars
 			$separator = ' ';
 
-		// elements
+		// elements from 'section_list_thesaurus' properties
 		// Sample value:
 			// [
 			//     {
@@ -275,13 +274,18 @@ class ts_object {
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
 		foreach ($ar_elements as $current_object) {
 
-			$render_vars = $current_object;
+			// sample
+				// 	{
+				// 	 "icon": "TCHI",
+				// 	 "tipo": "tchi59",
+				// 	 "type": "icon"
+				// 	}
 
 			// element_tipo
 				$current_element_tipo = $current_object->tipo ?? null;
 				if (empty($current_element_tipo)) {
 					debug_log(__METHOD__
-						." Error. Ignored empty element_tipo in current_object" . PHP_EOL
+						." Warning. Ignored bad formed empty element_tipo in current_object" . PHP_EOL
 						.' current_element_tipo:'. to_string($current_element_tipo) . PHP_EOL
 						.' current_object:'. to_string($current_object)
 						, logger::WARNING
@@ -304,7 +308,7 @@ class ts_object {
 					$element_obj->type	= $render_vars->type;
 					$element_obj->tipo	= $current_element_tipo;
 
-				// element_tipo iterate tipo
+			// iterate every tipo
 				foreach ($ar_element_tipo as $element_tipo) {
 
 					$model_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
@@ -417,7 +421,7 @@ class ts_object {
 										continue 3;
 									}
 
-								# icon Not need more info. Value is property 'type'
+								// icon do not need more info. Value is property 'type'
 								$element_obj->value = $render_vars->icon;
 
 								if ($model_name==='component_relation_index') {
