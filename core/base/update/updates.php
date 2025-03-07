@@ -34,6 +34,8 @@
 global $updates;
 $updates = new stdClass();
 
+
+
 $v=650; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -81,7 +83,7 @@ $updates->$v = new stdClass();
 
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
-		// update time machine data. Update 'data' of time_machine for comopnent_dataframe
+		// swaps data between component_relation_children and  component_relation_parent (v6.5 model)
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data_v6_5_0.php';
 			$script_obj = new stdClass();
 				$script_obj->info			= "Set component parent data with the component children data. Set all thesaurus data as parent relation model, able to be independent hierarchies to implement local ontologies";
@@ -90,14 +92,15 @@ $updates->$v = new stdClass();
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
-		//add new root node with hierarchy data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data_v6_5_0.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Add new node in the hierarchies that has multiple root nodes, unify the criteria of the thesaurus";
-				$script_obj->script_class	= "transform_data_v6_5_0";
-				$script_obj->script_method	= "add_root_node";
-				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
+		// add new root node with hierarchy data
+			// require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data_v6_5_0.php';
+			// $script_obj = new stdClass();
+			// 	$script_obj->info			= "Add new node in the hierarchies that has multiple root nodes, unify the criteria of the thesaurus";
+			// 	$script_obj->script_class	= "transform_data_v6_5_0";
+			// 	$script_obj->script_method	= "add_root_node";
+			// 	$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			// $updates->$v->run_scripts[] = $script_obj;
+
 
 
 $v=644; #####################################################################################
@@ -117,6 +120,8 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
 		');
+
+
 
 $v=643; #####################################################################################
 $updates->$v = new stdClass();
@@ -166,6 +171,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
 		');
+
 
 
 $v=641; #####################################################################################

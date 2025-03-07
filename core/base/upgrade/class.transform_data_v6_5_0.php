@@ -42,6 +42,7 @@ class transform_data_v6_5_0 {
 			// 'matrix_tools',
 			// 'matrix_users'
 			];
+
 		$action = 'transform_data_v6_5_0::set_parent_data_from_children_data';
 
 		update::convert_table_data($ar_tables, $action);
@@ -59,7 +60,6 @@ class transform_data_v6_5_0 {
 	*/
 	public static function set_parent_data_from_children_data(?object $datos) : ?object {
 
-
 		// empty relations cases
 			if (empty($datos->relations)) {
 				return null;
@@ -69,9 +69,8 @@ class transform_data_v6_5_0 {
 			$to_save = false;
 
 		// get the tipo
-			$ar_components_parent_tipo		= self::get_all_compnent_parent();
+			// $ar_components_parent_tipo	= self::get_all_compnent_parent();
 			$ar_components_children_tipo	= self::get_all_compnent_children();
-
 
 		// resolve the change using relations container
 			$section_id		= $datos->section_id;
@@ -92,7 +91,15 @@ class transform_data_v6_5_0 {
 					$parent_section_tipo	= $locator->section_tipo;
 					$parent_section_id		= $locator->section_id;
 					$ar_parent_tipo			= component_relation_children::get_ar_related_parent_tipo($locator->from_component_tipo, $section_tipo);
-					$parent_tipo			= $ar_parent_tipo[0];
+					$parent_tipo			= $ar_parent_tipo[0] ?? null;
+					if (empty($parent_tipo)) {
+						debug_log(__METHOD__
+							. " Ignored empty parent tipo for locator " . PHP_EOL
+							. ' locator: ' . to_string($locator)
+							, logger::ERROR
+						);
+						continue;
+					}
 
 					$parent_locator_data = new locator();
 						$parent_locator_data->set_section_tipo( $section_tipo );
@@ -100,12 +107,11 @@ class transform_data_v6_5_0 {
 						$parent_locator_data->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
 						$parent_locator_data->set_from_component_tipo( $parent_tipo );
 
-
 					$parent_set_result = self::set_parent_data($parent_section_tipo, $parent_section_id, $parent_locator_data);
-
 					if($parent_set_result===false){
 						return null;
 					}
+
 					// remove current locator
 					// children locators are not used anymore
 					unset($datos->relations[$key]);
@@ -129,12 +135,11 @@ class transform_data_v6_5_0 {
 
 	/**
 	* GET_ALL_COMPNENT_PARENT
-	* @return
+	* @return array $ar_components_parent_tipo
 	*/
-	private static function get_all_compnent_parent() {
+	private static function get_all_compnent_parent() : array {
 
 		static $ar_components_parent_tipo;
-
 		if(isset($ar_components_parent_tipo) ){
 			return $ar_components_parent_tipo;
 		}
@@ -148,12 +153,11 @@ class transform_data_v6_5_0 {
 
 	/**
 	* GET_ALL_COMPNENT_CHILDREN
-	* @return
+	* @return array $ar_components_children_tipo
 	*/
-	private static function get_all_compnent_children() {
+	private static function get_all_compnent_children() : array {
 
 		static $ar_components_children_tipo;
-
 		if(isset($ar_components_children_tipo) ){
 			return $ar_components_children_tipo;
 		}
@@ -164,6 +168,7 @@ class transform_data_v6_5_0 {
 	}//end get_all_compnent_children
 
 
+
 	/**
 	* SET_PARENT_DATA
 	* Update matrix_table with the new parent locator
@@ -172,7 +177,7 @@ class transform_data_v6_5_0 {
 	* @param locator $parent_locator_data
 	* @return bool
 	*/
-	private static function set_parent_data( string $parent_section_tipo, string|int $parent_section_id, locator $parent_locator_data) : bool {
+	private static function set_parent_data( string $parent_section_tipo, string|int $parent_section_id, locator $parent_locator_data ) : bool {
 
 		$matrix_table = section::get_matrix_table_from_tipo( $parent_section_tipo );
 
@@ -216,7 +221,7 @@ class transform_data_v6_5_0 {
 		// it save time machine for both.
 		$n_rows = pg_num_rows($result);
 		if ($n_rows<1) {
-			//create new section
+			// create new section
 			$section = section::get_instance(
 				$parent_section_id, // string|null section_id
 				$parent_section_tipo // string section_tipo
@@ -288,87 +293,118 @@ class transform_data_v6_5_0 {
 
 	/**
 	* ADD_ROOT_NODE
-	* @return
+	* Add new node in the hierarchies that has multiple root nodes, unify the criteria of the thesaurus
+	* @return bool
 	*/
-	public function add_root_node() {
+	public static function add_root_node() : bool {
 
-		$hierarchies_records = hierarchy::get_all_main_ontology_records();
+		// unfinished !
 
-		foreach ($hierarchies_records as $row) {
+		$main_hierarchy_records = hierarchy::get_all_main_hierarchy_records();
+		foreach ($main_hierarchy_records as $row) {
 
 			$hierarchy_section_id	= $row->section_id;
 			$hierarchy_section_tipo	= $row->section_tipo;
 
+			// component children
 			$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_CHILDREN_TIPO);
-			$component_term = component_common::get_instance(
+			$component_children = component_common::get_instance(
 				$model, // string model
 				DEDALO_HIERARCHY_CHILDREN_TIPO, // string tipo
 				$hierarchy_section_id, // string section_id
-				'edit', // string mode
+				'list', // string mode
 				DEDALO_DATA_NOLAN, // string lang
 				$hierarchy_section_tipo // string section_tipo
 			);
 
-			$term_data = $component_term->get_dato();
+			$children_data = $component_children->get_dato();
 
-			$total = count($term_data);
+			$total = count($children_data);
 
-			if($total > 1){
+			if ($total < 2) {
+				// It's not necessary to group nothing. Skip this row
+				continue;
+			}
 
-				// create the target section component
-					$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO);
-					$destination_section_component = component_common::get_instance(
-						$model, // string model
-						DEDALO_HIERARCHY_TARGET_SECTION_TIPO, // string tipo
-						$hierarchy_section_id, // string section_id
-						'edit', // string mode
-						DEDALO_DATA_NOLAN, // string lang
-						$hierarchy_section_tipo // string section_tipo
+			// create the target section component
+				$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO);
+				$destination_section_component = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TARGET_SECTION_TIPO, // string tipo
+					$hierarchy_section_id, // string section_id
+					'edit', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$hierarchy_section_tipo // string section_tipo
+				);
+
+			// create new section as top term
+				$target_section_tipo = $destination_section_component->get_value();
+				if (empty($target_section_tipo)) {
+					debug_log(__METHOD__
+						. " Ignored invalid target_section_tipo from value of component" . PHP_EOL
+						. ' component_tipo: ' . DEDALO_HIERARCHY_TARGET_SECTION_TIPO . PHP_EOL
+						. ' target_section_tipo: ' . to_string($target_section_tipo)
+						, logger::ERROR
 					);
+					continue;
+				}
 
-				// create new section as top term
-					$target_section = $destination_section_component->get_value();
+				$new_section = section::get_instance(
+					null, // string|null section_id
+					$target_section_tipo // string section_tipo
+				);
+				$new_section_id = $new_section->Save();
 
-					$new_section = section::get_instance(
-						null, // string|null section_id
-						$target_section // string section_tipo
-					);
+			// create the child nodes of every locator and inject the new data
+				foreach ($children_data as $children_locator) {
 
-					$new_section_id = $new_section->Save();
-
-				// create the child nodes of every locator and inject the new data
-					foreach ($term_data as $children_locator) {
-
-						$component_tipo = component_relation_parent::get_parent_tipo( $children_locator->section_tipo );
-
-						$parent_locator_data = new locator();
-							$parent_locator_data->set_section_tipo( $target_section );
-							$parent_locator_data->set_section_id( $new_section_id );
-							$parent_locator_data->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
-							$parent_locator_data->set_from_component_tipo( $component_tipo );
-
-						// create new component with parent data
-						$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-						$parent_component = component_common::get_instance(
-							$model, // string model
-							$component_tipo, // string tipo
-							$children_locator->section_id, // string section_id
-							'edit', // string mode
-							DEDALO_DATA_NOLAN, // string lang
-							$children_locator->section_tipo // string section_tipo
+					$component_parent_tipo = component_relation_parent::get_parent_tipo( $children_locator->section_tipo );
+					if (empty($component_parent_tipo)) {
+						debug_log(__METHOD__
+							. " Ignored unresolved component parent tipo from locator " . PHP_EOL
+							. ' children_locator: ' . to_string($children_locator)
+							, logger::ERROR
 						);
-						$parent_component->set_dato( $parent_locator_data );
-						$parent_component->Save();
+						continue;
 					}
 
-				// assign the new term data as term component
-					$locator_data = new locator();
-							$locator_data->set_section_tipo( $target_section );
-							$locator_data->set_section_id( $new_section_id );
+					// create new component_relationparent and add parent data
+					$model = RecordObj_dd::get_modelo_name_by_tipo( $component_parent_tipo );
+					$parent_component = component_common::get_instance(
+						$model, // string model
+						$component_parent_tipo, // string tipo
+						$children_locator->section_id, // string section_id
+						'edit', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$children_locator->section_tipo // string section_tipo
+					);
 
-					$destination_section_component->set_dato([$locator_data]);
-					$destination_section_component->Save();
-			}
-		}
+					$parent_locator_data = new locator();
+						$parent_locator_data->set_section_tipo( $target_section_tipo );
+						$parent_locator_data->set_section_id( $new_section_id );
+						$parent_locator_data->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
+						$parent_locator_data->set_from_component_tipo( $component_parent_tipo );
+
+					$parent_component->set_dato( $parent_locator_data );
+
+					$parent_component->Save();
+				}
+
+			// assign the new term data as term component
+				// (!) WORKING ON IT
+				// $locator_data = new locator();
+				// 	$locator_data->set_section_tipo( $target_section_tipo );
+				// 	$locator_data->set_section_id( $new_section_id );
+
+				// $destination_section_component->set_dato([$locator_data]);
+				// $destination_section_component->Save();
+
+		}//end foreach ($main_hierarchy_records as $row)
+
+
+		return true;
 	}//end add_root_node
-}
+
+
+
+}//end transform_data_v6_5_0
