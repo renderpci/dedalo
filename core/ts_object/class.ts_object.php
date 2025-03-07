@@ -70,7 +70,7 @@ class ts_object {
 			$ar_model_name_required = array('section_list_thesaurus');
 
 		// Search in current section
-			$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
+			$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
 				$section_tipo, // tipo
 				$ar_model_name_required, // ar_modelo_name_required
 				true, // from_cache
@@ -78,17 +78,16 @@ class ts_object {
 				false, // recursive
 				true // search_exact
 			);
-			# relation map defined in properties
-			$ar_properties = (function($ar_children){
-				if (!isset($ar_children[0])) {
-					return false;
-				}
+			// relation map defined in properties
+			$children_tipo	= $ar_children[0] ?? null;
+			$properties		= null;
+			if ($children_tipo) {
 				$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
-				return $RecordObj_dd->get_properties();
-			})($ar_children);
+				$properties		= $RecordObj_dd->get_properties();
+			}
 
 			// Fallback to real section when in virtual
-			if (empty($ar_properties)) {
+			if ( empty($properties) ) {
 				$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 				if ($section_tipo!==$section_real_tipo) {
 					$ar_children  = section::get_ar_children_tipo_by_model_name_in_section(
@@ -102,15 +101,15 @@ class ts_object {
 					// relation map defined in properties
 					if (isset($ar_children[0])) {
 						$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
-						$ar_properties	= $RecordObj_dd->get_properties();
+						$properties		= $RecordObj_dd->get_properties();
 					}
 				}
-			}//end if (!isset($ar_children[0]))
+			}//end if (empty($properties))
 
 		// If element exists (section_list_thesaurus) we get element 'properties' JSON value as array
-			if ( isset($ar_properties->show) && isset($ar_properties->show->ddo_map) ) {
+			if ( isset($properties->show) && isset($properties->show->ddo_map) ) {
 
-				$ddo_map = $ar_properties->show->ddo_map;
+				$ddo_map = $properties->show->ddo_map;
 				foreach ($ddo_map as $current_ddo) {
 
 					$type = $current_ddo->type ?? null;
@@ -120,7 +119,7 @@ class ts_object {
 							continue;
 						}else if ($model===true) {
 							if ( $type==='link_children' && ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO || $section_tipo===DEDALO_ONTOLOGY_SECTION_TIPO) ) {
-								// unset($ar_properties[$key]);
+								// unset($properties[$key]);
 								continue;
 							}else if ( $type==='link_children_model' ) {
 								$current_ddo->type = 'link_children';
@@ -294,7 +293,7 @@ class ts_object {
 				}
 
 			// No descriptors do not have children. Avoid calculate children
-				if ($child_data->is_descriptor===false && $render_vars->type==='link_children') {
+				if ($child_data->is_descriptor===false && $current_object->type==='link_children') {
 					continue;
 				}
 
@@ -305,7 +304,7 @@ class ts_object {
 
 			// Each element
 				$element_obj = new stdClass();
-					$element_obj->type	= $render_vars->type;
+					$element_obj->type	= $current_object->type;
 					$element_obj->tipo	= $current_element_tipo;
 
 			// iterate every tipo
@@ -404,14 +403,12 @@ class ts_object {
 
 							case ($element_obj->type==='icon'):
 
-								if($render_vars->icon==='CH') {
+								if($current_object->icon==='CH') {
 									continue 3;
 								}
 
 								// ND element can change term value when 'esdescriptor' value is 'no' (locator of 'no')
-									if($render_vars->icon==='ND') {
-										#debug_log(__METHOD__." children_data->ar_elements ".to_string($child_data->ar_elements), logger::DEBUG);
-										#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
+									if($current_object->icon==='ND') {
 										if (isset($dato[0])
 											&& isset($dato[0]->section_id)
 											&& (int)$dato[0]->section_id===2) {
@@ -422,7 +419,7 @@ class ts_object {
 									}
 
 								// icon do not need more info. Value is property 'type'
-								$element_obj->value = $render_vars->icon;
+								$element_obj->value = $current_object->icon;
 
 								if ($model_name==='component_relation_index') {
 
