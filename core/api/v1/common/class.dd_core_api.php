@@ -1624,6 +1624,10 @@ final class dd_core_api {
 					if ( !property_exists($sqo, 'filter_by_locators') && isset($sqo_session) && isset($sqo_session->filter_by_locators) ) {
 						$sqo->filter_by_locators = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter_by_locators;
 					}
+					// add children_recursive from session if not defined (and session yes)
+					if ( !property_exists($sqo, 'children_recursive') && isset($sqo_session) && isset($sqo_session->children_recursive) ) {
+						$sqo->children_recursive = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->children_recursive;
+					}
 				}
 
 			}else{
