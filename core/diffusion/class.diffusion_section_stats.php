@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS DIFFUSION_SECTION_STATS
 * Manages user activity methods
@@ -32,23 +32,6 @@ class diffusion_section_stats extends diffusion {
 		protected $diffusion_map_object;	// Current stored diffusion_map data
 		protected $js_ar_obj;	// Final object for send to JAVASCRIPT diffusion_section_stats.build_charts
 		static $geoip_mm;
-
-
-
-	/**
-	* CONSTRUCT
-	*/
-		// function __construct( $caller_section_tipo, $date ) {
-
-		// 	if (empty($caller_section_tipo)) {
-		// 		#throw new Exception("Error Processing Request. Empty caller_section_tipo", 1);
-		// 	}
-		// 	$this->caller_section_tipo = $caller_section_tipo;
-		// 	$this->date = $date;
-
-
-		// 	$this->domain = 'dedalo';
-		// }//end __construct
 
 
 
@@ -682,7 +665,7 @@ class diffusion_section_stats extends diffusion {
 				for ($i=0; $i < 24; $i++) {
 					$when_data_obj->{$i} = (object)[
 						'key'	=> $i,
-						'label'	=> str_pad($i, 2, '0', STR_PAD_LEFT),
+						'label'	=> str_pad((string)$i, 2, '0', STR_PAD_LEFT),
 						'value'	=> 0
 					];
 				}
