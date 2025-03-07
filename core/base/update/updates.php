@@ -34,24 +34,6 @@
 global $updates;
 $updates = new stdClass();
 
-$v=645; #####################################################################################
-$updates->$v = new stdClass();
-
-	# UPDATE TO
-	$updates->$v->version_major			= 6;
-	$updates->$v->version_medium		= 4;
-	$updates->$v->version_minor			= 5;
-
-	# MINIMUM UPDATE FROM
-	$updates->$v->update_from_major		= 6;
-	$updates->$v->update_from_medium	= 4;
-	$updates->$v->update_from_minor		= 4;
-
-	// Re-index and vacuum tables
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
-		');
-
 
 $v=650; #####################################################################################
 $updates->$v = new stdClass();
@@ -117,6 +99,26 @@ $updates->$v = new stdClass();
 			// 	$script_obj->script_method	= "add_root_node";
 			// 	$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			// $updates->$v->run_scripts[] = $script_obj;
+
+
+
+$v=645; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 4;
+	$updates->$v->version_minor			= 5;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 4;
+	$updates->$v->update_from_minor		= 4;
+
+	// Re-index and vacuum tables
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
+		');
 
 
 
