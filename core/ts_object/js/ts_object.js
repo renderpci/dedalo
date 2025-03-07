@@ -914,9 +914,9 @@ export const ts_object = new function() {
 		const self = this
 
 		// short vars
-			const wrap			= button_obj.parentNode.parentNode;
-			const section_tipo	= wrap.dataset.section_tipo
-			const section_id	= wrap.dataset.section_id
+			const wrapper		= button_obj.parentNode.parentNode;
+			const section_tipo	= wrapper.dataset.section_tipo
+			const section_id	= wrapper.dataset.section_id
 			const type			= button_obj.dataset.type
 			const tipo			= button_obj.dataset.tipo
 			const tipos			= tipo.split(',')
@@ -928,6 +928,13 @@ export const ts_object = new function() {
 		// render_component_node function
 			const components = [] // array of created component instances
 			const render_component_node = async function(tipo, key) {
+
+				const loader = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'loader loading',
+					inner_html		: 'Loading component..',
+					parent			: element_data_contanier
+				})
 
 				const model = await data_manager.resolve_model(tipo, section_tipo)
 
@@ -992,6 +999,11 @@ export const ts_object = new function() {
 					// build and render component
 						await current_component.build(true)
 						const component_node = await current_component.render()
+						// set pointer instance to DOM node
+						component_node.instance = current_component
+
+					// loader
+						loader.remove()
 
 					// activate
 						if (key===0) {
@@ -1006,7 +1018,6 @@ export const ts_object = new function() {
 			}//end render_component_node
 
 		// data_contanier
-			const wrapper					= button_obj.parentNode.parentNode;
 			const element_data_contanier	= [...wrapper.childNodes].find(el => el.classList.contains('data_container'))
 			const all_element_data_div		= element_data_contanier.children // childNodes;
 
@@ -1014,38 +1025,24 @@ export const ts_object = new function() {
 			const all_element_data_div_len = all_element_data_div.length
 			if (all_element_data_div_len > 0) { // if the data element is not empty
 
-				// get the tipo in the class name of the node element
-				// const element_is_different = element_data_contanier.firstChild.classList.contains(tipo) ? false : true
-				// if the element is different that user want to show
-				// if(element_is_different) {
-
-				// 	// remove all nodes
-				// 	for (let i = all_element_data_div_len - 1; i >= 0; i--) {
-				// 		all_element_data_div[i].remove()
-				// 	}
-
-				// 	// add the new one
-				// 	tipos.map(async (current_tipo)=>{
-				// 		const component_node = await render_component_node(current_tipo)
-				// 		element_data_contanier.appendChild(component_node)
-				// 	})
-
-				// }else{
-					// only remove all nodes
-					for (let i = all_element_data_div_len - 1; i >= 0; i--) {
-						all_element_data_div[i].remove()
+				for (let i = all_element_data_div_len - 1; i >= 0; i--) {
+					const component_wrapper = all_element_data_div[i]
+					if (component_wrapper.instance.tipo===tipo) {
+						// this component already exists. Remove it and stop
+						component_wrapper.instance.destroy(true, true, true)
+						return true
 					}
-				// }
+					// destroy component instance
+					component_wrapper.instance.destroy(true, true, true)
+				}
+			}
 
-			}else{ // if the data element is empty (first click to show)
-
-				// add nodes
-					const tipos_length = tipos.length
-					for (let i = 0; i < tipos_length; i++) {
-						const current_tipo = tipos[i]
-						const component_node = await render_component_node(current_tipo, i)
-						element_data_contanier.appendChild(component_node)
-					}
+		// render components and add nodes
+			const tipos_length = tipos.length
+			for (let i = 0; i < tipos_length; i++) {
+				const current_tipo = tipos[i]
+				const component_node = await render_component_node(current_tipo, i)
+				element_data_contanier.appendChild(component_node)
 			}
 
 
