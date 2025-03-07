@@ -45,7 +45,7 @@ $updates->$v = new stdClass();
 	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 4;
-	$updates->$v->update_from_minor		= 3;
+	$updates->$v->update_from_minor		= 4;
 
 	// Create matrix_ontology indexes. Mandatory to resolve children data
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
