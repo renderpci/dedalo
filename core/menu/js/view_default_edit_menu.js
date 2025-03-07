@@ -257,8 +257,9 @@ const get_content_data_edit = function(self) {
 	// application lang selector
 		const lang_datalist = page_globals.dedalo_application_langs
 		const dedalo_aplication_langs_selector = ui.build_select_lang({
-			langs		: lang_datalist,
-			action		: function(e) {
+			name	: 'dedalo_application_langs',
+			langs	: lang_datalist,
+			action	: function(e) {
 				// executed on change event
 				e.preventDefault()
 				change_lang({
@@ -283,8 +284,9 @@ const get_content_data_edit = function(self) {
 				}
 			})
 			const dedalo_data_langs_selector = ui.build_select_lang({
-				langs		: lang_datalist_data,
-				action		: function(e) {
+				name	: 'dedalo_data_lang',
+				langs	: lang_datalist_data,
+				action	: function(e) {
 					// executed on change event
 					e.preventDefault()
 					change_lang({
