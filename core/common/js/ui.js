@@ -1929,6 +1929,7 @@ export const ui = {
 
 		// options
 			const id			= options.id || null
+			const name			= options.name || null
 			const langs			= options.langs ||
 								  page_globals.dedalo_projects_default_langs ||
 								  [{
@@ -1976,6 +1977,7 @@ export const ui = {
 		// select
 			const select_lang = ui.create_dom_element({
 				id				: id,
+				name			: name,
 				element_type	: 'select',
 				class_name		: class_name
 			})

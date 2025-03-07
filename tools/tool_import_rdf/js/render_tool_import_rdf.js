@@ -83,6 +83,7 @@ const get_content_data_edit = async function(self) {
 		})
 		const lang_datalist						= page_globals.dedalo_projects_default_langs
 		const dedalo_aplication_langs_selector	= ui.build_select_lang({
+			name		: 'dedalo_aplication_langs_selector',
 			langs		: lang_datalist,
 			selected	: page_globals.dedalo_application_lang,
 			class_name	: 'dedalo_aplication_langs_selector',
