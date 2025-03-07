@@ -76,6 +76,7 @@ class transform_data_v6_5_0 {
 			$section_id		= $datos->section_id;
 			$section_tipo	= $datos->section_tipo;
 			$relations		= $datos->relations ?? []; 	// relations container iteration
+			$order			= 0;
 			foreach ($relations as $key => $locator) {
 				// check if the section has any children data
 				if( $locator->type===DEDALO_RELATION_TYPE_CHILDREN_TIPO
@@ -87,6 +88,8 @@ class transform_data_v6_5_0 {
 						$to_save = true;
 						continue;
 					}
+					// add 1 to order.
+					$order++;
 
 					$parent_section_tipo	= $locator->section_tipo;
 					$parent_section_id		= $locator->section_id;
@@ -107,7 +110,7 @@ class transform_data_v6_5_0 {
 						$parent_locator_data->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
 						$parent_locator_data->set_from_component_tipo( $parent_tipo );
 
-					$parent_set_result = self::set_parent_data($parent_section_tipo, $parent_section_id, $parent_locator_data);
+					$parent_set_result = self::set_parent_data($parent_section_tipo, $parent_section_id, $parent_locator_data, $order);
 					if($parent_set_result===false){
 						return null;
 					}
@@ -177,7 +180,7 @@ class transform_data_v6_5_0 {
 	* @param locator $parent_locator_data
 	* @return bool
 	*/
-	private static function set_parent_data( string $parent_section_tipo, string|int $parent_section_id, locator $parent_locator_data ) : bool {
+	private static function set_parent_data( string $parent_section_tipo, string|int $parent_section_id, locator $parent_locator_data, int $order ) : bool {
 
 		$matrix_table = section::get_matrix_table_from_tipo( $parent_section_tipo );
 
@@ -241,6 +244,33 @@ class transform_data_v6_5_0 {
 			);
 			$parent_component->set_dato( [$parent_locator_data] );
 			$parent_component->Save();
+
+			// set order
+			$section_map			= section::get_section_map( $parent_section_tipo );
+			$component_order_tipo	= $section_map->thesaurus->order ?? null;
+
+			if( empty($component_order_tipo) ){
+				$msg = "Failed to locate order in section_map of $parent_section_tipo ----------------------- review your ontology definition";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					.' section_tipo: ' . $parent_section_tipo . PHP_EOL
+					, logger::ERROR
+				);
+				return false;
+			}
+
+			// create new component order with parent data
+			$model_order = RecordObj_dd::get_modelo_name_by_tipo($component_order_tipo);
+			$order_component = component_common::get_instance(
+				$model_order, // string model
+				$component_order_tipo, // string tipo
+				$parent_section_id, // string section_id
+				'edit', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$parent_section_tipo // string section_tipo
+			);
+			$order_component->set_dato( [$order] );
+			$order_component->Save();
 
 			return true;
 		}
