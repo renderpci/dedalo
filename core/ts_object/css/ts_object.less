@@ -342,12 +342,12 @@
 			background-color: @color_orange_dedalo;
 			opacity: 0.6;
 			border: 0px;
-			padding-left: 4px;
-			padding-right: 3px;
+			padding-left: 3px;
+			padding-right: 2.5px;
 			color: @color_white;
 			border-radius: 3px;
 			margin: 0px;
-			height: 19px;
+			height: 17px;
 			width: initial;
 			font-size: 12px;
 			margin-right: 5px;
@@ -433,6 +433,9 @@
 					border-top-color: @color_orange_dedalo;
 					border-radius: 50%;
 					animation: run_spinner 800ms linear infinite;
+					// overwrite
+					left: 0rem;
+					top: 1px;
 				}
 			}
 		}
@@ -505,6 +508,10 @@
 
 			&:hover {
 				opacity: 1;
+			}
+
+			&:active {
+				opacity: 0.4;
 			}
 		}
 
@@ -615,6 +622,14 @@
 		height: auto;
 		margin-top: 1rem;
 		margin-bottom: 1rem;
+
+		>.loader {
+			width: 100%;
+			display: inline-block;
+			padding-top: 1.8rem;
+			padding-bottom: 1.5rem;
+			padding-left: 2rem;
+		}
 
 		// all components showed inside
 		>.wrapper_component {
