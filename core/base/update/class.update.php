@@ -323,11 +323,11 @@ class update {
 						$log_line .= PHP_EOL . 'current_script: ' . to_string($current_script);
 						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
-					$run_scripts	= update::run_scripts($current_script);
-					$cmsg			= $run_scripts->msg;
+					$run_scripts_response	= update::run_scripts($current_script);
+					$cmsg			= $run_scripts_response->msg;
 					$msg[]			= "Updated run scripts: ".to_string($cmsg);
 
-					if ($run_scripts->result===false) {
+					if ($run_scripts_response->result===false) {
 
 						array_push($msg, 'Error on run_scripts: '.to_string($current_script));
 
@@ -349,12 +349,28 @@ class update {
 
 						// msg update
 							$msg[] = 'Error updating Dédalo data';
-							if (isset($run_scripts->msg)) {
-								$msg[] = $run_scripts->msg;
+							if (isset($run_scripts_response->msg)) {
+								$msg[] = $run_scripts_response->msg;
+							}
+
+						// errors
+							if (isset($run_scripts_response->errors)) {
+								$response->errors = array_merge($response->errors, $run_scripts_response->errors);
 							}
 
 						// stop_on_error
 							if (isset($current_script->stop_on_error) && $current_script->stop_on_error===true) {
+
+								// CLI process data
+									if ( running_in_cli()===true ) {
+										common::$pdata->msg	= '****Updating run_scripts ' . $key+1 . ' of ' . $counter;
+										common::$pdata->data = $current_script;
+										common::$pdata->memory = dd_memory_usage();
+										common::$pdata->response = $run_scripts_response;
+										// send to output
+										print_cli(common::$pdata);
+									}
+									
 								$response->result	= false ;
 								$response->msg		= $msg;
 								$response->errors[] = 'unable to run update script';
@@ -363,7 +379,7 @@ class update {
 					}
 
 					// log line
-						$log_line  = PHP_EOL . 'result: script executed: ' . to_string($run_scripts->result);
+						$log_line  = PHP_EOL . 'result: script executed: ' . to_string($run_scripts_response->result);
 						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					// let GC do the memory job
@@ -795,6 +811,7 @@ class update {
 		// response default
 			$response = new stdClass();
 				$response->result 	= false;
+				$response->errors 	= [];
 				$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
 
 		try {
