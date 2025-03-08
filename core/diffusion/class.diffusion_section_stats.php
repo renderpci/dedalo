@@ -228,13 +228,14 @@ class diffusion_section_stats extends diffusion {
 					// if not empty totals_data, add
 					if (count($totals_data)>0) {
 
+						// save_user_activity
 						$result = diffusion_section_stats::save_user_activity(
 							$totals_data, // array totals_data
 							$user_id, // int user_id
 							'day', // string type
-							$i->format("Y"), // int year
-							$i->format("m"), // int month
-							$i->format("d") // int day
+							(int)$i->format("Y"), // int year
+							(int)$i->format("m"), // int month
+							(int)$i->format("d") // int day
 						);
 
 						$updated_days[] = (object)[
