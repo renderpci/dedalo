@@ -1,5 +1,5 @@
-<?php
-/*
+<?php declare(strict_types=1);
+/**
 * CLASS USER_ACTIVITY
 * DRAFT UNFINISHED! Creates a graphic visualization of whole user activity
 */
@@ -21,7 +21,6 @@ class user_activity extends widget_common {
 		$mode			= 'list';
 
 		$dato = [];
-
 		foreach ($ipo as $ipo_key => $current_ipo) {
 
 			// continue;
@@ -32,7 +31,7 @@ class user_activity extends widget_common {
 			$date_in	= $_REQUEST['date_in'] ?? '2000-01-01';
 			$today		= new DateTime();
 			$date_out	= $_REQUEST['date_out'] ?? $today->format("Y-m-d");
-			$user_id	= $section_id;
+			$user_id	= (int)$section_id;
 			$lang		= DEDALO_DATA_LANG;
 			$totals		= diffusion_section_stats::cross_users_range_data($date_in, $date_out, $user_id, $lang);
 
@@ -198,8 +197,7 @@ class user_activity extends widget_common {
 
 
 		}//end foreach ($ipo as $ipo_key => $current_ipo)
-
-
+			dump($dato, ' dato ++ '.to_string());
 
 
 		return $dato;
