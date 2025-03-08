@@ -60,7 +60,7 @@ class diffusion_section_stats extends diffusion {
 	* @param int $user_id
 	* @return object $response
 	*/
-	public static function update_user_activity_stats( int $user_id ) {
+	public static function update_user_activity_stats( int $user_id ) : object {
 		$start_time = start_time();
 
 		debug_log(__METHOD__
@@ -186,7 +186,7 @@ class diffusion_section_stats extends diffusion {
 			if ($result===false) {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
 				$response->errors[] = 'failed database execution';
-				return false;
+				return $response;
 			}
 			$activity_row = pg_fetch_object($result);
 			if (!$activity_row || empty($activity_row->date)) {
@@ -426,6 +426,8 @@ class diffusion_section_stats extends diffusion {
 	*   "section_tipo": "dd42",
 	*   "from_component_tipo": "dd545"
 	* }
+	* @param object $datos
+	* @param object &$what_obj
 	* @return object $what_obj
 	*/
 	public static function build_what( object $datos, object &$what_obj ) : object {
@@ -520,11 +522,10 @@ class diffusion_section_stats extends diffusion {
 	*	Optional. Ex. 12
 	* @param int|null $day = null
 	*	Optional. Ex. 30
-	*
-	* @return int|bool $section_id
+	* @return int|false $section_id
 	*	The section id created on save
 	*/
-	public static function save_user_activity(array $totals_data, int $user_id, string $type, int $year, ?int $month=null, ?int $day=null) : int|bool {
+	public static function save_user_activity(array $totals_data, int $user_id, string $type, int $year, ?int $month=null, ?int $day=null) : int|false {
 
 		// creates a new section
 			$section_tipo	= USER_ACTIVITY_SECTION_TIPO; // 'dd1521';
