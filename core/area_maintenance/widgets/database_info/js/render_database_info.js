@@ -102,113 +102,220 @@ const get_content_data_edit = async function(self) {
 
 	// form init
 		if (self.caller?.init_form) {
-			self.caller.init_form({
-				submit_label	: 'Re-build indexes',
-				confirm_text	: get_label.seguro || 'Sure?',
-				body_info		: content_data,
-				body_response	: body_response,
-				on_submit	: async (e) => {
 
-					// clean body_response nodes
-						while (body_response.firstChild) {
-							body_response.removeChild(body_response.firstChild);
-						}
+			// rebuild indexes
+				self.caller.init_form({
+					submit_label	: 'Re-build indexes',
+					confirm_text	: get_label.seguro || 'Sure?',
+					body_info		: content_data,
+					body_response	: body_response,
+					on_submit	: async (e) => {
 
-					// loading add
-						e.target.classList.add('lock')
-						const spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner'
-						})
-						body_response.prepend(spinner)
-
-					// API worker call
-						const api_response = await data_manager.request({
-							use_worker	: true,
-							body		: {
-								dd_api	: 'dd_area_maintenance_api',
-								action	: 'class_request',
-								source	: {
-									action : 'rebuild_db_indexes'
-								},
-								options	: {}
+						// clean body_response nodes
+							while (body_response.firstChild) {
+								body_response.removeChild(body_response.firstChild);
 							}
-						})
 
-					// loading  remove
-						spinner.remove()
-						e.target.classList.remove('lock')
-
-					// remove annoying rqo_string from object
-						if (api_response && api_response.debug && api_response.debug.rqo_string) {
-							delete api_response.debug.rqo_string
-						}
-
-					// response_node pre JSON response
-						if (api_response) {
-							ui.create_dom_element({
-								element_type	: 'pre',
-								class_name		: 'response_node',
-								inner_html		: JSON.stringify(api_response, null, 2),
-								parent			: body_response
+						// loading add
+							e.target.classList.add('lock')
+							const spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner'
 							})
-						}
-				}
-			})
+							body_response.prepend(spinner)
 
-			self.caller.init_form({
-				submit_label	: 'Consolidate tables',
-				confirm_text	: get_label.seguro || 'Sure?',
-				body_info		: content_data,
-				body_response	: body_response,
-				on_submit	: async (e) => {
+						// API worker call
+							const api_response = await data_manager.request({
+								use_worker	: true,
+								body		: {
+									dd_api	: 'dd_area_maintenance_api',
+									action	: 'class_request',
+									source	: {
+										action : 'rebuild_db_indexes'
+									},
+									options	: {}
+								}
+							})
 
-					// clean body_response nodes
-						while (body_response.firstChild) {
-							body_response.removeChild(body_response.firstChild);
-						}
+						// loading  remove
+							spinner.remove()
+							e.target.classList.remove('lock')
 
-					// loading add
-						e.target.classList.add('lock')
-						const spinner = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'spinner'
-						})
-						body_response.prepend(spinner)
-
-					// API worker call
-						const api_response = await data_manager.request({
-							use_worker	: true,
-							body		: {
-								dd_api	: 'dd_area_maintenance_api',
-								action	: 'class_request',
-								source	: {
-									action : 'consolidate_tables'
-								},
-								options	: {}
+						// remove annoying rqo_string from object
+							if (api_response && api_response.debug && api_response.debug.rqo_string) {
+								delete api_response.debug.rqo_string
 							}
-						})
 
-					// loading  remove
-						spinner.remove()
-						e.target.classList.remove('lock')
+						// response_node pre JSON response
+							if (api_response) {
+								ui.create_dom_element({
+									element_type	: 'pre',
+									class_name		: 'response_node',
+									inner_html		: JSON.stringify(api_response, null, 2),
+									parent			: body_response
+								})
+							}
+					}
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'info_text',
+					inner_html		: 'Forces rebuilding of PostgreSQL main indexes, extensions and functions',
+					parent			: content_data
+				})
 
-					// remove annoying rqo_string from object
-						if (api_response && api_response.debug && api_response.debug.rqo_string) {
-							delete api_response.debug.rqo_string
-						}
+			// consolidate table sequences
+				self.caller.init_form({
+					submit_label	: 'Consolidate tables',
+					confirm_text	: get_label.seguro || 'Sure?',
+					body_info		: content_data,
+					body_response	: body_response,
+					on_submit	: async (e) => {
 
-					// response_node pre JSON response
-						if (api_response) {
-							ui.create_dom_element({
-								element_type	: 'pre',
-								class_name		: 'response_node',
-								inner_html		: JSON.stringify(api_response, null, 2),
-								parent			: body_response
+						// clean body_response nodes
+							while (body_response.firstChild) {
+								body_response.removeChild(body_response.firstChild);
+							}
+
+						// loading add
+							e.target.classList.add('lock')
+							const spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner'
 							})
-						}
-				}
-			})
+							body_response.prepend(spinner)
+
+						// API worker call
+							const api_response = await data_manager.request({
+								use_worker	: true,
+								body		: {
+									dd_api	: 'dd_area_maintenance_api',
+									action	: 'class_request',
+									source	: {
+										action : 'consolidate_tables'
+									},
+									options	: {}
+								}
+							})
+
+						// loading  remove
+							spinner.remove()
+							e.target.classList.remove('lock')
+
+						// remove annoying rqo_string from object
+							if (api_response && api_response.debug && api_response.debug.rqo_string) {
+								delete api_response.debug.rqo_string
+							}
+
+						// response_node pre JSON response
+							if (api_response) {
+								ui.create_dom_element({
+									element_type	: 'pre',
+									class_name		: 'response_node',
+									inner_html		: JSON.stringify(api_response, null, 2),
+									parent			: body_response
+								})
+							}
+					}
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'info_text',
+					inner_html		: 'Remunerates table id column to consolidate id sequence from 1,2,... <br>[jer_dd, matrix_ontology, matrix_ontology_main, matrix_dd]',
+					parent			: content_data
+				})
+
+			// re-build user stats
+				self.caller.init_form({
+					submit_label	: 'Re-build user stats',
+					confirm_text	: 'Sure? \nThis action deletes all user dd1521 (User activity) records and recreate the stats records from matrix_activity data.',
+					body_info		: content_data,
+					body_response	: body_response,
+					inputs			: [{
+						type		: 'text',
+						name		: 'users',
+						label		: 'User section_id or a sequence as 1,2,3',
+						mandatory	: true
+					}],
+					on_submit	: async (e, values) => {
+
+						// clean body_response nodes
+							while (body_response.firstChild) {
+								body_response.removeChild(body_response.firstChild);
+							}
+
+						// loading add
+							e.target.classList.add('lock')
+							const spinner = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'spinner'
+							})
+							body_response.prepend(spinner)
+
+						// value
+							const users = values.filter(el => el.name==='users')
+								.map(el => el.value)[0]
+								.split(',')
+								.map(el => el.trim())
+
+							if (!users || users.length < 1) {
+								// loading  remove
+								spinner.remove()
+								e.target.classList.remove('lock')
+								return
+							}
+
+						// API worker call
+							const api_response = await data_manager.request({
+								use_worker	: true,
+								body		: {
+									dd_api	: 'dd_area_maintenance_api',
+									action	: 'class_request',
+									source	: {
+										action : 'rebuild_user_stats'
+									},
+									options	: {
+										users : users // array
+									}
+								}
+							})
+
+						// loading  remove
+							spinner.remove()
+							e.target.classList.remove('lock')
+
+						// remove annoying rqo_string from object
+							if (api_response && api_response.debug && api_response.debug.rqo_string) {
+								delete api_response.debug.rqo_string
+							}
+
+						// errors
+							if (api_response.errors && api_response.errors.length) {
+								ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'error',
+									inner_html		: api_response.errors.join('<br>'),
+									parent			: body_response
+								})
+							}
+
+						// response_node pre JSON response
+							if (api_response) {
+								ui.create_dom_element({
+									element_type	: 'pre',
+									class_name		: 'response_node',
+									inner_html		: JSON.stringify(api_response, null, 2),
+									parent			: body_response
+								})
+							}
+					}
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'info_text',
+					inner_html		: 'Re-create the user activity stats, calculated from table matix_activity and saved in section dd1521 as daily summaries',
+					parent			: content_data
+				})
 		}
 
 	// add body_response at end

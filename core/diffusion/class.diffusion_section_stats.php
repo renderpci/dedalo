@@ -71,6 +71,7 @@ class diffusion_section_stats extends diffusion {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed. ';
+			$response->errors	= [];
 
 		// time vars
 			$today		= new DateTime();
@@ -184,12 +185,15 @@ class diffusion_section_stats extends diffusion {
 			$result = pg_query(DBi::_getConnection(), $strQuery);
 			if ($result===false) {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
+				$response->errors[] = 'failed database execution';
 				return false;
 			}
 			$activity_row = pg_fetch_object($result);
 			if (!$activity_row || empty($activity_row->date)) {
 				debug_log(__METHOD__." Skip. Not calculable result found for user $user_id ".to_string(), logger::WARNING);
 				$response->msg .= 'Skip. Not calculable result found for user '.$user_id;
+				$response->errors[] = 'Skip. Not calculable result found for user '.$user_id;
+				$response->result = true;
 				return $response;
 			}
 
@@ -201,6 +205,7 @@ class diffusion_section_stats extends diffusion {
 						, logger::ERROR
 					);
 					$response->msg .= 'Not valid date found for user '.$user_id;
+					$response->errors[] = 'invalid date from activity row: ' .$activity_row->section_id;
 					return $response;
 				}
 
@@ -258,7 +263,9 @@ class diffusion_section_stats extends diffusion {
 
 		/// response
 			$response->result	= $updated_days;
-			$response->msg		= 'OK. Request done.';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done.'
+				: 'Warning! Request done with errors';
 
 
 		return $response;
@@ -1085,6 +1092,38 @@ class diffusion_section_stats extends diffusion {
 
 		return $ar_js_obj;
 	}//end parse_totals_for_js
+
+
+
+	/**
+	* DELETE_USER_ACTIVITY_STATS
+	* Deletes the previous database records of a given user
+	* in table 'matrix_stats' (section dd1521 - User activity)
+	* @param int user_id
+	* @return bool
+	*/
+	public static function delete_user_activity_stats( int $user_id ) : bool {
+
+		$strQuery	= '
+			DELETE
+			FROM "matrix_stats"
+			WHERE
+			section_tipo = \'dd1521\'
+			AND CAST("datos" AS text) LIKE \'%"section_id": "'.$user_id.'", "section_tipo": "dd128", "from_component_tipo": "dd1522"%\';
+		';
+		$result		= pg_query(DBi::_getConnection(), $strQuery);
+		if($result===false) {
+			$msg = "Failed Delete user stats user_id ($user_id) from matrix_stats";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end delete_user_activity_stats
 
 
 
