@@ -789,10 +789,9 @@ class area_maintenance extends area_common {
 
 
 
-
 	/**
 	* CONSOLIDATE_TABLES
-	* Force to re-build the PostgreSQL main indexes, extensions and functions
+	* Remunerates table id column to consolidate id sequence from 1,2,...
 	* @return object $response
 	*/
 	public static function consolidate_tables() : object {
@@ -2074,6 +2073,65 @@ class area_maintenance extends area_common {
 
 		return install::restore_jer_dd_recovery_from_file();
 	}//end restore_jer_dd_recovery_from_file
+
+
+
+	/**
+	* REBUILD_USER_STATS
+	* Re-creates the user daily stats from matrix-activity
+	* @param object $options
+	* @return object $rebuild_user_stats
+	*/
+	public static function rebuild_user_stats( object $options ) : object {
+
+		// options
+			$users = $options->users ?? null;
+
+		// response
+			$response = new stdClass();
+				$response->result		= false;
+				$response->msg			= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors		= [];
+				$response->updated_days	= [];
+
+		// check users value
+			if (empty($users)) {
+				$response->msg		.= ' Empty users value';
+				$response->errors[]	= 'invalid users';
+				return $response;
+			}
+
+		// write_lang_file
+			foreach ($users as $user_id) {
+
+				// delete_user_activity_stats
+				$deleted = diffusion_section_stats::delete_user_activity_stats( (int)$user_id );
+				if (!$deleted) {
+					$response->errors[] = 'failed delete user stats. User: '.$user_id;
+					continue;
+				}
+
+				// update_user_activity_stats
+				$update_user_response = diffusion_section_stats::update_user_activity_stats( (int)$user_id );
+				if (!$update_user_response->result) {
+					return $update_user_response;
+				}
+
+				// errors
+				$response->errors = array_merge($response->errors, $update_user_response->errors);
+
+				// updated_days
+				$response->updated_days[] = $update_user_response->result;
+			}
+
+		// response OK
+			$response->msg = empty($response->errors)
+				? 'OK. Request done.'
+				: 'Warning! Request done with errors';
+
+
+		return $response;
+	}//end rebuild_user_stats
 
 
 
