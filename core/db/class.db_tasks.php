@@ -142,9 +142,9 @@ class db_tasks {
 	* OPTIMIZE_TABLES
 	* Exec VACUUM ANALYZE command on every received table
 	* @param array $tables
-	* @return string|bool|null $res
+	* @return string|false|null $res
 	*/
-	public static function optimize_tables(array $tables) {
+	public static function optimize_tables( array $tables ) : string|false|null {
 
 		// command_base
 			$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
@@ -198,11 +198,10 @@ class db_tasks {
 
 
 
-
 	/**
 	* CONSOLIDATE_TABLE
 	* Remunerates table id column to consolidate id sequence from 1,2,...
-	* It get the first id and the total rows
+	* It gets the first id and the total rows,
 	* if the first id is lower than total rows the table do not needs consolidate.
 	* @return bool
 	*/
@@ -311,7 +310,7 @@ class db_tasks {
 
 	/**
 	* REBUILD_INDEXES
-	* Force to re-build the PostgreSQL main indexes, extensions and functions
+	* Forces rebuilding of PostgreSQL main indexes, extensions and functions
 	* @return object $response
 	*/
 	public static function rebuild_indexes() : object {
@@ -374,5 +373,5 @@ class db_tasks {
 	}//end rebuild_indexes
 
 
-}//end db_tasks
 
+}//end db_tasks
