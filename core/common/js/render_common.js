@@ -557,9 +557,7 @@ export const render_stream = function(options) {
 
 						const msg = data.msg && data.msg.length>3
 							? data.msg
-							: is_running
-								? 'Process running... please wait'
-								: (get_label.proceso_completado || 'Process completed')
+							: 'Process running... please wait'
 
 						ui.update_node_content(info_node.msg_node, msg)
 
@@ -569,7 +567,9 @@ export const render_stream = function(options) {
 
 						// avoid freezing the last message in cases where
 						// the process does not return anything at end
-						const msg_end = [(get_label.proceso_completado || 'Process completed') + ' ' + sse_response.total_time]
+						const msg_end = (data.errors && data.errors.length)
+							? [(get_label.proceso || 'Process') +' ' + sse_response.total_time]
+							: [(get_label.proceso_completado || 'Process completed') + ' ' + sse_response.total_time]
 						// add errors if any
 						if (data.errors && data.errors.length) {
 							const msg_error = (get_label.error || 'Error') +  ': ' + data.errors.join(', ')
