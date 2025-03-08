@@ -1161,6 +1161,7 @@ class area_maintenance extends area_common {
 
 		$response = new stdClass();
 			$response->result	= false;
+			$response->errors	= [];
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// DEDALO_SUPERUSER only
@@ -1205,6 +1206,7 @@ class area_maintenance extends area_common {
 
 		$response->result	= $update_data_version_response->result ?? false;
 		$response->msg		= $update_data_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';
+		$response->errors 	= array_merge($response->errors, $update_data_version_response->errors);
 
 
 		return $response;
