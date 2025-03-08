@@ -125,7 +125,7 @@ dump($ar_section, '$ar_section +-------------------+ '.to_string($current_tipo))
 			$to_save = false;
 
 		// get the tipo
-			// $ar_components_parent_tipo	= self::get_all_compnent_parent();
+			// $ar_components_parent_tipo	= self::get_all_component_parent();
 			$ar_components_children_tipo	= self::get_all_compnent_children();
 
 		// resolve the change using relations container
@@ -193,10 +193,10 @@ dump($ar_section, '$ar_section +-------------------+ '.to_string($current_tipo))
 
 
 	/**
-	* GET_ALL_COMPNENT_PARENT
+	* GET_ALL_COMPONENT_PARENT
 	* @return array $ar_components_parent_tipo
 	*/
-	private static function get_all_compnent_parent() : array {
+	private static function get_all_component_parent() : array {
 
 		static $ar_components_parent_tipo;
 		if(isset($ar_components_parent_tipo) ){
@@ -206,7 +206,7 @@ dump($ar_section, '$ar_section +-------------------+ '.to_string($current_tipo))
 		$ar_components_parent_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name( 'component_relation_parent' );
 
 		return $ar_components_parent_tipo;
-	}//end get_all_compnent_parent
+	}//end get_all_component_parent
 
 
 
@@ -234,6 +234,7 @@ dump($ar_section, '$ar_section +-------------------+ '.to_string($current_tipo))
 	* @param string $parent_section_tipo
 	* @param string|int $parent_section_id
 	* @param locator $parent_locator_data
+	* @param int $order
 	* @return bool
 	*/
 	private static function set_parent_data( string $parent_section_tipo, string|int $parent_section_id, locator $parent_locator_data, int $order ) : bool {
@@ -280,53 +281,54 @@ dump($ar_section, '$ar_section +-------------------+ '.to_string($current_tipo))
 		// it save time machine for both.
 		$n_rows = pg_num_rows($result);
 		if ($n_rows<1) {
+
 			// create new section
-			$section = section::get_instance(
-				$parent_section_id, // string|null section_id
-				$parent_section_tipo // string section_tipo
-			);
-			$section->Save();
+				$section = section::get_instance(
+					$parent_section_id, // string|null section_id
+					$parent_section_tipo // string section_tipo
+				);
+				$section->Save();
 
 			// create new component with parent data
-			$component_tipo = $parent_locator_data->from_component_tipo;
-			$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
-			$parent_component = component_common::get_instance(
-				$model, // string model
-				$component_tipo, // string tipo
-				$parent_section_id, // string section_id
-				'edit', // string mode
-				DEDALO_DATA_NOLAN, // string lang
-				$parent_section_tipo // string section_tipo
-			);
-			$parent_component->set_dato( [$parent_locator_data] );
-			$parent_component->Save();
+				$component_tipo = $parent_locator_data->from_component_tipo;
+				$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+				$parent_component = component_common::get_instance(
+					$model, // string model
+					$component_tipo, // string tipo
+					$parent_section_id, // string section_id
+					'edit', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$parent_section_tipo // string section_tipo
+				);
+				$parent_component->set_dato( [$parent_locator_data] );
+				$parent_component->Save();
 
 			// set order
-			$section_map			= section::get_section_map( $parent_section_tipo );
-			$component_order_tipo	= $section_map->thesaurus->order ?? null;
+				$section_map			= section::get_section_map( $parent_section_tipo );
+				$component_order_tipo	= $section_map->thesaurus->order ?? null;
 
-			if( empty($component_order_tipo) ){
-				$msg = "Failed to locate order in section_map of $parent_section_tipo ----------------------- review your ontology definition";
-				debug_log(__METHOD__
-					." ERROR: $msg ". PHP_EOL
-					.' section_tipo: ' . $parent_section_tipo . PHP_EOL
-					, logger::ERROR
+				if( empty($component_order_tipo) ){
+					$msg = "Failed to locate order in section_map of $parent_section_tipo ----------------------- review your ontology definition";
+					debug_log(__METHOD__
+						." ERROR: $msg ". PHP_EOL
+						.' section_tipo: ' . $parent_section_tipo . PHP_EOL
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// create new component order with parent data
+				$model_order = RecordObj_dd::get_modelo_name_by_tipo($component_order_tipo);
+				$order_component = component_common::get_instance(
+					$model_order, // string model
+					$component_order_tipo, // string tipo
+					$parent_section_id, // string section_id
+					'edit', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$parent_section_tipo // string section_tipo
 				);
-				return false;
-			}
-
-			// create new component order with parent data
-			$model_order = RecordObj_dd::get_modelo_name_by_tipo($component_order_tipo);
-			$order_component = component_common::get_instance(
-				$model_order, // string model
-				$component_order_tipo, // string tipo
-				$parent_section_id, // string section_id
-				'edit', // string mode
-				DEDALO_DATA_NOLAN, // string lang
-				$parent_section_tipo // string section_tipo
-			);
-			$order_component->set_dato( [$order] );
-			$order_component->Save();
+				$order_component->set_dato( [$order] );
+				$order_component->Save();
 
 			return true;
 		}
@@ -344,12 +346,36 @@ dump($ar_section, '$ar_section +-------------------+ '.to_string($current_tipo))
 				$datos->relations = [];
 			}
 
-			$exist = locator::in_array_locator( $parent_locator_data, $datos->relations, ['section_tipo','section_id','from_component_tipo','type']);
-			if($exist===true){
-				continue;
+			if( !isset($datos->components) ){
+				$datos->components = new stdClass();
 			}
 
-			$datos->relations[] = $parent_locator_data;
+			// set order
+				$section_map			= section::get_section_map( $parent_section_tipo );
+				$component_order_tipo	= $section_map->thesaurus->order ?? null;
+
+				if( empty($component_order_tipo) ){
+					$msg = "Failed to locate order in section_map of $parent_section_tipo ----------------------- review your ontology definition";
+					debug_log(__METHOD__
+						." ERROR: $msg ". PHP_EOL
+						.' section_tipo: ' . $parent_section_tipo . PHP_EOL
+						, logger::ERROR
+					);
+				}
+
+				//set order data
+				$datos->components->$component_order_tipo->inf = 'Order [component_number]';
+				$datos->components->$component_order_tipo->dato = new stdClass();
+				$lang = 'lg-nolan';
+				$datos->components->$component_order_tipo->dato->$lang = [$order];
+
+			// set parent
+				$exist = locator::in_array_locator( $parent_locator_data, $datos->relations, ['section_tipo','section_id','from_component_tipo','type']);
+				if($exist===true){
+					continue;
+				}
+
+				$datos->relations[] = $parent_locator_data;
 
 			// data_encoded : JSON ENCODE ALWAYS !!!
 			$data_encoded = json_handler::encode($datos);
