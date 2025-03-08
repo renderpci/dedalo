@@ -11,11 +11,12 @@ class logger_backend_activity extends logger_backend {
 	* @var
 	*/
 		// what var
+		// @see $what_map for statistics in diffusion_section_stats::build_what()
 		static $what = [
 			'LOG IN'			=>	1,	// dd696 login module
 			'LOG OUT'			=>	2,	// dd697 login module
 			'NEW'				=>	3, 	// dd695 section
-			'DELETE'			=>	4,	// dd698 section
+			'DELETE'			=>	4,	// dd729 delete section
 			'SAVE'				=>	5,	// dd700 component
 			'LOAD EDIT'			=>	6,	// dd694 page
 			'LOAD LIST'			=>	7,	// dd693 page

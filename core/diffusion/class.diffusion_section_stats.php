@@ -76,7 +76,7 @@ class diffusion_section_stats extends diffusion {
 			$today		= new DateTime();
 			$yesterday	= new DateTime(); $yesterday->modify('-1 day'); // or $yesterday->sub(new DateInterval('P1D'));
 
-		// last saved user activity stats
+		// last saved user activity stats (looks section 'dd1521' to get last record by date)
 			$sqo = json_decode('{
 			  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
 			  "limit": 1,
@@ -136,6 +136,8 @@ class diffusion_section_stats extends diffusion {
 			$search_result	= $search->search();
 			$ar_records		= $search_result->ar_records;
 
+			// activity_filter_beginning. Builds a SQL sentence as 'AND date > '2025-03-07''
+			// for filter results in the next query against matrix_activity
 			$activity_filter_beginning = isset($ar_records[0])
 				? (function($row){
 
@@ -166,10 +168,10 @@ class diffusion_section_stats extends diffusion {
 				  })($ar_records[0])
 				: '';
 
-		// do not include today at any time because it is not complete yet
+		// do not include today in any case because it is not yet complete.
 			$activity_filter_beginning .= ' AND date < \''.$today->format("Y-m-d").'\'';
 
-		// last activity record of current user
+		// search last activity record of current user
 			$strQuery = '
 				SELECT *
 				FROM "matrix_activity"
@@ -238,6 +240,7 @@ class diffusion_section_stats extends diffusion {
 							(int)$i->format("d") // int day
 						);
 
+						// updated_days add
 						$updated_days[] = (object)[
 							'user'	=> $user_id,
 							'date'	=> $i->format("Y-m-d")
@@ -278,7 +281,7 @@ class diffusion_section_stats extends diffusion {
 	public static function get_interval_raw_activity_data(int $user_id, string $date_in, string $date_out) : ?array {
 
 		// tipos
-			$what_tipo	= logger_backend_activity::$_COMPONENT_WHAT['tipo'];		// expected dd545
+			// $what_tipo	= logger_backend_activity::$_COMPONENT_WHAT['tipo'];	// expected dd545
 			$where_tipo	= logger_backend_activity::$_COMPONENT_WHERE['tipo'];	// expected dd546
 			$when_tipo	= logger_backend_activity::$_COMPONENT_WHEN['tipo'];	// expected dd547
 
@@ -306,42 +309,14 @@ class diffusion_section_stats extends diffusion {
 		// iterate found records
 		while ($row = pg_fetch_object($result)) {
 
-			$section_id	= (int)$row->section_id;
-			$datos		= json_decode($row->datos);
+			$datos = json_decode($row->datos);
 
-			// $what_key	= $datos->components->{$what_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
-			$what_key	= array_find($datos->relations ?? [], function($el) use($what_tipo){
-				return isset($el->from_component_tipo) && $el->from_component_tipo===$what_tipo;
-			});
 			$where_key	= $datos->components->{$where_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
 			$when_key	= $datos->components->{$when_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
 
 			// what
-				$key = $what_key;
-				if (!empty($key) && is_object($what_key)) {
-
-					$key = $what_key->from_component_tipo;
-
-					// take care to manage publish cases in different way
-						$to_ignore = [
-							'dd1223',
-							'dd271',
-							'dd1224',
-							'dd1225'
-						];
-
-					switch (true) {
-						case (isset($where_key[0]) && in_array($where_key[0], $to_ignore)):
-							// last publish first publish, first publish user, last publish user
-							// ignore it ..
-							break;
-						default:
-							$what_obj->{$key} = isset($what_obj->{$key})
-								? $what_obj->{$key} + 1
-								: 1;
-							break;
-					}
-				}//end what
+				// update $what_obj adding counters to the object (passed by reference)
+				self::build_what( $datos, $what_obj );
 
 			// where
 				$key = $where_key;
@@ -393,13 +368,16 @@ class diffusion_section_stats extends diffusion {
 
 		// merge and verticalize data to store it
 			$totals_data = [];
+			// what
 			foreach ($what_obj as $key => $value) {
 				$item = new stdClass();
 					$item->type		= 'what';
 					$item->tipo		= $key;
 					$item->value	= $value;
+					$item->label	= RecordObj_dd::get_termino_by_tipo($key); // add label for easy human read
 				$totals_data[] = $item;
 			}
+			// where
 			foreach ($where_obj as $key => $value) {
 				$item = new stdClass();
 					$item->type		= 'where';
@@ -407,6 +385,7 @@ class diffusion_section_stats extends diffusion {
 					$item->value	= $value;
 				$totals_data[] = $item;
 			}
+			// when
 			foreach ($when_obj as $key => $value) {
 				$item = new stdClass();
 					$item->type		= 'when';
@@ -414,6 +393,7 @@ class diffusion_section_stats extends diffusion {
 					$item->value	= $value;
 				$totals_data[] = $item;
 			}
+			// publish
 			foreach ($publish_obj as $key => $value) {
 				$item = new stdClass();
 					$item->type		= 'publish';
@@ -425,6 +405,96 @@ class diffusion_section_stats extends diffusion {
 
 		return $totals_data;
 	}//end get_interval_raw_activity_data
+
+
+
+	/**
+	* BUILD_WHAT
+	* Creates the 'what' object from activity row->datos based on
+	* locator from component tipo (dd545)
+	* like:
+	* {
+	*   "type": "dd151",
+	*   "section_id": "6",
+	*   "section_tipo": "dd42",
+	*   "from_component_tipo": "dd545"
+	* }
+	* @return object $what_obj
+	*/
+	public static function build_what( object $datos, object &$what_obj ) : object {
+
+		$what_tipo = logger_backend_activity::$_COMPONENT_WHAT['tipo'];	// expected dd545
+
+		// mapping locator to tipo (ontology label v5 compatible)
+		// @see $what map for activity in logger_backend_activity::$what
+			$what_map = [
+				'1'  => 'dd696', // login
+				'2'  => 'dd697', // logout
+				'3'  => 'dd695', // new
+				'4'  => 'dd729', // delete
+				'5'  => 'dd700', // save
+				'6'  => 'dd694', // edit
+				'7'  => 'dd693', // list
+				'8'  => 'dd699', // search
+				'9'  => 'dd1090', // upload
+				'10' => 'dd1080', // download
+				'11' => 'dd1094', // upload complete
+				'12' => 'dd1095', // delete file
+				'13' => 'dd1092', // recover section
+				'14' => 'dd1091', // recover component
+				'15' => 'dd1098', // statistics
+				'16' => 'dd1081' // new file version
+			];
+
+		// what_value
+			$what_value = array_find($datos->relations ?? [], function($el) use($what_tipo){
+				return isset($el->from_component_tipo) && $el->from_component_tipo===$what_tipo;
+			});
+			// Returns an object (or null) like:
+			// {
+			// 	"tipo": "dd545",
+			// 	"type": "what",
+			// 	"value": 1
+			// }
+			if ( !is_object($what_value) ) {
+				// no what action was found
+				debug_log(__METHOD__
+					. " Error. Ignored activity record without what definition! " . PHP_EOL
+					. ' what_tipo: ' . to_string($what_tipo) . PHP_EOL
+					. ' relations: ' . to_string($datos->relations) . PHP_EOL
+					. ' section_tipo: ' . to_string($datos->section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($datos->section_id)
+					, logger::ERROR
+				);
+				return $what_obj;
+			}
+
+			$section_id	= (string)$what_value->section_id;
+			$tipo		= $what_map[$section_id] ?? null;
+			if (empty($tipo)) {
+				// no what action was found in map
+				debug_log(__METHOD__
+					. " Error. Ignored activity record without what correspondence! " . PHP_EOL
+					. ' what_tipo: ' . to_string($what_tipo) . PHP_EOL
+					. ' relations: ' . to_string($datos->relations) . PHP_EOL
+					. ' section_tipo: ' . to_string($datos->section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($datos->section_id)
+					, logger::ERROR
+				);
+				return $what_obj;
+			}
+
+			// if is not already defined init as zero
+			if (!isset($what_obj->{$tipo})) {
+				$what_obj->{$tipo} = 0;
+			}
+
+			// add one
+			$what_obj->{$tipo}++;
+
+
+		return $what_obj;
+	}//end build_what
 
 
 
