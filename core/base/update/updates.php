@@ -84,6 +84,18 @@ $updates->$v = new stdClass();
 		// DATA INSIDE DATABASE UPDATES
 		// swaps data between component_relation_children and  component_relation_parent (v6.5 model)
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data_v6_5_0.php';
+
+		// check if the component_childen and component_parent section has an order component
+			$script_obj = new stdClass();
+				$script_obj->info			= "Check if the update can run safely with the current ontology definition, the sections with parent/children component has to have an order component";
+				$script_obj->script_class	= "transform_data_v6_5_0";
+				$script_obj->script_method	= "check_all_order_components_in_ontology";
+				$script_obj->stop_on_error	= true;
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+
+		// swaps data between component_relation_children and  component_relation_parent (v6.5 model)
 			$script_obj = new stdClass();
 				$script_obj->info			= "Set component parent data with the component children data. Set all thesaurus data as parent relation model, able to be independent hierarchies to implement local ontologies";
 				$script_obj->script_class	= "transform_data_v6_5_0";
