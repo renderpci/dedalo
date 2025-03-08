@@ -10,6 +10,62 @@ class transform_data_v6_5_0 {
 
 
 	/**
+	* CHECK_ALL_ORDER_COMPONENTS_IN_ONTOLOGY
+	* @return
+	*/
+	public static function check_all_order_components_in_ontology() : object {
+
+		// response default
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->errors 	= [];
+				$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
+
+
+		$ar_components_children_tipo	= self::get_all_compnent_children();
+
+$to_skip= ['mupreva2564'];
+		foreach ($ar_components_children_tipo as $current_tipo) {
+
+			$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, 'section', 'parent', true );
+dump($ar_section, '$ar_section +-------------------+ '.to_string($current_tipo));
+			foreach ($ar_section as $section) {
+
+				// dump($section, '$section +-------------------+ '.to_string($section));
+
+				if( in_array($section, $to_skip) ){
+
+					dump($section, '$section +-------------------+ '.to_string($section));
+					continue;
+				}
+
+				$section_map			= section::get_section_map( $section );
+				$component_order_tipo	= $section_map->thesaurus->order ?? null;
+
+				$order_model = RecordObj_dd::get_modelo_name_by_tipo($component_order_tipo);
+
+					dump($order_model, '$order_model +-------------------+ '.to_string($component_order_tipo));
+
+				if( empty($component_order_tipo) ){
+					$msg = "Failed to locate any order component in section_map of $section | Review your ontology definition";
+					debug_log(__METHOD__
+						." ERROR: $msg ". PHP_EOL
+						.' section_tipo: ' . $section . PHP_EOL
+						, logger::ERROR
+					);
+
+					$response->errors[] = $msg;
+
+					return $response;
+				}
+			}
+		}
+
+		die();
+		return $response;
+	}//end check_all_order_components_in_ontology
+
+	/**
 	* UPDATE_SET_PARENT_WITH_CHILDREN
 	* @return bool
 	*/
