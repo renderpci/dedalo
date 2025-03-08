@@ -647,8 +647,8 @@ class component_relation_children extends component_relation_common {
 			// WHERE ...
 			// ORDER BY ontology41_order ASC NULLS LAST , section_id ASC
 				$section_map = section::get_section_map( $section_tipo );
-				if (isset($section_map->order)) {
-					$order_component_tipo = $section_map->order; // 'ontology41' for Ontology
+				if (isset($section_map->thesaurus->order)) {
+					$order_component_tipo = $section_map->thesaurus->order; // 'ontology41' for Ontology
 					$path = [
 						(object)[
 							'component_tipo'	=> $order_component_tipo,
@@ -910,7 +910,7 @@ class component_relation_children extends component_relation_common {
 		$changed = [];
 
 		$section_map = section::get_section_map( $section_tipo );
-		if (!isset($section_map->order)) {
+		if (!isset($section_map->thesaurus->order)) {
 			debug_log(__METHOD__
 				. " Error. Invalid section map. order property not found in section list of section '$section_tipo'. Ignored sort_children action." . PHP_EOL
 				. ' section_map: ' . to_string($section_map)
@@ -920,7 +920,7 @@ class component_relation_children extends component_relation_common {
 		}
 
 		// component commons
-		$component_tipo	= $section_map->order;
+		$component_tipo	= $section_map->thesaurus->order;
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // component_number expected
 
 		$order = 0;
