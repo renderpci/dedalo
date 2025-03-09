@@ -180,7 +180,7 @@ $to_skip= ['mupreva2564'];
 
 					$parent_set_result = self::set_parent_data($parent_section_tipo, $parent_section_id, $parent_locator_data, $order);
 					if($parent_set_result===false){
-						return null;
+						continue;
 					}
 
 					// remove current locator
