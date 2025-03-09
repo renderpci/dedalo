@@ -70,7 +70,10 @@ $to_skip= ['mupreva2564'];
 			}
 		}
 
-		die();
+		$response->result 	= true;
+		$response->msg 		= 'Ok';
+
+
 		return $response;
 	}//end check_all_order_components_in_ontology
 
@@ -373,6 +376,9 @@ $to_skip= ['mupreva2564'];
 				}
 
 				//set order data
+				if(!isset($datos->components->$component_order_tipo)){
+					$datos->components->$component_order_tipo = new stdClass();
+				}
 				$datos->components->$component_order_tipo->inf = 'Order [component_number]';
 				$datos->components->$component_order_tipo->dato = new stdClass();
 				$lang = 'lg-nolan';
