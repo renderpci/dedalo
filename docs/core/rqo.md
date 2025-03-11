@@ -125,7 +125,7 @@ when the `action` is done, the API sent the response to the client. Response is 
 
 ## Configuration vs Request
 
-Request Query Object is used to call to work API and is used to define the component behavior into the ontology. Some times the RQO need to be configured to calculate the ddo_map of the section that is calling in the instance. For example to call multiple toponymy thesaurus as Spain, France, etc is not possible to defines the section_tipo because every Dédalo installation has a diffrent
+Request Query Object is used to call to work API and is used to define the component behavior into the ontology. Some times the RQO need to be configured to calculate the ddo_map of the section that is calling in the instance. For example to call multiple toponymy thesaurus as Spain, France, etc is not possible to defines the section_tipo because every Dédalo installation has a different
 
 
 
