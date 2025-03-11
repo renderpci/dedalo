@@ -707,6 +707,7 @@ class search {
 				$this->search_query_object->filter = $new_search_query_object_filter ?? null;
 			}
 
+
 		// select
 			$new_search_query_object_select = [];
 			foreach ($this->search_query_object->select as $select_object) {
