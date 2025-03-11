@@ -908,7 +908,8 @@ final class RecordObj_dd_test extends TestCase {
 				$eq,
 				'expected equal true' . PHP_EOL
 					. ' result: ' . to_string($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
+					. ' expected: ' . to_string($expected) . PHP_EOL
+					. ' for get_ar_parents_of_this of rsc85'
 			);
 	}//end test_get_ar_parents_of_this
 
@@ -939,7 +940,8 @@ final class RecordObj_dd_test extends TestCase {
 				$eq,
 				'expected equal true' . PHP_EOL
 					. ' result: ' . to_string($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
+					. ' expected: ' . to_string($expected) . PHP_EOL
+					. ' for get_ar_siblings_of_this of rsc85'
 			);
 
 		// rsc85
@@ -985,7 +987,9 @@ final class RecordObj_dd_test extends TestCase {
 				$eq,
 				'expected equal true' . PHP_EOL
 					. ' result: ' . to_string($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
+					. ' expected: ' . to_string($expected) . PHP_EOL
+					. ' for get_relaciones of rsc85'
+
 			);
 
 		// rsc170
