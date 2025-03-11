@@ -253,6 +253,10 @@ $to_skip= ['mupreva2564'];
 
 		$matrix_table = section::get_matrix_table_from_tipo( $parent_section_tipo );
 
+
+		if($parent_section_id==0){
+			return true;
+		}
 		if($matrix_table===false){
 			$msg = "Failed to set parent locator, impossible to determinate table ----------------------- review your database";
 			debug_log(__METHOD__
