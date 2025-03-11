@@ -115,7 +115,7 @@ class search_query_object {
 	* @param string $value like 'oh1_list'
 	* @return bool true
 	*/
-	public function set_id(string $value) {
+	public function set_id(string $value) : true {
 
 		$this->id = $value;
 
@@ -130,7 +130,7 @@ class search_query_object {
 	* @param array $value like ['oh1']
 	* @return bool true
 	*/
-	public function set_section_tipo(array $value) {
+	public function set_section_tipo(array $value) : true {
 
 		$this->section_tipo = $value;
 
@@ -146,7 +146,7 @@ class search_query_object {
 	* @param string $value like 'tm'
 	* @return bool true
 	*/
-	public function set_mode(string $value) {
+	public function set_mode(string $value) : true {
 
 		$this->mode = $value;
 
@@ -180,7 +180,7 @@ class search_query_object {
 	* }
 	* @return bool true
 	*/
-	public function set_filter(object $value) {
+	public function set_filter(object $value) : true {
 
 		$this->filter = $value;
 
@@ -209,7 +209,7 @@ class search_query_object {
 	* }]
 	* @return bool true
 	*/
-	public function set_select(array $value) {
+	public function set_select(array $value) : true {
 
 		$this->select = $value;
 
@@ -242,7 +242,7 @@ class search_query_object {
 	* @param int|null $value like 0
 	* @return bool true
 	*/
-	public function set_offset(?int $value) {
+	public function set_offset(?int $value) : true {
 
 		// if(empty($value)) return false;
 
@@ -260,7 +260,7 @@ class search_query_object {
 	* @param int|null $value like 0
 	* @return bool true
 	*/
-	public function set_total(?int $value) {
+	public function set_total(?int $value) : true {
 
 		$this->total = $value;
 
@@ -276,7 +276,7 @@ class search_query_object {
 	* @param bool|int $value
 	* @return bool
 	*/
-	public function set_full_count($value) {
+	public function set_full_count($value) : true {
 
 		if (gettype($value)!=='integer' && gettype($value)!=='boolean') {
 			debug_log(__METHOD__." ERROR on set_full_count. Invalid full_count type ".gettype($value).". Only integer|boolean are valid", logger::ERROR);
@@ -297,7 +297,7 @@ class search_query_object {
 	* ['section_tipo']
 	* @return
 	*/
-	public function set_group_by(array $value) {
+	public function set_group_by(array $value) : true {
 
 		$this->group_by = $value;
 
@@ -324,7 +324,7 @@ class search_query_object {
 	* ]
 	* @return bool true
 	*/
-	public function set_order(array $value) {
+	public function set_order(array $value) : true {
 
 		$this->order = $value;
 
@@ -347,7 +347,7 @@ class search_query_object {
 	* ]
 	* @return bool true
 	*/
-	public function set_order_custom(array $value) {
+	public function set_order_custom(array $value) : true {
 
 		$this->order_custom = $value;
 
@@ -366,7 +366,7 @@ class search_query_object {
 	*  }]
 	* @return bool true
 	*/
-	public function set_filter_by_locators(array $value) {
+	public function set_filter_by_locators(array $value) : true {
 
 		$this->filter_by_locators = $value;
 
@@ -383,7 +383,7 @@ class search_query_object {
 	* @param bool $value
 	* @return bool true
 	*/
-	public function set_allow_sub_select_by_id(bool $value) {
+	public function set_allow_sub_select_by_id(bool $value) : true {
 
 		$this->allow_sub_select_by_id = $value;
 
@@ -398,7 +398,7 @@ class search_query_object {
 	* @param bool $value
 	* @return bool true
 	*/
-	public function set_children_recursive(bool $value) {
+	public function set_children_recursive(bool $value) : true {
 
 		$this->children_recursive = $value;
 
@@ -415,7 +415,7 @@ class search_query_object {
 	* @param bool $value
 	* @return bool true
 	*/
-	public function set_remove_distinct(bool $value) {
+	public function set_remove_distinct(bool $value) : true {
 
 		$this->remove_distinct = $value;
 
@@ -432,7 +432,7 @@ class search_query_object {
 	* @param bool $value
 	* @return bool true
 	*/
-	public function set_skip_projects_filter(bool $value) {
+	public function set_skip_projects_filter(bool $value) : true {
 
 		$this->skip_projects_filter = $value;
 
@@ -452,7 +452,7 @@ class search_query_object {
 	* @param bool $value
 	* @return bool true
 	*/
-	public function set_parsed(bool $value) {
+	public function set_parsed(bool $value) : true {
 
 		$this->parsed = $value;
 
@@ -466,7 +466,7 @@ class search_query_object {
 	* By accessors. When property exits, return property value, else return null
 	* @param string $name
 	*/
-	final public function __get(string $name) {
+	final public function __get(string $name) : mixed {
 
 		if (isset($this->$name)) {
 			return $this->$name;
@@ -479,6 +479,7 @@ class search_query_object {
 			' in ' . $trace[0]['file'] .
 			' on line ' . $trace[0]['line'],
 			logger::DEBUG);
+
 		return null;
 	}
 	// final public function __set($name, $value) {
