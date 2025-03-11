@@ -522,7 +522,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$modelo_name	= $RecordObj_dd->get_modelo_name();
 
 		// cache
-		$modelo_name_by_tipo[$cache_uid] = $modelo_name;
+		if( !empty($modelo_name) ){
+			$modelo_name_by_tipo[$cache_uid] = $modelo_name;
+		}
 
 
 		return $modelo_name;
