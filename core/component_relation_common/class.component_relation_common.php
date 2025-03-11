@@ -442,6 +442,14 @@ class component_relation_common extends component_common {
 				//	}]
 				// it can NOT cached, because it can affect other columns of rsc92
 				$use_cache = empty($sub_ddo_map) ? true : false;
+
+				// don't used need to be changed the way that components get its instances
+				// will be used to add id_variant to the instance to improve the cache. 11-03-2025
+				// if( !empty($sub_ddo_map) ){
+				// 	// get ddo_map_id
+				// 	$ddo_map_id = $this->get_ddo_map_id($ddo_map);
+				// }
+
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
 				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
 				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
@@ -3408,6 +3416,33 @@ class component_relation_common extends component_common {
 
 		return $ar_data;
 	}//end get_calculation_data
+
+
+
+	/**
+	* GET_DDO_MAP_ID
+	* Flat the ddo_map objects into a string representation of the path.
+	* It use the section_tipo and component_tipo to build the id.	*
+	* @param array $ddo_map
+	* @return string $ddo_map_id
+	*/
+	public function get_ddo_map_id( array $ddo_map ) : string {
+
+		$ddo_map_flat = array_map( function($ddo){
+			// reset multiple section_tipo
+			$section_tipo = is_array( $ddo->section_tipo )
+				? reset( $ddo->section_tipo )
+				: $ddo->section_tipo;
+			// get a flat version of the section_tipo and the component_tipo as `rsc197_rsc92`
+			return $section_tipo .'_'. $ddo->tipo;
+		}, $ddo_map );
+
+		// get the final map_id join all parts as `rsc197_rsc92_af1_hierarchy36`
+		$ddo_map_id = implode('_', $ddo_map_flat );
+
+
+		return $ddo_map_id;
+	}//end get_ddo_map_id
 
 
 
