@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 /**
 * COMPONENT_RELATION_CHILDREN
+* Class to manage children relations between sections.
+* It does not store its own data, it only manages the component_relation_parent data in 'reverse' mode
 *
 */
 class component_relation_children extends component_relation_common {
