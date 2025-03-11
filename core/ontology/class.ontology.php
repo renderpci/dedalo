@@ -1050,13 +1050,11 @@ class ontology {
 			{
 				"$and": [
 					{
-						"q": [
-							{
-								"section_id": "1",
-								"section_tipo": "dd64",
-								"from_component_tipo": "hierarchy4"
-							}
-						],
+						"q": {
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "hierarchy4"
+						},
 						"q_operator": null,
 						"path": [
 							{
