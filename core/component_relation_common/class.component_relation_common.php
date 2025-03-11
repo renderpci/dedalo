@@ -412,6 +412,36 @@ class component_relation_common extends component_common {
 					continue;
 				}
 
+				// get the ddo path for inject to the next component level resolution.
+				$sub_ddo_map = get_children_recursive($ddo_map, $ddo);
+
+				// To use cache or not
+				// if the current component has a sub_ddo_map, it will be injected to be resolved in the next loop
+				// as current component will be changed on the fly, the cache will be changed, and it will solved incorrectly into the next row
+				// to prevent the conflict, the component cache will set false (because the it has different value).
+				// for example a column with a component as portal with ddo_map:
+				//	[{
+				//		"section_tipo": "rsc197",
+				//		"component_tipo": "rsc92",
+				//		"model": "component_portal",
+				//		"name": "Municipio de residencia"
+				//	}]
+				// it can be cached
+				// but a component with sub_ddo_map as:
+				//	[{
+				//		"section_tipo": "rsc197",
+				//		"component_tipo": "rsc92",
+				//		"model": "component_portal",
+				//		"name": "Municipio de residencia"
+				//	},
+				//	{
+				//		"section_tipo": "af1",
+				//		"component_tipo": "hierarchy26",
+				//		"model": "component_publication",
+				//		"name": "Público"
+				//	}]
+				// it can NOT cached, because it can affect other columns of rsc92
+				$use_cache = empty($sub_ddo_map) ? true : false;
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
 				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
 				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
@@ -441,7 +471,7 @@ class component_relation_common extends component_common {
 					($ddo->model === 'component_dataframe')
 						? $this->section_tipo
 						: $locator->section_tipo,
-					true,
+					$use_cache,
 					$caller_dataframe
 				);
 
@@ -450,9 +480,6 @@ class component_relation_common extends component_common {
 
 				// set the caller class name of the portal (who instantiate the portal) to the new component. as 'tool_export', 'tool_publication' etc.
 				$current_component->set_caller($this->caller);
-
-				// get the ddo path for inject to the next component level resolution.
-				$sub_ddo_map = get_children_recursive($ddo_map, $ddo);
 
 				// if the component has sub_ddo, create the request_config to be injected to component
 				// the request_config will be used instead the default request_config.
