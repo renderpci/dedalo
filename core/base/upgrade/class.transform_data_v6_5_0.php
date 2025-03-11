@@ -70,7 +70,10 @@ $to_skip= ['mupreva2564'];
 			}
 		}
 
-		die();
+		$response->result 	= true;
+		$response->msg 		= 'Ok';
+
+
 		return $response;
 	}//end check_all_order_components_in_ontology
 
@@ -177,7 +180,7 @@ $to_skip= ['mupreva2564'];
 
 					$parent_set_result = self::set_parent_data($parent_section_tipo, $parent_section_id, $parent_locator_data, $order);
 					if($parent_set_result===false){
-						return null;
+						continue;
 					}
 
 					// remove current locator
@@ -250,6 +253,10 @@ $to_skip= ['mupreva2564'];
 
 		$matrix_table = section::get_matrix_table_from_tipo( $parent_section_tipo );
 
+
+		if($parent_section_id==0){
+			return true;
+		}
 		if($matrix_table===false){
 			$msg = "Failed to set parent locator, impossible to determinate table ----------------------- review your database";
 			debug_log(__METHOD__
@@ -285,18 +292,40 @@ $to_skip= ['mupreva2564'];
 			return false;
 		}
 
-		// empty records case
+		// Empty records case
 		// generate new section and inject the data into de component
 		// it save time machine for both.
 		$n_rows = pg_num_rows($result);
 		if ($n_rows<1) {
+
+			// check if the parent section_tipo exists in jer_dd
+			// if not, create new hierarchy with the section_id and create the ontology and jer_dd node
+			// is necessary that parent section_tipo exists in ontology to save correctly the section with children data
+				$section_model = RecordObj_dd::get_modelo_name_by_tipo($parent_section_tipo);
+				if( empty($section_model) ){
+
+					$install_options = new stdClass();
+						$install_options->tld					= get_tld_from_tipo( $parent_section_tipo );
+						$install_options->typology				= 15;
+						$install_options->label					= get_tld_from_tipo( $parent_section_tipo );
+						$install_options->active_in_thesaurus	= false;
+
+					$install_response = install::activate_hierarchy( $install_options );
+
+					if($install_response->result === false){
+						debug_log(__METHOD__
+							." Impossible to generate the hierarchy for section tipo: ".to_string($parent_section_tipo)
+							, logger::ERROR
+						);
+					}
+				}
 
 			// create new section
 				$section = section::get_instance(
 					$parent_section_id, // string|null section_id
 					$parent_section_tipo // string section_tipo
 				);
-				$section->Save();
+				$section->forced_create_record();
 
 			// create new component with parent data
 				$component_tipo = $parent_locator_data->from_component_tipo;
@@ -373,6 +402,9 @@ $to_skip= ['mupreva2564'];
 				}
 
 				//set order data
+				if(!isset($datos->components->$component_order_tipo)){
+					$datos->components->$component_order_tipo = new stdClass();
+				}
 				$datos->components->$component_order_tipo->inf = 'Order [component_number]';
 				$datos->components->$component_order_tipo->dato = new stdClass();
 				$lang = 'lg-nolan';
