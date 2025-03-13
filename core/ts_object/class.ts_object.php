@@ -9,9 +9,9 @@ class ts_object {
 
 
 	// int (mandatory)
-	protected $section_id;
+	public $section_id;
 	// string (mandatory)
-	protected $section_tipo;
+	public $section_tipo;
 	// object
 	protected $section;
 	// mixed object|null (default null)
