@@ -14,7 +14,8 @@
 	import {
 		render_children,
 		dom_parse_children,
-		render_root_wrapper
+		render_root_wrapper,
+		render_ts_record
 	} from './render_ts_object.js'
 
 
@@ -1165,6 +1166,7 @@ export const ts_object = new function() {
 		* 	"hierarchy1_66": {
 		* 		"section_tipo": "hierarchy1",
 		* 		"section_id": "66",
+		* 		"order": 2,
 		* 		"mode": "edit",
 		* 		"lang": "lg-eng",
 		* 		"is_descriptor": true,
@@ -1173,6 +1175,8 @@ export const ts_object = new function() {
 		* 		"permissions_button_delete": 0,
 		* 		"permissions_indexation": 0,
 		* 		"permissions_structuration": 0,
+		* 		"ts_id": "hierarchy1_66",
+		* 		"ts_parent": "hierarchy1_1"
 		* 		"ar_elements": [
 		* 			{
 		* 				"type": "term",
@@ -1229,98 +1233,163 @@ export const ts_object = new function() {
 
 		const self = this
 
-		// iterate data object
-		for (const key in data) {
+		// get the root nodes, top nodes
+		// const root_nodes = data.filter(el => el.ts_parent === 'root')
 
-			const element = data[key]
+		// reset previous hilites
+			self.reset_hilites()
 
-			// target section_tipo
-				const target_section_tipo = element.section_tipo
+		// render all nodes and store it
+		const data_length = data.length
+		const ts_nodes = []
 
-			// clean div container
-				if(is_recursion===false) {
-					// Calculate main div of each root element
-					// Search children place
-					main_div = document.querySelector(`.hierarchy_root_node.${element.section_tipo}>.children_container`)
-					if (main_div) {
+		for (let i = 0; i < data_length; i++) {
+			const item = data[i]
+			// render the ts_record
+			const node = render_ts_record(self, item, i)
+			// set pointer
+			node.ts_id			= item.ts_id
+			node.ts_parent		= item.ts_parent
+			node.section_tipo	= item.section_tipo
 
-						// Clean main div (Clean previous nodes from root)
-						while (main_div.firstChild) {
-							main_div.removeChild(main_div.firstChild);
-						}
+			// find if the current record was the term searched
+			const searched_node = to_hilite.find(el => el.section_tipo===item.section_tipo && el.section_id===item.section_id)
+			// if the record was a searched term add a hilite class to remark it
+			if(searched_node){
+				const term_node = node.term_node
+				if (term_node) {
+					term_node.classList.add('element_hilite');
+				}
+			}
+			// store the result
+			ts_nodes.push(node)
+		}
 
-					}else{
-						console.error("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')
+		// link the nodes with his own parent node
+		const ts_nodes_length = ts_nodes.length
+		for (let i = 0; i < ts_nodes_length; i++) {
+			const current_node = ts_nodes[i]
 
-						// // not parent elements case, attach to root node
-						// // It search result node don't have parent, use root node as parent to allow display the term
-						// if (!element.heritage) {
-						// 	main_div = document.querySelector('.hierarchy_root_node[data-target_section_tipo="'+target_section_tipo+'"]>.children_container')
-						// }
+			// only the root parent node needs to be linked to the main node.
+			if(current_node.ts_parent==='root'){
+				// get the main div into the doom
+				main_div = document.querySelector(`.hierarchy_root_node.${current_node.section_tipo}>.children_container`)
+				if (main_div) {
+
+					// Clean main div (Clean previous nodes from root)
+					while (main_div.firstChild) {
+						main_div.removeChild(main_div.firstChild);
 					}
+					main_div.appendChild(current_node)
 				}
+			}else{
+				// link the node with its own parent
+				const parent_node = ts_nodes.find(el => el.ts_id===current_node.ts_parent)
 
-			// main_div conditional
-				if(!main_div) {
-
-					console.warn("[ts_object.parse_search_result] Warn: No main_div found! ", '.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container ', element);
-
-				}else{
-
-					const ar_children_data = []
-						  ar_children_data.push(element)
-
-					// render children. dom_parse_children (returns a promise)
-						const ar_children_container = dom_parse_children({
-							self							: self,
-							ar_children_data				: ar_children_data,
-							children_container				: main_div,
-							// render options
-							clean_children_container		: false, // Elements are added to existing main_div instead replace
-							children_container_is_loaded	: false, // Set children container as loaded
-							show_arrow_opened				: false, // Set icon arrow as opened
-							target_section_tipo				: target_section_tipo, // add always !
-							mode							: 'search'
-						})
+				if(parent_node && parent_node.children_container){
+					// set the link children state (arrow icon open)
+					parent_node.link_children.firstChild.classList.add('ts_object_children_arrow_icon_open');
+					parent_node.children_container.appendChild(current_node)
 				}
+			}
+		}
 
-			// hilite current term
-				const term_hilite = to_hilite.find(el => el.section_id==element.section_id && el.section_tipo===element.section_tipo)
-				if (term_hilite) {
-					requestAnimationFrame(
-						() => {
-							const term_node = document.querySelector(`.term[data-section_tipo="${element.section_tipo}"][data-section_id="${element.section_id}"]`)
-							if (term_node) {
-								self.hilite_element(term_node, false);
-							}
-						}
-					)
-				}
 
-			// Recursion when heritage is present
-			// Note var self.current_main_div is set on each dom_parse_children call
-			// (see render_ts_object.render_children_list)
-				if (typeof element.heritage!=='undefined') {
 
-					// Recursive parent element resolve
-					const h_data = element.heritage
-					self.parse_search_result(
-						h_data,
-						to_hilite,
-						self.current_main_div,
-						true
-					)
-				}
 
-			// Open arrows and fix children container state
-				// main_div.classList.remove('js_first_load')
-				// var children_element = main_div.parentNode.querySelector('.elements_container > [data-type="link_children"]')
-				// if (children_element.firstChild) {
-				// 	children_element.firstChild.classList.add('ts_object_children_arrow_icon_open')
-				// 	//console.log(children_element);
-				// }
 
-		}//end for (const key in data)
+		// // iterate data object
+		// for (const key in data) {
+
+		// 	const element = data[key]
+
+		// 	// target section_tipo
+		// 		const target_section_tipo = element.section_tipo
+
+		// 	// clean div container
+		// 		if(is_recursion===false) {
+		// 			// Calculate main div of each root element
+		// 			// Search children place
+		// 			main_div = document.querySelector(`.hierarchy_root_node.${element.section_tipo}>.children_container`)
+		// 			if (main_div) {
+
+		// 				// Clean main div (Clean previous nodes from root)
+		// 				while (main_div.firstChild) {
+		// 					main_div.removeChild(main_div.firstChild);
+		// 				}
+
+		// 			}else{
+		// 				console.error("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')
+
+		// 				// // not parent elements case, attach to root node
+		// 				// // It search result node don't have parent, use root node as parent to allow display the term
+		// 				// if (!element.heritage) {
+		// 				// 	main_div = document.querySelector('.hierarchy_root_node[data-target_section_tipo="'+target_section_tipo+'"]>.children_container')
+		// 				// }
+		// 			}
+		// 		}
+
+		// 	// main_div conditional
+		// 		if(!main_div) {
+
+		// 			console.warn("[ts_object.parse_search_result] Warn: No main_div found! ", '.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container ', element);
+
+		// 		}else{
+
+		// 			const ar_children_data = []
+		// 				  ar_children_data.push(element)
+
+		// 			// render children. dom_parse_children (returns a promise)
+		// 				const ar_children_container = dom_parse_children({
+		// 					self							: self,
+		// 					ar_children_data				: ar_children_data,
+		// 					children_container				: main_div,
+		// 					// render options
+		// 					clean_children_container		: false, // Elements are added to existing main_div instead replace
+		// 					children_container_is_loaded	: false, // Set children container as loaded
+		// 					show_arrow_opened				: false, // Set icon arrow as opened
+		// 					target_section_tipo				: target_section_tipo, // add always !
+		// 					mode							: 'search'
+		// 				})
+		// 		}
+
+		// 	// hilite current term
+		// 		const term_hilite = to_hilite.find(el => el.section_id==element.section_id && el.section_tipo===element.section_tipo)
+		// 		if (term_hilite) {
+		// 			requestAnimationFrame(
+		// 				() => {
+		// 					const term_node = document.querySelector(`.term[data-section_tipo="${element.section_tipo}"][data-section_id="${element.section_id}"]`)
+		// 					if (term_node) {
+		// 						self.hilite_element(term_node, false);
+		// 					}
+		// 				}
+		// 			)
+		// 		}
+
+		// 	// Recursion when heritage is present
+		// 	// Note var self.current_main_div is set on each dom_parse_children call
+		// 	// (see render_ts_object.render_children_list)
+		// 		if (typeof element.heritage!=='undefined') {
+
+		// 			// Recursive parent element resolve
+		// 			const h_data = element.heritage
+		// 			self.parse_search_result(
+		// 				h_data,
+		// 				to_hilite,
+		// 				self.current_main_div,
+		// 				true
+		// 			)
+		// 		}
+
+		// 	// Open arrows and fix children container state
+		// 		// main_div.classList.remove('js_first_load')
+		// 		// var children_element = main_div.parentNode.querySelector('.elements_container > [data-type="link_children"]')
+		// 		// if (children_element.firstChild) {
+		// 		// 	children_element.firstChild.classList.add('ts_object_children_arrow_icon_open')
+		// 		// 	//console.log(children_element);
+		// 		// }
+
+		// }//end for (const key in data)
 
 
 		return true
@@ -1646,10 +1715,8 @@ export const ts_object = new function() {
 				return link_children
 			}
 
-		// base_wrapper. If wrapper is a root hierarchy_node, search inside next thesaurus_node
-			const base_wrapper = (wrap.dataset.node_type && wrap.dataset.node_type==='hierarchy_node')
-				? wrap.firstChild.firstChild
-				: wrap
+		// base_wrapper. Wrapper as a root
+			const base_wrapper = wrap
 
 		const child_one		= base_wrapper.childNodes
 		const child_one_len	= child_one.length
