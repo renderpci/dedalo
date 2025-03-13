@@ -211,129 +211,152 @@ export const render_children_list = function(options) {
 
 	const ar_children_c = []
 
-	const fragment = new DocumentFragment();
+	// const fragment = new DocumentFragment();
 
 	const ar_children_data_len = ar_children_data.length
 	for (let i = 0; i < ar_children_data_len; i++) {
+			const item = ar_children_data[i]
 
-		const item = ar_children_data[i]
+			const node = render_ts_record( self, item, i )
 
-		const current_section_id	= item.section_id
-		const current_section_tipo	= item.section_tipo
-		const children_tipo			= item.children_tipo
+			const parent_node = (item.is_descriptor===true) ? children_container : parent_nd_container
 
-		// is_descriptor element is descriptor check
-			const is_descriptor = item.is_descriptor
+			parent_node.appendChild( node )
 
-		// is_indexable element is index-able check
-			const is_indexable = item.is_indexable
-
-		// wrap_ts_object . ts_object wrapper
-		// wrap_ts_object unified
-			const wrap_ts_object = render_wrapper({
-				section_id		: current_section_id,
-				section_tipo	: current_section_tipo,
-				children_tipo	: children_tipo,
-				is_descriptor	: is_descriptor
-			})
-			wrap_ts_object.parent_node = (is_descriptor===true) ? children_container : parent_nd_container
-			fragment.appendChild(wrap_ts_object)
-			// const parent_node = (is_descriptor===true) ? children_container : parent_nd_container
-			// parent_node.appendChild(fragment)
-
-		// ID COLUMN . id column content
-			const id_column_node = render_id_column({
-				self			: self,
-				section_tipo	: current_section_tipo,
-				section_id		: current_section_id,
-				node_type		: node_type,
-				is_descriptor	: is_descriptor,
-				is_indexable	: is_indexable,
-				children_data	: item,
-				mode			: mode,
-				key				: i
-			})
-			wrap_ts_object.appendChild(id_column_node)
-
-		// ELEMENTS CONTAINER . elements container
-			const elements_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'elements_container ' + self.caller.model,
-				data_set		: {role : 'elements_container'},
-				parent			: wrap_ts_object
-			})
-
-		// DATA CONTAINER . elements data container
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'data_container',
-				data_set		: {role : 'data_container'},
-				parent			: wrap_ts_object
-			})
-
-		// INDEXATIONS CONTAINER
-			const indexations_container_id = 'u' + item.section_tipo + '_' + item.section_id +'_'+ (new Date()).getTime()
-			ui.create_dom_element({
-				element_type	: 'div',
-				id				: indexations_container_id,
-				class_name		: 'indexations_container hide',
-				parent			: wrap_ts_object
-			})
-
-		// ND CONTAINER
-			if (is_descriptor===true && node_type!=='hierarchy_node') {
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'nd_container',
-					data_set		: {role : 'nd_container'},
-					parent			: wrap_ts_object
-				})
-			}
-
-		// CHILDREN CONTAINER . children container
-			if (is_descriptor===true) {
-				const children_c_class_name = (children_container_is_loaded===true)
-					? 'children_container'
-					: 'children_container js_first_load'
-				const children_c = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: children_c_class_name,
-					data_set		: {
-						role :'children_container'
-					},
-					parent			: wrap_ts_object
-				})
-				// Fix current main_div
-				// Important. Fix global var self.current_main_div used by search to parse results
-				self.current_main_div = children_c
-
-				// Add to ar_children_c
-				ar_children_c.push(children_c)
-			}//end if (is_descriptor===true)
-
-		// LIST_THESAURUS_ELEMENTS
-			const ts_line_node = render_ts_line({
-				self						: self,
-				child_data					: item,
-				indexations_container_id	: indexations_container_id,
-				show_arrow_opened			: show_arrow_opened,
-				is_descriptor				: is_descriptor
-			})
-			requestAnimationFrame(
-				() => {
-					elements_container.appendChild(ts_line_node)
-				}
-			)
 	}//end for (let i = 0; i < ar_childrens_data_len; i++)
 
 	// unpacks each wrapper
-	while (fragment.firstChild) {
-		fragment.firstChild.parent_node.append(fragment.firstChild)
-	}
+	// while (fragment.firstChild) {
+	// 	fragment.firstChild.parent_node.append(fragment.firstChild)
+	// }
 
 
 	return ar_children_c
 }//end render_children_list
+
+
+/**
+* RENDER_TS_RECORD
+* Render a list of child nodes (child containers)
+* @param object ts_record
+*/
+export const render_ts_record = function( self, ts_record, i ){
+
+	// const fragment = new DocumentFragment();
+
+	const current_section_id	= ts_record.section_id
+	const current_section_tipo	= ts_record.section_tipo
+	const children_tipo			= ts_record.children_tipo
+
+	// is_descriptor element is descriptor check
+		const is_descriptor = ts_record.is_descriptor
+
+	// is_indexable element is index-able check
+		const is_indexable = ts_record.is_indexable
+
+	// wrapper . ts_object wrapper
+	// wrapper unified
+		const wrapper = render_wrapper({
+			section_id		: current_section_id,
+			section_tipo	: current_section_tipo,
+			children_tipo	: children_tipo,
+			is_descriptor	: is_descriptor
+		})
+		// wrapper.parent_node = (is_descriptor===true) ? children_container : parent_nd_container
+		// fragment.appendChild(wrapper)
+		// const parent_node = (is_descriptor===true) ? children_container : parent_nd_container
+		// parent_node.appendChild(fragment)
+
+	// ID COLUMN . id column content
+		const id_column_node = render_id_column({
+			self			: self,
+			section_tipo	: current_section_tipo,
+			section_id		: current_section_id,
+			is_descriptor	: is_descriptor,
+			is_indexable	: is_indexable,
+			children_data	: ts_record,
+			mode			: ts_record.mode,
+			order			: ts_record.order || i+1
+		})
+		wrapper.appendChild(id_column_node)
+
+	// ELEMENTS CONTAINER . elements container
+		const elements_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'elements_container ' + self.caller.model,
+			data_set		: {role : 'elements_container'},
+			parent			: wrapper
+		})
+
+	// DATA CONTAINER . elements data container
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'data_container',
+			data_set		: {role : 'data_container'},
+			parent			: wrapper
+		})
+
+	// INDEXATIONS CONTAINER
+		const indexations_container_id = 'u' + ts_record.section_tipo + '_' + ts_record.section_id +'_'+ (new Date()).getTime()
+		ui.create_dom_element({
+			element_type	: 'div',
+			id				: indexations_container_id,
+			class_name		: 'indexations_container hide',
+			parent			: wrapper
+		})
+
+	// ND CONTAINER
+		if ( is_descriptor===true ) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'nd_container',
+				data_set		: {role : 'nd_container'},
+				parent			: wrapper
+			})
+		}
+
+	// CHILDREN CONTAINER . children container
+		if (is_descriptor===true) {
+			// const children_c_class_name = (children_container_is_loaded===true)
+			// 	? 'children_container'
+			// 	: 'children_container js_first_load'
+			const children_container_class_name = 'children_container js_first_load'
+			const children_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: children_container_class_name,
+				data_set		: {
+					role :'children_container'
+				},
+				parent			: wrapper
+			})
+			// pointer
+			wrapper.children_container = children_container
+			// Fix current main_div
+			// Important. Fix global var self.current_main_div used by search to parse results
+			// self.current_main_div = children_c
+
+			// // Add to ar_children_c
+			// ar_children_c.push(children_c)
+		}//end if (is_descriptor===true)
+
+	// LIST_THESAURUS_ELEMENTS
+		const ts_line_node = render_ts_line({
+			self						: self,
+			child_data					: ts_record,
+			indexations_container_id	: indexations_container_id,
+			show_arrow_opened			: false,
+			is_descriptor				: is_descriptor,
+			wrapper						: wrapper
+		})
+		requestAnimationFrame(
+			() => {
+				elements_container.appendChild(ts_line_node)
+			}
+		)
+
+
+	return wrapper
+}// end render_ts_record
 
 
 
@@ -358,6 +381,7 @@ export const render_ts_line = function(options) {
 		const indexations_container_id	= options.indexations_container_id
 		const show_arrow_opened			= options.show_arrow_opened
 		const is_descriptor				= options.is_descriptor
+		const wrapper					= options.wrapper
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
@@ -389,6 +413,8 @@ export const render_ts_line = function(options) {
 						key				: j
 					})
 					fragment.appendChild(term_node)
+					//pointer
+					wrapper.term_node = term_node
 					break;
 				}
 
@@ -430,6 +456,8 @@ export const render_ts_line = function(options) {
 							child_data			: child_data
 						})
 						fragment.appendChild(link_children)
+						//pointer
+						wrapper.link_children = link_children
 					break;
 				}
 
@@ -677,7 +705,7 @@ const render_id_column = function(options) {
 		const is_indexable	= options.is_indexable
 		const children_data	= options.children_data
 		const mode			= options.mode
-		const key			= options.key
+		const order			= options.order
 
 	const id_column_content = ui.create_dom_element({
 		element_type	: 'div',
@@ -688,7 +716,7 @@ const render_id_column = function(options) {
 
 		case 'relation': {
 			// hierarchy_node cannot be used as related  and not index-able too
-			if (node_type==='hierarchy_node' || is_indexable===false) break;
+			if ( is_indexable===false ) break;
 
 			// link_related
 				const link_related = ui.create_dom_element({
@@ -879,7 +907,7 @@ const render_id_column = function(options) {
 						const order_number = ui.create_dom_element({
 							element_type	: 'a',
 							class_name		: 'id_column_link ts_object_order_number',
-							text_node		: key + 1,
+							text_node		: order,
 							parent			: id_column_content
 						})
 						// click event
