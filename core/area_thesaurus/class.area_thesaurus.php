@@ -319,12 +319,12 @@ class area_thesaurus extends area_common {
 
 		// terms_are_model. This value comes from rqo->source->build_options->terms_are_model
 			// sent by the client from area_thesaurus when building and self.thesaurus_view_mode==='model'
-			$terms_are_model				= $this->build_options->terms_are_model ?? false;
-			$hierarchy_from_component_tipo	= $terms_are_model
-				? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO
-				: DEDALO_HIERARCHY_CHILDREN_TIPO;
+			// $terms_are_model				= $this->build_options->terms_are_model ?? false;
+			// $hierarchy_from_component_tipo	= $terms_are_model
+			// 	? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO
+			// 	: DEDALO_HIERARCHY_CHILDREN_TIPO;
 
-			$hierarchy_section_tipo = $this->get_hierarchy_section_tipo();
+			// $hierarchy_section_tipo = $this->get_hierarchy_section_tipo();
 
 		// Search records
 			$search			= search::get_instance($search_query_object);
@@ -332,8 +332,9 @@ class area_thesaurus extends area_common {
 			$ar_records		= $search_result->ar_records;
 
 		// ar_path_mix . Calculate full path of each result
-			$ar_path_mix	= [];
+			$ar_ts_objects	= [];
 			$found			= [];
+
 			foreach ($ar_records as $row) {
 
 				$section_tipo	= $row->section_tipo;
@@ -345,75 +346,140 @@ class area_thesaurus extends area_common {
 				];
 
 				// properties children_search check (case rsc197 People)
-					$RecordObj_dd		= new RecordObj_dd($section_tipo);
-					$section_properties	= $RecordObj_dd->get_properties();
+					// $RecordObj_dd		= new RecordObj_dd($section_tipo);
+					// $section_properties	= $RecordObj_dd->get_properties();
 
-					switch (true) {
-						case (!empty($section_properties) && isset($section_properties->children_search)):
+					// switch (true) {
+					// 	case (!empty($section_properties) && isset($section_properties->children_search)):
 
-							// defined section properties 'children_search' case
+					// 		// defined section properties 'children_search' case
 
-							$ar_path = [];
+					// 		$ar_path = [];
 
-							// root locator
-							$root_locator	= self::get_root_locator($section_tipo, $hierarchy_section_tipo);
-							$ar_path[]		= $root_locator;
-							break;
+					// 		// root locator
+					// 		$root_locator	= self::get_root_locator($section_tipo, $hierarchy_section_tipo);
+					// 		$ar_path[]		= $root_locator;
+					// 		break;
 
-						default:
+					// 	default:
 
 							// default case
 
-							$ar_parents = component_relation_parent::get_parents_recursive(
-								$section_id,
-								$section_tipo,
-								// (object)[
-								// 	'skip_root'						=> false,
-								// 	'search_in_main_hierarchy'		=> true,
-								// 	'main_table'					=> $this->get_main_table(),
-								// 	'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo
-								// ]
-							);
-							// add
-							$ar_path = array_reverse($ar_parents);
+				// get all parents of the node
+				$ar_parents = component_relation_parent::get_parents_recursive(
+					$section_id,
+					$section_tipo
+				);
 
-							// add parents direct children (only area_ontology for now)
-							if (get_called_class()==='area_ontology') {
-								// resolve every children (one level) of current term parents
-								$ar_path_mix = array_merge(
-									$ar_path_mix,
-									$this->get_parents_children(
-										$ar_parents,
-										$section_tipo,
-										$section_id,
-										$hierarchy_from_component_tipo
-									)
+				// reverse the order to get the root term, top term, at first position
+				$ar_path = array_reverse($ar_parents);
+
+				// get the ts_objects to built the tree
+				foreach ($ar_path as $parent_key => $current_parent) {
+
+					//Children
+						// get all children of every parent, first term is the root term
+						// therefore get its children, they will given in the correct order
+						$parent_tipo = $current_parent->from_component_tipo;
+
+						$children_tipo			= component_relation_parent::get_component_relation_children_tipo( $parent_tipo );
+						$children_section_id	= $current_parent->section_id;
+						$children_section_tipo	= $current_parent->section_tipo;
+
+						// build the component and get its data
+						$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo );
+						$component_children	= component_common::get_instance(
+							$children_model, // string model
+							$children_tipo, // string tipo
+							$children_section_id, // string section_id
+							'list', // string mode
+							DEDALO_DATA_NOLAN, // string lang
+							$children_section_tipo // string section_tipo
+						);
+
+						$children_data = $component_children->get_dato();
+
+						// built the ts_object with every child data
+						foreach ($children_data as $children_key => $child_locator) {
+							// find if the current child was resolved and is stored previously.
+							// avoid duplicates
+							$current_found = array_find($ar_ts_objects, function($el) use($child_locator) {
+								return	$el->section_tipo===$child_locator->section_tipo &&
+										$el->section_id==$child_locator->section_id;
+							});
+							// if the child doesn't exist create the ts_object, build it and get its data
+							if (!$current_found) {
+								// ts_parent. Used to link the child node to its parent in the tree
+								$ts_parent = $children_section_tipo.'_'.$children_section_id;
+								// set the order number(int) in the ts_options
+								$ts_options = new stdClass();
+									$ts_options->order = $children_key+1;
+
+								// create the ts_object of the child and get its data
+								// to be stored into the full array.
+								$ts_object = new ts_object(
+									$child_locator->section_id,
+									$child_locator->section_tipo,
+									$ts_options,
+									'list',
+									$ts_parent
 								);
+
+								$ar_ts_objects[] = $ts_object->get_data();
 							}
-							break;
-					}//end switch (true)
+						}
 
-				// add self at end
-					$locator = new locator();
-						$locator->set_section_tipo($section_tipo);
-						$locator->set_section_id($section_id);
-					$ar_path[] = $locator;
+					// Parent
+						// Find if the current parent was resolved previously
+						// avoiding duplicates
+						// here only root parents will be not stored (and not found)
+						// because the previous children resolution will include any others than root.
+						// all parents are checked, but only root parent will be processed.
+						$current_found = array_find($ar_ts_objects, function($el) use($current_parent) {
+							return	$el->section_tipo===$current_parent->section_tipo &&
+									$el->section_id==$current_parent->section_id;
+						});
+						if (!$current_found) {
+							// set its parent to link it in the tree
+							// if the node is the first one, it is the root node, the top node
+							// else the parent is the previous parent in the array
+							$ts_parent = ($parent_key === 0)
+								? 'root'
+								: $ar_path[$parent_key-1]->section_tipo.'_'.$ar_path[$parent_key-1]->section_id;
 
-				$ar_path_mix[] = $ar_path;
+							// if the parent is the root node, top node, get the order in the main section using the tld
+							$root_options = null;
+							if($ts_parent==='root'){
+								$root_tld	= get_tld_from_tipo($current_parent->section_tipo);
+
+								$root_order	= hierarchy::get_main_order($root_tld);
+								if(!empty($root_order)){
+									$root_options = new stdClass();
+										$root_options->order = $root_order;
+								}
+							}
+							// create the ts_object of the child and get its data
+							// to be stored into the full array.
+							$ts_object = new ts_object(
+								$current_parent->section_id,
+								$current_parent->section_tipo,
+								$root_options,
+								'edit',
+								$ts_parent
+							);
+
+							$ar_ts_objects[] = $ts_object->get_data();
+						}
+				}
 			}
 
-		// AR_DATA_COMBINED
-			$ar_data_combined = $this->combine_ar_data($ar_path_mix);
-
-		// result. Walk ar_data
-			$result = self::walk_hierarchy_data($ar_data_combined);
 
 		// total_records count
 			$total_records = count($ar_records);
 
 		// response
 			$response->msg		= 'Records found: ' . $total_records;
-			$response->result	= $result;
+			$response->result	= $ar_ts_objects;
 			$response->total	= $total_records;
 			$response->found	= $found;
 
