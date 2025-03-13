@@ -2460,4 +2460,49 @@ class ontology {
 
 
 
+	/**
+	* GET_MAIN_ORDER
+	* Get the main section from the given tld
+	* create the order component and get his full data
+	* return his data as an int `order` (the first value of the component).
+	* `order is used to show the root nodes in the tree.
+	* @param string $tld
+	* @return int|null $order
+	* @test true
+	*/
+	public static function get_main_order( string $tld ) : ?int {
+
+		// get main record
+			$main_record = ontology::get_ontology_main_from_tld( $tld );
+			if (empty($main_record)) {
+				debug_log(__METHOD__
+					. " Empty main record for tld " . PHP_EOL
+					. ' tld: ' . to_string($tld)
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// Name component
+			$tipo		= DEDALO_HIERARCHY_ORDER_TIPO;
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$main_record->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$main_record->section_tipo
+			);
+			$order_data = $component->get_dato();
+			$order = $order_data[0] ??  null;
+			if(!empty($order)){
+				$order = (int)$order;
+			}
+
+		return $order;
+	}//end get_main_order
+
+
+
 }//end ontology
