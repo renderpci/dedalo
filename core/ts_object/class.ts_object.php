@@ -22,6 +22,10 @@ class ts_object {
 	public $order;
 	// ar_elements
 	public $ar_elements;
+	// ts_id as dd1_1
+	public $ts_id;
+	// ts_parent as dd1_1
+	public $ts_parent;
 
 
 
@@ -34,10 +38,16 @@ class ts_object {
 	* @param string $mode
 	*	Default 'edit'
 	*/
-	public function __construct( int|string $section_id, string $section_tipo, ?object $options=null, string $mode='edit' ) {
+	public function __construct( int|string $section_id, string $section_tipo, ?object $options=null, string $mode='edit', ?string $ts_parent=null ) {
 
 		$this->section_id   = $section_id;
 		$this->section_tipo = $section_tipo;
+
+		// set thesaurus id
+		$this->ts_id = $section_tipo.'_'.$section_id;
+
+		// set thesaurus parent (link with parent node id)
+		$this->ts_parent = $ts_parent;
 
 		# Build and set current section obj
 		$this->section = section::get_instance( $section_id, $section_tipo );
@@ -222,7 +232,8 @@ class ts_object {
 		$child_data = new stdClass();
 			$child_data->section_tipo				= $this->section_tipo;
 			$child_data->section_id					= $this->section_id;
-			$child_data->mode						= 'edit';	//'list_thesaurus';
+			$child_data->ts_id						= $this->ts_id;
+			$child_data->ts_parent					= $this->ts_parent;
 			$child_data->lang						= DEDALO_DATA_LANG;
 			$child_data->is_descriptor				= true;
 			$child_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
