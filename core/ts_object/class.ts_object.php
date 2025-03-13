@@ -241,6 +241,7 @@ class ts_object {
 			$child_data->ts_id						= $this->ts_id;
 			$child_data->ts_parent					= $this->ts_parent;
 			$child_data->order						= $this->order;
+			$child_data->mode						= 'list';	//'list_thesaurus';
 			$child_data->lang						= DEDALO_DATA_LANG;
 			$child_data->is_descriptor				= true;
 			$child_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
