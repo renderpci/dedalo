@@ -23,7 +23,6 @@ final class dd_ts_api {
 	* 		children_tipo : string,
 	* 		model : string|null,
 	* 		children : array|null
-	* 		node_type : node_type
 	* 	},
 	* 	options : {
 	* 		pagination: {

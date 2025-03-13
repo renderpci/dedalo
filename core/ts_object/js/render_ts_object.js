@@ -113,7 +113,6 @@ export const dom_parse_children = function(options) {
 		const children_container			= options.children_container
 		// render options
 		const clean_children_container		= options.clean_children_container ?? true
-		const node_type						= options.node_type ?? 'thesaurus_node'
 		const children_container_is_loaded	= options.children_container_is_loaded ?? false
 		const show_arrow_opened				= options.show_arrow_opened ?? false
 		const pagination					= options.pagination || {}
@@ -160,8 +159,6 @@ export const dom_parse_children = function(options) {
 			children_container				: children_container,
 			parent_nd_container				: parent_nd_container,
 			children_container_is_loaded	: children_container_is_loaded,
-			node_type						: node_type,
-			next_node_type					: node_type,
 			show_arrow_opened				: show_arrow_opened,
 			mode							: mode
 		})
@@ -192,7 +189,6 @@ export const dom_parse_children = function(options) {
 * {
 * 	self: object
 * 	ar_children_data: array [{ar_elements:[{}], has_descriptor_children:true, is_descriptor:true, ..}],
-* 	node_type: string as 'hierarchy_node'
 * 	children_container: HTMLElement,
 * 	parent_nd_container: string|null
 *	children_container_is_loaded: bool
@@ -207,7 +203,6 @@ export const render_children_list = function(options) {
 	// options
 		const self							= options.self
 		const ar_children_data				= options.ar_children_data
-		const node_type						= options.node_type
 		const children_container			= options.children_container
 		const parent_nd_container			= options.parent_nd_container
 		const children_container_is_loaded	= options.children_container_is_loaded
@@ -678,7 +673,6 @@ const render_id_column = function(options) {
 		const self			= options.self
 		const section_tipo	= options.section_tipo
 		const section_id	= options.section_id
-		const node_type		= options.node_type
 		const is_descriptor	= options.is_descriptor
 		const is_indexable	= options.is_indexable
 		const children_data	= options.children_data
@@ -880,7 +874,7 @@ const render_id_column = function(options) {
 
 			// ORDER number element
 				if (children_data.permissions_button_new>=2) {
-					if(is_descriptor===true && node_type!=='hierarchy_node' && mode!=='search') {
+					if(is_descriptor===true && mode!=='search') {
 						// var event_function = [{'type':'click','name':'ts_object.build_order_form'}];
 						const order_number = ui.create_dom_element({
 							element_type	: 'a',
@@ -894,11 +888,10 @@ const render_id_column = function(options) {
 							self.build_order_form(order_number)
 						}
 						order_number.addEventListener('click', click_handler)
-					}//if(is_descriptor===true && node_type!=='hierarchy_node')
+					}//if(is_descriptor===true)
 				}
 
 			// EDIT . button edit element
-				//if (node_type!=='hierarchy_node') {
 				// var event_function 		= [{'type':'click','name':'ts_object.edit'}];
 				const link_edit = ui.create_dom_element({
 					element_type	: 'a',
@@ -931,7 +924,6 @@ const render_id_column = function(options) {
 					class_name		: 'ts_object_edit_icon',
 					parent			: link_edit
 				})
-				//}//end if (node_type!=='hierarchy_node')
 
 			break;
 		}
