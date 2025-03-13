@@ -140,7 +140,7 @@ class ts_object {
 	* PARSE_CHILD_DATA
 	* Auxiliary function used in dd_ts_api
 	* Iterates locators extracting the child data of each one
-	* @see get_child_data
+	* @see get_data
 	* @param array $locators
 	* @param string $area_model='area_thesaurus'
 	* @return array $child_data
@@ -213,10 +213,10 @@ class ts_object {
 
 
 	/**
-	* GET_CHILD_DATA
+	* GET_DATA
 	* @return object $child_data
 	*/
-	public function get_child_data() : object {
+	public function get_data() : object {
 
 		// Global object
 		$child_data = new stdClass();
@@ -507,11 +507,11 @@ class ts_object {
 				// $total = round( (start_time()-$start_time), 3 );
 				#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
 				// $child_data->total_time = $total;
-				// error_log('********************* get_child_data total:'. exec_time_unit($start_time,'ms'));
+				// error_log('********************* get_data total:'. exec_time_unit($start_time,'ms'));
 			}
 
 		return $child_data;
-	}//end get_child_data
+	}//end get_data
 
 
 

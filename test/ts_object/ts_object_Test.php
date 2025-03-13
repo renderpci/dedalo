@@ -60,10 +60,10 @@ final class ts_object_test extends TestCase {
 
 
 	/**
-	* TEST_get_child_data
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_child_data(): void {
+	public function test_get_data(): void {
 
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -74,7 +74,7 @@ final class ts_object_test extends TestCase {
 			$this->mode
 		);
 
-		$result = $ts_object->get_child_data();
+		$result = $ts_object->get_data();
 
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
@@ -94,7 +94,7 @@ final class ts_object_test extends TestCase {
 			$eq,
 			'expected true (class===array) and received type: ' .$type
 		);
-	}//end test_get_child_data
+	}//end test_get_data
 
 
 
