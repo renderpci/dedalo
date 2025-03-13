@@ -222,7 +222,6 @@ const render_content_data = function(self) {
 							element_type	: 'div',
 							class_name		: 'wrap_ts_object hierarchy_root_node',
 							dataset			: {
-												node_type			: 'hierarchy_node',
 												section_tipo		: hierarchy_sections_item.section_tipo,
 												section_id			: hierarchy_sections_item.section_id,
 												target_section_tipo	: hierarchy_sections_item.target_section_tipo
