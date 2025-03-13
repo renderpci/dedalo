@@ -83,7 +83,7 @@ class area_thesaurus extends area_common {
 		foreach ($active_elements as $element) {
 
 			// active_in_thesaurus check
-				if ($element->active_in_thesaurus===false) {
+				if ($element->active_in_thesaurus===false && $class_name!=='ontology' ) {
 					// skip non active in thesaurus sections
 					continue;
 				}
@@ -100,13 +100,13 @@ class area_thesaurus extends area_common {
 				}
 
 			// Skip filtered sections when defined
-				if (!empty($hierarchy_sections_filter) && !in_array($element->target_section_tipo, $hierarchy_sections_filter)) {
+				if ( !empty($hierarchy_sections_filter) && !in_array($element->target_section_tipo, $hierarchy_sections_filter) ) {
 					continue; // Skip
 				}
 
 			// root terms. The target section elements added to 'General term' portal
 				$root_terms = $class_name::get_root_terms( $element->section_tipo, $element->section_id, $terms_are_model );
-				if (empty($root_terms)) {
+				if ( empty($root_terms) && $class_name!=='ontology' ) {
 					// skip hierarchies without root terms
 					continue;
 				}
