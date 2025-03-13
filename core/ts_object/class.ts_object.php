@@ -59,7 +59,7 @@ class ts_object {
 		$this->mode = $mode;
 
 		# Set default order
-		$this->order = 1000; // Default is 1000. When get_html is called, this var is updated with component value if exits and have data
+		$this->order = $options->order ?? null;
 	}//end __construct
 
 
@@ -159,7 +159,7 @@ class ts_object {
 
 		$children_data = [];
 
-		foreach ($locators as $locator) {
+		foreach ($locators as $key => $locator) {
 
 			$section_id		= $locator->section_id;
 			$section_tipo	= $locator->section_tipo;
@@ -200,9 +200,15 @@ class ts_object {
 					continue;
 				}
 			}
+			// set order of locator in the ts_options
+			$ts_options = empty($ts_object_options)
+				? new stdClass()
+				: $ts_object_options;
 
-			$ts_object		= new ts_object( $section_id, $section_tipo, $ts_object_options );
-			$child_object	= $ts_object->get_child_data();
+			$ts_options->order = $key+1;
+
+			$ts_object		= new ts_object( $section_id, $section_tipo, $ts_options );
+			$child_object	= $ts_object->get_data();
 
 			if (empty($child_object->ar_elements)) {
 				$tld = get_tld_from_tipo($locator->section_tipo);
@@ -234,6 +240,7 @@ class ts_object {
 			$child_data->section_id					= $this->section_id;
 			$child_data->ts_id						= $this->ts_id;
 			$child_data->ts_parent					= $this->ts_parent;
+			$child_data->order						= $this->order;
 			$child_data->lang						= DEDALO_DATA_LANG;
 			$child_data->is_descriptor				= true;
 			$child_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
@@ -471,7 +478,7 @@ class ts_object {
 								$child_data->children_tipo = $element_tipo;
 
 								// fix children dato
-								$child_data->children = $dato;
+								// $child_data->children = $dato;
 
 								// set has_descriptor_children value
 								$child_data->has_descriptor_children = $this->has_children_of_type($dato, 'descriptor')===true;
