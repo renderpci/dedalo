@@ -1403,7 +1403,7 @@ class login extends common {
 					$properties->info[] = [
 						'type'	=> 'db_user',
 						'label'	=> 'DB info',
-						'value'	=> DEDALO_DATABASE_CONN .' - '. DEDALO_HOSTNAME_CONN .' - '. DEDALO_USERNAME_CONN
+						'value'	=> [DEDALO_DATABASE_CONN, DEDALO_HOSTNAME_CONN, DEDALO_USERNAME_CONN]
 					];
 			}
 
