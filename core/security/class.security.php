@@ -545,8 +545,7 @@ class security {
 
 	/**
 	* GET_SECTION_NEW_PERMISSIONS
-	* Resolve section create record permissions from
-	* button 'New' permissions
+	* Resolves button new permissions
 	* @see component_filter->set_dato_default()
 	* @param string $section_tipo
 	* @return int|null $permissions
