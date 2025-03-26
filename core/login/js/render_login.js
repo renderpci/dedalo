@@ -399,6 +399,9 @@ const get_content_data = function(self) {
 						break;
 					}
 					default:
+						if (Array.isArray(value)) {
+							value = value.join('<br>')
+						}
 						break;
 				}
 
