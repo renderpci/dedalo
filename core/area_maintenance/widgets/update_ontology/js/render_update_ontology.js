@@ -87,7 +87,13 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: `Current Ontology version: <b>${current_ontology}</b>`,
+			inner_html		: `Current Ontology info <b>${current_ontology.version}</b>`,
+			parent			: content_data
+		})
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'pre_clean',
+			inner_html		: JSON.stringify(current_ontology, null, 2),
 			parent			: content_data
 		})
 
