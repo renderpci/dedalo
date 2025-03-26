@@ -346,19 +346,22 @@ final class security_test extends TestCase {
 	*/
 	public function test_get_section_new_permissions() : void {
 
+		$tipo = 'oh1';
 		// result
-		$result = security::get_section_new_permissions('oh1');
+		$result = security::get_section_new_permissions($tipo);
 
 		$this->assertTrue(
 			gettype($result)==='integer',
 			'expected integer'. PHP_EOL
-			.' result: ' . gettype($result)
+			.' result: ' . gettype($result). PHP_EOL
+			.' tipo:' . $tipo
 		);
 
 		$this->assertTrue(
 			$result===2,
 			'expected 2'. PHP_EOL
-			.' result: ' . to_string($result)
+			.' result: ' . to_string($result) . PHP_EOL
+			.' tipo:' . $tipo
 		);
 	}//end test_get_section_new_permissions
 
