@@ -4865,7 +4865,7 @@ class diffusion_sql extends diffusion  {
 					continue;
 				}
 
-			// target is publishable check
+			// target is publishable check (see example of use in 'rsc703')
 				$current_is_publicable = isset($process_dato_arguments->is_publicable)
 					? (bool)$process_dato_arguments->is_publicable // override is_publicable verification (Bibliography case)
 					: diffusion::get_is_publicable($locator);
