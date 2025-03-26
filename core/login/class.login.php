@@ -1383,10 +1383,12 @@ class login extends common {
 				'value'	=> implode('.', get_current_version_in_db())
 			];
 		// ontology version
+			$RecordObj_dd		= new RecordObj_dd('dd1');
+			$dd1_properties		= $RecordObj_dd->get_properties();
 			$properties->info[] = [
 				'type'	=> 'version',
 				'label'	=> 'Ontology version',
-				'value'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, true, true)
+				'value'	=> [$dd1_properties->version, $dd1_properties->date]
 			];
 
 		// development server only
