@@ -239,14 +239,14 @@ final class dd_core_api {
 							if(defined('DEDALO_INSTALL_STATUS') &&  DEDALO_INSTALL_STATUS==='installed') {
 
 								// status is 'installed' but database it's not available
-								$msg = "Error. Your installation is set as 'installed' (DEDALO_INSTALL_STATUS) but the ontology tables are not available";
+								$msg = "Error. Your installation is set as 'installed' (DEDALO_INSTALL_STATUS) but the ontology tables are not ready (empty login_context or login_context->properties->login_items)";
 								debug_log(__METHOD__
 									. " $msg " . PHP_EOL
 									. ' rqo: '.to_string($rqo)
 									, logger::ERROR
 								);
 								$response->result	= false;
-								$response->errors[]	= 'ontology tables not available';
+								$response->errors[]	= 'ontology tables not ready';
 								$response->msg		= $msg;
 
 								return $response;
