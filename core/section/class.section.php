@@ -1407,61 +1407,31 @@ class section extends common {
 			switch($delete_mode) {
 
 				case 'delete_record' :
-					// TIME MACHINE : prepare matrix_time_machine data for recover this section later
-					// Get time machine id based on section tipo and section_id
-					$ar_id_time_machine = RecordObj_time_machine::get_ar_time_machine_of_this(
-						$section_tipo,
-						(int)$this->section_id,
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-					if (empty($ar_id_time_machine[0])) {
-						#return "Error on delete record. Time machine version of this record not exists. Please contact with your admin to delete this record";
+					// create a new time machine record. Always, even when the section has recovered previously, a new time machine record is created
+					// to mark every section delete point in the time. For tool list, only the last record (state 'deleted') will be used.
 						$RecordObj_time_machine_new = new RecordObj_time_machine(null);
-							$RecordObj_time_machine_new->set_section_id((int)$this->section_id);
-							$RecordObj_time_machine_new->set_section_tipo((string)$section_tipo);
-							$RecordObj_time_machine_new->set_tipo((string)$section_tipo);
-							$RecordObj_time_machine_new->set_lang((string)$this->get_lang());
-							$RecordObj_time_machine_new->set_timestamp((string)dd_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
-							$RecordObj_time_machine_new->set_userID(logged_user_id());
-							$RecordObj_time_machine_new->set_dato((object)$this->dato);
+							$RecordObj_time_machine_new->set_section_id( (int)$this->section_id );
+							$RecordObj_time_machine_new->set_section_tipo( (string)$section_tipo );
+							$RecordObj_time_machine_new->set_tipo( (string)$section_tipo );
+							$RecordObj_time_machine_new->set_lang( (string)$this->get_lang() );
+							$RecordObj_time_machine_new->set_timestamp( dd_date::get_timestamp_now_for_db() ); // Format 2012-11-05 19:50:44
+							$RecordObj_time_machine_new->set_userID( logged_user_id() );
+							$RecordObj_time_machine_new->set_dato( $this->get_dato() );
+							$RecordObj_time_machine_new->set_state('deleted');
 						$id_time_machine = (int)$RecordObj_time_machine_new->Save();
-					}else{
-						$id_time_machine = (int)$ar_id_time_machine[0];
-					}
-					if ($id_time_machine<1) {
-						debug_log(__METHOD__
-							." Error Processing Request. id_time_machine is empty "
-							, logger::ERROR
-						);
-						throw new Exception("Error Processing Request. id_time_machine is empty", 1);
-					}
-					# Update time machine record
-					$RecordObj_time_machine = new RecordObj_time_machine( (string)$id_time_machine );
-						$RecordObj_time_machine->set_dato($this->get_dato());	// Update dato with the last data stored in this section before is deleted
-						$RecordObj_time_machine->set_state('deleted');			// Mark state as 'deleted' for fast recovery
-					$tm_save = (int)$RecordObj_time_machine->Save();			// Expected int id_time_machine returned if all is ok
-					# Verify time machine is updated properly before delete this section
-					if ($tm_save!==$id_time_machine) {
-						debug_log(__METHOD__
-							." ERROR: Failed save update data for time machine record $id_time_machine [Section:Delete]. ". PHP_EOL
-							. " Record is NOT deleted (2) "
-							, logger::ERROR
-						);
-						# Something failed in time machine save
-						if(SHOW_DEBUG===true) {
-							dump($tm_save, " tm_save is distinct: tm_save:$tm_save - id_time_machine:$id_time_machine");
+						// check save resulting id
+						if ($id_time_machine<1) {
+							debug_log(__METHOD__
+								." Error Processing Request. id_time_machine is empty "
+								, logger::ERROR
+							);
+							throw new Exception("Error Processing Request. id_time_machine is empty", 1);
 						}
-						return false;
-					}
-					$dato_time_machine	= $RecordObj_time_machine->get_dato();
-					$dato_section		= $this->get_dato();
 
-					// before compare, encode and decode the objects to avoid comparison errors
-						// $dato_time_machine_compare	= json_decode( json_encode($dato_time_machine) );
-						// $dato_section_compare		= json_decode( json_encode($dato_section) );
-
-					// check time machine dato. JSON encode and decode each of them to unify types before compare
+						// check time machine dato
+						$dato_time_machine	= $RecordObj_time_machine_new->get_dato();
+						$dato_section		= $this->get_dato();
+						// JSON encode and decode each of them to unify types before compare
 						$a			= json_handler::decode(json_handler::encode($dato_time_machine));
 						$b			= json_handler::decode(json_handler::encode($dato_section));
 						$is_equal	= (bool)($a == $b);
@@ -1478,6 +1448,26 @@ class section extends common {
 							dump($dato_section,		 'SHOW_DEBUG COMPARE ERROR dato_section');
 
 							return false;
+						}
+
+					// clean old time machine records status (only the last record must be 'deleted' to allow tool_time_machine list easily)
+						// get all time machine records for this section
+						$ar_id_time_machine = RecordObj_time_machine::get_ar_time_machine_of_this(
+							$section_tipo,
+							(int)$this->section_id,
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
+						// iterate all and remove 'deleted' state if is set (except for the last new created)
+						foreach ($ar_id_time_machine as $current_id_time_machine) {
+							if ($current_id_time_machine==$id_time_machine) {
+								continue; // already set
+							}
+							$RecordObj_time_machine = new RecordObj_time_machine( (string)$current_id_time_machine );
+							if ( $RecordObj_time_machine->get_state()==='deleted' ) {
+								$RecordObj_time_machine->set_state(null);
+								$RecordObj_time_machine->Save();
+							}
 						}
 
 					// section delete. Delete matrix record
