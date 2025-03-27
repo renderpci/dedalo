@@ -980,7 +980,7 @@ class section extends common {
 						(int)$this->section_id,
 						$tipo,
 						true // bool cache
-					);
+					  );
 				$JSON_RecordObj_matrix->set_dato($section_dato);
 				$saved_id_matrix = $JSON_RecordObj_matrix->Save( $options );
 				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
@@ -1385,7 +1385,7 @@ class section extends common {
 
 		// section_tipo
 			$section_tipo = $this->tipo;
-			// section_real_tipo. If the section virtual have the section_tipo "real" in properties change the tipo of the section to the real
+			// section_real_tipo. If the virtual section has the section_tipo "real" in properties, change the tipo of the section to the real one.
 			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
 				$section_tipo = $this->get_section_real_tipo();
 			}
@@ -1467,10 +1467,13 @@ class section extends common {
 						$is_equal	= (bool)($a == $b);
 						if ($is_equal===false) {
 							debug_log(__METHOD__
-								." ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
-								." Record is NOT deleted ! (3) "
+								. " ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
+								. ' Record is NOT deleted ! (3) ' . PHP_EOL
+								. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+								. ' section_id: ' . $this->section_id
 								, logger::ERROR
 							);
+							// debug
 							dump($dato_time_machine, 'SHOW_DEBUG COMPARE ERROR dato_time_machine');
 							dump($dato_section,		 'SHOW_DEBUG COMPARE ERROR dato_section');
 
@@ -1478,7 +1481,6 @@ class section extends common {
 						}
 
 					// section delete. Delete matrix record
-						// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $section_tipo);
 						$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
 							? $this->JSON_RecordObj_matrix
 							: JSON_RecordObj_matrix::get_instance(
@@ -1486,11 +1488,11 @@ class section extends common {
 								(int)$this->section_id,
 								$section_tipo,
 								true // bool cache
-							);
+							  );
 						$JSON_RecordObj_matrix->MarkForDeletion();
 
 						// force JSON_RecordObj_matrix destruct to real deletion exec
-							$JSON_RecordObj_matrix->__destruct();
+						$JSON_RecordObj_matrix->__destruct();
 
 					// inverse references. Remove all inverse references to this section
 						$this->remove_all_inverse_references(true);
@@ -1501,12 +1503,12 @@ class section extends common {
 					// media. Remove media files associated to this section
 						$this->remove_section_media_files();
 
-					// logger
-						$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and children records. delete_mode $delete_mode";
+					// logger message
+						$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and references. delete_mode: $delete_mode";
 					break;
 
 				case 'delete_data' :
-					// CHILDREN : Calculate components children of current section
+					// children : Calculate components children of current section
 					$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_tipo ,
 						['component_'],
@@ -1614,7 +1616,7 @@ class section extends common {
 
 		// log
 			$is_portal = (TOP_TIPO!==$this->tipo);
-			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
 				'DELETE',
 				logger::INFO,
