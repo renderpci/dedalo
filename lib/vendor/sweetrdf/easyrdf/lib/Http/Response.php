@@ -298,7 +298,11 @@ class Response
             throw new Exception('Failed to parse HTTP response status line.');
         }
 
-        // Process the rest of the header lines
+        /**
+         * Process the rest of the header lines
+         *
+         * @var array<string,array<mixed>>
+         */
         $headers = [];
         foreach ($headerLines as $line) {
             if (preg_match("|^([\w-]+):\s+(.+)$|", $line, $m)) {
@@ -306,7 +310,7 @@ class Response
                 $hValue = $m[2];
 
                 if (isset($headers[$hName])) {
-                    if (!\is_array($headers[$hName])) {
+                    if (false === \is_array($headers[$hName])) {
                         $headers[$hName] = [$headers[$hName]];
                     }
                     $headers[$hName][] = $hValue;

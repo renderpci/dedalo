@@ -94,7 +94,6 @@ class RdfXml extends Parser
             xml_set_element_handler($parser, [$this, 'startElementHandler'], [$this, 'endElementHandler']);
             xml_set_character_data_handler($parser, [$this, 'cdataHandler']);
             xml_set_start_namespace_decl_handler($parser, [$this, 'newNamespaceHandler']);
-            xml_set_object($parser, $this);
             $this->xmlParser = $parser;
         }
     }

@@ -2,7 +2,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:annotation>
         <xs:documentation source="https://phpunit.de/documentation.html">
-            This Schema file defines the rules by which the XML configuration file of PHPUnit 11.4 may be structured.
+            This Schema file defines the rules by which the XML configuration file of PHPUnit 11.5 may be structured.
         </xs:documentation>
         <xs:appinfo source="https://phpunit.de/documentation.html"/>
     </xs:annotation>
@@ -64,6 +64,7 @@
             </xs:element>
         </xs:all>
         <xs:attribute name="pathCoverage" type="xs:boolean" default="false"/>
+        <xs:attribute name="includeUncoveredFiles" type="xs:boolean" default="true"/>
         <xs:attribute name="ignoreDeprecatedCodeUnits" type="xs:boolean" default="false"/>
         <xs:attribute name="disableCodeCoverageIgnore" type="xs:boolean" default="false"/>
     </xs:complexType>
