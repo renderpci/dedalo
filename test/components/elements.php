@@ -210,7 +210,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [$section_tipo,'test201',3]
+			'new_value_params'	=> [$section_tipo,'test201',3,'dd48']
 		],
 		(object)[
 			'model'				=> 'component_relation_index',
