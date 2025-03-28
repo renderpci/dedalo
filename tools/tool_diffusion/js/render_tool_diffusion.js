@@ -91,7 +91,6 @@ const get_content_data = async function(self) {
 				parent			: section_info
 			})
 
-
 	// diffusion_info_container
 		const diffusion_info_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -277,6 +276,11 @@ export const render_publication_items = function(self) {
 
 			const item		= current_diffusion_map[i]
 			const data_item	= ar_data[diffusion_group_key]
+
+			// skip disable cases
+			if (item.class_name==='diffusion_mysql' && !data_item.table) {				
+				continue;
+			}
 
 			// local_db_id like 'process_diffusion_mht2_rsc170'
 			const local_db_id = 'process_diffusion_' + item.element_tipo + '_' + self.caller.section_tipo
@@ -618,17 +622,17 @@ export const render_publication_items = function(self) {
 					})
 				}
 				publication_button.addEventListener('click', click_handler)
-
-				when_in_viewport(publication_button, ()=>{
-					publication_button.focus()
-				})
-
+				
 				// disable cases :
 					if (
 						(item.connection_status && item.connection_status.result===false) ||
 						(item.class_name==='diffusion_mysql' && !data_item.table)
 						) {
 							publication_button.classList.add('loading')
+					}else{
+						when_in_viewport(publication_button, ()=>{
+							publication_button.focus()
+						})
 					}
 
 				// check process status always
