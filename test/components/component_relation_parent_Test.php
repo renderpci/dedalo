@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestDox;
+// use PHPUnit\Framework\Attributes\TestDox;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -199,9 +199,6 @@ final class component_relation_parent_test extends TestCase {
 			    }]
 			');
 			$fixed_dato = $component->get_dato();
-
-				// dump($fixed_dato, ' fixed_dato ++ '.to_string());
-				// dump($reference_dato, '$reference_dato ++ '.to_string());
 
 			$this->assertTrue(
 				json_encode($fixed_dato)===json_encode($reference_dato),

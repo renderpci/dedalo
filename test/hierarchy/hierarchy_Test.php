@@ -404,8 +404,8 @@ final class hierarchy_test extends TestCase {
 		$this->assertTrue(
 			json_encode($result)===json_encode($reference),
 			'expected equal true ' . PHP_EOL
-				. to_string($result) . PHP_EOL
-				. to_string($reference)
+			. 'result: ' . json_encode($result) . PHP_EOL
+			. 'reference: ' . json_encode($reference)
 		);
 	}//end test_get_section_map_elemets
 

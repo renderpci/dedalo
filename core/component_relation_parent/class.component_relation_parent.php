@@ -253,7 +253,10 @@ class component_relation_parent extends component_relation_common {
 			if ($locator->section_tipo===$this->section_tipo && $locator->section_id==$this->section_id) {
 				debug_log(__METHOD__
 					. " Error: Ignored invalid locator received to add parent (auto-reference) " . PHP_EOL
-					. ' locator: ' . to_string($locator)
+					. ' locator: ' . to_string($locator) . PHP_EOL
+					. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
+					. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+					. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
 					, logger::ERROR
 				);
 				return false; // Avoid auto-references
@@ -262,7 +265,10 @@ class component_relation_parent extends component_relation_common {
 		// from_component_tipo check
 			if (!isset($locator->from_component_tipo)) {
 				debug_log(__METHOD__
-					.' ERROR. ignored action. Property "from_component_tipo" is mandatory '
+					.' ERROR. ignored action. Property "from_component_tipo" is mandatory ' . PHP_EOL
+					. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
+					. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+					. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
 					, logger::ERROR
 				);
 				return false;

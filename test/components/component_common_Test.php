@@ -622,14 +622,15 @@ final class component_common_test extends TestCase {
 			])) {
 				$this->assertTrue(
 					!empty($component->section_obj),
-					'expected component section_obj is not empty '. $element->model
+					'expected component section_obj is not empty '. $element->model . PHP_EOL
+					.'component->section_obj: ' . to_string($component->section_obj)
 				);
 				$this->assertTrue(
 					$component->section_obj->get_section_id()==$component->get_section_id(),
-					'expected section_obj section_id is the same as $component->section_id'
+					'expected section_obj section_id is the same as $component->section_id'. PHP_EOL
+					.'component->section_obj: ' . to_string($component->section_obj)
 				);
 			}
-
 		}
 	}//end test_load_component_dato
 
