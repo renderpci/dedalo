@@ -393,7 +393,7 @@ final class hierarchy_test extends TestCase {
 			    "thesaurus": {
 			        "term": "hierarchy25",
 			        "model": "hierarchy27",
-			        "order": "hierarchy48",
+			        "order": "hierarchy2",
 			        "parent": "hierarchy36",
 			        "is_indexable": "hierarchy24",
 			        "is_descriptor": "hierarchy23"

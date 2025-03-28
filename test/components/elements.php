@@ -210,7 +210,13 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [$section_tipo,'test201',3,'dd48']
+			'new_value_params'	=> [
+				$section_tipo,
+				'test201',
+				0, // max random int (not used)
+				'dd48',
+				2 // custom section_id
+			]
 		],
 		(object)[
 			'model'				=> 'component_relation_index',
@@ -241,7 +247,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['test3','test71',2],
+			'new_value_params'	=> ['test3','test71',0,'dd47',3],
 			'test_save'			=> false
 		],
 		(object)[
