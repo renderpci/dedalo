@@ -26,6 +26,7 @@ use function substr;
 use function trim;
 use PHPUnit\Event\Code\Test;
 use PHPUnit\Event\Code\TestMethod;
+use PHPUnit\Event\Test\AfterLastTestMethodErrored;
 use PHPUnit\Event\Test\BeforeFirstTestMethodErrored;
 use PHPUnit\Event\Test\ConsideredRisky;
 use PHPUnit\Event\Test\DeprecationTriggered;
@@ -83,7 +84,7 @@ final class ResultPrinter
         $this->displayDefectsInReverseOrder                 = $displayDefectsInReverseOrder;
     }
 
-    public function print(TestResult $result): void
+    public function print(TestResult $result, bool $stackTraceForDeprecations = false): void
     {
         if ($this->displayPhpunitErrors) {
             $this->printPhpunitErrors($result);
@@ -142,13 +143,8 @@ final class ResultPrinter
 
         if ($this->displayDetailsOnTestsThatTriggerDeprecations) {
             $this->printIssueList('PHP deprecation', $result->phpDeprecations());
-            $this->printIssueList('deprecation', $result->deprecations());
+            $this->printIssueList('deprecation', $result->deprecations(), $stackTraceForDeprecations);
         }
-    }
-
-    public function flush(): void
-    {
-        $this->printer->flush();
     }
 
     private function printPhpunitErrors(TestResult $result): void
@@ -187,12 +183,19 @@ final class ResultPrinter
         }
 
         $elements = [];
+        $messages = [];
 
         foreach ($result->testRunnerTriggeredWarningEvents() as $event) {
+            if (isset($messages[$event->message()])) {
+                continue;
+            }
+
             $elements[] = [
                 'title' => $event->message(),
                 'body'  => '',
             ];
+
+            $messages[$event->message()] = true;
         }
 
         $this->printListHeaderWithNumber(count($elements), 'PHPUnit test runner warning');
@@ -244,7 +247,7 @@ final class ResultPrinter
         $elements = [];
 
         foreach ($result->testErroredEvents() as $event) {
-            if ($event instanceof BeforeFirstTestMethodErrored) {
+            if ($event instanceof AfterLastTestMethodErrored || $event instanceof BeforeFirstTestMethodErrored) {
                 $title = $event->testClassName();
             } else {
                 $title = $this->name($event->test());
@@ -358,7 +361,7 @@ final class ResultPrinter
      * @param non-empty-string $type
      * @param list<Issue>      $issues
      */
-    private function printIssueList(string $type, array $issues): void
+    private function printIssueList(string $type, array $issues, bool $stackTrace = false): void
     {
         if (empty($issues)) {
             return;
@@ -394,24 +397,32 @@ final class ResultPrinter
                 $issue->line(),
             );
 
-            $body = trim($issue->description()) . PHP_EOL . PHP_EOL . 'Triggered by:';
+            $body = trim($issue->description()) . PHP_EOL . PHP_EOL;
 
-            $triggeringTests = $issue->triggeringTests();
+            if ($stackTrace && $issue->hasStackTrace()) {
+                $body .= trim($issue->stackTrace()) . PHP_EOL . PHP_EOL;
+            }
 
-            ksort($triggeringTests);
+            if (!$issue->triggeredInTest()) {
+                $body .= 'Triggered by:';
 
-            foreach ($triggeringTests as $triggeringTest) {
-                $body .= PHP_EOL . PHP_EOL . '* ' . $triggeringTest['test']->id();
+                $triggeringTests = $issue->triggeringTests();
 
-                if ($triggeringTest['count'] > 1) {
-                    $body .= sprintf(
-                        ' (%d times)',
-                        $triggeringTest['count'],
-                    );
-                }
+                ksort($triggeringTests);
 
-                if ($triggeringTest['test']->isTestMethod()) {
-                    $body .= PHP_EOL . '  ' . $triggeringTest['test']->file() . ':' . $triggeringTest['test']->line();
+                foreach ($triggeringTests as $triggeringTest) {
+                    $body .= PHP_EOL . PHP_EOL . '* ' . $triggeringTest['test']->id();
+
+                    if ($triggeringTest['count'] > 1) {
+                        $body .= sprintf(
+                            ' (%d times)',
+                            $triggeringTest['count'],
+                        );
+                    }
+
+                    if ($triggeringTest['test']->isTestMethod()) {
+                        $body .= PHP_EOL . '  ' . $triggeringTest['test']->file() . ':' . $triggeringTest['test']->line();
+                    }
                 }
             }
 

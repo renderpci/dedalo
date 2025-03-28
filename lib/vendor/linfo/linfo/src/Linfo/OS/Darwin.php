@@ -45,8 +45,6 @@ class Darwin extends BSDcommon
         $exec,
         $dmesg;
 
-    private LevelDict $systemProfiler;
-
     // Start us off
     public function __construct($settings)
     {

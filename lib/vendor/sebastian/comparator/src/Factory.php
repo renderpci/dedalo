@@ -9,14 +9,17 @@
  */
 namespace SebastianBergmann\Comparator;
 
+use const PHP_VERSION;
 use function array_unshift;
+use function extension_loaded;
+use function version_compare;
 
 final class Factory
 {
     private static ?Factory $instance = null;
 
     /**
-     * @var list<Comparator>
+     * @var array<non-negative-int, Comparator>
      */
     private array $customComparators = [];
 
@@ -98,6 +101,11 @@ final class Factory
         $this->registerDefaultComparator(new SplObjectStorageComparator);
         $this->registerDefaultComparator(new ExceptionComparator);
         $this->registerDefaultComparator(new EnumerationComparator);
+
+        if (extension_loaded('bcmath') && version_compare(PHP_VERSION, '8.4.0', '>=')) {
+            $this->registerDefaultComparator(new NumberComparator);
+        }
+
         $this->registerDefaultComparator(new ObjectComparator);
         $this->registerDefaultComparator(new ResourceComparator);
         $this->registerDefaultComparator(new ArrayComparator);

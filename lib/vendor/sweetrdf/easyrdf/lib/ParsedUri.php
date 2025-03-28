@@ -69,6 +69,17 @@ class ParsedUri
     {
         if (\is_string($uri)) {
             if (preg_match(self::URI_REGEX, $uri, $matches)) {
+                /**
+                 * Without the following "hack", PHPStan would throw the following errors (PHP 8.4):
+                 *
+                 * 74   Offset 2 on array{0: string, 1: string, 2: string, ...} in isset() always exists and is not nullable.
+                 * 80   Offset 4 on array{0: string, 1: string, 2: string, ...} in isset() always exists and is not nullable.
+                 * 86   Offset 5 on array{0: string, 1: string, 2: string, ...} in isset() always exists and is not nullable.
+                 *
+                 * @var array<mixed>
+                 */
+                $matches = $matches;
+
                 if (!empty($matches[1])) {
                     $this->scheme = isset($matches[2]) ? $matches[2] : '';
                 }

@@ -106,7 +106,7 @@ final class ProgressPrinter
         }
 
         if ($this->source->restrictNotices() &&
-            !(new SourceFilter)->includes($this->source, $event->file())) {
+            !SourceFilter::instance()->includes($event->file())) {
             return;
         }
 
@@ -124,7 +124,7 @@ final class ProgressPrinter
         }
 
         if ($this->source->restrictNotices() &&
-            !(new SourceFilter)->includes($this->source, $event->file())) {
+            !SourceFilter::instance()->includes($event->file())) {
             return;
         }
 
@@ -141,7 +141,8 @@ final class ProgressPrinter
             return;
         }
 
-        if ($this->source->ignoreSelfDeprecations() && $event->trigger()->isSelf()) {
+        if ($this->source->ignoreSelfDeprecations() &&
+            ($event->trigger()->isTest() || $event->trigger()->isSelf())) {
             return;
         }
 
@@ -154,7 +155,7 @@ final class ProgressPrinter
         }
 
         if ($this->source->restrictDeprecations() &&
-            !(new SourceFilter)->includes($this->source, $event->file())) {
+            !SourceFilter::instance()->includes($event->file())) {
             return;
         }
 
@@ -171,7 +172,8 @@ final class ProgressPrinter
             return;
         }
 
-        if ($this->source->ignoreSelfDeprecations() && $event->trigger()->isSelf()) {
+        if ($this->source->ignoreSelfDeprecations() &&
+            ($event->trigger()->isTest() || $event->trigger()->isSelf())) {
             return;
         }
 
@@ -184,7 +186,7 @@ final class ProgressPrinter
         }
 
         if ($this->source->restrictDeprecations() &&
-            !(new SourceFilter)->includes($this->source, $event->file())) {
+            !SourceFilter::instance()->includes($event->file())) {
             return;
         }
 
@@ -212,7 +214,7 @@ final class ProgressPrinter
         }
 
         if ($this->source->restrictWarnings() &&
-            !(new SourceFilter)->includes($this->source, $event->file())) {
+            !SourceFilter::instance()->includes($event->file())) {
             return;
         }
 
@@ -230,7 +232,7 @@ final class ProgressPrinter
         }
 
         if ($this->source->restrictWarnings() &&
-            !(new SourceFilter)->includes($this->source, $event->file())) {
+            !SourceFilter::instance()->includes($event->file())) {
             return;
         }
 

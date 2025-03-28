@@ -434,7 +434,7 @@ class TurtleTest extends TestCase
         // paths are not in turtle
         $this->expectException('EasyRdf\Parser\Exception');
         $this->expectExceptionMessage(
-            'Turtle Parse Error: object for statement missing on line 3, column 5'
+            "Turtle Parse Error: expected an RDF value here, found '^' on line 3, column 3"
         );
         $this->parseTurtle('turtle/bad-07.ttl');
     }
@@ -577,5 +577,48 @@ class TurtleTest extends TestCase
 
         $this->assertEquals(14, $triple_count);
         */
+    }
+
+    /**
+     * Allow usage of dot in middle of name
+     *
+     * @see https://github.com/sweetrdf/easyrdf/issues/51
+     */
+    public function testIssue51()
+    {
+        $this->turtleTestCase('gh51-sweetrdf-dot-in-name');
+    }
+
+    public function testIssue51Bad()
+    {
+        // Test long literals with missing end
+        $this->expectException('EasyRdf\Parser\Exception');
+        $this->expectExceptionMessage(
+            'Turtle Parse Error: Illegal predicate type: literal on line 7, column 19'
+        );
+        $this->parseTurtle('turtle/gh51-sweetrdf-dot-in-name-bad.ttl');
+    }
+
+    /**
+     * Allow whitespace(s) between quoted string literal and langtag or datatype
+     *
+     * @see https://github.com/sweetrdf/easyrdf/issues/52
+     */
+    public function testIssue52()
+    {
+        $this->turtleTestCase('gh52-sweetrdf-whitespace-langtag');
+    }
+
+    /**
+     * Bug in Turtle parser for boolean value that is directly followed by a semicolon
+     *
+     * @see https://github.com/sweetrdf/easyrdf/issues/58
+     */
+    public function testIssue58()
+    {
+        // Test file should parse without exceptions
+        $this->expectNotToPerformAssertions();
+
+        $this->parseTurtle('turtle/gh58-sweetrdf-bool-parser.ttl');
     }
 }

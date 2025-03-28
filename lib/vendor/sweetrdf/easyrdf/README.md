@@ -105,11 +105,11 @@ This fork (v1.\*) aims to be a drop-in replacement for the `easyrdf/easyrdf` pac
 
 #### What can you expect as an EasyRdf developer?
 
-This repository is set up in a way to lower the maintenance overhead in comparison to the original version. Test related tool was partly replaced with more lightweight solutions. Furthermore this repository is held by an organization instead of a user, which allows more flexible maintenance.
+This repository is set up in a way to lower the maintenance overhead in comparison to the original version. Test related tools were partly replaced with more lightweight solutions. Furthermore this repository is held by an organization instead of a user, which allows more flexible maintenance.
 
 #### Whats next? Whats my plan?
 
-As stated above, main objective is to keep EasyRdf's legecay code up to date and compatible with latest PHP versions. I welcome pull requests and try to react as fast as possible. If there are useful pull requests in easyrdf/easyrdf (and I have time to spare), I will picked them up and integrate them here (for instance https://github.com/sweetrdf/easyrdf/pull/9, https://github.com/sweetrdf/easyrdf/pull/14).
+As stated above, main objective is to keep EasyRdf's legacy code up to date and compatible with latest PHP versions. I welcome pull requests and try to react as fast as possible. If there are useful pull requests in easyrdf/easyrdf (and I have time to spare), I will picked them up and integrate them here (for instance https://github.com/sweetrdf/easyrdf/pull/9, https://github.com/sweetrdf/easyrdf/pull/14).
 
 ## Licensing
 

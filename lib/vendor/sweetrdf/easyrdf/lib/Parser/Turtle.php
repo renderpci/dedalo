@@ -554,6 +554,8 @@ class Turtle extends Ntriples
     {
         $label = $this->parseQuotedString();
 
+        $this->skipWSC();
+
         // Check for presence of a language tag or datatype
         $c = $this->peek();
 
@@ -904,6 +906,9 @@ class Turtle extends Ntriples
                 $value = $prefix;
 
                 if ('true' == $value || 'false' == $value) {
+                    // Unread last character
+                    $this->unread($c);
+
                     return [
                         'type' => 'literal',
                         'value' => $value,
@@ -939,6 +944,14 @@ class Turtle extends Ntriples
                     $localName .= $c;
                 }
                 $c = $this->read();
+            }
+
+            // Last char of name must not be a dot
+            if (mb_substr($localName, -1) === '.') {
+                $localName = substr_replace($localName, '', -1);
+                $this->unread($c); // step back
+                $this->unread('.'); // return dot to input buffer
+                $c = $this->read(); // read, because below the unread($c) is done for all cases
             }
         }
 
@@ -1217,6 +1230,7 @@ class Turtle extends Ntriples
             self::isNameStartChar($c)
             || $o >= 0x30 && $o <= 0x39     // 0-9
             || '-' == $c
+            || '.' == $c                    // dots are allowed in the middle of a name, not as start char
             || 0x00B7 == $o;
     }
 
