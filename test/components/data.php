@@ -61,7 +61,8 @@ function random_locator($arguments) {
 	$from_component_tipo	= $arguments[1];
 	$max 					= $arguments[2] ?? 50;
 	$type 					= $arguments[3] ?? 'dd151';
-	$section_id				= (random_number($max) ?? 1);
+	$custom_section_id		= $arguments[4] ?? null;
+	$section_id				= $custom_section_id ?? (random_number($max) ?? 1);
 
 	// $value = (object)[
 	// 	'type'					=> 'dd151',

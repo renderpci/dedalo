@@ -911,10 +911,10 @@ final class ontology_test extends TestCase {
 		});
 		$expected = json_decode('
 			{
-		        "type": "dd48",
-		        "section_id": "4",
 		        "section_tipo": "rsc0",
-		        "from_component_tipo": "ontology14"
+				"section_id": "4",
+				"from_component_tipo": "ontology14",
+				"type": "dd48"
 		    }
 		');
 		$this->assertTrue(

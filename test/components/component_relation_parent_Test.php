@@ -195,7 +195,8 @@ final class component_relation_parent_test extends TestCase {
 				[{
 			        "section_tipo": "test3",
 			        "section_id": "2",
-			        "from_component_tipo": "test71"
+			        "from_component_tipo": "test71",
+			        "type": "dd47"
 			    }]
 			');
 			$fixed_dato = $component->get_dato();
@@ -476,9 +477,12 @@ final class component_relation_parent_test extends TestCase {
 
 		$section_id	= 3;
 
+		$locator = new locator();
+			$locator->set_section_tipo($component->section_tipo);
+			$locator->set_section_id($section_id);
+
 		$result = $component->add_parent(
-			$component->section_tipo,
-			$section_id
+			$locator
 		);
 
 		$this->assertTrue(
@@ -525,11 +529,14 @@ final class component_relation_parent_test extends TestCase {
 
 		$section_id	= 3;
 
+		$locator = new locator();
+			$locator->set_section_tipo($component->section_tipo);
+			$locator->set_section_id($section_id);
+
 		// add dato (this action saves too)
 			$component->set_dato(null);
 			$result = $component->add_parent(
-				$component->section_tipo,
-				$section_id
+				$locator
 			);
 
 			if ($result===false) {
@@ -651,13 +658,13 @@ final class component_relation_parent_test extends TestCase {
 
 		$query_object = json_decode('
 			{
-			    "q": [
+			    "q":
 			        {
 			            "section_tipo": "test3",
-			            "section_id": "3",
+			            "section_id": "1",
 			            "from_component_tipo": "test71"
 			        }
-			    ],
+			    ,
 			    "path": [
 			        {
 			            "name": "relation_parent",
@@ -666,6 +673,7 @@ final class component_relation_parent_test extends TestCase {
 			            "component_tipo": "test71"
 			        }
 			    ],
+			    "q_split": false,
 			    "type": "jsonb",
 			    "component_path": [
 			        "components",
@@ -686,41 +694,44 @@ final class component_relation_parent_test extends TestCase {
 				. gettype($result)
 		);
 
-		$reference_value = 'in_column';
+		$reference_value = '["relations"]';
 		$this->assertTrue(
-			$result->format===$reference_value,
-			'expected in_column : ' . PHP_EOL
-				. to_string($result->format)
+			json_encode($result->component_path)===$reference_value,
+			'unequal component_path ' . PHP_EOL
+			.'$result->component_path: ' .  json_encode($result->component_path) . PHP_EOL
+			.'expected $reference_value: ' .  to_string($reference_value) . PHP_EOL
+			.'result: ' . to_string($result)
 		);
 	}//end test_resolve_query_object_sql
 
 
 
 	/**
-	* TEST_get_target_component_children_tipos
+	* TEST_gget_component_relation_children_tipo
 	* @return void
 	*/
-	public function test_get_target_component_children_tipos() {
+	public function test_gget_component_relation_children_tipo() {
 
 		$component_tipo = self::$tipo;
 
-		$result = component_relation_parent::get_target_component_children_tipos(
+		$result = component_relation_parent::get_component_relation_children_tipo(
 			$component_tipo
 		);
 
 		$this->assertTrue(
-			gettype($result)==='array',
-			'expected type array : ' . PHP_EOL
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
 				. gettype($result)
 		);
 
-		$reference_value = ['test201'];
+		$reference_value = 'test201';
 		$this->assertTrue(
-			json_encode($result)===json_encode($reference_value),
+			$result===$reference_value,
 			'expected equal : ' . PHP_EOL
-				. to_string($result)
+			.'result: ' . to_string($result) . PHP_EOL
+			.'reference_value: ' . to_string($reference_value)
 		);
-	}//end test_get_target_component_children_tipos
+	}//end test_gget_component_relation_children_tipo
 
 
 

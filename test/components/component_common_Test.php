@@ -616,7 +616,7 @@ final class component_common_test extends TestCase {
 
 			if (!in_array($element->model, [
 				'component_relation_index', // data is external, not loaded from section
-				'component_relation_parent', // data is external, not loaded from section
+				'component_relation_children', // data is external, not loaded from section
 				'component_inverse', // data is external, not loaded from section
 				'component_section_id' // data is direct, not loaded from section
 			])) {
