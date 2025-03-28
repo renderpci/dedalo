@@ -4,7 +4,7 @@
 // require __DIR__ . '/autoload.php';
 
 // SHOW_DEBUG. Overwrite config SHOW_DEBUG
-	define('SHOW_DEBUG', true);
+	define('SHOW_DEBUG', false);
 
 // TEST_USER_ID: [
 	// 	-1, // root development user
@@ -29,7 +29,8 @@
 	// use PHPUnit\Framework\Attributes\TestDox;
 
 // message CLI
-	$msg = "Dédalo ".DEDALO_VERSION." testing using user id: ".TEST_USER_ID .' - SHOW_DEBUG: ' .to_string(SHOW_DEBUG) . ' - 😐';
+	$icon = !SHOW_DEBUG ? '😀' : '🧐';
+	$msg = "Dédalo ".DEDALO_VERSION." testing using user id: ".TEST_USER_ID .' - SHOW_DEBUG: ' .to_string(SHOW_DEBUG) . ' - ' . $icon;
 	fwrite(STDERR, PHP_EOL
 		. print_r($msg, TRUE) . PHP_EOL
 	);
