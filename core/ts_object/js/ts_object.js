@@ -13,7 +13,6 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
 		render_children,
-		dom_parse_children,
 		render_root_wrapper,
 		render_ts_record
 	} from './render_ts_object.js'
@@ -86,7 +85,8 @@ export const ts_object = new function() {
 			}
 
 			const api_response = await data_manager.request({
-				body : rqo
+				use_worker	: false,
+				body		: rqo
 			})
 			// debug
 			if(SHOW_DEBUG===true) {
@@ -1701,50 +1701,13 @@ export const ts_object = new function() {
 	/**
 	* GET_LINK_CHILDREN_FROM_WRAP
 	* Find link_children node from current given wrapper
+	* Note that link_children is set as wrap pointer as 'wrapper.link_children = link_children'
 	* @param HTMLElement wrap
 	* @return HTMLElement|null link_children
 	*/
 	this.get_link_children_from_wrap = function(wrap) {
 
-		// LINK_CHILDREN . Search component_relation_children tipo from wrap
-			let link_children = null;
-
-		// check valid wrap by class
-			if (wrap.classList.contains("wrap_ts_object")===false) {
-				console.error("Error. Invalid received wrap. Expected wrap class is wrap_ts_object. wrap:",wrap);
-				return link_children
-			}
-
-		// base_wrapper. Wrapper as a root
-			const base_wrapper = wrap
-
-		const child_one		= base_wrapper.childNodes
-		const child_one_len	= child_one.length
-		for (let i = child_one_len - 1; i >= 0; i--) {
-
-			if (child_one[i].dataset.role && child_one[i].dataset.role==="elements_container") {
-
-				const child_two		= child_one[i].childNodes
-				const child_two_len	= child_two.length
-				for (let j = 0; j < child_two_len; j++) {
-					if(child_two[j].dataset.type && child_two[j].dataset.type==="link_children") {
-						// matched : fix value
-						link_children = child_two[j]
-						break;
-					}
-				}
-				break;
-			}
-		}
-
-		if (link_children===null) {
-			if(SHOW_DEBUG===true) {
-				console.warn("[ts_object.get_link_children_from_wrap] Error on locate link_children from wrap: ", wrap);
-			}
-		}
-
-
-		return link_children;
+		return wrap.link_children ?? null;
 	}//end get_link_children_from_wrap
 
 
