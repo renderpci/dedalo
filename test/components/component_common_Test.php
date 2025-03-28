@@ -318,7 +318,8 @@ final class component_common_test extends TestCase {
 					'new_data type expected array. current type: ' .gettype($new_data)
 				);
 
-			$component->set_dato($new_data);
+			// set dato
+				$component->set_dato($new_data);
 
 			$last_error = $_ENV['DEDALO_LAST_ERROR'] ?? null;
 			$this->assertTrue(
@@ -335,7 +336,10 @@ final class component_common_test extends TestCase {
 			foreach ($component->get_dato() as $key => $value) {
 				$this->assertTrue(
 					$value==$new_data[$key],
-					'expected dato element is the same as new data.'. $element->model .PHP_EOL. json_encode($value).PHP_EOL.json_encode($new_data[$key]).PHP_EOL
+					'expected dato element is the same as new data' . PHP_EOL
+					.'model: ' . $element->model . PHP_EOL
+					.'value: ' . json_encode($value) . PHP_EOL
+					.'new_data: ' . json_encode($new_data[$key]) . PHP_EOL
 					.gettype($value).PHP_EOL
 					.gettype($new_data[$key]).PHP_EOL
 				);
@@ -344,7 +348,10 @@ final class component_common_test extends TestCase {
 			foreach ($component->get_dato_resolved() as $key => $value) {
 				$this->assertTrue(
 					$value==$new_data[$key],
-					'expected dato element is the same as new data.'. $element->model .PHP_EOL. json_encode($value).PHP_EOL.json_encode($new_data[$key]).PHP_EOL
+					'expected dato resolved element is the same as new data.'
+					.'model: ' . $element->model . PHP_EOL
+					.'value: ' . json_encode($value) . PHP_EOL
+					.'new value: ' . json_encode($new_data[$key]) .PHP_EOL
 					.gettype($value).PHP_EOL
 					.gettype($new_data[$key]).PHP_EOL
 				);
