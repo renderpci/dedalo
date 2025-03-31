@@ -555,10 +555,11 @@ export const ts_object = new function() {
 			const is_open				= link_children_element?.firstChild.classList.contains('ts_object_children_arrow_icon_open')
 
 			// short vars
-			const wrapper		= link_children_element.parentNode.parentNode
-			const section_tipo	= wrapper.dataset.section_tipo
-			const section_id	= wrapper.dataset.section_id
-			const children_tipo	= wrapper.dataset.children_tipo
+			const wrapper				= link_children_element.parentNode.parentNode
+			const section_tipo			= wrapper.dataset.section_tipo
+			const section_id			= wrapper.dataset.section_id
+			const children_tipo			= wrapper.dataset.children_tipo
+			const children_container	= wrapper.children_container
 
 			if(link_children_element && is_open) {
 
