@@ -584,7 +584,7 @@ class relation_list extends common {
 										]
 									];
 
-								// inverse_references
+									// inverse_references
 									// return all records found
 									$current_dato = array_map(function($row){
 										return (object)[
@@ -643,7 +643,7 @@ class relation_list extends common {
 									}
 									$is_related = true;
 									continue;
-								}
+								}//end if(isset($map_obj->related))
 
 							// reference
 								// "type": "dd151",
