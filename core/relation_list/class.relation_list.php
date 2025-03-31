@@ -659,10 +659,30 @@ class relation_list extends common {
 
 							$current_dato = [$custom_locator];
 
-							$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
+							$is_direct = !isset($map_obj->custom_arguments->process_dato_arguments);
+							if ($is_direct) {
+
+								// direct case @see 'mdcat4338' (changed to calculated value 31-03-2025)
+								$process_dato_arguments	= $map_obj->process_dato_arguments;
 								$process_dato_arguments->lang = $lang;
 
-							$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
+								// function_handler
+								$function_handler = $map_obj->process_dato; // like 'diffusion_sql::return_fixed_value'
+
+								$current_properties = new stdClass();
+									$current_properties->process_dato_arguments = $process_dato_arguments;
+								$current_options = new stdClass();
+									$current_options->properties = $current_properties;
+								$current_value = $function_handler($current_options, $current_dato);
+
+							}else{
+
+								// default case (resolve_value)
+								$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
+								$process_dato_arguments->lang = $lang;
+
+								$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
+							}
 
 							$value_obj->{$map_key} = $current_value;
 						}//end foreach ($map_item as $map_key => $map_obj)
