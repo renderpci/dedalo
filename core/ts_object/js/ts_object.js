@@ -582,6 +582,9 @@ export const ts_object = new function() {
 						  })()
 						: pagination
 
+				// loading style
+					children_container.classList.add('loading')
+
 				// load children data and build nodes
 					self.render_children({
 						link_children_element		: link_children_element,
@@ -607,6 +610,9 @@ export const ts_object = new function() {
 						if (callback) {
 							callback(term_node)
 						}
+
+						// loading style
+						children_container.classList.remove('loading')
 					})
 			}else if(!link_children_element){
 				if (SHOW_DEBUG===true) {
