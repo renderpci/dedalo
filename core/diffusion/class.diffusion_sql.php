@@ -1631,18 +1631,18 @@ class diffusion_sql extends diffusion  {
 							$response->errors[] = 'failed save record: '. $save_response->msg ?? 'Unknown error';
 						}
 
-					// global_search (LEGACY ONLY)
-						if (isset($table_properties->global_search_map)) {
+					// global_search (LEGACY ONLY) (disabled 31-03-2025)
+						// if (isset($table_properties->global_search_map)) {
 
-							$gs_options = new stdClass();
-								$gs_options->global_search_map		= $table_properties->global_search_map;
-								$gs_options->diffusion_section		= $diffusion_section;
-								$gs_options->section_tipo			= $section_tipo;
-								$gs_options->diffusion_element_tipo	= $diffusion_element_tipo;
-								$gs_options->ar_field_data			= $ar_field_data;
-							self::save_global_search_data($gs_options);
+							// $gs_options = new stdClass();
+							// 	$gs_options->global_search_map		= $table_properties->global_search_map;
+							// 	$gs_options->diffusion_section		= $diffusion_section;
+							// 	$gs_options->section_tipo			= $section_tipo;
+							// 	$gs_options->diffusion_element_tipo	= $diffusion_element_tipo;
+							// 	$gs_options->ar_field_data			= $ar_field_data;
+							// self::save_global_search_data($gs_options);
 
-						}//end if (isset($table_properties->global_search_map))
+						// }//end if (isset($table_properties->global_search_map))
 
 					// save_global_table_data
 						if (!isset($table_properties->global_table_maps)) {
