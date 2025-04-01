@@ -171,6 +171,7 @@ class component_password extends component_common {
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value($data);
+				$dd_grid_cell_object->set_model(get_called_class());
 
 
 		return $dd_grid_cell_object;

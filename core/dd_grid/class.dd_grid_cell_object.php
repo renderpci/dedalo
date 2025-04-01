@@ -147,6 +147,8 @@ class dd_grid_cell_object {
 	// object features
 	// Multipurpose container used to pass useful information, for example the section color
 	public $features;
+	// model string|null
+	public $model;
 
 	// ar_value_type_allowed
 		// private static $ar_value_type_allowed = [
@@ -418,6 +420,18 @@ class dd_grid_cell_object {
 	public function set_features(?object $value) : void {
 		$this->features = $value;
 	}//end set_features
+
+
+
+	/**
+	* SET_COLUMN
+	* Set component model as 'component_av'
+	* @param string|null $value
+	* @return void
+	*/
+	public function set_model(?string $value) : void {
+		$this->model = $value;
+	}//end set_model
 
 
 
