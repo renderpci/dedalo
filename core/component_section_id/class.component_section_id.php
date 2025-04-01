@@ -125,16 +125,17 @@ class component_section_id extends component_common {
 		$label	= $this->get_label();
 
 		// value
-			$value = new dd_grid_cell_object();
-				$value->set_type('column');
-				$value->set_label($label);
-				$value->set_ar_columns_obj([$column_obj]);
-				$value->set_cell_type('section_id');
-				$value->set_row_count(1);
-				$value->set_value($data);
+			$dd_grid_cell_object = new dd_grid_cell_object();
+				$dd_grid_cell_object->set_type('column');
+				$dd_grid_cell_object->set_label($label);
+				$dd_grid_cell_object->set_cell_type('section_id');
+				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
+				$dd_grid_cell_object->set_row_count(1);
+				$dd_grid_cell_object->set_value($data);
+				$dd_grid_cell_object->set_model(get_called_class());
 
 
-		return $value;
+		return $dd_grid_cell_object;
 	}//end get_grid_value
 
 

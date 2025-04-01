@@ -218,22 +218,23 @@ class component_text_area extends component_common {
 					: ' | ');
 
 		// value
-			$value = new dd_grid_cell_object();
-				$value->set_type('column');
-				$value->set_label($label);
-				$value->set_ar_columns_obj([$column_obj]);
+			$dd_grid_cell_object = new dd_grid_cell_object();
+				$dd_grid_cell_object->set_type('column');
+				$dd_grid_cell_object->set_label($label);
 				if(isset($cell_type)){
-					$value->set_cell_type($cell_type);
+					$dd_grid_cell_object->set_cell_type($cell_type);
 				}
+				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
 				if(isset($class_list)){
-					$value->set_class_list($class_list);
+					$dd_grid_cell_object->set_class_list($class_list);
 				}
-				$value->set_records_separator($records_separator);
-				$value->set_value($processed_data);
-				$value->set_fallback_value($processed_fallback_value);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value($processed_data);
+				$dd_grid_cell_object->set_fallback_value($processed_fallback_value);
+				$dd_grid_cell_object->set_model(get_called_class());
 
 
-		return $value;
+		return $dd_grid_cell_object;
 	}//end get_grid_value
 
 

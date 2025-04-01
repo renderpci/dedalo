@@ -157,15 +157,16 @@ class component_av extends component_media_common implements component_media_int
 			$label = $this->get_label();
 
 		// value
-			$grid_cell_object = new dd_grid_cell_object();
-				$grid_cell_object->set_type('column');
-				$grid_cell_object->set_label($label);
-				$grid_cell_object->set_ar_columns_obj([$column_obj]);
-				$grid_cell_object->set_cell_type('img');
-				$grid_cell_object->set_value([$current_url]);
+			$dd_grid_cell_object = new dd_grid_cell_object();
+				$dd_grid_cell_object->set_type('column');
+				$dd_grid_cell_object->set_label($label);
+				$dd_grid_cell_object->set_cell_type('img');
+				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
+				$dd_grid_cell_object->set_value([$current_url]);
+				$dd_grid_cell_object->set_model(get_called_class());
 
 
-		return $grid_cell_object;
+		return $dd_grid_cell_object;
 	}//end get_grid_value
 
 

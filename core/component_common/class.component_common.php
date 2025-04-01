@@ -1077,6 +1077,7 @@ abstract class component_common extends common {
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value($data);
 				$dd_grid_cell_object->set_fallback_value($fallback_value);
+				$dd_grid_cell_object->set_model(get_called_class());
 
 
 		return $dd_grid_cell_object;
@@ -1161,6 +1162,7 @@ abstract class component_common extends common {
 				$flat_value->set_ar_columns_obj([$column_obj]);
 				$flat_value->set_row_count($row_count);
 				$flat_value->set_value($data);
+				$flat_value->set_model(get_called_class());
 
 
 		return $flat_value;

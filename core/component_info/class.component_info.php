@@ -571,7 +571,6 @@ class component_info extends component_common {
 							$dd_grid_cell_object->set_type('column');
 							$dd_grid_cell_object->set_label($current_id);
 							$dd_grid_cell_object->set_cell_type('text');
-
 							$dd_grid_cell_object->set_ar_columns_obj( [$current_column_obj] );
 							if(isset($class_list)){
 								$dd_grid_cell_object->set_class_list($class_list);
@@ -579,6 +578,7 @@ class component_info extends component_common {
 							$dd_grid_cell_object->set_records_separator($records_separator);
 							$dd_grid_cell_object->set_value($value);
 							$dd_grid_cell_object->set_fallback_value($fallback_value);
+							$dd_grid_cell_object->set_model(get_called_class());
 
 
 					// store the columns into the full columns array

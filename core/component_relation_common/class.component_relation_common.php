@@ -613,21 +613,22 @@ class component_relation_common extends component_common {
 						: ' | '));
 
 		// value object (dd_grid_cell_object)
-			$value = new dd_grid_cell_object();
-				$value->set_type('column');
-				$value->set_row_count($row_count);
-				$value->set_column_count($column_count);
-				$value->set_label($label);
-				$value->set_ar_columns_obj($ar_columns_obj);
+			$dd_grid_cell_object = new dd_grid_cell_object();
+				$dd_grid_cell_object->set_type('column');
+				$dd_grid_cell_object->set_row_count($row_count);
+				$dd_grid_cell_object->set_column_count($column_count);
+				$dd_grid_cell_object->set_label($label);
+				$dd_grid_cell_object->set_ar_columns_obj($ar_columns_obj);
 				if(isset($class_list)){
-					$value->set_class_list($class_list);
+					$dd_grid_cell_object->set_class_list($class_list);
 				}
-				$value->set_fields_separator($fields_separator);
-				$value->set_records_separator($records_separator);
-				$value->set_value($ar_cells);
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value($ar_cells);
+				$dd_grid_cell_object->set_model(get_called_class());
 
 
-		return $value;
+		return $dd_grid_cell_object;
 	}//end get_grid_value
 
 
