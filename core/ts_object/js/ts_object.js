@@ -297,7 +297,7 @@ export const ts_object = new function() {
 	* @param event
 	* @return bool
 	*/
-	this.toggle_view_children = function(link_children_element, event) {
+	this.toggle_view_children = async function(link_children_element, event) {
 
 		const self = this
 
@@ -317,7 +317,7 @@ export const ts_object = new function() {
 			link_children_element.firstChild.classList.add('ts_object_children_arrow_icon_open', 'arrow_spinner');
 
 			// Load element by AJAX
-				self.render_children({
+				await self.render_children({
 					link_children_element		: link_children_element,
 					section_tipo				: section_tipo,
 					section_id					: section_id,
@@ -343,7 +343,7 @@ export const ts_object = new function() {
 
 				// Load element by AJAX
 					if (typeof event!=="undefined" && event.altKey===true) {
-						self.render_children({
+						await self.render_children({
 							link_children_element		: link_children_element,
 							section_tipo				: section_tipo,
 							section_id					: section_id,
@@ -774,7 +774,8 @@ export const ts_object = new function() {
 			mandatory.map(el => {
 				if (!options[el]) {
 					alert(`Error: var ${el} is mandatory!`);
-					throw 'Mandatory vars check fail: ' + el
+					console.warn('options:', options);
+					throw '[add_child] Mandatory vars check fail for options: ' + el
 				}
 			})
 

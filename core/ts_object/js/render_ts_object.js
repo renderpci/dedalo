@@ -276,7 +276,8 @@ export const render_ts_record = function( self, ts_record, i ){
 			is_indexable	: is_indexable,
 			children_data	: ts_record,
 			mode			: ts_record.mode,
-			order			: ts_record.order || i+1
+			order			: ts_record.order || i+1,
+			wrapper			: wrapper
 		})
 		wrapper.appendChild(id_column_node)
 
@@ -706,6 +707,7 @@ const render_id_column = function(options) {
 		const children_data	= options.children_data
 		const mode			= options.mode
 		const order			= options.order
+		const wrapper		= options.wrapper
 
 	const id_column_content = ui.create_dom_element({
 		element_type	: 'div',
@@ -857,10 +859,21 @@ const render_id_column = function(options) {
 						// mousedown event
 						const mousedown_handler = (e) => {
 							e.stopPropagation()
-							// handle. set with event value
-							self.handle = e
+							// event_handle. set with event value
+							wrapper.event_handle = e
+							// activate draggable
+							wrapper.draggable = true
 						}
 						dragger.addEventListener('mousedown', mousedown_handler)
+						// mouseup event . Reverts mousedown wrapper draggable set
+						const mouseup_handler = (e) => {
+							e.stopPropagation()
+							// event_handle. set with event value
+							wrapper.event_handle = null
+							// deactivate draggable
+							wrapper.draggable = false
+						}
+						dragger.addEventListener('mouseup', mouseup_handler)
 
 						// drag icon
 						ui.create_dom_element({
@@ -1436,33 +1449,43 @@ export const render_wrapper = function(options) {
 		const wrap_ts_object = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: class_name,
-			data_set		: dataset,
-			draggable		: true
+			data_set		: dataset
 		})
 		// drag events attach
 		if (is_descriptor===true) {
-			// dragstart event
+
+			// dragstart event. Activated on dragger click
 			const dragstart_handler = (e) => {
 				on_dragstart(self, e)
 			}
 			wrap_ts_object.addEventListener('dragstart', dragstart_handler)
+
 			// dragend event
 			const dragend_handler = (e) => {
+				// deactivate wrapper event_handle (forces to select from drag icon)
+				wrap_ts_object.event_handle = null
 				on_dragend(self, e)
 			}
 			wrap_ts_object.addEventListener('dragend', dragend_handler)
+
 			// drop event
 			const drop_event = (e) => {
-				on_drop(self, e)
+				// deactivate wrapper event_handle (forces to select from drag icon)
+				wrap_ts_object.event_handle = null
+				on_drop(self, e, wrap_ts_object)
 			}
 			wrap_ts_object.addEventListener('drop', drop_event)
+
 			// dragover event
 			const dragover_handler = (e) => {
 				on_dragover(self, e)
 			}
 			wrap_ts_object.addEventListener('dragover', dragover_handler)
+
 			// dragleave
 			const dragleave_handler = (e) => {
+				// deactivate wrapper event_handle (forces to select from drag icon)
+				wrap_ts_object.event_handle = null
 				on_dragleave(self, e)
 			}
 			wrap_ts_object.addEventListener('dragleave', dragleave_handler)
