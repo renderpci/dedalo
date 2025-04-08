@@ -285,7 +285,7 @@ final class dd_ts_api {
 						$model,
 						$component_tipo,
 						$new_section_id,
-						'edit', // note mode edit autosave default value
+						'edit', // note that mode edit forces auto-save default value
 						DEDALO_DATA_NOLAN,
 						$section_tipo
 					);
@@ -307,10 +307,13 @@ final class dd_ts_api {
 			if (empty($component_relation_parent_tipo)) {
 				$response->msg = 'Error on get component_relation_parent from section. Model does not exists';
 				debug_log(__METHOD__.
-					" $response->msg "
+					" $response->msg " . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
+					.' model: component_relation_parent' . PHP_EOL
+					.' ar_parent_tipo: ' . to_string($ar_parent_tipo)
 					, logger::ERROR
 				);
-				$response->errors[] = 'Invalid component_relation_parent from section '.$section_tipo;
+				$response->errors[] = 'Invalid component_relation_parent from section: '.$section_tipo;
 				return $response;
 			}
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_relation_parent_tipo, true);
