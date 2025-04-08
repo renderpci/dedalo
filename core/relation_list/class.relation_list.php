@@ -756,13 +756,15 @@ class relation_list extends common {
 						if ($direct_value===true) {
 
 							// direct component value case (@see 'dmmgobes29')
-
+							
+							$translatable = RecordObj_dd::get_translatable( $target_component_tipo );
+							$lang = ( $translatable===true) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 							$current_component = component_common::get_instance(
 								$model,
 								$target_component_tipo,
 								$current_locator->section_id,
 								'list',
-								DEDALO_DATA_LANG,
+								$lang,
 								$current_locator->section_tipo
 							);
 
@@ -786,7 +788,7 @@ class relation_list extends common {
 								//     }
 								//   }
 								// }
-								$ar_value[] = $current_component->{$component_method}(DEDALO_DATA_LANG, $options);
+								$ar_value[] = $current_component->{$component_method}($lang, $options);
 							}else{
 								$ar_value[] = $current_component->get_value();
 							}
