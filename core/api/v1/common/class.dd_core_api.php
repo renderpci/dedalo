@@ -1634,7 +1634,7 @@ final class dd_core_api {
 
 				// non received case
 
-				if ( $model==='section' && ($mode==='edit' || $mode==='list') && isset($sqo_session) ) {
+				if ( $model==='section' && ( $mode==='edit' || $mode==='list' ) && isset($sqo_session) ) {
 
 					// use session already set sqo
 					$sqo = $sqo_session;
