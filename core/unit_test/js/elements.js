@@ -290,8 +290,9 @@ import * as fn from './data.js'
 			section_id			: section_id,
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_locator,
-			new_value_params	: [section_tipo,'test201']
+			new_value			: fn.custom_locator,
+			new_value_params	: [section_tipo,9,'test201','dd48'],
+			test_save			: true
 		})
 
 	// component_relation_index
@@ -332,7 +333,7 @@ import * as fn from './data.js'
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_locator,
 			new_value_params	: ['es1','test71'],
-			test_save			: false
+			test_save			: true
 		})
 
 	// component_relation_related

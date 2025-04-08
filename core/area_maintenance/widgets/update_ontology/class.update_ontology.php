@@ -60,9 +60,20 @@ class update_ontology {
 				array_merge($DEDALO_PREFIX_TIPOS, ['ontology'])
 			));
 
+		// current_ontology: dd1 properties
+			$RecordObj_dd		= new RecordObj_dd('dd1');
+			$dd1_properties		= $RecordObj_dd->get_properties();
+			$current_ontology	= (object)[
+				'date'			=> $dd1_properties->date,
+				'host'			=> $dd1_properties->host,
+				'entity'		=> $dd1_properties->entity,
+				'entity_label'	=> $dd1_properties->entity_label,
+				'version'		=> $dd1_properties->version
+			];
+
 		$result = (object)[
 			'servers'				=> $ontology_servers,
-			'current_ontology'		=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa'),
+			'current_ontology'		=> $current_ontology,
 			'prefix_tipos'			=> $DEDALO_PREFIX_TIPOS,
 			'structure_from_server'	=> (defined('STRUCTURE_FROM_SERVER') ? STRUCTURE_FROM_SERVER : null),
 			'body'					=>  label::get_label('update_ontology')." is disabled for ".DEDALO_ENTITY,

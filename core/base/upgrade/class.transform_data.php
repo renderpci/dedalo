@@ -2770,7 +2770,7 @@ class transform_data {
 	* UPDATE_DATAFRAME_TM_TO_V6_4_3
 	* Check all main component data to review if its own dataframe require add section_tipo_key
 	* dataframe in version >=6.4.3 define the section_tipo_key to bind the dataframe data to main data
-	* used in multiple target_section components as Collection (numisdata159) that call People (rsc197) and Entities(rsc106)
+	* used in multiple target_section components as Collection (numisdata159) that call People (rsc197) and Entities (rsc106)
 	* @return bool
 	*/
 	public static function update_dataframe_tm_to_v6_4_3() : bool {
@@ -2804,13 +2804,26 @@ class transform_data {
 
 				$to_save = false;
 				if (!empty($dato)) {
-					// get the target_section_tipo of the main component to be used as section_tipo_key
-					$section_tipo_key = transform_data::get_section_tipo_key_from_main_component( $section_tipo, $section_id, $dataframe_tipo );
 
 					foreach ($dato as $current_locator) {
+
 						if( !isset($current_locator->section_id_key) || isset($current_locator->section_tipo_key) ){
 							continue;
 						}
+
+						// get the target_section_tipo of the main component to be used as section_tipo_key
+						$section_tipo_key = transform_data::get_section_tipo_key_from_main_component( $section_tipo, $section_id, $dataframe_tipo );
+						if (empty($section_tipo_key)) {
+							debug_log(__METHOD__
+								. " Ignored empty section_tipo_key " . PHP_EOL
+								. ' section_tipo_key: ' . to_string($section_tipo_key) . PHP_EOL
+								, logger::ERROR
+							);
+							$info =  to_string("$section_tipo - $section_id") .' dataframe_tipo: ' .to_string($dataframe_tipo);
+							throw new Exception("Error Processing Request - " .$info, 1);
+							return false;
+						}
+
 						$current_locator->section_tipo_key = $section_tipo_key;
 						unset( $current_locator->tipo_key );
 						$to_save = true;
@@ -2843,6 +2856,7 @@ class transform_data {
 			}
 		}
 
+
 		return true;
 	}//end update_dataframe_tm_to_v6_4_3
 
@@ -2857,7 +2871,7 @@ class transform_data {
 	* @param string $dataframe_tipo | tipo of the component_dataframe
 	* @return string $section_tipo_key
 	*/
-	private static function get_section_tipo_key_from_main_component( string $section_tipo, int|string $section_id, string $dataframe_tipo ) : string {
+	private static function get_section_tipo_key_from_main_component( string $section_tipo, int|string $section_id, string $dataframe_tipo ) : ?string {
 
 		$RecordObj_dd			= new RecordObj_dd($dataframe_tipo);
 		$main_component_tipo	= $RecordObj_dd->get_parent();
@@ -2874,7 +2888,21 @@ class transform_data {
 				$section_tipo // string section_tipo
 			);
 
-			$section_tipo_key = $main_component->get_ar_target_section_tipo()[0];
+			$ar_section_tipo_key = $main_component->get_ar_target_section_tipo();
+
+		// check value
+			if (empty($ar_section_tipo_key)) {
+				debug_log(__METHOD__
+					. " Empty target_section_tipo " . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' dataframe_tipo: ' . to_string($dataframe_tipo)
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		$section_tipo_key = $ar_section_tipo_key[0];
 
 
 		return $section_tipo_key;

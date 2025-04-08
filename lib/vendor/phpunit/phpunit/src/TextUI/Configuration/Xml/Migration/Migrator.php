@@ -23,7 +23,6 @@ final readonly class Migrator
 {
     /**
      * @throws Exception
-     * @throws MigrationBuilderException
      * @throws MigrationException
      * @throws XmlException
      */
@@ -32,7 +31,7 @@ final readonly class Migrator
         $origin = (new SchemaDetector)->detect($filename);
 
         if (!$origin->detected()) {
-            throw new Exception('The file does not validate against any know schema');
+            throw new Exception('The file does not validate against any known schema');
         }
 
         if ($origin->version() === Version::series()) {

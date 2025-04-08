@@ -137,7 +137,7 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* SET_DATO
-	* Note that current component DON´T STORE DATA.
+	* Note that current component DON'T STORE DATA.
 	* Instead, is inserted in the related 'component_relation_parent' the link to self
 	* Don't use this method regularly, is preferable use 'add_children' method for every new relation
 	* @param array|string $dato
@@ -146,26 +146,20 @@ class component_relation_children extends component_relation_common {
 	*/
 	public function set_dato( $dato ) : bool {
 
-		// dato format check
-			if (is_string($dato)) { // Tool Time machine case, dato is string
-				$dato = json_handler::decode($dato);
-			}
-			if (is_object($dato)) {
-				$dato = [$dato];
-			}
-			// Ensures is a real non-associative array (avoid JSON encode as object)
-			if (!is_null($dato)) {
-				$dato = is_array($dato)
-					? array_values($dato)
-					: (array)$dato;
-			}
+		// Normalize dato to an array of locator objects
+			$normalized_dato = match (true) {
+				is_string($dato) => (array)json_handler::decode($dato),
+				is_object($dato) => [$dato],
+				is_array($dato) => array_values($dato),
+				default => [],
+			};
 
 		// remove previous dato
 			$previous_dato = $this->get_dato();
 			if (!empty($previous_dato)) {
 				foreach ($previous_dato as $locator) {
 
-					$exist = locator::in_array_locator( $locator, $dato, ['section_tipo','section_id','from_component_tipo']);
+					$exist = locator::in_array_locator( $locator, $normalized_dato, ['section_tipo','section_id','from_component_tipo']);
 					if($exist===true){
 						continue;
 					}
@@ -186,8 +180,8 @@ class component_relation_children extends component_relation_common {
 			}
 
 		// add the new one if any
-			if (!empty($dato)) {
-				foreach ($dato as $locator) {
+			if (!empty($normalized_dato)) {
+				foreach ($normalized_dato as $locator) {
 
 					$exist = locator::in_array_locator( $locator, $previous_dato, ['section_tipo','section_id','from_component_tipo']);
 					if($exist===true){
@@ -211,13 +205,13 @@ class component_relation_children extends component_relation_common {
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
-							dump($dato, ' dato ++ '.to_string());
+							dump($normalized_dato, ' dato ++ '.to_string());
 						}
 					}
 				}
 			}
 
-		// $this->update_parents($dato);
+		// $this->update_parents($normalized_dato);
 
 		// force read the new value on get_dato (prevent cache inconsistency)
 			unset($this->dato_resolved); //  = null;

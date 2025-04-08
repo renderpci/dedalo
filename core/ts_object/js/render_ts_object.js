@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {ts_object} from './ts_object.js'
@@ -235,14 +236,13 @@ export const render_children_list = function(options) {
 }//end render_children_list
 
 
+
 /**
 * RENDER_TS_RECORD
-* Render a list of child nodes (child containers)
+* Render a wrapper containing all ts_object item nodes
 * @param object ts_record
 */
 export const render_ts_record = function( self, ts_record, i ){
-
-	// const fragment = new DocumentFragment();
 
 	const current_section_id	= ts_record.section_id
 	const current_section_tipo	= ts_record.section_tipo
@@ -1417,8 +1417,8 @@ export const render_wrapper = function(options) {
 	const self = ts_object
 
 	// options
-		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
 		const children_tipo	= options.children_tipo
 		const is_descriptor = options.is_descriptor
 
@@ -1499,9 +1499,9 @@ export const render_root_wrapper = function (options) {
 			element_type	: 'div',
 			class_name		: 'wrap_ts_object hierarchy_root_node ' + target_section_tipo,
 			dataset			: {
-				section_tipo		: section_tipo,
-				section_id			: section_id,
-				children_tipo		: children_tipo
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				children_tipo	: children_tipo
 			}
 		})
 
@@ -1515,7 +1515,7 @@ export const render_root_wrapper = function (options) {
 			parent			: hierarchy_wrapper
 		})
 
-	// temporal fake items to preserve ts_objec->get_children flow. After finish, remove elements
+	// fake items to preserve ts_objec->get_children structure and flow
 		// hierarchy_elements_container
 		const hierarchy_elements_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -1523,10 +1523,17 @@ export const render_root_wrapper = function (options) {
 			parent			: hierarchy_wrapper
 		})
 		// link_children
-		hierarchy_wrapper.link_children = ui.create_dom_element({
+		const link_children_element = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'link_children',
+			class_name		: 'link_children arrow_icon',
 			parent			: hierarchy_elements_container
+		})
+		hierarchy_wrapper.link_children = link_children_element
+		// arrow icon
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'ts_object_children_arrow_icon',
+			parent			: link_children_element
 		})
 
 
@@ -1558,37 +1565,74 @@ export const render_link_children = function (options) {
 		const show_arrow_opened	= options.show_arrow_opened
 		const child_data		= options.child_data
 
+	// local_db_id
+		const local_db_id = 'ts_object_status_' + child_data.ts_id
+
 	// Case link open children (arrow)
-	const link_children_element = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'link_children ' + add_class + ' arrow_icon',
-		data_set		: children_dataset
-	})
+		const link_children_element = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'link_children ' + add_class + ' arrow_icon',
+			data_set		: children_dataset
+		})
 
 	// set already calculated children list to prevent calculate it again
-	link_children_element.children_list = null // child_data.children
+		link_children_element.children_list = null // child_data.children
 
 	// mousedown event
-	const mousedown_handler = (e) => {
-		e.stopPropagation()
-		self.toggle_view_children(link_children_element, e)
-	}
-	link_children_element.addEventListener('mousedown', mousedown_handler)
+		const mousedown_handler = (e) => {
+			e.stopPropagation()
+			self.toggle_view_children(link_children_element, e)
+			// update status. Tracks element open children status
+			const is_open = arrow_icon.classList.contains('ts_object_children_arrow_icon_open')
+			if (is_open) {
+				data_manager.set_local_db_data(
+					{
+						id		: local_db_id,
+						value	: is_open
+					}, // mixed data
+					'status' // string table
+				)
+			}else{
+				data_manager.delete_local_db_data(local_db_id, 'status')
+			}
+		}
+		link_children_element.addEventListener('mousedown', mousedown_handler)
 
-// arrow_icon
-	const ar_class = ['ts_object_children_arrow_icon']
-	if (child_data_item.value==='button show children unactive') {
-		// not children case
-		ar_class.push('arrow_unactive')
-	}else if (show_arrow_opened===true){
-		// opened case
-		ar_class.push('ts_object_children_arrow_icon_open')
-	}
-	ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: ar_class.join(' '),
-		parent			: link_children_element
-	})
+	// restore open arrow status
+		data_manager.get_local_db_data(local_db_id, 'status')
+		.then((status) => {
+			if (status?.value) {
+				when_in_viewport(
+					link_children_element,
+					() => {
+						requestAnimationFrame(
+							() => {
+								// fire mousedown event to force load children
+								// Only dispatch the event if the arrow is not already open
+								if (!arrow_icon.classList.contains('ts_object_children_arrow_icon_open')) {
+									link_children_element.dispatchEvent(new MouseEvent('mousedown'));
+								}
+							}
+						)
+					}
+				)
+			}
+		})
+
+	// arrow_icon
+		const ar_class = ['ts_object_children_arrow_icon']
+		if (child_data_item.value==='button show children unactive') {
+			// not children case
+			ar_class.push('arrow_unactive')
+		}else if (show_arrow_opened===true){
+			// opened case
+			ar_class.push('ts_object_children_arrow_icon_open')
+		}
+		const arrow_icon = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: ar_class.join(' '),
+			parent			: link_children_element
+		})
 
 
 	return link_children_element

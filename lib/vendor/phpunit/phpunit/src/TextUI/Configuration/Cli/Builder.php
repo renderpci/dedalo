@@ -115,7 +115,7 @@ final class Builder
         'fail-on-skipped',
         'fail-on-warning',
         'stop-on-defect',
-        'stop-on-deprecation',
+        'stop-on-deprecation==',
         'stop-on-error',
         'stop-on-failure',
         'stop-on-incomplete',
@@ -215,6 +215,7 @@ final class Builder
         $failOnWarning                     = null;
         $stopOnDefect                      = null;
         $stopOnDeprecation                 = null;
+        $specificDeprecationToStopOn       = null;
         $stopOnError                       = null;
         $stopOnFailure                     = null;
         $stopOnIncomplete                  = null;
@@ -454,7 +455,7 @@ final class Builder
 
                 case '--group':
                     if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredWarning(
+                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                             'Using comma-separated values with --group is deprecated and will no longer work in PHPUnit 12. You can use --group multiple times instead.',
                         );
                     }
@@ -471,7 +472,7 @@ final class Builder
 
                 case '--exclude-group':
                     if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredWarning(
+                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                             'Using comma-separated values with --exclude-group is deprecated and will no longer work in PHPUnit 12. You can use --exclude-group multiple times instead.',
                         );
                     }
@@ -488,7 +489,7 @@ final class Builder
 
                 case '--covers':
                     if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredWarning(
+                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                             'Using comma-separated values with --covers is deprecated and will no longer work in PHPUnit 12. You can use --covers multiple times instead.',
                         );
                     }
@@ -505,7 +506,7 @@ final class Builder
 
                 case '--uses':
                     if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredWarning(
+                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                             'Using comma-separated values with --uses is deprecated and will no longer work in PHPUnit 12. You can use --uses multiple times instead.',
                         );
                     }
@@ -533,7 +534,7 @@ final class Builder
 
                 case '--test-suffix':
                     if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredWarning(
+                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                             'Using comma-separated values with --test-suffix is deprecated and will no longer work in PHPUnit 12. You can use --test-suffix multiple times instead.',
                         );
                     }
@@ -702,6 +703,10 @@ final class Builder
 
                 case '--stop-on-deprecation':
                     $stopOnDeprecation = true;
+
+                    if ($option[1] !== null) {
+                        $specificDeprecationToStopOn = $option[1];
+                    }
 
                     break;
 
@@ -1035,6 +1040,7 @@ final class Builder
             $failOnWarning,
             $stopOnDefect,
             $stopOnDeprecation,
+            $specificDeprecationToStopOn,
             $stopOnError,
             $stopOnFailure,
             $stopOnIncomplete,
@@ -1115,7 +1121,7 @@ final class Builder
         $this->processed[$option]++;
 
         if ($this->processed[$option] === 2) {
-            EventFacade::emitter()->testRunnerTriggeredWarning(
+            EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                 sprintf(
                     'Option %s cannot be used more than once',
                     $option,

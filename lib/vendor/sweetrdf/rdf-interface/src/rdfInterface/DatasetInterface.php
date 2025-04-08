@@ -162,11 +162,11 @@ interface DatasetInterface extends QuadIteratorAggregateInterface, \ArrayAccess,
      * 
      * An immputable equivalent is the copyExcept($filter) method.
      * 
-     * @param QuadCompareInterface|QuadIteratorInterface|QuadIteratorAggregateInterface|callable $filter
+     * @param QuadCompareInterface|QuadIteratorInterface|QuadIteratorAggregateInterface|callable|null $filter
      * @return DatasetInterface a dataset containing removed quads.
      * @see copyExcept()
      */
-    public function delete(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable $filter): DatasetInterface; // callable(Quad, DatasetInterface)
+    public function delete(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable | null $filter = null): DatasetInterface; // callable(Quad, DatasetInterface)
 
     /**
      * In-place removes quads from the dataset.
@@ -366,7 +366,7 @@ interface DatasetInterface extends QuadIteratorAggregateInterface, \ArrayAccess,
     public function any(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable $filter): bool;
 
     // various getters
-    
+
     /**
      * Fetches an iterator over unique set of dataset quad subjects optionally 
      * matching a given filter.

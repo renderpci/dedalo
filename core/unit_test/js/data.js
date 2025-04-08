@@ -61,13 +61,14 @@
 		const section_tipo			= arguments[0][0]
 		const section_id			= arguments[0][1]
 		const from_component_tipo	= arguments[0][2]
+		const type					= arguments[0][3] ?? 'dd151'
 		// const paginated_key		= typeof arguments[0][2]!=="undefined" ? arguments[0][2] : false
 
 		const value = {
-			type				: "dd151",
-			section_id			: (section_id).toString(),
 			section_tipo		: section_tipo, // "dd501"
-			from_component_tipo	: from_component_tipo // "test144"
+			section_id			: (section_id).toString(),
+			from_component_tipo	: from_component_tipo, // "test144"
+			type				: type
 		}
 
 		return value

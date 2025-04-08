@@ -485,6 +485,10 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 				if (isset($bulk_process_id)) {
 					$RecordObj_time_machine->set_bulk_process_id( $bulk_process_id );
 				}
+			// state. Set as 'created' for sections
+				if ($tipo===$section_tipo) {
+					$RecordObj_time_machine->set_state('created');
+				}
 
 		// Save obj
 			$RecordObj_time_machine->Save();
