@@ -526,7 +526,7 @@ const render_info_modal = function( self, versions_info ) {
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'content'
+			class_name		: 'content'
 		})
 
 		// response

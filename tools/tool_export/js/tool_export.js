@@ -461,7 +461,7 @@ tool_export.prototype.update_local_db_data = async function() {
 
 /**
 * COMPOSE_ID
-* Compose the ddo id used in drag in the unified way
+* Compose the ddo id used in drag and drop in a unified way
 * @param object ddo
 * @param array path
 * @return string id
