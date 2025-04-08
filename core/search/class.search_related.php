@@ -166,7 +166,9 @@ class search_related extends search {
 			}
 
 		$str_query .= ';';
-			// dump(exec_time_unit($start_time).' ms', ' st +--------+ '.to_string($str_query));
+
+		// debug
+			// dump(null, 'null str_query ++ '.to_string($str_query));
 
 		return $str_query;
 	}//end parse_search_query_object

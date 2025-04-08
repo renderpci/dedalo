@@ -107,46 +107,53 @@ final class component_relation_children_test extends TestCase {
 		);
 
 		// null case
+			$updated_dato = $component->get_dato();
 			$this->assertTrue(
 				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				' (null case) expected [] : ' . PHP_EOL
+				.'component dato: ' . to_string($updated_dato) . PHP_EOL
+				.'reference dato: ' . to_string([]) . PHP_EOL
 			);
 
 		// object case
 			$locator = json_decode('
 				{
-					"type":"dd48",
-					"section_id":"2",
-					"section_tipo":"test3",
-					"from_component_tipo":"test201"
+					"section_tipo": "test3",
+					"section_id": "2",
+					"from_component_tipo": "test201",
+					"type": "dd48"
 				}
 			');
-			$dato	= $locator;
-			$result	= $component->set_dato($dato);
-
+			$dato			= $locator;
+			$result			= $component->set_dato($dato);
+			$updated_dato	= $component->get_dato();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode([$dato]),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
+				json_encode($updated_dato)===json_encode([$dato]),
+				' (object case) expected equal array : ' . PHP_EOL
+				.'component updated_dato: ' . to_string($updated_dato) . PHP_EOL
+				.'reference dato: ' . to_string([$dato]) . PHP_EOL
+				.'$component->dato: ' . to_string($component->dato) . PHP_EOL
 			);
 
 		// array case
 			$dato	= [$locator];
 			$result	= $component->set_dato($dato);
+			$updated_dato = $component->get_dato();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
+				json_encode($updated_dato)===json_encode($dato),
+				' (array case) expected equal array : ' . PHP_EOL
+				.'component get_dato: ' . to_string($updated_dato) . PHP_EOL
+				.'reference dato: ' . to_string($dato) . PHP_EOL
 			);
 
 		// restore dato
 			$result	= $component->set_dato($old_dato);
-
+			$updated_dato = $component->get_dato();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
-				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+				json_encode($updated_dato)===json_encode($old_dato),
+				' (restore dato case) expected old dato : ' . PHP_EOL
+				.'updated_dato: ' . to_string($updated_dato) . PHP_EOL
+				.'reference dato: ' . to_string($old_dato) . PHP_EOL
 			);
 	}//end test_set_dato
 
@@ -182,11 +189,67 @@ final class component_relation_children_test extends TestCase {
 		$result = $component->get_sortable();
 
 		$this->assertTrue(
-			$result===true,
-			'expected true : ' . PHP_EOL
+			$result===false,
+			'expected false : ' . PHP_EOL
 				. to_string($result)
 		);
 	}//end test_get_sortable
+
+
+
+	/**
+	* TEST_resolve_query_object_sql
+	* @return void
+	*/
+	public function test_resolve_query_object_sql() {
+
+		$query_object = json_decode('
+			{
+			    "q": [
+			        {
+			            "section_tipo": "test3",
+			            "section_id": "2",
+			            "from_component_tipo": "test201"
+			        }
+			    ],
+			    "path": [
+			        {
+			            "name": "relation_children",
+			            "model": "component_relation_children",
+			            "section_tipo": "test3",
+			            "component_tipo": "test201"
+			        }
+			    ],
+			    "q_split": false,
+			    "type": "jsonb",
+			    "component_path": [
+			        "components",
+			        "test201",
+			        "dato"
+			    ],
+			    "lang": "all"
+			}
+		');
+
+		$result = component_relation_children::resolve_query_object_sql(
+			$query_object
+		);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$reference_value = 'in_column';
+		$this->assertTrue(
+			$result->format===$reference_value,
+			'expected \'in_column\' : ' . PHP_EOL
+			.'$result->format: ' .  to_string($result->format) . PHP_EOL
+			.'expected $reference_value: ' .  to_string($reference_value) . PHP_EOL
+			.'result: ' . to_string($result)
+		);
+	}//end test_resolve_query_object_sql
 
 
 

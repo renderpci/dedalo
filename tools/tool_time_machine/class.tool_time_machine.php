@@ -64,20 +64,16 @@ class tool_time_machine extends tool_common {
 					// Set data overwrites the data of the current element
 						$element->set_dato($dato_time_machine);
 
-					// Save the component with a new updated data from time machine
+					// Save the element (section) with a new updated data from time machine
 						$result = $element->Save((object)[
 							'forced_create_record' => $section_id
 						]);
 
-					// section->Save returns int $section_id on success or null on fail
+					// section->Save returns int $section_id on success or null on failure
 						if ($result==$section_id) {
 
-							// matrix_time_machine restore state from 'deleted' to 'recovered'
-
 							// Set state 'recovered' at matrix_time_machine record (to avoid be showed for recover later)
-								$RecordObj_time_machine	= new RecordObj_time_machine($matrix_id);
-									$RecordObj_time_machine->set_state('recovered');
-
+								$RecordObj_time_machine->set_state('recovered');
 								$tm_result = $RecordObj_time_machine->Save();
 								if ($tm_result===false) {
 									$response->errors[] = 'failed time machine save';
@@ -89,16 +85,16 @@ class tool_time_machine extends tool_common {
 									unset($_SESSION['dedalo']['config']['sqo'][$sqo_id]);
 								}
 
-							// section recover media files. Expected array, null on fails
+							// section recover media files. Expected array, null on failure
 								$restored_result = $element->restore_deleted_section_media_files();
 								if (is_null($restored_result)) {
 									$response->errors[] = 'failed time machine restore deleted media files';
-									debug_log(__METHOD__." Error on restore deleted media files ".to_string(), logger::ERROR);
+									debug_log(__METHOD__." Error on restore deleted media files", logger::ERROR);
 								}
 								// add to response
 								$response->restore_deleted_section_media_files = $restored_result;
 
-							// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+							// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 								$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 								logger::$obj['activity']->log_message(
 									'RECOVER SECTION',

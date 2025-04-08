@@ -29,7 +29,8 @@
 	// use PHPUnit\Framework\Attributes\TestDox;
 
 // message CLI
-	$msg = "Dédalo ".DEDALO_VERSION." testing using user id: ".TEST_USER_ID .' - SHOW_DEBUG: ' .to_string(SHOW_DEBUG) . ' - 😐';
+	$icon = !SHOW_DEBUG ? '😀' : '🧐';
+	$msg = "Dédalo ".DEDALO_VERSION." testing using user id: ".TEST_USER_ID .' - SHOW_DEBUG: ' .to_string(SHOW_DEBUG) . ' - ' . $icon;
 	fwrite(STDERR, PHP_EOL
 		. print_r($msg, TRUE) . PHP_EOL
 	);

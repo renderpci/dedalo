@@ -182,11 +182,9 @@ class area extends area_common  {
 
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
 				$model			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
-				$visible		= $RecordObj_dd->get_visible();
 
 				// Test if model is accepted or not (more restrictive)
-				if( $visible!=='no'
-					&& in_array($model, area::$ar_children_include_model_name)
+				if( 	in_array($model, area::$ar_children_include_model_name)
 					&& !in_array($model, area::$ar_children_exclude_modelo_name)
 				) {
 

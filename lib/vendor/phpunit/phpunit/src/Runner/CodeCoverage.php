@@ -52,11 +52,6 @@ final class CodeCoverage
     private ?TestCase $test                                             = null;
     private ?Timer $timer                                               = null;
 
-    /**
-     * @var array<string,list<int>>
-     */
-    private array $linesToBeIgnored = [];
-
     public static function instance(): self
     {
         if (self::$instance === null) {
@@ -110,11 +105,11 @@ final class CodeCoverage
 
         if ($codeCoverageFilterRegistry->get()->isEmpty()) {
             if (!$codeCoverageFilterRegistry->configured()) {
-                EventFacade::emitter()->testRunnerTriggeredWarning(
+                EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                     'No filter is configured, code coverage will not be processed',
                 );
             } else {
-                EventFacade::emitter()->testRunnerTriggeredWarning(
+                EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                     'Incorrect filter configuration, code coverage will not be processed',
                 );
             }
@@ -171,7 +166,7 @@ final class CodeCoverage
      * @param array<string,list<int>>|false $linesToBeCovered
      * @param array<string,list<int>>       $linesToBeUsed
      */
-    public function stop(bool $append = true, array|false $linesToBeCovered = [], array $linesToBeUsed = []): void
+    public function stop(bool $append, array|false $linesToBeCovered = [], array $linesToBeUsed = []): void
     {
         if (!$this->collecting) {
             return;
@@ -188,7 +183,7 @@ final class CodeCoverage
         }
 
         /* @noinspection UnusedFunctionResultInspection */
-        $this->codeCoverage->stop($append, $status, $linesToBeCovered, $linesToBeUsed, $this->linesToBeIgnored);
+        $this->codeCoverage->stop($append, $status, $linesToBeCovered, $linesToBeUsed);
 
         $this->test       = null;
         $this->collecting = false;
@@ -316,7 +311,9 @@ final class CodeCoverage
             $textReport = $processor->process($this->codeCoverage(), $configuration->colors());
 
             if ($configuration->coverageText() === 'php://stdout') {
-                $printer->print($textReport);
+                if (!$configuration->noOutput() && !$configuration->debug()) {
+                    $printer->print($textReport);
+                }
             } else {
                 file_put_contents($configuration->coverageText(), $textReport);
             }
@@ -338,22 +335,6 @@ final class CodeCoverage
         }
     }
 
-    /**
-     * @param array<string,list<int>> $linesToBeIgnored
-     */
-    public function ignoreLines(array $linesToBeIgnored): void
-    {
-        $this->linesToBeIgnored = $linesToBeIgnored;
-    }
-
-    /**
-     * @return array<string,list<int>>
-     */
-    public function linesToBeIgnored(): array
-    {
-        return $this->linesToBeIgnored;
-    }
-
     private function activate(Filter $filter, bool $pathCoverage): void
     {
         try {
@@ -368,7 +349,7 @@ final class CodeCoverage
                 $filter,
             );
         } catch (CodeCoverageException $e) {
-            EventFacade::emitter()->testRunnerTriggeredWarning(
+            EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
                 $e->getMessage(),
             );
         }

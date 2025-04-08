@@ -760,7 +760,7 @@ final class ontology_test extends TestCase {
 			);
 
 		// propiedades
-			$expected		= json_decode('{"info":"section_config es una propiedade NO standarizada. Sólo en puebas","section_config":{"list_line":"single"}}');
+			$expected		= json_decode('{"info":"section_config es una propiedad NO estandarizada. Sólo en pruebas","section_config":{"list_line":"single"}}');
 			$propiedades	= json_decode($result->get_propiedades());
 			$this->assertTrue(
 				json_encode($propiedades)===json_encode($expected),
@@ -769,7 +769,7 @@ final class ontology_test extends TestCase {
 			);
 
 		// properties
-			$expected = json_decode('{"info": "section_config es una propiedade NO standarizada. Sólo en puebas", "section_config": {"list_line": "single"}}');
+			// $expected = json_decode('{"info": "section_config es una propiedad NO estandarizada. Sólo en pruebas","section_config": {"list_line": "single"}}');
 			$this->assertTrue(
 				json_encode($result->get_properties(), JSON_UNESCAPED_UNICODE)==json_encode($expected, JSON_UNESCAPED_UNICODE),
 				'expected: ' . to_string($expected) .  PHP_EOL
@@ -911,10 +911,10 @@ final class ontology_test extends TestCase {
 		});
 		$expected = json_decode('
 			{
-		        "type": "dd48",
-		        "section_id": "4",
 		        "section_tipo": "rsc0",
-		        "from_component_tipo": "ontology14"
+				"section_id": "4",
+				"from_component_tipo": "ontology14",
+				"type": "dd48"
 		    }
 		');
 		$this->assertTrue(
