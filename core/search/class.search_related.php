@@ -24,6 +24,7 @@ class search_related extends search {
 	* @return string $sql_query
 	*/
 	public function parse_search_query_object( bool $full_count=false ) : string {
+		$start_time=start_time();
 
 		// tables where to search
 			$ar_tables_to_search = common::get_matrix_tables_with_relations();
@@ -42,18 +43,25 @@ class search_related extends search {
 		// used to obtain the sections with calls to it.
 			$ar_locators = $this->filter_by_locators;
 
+		// filter by locators operator.
+			$filter_by_locators_op = $this->filter_by_locators_op ?? 'OR';
+
 		// add filter of sections when the filter is not 'all', it's possible add specific section to get the related records only for these sections.
 		// if the section has all, the filter don't add any section to the WHERE
 			$ar_section_tipo	= $this->ar_section_tipo;
 			$ar_section_filter	= [];
 			foreach ($ar_section_tipo as $section_tipo) {
 				if ($section_tipo !=='all') {
-					$ar_section_filter[] = 'section_tipo = \''.$section_tipo.'\'';
+					// $ar_section_filter[] = 'section_tipo = \''.$section_tipo.'\'';
+					$ar_section_filter[] = '\''.$section_tipo.'\'';
 				}
 			}
-			// sample: 'section_tipo = 'tch1' OR section_tipo = 'tch100' OR section_tipo = 'tch178'
+			// // sample: 'section_tipo = 'tch1' OR section_tipo = 'tch100' OR section_tipo = 'tch178'
+			// $section_filter = !empty($ar_section_filter)
+			// 	? implode(' OR ', $ar_section_filter)
+			// 	: false;
 			$section_filter = !empty($ar_section_filter)
-				? implode(' OR ', $ar_section_filter)
+				? 'section_tipo IN(' . implode(',', $ar_section_filter) .')'
 				: false;
 
 		// each table query
@@ -120,7 +128,7 @@ class search_related extends search {
 					// now tables has a contraction/flat of the locator to be indexed the combination of section_tipo and section_id
 					// $locators_query[]	= PHP_EOL.'datos#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
 				}//end foreach ($ar_locators as $locator)
-				$query .= '(' . implode(' OR ', $locators_query) . ')';
+				$query .= '(' . implode(' '.$filter_by_locators_op.' ', $locators_query) . ')';
 
 				if ($section_filter!==false) {
 					$query .= PHP_EOL . ' AND (' . $section_filter . ')';
@@ -158,7 +166,7 @@ class search_related extends search {
 			}
 
 		$str_query .= ';';
-
+			// dump(exec_time_unit($start_time).' ms', ' st +--------+ '.to_string($str_query));
 
 		return $str_query;
 	}//end parse_search_query_object
