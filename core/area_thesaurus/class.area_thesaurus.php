@@ -377,7 +377,7 @@ class area_thesaurus extends area_common {
 				// get the ts_objects to built the tree
 				foreach ($ar_path as $parent_key => $current_parent) {
 
-					//Children
+					// Children
 						// get all children of every parent, first term is the root term
 						// therefore get its children, they will given in the correct order
 						$parent_tipo = $current_parent->from_component_tipo;
