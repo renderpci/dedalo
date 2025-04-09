@@ -132,11 +132,9 @@ class component_av extends component_media_common implements component_media_int
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj
-			$column_obj = isset($this->column_obj)
-				? $this->column_obj
-				: (object)[
-					'id' => $this->section_tipo.'_'.$this->tipo
-				  ];
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
 		// quality
 			$quality = $this->get_default_quality();

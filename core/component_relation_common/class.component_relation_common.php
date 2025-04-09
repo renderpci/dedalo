@@ -289,12 +289,11 @@ class component_relation_common extends component_common {
 			$sub_row_count			= 0;
 			// $sub_column_count	= null;
 			// the column_object could be injected for the caller or build new one
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
+
+		// column_obj
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
 		// children_recursive function, get all ddo chain that depends of this component
 			if (!function_exists('get_children_recursive')) {
