@@ -6,7 +6,7 @@
 
 
 // imports
-
+	import {clone} from '../../common/js/utils/index.js'
 
 
 /**
@@ -188,16 +188,41 @@ export const get_columns = function(self, column_data, ar_columns_obj, parent_ro
 	for (let i = 0; i < column_len; i++) {
 		// specify the current column to be filled
 		const column = ar_columns_obj[i]
-		// find the data of the column, if it's not present, create a empty column
-		const column_value = column_data.find(item => item.ar_columns_obj.find(el => el.id === column.id))
-			? column_data.find(item => item.ar_columns_obj.find(el => el.id === column.id))
+		// find the data of the column
+		// Breakdown option get every column data in different columns_objecs, therefore use a filter instead a find to get all.
+		const ar_column_values = column_data.filter(item => item.ar_columns_obj.find(el => el.id === column.id))
+			? column_data.filter(item => item.ar_columns_obj.find(el => el.id === column.id))
+			: null
+		// if the column has not data, create a empty column
+		const column_value = (ar_column_values.length)
+			? clone( ar_column_values[0] )
 			: {
-				ar_columns_obj	: [column],
-				type			: 'column',
-				cell_type		: 'text',
-				value			: '',
-				class_list		: 'empty_value'
-			  }
+				ar_columns_obj: [column],
+				type		: 'column',
+				cell_type	: 'text',
+				value		: '',
+				class_list	: 'empty_value'
+			}
+		// Get the column values and join they into a new value. Used by breakdown option to show every data of its own column
+		// when the breakdown is selected, every data is a column with its own value, therefore is necessary join all values
+		if(ar_column_values.length){
+			const ar_columns_values_len	= ar_column_values.length
+
+			const ar_values = []
+			for (let j = 0; j < ar_columns_values_len; j++) {
+				const value = ar_column_values[j].value
+				// set the value into the value array.
+				// important, sometimes the value could be a object (because is a column inside a column)
+				// therefore don't join the values, use the spread to assign the current value as is.
+				if(Array.isArray(value)){
+					ar_values.push(...value)
+				}else{
+					ar_values.push(value)
+				}
+			}
+			column_value.value = ar_values
+		}
+
 		// if the column is the last column with data, identify by cell_type property, render the node
 		if(column_value && column_value.type === 'column' && column_value.cell_type){
 
