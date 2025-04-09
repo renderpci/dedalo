@@ -152,4 +152,49 @@ dd_grid.prototype.get_total = async function() {
 
 
 
+/**
+* GET_GRID_VALUES
+* Recursively resolves the given dd_grid data
+* @param array data
+* @return array values
+* 	e.g. [{model:"component_image",label:"obverse",value:"https://domain.org/path/rsc29_rsc170_1381.jpg"}]
+*/
+dd_grid.prototype.get_grid_values = function(data) {
+
+	const values = []
+
+	const data_len = data.length
+	for (let i = 0; i < data_len; i++) {
+
+		const data_item = data[i]
+
+		if (data_item && data_item.type) {
+
+			if(data_item.value){
+
+				// column case add
+				if(data_item.type==='column' && data_item.cell_type){
+
+					// values.push(data_item)
+					values.push({
+						ar_columns_obj	: data_item.ar_columns_obj,
+						model			: data_item.model,
+						label			: data_item.label,
+						value			: data_item.value
+					})
+				}
+
+				// value. Recursion
+				const rec_values = this.get_grid_values(data_item.value)
+				values.push(...rec_values)
+			}
+		}
+	}//end for (let i = 0; i < data_len; i++)
+
+
+	return values
+}//end get_grid_values
+
+
+
 // @license-end
