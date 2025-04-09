@@ -9,6 +9,8 @@
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {when_in_viewport} from '../../../core/common/js/events.js'
+	import {downloadZip} from './lib/client-zip/index.js'
 
 
 
@@ -355,6 +357,22 @@ const get_content_data_edit = async function(self) {
 						export_buttons_options.scrollIntoView(true)
 					}
 
+				// check if some allowed media component is present in the data
+				// if not, the button_download_media will be lock to prevent use it
+					if (button_download_media) {
+						// fix values from grid data parsing models in portals
+						self.grid_values = get_parsed_grid_values(self)
+
+						const models_in_data		= self.grid_values.map(item => item.model)
+						const models_in_data_unique	= [...new Set(models_in_data)];
+
+						// set updated value
+						self.media_components_in_data = models_in_data_unique.filter(el => self.media_components.has(el));
+
+						const style_action = self.media_components_in_data.length ? 'remove' : 'add'
+						button_download_media.classList[style_action]('loading')
+					}
+
 				// spinner remove
 					[button_export, activate_all_columns, deactivate_all_columns].map(
 						el => el.classList.remove('hide')
@@ -447,7 +465,10 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_options no_print',
 			parent			: fragment
 		})
+
+		// filename base name
 		const filename = 'export_' +self.caller.label +'_'+ new Date().toLocaleDateString()+'-'+ self.caller.section_tipo
+
 		// csv. button_export_csv
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
@@ -579,6 +600,21 @@ const get_content_data_edit = async function(self) {
 					link.click();
 					document.body.removeChild(link);
 			})
+
+		// media. button download media (images, pdf, av, 3d, svg)
+			const button_download_media = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'processing_import success download loading',
+				inner_html		: (get_label.download || 'Download') + ' media',
+				parent			: export_buttons_options
+			})
+			const download_media_click_handler = (e) => {
+				e.stopPropagation()
+				e.target.blur()
+				// modal with quality selection options
+				render_download_modal(self)
+			}
+			button_download_media.addEventListener('click', download_media_click_handler)
 
 		// print. button export print
 			const button_export_print = ui.create_dom_element({
@@ -844,6 +880,392 @@ const do_sortable = function(element, self) {
 				}
 			});
 }//end do_sortable
+
+
+
+/**
+* GET_PARSED_GRID_VALUES
+* Get dd_grid values and overwrites models base in the
+* self.ar_ddo_to_export (user components selection)
+* @param object self
+* 	tool_export instance
+* @return array grid_values
+*/
+export const get_parsed_grid_values = (self) => {
+
+	// grid_values from dd_grid extract values from dd_grid data
+	const grid_values = self.dd_grid.get_grid_values(self.dd_grid.data)
+
+	// overwrite model from grid_values with more accurate ar_ddo_to_export
+	// this solves portals deep resolution inconsistencies
+	const ar_ddo_to_export = self.ar_ddo_to_export
+	ar_ddo_to_export.forEach(el => {
+		const id = el.path.map(item => item.section_tipo +'_'+ item.component_tipo).join('_')
+		const found = grid_values.filter(el => el.ar_columns_obj[0].id===id)
+		if (found) {
+			// overwrite the model as component_portal -> component_image
+			found.map(f => f.model = el.model)
+		}
+	})
+
+
+	return grid_values
+}//end get_parsed_grid_values
+
+
+
+/**
+* RENDER_DOWNLOAD_MODAL
+* Creates a standard dd_modal to allow quality selection for media
+* download files before collect the files
+* @param object self
+* 	tool_export instance
+* @return HTMLElement modal
+*/
+export const render_download_modal = (self) => {
+
+	// body
+	const body = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'body content'
+	})
+	// quality selectors
+	const quality_parse = {}
+	const models_unique = self.media_components_in_data;
+	const models_unique_length = models_unique.length
+	for (let i = 0; i < models_unique_length; i++) {
+
+		const model = models_unique[i]
+
+		// selector_container
+			const selector_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'selector_container',
+				parent			: body
+			})
+
+		// selector_title
+			ui.create_dom_element({
+				element_type	: 'h3',
+				class_name		: 'selector_title',
+				inner_html		: 'Quality for ' + model,
+				parent			: selector_container
+			})
+
+		// quality_selector
+			const quality_selector = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'quality_selector for_' + model,
+				parent			: selector_container
+			})
+			switch (model) {
+
+				case 'component_image':
+					quality_parse[model] = {
+						source : page_globals.dedalo_image_quality_default,
+						target : page_globals.dedalo_image_quality_default
+					}
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: page_globals.dedalo_image_quality_default,
+						text_node		: page_globals.dedalo_image_quality_default,
+						parent			: quality_selector
+					})
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: 'original',
+						text_node		: 'original',
+						parent			: quality_selector
+					})
+					break;
+
+				case 'component_av':
+					quality_parse[model] = {
+						source : page_globals.dedalo_av_quality_default,
+						target : page_globals.dedalo_av_quality_default
+					}
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: page_globals.dedalo_av_quality_default,
+						text_node		: page_globals.dedalo_av_quality_default,
+						parent			: quality_selector
+					})
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: 'original',
+						text_node		: 'original',
+						parent			: quality_selector
+					})
+					break;
+
+				case 'component_3d':
+				case 'component_pdf':
+				case 'component_svg':
+					quality_parse[model] = {
+						source : 'web',
+						target : 'web'
+					}
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: 'web',
+						text_node		: 'web',
+						parent			: quality_selector
+					})
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: 'original',
+						text_node		: 'original',
+						parent			: quality_selector
+					})
+					break;
+
+				default:
+					// not yet implemented
+					break;
+			}
+			const change_handler = (e) => {
+				quality_parse[model].target = e.target.value
+			}
+			quality_selector.addEventListener('change', change_handler)
+	}
+
+	// footer
+	const footer = ui.create_dom_element({
+		element_type	: 'div',
+		class_name 		: 'content'
+	})
+
+	// button_ok
+	const button_ok = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'success',
+		inner_html		: get_label.ok || 'OK',
+		parent			: footer
+	})
+	const click_handler = async (e) => {
+		e.stopPropagation()
+
+		footer.classList.add('loading')
+
+		try {
+			await download_media(
+				self,
+				quality_parse
+			)
+		} catch (error) {
+			console.error(error)
+		}
+
+		footer.classList.remove('loading')
+	}
+	button_ok.addEventListener('click', click_handler)
+	when_in_viewport(button_ok, () => {
+		button_ok.focus()
+	})
+
+	const modal = ui.attach_to_modal({
+		header		: get_label.download_media || 'Download media',
+		body		: body,
+		footer		: footer,
+		size		: 'normal',
+		callback	: (dd_modal) => {
+			dd_modal.modal_content.style.width = '50rem'
+			dd_modal.classList.add('tool_export_modal')
+		},
+		on_close : () => {
+
+		}
+	})
+
+
+	return modal
+}//end render_download_modal
+
+
+
+/**
+* DOWNLOAD_MEDIA
+* Search media files in dd_grid data and download the found media files fetching the URL
+* Default quality is used (e.g. '1.5MB' in images) in grid data. If we want to map to another
+* quality (e.g. 'original') we set the 'quality_parse' object value.
+* @param object self
+* 	tool_export instance
+* @param object|undefined quality_parse
+* 	sample: {
+*		component_image : {
+*			source : '1.5MB',
+*			target : 'original'
+*		}
+*	}
+* @return
+*/
+const download_media = async function (self, quality_parse) {
+
+	// quality_parse. Defines source and target quality for each model
+	if (!quality_parse) {
+		// default value
+		quality_parse = {
+			component_image : {
+				source : '1.5MB',
+				target : 'original'
+			},
+			component_av : {
+				source : '404',
+				target : 'original'
+			}
+		}
+	}
+	// calculate quality from quality_parse definition
+	const get_quality = (model, type) => {
+		if (quality_parse[model]) {
+			return quality_parse[model][type] ?? false
+		}
+		return false
+	}
+
+	// grid_values (already calculated on submit with button export)
+	const grid_values = self.grid_values
+
+	// list of media models to parse
+	const ar_models_set = new Set(self.media_components_in_data)
+
+	// get value recursively from grid item
+	const get_value = (item) => {
+
+		if (!item || !item.value) {
+			return null
+		}
+
+		if (item.model && ar_models_set.has(item.model)) {
+			return {
+				url		: item.value,
+				model	: item.model
+			}
+		}
+
+		if (Array.isArray(item.value)) {
+			const ar_value = item.value.reduce((acc, inner_item) => {
+				const current_value = get_value(inner_item);
+				if (current_value) {
+					acc.push(current_value);
+				}
+				return acc;
+			}, []);
+			return ar_value.length ? ar_value : null;
+		}
+
+		return null
+	}
+
+	// extract values from grid data
+	const ar_values = []
+	const grid_values_length = grid_values.length
+	for (let i = 0; i < grid_values_length; i++) {
+
+		const item = grid_values[i]
+
+		const value = get_value(item)
+
+		if (value) {
+
+			if (Array.isArray(value)) {
+				value.forEach(el => {
+					ar_values.push(el)
+				})
+			}else{
+				ar_values.push(value)
+			}
+		}
+	}
+
+	// no values case
+	const ar_values_length = ar_values.length
+	if (!ar_values_length) {
+		return null
+	}
+
+	const url_list = []
+	const fill_url_list = (ar_values) => {
+
+		const ar_values_length = ar_values.length
+		for (let i = 0; i < ar_values_length; i++) {
+
+			const el = ar_values[i]
+
+			if (Array.isArray(el)) {
+				fill_url_list(el)
+			}else{
+				const source_quality = get_quality(el.model, 'source')
+				const target_quality = get_quality(el.model, 'target')
+
+				const ar_url = Array.isArray(el.url) ? el.url : el.url.split(' | ')
+				ar_url.forEach(item => {
+
+					if (!item || !item.length) {
+						return
+					}
+
+					const url = (source_quality && target_quality && source_quality!==target_quality)
+						? item.replace('/'+source_quality+'/','/'+target_quality+'/')
+						: item
+
+					url_list.push(url)
+				})
+			}
+		}
+	}
+	fill_url_list(ar_values)
+
+	const failed_files = []
+	const fetch_list = []
+	url_list.flat().forEach(function(url) {
+		console.log('url:', url);
+
+		const current_fetch = fetch(url)
+			.then((res)=>{
+				if (res.ok) {
+					return res
+				}
+				failed_files.push(url)
+			})
+			.catch((error) => {
+				if(SHOW_DEBUG===true) {
+					console.log(error)
+				}
+			})
+
+		fetch_list.push(current_fetch)
+	});
+
+	const promise_items = await Promise.all(fetch_list)
+
+	// filter valid files (exclude not downloadable)
+	const files = promise_items.filter(el => el)
+
+	const downloaded_files = files.map(el => el.url)
+
+	// info text file add to download file
+	const info = {
+		name: "info.txt",
+		lastModified: new Date(),
+		input: "Downloaded files: " + JSON.stringify(downloaded_files, null, 2) + "\nFailed files: " + JSON.stringify(failed_files, null, 2)
+	}
+	files.push(info)
+
+	// get the ZIP stream in a Blob
+	// Using lib client-zip @see https://github.com/Touffy/client-zip?tab=readme-ov-file
+	const blob = await downloadZip(files).blob()
+
+	// make and click a temporary link to download the Blob
+	const link = document.createElement('a')
+	link.href = URL.createObjectURL(blob)
+	link.download = 'export_media.zip'
+	link.click()
+	link.remove()
+
+
+	return true
+}//end download_media
 
 
 

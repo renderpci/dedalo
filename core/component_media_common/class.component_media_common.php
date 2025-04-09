@@ -235,7 +235,7 @@ class component_media_common extends component_common {
 					: $this->get_thumb_quality();
 
 				// Caller class name, the name of who instantiate the component
-				// the uri resolution of the data depends of the caller
+				// the URI resolution of the data depends of the caller
 				// when is caller by tool_export it needs to be absolute (with the protocol and domain)
 				// when is caller by tool_diffusion it needs to be relative (without the protocol and domain)
 				switch ($this->caller) {
@@ -247,7 +247,7 @@ class component_media_common extends component_common {
 						$absolute = false;
 						break;
 				}
-				// get the uri of the data
+				// get the URI of the data
 				$current_url = $this->get_url(
 					$element_quality, // string quality
 					false, // bool test_file
