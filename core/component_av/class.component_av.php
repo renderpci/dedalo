@@ -141,12 +141,31 @@ class component_av extends component_media_common implements component_media_int
 		// quality
 			$quality = $this->get_default_quality();
 
-		// dato
+		// current_url. get from dato
 			$dato = $this->get_dato();
 			if(isset($dato)){
 
+				// Caller class name, the name of who instantiate the component
+				// the URI resolution of the data depends of the caller
+				// when is caller by tool_export it needs to be absolute (with the protocol and domain)
+				// when is caller by tool_diffusion it needs to be relative (without the protocol and domain)
+				switch ($this->caller) {
+					case 'tool_export':
+						$absolute = true;
+						break;
+
+					default:
+						$absolute = false;
+						break;
+				}
+
 				$current_url = ($this->mode==='edit')
-					? $this->get_url($quality)
+					? $this->get_url(
+						$quality,
+						false, // bool test_file
+						$absolute,  // bool absolute
+						false // bool default_add
+					  )
 					: $this->get_posterframe_url();
 
 			}else{

@@ -39,6 +39,17 @@ export const tool_export = function () {
 	this.caller				= null // section or component
 	this.components_list	= {}
 	this.data_format		= null
+	// media_components. Set of grid data existing media components (used to export media)
+	// e.g. new Set(['component_image']);
+	this.media_components	= new Set([
+		'component_3d',
+		'component_av',
+		'component_image',
+		'component_pdf',
+		'component_svg'
+	]);
+	// media_components_in_data. Array of media components in data (used to export media)
+	this.media_components_in_data = [];
 }//end tool_export
 
 
