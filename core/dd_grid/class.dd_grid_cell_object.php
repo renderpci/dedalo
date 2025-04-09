@@ -437,14 +437,14 @@ class dd_grid_cell_object {
 
 	/**
 	* RESOLVE_VALUE
-	* get dd_grid and flat his columns and rows join it as string value
+	* Get given dd_grid and flat his columns and rows join it as string value
 	* @param dd_grid_cell_object $dd_grid
-	* @return string $column_value
+	* @return string $column_value|$row_value
 	*/
 	public static function resolve_value(dd_grid_cell_object $dd_grid) : string {
 
 		$value_check = $dd_grid->value;
-		if(isset($value_check[0]) && is_object($value_check[0]) &&
+		if( isset($value_check[0]) && is_object($value_check[0]) &&
 			isset($value_check[0]->type) && $value_check[0]->type==='row') {
 
 			// rows case
