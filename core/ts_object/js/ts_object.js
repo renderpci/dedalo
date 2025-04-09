@@ -60,13 +60,10 @@ export const ts_object = new function() {
 			const thesaurus_view_mode	= caller.thesaurus_view_mode
 			const terms_are_model		= thesaurus_view_mode==='model'
 
-		// prevent_lock: set false on 'area_ontology' to allow session cache in ontology
-			const prevent_lock = caller.model==='area_ontology' ? false : true
-
 		// API call
 			const rqo = {
 				dd_api			: 'dd_ts_api',
-				prevent_lock	: prevent_lock,
+				prevent_lock	: true,
 				action			: 'get_children_data',
 				source			: {
 					section_id		: section_id,

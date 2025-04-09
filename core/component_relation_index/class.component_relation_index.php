@@ -6,6 +6,7 @@
 class component_relation_index extends component_relation_common {
 
 
+
 	/**
 	* @var
 	*/
@@ -18,6 +19,7 @@ class component_relation_index extends component_relation_common {
 	// default_target_section, when is not set in properties it will set as all related sections than call.
 	protected $default_target_section		= ['all'];
 	public $target_section;
+
 
 
 	/**
@@ -730,6 +732,7 @@ class component_relation_index extends component_relation_common {
 
 		return $ar_operators;
 	}//end search_operators_info
+
 
 
 	/**

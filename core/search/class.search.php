@@ -61,6 +61,9 @@ class search {
 		// filter_by_locators
 		protected $filter_by_locators;
 
+		// filter_by_locators_op
+		protected $filter_by_locators_op;
+
 		// ar_direct_columns. Useful to calculate efficient order sentences
 		public static $ar_direct_columns = ['section_id','section_tipo','id'];
 
@@ -218,6 +221,11 @@ class search {
 		// filter_by_locators
 		if(isset($this->search_query_object->filter_by_locators)) {
 			$this->filter_by_locators = $this->search_query_object->filter_by_locators;
+		}
+
+		// filter_by_locators_op
+		if(isset($this->search_query_object->filter_by_locators_op)) {
+			$this->filter_by_locators_op = $this->search_query_object->filter_by_locators_op;
 		}
 
 		// records limit default
