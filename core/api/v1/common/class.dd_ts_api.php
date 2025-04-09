@@ -73,47 +73,47 @@ final class dd_ts_api {
 					// root nodes are passed as resolved $children array case
 					break;
 
-				case !empty($section_properties) && isset($section_properties->children_search):
-					// thesaurus_node: section case (from current term children, usually 'hierarchy45')
-					// pagination. Set default if is not defined
-						$current_pagination = !empty($pagination)
-							? $pagination
-							: (object)[
-								'limit'		=> $default_limit,
-								'offset'	=> 0,
-								'total'		=> null
-							];
+				// case !empty($section_properties) && isset($section_properties->children_search):
+				// 	// thesaurus_node: section case (from current term children, usually 'hierarchy45')
+				// 	// pagination. Set default if is not defined
+				// 		$current_pagination = !empty($pagination)
+				// 			? $pagination
+				// 			: (object)[
+				// 				'limit'		=> $default_limit,
+				// 				'offset'	=> 0,
+				// 				'total'		=> null
+				// 			];
 
-					// sqo. children_search
-						$sqo = $section_properties->children_search->sqo;
-						// add pagination
-						$sqo->limit		= $current_pagination->limit;
-						$sqo->offset	= $current_pagination->offset;
+				// 	// sqo. children_search
+				// 		$sqo = $section_properties->children_search->sqo;
+				// 		// add pagination
+				// 		$sqo->limit		= $current_pagination->limit;
+				// 		$sqo->offset	= $current_pagination->offset;
 
-						$section_search	= search::get_instance(
-							$sqo // object sqo
-						);
-						$rows_data = $section_search->search();
+				// 		$section_search	= search::get_instance(
+				// 			$sqo // object sqo
+				// 		);
+				// 		$rows_data = $section_search->search();
 
-					// children
-						$children = array_map(function($item){
+				// 	// children
+				// 		$children = array_map(function($item){
 
-							$locator = new stdClass();
-								$locator->section_tipo	= $item->section_tipo;
-								$locator->section_id	= $item->section_id;
+				// 			$locator = new stdClass();
+				// 				$locator->section_tipo	= $item->section_tipo;
+				// 				$locator->section_id	= $item->section_id;
 
-							return $locator;
-						}, $rows_data->ar_records);
+				// 			return $locator;
+				// 		}, $rows_data->ar_records);
 
-					// count
-						if (!isset($current_pagination->total)) {
-							$section_search	= search::get_instance(
-								$section_properties->children_search->sqo, // basic SQO as {section_tipo:["rsc97"]}
-							);
-							$result = $section_search->count();
-							$current_pagination->total = $result->total;
-						}
-					break;
+				// 	// count
+				// 		if (!isset($current_pagination->total)) {
+				// 			$section_search	= search::get_instance(
+				// 				$section_properties->children_search->sqo, // basic SQO as {section_tipo:["rsc97"]}
+				// 			);
+				// 			$result = $section_search->count();
+				// 			$current_pagination->total = $result->total;
+				// 		}
+				// 	break;
 
 				default:
 					// Calculate children from parent

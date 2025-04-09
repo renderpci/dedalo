@@ -49,6 +49,7 @@
 										section_tipo
 										component_tipo
 								  }]
+		filter_by_locators_op 	: (OR || AND)
 		allow_sub_select_by_id	: (true || false)
 		children_recursive 		: (true || false)
 		remove_distinct			: (true || false)
@@ -76,6 +77,7 @@ class search_query_object {
 		public $order;
 		public $order_custom;
 		public $filter_by_locators;
+		public $filter_by_locators_op;
 		public $allow_sub_select_by_id;
 		public $children_recursive;
 		public $remove_distinct;
@@ -372,6 +374,20 @@ class search_query_object {
 
 		return true;
 	}//end set_filter_by_locators
+
+
+
+	/**
+	* SET_FILTER_BY_LOCATORS_OP
+	* @param string $value OR, AND
+	* @return bool true
+	*/
+	public function set_filter_by_locators_op( string $value ) : true {
+
+		$this->filter_by_locators_op = $value;
+
+		return true;
+	}//end set_filter_by_locators_op
 
 
 

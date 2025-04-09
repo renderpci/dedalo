@@ -164,42 +164,6 @@ class ts_object {
 			$section_id		= $locator->section_id;
 			$section_tipo	= $locator->section_tipo;
 
-			// remove the inactive ontologies in main ontology
-			// some children defined in ontology node could be not active and loaded
-			// remove they from the children_data to prevent to show it in the tree.
-			if ($area_model==='area_ontology') {
-
-				// active ontologies list. Calculate once by session (445 ms)
-				if(isset($_SESSION['dedalo']['config']['active_elements'])) {
-					$active_elements = $_SESSION['dedalo']['config']['active_elements'];
-				}else{
-					$active_elements = [];
-					foreach (ontology::get_active_elements() as $el) {
-						// if ($el->active_in_thesaurus===true) {
-							$active_elements[] = (object)[
-								'tld'					=> $el->tld,
-								'section_tipo'			=> $el->section_tipo,
-								'target_section_tipo'	=> $el->target_section_tipo
-							];
-						// }
-					}
-					$_SESSION['dedalo']['config']['active_elements'] = $active_elements;
-				}
-
-				$found = array_find($active_elements, function($el) use($section_tipo){
-					return $el->target_section_tipo===$section_tipo
-						|| $el->section_tipo===$section_tipo
-						|| get_tld_from_tipo($section_tipo)===$el->tld;
-				});
-				if (empty($found)) {
-					// remove from pagination total count
-					if (isset($current_pagination->total)) {
-						$current_pagination->total--;
-					}
-					// ignore this non active tld item
-					continue;
-				}
-			}
 			// set order of locator in the ts_options
 			$ts_options = empty($ts_object_options)
 				? new stdClass()
