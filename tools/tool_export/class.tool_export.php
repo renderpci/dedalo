@@ -420,10 +420,13 @@ class tool_export extends tool_common {
 						$component_dato = array_filter($relations, function($el) use($ddo, $current_component){
 							if (!isset($el->from_component_tipo)) {
 								debug_log(__METHOD__
-									. " Error. Ignored WRONG locator without from_component_tipo ". PHP_EOL
-									. "(model: $current_component->get_model(), tipo: $current_component->get_tipo(),
-									  section_tipo: $current_component->get_section_tipo(), section_id: $current_component->get_section_id())". PHP_EOL
-									. to_string($el)
+									.' Error. Ignored WRONG locator without from_component_tipo '. PHP_EOL
+									.' model: ' . to_string($current_component->get_model()) . PHP_EOL
+									.' tipo: ' . to_string($current_component->get_tipo()) . PHP_EOL
+									.' section_tipo: ' . to_string($current_component->get_section_tipo()) . PHP_EOL
+									.' section_id: ' . to_string($current_component->get_section_id()) . PHP_EOL
+									.' locator: ' . to_string($el) . PHP_EOL
+									// .' current_component: ' . to_string($current_component)
 									, logger::ERROR
 								);
 								return false;
