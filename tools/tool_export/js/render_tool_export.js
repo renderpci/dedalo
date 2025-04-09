@@ -232,7 +232,7 @@ const get_content_data_edit = async function(self) {
 				// select_option_breakdown
 				ui.create_dom_element({
 					element_type	: 'option',
-					inner_html		: get_label.breakdown || 'breakdown',
+					inner_html		: get_label.breakdown || 'Breakdown',
 					value			: 'grid_value',
 					parent			: select_data_format_export
 				})
