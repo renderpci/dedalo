@@ -159,12 +159,11 @@ class component_iri extends component_common {
 			$fields_separator	= $ddo->fields_separator ?? null;
 			$records_separator	= $ddo->records_separator ?? null;
 			$class_list			= $ddo->class_list ?? null;
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
+
+		// column_obj
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
 		// set the label of the component as column label
 			$label = $this->get_label();

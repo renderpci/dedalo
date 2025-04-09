@@ -219,12 +219,10 @@ class component_media_common extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$column_obj = isset($this->column_obj)
-				? $this->column_obj
-				: (object)[
-					'id' => $this->section_tipo.'_'.$this->tipo
-				  ];
+		// column_obj
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
 		// current_url. get from dato
 			$dato = $this->get_dato();
