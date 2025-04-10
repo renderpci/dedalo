@@ -367,7 +367,8 @@ class component_relation_parent extends component_relation_common {
 			);
 			if (empty($ar_parent_tipo)) {
 				debug_log(__METHOD__
-					." Ignored search get_parent because this section ($section_tipo) do not have any component of model: component_relation_parent "
+					." Ignored search get_parent because this section ($section_tipo) do not have any component of model: component_relation_parent " . PHP_EOL
+					.'section_tipo: ' . $section_tipo . PHP_EOL
 					, logger::ERROR
 				);
 				return $children_tipo;
@@ -377,6 +378,7 @@ class component_relation_parent extends component_relation_common {
 
 		return $children_tipo;
 	}//end get_parent_tipo
+
 
 
 	/**
@@ -399,7 +401,7 @@ class component_relation_parent extends component_relation_common {
 				. ' section_id: ' . to_string($section_id) . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
 				. ' from_component_tipo: ' . to_string($from_component_tipo) . PHP_EOL
-				. ' component_tipo: ' . to_string($component_tipo) . PHP_EOL
+				. ' component_tipo: ' . to_string($component_tipo)
 				, logger::ERROR
 			);
 			return [];
