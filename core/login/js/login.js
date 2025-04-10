@@ -153,7 +153,7 @@ login.prototype.build = async function(autoload=false) {
 		const saml_config = self.context?.properties?.saml_config
 		if (saml_config) {
 			try {
-				const {saml} = await import('../../../lib/dedalo/login/saml/js/saml.js')
+				const {saml} = await import('../saml/js/saml.js')
 				self.saml = new saml()
 				await self.saml.init({
 					caller		: self,
