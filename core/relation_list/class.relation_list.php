@@ -788,7 +788,7 @@ class relation_list extends common {
 								$current_locator->section_tipo
 							);
 
-							if (isset($component_method) && $component_method==='get_diffusion_value') {
+							if ($component_method==='get_diffusion_value') {
 								// sample at 'dmmgobes31'
 								// {
 								//   "data_to_be_used": "filtered_values",
@@ -809,6 +809,26 @@ class relation_list extends common {
 								//   }
 								// }
 								$ar_value[] = $current_component->{$component_method}($lang, $options);
+							}else if ( isset($component_method) ) {
+								$component_data = $current_component->{$component_method}();
+
+								if(is_string($component_data)){
+									try {
+										$data_parse = json_decode($component_data);
+										if($data_parse !== null){
+											$component_data = $data_parse;
+										}
+									} catch (Exception $e) {
+
+									}
+								}
+								if(!empty($component_data)){
+									if(is_array($component_data)){
+										$ar_value = array_merge($ar_value, $component_data);
+									}else{
+										$ar_value[] = $component_data;
+									}
+								}
 							}else{
 								$ar_value[] = $current_component->get_value();
 							}

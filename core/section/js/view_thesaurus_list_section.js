@@ -7,14 +7,19 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {
+		clone,
+		get_font_fit_size,
+		object_to_url_vars,
+		// open_window
+	} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from './render_common_section.js'
-	import {
-		render_column_id
-	} from './render_list_section.js'
+	// // import {
+	// 	render_column_id
+	// } from './render_list_section.js'
 
 
 
@@ -121,32 +126,11 @@ view_thesaurus_list_section.render = async function(self, options) {
 			const selector = `${self.section_tipo}_${self.tipo}.list`
 
 		// custom properties defined css
-			// if (self.context.css) {
-				// use defined section css
-				// set_element_css(selector, self.context.css)
-			// }
 			// flat columns create a sequence of grid widths taking care of sub-column space
 			// like 1fr 1fr 1fr 3fr 1fr
 			const items				= ui.flat_column_items(columns_map)
 			const template_columns	= items.join(' ')
 
-			// direct assign DES
-				// Object.assign(
-				// 	list_body.style,
-				// 	{
-				// 		"grid-template-columns": template_columns
-				// 	}
-				// )
-
-			// re-parse template_columns as percent
-				// const items_lenght = items.length
-				// const percent_template_columns = items.map(el => {
-				// 	if (el==='1fr') {
-				// 		return Math.ceil(90 / (items_lenght -1)) + '%'
-				// 	}
-				// 	return el
-				// }).join(' ')
-				// console.log("percent_template_columns:",percent_template_columns);
 
 			const css_object = {
 				'.list_body' : {
@@ -211,7 +195,6 @@ const get_content_data = async function(self, ar_section_record) {
 		}else{
 
 			// rows
-
 			// parallel mode
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
@@ -276,16 +259,6 @@ const rebuild_columns_map = async function(self) {
 			callback	: render_column_id
 		})
 
-	// button_remove
-		// 	if (self.permissions>1) {
-		// 		columns_map.push({
-		// 			id			: 'remove',
-		// 			label		: '', // get_label.delete || 'Delete',
-		// 			width 		: 'auto',
-		// 			callback	: render_column_remove
-		// 		})
-		// 	}
-
 	// columns base
 		const base_columns_map = await self.columns_map
 		columns_map.push(...base_columns_map)
@@ -335,127 +308,105 @@ const get_buttons = function(self) {
 			event_manager.publish('toggle_search_panel_'+self.id)
 		})
 
-	// non_editable_sections. Activity section 'dd542'
-		const non_editable_sections = [
-			'dd542', // activity
-			'dd1324' // registered tools
-		]
-		if (non_editable_sections.includes(self.tipo)) {
-			return fragment
+	return fragment
+}//end get_buttons
+
+
+
+
+
+/**
+* RENDER_COLUMN_ID
+* Custom render to generate the section list column id.
+* Is called as callback from section_record
+* @param object options
+* @return DOM DocumentFragment
+*/
+const render_column_id = function(options) {
+
+	// options
+		const self			= options.caller // object instance, usually section or portal
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+		const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
+
+	// permissions
+		const permissions = self.permissions
+
+	// show_interface
+		const show_interface = self.show_interface || {}
+
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
+	// linker
+		const linker = self.caller.area_thesaurus.linker
+	// section_id
+		const section_id_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'section_id',
+			text_content	: section_id
+		})
+		if(SHOW_DEBUG===true) {
+			section_id_node.title = 'paginated_key: ' + paginated_key
+		}
+		// adjust the font size to fit it into the column
+		// @see https://www.freecodecamp.org/news/learn-css-units-em-rem-vh-vw-with-code-examples/#what-are-vw-units
+		const base_size	= 1.25 // defined as --font_size: 1.25rem; into CSS (list.less)
+		const font_size	= get_font_fit_size(section_id, base_size, 4)
+		if (font_size!==base_size) {
+			section_id_node.style.setProperty('--font_size', `${font_size}rem`);
 		}
 
-	// other_buttons_block
-		const other_buttons_block = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'other_buttons_block hide',
-			parent			: buttons_container
-		})
+	// buttons
+		switch(true){
 
-	// other buttons
-		const ar_buttons_length = ar_buttons.length;
-		for (let i = 0; i < ar_buttons_length; i++) {
+			// initiator. is a url var used in iframe containing section list to link to opener portal
+			case (self.initiator && self.initiator.indexOf('tool_indexation_')!==-1): {
 
-			const current_button = ar_buttons[i]
+				// link_button. component portal caller (link)
+					const link_button = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'link_button',
+						parent			: fragment
+					})
+					link_button.addEventListener('click', function(e) {
+						e.stopPropagation()
 
-			// button_delete multiple
-			// check if user is global admin to activate the button delete (avoid users to delete multiple sections)
-				if(current_button.model==='button_delete' && page_globals.is_global_admin===false){
-					continue
-				}
-
-			// button node
-				const class_name	= 'warning ' + current_button.model.replace('button_', '')
-				const button_node	= ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: class_name,
-					inner_html		: current_button.label,
-					parent			: other_buttons_block
-				})
-				// icon
-				// section buttons option for custom button CSS classes.
-				// To define a button class, set ontology item properties such as "css": { "style": "import_files" }
-				if (current_button.properties?.css && current_button.properties?.css.style) {
-					button_node.classList.add(current_button.properties.css.style)
-				}
-				// click event
-				const click_handler = (e) => {
-					e.stopPropagation()
-
-					switch(current_button.model){
-						case 'button_new':
-							event_manager.publish('new_section_' + self.id)
-							break;
-
-						case 'button_delete': {
-							// sqo conform
-							const delete_sqo = clone(self.rqo.sqo)
-							delete_sqo.limit = null
-							delete delete_sqo.offset
-
-							// delete_record
-							self.render_delete_record_dialog({
-								section			: self,
-								section_id		: null,
-								section_tipo	: self.section_tipo,
-								sqo				: delete_sqo
-							})
-							break;
+						// publish event link_term
+						if (!linker) {
+							console.warn(`Error. self.linker is not defined.
+								Please set ts_object linker property with desired target component portal:`, self);
+							return false
 						}
-						// button_import and button_trigger cases for compatibility with v5 ontology
-						// in future version will be merge both with new model button_tool
-						// in the mid-time use button_trigger for general cases to dispatch tools.
-						case 'button_import':
-						case 'button_trigger':
-							// open_tool (tool_common)
-							open_tool({
-								tool_context	: current_button.tools[0],
-								caller			: self,
-								caller_options	: {
-									section_tipo	: self.section_tipo,
-									button_tipo		: current_button.tipo
-								}
-							})
-							break;
+						// linker id. A component_portal instance is expected as linker
+						const linker_id = linker.id
+						// source_window.event_manager.publish('link_term_' + linker_id,
+						const window_base = !linker.caller
+							? window.opener // case DS opening new window
+							: window // default case (indexation)
+						window_base.event_manager.publish('link_term_' + linker_id, {
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							label			: self.label ? self.label : ''
+						})
 
-						default:
-							event_manager.publish('click_' + current_button.model)
-							break;
-					}
-				}
-				button_node.addEventListener('click', click_handler)
-		}//end for (let i = 0; i < ar_buttons_length; i++)
-
-	// tools buttons
-		ui.add_tools(self, other_buttons_block)
-
-	// show_other_buttons_button
-		const show_other_buttons_label	= get_label.show_buttons || 'Show buttons'
-		const show_other_buttons_button	= ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'icon_arrow show_other_buttons_button',
-			title			: show_other_buttons_label,
-			dataset			: {
-				label : show_other_buttons_label
-			},
-			parent			: buttons_container
-		})
-		show_other_buttons_button.addEventListener('click', function(e) {
-			e.stopPropagation()
-		})
-
-	// track collapse toggle state of content
-		ui.collapse_toggle_track({
-			toggler				: show_other_buttons_button,
-			container			: other_buttons_block,
-			collapsed_id		: 'section_other_buttons_block',
-			collapse_callback	: () => {show_other_buttons_button.classList.remove('up')},
-			expose_callback		: () => {show_other_buttons_button.classList.add('up')},
-			default_state		: 'closed'
-		})
+					})
+					link_button.appendChild(section_id_node)
+					// link_icon
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button arrow_link icon',
+						parent			: link_button
+					})
+				break;
+			}
+		}
 
 
 	return fragment
-}//end get_buttons
+}//end render_column_id
+
 
 
 
