@@ -665,10 +665,15 @@ const render_viewer_selector = function(self, wrapper){
 	// short vars
 		const media_component	= self.media_component
 		const area_thesaurus	= self.area_thesaurus
+		const people_section	= self.people_section
 		const items = [
 			{
 				label : area_thesaurus.label,
 				value : 'area_thesaurus'
+			},
+			{
+				label : people_section.label,
+				value : 'people_section'
 			},
 			{
 				label : media_component.label,
@@ -705,13 +710,30 @@ const render_viewer_selector = function(self, wrapper){
 			const left_container		= wrapper.content_data.left_container
 			const area_thesaurus_node	= left_container.area_thesaurus_node
 			const media_component_node	= left_container.media_component_node || null
+			const people_section_node	= left_container.people_section_node || null
 
-			if (self.viewer==='media_component') {
+			const hidde_all = () => {
 
 				// hide area_thesaurus_node
+				if (area_thesaurus_node) {
 					area_thesaurus_node.classList.add('hide')
+				}
+				// hide media_component_node
+				if (media_component_node) {
+					media_component_node.classList.add('hide')
+				}
+				// hide people_section_node
+				if (people_section_node) {
+					people_section_node.classList.add('hide')
+				}
+			}
 
-				// show media_component_node
+			switch (self.viewer) {
+				case 'media_component':
+
+					hidde_all();
+
+					// show media_component_node
 					if (media_component_node) {
 						media_component_node.classList.remove('hide')
 					}else{
@@ -724,17 +746,36 @@ const render_viewer_selector = function(self, wrapper){
 							left_container.media_component_node = node
 						})
 					}
-			}else
-			if (self.viewer==='area_thesaurus'){
+					break;
 
-				// hide media_component_node
-					if (media_component_node) {
-						media_component_node.classList.add('hide')
+				case 'people_section':
+
+					hidde_all();
+
+					// show people_section_node
+					if (people_section_node) {
+						people_section_node.classList.remove('hide')
+					}else{
+						// first call, do not exists
+						// self.people_section_node.mode = 'player'
+						self.people_section.render()
+						.then(function(node){
+							left_container.appendChild(node)
+							// fix pointer
+							left_container.people_section_node = node
+						})
 					}
+					break;
+				case 'area_thesaurus':
+				default:
 
-				// show area_thesaurus_node
+					hidde_all();
+
+					// show area_thesaurus_node
 					area_thesaurus_node.classList.remove('hide')
+					break;
 			}
+
 		})
 
 	// option label
