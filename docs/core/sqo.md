@@ -78,6 +78,7 @@ Search Query Object is send as part of Request Query Object to be processed by s
 - **children_recursive** : `bool` (true || false) filter the term of hierarchy and get the all children nodes dependents of the searched term. Default : false  **optional**
 - **remove_distinct** : `bool` (true || false) remove duplicates records when the SQL query has a sub select with multiple criteria that can get duplicate records. Default : false **optional**
 - **skip_projects_filter** : `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
+- **breakdown** : `bool` (true || false) Split the data in the section(DDBB row) that match with the query in a row for every match. Used to locate specific locators and count the values than match the locator to be searched. Applied in `related` mode to search the indexations than call to specific interviews, person, etc. Default false  **optional**
 - **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default false  **optional**
 - **select** : `array of objects` array of ddo with defines the SELECT parameter **DEPRECATED DO NOT USED IN V6**
 
@@ -126,6 +127,7 @@ allow_sub_select_by_id  : (true || false) // default true
 children_recursive      : (true || false) // default false
 remove_distinct         : (true || false) // default false
 skip_projects_filter    : (true || false) // default false
+breakdown               : (true || false) // default false
 parsed                  : (true || false) // boolean, state of the sqo | default false
 select                  : [{    //DEPRECATED | array of objects optional
                             section_tipo
@@ -1082,7 +1084,6 @@ And the API will return something like:
 
 ```
 
-
 ### order
 
 Defines the component or components that will use to order the records found. Order is set as array of columns that defines the configuration of the component to be used to configure the order, every object has a [path](#path-1) and [direction](#direction), the array order fix the priority.
@@ -1462,6 +1463,171 @@ LIMIT 5;
 Remove the projects filter applied to users. Every search inside Dédalo use the component_filter to restrict the section records that the user can get of any section. Every user has his own permissions to get one, two or more projects, projects are defined in section [dd153](https://dedalo.dev/ontology/dd153) and is assign to every user in the system. Only general-admin and the root user remove the projects restriction using this property. By default is false and is not possible to change in the fly.
 
 Definition: `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
+
+### breakdown
+
+Defines whether the search result will be split by each locator in each section matching the query in a row by match. Only used in `related` mode.
+
+Definition: `bool` (true || false) When is set as `true` give me every locator that match the query in a row. When is set as `false` give me the full section that match the query. Default : false **optional**
+
+Used to obtain all locators that call to some other locator. For instance, an indexation of the one audiovisual can use multiple locators to point specific segments of the interview. These locators can be repeatedly employed throughout the interview because they represent recurrent themes, individuals, topics, and so on. For example, a single person can be indexed multiple times within an interview. The audiovisual of the interview is a section with its full data, with all locators and if the referenced individual is mentioned twice, they will be stored as two distinct locators within that section.
+
+Example: In an audiovisual section we have stored 2 locators pointing to the same person, `"section_id": 7, "section_tipo": "rsc197"` and one locator pointing to other person `section_id: 42, section_tipo: "rsc197"` in this way:
+
+```mermaid
+    graph LR
+    A(("Audiovisual :: section_id 1"))-->B(Indexation :: tag_id 1)
+    A-->C(Indexation :: tag_id  3)
+    B-->D(("Person :: section_id 7"))
+    C-->D
+    A-->E(Indexation :: tag_id 2)
+    E-->F(("Person :: section_id 42"))
+```
+
+Data:
+
+```json
+{
+  "section_id": 1,
+  "section_tipo": "rsc167",
+  "label": "Audiovisual",
+  "relations": [
+      {
+          "type": "dd96",
+          "tag_id": "1",
+          "section_id": "7",
+          "section_tipo": "rsc197",
+          "tag_component_tipo": "rsc36",
+          "from_component_tipo": "rsc860",
+          "label": "Person"
+      },
+      {
+          "type": "dd96",
+          "tag_id": "2",
+          "section_id": "42",
+          "section_tipo": "rsc197",
+          "tag_component_tipo": "rsc36",
+          "from_component_tipo": "rsc860",
+          "label": "Person"
+      },
+      {
+          "type": "dd96",
+          "tag_id": "3",
+          "section_id": "7",
+          "section_tipo": "rsc197",
+          "tag_component_tipo": "rsc36",
+          "from_component_tipo": "rsc860",
+          "label": "Person"
+      }
+    ]
+}
+```
+
+In the following examples, we are interested in identifying the caller of person 7.
+
+Example 1: `breakdown` set to `false`
+
+```json
+{
+    "section_tipo" : ["rsc197"],
+    "mode" : "related",
+    "filter_by_locators" : [
+        {
+            "type" : "dd96",
+            "section_tipo" : "rsc197",
+            "section_id" : "7"
+        }
+    ],
+   "breakdown": false
+}
+```
+
+The SQL equivalent:
+
+```sql
+SELECT section_tipo, section_id, datos
+FROM "matrix"
+WHERE ( relations_flat_ty_st_si(datos) @> '["dd96_rsc197_7"]'::jsonb )
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_activities"
+WHERE ( relations_flat_ty_st_si(datos) @> '["dd96_rsc197_7"]'::jsonb )
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_hierarchy"
+WHERE ( relations_flat_ty_st_si(datos) @> '["dd96_rsc197_7"]'::jsonb )
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_list"
+WHERE ( relations_flat_ty_st_si(datos) @> '["dd96_rsc197_7"]'::jsonb )
+ORDER BY section_tipo, section_id ASC;
+```
+
+and the result with be 1 row with the full audiovisual section data:
+
+| section_id | section_tipo | datos |
+| --- | --- | --- |
+| 1 | rsc167 | `{"section_id":1,"section_tipo":"rsc167","label":"Audiovisual","relations":\[{"type":"dd96","tag_id":"1","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"},{"type":"dd96","tag_id":"2","section_id":"42","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"},{"type":"dd96","tag_id":"3","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}]}` |
+
+Example 2: `breakdown` set to `true`
+
+```json
+{
+    "section_tipo" : ["rsc197"],
+    "mode" : "related",
+    "filter_by_locators" : [
+        {
+            "type" : "dd96",
+            "section_tipo" : "rsc197",
+            "section_id" : "7"
+        }
+    ],
+    "breakdown": true
+}
+```
+
+The SQL equivalent:
+
+```sql
+SELECT section_tipo, section_id, relations_data
+FROM "matrix"
+cross join jsonb_array_elements( datos->'relations' ) as relations_data
+WHERE ( relations_flat_ty_st_si(datos) @> '["dd96_rsc197_7"]'::jsonb
+    AND relations_data->'type' ? 'dd96'
+    AND relations_data->'section_tipo' ? 'rsc197'
+    AND relations_data->'section_id' ? '7' )
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_activities"
+WHERE ( relations_flat_ty_st_si(datos) @> '["dd96_rsc197_7"]'::jsonb
+    AND relations_data->'type' ? 'dd96'
+    AND relations_data->'section_tipo' ? 'rsc197'
+    AND relations_data->'section_id' ? '7' )
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_hierarchy"
+WHERE ( relations_flat_ty_st_si(datos) @> '["dd96_rsc197_7"]'::jsonb
+    AND relations_data->'type' ? 'dd96'
+    AND relations_data->'section_tipo' ? 'rsc197'
+    AND relations_data->'section_id' ? '7' )
+UNION ALL
+SELECT section_tipo, section_id, datos
+FROM "matrix_list"
+WHERE ( relations_flat_ty_st_si(datos) @> '["dd96_rsc197_7"]'::jsonb
+    AND relations_data->'type' ? 'dd96'
+    AND relations_data->'section_tipo' ? 'rsc197'
+    AND relations_data->'section_id' ? '7' )
+ORDER BY section_tipo, section_id ASC;
+```
+
+The result will be two rows, with each locator calling the person 7 in this manner:
+
+| section_id | section_tipo | locator_data |
+| --- | --- | --- |
+| 1 | rsc167 | `{"type":"dd96","tag_id":"1","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}` |
+| 1 | rsc167 | `{"type":"dd96","tag_id":"3","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}` |
+
+The result can be counted or used to be paginated directly in a simple way.
 
 ### parsed
 
