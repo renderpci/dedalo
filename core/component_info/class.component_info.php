@@ -504,12 +504,10 @@ class component_info extends component_common {
 			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
 
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
+		// column_obj
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
 		// short vars
 			$data		= $this->get_dato_parsed();// use data parsed to be processed by the widget if needed. see mdcat->sum_dates

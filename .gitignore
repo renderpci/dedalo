@@ -66,6 +66,9 @@ lib/vendor/*
 # !lib/vendor/composer
 !lib/vendor/myclabs
 !lib/vendor/sweetrdf
+# saml login libs
+!lib/vendor/robrichards
+!lib/vendor/onelogin
 # !lib/vendor/sebastian
 !lib/vendor/phpunit
 !lib/vendor/linfo

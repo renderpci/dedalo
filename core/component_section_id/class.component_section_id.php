@@ -114,12 +114,9 @@ class component_section_id extends component_common {
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// column_obj
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
 		$data	= $this->get_dato();
 		$label	= $this->get_label();

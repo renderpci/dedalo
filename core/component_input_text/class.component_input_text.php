@@ -145,21 +145,18 @@ class component_input_text extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
+		// column_obj
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
-		// records_separator
+		// records_separator. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
 			$properties			= $this->get_properties();
 			$records_separator	= isset($ddo->records_separator)
-			? $ddo->records_separator
-			: (isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ');
+				? $ddo->records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
 
 		// dato
 			$dato			= $this->get_dato() ?? [];
