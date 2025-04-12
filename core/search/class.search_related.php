@@ -36,6 +36,9 @@ class search_related extends search {
 		// group_by
 			$group_by = $this->search_query_object->group_by ?? null;
 
+		// breakdown
+			$breakdown = $this->search_query_object->breakdown ?? false;
+
 		// order
 			$sql_query_order = $this->build_sql_query_order();
 
@@ -78,9 +81,11 @@ class search_related extends search {
 					: '';
 				// add full count when is set
 				// else get the row
-				$query	.= ($full_count===true)
+				$query	.= ( $full_count===true )
 					? 'COUNT(*) as full_count'
-					: 'section_tipo, section_id, datos';
+					: ( $breakdown===true
+						? 'section_tipo, section_id, locator_data'
+						: 'section_tipo, section_id, datos');
 
 				// columns
 				if (!empty($this->order_columns)) {
@@ -93,6 +98,12 @@ class search_related extends search {
 				// FROM
 				$query	.= PHP_EOL . 'FROM "'.$table.'"';
 
+				// Breakdown
+				if( $breakdown===true ){
+					$query	.= PHP_EOL;
+					$query	.= 'cross join jsonb_array_elements( datos->\'relations\' ) as locator_data';
+				}
+
 				// WHERE
 				$query	.= PHP_EOL . 'WHERE ';
 
@@ -103,25 +114,47 @@ class search_related extends search {
 
 						case !isset($locator->section_id) && isset($locator->type):
 							// relation index case
-							$locator_index		= $locator->type.'_'.$locator->section_tipo;
-							$locators_query[]	= PHP_EOL.'relations_flat_ty_st(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$locator_index	= $locator->type.'_'.$locator->section_tipo;
+							$sql			= PHP_EOL.'relations_flat_ty_st(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							if( $breakdown===true ){
+								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
+								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+							}
+							$locators_query[] = $sql;
 							break;
 
 						case isset($locator->from_component_tipo):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->from_component_tipo.'_'.$base_flat_locator;
-							$locators_query[]	= PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql				= PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							if( $breakdown===true ){
+								$sql .= PHP_EOL." AND locator_data->'from_component_tipo' ? '$locator->from_component_tipo'";
+								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+							}
+							$locators_query[] = $sql;
 							break;
 
 						case isset($locator->type):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->type.'_'.$base_flat_locator;
-							$locators_query[]	= PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql				= PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							if( $breakdown===true ){
+								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
+								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+							}
+							$locators_query[] = $sql;
 							break;
 
 						default:
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
-							$locators_query[]	= PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							$sql				= PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							if( $breakdown===true ){
+								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+							}
+							$locators_query[] = $sql;
 							break;
 					}
 					// Old model, it search directly in the table with gin index of relations, but it's slow for large databases.
