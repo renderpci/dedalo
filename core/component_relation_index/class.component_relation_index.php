@@ -161,6 +161,7 @@ class component_relation_index extends component_relation_common {
 				$sqo_count->set_section_tipo( $target_section );
 				$sqo_count->set_mode('related');
 				$sqo_count->set_filter_by_locators([$filter_locator]);
+				$sqo_count->set_breakdown(true);
 
 		// search to get
 			$search		= search::get_instance($sqo_count);
