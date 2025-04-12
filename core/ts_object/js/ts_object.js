@@ -987,15 +987,19 @@ export const ts_object = new function() {
 								// change the value of the current DOM element
 								button_obj.firstChild.innerHTML = value
 
-								// destroy
-								// current_component.destroy(true, true, true)
-								components.forEach((component) => {
-									component.destroy(true, true, true)
-								});
-								// clean up array of components
-								while(components.length > 0) {
-									components.pop();
-								}
+								dd_request_idle_callback(
+									() => {
+										// destroy
+										// current_component.destroy(true, true, true)
+										components.forEach((component) => {
+											component.destroy(true, true, true)
+										});
+										// clean up array of components
+										while(components.length > 0) {
+											components.pop();
+										}
+									}
+								)
 							}
 							self.events_tokens.push(
 								event_manager.subscribe('save_' + current_component.id_base, save_handler)
