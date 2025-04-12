@@ -1045,7 +1045,8 @@ export const render_download_modal = (self) => {
 	const click_handler = async (e) => {
 		e.stopPropagation()
 
-		footer.classList.add('loading')
+		body.classList.add('loading')
+		button_ok.classList.add('button_spinner')
 
 		try {
 			await download_media(
@@ -1056,7 +1057,8 @@ export const render_download_modal = (self) => {
 			console.error(error)
 		}
 
-		footer.classList.remove('loading')
+		body.classList.remove('loading')
+		button_ok.classList.remove('button_spinner')
 	}
 	button_ok.addEventListener('click', click_handler)
 	when_in_viewport(button_ok, () => {
