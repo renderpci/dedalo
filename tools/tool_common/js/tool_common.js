@@ -285,6 +285,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 						const element_options = {
 							model				: el.model,
 							mode				: el.mode,
+							view 				: el.view,
 							tipo				: el.tipo,
 							section_tipo		: el.section_tipo,
 							section_id			: el.section_id,
