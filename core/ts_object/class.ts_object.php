@@ -197,23 +197,24 @@ class ts_object {
 	* @return object $child_data
 	*/
 	public function get_data() : object {
+		$start_time=start_time();
 
 		// Global object
-		$child_data = new stdClass();
-			$child_data->section_tipo				= $this->section_tipo;
-			$child_data->section_id					= $this->section_id;
-			$child_data->ts_id						= $this->ts_id;
-			$child_data->ts_parent					= $this->ts_parent;
-			$child_data->order						= $this->order;
-			$child_data->mode						= 'list';	//'list_thesaurus';
-			$child_data->lang						= DEDALO_DATA_LANG;
-			$child_data->is_descriptor				= true;
-			$child_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
-			$child_data->permissions_button_new		= $this->get_permissions_element('button_new');
-			$child_data->permissions_button_delete	= $this->get_permissions_element('button_delete');
-			$child_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
-			$child_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
-			$child_data->ar_elements				= [];
+		$data = new stdClass();
+			$data->section_tipo					= $this->section_tipo;
+			$data->section_id					= $this->section_id;
+			$data->ts_id						= $this->ts_id;
+			$data->ts_parent					= $this->ts_parent;
+			$data->order						= $this->order;
+			$data->mode							= 'list';	//'list_thesaurus';
+			$data->lang							= DEDALO_DATA_LANG;
+			$data->is_descriptor				= true;
+			$data->is_indexable					= (bool)self::is_indexable($this->section_tipo, $this->section_id);
+			$data->permissions_button_new		= $this->get_permissions_element('button_new');
+			$data->permissions_button_delete	= $this->get_permissions_element('button_delete');
+			$data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
+			$data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
+			$data->ar_elements					= [];
 
 		// model boolean
 			$model = $this->options->model ?? null; // options are set when building the class
@@ -276,7 +277,7 @@ class ts_object {
 				}
 
 			// No descriptors do not have children. Avoid calculate children
-				if ($child_data->is_descriptor===false && $current_object->type==='link_children') {
+				if ($data->is_descriptor===false && $current_object->type==='link_children') {
 					continue;
 				}
 
@@ -320,7 +321,9 @@ class ts_object {
 						// get the data when the component is not a relation_index
 						// relation index get full data when get_dato() is called
 						// but this component needs a pagination data
-						$dato = ($model_name!=='component_relation_index')
+						$dato = ($model_name!=='component_relation_index'
+							// && $model_name!=='component_relation_children'
+						)
 							? $component->get_dato()
 							: [];
 
@@ -328,7 +331,7 @@ class ts_object {
 						switch (true) {
 
 							case (in_array($element_tipo, hierarchy::$hierarchy_portals_tipo)):
-								// Do not change main hierarchy portals data
+								// Do not change main hierarchy portals data, component_children in main section
 								break;
 
 							case ($model_name==='component_autocomplete_hi' || $model_name==='component_portal'):
@@ -390,13 +393,13 @@ class ts_object {
 									continue 3;
 								}
 
-								// ND element can change term value when 'esdescriptor' value is 'no' (locator of 'no')
+								// ND element can change term value when 'descriptor' value is 'no' (locator of 'no')
 									if($current_object->icon==='ND') {
 										if (isset($dato[0])
 											&& isset($dato[0]->section_id)
 											&& (int)$dato[0]->section_id===2) {
-											ts_object::set_term_as_nd($child_data->ar_elements);
-											$child_data->is_descriptor = false;
+											ts_object::set_term_as_nd($data->ar_elements);
+											$data->is_descriptor = false;
 										}
 										continue 3;
 									}
@@ -440,21 +443,34 @@ class ts_object {
 							case ($element_obj->type==='link_children'):
 
 								// fix children_tipo
-								$child_data->children_tipo = $element_tipo;
+								$data->children_tipo = $element_tipo;
 
 								// fix children dato
-								// $child_data->children = $dato;
+								// $data->children = $dato;
 
 								// set has_descriptor_children value
-								$child_data->has_descriptor_children = $this->has_children_of_type($dato, 'descriptor')===true;
+								$data->has_descriptor_children = $this->has_children_of_type($dato, 'descriptor')===true;
+								// $data->has_descriptor_children = component_relation_children::has_children_of_type(
+								// 	$this->section_id,
+								// 	$this->section_tipo,
+								// 	$element_tipo,
+								// 	'descriptor'
+								// );
 
 								// D : Descriptors
-								$element_obj->value = ($child_data->has_descriptor_children===true)
+								$element_obj->value = ($data->has_descriptor_children===true)
 									? 'button show children'
 									: 'button show children unactive';
 
 								// ND : No descriptors case
 								$has_children_of_type_result = $this->has_children_of_type($dato, 'nd');
+								// $has_children_of_type_result = component_relation_children::has_children_of_type(
+								// 	$this->section_id,
+								// 	$this->section_tipo,
+								// 	$element_tipo,
+								// 	'non_descriptor'
+								// );
+
 								if($has_children_of_type_result===true) {
 
 									$nd_element = new stdClass();
@@ -462,7 +478,7 @@ class ts_object {
 										$nd_element->tipo	= $element_tipo;
 										$nd_element->value	= 'ND';
 
-									$child_data->ar_elements[] = $nd_element;
+									$data->ar_elements[] = $nd_element;
 								}
 								break;
 
@@ -482,18 +498,19 @@ class ts_object {
 				}//end foreach ($ar_element_tipo as $element_tipo)
 
 			// Add
-				$child_data->ar_elements[] = $element_obj;
+				$data->ar_elements[] = $element_obj;
+
 		}//end foreach ($ar_elements as $k_element_tipo => $current_object)
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				// $total = round( (start_time()-$start_time), 3 );
 				#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-				// $child_data->total_time = $total;
-				// error_log('********************* get_data total:'. exec_time_unit($start_time,'ms'));
+				// $data->total_time = $total;
+				// error_log('********************* get_data total: '. exec_time_unit($start_time,'ms'));
 			}
 
-		return $child_data;
+		return $data;
 	}//end get_data
 
 
@@ -960,10 +977,10 @@ class ts_object {
 	* @param object section_list_thesaurus_item
 	* sample:
 	* {
-	*    "icon": "TCHI",
-	*    "tipo": "tchi59",
-	*    "type": "icon",
-	*    "show_data": "children"
+	*	"icon": "TCHI",
+	*	"tipo": "tchi59",
+	*	"type": "icon",
+	*	"show_data": "children"
 	* }
 	* @return object $count_data_group_by
 	*/
@@ -973,6 +990,10 @@ class ts_object {
 			static $resolved_child;
 
 		// filter_locators
+		// get all children of the current term to be used to count the indexations of the term
+		// Used to get all callers of a term and its children together.
+		// In TCHI, show all objects(TCH) related to all statigraphic units (children of the current sector) into the sector (current term).
+		// see `hierarchy44`
 			if (isset($section_list_thesaurus_item->show_data)) {
 
 				// filter_by_locator

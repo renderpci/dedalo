@@ -55,6 +55,7 @@
 		remove_distinct			: (true || false)
 		skip_projects_filter	: (true || false)
 		parsed					: (true || false) // boolean, state of the sqo
+		breakdown				: (true || false)
 
 */
 class search_query_object {
@@ -83,6 +84,7 @@ class search_query_object {
 		public $remove_distinct;
 		public $skip_projects_filter;
 		public $parsed;
+		public $breakdown;
 		public $select;
 		// generated_time
 		public $generated_time;
@@ -474,6 +476,28 @@ class search_query_object {
 
 		return true;
 	}//end set_parsed
+
+
+
+	/**
+	* SET_BREAKDOWN
+	* Breakdowns the relations data into rows (split matching locators as rows).
+	* If the property is set in true:
+	* use the relations data to breakdown the data into rows with the match search.
+	* If the property is set as false:
+	* the result will be the section that match
+	* By default is false
+	* Used in search related to split the locators than match the search criteria (as indexations of audiovisual)
+	* @see search_related.parse_search_query_object
+	* @param bool $value
+	* @return bool true
+	*/
+	public function set_breakdown(bool $value) : true {
+
+		$this->breakdown = $value;
+
+		return true;
+	}//end set_breakdown
 
 
 

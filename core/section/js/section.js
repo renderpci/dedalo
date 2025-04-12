@@ -610,6 +610,12 @@ section.prototype.build = async function(autoload=false) {
 					}
 				}
 
+			// section_list_thesurus
+		self.context.mode = self.context.mode === 'list_thesaurus'
+			? 'list'
+			: self.context.mode;
+		self.mode = self.context.mode;
+
 			// set Data
 				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections') || {}
 				self.section_id	= self.mode!=='list' && self.data && self.data.value
@@ -703,6 +709,12 @@ section.prototype.build = async function(autoload=false) {
 					self.events_tokens.push(debug_token)
 				}
 		}//end if (autoload===true)
+
+	// section_list_thesurus cas
+		self.context.mode = self.context.mode === 'list_thesaurus'
+			? 'list'
+			: self.context.mode;
+		self.mode = self.context.mode;
 
 	// update instance properties from context
 		set_context_vars(self, self.context)

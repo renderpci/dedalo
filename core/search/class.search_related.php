@@ -36,6 +36,9 @@ class search_related extends search {
 		// group_by
 			$group_by = $this->search_query_object->group_by ?? null;
 
+		// breakdown
+			$breakdown = $this->search_query_object->breakdown ?? false;
+
 		// order
 			$sql_query_order = $this->build_sql_query_order();
 
@@ -78,9 +81,11 @@ class search_related extends search {
 					: '';
 				// add full count when is set
 				// else get the row
-				$query	.= ($full_count===true)
+				$query	.= ( $full_count===true )
 					? 'COUNT(*) as full_count'
-					: 'section_tipo, section_id, datos';
+					: ( $breakdown===true
+						? 'section_tipo, section_id, locator_data'
+						: 'section_tipo, section_id, datos');
 
 				// columns
 				if (!empty($this->order_columns)) {
@@ -93,6 +98,12 @@ class search_related extends search {
 				// FROM
 				$query	.= PHP_EOL . 'FROM "'.$table.'"';
 
+				// Breakdown
+				if( $breakdown===true ){
+					$query	.= PHP_EOL;
+					$query	.= 'cross join jsonb_array_elements( datos->\'relations\' ) as locator_data';
+				}
+
 				// WHERE
 				$query	.= PHP_EOL . 'WHERE ';
 
@@ -103,25 +114,47 @@ class search_related extends search {
 
 						case !isset($locator->section_id) && isset($locator->type):
 							// relation index case
-							$locator_index		= $locator->type.'_'.$locator->section_tipo;
-							$locators_query[]	= PHP_EOL.'relations_flat_ty_st(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$locator_index	= $locator->type.'_'.$locator->section_tipo;
+							$sql			= PHP_EOL.'relations_flat_ty_st(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							if( $breakdown===true ){
+								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
+								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+							}
+							$locators_query[] = $sql;
 							break;
 
 						case isset($locator->from_component_tipo):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->from_component_tipo.'_'.$base_flat_locator;
-							$locators_query[]	= PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql				= PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							if( $breakdown===true ){
+								$sql .= PHP_EOL." AND locator_data->'from_component_tipo' ? '$locator->from_component_tipo'";
+								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+							}
+							$locators_query[] = $sql;
 							break;
 
 						case isset($locator->type):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->type.'_'.$base_flat_locator;
-							$locators_query[]	= PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql				= PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							if( $breakdown===true ){
+								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
+								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+							}
+							$locators_query[] = $sql;
 							break;
 
 						default:
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
-							$locators_query[]	= PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							$sql				= PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							if( $breakdown===true ){
+								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+							}
+							$locators_query[] = $sql;
 							break;
 					}
 					// Old model, it search directly in the table with gin index of relations, but it's slow for large databases.
@@ -174,7 +207,6 @@ class search_related extends search {
 	}//end parse_search_query_object
 
 
-
 	/**
 	* GET_REFERENCED_LOCATORS
 	* Get the sections pointed by any type of locator to the caller (reference_locator)
@@ -191,15 +223,6 @@ class search_related extends search {
 	public static function get_referenced_locators( array $filter_locators, ?int $limit=null, ?int $offset=null, bool $count=false, array $target_section=['all'] ) : array {
 		$start_time = start_time();
 
-		// cache
-			// static $referenced_locators_cache;
-			// $cache_key = implode('_', get_object_vars($filter_locators)) .'_'. $limit .'_'. $offset .'_'. $count;
-			// if (isset($referenced_locators_cache[$cache_key])) {
-			// 	return $referenced_locators_cache[$cache_key];
-			// }
-
-
-
 		// new way done in relations field with standard sqo
 			$sqo = new search_query_object();
 				$sqo->set_section_tipo($target_section);
@@ -208,6 +231,8 @@ class search_related extends search {
 				$sqo->set_limit($limit);
 				$sqo->set_offset($offset);
 				$sqo->set_filter_by_locators($filter_locators);
+				$sqo->set_breakdown(true);
+
 
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
@@ -231,31 +256,17 @@ class search_related extends search {
 			}
 
 		$ar_inverse_locators = [];
-		foreach($filter_locators as $current_filter_locator){
 
-			// Compare all properties of received locator in each relations locator
-			$ar_properties = [];
-			foreach ($current_filter_locator as $key => $value) {
-				$ar_properties[] = $key;
-			}
+		// set the results as the inverse_locator
+		foreach ($result as $row) {
 
-			// filter results
-			foreach ($result as $row) {
+			$current_locator = $row->locator_data;
 
-				$current_section_id		= $row->section_id;
-				$current_section_tipo	= $row->section_tipo;
-				$current_relations		= $row->datos->relations;
-
-				foreach ($current_relations as $current_locator) {
-					if ( true===locator::compare_locators($current_filter_locator, $current_locator, $ar_properties) ) {
-						// Add some temporal info to current locator for build component later
-						$current_locator->from_section_tipo	= $current_section_tipo;
-						$current_locator->from_section_id	= $current_section_id;
-						// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
-						$ar_inverse_locators[] = $current_locator;
-					}
-				}
-			}
+			// Add some temporal info to current locator for build component later
+			$current_locator->from_section_tipo	= $row->section_tipo;
+			$current_locator->from_section_id	= $row->section_id;
+			// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
+			$ar_inverse_locators[] = $current_locator;
 		}
 
 		// debug
@@ -266,14 +277,6 @@ class search_related extends search {
 				// . ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
 			);
-
-		// cache
-			// $referenced_locators_cache[$cache_key] = $ar_inverse_locators;
-
-		// debug
-			// $bt = debug_backtrace();
-			// dump($bt, ' bt ++ '.to_string());
-
 
 		return $ar_inverse_locators;
 	}//end get_referenced_locators

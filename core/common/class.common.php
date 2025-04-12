@@ -2880,6 +2880,7 @@ abstract class common {
 			// Get the properties, if the mode is list, get the child term 'section_list' that had has the configuration
 			// of the list (for sections and portals) by default or edit mode get the properties of the term itself.
 			switch ($mode) {
+				case 'list_thesaurus':
 				case 'list':
 				case 'tm':
 					// default. Properties from self element
@@ -2892,10 +2893,14 @@ abstract class common {
 						break; // stop here
 					}
 
+					$list_model = $mode === 'list_thesaurus'
+						? 'section_list_thesaurus'
+						: 'section_list';
+
 					// in the case that section_list is defined
 					$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 						$tipo,
-						'section_list',
+						$list_model,
 						'children',
 						true // bool search exact
 					);

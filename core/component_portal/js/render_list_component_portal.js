@@ -9,6 +9,8 @@
 	import {view_mini_portal} from './view_mini_portal.js'
 	import {view_text_list_portal} from './view_text_list_portal.js'
 	import {view_line_list_portal} from './view_line_list_portal.js'
+	//indexation
+	import {view_indexation_list_portal} from './view_indexation_list_portal.js'
 	// dataframe
 	import {view_default_list_dataframe} from '../../component_dataframe/js/view_default_list_dataframe.js'
 	import {view_mini_list_dataframe} from '../../component_dataframe/js/view_mini_list_dataframe.js'
@@ -57,6 +59,9 @@ render_list_component_portal.prototype.list = async function(options) {
 
 		case 'text':
 			return view_text_list_portal.render(self, options)
+
+		case 'indexation':
+			return view_indexation_list_portal.render(self, options)
 
 		case 'dataframe_default':
 			return view_default_list_dataframe.render(self, options)

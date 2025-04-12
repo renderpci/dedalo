@@ -241,6 +241,13 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			// show_interface
 			self.media_component.show_interface.tools = false
 
+		// people_section. fix people_section for convenience
+			const people_section_ddo	= self.tool_config.ddo_map.find(el => el.role==='people_section')
+			self.people_section			= self.ar_instances.find(el => el.tipo===people_section_ddo.tipo)
+			// set instance in thesaurus mode 'relation'
+			// self.people_section.caller					= self
+			self.people_section.linker					= self.indexing_component
+
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
 			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
