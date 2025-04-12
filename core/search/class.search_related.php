@@ -207,7 +207,6 @@ class search_related extends search {
 	}//end parse_search_query_object
 
 
-
 	/**
 	* GET_REFERENCED_LOCATORS
 	* Get the sections pointed by any type of locator to the caller (reference_locator)
@@ -224,15 +223,6 @@ class search_related extends search {
 	public static function get_referenced_locators( array $filter_locators, ?int $limit=null, ?int $offset=null, bool $count=false, array $target_section=['all'] ) : array {
 		$start_time = start_time();
 
-		// cache
-			// static $referenced_locators_cache;
-			// $cache_key = implode('_', get_object_vars($filter_locators)) .'_'. $limit .'_'. $offset .'_'. $count;
-			// if (isset($referenced_locators_cache[$cache_key])) {
-			// 	return $referenced_locators_cache[$cache_key];
-			// }
-
-
-
 		// new way done in relations field with standard sqo
 			$sqo = new search_query_object();
 				$sqo->set_section_tipo($target_section);
@@ -241,6 +231,8 @@ class search_related extends search {
 				$sqo->set_limit($limit);
 				$sqo->set_offset($offset);
 				$sqo->set_filter_by_locators($filter_locators);
+				$sqo->set_breakdown(true);
+
 
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
@@ -264,31 +256,17 @@ class search_related extends search {
 			}
 
 		$ar_inverse_locators = [];
-		foreach($filter_locators as $current_filter_locator){
 
-			// Compare all properties of received locator in each relations locator
-			$ar_properties = [];
-			foreach ($current_filter_locator as $key => $value) {
-				$ar_properties[] = $key;
-			}
+		// set the results as the inverse_locator
+		foreach ($result as $row) {
 
-			// filter results
-			foreach ($result as $row) {
+			$current_locator = $row->locator_data;
 
-				$current_section_id		= $row->section_id;
-				$current_section_tipo	= $row->section_tipo;
-				$current_relations		= $row->datos->relations;
-
-				foreach ($current_relations as $current_locator) {
-					if ( true===locator::compare_locators($current_filter_locator, $current_locator, $ar_properties) ) {
-						// Add some temporal info to current locator for build component later
-						$current_locator->from_section_tipo	= $current_section_tipo;
-						$current_locator->from_section_id	= $current_section_id;
-						// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
-						$ar_inverse_locators[] = $current_locator;
-					}
-				}
-			}
+			// Add some temporal info to current locator for build component later
+			$current_locator->from_section_tipo	= $row->section_tipo;
+			$current_locator->from_section_id	= $row->section_id;
+			// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
+			$ar_inverse_locators[] = $current_locator;
 		}
 
 		// debug
@@ -299,14 +277,6 @@ class search_related extends search {
 				// . ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
 			);
-
-		// cache
-			// $referenced_locators_cache[$cache_key] = $ar_inverse_locators;
-
-		// debug
-			// $bt = debug_backtrace();
-			// dump($bt, ' bt ++ '.to_string());
-
 
 		return $ar_inverse_locators;
 	}//end get_referenced_locators
