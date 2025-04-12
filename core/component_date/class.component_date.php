@@ -221,11 +221,9 @@ class component_date extends component_common {
 			$class_list			= $ddo->class_list ?? null;
 
 		// column_obj
-			$column_obj			= isset($this->column_obj)
-				? $this->column_obj
-				: (object)[
-					'id' => $this->section_tipo.'_'.$this->tipo
-				  ];
+			$column_obj = $this->column_obj ?? (object)[
+				'id' => $this->section_tipo.'_'.$this->tipo
+			];
 
 		// short vars
 			$label		= $this->get_label();

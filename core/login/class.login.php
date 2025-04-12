@@ -471,7 +471,7 @@ class login extends common {
 
 				// Error
 					#
-					# STOP: CODE NOT EXISTS
+					# STOP: CODE DOES NOT EXISTS
 					#
 
 					// LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)

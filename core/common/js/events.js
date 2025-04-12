@@ -28,15 +28,16 @@ if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 */
 export const events_init = function() {
 
+	// (!) WORK IN PROGRESS
+
 	// add visibility change to control if the user change the tab without save
-		document.addEventListener('visibilitychange', visibility_change);
-		async function visibility_change(){
+		const visibility_change = async () => {
 
 			if (document.visibilityState==='hidden' && window.unsaved_data===true) {
-
-				await saving
+				// await saving
 			}
 		}
+		document.addEventListener('visibilitychange', visibility_change);
 
 	// save
 		const save_handler = (result) => {
@@ -45,7 +46,7 @@ export const events_init = function() {
 			}
 			// saved = true
 		}
-		const saving = event_manager.subscribe('save', save_handler)
+		event_manager.subscribe('save', save_handler)
 
 
 	return true
@@ -144,9 +145,9 @@ export const when_in_dom = function(node, callback) {
 /**
 * WHEN_IN_VIEWPORT
 * Exec a callback when node element is visible in document viewport
-* @param DOM node 'node'
+* @param HTMLElement node
 * @param function callback
-* @param bool once
+* @param bool once = true
 *
 * @return mutation observer
 */
@@ -169,7 +170,7 @@ export const when_in_viewport = function(node, callback, once=true) {
 			}
 		},
 		{
-			rootMargin: "0px",
+			rootMargin: '0px',
 			threshold: [0]
 		}
 	);
