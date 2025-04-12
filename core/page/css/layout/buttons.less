@@ -639,3 +639,31 @@ button {
 		}
 	}
 }//end .contenteditable_buttons
+
+// button spinner
+button.button_spinner {
+	pointer-events: none !important;
+
+	&::before {
+		content: " ";
+		display: inline-block;
+		background-color: unset !important;
+		height: 1em;
+		width: 1em;
+		margin-right: 0.5em;
+		vertical-align: text-bottom;
+
+		// Create a curve at the top
+		border-radius: 50%;
+		border: 1.45px solid @color_white;
+		border-top-color: @color_orange_dedalo;
+
+		animation: run_spinner 800ms linear infinite;
+	}
+
+	&.success {
+		&::before {
+			border-top-color: transparent;
+		}
+	}
+}
