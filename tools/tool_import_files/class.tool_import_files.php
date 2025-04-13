@@ -319,16 +319,19 @@ class tool_import_files extends tool_common {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// options
-			$file_processor				=  $options->file_processor ?? null;
-			$file_processor_properties	=  $options->file_processor_properties ?? null;
-			$file_name					=  $options->file_name ?? null;
-			$file_path					=  $options->file_path ?? null;
-			$section_tipo				=  $options->section_tipo ?? null;
-			$section_id					=  $options->section_id ?? null;
-			$target_section_tipo		=  $options->target_section_tipo ?? null;
-			$tool_config				=  $options->tool_config ?? null;
+			$file_processor				= $options->file_processor ?? null;
+			$file_processor_properties	= $options->file_processor_properties ?? null;
+			$file_name					= $options->file_name ?? null;
+			$file_path					= $options->file_path ?? null;
+			$section_tipo				= $options->section_tipo ?? null;
+			$section_id					= $options->section_id ?? null;
+			$target_section_tipo		= $options->target_section_tipo ?? null;
+			$tool_config				= $options->tool_config ?? null;
+			$key_dir					= $options->key_dir ?? null;
+			$custom_target_quality		= $options->custom_target_quality ?? null;
 
 		# FILE_PROCESSOR
 		# Global var button properties JSON data array
@@ -347,16 +350,23 @@ class tool_import_files extends tool_common {
 
 				$function_name 	  = $file_processor_obj->function_name;
 				if (is_callable($function_name)) {
-					$custom_arguments = (array)$file_processor_obj->custom_arguments;
-					$standard_options = [
+					$custom_arguments = $file_processor_obj->custom_arguments;
+					$standard_options = (object)[
 						'file_name'				=> $file_name,
 						'file_path'				=> $file_path,
 						'section_tipo'			=> $section_tipo,
 						'section_id'			=> $section_id,
 						'target_section_tipo'	=> $target_section_tipo,
-						'tool_config'			=> $tool_config
+						'tool_config'			=> $tool_config,
+						'key_dir'				=> $key_dir,
+						'custom_target_quality'	=> $custom_target_quality,
+						'custom_arguments' 		=> $custom_arguments
 					];
-					$result = call_user_func($function_name, $standard_options, $custom_arguments);
+					$current_response = call_user_func($function_name, $standard_options);
+					if($current_response->result === false){
+						$response->result = false;
+						$response->errors[] = $current_response->msg;
+					}
 				}else{
 					debug_log(__METHOD__
 						." Error on call file processor function: " . PHP_EOL
@@ -390,11 +400,13 @@ class tool_import_files extends tool_common {
 		}//end foreach ((array)$options->file_processor_properties as $key => $file_processor_obj)
 
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done';
+		$response->result	= empty($response->errors);
+		$response->msg		= empty($response->errors)
+			? 'OK. Request done'
+			: 'Errors happened';
 
 
-		return (object)$response;
+		return $response;
 	}//end file_processor
 
 
@@ -767,12 +779,14 @@ class tool_import_files extends tool_common {
 							$processor_options->file_processor				= $current_file_processor;
 							$processor_options->file_processor_properties	= $file_processor_properties;
 							// Standard arguments
-							$processor_options->file_name					= $current_file_name;
-							$processor_options->file_path					= $tmp_dir;
-							$processor_options->section_tipo				= $section_tipo;
-							$processor_options->section_id					= $section_id;
-							$processor_options->target_section_tipo			= $target_section_tipo;
-							$processor_options->tool_config					= $tool_config;
+							$processor_options->file_name				= $current_file_name;
+							$processor_options->file_path				= $tmp_dir;
+							$processor_options->section_tipo			= $section_tipo;
+							$processor_options->section_id				= $section_id;
+							$processor_options->target_section_tipo		= $target_section_tipo;
+							$processor_options->tool_config				= $tool_config;
+							$processor_options->key_dir					= $key_dir;
+							$processor_options->custom_target_quality	= $custom_target_quality;
 						tool_import_files::file_processor($processor_options);
 					}//end if (!empty($file_processor_properties))
 
