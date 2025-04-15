@@ -24,7 +24,9 @@ class transform_data_v6_5_0 {
 
 		$ar_components_children_tipo	= self::get_all_compnent_children();
 
-$to_skip= ['mupreva2564'];
+		// To skip wrong definitions or unused.
+		// Added the tipos that you don't want to be parsed
+		$to_skip= ['']; //as 'mupreva2564'
 		foreach ($ar_components_children_tipo as $current_tipo) {
 
 			$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, 'section', 'parent', true );
