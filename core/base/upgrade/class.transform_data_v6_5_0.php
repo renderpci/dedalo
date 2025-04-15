@@ -492,6 +492,7 @@ $to_skip= ['mupreva2564'];
 
 			// create new section as top term
 				$target_section_tipo = $destination_section_component->get_value();
+
 				if (empty($target_section_tipo)) {
 					debug_log(__METHOD__
 						. " Ignored invalid target_section_tipo from value of component" . PHP_EOL
@@ -502,6 +503,11 @@ $to_skip= ['mupreva2564'];
 					continue;
 				}
 
+				// fix counter
+				counter::modify_counter(
+					$target_section_tipo,
+					'fix'
+				);
 				$new_section = section::get_instance(
 					null, // string|null section_id
 					$target_section_tipo // string section_tipo
@@ -510,6 +516,18 @@ $to_skip= ['mupreva2564'];
 
 			// create the child nodes of every locator and inject the new data
 				foreach ($children_data as $children_locator) {
+
+					//check section of the node if not exist ignore, error in data
+						$check_section = section::get_instance(
+							$children_locator->section_id, // string|null section_id
+							$children_locator->section_tipo // string section_tipo
+						);
+
+						$data_check = $check_section->get_dato();
+
+						if( empty($data_check->relations) ){
+							continue;
+						}
 
 					$component_parent_tipo = component_relation_parent::get_parent_tipo( $children_locator->section_tipo );
 					if (empty($component_parent_tipo)) {
@@ -521,7 +539,7 @@ $to_skip= ['mupreva2564'];
 						continue;
 					}
 
-					// create new component_relationparent and add parent data
+					// create new component_relation_parent and add parent data
 					$model = RecordObj_dd::get_modelo_name_by_tipo( $component_parent_tipo );
 					$parent_component = component_common::get_instance(
 						$model, // string model
@@ -538,19 +556,59 @@ $to_skip= ['mupreva2564'];
 						$parent_locator_data->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
 						$parent_locator_data->set_from_component_tipo( $component_parent_tipo );
 
+
+
 					$parent_component->set_dato( $parent_locator_data );
 
 					$parent_component->Save();
 				}
 
 			// assign the new term data as term component
-				// (!) WORKING ON IT
-				// $locator_data = new locator();
-				// 	$locator_data->set_section_tipo( $target_section_tipo );
-				// 	$locator_data->set_section_id( $new_section_id );
+				$locator_data = new locator();
+					$locator_data->set_section_tipo( $target_section_tipo );
+					$locator_data->set_section_id( $new_section_id );
 
-				// $destination_section_component->set_dato([$locator_data]);
-				// $destination_section_component->Save();
+				$component_children->set_dato([$locator_data]);
+				$component_children->Save();
+
+			//named the new term with the name of the hierarchy
+
+				$section_map = section::get_section_map( $target_section_tipo );
+				if (isset($section_map->thesaurus->term)) {
+
+					// hierarchy component name
+					$hierarchy_term_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO);
+					$hierarchy_term = component_common::get_instance(
+						$hierarchy_term_model, // string model
+						DEDALO_HIERARCHY_TERM_TIPO, // string tipo
+						$hierarchy_section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_LANG, // string lang
+						$hierarchy_section_tipo // string section_tipo
+					);
+
+					$hierarchy_term_data = $hierarchy_term->get_dato();
+
+					$term_tipo = is_array( $section_map->thesaurus->term )
+						? $section_map->thesaurus->term[0]
+						: $section_map->thesaurus->term;
+
+					// new node component name
+					$node_term_model = RecordObj_dd::get_modelo_name_by_tipo($term_tipo);
+					$node_term = component_common::get_instance(
+						$node_term_model, // string model
+						$term_tipo, // string tipo
+						$new_section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_LANG, // string lang
+						$target_section_tipo // string section_tipo
+					);
+					// set the name of the hierarchy to the new term
+					$children_data = $node_term->set_dato( $hierarchy_term_data );
+
+					//save the name of the node.
+					$node_term->Save();
+				}
 
 		}//end foreach ($main_hierarchy_records as $row)
 
