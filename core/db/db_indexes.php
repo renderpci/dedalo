@@ -836,6 +836,27 @@
 		ON public.matrix_langs USING btree
 		(section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog."default" ASC NULLS LAST)
 		TABLESPACE pg_default;
+
+		-- relations_flat
+		CREATE INDEX IF NOT EXISTS matrix_langs_relations_flat_fct_st_si
+		ON public.matrix_langs USING gin
+		(relations_flat_fct_st_si(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+
+		CREATE INDEX IF NOT EXISTS matrix_langs_relations_flat_st_si
+		ON public.matrix_langs USING gin
+		(relations_flat_st_si(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+
+		CREATE INDEX IF NOT EXISTS matrix_langs_relations_flat_ty_st
+		ON public.matrix_langs USING gin
+		(relations_flat_ty_st(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+
+		CREATE INDEX IF NOT EXISTS matrix_langs_relations_flat_ty_st_si
+		ON public.matrix_langs USING gin
+		(relations_flat_ty_st_si(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
 	';
 
 // matrix_list
@@ -1733,6 +1754,27 @@
 		CREATE INDEX IF NOT EXISTS matrix_ontology_main_section_tipo_idx
 		ON public.matrix_ontology_main USING btree
 		(section_tipo COLLATE pg_catalog."default" ASC NULLS LAST)
+		TABLESPACE pg_default;
+
+		-- relations_flat
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_relations_flat_fct_st_si
+		ON public.matrix_ontology_main USING gin
+		(relations_flat_fct_st_si(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_relations_flat_st_si
+		ON public.matrix_ontology_main USING gin
+		(relations_flat_st_si(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_relations_flat_ty_st
+		ON public.matrix_ontology_main USING gin
+		(relations_flat_ty_st(datos) jsonb_path_ops)
+		TABLESPACE pg_default;
+
+		CREATE INDEX IF NOT EXISTS matrix_ontology_main_relations_flat_ty_st_si
+		ON public.matrix_ontology_main USING gin
+		(relations_flat_ty_st_si(datos) jsonb_path_ops)
 		TABLESPACE pg_default;
 	';
 
