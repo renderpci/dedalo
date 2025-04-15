@@ -92,6 +92,13 @@ $updates->$v = new stdClass();
 			<p>
 			If you don't want this behavior, uncheck this process and your thesaurus structure will be preserved as is, but without the hierarchy node.
 			</p>
+			<p>
+			<strong>Update the ontology AFTER running the scripts.</strong>
+			</p>
+			After running the updates of all data, log out and log in and update the ontology. Version 6.5.0 has enhancements only available when the code, data and ontology have the same version.
+			If you do not update the ontology after the data update, you may get some errors in the indexing tool.
+			<p>
+			</p>
 
 		";
 		$updates->$v->alert_update[] = $alert;
@@ -127,6 +134,39 @@ $updates->$v = new stdClass();
 			(f_unaccent(datos #>> \'{components,hierarchy25,dato}\'::text[]) COLLATE pg_catalog."default" gin_trgm_ops)
 			TABLESPACE pg_default;
 		');
+
+	// Create matrix_langs indexes. Mandatory to resolve children data
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_langs_relations_flat_fct_st_si
+			ON public.matrix_langs USING gin
+			(relations_flat_fct_st_si(datos) jsonb_path_ops)
+			TABLESPACE pg_default;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_langs_relations_flat_st_si
+			ON public.matrix_langs USING gin
+			(relations_flat_st_si(datos) jsonb_path_ops)
+			TABLESPACE pg_default;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_langs_relations_flat_ty_st
+			ON public.matrix_langs USING gin
+			(relations_flat_ty_st(datos) jsonb_path_ops)
+			TABLESPACE pg_default;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_langs_relations_flat_ty_st_si
+			ON public.matrix_langs USING gin
+			(relations_flat_ty_st_si(datos) jsonb_path_ops)
+			TABLESPACE pg_default;
+		');
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS matrix_langs_term
+			ON public.matrix_langs USING gin
+			(f_unaccent(datos #>> \'{components,hierarchy25,dato}\'::text[]) COLLATE pg_catalog."default" gin_trgm_ops)
+			TABLESPACE pg_default;
+		');
+
 
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
