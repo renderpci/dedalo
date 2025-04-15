@@ -49,6 +49,53 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium	= 4;
 	$updates->$v->update_from_minor		= 5;
 
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= '';
+
+		$alert->command .= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<p>
+			<strong>A new ontology and thesaurus data model.</strong>
+			</p>
+			<p>
+			This version changes the parent/children data model of the Ontology and Thesaurus sections.
+			These sections now use the parent model instead of children model.
+			This update will move all child relationships to parent relationships.
+			</p>
+			<br>
+			<p>
+			<strong>Bad definitions could stop the process.</strong>
+			</p>
+			<p>
+			The update changes your data, and it could has errors or bad definitions in local Ontologies.
+			We recommend to show the PHP log to detect terms with bad data or definition.
+			<br>
+			If you find some term that stop the process you can use the variable <strong>\$to_skip</strong> in:
+			<pre>
+			./dedalo/core/base/upgrade/transform_data_v6_5_0->check_all_order_components_in_ontology()
+			</pre>
+			And fix it manually after the update.
+			</p>
+			<br>
+			<p>
+			<strong>Root nodes.</strong>
+			</p>
+			<p>
+			The root nodes (top nodes) dependent of the hierarchy will removed.
+			Now the hierarchy doesn't use the relation_children to point the root nodes instead it uses a component_autocomplete_hi.
+			The script number <strong>3 add_root_node</strong>(the last one) will create a new node in the thesaurus and link the children to it when the top nodes are more than 1.
+			The situation is explained <a href=\"https://agora.dedalo.dev/d/181-thesaurus-data-model\"> here.</a>
+			</p>
+			<p>
+			If you don't want this behavior, uncheck this process. It will preserving your thesaurus structure.
+			</p>
+
+		";
+		$updates->$v->alert_update[] = $alert;
+
 	// Create matrix_ontology indexes. Mandatory to resolve children data
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			CREATE INDEX IF NOT EXISTS matrix_ontology_relations_flat_fct_st_si
