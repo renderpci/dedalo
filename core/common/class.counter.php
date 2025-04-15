@@ -205,8 +205,8 @@ abstract class counter {
 			$is_global_admin	= security::is_global_admin($user_id);
 			if ($is_global_admin!==true) {
 				debug_log(__METHOD__
-					. " Error. Unable to reset counter. Insufficient privileges " . PHP_EOL
-					. ' To reset counters you must be global admin or higher'
+					. " Error. Unable to modify counter. Insufficient privileges " . PHP_EOL
+					. ' To modify counters you must be global admin or higher'
 					, logger::ERROR
 				);
 				return false;
@@ -222,8 +222,16 @@ abstract class counter {
 					break;
 
 				case 'fix':
-					$matrix_table	= common::get_matrix_table_from_tipo($section_tipo);
-					$result			= counter::consolidate_counter(
+					$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+					if (empty($matrix_table)) {
+						debug_log(__METHOD__
+							. " Error. Unable to fix counter. Invalid (empty) matrix table. " . PHP_EOL
+							. ' tipo: ' . to_string($section_tipo)
+							, logger::ERROR
+						);
+						return false;
+					}
+					$result = counter::consolidate_counter(
 						$section_tipo,
 						$matrix_table,
 						'matrix_counter'
