@@ -1137,9 +1137,10 @@ class update_code {
 
 				$file_name	= $file_version.'.zip';
 				$file_path	= $current_version_path.'/'.$file_name;
-				$file_date	= date("Y-m-d H:i:s", filemtime($file_path));
 
 				if(file_exists($file_path)){
+
+					$file_date = date("Y-m-d H:i:s", filemtime($file_path));
 
 					$file_item = new stdClass();
 						$file_item->version	= implode('.', $valid_version);
