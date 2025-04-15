@@ -8,8 +8,8 @@ class hierarchy extends ontology {
 
 
 	// Table where hierarchy data is stored
-	static $main_table = 'matrix_hierarchy_main';
-	static $main_section_tipo = 'hierarchy1';
+	static $main_table			= 'matrix_hierarchy_main';
+	static $main_section_tipo	= 'hierarchy1';
 
 	// array hierarchy_portals_tipo
 	// store hierarchy portals data (former component_relation_children, now component_portal)
@@ -1175,7 +1175,31 @@ class hierarchy extends ontology {
 	*/
 	public static function get_all_main_hierarchy_records() : array {
 
-		return ontology::get_all_main_ontology_records();
+		$main_section_tipo = self::$main_section_tipo;
+
+		// search_query_object
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( [$main_section_tipo] );
+				$sqo->set_limit( 0 );
+				$sqo->set_skip_projects_filter( true );
+
+		// search exec
+			$search	= search::get_instance($sqo);
+			$result	= $search->search();
+
+		$ar_records = $result->ar_records ?? [];
+
+		if (empty($ar_records)) {
+			debug_log(__METHOD__
+				. " EMPTY AR RECORDS " . PHP_EOL
+				. ' section_tipo: ' . to_string($main_section_tipo) . PHP_EOL
+				. ' sqo: ' . to_string($sqo) . PHP_EOL
+				, logger::ERROR
+			);
+		}
+
+
+		return $ar_records;
 	}//end get_all_main_hierarchy_records
 
 
