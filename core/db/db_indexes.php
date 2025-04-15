@@ -857,6 +857,12 @@
 		ON public.matrix_langs USING gin
 		(relations_flat_ty_st_si(datos) jsonb_path_ops)
 		TABLESPACE pg_default;
+
+		-- term
+		CREATE INDEX IF NOT EXISTS matrix_langs_term
+		ON public.matrix_langs USING gin
+		(f_unaccent(datos #>> \'{components,hierarchy25,dato}\'::text[]) COLLATE pg_catalog."default" gin_trgm_ops)
+		TABLESPACE pg_default;
 	';
 
 // matrix_list
