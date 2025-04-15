@@ -84,13 +84,13 @@ $updates->$v = new stdClass();
 			<strong>Root nodes.</strong>
 			</p>
 			<p>
-			The root nodes (top nodes) dependent of the hierarchy will removed.
+			The root nodes (top nodes) dependent of the hierarchy will be removed.
 			Now the hierarchy doesn't use the relation_children to point the root nodes instead it uses a component_autocomplete_hi.
 			The script number <strong>3 add_root_node</strong>(the last one) will create a new node in the thesaurus and link the children to it when the top nodes are more than 1.
 			The situation is explained <a href=\"https://agora.dedalo.dev/d/181-thesaurus-data-model\"> here.</a>
 			</p>
 			<p>
-			If you don't want this behavior, uncheck this process. It will preserving your thesaurus structure.
+			If you don't want this behavior, uncheck this process and your thesaurus structure will be preserved as is, but without the hierarchy node.
 			</p>
 
 		";
