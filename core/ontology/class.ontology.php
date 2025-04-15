@@ -1004,9 +1004,11 @@ class ontology {
 	*/
 	public static function get_all_main_ontology_records() : array {
 
+		$main_section_tipo = self::$main_section_tipo;
+
 		// search_query_object
 			$sqo = new search_query_object();
-				$sqo->set_section_tipo( [self::$main_section_tipo] );
+				$sqo->set_section_tipo( [$main_section_tipo] );
 				$sqo->set_limit( 0 );
 				$sqo->set_skip_projects_filter( true );
 
@@ -1019,7 +1021,7 @@ class ontology {
 		if (empty($ar_records)) {
 			debug_log(__METHOD__
 				. " EMPTY AR RECORDS " . PHP_EOL
-				. ' section_tipo: ' . to_string(self::$main_section_tipo) . PHP_EOL
+				. ' section_tipo: ' . to_string($main_section_tipo) . PHP_EOL
 				. ' sqo: ' . to_string($sqo) . PHP_EOL
 				, logger::ERROR
 			);
