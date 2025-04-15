@@ -1610,6 +1610,8 @@ export const ts_object = new function() {
 	*/
 	this.toggle_nd = async function(button_obj) {
 
+		const self = this
+
 		// nd_container
 			const nd_container = ts_object.get_my_parent_container(button_obj, 'nd_container')
 			if (!nd_container) {
