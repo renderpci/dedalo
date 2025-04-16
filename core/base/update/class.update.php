@@ -370,7 +370,7 @@ class update {
 										// send to output
 										print_cli(common::$pdata);
 									}
-									
+
 								$response->result	= false ;
 								$response->msg		= $msg;
 								$response->errors[] = 'unable to run update script';
@@ -989,7 +989,7 @@ class update {
 	* TABLES_ROWS_ITERATOR
 	* Get the row (with all columns) from required tables and apply the action required to every row
 	* @param array $ar_tables
-	*
+	* @param function $callback
 	* @return bool
 	* 	true
 	*/
