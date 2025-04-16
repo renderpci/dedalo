@@ -157,7 +157,7 @@ class system_info {
 
 			$requeriments_list[] = (object)[
 				'name'	=> 'FFMPEG supported version',
-				'value'	=> (version_compare(trim($ffmpeg_version), '5.0') >= 0),
+				'value'	=> (version_compare(trim($ffmpeg_version), '4.4.2') >= 0),
 				'info'	=> 'Version: '. $ffmpeg_version . ' - minimum: 5.0'
 			];
 
