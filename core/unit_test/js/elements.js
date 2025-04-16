@@ -291,7 +291,12 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.custom_locator,
-			new_value_params	: [section_tipo,9,'test201','dd48'],
+			new_value_params	: [
+				section_tipo, // section_tipo
+				2, // section_id
+				'test201', // from_component_tipo
+				'dd48' // type
+			],
 			test_save			: true
 		})
 

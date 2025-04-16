@@ -11,7 +11,7 @@ class transform_data_v6_5_0 {
 
 	/**
 	* CHECK_ALL_ORDER_COMPONENTS_IN_ONTOLOGY
-	* @return
+	* @return bool
 	*/
 	public static function check_all_order_components_in_ontology() : object {
 
@@ -22,7 +22,7 @@ class transform_data_v6_5_0 {
 				$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
 
 
-		$ar_components_children_tipo	= self::get_all_compnent_children();
+		$ar_components_children_tipo = self::get_all_compnent_children();
 
 		// To skip wrong definitions or unused.
 		// Added the tipos that you don't want to be parsed
@@ -73,11 +73,13 @@ class transform_data_v6_5_0 {
 		}
 
 		$response->result 	= true;
-		$response->msg 		= 'Ok';
+		$response->msg 		= 'OK';
 
 
 		return $response;
 	}//end check_all_order_components_in_ontology
+
+
 
 	/**
 	* UPDATE_SET_PARENT_WITH_CHILDREN
