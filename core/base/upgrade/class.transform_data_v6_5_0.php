@@ -11,16 +11,15 @@ class transform_data_v6_5_0 {
 
 	/**
 	* CHECK_ALL_ORDER_COMPONENTS_IN_ONTOLOGY
-	* @return bool
+	* @return object $response
 	*/
 	public static function check_all_order_components_in_ontology() : object {
 
 		// response default
-			$response = new stdClass();
-				$response->result 	= false;
-				$response->errors 	= [];
-				$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
-
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->errors 	= [];
+			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
 
 		$ar_components_children_tipo = self::get_all_compnent_children();
 
@@ -73,7 +72,9 @@ class transform_data_v6_5_0 {
 		}
 
 		$response->result 	= true;
-		$response->msg 		= 'OK';
+		$response->msg 		= empty($response->errors)
+			? 'OK'
+			: 'Request done with errors';
 
 
 		return $response;
@@ -141,8 +142,7 @@ class transform_data_v6_5_0 {
 			$to_save = false;
 
 		// get the tipo
-			// $ar_components_parent_tipo	= self::get_all_component_parent();
-			$ar_components_children_tipo	= self::get_all_compnent_children();
+			$ar_components_children_tipo = self::get_all_compnent_children();
 
 		// resolve the change using relations container
 			$section_id		= $datos->section_id;
@@ -256,7 +256,6 @@ class transform_data_v6_5_0 {
 	private static function set_parent_data( string $parent_section_tipo, string|int $parent_section_id, locator $parent_locator_data, int $order ) : bool {
 
 		$matrix_table = section::get_matrix_table_from_tipo( $parent_section_tipo );
-
 
 		if($parent_section_id==0){
 			return true;
@@ -559,8 +558,6 @@ class transform_data_v6_5_0 {
 						$parent_locator_data->set_section_id( $new_section_id );
 						$parent_locator_data->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
 						$parent_locator_data->set_from_component_tipo( $component_parent_tipo );
-
-
 
 					$parent_component->set_dato( $parent_locator_data );
 
