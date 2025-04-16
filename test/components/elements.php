@@ -211,10 +211,10 @@ function get_elements() : array {
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
 			'new_value_params'	=> [
-				$section_tipo,
-				'test201',
+				$section_tipo, // section_tipo
+				'test201', // from_component_tipo
 				0, // max random int (not used)
-				'dd48',
+				DEDALO_RELATION_TYPE_CHILDREN_TIPO, // 'dd48', // type
 				2 // custom section_id
 			]
 		],

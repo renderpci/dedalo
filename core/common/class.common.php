@@ -3942,6 +3942,9 @@ abstract class common {
 
 	/**
 	* GET_DDINFO_PARENTS
+	* Creates ddinfo object with parents data
+	* @param object $locator
+	* @param string $source_component_tipo
 	* @return object $dd_info
 	*/
 	public static function get_ddinfo_parents(object $locator, string $source_component_tipo) : object {

@@ -62,6 +62,8 @@ final class dd_api_Test extends TestCase {
 	*/
 	public function test_login() : void {
 
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
 		$rqo = json_decode('
 			{
 				"action": "login",

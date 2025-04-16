@@ -124,15 +124,15 @@ final class component_relation_children_test extends TestCase {
 					"type": "dd48"
 				}
 			');
-			$dato			= $locator;
-			$result			= $component->set_dato($dato);
+			$reference_dato	= $locator;
+			$result			= $component->set_dato($reference_dato);
 			$updated_dato	= $component->get_dato();
 			$this->assertTrue(
-				json_encode($updated_dato)===json_encode([$dato]),
+				json_encode($updated_dato)===json_encode([$reference_dato]),
 				' (object case) expected equal array : ' . PHP_EOL
 				.'component updated_dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato: ' . to_string([$dato]) . PHP_EOL
-				.'$component->dato: ' . to_string($component->dato) . PHP_EOL
+				.'reference dato (array with locator): ' . to_string($reference_dato) . PHP_EOL
+				.'updated_dato: ' . to_string($updated_dato) . PHP_EOL
 			);
 
 		// array case
