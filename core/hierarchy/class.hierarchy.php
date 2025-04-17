@@ -825,10 +825,14 @@ class hierarchy extends ontology {
 				continue;
 			}
 
+			$matrix_table = $safe_tipo==='lg1' || $safe_tipo==='lg2'
+				? 'matrix_langs'
+				: 'matrix_hierarchy';
+
 			$command  = '';
 			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
 			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
-			$command .= ' -c "\copy (SELECT section_id, section_tipo, datos FROM matrix_hierarchy WHERE ';
+			$command .= ' -c "\copy (SELECT section_id, section_tipo, datos FROM '.$matrix_table.' WHERE ';
 			if ($current_section_tipo==='all') {
 
 				$command .= 'section_tipo IS NOT NULL ORDER BY section_tipo, section_id ASC) ';
