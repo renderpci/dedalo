@@ -6,10 +6,10 @@
 The Ontology transition was complete! All supported Ontologies are ready to be used in Dédalo v6.
 
 Important!: Ontology model transition from v5 to v6.
-Version 6.2.9 was the last version compatible with the v5 ontology model.
-Version > 6.3.0 was removed the old ontology editor and freeze support for v5 definitions.
-Version >= 6.4.0 The new Ontology only support v6, new features are implemented only for v6.
-Version >= 6.5.0 New Ontology was totally integrated with the hierarchy, with the same parent data model instead children data model.
+- Version 6.2.9 was the last version compatible with the v5 ontology model.
+- Version > 6.3.0 was removed the old ontology editor and freeze support for v5 definitions.
+- Version >= 6.4.0 The new Ontology only support v6, new features are implemented only for v6.
+- Version >= 6.5.0 New Ontology was totally integrated with the hierarchy, with the same parent data model instead children data model.
 
 | ontology | state | use | interface | tools | comments | v5 compatibility until (dmy) |
 | --- | --- | --- | --- | --- | --- | --- |
