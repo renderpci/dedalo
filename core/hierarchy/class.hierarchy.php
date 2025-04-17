@@ -1208,4 +1208,72 @@ class hierarchy extends ontology {
 
 
 
+	/**
+	* GET_ACTIVE_ELEMENTS
+	* Execs a real SQL search and
+	* returns an array of current active ontologies or hierarchies
+	* @return array $active_hierarchies
+	* @test true
+	*/
+	public static function get_active_elements() : array {
+
+		static $active_hierarchy_elements_cache;
+		if (isset($active_hierarchy_elements_cache)) {
+			return $active_hierarchy_elements_cache;
+		}
+
+		// main filter
+		$filter = json_decode('
+			{
+				"$and": [
+					{
+						"q": {
+							"section_id": "1",
+							"section_tipo": "dd64",
+							"from_component_tipo": "hierarchy4"
+						},
+						"q_operator": null,
+						"path": [
+							{
+								"name": "Active",
+								"model": "component_radio_button",
+								"section_tipo": "hierarchy1",
+								"component_tipo": "hierarchy4"
+							}
+						],
+						"type": "jsonb"
+					}
+				]
+			}
+		');
+
+		// section tipo depends on the current class (hierarchy, ontology)
+		$section_tipo = hierarchy::$main_section_tipo;
+
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo( [$section_tipo] );
+			$sqo->set_limit( 0 );
+			$sqo->set_offset( 0 );
+			$sqo->set_filter( $filter );
+
+		$search = search::get_instance(
+			$sqo // object sqo
+		);
+		$result = $search->search();
+
+		// active_elements
+		$active_elements = array_map(
+			'ontology::row_to_element',
+			$result->ar_records
+		);
+
+		// cache
+		$active_hierarchy_elements_cache = $active_elements;
+
+
+		return $active_elements;
+	}//end get_active_elements
+
+
+
 }//end class hierarchy

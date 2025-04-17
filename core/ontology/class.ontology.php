@@ -1042,9 +1042,9 @@ class ontology {
 	*/
 	public static function get_active_elements() : array {
 
-		static $active_elements_cache;
-		if (isset($active_elements_cache)) {
-			return $active_elements_cache;
+		static $active_ontology_elements_cache;
+		if (isset($active_ontology_elements_cache)) {
+			return $active_ontology_elements_cache;
 		}
 
 		// main filter
@@ -1073,7 +1073,7 @@ class ontology {
 		');
 
 		// section tipo depends on the current class (hierarchy, ontology)
-		$section_tipo = get_called_class()::$main_section_tipo;
+		$section_tipo = ontology::$main_section_tipo;
 
 		$sqo = new search_query_object();
 			$sqo->set_section_tipo( [$section_tipo] );
@@ -1093,7 +1093,7 @@ class ontology {
 		);
 
 		// cache
-		$active_elements_cache = $active_elements;
+		$active_ontology_elements_cache = $active_elements;
 
 
 		return $active_elements;
