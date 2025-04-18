@@ -51,12 +51,12 @@ function crop_50( object $request_options ) : object {
 
 	// Step 2: Extract grayscale values
 	$objects_info = $file_data->dir_path . '/objects_info.txt';
-	$cmd = ImageMagick::get_imagemagick_installed_path() . " \"$bit_image\" -define connected-components:verbose=true -define connected-components:area-threshold=1000 -connected-components 8 null: | awk 'NR>2{print $2}' > \"$objects_info\"";
+	$cmd = ImageMagick::get_imagemagick_installed_path() . " \"$bit_image\" -define connected-components:verbose=true -define connected-components:area-threshold=30000 -connected-components 8 null: | awk 'NR>1{print $2, $5}' > \"$objects_info\"";
 	shell_exec($cmd);
 
 	// Step 3: Parse bounding boxes from connected components data
 	$data = file_get_contents($objects_info);
-	preg_match_all('/(\d+)x(\d+)\+(\d+)\+(\d+)/', $data, $matches, PREG_SET_ORDER);
+	preg_match_all('/(\d+)x(\d+)\+(\d+)\+(\d+) gray\(255\)/', $data, $matches, PREG_SET_ORDER);
 
 	// step 4: get the regions found.
 	$regions = [];
