@@ -1481,23 +1481,12 @@ class ontology {
 			// }
 
 		// order v6.5
-			$order_tipo			= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
-			$order_model		= RecordObj_dd::get_modelo_name_by_tipo( $order_tipo  );
-			$order_component	= component_common::get_instance(
-				$order_model,
-				$order_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-
-			$order_data = $order_component->get_dato();
-
-			if(empty($order_data)){
+			$order_tipo		= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
+			$order_model	= RecordObj_dd::get_modelo_name_by_tipo( $order_tipo  );
+			if (empty($order_model)) {
 
 				debug_log(__METHOD__
-					. ' Record without order_data ' . PHP_EOL
+					. ' Section without order component ('.DEDALO_ONTOLOGY_ORDER_TIPO.'). Ignored set order action.' . PHP_EOL
 					. ' section_tipo : ' . to_string($section_tipo). PHP_EOL
 					. ' section_id   : ' . to_string($section_id). PHP_EOL
 					. ' order_tipo   : ' . to_string($order_tipo)
@@ -1506,8 +1495,32 @@ class ontology {
 
 			}else{
 
-				$order_value = reset($order_data);
-				$jer_dd_record->set_norden( (int)$order_value );
+				$order_component = component_common::get_instance(
+					$order_model,
+					$order_tipo ,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
+
+				$order_data = $order_component->get_dato();
+
+				if(empty($order_data)){
+
+					debug_log(__METHOD__
+						. ' Record without order_data ' . PHP_EOL
+						. ' section_tipo : ' . to_string($section_tipo). PHP_EOL
+						. ' section_id   : ' . to_string($section_id). PHP_EOL
+						. ' order_tipo   : ' . to_string($order_tipo)
+						, logger::DEBUG
+					);
+
+				}else{
+
+					$order_value = reset($order_data);
+					$jer_dd_record->set_norden( (int)$order_value );
+				}
 			}
 
 		// translatable
