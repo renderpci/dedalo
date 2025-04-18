@@ -151,10 +151,7 @@ class component_relation_parent extends component_relation_common {
 				$parents = self::get_parents_recursive(
 					$section_id,
 					$section_tipo,
-					(object)[
-						'skip_root' => true,
-						'search_in_main_hierarchy' => true
-					]
+					$this->tipo
 				);
 
 			// new_dato
