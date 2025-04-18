@@ -2960,6 +2960,17 @@ abstract class component_common extends common {
 			return null;
 		}
 
+		// catch non valid types data
+		if (!is_object($dato_full_json) && !is_string($dato_full_json)) {
+			debug_log(__METHOD__
+				. " Ignored value (only object and string are valid types) " . PHP_EOL
+				. ' dato_full_json: ' . to_string($dato_full_json)
+				. ' type: ' . gettype($dato_full_json)
+				, logger::ERROR
+			);
+			return null;
+		}
+
 		# decoded_obj . Unify received 'dato_full_json' in object format
 		if (is_object($dato_full_json)) {
 			$decoded_obj = $dato_full_json;
