@@ -196,9 +196,8 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 			}
 		// Get the column values and join they into a new value. Used by breakdown option to show every data of its own column
 		// when the breakdown is selected, every data is a column with its own value, therefore is necessary join all values
-		if(ar_column_values.length){
-			const ar_columns_values_len	= ar_column_values.length
-
+		const ar_columns_values_len	= ar_column_values?.length || 0
+		if(ar_columns_values_len>1){
 			const ar_values = []
 			for (let j = 0; j < ar_columns_values_len; j++) {
 				const value = ar_column_values[j].value
