@@ -1289,12 +1289,9 @@ const render_ontology_term = function(options) {
 				: section_tipo + section_id
 
 		// term_text
-			// const term_text = Array.isArray( child_data.ar_elements[key].value )
-			// 	? child_data.ar_elements[key].value.join(' ')
-			// 	: child_data.ar_elements[key].value
 			const term_text = term_regex_result
 				? term_regex_result[1]
-				: child_data.ar_elements[key].value
+				: child_data.ts_id
 
 	// children_dataset
 		const children_dataset	= {
