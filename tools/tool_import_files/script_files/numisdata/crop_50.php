@@ -25,6 +25,7 @@ function crop_50( object $request_options ) : object {
 		$options->key_dir				= null;
 		$options->custom_target_quality	= null;
 		$options->custom_arguments 		= null;
+		$options->components_temp_data	= null;
 		foreach ($request_options as $key => $value) {
 			if (property_exists($options, $key)) {
 				$options->$key = $value;
@@ -37,11 +38,12 @@ function crop_50( object $request_options ) : object {
 			return $item->role === 'target_component';
 		});
 		$target_component_tipo	= $target_ddo->tipo;
+		$target_component_model	= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
 
-	$file_data 		= (object)tool_import_files::get_file_data($file_path, $file_name);
-	$source_image 	= $file_data->file_path;
+	$file_data 		= tool_import_files::get_file_data($file_path, $file_name);
+	$source_image 	= $file_data['file_path'];
 
-	$bit_image =  $file_data->dir_path . '/' .$file_data->file_name . '_projection.png';// . $file_data->extension;
+	$bit_image =  $file_data['dir_path'] . '/' .$file_data['file_name'] . '_projection.png';// . $file_data['extension'];
 
 	// Cropping the image
 
@@ -50,7 +52,7 @@ function crop_50( object $request_options ) : object {
 	shell_exec($conver_to_bit);
 
 	// Step 2: Extract grayscale values
-	$objects_info = $file_data->dir_path . '/objects_info.txt';
+	$objects_info = $file_data['dir_path'] . '/objects_info.txt';
 	$cmd = ImageMagick::get_imagemagick_installed_path() . " \"$bit_image\" -define connected-components:verbose=true -define connected-components:area-threshold=30000 -connected-components 8 null: | awk 'NR>1{print $2, $5}' > \"$objects_info\"";
 	shell_exec($cmd);
 
@@ -89,7 +91,7 @@ function crop_50( object $request_options ) : object {
 
 	// Step 6: Crop each coin from original image and add the white space for the smallest height image.
 	foreach ($regions as $key => $region) {
-		$outputFile = $file_data->dir_path . '/' .$file_data->file_name . '_crop-' .$key. '.' . $file_data->extension;
+		$outputFile = $file_data['dir_path'] . '/' .$file_data['file_name'] . '_crop-' .$key. '.' . $file_data['extension'];
 
 			$cmd = sprintf(
 				ImageMagick::get_imagemagick_installed_path() . " \"%s\" -crop %dx%d+%d+%d +repage -background white -gravity center -extent %dx%d \"%s\"",
@@ -138,10 +140,25 @@ function crop_50( object $request_options ) : object {
 		$current_section_id = $portal_response->section_id;
 
 		// File target name
-		$crop_file_name	= $file_data->file_name . "_crop-" . $crop_number . '.' . $file_data->extension;
+		$crop_file_name	= $file_data['file_name'] . "_crop-" . $crop_number . '.' . $file_data['extension'];
 
 		// File target data
-		$file_crop_data = tool_import_files::get_file_data($file_data->dir_path, $crop_file_name);
+		$file_crop_data = tool_import_files::get_file_data($file_data['dir_path'], $crop_file_name);
+
+		// Set components data
+		// set data into target section of the component adding information provided by the user.
+			$components_data_options = new stdClass();
+				$components_data_options->ar_ddo_map					= $tool_config->ddo_map ?? [];
+				$components_data_options->section_tipo					= $section_tipo;
+				$components_data_options->section_id					= $section_id;
+				$components_data_options->target_section_id				= $current_section_id;
+				$components_data_options->target_ddo_component			= $target_ddo;
+				$components_data_options->file_data						= $file_data;
+				$components_data_options->current_file_name				= $file_name;
+				$components_data_options->target_component_model		= $target_component_model;
+				$components_data_options->components_temp_data			= $components_temp_data;
+
+			tool_import_files::set_components_data($components_data_options);
 
 		// set_media_file. Move uploaded file to media folder and create default versions
 		$add_file_options = new stdClass();
@@ -155,7 +172,12 @@ function crop_50( object $request_options ) : object {
 			$add_file_options->extension	= $file_crop_data['extension'];
 
 		// Save file and verions
-		tool_import_files::set_media_file($add_file_options, $target_section_tipo, $current_section_id, $target_component_tipo);
+		tool_import_files::set_media_file(
+			$add_file_options,
+			$target_section_tipo,
+			$current_section_id,
+			$target_component_tipo
+		);
 
 		$crop_number++;
 	}
