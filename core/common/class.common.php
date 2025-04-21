@@ -2559,11 +2559,12 @@ abstract class common {
 	public function build_request_config() : array {
 		$start_time=start_time();
 
-		// already fixed value case
+		// 1. Return if already calculated in this instance
 			if (isset($this->request_config)) {
 				return $this->request_config;
 			}
 
+		// 2. Attempt to retrieve from static cache
 		// cache. Experimental 10-08-2023. Note that 'get_ar_request_config' is affected by section_id when sqo->fixed_filter is defined
 			static $resolved_request_config_parsed = [];
 			$resolved_key = $this->tipo .'_'. $this->get_section_tipo() .'_'. $this->mode .'_'. $this->section_id;
@@ -2572,7 +2573,8 @@ abstract class common {
 				return $resolved_request_config_parsed[$resolved_key];
 			}
 
-		// requested_source is fixed from RQO calls to API when they exists like
+		// 3. Attempt to build from the client's API request (RQO)
+			// requested_source is fixed from RQO calls to API when they exists like
 			// {
 			//     "typo": "source",
 			//     "action": "search",
@@ -2586,122 +2588,120 @@ abstract class common {
 			$requested_source	= dd_core_api::$rqo->source ?? null;
 			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
-		if( isset($requested_source) &&
-			($requested_source->tipo===$this->tipo ||
-				(isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo)))
-			) {
+			if( isset($requested_source) &&
+				($requested_source->tipo===$this->tipo ||
+					(isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo)))
+				) {
 
-			// set the request_config with the API rqo sent by client
+				// set the request_config with the API rqo sent by client
 
-			// requested_show. get the rqo sent to the API
-			$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show)
-				? unserialize(serialize(dd_core_api::$rqo->show))
-				: false;
+				// requested_show. get the rqo sent to the API
+				$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show)
+					? unserialize(serialize(dd_core_api::$rqo->show))
+					: false;
 
-			if (!empty($requested_show)) {
+				if (!empty($requested_show)) {
 
-				// consolidate ddo items properties
-					$new_show_ddo_map = [];
-					foreach ($requested_show->ddo_map as $key => $current_ddo) {
-						// get the direct ddo linked by the source
-						$new_ddo = unserialize(serialize($current_ddo));
-						if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
-							// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-							if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
-								$new_ddo->parent		= $this->tipo;
-								$new_ddo->section_tipo	= $this->tipo;
+					// consolidate ddo items properties
+						$new_show_ddo_map = [];
+						foreach ($requested_show->ddo_map as $key => $current_ddo) {
+							// get the direct ddo linked by the source
+							$new_ddo = unserialize(serialize($current_ddo));
+							if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
+								// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
+								if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
+									$new_ddo->parent		= $this->tipo;
+									$new_ddo->section_tipo	= $this->tipo;
+								}
 							}
-						}
 
-						// added label & mode if not are already defined
-						if(!isset($new_ddo->label)) {
-							$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
-						}
-						if(!isset($new_ddo->mode)) {
-							$new_ddo->mode = $this->mode;
-						}
-						$new_show_ddo_map[] = $new_ddo;
-					}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
+							// added label & mode if not are already defined
+							if(!isset($new_ddo->label)) {
+								$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+							}
+							if(!isset($new_ddo->mode)) {
+								$new_ddo->mode = $this->mode;
+							}
+							$new_show_ddo_map[] = $new_ddo;
+						}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
-				// request_config_object. Create the new request_config_object with the caller
-					$request_config_object = new request_config_object();
-						$request_config_object->api_engine		= 'dedalo';
-						$request_config_object->type			= 'main';
-						$request_config_object->show			= new stdClass();
-						$request_config_object->show->ddo_map	= $new_show_ddo_map;
+					// request_config_object. Create the new request_config_object with the caller
+						$request_config_object = new request_config_object();
+							$request_config_object->api_engine		= 'dedalo';
+							$request_config_object->type			= 'main';
+							$request_config_object->show			= new stdClass();
+							$request_config_object->show->ddo_map	= $new_show_ddo_map;
 
-					// requested_search
-						$requested_search = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->search)
-							? unserialize(serialize(dd_core_api::$rqo->search))
-							: false;
-						if (!empty($requested_search)) {
+						// requested_search
+							$requested_search = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->search)
+								? unserialize(serialize(dd_core_api::$rqo->search))
+								: false;
+							if (!empty($requested_search)) {
 
-							$new_search_ddo_map = [];
-							// consolidate ddo items properties
-							foreach ($requested_search->ddo_map as $key => $current_ddo) {
+								$new_search_ddo_map = [];
+								// consolidate ddo items properties
+								foreach ($requested_search->ddo_map as $key => $current_ddo) {
 
-								// new_ddo. Get the direct ddo linked by the source
-									$new_ddo = unserialize(serialize($current_ddo));
-									if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
-										// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-										if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
-											$new_ddo->parent		= $this->tipo;
-											$new_ddo->section_tipo	= $this->tipo;
+									// new_ddo. Get the direct ddo linked by the source
+										$new_ddo = unserialize(serialize($current_ddo));
+										if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
+											// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
+											if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
+												$new_ddo->parent		= $this->tipo;
+												$new_ddo->section_tipo	= $this->tipo;
+											}
 										}
-									}
 
-								// label add if not are already defined
-									if(!isset($new_ddo->label)) {
-										$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
-									}
+									// label add if not are already defined
+										if(!isset($new_ddo->label)) {
+											$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+										}
 
-								// mode add if not are already defined
-									if(!isset($new_ddo->mode)) {
-										$new_ddo->mode = $this->mode;
-									}
+									// mode add if not are already defined
+										if(!isset($new_ddo->mode)) {
+											$new_ddo->mode = $this->mode;
+										}
 
-								// add to search ddo_map
-									$new_search_ddo_map[] = $new_ddo;
-							}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
+									// add to search ddo_map
+										$new_search_ddo_map[] = $new_ddo;
+								}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
 
-							$request_config_object->search			= new stdClass();
-							$request_config_object->search->ddo_map	= $new_search_ddo_map;
-						}//end if (!empty($requested_search))
+								$request_config_object->search			= new stdClass();
+								$request_config_object->search->ddo_map	= $new_search_ddo_map;
+							}//end if (!empty($requested_search))
 
-					// sqo add
-						if (isset(dd_core_api::$rqo->sqo)) {
-							$sqo = unserialize(serialize(dd_core_api::$rqo->sqo));
-							$sqo->section_tipo = array_map(function($el){
-								return (object)[
-									'tipo' => $el
-								];
-							}, $sqo->section_tipo);
-							$request_config_object->sqo = $sqo;
-						}
+						// sqo add
+							if (isset(dd_core_api::$rqo->sqo)) {
+								$sqo = unserialize(serialize(dd_core_api::$rqo->sqo));
+								$sqo->section_tipo = array_map(function($el){
+									return (object)[
+										'tipo' => $el
+									];
+								}, $sqo->section_tipo);
+								$request_config_object->sqo = $sqo;
+							}
 
-					// fix request_config
-						$this->request_config = [$request_config_object];
+						// fix request_config
+							$this->request_config = [$request_config_object];
 
-					// merge and set ddo elements
-						dd_core_api::$ddo_map = array_merge(
-							dd_core_api::$ddo_map,
-							$request_config_object->show->ddo_map
-						);
+						// merge and set ddo elements
+							dd_core_api::$ddo_map = array_merge(
+								dd_core_api::$ddo_map,
+								$request_config_object->show->ddo_map
+							);
 
-				return $this->request_config; // we have finished ! Note we stop here (!)
-			}//end if (!empty($requested_show))
-		}//end if( isset($requested_source) &&...
+					return $this->request_config; // we have finished ! Note we stop here (!)
+				}//end if (!empty($requested_show))
+			}//end if( isset($requested_source) &&...
 
 		// create a new fresh request_config with fallback options
 
-		// short vars
+		// 4. Attempt to build from user presets
 			$mode			= $this->get_mode();
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
 			$user_id		= logged_user_id();
-
-		// 1. From user preset
-			$user_preset = request_config_presets::search_request_config(
+			$user_preset	= request_config_presets::search_request_config(
 				$tipo,
 				$section_tipo,
 				$user_id,
@@ -2710,7 +2710,7 @@ abstract class common {
 			);
 			if (!empty($user_preset)) {
 
-				// fix request_config value
+				// set resolved request_config value
 				$request_config = $user_preset;
 
 				debug_log(__METHOD__.
@@ -2719,7 +2719,7 @@ abstract class common {
 				);
 			}
 
-		// 2. From Ontology
+		// 5. Attempt to build from Ontology
 			if (empty($request_config)) {
 
 				$request_config = $this->get_ar_request_config();
@@ -2919,10 +2919,9 @@ abstract class common {
 					$source_properties = $this->get_properties();
 					break;
 			}
-
-		// clone the source properties
-		// to use a copy of the properties to parse the request_config resolving section_tipo as self or other needs
-		// don't use php clone, it doesn't work with deep objects
+			// clone the source properties
+			// to use a copy of the properties to parse the request_config resolving section_tipo as self or other needs
+			// don't use php clone, it doesn't work with deep objects
 			$properties = ($source_properties !== null)
 				? json_decode(json_encode( $source_properties ))
 				: null;
