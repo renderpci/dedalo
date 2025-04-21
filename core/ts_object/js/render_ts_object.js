@@ -998,7 +998,7 @@ const render_delete_record_dialog = function (options) {
 
 	// invalid permissions
 		if (self.permissions<2) {
-			return
+			return false
 		}
 
 	// header
