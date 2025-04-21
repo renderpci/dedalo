@@ -328,10 +328,10 @@ class tool_import_files extends tool_common {
 			$file_path					= $options->file_path ?? null;
 			$section_tipo				= $options->section_tipo ?? null;
 			$section_id					= $options->section_id ?? null;
-			$target_section_tipo		= $options->target_section_tipo ?? null;
 			$tool_config				= $options->tool_config ?? null;
 			$key_dir					= $options->key_dir ?? null;
 			$custom_target_quality		= $options->custom_target_quality ?? null;
+			$components_temp_data		= $options->components_temp_data ?? null;
 
 		# FILE_PROCESSOR
 		# Global var button properties JSON data array
@@ -356,11 +356,11 @@ class tool_import_files extends tool_common {
 						'file_path'				=> $file_path,
 						'section_tipo'			=> $section_tipo,
 						'section_id'			=> $section_id,
-						'target_section_tipo'	=> $target_section_tipo,
 						'tool_config'			=> $tool_config,
 						'key_dir'				=> $key_dir,
 						'custom_target_quality'	=> $custom_target_quality,
-						'custom_arguments' 		=> $custom_arguments
+						'custom_arguments' 		=> $custom_arguments,
+						'components_temp_data'	=> $components_temp_data
 					];
 					$current_response = call_user_func($function_name, $standard_options);
 					if($current_response->result === false){
@@ -627,19 +627,18 @@ class tool_import_files extends tool_common {
 										);
 
 										// component processor
-										$compoonet_processor_options = new stdClass();
-											$compoonet_processor_options->ar_ddo_map					= $ar_ddo_map;
-											$compoonet_processor_options->section_tipo					= $section_tipo;
-											$compoonet_processor_options->section_id					= $section_id;
-											$compoonet_processor_options->target_section_id				= $target_section_id;
-											$compoonet_processor_options->input_components_section_tipo	= $input_components_section_tipo;
-											$compoonet_processor_options->target_ddo_component			= $target_ddo_component;
-											$compoonet_processor_options->file_data						= $file_data;
-											$compoonet_processor_options->current_file_name				= $target_filename;
-											$compoonet_processor_options->target_component_model		= $target_component_model;
-											$compoonet_processor_options->components_temp_data			= $components_temp_data;
+										$components_data_options = new stdClass();
+											$components_data_options->ar_ddo_map					= $ar_ddo_map;
+											$components_data_options->section_tipo					= $section_tipo;
+											$components_data_options->section_id					= $section_id;
+											$components_data_options->target_section_id				= $target_section_id;
+											$components_data_options->target_ddo_component			= $target_ddo_component;
+											$components_data_options->file_data						= $file_data;
+											$components_data_options->current_file_name				= $target_filename;
+											$components_data_options->target_component_model		= $target_component_model;
+											$components_data_options->components_temp_data			= $components_temp_data;
 
-										 tool_import_files::set_components_data($compoonet_processor_options);
+										 tool_import_files::set_components_data($components_data_options);
 								}
 
 								// stop the other processes done by other modes and go to the next image
@@ -712,69 +711,23 @@ class tool_import_files extends tool_common {
 						continue;
 					}
 
-				// component portal. Component (expected portal)
-					$component_portal = component_common::get_instance(
-						$target_ddo->model,
-						$target_ddo->tipo,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$target_ddo->section_tipo
-					);
-					// Portal target_section_tipo
-					$target_section_tipo = $target_ddo->target_section_tipo ?? $component_portal->get_ar_target_section_tipo()[0];
+				// set the media into the component_portal and its own target section.
+				// the media can be processed by a specific script ($current_file_processor)
+				// if media has not a specific process, import directly.
+					if ( !empty($current_file_processor) ) {
+						// file_processor
+						// Global var button properties JSON data array
+						// Optional additional file script processor defined in button import properties
+						// Note that var $file_processor_properties is the button properties JSON data, NOT current element processor selection
 
-				// section. Create a new section for each file from current portal
-					$portal_response = (object)$component_portal->add_new_element((object)[
-						'target_section_tipo' => $target_section_tipo
-					]);
-					if ($portal_response->result===false) {
-						$response->result 	= false;
-						$response->msg 		= "Error on create portal children: ".$portal_response->msg;
-						debug_log(__METHOD__." $response->msg ", logger::ERROR);
-						return $response;
-					}
-					// save portal if all is all ok
-					$component_portal->Save();
-
-					// Fix new section created as current_section_id
-					$target_section_id = $portal_response->section_id;
-
-				// component portal new section order. Order portal record when is $import_file_name_mode=enumerate
-					// if ($import_file_name_mode==='enumerate' || $import_file_name_mode==='named' ) {
-					// 	$portal_norder = $regex']->portal_order!=='' ? (int)$regex']->portal_order : false;
-					// 	if ($portal_norder!==false) {
-					// 		$changed_order = $component_portal->set_locator_order( $portal_response->added_locator, $portal_norder );
-					// 		if ($changed_order===true) {
-					// 			$component_portal->Save();
-					// 		}
-					// 		debug_log(__METHOD__
-					// 			." CHANGED ORDER FOR : ".$regex']->portal_order." ".to_string($regex'])
-					// 			, logger::DEBUG
-					// 		);
-					// 	}
-					// }
-
-				// component processor
-					$compoonet_processor_options = new stdClass();
-						$compoonet_processor_options->ar_ddo_map					= $ar_ddo_map;
-						$compoonet_processor_options->section_tipo					= $section_tipo;
-						$compoonet_processor_options->section_id					= $section_id;
-						$compoonet_processor_options->target_section_id				= $target_section_id;
-						$compoonet_processor_options->input_components_section_tipo	= $input_components_section_tipo;
-						$compoonet_processor_options->target_ddo_component			= $target_ddo_component;
-						$compoonet_processor_options->file_data						= $file_data;
-						$compoonet_processor_options->current_file_name				= $current_file_name;
-						$compoonet_processor_options->target_component_model		= $target_component_model;
-						$compoonet_processor_options->components_temp_data			= $components_temp_data;
-
-					 tool_import_files::set_components_data($compoonet_processor_options);
-
-				// file_processor
-					// Global var button properties JSON data array
-					// Optional additional file script processor defined in button import properties
-					// Note that var $file_processor_properties is the button properties JSON data, NOT current element processor selection
-					if (!empty($current_file_processor) && !empty($file_processor_properties)) {
+						if ( empty($file_processor_properties) ) {
+							debug_log(__METHOD__
+								.' Undefined file processor properties'. PHP_EOL
+								.' current value_obj: '. json_encode( $value_obj )
+								, logger::ERROR
+							);
+							continue;
+						}
 						$processor_options = new stdClass();
 							$processor_options->file_processor				= $current_file_processor;
 							$processor_options->file_processor_properties	= $file_processor_properties;
@@ -783,30 +736,97 @@ class tool_import_files extends tool_common {
 							$processor_options->file_path				= $tmp_dir;
 							$processor_options->section_tipo			= $section_tipo;
 							$processor_options->section_id				= $section_id;
-							$processor_options->target_section_tipo		= $target_section_tipo;
 							$processor_options->tool_config				= $tool_config;
 							$processor_options->key_dir					= $key_dir;
 							$processor_options->custom_target_quality	= $custom_target_quality;
-						tool_import_files::file_processor($processor_options);
-					}//end if (!empty($file_processor_properties))
+							$processor_options->components_temp_data	= $components_temp_data;
 
-				// set_media_file. Move uploaded file to media folder and create default versions
-					$add_file_options = new stdClass();
-						$add_file_options->name			= $current_file_name; // string original file name like 'IMG_3007.jpg'
-						$add_file_options->key_dir		= $key_dir; // string upload caller name like 'oh1_oh1'
-						$add_file_options->tmp_dir		= 'DEDALO_UPLOAD_TMP_DIR'; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
-						$add_file_options->tmp_name		= $current_file_name; // string like 'phpJIQq4e'
-						$add_file_options->quality		= $custom_target_quality;
-						$add_file_options->source_file	= null;
-						$add_file_options->size			= $file_data['file_size'];
-						$add_file_options->extension	= $file_data['extension'];
+						tool_import_files::file_processor( $processor_options );
 
-					tool_import_files::set_media_file(
-						$add_file_options,
-						$target_section_tipo,
-						$target_section_id,
-						$target_component_tipo
-					);
+					} else {
+
+						// Usually files
+						// media files without process assigned will be imported into the component_portal of the media
+						// Create new media section and set the imported file to it.
+						// Media files that has not file_processor as splits or other process.
+
+						// component portal. Component (expected portal)
+							$component_portal = component_common::get_instance(
+								$target_ddo->model,
+								$target_ddo->tipo,
+								$section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$target_ddo->section_tipo
+							);
+							// Portal target_section_tipo
+							$target_section_tipo = $target_ddo->target_section_tipo ?? $component_portal->get_ar_target_section_tipo()[0];
+
+						// section. Create a new section for each file from current portal
+							$portal_response = (object)$component_portal->add_new_element((object)[
+								'target_section_tipo' => $target_section_tipo
+							]);
+							if ($portal_response->result===false) {
+								$response->result 	= false;
+								$response->msg 		= "Error on create portal children: ".$portal_response->msg;
+								debug_log(__METHOD__." $response->msg ", logger::ERROR);
+								return $response;
+							}
+
+							// save portal if all is all ok
+							$component_portal->Save();
+
+							// Fix new section created as current_section_id
+							$target_section_id = $portal_response->section_id;
+
+						// component portal new section order. Order portal record when is $import_file_name_mode=enumerate
+							// if ($import_file_name_mode==='enumerate' || $import_file_name_mode==='named' ) {
+							// 	$portal_norder = $regex']->portal_order!=='' ? (int)$regex']->portal_order : false;
+							// 	if ($portal_norder!==false) {
+							// 		$changed_order = $component_portal->set_locator_order( $portal_response->added_locator, $portal_norder );
+							// 		if ($changed_order===true) {
+							// 			$component_portal->Save();
+							// 		}
+							// 		debug_log(__METHOD__
+							// 			." CHANGED ORDER FOR : ".$regex']->portal_order." ".to_string($regex'])
+							// 			, logger::DEBUG
+							// 		);
+							// 	}
+							// }
+
+						// Set components data
+						// set data into target section of the component adding information provided by the user.
+							$components_data_options = new stdClass();
+								$components_data_options->ar_ddo_map					= $ar_ddo_map;
+								$components_data_options->section_tipo					= $section_tipo;
+								$components_data_options->section_id					= $section_id;
+								$components_data_options->target_section_id				= $target_section_id;
+								$components_data_options->target_ddo_component			= $target_ddo_component;
+								$components_data_options->file_data						= $file_data;
+								$components_data_options->current_file_name				= $current_file_name;
+								$components_data_options->target_component_model		= $target_component_model;
+								$components_data_options->components_temp_data			= $components_temp_data;
+
+							tool_import_files::set_components_data($components_data_options);
+
+						// set_media_file. Move uploaded file to media folder and create default versions
+							$add_file_options = new stdClass();
+								$add_file_options->name			= $current_file_name; // string original file name like 'IMG_3007.jpg'
+								$add_file_options->key_dir		= $key_dir; // string upload caller name like 'oh1_oh1'
+								$add_file_options->tmp_dir		= 'DEDALO_UPLOAD_TMP_DIR'; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
+								$add_file_options->tmp_name		= $current_file_name; // string like 'phpJIQq4e'
+								$add_file_options->quality		= $custom_target_quality;
+								$add_file_options->source_file	= null;
+								$add_file_options->size			= $file_data['file_size'];
+								$add_file_options->extension	= $file_data['extension'];
+
+							tool_import_files::set_media_file(
+								$add_file_options,
+								$target_section_tipo,
+								$target_section_id,
+								$target_component_tipo
+							);
+					}
 
 				// ar_processed. Add as processed
 					$processed_info = new stdClass();
@@ -1002,7 +1022,6 @@ class tool_import_files extends tool_common {
 			$section_tipo					= $options->section_tipo;
 			$section_id						= $options->section_id;
 			$target_section_id				= $options->target_section_id;
-			$input_components_section_tipo	= $options->input_components_section_tipo;
 			$target_ddo_component			= $options->target_ddo_component;
 			$file_data						= $options->file_data;
 			$current_file_name				= $options->current_file_name;
@@ -1066,11 +1085,6 @@ class tool_import_files extends tool_common {
 					break;
 
 				case 'input_component':
-
-					// input_components_section_tipo store
-						if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
-							$input_components_section_tipo[] = $ddo->section_tipo;
-						}
 
 					// component_data save
 						$is_translatable = RecordObj_dd::get_translatable($ddo->tipo);
