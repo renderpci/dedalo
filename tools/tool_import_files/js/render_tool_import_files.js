@@ -150,7 +150,9 @@ const get_content_data_edit = async function(self) {
 			for (let i = self.files_data.length - 1; i >= 0; i--) {
 				const current_value = self.files_data[i]
 				if(ar_file_processor){
-					self.files_data[i].file_processor = current_value.previewElement.querySelector(".file_processor_select").value
+					self.files_data[i].file_processor = current_value.previewElement.querySelector(".file_processor_select").value === 'null'
+					? null
+					: current_value.previewElement.querySelector(".file_processor_select").value
 				}
 				self.files_data[i].component_option = current_value.previewElement.querySelector(".option_component_select").value;
 			}
