@@ -317,16 +317,16 @@ class get_coins_by_period extends widget_common {
 						});
 
 						// check ts_term found
-						if (!is_object($ts_term)) {
-							debug_log(__METHOD__
-								. " Ignored not found ts_term for period. " . PHP_EOL
-								. ' current_period: ' . to_string($current_period) . PHP_EOL
-								. ' ar_hierarchies: ' . to_string($ar_hierarchies)
-								, logger::DEBUG
-							);
-							$empty_period_count + 1;
-							continue;
-						}
+							// if (!is_object($ts_term)) {
+							// 	debug_log(__METHOD__
+							// 		. " Ignored not found ts_term for period. " . PHP_EOL
+							// 		. ' current_period: ' . to_string($current_period) . PHP_EOL
+							// 		. ' ar_hierarchies: ' . to_string($ar_hierarchies)
+							// 		, logger::DEBUG
+							// 	);
+							// 	$empty_period_count + 1;
+							// 	continue;
+							// }
 
 						// Check if the source specify that need any parent with specific model (as "Era" model terms)
 						if($use_parent === true){
@@ -347,8 +347,8 @@ class get_coins_by_period extends widget_common {
 								$ts_term->count = $ts_term->count + 1;
 							}
 						}
-					}
-				}
+					}//end foreach ($period_dato as $current_period)
+				}//end foreach ($ar_records as $current_section_data)
 
 				$period = array_filter($ar_hierarchies, function($el){
 					return $el->count !== null;

@@ -667,7 +667,6 @@ page.prototype.add_events = function() {
 
 	// page click/mousedown
 		document.addEventListener('mousedown', deactivate_components)
-
 }//end add_events
 
 
