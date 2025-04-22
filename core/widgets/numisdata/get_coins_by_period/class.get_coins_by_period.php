@@ -329,7 +329,7 @@ class get_coins_by_period extends widget_common {
 
 							// if the term do not has any parent with the model to find add it to the unknown term (?)
 							if(!isset($area_term)){
-								$empty_period_count + 1;
+								$empty_period_count++;
 							}else{
 								// count the coin into the term
 								$area_term->count = $area_term->count + 1;
