@@ -277,15 +277,9 @@ class get_coins_by_period extends widget_common {
 				$search_result	= $search->search();
 				$ar_records		= $search_result->ar_records;
 
-
 			// get the value of the component using portal dato
-				$periods = [];
 				$empty_period_count = null;
-
 				foreach ($ar_records as $current_section_data) {
-					// $component_time = start_time();
-					$target_section_id		= $current_section_data->section_id;
-					$target_section_tipo	= $current_section_data->section_tipo;
 
 					$relations = $current_section_data->datos->relations ?? [];
 					$duplicated_dato = array_find($relations, function($el) use($component_tipo_duplicated){
