@@ -324,6 +324,7 @@ class get_coins_by_period extends widget_common {
 								. ' ar_hierarchies: ' . to_string($ar_hierarchies)
 								, logger::DEBUG
 							);
+							$empty_period_count + 1;
 							continue;
 						}
 
