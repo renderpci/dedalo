@@ -315,6 +315,18 @@ class get_coins_by_period extends widget_common {
 							return $el->section_tipo === $current_period->section_tipo
 									&& $el->section_id === $current_period->section_id;
 						});
+
+						// check ts_term found
+						if (!is_object($ts_term)) {
+							debug_log(__METHOD__
+								. " Ignored not found ts_term for period. " . PHP_EOL
+								. ' current_period: ' . to_string($current_period) . PHP_EOL
+								. ' ar_hierarchies: ' . to_string($ar_hierarchies)
+								, logger::DEBUG
+							);
+							continue;
+						}
+
 						// Check if the source specify that need any parent with specific model (as "Era" model terms)
 						if($use_parent === true){
 							// find the parent term with the target model section_id
