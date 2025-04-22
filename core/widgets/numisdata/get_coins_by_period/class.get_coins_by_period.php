@@ -292,7 +292,7 @@ class get_coins_by_period extends widget_common {
 						//     "section_tipo": "numisdata341",
 						//     "from_component_tipo": "numisdata157"
 						// }
-					if ( is_object($duplicated_dato) && $duplicated_dato->section_id=='2') {
+					if ( is_object($duplicated_dato) && $duplicated_dato->section_id=='2' ) {
 						continue;
 					}
 
@@ -311,16 +311,16 @@ class get_coins_by_period extends widget_common {
 						});
 
 						// check ts_term found
-							// if (!is_object($ts_term)) {
-							// 	debug_log(__METHOD__
-							// 		. " Ignored not found ts_term for period. " . PHP_EOL
-							// 		. ' current_period: ' . to_string($current_period) . PHP_EOL
-							// 		. ' ar_hierarchies: ' . to_string($ar_hierarchies)
-							// 		, logger::DEBUG
-							// 	);
-							// 	$empty_period_count + 1;
-							// 	continue;
-							// }
+							if (!is_object($ts_term)) {
+								debug_log(__METHOD__
+									. " Ignored not found ts_term for period. " . PHP_EOL
+									. ' current_period: ' . to_string($current_period) . PHP_EOL
+									. ' ar_hierarchies: ' . to_string($ar_hierarchies)
+									, logger::DEBUG
+								);
+								$empty_period_count++;
+								continue;
+							}
 
 						// Check if the source specify that need any parent with specific model (as "Era" model terms)
 						if($use_parent === true){
