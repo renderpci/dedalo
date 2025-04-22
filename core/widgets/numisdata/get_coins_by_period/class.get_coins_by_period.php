@@ -316,7 +316,7 @@ class get_coins_by_period extends widget_common {
 									. " Ignored not found ts_term for period. " . PHP_EOL
 									. ' current_period: ' . to_string($current_period) . PHP_EOL
 									. ' ar_hierarchies: ' . to_string($ar_hierarchies)
-									, logger::DEBUG
+									, logger::ERROR
 								);
 								$empty_period_count++;
 								continue;
