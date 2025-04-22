@@ -1702,6 +1702,15 @@ class section extends common {
 			?array $ar_exclude_models=null
 		) : array {
 
+		// debug
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__
+					. " func_get_args " . PHP_EOL
+					. ' ' . to_string( func_get_args() )
+					, logger::DEBUG
+				);
+			}
+
 		# AR_MODEL_NAME_REQUIRED cast 'ar_model_name_required' to array
 		$ar_model_name_required = (array)$ar_model_name_required;
 
