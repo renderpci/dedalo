@@ -1598,9 +1598,13 @@ export const render_link_children = function (options) {
 	// set already calculated children list to prevent calculate it again
 		link_children_element.children_list = null // child_data.children
 
+	// link child_data pointer
+		link_children_element.child_data = child_data
+
 	// mousedown event
 		const mousedown_handler = (e) => {
 			e.stopPropagation()
+
 			self.toggle_view_children(link_children_element, e)
 			// update status. Tracks element open children status
 			const is_open = arrow_icon.classList.contains('ts_object_children_arrow_icon_open')
@@ -1630,6 +1634,12 @@ export const render_link_children = function (options) {
 								// fire mousedown event to force load children
 								// Only dispatch the event if the arrow is not already open
 								if (!arrow_icon.classList.contains('ts_object_children_arrow_icon_open')) {
+									// check if this 'ts_id' is already open to prevent duplicity
+									// in infinite loop cases
+									if (self.opened_elements[child_data.ts_id]) {
+										return
+									}
+									// fire mousedown_handler
 									link_children_element.dispatchEvent(new MouseEvent('mousedown'));
 								}
 							}

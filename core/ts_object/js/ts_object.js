@@ -36,6 +36,9 @@ export const ts_object = new function() {
 		// events_tokens
 		this.events_tokens = [];
 
+		// opened_elements
+		this.opened_elements = {}
+
 
 
 	/**
@@ -325,11 +328,7 @@ export const ts_object = new function() {
 				});
 
 			// save_opened_elements
-			dd_request_idle_callback(
-				() => {
-					self.save_opened_elements(link_children_element,'add')
-				}
-			)
+				self.save_opened_elements(link_children_element,'add')
 
 		}else{
 
@@ -352,11 +351,7 @@ export const ts_object = new function() {
 					}
 
 				// save_opened_elements
-				dd_request_idle_callback(
-					() => {
-						self.save_opened_elements(link_children_element,'add')
-					}
-				)
+					self.save_opened_elements(link_children_element,'add')
 
 			}else{
 
@@ -364,11 +359,8 @@ export const ts_object = new function() {
 				link_children_element.firstChild.classList.remove('ts_object_children_arrow_icon_open');
 
 				// save_opened_elements
-				dd_request_idle_callback(
-					() => {
-						self.save_opened_elements(link_children_element,'remove')
-					}
-				)
+					self.save_opened_elements(link_children_element,'remove')
+
 			}
 		}
 
@@ -385,42 +377,15 @@ export const ts_object = new function() {
 	* @param string action
 	* @return bool
 	*/
-	this.opened_elements = {}
 	this.save_opened_elements = function(link_children_element, action) {
 
-		if(SHOW_DEBUG!==true) {
-			return false;
-		}
-
-		const wrap	= link_children_element.parentNode.parentNode
-		const key	= wrap.dataset.section_tipo +'_'+ wrap.dataset.section_id
+		const current_key = link_children_element.child_data.ts_id
 
 		if (action==='add') {
-
-			// add
-
-			const open_children_elements = wrap.getElementsByClassName('ts_object_children_arrow_icon_open')
-			const len = open_children_elements.length
-
-			for (let i = len - 1; i >= 0; i--) {
-				const current_wrap			= open_children_elements[i].parentNode.parentNode.parentNode
-				const current_parent_node	= current_wrap.parentNode.parentNode
-				const current_parent		= current_parent_node.dataset.section_tipo +'_'+ current_parent_node.dataset.section_id
-				const current_key			= current_wrap.dataset.section_tipo +'_'+ current_wrap.dataset.section_id
-
-				this.opened_elements[current_key] = current_parent
-			}
-
+			this.opened_elements[current_key] = true
 		}else{
-
-			// remove
-
-			delete this.opened_elements[key]
-			this.remove_children_from_opened_elements(key)
+			delete this.opened_elements[current_key]
 		}
-
-
-		return true
 	}//end save_opened_elements
 
 
