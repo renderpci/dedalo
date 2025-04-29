@@ -426,23 +426,126 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_PARENTS_RECURSIVE
-	* Iterate recursively all parents of current term
+	* Public facing function to get all unique ancestor parents recursively.
+	* This acts as a clean entry point and initializes the process.
 	* @param int|string $section_id
+	* 	The starting section ID.
 	* @param string $section_tipo
-	* @param ?string $component_tipo
-	* @return array $parents_recursive
+	* 	The starting section type.
+	* @param string|null $component_tipo
+	* 	Optional component type filter passed to get_parents.
+	* @return array
+	* 	An array of unique parent objects/arrays, generally ordered from direct parents upwards.
 	*/
-	public static function get_parents_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null) : array {
+	public static function get_parents_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null): array {
 
-		$parents_recursive = component_relation_parent::get_parents($section_id, $section_tipo, $component_tipo);
+		// reset self::$errors
+		// On each call, the class errors are cleaned to allow display errors from client
+		// when a infinite loop is detected fro example.
+		self::$errors = [];
 
-		foreach ($parents_recursive as $parent) {
-			$ascendants = component_relation_parent::get_parents_recursive($parent->section_id, $parent->section_tipo, $component_tipo); // Recursively get ascendants
-			$parents_recursive = array_merge($parents_recursive, $ascendants);
-		}
+		// Initialize the master list, keyed by 'type_id' for uniqueness
+		$unique_ancestors = [];
 
-		return $parents_recursive;
+		// Call the internal recursive helper, passing the ancestor list by reference.
+		// The initial visited array is empty.
+		self::fetch_ancestors_recursive($section_id, $section_tipo, $component_tipo, $unique_ancestors, []);
+
+		// Return the values of the populated ancestor list as a numerically indexed array.
+		return array_values($unique_ancestors);
 	}//end get_parents_recursive
+
+
+
+	/**
+	* FETCH_ANCESTORS_RECURSIVE
+	* Optimized internal recursive function to fetch ancestors.
+	* Prevents duplicates and cycles efficiently. Avoids redundant processing of already visited nodes.
+	* @param int|string $section_id
+	* 	The ID of the current section being processed.
+	* @param string $section_tipo
+	* 	The type of the current section being processed.
+	* @param string|null $component_tipo
+	* 	Optional component type filter.
+	* @param array &$unique_ancestors
+	* 	Associative array (passed by reference) to collect unique ancestors, keyed by 'type_id'.
+	* @param array $visited
+	*	Associative array tracking nodes visited *in the current recursion path* to detect cycles. Keys are 'type_id'. Passed by value.
+	* @return void
+	* 	This function modifies $unique_ancestors directly.
+	*/
+	private static function fetch_ancestors_recursive(
+		int|string $section_id,
+		string $section_tipo,
+		?string $component_tipo,
+		array &$unique_ancestors, // Pass master list by reference
+		array $visited // Pass current path's visited nodes by value
+	): void {
+
+		// Create a unique key for the current node.
+		$current_node_key = $section_tipo . '_' . $section_id;
+
+		// Cycle Detection (Current Path)
+		// If this node is already in the visited list *for this specific path*, we have a cycle. Stop this path.
+		if (isset($visited[$current_node_key])) {
+			debug_log(__METHOD__
+				. " Loop detected at: " . PHP_EOL
+				. ' current_node_key: ' . to_string($current_node_key)
+				, logger::ERROR
+			);
+			self::$errors[] = (object)[
+				'type'			=> 'get_parents_recursive',
+				'msg'			=> 'Loop detected',
+				'info' 			=> (object)[
+					'section_tipo'	=> $section_tipo,
+					'section_id'	=> $section_id
+				]
+			];
+			return;
+		}
+		// Mark current node as visited for this path to detect cycles further down.
+		$visited[$current_node_key] = true;
+
+		// 1. Get the direct parents of the current node.
+		$direct_parents = self::get_parents($section_id, $section_tipo, $component_tipo);
+
+		// 2. Process direct parents and recurse if necessary.
+		foreach ($direct_parents as $parent) {
+			// Basic validation: Ensure the parent structure is as expected.
+			if (is_object($parent) && isset($parent->section_id) && isset($parent->section_tipo)) {
+				$parent_key = $parent->section_tipo . '_' . $parent->section_id;
+
+				// Avoid Re-processing
+				// Check if this parent has *already* been added to the final unique list.
+				// If yes, its ancestors are also already included (or being processed), so we can skip recursing for it.
+				if (!isset($unique_ancestors[$parent_key])) {
+
+					// Add the direct parent to the master unique list *before* recursing.
+					$unique_ancestors[$parent_key] = $parent;
+
+					// --- Recurse for the newly found parent ---
+					self::fetch_ancestors_recursive(
+						$parent->section_id,
+						$parent->section_tipo,
+						$component_tipo,
+						$unique_ancestors, // Pass the master list by reference
+						$visited          // Pass the current path's visited state (by value copy)
+					);
+				}
+				// If the parent *was* already in $unique_ancestors, we don't need to do anything here.
+			} else {
+				 // Optional: Log or handle cases where parent data isn't structured as expected.
+				 // error_log("Invalid parent structure encountered while processing node $current_node_key: " . print_r($parent, true));
+				debug_log(__METHOD__
+					. " Invalid parent object encountered while processing node: $current_node_key " . PHP_EOL
+					. ' parent: ' . to_string($parent)
+					, logger::ERROR
+				);
+			}
+		}
+		// Note: $visited state for this node automatically disappears when this function call returns,
+		// because it was passed by value. This correctly allows the node to be visited again via a *different* path.
+	}//end fetch_ancestors_recursive
 
 
 
