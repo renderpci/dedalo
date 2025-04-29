@@ -126,7 +126,6 @@ abstract class component_common extends common {
 
 
 
-
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
