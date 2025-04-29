@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {render_error} from '../../common/js/render_common.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {
@@ -208,6 +209,12 @@ const get_content_data = async function(self, ar_section_record) {
 		if(self.data.references && self.data.references.length > 0){
 			const references_node = render_references(self.data.references)
 			fragment.appendChild(references_node)
+		}
+
+	// errors (server side detected errors like infinite loops, etc.)
+		if (self.data.errors?.length ) {
+			const error_node = render_error(self.data.errors)
+			fragment.appendChild(error_node)
 		}
 
 	// content_data

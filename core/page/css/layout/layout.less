@@ -124,7 +124,43 @@
 		}//end .buttons
 	}//end area
 
+// wrapper_error. Used by components to display server side errors like 'Loop detected' in component_relation_parent
+	.wrapper_error {
+		margin: 1rem;
+		padding: 0.5rem;
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+		border-radius: 3px;
+		line-height: 1.1rem;
+		font-weight: 200;
 
+		>.wrapper_error_title {
+			text-transform: uppercase;
+			padding-bottom: .25rem;
+			border-bottom: 1px solid #cbcac9;
+			margin-bottom: 0.5rem;
+
+			>.icon {
+				background-color: white;
+				float: right;
+			}
+		}
+
+		>.error_wrap {
+
+			>.error_type {
+
+			}
+
+			>.error_msg {
+
+			}
+
+			>.error_info {
+				white-space: pre;
+			}
+		}
+	}
 
 // component common definitions
 	.wrapper_component {

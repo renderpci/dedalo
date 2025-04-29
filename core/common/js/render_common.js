@@ -629,4 +629,83 @@ export const render_stream = function(options) {
 
 
 
+/**
+* RENDER_ERROR
+* Creates the DOM nodes to display Dédalo standard errors
+* @see component_relation_parent recursive errors
+* @param array|object error
+* @return HTMLElemenrt wrapper
+*/
+export const render_error = function (error) {
+
+	const errors = (Array.isArray(error))
+		? error
+		: [error]
+
+	const wrapper = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'wrapper_error error'
+	})
+
+	// title
+	const title = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'wrapper_error_title',
+		inner_html		: (get_label.erors_found || 'Errors found'),
+		parent			: wrapper
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'button icon exclamation',
+		parent			: title
+	})
+
+	const errors_length = errors.length
+	for (let i = 0; i < errors_length; i++) {
+
+		const item = errors[i]
+
+		const type	= item.type || 'Unknown type'
+		const msg	= item.msg || 'Unknown msg'
+		const info	= item.info || null
+
+		const error_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'error_wrap',
+			parent			: wrapper
+		})
+
+		// type
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'error_type',
+			inner_html		: 'Type: ' + type,
+			parent			: error_wrap
+		})
+
+		// msg
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'error_msg',
+			inner_html		: msg,
+			parent			: error_wrap
+		})
+
+		// error info
+		if (info) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'error_info',
+				inner_html		: JSON.stringify(info, null, 2),
+				parent			: error_wrap
+			})
+		}
+	}
+
+
+	return wrapper
+}//end render_error
+
+
+
 // @license-end
