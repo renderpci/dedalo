@@ -79,6 +79,11 @@
 						$data[] =$current_data;
 					}
 				}
+
+			// errors. Add specific class static errors
+				if (!empty(component_relation_parent::$errors)) {
+					$item->errors = component_relation_parent::$errors;
+				}
 		}//end if (!empty($dato))
 	}//end if $options->get_data===true && $permissions>0
 

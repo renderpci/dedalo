@@ -19,6 +19,10 @@ class component_relation_parent extends component_relation_common {
 	// SQL query stored for debug only
 	static $get_parents_query;
 
+	// errors. Store statically the class errors
+	static $errors;
+
+
 
 	/**
 	* GET_VALOR
@@ -490,7 +494,8 @@ class component_relation_parent extends component_relation_common {
 		if (isset($visited[$current_node_key])) {
 			debug_log(__METHOD__
 				. " Loop detected at: " . PHP_EOL
-				. ' current_node_key: ' . to_string($current_node_key)
+				. ' current_node_key: ' . to_string($current_node_key) . PHP_EOL
+				. ' unique_ancestors: ' . to_string($unique_ancestors)
 				, logger::ERROR
 			);
 			self::$errors[] = (object)[
