@@ -726,6 +726,17 @@ export const ui = {
 			// usually happens in component_text_area editions because the delay (500 ms) to set as changed
 				check_unsaved_data()
 
+			// section last selection store
+				data_manager.set_local_db_data(
+					{
+						id		: 'last_section_selection_' + component.section_tipo,
+						value	: {
+							tipo : component.tipo
+						}
+					},
+					'status' // string table
+				);
+
 
 			return true
 		},//end activate
@@ -780,6 +791,12 @@ export const ui = {
 
 			// publish event deactivate_component
 				event_manager.publish('deactivate_component', component)
+
+			// section last selection delete
+				data_manager.delete_local_db_data(
+					'last_section_selection_' + component.section_tipo,
+					'status' // string table
+				);
 
 
 			return true

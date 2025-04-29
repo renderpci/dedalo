@@ -7,7 +7,7 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance} from '../../common/js/instances.js'
+	import {get_instance,get_all_instances} from '../../common/js/instances.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {common, push_browser_history, set_environment} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
@@ -168,6 +168,41 @@ page.prototype.init = async function(options) {
 			}//end dedalo_notification_handler
 			self.events_tokens.push(
 				event_manager.subscribe('dedalo_notification', dedalo_notification_handler)
+			)
+
+		// event render
+			const render_page_handler = () => {
+				dd_request_idle_callback(
+					async () => {
+						// only edit mode is used. Ignore others
+						if (self.mode!=='edit') {
+							return
+						}
+						// section_context from page context
+						const section_context = self.context.find(el => el.model==='section')
+						if (!section_context) {
+							return
+						}
+						// get local db last_section_selection info for current section
+						const status_data = await data_manager.get_local_db_data(
+							'last_section_selection_' + section_context.tipo,
+							'status'
+						)
+						if (!status_data) {
+							return
+						}
+						// find component in page all instances and active it if found
+						const all_instances = get_all_instances()
+						const component = all_instances.find(el => el.tipo===status_data.value.tipo && el.section_tipo===section_context.tipo)
+						if (!component) {
+							return
+						}
+						ui.component.activate(component, true)
+					}
+				)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_page', render_page_handler)
 			)
 
 	// events listeners. Add window/document general events
