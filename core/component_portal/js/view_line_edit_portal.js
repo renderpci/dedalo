@@ -265,7 +265,7 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 		columns_map.push(...base_columns_map)
-		
+
 	// column remove
 		if ( self.context.properties.source?.mode !== 'external' && self.permissions > 1) {
 			columns_map.push({

@@ -12,24 +12,27 @@
 	$properties		= $this->get_properties() ?? new stdClass();
 
 
+
+// context
+	$context = [];
+
+	$this->context = $this->get_structure_context(
+		$permissions,
+		true // bool add_request_config
+	);
+
+	// properties : show_interface set as false to prevent + button creation in client
+		$properties = $this->context->properties ?? new stdClass();
+		$properties->show_interface = $properties->show_interface ?? new stdClass();
+		$properties->show_interface->button_add = false;
+		$this->context->properties = $properties;
+
+	$context[] = $this->context;
+
+
+
 // data
-	$context	= [];
-	$data		= [];
-
-
-	// context
-		$this->context = $this->get_structure_context(
-			$permissions,
-			true // bool add_request_config
-		);
-
-		// properties : show_interface set as false to prevent + button creation in client
-			$properties = $this->context->properties ?? new stdClass();
-			$properties->show_interface = $properties->show_interface ?? new stdClass();
-			$properties->show_interface->button_add = false;
-			$this->context->properties = $properties;
-
-		$context[] = $this->context;
+	$data = [];
 
 	if($permissions>0){
 
@@ -76,7 +79,7 @@
 					}
 				}else{
 					foreach ($ar_subdata as $current_data) {
-						$data[] =$current_data;
+						$data[] = $current_data;
 					}
 				}
 

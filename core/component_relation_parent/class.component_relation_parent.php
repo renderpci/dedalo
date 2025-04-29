@@ -344,7 +344,6 @@ class component_relation_parent extends component_relation_common {
 
 
 
-
 	/**
 	* GET_PARENT_TIPO
 	* get ontology tipo for component_relation_parent of the section_tipo given
