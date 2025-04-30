@@ -12,6 +12,8 @@ class diffusion_mysql extends diffusion_sql  {
 
 	static $insert_id;
 
+	private const DEFAULT_COLLATION = 'utf8mb4_unicode_ci';
+
 
 
 	/**
@@ -167,11 +169,11 @@ class diffusion_mysql extends diffusion_sql  {
 			$sql_query .= self::generate_keys($ar_fields, $table_type);
 			switch ($engine) {
 				case 'InnoDB':
-					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Self-generated table in Dédalo for diffusion' AUTO_INCREMENT=1 ;\n";
+					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=".self::DEFAULT_COLLATION." COMMENT='Self-generated table in Dédalo for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 				case 'MyISAM':
 				default:
-					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo for diffusion' AUTO_INCREMENT=1 ;\n";
+					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=".self::DEFAULT_COLLATION." PACK_KEYS=0 COMMENT='Self-generated table in Dédalo for diffusion' AUTO_INCREMENT=1 ;\n";
 					break;
 			}
 
@@ -462,7 +464,7 @@ class diffusion_mysql extends diffusion_sql  {
 	private static function generate_fields(array $ar_fields) : string {
 
 		$ar_sentences = [];
-		foreach ($ar_fields as $key => $field_ar_data) {
+		foreach ($ar_fields as $field_ar_data) {
 
 			$field_name		= $field_ar_data['field_name'];
 			$field_type		= $field_ar_data['field_type'];
@@ -470,8 +472,13 @@ class diffusion_mysql extends diffusion_sql  {
 			$field_options	= $field_ar_data['field_options'];
 
 			// create each field sentence
-			$field_insert_sql	= diffusion_mysql::build_field_insert_sql($field_name, $field_type, $field_options, $field_coment);
-			$ar_sentences[]		= $field_insert_sql;
+			$field_insert_sql = diffusion_mysql::build_field_insert_sql(
+				$field_name,
+				$field_type,
+				$field_options,
+				$field_coment
+			);
+			$ar_sentences[] = $field_insert_sql;
 		}//end foreach ($ar_fields as $key => $ar_data)
 
 		$sql_query = "\n`id` int(12) NOT NULL AUTO_INCREMENT, \n" . implode(",\n", $ar_sentences);
@@ -484,72 +491,97 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* BUILD_FIELD_INSERT_SQL
-	* Creates a SQL sentence of field (column) based on type
+	* Creates a SQL sentence of field (column) based on given type
+	* @param string $field_name
+	* @param string $field_type
+	* @param mixed $field_options=null
+	* @param string $field_coment=''
+	* @param string $pref='field_'
 	* @return string $sql_query
 	*/
-	public static function build_field_insert_sql(string $field_name, string $field_type, $field_options=null, string $field_coment='', string $pref='field_') : string {
+	public static function build_field_insert_sql(string $field_name, string $field_type, mixed $field_options=null, string $field_coment='', string $pref='field_') : string {
 
 		$sql_query = '';
 
-		// safe $field_coment (prevents problems with apostrophes)
-		$field_coment = addslashes($field_coment);
+		// Validate Field Name (Basic check for common valid characters)
+		if (!preg_match('/^[a-zA-Z0-9_]+$/', $field_name)) {
+			throw new InvalidArgumentException("Invalid field name format: '$field_name'. Only alphanumeric characters and underscores are allowed.");
+		}
 
 		switch (true) {
 			case ($field_type===$pref.'int'):
-				$sql_query = "`$field_name` int($field_options) COMMENT '$field_coment'";
-				if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
+				if(empty($field_options)) {
+					throw new Exception("Error Processing Request. Field int field_name: '$field_name' field_type: '$field_type' don't have options (positive integer length). int field_options is mandatory'  ", 1);
+				}
+				$sql_query = "`$field_name` int($field_options)";
 				break;
 
 			case ($field_type===$pref.'int_unsigned'):
-				$sql_query = "`$field_name` int($field_options) unsigned COMMENT '$field_coment'";
-				if(empty($field_options)) throw new Exception("Error Processing Request. Field int $field_name $field_type don't have options. int field_options is mandatory'  ", 1);
+				if(empty($field_options)) {
+					throw new Exception("Error Processing Request. Field int field_name: '$field_name' field_type: '$field_type' don't have options (positive integer length). int field_options is mandatory'  ", 1);
+				}
+				$sql_query = "`$field_name` int($field_options) unsigned";
 				break;
 
 			case ($field_type===$pref.'text'):
-				$sql_query = "`$field_name` text COLLATE utf8mb4_unicode_ci COMMENT '$field_coment'";
+				$sql_query = "`$field_name` text COLLATE ".self::DEFAULT_COLLATION."";
 				break;
 
 			case ($field_type===$pref.'mediumtext'):
-				$sql_query = "`$field_name` mediumtext COLLATE utf8mb4_unicode_ci COMMENT '$field_coment'";
+				$sql_query = "`$field_name` mediumtext COLLATE ".self::DEFAULT_COLLATION."";
 				break;
 
 			case ($field_type===$pref.'enum'):
-				$sql_query = "`$field_name` enum($field_options) COLLATE utf8mb4_unicode_ci COMMENT '$field_coment'";
-				if(empty($field_options)) throw new Exception("Error Processing Request. Field enum $field_name don't have 'properties'  ", 1);
+				if(empty($field_options)) {
+					throw new Exception("Error Processing Request. Field enum field_name: '$field_name' don't have 'properties' ", 1);
+				}
+				$sql_query = "`$field_name` enum($field_options) COLLATE ".self::DEFAULT_COLLATION."";
 				break;
 
 			case ($field_type===$pref.'varchar'):
-				$sql_query = "`$field_name` varchar($field_options) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '$field_coment'";
-				if(empty($field_options)) throw new Exception("Error Processing Request. Field varchar $field_name don't have 'properties'  ", 1);
+				if(empty($field_options)) {
+					throw new Exception("Error Processing Request. Field varchar $field_name don't have 'properties'  ", 1);
+				}
+				$sql_query = "`$field_name` varchar($field_options) COLLATE ".self::DEFAULT_COLLATION." DEFAULT NULL";
 				break;
 
 			case ($field_type===$pref.'date'):
-				$sql_query = "`$field_name` date DEFAULT NULL COMMENT '$field_coment'";
+				$sql_query = "`$field_name` date DEFAULT NULL";
 				break;
 
 			case ($field_type===$pref.'datetime'):
-				$sql_query = "`$field_name` datetime DEFAULT NULL COMMENT '$field_coment'";
+				$sql_query = "`$field_name` datetime DEFAULT NULL";
 				break;
 
 			case ($field_type===$pref.'decimal'):
-				$sql_query = "`$field_name` decimal(10,0) DEFAULT NULL COMMENT '$field_coment'";
+				$sql_query = "`$field_name` decimal(10,0) DEFAULT NULL";
 				break;
 
 			case ($field_type===$pref.'boolean'):
-				# bool and boolean are alias of tinyint. 0 value is false and 1 is true
-				$sql_query = "`$field_name` tinyint(4) DEFAULT NULL COMMENT '$field_coment'";
+				// bool and boolean are alias of tinyint. 0 value is false and 1 is true
+				$sql_query = "`$field_name` tinyint(4) DEFAULT NULL";
 				break;
 
 			case ($field_type===$pref.'year'):
-				$sql_query = "`$field_name` year(4) DEFAULT NULL COMMENT '$field_coment'";
+				$sql_query = "`$field_name` year(4) DEFAULT NULL";
 				break;
 
 			case ($field_type==='box elements'):
 				// Ignore box
 				break;
+
 			default:
 				throw new Exception("Error Processing Request. Field type not defined: '$field_type' (field_name:'$field_name', field_coment:'$field_coment', field_options:'$field_options')", 1);
 				break;
+		}
+
+		// comment
+		if (!empty($field_coment)) {
+			// Safe comment $field_coment (prevents problems with apostrophes)
+			$conn			= DBi::_getConnection_mysql();
+			$safe_coment	= $conn->real_escape_string($field_coment);
+			// Append the comment
+			$sql_query .= " COMMENT '$safe_coment'";
 		}
 
 
