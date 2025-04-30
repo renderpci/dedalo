@@ -3,7 +3,7 @@
 * UPDATES CONTROL
 * Definition of the update process
 *
-* Every update is a object with his own defintion
+* Every update is a object with his own definition
 * the update key is unique combination of the version numbers
 *
 * {
@@ -33,6 +33,26 @@
 
 global $updates;
 $updates = new stdClass();
+
+
+
+$v=651; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 5;
+	$updates->$v->version_minor			= 1;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 5;
+	$updates->$v->update_from_minor		= 0;
+
+	// Re-index and vacuum tables
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
+		');
 
 
 
