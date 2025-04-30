@@ -3429,8 +3429,8 @@ abstract class common {
 											.' WARNING. Ignored current_choose_ddo: tipo is invalid (maybe TLD is not installed): '
 											.' current_choose_ddo->tipo: ' . to_string($current_choose_ddo->tipo) . PHP_EOL
 											.' current_choose_ddo: ' . to_string($current_choose_ddo) . PHP_EOL
-											.' ar_search_ddo_map type: ' . gettype($ar_search_ddo_map) . PHP_EOL
-											.' ar_search_ddo_map: ' . json_encode($ar_search_ddo_map, JSON_PRETTY_PRINT) . PHP_EOL
+											.' ar_search_ddo_map type: ' . (isset($ar_search_ddo_map) ? gettype($ar_search_ddo_map) : '') . PHP_EOL
+											.' ar_search_ddo_map: ' . (isset($ar_search_ddo_map) ? json_encode($ar_search_ddo_map, JSON_PRETTY_PRINT) : '') . PHP_EOL
 											.' this->tipo: ' . $this->tipo . PHP_EOL
 											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 											.' this->section_id: ' . $this->section_id . PHP_EOL
