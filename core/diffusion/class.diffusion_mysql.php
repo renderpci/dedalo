@@ -491,6 +491,9 @@ class diffusion_mysql extends diffusion_sql  {
 
 		$sql_query = '';
 
+		// safe $field_coment (prevents problems with apostrophes)
+		$field_coment = addslashes($field_coment);
+
 		switch (true) {
 			case ($field_type===$pref.'int'):
 				$sql_query = "`$field_name` int($field_options) COMMENT '$field_coment'";
