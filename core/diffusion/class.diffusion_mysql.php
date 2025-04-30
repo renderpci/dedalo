@@ -697,8 +697,8 @@ class diffusion_mysql extends diffusion_sql  {
 
 		// iterate rows
 			foreach ((array)$ar_section_id as $section_id => $ar_fields) {
-				# Iterate one or more records
-				#$ar_fields = $options->record_data['ar_fields'][$section_id];
+
+				// Iterate one or more records
 
 				// delete_previous. if it don't work with versions, delete current record in all langs if exists
 					if ($delete_previous===true) {
@@ -719,15 +719,14 @@ class diffusion_mysql extends diffusion_sql  {
 
 						if (!in_array($field_name, $real_table_fields)) {
 							debug_log(__METHOD__
-								." Skipped create field '$field_name' because not exists in table '$table_name' [section_id: $section_id]"
+								." Skipped create field '$field_name' because do not exists in table '$table_name' [section_id: $section_id]"
 								, logger::WARNING
 							);
-							continue; # Skip
+							continue; // Skip field
 						}
 
 						$field_value = diffusion_mysql::conform_field_value($field_value, $database_name);
 
-						#$ar_field_name[]	= '`'.$field_name.'`';
 						$ar_field_name[]	= strpos($field_name, '`')===0 ? $field_name : '`'.$field_name.'`'; // 2018-03-16 !!
 						$ar_field_value[]	= $field_value;
 					}
@@ -780,7 +779,7 @@ class diffusion_mysql extends diffusion_sql  {
 		// response OK
 			$response->result	= true;
 			$response->new_id	= self::$insert_id;
-			$response->msg		= implode(",\n", $response->msg);		#dump($response, ' response');
+			$response->msg		= implode(",\n", $response->msg);
 
 		// response debug
 			if(SHOW_DEBUG===true) {
@@ -800,11 +799,6 @@ class diffusion_mysql extends diffusion_sql  {
 	*/
 	public static function get_real_table_fields($database_name, $table_name) {
 
-		// static $real_table_fields_data;
-		// if ($cache===true && isset($real_table_fields_data[$table_name])) {
-		// 	return $real_table_fields_data[$table_name];
-		// }
-
 		$real_table_fields = [];
 
 		$strQuery	= "DESCRIBE {$database_name}.$table_name ;";
@@ -817,9 +811,6 @@ class diffusion_mysql extends diffusion_sql  {
 			$real_table_fields[] = $row["Field"];
 		}
 		$result->free();
-
-		# Cache
-		// $real_table_fields_data[$table_name] = $real_table_fields;
 
 
 		return $real_table_fields;
@@ -913,11 +904,8 @@ class diffusion_mysql extends diffusion_sql  {
 			# If get property exists in options array/object, overwrite default
 			if (property_exists($sql_options, $key)) {
 				$sql_options->$key = $value;
-				#dump($value, "key: $key changed from ", array());
 			}
-			#dump($value, "key: $key NOT SET for ".get_class($sql_options)." - ".$sql_options->$key. " ($key => $value)");
 		}
-		#dump($sql_options, ' sql_options');
 		$ar_data=array();
 
 		$strQuery = "-- ".__METHOD__;
@@ -944,9 +932,6 @@ class diffusion_mysql extends diffusion_sql  {
 				$strQuery .= "\nLIMIT ".intval($sql_options->limit);
 			}
 			$sql_options->strQuery = $strQuery;
-			if(SHOW_DEBUG===true) {
-				#dump($sql_options);
-			}
 
 		$result = $sql_options->conn->query($strQuery);
 
@@ -1082,31 +1067,6 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
-	* IS_PUBLICABLE
-	* Check is field 'publication' is present and if value is 'no' return false. Else return true
-	* @return bool
-	*//* DEPRECATED
-		public static function is_publicable($section_id, $ar_fields) {
-
-			$ar_fields = reset($ar_fields); // Only need first lang
-
-			foreach ($ar_fields as $key => $ar_value) {
-				#dump($ar_value, ' $ar_value ++ '.to_string());
-				if (
-					($ar_value['field_name']==='publication' || $ar_value['field_name']==='publicacion') &&
-					($ar_value['field_value']==='no' || empty($ar_value['field_value']))
-					) {
-					return false;
-				}
-			}
-
-			return true;
-		}//end is_publicable
-		*/
-
-
-
-	/**
 	* DELETE_SQL_RECORD
 	* Removes a database record based on params
 	* @param string|int $section_id
@@ -1187,7 +1147,7 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 
 		$data = addslashes($data);
-			#dump($data, ' data ++ '.to_string());
+
 		/*
 		$strQuery = "DELETE FROM `$database_name`.`$table_name` WHERE `name` = '$name';";
 		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );

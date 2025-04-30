@@ -147,7 +147,6 @@ abstract class diffusion  {
 			if ($name===$diffusion_domain_name) {
 				$diffusion_domain_tipo = $current_diffusion_domain_tipo;
 				break;
-					#dump($diffusion_domain_tipo, ' $diffusion_domain_tipo ++ '.to_string($diffusion_domain_name));
 			}
 		}
 		if (!isset($diffusion_domain_tipo)) {
@@ -159,7 +158,6 @@ abstract class diffusion  {
 		# DIFFUSION_GROUP
 		# Search inside current diffusion_domain and iterate all diffusion_group
 		$ar_diffusion_group = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain_tipo, $model_name='diffusion_group', $relation_type='children', $search_exact=true);
-			#dump($ar_diffusion_element_tipo, ' ar_diffusion_element_tipo ++ '.to_string());
 		foreach ($ar_diffusion_group as $diffusion_group_tipo) {
 
 			$diffusion_map->{$diffusion_group_tipo} = array();
