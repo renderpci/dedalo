@@ -4129,7 +4129,7 @@ class diffusion_sql extends diffusion  {
 		$dato = $component->get_dato();
 
 		#
-		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
+		# TERMINOS_RELACIONADOS . We get the related terms of the current component
 		$RecordObj_dd				= new RecordObj_dd($component_tipo);
 		$ar_terminos_relacionados	= (array)$RecordObj_dd->get_relaciones();
 
