@@ -5169,6 +5169,12 @@ class diffusion_sql extends diffusion  {
 			? $options // case direct from resolve value output
 			: (object)$options->properties->process_dato_arguments; // default case
 
+		// two levels case and with options (numisdata1046)
+		// added to allow compatibility with numisdata1046 and numisdata1047 properties configuration
+		if (isset($process_dato_arguments->process_dato_arguments->options)) {
+			$process_dato_arguments = $process_dato_arguments->process_dato_arguments->options;
+		}
+
 		$selected_key 	= isset($process_dato_arguments->selected_key)  ? (int)$process_dato_arguments->selected_key : 0;
 		$selected_date 	= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
 		$date_format 	= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
