@@ -36,7 +36,7 @@ final readonly class ChildProcessResultProcessor
 
     public function process(Test $test, string $serializedProcessResult, string $stderr): void
     {
-        if (!empty($stderr)) {
+        if ($stderr !== '') {
             $exception = new Exception(trim($stderr));
 
             assert($test instanceof TestCase);
@@ -69,25 +69,25 @@ final readonly class ChildProcessResultProcessor
             return;
         }
 
-        $this->eventFacade->forward($childResult['events']);
-        $this->passedTests->import($childResult['passedTests']);
+        $this->eventFacade->forward($childResult->events);
+        $this->passedTests->import($childResult->passedTests);
 
         assert($test instanceof TestCase);
 
-        $test->setResult($childResult['testResult']);
-        $test->addToAssertionCount($childResult['numAssertions']);
+        $test->setResult($childResult->testResult);
+        $test->addToAssertionCount($childResult->numAssertions);
 
         if (!$this->codeCoverage->isActive()) {
             return;
         }
 
         // @codeCoverageIgnoreStart
-        if (!$childResult['codeCoverage'] instanceof \SebastianBergmann\CodeCoverage\CodeCoverage) {
+        if (!$childResult->codeCoverage instanceof \SebastianBergmann\CodeCoverage\CodeCoverage) {
             return;
         }
 
         CodeCoverage::instance()->codeCoverage()->merge(
-            $childResult['codeCoverage'],
+            $childResult->codeCoverage,
         );
         // @codeCoverageIgnoreEnd
     }

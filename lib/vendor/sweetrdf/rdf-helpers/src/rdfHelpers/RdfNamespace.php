@@ -45,13 +45,13 @@ abstract class RdfNamespace implements \rdfInterface\RdfNamespaceInterface {
 
     abstract protected function getNamedNode(string $iri): NamedNode;
 
-    private int $n = 0;
+    protected int $n = 0;
 
     /**
      *
      * @var array<string, string>
      */
-    private array $namespaces = [];
+    protected array $namespaces = [];
 
     public function add(string $iriPrefix, ?string $shortName = null): string {
         $key = array_search($iriPrefix, $this->namespaces);

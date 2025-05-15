@@ -9,9 +9,11 @@
  */
 namespace SebastianBergmann\CodeCoverage\Report\Xml;
 
+use function assert;
 use function basename;
 use function dirname;
 use DOMDocument;
+use DOMElement;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
@@ -38,7 +40,7 @@ final class Report extends File
         return $this->dom();
     }
 
-    public function functionObject($name): Method
+    public function functionObject(string $name): Method
     {
         $node = $this->contextNode()->appendChild(
             $this->dom()->createElementNS(
@@ -47,15 +49,17 @@ final class Report extends File
             ),
         );
 
+        assert($node instanceof DOMElement);
+
         return new Method($node, $name);
     }
 
-    public function classObject($name): Unit
+    public function classObject(string $name): Unit
     {
         return $this->unitObject('class', $name);
     }
 
-    public function traitObject($name): Unit
+    public function traitObject(string $name): Unit
     {
         return $this->unitObject('trait', $name);
     }
@@ -67,7 +71,7 @@ final class Report extends File
             'source',
         )->item(0);
 
-        if (!$source) {
+        if ($source === null) {
             $source = $this->contextNode()->appendChild(
                 $this->dom()->createElementNS(
                     'https://schema.phpunit.de/coverage/1.0',
@@ -75,6 +79,8 @@ final class Report extends File
                 ),
             );
         }
+
+        assert($source instanceof DOMElement);
 
         return new Source($source);
     }
@@ -85,7 +91,7 @@ final class Report extends File
         $this->contextNode()->setAttribute('path', dirname($name));
     }
 
-    private function unitObject(string $tagName, $name): Unit
+    private function unitObject(string $tagName, string $name): Unit
     {
         $node = $this->contextNode()->appendChild(
             $this->dom()->createElementNS(
@@ -93,6 +99,8 @@ final class Report extends File
                 $tagName,
             ),
         );
+
+        assert($node instanceof DOMElement);
 
         return new Unit($node, $name);
     }

@@ -9,6 +9,7 @@
  */
 namespace SebastianBergmann\CodeCoverage\Report\Xml;
 
+use function assert;
 use DOMDocument;
 use DOMElement;
 
@@ -30,7 +31,7 @@ class File
     {
         $totalsContainer = $this->contextNode->firstChild;
 
-        if (!$totalsContainer) {
+        if ($totalsContainer === null) {
             $totalsContainer = $this->contextNode->appendChild(
                 $this->dom->createElementNS(
                     'https://schema.phpunit.de/coverage/1.0',
@@ -38,6 +39,8 @@ class File
                 ),
             );
         }
+
+        assert($totalsContainer instanceof DOMElement);
 
         return new Totals($totalsContainer);
     }
@@ -49,7 +52,7 @@ class File
             'coverage',
         )->item(0);
 
-        if (!$coverage) {
+        if ($coverage === null) {
             $coverage = $this->contextNode->appendChild(
                 $this->dom->createElementNS(
                     'https://schema.phpunit.de/coverage/1.0',
@@ -64,6 +67,8 @@ class File
                 'line',
             ),
         );
+
+        assert($lineNode instanceof DOMElement);
 
         return new Coverage($lineNode, $line);
     }

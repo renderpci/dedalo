@@ -128,6 +128,7 @@ final class Snapshot
 
             assert($iniSettings !== false);
 
+            /* @phpstan-ignore assign.propertyType */
             $this->iniSettings = $iniSettings;
         }
 
@@ -292,7 +293,7 @@ final class Snapshot
                 !in_array($key, $superGlobalArrays, true) &&
                 $this->canBeSerialized($GLOBALS[$key]) &&
                 !$this->excludeList->isGlobalVariableExcluded($key)) {
-                /* @noinspection UnserializeExploitsInspection */
+                /* @phpstan-ignore assign.propertyType */
                 $this->globalVariables[$key] = unserialize(serialize($GLOBALS[$key]));
             }
         }
@@ -304,7 +305,7 @@ final class Snapshot
 
         if (isset($GLOBALS[$superGlobalArray]) && is_array($GLOBALS[$superGlobalArray])) {
             foreach ($GLOBALS[$superGlobalArray] as $key => $value) {
-                /* @noinspection UnserializeExploitsInspection */
+                /* @phpstan-ignore assign.propertyType */
                 $this->superGlobalVariables[$superGlobalArray][$key] = unserialize(serialize($value));
             }
         }
@@ -396,6 +397,7 @@ final class Snapshot
     {
         $result = [];
 
+        /* @phpstan-ignore argument.type */
         if ($processed->contains($variable)) {
             return $result;
         }

@@ -21,9 +21,9 @@ use function str_replace;
 use function time;
 use DOMImplementation;
 use SebastianBergmann\CodeCoverage\CodeCoverage;
-use SebastianBergmann\CodeCoverage\Driver\WriteOperationFailedException;
 use SebastianBergmann\CodeCoverage\Node\File;
 use SebastianBergmann\CodeCoverage\Util\Filesystem;
+use SebastianBergmann\CodeCoverage\WriteOperationFailedException;
 
 final class Cobertura
 {
@@ -153,7 +153,7 @@ final class Cobertura
 
                     $linesValid   = $method['executableLines'];
                     $linesCovered = $method['executedLines'];
-                    $lineRate     = $linesValid === 0 ? 0 : ($linesCovered / $linesValid);
+                    $lineRate     = $linesCovered / $linesValid;
 
                     $branchesValid   = $method['executableBranches'];
                     $branchesCovered = $method['executedBranches'];
@@ -228,7 +228,7 @@ final class Cobertura
 
                 $linesValid   = $function['executableLines'];
                 $linesCovered = $function['executedLines'];
-                $lineRate     = $linesValid === 0 ? 0 : ($linesCovered / $linesValid);
+                $lineRate     = $linesCovered / $linesValid;
 
                 $functionsLinesValid   += $linesValid;
                 $functionsLinesCovered += $linesCovered;

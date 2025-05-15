@@ -43,17 +43,17 @@ final readonly class TestSuiteMapper
     public function map(string $xmlConfigurationFile, TestSuiteCollection $configuredTestSuites, string $namesOfIncludedTestSuites, string $namesOfExcludedTestSuites): TestSuiteObject
     {
         try {
-            $namesOfIncludedTestSuitesAsArray = $namesOfIncludedTestSuites ? explode(',', $namesOfIncludedTestSuites) : [];
-            $excludedTestSuitesAsArray        = $namesOfExcludedTestSuites ? explode(',', $namesOfExcludedTestSuites) : [];
+            $namesOfIncludedTestSuitesAsArray = $namesOfIncludedTestSuites !== '' ? explode(',', $namesOfIncludedTestSuites) : [];
+            $excludedTestSuitesAsArray        = $namesOfExcludedTestSuites !== '' ? explode(',', $namesOfExcludedTestSuites) : [];
             $result                           = TestSuiteObject::empty($xmlConfigurationFile);
             $processed                        = [];
 
             foreach ($configuredTestSuites as $configuredTestSuite) {
-                if (!empty($namesOfIncludedTestSuitesAsArray) && !in_array($configuredTestSuite->name(), $namesOfIncludedTestSuitesAsArray, true)) {
+                if ($namesOfIncludedTestSuitesAsArray !== [] && !in_array($configuredTestSuite->name(), $namesOfIncludedTestSuitesAsArray, true)) {
                     continue;
                 }
 
-                if (!empty($excludedTestSuitesAsArray) && in_array($configuredTestSuite->name(), $excludedTestSuitesAsArray, true)) {
+                if ($excludedTestSuitesAsArray !== [] && in_array($configuredTestSuite->name(), $excludedTestSuitesAsArray, true)) {
                     continue;
                 }
 

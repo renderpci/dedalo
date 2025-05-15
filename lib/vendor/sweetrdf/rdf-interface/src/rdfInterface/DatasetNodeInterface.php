@@ -535,8 +535,8 @@ interface DatasetNodeInterface extends TermInterface, DatasetInterface {
     public function listGraphs(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable | null $filter = null): TermIteratorInterface;
 
     /**
-     * Fetches subject of a first quad having subject matching dataset
-     * node's node and a given filter or null otherwise.
+     * Fetches subject of a first quad matching a given filter and subject
+     * matching dataset node's node or null otherwise.
      * 
      * @param QuadCompareInterface|QuadIteratorInterface|QuadIteratorAggregateInterface|callable|null $filter
      * @return TermInterface | null
@@ -544,17 +544,16 @@ interface DatasetNodeInterface extends TermInterface, DatasetInterface {
     public function getSubject(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable | null $filter = null): TermInterface | null;
 
     /**
-     * Fetches subject of a first quad having subject matching dataset
-     * node's node and a given filter or null otherwise.
+     * Fetches predicate of a first quad matching a given filter and subject
+     * matching dataset node's node or null otherwise.
      * 
      * @param QuadCompareInterface|QuadIteratorInterface|QuadIteratorAggregateInterface|callable|null $filter
-     * @return TermInterface | null
      */
-    public function getPredicate(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable | null $filter = null): TermInterface | null;
+    public function getPredicate(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable | null $filter = null): NamedNodeInterface | null;
 
     /**
-     * Fetches object of a first quad  having subject matching dataset
-     * node's node and a given filter or null otherwise.
+     * Fetches object of a first quad mathing a given filter and subject
+     * matching dataset node's node or null otherwise.
      * 
      * @param QuadCompareInterface|QuadIteratorInterface|QuadIteratorAggregateInterface|callable|null $filter
      * @return TermInterface | null
@@ -562,8 +561,8 @@ interface DatasetNodeInterface extends TermInterface, DatasetInterface {
     public function getObject(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable | null $filter = null): TermInterface | null;
 
     /**
-     * Fetches graph of a first quad  having subject matching dataset
-     * node's node and a given filter or null otherwise.
+     * Fetches graph of a first quad matching a given filter and subject
+     * matching dataset node's node or null otherwise.
      * 
      * @param QuadCompareInterface|QuadIteratorInterface|QuadIteratorAggregateInterface|callable|null $filter
      * @return TermInterface | null

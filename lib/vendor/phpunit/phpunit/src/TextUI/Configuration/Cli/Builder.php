@@ -10,8 +10,6 @@
 namespace PHPUnit\TextUI\CliArguments;
 
 use const DIRECTORY_SEPARATOR;
-use function array_map;
-use function array_merge;
 use function assert;
 use function basename;
 use function explode;
@@ -19,7 +17,6 @@ use function getcwd;
 use function is_file;
 use function is_numeric;
 use function sprintf;
-use function str_contains;
 use function strtolower;
 use PHPUnit\Event\Facade as EventFacade;
 use PHPUnit\Runner\TestSuiteSorter;
@@ -34,7 +31,10 @@ use SebastianBergmann\CliParser\Parser as CliParser;
  */
 final class Builder
 {
-    private const LONG_OPTIONS = [
+    /**
+     * @var non-empty-list<non-empty-string>
+     */
+    private const array LONG_OPTIONS = [
         'atleast-version=',
         'bootstrap=',
         'cache-result',
@@ -57,10 +57,12 @@ final class Builder
         'coverage-xml=',
         'path-coverage',
         'disallow-test-output',
+        'display-all-issues',
         'display-incomplete',
         'display-skipped',
         'display-deprecations',
         'display-phpunit-deprecations',
+        'display-phpunit-notices',
         'display-errors',
         'display-notices',
         'display-warnings',
@@ -106,8 +108,10 @@ final class Builder
         'reverse-list',
         'static-backup',
         'stderr',
+        'fail-on-all-issues',
         'fail-on-deprecation',
         'fail-on-phpunit-deprecation',
+        'fail-on-phpunit-notice',
         'fail-on-empty-test-suite',
         'fail-on-incomplete',
         'fail-on-notice',
@@ -140,7 +144,8 @@ final class Builder
         'debug',
         'extension=',
     ];
-    private const SHORT_OPTIONS = 'd:c:h';
+
+    private const string SHORT_OPTIONS = 'd:c:h';
 
     /**
      * @var array<string, non-negative-int>
@@ -194,10 +199,12 @@ final class Builder
         $defaultTimeLimit                  = null;
         $disableCodeCoverageIgnore         = null;
         $disallowTestOutput                = null;
+        $displayAllIssues                  = null;
         $displayIncomplete                 = null;
         $displaySkipped                    = null;
         $displayDeprecations               = null;
         $displayPhpunitDeprecations        = null;
+        $displayPhpunitNotices             = null;
         $displayErrors                     = null;
         $displayNotices                    = null;
         $displayWarnings                   = null;
@@ -205,8 +212,10 @@ final class Builder
         $excludeGroups                     = null;
         $executionOrder                    = null;
         $executionOrderDefects             = null;
+        $failOnAllIssues                   = null;
         $failOnDeprecation                 = null;
         $failOnPhpunitDeprecation          = null;
+        $failOnPhpunitNotice               = null;
         $failOnEmptyTestSuite              = null;
         $failOnIncomplete                  = null;
         $failOnNotice                      = null;
@@ -277,7 +286,11 @@ final class Builder
 
             switch ($option[0]) {
                 case '--colors':
-                    $colors = $option[1] ?: \PHPUnit\TextUI\Configuration\Configuration::COLOR_AUTO;
+                    $colors = \PHPUnit\TextUI\Configuration\Configuration::COLOR_AUTO;
+
+                    if ($option[1] !== null) {
+                        $colors = $option[1];
+                    }
 
                     break;
 
@@ -454,68 +467,44 @@ final class Builder
                     break;
 
                 case '--group':
-                    if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                            'Using comma-separated values with --group is deprecated and will no longer work in PHPUnit 12. You can use --group multiple times instead.',
-                        );
-                    }
-
                     if ($groups === null) {
                         $groups = [];
                     }
 
-                    $groups = array_merge($groups, explode(',', $option[1]));
+                    $groups[] = $option[1];
 
                     $optionAllowedMultipleTimes = true;
 
                     break;
 
                 case '--exclude-group':
-                    if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                            'Using comma-separated values with --exclude-group is deprecated and will no longer work in PHPUnit 12. You can use --exclude-group multiple times instead.',
-                        );
-                    }
-
                     if ($excludeGroups === null) {
                         $excludeGroups = [];
                     }
 
-                    $excludeGroups = array_merge($excludeGroups, explode(',', $option[1]));
+                    $excludeGroups[] = $option[1];
 
                     $optionAllowedMultipleTimes = true;
 
                     break;
 
                 case '--covers':
-                    if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                            'Using comma-separated values with --covers is deprecated and will no longer work in PHPUnit 12. You can use --covers multiple times instead.',
-                        );
-                    }
-
                     if ($testsCovering === null) {
                         $testsCovering = [];
                     }
 
-                    $testsCovering = array_merge($testsCovering, array_map('strtolower', explode(',', $option[1])));
+                    $testsCovering[] = strtolower($option[1]);
 
                     $optionAllowedMultipleTimes = true;
 
                     break;
 
                 case '--uses':
-                    if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                            'Using comma-separated values with --uses is deprecated and will no longer work in PHPUnit 12. You can use --uses multiple times instead.',
-                        );
-                    }
-
                     if ($testsUsing === null) {
                         $testsUsing = [];
                     }
 
-                    $testsUsing = array_merge($testsUsing, array_map('strtolower', explode(',', $option[1])));
+                    $testsUsing[] = strtolower($option[1]);
 
                     $optionAllowedMultipleTimes = true;
 
@@ -533,17 +522,11 @@ final class Builder
                     break;
 
                 case '--test-suffix':
-                    if (str_contains($option[1], ',')) {
-                        EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                            'Using comma-separated values with --test-suffix is deprecated and will no longer work in PHPUnit 12. You can use --test-suffix multiple times instead.',
-                        );
-                    }
-
                     if ($testSuffixes === null) {
                         $testSuffixes = [];
                     }
 
-                    $testSuffixes = array_merge($testSuffixes, explode(',', $option[1]));
+                    $testSuffixes[] = $option[1];
 
                     $optionAllowedMultipleTimes = true;
 
@@ -656,6 +639,11 @@ final class Builder
 
                     break;
 
+                case '--fail-on-all-issues':
+                    $failOnAllIssues = true;
+
+                    break;
+
                 case '--fail-on-deprecation':
                     $failOnDeprecation = true;
 
@@ -663,6 +651,11 @@ final class Builder
 
                 case '--fail-on-phpunit-deprecation':
                     $failOnPhpunitDeprecation = true;
+
+                    break;
+
+                case '--fail-on-phpunit-notice':
+                    $failOnPhpunitNotice = true;
 
                     break;
 
@@ -850,6 +843,11 @@ final class Builder
 
                     break;
 
+                case '--display-all-issues':
+                    $displayAllIssues = true;
+
+                    break;
+
                 case '--display-incomplete':
                     $displayIncomplete = true;
 
@@ -867,6 +865,11 @@ final class Builder
 
                 case '--display-phpunit-deprecations':
                     $displayPhpunitDeprecations = true;
+
+                    break;
+
+                case '--display-phpunit-notices':
+                    $displayPhpunitNotices = true;
 
                     break;
 
@@ -987,15 +990,11 @@ final class Builder
             }
         }
 
-        if (empty($iniSettings)) {
+        if ($iniSettings === []) {
             $iniSettings = null;
         }
 
-        if (empty($coverageFilter)) {
-            $coverageFilter = null;
-        }
-
-        if (empty($extensions)) {
+        if ($extensions === []) {
             $extensions = null;
         }
 
@@ -1030,8 +1029,10 @@ final class Builder
             $excludeGroups,
             $executionOrder,
             $executionOrderDefects,
+            $failOnAllIssues,
             $failOnDeprecation,
             $failOnPhpunitDeprecation,
+            $failOnPhpunitNotice,
             $failOnEmptyTestSuite,
             $failOnIncomplete,
             $failOnNotice,
@@ -1088,10 +1089,12 @@ final class Builder
             $testSuite,
             $excludeTestSuite,
             $useDefaultConfiguration,
+            $displayAllIssues,
             $displayIncomplete,
             $displaySkipped,
             $displayDeprecations,
             $displayPhpunitDeprecations,
+            $displayPhpunitNotices,
             $displayErrors,
             $displayNotices,
             $displayWarnings,
