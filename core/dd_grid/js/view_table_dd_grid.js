@@ -175,7 +175,7 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 	const fill_the_gaps = self.config.fill_the_gaps
 
 	// first we loop all map columns, independently of the data
-	const column_len	= ar_columns_obj.length
+	const column_len = ar_columns_obj.length
 	for (let i = 0; i < column_len; i++) {
 		// specify the current column to be filled
 		const column = ar_columns_obj[i]
@@ -188,11 +188,11 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 		const column_value = (ar_column_values.length)
 			? clone( ar_column_values[0] )
 			: {
-				ar_columns_obj: [column],
-				type		: 'column',
-				cell_type	: 'text',
-				value		: '',
-				class_list	: 'empty_value'
+				ar_columns_obj	: [column],
+				type			: 'column',
+				cell_type		: 'text',
+				value			: '',
+				class_list		: 'empty_value'
 			}
 		// Get the column values and join they into a new value. Used by breakdown option to show every data of its own column
 		// when the breakdown is selected, every data is a column with its own value, therefore is necessary join all values

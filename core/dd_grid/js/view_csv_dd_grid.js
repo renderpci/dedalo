@@ -208,7 +208,6 @@ export const get_columns = function(self, column_data, ar_columns_obj, parent_ro
 		const ar_columns_values_len	= ar_column_values?.length || 0
 		if(ar_columns_values_len>1){
 			const ar_columns_values_len	= ar_column_values.length
-
 			const ar_values = []
 			for (let j = 0; j < ar_columns_values_len; j++) {
 				const value = ar_column_values[j].value

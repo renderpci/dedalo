@@ -189,17 +189,16 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 		const column_value = (ar_column_values.length)
 			? clone( ar_column_values[0] )
 			: {
-				ar_columns_obj: [column],
-				type		: 'column',
-				cell_type	: 'text',
-				value		: '',
-				class_list	: 'empty_value'
+				ar_columns_obj	: [column],
+				type			: 'column',
+				cell_type		: 'text',
+				value			: '',
+				class_list		: 'empty_value'
 			}
 		// Get the column values and join they into a new value. Used by breakdown option to show every data of its own column
 		// when the breakdown is selected, every data is a column with its own value, therefore is necessary join all values
 		const ar_columns_values_len	= ar_column_values?.length || 0
 		if(ar_columns_values_len>1){
-
 			const ar_values = []
 			for (let j = 0; j < ar_columns_values_len; j++) {
 				const value = ar_column_values[j].value
