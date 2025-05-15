@@ -1342,7 +1342,7 @@ class diffusion_sql extends diffusion  {
 		}//end switch ($options->typology)
 
 
-		return (array)$ar_field_data;
+		return $ar_field_data;
 	}//end build_data_field
 
 
@@ -5352,7 +5352,7 @@ class diffusion_sql extends diffusion  {
 	* Check if a value is considered empty
 	* @return bool
 	*/
-	public static function empty_value($value) {
+	public static function empty_value($value) : bool {
 
 		return (bool)( (empty($value) || $value==='[]') && $value!='0' );
 	}//end empty_value

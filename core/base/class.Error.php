@@ -154,7 +154,7 @@ if(SHOW_DEBUG===true) {
 	error_reporting(0);
 }
 
-# SET ERROR HANDLERS
+// SET ERROR HANDLERS
 set_error_handler( array( 'dd_error', 'captureError' ) );
 set_exception_handler( array( 'dd_error', 'captureException' ) );
 register_shutdown_function( array( 'dd_error', 'captureShutdown' ) );
