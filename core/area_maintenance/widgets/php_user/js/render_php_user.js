@@ -66,9 +66,10 @@ render_php_user.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value		= self.value || {}
-		const info		= value.info || {}
-		const name		= info.name || ''
+		const value					= self.value || {}
+		const info					= value.info || {}
+		const php_error_log_path	= value.php_error_log_path || ''
+		const name					= info.name || ''
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -83,11 +84,25 @@ const get_content_data_edit = async function(self) {
 			parent			: content_data
 		})
 
-	// version
+	// info
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: '',
 			inner_html		: JSON.stringify(info, null, 2),
+			parent			: content_data
+		})
+
+	// PHP error log path
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: '',
+			inner_html		: `<br>PHP error log path:`,
+			parent			: content_data
+		})
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: '',
+			inner_html		:  php_error_log_path,
 			parent			: content_data
 		})
 

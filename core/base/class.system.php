@@ -406,8 +406,31 @@ class system {
 			);
 		}
 
-		return $info;
+		return $info ?? null;
 	}//end get_php_user_info
+
+
+
+	/**
+	* GET_ERROR_LOG_PATH
+	* Resolves current PHP error log file path
+	* @return string|null $error_path
+	*/
+	public static function get_error_log_path() : ?string {
+
+		try {
+
+			$error_path = ini_get('error_log');
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__
+				." Exception:".$e->getMessage()
+				, logger::ERROR
+			);
+		}
+
+		return $error_path ?? null;
+	}//end get_error_log_path
 
 
 
