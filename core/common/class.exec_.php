@@ -325,12 +325,13 @@ class exec_ {
 					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'],
 					'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
 				],
-				'session_id'	=> session_id(),
-				'user_id'		=> logged_user_id(),
-				'class_name'	=> $class_name, // class name
-				'method_name'	=> $method_name, // method name
-				'file'			=> $class_file, // class file to include optional
-				'params'		=> $safe_params // object with options passed to the function
+				'session_id'		=> session_id(),
+				'error_log_path'	=> system::get_error_log_path(), // current PHP-FPM path to use in process the same output
+				'user_id'			=> logged_user_id(),
+				'class_name'		=> $class_name, // class name
+				'method_name'		=> $method_name, // method name
+				'file'				=> $class_file, // class file to include optional
+				'params'			=> $safe_params // object with options passed to the function
 			];
 			$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
