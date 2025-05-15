@@ -1,23 +1,26 @@
 #!/usr/bin/env php
-<?php
+<?php declare(strict_types=1);
 /**
-* process_runner.php
-* This file calculates process in background.
-*
+* PROCESS_RUNNER.PHP
+* This file executes process in background.
+* Is called from exec_::request_cli
+* @see exec_::request_cli
 */
+
 // time
 	$start_time = hrtime(true);
-
-// error_log_path
-	$error_log_path = $data['error_log_path'] ?? null;
-	if ($error_log_path) {
-		ini_set('error_log', $error_log_path);
-	}
 
 // data
 	$data = json_decode($argv[1], true);
 	if (empty($data)) {
 		die('Invalid data');
+	}
+
+// error_log_path.
+// From now on, the execution CLI uses the same error log path as the PHP-FPM pool to get a unified error output.
+	$error_log_path = $data['error_log_path'] ?? null;
+	if ($error_log_path) {
+		ini_set('error_log', $error_log_path);
 	}
 
 // server environment. Restore from command arguments

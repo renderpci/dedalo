@@ -293,7 +293,7 @@ class exec_ {
 
 	/**
 	* REQUEST_CLI
-	* Exec tool method in CLI using process runner file
+	* Exec given method in CLI using a process runner file
 	* @see /core/base/process_runner.php
 	* @param object $options
 	* {
@@ -326,7 +326,7 @@ class exec_ {
 					'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
 				],
 				'session_id'		=> session_id(),
-				'error_log_path'	=> system::get_error_log_path(), // current PHP-FPM path to use in process the same output
+				'error_log_path'	=> system::get_error_log_path(), // current PHP-FPM path to use the same error output
 				'user_id'			=> logged_user_id(),
 				'class_name'		=> $class_name, // class name
 				'method_name'		=> $method_name, // method name
