@@ -8,6 +8,12 @@
 // time
 	$start_time = hrtime(true);
 
+// error_log_path
+	$error_log_path = $data['error_log_path'] ?? null;
+	if ($error_log_path) {
+		ini_set('error_log', $error_log_path);
+	}
+
 // data
 	$data = json_decode($argv[1], true);
 	if (empty($data)) {
