@@ -20,9 +20,9 @@ use function str_contains;
 use function time;
 use DOMDocument;
 use SebastianBergmann\CodeCoverage\CodeCoverage;
-use SebastianBergmann\CodeCoverage\Driver\WriteOperationFailedException;
 use SebastianBergmann\CodeCoverage\Node\File;
 use SebastianBergmann\CodeCoverage\Util\Filesystem;
+use SebastianBergmann\CodeCoverage\WriteOperationFailedException;
 
 final class Clover
 {
@@ -79,6 +79,7 @@ final class Clover
                 }
 
                 foreach ($class['methods'] as $methodName => $method) {
+                    /** @phpstan-ignore equal.notAllowed */
                     if ($method['executableLines'] == 0) {
                         continue;
                     }
@@ -87,6 +88,7 @@ final class Clover
                     $classStatements        += $method['executableLines'];
                     $coveredClassStatements += $method['executedLines'];
 
+                    /** @phpstan-ignore equal.notAllowed */
                     if ($method['coverage'] == 100) {
                         $coveredMethods++;
                     }
@@ -168,8 +170,8 @@ final class Clover
             $linesOfCode = $item->linesOfCode();
 
             $xmlMetrics = $xmlDocument->createElement('metrics');
-            $xmlMetrics->setAttribute('loc', (string) $linesOfCode['linesOfCode']);
-            $xmlMetrics->setAttribute('ncloc', (string) $linesOfCode['nonCommentLinesOfCode']);
+            $xmlMetrics->setAttribute('loc', (string) $linesOfCode->linesOfCode());
+            $xmlMetrics->setAttribute('ncloc', (string) $linesOfCode->nonCommentLinesOfCode());
             $xmlMetrics->setAttribute('classes', (string) $item->numberOfClassesAndTraits());
             $xmlMetrics->setAttribute('methods', (string) $item->numberOfMethods());
             $xmlMetrics->setAttribute('coveredmethods', (string) $item->numberOfTestedMethods());
@@ -201,8 +203,8 @@ final class Clover
 
         $xmlMetrics = $xmlDocument->createElement('metrics');
         $xmlMetrics->setAttribute('files', (string) count($report));
-        $xmlMetrics->setAttribute('loc', (string) $linesOfCode['linesOfCode']);
-        $xmlMetrics->setAttribute('ncloc', (string) $linesOfCode['nonCommentLinesOfCode']);
+        $xmlMetrics->setAttribute('loc', (string) $linesOfCode->linesOfCode());
+        $xmlMetrics->setAttribute('ncloc', (string) $linesOfCode->nonCommentLinesOfCode());
         $xmlMetrics->setAttribute('classes', (string) $report->numberOfClassesAndTraits());
         $xmlMetrics->setAttribute('methods', (string) $report->numberOfMethods());
         $xmlMetrics->setAttribute('coveredmethods', (string) $report->numberOfTestedMethods());

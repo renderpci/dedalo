@@ -30,12 +30,14 @@ use PHPUnit\Event\Test\PhpDeprecationTriggered;
 use PHPUnit\Event\Test\PhpNoticeTriggered;
 use PHPUnit\Event\Test\PhpunitDeprecationTriggered;
 use PHPUnit\Event\Test\PhpunitErrorTriggered;
+use PHPUnit\Event\Test\PhpunitNoticeTriggered;
 use PHPUnit\Event\Test\PhpunitWarningTriggered;
 use PHPUnit\Event\Test\PhpWarningTriggered;
 use PHPUnit\Event\Test\Skipped as TestSkipped;
 use PHPUnit\Event\Test\WarningTriggered;
 use PHPUnit\Event\TestRunner\DeprecationTriggered as TestRunnerDeprecationTriggered;
 use PHPUnit\Event\TestRunner\ExecutionStarted;
+use PHPUnit\Event\TestRunner\NoticeTriggered as TestRunnerNoticeTriggered;
 use PHPUnit\Event\TestRunner\WarningTriggered as TestRunnerWarningTriggered;
 use PHPUnit\Event\TestSuite\Finished as TestSuiteFinished;
 use PHPUnit\Event\TestSuite\Skipped as TestSuiteSkipped;
@@ -106,19 +108,29 @@ final class Collector
     private array $testTriggeredPhpunitErrorEvents = [];
 
     /**
+     * @var array<string,list<PhpunitNoticeTriggered>>
+     */
+    private array $testTriggeredPhpunitNoticeEvents = [];
+
+    /**
      * @var array<string,list<PhpunitWarningTriggered>>
      */
     private array $testTriggeredPhpunitWarningEvents = [];
 
     /**
-     * @var list<TestRunnerWarningTriggered>
-     */
-    private array $testRunnerTriggeredWarningEvents = [];
-
-    /**
      * @var list<TestRunnerDeprecationTriggered>
      */
     private array $testRunnerTriggeredDeprecationEvents = [];
+
+    /**
+     * @var list<TestRunnerNoticeTriggered>
+     */
+    private array $testRunnerTriggeredNoticeEvents = [];
+
+    /**
+     * @var list<TestRunnerWarningTriggered>
+     */
+    private array $testRunnerTriggeredWarningEvents = [];
 
     /**
      * @var array<non-empty-string, Issue>
@@ -182,10 +194,12 @@ final class Collector
             new TestTriggeredPhpNoticeSubscriber($this),
             new TestTriggeredPhpunitDeprecationSubscriber($this),
             new TestTriggeredPhpunitErrorSubscriber($this),
+            new TestTriggeredPhpunitNoticeSubscriber($this),
             new TestTriggeredPhpunitWarningSubscriber($this),
             new TestTriggeredPhpWarningSubscriber($this),
             new TestTriggeredWarningSubscriber($this),
             new TestRunnerTriggeredDeprecationSubscriber($this),
+            new TestRunnerTriggeredNoticeSubscriber($this),
             new TestRunnerTriggeredWarningSubscriber($this),
         );
 
@@ -206,8 +220,10 @@ final class Collector
             $this->testMarkedIncompleteEvents,
             $this->testTriggeredPhpunitDeprecationEvents,
             $this->testTriggeredPhpunitErrorEvents,
+            $this->testTriggeredPhpunitNoticeEvents,
             $this->testTriggeredPhpunitWarningEvents,
             $this->testRunnerTriggeredDeprecationEvents,
+            $this->testRunnerTriggeredNoticeEvents,
             $this->testRunnerTriggeredWarningEvents,
             array_values($this->errors),
             array_values($this->deprecations),
@@ -416,6 +432,15 @@ final class Collector
         $this->testTriggeredPhpunitDeprecationEvents[$event->test()->id()][] = $event;
     }
 
+    public function testTriggeredPhpunitNotice(PhpunitNoticeTriggered $event): void
+    {
+        if (!isset($this->testTriggeredPhpunitNoticeEvents[$event->test()->id()])) {
+            $this->testTriggeredPhpunitNoticeEvents[$event->test()->id()] = [];
+        }
+
+        $this->testTriggeredPhpunitNoticeEvents[$event->test()->id()][] = $event;
+    }
+
     public function testTriggeredError(ErrorTriggered $event): void
     {
         if (!$this->issueFilter->shouldBeProcessed($event)) {
@@ -573,6 +598,11 @@ final class Collector
         $this->testRunnerTriggeredDeprecationEvents[] = $event;
     }
 
+    public function testRunnerTriggeredNotice(TestRunnerNoticeTriggered $event): void
+    {
+        $this->testRunnerTriggeredNoticeEvents[] = $event;
+    }
+
     public function testRunnerTriggeredWarning(TestRunnerWarningTriggered $event): void
     {
         $this->testRunnerTriggeredWarningEvents[] = $event;
@@ -580,49 +610,49 @@ final class Collector
 
     public function hasErroredTests(): bool
     {
-        return !empty($this->testErroredEvents);
+        return $this->testErroredEvents !== [];
     }
 
     public function hasFailedTests(): bool
     {
-        return !empty($this->testFailedEvents);
+        return $this->testFailedEvents !== [];
     }
 
     public function hasRiskyTests(): bool
     {
-        return !empty($this->testConsideredRiskyEvents);
+        return $this->testConsideredRiskyEvents !== [];
     }
 
     public function hasSkippedTests(): bool
     {
-        return !empty($this->testSkippedEvents);
+        return $this->testSkippedEvents !== [];
     }
 
     public function hasIncompleteTests(): bool
     {
-        return !empty($this->testMarkedIncompleteEvents);
+        return $this->testMarkedIncompleteEvents !== [];
     }
 
     public function hasDeprecations(): bool
     {
-        return !empty($this->deprecations) ||
-               !empty($this->phpDeprecations) ||
-               !empty($this->testTriggeredPhpunitDeprecationEvents) ||
-               !empty($this->testRunnerTriggeredDeprecationEvents);
+        return $this->deprecations !== [] ||
+               $this->phpDeprecations !== [] ||
+               $this->testTriggeredPhpunitDeprecationEvents !== [] ||
+               $this->testRunnerTriggeredDeprecationEvents !== [];
     }
 
     public function hasNotices(): bool
     {
-        return !empty($this->notices) ||
-               !empty($this->phpNotices);
+        return $this->notices !== [] ||
+               $this->phpNotices !== [];
     }
 
     public function hasWarnings(): bool
     {
-        return !empty($this->warnings) ||
-               !empty($this->phpWarnings) ||
-               !empty($this->testTriggeredPhpunitWarningEvents) ||
-               !empty($this->testRunnerTriggeredWarningEvents);
+        return $this->warnings !== [] ||
+               $this->phpWarnings !== [] ||
+               $this->testTriggeredPhpunitWarningEvents !== [] ||
+               $this->testRunnerTriggeredWarningEvents !== [];
     }
 
     /**

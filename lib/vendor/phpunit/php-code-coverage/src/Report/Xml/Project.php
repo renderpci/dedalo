@@ -9,13 +9,18 @@
  */
 namespace SebastianBergmann\CodeCoverage\Report\Xml;
 
+use function assert;
 use DOMDocument;
+use DOMElement;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
  */
 final class Project extends Node
 {
+    /**
+     * @phpstan-ignore constructor.missingParentCall
+     */
     public function __construct(string $directory)
     {
         $this->init();
@@ -34,7 +39,7 @@ final class Project extends Node
             'build',
         )->item(0);
 
-        if (!$buildNode) {
+        if ($buildNode === null) {
             $buildNode = $this->dom()->documentElement->appendChild(
                 $this->dom()->createElementNS(
                     'https://schema.phpunit.de/coverage/1.0',
@@ -42,6 +47,8 @@ final class Project extends Node
                 ),
             );
         }
+
+        assert($buildNode instanceof DOMElement);
 
         return new BuildInformation($buildNode);
     }
@@ -53,7 +60,7 @@ final class Project extends Node
             'tests',
         )->item(0);
 
-        if (!$testsNode) {
+        if ($testsNode === null) {
             $testsNode = $this->contextNode()->appendChild(
                 $this->dom()->createElementNS(
                     'https://schema.phpunit.de/coverage/1.0',
@@ -61,6 +68,8 @@ final class Project extends Node
                 ),
             );
         }
+
+        assert($testsNode instanceof DOMElement);
 
         return new Tests($testsNode);
     }

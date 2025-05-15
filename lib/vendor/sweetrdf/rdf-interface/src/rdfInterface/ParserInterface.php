@@ -33,6 +33,14 @@ namespace rdfInterface;
 interface ParserInterface {
 
     /**
+     * `$baseUri` value to be used when identifiers of blanks nodes encountered
+     *  in the input source should be preserved. If you need it on production,
+     *  think twice. It can be a last resort though in some corner cases like
+     *  parsing reference test outputs.
+     */
+    const BLANK_NODES_PRESERVE = '__PRESERVE_BLANK_NODES__';
+
+    /**
      * 
      * @param DataFactoryInterface $dataFactory factory to be used to generate RDF terms.
      */
@@ -41,14 +49,20 @@ interface ParserInterface {
     /**
      * 
      * @param string $input
+     * @param string $baseUri allows to specify the base URI of the parsed document
+     *   so a parser can correctly determine which blank nodes belong to the same 
+     *   document (see also the `BLANK_NODES_PRESERVE` constant)
      * @return QuadIteratorInterface
      */
-    public function parse(string $input): QuadIteratorInterface;
+    public function parse(string $input, string $baseUri = ''): QuadIteratorInterface;
 
     /**
      *
      * @param resource | \Psr\Http\Message\StreamInterface $input
+     * @param string $baseUri allows to specify the base URI of the parsed document
+     *   so a parser can correctly determine which blank nodes belong to the same 
+     *   document (see also the `BLANK_NODES_PRESERVE` constant)
      * @return \rdfInterface\QuadIteratorInterface
      */
-    public function parseStream($input): QuadIteratorInterface;
+    public function parseStream($input, string $baseUri = ''): QuadIteratorInterface;
 }
