@@ -1113,21 +1113,18 @@ section.prototype.delete_section = async function (options) {
 			alert('Errors: \n' + errors.join('\n'));
 		}
 
-		if (api_response.result && api_response.result.length>0) {
+		if (api_response?.result && api_response.result.length>0) {
 
-			// force to recalculate total records
-			self.total = null
-			// refresh self section
-			self.refresh()
-		}else{
-			console.error('api_response.errors:', api_response.errors);
-			console.error( api_response.msg || 'Error on delete records!');
-
-			return false
+			// all is OK
+			return true
 		}
 
+	// delete has failed. Notify and return false
+		console.error('api_response.errors:', api_response.errors);
+		console.error( api_response.msg || 'Error on delete records!');
 
-	return true
+
+	return false
 }//end delete_section
 
 
