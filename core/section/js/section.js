@@ -1068,6 +1068,7 @@ section.prototype.duplicate_section = async function (section_id) {
 
 /**
 * DELETE_SECTION
+* Remove the sqo calculation section records from database
 * @param object options
 * {
 * 	sqo : object,
@@ -1084,9 +1085,6 @@ section.prototype.delete_section = async function (options) {
 		const delete_mode				= options.delete_mode
 		const caller_dataframe			= options.caller_dataframe || null
 		const delete_diffusion_records	= options.delete_diffusion_records ?? true
-
-	// sqo
-		// sqo.limit = null
 
 	// source
 		const source			= create_source(self, 'delete')
