@@ -244,7 +244,7 @@ export const load_user_search_presets = async function(self) {
 			]
 		}
 		const sqo = {
-			limit			: 0,
+			limit			: 15,
 			offset			: 0,
 			filter			: fiter,
 			section_tipo	: [{
@@ -279,22 +279,12 @@ export const load_user_search_presets = async function(self) {
 			id_variant		: self.section_tipo + '_search_user_presets',
 			inspector		: false, // (!) disable elements
 			filter			: false, // (!) disable elements
-			session_save	: false
+			session_save	: false,
+			view			: 'search_user_presets',
+			caller			: self
 		}
 		const section = await get_instance(instance_options)
 		await section.build(true)
-
-	// section. render another node of component caller and append to container
-		section.render_views.push(
-			{
-				view	: 'search_user_presets',
-				mode	: 'list',
-				render	: 'view_search_user_presets',
-				path 	: '../../search/js/view_search_user_presets.js'
-			}
-		)
-		section.context.view	= 'search_user_presets'
-		section.caller			= self
 
 
 	return section
@@ -372,8 +362,9 @@ export const edit_user_search_preset = async function(self, section_id) {
 			mode			: 'edit',
 			lang			: page_globals.dedalo_data_lang,
 			request_config	: request_config,
-			add_show 		: true,
-			id_variant		: self.section_tipo +'_'+ section_id + '_search_user_preset'
+			add_show		: true,
+			session_save	: false,
+			id_variant		: self.section_tipo +'_'+ section_id + '_search_user_preset_edit'
 		}
 		const section = await get_instance(instance_options)
 		// filter search disallow
