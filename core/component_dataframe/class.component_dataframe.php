@@ -84,6 +84,24 @@ class component_dataframe extends component_portal {
 
 
 	/**
+	* GET_VALOR
+	* V5 diffusion compatibility
+	* @param ?string $lang=DEDALO_DATA_LANG
+	* @param $format='string'
+	* @param $fields_separator=', '
+	* @param $records_separator='<br>'
+	* @param $ar_related_terms=false
+	* @param $data_to_be_used='valor'
+	* @return mixed $valor
+	*/
+	public function get_valor( ?string $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
+
+		return json_encode( $this->get_dato() );
+	}//end get_valor
+
+
+
+	/**
 	* REMOVE_LOCATOR_FROM_DATO
 	* Removes from dato one or more locators that accomplish given locator equality
 	* (!) Not save the result
