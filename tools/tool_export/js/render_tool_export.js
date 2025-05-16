@@ -78,27 +78,21 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'components_list_container',
 			parent			: grid_top
 		})
-		// fields list . List of section fields usable in search
-			// const search_container_selector = ui.create_dom_element({
-			// 	element_type	: 'ul',
-			// 	class_name		: 'search_section_container target_container',
-			// 	parent			: components_list_container
-			// })
 		// components_list. render section component list [left]
-			const ar_components_exclude = ['component_password']
-			const section_elements = await self.get_section_elements_context({
-				section_tipo			: self.target_section_tipo,
-				ar_components_exclude	: ar_components_exclude
-			})
-			// render_components_list (common shared render by render_common.js)
-			const ar_components = render_components_list({
-				self					: self,
-				section_tipo			: self.target_section_tipo,
-				target_div				: components_list_container,
-				path					: [],
-				section_elements		: section_elements,
-				ar_components_exclude	: ar_components_exclude
-			})
+		const ar_components_exclude = ['component_password']
+		const section_elements = await self.get_section_elements_context({
+			section_tipo			: self.target_section_tipo,
+			ar_components_exclude	: ar_components_exclude
+		})
+		// render_components_list (common shared render by render_common.js)
+		const ar_components = render_components_list({
+			self					: self,
+			section_tipo			: self.target_section_tipo,
+			target_div				: components_list_container,
+			path					: [],
+			section_elements		: section_elements,
+			ar_components_exclude	: ar_components_exclude
+		})
 
 	// user_selection_list (right side)
 		const selection_list_contaniner = ui.create_dom_element({
@@ -225,13 +219,6 @@ const get_content_data_edit = async function(self) {
 					value			: 'value',
 					parent			: select_data_format_export
 				})
-				// select_option_html
-				// ui.create_dom_element({
-				// 	element_type	: 'option',
-				// 	inner_html		: get_label.html || 'HTML',
-				// 	value			: 'html',
-				// 	parent			: select_data_format_export
-				// })
 				// select_option_breakdown
 				ui.create_dom_element({
 					element_type	: 'option',
@@ -239,13 +226,6 @@ const get_content_data_edit = async function(self) {
 					value			: 'grid_value',
 					parent			: select_data_format_export
 				})
-				// // select_option_breakdown_html
-				// ui.create_dom_element({
-				// 	element_type	: 'option',
-				// 	inner_html		: (get_label.breakdown || 'breakdown' ) + ' ' +(get_label.html || 'HTML'),
-				// 	value			: 'breakdown_html',
-				// 	parent			: select_data_format_export
-				// })
 				// select_option_dedalo
 				ui.create_dom_element({
 					element_type	: 'option',
@@ -308,19 +288,6 @@ const get_content_data_edit = async function(self) {
 						class_name		: 'spinner',
 						parent			: export_data_container
 					});
-
-				// export_grid API call
-					// self.data_format = select_data_format_export.value
-
-				// sort ar_ddo_to_export by DOM items position
-					// const ar_ddo_to_export_sorted = []
-					// const element_children_length = user_selection_list.children.length
-					// for (let i = 0; i < element_children_length; i++) {
-					// 	const item = user_selection_list.children[i]
-					// 	if (item.ddo) {
-					// 		ar_ddo_to_export_sorted.push(item.ddo)
-					// 	}
-					// }
 
 				// spinner add
 					[button_export, activate_all_columns, deactivate_all_columns].map(
@@ -395,7 +362,7 @@ const get_content_data_edit = async function(self) {
 			})
 			activate_all_columns.addEventListener('click', function(e) {
 				e.stopPropagation()
-				// console.log('components_list_container:', components_list_container);
+
 				const ar_components_length = ar_components.length
 				for (let i = 0; i < ar_components_length; i++) {
 
@@ -422,7 +389,7 @@ const get_content_data_edit = async function(self) {
 					// exists
 						const found = self.ar_ddo_to_export.find(el => el.id===new_ddo.id)
 						if (found) {
-							// console.log('Ignored already included item ddo:', found);
+							// Ignored already included item ddo
 							continue;
 						}
 
@@ -480,7 +447,7 @@ const get_content_data_edit = async function(self) {
 			button_export_csv.addEventListener('click', async function() {
 
 				// dd_grid
-					const dd_grid		= self.dd_grid // self.ar_instances.find(el => el.model==='dd_grid')
+					const dd_grid		= self.dd_grid
 					dd_grid.view		= 'csv'
 					await dd_grid.build(false)
 					const csv_string	= await dd_grid.render()
@@ -507,7 +474,7 @@ const get_content_data_edit = async function(self) {
 			button_export_tsv.addEventListener('click', async function() {
 
 				// dd_grid
-					const dd_grid		= self.dd_grid // self.ar_instances.find(el => el.model==='dd_grid')
+					const dd_grid		= self.dd_grid
 					dd_grid.view		= 'tsv'
 					await dd_grid.build(false)
 					const tsv_string	= await dd_grid.render()
@@ -541,7 +508,7 @@ const get_content_data_edit = async function(self) {
 					const table_export	= await dd_grid.render()
 
 					self.export_table_with_xlsx_lib({
-						table		: table_export, //export_data_container,
+						table		: table_export,
 						filename	: file
 					})
 			})
@@ -555,17 +522,17 @@ const get_content_data_edit = async function(self) {
 			})
 			button_export_excel.addEventListener('click', async function() {
 				// Download it
-					const file	= filename+ '.xlsx';
+				const file	= filename+ '.xlsx';
 
-					const dd_grid		= self.dd_grid
-					dd_grid.view		= 'table_export'
-					await dd_grid.build(false)
-					const table_export	= await dd_grid.render()
+				const dd_grid		= self.dd_grid
+				dd_grid.view		= 'table_export'
+				await dd_grid.build(false)
+				const table_export	= await dd_grid.render()
 
-					self.export_table_with_xlsx_lib({
-						table		: table_export, //export_data_container,
-						filename	: file
-					})
+				self.export_table_with_xlsx_lib({
+					table		: table_export,
+					filename	: file
+				})
 			})
 
 		// html. button export html
@@ -700,20 +667,6 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 			self.update_local_db_data()
 		})
 
-	// label component source if exists
-		// if (first_item!==last_item) {
-		// 	console.log("first_item:",first_item);
-		// 	const label_add = parent_div.querySelector('span.label_add')
-		// 	if (label_add) {
-		// 		label_add.innerHTML = first_item.name +' '+ label_add.innerHTML
-		// 	}
-		// }
-
-	// show hidden parent container
-		// parent_div.classList.remove('hide')
-
-	// store ddo in local DB
-
 
 	return export_component
 }//end build_export_component
@@ -805,19 +758,13 @@ const do_sortable = function(element, self) {
 				// data transfer
 					const data			= event.dataTransfer.getData('text/plain');// element that move
 					const parsed_data	= JSON.parse(data)
-					// console.log('[sort] parsed_data.drag_type:', parsed_data);
 
 				if (parsed_data.drag_type==='sort') {
 
 					// sort case
 					// place drag item
 					const dragged = self.dragged
-					// if(element.parentNode.lastChild===element) {
-					// 	element.parentNode.appendChild(dragged)
-					// }else{
-						element.parentNode.insertBefore(dragged, element)
-					// }
-
+					element.parentNode.insertBefore(dragged, element)
 					dragged.classList.add('active')
 
 					// Update the ddo_export. Move to the new array position
@@ -856,7 +803,7 @@ const do_sortable = function(element, self) {
 					// exists
 						const found = self.ar_ddo_to_export.find(el => el.id===new_ddo.id)
 						if (found) {
-							console.log('Ignored already included item ddo:', found);
+							// Ignored already included item ddo
 							return
 						}
 
