@@ -5,13 +5,13 @@
 
 
 // imports
-	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {set_element_css} from '../../page/js/css.js'
+	import {edit_user_search_preset, load_search_preset} from '../../search/js/search_user_presets.js'
+	import {render_filter} from '../../search/js/render_search.js'
+	import {get_section_records} from '../../section/js/section.js'
 	import {no_records_node} from '../../section/js/render_common_section.js'
-	import {edit_user_search_preset, load_search_preset} from './search_user_presets.js'
-	import {render_filter} from './render_search.js'
 
 
 
@@ -66,7 +66,7 @@ view_search_user_presets.render = async function(self, options) {
 
 			self.paginator.build()
 			.then(function(){
-				self.paginator.mode = 'micro'
+				self.paginator.mode = 'mini'
 				self.paginator.render().then(paginator_wrapper => {
 					paginator_container.appendChild(paginator_wrapper)
 				})
@@ -464,6 +464,13 @@ export const render_column_remove = function(options) {
 				})
 
 				if (result) {
+
+					// reset offset
+					section.rqo.sqo.offset = 0
+
+					// refresh section section
+					await section.refresh()
+
 					// search : update buttons and selections
 					const search_instance = options.caller.caller
 					if (search_instance) {

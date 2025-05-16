@@ -18,6 +18,7 @@
 	import {view_graph_list_section} from './view_graph_list_section.js'
 	import {view_base_list_section} from './view_base_list_section.js'
 	import {view_thesaurus_list_section} from './view_thesaurus_list_section.js'
+	import {view_search_user_presets} from './view_search_user_presets.js'
 
 
 
@@ -64,6 +65,9 @@ render_list_section.prototype.list = async function(options) {
 
 			case 'thesaurus_list':
 				return view_thesaurus_list_section.render(self, options)
+
+			case 'search_user_presets':
+				return view_search_user_presets.render(self, options)
 
 			case 'default':
 			default: {
