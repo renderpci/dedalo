@@ -192,13 +192,13 @@ render_search.prototype.render_base = function() {
 		})
 		// set
 		self.search_container_selection_presets = search_container_selection_presets
+		// component_presets_label
 		const component_presets_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'component_presets_label',
 			inner_html		: get_label.search_presets || 'User search preset',
 			parent			: self.search_container_selection_presets
 		})
-
 		// button_new_preset
 			const button_add_preset = ui.create_dom_element({
 				id 				: 'button_new_preset',
@@ -1205,31 +1205,41 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 		const search_container_selection_presets = self.search_container_selection_presets // button.parentNode.querySelector(".search_container_selection_presets")
 
-		// user_presets_section . get section of users presets
-			if (!self.user_presets_section) {
-				self.user_presets_section = await load_user_search_presets(self)
-				const user_presets_node = await self.user_presets_section.render()
-				search_container_selection_presets.appendChild(user_presets_node)
+		// Validate that we have a valid element before proceeding
+			if (!search_container_selection_presets || !(search_container_selection_presets instanceof HTMLElement)) {
+				console.error("toggle_presets: Target search_container_selection_presets element not found or is not a valid HTMLElement.");
+				return; // Exit if no container
 			}
 
-		// action based on css
-			let action
-			if (search_container_selection_presets.classList.contains('display_none')) {
+		// Determine the action (open or close) and toggle visibility before toggle
+			const is_hidden	= search_container_selection_presets.classList.contains('display_none');
+			const action	= is_hidden ? 'open' : 'close';
 
-				search_container_selection_presets.classList.remove('display_none')
-				action = 'open'
-
-			}else{
-
-				search_container_selection_presets.classList.add('display_none')
-				action = 'close'
-			}
+		// Toggle the visibility class concisely
+			search_container_selection_presets.classList.toggle('display_none');
 
 		// Set search panel as open/close
 			self.track_show_panel({
 				name	: 'presets_panel', // cookie_name
 				action	: action
 			})
+
+		// user_presets_section . get section of users presets
+			if (action==='open' && !self.user_presets_section) {
+
+				// loading_node. Message waiting load
+				const loading_node = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'notes loading',
+					inner_html		: 'Loading..',
+					parent			: search_container_selection_presets
+				})
+
+				self.user_presets_section = await load_user_search_presets(self)
+				const user_presets_node = await self.user_presets_section.render()
+				loading_node.remove()
+				search_container_selection_presets.appendChild(user_presets_node)
+			}
 
 
 		return true
