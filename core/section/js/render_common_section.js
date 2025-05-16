@@ -134,7 +134,10 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 					delete_mode					: 'delete_record',
 					delete_diffusion_records	: delete_diffusion_records_checkbox.checked
 				})
-				.then(function(){
+				.then(async () => {
+					// refresh section section
+					await section.refresh()
+					// fire modal event on_close
 					modal.on_close()
 				})
 			}
@@ -168,7 +171,10 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 					sqo			: sqo,
 					delete_mode	: 'delete_data'
 				})
-				.then(function(){
+				.then(async () => {
+					// refresh section section
+					await section.refresh()
+					// fire modal on_close
 					modal.on_close()
 				})
 			}
