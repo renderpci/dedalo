@@ -100,31 +100,30 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'selection_list_contaniner',
 			parent			: grid_top
 		})
-			// title
-			ui.create_dom_element({
-				element_type	: 'h1',
-				class_name		: 'list_title',
-				inner_html		: get_label.active_elements || 'Active elements',
-				parent			: selection_list_contaniner
-			})
+		// title
+		ui.create_dom_element({
+			element_type	: 'h1',
+			class_name		: 'list_title',
+			inner_html		: get_label.active_elements || 'Active elements',
+			parent			: selection_list_contaniner
+		})
+		// user_selection_list
+		const user_selection_list = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'user_selection_list',
+			parent			: selection_list_contaniner
+		})
+		// empty_space
+		const empty_space = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'empty_space',
+			parent			: selection_list_contaniner
+		})
 
-			const user_selection_list = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'user_selection_list',
-				parent			: selection_list_contaniner
-			})
-
-
-			const empty_space = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'empty_space',
-				parent			: selection_list_contaniner
-			})
-
-			// empty_space drag and drop events
-			empty_space.addEventListener('dragover', function(e){self.on_dragover(user_selection_list,e)})
-			empty_space.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
-			empty_space.addEventListener('drop', function(e){self.on_drop(user_selection_list,e)})
+		// empty_space drag and drop events
+		empty_space.addEventListener('dragover', function(e){self.on_dragover(user_selection_list,e)})
+		empty_space.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
+		empty_space.addEventListener('drop', function(e){self.on_drop(user_selection_list,e)})
 
 		// read saved ddo in local DB and restore elements if found
 			const id = 'tool_export_config'
@@ -205,12 +204,13 @@ const get_content_data_edit = async function(self) {
 					class_name		: 'select_data_format_export',
 					parent			: data_format
 				})
-				select_data_format_export.addEventListener('change', function() {
+				const change_handler = () => {
 					// fix value
 					self.data_format = select_data_format_export.value
-				})
-				// fix default value
-				self.data_format = 'standard'
+					// store to preserve across reloads
+					localStorage.setItem('selected_data_format_export', select_data_format_export.value);
+				}
+				select_data_format_export.addEventListener('change', change_handler)
 
 				// select_option_standard
 				ui.create_dom_element({
@@ -233,6 +233,10 @@ const get_content_data_edit = async function(self) {
 					value			: 'dedalo_raw',
 					parent			: select_data_format_export
 				})
+
+				// fix selector value
+				self.data_format = localStorage.getItem('selected_data_format_export') || 'standard'
+				select_data_format_export.value = self.data_format
 
 		// Options to check
 			const options_to_check = ui.create_dom_element({
