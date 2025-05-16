@@ -6,6 +6,7 @@
 
 
 // imports
+	import {clone} from '../../../core/common/js/utils/index.js'
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
@@ -1186,19 +1187,42 @@ const download_media = async function (self, quality_parse) {
 		return null
 	}
 
+	const failed_files = []
 	const url_list = []
 	const fill_url_list = (ar_values) => {
 
 		const ar_values_length = ar_values.length
 		for (let i = 0; i < ar_values_length; i++) {
 
-			const el = ar_values[i]
+			const el = clone( ar_values[i] )
 
 			if (Array.isArray(el)) {
 				fill_url_list(el)
 			}else{
+
 				const source_quality = get_quality(el.model, 'source')
 				const target_quality = get_quality(el.model, 'target')
+
+				// dedalo_raw case
+				// If export data format is dedalo_raw, the url is inside 'files_info' property
+				const nolan = 'lg-nolan'
+				if (el.url[nolan] && el.url[nolan][0].files_info) {
+
+					const found = el.url[nolan][0].files_info.find(el => el.quality===target_quality)
+					if (found) {
+						// overwrite URL
+						el.url = DEDALO_MEDIA_URL + found.file_path
+					}else{
+						// find thumb
+						const thumb = el.url[nolan][0].files_info.find(el => el.quality===page_globals.dedalo_quality_thumb)
+						if (thumb) {
+							failed_files.push( thumb.file_name )
+						}else{
+							failed_files.push( JSON.stringify( el.url[nolan][0].files_info ) )
+						}
+						continue; // skip item
+					}
+				}
 
 				const ar_url = Array.isArray(el.url) ? el.url : el.url.split(' | ')
 				ar_url.forEach(item => {
@@ -1218,10 +1242,8 @@ const download_media = async function (self, quality_parse) {
 	}
 	fill_url_list(ar_values)
 
-	const failed_files = []
 	const fetch_list = []
 	url_list.flat().forEach(function(url) {
-		console.log('url:', url);
 
 		const current_fetch = fetch(url)
 			.then((res)=>{
