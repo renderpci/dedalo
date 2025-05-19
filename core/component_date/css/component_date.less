@@ -74,6 +74,9 @@
 						width: 2.4rem;
 						min-width: 2.4rem;
 						text-align: center;
+						@media screen and (max-width: @width_break_point_1) {
+							top: 2px;
+						}
 					}
 					&.input_date {
 						// date format (from general less) set common font family and letter-spacing
@@ -143,6 +146,7 @@
 				&:focus-within {
 					.button_container.hidden_button {
 						visibility: visible;
+						padding: .2rem .2rem .2rem .4rem;
 					}
 				}
 
