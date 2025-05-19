@@ -1,8 +1,9 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_INFO
-*
-*
+* Manages specific component info logic
+* Common component properties and methods are inherited from the component_common class
+* that are inherited from the common class.
 */
 class component_info extends component_common {
 
@@ -224,8 +225,8 @@ class component_info extends component_common {
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// Default behavior is get value
-			$diffusion_lang = $lang ?? DEDALO_DATA_LANG;
-			$diffusion_value = $this->get_valor(
+			$diffusion_lang		= $lang ?? DEDALO_DATA_LANG;
+			$diffusion_value	= $this->get_valor(
 				$diffusion_lang
 			);
 
