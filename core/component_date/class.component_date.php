@@ -129,6 +129,18 @@ class component_date extends component_common {
 
 		$dato = parent::get_dato();
 
+		// catch invalid type data
+		if ($dato!==null && !is_array($dato)) {
+			debug_log(__METHOD__
+				. " Invalid type detected for component_date. Expected null or array " . PHP_EOL
+				. ' type : ' . gettype($dato). PHP_EOL
+				. ' dato: ' . json_encode($dato)
+				, logger::ERROR
+			);
+			return empty($dato) ? null : [$dato];
+		}
+
+
 		return $dato;
 	}//end get_dato
 
