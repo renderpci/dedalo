@@ -213,6 +213,77 @@ class component_info extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_VALUE
+	* Calculate current component diffusion value
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+
+		// Default behavior is get value
+			$diffusion_lang = $lang ?? DEDALO_DATA_LANG;
+			$diffusion_value = $this->get_valor(
+				$diffusion_lang
+			);
+
+		// null empty values
+			if (empty($diffusion_value)) {
+				return null;
+			}
+
+		// strip_tags all values (remove untranslated mark elements)
+			$diffusion_value = preg_replace("/<\/?mark>/", "", to_string($diffusion_value));
+
+		// options
+			if (is_object($option_obj)) {
+				switch (true) {
+
+					// key values selection
+					// Splits and select any slices from value
+					// use : @see mdcat1181 for a sample like:
+					// {
+					//   "process_dato": "diffusion_sql::resolve_component_value",
+					//   "process_dato_arguments": {
+					//     "component_method": "get_diffusion_value",
+					//     "custom_arguments": [
+					//       {
+					//         "key_values": [0],
+					//         "separator": ", "
+					//       }
+					//     ]
+					//   }
+					// }
+					case isset($option_obj->key_values) && is_array($option_obj->key_values):
+
+						$separator	= $option_obj->separator ?? ', ';
+						$beats		= explode($separator, $diffusion_value);
+
+						$ar_selection = [];
+						foreach ($beats as $key => $value) {
+							if (in_array($key, $option_obj->key_values)) {
+								$ar_selection[] = $value;
+							}
+						}
+						// overwrite value
+						$diffusion_value = implode($separator, $ar_selection);
+						break;
+
+					default:
+						// nothing to do
+						break;
+				}
+			}
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
+	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
 	* @return string $valor
