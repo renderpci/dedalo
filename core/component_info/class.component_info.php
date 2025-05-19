@@ -125,6 +125,7 @@ class component_info extends component_common {
 					}
 			}//end foreach ($widgets as $widget)
 
+
 		return $dato_parsed;
 	}//end get_dato_parsed
 
@@ -137,7 +138,8 @@ class component_info extends component_common {
 	*/
 	public function get_dato_full() {
 
-		$dato_full			= $this->get_dato();
+		$dato_full = $this->get_dato();
+
 
 		return $dato_full;
 	}//end get_dato_full
@@ -146,7 +148,7 @@ class component_info extends component_common {
 
 	/**
 	* GET_DB_DATA
-	* @return
+	* @return mixed $data
 	*/
 	public function get_db_data() {
 
@@ -154,11 +156,8 @@ class component_info extends component_common {
 
 		if(empty($data)){
 			$data = $this->get_dato();
-			// if(!empty($data)){
-			// 	$this->set_dato($data);
-			// 	$this->Save();
-			// }
 		}
+
 
 		return $data;
 	}//end get_db_data
@@ -169,7 +168,7 @@ class component_info extends component_common {
 	* GET_WIDGETS
 	* Resolve list of widgets for current component_info
 	* They are defined in properties
-	* @return array|null
+	* @return array|null $widgets
 	*/
 	public function get_widgets() : ?array {
 
@@ -186,6 +185,7 @@ class component_info extends component_common {
 
 			return null;
 		}
+
 
 		return $widgets;
 	}//end get_widgets
@@ -204,7 +204,7 @@ class component_info extends component_common {
 		$valor = $this->get_value();
 		$valor = !empty($valor)
 			? strip_tags($valor)
-			: $valor;
+			: to_string($valor);
 
 
 		return $valor;
@@ -244,15 +244,15 @@ class component_info extends component_common {
 		*	"value_format": "first_value",
 		*	"lang": "lg-spa"
 		* }
+	* @see example of use in numisdata786
 	* @return mixed $diffusion_dato
 	*/
 	public function get_diffusion_dato( object $options ) : mixed {
 
 		// options
 			$widget_name	= $options->widget_name; // array
-			$select			= $options->select; // array
+			$select			= $options->select ?? []; // array
 			$value_format	= $options->value_format ?? null; // string|null
-			$lang			= $options->lang ?? DEDALO_DATA_LANG; // string
 
 		// widgets
 			$widgets = $this->get_widgets();
@@ -325,7 +325,7 @@ class component_info extends component_common {
 				// current_widget_name like 'get_archive_weights'
 
 				// select. Like 'media_diameter'
-				$current_select = $select[$key];
+				$current_select = $select[$key] ?? null;
 
 				// find current widget selected values
 				$ar_values = array_filter($dato, function($el) use($current_widget_name, $current_select){
@@ -425,7 +425,7 @@ class component_info extends component_common {
 	/**
 	* GET_SORTABLE
 	* @return bool
-	* 	Default is true. Override when component is sortable
+	* 	Default is true. Override when component is not sortable
 	*/
 	public function get_sortable() : bool {
 
@@ -457,9 +457,9 @@ class component_info extends component_common {
 
 	/**
 	* GET_CALCULATION_DATA
-	*  Get the data of the component for do a calculation
+	* Obtain the component data for a calculation
 	* @param object|null $options = null
-	* @return mixed $data
+	* @return array $data
 	*/
 	public function get_calculation_data( ?object $options=null ) : array {
 
@@ -471,11 +471,8 @@ class component_info extends component_common {
 		$dato = $this->get_dato();
 		if (!empty($dato)) {
 			foreach ($dato as $current_dato) {
-
 				if (isset($current_dato->{$select})){
 					$data[] = $current_dato->{$select};
-				}else{
-					continue;
 				}
 			}
 		}
@@ -533,7 +530,7 @@ class component_info extends component_common {
 					$found = array_find($data ?? [], function($item) use($current_id){
 						return $item->id===$current_id;
 					});
-					$value	= is_object( $found )
+					$value = is_object( $found )
 						? $found->value
 						: null;
 
@@ -541,7 +538,7 @@ class component_info extends component_common {
 						$value= json_encode($value);
 					}
 
-					$value	= [$value];
+					$value = [$value];
 
 					// create the new column obj id getting the previous id and add the new path
 					// it will set to the column_obj for the next loop
