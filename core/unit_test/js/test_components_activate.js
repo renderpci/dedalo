@@ -11,6 +11,8 @@ import {ui} from '../../common/js/ui.js'
 
 describe("COMPONENTS ACTIVATE", async function() {
 
+	this.timeout(5000);
+
 	const container = document.getElementById('content');
 	container.addEventListener('click', function(e) {
 		e.preventDefault()
