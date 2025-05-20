@@ -1511,9 +1511,10 @@ export const deactivate_components = function(e) {
 						data_manager.request({
 							use_worker	: true,
 							body		: {
-								dd_api	: 'dd_utils_api',
-								action	: 'update_lock_components_state',
-								options	: {
+								dd_api			: 'dd_utils_api',
+								action			: 'update_lock_components_state',
+								prevent_lock	: true,
+								options			: {
 									component_tipo	: component_instance.tipo,
 									section_tipo	: component_instance.section_tipo,
 									section_id		: component_instance.section_id,

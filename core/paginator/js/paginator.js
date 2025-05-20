@@ -185,56 +185,112 @@ paginator.prototype.destroy = async function() {
 
 
 /**
-* GET_TOTAL
-* Exec a async API call to count the current sqo records
-* Total is calculated in the caller
-* @return int total
+* _TOTAL_PROMISE
+* @private
+* @type {Promise<number>|null}
+* A private property to hold the pending promise for the total count API call.
+* This prevents multiple concurrent API calls if get_total is invoked rapidly.
 */
-paginator.loading_total_status = null
+paginator.prototype._total_promise = null; // Initialize this property once, likely after prototype definition
+
+
+
+/**
+* GET_TOTAL
+* Fetches the total count of records asynchronously from an API.
+* Ensures only one API call is active at a time to prevent redundant requests.
+* Once the total is fetched, it updates all pagination-related properties on the instance.
+* @return {Promise<number>} A Promise that resolves with the total count of records.
+*/
 paginator.prototype.get_total = async function() {
+	// If a promise to fetch the total is already pending, return that existing promise.
+	// This is the core of our debouncing/queueing mechanism.
+	if (this._total_promise) {
+		return this._total_promise;
+	}
+
+	// Create and store a new promise for the current API call.
+	// This promise will be resolved or rejected based on the API call's outcome.
+	this._total_promise = (async () => {
+		try {
+			// Execute the actual API call to get the total.
+			// This is where your external data source is queried.
+			const total = await this.caller.get_total();
+
+			// After successfully getting the total, calculate and update
+			// all derived pagination properties on the instance.
+			this._update_pagination_props(total);
+
+			// Once the operation completes (successfully), clear the promise
+			// so that future calls to get_total will trigger a new API request.
+			this._total_promise = null;
+
+			return total; // Resolve the promise with the fetched total
+		} catch (error) {
+			// --- Error Handling ---
+			// Log the error for debugging purposes.
+			console.error("paginator.get_total: Error fetching total from API:", error);
+
+			// In case of an error, clear the promise so that the next call to get_total
+			// will attempt to re-fetch the total, rather than endlessly returning a rejected promise.
+			this._total_promise = null;
+
+			// Re-throw the error so that the original caller of get_total can handle it.
+			throw error;
+		}
+	})(); // Immediately invoke this async IIFE to create and assign the promise.
+
+
+	return this._total_promise; // Return the promise that was just created/stored
+}//end get_total
+
+
+
+/**
+* _UPDATE_PAGINATION_PROPS
+* @private
+* Calculates and updates all derived pagination properties on the paginator instance.
+* This method is called internally after the total count has been successfully fetched.
+* @param {number} total The total count of records (should be a non-negative number).
+*/
+paginator.prototype._update_pagination_props = function(total) {
 
 	const self = this
 
-	// queue. Prevent double resolution calls to API
-		if (self.loading_total_status==='resolving') {
-			return new Promise(function(resolve){
-				setTimeout(function(){
-					resolve( self.get_total() )
-				}, 50)
-			})
-		}
-
-	self.loading_total_status = 'resolving'
-
-	const total = await self.caller.get_total()
-
-	self.loading_total_status = 'resolved'
-
 	// short vars
-		const limit				= self.get_limit()
-		const offset			= self.get_offset()
+	const limit		= self.get_limit()
+	const offset	= self.get_offset()
 
 	// pages fix vars
-		self.total				= total
-		self.limit				= limit
-		self.total_pages		= limit>0 ? Math.ceil(total / limit) : 0
-		self.page_number		= self.get_page_number(limit, offset)
-		self.prev_page_offset	= offset - limit
-		self.next_page_offset	= offset + limit
 
-		self.page_row_begin		= (total===0) ? 0 : offset + 1;
-		self.page_row_end		= self.get_page_row_end(self.page_row_begin, limit, total);
+	// Ensure values are non-negative to prevent unexpected calculations (e.g., NaN).
+	self.total	= Math.max(0, total)
+	self.limit	= Math.max(0, limit);
+	self.offset	= Math.max(0, offset);
+
+	// Calculate total pages. Handle 'limit' being zero to avoid division by zero.
+	// If total > 0 but limit is 0, it implies one "page" of all items.
+	self.total_pages = self.limit > 0 ? Math.ceil(self.total / self.limit) : (self.total > 0 ? 1 : 0);
+
+	// Calculate current page number.
+	// Assuming get_page_number handles cases where offset/limit lead to invalid page numbers.
+	this.page_number = self.get_page_number(self.limit, self.offset);
+
+	// page offset
+	self.prev_page_offset	= self.offset - self.limit
+	self.next_page_offset	= self.offset + self.limit
+
+	// Calculate the display range for the current page (e.g., "Showing 11-20 of 100").
+	self.page_row_begin	= (self.total===0) ? 0 : self.offset + 1;
+	self.page_row_end	= self.get_page_row_end(self.page_row_begin, self.limit, self.total);
 
 	// offset fix
-		self.offset				= offset;
-		self.offset_first		= 0;
-		self.offset_prev		= (offset>limit) ? offset - limit : 0
-		self.offset_next		= offset + limit
-		self.offset_last		= limit * (self.total_pages -1)
-
-
-	return total
-}//end get_total
+	// Calculate offsets for navigation links.
+	self.offset_first	= 0;
+	self.offset_prev	= (self.offset > self.limit) ? self.offset - self.limit : 0
+	self.offset_next	= self.offset + self.limit
+	self.offset_last	= self.limit * (self.total_pages -1)
+}//end _update_pagination_props
 
 
 
@@ -347,13 +403,9 @@ paginator.prototype.get_page_number = function(item_per_page, offset) {
 * @return int page_row_end
 */
 paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, total_records) {
-
-	// if(SHOW_DEBUG===true) {
-		//console.log("page_row_begin:",page_row_begin);
-		//console.log("item_per_page:",item_per_page);
-		//console.log("total_records:",total_records);
-	// }
-
+	if (total_records===0) {
+		return 0
+	}
 	const page_row_end = page_row_begin + item_per_page -1;
 	if (page_row_end > total_records) {
 		return total_records
@@ -387,7 +439,6 @@ paginator.prototype.go_to_page_json = function(page) {
 
 	// new offset
 		const new_offset = ((page -1) * item_per_page)
-			//console.log("new_offset:",new_offset);
 
 	// search with new offset
 		self.paginate(new_offset)

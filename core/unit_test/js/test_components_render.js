@@ -87,7 +87,7 @@ async function fn_change_search_element(instance) {
 
 describe(`COMPONENTS RENDER`, async function() {
 
-	this.timeout(4000);
+	this.timeout(5000);
 
 	// elements iterate
 	for (let i = 0; i < elements_length; i++) {

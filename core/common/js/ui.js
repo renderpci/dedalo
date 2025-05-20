@@ -772,9 +772,8 @@ export const ui = {
 					const save_on_deactivate = typeof component.save_on_deactivate!=='undefined'
 						? component.save_on_deactivate
 						: true
-
 					if (save_on_deactivate===true) {
-						await component.change_value({
+						component.change_value({
 							changed_data	: component.data.changed_data,
 							refresh			: false
 						})
