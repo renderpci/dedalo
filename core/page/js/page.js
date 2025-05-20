@@ -602,7 +602,6 @@ page.prototype.add_events = function() {
 
 			// unsaved_data is false. Nothing to worry about
 				if (unsaved_data!==true) {
-					// console.log('window.unsaved_data:', window.unsaved_data);
 					// removeEventListener('beforeunload', beforeUnloadListener, {capture: true})
 					return false
 				}
@@ -852,6 +851,7 @@ const set_custom_css = function () {
 		}
 	}
 }//end set_custom_css
+
 
 
 /**
