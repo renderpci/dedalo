@@ -3693,6 +3693,16 @@ abstract class component_common extends common {
 
 				$target_section_tipo = $changed_data->value;
 
+				$permissions_new = security::get_section_new_permissions( $target_section_tipo );
+				if($permissions_new < 2){
+					debug_log(__METHOD__
+						." Error on add_new_element (section_tipo:'$target_section_tipo').".PHP_EOL
+						.' Insufficient permissions: ' . $permissions_new
+						, logger::ERROR
+					);
+					return false;
+				}
+
 				// component add_new_element. Returns object $response
 					$response = $this->add_new_element((object)[
 						'target_section_tipo' => $target_section_tipo
