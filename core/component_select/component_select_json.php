@@ -34,9 +34,12 @@
 						$current_section_tipo_permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
 						if ($current_section_tipo_permissions>0) {
 							$target_sections[] = [
-								'tipo'			=> $current_section_tipo,
-								'label'			=> RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true),
-								'permissions'	=> $current_section_tipo_permissions
+								'tipo'				=> $current_section_tipo,
+								'label'				=> RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true),
+								// section permissions, general access to the target section, it will be able to edit or not the section
+								'permissions'		=> $current_section_tipo_permissions,
+								// get permissions of the button new of the target section, it will be able to add or not new item in the target section.
+								'permissions_new'	=> security::get_section_new_permissions( $current_section_tipo )
 							];
 						}
 					}
