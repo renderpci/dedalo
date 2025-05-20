@@ -110,10 +110,6 @@ const get_content_value = (i, current_value, self) => {
 		// change event
 			select.addEventListener('change', function(){
 
-				const value = this.value
-					? JSON.parse(this.value)
-					: null
-
 				const parsed_value	= (select.value.length>0)
 					? JSON.parse(select.value)
 					: null
