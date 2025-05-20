@@ -439,7 +439,6 @@ paginator.prototype.go_to_page_json = function(page) {
 
 	// new offset
 		const new_offset = ((page -1) * item_per_page)
-			//console.log("new_offset:",new_offset);
 
 	// search with new offset
 		self.paginate(new_offset)
