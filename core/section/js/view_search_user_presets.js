@@ -468,6 +468,8 @@ export const render_column_remove = function(options) {
 					// reset offset
 					section.rqo.sqo.offset = 0
 
+					// force to recalculate total records
+					section.total = null
 					// refresh section section
 					await section.refresh()
 
