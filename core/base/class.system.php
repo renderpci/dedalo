@@ -78,12 +78,14 @@ class system {
 
 		preg_match_all('/.*"MHz": "([0-9]+)\.[0-9]+".*/', to_string($cpu_info), $output_array);
 
-		$total_mhz = isset($output_array[1][0])
-			? (int)$output_array[1][0]
-			: null;
+		$match_list = $output_array[1] ?? [];
+		if (!empty($match_list)) {
+			// max value
+			$total_mhz = intval( max($match_list) );
+		}
 
 
-		return $total_mhz;
+		return $total_mhz ?? null;
 	}//end get_mhz
 
 

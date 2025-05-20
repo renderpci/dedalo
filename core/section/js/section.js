@@ -1214,9 +1214,10 @@ section.prototype.navigate = async function(options) {
 				data_manager.request({
 					use_worker	: true,
 					body		: {
-						dd_api	: 'dd_utils_api',
-						action	: 'update_lock_components_state',
-						options	: {
+						dd_api			: 'dd_utils_api',
+						action			: 'update_lock_components_state',
+						prevent_lock	: true,
+						options			: {
 							component_tipo	: null,
 							section_tipo	: self.tipo,
 							section_id		: null,

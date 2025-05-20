@@ -402,10 +402,10 @@ class component_relation_parent extends component_relation_common {
 		if (empty($component_tipo)) {
 			debug_log(__METHOD__
 				. " Error! Unable to resolve component_tipo. Returning empty array" . PHP_EOL
-				. ' section_id: ' . to_string($section_id) . PHP_EOL
-				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-				. ' from_component_tipo: ' . to_string($from_component_tipo) . PHP_EOL
-				. ' component_tipo: ' . to_string($component_tipo)
+				. ' section_id: ' . json_encode($section_id) . PHP_EOL
+				. ' section_tipo: ' . json_encode($section_tipo) . PHP_EOL
+				. ' from_component_tipo: ' . json_encode($from_component_tipo) . PHP_EOL
+				. ' component_tipo: ' . json_encode($component_tipo)
 				, logger::ERROR
 			);
 			return [];
