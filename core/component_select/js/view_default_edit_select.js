@@ -354,11 +354,15 @@ const get_buttons = (self) => {
 		const target_sections_length	= target_sections.length
 		const show_interface			= self.show_interface
 
+	// permissions to create new values in the target section
+	// permissions below 2 can not create new values.
+		const permissions_new = target_sections[0]?.permissions_new || 0;
+
 	// fragment
 		const fragment = new DocumentFragment()
 
 	// button_add (not in component_select_lang)
-		if(show_interface.button_add === true && self.model !== 'component_select_lang'){
+		if( permissions_new > 1 && show_interface.button_add === true && self.model !== 'component_select_lang'){
 
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
