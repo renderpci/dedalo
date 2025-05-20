@@ -128,6 +128,7 @@ dd_grid.prototype.get_total = async function() {
 	const rqo_count = clone(self.rqo)
 
 	rqo_count.action = 'count'
+	rqo_count.prevent_lock = true
 	delete rqo_count.sqo.limit
 	delete rqo_count.sqo.offset
 	delete rqo_count.sqo.total
