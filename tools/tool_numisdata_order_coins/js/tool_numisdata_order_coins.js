@@ -151,8 +151,6 @@ tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 */
 tool_numisdata_order_coins.prototype.assign_element = function(options){
 
-	const self = this
-
 	const locator	= options.locator
 	const caller	= options.caller
 
@@ -161,7 +159,7 @@ tool_numisdata_order_coins.prototype.assign_element = function(options){
 		value	: locator
 	}]
 	// change_value (save data)
-	const change =  caller.change_value({
+	const change = caller.change_value({
 		changed_data	: changed_data,
 		refresh			: false
 	})
