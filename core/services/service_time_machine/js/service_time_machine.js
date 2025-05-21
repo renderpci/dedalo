@@ -518,12 +518,12 @@ service_time_machine.prototype.get_total = async function() {
 		delete count_sqo.offset
 		delete count_sqo.select
 		delete count_sqo.generated_time
-		
+
 		const source	= create_source(self, null)
 		const rqo_count = {
 			action			: 'count',
-			sqo				: count_sqo,
 			prevent_lock	: true,
+			sqo				: count_sqo,
 			source			: source
 		}
 		const api_count_response = await data_manager.request({

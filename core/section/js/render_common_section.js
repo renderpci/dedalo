@@ -135,6 +135,8 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 					delete_diffusion_records	: delete_diffusion_records_checkbox.checked
 				})
 				.then(async () => {
+					// force to recalculate total records
+					section.total = null
 					// refresh section section
 					await section.refresh()
 					// fire modal event on_close
@@ -172,6 +174,8 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 					delete_mode	: 'delete_data'
 				})
 				.then(async () => {
+					// force to recalculate total records
+					section.total = null
 					// refresh section section
 					await section.refresh()
 					// fire modal on_close

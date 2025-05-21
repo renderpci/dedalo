@@ -1409,6 +1409,17 @@ section.prototype.change_mode = async function(options) {
 
 
 /**
+* _TOTAL_PROMISE
+* @private
+* @type {Promise<number>|null}
+* A private property to hold the pending promise for the total count API call.
+* This prevents multiple concurrent API calls if get_total is invoked rapidly.
+*/
+section.prototype._total_promise = null; // Initialize this property once, likely after prototype definition
+
+
+
+/**
 * GET_TOTAL
 * Exec a async API call to count the current sqo records
 * @return int total
@@ -1422,60 +1433,73 @@ section.prototype.get_total = async function() {
 			return self.total
 		}
 
-	// queue. Prevent double resolution calls to API
-		if (self.loading_total_status==='resolving') {
-			return new Promise(function(resolve){
-				setTimeout(function(){
-					resolve( self.get_total() )
-				}, 600)
-			})
+	// If a promise to fetch the total is already pending, return that existing promise for debouncing/queueing.
+		if (self._total_promise) {
+			return self._total_promise;
 		}
 
-	// loading status update
-		self.loading_total_status = 'resolving'
+	// Create and store a new promise for the current API call.
+	// This promise will be resolved or rejected based on the API call's outcome.
+		self._total_promise = (async () => {
+			try {
+				// Execute the actual API call to get the total.
+				// API request
 
-	// API request
+					// count sqo. Simplified version from current self.rqo.sqo
+					const count_sqo = clone(self.rqo.sqo)
+					// remove unused properties
+					delete count_sqo.limit
+					delete count_sqo.offset
+					delete count_sqo.select
+					delete count_sqo.order
+					delete count_sqo.generated_time
 
-		// count sqo. Simplified version from current self.rqo.sqo
-		const count_sqo = clone(self.rqo.sqo)
-		// remove unused properties
-		delete count_sqo.limit
-		delete count_sqo.offset
-		delete count_sqo.select
-		delete count_sqo.order
-		delete count_sqo.generated_time
+					// source
+					const source = create_source(self, null)
+					// remove unused properties
+					delete source.properties
 
-		// source
-		const source = create_source(self, null)
-		// remove unused properties
-		delete source.properties
+					const rqo_count	= {
+						action			: 'count',
+						prevent_lock	: true,
+						sqo				: count_sqo,
+						source			: source
+					}
+					const api_count_response = await data_manager.request({
+						body		: rqo_count,
+						use_worker	: true
+					})
 
-		const rqo_count	= {
-			action			: 'count',
-			sqo				: count_sqo,
-			prevent_lock	: true,
-			source			: source
-		}
-		const api_count_response = await data_manager.request({
-			body		: rqo_count,
-			use_worker	: true
-		})
+				// API error case
+					if ( api_count_response.result===false || api_count_response.errors?.length ) {
+						console.error('Error on count total : api_count_response:', api_count_response);
+						return
+					}
 
-	// API error case
-		if ( api_count_response.result===false || api_count_response.errors?.length ) {
-			console.error('Error on count total : api_count_response:', api_count_response);
-			return
-		}
+				// set result
+					self.total = api_count_response.result.total
 
-	// set result
-		self.total = api_count_response.result.total
+				// Once the operation completes (successfully), clear the promise
+				// so that future calls to get_total will trigger a new API request.
+				self._total_promise = null;
+
+				return self.total; // Resolve the promise with the fetched total
+			} catch (error) {
+				// --- Error Handling ---
+				// Log the error for debugging purposes.
+				console.error("section.get_total: Error fetching total from API:", error);
+
+				// In case of an error, clear the promise so that the next call to get_total
+				// will attempt to re-fetch the total, rather than endlessly returning a rejected promise.
+				self._total_promise = null;
+
+				// Re-throw the error so that the original caller of get_total can handle it.
+				throw error;
+			}
+		})(); // Immediately invoke this async IIFE to create and assign the promise.
 
 
-	// loading status update
-		self.loading_total_status = 'resolved'
-
-
-	return self.total
+	return self._total_promise; // Return the promise that was just created/stored
 }//end get_total
 
 

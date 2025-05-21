@@ -577,7 +577,7 @@ abstract class common {
 						// add table
 						$ar_tables_with_relations[] = $table_name;
 
-					}else if($table_name==='matrix_test' && SHOW_DEBUG===true){
+					}else if($table_name==='matrix_test' && (SHOW_DEBUG===true || DEVELOPMENT_SERVER===true)){
 
 						// add table matrix_test only in development server context
 						$ar_tables_with_relations[] = $table_name;
