@@ -694,6 +694,13 @@ class tool_import_files extends tool_common {
 						$target_ddo = array_find($ar_ddo_map, function($item) use($current_component_option_tipo){
 							return $item->role === 'component_option' && $item->tipo===$current_component_option_tipo;
 						});
+
+						// check if the section is not defined in the target_ddo (as virtual sections):
+						// in those cases it will defined as 'self' and needs to be replace by the current section_tipo.
+						if( $target_ddo->section_tipo === 'self'){
+							$target_ddo->section_tipo = $section_tipo;
+						}
+
 					}else{
 						// target ddo will be the caller portal, used when the tool is loaded by specific portal and all files will be stored inside these portal
 						$target_ddo = new dd_object();
