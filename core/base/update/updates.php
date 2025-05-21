@@ -72,7 +72,7 @@ $updates->$v = new stdClass();
 		];
 
 		$script_obj = new stdClass();
-			$script_obj->info			= "Change tld's from qdp portals to tch";
+			$script_obj->info			= "Change tld's from peri thesaurus to dc";
 			$script_obj->script_class	= "transform_data";
 			$script_obj->script_method	= "changes_in_tipos";
 			$script_obj->script_vars	= [
