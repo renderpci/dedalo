@@ -139,7 +139,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->label	= 'Move to portal';
 				$item->value	= (object)[
-					'body' => 'Move data from a section to other linked section and link together with a portal (ex: Use and function components behind qdp443 to section rsc1340).<br>
+					'body' => 'Move data from a section to another linked section and link together with a portal (e.g. "Use and function" components behind qdp443 to section rsc1340).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
 							   Note that this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_to_portal' )
@@ -153,7 +153,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->label	= 'Move to table';
 				$item->value	= (object)[
-					'body' => 'Move data from a table to other table (ex: move utoponymy1 to matrix_hierarchy).<br>
+					'body' => 'Move data from a table to another (e.g. move utoponymy1 to matrix_hierarchy).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_table.<br>',
 					'files' => area_maintenance::get_definitions_files( 'move_to_table' )
 				];
