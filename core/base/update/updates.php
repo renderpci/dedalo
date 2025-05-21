@@ -35,6 +35,53 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=652; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 5;
+	$updates->$v->version_minor			= 2;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 5;
+	$updates->$v->update_from_minor		= 1;
+
+	$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= '';
+
+		$alert->command .= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<p>
+			<strong>This update will move your data from old thesaurus peri1 to dc1.</strong>
+			</p>
+			<p>
+			If you are using the chronological hierarchy peri1, it was totally deprecated and obsolete.
+			This update will change your data to set it as general dc1 thesaurus.
+			Please review your hierarchy definitions according to this change, you can find more information <a href=\"https://agora.dedalo.dev/d/213\"> here</a>.
+			</p>
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// 1 move tld's from peri1 to dc1
+		$json_files =[
+			'chronological_hierarchy_peri1_to_dc1.json'
+		];
+
+		$script_obj = new stdClass();
+			$script_obj->info			= "Change tld's from qdp portals to tch";
+			$script_obj->script_class	= "transform_data";
+			$script_obj->script_method	= "changes_in_tipos";
+			$script_obj->script_vars	= [
+				$ar_tables,
+				$json_files
+			]; // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
+
+
 
 $v=651; #####################################################################################
 $updates->$v = new stdClass();
