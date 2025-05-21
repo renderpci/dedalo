@@ -59,9 +59,8 @@ export const move_to_table = function() {
 */
 move_to_table.prototype.exec_move_to_table = async (files_selected) => {
 
-	console.log('files_selected:', files_selected);
-
-	if (!files_selected.length) {
+	if (!files_selected?.length) {
+		console.error('No files selected');
 		return
 	}
 
