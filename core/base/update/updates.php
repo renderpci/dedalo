@@ -67,6 +67,30 @@ $updates->$v = new stdClass();
 		$updates->$v->alert_update[] = $alert;
 
 	// 1 move tld's from peri1 to dc1
+
+		$ar_tables = [
+			// 'new_matrix'
+			'matrix',
+			'matrix_activities',
+			'matrix_activity',
+			'matrix_counter',
+			'matrix_dataframe',
+			'matrix_dd',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_indexations',
+			'matrix_layout',
+			'matrix_layout_dd',
+			'matrix_list',
+			'matrix_nexus',
+			'matrix_nexus_main',
+			'matrix_notes',
+			'matrix_profiles',
+			'matrix_projects',
+			'matrix_stats',
+			'matrix_time_machine'
+		];
+
 		$json_files =[
 			'chronological_hierarchy_peri1_to_dc1.json'
 		];
