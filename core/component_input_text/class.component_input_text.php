@@ -550,7 +550,28 @@ class component_input_text extends component_common {
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator	= '!~';
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$first_char	= mb_substr($q_clean, 0, 1);
+				$last_char	= mb_substr($q_clean, -1);
+				switch (true) {
+					// contains
+					case ($first_char==='*' && $last_char==='*'):
+						$q_clean = str_replace('*', '', $q_clean);
+						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+						break;
+					// begins with
+					case ($first_char==='*'):
+						$q_clean = str_replace('*', '', $q_clean);
+						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+						break;
+					// ends with
+					case ($last_char==='*'):
+						$q_clean = str_replace('*', '', $q_clean);
+						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*"\'';
+						break;
+					default:
+						$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+						break;
+				}
 				$query_object->unaccent	= false;
 				break;
 			# IS EXACTLY EQUAL ==
@@ -609,7 +630,7 @@ class component_input_text extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*"\'';
 				$query_object->unaccent	= true;
 				break;
 			# BEGINS WITH

@@ -567,12 +567,6 @@ common.prototype.refresh = async function(options={}) {
 		// 	self.node[i].classList.add('loading')
 		// }
 
-	// total (section cases)
-		if (self.total) {
-			// force to recalculate total records
-			self.total = null
-		}
-
 	// destroy (dependencies only)
 		if (self.status!=='rendered') {
 			console.warn("/// destroyed fail (expected status 'rendered') with actual status:", self.model, self.status);

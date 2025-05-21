@@ -225,6 +225,8 @@ render_search.prototype.render_base = function() {
 					section_id	: section_id,
 					on_close	: async () => {
 
+						// force to recalculate total records
+						self.user_presets_section.total = null
 						// force refresh the section
 						await self.user_presets_section.refresh()
 

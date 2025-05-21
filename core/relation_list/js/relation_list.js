@@ -263,8 +263,8 @@ relation_list.prototype.build = async function(autoload=true){
 			//rqo, use the 'count' action of the API
 			const rqo = {
 				action			: 'count',
-				sqo				: sqo_count,
 				prevent_lock	: true,
+				sqo				: sqo_count,
 				source			: source
 			}
 
