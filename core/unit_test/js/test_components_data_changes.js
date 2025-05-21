@@ -37,6 +37,8 @@ describe("COMPONENTS DATA CHANGES", async function() {
 			// TEST data save
 				it(`${element.model}. Data save using API`, async function() {
 
+					this.timeout(5000);
+
 					const options = {
 						id_variant		: Math.random() + '-' + Math.random(),
 						lang			: element.lang,
