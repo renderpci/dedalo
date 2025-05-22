@@ -460,8 +460,9 @@ data_manager.get_element_context = async function(source) {
 		// const api_response = await this.request({
 		const api_response = this.request({
 			body : {
-				action	: 'get_element_context',
-				source	: source
+				action			: 'get_element_context',
+				prevent_lock	: true,
+				source			: source
 			}
 		})
 
@@ -492,9 +493,10 @@ data_manager.resolve_model = async function(tipo, section_tipo) {
 	// api request
 		const api_response = await this.request({
 			body : {
-				action	: 'get_element_context',
-				simple	: true, // force simple context here
-				source	: {
+				action			: 'get_element_context',
+				prevent_lock	: true,
+				simple			: true, // force simple context here
+				source			: {
 					tipo			: tipo,
 					section_tipo	: section_tipo
 				}
