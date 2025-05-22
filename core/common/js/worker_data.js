@@ -63,67 +63,71 @@ self.onmessage = async function(e) {
 */
 const data_manager = {}
 data_manager.request = async function(options) {
-	// console.log("// request options:",options);
 
-	// options
-		this.url			= options.url
-		this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-		this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
-		this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-		this.credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
-		this.headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
-		this.redirect		= options.redirect || 'follow' // manual, *follow, error
-		this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
-		this.body			= options.body // body data type must match "Content-Type" header
+	const default_options = {
+		url			: typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/',
+		method		: 'POST', // *GET, POST, PUT, DELETE, etc.
+		mode		: 'cors', // no-cors, cors, *same-origin
+		cache		: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+		credentials	: 'same-origin', // include, *same-origin, omit
+		headers		: {'Content-Type': 'application/json'}, // 'Content-Type': 'application/x-www-form-urlencoded'
+		redirect	: 'follow', // manual, *follow, error
+		referrer	: 'no-referrer', // no-referrer, *client
+		body		: null // body data type must match "Content-Type" header
+	};
+
+	const merged_options = { ...default_options, ...options };
+
+	// vars from options applying defaults
+	const { url, method, mode, cache, credentials, headers, redirect, referrer, body } = merged_options;
 
 	// handle_errors
-		const handle_errors = function(response) {
-			if (!response.ok) {
-				console.warn("-> HANDLE_ERRORS response:",response);
-				throw Error(response.statusText);
-			}
-			return response;
+	const handle_errors = async (response) => {
+		if (!response.ok) {
+			console.warn("-> HANDLE_ERRORS response:", response);
+			// extract response text to console
+			const response_text = await response.text();
+			console.error(response_text);
+			throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
 		}
+		return response;
+	}
 
-	const api_response = fetch(
-		this.url,
-		{
-			method		: this.method,
-			mode		: this.mode,
-			cache		: this.cache,
-			credentials	: this.credentials,
-			headers		: this.headers,
-			redirect	: this.redirect,
-			referrer	: this.referrer,
-			body		: JSON.stringify(this.body)
+	try {
+		const fetch_response = await fetch(url, {
+			method		: method,
+			mode		: mode,
+			cache		: cache,
+			credentials	: credentials,
+			headers		: headers,
+			redirect	: redirect,
+			referrer	: referrer,
+			body		: body ? JSON.stringify(body) : null
 		})
-		.then(handle_errors)
-		.then(response => {
-			const json_parsed = response.json().then((result)=>{
 
-				if (result.error) {
+		const json_response = await handle_errors(fetch_response).then(response => response.json());
 
-					// debug console message
-						console.error("result error:", result);
-				}
-
-				return result
-			})
-
-			return json_parsed
-		})
-		.catch(error => {
-			console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n", error)
-			console.warn("options:", options);
-			return {
-				result	: false,
-				msg		: error.message,
-				error	: error
+		// error occurred
+			if (json_response?.error) {
+				// debug console message
+				console.error("data_manager request api_response:", json_response);
 			}
-		});
 
+		return json_response;
 
-	return api_response
+	} catch (error) {
+
+		console.warn('request url:', typeof url, url);
+		console.warn("request options:", options);
+		console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid or network error. See your server log for details. catch ERROR:\n", error);
+
+		return {
+			result	: false,
+			msg		: error.message || 'Network error',
+			error	: error,
+			errors	: [error.message || 'Network error'],
+		};
+	}
 }//end request
 
 

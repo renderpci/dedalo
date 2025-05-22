@@ -20,199 +20,235 @@ export const data_manager = function() {
 * Receives a JSON string to be parsed
 * @param object options
 * @return api_response
+* 	Promise
 */
 data_manager.request = async function(options) {
 
-	// debug
-		if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
-			const action = options.body && options.body.action
-				? options.body.action
-				: null;
-			console.warn('request options:', action, options);
-		}
+	const self = this
 
-	// options
-		this.url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')
-		this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-		this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
-		this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-		this.credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
-		this.headers		= options.headers || {'Content-Type': 'application/json'}// 'Content-Type': 'application/x-www-form-urlencoded'
-		this.redirect		= options.redirect || 'follow' // manual, *follow, error
-		this.referrer		= options.referrer || 'no-referrer' // no-referrer, *client
-		this.body			= options.body // body data type must match "Content-Type" header
-		this.use_worker		= options.use_worker ?? false
+	const default_options = {
+		url			: typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/',
+		method		: 'POST', // *GET, POST, PUT, DELETE, etc.
+		mode		: 'cors', // no-cors, cors, *same-origin
+		cache		: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+		credentials	: 'same-origin', // include, *same-origin, omit
+		headers		: {'Content-Type': 'application/json'}, // 'Content-Type': 'application/x-www-form-urlencoded'
+		redirect	: 'follow', // manual, *follow, error
+		referrer	: 'no-referrer', // no-referrer, *client
+		body		: null, // body data type must match "Content-Type" header
+		use_worker	: false
+	};
+
+	const merged_options = { ...default_options, ...options };
+
+	// vars from options applying defaults
+	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker } = merged_options;
+
+	// Debug request
+	if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {
+		const action		= body?.action || 'load';
+		const worker_label	= use_worker ? '[wk] ' : ''
+		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), merged_options);
+	}
 
 	// recovery mode. Auto add if environment recovery_mode is true
 	// On set to true, it is passed across all API request calls preserving the mode
-		if (page_globals.recovery_mode) {
-			this.body.recovery_mode = true
-		}
+	if (page_globals.recovery_mode && body) {
+		body.recovery_mode = true
+	}
 
-	// reset page_globals.api_errors
-		page_globals.api_errors = []
+	 // Reset page_globals.api_errors at the beginning of each request
+	page_globals.api_errors = [];
+	page_globals.request_message = null; // Reset request message
+
+	// Check URL
+	if (!url || !url.length) {
+		const msg = 'Error: empty or invalid API URL';
+		console.error(msg, { typeof: typeof url, value: url });
+		self._record_api_error(
+			'data_manager', // error_type
+			msg, // message
+			'data_manager URL validation', // trace
+			null // details
+		)
+		return {
+			result	: false,
+			msg		: msg,
+			error	: 'URL is not valid',
+			errors	: ['URL is not valid']
+		};
+	}
 
 	// using worker cases.
 	// Note that execution is slower, but it is useful for low priority
 	// calls like 'update_lock_components_state'
-		if (this.use_worker===true) {
-			const current_worker = new Worker(DEDALO_CORE_URL + '/common/js/worker_data.js', {
-				type : 'module'
-			});
-			current_worker.postMessage({
-				url		: this.url,
-				body	: this.body
-			});
-
-			current_worker.onerror = (event) => {
-				console.error("There is an error with current worker error!");
-				console.log('options:', options);
-				console.log('event:', event);
-			};
-
-			return new Promise(function(resolve, reject){
-
-				current_worker.onmessage = function(e) {
-					if (!e.data.api_response) {
-						console.error('Error worker_data onmessage. Rejected! e.data:', e.data);
-						current_worker.terminate()
-
-						reject({})
-					}
-
-					current_worker.terminate()
-
-					resolve(e.data.api_response)
-				}
-			})
-			.catch(error => {
-				console.error(error)
-
-				// api_errors. store api_errors. Used to render error page_globals
-				page_globals.api_errors.push(
-					{
-						error	: 'data_manager', // error type
-						msg		: error,
-						trace	: 'data_manager worker catch error'
-					}
-				)
-
-				return {
-					result	: false,
-					msg		: error.message,
-					error	: error,
-					errors  : [error.message || null]
-				}
-			});
-		}
-
-	// check url
-		if (!this.url || !this.url.length) {
-			const msg = 'Error: empty or invalid API URL'
-			console.error(msg + '. typeof:', typeof this.url, 'value:', this.url);
-			return {
-				result	: false,
-				msg		: msg,
-				error	: 'URL is not valid',
-				errors  : ['URL is not valid']
-			}
-		}
+	// (!) Deactivated 22-05-2025 temporally to simplify network issues debug
+	// if (use_worker === true) {
+	// 	return this._handle_worker_request(url, body);
+	// }
 
 	// handle_errors
-		const handle_errors = function(response) {
-			if (!response.ok) {
-				console.warn("-> HANDLE_ERRORS response:",response);
-				// extract response text to console
-				response.text().then(function(response_str){
-					console.error(response_str);
-				})
-				throw Error(response.statusText);
-			}
-			return response;
+	const handle_errors = async (response) => {
+		if (!response.ok) {
+			console.warn("-> HANDLE_ERRORS response:", response);
+			// extract response text to console
+			const response_text = await response.text();
+			console.error(response_text);
+			self._record_api_error(
+				'data_manager', // error_type
+				response_text, // message
+				'data_manager fetch handle_errors', // trace
+				null // details
+			)
+			throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
 		}
+		return response;
+	}
 
-	const api_response = fetch(
-		this.url,
-		{
-			method		: this.method,
-			mode		: this.mode,
-			cache		: this.cache,
-			credentials	: this.credentials,
-			headers		: this.headers,
-			redirect	: this.redirect,
-			referrer	: this.referrer,
-			body		: JSON.stringify(this.body)
+	try {
+		const fetch_response = await fetch(url, {
+			method		: method,
+			mode		: mode,
+			cache		: cache,
+			credentials	: credentials,
+			headers		: headers,
+			redirect	: redirect,
+			referrer	: referrer,
+			body		: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null
 		})
-		.then(handle_errors)
-		.then(response => {
-			const json_parsed = response.json()
-			.then((api_response)=>{
 
-				if (api_response.error) {
+		const json_response = await (await handle_errors(fetch_response)).json();
 
-					// debug console message
-						console.error("data_manager request api_response:", api_response);
+		// error occurred. Catch and alert
+			if (json_response?.error) {
 
-					// update_lock_components_state fails. Do not send alert here
-						if (options.body.action && options.body.action==='update_lock_components_state') {
-							return
-						}
+				// debug console message
+				console.error("data_manager request api_response:", json_response);
 
+				// update_lock_components_state fails. Do not send alert here
+				const action = body?.action;
+				if (action !== 'update_lock_components_state') {
 					// alert msg to user
-						const msg = api_response.msg || api_response.error
-						if (!page_globals.request_message || page_globals.request_message!==msg) {
-							alert("An error has occurred in the API connection\n[data_manager.request]\n\n" + msg);
-						}
-
-					// save error message. This is captured by page rendering to display the proper error
-
-						// request_message. Store request message temporally
-							page_globals.request_message = msg
-							setTimeout(function(){
-								page_globals.request_message = null
-							}, 3000)
-
-						// api_errors. store api_errors. Used to render error page_globals
-							page_globals.api_errors.push(
-								{
-									error	: api_response?.errors?.length ? api_response.errors.join(' | ') : 'data_manager', // error type
-									msg		: msg,
-									trace	: 'data_manager json_parsed'
-								}
-							)
+					const msg = json_response.msg || json_response.error;
+					if (!page_globals.request_message || page_globals.request_message !== msg) {
+						alert(`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`);
+					}
+					// request_message. Store request message temporally
+					page_globals.request_message = msg;
+					setTimeout(() => {
+						page_globals.request_message = null;
+					}, 3000);
 				}
 
-				return api_response
-			})
-
-			return json_parsed
-		})
-		.catch(error => {
-			console.warn('request url:', typeof this.url, this.url);
-			console.warn("request options:", options);
-			console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n")
-			console.error('error:', error);
-
-			// api_errors. store api_errors. Used to render error page_globals
-				page_globals.api_errors.push(
-					{
-						error	: api_response?.errors?.length ? api_response.errors.join(' | ') : 'data_manager', // error type
-						msg		: (api_response?.msg || api_response?.error || error),
-						trace	: 'data_manager catch error'
-					}
+				// save error message. This is captured by page rendering to display the proper error
+				// api_errors. store api_errors. Used to render error page_globals
+				self._record_api_error(
+					'data_manager', // error_type
+					json_response.msg || json_response.error, // message
+					'data_manager json_parsed', // trace
+					json_response.errors?.length ? json_response.errors.join(' | ') : '' // details
 				)
 
-			return {
-				result	: false,
-				msg		: error.message || null,
-				error	: error,
-				errors  : [error.message || null]
+				return json_response;
 			}
-		});
 
+		return json_response;
 
-	return api_response
+	} catch (error) {
+
+		console.warn('request url:', typeof url, url);
+		console.warn("request options:", options);
+		console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid or network error. See your server log for details. catch ERROR:\n", error);
+
+		// api_errors. store api_errors. Used to render error page_globals
+		self._record_api_error(
+			'data_manager', // error_type
+			error.message || 'Network error or invalid JSON', // message
+			'data_manager catch error', // trace
+			error // details
+		)
+
+		return {
+			result	: false,
+			msg		: error.message || 'Network error',
+			error	: error,
+			errors	: [error.message || 'Network error'],
+		};
+	}
 }//end request
+
+
+
+/**
+* _HANDLE_WORKER_REQUEST
+* Manages the worker API request
+* @param string url
+* @param object body
+* @param object options
+* @return api_response
+*/
+data_manager._handle_worker_request = function(url, body) {
+
+	return new Promise((resolve, reject) => {
+		try {
+			const current_worker = new Worker(DEDALO_CORE_URL + '/common/js/worker_data.js', {
+				type: 'module'
+			});
+
+			current_worker.postMessage({ url, body });
+
+			current_worker.onerror = (event) => {
+				console.error("There is an error with current worker error!", event);
+				this._record_api_error('data_manager', 'Worker error', 'worker onerror', event);
+				current_worker.terminate();
+				reject(this._create_error_response('Worker error', event.message));
+			};
+
+			current_worker.onmessage = (e) => {
+				if (!e.data?.api_response) {
+					const error_message = 'Error in worker response: missing api_response';
+					console.error(error_message, 'e.data:', e.data);
+					this._record_api_error('data_manager', error_message, 'worker onmessage', e.data);
+					current_worker.terminate();
+					reject(this._create_error_response(error_message, 'Missing API response from worker'));
+					return;
+				}
+				current_worker.terminate();
+				resolve(e.data.api_response);
+			};
+		} catch (error) {
+			console.error("Error creating worker:", error);
+			this._record_api_error('data_manager', error.message, 'worker creation');
+			reject(this._create_error_response(error.message, 'Failed to create worker'));
+		}
+	}).catch(error => {
+		console.error("Worker Promise Catch:", error);
+		this._record_api_error('data_manager', error.message, 'data_manager worker catch error');
+		return this._create_error_response(error.message, error);
+	});
+}//end _handle_worker_request
+
+
+
+data_manager._record_api_error = function(error_type, message, trace, details = null) {
+	page_globals.api_errors.push({
+		error	: error_type,
+		msg		: message,
+		trace	: trace,
+		details	: details,
+	});
+}//end _record_api_error
+
+
+
+data_manager._create_error_response = function(msg, error) {
+	return {
+		result	: false,
+		msg		: msg,
+		error	: error,
+		errors	: [msg],
+	};
+}//end _create_error_response
 
 
 
