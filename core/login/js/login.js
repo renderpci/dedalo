@@ -44,7 +44,8 @@ export const login = function() {
 	this.status
 
 	// use_service_worker. default is true
-	this.use_service_worker = true
+	// (!) Disable temporally
+	this.use_service_worker = false
 }//end login
 
 
