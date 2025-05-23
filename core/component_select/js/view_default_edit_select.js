@@ -9,11 +9,12 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_dataframe} from '../../component_common/js/component_common.js'
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {
 		get_content_data
 	} from './render_edit_component_select.js'
-	import {get_dataframe} from '../../component_common/js/component_common.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
+
 
 
 /**
@@ -311,6 +312,7 @@ const get_content_value = (i, current_value, self) => {
 				}
 			})
 		}
+
 
 	return content_value
 }//end get_content_value
