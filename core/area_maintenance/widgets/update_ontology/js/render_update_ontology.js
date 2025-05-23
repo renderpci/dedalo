@@ -103,7 +103,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'body_response'
 		})
 
-	// dedalo_entity check
+	// server config vars (STRUCTURE_FROM_SERVER, DEDALO_PREFIX_TIPOS)
 		const server_vars_node = render_server_vars(value)
 		content_data.appendChild(server_vars_node)
 
@@ -332,6 +332,10 @@ const get_content_data_edit = async function(self) {
 		const rebuild_lang_files_container = render_rebuild_lang_files()
 		content_data.appendChild(rebuild_lang_files_container)
 
+	// render export to translate
+		const export_to_translate_container = render_export_to_translate(self, prefix_tipos)
+		content_data.appendChild(export_to_translate_container)
+
 
 	return content_data
 }//end get_content_data_edit
@@ -500,7 +504,7 @@ const render_rebuild_lang_files = function () {
 	// rebuild_lang_files_container
 		const rebuild_lang_files_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'rebuild_lang_files_container'
+			class_name		: 'rebuild_lang_files_container container'
 		})
 
 	// info_text
@@ -582,6 +586,218 @@ const render_rebuild_lang_files = function () {
 
 	return rebuild_lang_files_container
 }//end render_rebuild_lang_files
+
+
+
+/**
+* RENDER_EXPORT_TO_TRANSLATE
+* Renders text and button to allow to call API dd_area_maintenance_api->rebuild_lang_files
+* @param object self (Widget instance)
+* @param array prefix_tipos (TLDs array list)
+* @return HTMLElement rebuild_lang_files_container
+*/
+const render_export_to_translate = function (self, prefix_tipos) {
+
+	const langs = page_globals.dedalo_projects_default_langs.map(el => el.value)
+
+	// export_to_translate_container
+		const export_to_translate_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_to_translate_container container'
+		})
+
+	// info_text
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_text',
+			inner_html		: `Export Ontology records to translate`,
+			parent			: export_to_translate_container
+		})
+
+	// body_response
+		const body_response = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body_response'
+		})
+
+	// form init
+		if (self.caller?.init_form) {
+			self.caller.init_form({
+				submit_label	: 'Export Ontology records',
+				body_info		: export_to_translate_container,
+				body_response	: body_response,
+				inputs			: [
+					{
+						type		: 'text',
+						name		: 'export_ontology_langs',
+						label		: 'Languages list to export',
+						mandatory	: true,
+						value		: langs
+					},
+					{
+						type		: 'text',
+						name		: 'export_ontology_tld_list',
+						label		: 'TLD list to export',
+						mandatory	: true,
+						value		: prefix_tipos
+					},
+					{
+						type		: 'text',
+						name		: 'export_ontology_exclude_models',
+						label		: 'Exclude models regex',
+						mandatory	: false,
+						value		: 'field_*,table*,box*,rdf,rdf:*,owl:*,xml,relation_list,section_list,section_map,diffusion*,database*,edit_view,exclude_elements'
+					}
+				],
+				on_render : (nodes) => {
+					// make persistent the values
+					const input_nodes = nodes.input_nodes || []
+					input_nodes.forEach(el => {
+						const name = el.name
+						// localStorage check for value
+						const local_value = localStorage.getItem(name)
+						if (local_value) {
+							// assign the stored value
+							el.value = local_value
+						}
+						// add event listener
+						const change_handler = (e) => {
+							// store the new value
+							localStorage.setItem(name, el.value);
+						}
+						el.addEventListener('change', change_handler)
+					})
+				},
+				on_submit : async (e, values) => {
+
+					// export_ontology_langs
+						const export_ontology_langs_item	= values.find(el => el.name==='export_ontology_langs')
+						const export_ontology_langs			= export_ontology_langs_item?.value.split(',')
+							.map(el => el.trim())
+
+					// export_ontology_tld_list
+						// sample value:
+						// [{
+						// 	name : "export_ontology_tld_list",
+						// 	value : "dd,rsc,hierarchy,actv,aup,dmm"
+						// }]
+						const export_ontology_tld_list_item	= values.find(el => el.name==='export_ontology_tld_list')
+						const export_ontology_tld_list		= export_ontology_tld_list_item?.value.split(',')
+							.map(el => el.trim())
+							.filter(el => el.length>1)
+
+						if (!export_ontology_tld_list.length) {
+							alert("Error: no TLDs are selected");
+							return
+						}
+
+					// export_ontology_exclude_models
+						// sample value:
+						// [{
+						// 	name : "export_ontology_exclude_models",
+						// 	value : "field_*,table*,box*,rdf:*,xml,owl:*,relation_list,section_list,section_map,diffusion*"
+						// }]
+						const export_ontology_exclude_models_item	= values.find(el => el.name==='export_ontology_exclude_models')
+						const export_ontology_exclude_models		= export_ontology_exclude_models_item?.value.split(',')
+							.map(el => el.trim())
+
+					// clean body_response nodes
+						while (body_response.firstChild) {
+							body_response.removeChild(body_response.firstChild);
+						}
+
+					// loading add
+						e.target.classList.add('lock')
+						const spinner = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'spinner'
+						})
+						body_response.prepend(spinner)
+
+					// API request
+						const api_response = await data_manager.request({
+							use_worker	: true,
+							body		: {
+								dd_api	: 'dd_area_maintenance_api',
+								action	: 'widget_request',
+								source	: {
+									type	: 'widget',
+									model	: 'update_ontology',
+									action	: 'export_to_translate'
+								},
+								options	: {
+									export_ontology_langs			: export_ontology_langs,
+									export_ontology_tld_list		: export_ontology_tld_list,
+									export_ontology_exclude_models	: export_ontology_exclude_models
+								}
+							}
+						})
+						// debug
+						if(SHOW_DEBUG===true) {
+							console.log('))) export_to_translate server_api_response:', api_response)
+						}
+
+						const result = api_response?.result
+
+					// loading remove
+						e.target.classList.remove('lock')
+						spinner.remove()
+
+					// Error case
+						if(!result){
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error',
+								inner_html		: api_response.msg || 'Error connecting server',
+								parent			: body_response
+							})
+							return
+						}
+
+					// OK case
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'ok',
+							inner_html		: 'export_to_translate: ' + (api_response.msg || 'success'),
+							parent			: body_response
+						})
+
+					// create CSV string
+						const ar_row_csv = []
+						const result_length = result.length
+						for (let i = 0; i < result_length; i++) {
+
+							const line = result[i]
+
+							const row_csv = line.map(item => {
+								return '"'+item.toString().replace(/\"/g, '""') +'"'
+							})
+
+							ar_row_csv.push(row_csv)
+						}
+						const csv_string = ar_row_csv.join("\n")
+
+					// Download it
+						const filename = 'ontology_translations'
+						const file	= filename + '.csv';
+						const link	= document.createElement('a');
+						link.style.display = 'none';
+						link.setAttribute('target', '_blank');
+						link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+						link.setAttribute('download', file);
+						document.body.appendChild(link);
+						link.click();
+						document.body.removeChild(link);
+				}
+			})
+		}
+
+	// body_response append at end
+		export_to_translate_container.appendChild(body_response)
+
+
+	return export_to_translate_container
+}//end render_export_to_translate
 
 
 
