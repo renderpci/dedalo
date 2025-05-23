@@ -879,7 +879,7 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 /**
 * DATA_LIMIT_REACHED
 * @param object self
-* 	component  instance
+* 	component instance
 * @return bool
 * 	true on reached
 */
@@ -1208,14 +1208,6 @@ component_portal.prototype.sort_data = async function(options) {
 			value		: value
 		})]
 
-	/* old
-		// exec async change_value
-			const api_response = await self.change_value({
-				changed_data	: changed_data,
-				refresh			: true
-			})
-			*/
-
 	// api_response : change_value (and save)
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
@@ -1230,7 +1222,6 @@ component_portal.prototype.sort_data = async function(options) {
 		})
 
 
-
 	return api_response
 }//end sort_data
 
@@ -1240,7 +1231,6 @@ component_portal.prototype.sort_data = async function(options) {
 * GET_TOTAL
 * this function is for compatibility with section and paginator
 * total is resolved in server and comes in data, so it's not necessary call to server to get it
-*
 * @return int self.total
 */
 component_portal.prototype.get_total = async function() {
@@ -1296,16 +1286,6 @@ component_portal.prototype.unlink_record = async function(options) {
 			console.warn("// unlink_record api_response failed ", api_response);
 			return false
 		}
-
-	/* old
-		// update pagination offset
-			self.update_pagination_values('remove')
-
-		// refresh
-			await self.refresh({
-				build_autoload : true // when true, force reset offset
-			})
-			*/
 
 	// refresh self component
 		await self.refresh({

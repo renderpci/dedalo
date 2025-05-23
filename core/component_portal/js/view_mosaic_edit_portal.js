@@ -120,7 +120,6 @@ view_mosaic_edit_portal.render = async function(self, options) {
 			// store to allow destroy later
 			self.ar_instances.push(...hover_ar_section_record)
 
-
 	// content_data. Create the mosaic with only the marked ddo as "mosaic" with true value
 		// columns_map
 			const base_columns_map	= self.columns_map.filter(el => el.in_mosaic===true)

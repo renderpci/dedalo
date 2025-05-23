@@ -13,15 +13,15 @@
 	import {tr} from '../../common/js/tr.js'
 	import {ui} from '../../common/js/ui.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
 	import {
-				render_edit_component_text_area,
-				render_layer_selector,
-				render_page_selector
-			} from './render_edit_component_text_area.js'
+			render_edit_component_text_area,
+			render_layer_selector,
+			render_page_selector
+	} from './render_edit_component_text_area.js'
 	import {render_list_component_text_area} from './render_list_component_text_area.js'
 	import {render_search_component_text_area} from './render_search_component_text_area.js'
 	import {render_reference} from './render_reference.js'
-	import {service_ckeditor} from '../../services/service_ckeditor/js/service_ckeditor.js'
 
 
 
@@ -391,6 +391,9 @@ component_text_area.prototype.build = async function(options) {
 * DESTROY
 * Force service_ckeditor instances to destroy editors (ckeditor instance)
 * and later execute a standard self destroy from common
+* @param bool delete_self=true
+* @param bool delete_dependencies=false
+* @param bool remove_dom=false
 * @return bool
 * 	Promise resolve bool
 */
@@ -419,7 +422,7 @@ component_text_area.prototype.destroy = async function(delete_self=true, delete_
 /**
 * TAGS_TO_HTML
 * Parses Dédalo server side tags to html tags
-* i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
+* e.g. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
 * @return string html
 */
 component_text_area.prototype.tags_to_html = function(value) {
@@ -439,6 +442,7 @@ component_text_area.prototype.tags_to_html = function(value) {
 				console.error('Fixed found legacy error tags path (btn.php)');
 			}
 		}
+
 
 	return html_safe
 }//end tags_to_html
@@ -527,6 +531,7 @@ component_text_area.prototype.save_editor = async function(key=0) {
 
 	const result = text_editor.save() // return async bool
 
+
 	return result
 }//end save_editor
 
@@ -565,6 +570,7 @@ component_text_area.prototype.save = async function(changed_data = undefined) {
 * PREPROCESS_TEXT_TO_SAVE
 * Replace <section> tags to internal Dédalo tags
 * Unify text content format
+* @param string html_value
 * @return string
 */
 component_text_area.prototype.preprocess_text_to_save = async function(html_value) {
@@ -701,6 +707,7 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 		//console.log("[component_text_area.preprocess_text_to_save] exec in ms:",time);
 		//console.log("[component_text_area.render_all_tags] time: " +time+ " ms")
 	}
+
 
 	return clean_text_value
 }//end preprocess_text_to_save
@@ -925,6 +932,7 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 		data		: (type==='tc') ? tag_id : data
 	}
 
+
 	return view_tag_obj
 }//end build_view_tag_obj
 
@@ -970,6 +978,7 @@ component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) 
 	const last_tag_id = text_editor.get_last_tag_id({
 		tag_type : tag_type
 	})
+
 
 	return last_tag_id
 }//end get_last_tag_id
@@ -1034,6 +1043,7 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 			})
 		// Fire click into the image node of the tag
 			inserted_tag_in.firstChild.click()
+
 
 	return (range_clon)
 		? tag_id
@@ -1375,7 +1385,6 @@ component_text_area.prototype.build_tag = function(options) {
 
 
 
-
 /*	Persons
 ----------------------------------------------------------------------------------------- */
 
@@ -1420,8 +1429,6 @@ component_text_area.prototype.build_tag = function(options) {
 
 /*	Geo location
 ----------------------------------------------------------------------------------------- */
-
-
 
 	/**
 	* CREATE_GEO_TAG
@@ -1505,6 +1512,7 @@ component_text_area.prototype.build_tag = function(options) {
 	}//end create_reference
 
 
+
 /*	Draw
 ----------------------------------------------------------------------------------------- */
 
@@ -1531,6 +1539,8 @@ component_text_area.prototype.build_tag = function(options) {
 		const inserted_tag = text_editor.set_content(draw_view_tag)
 
 	}//end create_draw_tag
+
+
 
 /**
 * CHANGE_LANG

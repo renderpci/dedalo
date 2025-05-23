@@ -10,7 +10,7 @@
 
 
 /**
-* VIEW_text_LIST_SELECT
+* VIEW_TEXT_LIST_SELECT
 * Manages the component's logic and appearance in client side
 */
 export const view_text_list_select = function() {
@@ -23,6 +23,7 @@ export const view_text_list_select = function() {
 /**
 * RENDER
 * Render node to be used by service autocomplete or any datalist
+* @param object self
 * @return HTMLElement wrapper
 */
 view_text_list_select.render = async function(self) {
