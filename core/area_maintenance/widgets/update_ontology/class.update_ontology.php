@@ -125,10 +125,38 @@ class update_ontology {
 				return $tld . '0';
 			}, $export_ontology_tld_list);
 
-			// filter. Filter from model deep term regex !=item
-			$filter_items = array_map(function($el){
+
+			// filter compose
+			$filter_items = [];
+
+			// filter. Exclude models
+			$filter_items[] = json_decode('
+				{
+					"q": [
+						{
+							"section_id": "2",
+							"section_tipo": "dd64",
+							"from_component_tipo": "ontology30"
+						}
+					],
+					"q_operator": null,
+					"path": [
+						{
+							"name": "Is model",
+							"model": "component_radio_button",
+							"section_tipo": "dd0",
+							"component_tipo": "ontology30"
+						}
+					],
+					"q_split": false,
+					"type": "jsonb"
+				}
+			');
+
+			// filter. From model deep term regex !=item
+			foreach ($export_ontology_exclude_models as $el) {
 				$q = '!=' . $el;
-				$item = (object)[
+				$filter_items[] = (object)[
 					'q'		=> [$q],
 					'path'	=> json_decode('
 						[
@@ -149,14 +177,11 @@ class update_ontology {
 					'q_split'	=> false,
 					'type'		=> 'jsonb'
 				];
-				return $item;
-			}, $export_ontology_exclude_models);
+			}
 
-			$filter = empty($filter_items)
-				? null
-				: (object)[
-					'$and' => $filter_items
-				  ];
+			$filter = (object)[
+				'$and' => $filter_items
+			];
 
 			// search_query_object
 			$sqo = new search_query_object();
