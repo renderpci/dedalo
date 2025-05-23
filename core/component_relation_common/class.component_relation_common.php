@@ -1544,7 +1544,7 @@ class component_relation_common extends component_common {
 	* @param object $query_object
 	* @return object $new_query_object
 	*/
-	protected static function add_relations_search( object $query_object) : object {
+	protected static function add_relations_search( object $query_object ) : object {
 
 		// q_operator
 			$q_operator = $query_object->q_operator ?? null;
