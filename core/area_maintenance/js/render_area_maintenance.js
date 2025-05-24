@@ -292,6 +292,7 @@ export const build_form = function(widget_object) {
 		const trigger		= widget_object.trigger || {}
 		const on_submit		= widget_object.on_submit // optional replacement function to exec on submit
 		const on_done		= widget_object.on_done // optional function to exec on API response
+		const on_render		= widget_object.on_render // optional function to exec on render is complete
 
 	// create the form
 		const form_container = ui.create_dom_element({
@@ -379,6 +380,7 @@ export const build_form = function(widget_object) {
 				type			: input.type,
 				name			: input.name,
 				placeholder		: input.label,
+				title			: input.label,
 				class_name		: class_name,
 				parent			: form_container
 			})
@@ -405,6 +407,11 @@ export const build_form = function(widget_object) {
 		button_submit.addEventListener('click', function(e){
 			e.stopPropagation()
 		})
+
+	// on_render
+		if (on_render) {
+			on_render({form_container, input_nodes})
+		}
 
 
 	return form_container

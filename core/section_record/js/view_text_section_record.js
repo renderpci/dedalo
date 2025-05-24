@@ -158,7 +158,7 @@ view_text_section_record.render = async function(self, options) {
 				}
 
 			// columns separator (between components inside the same column)
-				if(ar_nodes_length > 0 && i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
+				if(ar_nodes_length > 0 && i < columns_map_length-2 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
 
 					// ddinfo case. Check i f is empty the content
 						if (columns_map[i+1].id==='ddinfo' && typeof columns_map[i+1].callback==='function') {

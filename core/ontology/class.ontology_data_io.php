@@ -244,6 +244,15 @@ class ontology_data_io {
 			$command = $command_base
 				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip > {$file_path}';\" ";
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__
+						. " Executing Ontology export command: " . PHP_EOL
+						. ' command: ' . to_string($command)
+						, logger::WARNING
+					);
+				}
+
 		// exec command in terminal
 			$command_result = shell_exec($command);
 

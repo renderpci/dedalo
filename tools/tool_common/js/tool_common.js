@@ -335,7 +335,8 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 				// tool rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
 					const rqo = {
-						action	: 'get_element_context',
+						action			: 'get_element_context',
+						prevent_lock	: true,
 						// tool source for component JSON that stores full tool config
 						source : {
 							model			: self.model,
@@ -343,8 +344,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							section_id		: self.section_id,
 							mode			: self.mode,
 							lang			: self.lang
-						},
-						prevent_lock : true
+						}
 					}
 
 				// load data. Load section data from db of the current tool.
@@ -548,11 +548,11 @@ export const open_tool = async (options) => {
 			? await (async ()=>{
 				// tool rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
 				const rqo = {
-					action	: 'get_element_context',
-					source : {
+					action			: 'get_element_context',
+					prevent_lock	: true,
+					source			: {
 						model : options.tool_context // expected name as 'tool_upload'
-					},
-					prevent_lock : true
+					}
 				}
 				const api_response = await data_manager.request({
 					body : rqo

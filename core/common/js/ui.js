@@ -532,6 +532,7 @@ export const ui = {
 				const view			= instance.view || null
 				const label			= instance.label // instance.context.label
 				const element_css	= instance.context.css || {}
+				const path			= instance.path || []
 				const content_data	= items.content_data || null
 
 			// DocumentFragment
@@ -545,13 +546,26 @@ export const ui = {
 					fragment.appendChild(items.label)
 				}else{
 					// default
+
+					// label: add > symbol to easily identify items with depth (more than one level)
+					const final_label = path.length>1
+						? ('>').repeat(path.length-1) + ' ' + label
+						: label
+
+					// title : add section depth path for easy location
+					const base_title = tipo + ' ' + model.substring(10) + ' [' + instance.lang.substring(3) + ']'
+					const title = path.length>0
+						? path.map(el => el.section_tipo).join(' > ') +' : '+ base_title
+						: base_title
+
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
-						inner_html		: label,
-						title			: tipo + ' ' + model.substring(10) + ' [' + instance.lang.substring(3) + ']',
+						inner_html		: final_label,
+						title			: title,
 						parent			: fragment
 					})
-					// parent_grouper_label
+
+					// parent_grouper_label. Add parent grouper info to the component view
 						const parent_grouper_label = instance.context.config?.parent_grouper_label
 						if (parent_grouper_label) {
 							ui.create_dom_element({

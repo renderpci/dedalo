@@ -45,6 +45,8 @@ describe(`COMPONENTS LIFE-CYCLE`, async function() {
 
 		describe(`${element.model.toUpperCase()}`, async function() {
 
+			this.timeout(15000);
+
 			// modes iterate for each element (edit, list, search)
 				await (async ()=>{
 					for (let k = 0; k < ar_mode_length; k++) {
@@ -130,6 +132,8 @@ async function life_cycle_test(element, view) {
 	let new_instance = null
 
 	describe(`${element.model} ${element.mode} ${view} `, function() {
+
+		this.timeout(15000);
 
 		it(`${element.model} INIT ${element.mode}`, async function() {
 

@@ -949,6 +949,7 @@ class ontology {
 	* Calculates ontology sections (target section tipo) like dd0, ontologytype3, ...
 	* Stored in matrix_ontology_main table.
 	* @return array $ontology_sections
+	* 	Array of ontology sections tipo
 	* @test true
 	*/
 	public static function get_all_ontology_sections() : array {
