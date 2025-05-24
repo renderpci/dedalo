@@ -2520,4 +2520,52 @@ class ontology {
 
 
 
+	/**
+	* GET_OVERWRITE
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return locator|null $locator
+	*/
+	public static function get_overwrite( string $section_tipo, string|int $section_id ) : ?locator {
+
+		//search if the node has a overwrite node in local
+			$local_section_tipo = 'localontology0';
+
+		// node locator
+			$locator = new locator();
+				$locator->set_section_tipo( $section_tipo );
+				$locator->set_section_id( $section_id );
+
+
+		// create a sqo to count all the references
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( [$local_section_tipo] );
+				$sqo->set_mode('related');
+				$sqo->set_filter_by_locators([$locator]);
+				$sqo->set_limit( 1 );
+
+		// search the overwrite section
+			$search = search::get_instance(
+				$sqo // object sqo
+			);
+			$rows_data	= $search->search();
+			$ar_records	= $rows_data->ar_records; // create reference
+
+		// If the node has not any overwrite node return null
+			if( empty($ar_records) ){
+				return null;
+			}
+
+		// set the overwrite node locator with the row
+			$overwrite_row = $ar_records[0];
+
+			$overwrite_locator = new locator();
+				$overwrite_locator->set_section_tipo( $overwrite_row->section_tipo );
+				$overwrite_locator->set_section_id( $overwrite_row->section_id );
+
+		return $overwrite_locator;
+	}//end get_overwrite
+
+
+
 }//end ontology
