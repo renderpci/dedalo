@@ -30,7 +30,7 @@ This system ensures scalability and customisation. Every TLD defines a specific 
 | **dd** | Dédalo core definition, is used to general aspects as `Cultural heritage fields` as `Tangible` or `Oral History`, `Administration`, `Dédalo users`, etc. |
 | **rsc** | Resource, used to define media elements as `Audiovisual`, `Image`, `SVG`, `PDF`, etc. including `Publications`, `Restoration processes`, and other common sections shared across the system |
 | **ontology** | Ontology definition, used to create the ontology definition |
-| **hierarchy** | Thesaurus definition, used to manage any kind of thesaurus and taxonomies as `Onomastic`, `Material`, `Techniques`, etc. as well `Tipology` catalogues.
+| **hierarchy** | Thesaurus definition, used to manage any kind of thesaurus and taxonomies as `Onomastic`, `Material`, `Techniques`, etc. as well `Tipology` catalogues. |
 | **lg** | Languages, Definition for the languages in the thesaurus (used for all application to translate data and interface) |
 | **utoponymy** | Unofficial toponymy. Section definition for unofficial toponymy (unofficial places names), used to add places that are not inside the official toponymy of countries or the installation don't want import the official toponymy (use to point the place without the official term in some sections as Publications, to define any place of publication around the world) |
 | **oh** | Oral History, the definition sections and tools to be used for oral history projects such as `Interviews`, `Transcription`, `Indexation`, etc. |
@@ -54,7 +54,6 @@ This flexibility facilitates data sharing and integration with other systems.
 Linked Data Model:
 Dédalo is based on a linked data model and uses a relative, multi-reference, universal locator.
 This locator can find entities, sections, components, and tags, allowing for precise data retrieval and management.
-
 
 ## Practical Applications
 
@@ -81,4 +80,3 @@ Multiformat output and a linked data model facilitate integration with other sys
 
 Efficiency:
 Real-time object creation and dynamic behaviour adjustment reduce the need for extensive coding, streamlining the management process.
-
