@@ -43,7 +43,7 @@ export const view_line_edit_portal = function() {
 * Manages the component's logic and appearance in client side
 * @param object self
 * @param object options
-* @return promise
+* @return HTMLElement wrapper
 * 	DOM node wrapper
 */
 view_line_edit_portal.render = async function(self, options) {
@@ -398,6 +398,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 	return button_remove
 }//end render_column_remove
+
 
 
 /**

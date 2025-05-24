@@ -189,6 +189,8 @@ export const add_events = function(self, wrapper) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
+* @param object self
+* @param array ar_section_record
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {

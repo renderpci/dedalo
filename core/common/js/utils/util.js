@@ -623,7 +623,7 @@ export function download_file(options) {
 /**
 * FIND_UP_NODE
 * Search parent node recursively until reach the target
-* @param DOM node el
+* @param HTMLElement el
 * @param string target_tag
 * 	Sample: 'div'
 * @param function compare
@@ -742,7 +742,7 @@ export const get_json_langs = async function () {
 
 	// calculate from server
 		const json_langs = await data_manager.request({
-			url		: '../common/js/lang.json',
+			url		: DEDALO_CORE_URL + '/common/js/lang.json',
 			method	: 'GET',
 			cache	: 'force-cache' // force use cache because the file do not changes
 		})
