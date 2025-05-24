@@ -1167,10 +1167,11 @@ By default Dédalo load some common tipos for all project types.
 
 | **TLD** | **Defintion** |
 | --- | --- |
-| **dd** | dedalo. Definition of default list and common uses and tools such as translation tools. |
-| **rsc** | resources. Definition for areas and sections commons to all projects such as people, images, audiovisual files, publications, documents, bibliography, etc. |
-| **hierarchy** | thesaurus. Definition for sections as toponymy, onomastic, chronologies, techniques, material, etc. |
-| **lg** | languages, Definition for the languages in the thesaurus (used for all application to translate data and interface) |
+| **dd** | Dédalo. Definition of default list and common uses and tools such as translation tools. |
+| **rsc** | Resources. Definition for areas and sections commons to all projects such as people, images, audiovisual files, publications, documents, bibliography, etc. |
+| **ontology** | Ontology. Definition of the sections used as nodes of the ontology |
+| **hierarchy** | Thesaurus. Definition for sections as toponymy, onomastic, chronologies, techniques, material, etc. |
+| **lg** | Languages, Definition for the languages in the thesaurus (used for all application to translate data and interface) |
 | **utoponymy** | Unofficial toponymy. Section definition for unofficial toponymy (unofficial places names), used to add places that are not inside the official toponymy of countries or the installation don't want import the official toponymy (use to point the place without the official term in some sections as Publications, to define any place of publication around the world) |
 
 Besides, every installation can import the ontology tipo that will use in the inventory or research:
@@ -1187,7 +1188,7 @@ Besides, every installation can import the ontology tipo that will use in the in
 | **actv** | Activities, the definition of section and fields of activities as exhibitions, workshops, didactics, conferences, etc. |
 
 ```php
-define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'hierarchy', 'lg', 'oh', 'ich' ]);
+define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'ontology', 'hierarchy', 'lg', 'oh', 'ich' ]);
 ```
 
 !!! note "Thesaurus dependencies"
