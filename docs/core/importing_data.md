@@ -307,7 +307,7 @@ Tc tag are using to point a specific audiovisual timecode at the beginning of pa
 tc tags has his own format, the tc is enclosing by `TC_` and `_TC` marks.
 
 ```text
-[TC:hh:mm:ss.ms_TC]
+[TC_hh:mm:ss.ms_TC]
 ```
 Example:
 
