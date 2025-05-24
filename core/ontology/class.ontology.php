@@ -1257,7 +1257,15 @@ class ontology {
 	*/
 	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?RecordObj_dd {
 
-		// node locator
+		// overwrite locator
+		// It check if exist any definition in local installation that overwrite the main node.
+		// Local ontology nodes can overwrite the main definitions with specific properties, names, etc.
+		// Local ontology nodes are defined into the `localontology0` section and are not part of the shared ontology.
+		// $overwrite_locator point to the local definition and is used to create the jer_dd node with the overwrite data.
+		// if the main node has not any overwrite node the $overwrite_locator is null and the main node is used (default behavior)
+			$overwrite_locator = self::get_overwrite( $section_tipo, $section_id );
+
+		// node locator (main node)
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
 			$locator->set_section_id($section_id);
@@ -1265,17 +1273,16 @@ class ontology {
 		// tld
 			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  section_id)
 			$tld_tipo		= 'ontology7';
-			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
-			$tld_component	= component_common::get_instance(
-				$tld_model,
-				$tld_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
 
-			$tld_data = $tld_component->get_dato();
+			// 1 get the tld data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$tld_data = self::get_node_component_data( $overwrite_locator, $tld_tipo );
+			}
+			// 2 if the tld data has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the tld data with the main node definition.
+			$tld_data = $tld_data ?? self::get_node_component_data( $locator, $tld_tipo );
+
 			// tld is mandatory! if tld_data is empty stop the process
 			if(empty($tld_data)){
 				debug_log(__METHOD__
@@ -1297,17 +1304,14 @@ class ontology {
 		// parent
 		// parent needs to know the parent tld of the locator to build the term_id
 			$parent_tipo		= 'ontology15';
-			$parent_model		= RecordObj_dd::get_modelo_name_by_tipo( $parent_tipo  );
-			$parent_component	= component_common::get_instance(
-				$parent_model,
-				$parent_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-
-			$parent_data = $parent_component->get_dato();
+			// 1 get the parent data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$model_data = self::get_node_component_data( $overwrite_locator, $parent_tipo );
+			}
+			// 2 if the parent data has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the parent data with the main node definition.
+			$parent_data = $model_data ?? self::get_node_component_data( $locator, $parent_tipo );
 
 			if( empty($parent_data) || empty($parent_data[0]) ){
 				// main dd nodes exception
@@ -1343,18 +1347,18 @@ class ontology {
 			}
 
 		// is model
-			$is_model_tipo		= 'ontology30';
-			$is_model_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_model_tipo  );
-			$is_model_component	= component_common::get_instance(
-				$is_model_model,
-				$is_model_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
 
-			$is_model_data = $is_model_component->get_dato();
+			// IMPORTANT
+			// NOT overwrite it!, needs to be coherent with the main definition.
+			// Models are defined and can't be created locally.
+			// overwrites creates a incoherent situation in the ontology that can not be resolved.
+			// Models can be overwritten, but NOT if the term is a model or not!
+
+			$is_model_tipo		= 'ontology30';
+			// get the component data
+			$is_model_data = self::get_node_component_data( $locator, $is_model_tipo );
+
+
 
 			if(empty($is_model_data)){
 
@@ -1370,23 +1374,25 @@ class ontology {
 
 				$is_model_locator = reset($is_model_data);
 				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
-				$jer_dd_record->set_esmodelo( $is_model );
 			}
-			$is_model = $is_model ?? 'no';
+
+			$is_model = $is_model ?? 'no'; // default value
+			$jer_dd_record->set_esmodelo( $is_model );
 
 		// model. Get the model tld and id
-			$model_tipo			= 'ontology6';
-			$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
-			$model_component	= component_common::get_instance(
-				$model_model,
-				$model_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
+			$model_tipo = 'ontology6';
 
-			$model_data = $model_component->get_dato();
+			// 1 get the model data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$model_data = self::get_node_component_data( $overwrite_locator, $model_tipo );
+			}
+			// 2 if the model data has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the model data with the main node definition.
+			$model_data = $model_data ?? self::get_node_component_data( $locator, $model_tipo );
+
+			$model_tipo_resolution	= null; // if node is a model it has not model tipo
+			$model_resolution		= null; // if node is a model it has not model resolution
 
 			if( empty($model_data) ){
 
@@ -1400,7 +1406,6 @@ class ontology {
 						, logger::ERROR
 					);
 				}
-
 			}else{
 
 				// set the model tipo as (dd6, dd3, etd.)
@@ -1408,7 +1413,7 @@ class ontology {
 				// model will be the term_id (section_tipo & section_id)
 				$model_locator = reset($model_data);
 				$model_tipo_resolution = ontology::get_term_id_from_locator($model_locator);
-				$jer_dd_record->set_modelo( $model_tipo_resolution );
+
 				// set the model resolution (section, component_input_text, etc)
 				$model_resolution = RecordObj_dd::get_termino_by_tipo(
 					$model_tipo_resolution,
@@ -1416,71 +1421,31 @@ class ontology {
 					true,
 					false
 				);
-				$jer_dd_record->set_model( $model_resolution );
 			}
 
-		// descriptor
-			$is_descriptor_tipo			= 'ontology4';
-			$is_descriptor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_descriptor_tipo  );
-			$is_descriptor_component	= component_common::get_instance(
-				$is_descriptor_model,
-				$is_descriptor_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
+			// set the model columns with the data resolution
+			// it could be the model of node when the node is not a model with its resolution
+			// or null when the node is a model (as `component_imput_text`)
+			$jer_dd_record->set_modelo( $model_tipo_resolution );
+			$jer_dd_record->set_model( $model_resolution );
 
-			$is_descriptor_data = $is_descriptor_component->get_dato();
+		// Descriptor
 
-			if(empty($is_descriptor_data)){
-
-				debug_log(__METHOD__
-					. " Record without is_descriptor_data " . PHP_EOL
-					. ' section_tipo       : ' . to_string($section_tipo). PHP_EOL
-					. ' section_id         : ' . to_string($section_id). PHP_EOL
-					. ' is_descriptor_tipo : ' . to_string($is_descriptor_tipo)
-					, logger::DEBUG
-				);
-
-			}else{
-				$is_descriptor_data_locator	= reset($is_descriptor_data);
-				$is_descriptor = (int)$is_descriptor_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
-				$jer_dd_record->set_esdescriptor( $is_descriptor );
+			// 1 get the descriptor value data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$descriptor = self::resolve_descriptor( $overwrite_locator );
 			}
+			// 2 if the descriptor value has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the descriptor value with the main node definition.
+			$descriptor = $descriptor ?? self::resolve_descriptor( $locator );
 
-		// visibility
+			$jer_dd_record->set_esdescriptor( $descriptor );
+
+		// Visibility
 			$jer_dd_record->set_visible( 'si' );
 
-		// order
-			// if( !empty($parent_locator) ){
-			// 	// use the parent data to get the children data and calculate the order.
-			// 	$siblings	= ontology::get_siblings( $parent_locator );
-			// 	$order		= ontology::get_order_from_locator( $locator, $siblings );
-
-			// 	// as every node can change his order position related to other nodes
-			// 	// every sibling of the node need update his own order.
-			// 	// the order is save in the common parent node
-			// 	// and is the array key of the locator sibling
-			// 	foreach ($siblings as $key => $sibling_locator) {
-			// 		// don't update when the sibling is the current node
-			// 		// it will update when it will saved.
-			// 		if($sibling_locator->section_tipo === $section_tipo
-			// 			&& (int)$sibling_locator->section_id === (int)$section_id){
-			// 			continue;
-			// 		}
-			// 		// get the term_id of the sibling used to get update jer_dd row
-			// 		// and save with his position (array key +1)
-			// 		$sibling_term_id	= ontology::get_term_id_from_locator( $sibling_locator );
-			// 		$sibling_node		= new RecordObj_dd( $sibling_term_id );
-			// 		$sibling_node->set_norden( $key+1 );
-			// 		$sibling_node->Save();
-			// 	}
-
-			// 	$jer_dd_record->set_norden( $order );
-			// }
-
-		// order v6.5
+		// Order
 			$order_tipo		= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
 			$order_model	= RecordObj_dd::get_modelo_name_by_tipo( $order_tipo  );
 			if (empty($order_model)) {
@@ -1524,82 +1489,42 @@ class ontology {
 			}
 
 		// translatable
-			$translatable_tipo		= 'ontology8';
-			$translatable_model		= RecordObj_dd::get_modelo_name_by_tipo( $translatable_tipo  );
-			$translatable_component	= component_common::get_instance(
-				$translatable_model,
-				$translatable_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
 
-			$translatable_data = $translatable_component->get_dato();
-
-			if(empty($translatable_data)){
-
-				debug_log(__METHOD__
-					. " Record without translatable_data " . PHP_EOL
-					. ' section_tipo      : ' . to_string($section_tipo). PHP_EOL
-					. ' section_id        : ' . to_string($section_id). PHP_EOL
-					. ' translatable_tipo : ' . to_string($translatable_tipo)
-					, logger::DEBUG
-				);
-
-			}else{
-				$translatable_data_locator = reset($translatable_data);
-				$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
-				$jer_dd_record->set_traducible( $translatable );
+			// 1 get the translatable value data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$translatable = self::resolve_translatable( $overwrite_locator );
 			}
+			// 2 if the translatable value has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the translatable value with the main node definition.
+			$translatable = $translatable ?? self::resolve_translatable( $locator );
+
+			$jer_dd_record->set_traducible( $translatable );
 
 		// relations
-			$relations_tipo			= 'ontology10';
-			$relations_model		= RecordObj_dd::get_modelo_name_by_tipo( $relations_tipo  );
-			$relations_component	= component_common::get_instance(
-				$relations_model,
-				$relations_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
 
-			$relations_data = $relations_component->get_dato();
-
-			if( !empty($relations_data) ){
-
-				$relations = [];
-				foreach ($relations_data as $current_relation) {
-					// get the relation data
-					// use the locator
-					$relation_term_id = ontology::get_term_id_from_locator( $current_relation );
-
-					$relation = new stdClass();
-						$relation->tipo = $relation_term_id;
-					$relations[] = $relation;
-
-				}
-			}else{
-
-				$relations = null;
+			// 1 get the relations data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$relations = self::resolve_relations( $overwrite_locator );
 			}
+			// 2 if the relations has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the relations with the main node definition.
+			$relations = $relations ?? self::resolve_relations( $locator );
 
 			$jer_dd_record->set_relaciones( $relations );
 
-		// properties V5
+		// Properties V5
 			$properties_v5_tipo			= 'ontology19';
-			$properties_v5_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_v5_tipo  );
-			$properties_v5_component	= component_common::get_instance(
-				$properties_v5_model,
-				$properties_v5_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
 
-			$properties_v5_data = $properties_v5_component->get_dato();
+			// 1 get v5 properties data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$properties_v5_data = self::get_node_component_data( $overwrite_locator, $properties_v5_tipo );
+			}
+			// 2 if the v5 properties data has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the v5 properties data with the main node definition.
+			$properties_v5_data = $properties_v5_data ?? self::get_node_component_data( $locator, $properties_v5_tipo );
 
 			if( !is_empty_dato( $properties_v5_data ) ){
 				$properties_v5 = json_encode( $properties_v5_data[0] );
@@ -1610,20 +1535,19 @@ class ontology {
 
 			$jer_dd_record->set_propiedades( $properties_v5 );
 
-		// properties
-			$properties_tipo		= 'ontology18';
-			$properties_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_tipo  );
-			$properties_component	= component_common::get_instance(
-				$properties_model,
-				$properties_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$properties_data = $properties_component->get_dato();
+		// Properties
+			$properties_tipo = 'ontology18';
 
-			// properties
+			// 1 get properties data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$properties_data = self::get_node_component_data( $overwrite_locator, $properties_tipo );
+			}
+			// 2 if properties data has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get properties data with the main node definition.
+			$properties_data = $properties_data ?? self::get_node_component_data( $locator, $properties_tipo );
+
+			// Create the properties object with the data or create new empty object to collect CSS or RQO data
 			$properties = !empty($properties_data)
 				? ($properties_data[0] ?? new stdClass())
 				: new stdClass();
@@ -1640,75 +1564,243 @@ class ontology {
 				$properties = new stdClass();
 			}
 
-		// properties CSS
-			$properties_css_tipo		= 'ontology16';
-			$properties_css_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_css_tipo  );
-			$properties_css_component	= component_common::get_instance(
-				$properties_css_model,
-				$properties_css_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$properties_css_data = $properties_css_component->get_dato();
+		// Properties CSS
+			$properties_css_tipo = 'ontology16';
 
+			// 1 get the CSS properties data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$properties_css_data = self::get_node_component_data( $overwrite_locator, $properties_css_tipo );
+			}
+			// 2 if the CSS properties data has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the CSS properties data with the main node definition.
+			$properties_css_data = $properties_css_data ?? self::get_node_component_data( $locator, $properties_css_tipo );
+
+			// Properties set the CSS properties as css in properties
 			if( !empty($properties_css_data) ){
 				$properties->css = reset($properties_css_data);
 			}
 
-		// properties RQO
-			$properties_rqo_tipo		= 'ontology17';
-			$properties_rqo_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_rqo_tipo  );
-			$properties_rqo_component	= component_common::get_instance(
-				$properties_rqo_model,
-				$properties_rqo_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$properties_rqo_data = $properties_rqo_component->get_dato();
+		// Properties RQO
+			$properties_rqo_tipo = 'ontology17';
+
+			// 1 get the RQO properties data from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$properties_rqo_data = self::get_node_component_data( $overwrite_locator, $properties_rqo_tipo );
+			}
+			// 2 if the RQO properties data has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the RQO properties data with the main node definition.
+			$properties_rqo_data = $properties_rqo_data ?? self::get_node_component_data( $locator, $properties_rqo_tipo );
+
+			// Properties set the RQO properties as source in properties
 			if( !empty($properties_rqo_data) ){
 				$properties->source = reset($properties_rqo_data);
 			}
 
+		// Properties mix
+			// Reset the properties if they are empty.
 			if( empty(get_object_vars($properties)) ){
 				$properties = null;
 			}
 
+			// set the term into jet_dd_record
 			$jer_dd_record->set_properties( $properties );
 
 		// term
-			$term_tipo		= 'ontology5';
-			$term_model		= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo );
-			$term_component	= component_common::get_instance(
-				$term_model,
-				$term_tipo ,
-				$section_id,
-				'list',
-				DEDALO_DATA_LANG,
-				$section_tipo
-			);
 
-			$term_data = $term_component->get_dato_full();
-
-			if( !empty($term_data) && !empty(get_object_vars($term_data)) ){
-				$term = new stdClass();
-				foreach ($term_data as $lang => $ar_term) {
-					if( !empty($ar_term) ){
-						$term->$lang = reset($ar_term);
-					}
-				}
-			}else{
-				$term = null;
+			// 1 get the term value from local overwrite node if exist overwrite node as local definition.
+			if ( $overwrite_locator ) {
+				$term = self::resolve_term( $overwrite_locator );
 			}
+			// 2 if the term has not defined, because it has not any overwrite (default behavior),
+			// or the overwrite has not value defined (partial definition in overwrite node),
+			// get the term with the main node definition.
+			$term = $term ?? self::resolve_term( $locator );
 
+			// set the term into jet_dd_record
 			$jer_dd_record->set_term( $term );
 
 
 		return $jer_dd_record;
 	}//end parse_section_record_to_jer_dd_record
+
+
+
+	/**
+	* GET_NODE_COMPONENT_DATA
+	* Get the CSS properties data of the node.
+	* @param locator $locator
+	* @return array|null $properties_rqo_data
+	*/
+	private static function get_node_component_data( locator $locator, string $properties_tipo ) : ?array {
+
+		$properties_model	= RecordObj_dd::get_modelo_name_by_tipo( $properties_tipo  );
+		$component			= component_common::get_instance(
+			$properties_model,
+			$properties_tipo ,
+			$locator->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$locator->section_tipo
+		);
+		$properties_data = $component->get_dato();
+
+		// Unify the empty values to null (relations return a empty array when they has not data)
+		$properties_data = empty( $properties_data ) ? null : $properties_data;
+
+		return $properties_data;
+	}//end get_node_component_data
+
+
+	/**
+	* RESOLVE_DESCRIPTOR
+	* Get the descriptor value of the node.
+	* the descriptor value is defined as 'si' or 'not' based with the section_id of the locator:
+	* section_id = 1 -> si
+	* section_id = 2 -> no
+	* @param locator $locator
+	* @return string $descriptor
+	*/
+	private static function resolve_descriptor( locator $locator ) : string {
+
+		$is_descriptor_tipo = 'ontology4';
+
+		// get the descriptor data of the node.
+		$is_descriptor_data =  self::get_node_component_data( $locator, $is_descriptor_tipo );
+
+		$descriptor = 'si'; // default value
+
+		if(empty($is_descriptor_data)){
+
+			debug_log(__METHOD__
+				. " Record without is_descriptor_data " . PHP_EOL
+				. ' section_tipo       : ' . to_string($locator->section_tipo). PHP_EOL
+				. ' section_id         : ' . to_string($locator->section_id). PHP_EOL
+				. ' is_descriptor_tipo : ' . to_string($is_descriptor_tipo)
+				, logger::DEBUG
+			);
+
+		}else{
+			$is_descriptor_data_locator	= reset($is_descriptor_data);
+			$descriptor = (int)$is_descriptor_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
+		}
+
+		return $descriptor;
+	}//end resolve_descriptor
+
+
+
+	/**
+	* RESOLVE_TRANSLATABLE
+	* Get the translatable value of the node.
+	* the translatable value is defined as 'si' or 'not' based with the section_id of the locator:
+	* section_id = 1 -> si
+	* section_id = 2 -> no
+	* @param locator $locator
+	* @return string $translatable
+	*/
+	private static function resolve_translatable( locator $locator ) : string {
+
+		$translatable_tipo		= 'ontology8';
+
+		// get the translatable data of the node.
+		$translatable_data =  self::get_node_component_data( $locator, $translatable_tipo );
+
+		$translatable = 'si'; // default value when is not set.
+
+		if(empty($translatable_data)){
+
+			debug_log(__METHOD__
+				. " Record without translatable_data " . PHP_EOL
+				. ' section_tipo      : ' . to_string($locator->section_tipo). PHP_EOL
+				. ' section_id        : ' . to_string($locator->section_id). PHP_EOL
+				. ' translatable_tipo : ' . to_string($translatable_tipo)
+				, logger::DEBUG
+			);
+
+		}else{
+			$translatable_data_locator = reset($translatable_data);
+			$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
+		}
+
+		return $translatable;
+	}//end resolve_translatable
+
+
+
+	/**
+	* RESOLVE_RELATIONS
+	* Get the relations data of the node.
+	* the relations data are all locators pointed to other nodes.
+	* @param locator $locator
+	* @return array|null $relations
+	*/
+	private static function resolve_relations( locator $locator ) : ?array {
+
+		$relations_tipo			= 'ontology10';
+
+		// get the relations data of the node.
+		$relations_data =  self::get_node_component_data( $locator, $relations_tipo );
+
+		if( !empty($relations_data) ){
+
+			$relations = [];
+			foreach ($relations_data as $current_relation) {
+				// get the relation data
+				// use the locator
+				$relation_term_id = ontology::get_term_id_from_locator( $current_relation );
+
+				$relation = new stdClass();
+					$relation->tipo = $relation_term_id;
+				$relations[] = $relation;
+
+			}
+		}else{
+
+			$relations = null;
+		}
+
+		return $relations;
+	}//end resolve_relations
+
+
+
+	/**
+	* RESOLVE_TERM
+	* Get the term / label data of the node.
+	* the term includes all languages translations.
+	* @param locator $locator
+	* @return object|null $term
+	*/
+	private static function resolve_term( locator $locator ) : ?object {
+
+		$term_tipo		= 'ontology5';
+		$term_model		= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo );
+		$term_component	= component_common::get_instance(
+			$term_model,
+			$term_tipo ,
+			$locator->section_id,
+			'list',
+			DEDALO_DATA_LANG,
+			$locator->section_tipo
+		);
+
+		$term_data = $term_component->get_dato_full();
+
+		if( !empty($term_data) && !empty(get_object_vars($term_data)) ){
+			$term = new stdClass();
+			foreach ($term_data as $lang => $ar_term) {
+				if( !empty($ar_term) ){
+					$term->$lang = reset($ar_term);
+				}
+			}
+		}else{
+			$term = null;
+		}
+
+		return $term;
+	}//end resolve_term
 
 
 
