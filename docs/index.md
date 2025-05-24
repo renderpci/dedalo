@@ -18,10 +18,11 @@ Dédalo is a Free and Open Source software develop abstract objects with a ontol
 
 5. Core
 
-    1. [Components](./core/components/index.md)
-    2. [Locator](./core/locator.md)
-    3. [Search Query Object - SQO](./core/sqo.md)
-    4. [Import data](./core/importing_data.md)
+    1. [Ontology](./core/ontology/index.md)
+    2. [Components](./core/components/index.md)
+    3. [Locator](./core/locator.md)
+    4. [Search Query Object - SQO](./core/sqo.md)
+    5. [Import data](./core/importing_data.md)
 
 6. Diffusion
 

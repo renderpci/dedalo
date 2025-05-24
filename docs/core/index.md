@@ -221,3 +221,5 @@ FROM "Quality"
 Or doing a join if you want to see it in list mode (without all results). With the data you will need to build the html code to create the select.
 
 The problem here are the changes, because the schema, the logic and the render is specific and rigid, if you need  change quality, you will need change the schema of the database, the logic in your code and the html associated. In simple cases or specific uses than not has changes it is not a problem, but in a large and complex situation it could be very hard. Dédalo ontology is a abstraction of all of this process and you will not change your databases or the logic associated opening the possibility to grow and change in a flexible way.
+
+You can find specific documentation on the Dedalo ontology [here.](./ontology/index.md)
