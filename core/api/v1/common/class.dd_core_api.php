@@ -2795,4 +2795,27 @@ final class dd_core_api {
 
 
 
+	/**
+	* TEST
+	* Useful for API testing purposes such as network metrics.
+	* @return object $response
+	*/
+	public static function test() : object {
+
+		// environment calculation
+		$environment = dd_core_api::get_environment();
+
+		$response = new stdClass();
+			$response->result			= true;
+			$response->dedalo_entity	= $environment->result->page_globals->dedalo_entity;
+			$response->environment		= $environment->result;
+			$response->msg				= 'OK. Test request done successfully';
+			$response->errors			= [];
+
+
+		return $response;
+	}//end test
+
+
+
 }//end dd_core_api
