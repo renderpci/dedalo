@@ -20,10 +20,11 @@
 export function render_node_info(options) {
 
 	// options
-		const instance		= options.instance // object element instance (component, section, etc.)
-		const api_response	= options.api_response // object|null
+		const instance		= options.instance // optional object element instance (component, section, etc.)
+		const api_response	= options.api_response // optional object|null
 		const msg			= options.msg // string optional event message
-		const container		= options.container // DOM node container
+		const type			= options.type || 'save'
+		const remove_time	= options.remove_time
 
 	// node_info. create temporal node info
 		const node_info = ui.create_dom_element({
@@ -36,63 +37,95 @@ export function render_node_info(options) {
 			node_info.remove()
 		})
 
-	// msg. Based on API response result
-		if(api_response) {
+	switch (type) {
 
-			if (api_response.result===false) {
+		case 'warning' : {
+			node_info.classList.add('warning')
+			const text = msg
+			node_info.insertAdjacentHTML('afterbegin', text)
+			// remove node on timeout
+			if (remove_time) {
+				setTimeout(()=>{
+					node_info.remove()
+				}, remove_time)
+			}
+			break;
+		}
 
-				// error response
+		case 'error' : {
+			node_info.classList.add('error')
+			const text = msg
+			node_info.insertAdjacentHTML('afterbegin', text)
+			// remove node on timeout
+			if (remove_time) {
+				setTimeout(()=>{
+					node_info.remove()
+				}, remove_time)
+			}
+			break;
+		}
 
-				node_info.classList.add('error')
-				const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
-				node_info.insertAdjacentHTML('afterbegin', text)
-				// error msg
-					const msg = []
-					if (api_response.error) {
-						msg.push(api_response.error)
-					}
-					if (api_response.msg) {
-						msg.push(api_response.msg)
-					}
-					if (msg.length>0) {
-						node_info.insertAdjacentHTML('beforeend', '<br>' + msg.join('<br>') )
-					}
+		case 'save':
+		default:
+			// msg. Based on API response result
+			if(api_response) {
+
+				if (api_response.result===false) {
+
+					// error response
+
+					node_info.classList.add('error')
+					const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
+					node_info.insertAdjacentHTML('afterbegin', text)
+					// error msg
+						const ar_msg = []
+						if (api_response.error) {
+							// Typically, api_response.error is an Error object. Extract the message if it exists.
+							const message = api_response.error.message || JSON.stringify(api_response.error)
+							ar_msg.push(message)
+						}
+						// Add the message to the error array only if it is different from the error message already added.
+						if (api_response.msg && !ar_msg.includes(api_response.msg)) {
+							ar_msg.push(api_response.msg)
+						}
+						if (ar_msg.length>0) {
+							node_info.insertAdjacentHTML('beforeend', '<br>' + ar_msg.join('<br>') )
+						}
+				}else{
+
+					// OK response
+
+					node_info.classList.add('ok')
+					const text = `${instance.label} ${get_label.saved || 'Saved'}`
+					node_info.insertAdjacentHTML('afterbegin', text)
+
+					// remove node on timeout
+						setTimeout(function(){
+							// node_info.remove()
+							node_info.onanimationend = (e) => {
+								if (e.target.classList.contains('fade-out')) {
+									node_info.parentNode.removeChild(node_info);
+								}
+							};
+							// To fade away:
+							node_info.classList.add('fade-out');
+						}, 10000)
+				}
 			}else{
 
-				// OK response
+				// error on save (saved false case)
 
-				node_info.classList.add('ok')
-				const text = `${instance.label} ${get_label.saved || 'Saved'}`
+				node_info.classList.add('warning')
+				const text = `${msg} <br>${instance.label}`
 				node_info.insertAdjacentHTML('afterbegin', text)
 
 				// remove node on timeout
 					setTimeout(function(){
-						// node_info.remove()
-						node_info.onanimationend = (e) => {
-							if (e.target.classList.contains('fade-out')) {
-								node_info.parentNode.removeChild(node_info);
-							}
-						};
-						// To fade away:
-						node_info.classList.add('fade-out');
-					}, 10000)
+						node_info.remove()
+					}, 30000)
 			}
-		}else{
-
-			// error on save (saved false case)
-
-			node_info.classList.add('warning')
-			const text = `${msg} <br>${instance.label}`
-			node_info.insertAdjacentHTML('afterbegin', text)
-
-			// remove node on timeout
-				setTimeout(function(){
-					node_info.remove()
-				}, 30000)
-		}
-
-		// position node info based on last existing node_info
-
+			break;
+	}
 
 
 	return node_info

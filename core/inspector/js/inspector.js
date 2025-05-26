@@ -188,6 +188,17 @@ inspector.prototype.init = async function(options) {
 				event_manager.subscribe('render_component_filter_' + self.section_tipo, render_component_filter_handler)
 			)
 
+		// notifications. Render inspector bubbles into the activity container.
+		// Mainly used to inform users that a network error has occurred.
+		// @see data_manager render_msg_to_inspector for other uses.
+			const notifications_handler = async (options) => {
+				// render notification and prepend to activity_info_container
+				load_activity_info(self, options)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('notification', notifications_handler)
+			)
+
 	// status update
 		self.status = 'initialized'
 
