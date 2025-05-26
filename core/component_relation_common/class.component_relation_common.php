@@ -1217,22 +1217,17 @@ class component_relation_common extends component_common {
 				$value[] = $current_value;
 			}//end foreach ($ar_components_related as $component_tipo)
 
-			$ar_values_clean = [];
-			foreach ((array)$value as $key => $element_value) {
-				if (empty($element_value) || $element_value==='<mark></mark>' || $element_value===' ') continue;
-				$ar_values_clean[] = $element_value;
+			foreach ($value as $element_value) {
+				if (empty($element_value) || $element_value==='<mark></mark>' || trim($element_value)==='') continue;
+				$ar_value[] = $element_value;
 			}
-
-			// $locator_value = implode($fields_separator, $ar_values_clean);
-			$ar_value = array_merge($ar_value, $ar_values_clean);
 
 		}else{
 
 			if ($show_parents===true) {
 
-				$ar_current_values = [];
 				if ($include_self===true) {
-					$ar_current_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
+					$ar_value[] = ts_object::get_term_by_locator( $locator, $lang, true );
 				}
 
 				// parents_recursive
@@ -1244,19 +1239,15 @@ class component_relation_common extends component_common {
 
 					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
 					if (!empty($current_value)) {
-						$ar_current_values[]  = $current_value;
+						$ar_value[]  = $current_value;
 					}
 				}
-
-				// $locator_value = implode($fields_separator, $ar_current_values);
-				$ar_value = array_merge($ar_value, $ar_current_values);
 
 			}else{
 
 				$locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
 
 				$ar_value[] = $locator_value;
-
 
 			}//end if ($show_parents===true)
 		}

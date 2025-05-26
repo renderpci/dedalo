@@ -2,6 +2,8 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_API_URL, Promise */
 /*eslint no-undef: "error"*/
 
+
+
 // imports
 	import {JSON_parse_safely} from '../../../core/common/js/utils/util.js'
 
