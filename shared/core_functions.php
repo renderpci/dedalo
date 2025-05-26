@@ -2387,8 +2387,7 @@ function is_empty_dato(mixed $dato) : bool {
 
 		case is_object($dato):
 
-			$value = (array)$dato;
-			if (!is_empty_dato($value)) {
+			foreach ($dato as $property) {
 				return false;
 			}
 			return true;
