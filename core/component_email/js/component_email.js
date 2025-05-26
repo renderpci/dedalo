@@ -149,15 +149,17 @@ component_email.prototype.get_ar_emails = async function() {
 	// set the show with email component_data, and reset the limit to get all records searched
 		rqo.show = {}
 		rqo.show.ddo_map =[{
-			tipo: self.tipo,
-			parent: 'self',
-			section_tipo: self.section_tipo
+			tipo			: self.tipo,
+			parent			: 'self',
+			section_tipo	: self.section_tipo
 		}]
 
 		rqo.sqo.limit = 0
 
 	// load data
-		const api_response = await data_manager.request({body:rqo})
+		const api_response = await data_manager.request({
+			body : rqo
+		})
 
 	// get the result of the datum
 		const search_datum	= api_response.result
