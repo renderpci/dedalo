@@ -193,7 +193,6 @@ data_manager.request_OLD = async function(options) {
 * 	Promise
 */
 data_manager.request = async function(options) {
-	console.log('))) data manager request options:', options);
 
 	const self = this
 
@@ -371,7 +370,7 @@ data_manager.request = async function(options) {
 * @return response
 * 	Promise APi response
 */
-async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
+async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, base_delay = 500, timeout = 6000) {
 
 	let attempts = 0;
 
