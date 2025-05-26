@@ -2624,7 +2624,7 @@ function check_url( string $url ) : bool {
 */
 function is_ontology_available() {
 
- 	try {
+	try {
 
 		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
 		$term			= $RecordObj_dd->get_term();

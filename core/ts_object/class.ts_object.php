@@ -321,9 +321,7 @@ class ts_object {
 						// get the data when the component is not a relation_index
 						// relation index get full data when get_dato() is called
 						// but this component needs a pagination data
-						$dato = ($model_name!=='component_relation_index'
-							// && $model_name!=='component_relation_children'
-						)
+						$dato = $model_name!=='component_relation_index' // && $model_name!=='component_relation_children'
 							? $component->get_dato()
 							: [];
 
