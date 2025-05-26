@@ -6,6 +6,9 @@
 
 // imports
 	import {JSON_parse_safely} from '../../../core/common/js/utils/util.js'
+	import {event_manager} from './event_manager.js'
+
+
 
 /**
 * DATA_MANAGER
@@ -24,7 +27,7 @@ export const data_manager = function() {
 * @return api_response
 * 	Promise
 */
-data_manager.request = async function(options) {
+data_manager.request_OLD = async function(options) {
 
 	const self = this
 
@@ -178,6 +181,269 @@ data_manager.request = async function(options) {
 		};
 	}
 }//end request
+
+
+
+/**
+* REQUEST
+* Make a fetch request to server API
+* Receives a JSON string to be parsed
+* @param object options
+* @return api_response
+* 	Promise
+*/
+data_manager.request = async function(options) {
+	console.log('))) data manager request options:', options);
+
+	const self = this
+
+	const default_options = {
+		url			: typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/',
+		method		: 'POST', // *GET, POST, PUT, DELETE, etc.
+		mode		: 'cors', // no-cors, cors, *same-origin
+		cache		: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+		credentials	: 'same-origin', // include, *same-origin, omit
+		headers		: {'Content-Type': 'application/json'}, // 'Content-Type': 'application/x-www-form-urlencoded'
+		redirect	: 'follow', // manual, *follow, error
+		referrer	: 'no-referrer', // no-referrer, *client
+		body		: null, // body data type must match "Content-Type" header
+		use_worker	: false
+	};
+
+	const merged_options = { ...default_options, ...options };
+
+	// vars from options applying defaults
+	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker } = merged_options;
+
+	// Debug request
+	if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {
+		const action		= body?.action || 'load';
+		const worker_label	= use_worker ? '[wk] ' : ''
+		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), merged_options);
+	}
+
+	// recovery mode. Auto add if environment recovery_mode is true
+	// On set to true, it is passed across all API request calls preserving the mode
+	if (page_globals.recovery_mode && body) {
+		body.recovery_mode = true
+	}
+
+	// Reset page_globals.api_errors at the beginning of each request
+	page_globals.api_errors = [];
+	page_globals.request_message = null; // Reset request message
+
+	// Check URL
+	if (!url || !url.length) {
+		const msg = 'Error: empty or invalid API URL';
+		console.error(msg, { typeof: typeof url, value: url });
+		self._record_api_error(
+			'data_manager', // error_type
+			msg, // message
+			'data_manager URL validation', // trace
+			null // details
+		)
+		return {
+			result	: false,
+			msg		: msg,
+			error	: 'URL is not valid',
+			errors	: ['URL is not valid']
+		};
+	}
+
+	// using worker cases.
+	// Note that execution is slower, but it is useful for low priority
+	// calls like 'update_lock_components_state'
+	// (!) Deactivated 22-05-2025 temporally to simplify network issues debug
+	// if (use_worker === true) {
+	// 	return this._handle_worker_request(url, body);
+	// }
+
+	// handle_errors
+	const handle_errors = async (response) => {
+		if (!response.ok) {
+			console.warn("-> HANDLE_ERRORS response:", response);
+			// extract response text to console
+			const response_text = await response.text();
+			console.error(response_text);
+			self._record_api_error(
+				'data_manager', // error_type
+				response_text, // message
+				'data_manager fetch handle_errors', // trace
+				null // details
+			)
+			throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
+		}
+		return response;
+	}
+
+	try {
+		const fetch_response = await _fetch_with_retry_and_timeout(url, {
+			method		: method,
+			mode		: mode,
+			cache		: cache,
+			credentials	: credentials,
+			headers		: headers,
+			redirect	: redirect,
+			referrer	: referrer,
+			body		: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null
+		})
+
+		const json_response = await (await handle_errors(fetch_response)).json();
+
+		// error occurred. Catch and alert
+			if (json_response?.error) {
+
+				// debug console message
+				console.error("data_manager request api_response:", json_response);
+
+				// update_lock_components_state fails. Do not send alert here
+				const action = body?.action;
+				if (action !== 'update_lock_components_state') {
+					// alert msg to user
+					const msg = json_response.msg || json_response.error;
+					if (!page_globals.request_message || page_globals.request_message !== msg) {
+						alert(`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`);
+					}
+					// request_message. Store request message temporally
+					page_globals.request_message = msg;
+					setTimeout(() => {
+						page_globals.request_message = null;
+					}, 3000);
+				}
+
+				// save error message. This is captured by page rendering to display the proper error
+				// api_errors. store api_errors. Used to render error page_globals
+				self._record_api_error(
+					'data_manager', // error_type
+					json_response.msg || json_response.error, // message
+					'data_manager json_parsed', // trace
+					json_response.errors?.length ? json_response.errors.join(' | ') : '' // details
+				)
+
+				return json_response;
+			}
+
+		return json_response;
+
+	} catch (error) {
+
+		console.warn('request url:', typeof url, url);
+		console.warn("request options:", options);
+		console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid or network error. See your server log for details. catch ERROR:\n", error);
+
+		// api_errors. store api_errors. Used to render error page_globals
+		self._record_api_error(
+			'data_manager', // error_type
+			error.message || 'Network error or invalid JSON', // message
+			'data_manager catch error', // trace
+			error // details
+		)
+
+		return {
+			result	: false,
+			msg		: error.message || 'Network error',
+			error	: error,
+			errors	: [error.message || 'Network error'],
+		};
+	}
+}//end request
+
+
+
+/**
+* _FETCH_WITH_RETRY_AND_TIMEOUT
+* Make a fetch request to server API
+* Receives a JSON string to be parsed
+* @param string url
+* 	The URL for the fetch request.
+* @param object options = {}
+* 	Additional options for the fetch (such as headers, method, etc.).
+* @param int retries = 5
+* 	Number of times the fetch will retry in case of failure.
+* @param int base_delay = 500
+* 	The initial delay between retries (in milliseconds). It will exponentially increase with each failed attempt.
+* @param int timeout = 5000
+* 	The timeout limit for the request (in milliseconds). If the request exceeds this time, it will be aborted.
+* @return response
+* 	Promise APi response
+*/
+async function _fetch_with_retry_and_timeout(url, options = {}, retries = 6, base_delay = 500, timeout = 5000) {
+
+	const controller = new AbortController();
+	const signal = controller.signal;
+
+	let attempts = 0;
+
+	while (attempts < retries) {
+		attempts++;
+
+		// Set up timeout handling
+		const timeout_id = setTimeout(() => {
+			controller.abort(); // Abort fetch request if timeout is reached
+		}, timeout);
+
+		try {
+			// Attempt the fetch request with timeout and retry logic
+			const response = await fetch(url, { ...options, signal });
+
+			// Clear timeout once fetch completes
+			clearTimeout(timeout_id);
+
+			// Check if the response is successful (status 200-299)
+			if (response.ok) {
+				return response;
+			} else {
+				const msg = `Server responded with status ${response.status}`
+				render_msg_to_inspector(msg, 'warning', 7000)
+				throw new Error(msg);
+			}
+		} catch (error) {
+			// delay Exponential backoff: increase delay between retries
+			const delay = base_delay * Math.pow(2, attempts);
+
+			// If the error is from the timeout, handle it
+			if (error.name === 'AbortError') {
+				const msg = `Attempt ${attempts} failed: Request timed out (AbortError).`
+				render_msg_to_inspector(msg, 'warning', delay + 3000)
+				console.error(msg);
+			} else {
+				const msg = `Attempt ${attempts} failed: ${error.message}`
+				render_msg_to_inspector(msg, 'warning', delay + 3000)
+				console.error(msg);
+			}
+
+			// If we've exhausted the retries, throw error
+			if (attempts >= retries) {
+				const msg = 'Max retries reached, request failed.'
+				render_msg_to_inspector(msg, 'error', null)
+				throw new Error(msg);
+			}
+
+			// Exponential backoff: increase delay between retries
+			console.log(`Retrying in ${delay}ms...`);
+			await new Promise(resolve => setTimeout(resolve, delay));
+		}
+	}
+}//end _fetch_with_retry_and_timeout
+
+
+
+/**
+* RENDER_MSG_TO_INSPECTOR
+* Manages the inspector notifications using a 'notification' event
+* @param string msg
+* @param string type
+* @param int|null remove_time
+* @return void
+*/
+export const render_msg_to_inspector = (msg, type, remove_time) => {
+
+	event_manager.publish('notification', {
+		msg			: msg,
+		type		: type,
+		remove_time	: remove_time
+	})
+}//end render_msg_to_inspector
 
 
 
