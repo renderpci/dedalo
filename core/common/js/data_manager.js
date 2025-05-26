@@ -207,13 +207,16 @@ data_manager.request = async function(options) {
 		redirect	: 'follow', // manual, *follow, error
 		referrer	: 'no-referrer', // no-referrer, *client
 		body		: null, // body data type must match "Content-Type" header
-		use_worker	: false
+		use_worker	: false,
+		retries		: 5, // default request retries int
+		base_delay	: 500, // default base delay in ms
+		timeout		: 6000 // default timeout in ms
 	};
 
 	const merged_options = { ...default_options, ...options };
 
 	// vars from options applying defaults
-	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker } = merged_options;
+	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker, retries, base_delay, timeout } = merged_options;
 
 	// Debug request
 	if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {
@@ -286,7 +289,7 @@ data_manager.request = async function(options) {
 			redirect	: redirect,
 			referrer	: referrer,
 			body		: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null
-		})
+		}, retries, base_delay, timeout)
 
 		const json_response = await (await handle_errors(fetch_response)).json();
 
