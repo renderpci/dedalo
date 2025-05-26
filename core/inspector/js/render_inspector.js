@@ -1545,10 +1545,10 @@ const render_activity_info = function(self) {
 			parent			: wrapper
 		})
 
-	// activity_info_body
+	// activity_info_body (bubbles_notification_container)
 		const activity_info_body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'activity_info_body hide',
+			class_name		: 'bubbles_notification_container activity_info_body hide',
 			parent			: wrapper
 		})
 		// fix pointer to node placeholder

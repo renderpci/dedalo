@@ -29,13 +29,30 @@ export function render_node_info(options) {
 	// node_info. create temporal node info
 		const node_info = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'node_info_save_msg'
+			class_name		: 'bubble'
 		})
 
+	// fade_away
+		const fade_away = (bubble, delay = 10000) => {
+			// remove node on timeout
+			setTimeout(()=>{
+				// node_info.remove()
+				bubble.onanimationend = (e) => {
+					if (e.target.classList.contains('fade-out')) {
+						bubble.parentNode.removeChild(bubble);
+					}
+				};
+				// To fade away:
+				bubble.classList.add('fade-out');
+			}, delay)
+		}
+
 	// remove node on click
-		node_info.addEventListener('click', function(){
+		const click_handler = (e) => {
+			e.stopPropagation()
 			node_info.remove()
-		})
+		}
+		node_info.addEventListener('click', click_handler)
 
 	switch (type) {
 
@@ -45,9 +62,7 @@ export function render_node_info(options) {
 			node_info.insertAdjacentHTML('afterbegin', text)
 			// remove node on timeout
 			if (remove_time) {
-				setTimeout(()=>{
-					node_info.remove()
-				}, remove_time)
+				fade_away(node_info, remove_time)
 			}
 			break;
 		}
@@ -58,9 +73,7 @@ export function render_node_info(options) {
 			node_info.insertAdjacentHTML('afterbegin', text)
 			// remove node on timeout
 			if (remove_time) {
-				setTimeout(()=>{
-					node_info.remove()
-				}, remove_time)
+				fade_away(node_info, remove_time)
 			}
 			break;
 		}
@@ -100,16 +113,7 @@ export function render_node_info(options) {
 					node_info.insertAdjacentHTML('afterbegin', text)
 
 					// remove node on timeout
-						setTimeout(function(){
-							// node_info.remove()
-							node_info.onanimationend = (e) => {
-								if (e.target.classList.contains('fade-out')) {
-									node_info.parentNode.removeChild(node_info);
-								}
-							};
-							// To fade away:
-							node_info.classList.add('fade-out');
-						}, 10000)
+					fade_away(node_info, 10000)
 				}
 			}else{
 
@@ -120,9 +124,7 @@ export function render_node_info(options) {
 				node_info.insertAdjacentHTML('afterbegin', text)
 
 				// remove node on timeout
-					setTimeout(function(){
-						node_info.remove()
-					}, 30000)
+				fade_away(node_info, 30000)
 			}
 			break;
 	}
