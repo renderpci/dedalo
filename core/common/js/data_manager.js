@@ -354,6 +354,7 @@ data_manager.request = async function(options) {
 * _FETCH_WITH_RETRY_AND_TIMEOUT
 * Make a fetch request to server API
 * Receives a JSON string to be parsed
+* Note: Revised by Chat GPT Copilot
 * @param string url
 * 	The URL for the fetch request.
 * @param object options = {}
@@ -367,20 +368,19 @@ data_manager.request = async function(options) {
 * @return response
 * 	Promise APi response
 */
-async function _fetch_with_retry_and_timeout(url, options = {}, retries = 6, base_delay = 500, timeout = 5000) {
-
-	const controller = new AbortController();
-	const signal = controller.signal;
+async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
 
 	let attempts = 0;
 
 	while (attempts < retries) {
 		attempts++;
 
-		// Set up timeout handling
-		const timeout_id = setTimeout(() => {
-			controller.abort(); // Abort fetch request if timeout is reached
-		}, timeout);
+		// Create a controller in each iteration
+		const controller = new AbortController();
+		const signal = controller.signal;
+
+		// Set timeout and get his ID
+		const timeout_id = setTimeout(() => controller.abort(), timeout);
 
 		try {
 			// Attempt the fetch request with timeout and retry logic
@@ -389,33 +389,29 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 6, bas
 			// Clear timeout once fetch completes
 			clearTimeout(timeout_id);
 
-			// Check if the response is successful (status 200-299)
-			if (response.ok) {
+			if (response?.ok) {
 				return response;
 			} else {
-				const msg = `Server responded with status ${response.status}`
-				render_msg_to_inspector(msg, 'warning', 7000)
+				const msg = `Server responded with status ${response.status}`;
+				render_msg_to_inspector(msg, 'warning', 7000);
 				throw new Error(msg);
 			}
 		} catch (error) {
-			// delay Exponential backoff: increase delay between retries
-			const delay = base_delay * Math.pow(2, attempts);
 
-			// If the error is from the timeout, handle it
-			if (error.name === 'AbortError') {
-				const msg = `Attempt ${attempts} failed: Request timed out (AbortError).`
-				render_msg_to_inspector(msg, 'warning', delay + 3000)
-				console.error(msg);
-			} else {
-				const msg = `Attempt ${attempts} failed: ${error.message}`
-				render_msg_to_inspector(msg, 'warning', delay + 3000)
-				console.error(msg);
-			}
+			// ensure cleanup timeout if fetch throws before completion
+			clearTimeout(timeout_id);
+
+			const delay = base_delay * Math.pow(2, attempts);
+			const isAbort = error.name === 'AbortError';
+
+			const msg = `Attempt ${attempts} failed: ${isAbort ? 'Request timed out (AbortError)' : error.message}`;
+			render_msg_to_inspector(msg, 'warning', delay + 3000);
+			console.error(msg);
 
 			// If we've exhausted the retries, throw error
 			if (attempts >= retries) {
-				const msg = 'Max retries reached, request failed.'
-				render_msg_to_inspector(msg, 'error', null)
+				const msg = 'Max retries reached, request failed.';
+				render_msg_to_inspector(msg, 'error', null);
 				throw new Error(msg);
 			}
 
@@ -425,7 +421,6 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 6, bas
 		}
 	}
 }//end _fetch_with_retry_and_timeout
-
 
 
 /**
