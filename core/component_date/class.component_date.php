@@ -1376,22 +1376,22 @@ class component_date extends component_common {
 						break;*/
 
 				default:
-					$current_date = $dato;
-					if (isset($current_date->start)) {
-						$current_date = $current_date->start;
+					if (isset($dato->start) && isset($dato->start->year)) {
+						$dd_date 		 		= new dd_date($dato->start);
+						$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+						$ar_diffusion_values[] 	= $timestamp;
 					}
-					$dd_date 		 		= new dd_date($current_date);
-					$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-					$ar_diffusion_values[] 	= $timestamp;
 					break;
 			}
 		}//end foreach($ar_dato as $dato)
 
-		#$diffusion_value = implode('|',$ar_diffusion_values);
+		if (empty($ar_diffusion_values)) {
+			return null;
+		}
 
 		# NOTA
 		# Para publicación, NO está solucionado el caso en que hay más de una fecha... ejem.. VALORAR ;-)
-		$diffusion_value = reset($ar_diffusion_values); // Temporal !!
+		$diffusion_value = $ar_diffusion_values[0] ?? null; // Temporal !!
 
 		// Force null on empty value to avoid errors on MYSQL save value invalid format
 		// Only valid dates or null area accepted
