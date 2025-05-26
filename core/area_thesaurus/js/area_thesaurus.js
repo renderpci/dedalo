@@ -12,12 +12,14 @@
 	import {clone, dd_console, url_vars_to_object} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {area_common} from '../../area_common/js/area_common.js'
-	import {search} from '../../search/js/search.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_node_info} from '../../common/js/utils/notifications.js'
+	import {area_common} from '../../area_common/js/area_common.js'
+	import {ts_object} from '../../ts_object/js/ts_object.js'
+	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_thesaurus} from './render_area_thesaurus.js'
-	import {ts_object} from '../../ts_object/js/ts_object.js'
+
 
 
 
@@ -136,6 +138,28 @@ area_thesaurus.prototype.init = async function(options) {
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('render_'+self.id, render_handler)
+			)
+
+		// notifications. Render inspector bubbles into the activity container.
+		// Mainly used to inform users that a network error has occurred.
+		// @see data_manager render_msg_to_inspector for other uses.
+			const notifications_handler = async (options) => {
+
+				// container
+					const container	= self.bubbles_notification_container
+					if (!container) {
+						console.error('bubbles_notification_container is undefined!');
+						return
+					}
+
+				// render notification bubble
+					const node_info = render_node_info(options)
+
+				// prepend node (at top of the list)
+					container.prepend(node_info)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('notification', notifications_handler)
 			)
 
 	// URL vars
