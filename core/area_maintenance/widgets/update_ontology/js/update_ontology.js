@@ -141,7 +141,9 @@ update_ontology.prototype.update_ontology = async (options) => {
 				action	: 'update_ontology',
 			},
 			options : options
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 	if(SHOW_DEBUG===true) {
 		console.log('))) update_ontology api_response:', api_response);

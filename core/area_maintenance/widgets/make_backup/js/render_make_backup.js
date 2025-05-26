@@ -191,7 +191,9 @@ const get_content_data = async function(self) {
 						psql_backup_files	: true,
 						mysql_backup_files	: false
 					}
-				}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
 			})
 			.then(function(response){
 				// backup_files_info node created once
@@ -242,7 +244,9 @@ const get_content_data = async function(self) {
 						action : 'make_backup'
 					},
 					options	: {}
-				}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
 			})
 
 			if (!api_response || !api_response.result) {
@@ -347,7 +351,9 @@ const refresh_files_list = async (type, container) => {
 				psql_backup_files	: psql_backup_files,
 				mysql_backup_files	: mysql_backup_files
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 	// message from API response
 	const msg = api_response?.result || ['Unknown error']

@@ -169,7 +169,9 @@ const get_content_data_edit = async function(self) {
 						options : {
 							section_tipo : section_tipo // string like '*' or 'es1,es2'
 						}
-					}
+					},
+					retries : 1, // one try only
+					timeout : 3600 * 1000 // 1 hour waiting response
 				})
 				.then(function(response){
 					console.log('response:', response);

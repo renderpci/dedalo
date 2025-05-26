@@ -177,7 +177,9 @@ const render_long_process = function() {
 						iterations			: iterations,
 						update_rate			: update_rate // milliseconds
 					}
-				}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
 			})
 
 			return response

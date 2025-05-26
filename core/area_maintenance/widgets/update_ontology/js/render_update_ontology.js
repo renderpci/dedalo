@@ -176,7 +176,9 @@ const get_content_data_edit = async function(self) {
 									version	: page_globals.dedalo_version,
 									code	: server.code
 								}
-							}
+							},
+							retries : 1, // one try only
+							timeout : 3600 * 1000 // 1 hour waiting response
 						})
 						// debug
 						if(SHOW_DEBUG===true) {
@@ -551,7 +553,9 @@ const render_rebuild_lang_files = function () {
 						action : 'rebuild_lang_files'
 					},
 					options	: {}
-				}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
 			})
 
 			spinner.remove()
@@ -730,7 +734,9 @@ const render_export_to_translate = function (self, prefix_tipos) {
 									export_ontology_tld_list		: export_ontology_tld_list,
 									export_ontology_exclude_models	: export_ontology_exclude_models
 								}
-							}
+							},
+							retries : 1, // one try only
+							timeout : 3600 * 1000 // 1 hour waiting response
 						})
 						// debug
 						if(SHOW_DEBUG===true) {

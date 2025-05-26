@@ -299,7 +299,9 @@ tool_transcription.prototype.build_subtitles_file = async function() {
 	return new Promise(function(resolve){
 
 		data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 120 * 1000 // 120 secs waiting response
 		})
 		.then(function(response){
 			if(SHOW_DEVELOPER===true) {
@@ -367,7 +369,9 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

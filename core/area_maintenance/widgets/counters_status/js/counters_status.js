@@ -82,7 +82,9 @@ counters_status.prototype.modify_counter = async function(options) {
 					section_tipo	: section_tipo,
 					counter_action	: counter_action
 				}
-			}
+			},
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 1 hour waiting response
 		})
 		if(SHOW_DEBUG===true) {
 			console.log('modify_counter api_response:', api_response);

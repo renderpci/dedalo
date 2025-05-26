@@ -358,7 +358,9 @@ tool_time_machine.prototype.apply_value = function(options) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 60 * 1000 // 60 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -413,7 +415,9 @@ tool_time_machine.prototype.bulk_revert_process = function(options) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 180 * 1000 // 180 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

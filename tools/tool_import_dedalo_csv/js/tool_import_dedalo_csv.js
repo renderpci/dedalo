@@ -262,7 +262,9 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 
 			data_manager.request({
 				use_worker	: true,
-				body		: rqo
+				body		: rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -379,7 +381,9 @@ tool_import_dedalo_csv.prototype.process_uploaded_file = function(file_data) {
 
 			data_manager.request({
 				use_worker	: true,
-				body		: rqo
+				body		: rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

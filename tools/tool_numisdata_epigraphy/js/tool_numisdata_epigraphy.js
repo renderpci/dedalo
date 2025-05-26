@@ -226,7 +226,9 @@ tool_numisdata_epigraphy.prototype.get_relations = async function(options) {
 			? 'count'
 			: 'read',
 		source	: source,
-		sqo		: sqo
+		sqo		: sqo,
+		retries : 5, // one try only
+		timeout : 20 * 1000 // 20 secs waiting response
 	}
 
 	// get context and data

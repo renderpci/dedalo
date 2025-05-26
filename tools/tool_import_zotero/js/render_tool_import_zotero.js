@@ -161,7 +161,9 @@ const get_content_data_edit = async function(self) {
 				return new Promise(function(resolve){
 
 					data_manager.request({
-						body : rqo
+						body : rqo,
+						retries : 1, // one try only
+						timeout : 3600 * 1000 // 3600 secs waiting response
 					})
 					.then(function(response){
 

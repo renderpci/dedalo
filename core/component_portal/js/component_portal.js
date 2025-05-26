@@ -851,7 +851,9 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 
 	// data_manager. create new record
 		const api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 10 * 1000 // 10 secs waiting response
 		})
 		// add value to current data
 		if (api_response.result) {
@@ -1175,7 +1177,9 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 				locator			: locator,
 				ar_properties	: ar_properties
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 10 * 1000 // 10 secs waiting response
 	})
 }//end delete_locator
 

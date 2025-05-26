@@ -528,7 +528,9 @@ service_time_machine.prototype.get_total = async function() {
 		}
 		const api_count_response = await data_manager.request({
 			body		: rqo_count,
-			use_worker	: true
+			use_worker	: true,
+			retries : 5, // try
+			timeout : 10 * 1000 // 10 secs waiting response
 		})
 
 	// API error case

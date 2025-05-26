@@ -102,7 +102,9 @@ register_tools.prototype.get_widget_value = async () => {
 				type	: 'widget',
 				model	: 'register_tools'
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 	if(SHOW_DEBUG===true) {
 		console.log('))) get_widget_value resgister_tools api_response:', api_response);;

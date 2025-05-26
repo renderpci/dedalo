@@ -134,7 +134,9 @@ const get_content_data_edit = async function(self) {
 										action : 'rebuild_db_indexes'
 									},
 									options	: {}
-								}
+								},
+								retries : 1, // one try only
+								timeout : 3600 * 1000 // 1 hour waiting response
 							})
 
 						// loading  remove
@@ -195,7 +197,9 @@ const get_content_data_edit = async function(self) {
 										action : 'consolidate_tables'
 									},
 									options	: {}
-								}
+								},
+								retries : 1, // one try only
+								timeout : 3600 * 1000 // 1 hour waiting response
 							})
 
 						// loading  remove
@@ -277,7 +281,9 @@ const get_content_data_edit = async function(self) {
 									options	: {
 										users : users // array
 									}
-								}
+								},
+								retries : 1, // one try only
+								timeout : 3600 * 1000 // 1 hour waiting response
 							})
 
 						// loading  remove

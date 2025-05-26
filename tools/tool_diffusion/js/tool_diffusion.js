@@ -198,7 +198,9 @@ tool_diffusion.prototype.export = function(options) {
 			// request
 			data_manager.request({
 				use_worker	: true,
-				body		: rqo
+				body		: rqo,
+				retries : 1, // one try only
+				timeout : 10 * 1000 // 10 secs waiting response
 			})
 			.then(function(api_response){
 				resolve(api_response)

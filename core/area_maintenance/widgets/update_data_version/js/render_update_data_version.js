@@ -299,7 +299,9 @@ const get_content_data = async function(self) {
 						background_running	: true, // set run in background CLI
 						updates_checked		: updates_checked
 					}
-				}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
 			})
 
 			return response

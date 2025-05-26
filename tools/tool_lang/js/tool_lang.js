@@ -210,7 +210,9 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 5, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

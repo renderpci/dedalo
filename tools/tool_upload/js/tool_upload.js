@@ -160,7 +160,9 @@ tool_upload.prototype.process_uploaded_file = async function(file_data, process_
 
 	// call to the API, fetch data and get response
 		const api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 3600 secs waiting response
 		})
 
 	// debug

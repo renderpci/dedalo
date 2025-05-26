@@ -352,7 +352,9 @@ export const build_form = function(widget_object) {
 								action	: trigger.action,
 								source	: trigger.source || null,
 								options	: options
-							}
+							},
+							retries : 1, // one try only
+							timeout : 3600 * 1000 // 1 hour waiting response
 						})
 						print_response(body_response, api_response)
 						form_container.classList.remove('lock')

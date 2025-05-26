@@ -346,7 +346,9 @@ tool_media_versions.prototype.build_version = async function(quality) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -403,7 +405,9 @@ tool_media_versions.prototype.conform_headers = async function(quality) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -459,7 +463,9 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -506,7 +512,9 @@ tool_media_versions.prototype.sync_files = async function() {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
@@ -552,7 +560,9 @@ tool_media_versions.prototype.delete_version = async function(quality, extension
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 20 * 1000 // 20 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
