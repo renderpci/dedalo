@@ -79,7 +79,9 @@ update_code.prototype.get_value = async () => {
 				type	: 'widget',
 				model	: 'update_code'
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 	if(SHOW_DEBUG===true) {
 		console.log('))) get_value update_code api_response:', api_response);;
@@ -187,7 +189,9 @@ update_code.prototype.update_code = async ( options ) => {
 				update_mode	: update_mode,
 				info		: info
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 	if(SHOW_DEBUG===true) {
 		console.log('))) update_code update_code api_response:', api_response);

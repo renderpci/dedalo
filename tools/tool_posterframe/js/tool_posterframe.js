@@ -262,7 +262,9 @@ tool_posterframe.prototype.create_identifying_image = async function(item_value,
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 120 * 1000 // 120 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

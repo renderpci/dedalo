@@ -77,7 +77,9 @@ move_to_portal.prototype.exec_move_to_portal = async (files_selected) => {
 				background_running	: true, // set run in background CLI
 				files_selected		: files_selected // array e.g. ['finds_numisdata279_to_tchi1.json']
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 
 	return response

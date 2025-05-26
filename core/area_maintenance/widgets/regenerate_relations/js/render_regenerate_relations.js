@@ -138,7 +138,9 @@ const get_content_data_edit = async function(self) {
 						background_running	: true, // set run in background CLI
 						tables				: tables // string like '*' or 'matrix_hierarchy'
 					}
-				}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
 			})
 
 			return response

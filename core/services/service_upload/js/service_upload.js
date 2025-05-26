@@ -573,7 +573,9 @@ service_upload.prototype.join_chunked_files = async function(options) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 5, // try
+				timeout : 10 * 1000 // 10 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

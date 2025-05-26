@@ -139,7 +139,9 @@ tool_pdf_extractor.prototype.get_pdf_data = async function() {
 	return new Promise(function(resolve){
 
 		data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 180 * 1000 // 180 secs waiting response
 		})
 		.then(function(response){
 			if(SHOW_DEVELOPER===true) {

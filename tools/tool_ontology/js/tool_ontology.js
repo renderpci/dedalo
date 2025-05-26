@@ -143,7 +143,9 @@ tool_ontology.prototype.set_records_in_jer_dd = async function() {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 60 * 1000 // 60 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

@@ -208,7 +208,9 @@ tool_ontology_parser.prototype.export_ontologies = async function () {
 
 	// call to the API, fetch data and get response
 		const api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 180 * 1000 // 180 secs waiting response
 		})
 
 		// debug
@@ -253,7 +255,9 @@ tool_ontology_parser.prototype.regenerate_ontologies = async function () {
 
 	// call to the API, fetch data and get response
 		const api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 180 * 1000 // 180 secs waiting response
 		})
 
 		// debug

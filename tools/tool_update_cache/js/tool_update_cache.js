@@ -200,7 +200,9 @@ tool_update_cache.prototype.update_cache = function() {
 
 			data_manager.request({
 				use_worker	: true,
-				body		: rqo
+				body		: rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {

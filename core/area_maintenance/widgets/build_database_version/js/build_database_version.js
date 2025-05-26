@@ -100,7 +100,9 @@ build_database_version.prototype.build_install_version = async function () {
 			options : {
 				background_running	: true // set run in background CLI
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 
 
@@ -126,7 +128,9 @@ build_database_version.prototype.build_recovery_version_file = async function ()
 			options : {
 				background_running	: false // set run in background CLI
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 
 
@@ -153,7 +157,9 @@ build_database_version.prototype.restore_jer_dd_recovery_from_file = async funct
 			options : {
 				background_running	: false // set run in background CLI
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 
 

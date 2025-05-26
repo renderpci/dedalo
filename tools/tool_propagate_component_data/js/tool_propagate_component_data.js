@@ -226,7 +226,9 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 
 			data_manager.request({
 				use_worker	: true,
-				body		: rqo
+				body		: rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
 			.then(function(api_response){
 				if(SHOW_DEVELOPER===true) {

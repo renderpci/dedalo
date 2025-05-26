@@ -192,7 +192,9 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 
 	// call to the API, fetch data and get response
 		const api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 3600 secs waiting response
 		})
 		if(SHOW_DEVELOPER===true) {
 			dd_console("-> automatic_translation API api_response:",'DEBUG', api_response);

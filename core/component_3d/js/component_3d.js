@@ -174,7 +174,9 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 
 	// call to the API, fetch data and get response
 		const move_api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 1 hour waiting response
 		})
 
 	// debug
@@ -210,7 +212,9 @@ component_3d.prototype.delete_posterframe = async function() {
 
 	// call to the API, fetch data and get response
 		const api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 1 hour waiting response
 		})
 
 	// debug

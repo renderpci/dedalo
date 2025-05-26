@@ -631,7 +631,9 @@ const render_config_options = function(self) {
 							options	: {
 								action : 'to_update'
 							}
-						}
+						},
+						retries : 1, // one try only
+						timeout : 10 * 1000 // 10 secs waiting response
 					})
 
 				// manage result
@@ -777,7 +779,9 @@ const render_install_db_block = function(self) {
 						options	: {
 							action : 'install_db_from_default_file'
 						}
-					}
+					},
+					retries : 1, // one try only
+					timeout : 10 * 1000 // 10 secs waiting response
 				})
 				// manage result
 				if (api_response.result===true) {
@@ -1051,7 +1055,9 @@ const render_set_root_password_block = function(self) {
 							action		: 'set_root_pw',
 							password	: input_new_pw.value
 						}
-					}
+					},
+					retries : 1, // one try only
+					timeout : 10 * 1000 // 10 secs waiting response
 				})
 				// manage result
 				if (api_response.result===true) {
@@ -1355,7 +1361,9 @@ export const render_hierarchies_import_block = function(options) {
 							action		: 'install_hierarchies',
 							hierarchies	: hierarchies_to_install
 						}
-					}
+					},
+					retries : 1, // one try only
+					timeout : 10 * 1000 // 10 secs waiting response
 				})
 				console.log('install_hierarchies response: ', api_response);
 
@@ -1457,7 +1465,9 @@ const render_install_finish_block = function(self) {
 						options	: {
 							action	: 'install_finish'
 						}
-					}
+					},
+					retries : 1, // one try only
+					timeout : 10 * 1000 // 10 secs waiting response
 				})
 
 			// manage result

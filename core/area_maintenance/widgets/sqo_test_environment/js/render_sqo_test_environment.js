@@ -127,7 +127,9 @@ const get_content_data_edit = async function(self) {
 
 						// data_manager
 						const api_response = await data_manager.request({
-							body : rqo
+							body : rqo,
+							retries : 1, // one try only
+							timeout : 3600 * 1000 // 1 hour waiting response
 						})
 						if(SHOW_DEBUG===true) {
 							// console.log("/// json_editor_api api_response:",api_response);

@@ -163,7 +163,9 @@ tool_tc.prototype.change_all_time_codes = function(offset_seconds) {
 	return new Promise(function(resolve){
 
 		data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 120 * 1000 // 120 secs waiting response
 		})
 		.then(function(response){
 			if(SHOW_DEVELOPER===true) {

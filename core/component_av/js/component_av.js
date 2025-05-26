@@ -422,7 +422,9 @@ export const download_av_fragment = async function(options) {
 					tc_out_secs	: tc_out_secs,
 					watermark	: watermark
 				}
-			}
+			},
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 1 hour waiting response
 		})
 		.then(async function(api_response){
 
@@ -482,7 +484,9 @@ component_av.prototype.get_media_streams = function() {
 				options : {
 					// quality	: quality
 				}
-			}
+			},
+			retries : 2, // two try only
+			timeout : 15 * 1000 // 15 secs waiting response
 		})
 		.then(async function(api_response) {
 			if(SHOW_DEBUG===true) {
@@ -534,7 +538,9 @@ component_av.prototype.create_posterframe = async function() {
 
 	// call to the API, fetch data and get response
 		const api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 1 hour waiting response
 		})
 
 	// debug
@@ -567,7 +573,9 @@ component_av.prototype.delete_posterframe = async function() {
 
 	// call to the API, fetch data and get response
 		const api_response = await data_manager.request({
-			body : rqo
+			body : rqo,
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 1 hour waiting response
 		})
 
 	// debug
