@@ -2,7 +2,7 @@
 include dirname(__FILE__) . '/class.dd_iri.php';
 /**
 * CLASS COMPONENT_IRI
-*
+* Manages Internationalized Resource Identifiers (URI allowing Unicode). E.g. https://valència.dev
 */
 class component_iri extends component_common {
 
@@ -12,7 +12,7 @@ class component_iri extends component_common {
 	* CLASS VARS
 	* @var
 	*/
-	// with_lang_versions. Always active for this component
+	// with_lang_versions. Set in properties for true like component_input_text
 	public $with_lang_versions = true;
 
 
@@ -848,7 +848,7 @@ class component_iri extends component_common {
 				if(is_array($dato_from_json)){
 
 					$value = [];
-					foreach ($dato_from_json as $key => $current_value) {
+					foreach ($dato_from_json as $current_value) {
 						// check if the value is a flat string with the uri
 						if(is_string($current_value)){
 							$result = $has_protocol($current_value);
