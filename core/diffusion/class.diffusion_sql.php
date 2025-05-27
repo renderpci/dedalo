@@ -4887,6 +4887,15 @@ class diffusion_sql extends diffusion  {
 										$options->lang ?? DEDALO_DATA_LANG,
 										$locator->section_tipo,
 										false);
+					// transliterable components like component_iri cases (see diffusion 'navarra132').
+					// If the component does not have data in the current language, set DEDALO_DATA_NOLAN as the fallback value for Diffusion.
+					if(strpos($model_name, 'component_')!==false && $component->get_lang()!==DEDALO_DATA_NOLAN && $component->with_lang_versions===true) {
+						$dato = $component->get_dato();
+						// fallback trans-liter-able data for component with_lang_versions
+						if (empty($dato)) {
+							$component->set_lang(DEDALO_DATA_NOLAN);
+						}
+					}
 
 			// method
 				$method = isset($process_dato_arguments->component_method)
