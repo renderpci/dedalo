@@ -4811,9 +4811,6 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function resolve_value(object $options, $dato, string $default_separator=' | ') {
 
-		// dump($options, ' options ++ '.to_string());
-		// dump($dato, ' dato ++ '.to_string());
-
 		if (isset($dato[0])) {
 			$ar_locator = $dato;
 		}else{
@@ -5280,7 +5277,6 @@ class diffusion_sql extends diffusion  {
 		// database_alias case
 			$database_alias_tipo = $diffusion_element_tipo;
 			if ($reference_root_element!==$database_alias_tipo) {
-
 				// replace current tables list with modified parsed version
 				$ar_table_tipo = diffusion::parse_database_alias_tables($ar_table_tipo, $database_alias_tipo);
 			}
