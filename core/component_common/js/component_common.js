@@ -556,11 +556,18 @@ component_common.prototype.save = async function(new_changed_data) {
 				}
 			}
 		}
+
+		// lock component events setting 'loading' class
+			if (self.node) {
+				self.node.classList.add('loading')
+			}
+
 		const response = await send_data()
 
 		// remove saving class on finish
 			if (self.node) {
 				self.node.classList.remove('saving')
+				self.node.classList.remove('loading')
 			}
 
 
