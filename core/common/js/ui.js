@@ -1414,7 +1414,7 @@ export const ui = {
 						})
 				}
 				tool_button.addEventListener('click', click_handler)
-				tool_button.addEventListener('mousedown', click_handler)
+
 
 			return tool_button
 		},//build_section_tool_button
