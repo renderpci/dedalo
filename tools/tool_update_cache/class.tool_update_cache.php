@@ -31,7 +31,7 @@ class tool_update_cache extends tool_common {
 
 		// unlock session
 			session_write_close();
-			ignore_user_abort();
+			ignore_user_abort(true);
 
 		// options
 			$section_tipo			= $options->section_tipo ?? null;
