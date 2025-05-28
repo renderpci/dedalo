@@ -93,7 +93,10 @@ $global_start_time = hrtime(true);
 	}elseif (!empty($_REQUEST)) {
 
 		// GET/POST case
-		if (isset($_REQUEST['rqo'])) {
+		if (isset($_GET['time'])) {
+			// Ignore time get (used only for cache purposes @see data_manager.request JS.)
+			// Prevents potential proxy problems.
+		}else if (isset($_REQUEST['rqo'])) {
 			$rqo = json_handler::decode($_REQUEST['rqo']);
 		}else{
 			$rqo = (object)[

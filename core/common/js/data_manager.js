@@ -20,14 +20,46 @@ export const data_manager = function() {
 
 
 /**
-* REQUEST
+* GET_API_URL
+* Get API url from environment with fallback to default value
+* @return string
+*/
+const get_api_url = () => {
+	return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/'
+}//end get_api_url
+
+
+
+
+/**
+* CHECK_SERVER_HEALTH
+* Checks a lightweight PHP endpoint specifically for health checks.
+* @return bool
+*/
+export const check_server_health = async () => {
+    try {
+    	const url = get_api_url() + 'health'
+        const response = await fetch( url, {
+            method: 'GET',
+            cache: 'no-cache'
+        });
+        return response.ok;
+    } catch (error) {
+        return false;
+    }
+}//end check_server_health
+
+
+
+/**
+* REQUEST_LEGACY
 * Make a fetch request to server API
 * Receives a JSON string to be parsed
 * @param object options
 * @return api_response
 * 	Promise
 */
-data_manager.request_OLD = async function(options) {
+data_manager.request_legacy = async function(options) {
 
 	const self = this
 
@@ -180,7 +212,7 @@ data_manager.request_OLD = async function(options) {
 			errors	: [error.message || 'Network error'],
 		};
 	}
-}//end request
+}//end request_legacy
 
 
 
@@ -197,7 +229,7 @@ data_manager.request = async function(options) {
 	const self = this
 
 	const default_options = {
-		url			: typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/',
+		url			: get_api_url(),
 		method		: 'POST', // *GET, POST, PUT, DELETE, etc.
 		mode		: 'cors', // no-cors, cors, *same-origin
 		cache		: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
@@ -209,7 +241,7 @@ data_manager.request = async function(options) {
 		use_worker	: false,
 		retries		: 5, // default request retries int
 		base_delay	: 500, // default base delay in ms
-		timeout		: 6000 // default timeout in ms
+		timeout		: 5000 // default timeout in ms
 	};
 
 	const merged_options = { ...default_options, ...options };
@@ -218,9 +250,9 @@ data_manager.request = async function(options) {
 	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker, retries, base_delay, timeout } = merged_options;
 
 	// Debug request
-	if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {
-		const action		= body?.action || 'load';
-		const worker_label	= use_worker ? '[wk] ' : ''
+	if(SHOW_DEBUG) {
+		const action				= body?.action || 'load';
+		const worker_label			= use_worker ? '[wk] ' : ''
 		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), merged_options);
 	}
 
@@ -251,14 +283,19 @@ data_manager.request = async function(options) {
 			errors	: ['URL is not valid']
 		};
 	}
+	// Adding 'time' param prevents potential proxy problems in 'no-cache' calls
+	// 'time' param is ignored by the API endpoint (@see ../json/index.php)
+	const safe_url = merged_options.cache==='no-cache'
+		? url + ('?time=' + (new Date()).getTime())
+		: url
 
 	// using worker cases.
-	// Note that execution is slower, but it is useful for low priority
-	// calls like 'update_lock_components_state'
-	// (!) Deactivated 22-05-2025 temporally to simplify network issues debug
-	// if (use_worker === true) {
-	// 	return this._handle_worker_request(url, body);
-	// }
+		// Note that execution is slower, but it is useful for low priority
+		// calls like 'update_lock_components_state'
+		// (!) Deactivated 22-05-2025 temporally to simplify network issues debug
+		// if (use_worker === true) {
+		// 	return this._handle_worker_request(url, body);
+		// }
 
 	// handle_errors
 	const handle_errors = async (response) => {
@@ -279,18 +316,36 @@ data_manager.request = async function(options) {
 	}
 
 	try {
-		const fetch_response = await _fetch_with_retry_and_timeout(url, {
-			method		: method,
-			mode		: mode,
-			cache		: cache,
-			credentials	: credentials,
-			headers		: headers,
-			redirect	: redirect,
-			referrer	: referrer,
-			body		: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null
-		}, retries, base_delay, timeout)
+		const request_start_time = performance.now();
+
+		const fetch_response = await _fetch_with_retry_and_timeout(
+			// url + ('?t=' + (new Date()).getTime()),
+			safe_url,
+			{
+				method		: method,
+				mode		: mode,
+				cache		: cache,
+				credentials	: credentials,
+				headers		: headers,
+				redirect	: redirect,
+				referrer	: referrer,
+				body		: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null
+			},
+			retries,
+			base_delay,
+			timeout
+		)
+
+		const data_start_time = performance.now();
 
 		const json_response = await (await handle_errors(fetch_response)).json();
+
+		if(SHOW_DEBUG) {
+			console.log(`Time to request: ${(performance.now() - request_start_time).toFixed(2)}ms`);
+			console.log(`Time to download data: ${(performance.now() - data_start_time).toFixed(2)}ms`);
+		}
+
+		// const json_response = await fetch_data_with_slow_and_network_detection(url, body, 10000)
 
 		// error occurred. Catch and alert
 			if (json_response?.error) {
@@ -370,45 +425,118 @@ data_manager.request = async function(options) {
 * @return response
 * 	Promise APi response
 */
-async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, base_delay = 500, timeout = 6000) {
+async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
+
+	// Check offline first
+	if (!navigator.onLine) {
+		throw new Error('Offline - please check your network connection');
+	}
+
+	// Custom error classes
+		class HttpError extends Error {
+		  constructor(status, statusText, response) {
+		    super(`HTTP ${status}: ${statusText}`);
+		    this.name = 'HttpError';
+		    this.status = status;
+		    this.statusText = statusText;
+		    this.response = response;
+		  }
+		}
 
 	let attempts = 0;
 
 	while (attempts < retries) {
 		attempts++;
 
-		// Create a controller in each iteration
+		if(SHOW_DEBUG) {
+			console.log('Trying : ', attempts);
+		}
+
+		// Delay between tries. Exponential backoff
+		const delay = base_delay * Math.pow(2, attempts);
+
+		// Increase timeout in each API call
+		const current_time_out = attempts===1
+			? timeout
+			: timeout + delay
+
+		// Create a controller for the request in each iteration
 		const controller = new AbortController();
 		const signal = controller.signal;
 
-		// Set timeout and get his ID
-		const timeout_id = setTimeout(() => controller.abort(), timeout);
+		// Set the controller timeout and get his ID
+		const timeout_id = setTimeout(() => controller.abort(), current_time_out);
+
+		// check_long_process_time
+		// If there is no response from the server within the assigned timeout period,
+		// the server will be asked for its status (minimum health request).
+		// If the server responds before the timeout ends, the timeout will be removed
+		// to allow time to complete the main request (a long process probably).
+		const check_long_process_time = parseInt( current_time_out / 2 )
+		const server_health_timeout_id = setTimeout(async () => {
+			// fast API call to check health
+			const is_server_health = await check_server_health()
+			if (is_server_health) {
+				// Clear main timeout to prevent fire the signal timeout
+				// This allows to wait until main request ends (stops new tries).
+				clearTimeout(timeout_id);
+				const msg = 'Awaiting for busy server..'
+				console.log(msg);
+				render_msg_to_inspector(msg, 'warning', delay + 3000);
+			}
+		},  check_long_process_time)
 
 		try {
+
 			// Attempt the fetch request with timeout and retry logic
 			const response = await fetch(url, { ...options, signal });
 
-			// Clear timeout once fetch completes
+			// Clear timeouts once fetch completes
 			clearTimeout(timeout_id);
+			clearTimeout(server_health_timeout_id);
 
-			if (response?.ok) {
-				return response;
-			} else {
-				const msg = `Server responded with status ${response.status}`;
-				render_msg_to_inspector(msg, 'warning', 7000);
-				throw new Error(msg);
+			// Handle HTTP errors (4xx, 5xx)
+			if (!response?.ok) {
+				throw new HttpError(response.status, response.statusText, response);
 			}
+
+			return response;
 		} catch (error) {
 
-			// ensure cleanup timeout if fetch throws before completion
+			// ensure cleanup timeouts if fetch throws before completion
 			clearTimeout(timeout_id);
+			clearTimeout(server_health_timeout_id);
 
-			const delay = base_delay * Math.pow(2, attempts);
-			const isAbort = error.name === 'AbortError';
+			// HttpError. Don't retry on client errors (4xx) except 408, 429
+			if (error instanceof HttpError) {
+				// notify to user
+				const msg = `Server responded with status ${error.status}`;
+				render_msg_to_inspector(msg, 'warning', 7000);
 
-			const msg = `Attempt ${attempts} failed: ${isAbort ? 'Request timed out (AbortError)' : error.message}`;
-			render_msg_to_inspector(msg, 'warning', delay + 3000);
-			console.error(msg);
+				const retryableStatuses = [408, 429, 500, 502, 503, 504];
+				if( !retryableStatuses.includes(error.status) ) {
+					const msg = `Not retry-able HTTP error ${error.status}`;
+					render_msg_to_inspector(msg, 'error', null);
+					console.error(msg);
+					throw new Error(msg);
+				}
+			}
+
+			// AbortError. Controller abort case
+			if (error.name === 'AbortError') {
+				// notify to user
+				const msg = `Request (${attempts}) timed out after ${current_time_out/1000}s`
+				render_msg_to_inspector(msg, 'warning', delay + 3000);
+				console.error(msg);
+			}
+
+			// TypeError. Network error
+			if (error instanceof TypeError && error.message.includes('fetch')) {
+				// notify to user
+				const msg = `Network connection failed`
+				render_msg_to_inspector(msg, 'warning', delay + 3000);
+				console.error(msg);
+			}
 
 			// If we've exhausted the retries, throw error
 			if (attempts >= retries) {
@@ -418,11 +546,76 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 			}
 
 			// Exponential backoff: increase delay between retries
-			console.log(`Retrying in ${delay}ms...`);
-			await new Promise(resolve => setTimeout(resolve, delay));
+			{
+				const msg = `Retrying in ${delay}ms. Please wait...`
+				render_msg_to_inspector(msg, 'warning', delay + 3000);
+				console.log(`Retrying in ${delay}ms...`);
+				await new Promise(resolve => setTimeout(resolve, delay));
+			}
 		}
 	}
 }//end _fetch_with_retry_and_timeout
+
+
+
+/**
+* _FETCH_WITH_RACE
+* Launch n retries in a race promise and abort all on finish.
+* @return object api_response
+*/
+async function _fetch_with_race(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
+
+	// Create a controller in each iteration
+	const controller = new AbortController();
+	const signal = controller.signal;
+
+	const race_calls = []
+	const total_timeout = timeout * retries
+	for (let i = 0; i < retries; i++) {
+
+		const delay = (i==0)
+			? 0
+			: base_delay * Math.pow(2, i+1);
+
+		const api_response = new Promise(function(resolve){
+			if(SHOW_DEBUG) {
+				console.log('Promise :', i+1 + ' - delay: ' + delay);
+			}
+			setTimeout(() => {
+				resolve(
+					fetch(url, { ...options, signal })
+				)
+			}, delay);
+		})
+		// const api_response = new Promise(resolve => setTimeout(resolve, 6000));
+
+		race_calls.push(api_response)
+	}
+	// Add a total timeout to the race to prevent an infinite wait.
+	race_calls.push( new Promise(resolve => setTimeout(resolve, total_timeout)) )
+
+	try {
+		const api_response = await Promise.race(race_calls)
+
+		// Handle HTTP errors (4xx, 5xx)
+		if (!api_response?.ok) {
+			controller.abort();
+			throw new Error(api_response);
+		}
+
+		// set the controller to abort after parse JSON
+		api_response.controller = controller
+
+		return api_response
+	} catch (error) {
+		controller.abort();
+		// Error case
+		console.error("RACE failed with error:", error);
+		const msg = 'Max retries reached, request failed. ' + error;
+		throw new Error(msg)
+	}
+}//end fetch_with_race
+
 
 
 /**
