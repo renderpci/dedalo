@@ -10,6 +10,20 @@
 
 
 
+// Custom error classes
+// @see _fetch_with_retry_and_timeout
+class HttpError extends Error {
+	constructor(status, statusText, response) {
+		super(`HTTP ${status}: ${statusText}`);
+		this.name = 'HttpError';
+		this.status = status;
+		this.statusText = statusText;
+		this.response = response;
+	}
+}
+
+
+
 /**
 * DATA_MANAGER
 */
@@ -37,16 +51,16 @@ const get_api_url = () => {
 * @return bool
 */
 export const check_server_health = async () => {
-    try {
-    	const url = get_api_url() + 'health'
-        const response = await fetch( url, {
-            method: 'GET',
-            cache: 'no-cache'
-        });
-        return response.ok;
-    } catch (error) {
-        return false;
-    }
+	try {
+		const url = get_api_url() + 'health'
+		const response = await fetch( url, {
+			method: 'GET',
+			cache: 'no-cache'
+		});
+		return response.ok;
+	} catch (error) {
+		return false;
+	}
 }//end check_server_health
 
 
@@ -432,23 +446,12 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 		throw new Error('Offline - please check your network connection');
 	}
 
-	// Custom error classes
-		class HttpError extends Error {
-		  constructor(status, statusText, response) {
-		    super(`HTTP ${status}: ${statusText}`);
-		    this.name = 'HttpError';
-		    this.status = status;
-		    this.statusText = statusText;
-		    this.response = response;
-		  }
-		}
-
 	let attempts = 0;
 
 	while (attempts < retries) {
 		attempts++;
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG && attempts>1) {
 			console.log('Trying : ', attempts);
 		}
 
@@ -481,7 +484,9 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 				// This allows to wait until main request ends (stops new tries).
 				clearTimeout(timeout_id);
 				const msg = 'Awaiting for busy server..'
-				console.log(msg);
+				if(SHOW_DEBUG) {
+					console.log(msg);
+				}
 				render_msg_to_inspector(msg, 'warning', delay + 3000);
 			}
 		},  check_long_process_time)
@@ -549,7 +554,9 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 			{
 				const msg = `Retrying in ${delay}ms. Please wait...`
 				render_msg_to_inspector(msg, 'warning', delay + 3000);
-				console.log(`Retrying in ${delay}ms...`);
+				if(SHOW_DEBUG) {
+					console.log(`Retrying in ${delay}ms...`);
+				}
 				await new Promise(resolve => setTimeout(resolve, delay));
 			}
 		}
