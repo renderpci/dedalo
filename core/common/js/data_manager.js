@@ -300,7 +300,7 @@ data_manager.request = async function(options) {
 	// Adding 'time' param prevents potential proxy problems in 'no-cache' calls
 	// 'time' param is ignored by the API endpoint (@see ../json/index.php)
 	const safe_url = merged_options.cache==='no-cache'
-		? url + ('?time=' + (new Date()).getTime())
+		? url + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
 		: url
 
 	// using worker cases.
