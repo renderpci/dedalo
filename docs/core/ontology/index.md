@@ -5,7 +5,7 @@
 Dédalo is an open-source cultural heritage management system designed to handle both tangible and intangible assets, including oral histories, archaeological asses and properties, ethnological objects, etc documented with multimedia archives.
 At the heart of Dédalo lies its Ontology—a dynamic, modular framework that defines the structure, behaviour, and interactions of all data and components within the system.
 
-## What Is the Dédalo Ontology?
+## What Dédalo Ontology is?
 
 The Ontology in Dédalo serves as the foundational schema that governs how information is organised, stored, and presented.
 It defines every element of the application, from data models and user interfaces to workflows and outputs.
@@ -15,7 +15,7 @@ Dédalo's Ontology employs a correspondence system based on models (elements) an
 For example, to define a `section` (analogous to an SQL table), a node is created in the Ontology with the model `section`.
 This setup enables the system to manage records associated with that section in the database, with specific data processors defined as child nodes of that node, like `components` (analogous to an SQL fields), `groups`, view definitions, and more.
 
-## Key Features of the Ontology
+### Key Features of the Ontology
 
 Model-Node Structure:
 The Ontology uses a model-node structure where 'models' represent data types (e.g., sections, components), and 'nodes' are specific instances or definitions of these models.
@@ -55,7 +55,7 @@ Linked Data Model:
 Dédalo is based on a linked data model and uses a relative, multi-reference, universal locator.
 This locator can find entities, sections, components, and tags, allowing for precise data retrieval and management.
 
-## Practical Applications
+### Practical Applications
 
 Dédalo's Ontology supports various cultural heritage domains, including:
 
@@ -67,7 +67,7 @@ Dédalo's Ontology supports various cultural heritage domains, including:
 
 The system's flexibility allows institutions to tailor the Ontology to their specific needs, ensuring accurate representation and management of diverse cultural heritage materials .
 
-## Benefits of Using Dédalo's Ontology
+### Benefits of Using Dédalo's Ontology
 
 Customisation:
 Organisations can adapt the Ontology to fit their unique data structures and workflows.
@@ -80,3 +80,52 @@ Multiformat output and a linked data model facilitate integration with other sys
 
 Efficiency:
 Real-time object creation and dynamic behaviour adjustment reduce the need for extensive coding, streamlining the management process.
+
+
+## Managing ontology
+
+## Local ontology
+
+It is possible to create a local ontology by users or institutions not necessarily aligned with shared, global or standardised ontologies.
+
+Dédalo provide two ways to add local ontology:
+
+1. Creating a custom TLD for the ontology.
+2. Overwriting specific nodes of a shared / standard ontology.
+
+### Creating a custom TLD
+
+Users and institutions can create their own TLDs to build their own ontology definitions.
+Note that the custom TLD must be unique and not conflict with existing shared and shared TLDs.
+Therefore, do not use `dd`, `tch` or any other defined shared and common TLD. A good practice could be to use the name of the institution/museum such as: `mupreva`(Museu de Pehistòria de València).
+
+#### Creating a new TLD
+
+1. Login as root user or with an user with right privileges to access to the Ontology.
+2. Navigate to `Ontology->Ontologies main` in menu.
+3. Create new record.
+4. Set the new TLD and fill the fields with your custom ontology name, main language, typology, etc.
+5. Ensure that Real section tipo field has been defined with `ontology1`.
+6. Press the create ontology button in the inspector. This action will create the new ontology a it will be ready to be used.
+
+#### Creating the nodes
+
+Nodes in local ontology are extensions of the common/shared ontology and it needs to be linked to any existing node to be represented into the ontology tree.
+For example if you want to extend the `Objects` section [tch1](https://dedalo.dev/ontology/tch1) you need specify in your node that `tch1` is his parent.
+Or if you want to create a whole new definition for `Intangible Heritage` you can set the parent of your node to point to the area `Intangible` [dd323](https://dedalo.dev/ontology/dd323), this will allow you to create new areas or sections within your node.
+If you do not link your root nodes to existing nodes, your definition will work but it will not accessible in menu or in the place that you want act.
+
+!!! note "Mandatory TLD's"
+	Dédalo use four main TLD's as core definition and is not possible remove them: `dd`, `ontology`, `lg`, `hierarchy`
+	Why? Because the main functionalities as login, profiles, tables, tools, ontology definition, or multi-language features are defined by this TLD's.
+	A small comment about `rsc` TLD, it is not core but is a important definition, because it manage all media (image, audiovisual, pdf, svg, 3d, ...), people, entities, etc. and although it is not mandatory, it is almost essential (you can create your own media management by your own, but is hard to do it).
+
+##### Creating fist node
+
+When you create a new TLD, you will have defined a `Typology` for your TLD, this typology helps to organise the ontology definitions and allows you to access it through the menu.
+
+Therefore, to create the first node access your ontology section in the menu by navigating to `Ontology->Instances-><typology>-><Your_ontology_name>` where `<typology>` is the typology defined in `Ontology main` and `<Your_ontology_name>` is your own name in `Ontology main`.
+
+And create the new node.
+
+
