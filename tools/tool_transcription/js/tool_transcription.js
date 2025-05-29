@@ -10,7 +10,7 @@
 	import { common, create_source } from '../../../core/common/js/common.js'
 	import { tool_common } from '../../tool_common/js/tool_common.js'
 	import { render_tool_transcription } from './render_tool_transcription.js'
-	import { transcribe } from '../transcribers/browser_whisper/browser_whisper.js'
+	// import { transcribe } from '../transcribers/browser_whisper/browser_whisper.js'
 
 
 
@@ -341,9 +341,14 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 	// source lang
 		const source_lang 			= options.source_lang // self.transcription_component.lang
 
-		// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-		// this generates a call as my_tool_name::my_function_name(options)
-			const source = create_source(self, 'create_transcribable_audio_file')
+	// transcribe worker
+		const transcribe_worker = new Worker( '../../tools/tool_transcription/transcribers/browser_whisper/browser_whisper.js', {
+			type : 'module'
+		})
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'create_transcribable_audio_file')
 
 
 		const rqo = {
@@ -358,7 +363,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				}
 			}
 		}
-		// call to the API, fetch data and get response
+	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
 			nodes.status_container.classList.remove('hide')
 			nodes.status_container.classList.add('loading_status')
@@ -383,31 +388,139 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 						? lang_obj.tld2
 						: 'en'
 
-				// transcribe
-					transcribe( {
-						self 		: self,
-						audio_file	: response.result,
-						language	: lang,
-						model		: 'Xenova/whisper-small',
-						device		: nodes.transcriber_device_checkbox.checked ? 'wasm' : 'webgpu',
-						nodes 		: nodes
-					}).then( function(response){
+				// Manage the worker answers
+				// it could be the status of the process or the final transcription data
+				transcribe_worker.onmessage = function(e) {
+					const status	= e.data.status
+					const data		= e.data.data
 
-						// delete audio file
-						rqo.source.action = 'delete_transcribable_audio_file'
+					switch (status) {
+						case 'init':
 
-						data_manager.request({
-							body : rqo,
-							retries : 1, // one try only
-							timeout : 3600 * 1000 // 3600 secs waiting response
-						})
+							const progress	= data.progress;
+							const status	= data.status;
+							const device	= data.device;
 
-						resolve(response)
-					});
+							const procesing_label = device==='webgpu' ? 'setting_up' : 'procesing';
+
+
+							// set the label for all status as initializing and the ready to Setting_up
+							// both labels are translated into the tool config.
+							const label = status==='ready'
+								? self.get_tool_label( procesing_label )
+								: self.get_tool_label( 'initializing' )
+
+							const loaded = (progress)
+								? ` : ${parseInt(progress).toString().padStart(2, 0)}%`
+								: (status==='ready')
+									? ''
+									: ' : 00%'
+							const procesing = `${label}${loaded}`;
+							nodes.status_container.innerHTML = procesing;
+
+							break;
+						// on new chunk start empty the status_container, new phrase will be processed
+						case 'on_chunk_start':
+							nodes.status_container.innerHTML = '';
+							nodes.status_container.classList.remove('loading_status')
+
+							break;
+						//every time that a word is processed and ready it is set at end of the phrase
+						case 'callback_function':
+							nodes.status_container.innerHTML = data;
+
+							break;
+						// final data as returned as array of objects with a dd_format parameter.
+						case 'end':
+							transcribe_worker.terminate()
+
+								// Parse the final dedalo format
+								// join all paragraphs into a valid value for component_text_area
+								const response = parse_dedalo_format(data)
+
+							// delete audio file
+								rqo.source.action = 'delete_transcribable_audio_file'
+
+								data_manager.request({
+									body : rqo,
+									retries : 1, // one try only
+									timeout : 3600 * 1000 // 3600 secs waiting response
+								})
+
+							resolve( response )
+							break;
+					}
+				}
+				transcribe_worker.onerror = function(e) {
+					console.error('Worker error [transcribe]:', e);
+				}
+
+				// Process the audio file to be sent to Worker
+				// Used as module is possible send the URI, but as worker the AudioContext is not available
+				const audio_buffer	= await fetch(response.result).then(res => res.arrayBuffer());
+				const audio_ctx		= new AudioContext({ sampleRate: 16000 });
+				const audio_data	= await audio_ctx.decodeAudioData(audio_buffer);
+				const audio_chanel	= audio_data.getChannelData(0)
+
+				const options =  {
+					audio_file	: audio_chanel,
+					language	: lang,
+					model		: 'Xenova/whisper-small',
+					device		: nodes.transcriber_device_checkbox.checked ? 'wasm' : 'webgpu'
+				}
+
+				// init the worker for transcription
+				transcribe_worker.postMessage({
+					options	: options
+				})
 			})
 		})
 
 }//end automatic_transcription
+
+
+
+/**
+* parse_DEDALO_FORMAT
+* Process the segments into the HTML format supported by Dédalo with the time code tag format
+* every segment is enclosed by a paragraph a <p> element
+* @param array transcripts
+* @return array data
+* Dédalo transcription format as HTML:
+* <p>
+* 	[TC_00:00:05.600_TC] My transcription
+* <\p>
+*/
+const parse_dedalo_format = function ( transcripts ){
+
+	const transcripts_length = transcripts.length;
+
+	// creating a fragment to storage all nodes
+	const fragment = new DocumentFragment();
+
+	for (let i = 0; i < transcripts_length; i++) {
+		// create the text node with the transcription
+		const current_text_node = document.createTextNode(transcripts[i].dd_format)
+
+		// create the paragraph to enclose the text fragment
+		const current_node = document.createElement("p");
+
+		// add the text to the paragraph
+		current_node.appendChild(current_text_node)
+		// add to the fragment
+		fragment.appendChild(current_node)
+	}
+
+	// Create a temporary container to insert the fragment and get the final HTML
+	const temp_div = document.createElement('div');
+	temp_div.appendChild(fragment);
+
+	// create a valid data for the component_text_area
+	const data = [ temp_div.innerHTML ]
+
+	return data;
+}// end parse_dedalo_format
+
 
 
 
