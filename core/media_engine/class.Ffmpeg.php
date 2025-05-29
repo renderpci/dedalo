@@ -167,7 +167,7 @@ final class Ffmpeg {
 		$beats = [$quality];
 
 		// media standard identification (pal|ntsc)
-			$media_standard = $quality!=='audio'
+			$media_standard = ( strpos($quality, 'audio')===false )
 				? Ffmpeg::get_media_standard($file_path)
 				: null;
 			if (!empty($media_standard)) {
@@ -175,7 +175,7 @@ final class Ffmpeg {
 			}
 
 		// aspect_ratio
-			$aspect_ratio = $quality!=='audio'
+			$aspect_ratio = ( strpos($quality, 'audio')===false )
 				? Ffmpeg::get_aspect_ratio($file_path)
 				: null;
 			if (!empty($aspect_ratio)) {
@@ -483,7 +483,7 @@ final class Ffmpeg {
 
 		// shell command
 		$command = '';
-		if($setting_name==='audio') {
+		if($setting_name==='audio' || $setting_name==='audio_tr') {
 
 			switch (true) {
 				case ($source_with_audio===false):
@@ -491,7 +491,15 @@ final class Ffmpeg {
 					# SOURCE NOT CONTAINS ANY AUDIO TRACK
 					$response->msg .= 'Source does not contains audio';
 					return $response;
+				case ($setting_name==='audio_tr'):
 
+					$command	.= "nice -n 19 $ffmpeg_path -i $src_file -vn -ar 16000 -ac 1 $target_file ";
+
+					// delete self sh file
+					$command	.= "&& rm -f " . $sh_file;
+					break;
+
+				case ($setting_name==='audio'):
 				default:
 					#
 					# SOURCE CONTAINS ANY AUDIO TRACK
