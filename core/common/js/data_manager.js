@@ -477,18 +477,26 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 		// to allow time to complete the main request (a long process probably).
 		const check_long_process_time = parseInt( current_time_out / 2 )
 		const server_health_timeout_id = setTimeout(async () => {
-			// fast API call to check health
-			const is_server_health = await check_server_health()
-			if (is_server_health) {
-				// Clear main timeout to prevent fire the signal timeout
-				// This allows to wait until main request ends (stops new tries).
-				clearTimeout(timeout_id);
-				const msg = 'Awaiting for busy server..'
-				if(SHOW_DEBUG) {
-					console.log(msg);
+			try {
+				// fast API call to check health
+				const is_server_health = await check_server_health()
+				if (is_server_health) {
+					// Clear main timeout to prevent fire the signal timeout
+					// This allows to wait until main request ends (stops new tries).
+					clearTimeout(timeout_id);
+					const msg = 'Awaiting for busy server..'
+					if(SHOW_DEBUG) {
+						console.log(msg);
+					}
+					render_msg_to_inspector(msg, 'warning', delay + 3000);
 				}
-				render_msg_to_inspector(msg, 'warning', delay + 3000);
+			} catch (health_error) {
+				// Handle health check errors silently or log them
+				if(SHOW_DEBUG) {
+					console.log('Health check failed:', health_error.message);
+				}
 			}
+
 		},  check_long_process_time)
 
 		try {
