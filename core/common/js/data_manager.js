@@ -1206,64 +1206,80 @@ data_manager.set_local_db_data = async function(data, table) {
 * GET_LOCAL_DB_DATA
 * @param string id
 * @param string table
-* @param bool cache = false
+* @param bool use_cache = false
 * Calling sample:
 *	current_data_manager.get_local_db_data('tool_export_config', 'data')
 * @return promise
 */
-const db_table = {}
-data_manager.get_local_db_data = async function(id, table, cache=false) {
+const db_table_cache = new Map();
+data_manager.get_local_db_data = async function(id, table, use_cache=false) {
 
 	const self = this
 
-	// get local db
-		const db = cache===true
-			? await (async ()=>{
-				if (!db_table[table]) {
-					db_table[table] = await self.get_local_db()
-				}
-				return db_table[table]
-			  })()
-			: await self.get_local_db()
+	try {
 
-	// check if is possible create and use IndexDB, if not, the promise will return undefined and we use false
+		// Input validation
+		if (!id || !table) {
+			throw new Error('Missing required parameters: id and table');
+		}
+
+		// Get database with optional caching
+		const db = use_cache && db_table_cache.has(table)
+			? db_table_cache.get(table)
+			: await self.get_local_db();
+
+		// check if is possible create and use IndexDB, if not, the promise will return undefined and we use false
 		if(!db){
+			console.warn('[get_local_db_data] IndexedDB not available, running without cache');
 			return false
 		}
 
-	return new Promise(function(resolve, reject){
+		// Cache database if requested
+		if (use_cache && !db_table_cache.has(table)) {
+			db_table_cache.set(table, db);
+		}
 
-		// transaction
-			const transaction = db.transaction(table, 'readwrite');
+		// Get data from IndexedDB
+		const result = await new Promise(function(resolve, reject){
 
-			// complete. Do something when all the data is added to the database.
-				// transaction.oncomplete = function(event) {
-				// 	console.log("All done!");
-				// };
+			// transaction
+				const transaction = db.transaction(table, 'readwrite');
 
-			// error
-				transaction.onerror = function(event) {
-					if(SHOW_DEBUG){
-						console.error("[get_local_db_data] error:", event.target);
-						console.error('[get_local_db_data] table:', table, 'db:',db);
-					}else{
-						console.error("[get_local_db_data] It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
-					}
-					reject(false)
+				// complete. Do something when all the data is added to the database.
+					// transaction.oncomplete = function(event) {
+					// 	console.log("All done!");
+					// };
+
+				// error
+					transaction.onerror = function(event) {
+						if(SHOW_DEBUG){
+							console.error("[get_local_db_data] error:", event.target);
+							console.error('[get_local_db_data] table:', table, 'db:',db);
+						}else{
+							console.error("[get_local_db_data] It's not possible get_local_db, IndexedDB is blocked, Dédalo will run slowly without cache.");
+						}
+						reject(false)
+					};
+
+			// request
+				const objectStore	= transaction.objectStore(table);
+				const request		= objectStore.get(id);
+
+				request.onsuccess = function(event) {
+					resolve(event.target.result)
 				};
+				request.onerror = function(event) {
+					console.error("[get_local_db_data] error:", event.target);
+					reject(event.target.error);
+				};
+		})
 
-		// request
-			const objectStore	= transaction.objectStore(table);
-			const request		= objectStore.get(id);
+		return result;
 
-			request.onsuccess = function(event) {
-				resolve(event.target.result)
-			};
-			request.onerror = function(event) {
-				console.error("[get_local_db_data] error:", event.target);
-				reject(event.target.error);
-			};
-	})
+	} catch (error) {
+		console.error('[get_local_db_data] Error:', error.message);
+		throw error; // Re-throw to let caller handle
+	}
 }//end get_local_db_data
 
 
