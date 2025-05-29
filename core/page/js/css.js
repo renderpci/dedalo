@@ -85,16 +85,16 @@ export const set_element_css = async (key, value, replace=false) => {
 * 	like 'rsc170_rsc76'
 * @param value object
 * 	like
- 	{
-	    "rsc732": {
-	      ".wrapper_component": {
-	          "grid-row": "1 / 5",
-      		  "grid-column": "9 / 11",
-	          "@media screen and (min-width: 900px)": {
-	            "width": "50%"
-	        }
-	      }
-	    }
+	{
+		"rsc732": {
+		  ".wrapper_component": {
+			  "grid-row": "1 / 5",
+			  "grid-column": "9 / 11",
+			  "@media screen and (min-width: 900px)": {
+				"width": "50%"
+			}
+		  }
+		}
 	}
 * @return bool
 */

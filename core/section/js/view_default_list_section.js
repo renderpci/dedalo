@@ -243,52 +243,49 @@ const get_content_data = async function(self, ar_section_record) {
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
 * @param object self
-* @return obj columns_map
+* 	section instance
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
-	// columns_map already rebuilt case
-		if (self.fixed_columns_map===true) {
-			return self.columns_map
-		}
+	// Early return if columns_map already rebuilt
+	if (self.fixed_columns_map===true) {
+		return self.columns_map || []
+	}
 
+	// Initialize columns_map array
 	const columns_map = []
 
-	// column section_id check
-		columns_map.push({
-			id			: 'section_id',
-			label		: 'Id',
-			tipo		: 'section_id', // used to sort only
-			sortable	: true,
-			width		: 'minmax(auto, 6rem)',
-			path		: [{
-				// note that component_tipo=section_id is valid here
-				// because section_id is a direct column in search
-				component_tipo	: 'section_id',
-				// optional. Just added for aesthetics
-				model			: 'component_section_id',
-				name			: 'ID',
-				section_tipo	: self.section_tipo
-			}],
-			callback	: render_column_id
-		})
+	// Add section_id column
+    const section_id_column = {
+		id			: 'section_id',
+		label		: 'Id',
+		tipo		: 'section_id', // used to sort only
+		sortable	: true,
+		width		: 'minmax(auto, 6rem)',
+		path		: [{
+			// note that component_tipo=section_id is valid here
+			// because section_id is a direct column in search
+			component_tipo	: 'section_id',
+			// optional. Just added for aesthetics
+			model			: 'component_section_id',
+			name			: 'ID',
+			section_tipo	: self.section_tipo
+		}],
+		callback	: render_column_id
+    }
+	columns_map.push(section_id_column)
 
-	// button_remove
-		// 	if (self.permissions>1) {
-		// 		columns_map.push({
-		// 			id			: 'remove',
-		// 			label		: '', // get_label.delete || 'Delete',
-		// 			width 		: 'auto',
-		// 			callback	: render_column_remove
-		// 		})
-		// 	}
+	// Add base columns if they exist
+	const base_columns_map = self.columns_map || [];
+    if (Array.isArray(base_columns_map)) {
+        columns_map.push(...base_columns_map);
+    }
 
-	// columns base
-		const base_columns_map = await self.columns_map
-		columns_map.push(...base_columns_map)
-
-	// fixed as calculated
+	// Mark as fixed if we have base columns
+	if (base_columns_map.length > 0) {
 		self.fixed_columns_map = true
+	}
 
 
 	return columns_map
