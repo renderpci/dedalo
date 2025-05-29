@@ -452,10 +452,11 @@ component_text_area.prototype.tags_to_html = function(value) {
 /**
 * SET_VALUE
 * Set individual value based on element key
-* @param int key
-*	defined in container dataset key
-* @param string value
-*	value from active text editor
+* @param object value
+* {
+*  	key 	// int  : defined in container dataset key
+*	value 	// string : value from active text editor
+* }
 * @return promise
 */
 component_text_area.prototype.set_value = function(value) {
