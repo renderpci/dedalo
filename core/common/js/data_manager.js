@@ -456,7 +456,7 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 		}
 
 		// Delay between tries. Exponential backoff
-		const delay = base_delay * Math.pow(2, attempts);
+		const delay = base_delay * Math.pow(2, attempts - 1); // Fixed: attempts-1 for proper backoff
 
 		// Increase timeout in each API call
 		const current_time_out = attempts===1
