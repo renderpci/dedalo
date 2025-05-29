@@ -888,6 +888,7 @@ const render_automatic_transcription = function (options) {
 	// two options 'gpu' or 'cpu' by default is 'gpu' but for compatibility 'cpu' can be set.
 			const device_container = ui.create_dom_element({
 				element_type	: 'span',
+				class_name		: 'device_container',
 				parent 			: automatic_transcription_container
 			})
 
