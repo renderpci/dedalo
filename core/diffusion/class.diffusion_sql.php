@@ -4811,9 +4811,6 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function resolve_value(object $options, $dato, string $default_separator=' | ') {
 
-		// dump($options, ' options ++ '.to_string());
-		// dump($dato, ' dato ++ '.to_string());
-
 		if (isset($dato[0])) {
 			$ar_locator = $dato;
 		}else{
@@ -4890,6 +4887,15 @@ class diffusion_sql extends diffusion  {
 										$options->lang ?? DEDALO_DATA_LANG,
 										$locator->section_tipo,
 										false);
+					// transliterable components like component_iri cases (see diffusion 'navarra132').
+					// If the component does not have data in the current language, set DEDALO_DATA_NOLAN as the fallback value for Diffusion.
+					if(strpos($model_name, 'component_')!==false && $component->get_lang()!==DEDALO_DATA_NOLAN && $component->with_lang_versions===true) {
+						$dato = $component->get_dato();
+						// fallback trans-liter-able data for component with_lang_versions
+						if (empty($dato)) {
+							$component->set_lang(DEDALO_DATA_NOLAN);
+						}
+					}
 
 			// method
 				$method = isset($process_dato_arguments->component_method)
@@ -5280,7 +5286,6 @@ class diffusion_sql extends diffusion  {
 		// database_alias case
 			$database_alias_tipo = $diffusion_element_tipo;
 			if ($reference_root_element!==$database_alias_tipo) {
-
 				// replace current tables list with modified parsed version
 				$ar_table_tipo = diffusion::parse_database_alias_tables($ar_table_tipo, $database_alias_tipo);
 			}

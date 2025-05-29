@@ -127,6 +127,9 @@ component_common.prototype.init = async function(options) {
 			self.events_subscription()
 		}
 
+	// save status. While save action is running, is set to true to prevent save overlapping
+		self.saving = false
+
 	// DES
 		// component_save (when user change component value) every component is looking if the own the instance was changed.
 			/*
@@ -410,6 +413,13 @@ component_common.prototype.save = async function(new_changed_data) {
 
 	const self = this
 
+	// set save status to prevent save orders overlapping
+	if (self.saving) {
+		console.error(`${self.model} is already saving data. Stop saving to prevent double action.`);
+		return false
+	}
+	self.saving = true
+
 	// fallback to self.data.changed_data if not received
 		const changed_data = new_changed_data || self.data.changed_data
 
@@ -430,6 +440,9 @@ component_common.prototype.save = async function(new_changed_data) {
 					api_response	: null,
 					msg				: msg
 				})
+
+			// update save status
+			self.saving = false
 
 			return false
 		}
@@ -468,6 +481,9 @@ component_common.prototype.save = async function(new_changed_data) {
 				// page unload event
 					// set_before_unload (bool)
 					set_before_unload(false)
+
+				// update save status
+				self.saving = false
 
 				return false
 			}
@@ -540,11 +556,18 @@ component_common.prototype.save = async function(new_changed_data) {
 				}
 			}
 		}
+
+		// lock component events setting 'loading' class
+			if (self.node) {
+				self.node.classList.add('loading')
+			}
+
 		const response = await send_data()
 
 		// remove saving class on finish
 			if (self.node) {
 				self.node.classList.remove('saving')
+				self.node.classList.remove('loading')
 			}
 
 
@@ -642,6 +665,9 @@ component_common.prototype.save = async function(new_changed_data) {
 					api_response	: response
 				}
 			)
+
+		// update save status
+		self.saving = false
 
 		// remove active
 			// ui.component.inactive(self)

@@ -1049,7 +1049,7 @@ final class dd_utils_api {
 
 		// unlock session
 			session_write_close();
-			ignore_user_abort();
+			ignore_user_abort(true);
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -1106,7 +1106,7 @@ final class dd_utils_api {
 
 		// unlock session
 			session_write_close();
-			ignore_user_abort();
+			ignore_user_abort(true);
 
 		$response = new stdClass();
 			$response->result	= false;
