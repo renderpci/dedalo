@@ -97,7 +97,7 @@ self.transcribe = async function( options ) {
 			const chunk_text = ar_chunks.at(-1).text += text;
 
 			self.postMessage({
-				status: 'callback_function:',
+				status: 'callback_function',
 				data: chunk_text
 			});
 			// console.log("text:",ar_chunks.at(-1).text);
