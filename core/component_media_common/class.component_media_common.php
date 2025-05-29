@@ -1263,7 +1263,7 @@ class component_media_common extends component_common {
 					}
 				}
 
-			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			// logger activity : WHAT (action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 				logger::$obj['activity']->log_message(
 					'DELETE FILE',
 					logger::INFO,
