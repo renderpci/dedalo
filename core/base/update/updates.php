@@ -46,7 +46,7 @@ $updates->$v = new stdClass();
 	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 5;
-	$updates->$v->update_from_minor		= 1;
+	$updates->$v->update_from_minor		= 2;
 
 	// Re-index and vacuum tables
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
