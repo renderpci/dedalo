@@ -1130,7 +1130,7 @@ class component_av extends component_media_common implements component_media_int
 
 		// short vars
 			$id				= $this->get_id();
-			$source_quality	= $this->get_source_quality_to_build($quality);
+			$source_quality	= $this->get_source_quality_to_build( $quality );
 			if (empty($source_quality)) {
 				$response->msg .= ' Invalid source_quality';
 				$response->errors[] = 'invalid source_quality';
@@ -1160,7 +1160,7 @@ class component_av extends component_media_common implements component_media_int
 				return $response;
 			}
 			$setting_name			= Ffmpeg::get_setting_name($source_file_path, $quality);
-			$target_file_path		= $this->get_media_filepath($quality);
+			$target_file_path		= $this->get_media_filepath( $quality );
 			$av_alternate_response	= Ffmpeg::build_av_alternate_command((object)[
 				'setting_name'		=> $setting_name,
 				'source_file_path'	=> $source_file_path,
