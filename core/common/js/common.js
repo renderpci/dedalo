@@ -2878,8 +2878,15 @@ export const build_autoload = async function(self) {
 			// previous_status
 				const previous_status = 'initialized'
 
+			// error
+				const error = api_response.error
+					? api_response.error
+					: api_response.errors
+						? api_response.errors[0] || null
+						: null
+
 			// custom behaviors
-				switch (api_response.error) {
+				switch (error) {
 					case 'not_logged':
 						// display login window
 						await render_relogin({
