@@ -343,6 +343,79 @@ class tool_transcription extends tool_common {
 
 		return (object)$response;
 	}//end create_transcribable_audio_file
+
+
+
+	/**
+	* DELETE_TRANSCRIBABLE_AUDIO_FILE
+	* Hard delete of the temporal audio file that was created to be used in automatic transcription
+	* It doesn't use the component delete process because the component has not a hard delete
+	* component move the delete files to `delete` directory because needs to be accessible/recoverable in time machine
+	* The transcribable audio file is a temporal format. This format is not used in any other Dédalo parts.
+	* @param object $options
+	* {
+	*	media_ddo : {
+	*		component_tipo		: string media_component tipo as rsc35
+	*		section_id			: int|string media_component section_id as 14
+	*		section_tipo		: string media_component section_tipo as rsc176
+	*	}
+	* }
+	* @return object $response
+	*/
+	public static function delete_transcribable_audio_file( $options ) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// component to use
+			$media_ddo				= $options->media_ddo;
+
+		// Source text . Get source text from component (source_lang)
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($media_ddo->component_tipo, true);
+			$component	= component_common::get_instance(
+				$model,
+				$media_ddo->component_tipo,
+				$media_ddo->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$media_ddo->section_tipo
+			);
+			$component->extension = 'wav';
+
+			$file_path	= $component->get_media_filepath( 'audio_tr', 'wav' );
+			$audio_file	= $component->quality_file_exist( 'audio_tr' );
+			if($audio_file===false){
+				$response->result = true;
+				$response->msg	= 'Ok. File not exist in server, nothing to delete';
+				return $response;
+			}
+
+			// delete the file
+			$deleted = unlink($file_path);
+
+			if($deleted===false){
+				$response->msg		= 'Error. It was impossible to delete the audio file. View server log.';
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				return $response;
+			}
+
+			$response->result	= true;
+			$response->msg		= 'Ok: file was deleted';
+
+
+		//  debug
+			if(SHOW_DEBUG===true) {
+				$response->debug			= new stdClass();
+				$response->debug->deleted	= $file_path;
+			}
+
+		return (object)$response;
+	}//end delete_transcribable_audio_file
+
+
+
+	/**
 	* CHECK_SERVER_TRANSCRIBER_STATUS
 	* Exec a translation request against the transcriber service given (babel, google, etc.)
 	* and save the result to the target component in the target lang.
