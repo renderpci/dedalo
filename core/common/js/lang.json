@@ -131,6 +131,7 @@
 {"section_id":19792,"dd_lang":"lg-ukr","tld4":"ukr","tld2":"uk","glotocode":"ukra1253","walls":"ukr","lat":49.0,"long":33.0,"locale":"uk"},
 {"section_id":19890,"dd_lang":"lg-urd","tld4":"urd","tld2":"ur","glotocode":"urdu1245","walls":"urd","lat":25.0,"long":67.0,"locale":"ur"},
 {"section_id":19980,"dd_lang":"lg-uzb","tld4":"uzb","tld2":"uz","locale":"uz"},
+{"section_id":19980,"dd_lang":"lg-vlca","tld4":"vlca","tld2":"ca","locale":"ca"},
 {"section_id":20119,"dd_lang":"lg-vie","tld4":"vie","tld2":"vi","glotocode":"viet1252","walls":"vie","lat":10.5,"long":106.5,"locale":"vi"},
 {"section_id":20530,"dd_lang":"lg-wln","tld4":"wln","tld2":"wa","locale":"wa"},
 {"section_id":21033,"dd_lang":"lg-yid","tld4":"yid","tld2":"yi","locale":"yi"},
