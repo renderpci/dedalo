@@ -305,6 +305,10 @@
 					width: 14rem;
 					margin: 1rem;
 					height: 3em;
+					position: relative;
+					border-radius: 8px;
+  					box-shadow: 0 0 0 1px rgba(0,0,0,.01);
+  					background: @color_light;
 
 					&:hover {
 						background-color: @tool_color;
@@ -313,15 +317,64 @@
 					}
 
 					&.disable {
-						opacity: 25%;
+						// opacity: 25%;
+						pointer-events: none;
+					}
+
+					&.disable::after {
+						pointer-events: none;
+						position: absolute;
+						// min-height: 2em;
+						content: "";
+						top: 0px;
+						left: 0;
+						right: 0;
+						z-index: -1;
+						height: 100%;
+						width: 100%;
+						filter: blur(7px);
+						background: linear-gradient(
+							60deg,
+							#ffb7c2,
+							#ff5770,
+							#e4428d,
+							#c42da8,
+							#9e16c3,
+							#6501de,
+							#9e16c3,
+							#c42da8,
+							#e4428d,
+							#ff5770,
+							#ffb7c2
+						);
+						background-size: 200% 200%;
+						animation: animateGlow 2.15s linear infinite;					}
+
+					@keyframes animateGlow {
+						0% {
+							background-position: 0% 50%;
+						}
+						100% {
+							background-position: 200% 50%;
+						}
 					}
 				}
 
-				>.server_status_container {
+
+
+				>.status_container {
 					width: 100%;
 					text-align: center;
-					font-size: 1.5rem;
+					font-size: 1.3rem;
 					font-weight: 200;
+					border-radius: 8px;
+					height: 2.6rem;
+					padding: 0.5rem;
+
+					&.loading_status {
+						color: @color_grey_darken;
+						font-family: monospace;
+					}
 
 					&.processing {
 						color: #13bb87;
@@ -343,6 +396,8 @@
 			}//end .subtitles
 		}
 	}//end .content_data
+
+
 }//end .wrapper_tool
 
 // tool_transcription_icon

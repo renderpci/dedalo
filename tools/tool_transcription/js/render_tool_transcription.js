@@ -650,19 +650,17 @@ const render_activity_info = async function(self) {
 
 
 /**
-* RENDER_AUTOMATIC_TRANSCRIPTION
+* get_SERVER_status
 * @param object options
 * @return HTMLElement automatic_transcription_container
 */
-const render_automatic_transcription = function (options) {
+const get_server_status = function (options) {
 
 	// options
-		const self					= options.self
-		const source_select_lang	= options.source_select_lang
+		const self	= options.self
+		const nodes	= options.nodes
 
 	const server_process_id = 'transcriber_process_'+self.media_component.section_tipo+'_'+self.media_component.section_id
-
-	const server_status = {}
 
 	// Status server cases:
 	// 1 - the pid and the file do not exist and nothing can do
@@ -681,7 +679,7 @@ const render_automatic_transcription = function (options) {
 		const pid = server_process.pid
 
 		const response = await self.check_server_transcriber_status({
-			transcriber_engine	: self.transcriber_engine_select.value,
+			transcriber_engine	: nodes.transcriber_engine_select.value,
 			pid : pid
 		})
 
@@ -696,9 +694,9 @@ const render_automatic_transcription = function (options) {
 					server_process_id,
 					'status'
 				)
-				server_status_container.innerHTML = self.get_tool_label('inactive') || 'Inactive'
-				server_status_container.classList.remove('processing');
-				button_automatic_transcription.classList.remove('disable');
+				nodes.status_container.innerHTML = self.get_tool_label('inactive') || 'Inactive'
+				nodes.status_container.classList.remove('processing');
+				nodes.button_automatic_transcription.classList.remove('disable');
 				break;
 
 			case 2:
@@ -707,10 +705,10 @@ const render_automatic_transcription = function (options) {
 					check_current_server_status()
 				}, 4000)
 
-				server_status_container.innerHTML = self.get_tool_label('processing') || 'Processing'
-				server_status_container.classList.add('processing');
-				button_automatic_transcription.classList.add('disable');
-				button_automatic_transcription.active = false
+				nodes.status_container.innerHTML = self.get_tool_label('processing') || 'Processing'
+				nodes.status_container.classList.add('processing');
+				nodes.button_automatic_transcription.classList.add('disable');
+				nodes.button_automatic_transcription.active = false
 
 				break;
 
@@ -721,9 +719,9 @@ const render_automatic_transcription = function (options) {
 					server_process_id,
 					'status'
 				)
-				server_status_container.innerHTML = self.get_tool_label('finished') || 'Process done'
-				server_status_container.classList.remove('processing');
-				button_automatic_transcription.classList.remove('disable');
+				nodes.status_container.innerHTML = self.get_tool_label('finished') || 'Process done'
+				nodes.status_container.classList.remove('processing');
+				nodes.button_automatic_transcription.classList.remove('disable');
 
 				setTimeout(function(){
 					self.transcription_component.refresh()
@@ -733,6 +731,24 @@ const render_automatic_transcription = function (options) {
 		}
 	}
 
+	// fire the status check
+	check_current_server_status()
+
+}//end get_server_status
+
+
+
+/**
+* RENDER_AUTOMATIC_TRANSCRIPTION
+* @param object options
+* @return HTMLElement automatic_transcription_container
+*/
+const render_automatic_transcription = function (options) {
+
+	// options
+		const self					= options.self
+		const source_select_lang	= options.source_select_lang
+
 	const transcriber_engine = (self.context.config)
 		? self.context.config.transcriber_engine.value
 		: false
@@ -740,6 +756,10 @@ const render_automatic_transcription = function (options) {
 	const transcriber_quality = (self.context.config)
 		? self.context.config.transcriber_quality
 		: false
+
+	// nodes pointer
+	// storage of the nodes to be used for check and change status.
+		const nodes = {}
 
 	// container
 		const automatic_transcription_container = ui.create_dom_element({
@@ -754,70 +774,138 @@ const render_automatic_transcription = function (options) {
 			inner_html		: self.get_tool_label('automatic_transcription') || "Automatic transcription",
 			parent			: automatic_transcription_container
 		})
+		//save the pointer
+			nodes.button_automatic_transcription = button_automatic_transcription
 
-		button_automatic_transcription.addEventListener('click', () => {
+		const button_automatic_transcription_click_handler = async function(e){
 			if(button_automatic_transcription.active=== false){
 				return
 			}
-			self.automatic_transcription({
-					transcriber_engine	: self.transcriber_engine_select.value,
-					transcriber_quality	: self.transcriber_engine_quality  && self.transcriber_engine_quality.value
-						? self.transcriber_engine_quality.value
-						: false,
-					source_lang			: source_select_lang
-			})
-			.then((response)=>{
-				// user messages
-				const msg_type = (response.result===false) ? 'error' : 'ok'
-				ui.show_message(automatic_transcription_container, response.msg, msg_type)
+			const engine = transcriber_engine.find(el => el.name === nodes.transcriber_engine_select.value)
+			if(!engine){
+				return
+			}
+			button_automatic_transcription.classList.add('disable')
 
-				if(response.result!==false){
+			// options to be sent to engine
+			const automatic_transcription_options = {
+				transcriber_engine	: engine.name,
+				transcriber_quality	: nodes.transcriber_engine_quality && nodes.transcriber_engine_quality.value
+					? nodes.transcriber_engine_quality.value
+					: false,
+				source_lang			: source_select_lang,
+				nodes 				: nodes
+			}
 
-					const pid = response.result.pid
+			// process with the engine
+			// Two options:
+			// type = browser -> (Default) the engine will be use the default transformer process in client browser
+			// type = server -> the engine will call to any API server to process the av.
+			switch (engine.type) {
+				case 'server':
+					// return a Promise to be resolved by the API response of the server
+					self.automatic_transcription_server(automatic_transcription_options)
+					.then((response)=>{
+						// user messages
+						const msg_type = (response.result===false) ? 'error' : 'ok'
+						ui.show_message(automatic_transcription_container, response.msg, msg_type)
 
-					// set the server pid to the local database
-					data_manager.set_local_db_data({
-						id	: server_process_id,
-						pid	: pid
-					}, 'status')
+						if(response.result!==false){
 
-					check_current_server_status()
-				}
-			})
-		})
+							const pid = response.result.pid
+
+							// set the server pid to the local database
+							data_manager.set_local_db_data({
+								id	: server_process_id,
+								pid	: pid
+							}, 'status')
+
+							check_current_server_status()
+						}
+					})
+
+					break;
+
+				case 'browser':
+				default:
+					// return a Promise with the data to be saved into transcription component.
+					self.automatic_transcription(automatic_transcription_options)
+					.then((response)=>{
+
+						button_automatic_transcription.classList.remove('disable')
+						status_container.innerHTML = self.get_tool_label('transcription_completed') || 'Transcription completed.';
+
+						self.transcription_component.set_value({
+							key		: 0,
+							value	: response
+						})
+						self.transcription_component.save()
+					})
+
+					break;
+			}
+		}
+		button_automatic_transcription.addEventListener('click', button_automatic_transcription_click_handler)
+
 
 	// select engine
 		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			inner_html		: self.get_tool_label('engine') || 'Quality',
-			parent 			: automatic_transcription_container
-		})
-
-		self.transcriber_engine_select = ui.create_dom_element({
-			element_type	: 'select',
-			parent 			: automatic_transcription_container
-		})
-		for (let i = 0; i < transcriber_engine.length; i++) {
-
-			const engine = transcriber_engine[i]
-
-			const option = ui.create_dom_element({
-				element_type	: 'option',
-				value			: engine.name,
-				inner_html		: engine.label,
-				parent			: self.transcriber_engine_select
+			ui.create_dom_element({
+				element_type	: 'span',
+				inner_html		: self.get_tool_label('engine') || 'Engine',
+				parent 			: automatic_transcription_container
 			})
-			if (self.target_transcriber===engine.name) {
-				option.selected = true
+
+			const transcriber_engine_select = ui.create_dom_element({
+				element_type	: 'select',
+				parent 			: automatic_transcription_container
+			})
+		//save the pointer
+			nodes.transcriber_engine_select = transcriber_engine_select
+		//options
+			for (let i = 0; i < transcriber_engine.length; i++) {
+
+				const engine = transcriber_engine[i]
+
+				const option = ui.create_dom_element({
+					element_type	: 'option',
+					value			: engine.name,
+					inner_html		: engine.label,
+					parent			: transcriber_engine_select
+				})
+				if (self.target_transcriber===engine.name) {
+					option.selected = true
+				}
 			}
-		}
-		self.transcriber_engine_select.addEventListener('change', function(){
-			data_manager.set_local_db_data({
-				id		: 'transcriber_engine_select',
-				value	: self.transcriber_engine_select.value
-			}, 'status')
-		})
+			transcriber_engine_select.addEventListener('change', function(){
+				data_manager.set_local_db_data({
+					id		: 'transcriber_engine_select',
+					value	: transcriber_engine_select.value
+				}, 'status')
+			})
+
+	// configuration of device to use in processing
+	// two options 'gpu' or 'cpu' by default is 'gpu' but for compatibility 'cpu' can be set.
+			const device_container = ui.create_dom_element({
+				element_type	: 'span',
+				parent 			: automatic_transcription_container
+			})
+
+			const option_label = ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: self.get_tool_label('cpu_device') || 'More compatible, slower.',
+				parent			: device_container
+			})
+
+			const transcriber_device_checkbox = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox'
+			})
+
+			//save the pointer
+			nodes.transcriber_device_checkbox = transcriber_device_checkbox
+
+			option_label.prepend(transcriber_device_checkbox)
 
 	// select quality of transcriber
 		if(transcriber_quality){
@@ -828,10 +916,12 @@ const render_automatic_transcription = function (options) {
 				parent 			: automatic_transcription_container
 			})
 
-			self.transcriber_engine_quality = ui.create_dom_element({
+			const transcriber_engine_quality = ui.create_dom_element({
 				element_type	: 'select',
 				parent 			: automatic_transcription_container
 			})
+			//save the pointer
+				nodes.transcriber_engine_quality = transcriber_engine_quality
 			const quality_value = transcriber_quality.value
 			for (let i = 0; i < quality_value.length; i++) {
 
@@ -842,29 +932,35 @@ const render_automatic_transcription = function (options) {
 					element_type	: 'option',
 					value			: quality.name,
 					inner_html		: label,
-					parent			: self.transcriber_engine_quality
+					parent			: transcriber_engine_quality
 				})
 				if (transcriber_quality.default===quality.name) {
 					option.selected = true
 				}
 			}
-			self.transcriber_engine_quality.addEventListener('change', function(){
+			transcriber_engine_quality.addEventListener('change', function(){
 				data_manager.set_local_db_data({
 					id		: 'transcriber_engine_quality',
-					value	: self.transcriber_engine_quality.value
+					value	: transcriber_engine_quality.value
 				}, 'status')
 			})
 		}// end if(transcriber_quality)
 
-	// server_status
-
-		const server_status_container = ui.create_dom_element({
+	// status
+		const status_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'server_status_container',
+			class_name		: 'status_container hide',
 			parent 			: automatic_transcription_container
 		})
+		//save the pointer
+			nodes.status_container = status_container
 
-		check_current_server_status()
+	// get and check the server status
+	// it change the button and display the status into the nodes.
+		get_server_status({
+			self : self,
+			nodes: nodes
+		})
 
 
 	return automatic_transcription_container
