@@ -427,6 +427,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 							break;
 						//every time that a word is processed and ready it is set at end of the phrase
 						case 'callback_function':
+							nodes.status_container.classList.remove('loading_status')
 							nodes.status_container.innerHTML = data;
 
 							break;
