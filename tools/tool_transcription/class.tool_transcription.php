@@ -278,6 +278,71 @@ class tool_transcription extends tool_common {
 
 
 	/**
+	* CREATE_TRANSCRIBABLE_AUDIO_FILE
+	* Build the media component and create a version compatible with Whisper
+	* To avoid problems with compressed audio files Whisper works better with uncompressed audio file in wave format
+	* and the file needs to be resample in 16khz mono
+	* As the Whisper parameters are different of Dédalo standards, build a new quality : audio_tr
+	* This quality is created `on the fly` and is not necessary to specify in config.php
+	* The files are created as temporal version, that will removed when the transcription will done.
+	* @param object $options
+	* {
+	*	media_ddo : {
+	*		component_tipo		: string media_component tipo as rsc35
+	*		section_id			: int|string media_component section_id as 14
+	*		section_tipo		: string media_component section_tipo as rsc176
+	*	}
+	* }
+	* @return object $response
+	*/
+	public static function create_transcribable_audio_file( $options ) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// component to use
+			$media_ddo				= $options->media_ddo;
+
+		// Source text . Get source text from component (source_lang)
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($media_ddo->component_tipo, true);
+			$component	= component_common::get_instance(
+				$model,
+				$media_ddo->component_tipo,
+				$media_ddo->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$media_ddo->section_tipo
+			);
+			$component->extension = 'wav';
+
+			$quality	= $component->get_quality();
+			$audio_file	= $component->quality_file_exist( 'audio_tr' );
+			if($audio_file===false){
+				$component->build_version('audio_tr', $async=false);
+			}
+			$audio_file	= $component->quality_file_exist( 'audio_tr' );
+
+			if($audio_file===false){
+				$response->msg		= 'Error. Audio file is not available.';
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				return $response;
+			}
+
+			$av_url = DEDALO_PROTOCOL . DEDALO_HOST . $component->get_url('audio_tr');
+
+			$response->result	= $av_url;
+			$response->msg		= 'Ok: file was created';
+
+
+		//  debug
+			if(SHOW_DEBUG===true) {
+				$response->debug			= new stdClass();
+				$response->debug->av_url	= $av_url;
+			}
+
+		return (object)$response;
+	}//end create_transcribable_audio_file
 	* CHECK_SERVER_TRANSCRIBER_STATUS
 	* Exec a translation request against the transcriber service given (babel, google, etc.)
 	* and save the result to the target component in the target lang.
