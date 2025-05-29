@@ -451,7 +451,7 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 	while (attempts < retries) {
 		attempts++;
 
-		if(SHOW_DEBUG && attempts>1) {
+		if(SHOW_DEBUG && attempts > 1) {
 			console.log('Trying : ', attempts);
 		}
 
@@ -459,7 +459,7 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 		const delay = base_delay * Math.pow(2, attempts - 1); // Fixed: attempts-1 for proper backoff
 
 		// Increase timeout in each API call
-		const current_time_out = attempts===1
+		const current_time_out = attempts === 1
 			? timeout
 			: timeout + delay
 
