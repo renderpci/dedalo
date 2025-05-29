@@ -117,50 +117,47 @@ view_default_list_section.render = async function(self, options) {
 		// fix last list_body (for pagination selection)
 		self.node_body = list_body
 
-		// list_body css
-			const selector = `${self.section_tipo}_${self.tipo}.list`
+		const set_list_body_css = (replace) => {
 
-		// custom properties defined css
-			// if (self.context.css) {
-				// use defined section css
-				// set_element_css(selector, self.context.css)
-			// }
-			// flat columns create a sequence of grid widths taking care of sub-column space
-			// like 1fr 1fr 1fr 3fr 1fr
-			const items				= ui.flat_column_items(columns_map)
-			const template_columns	= items.join(' ')
+			// list_body css
+				const selector = `${self.section_tipo}_${self.tipo}.list`
 
-			// direct assign DES
-				// Object.assign(
-				// 	list_body.style,
-				// 	{
-				// 		"grid-template-columns": template_columns
-				// 	}
-				// )
+			// custom properties defined css
+				// if (self.context.css) {
+					// use defined section css
+					// set_element_css(selector, self.context.css)
+				// }
+				// flat columns create a sequence of grid widths taking care of sub-column space
+				// like 1fr 1fr 1fr 3fr 1fr
+				const items				= ui.flat_column_items(columns_map)
+				const template_columns	= items.join(' ')
 
-			// re-parse template_columns as percent
-				// const items_lenght = items.length
-				// const percent_template_columns = items.map(el => {
-				// 	if (el==='1fr') {
-				// 		return Math.ceil(90 / (items_lenght -1)) + '%'
-				// 	}
-				// 	return el
-				// }).join(' ')
-				// console.log("percent_template_columns:",percent_template_columns);
+				// re-parse template_columns as percent
+					// const items_lenght = items.length
+					// const percent_template_columns = items.map(el => {
+					// 	if (el==='1fr') {
+					// 		return Math.ceil(90 / (items_lenght -1)) + '%'
+					// 	}
+					// 	return el
+					// }).join(' ')
+					// console.log("percent_template_columns:",percent_template_columns);
 
-			const css_object = {
-				'.list_body' : {
-					'grid-template-columns' : template_columns
+				const css_object = {
+					'.list_body' : {
+						'grid-template-columns' : template_columns
+					}
 				}
-			}
-			if (self.context?.css) {
-				// use defined section css
-				for(const property in self.context.css) {
-					css_object[property] = self.context.css[property]
+				if (self.context?.css) {
+					// use defined section css
+					for(const property in self.context.css) {
+						css_object[property] = self.context.css[property]
+					}
 				}
-			}
-			// use calculated css
-			set_element_css(selector, css_object)
+
+				// set css
+				set_element_css(selector, css_object, replace)
+		}//end set_list_body_css
+		set_list_body_css(true)
 
 	// list_header_node. Create and append if ar_instances is not empty
 		const list_header_node = ui.render_list_header(columns_map, self)
