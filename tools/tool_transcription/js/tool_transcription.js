@@ -5,11 +5,12 @@
 
 
 // import
-	import { dd_console} from '../../../core/common/js/utils/index.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {common, create_source} from '../../../core/common/js/common.js'
-	import {tool_common} from '../../tool_common/js/tool_common.js'
-	import {render_tool_transcription} from './render_tool_transcription.js'
+	import { dd_console, get_json_langs } from '../../../core/common/js/utils/index.js'
+	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { common, create_source } from '../../../core/common/js/common.js'
+	import { tool_common } from '../../tool_common/js/tool_common.js'
+	import { render_tool_transcription } from './render_tool_transcription.js'
+	import { transcribe } from '../transcribers/browser_whisper/browser_whisper.js'
 
 
 
@@ -317,6 +318,101 @@ tool_transcription.prototype.build_subtitles_file = async function() {
 
 /**
 * AUTOMATIC_TRANSCRIPTION
+* Create a transformer pipeline with Whisper
+* using a browser WASM transcribe and save the resulting value
+* @param object options
+* {
+* 	transcriber_engine	: string,
+* 	transcriber_quality	: string
+* 	source_lang			: string as `lg-spa`
+* 	nodes				: object with HTML nodes
+* }
+* @return promise response
+*/
+tool_transcription.prototype.automatic_transcription = async function(options) {
+
+	const self = this
+
+	// options
+		const transcriber_engine	= options.transcriber_engine
+		const transcriber_quality	= options.transcriber_quality
+		const nodes					= options.nodes
+
+	// source lang
+		const source_lang 			= options.source_lang // self.transcription_component.lang
+
+		// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+		// this generates a call as my_tool_name::my_function_name(options)
+			const source = create_source(self, 'create_transcribable_audio_file')
+
+
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				media_ddo : {
+					component_tipo		: self.media_component.tipo,
+					section_id			: self.media_component.section_id,
+					section_tipo		: self.media_component.section_tipo
+				}
+			}
+		}
+		// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+			nodes.status_container.classList.remove('hide')
+			nodes.status_container.classList.add('loading_status')
+			nodes.status_container.innerHTML = self.get_tool_label('processing_audio') || 'Processing audio...'
+			data_manager.request({
+				body : rqo,
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 3600 secs waiting response
+			})
+			.then(async function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> transcription_component API response:",'DEBUG',response);
+				}
+
+				// set the lang of the transcription
+					const json_langs = self.json_langs || await get_json_langs() || []
+					if (json_langs.length<1) {
+						console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
+					}
+					const lang_obj		= json_langs.find(item => item.dd_lang===source_lang)
+					const lang			= lang_obj
+						? lang_obj.tld2
+						: 'en'
+
+				// transcribe
+					transcribe( {
+						self 		: self,
+						audio_file	: response.result,
+						language	: lang,
+						model		: 'Xenova/whisper-small',
+						device		: nodes.transcriber_device_checkbox.checked ? 'wasm' : 'webgpu',
+						nodes 		: nodes
+					}).then( function(response){
+
+						// delete audio file
+						rqo.source.action = 'delete_transcribable_audio_file'
+
+						data_manager.request({
+							body : rqo,
+							retries : 1, // one try only
+							timeout : 3600 * 1000 // 3600 secs waiting response
+						})
+
+						resolve(response)
+					});
+			})
+		})
+
+}//end automatic_transcription
+
+
+
+/**
+* AUTOMATIC_TRANSCRIPTION_SERVER
 * Call the API to transcribe the audiovisual component with the source lang
 * using a online service like babel or Google transcribe and save the resulting value
 * (!) Tool transcription config transcriber must to be exists in register_tools section
@@ -327,26 +423,27 @@ tool_transcription.prototype.build_subtitles_file = async function() {
 * }
 * @return promise response
 */
-tool_transcription.prototype.automatic_transcription = async function(options) {
+tool_transcription.prototype.automatic_transcription_server = async function(options) {
 
 	const self = this
 
 	// options
 		const transcriber_engine	= options.transcriber_engine
-		const transcriber_quality 	= options.transcriber_quality
+		const transcriber_quality	= options.transcriber_quality
+		const nodes					= options.nodes
 
 	// source lang
-		const source_lang = self.transcription_component.lang
+		const source_lang 			= options.source_lang
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'automatic_transcription')
+		const source_server = create_source(self, 'automatic_transcription')
 
 	// rqo
-		const rqo = {
+		const rqo_server = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
-			source	: source,
+			source	: source_server,
 			options	: {
 				source_lang : source_lang,
 				transcription_ddo : {
@@ -369,7 +466,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				body : rqo,
+				body : rqo_server,
 				retries : 1, // one try only
 				timeout : 3600 * 1000 // 3600 secs waiting response
 			})
@@ -381,7 +478,8 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				resolve(response)
 			})
 		})
-}//end automatic_transcription
+
+}//end automatic_transcription_server
 
 
 
