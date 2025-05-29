@@ -230,7 +230,7 @@ class tool_transcription extends tool_common {
 					$transcriber_engine = 'babel_transcriber';
 				case 'babel_transcriber':
 				default:
-					include_once(dirname(__FILE__) . '/transcribers/class.babel_transcriber.php');
+					include_once(dirname(__FILE__) . '/transcribers/babel/class.babel_transcriber.php');
 
 					// babel use tld2 instead tld3
 					$lang_tld2	 = lang::get_alpha2_from_code($source_lang);
@@ -340,7 +340,7 @@ class tool_transcription extends tool_common {
 					$transcriber_engine = 'babel_transcriber';
 				case 'babel_transcriber':
 				default:
-					include_once(dirname(__FILE__) . '/transcribers/class.babel_transcriber.php');
+					include_once(dirname(__FILE__) . '/transcribers/babel/class.babel_transcriber.php');
 
 					// check background process to check if the transcriber had done.
 					$result = babel_transcriber::check_transcriber_status((object)[
