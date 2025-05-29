@@ -33,33 +33,48 @@ const root_css = {};
 
 /**
 * SET_ELEMENT_CSS
-* @return bool
+* Sets CSS styles for a specific element by updating the stylesheet and root CSS registry.
+* Prevents overwriting existing styles unless explicitly requested via replace parameter.
+* @param string key
+* 	Unique identifier for the CSS rule/element (e.g., selector name, element ID)
+* @param object value
+* 	CSS properties object containing style declarations
+*	e.g. { color: 'red', fontSize: '16px', margin: '10px' }
+* @param bool replace
+* 	 Whether to replace existing CSS rules for this key
+*		- false: Skip if key already exists (default)
+*		- true: Overwrite existing CSS rules
+* @return result bool
+* 	Success status
+*		- true: CSS was successfully set/updated
+*		- false: Operation failed (key exists and replace=false, or empty value)
+* @example
+* // Basic usage - set new CSS rule
+* set_element_css('my-button', {
+*	backgroundColor: '#007bff',
+*	color: 'white',
+*	padding: '10px 20px'
+* }); // returns true
 */
-export const set_element_css = function(key, value) {
+export const set_element_css = async (key, value, replace=false) => {
 
-	// already exits check
-		if (root_css[key]!==undefined) {
-			// console.log("Ignored existing key (set_element_css):", key, value);
-			return false
-		}
+	// Check if key already exists and replace is disabled
+	if (replace===false && root_css[key]!==undefined) {
+		// console.log("Ignored existing key (set_element_css):", key, value);
+		return false
+	}
 
+	// Validate value parameter - must be non-empty object
 	if (!value || Object.keys(value).length===0) {
 		// empty object
 		return false
 	}
 
 	// set root_css property
-	update_style_sheet(key, value)
+	const result = await update_style_sheet(key, value)
 
-	// .then(function(result){
-	// 	if (result===true) {
-	// 		// update proxy var value
-	// 		root_css[key] = value;
-	// 	}
-	// 	// console.log("root_css:",root_css);
-	// })
 
-	return true
+	return result
 }//end set_element_css
 
 
@@ -70,16 +85,16 @@ export const set_element_css = function(key, value) {
 * 	like 'rsc170_rsc76'
 * @param value object
 * 	like
- 	{
-	    "rsc732": {
-	      ".wrapper_component": {
-	          "grid-row": "1 / 5",
-      		  "grid-column": "9 / 11",
-	          "@media screen and (min-width: 900px)": {
-	            "width": "50%"
-	        }
-	      }
-	    }
+	{
+		"rsc732": {
+		  ".wrapper_component": {
+			  "grid-row": "1 / 5",
+			  "grid-column": "9 / 11",
+			  "@media screen and (min-width: 900px)": {
+				"width": "50%"
+			}
+		  }
+		}
 	}
 * @return bool
 */
