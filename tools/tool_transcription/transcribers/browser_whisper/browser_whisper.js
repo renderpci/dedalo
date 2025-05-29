@@ -6,6 +6,34 @@
 // imports
 import { pipeline, WhisperTextStreamer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3';
 
+
+/**
+* ONMESSAGE
+* Init the worker process the e.data contains the options:
+* {
+* 	audio_file	: float32Array or string with the URI (don't use the URI in worker!)
+*	language	: string | tld2 format of the language of the audiovisual
+*	model		: string | model file to load into the pipeline (Whisper model) compatible with transformers.js
+*	device		: string | 'wasm' : 'webgpu'
+* }
+*/
+self.onmessage = async (e) => {
+	// const t1 = performance.now()
+
+	// options
+		const options	= e.data.options // object of options to sent to the function
+
+	// fire function
+		const response = await self.transcribe( options )
+
+	self.postMessage({
+		status: 'end',
+		data: response
+	});
+}//end onmessage
+
+
+
 /**
 * TRANSCRIBE
 * Use the transformers.js library to create a pipeline with Whisper
@@ -14,44 +42,34 @@ import { pipeline, WhisperTextStreamer } from 'https://cdn.jsdelivr.net/npm/@hug
 * Return the final transcription with correct format to be saved into the component_text_area
 * @param object options
 * {
-* 	self		: object | the instance that call
 * 	model		: string | model file to load into the pipeline (Whisper model) compatible with transformers.js
-* 	audio_file	: string | URI of the audio_file to be processed
+* 	audio_file	: string | as worker Float32Array and module URI of the audio_file to be processed
 * 	language	: string | tld2 format of the language of the audiovisual
-* 	nodes		: object | HTML nodes of user interface to set the status and the text done by the process.
+* 	device		: string | 'webgpu' or 'wasm' by default 'webgpu'
 * }
 * @return array data
 */
-export const transcribe = async function( options ) {
+self.transcribe = async function( options ) {
 
 	// sort variables
-		const self			= options.self;
 		const model			= options.model;
 		const audio_file	= options.audio_file;
 		const language		= options.language || 'en'; //or 'spanish', 'french', etc.
-		const nodes			= options.nodes;
 		const device 		= options.device || 'webgpu'; // 'wasm' or 'webgpu'
-
-		const procesing_label = device==='webgpu' ? 'setting_up' : 'procesing';
 
 	// Initialize the Whisper pipeline
 		const transcriber = await pipeline('automatic-speech-recognition', model,  {
 			device: device,//'webgpu',
 			// show the status in the browser
 			progress_callback: ({ progress, status, file }) => {
-				// set the label for all status as initializing and the ready to Setting_up
-				// both labels are translated into the tool config.
-				const label = status==='ready'
-					? self.get_tool_label( procesing_label )
-					: self.get_tool_label( 'initializing' )
-
-				const loaded = (progress)
-					? ` : ${parseInt(progress).toString().padStart(2, 0)}%`
-					: (status==='ready')
-						? ''
-						: ' : 00%'
-				const procesing = `${label}${loaded}`;
-				nodes.status_container.innerHTML = procesing
+				self.postMessage({
+					status: 'init',
+					data: {
+						progress,
+						status,
+						device
+					}
+				});
 			}
 		});
 
@@ -68,13 +86,20 @@ export const transcribe = async function( options ) {
 			ar_chunks.push({
 				text	: ""
 			})
-			nodes.status_container.innerHTML = '';
-			nodes.status_container.classList.remove('loading_status')
+
+			self.postMessage({
+				status: 'on_chunk_start:',
+				data: ''
+			});
 		},
 		// every time that a token is ready (as word processed) show it.
 		callback_function: (text) => {
-			ar_chunks.at(-1).text += text;
-			nodes.status_container.innerHTML = ar_chunks.at(-1).text;
+			const chunk_text = ar_chunks.at(-1).text += text;
+
+			self.postMessage({
+				status: 'callback_function:',
+				data: chunk_text
+			});
 			// console.log("text:",ar_chunks.at(-1).text);
 		},
 		// token_callback_function: (token) => {
@@ -130,11 +155,7 @@ export const transcribe = async function( options ) {
 	// Insert the chunk with correct time code into the transcripts
 		transcripts.push(...timed_chunks);
 
-	// Parse the final dedalo format
-		const data = parse_dedalo_format(transcripts)
-
-
-	return data;
+	return transcripts;
 }
 
 
@@ -147,7 +168,7 @@ export const transcribe = async function( options ) {
 * @param float total_seconds
 * @return striing tc
 */
-function seconds_to_tc( total_seconds ) {
+self.seconds_to_tc = function( total_seconds ) {
 
 	const hours			= Math.floor(total_seconds / 3600);
 	const minutes		= Math.floor((total_seconds % 3600) / 60);
@@ -163,49 +184,6 @@ function seconds_to_tc( total_seconds ) {
 	return tc;
 }//end seconds_to_tc
 
-
-
-
-/**
-* parse_DEDALO_FORMAT
-* Process the segments into the HTML format supported by Dédalo with the time code tag format
-* every segment is enclosed by a paragraph a <p> element
-* @param array transcripts
-* @return array data
-* Dédalo transcription format as HTML:
-* <p>
-* 	[TC_00:00:05.600_TC] My transcription
-* <\p>
-*/
-function parse_dedalo_format ( transcripts ){
-
-	const transcripts_length = transcripts.length;
-
-	// creating a fragment to storage all nodes
-	const fragment = new DocumentFragment();
-
-	for (let i = 0; i < transcripts_length; i++) {
-		// create the text node with the transcription
-		const current_text_node = document.createTextNode(transcripts[i].dd_format)
-
-		// create the paragraph to enclose the text fragment
-		const current_node = document.createElement("p");
-
-		// add the text to the paragraph
-		current_node.appendChild(current_text_node)
-		// add to the fragment
-		fragment.appendChild(current_node)
-	}
-
-	// Create a temporary container to insert the fragment and get the final HTML
-	const temp_div = document.createElement('div');
-	temp_div.appendChild(fragment);
-
-	// create a valid data for the component_text_area
-	const data = [ temp_div.innerHTML ]
-
-	return data;
-}// end parse_dedalo_format
 
 
 
