@@ -353,8 +353,9 @@ data_manager.request = async function(options) {
 				}
 			}
 		}
+
+		// exec fetch with retry and timeout
 		const fetch_response = await _fetch_with_retry_and_timeout(
-			// url + ('?t=' + (new Date()).getTime()),
 			safe_url,
 			{
 				method		: method,
@@ -364,7 +365,7 @@ data_manager.request = async function(options) {
 				headers		: headers,
 				redirect	: redirect,
 				referrer	: referrer,
-				body		: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null
+				body		: request_body
 			},
 			retries,
 			base_delay,
@@ -373,6 +374,7 @@ data_manager.request = async function(options) {
 
 		const data_start_time = performance.now();
 
+		// Parse API JAON response handling errors
 		const json_response = await (await handle_errors(fetch_response)).json();
 
 		if(SHOW_DEBUG) {
@@ -380,44 +382,42 @@ data_manager.request = async function(options) {
 			console.log(`Time to download data: ${(performance.now() - data_start_time).toFixed(2)}ms`);
 		}
 
-		// const json_response = await fetch_data_with_slow_and_network_detection(url, body, 10000)
+		// Error occurred. Catch and alert
+		if (json_response?.error) {
 
-		// error occurred. Catch and alert
-			if (json_response?.error) {
+			// debug console message
+			console.error("data_manager request api_response:", json_response);
 
-				// debug console message
-				console.error("data_manager request api_response:", json_response);
-
-				// update_lock_components_state fails. Do not send alert here
-				const action = body?.action;
-				if (action !== 'update_lock_components_state') {
-					// alert msg to user
-					const msg = json_response.msg || json_response.error;
-					if (!page_globals.request_message || page_globals.request_message !== msg) {
-						render_msg_to_inspector(
-							`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`,
-							'error',
-							10000
-						);
-					}
-					// request_message. Store request message temporally
-					page_globals.request_message = msg;
-					setTimeout(() => {
-						page_globals.request_message = null;
-					}, 3000);
+			// update_lock_components_state fails. Do not send alert here
+			const action = body?.action;
+			if (action !== 'update_lock_components_state') {
+				// alert msg to user
+				const msg = json_response.msg || json_response.error;
+				if (!page_globals.request_message || page_globals.request_message !== msg) {
+					render_msg_to_inspector(
+						`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`,
+						'error',
+						10000
+					);
 				}
-
-				// save error message. This is captured by page rendering to display the proper error
-				// api_errors. store api_errors. Used to render error page_globals
-				self._record_api_error(
-					'data_manager', // error_type
-					json_response.msg || json_response.error, // message
-					'data_manager json_parsed', // trace
-					json_response.errors?.length ? json_response.errors.join(' | ') : '' // details
-				)
-
-				return json_response;
+				// request_message. Store request message temporally
+				page_globals.request_message = msg;
+				setTimeout(() => {
+					page_globals.request_message = null;
+				}, 3000);
 			}
+
+			// save error message. This is captured by page rendering to display the proper error
+			// api_errors. store api_errors. Used to render error page_globals
+			self._record_api_error(
+				'data_manager', // error_type
+				json_response.msg || json_response.error, // message
+				'data_manager json_parsed', // trace
+				json_response.errors?.length ? json_response.errors.join(' | ') : '' // details
+			)
+
+			return json_response;
+		}
 
 		return json_response;
 
