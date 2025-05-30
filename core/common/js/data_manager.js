@@ -265,15 +265,18 @@ data_manager.request = async function(options) {
 
 	// Debug request
 	if(SHOW_DEBUG) {
-		const action				= body?.action || 'load';
-		const worker_label			= use_worker ? '[wk] ' : ''
-		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), merged_options);
+		const action		= body?.action || 'load';
+		const worker_label	= use_worker ? '[wk] ' : ''
+		const source_model	= body?.source?.model || ''
+		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), source_model, merged_options);
 	}
 
 	// recovery mode. Auto add if environment recovery_mode is true
 	// On set to true, it is passed across all API request calls preserving the mode
 	if (page_globals.recovery_mode && body) {
-		body.recovery_mode = true
+		if (typeof body === 'object') {
+			body.recovery_mode = true;
+		}
 	}
 
 	// Reset page_globals.api_errors at the beginning of each request
@@ -299,7 +302,7 @@ data_manager.request = async function(options) {
 	}
 	// Adding 'time' param prevents potential proxy problems in 'no-cache' calls
 	// 'time' param is ignored by the API endpoint (@see ../json/index.php)
-	const safe_url = merged_options.cache==='no-cache'
+	const safe_url = merged_options.cache === 'no-cache'
 		? url + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
 		: url
 
@@ -373,7 +376,11 @@ data_manager.request = async function(options) {
 					// alert msg to user
 					const msg = json_response.msg || json_response.error;
 					if (!page_globals.request_message || page_globals.request_message !== msg) {
-						alert(`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`);
+						render_msg_to_inspector(
+							`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`,
+							'error',
+							10000
+						);
 					}
 					// request_message. Store request message temporally
 					page_globals.request_message = msg;
