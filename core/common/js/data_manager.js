@@ -335,6 +335,19 @@ data_manager.request = async function(options) {
 	try {
 		const request_start_time = performance.now();
 
+		// Prepare body for request
+		let request_body = null;
+		if (body) {
+			if (typeof body === 'string') {
+				request_body = body;
+			} else {
+				try {
+					request_body = JSON.stringify(body);
+				} catch (jsonError) {
+					throw new Error(`Failed to serialize request body: ${jsonError.message}`);
+				}
+			}
+		}
 		const fetch_response = await _fetch_with_retry_and_timeout(
 			// url + ('?t=' + (new Date()).getTime()),
 			safe_url,
