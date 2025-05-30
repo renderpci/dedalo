@@ -319,14 +319,19 @@ data_manager.request = async function(options) {
 		if (!response.ok) {
 			console.warn("-> HANDLE_ERRORS response:", response);
 			// extract response text to console
-			const response_text = await response.text();
+			let response_text;
+			try {
+				response_text = await response.text();
+			} catch (textError) {
+				response_text = `Failed to read response text: ${textError.message}`;
+			}
 			console.error(response_text);
 			self._record_api_error(
 				'data_manager', // error_type
 				response_text, // message
 				'data_manager fetch handle_errors', // trace
 				null // details
-			)
+			);
 			throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
 		}
 		return response;
