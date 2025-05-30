@@ -35,12 +35,23 @@ export const data_manager = function() {
 
 /**
 * GET_API_URL
-* Get API url from environment with fallback to default value
+* Get API URL from environment with fallback to default value
 * @return string
 */
-const get_api_url = () => {
+export const get_api_url = () => {
 	return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/'
 }//end get_api_url
+
+
+
+/**
+* GET_API_HEALTH_URL
+* Get API health endpoint URL
+* @return string
+*/
+export const get_api_health_url = () => {
+	return get_api_url() + 'health'
+}//end get_api_health_url
 
 
 
@@ -52,7 +63,7 @@ const get_api_url = () => {
 */
 export const check_server_health = async () => {
 	try {
-		const url = get_api_url() + 'health'
+		const url = get_api_health_url()
 		const response = await fetch( url, {
 			method: 'GET',
 			cache: 'no-cache'

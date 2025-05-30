@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
  	import {dd_request_idle_callback,when_in_viewport} from '../../../../common/js/events.js'
+ 	import {check_server_health,data_manager,get_api_health_url,get_api_url} from '../../../../common/js/data_manager.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
@@ -173,6 +174,16 @@ const render_datalist = (self, datalist_container) => {
 
 	const fragment = new DocumentFragment()
 
+	// Dédalo health_list
+		const health_list_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'list_container health_list_container',
+			parent			: fragment
+		})
+		health_list_container.appendChild(
+			render_health_list(self)
+		)
+
 	// Dédalo requeriments_list
 		const requeriments_list_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -204,6 +215,188 @@ const render_datalist = (self, datalist_container) => {
 
 	return true
 }//end render_datalist
+
+
+
+/**
+* RENDER_HEALTH_LIST
+* Render the list of Dédalo health check
+* @param object self
+* 	widget instance
+* @return DocumentFragment
+*/
+const render_health_list = function (self) {
+
+	const fragment = new DocumentFragment()
+
+	const api_health_url = get_api_health_url()
+
+	// environment
+	const get_environment = async () => {
+		return data_manager.request({
+			body : {
+				'dd_api'	: 'dd_core_api',
+				'action'	: 'get_environment'
+			}
+		})
+	}
+
+	// failed_list
+		const failed_list = []
+
+	// header
+		// info_item
+		const info_item = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_item header',
+			parent			: fragment
+		})
+		// Check label
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html		: 'Check',
+			parent			: info_item
+		})
+		// result label
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html		: 'Result',
+			parent			: info_item
+		})
+		// info label
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html		: 'Info',
+			parent			: info_item
+		})
+
+	const checks_list = [
+		'check_server_health',
+		'check_server_health',
+		'check_server_health',
+		'check_server_health',
+		'check_server_health',
+		'get_environment',
+	]
+	const total_tries = checks_list.length
+	for (let i = 0; i < total_tries; i++) {
+
+		const check_name = checks_list[i]
+
+		// info_item
+		const info_item = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_item',
+			parent			: fragment
+		})
+		// name
+		const name_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'name',
+			inner_html		: 'Loading..',
+			parent			: info_item
+		})
+
+		// value
+		const value_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'value',
+			parent			: info_item
+		})
+
+		// info text
+		const info_column = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'info',
+			parent			: info_item
+		})
+
+		const start_time = performance.now();
+
+		switch (check_name) {
+
+			case 'check_server_health':
+				check_server_health()
+				.then(function(result){
+
+					name_node.innerHTML = `API health call ${i+1}`
+
+					const total_time = performance.now() - start_time;
+
+					value_node.innerHTML = JSON.stringify(result, null, 2)
+
+					// icon success / failed
+					if (result) {
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button icon check success',
+							parent			: value_node
+						})
+					}else{
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button icon cancel error',
+							parent			: value_node
+						})
+
+						failed_list.push('Health API check ', i+1)
+					}
+
+					info_column.innerHTML = `The API health endpoint (${api_health_url}) check takes ${total_time.toFixed(2)}ms.`
+					if (total_time > 150) {
+						info_column.classList.add('warning')
+					}
+				})
+				break;
+
+			case 'get_environment':
+				get_environment()
+				.then(function(response){
+
+					name_node.innerHTML = 'API environment call'
+
+					const total_time = performance.now() - start_time;
+
+					value_node.innerHTML = JSON.stringify(response.result!==false, null, 2)
+
+					// icon success / failed
+					if (response.result!==false) {
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button icon check success',
+							parent			: value_node
+						})
+					}else{
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button icon cancel error',
+							parent			: value_node
+						})
+
+						failed_list.push('Environment API check ', i+1)
+					}
+
+					info_column.innerHTML = `The API environment check takes ${total_time.toFixed(2)}ms.`
+					if (total_time > 300) {
+						info_column.classList.add('warning')
+					}
+				})
+				break;
+		}//end switch (check_name)
+	}//end for (let i = 0; i < total_tries; i++)
+
+	// failed list
+	if (failed_list.length>0) {
+		dd_request_idle_callback(
+			() => {
+				set_widget_label_style(self, 'danger', 'add', datalist_container)
+			}
+		)
+	}
+
+
+	return fragment
+}//end render_health_list
 
 
 
