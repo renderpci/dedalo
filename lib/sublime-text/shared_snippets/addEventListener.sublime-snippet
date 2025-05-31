@@ -1,6 +1,6 @@
 <snippet>
 	<content><![CDATA[
-const $1_handler (e) {
+const $1_handler = (e) => {
 	$3
 }
 $2.addEventListener('$1', $1_handler)

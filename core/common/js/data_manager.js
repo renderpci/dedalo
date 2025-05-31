@@ -35,12 +35,23 @@ export const data_manager = function() {
 
 /**
 * GET_API_URL
-* Get API url from environment with fallback to default value
+* Get API URL from environment with fallback to default value
 * @return string
 */
-const get_api_url = () => {
+export const get_api_url = () => {
 	return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/'
 }//end get_api_url
+
+
+
+/**
+* GET_API_HEALTH_URL
+* Get API health endpoint URL
+* @return string
+*/
+export const get_api_health_url = () => {
+	return get_api_url() + 'health/'
+}//end get_api_health_url
 
 
 
@@ -52,7 +63,7 @@ const get_api_url = () => {
 */
 export const check_server_health = async () => {
 	try {
-		const url = get_api_url() + 'health'
+		const url = get_api_health_url() + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
 		const response = await fetch( url, {
 			method: 'GET',
 			cache: 'no-cache'
@@ -265,15 +276,18 @@ data_manager.request = async function(options) {
 
 	// Debug request
 	if(SHOW_DEBUG) {
-		const action				= body?.action || 'load';
-		const worker_label			= use_worker ? '[wk] ' : ''
-		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), merged_options);
+		const action		= body?.action || 'load';
+		const worker_label	= use_worker ? '[wk] ' : ''
+		const source_model	= body?.source?.model || ''
+		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), source_model, merged_options);
 	}
 
 	// recovery mode. Auto add if environment recovery_mode is true
 	// On set to true, it is passed across all API request calls preserving the mode
 	if (page_globals.recovery_mode && body) {
-		body.recovery_mode = true
+		if (typeof body === 'object') {
+			body.recovery_mode = true;
+		}
 	}
 
 	// Reset page_globals.api_errors at the beginning of each request
@@ -299,7 +313,7 @@ data_manager.request = async function(options) {
 	}
 	// Adding 'time' param prevents potential proxy problems in 'no-cache' calls
 	// 'time' param is ignored by the API endpoint (@see ../json/index.php)
-	const safe_url = merged_options.cache==='no-cache'
+	const safe_url = merged_options.cache === 'no-cache'
 		? url + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
 		: url
 
@@ -316,14 +330,19 @@ data_manager.request = async function(options) {
 		if (!response.ok) {
 			console.warn("-> HANDLE_ERRORS response:", response);
 			// extract response text to console
-			const response_text = await response.text();
+			let response_text;
+			try {
+				response_text = await response.text();
+			} catch (textError) {
+				response_text = `Failed to read response text: ${textError.message}`;
+			}
 			console.error(response_text);
 			self._record_api_error(
 				'data_manager', // error_type
 				response_text, // message
 				'data_manager fetch handle_errors', // trace
 				null // details
-			)
+			);
 			throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
 		}
 		return response;
@@ -332,8 +351,22 @@ data_manager.request = async function(options) {
 	try {
 		const request_start_time = performance.now();
 
+		// Prepare body for request
+		let request_body = null;
+		if (body) {
+			if (typeof body === 'string') {
+				request_body = body;
+			} else {
+				try {
+					request_body = JSON.stringify(body);
+				} catch (jsonError) {
+					throw new Error(`Failed to serialize request body: ${jsonError.message}`);
+				}
+			}
+		}
+
+		// exec fetch with retry and timeout
 		const fetch_response = await _fetch_with_retry_and_timeout(
-			// url + ('?t=' + (new Date()).getTime()),
 			safe_url,
 			{
 				method		: method,
@@ -343,7 +376,7 @@ data_manager.request = async function(options) {
 				headers		: headers,
 				redirect	: redirect,
 				referrer	: referrer,
-				body		: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null
+				body		: request_body
 			},
 			retries,
 			base_delay,
@@ -352,6 +385,7 @@ data_manager.request = async function(options) {
 
 		const data_start_time = performance.now();
 
+		// Parse API JAON response handling errors
 		const json_response = await (await handle_errors(fetch_response)).json();
 
 		if(SHOW_DEBUG) {
@@ -359,40 +393,42 @@ data_manager.request = async function(options) {
 			console.log(`Time to download data: ${(performance.now() - data_start_time).toFixed(2)}ms`);
 		}
 
-		// const json_response = await fetch_data_with_slow_and_network_detection(url, body, 10000)
+		// Error occurred. Catch and alert
+		if (json_response?.error) {
 
-		// error occurred. Catch and alert
-			if (json_response?.error) {
+			// debug console message
+			console.error("data_manager request api_response:", json_response);
 
-				// debug console message
-				console.error("data_manager request api_response:", json_response);
-
-				// update_lock_components_state fails. Do not send alert here
-				const action = body?.action;
-				if (action !== 'update_lock_components_state') {
-					// alert msg to user
-					const msg = json_response.msg || json_response.error;
-					if (!page_globals.request_message || page_globals.request_message !== msg) {
-						alert(`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`);
-					}
-					// request_message. Store request message temporally
-					page_globals.request_message = msg;
-					setTimeout(() => {
-						page_globals.request_message = null;
-					}, 3000);
+			// update_lock_components_state fails. Do not send alert here
+			const action = body?.action;
+			if (action !== 'update_lock_components_state') {
+				// alert msg to user
+				const msg = json_response.msg || json_response.error;
+				if (!page_globals.request_message || page_globals.request_message !== msg) {
+					render_msg_to_inspector(
+						`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`,
+						'error',
+						10000
+					);
 				}
-
-				// save error message. This is captured by page rendering to display the proper error
-				// api_errors. store api_errors. Used to render error page_globals
-				self._record_api_error(
-					'data_manager', // error_type
-					json_response.msg || json_response.error, // message
-					'data_manager json_parsed', // trace
-					json_response.errors?.length ? json_response.errors.join(' | ') : '' // details
-				)
-
-				return json_response;
+				// request_message. Store request message temporally
+				page_globals.request_message = msg;
+				setTimeout(() => {
+					page_globals.request_message = null;
+				}, 3000);
 			}
+
+			// save error message. This is captured by page rendering to display the proper error
+			// api_errors. store api_errors. Used to render error page_globals
+			self._record_api_error(
+				'data_manager', // error_type
+				json_response.msg || json_response.error, // message
+				'data_manager json_parsed', // trace
+				json_response.errors?.length ? json_response.errors.join(' | ') : '' // details
+			)
+
+			return json_response;
+		}
 
 		return json_response;
 
