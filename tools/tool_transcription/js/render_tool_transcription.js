@@ -847,105 +847,175 @@ const render_automatic_transcription = function (options) {
 		}
 		button_automatic_transcription.addEventListener('click', button_automatic_transcription_click_handler)
 
-
-	// select engine
-		// label
-			ui.create_dom_element({
-				element_type	: 'span',
-				inner_html		: self.get_tool_label('engine') || 'Engine',
-				parent 			: automatic_transcription_container
-			})
-
-			const transcriber_engine_select = ui.create_dom_element({
-				element_type	: 'select',
-				parent 			: automatic_transcription_container
-			})
-		//save the pointer
-			nodes.transcriber_engine_select = transcriber_engine_select
-		//options
-			for (let i = 0; i < transcriber_engine.length; i++) {
-
-				const engine = transcriber_engine[i]
-
-				const option = ui.create_dom_element({
-					element_type	: 'option',
-					value			: engine.name,
-					inner_html		: engine.label,
-					parent			: transcriber_engine_select
-				})
-				if (self.target_transcriber===engine.name) {
-					option.selected = true
-				}
+	// configuration
+	// open/close the configuration options
+		const show_configuration = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'icon gear',
+			parent			: automatic_transcription_container
+		})
+		const show_configuration_click_handler = async function (e) {
+			if(configuration_container.classList.contains('hide')){
+				configuration_container.classList.remove('hide')
+				show_configuration.classList.add('open')
+			}else{
+				configuration_container.classList.add('hide')
+				show_configuration.classList.remove('open')
 			}
-			transcriber_engine_select.addEventListener('change', function(){
-				data_manager.set_local_db_data({
-					id		: 'transcriber_engine_select',
-					value	: transcriber_engine_select.value
-				}, 'status')
-			})
+		}
+		show_configuration.addEventListener('click', show_configuration_click_handler)
 
-	// configuration of device to use in processing
-	// two options 'gpu' or 'cpu' by default is 'gpu' but for compatibility 'cpu' can be set.
-			const device_container = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'device_container',
-				parent 			: automatic_transcription_container
-			})
+		// configuration options
+		const configuration_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'configuration_container hide',
+			parent 			: automatic_transcription_container
+		})
 
-			const option_label = ui.create_dom_element({
-				element_type	: 'label',
-				inner_html		: self.get_tool_label('cpu_device') || 'More compatible, slower.',
-				parent			: device_container
-			})
-
-			const transcriber_device_checkbox = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'checkbox'
-			})
-
-			//save the pointer
-			nodes.transcriber_device_checkbox = transcriber_device_checkbox
-
-			option_label.prepend(transcriber_device_checkbox)
-
-	// select quality of transcriber
-		if(transcriber_quality){
+		// select engine
 			// label
-			ui.create_dom_element({
-				element_type	: 'span',
-				inner_html		: self.get_tool_label('quality') || 'Quality',
-				parent 			: automatic_transcription_container
-			})
-
-			const transcriber_engine_quality = ui.create_dom_element({
-				element_type	: 'select',
-				parent 			: automatic_transcription_container
-			})
-			//save the pointer
-				nodes.transcriber_engine_quality = transcriber_engine_quality
-			const quality_value = transcriber_quality.value
-			for (let i = 0; i < quality_value.length; i++) {
-
-				const quality	= quality_value[i]
-				const label		= self.get_tool_label(quality.label) || quality.label
-
-				const option = ui.create_dom_element({
-					element_type	: 'option',
-					value			: quality.name,
-					inner_html		: label,
-					parent			: transcriber_engine_quality
+				const engine_label = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: self.get_tool_label('engine') || 'Engine',
+					class_name 		: 'engine_label',
+					parent 			: configuration_container
 				})
-				if (transcriber_quality.default===quality.name) {
-					option.selected = true
+
+				const transcriber_engine_select = ui.create_dom_element({
+					element_type	: 'select',
+					parent 			: engine_label
+				})
+			//save the pointer
+				nodes.transcriber_engine_select = transcriber_engine_select
+			//options
+				for (let i = 0; i < transcriber_engine.length; i++) {
+
+					const engine = transcriber_engine[i]
+
+					const option = ui.create_dom_element({
+						element_type	: 'option',
+						value			: engine.name,
+						inner_html		: engine.label,
+						parent			: transcriber_engine_select
+					})
+					if (self.target_transcriber===engine.name) {
+						option.selected = true
+					}
 				}
-			}
-			transcriber_engine_quality.addEventListener('change', function(){
-				data_manager.set_local_db_data({
-					id		: 'transcriber_engine_quality',
-					value	: transcriber_engine_quality.value
-				}, 'status')
-			})
-		}// end if(transcriber_quality)
+				// local_db
+					const engine_id = 'transcriber_engine_select'
+					transcriber_engine_select.addEventListener('change', function(){
+						data_manager.set_local_db_data({
+							id		: engine_id,
+							value	: transcriber_engine_select.value
+						}, 'status')
+					})
+
+					data_manager.get_local_db_data(
+						engine_id,
+						'status'
+					).then(function( quality_saved ){
+						if(quality_saved){
+							transcriber_engine_select.value = quality_saved.value
+						}
+					})
+
+		// configuration of device to use in processing
+		// two options 'gpu' or 'cpu' by default is 'gpu' but for compatibility 'cpu' can be set.
+				const device_container = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'device_container',
+					parent 			: configuration_container
+				})
+
+				const option_label = ui.create_dom_element({
+					element_type	: 'label',
+					inner_html		: self.get_tool_label('cpu_device') || 'More compatible, slower.',
+					parent			: device_container
+				})
+
+				const transcriber_device_checkbox = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox'
+				})
+
+				//save the pointer
+				nodes.transcriber_device_checkbox = transcriber_device_checkbox
+
+				option_label.prepend(transcriber_device_checkbox)
+
+				// local_db
+					const device_id = 'transcriber_device_checkbox'
+					transcriber_device_checkbox.addEventListener('change', function(){
+						data_manager.set_local_db_data({
+							id		: device_id,
+							value	: transcriber_device_checkbox.checked
+						}, 'status')
+					})
+
+					data_manager.get_local_db_data(
+						device_id,
+						'status'
+					).then(function( quality_saved ){
+						if(quality_saved){
+							transcriber_device_checkbox.checked = quality_saved.value
+						}
+					})
+
+
+		// select quality of transcriber
+			if(transcriber_quality){
+				// label
+				const quality_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name 		: 'quality_label',
+					inner_html		: self.get_tool_label('quality') || 'Quality',
+					parent 			: configuration_container
+				})
+
+
+				const transcriber_engine_quality = ui.create_dom_element({
+					element_type	: 'select',
+					parent 			: quality_label
+				})
+				//save the pointer
+					nodes.transcriber_engine_quality = transcriber_engine_quality
+				const quality_value = transcriber_quality.value
+				for (let i = 0; i < quality_value.length; i++) {
+
+					const quality	= quality_value[i]
+					const label		= self.get_tool_label(quality.label) || quality.label
+
+					const option = ui.create_dom_element({
+						element_type	: 'option',
+						value			: quality.name,
+						inner_html		: label,
+						parent			: transcriber_engine_quality
+					})
+
+					if (transcriber_quality.default===quality.label) {
+						option.selected = true
+					}
+				}
+				// local_db
+					const quality_id = 'transcriber_engine_quality'
+
+					transcriber_engine_quality.addEventListener('change', function(){
+						data_manager.set_local_db_data({
+							id		: quality_id,
+							value	: transcriber_engine_quality.value
+						}, 'status')
+					})
+
+					data_manager.get_local_db_data(
+						quality_id,
+						'status'
+					).then(function( quality_saved ){
+						if(quality_saved){
+							transcriber_engine_quality.value = quality_saved.value
+						}
+					})
+			}// end if(transcriber_quality)
 
 	// status
 		const status_container = ui.create_dom_element({
