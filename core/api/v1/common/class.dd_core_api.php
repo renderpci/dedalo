@@ -396,7 +396,7 @@ final class dd_core_api {
 								$context[] = $current_context;
 							break;
 
-						case ($model==='area_thesaurus'):
+						case ($model==='area_thesaurus' || $model==='area_ontology'):
 
 							$area = area::get_instance($model, $tipo, $mode);
 							$area->set_lang(DEDALO_DATA_LANG);
