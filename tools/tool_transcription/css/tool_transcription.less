@@ -95,6 +95,7 @@
 				>.lang_label {
 					padding-right: 0.33rem;
 				}
+
 				>select {
 
 				}
@@ -301,7 +302,8 @@
 
 				}
 
-				&.automatic_transcription_container{
+				&.automatic_transcription_container {
+
 					>.button_automatic_transcription {
 						width: 14rem;
 						margin: 1rem;
@@ -318,14 +320,12 @@
 						}
 
 						&.disable {
-							// opacity: 25%;
 							pointer-events: none;
 						}
 
 						&.disable::after {
 							pointer-events: none;
 							position: absolute;
-							// min-height: 2em;
 							content: "";
 							top: 0px;
 							left: 0;
@@ -349,7 +349,8 @@
 								#ffb7c2
 							);
 							background-size: 200% 200%;
-							animation: animateGlow 2.15s linear infinite;					}
+							animation: animateGlow 2.15s linear infinite;
+						}
 
 						@keyframes animateGlow {
 							0% {
@@ -361,28 +362,32 @@
 						}
 					}
 
-					.configuration_container{
+					.configuration_container {
 						width: 100%;
 						display: flex;
 						align-items: center;
 						justify-content: center;
 
-						>.quality_label{
-							margin-left: 1rem ;
-							select{
-								margin-left: 0.5rem ;
+						>.quality_label {
+							margin-left: 1rem;
+
+							select {
+								margin-left: 0.5rem;
 							}
 						}
-						>.engine_label{
-							select{
-								margin-left: 0.5rem ;
+						>.engine_label {
+
+							select {
+								margin-left: 0.5rem;
 							}
 						}
 						>.device_container {
 							margin-left: 1rem;
-							label{
+
+							label {
 								display: flex;
 								cursor: pointer;
+
 								input {
 									margin-right: 0.3rem;
 								}
@@ -390,14 +395,13 @@
 						}
 
 					}
-					>.gear{
-						// background-color: @tool_color;
+					>.gear {
 						background-image: url('../img/gear.svg');
-						// background-size: 18px !important;
 						width: 18px;
 						height: 18px;
 						filter: invert(75%);
 						cursor: pointer;
+
 						&.open, &:hover {
 							filter: invert(45%);
 						}
@@ -432,14 +436,11 @@
 								opacity: 0;
 							}
 						}
-
 					}
 				}
-
 			}//end .subtitles
 		}
 	}//end .content_data
-
 
 }//end .wrapper_tool
 
