@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 29,
-              "hour": 16,
-              "time": 65098312300,
+              "day": 31,
+              "hour": 11,
+              "time": 65098468751,
               "year": 2025,
               "month": 5,
-              "minute": 31,
-              "second": 40
+              "minute": 59,
+              "second": 11
             }
           }
         ]
@@ -136,25 +136,6 @@
         ]
       }
     },
-    "dd999": {
-      "inf": "Configuración [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "transcriber_engine": {
-              "value": [
-                {
-                  "name": "local",
-                  "type": "browser",
-                  "label": "Local transcriber"
-                }
-              ],
-              "client": true
-            }
-          }
-        ]
-      }
-    },
     "dd1326": {
       "inf": "Nombre de la herramienta [component_input_text]",
       "dato": {
@@ -167,7 +148,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "3.0.0"
+          "3.0.1"
         ]
       }
     },
@@ -1184,8 +1165,91 @@
               "lang": "lg-nep",
               "name": "procesing",
               "value": "प्रशोधन गर्दै... पर्खनुहोस्।"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "large_turbo",
+              "value": "High, fast"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "large_turbo",
+              "value": "Alta, rápido"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "large_turbo",
+              "value": "Alt, ràpid"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "large_turbo",
+              "value": "उच्च, छिटो"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "large_turbo",
+              "value": "Hoch, schnell"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "large_turbo",
+              "value": "Ψηλά, γρήγορα"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "large_turbo",
+              "value": "Haut, rapide"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "large_turbo",
+              "value": "Alta, veloce"
+            },
+            {
+              "lang": "lg-por",
+              "name": "large_turbo",
+              "value": "Alta, rápido"
             }
           ]
+        ]
+      }
+    },
+    "dd1633": {
+      "inf": "Default configuration [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "transcriber_engine": {
+              "value": [
+                {
+                  "name": "local",
+                  "type": "browser",
+                  "label": "Local transcriber"
+                }
+              ],
+              "client": true
+            },
+            "transcriber_quality": {
+              "type": "array",
+              "value": [
+                {
+                  "name": "Xenova/whisper-small",
+                  "label": "small"
+                },
+                {
+                  "name": "onnx-community/whisper-large-v3-ONNX",
+                  "label": "large"
+                },
+                {
+                  "name": "onnx-community/whisper-large-v3-turbo",
+                  "label": "large_turbo"
+                }
+              ],
+              "client": true,
+              "default": "large"
+            }
+          }
         ]
       }
     },
@@ -1201,7 +1265,7 @@
   "section_id": 28,
   "created_date": "2025-01-27 13:51:03",
   "section_tipo": "dd1340",
-  "modified_date": "2025-05-29 16:31:40",
+  "modified_date": "2025-05-31 11:59:11",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
