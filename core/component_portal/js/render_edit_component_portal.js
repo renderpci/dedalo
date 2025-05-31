@@ -1012,8 +1012,13 @@ export const get_buttons = (self) => {
 						: null
 
 				// url vars
+					const is_ontology	= self.tipo.slice(-1) === '0'
+					const tipo			= is_ontology
+						? 'dd5' // ONTOLOGY_TIPO
+						: 'dd100'; // THESAURUS_TIPO
+
 					const url_vars = {
-						tipo			: 'dd100', // THESAURUS_TIPO
+						tipo			: tipo,
 						menu			: false,
 						thesaurus_mode	: 'relation'
 					}
