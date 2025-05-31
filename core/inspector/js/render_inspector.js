@@ -154,10 +154,11 @@ const get_content_data = function(self) {
 				title			: get_label.find || "Search",
 				parent			: buttons_container
 			})
-			button_search.addEventListener('mousedown', function(e){
+			const button_search_mousedown_handler = (e) => {
 				e.stopPropagation()
 				event_manager.publish('toggle_search_panel_' + self.caller.id)
-			})
+			}
+			button_search.addEventListener('mousedown', button_search_mousedown_handler)
 
 		// button_new . Call API to create new section and navigate to the new record
 			const section_button_new = section_buttons.find(el => el.model==='button_new')
@@ -168,10 +169,11 @@ const get_content_data = function(self) {
 					title			: section_button_new.label || 'New',
 					parent			: buttons_container
 				})
-				button_new.addEventListener('click', (e) => {
+				const button_new_click_handler = (e) => {
 					e.stopPropagation()
 					event_manager.publish('new_section_' + self.caller.id)
-				})
+				}
+				button_new.addEventListener('click', button_new_click_handler)
 			}
 
 		// button_duplicate . Call API to duplicate current record
@@ -183,14 +185,15 @@ const get_content_data = function(self) {
 					title			: get_label.duplicate || "Duplicate",
 					parent			: buttons_container
 				})
-				button_duplicate.addEventListener('click', (e) => {
+				const button_duplicate_click_handler = (e) => {
 					e.stopPropagation()
 					event_manager.publish('duplicate_section_' + self.caller.id, {
 						section_tipo	: self.caller.section_tipo,
 						section_id		: self.caller.section_id,
 						caller			: self.caller // section
 					})
-				})
+				}
+				button_duplicate.addEventListener('click', button_duplicate_click_handler)
 			}
 
 		// button_delete . Call API to delete current record
@@ -202,14 +205,15 @@ const get_content_data = function(self) {
 					title			: section_button_delete.label || 'Delete',
 					parent			: buttons_container
 				})
-				button_delete.addEventListener('click', (e) => {
+				const button_delete_click_handler = (e) => {
 					e.stopPropagation()
 					event_manager.publish('delete_section_' + self.caller.id, {
 						section_tipo	: self.caller.section_tipo,
 						section_id		: self.caller.section_id,
 						caller			: self.caller // section
 					})
-				})
+				}
+				button_delete.addEventListener('click', button_delete_click_handler)
 			}
 
 		// button_diffusion
@@ -221,14 +225,15 @@ const get_content_data = function(self) {
 					title			: get_label.diffusion || 'Diffusion',
 					parent			: buttons_container
 				})
-				button_diffusion.addEventListener('mousedown', (e) => {
+				const button_diffusion_mousedown_handler = (e) => {
 					e.stopPropagation()
 					// open_tool (tool_common)
 					open_tool({
 						tool_context	: tool_diffusion, // tool context
 						caller			: self.caller // section instance
 					})
-				})
+				}
+				button_diffusion.addEventListener('mousedown', button_diffusion_mousedown_handler)
 			}
 
 	// tools_container. Section tools buttons
@@ -247,7 +252,7 @@ const get_content_data = function(self) {
 						element_type	: 'button',
 						class_name		: 'light blank',
 						style			: {
-							'--icon-path'	: "url('" +tool_context.icon +"')"
+							'--icon-path' : `url('${tool_context.icon}')`
 						},
 						title			: tool_context.label,
 						parent			: tools_container
@@ -260,7 +265,6 @@ const get_content_data = function(self) {
 							caller			: self.caller
 						})
 					}
-					tool_button.addEventListener('click', click_handler)
 					tool_button.addEventListener('mousedown', click_handler)
 
 				// button events. Configured in tool properties. See tool_ontology definition
