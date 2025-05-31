@@ -4,7 +4,7 @@
 
 
 // imports
-import { pipeline, WhisperTextStreamer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3';
+import { pipeline, WhisperTextStreamer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';
 
 
 /**
@@ -60,6 +60,17 @@ self.transcribe = async function( options ) {
 	// Initialize the Whisper pipeline
 		const transcriber = await pipeline('automatic-speech-recognition', model,  {
 			device: device,//'webgpu',
+			dtype: {
+				encoder_model:
+					( model.includes('large') || model.includes('medium') )
+						? "fp16"
+						: "fp32",
+				decoder_model_merged:
+					( model.includes('large') || model.includes('medium') )
+						? 'q4'
+						: 'fp32'
+			},
+
 			// show the status in the browser
 			progress_callback: ({ progress, status, file }) => {
 				self.postMessage({
