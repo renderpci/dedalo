@@ -50,7 +50,7 @@ export const get_api_url = () => {
 * @return string
 */
 export const get_api_health_url = () => {
-	return get_api_url() + 'health'
+	return get_api_url() + 'health/'
 }//end get_api_health_url
 
 
@@ -63,7 +63,7 @@ export const get_api_health_url = () => {
 */
 export const check_server_health = async () => {
 	try {
-		const url = get_api_health_url()
+		const url = get_api_health_url() + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
 		const response = await fetch( url, {
 			method: 'GET',
 			cache: 'no-cache'
