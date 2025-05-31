@@ -721,11 +721,12 @@ export const get_buttons = (self) => {
 			// button_update data external
 			const button_update_data_external = ui.create_dom_element({
 				element_type	: 'span',
+				title			: get_label.update || 'Update',
 				class_name		: 'button sync',
 				parent			: buttons_fold
 			})
 			// event click
-			const click_handler_update_data_external = async function(e) {
+			const update_data_external_click_handler = async function(e) {
 				e.stopPropagation()
 				// force server data to calculate external data
 				const source = self.rqo.source
@@ -738,7 +739,7 @@ export const get_buttons = (self) => {
 					render_level	: 'content'
 				})
 			}
-			button_update_data_external.addEventListener('click', click_handler_update_data_external)
+			button_update_data_external.addEventListener('click', update_data_external_click_handler)
 		}//end button external
 
 	// button_add
@@ -994,11 +995,11 @@ export const get_buttons = (self) => {
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button tree',
+				title			: get_label.vincular_recurso || 'Link resource',
 				parent			: buttons_fold
 			})
-			// event mouseup. Add listener to the select
-			button_tree_selector.addEventListener('mouseup', fn_mousedown)
-			function fn_mousedown(e){
+			// event mousedown. Add listener to the button
+			const mousedown_handler = (e) => {
 				e.stopPropagation()
 
 				const caller_id = self.id || null
@@ -1012,25 +1013,30 @@ export const get_buttons = (self) => {
 						: null
 
 				// url vars
+					const is_ontology	= self.tipo.slice(-1) === '0'
+					const tipo			= is_ontology
+						? 'dd5' // ONTOLOGY_TIPO
+						: 'dd100'; // THESAURUS_TIPO
+
 					const url_vars = {
-						tipo			: 'dd100', // THESAURUS_TIPO
+						tipo			: tipo,
 						menu			: false,
 						thesaurus_mode	: 'relation'
 					}
 
-				// hierarchy_sections
+					// hierarchy_sections
 					if (hierarchy_sections) {
 						url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
 					}
 
-				// Optional hierarchy_terms. Add to url if present
+					// Optional hierarchy_terms. Add to url if present
 					if (hierarchy_terms) {
 						url_vars.hierarchy_terms = JSON.stringify(hierarchy_terms)
 					}
 
-				if(caller_id){
-					url_vars.initiator = JSON.stringify(caller_id)
-				}
+					if(caller_id){
+						url_vars.initiator = JSON.stringify(caller_id)
+					}
 
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
 
@@ -1044,6 +1050,7 @@ export const get_buttons = (self) => {
 				}
 				window.rel_window.focus()
 			}
+			button_tree_selector.addEventListener('mousedown', mousedown_handler)
 		}
 
 	// buttons tools
