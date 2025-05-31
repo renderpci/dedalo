@@ -437,7 +437,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 								// Parse the final dedalo format
 								// join all paragraphs into a valid value for component_text_area
-								const response = parse_dedalo_format(data)
+								const final_tr_response = parse_dedalo_format(data)
 
 							// delete audio file
 								rqo.source.action = 'delete_transcribable_audio_file'
@@ -445,10 +445,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 								data_manager.request({
 									body : rqo,
 									retries : 1, // one try only
-									timeout : 3600 * 1000 // 3600 secs waiting response
+									timeout : 3600 * 1000 // 3600 secs waiting final_tr_response
 								})
 
-							resolve( response )
+							resolve( final_tr_response )
 							break;
 					}
 				}
@@ -466,7 +466,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				const options =  {
 					audio_file	: audio_chanel,
 					language	: lang,
-					model		: 'Xenova/whisper-small',
+					model		: transcriber_quality, //'onnx-community/whisper-large-v3-ONNX',// Xenova/whisper-small',
 					device		: nodes.transcriber_device_checkbox.checked ? 'wasm' : 'webgpu'
 				}
 
