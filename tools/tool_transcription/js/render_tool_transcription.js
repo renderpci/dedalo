@@ -868,7 +868,7 @@ const render_automatic_transcription = function (options) {
 		// configuration options
 		const configuration_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'configuration_container hide',
+			class_name		: 'configuration_container hide unselectable',
 			parent 			: automatic_transcription_container
 		})
 
