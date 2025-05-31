@@ -43,7 +43,7 @@ $global_start_time = hrtime(true);
 
 // php version check
 	$version = explode('.', phpversion());
-	if ($version[0]<8 || ($version[0]==8 && $version[1]<1)) {
+	if ($version[0]<8 || ($version[0]==8 && $version[1]<3)) {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed. This PHP version is not supported ('.phpversion().'). You need: >=8.1';

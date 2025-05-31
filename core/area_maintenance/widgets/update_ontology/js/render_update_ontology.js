@@ -87,7 +87,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: `Current Ontology info <b>${current_ontology.version}</b>`,
+			inner_html		: `Current Ontology info <b>${current_ontology.version}</b> <span class="note">(extracted from jer_dd > dd1 > properties)</span>`,
 			parent			: content_data
 		})
 		ui.create_dom_element({

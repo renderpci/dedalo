@@ -1,5 +1,5 @@
 {
-  "label": "Tools development",
+  "label": "Desarrollo de herramientas",
   "relations": [
     {
       "type": "dd151",
@@ -8,16 +8,16 @@
       "from_component_tipo": "dd200"
     },
     {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
       "type": "dd151",
       "section_id": "1",
       "section_tipo": "dd64",
       "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
     },
     {
       "type": "dd151",
@@ -35,13 +35,13 @@
       "type": "dd151",
       "section_id": "2",
       "section_tipo": "dd64",
-      "from_component_tipo": "dd1601"
+      "from_component_tipo": "dd1333"
     },
     {
       "type": "dd151",
       "section_id": "2",
       "section_tipo": "dd64",
-      "from_component_tipo": "dd1333"
+      "from_component_tipo": "dd1601"
     },
     {
       "type": "dd151",
@@ -81,12 +81,12 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 15,
-              "hour": 19,
-              "time": 65086400063,
+              "day": 31,
+              "hour": 10,
+              "time": 65098463243,
               "year": 2025,
-              "month": 1,
-              "minute": 34,
+              "month": 5,
+              "minute": 27,
               "second": 23
             }
           }
@@ -94,7 +94,7 @@
       }
     },
     "dd612": {
-      "inf": "Description [component_text_area]",
+      "inf": "Descripción [component_text_area]",
       "dato": {
         "lg-cat": [
           "<p>Gestiona la transformació de l'ontologia en registres jer_dd</p>"
@@ -129,7 +129,7 @@
       }
     },
     "dd799": {
-      "inf": "Label [component_input_text]",
+      "inf": "Etiqueta [component_input_text]",
       "dato": {
         "lg-cat": [
           "Ontologia"
@@ -164,7 +164,7 @@
       }
     },
     "dd1326": {
-      "inf": "Tool name [component_input_text]",
+      "inf": "Nombre de la herramienta [component_input_text]",
       "dato": {
         "lg-nolan": [
           "tool_ontology"
@@ -172,15 +172,15 @@
       }
     },
     "dd1327": {
-      "inf": "Version [component_input_text]",
+      "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.3"
+          "1.0.4"
         ]
       }
     },
     "dd1328": {
-      "inf": "Dédalo version minimum [component_input_text]",
+      "inf": "Versión Dédalo mínima [component_input_text]",
       "dato": {
         "lg-nolan": [
           "6.4.0"
@@ -188,7 +188,7 @@
       }
     },
     "dd1335": {
-      "inf": "Properties [component_json]",
+      "inf": "Propiedades [component_json]",
       "dato": {
         "lg-nolan": [
           {
@@ -217,18 +217,18 @@
       }
     },
     "dd1350": {
-      "inf": "Affected types: [component_json]",
+      "inf": "Afecta a tipos: [component_json]",
       "dato": {
         "lg-nolan": [
           [
             "ontology35",
-            "/^[a-z]+0$/"
+            "/^(?!localontology0)[a-z]+0$/"
           ]
         ]
       }
     },
     "dd1372": {
-      "inf": "Labels [component_json]",
+      "inf": "Etiquetas [component_json]",
       "dato": {
         "lg-nolan": [
           [
@@ -337,7 +337,7 @@
       }
     },
     "dd1644": {
-      "inf": "Developer [component_input_text]",
+      "inf": "Desarollador [component_input_text]",
       "dato": {
         "lg-nolan": [
           "Dédalo team"
@@ -348,7 +348,7 @@
   "section_id": 31,
   "created_date": "2024-11-24 21:14:25",
   "section_tipo": "dd1340",
-  "modified_date": "2025-01-15 19:34:23",
+  "modified_date": "2025-05-31 10:27:23",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

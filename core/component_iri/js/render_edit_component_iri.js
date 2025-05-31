@@ -160,6 +160,14 @@ const get_content_value = (i, current_value, self) => {
 					input_title.addEventListener('mousedown', function(e) {
 						e.stopPropagation()
 					})
+				// keyup event
+					const input_title_keyup_handler = (e) => {
+						if(e.key === 'Enter'){
+							input_iri.focus()
+							return false
+						}
+					}
+					input_title.addEventListener('keyup', input_title_keyup_handler)
 		}// end if(use_title)
 
 	// IRI input field
@@ -205,6 +213,16 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self, false)
 				}
 			})
+		// keyup event
+			const input_iri_keyup_handler = (e) => {
+				// Enter key force to dispatchEvent change
+				if ( e.key === 'Enter' && self.data.changed_data?.length ) {
+					input_iri.dispatchEvent(new Event('change'))
+					self.save()
+					return false
+				}
+			}
+			input_iri.addEventListener('keyup', input_iri_keyup_handler)
 
 	// active
 		const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
