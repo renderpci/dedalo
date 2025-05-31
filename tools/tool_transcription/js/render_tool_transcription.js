@@ -951,6 +951,14 @@ const render_automatic_transcription = function (options) {
 							id		: device_id,
 							value	: transcriber_device_checkbox.checked
 						}, 'status')
+
+						if(transcriber_device_checkbox.checked){
+							const quality_small	= transcriber_quality.value.find(el => el.label==='small').name
+							nodes.transcriber_engine_quality.value = quality_small
+							nodes.transcriber_engine_quality.classList.add('lock')
+						}else{
+							nodes.transcriber_engine_quality.classList.remove('lock')
+						}
 					})
 
 					data_manager.get_local_db_data(
@@ -959,6 +967,16 @@ const render_automatic_transcription = function (options) {
 					).then(function( quality_saved ){
 						if(quality_saved){
 							transcriber_device_checkbox.checked = quality_saved.value
+
+						// initial change quality if the engine is checked.
+						// if the engine is checked only can set the small version,
+						// any large model use more ram that can be handled in wasm
+						// only webGPU can load large models
+							if(transcriber_device_checkbox.checked){
+								const quality_small	= transcriber_quality.value.find(el => el.label==='small').name
+								nodes.transcriber_engine_quality.value = quality_small
+								nodes.transcriber_engine_quality.classList.add('lock')
+							}
 						}
 					})
 
@@ -972,7 +990,6 @@ const render_automatic_transcription = function (options) {
 					inner_html		: self.get_tool_label('quality') || 'Quality',
 					parent 			: configuration_container
 				})
-
 
 				const transcriber_engine_quality = ui.create_dom_element({
 					element_type	: 'select',
@@ -1011,10 +1028,15 @@ const render_automatic_transcription = function (options) {
 						quality_id,
 						'status'
 					).then(function( quality_saved ){
-						if(quality_saved){
+						// change the valuw if the user was change it and the engine check box is not selected
+						// if the engine is checked only can set the small version,
+						// any large model use more ram that can be handled in wasm
+						// only webGPU can load large models
+						if(quality_saved && !transcriber_device_checkbox.checked){
 							transcriber_engine_quality.value = quality_saved.value
 						}
 					})
+
 			}// end if(transcriber_quality)
 
 	// status
