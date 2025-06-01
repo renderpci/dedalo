@@ -835,13 +835,12 @@ const render_automatic_transcription = function (options) {
 						button_automatic_transcription.classList.remove('disable')
 						status_container.innerHTML = self.get_tool_label('transcription_completed') || 'Transcription completed.';
 
+						// set value and implicit save action in component_text_area
 						self.transcription_component.set_value({
 							key		: 0,
 							value	: response
 						})
-						self.transcription_component.save()
 					})
-
 					break;
 			}
 		}
