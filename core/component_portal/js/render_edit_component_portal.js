@@ -10,7 +10,6 @@
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
-	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {view_default_edit_portal} from './view_default_edit_portal.js'
 	import {view_line_edit_portal} from './view_line_edit_portal.js'
 	import {view_tree_edit_portal} from './view_tree_edit_portal.js'
@@ -1120,15 +1119,15 @@ export const activate_autocomplete = async function(self, wrapper) {
 			&& self.autocomplete_active!==undefined
 			&& self.autocomplete_active===false ){
 
-			self.autocomplete = new service_autocomplete()
-			await self.autocomplete.init({
+			// get instance and init for service_autocomplete
+			self.autocomplete = await get_instance({
+				model			: 'service_autocomplete',
 				caller			: self,
 				tipo			: self.tipo,
 				section_tipo	: self.section_tipo,
 				request_config	: self.context.request_config,
 				properties		: self.context.properties.service_autocomplete || null
 			})
-
 			await self.autocomplete.build()
 			// render. Build_autocomplete_input nodes
 			await self.autocomplete.render()
