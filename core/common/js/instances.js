@@ -210,47 +210,65 @@ export const get_all_instances = function() {
 
 /**
 * DELETE_INSTANCE
-* Delete the found instance/s from global 'instances' array list
+* Delete the found instance/s from the 'instances' array list based on options.
 * @param object options
-* @return int deleted
+* 	An object containing key-value pairs to match against instances.
+* @returns int deleted_count
+* 	The number of instances deleted.
 */
-export const delete_instance = async function(options) {
+export const delete_instance = function(options) {
 
-	let deleted = 0;
-	function check_options(item, index) {
+	// check the options
+	if (!options || Object.keys(options).length === 0) {
+		console.warn('Ignored delete_instance. Empty options', options);
+		return 0
+	}
 
-		// check all received properties to match instance
-		let result = false
-		for(let key in options) {
+	const indices_to_delete = [];
+	let found_count = 0;
 
-			const value = options[key]
-			if (value===null) {
-				continue; // ignore null options
-			}
+	// Iterate instances (form this module vars 'instances' array)
+	for (let i = 0; i < instances.length; i++) {
 
-			if (item[key]===value) {
-				result = true
-			}else{
-				result = false
-				break;
+		const item = instances[i];
+
+		let match = true;
+
+		for (const key in options) {
+			if (Object.prototype.hasOwnProperty.call(options, key)) {
+				const value = options[key];
+				if (typeof value !== 'undefined' && value !== null) {
+					if (item[key] !== value) {
+						match = false;
+						break; // No need to check other keys if one doesn't match
+					}
+				}
 			}
 		}
 
-		if (result===true) {
-			instances.splice(index, 1)
-			deleted++
+		if (match) {
+			indices_to_delete.push(i); // More efficient than unshift
+			found_count++;
 		}
-
-		return result
-	}
-	const found_instances = instances.filter(check_options)
-	if (found_instances.length===0) {
-		// No instances found for deletion
-		console.warn('Instance not found for deletion. From options:', options);
 	}
 
+	// Reverse to delete from highest index first
+    indices_to_delete.reverse();
 
-	return deleted
+	// delete by array index
+	let deleted_count = 0;
+	if (indices_to_delete.length > 0) {
+		for (const index of indices_to_delete) {
+			// console.warn('))) Deleted Instance. index:', index, options);
+			instances.splice(index, 1);
+			deleted_count++;
+		}
+	}else{
+		console.warn('Instance not found for deletion. instances length:', instances.length, 'options:', options, instances);
+	}
+
+
+	return deleted_count;
 }//end delete_instance
 
 
