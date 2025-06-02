@@ -966,14 +966,13 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 data_manager.get_element_context = async function(source) {
 
 	// api request
-		// const api_response = await this.request({
-		const api_response = this.request({
-			body : {
-				action			: 'get_element_context',
-				prevent_lock	: true,
-				source			: source
-			}
-		})
+	const api_response = await this.request({
+		body : {
+			action			: 'get_element_context',
+			prevent_lock	: true,
+			source			: source
+		}
+	})
 
 
 	return api_response
