@@ -1648,12 +1648,10 @@ final class dd_core_api {
 							? $rqo->show->sqo_config->limit
 							: (function() use($tipo, $section_tipo, $mode){
 								// user preset check (defined sqo limit)
-								$user_preset = request_config_presets::search_request_config(
+								$user_preset = request_config_presets::get_request_config(
 									$tipo,
 									$section_tipo,
-									logged_user_id(), // int $user_id
-									$mode,
-									null // view
+									$mode
 								);
 								if (!empty($user_preset[0])) {
 									$user_preset_rqo = $user_preset[0]->rqo;

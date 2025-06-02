@@ -2705,13 +2705,10 @@ abstract class common {
 			$mode			= $this->get_mode();
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
-			$user_id		= logged_user_id();
-			$user_preset	= request_config_presets::search_request_config(
+			$user_preset	= request_config_presets::get_request_config(
 				$tipo,
 				$section_tipo,
-				$user_id,
-				$mode,
-				null
+				$mode
 			);
 			if (!empty($user_preset)) {
 
