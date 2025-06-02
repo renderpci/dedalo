@@ -8,6 +8,180 @@ class request_config_presets {
 
 
 	// static $cache_user_preset_layout_map = [];
+	// cache file name
+	static $cache_file_name = 'all_request_config.json'; // file base name. Final e.g. 'development_1_all_request_config.json'
+
+
+
+	/**
+	* GET_ALL_REQUEST_CONFIG
+	* Search all request config records from database (matrix_list)
+	* and save/get the result to a cache file when $use_cache is true
+	* @param bool $use_cache = true
+	* @return array
+	* 	Assoc array of request_config_object objects
+	*/
+	public static function get_all_request_config( bool $use_cache = true ) : array {
+
+		$all_request_config = [];
+
+		// Attempt to read from cache
+		if ($use_cache) {
+			try {
+				$file_cache = dd_cache::cache_from_file((object)[
+					'file_name'	=> request_config_presets::$cache_file_name
+				]);
+
+				if (!empty($file_cache)) {
+
+					$all_request_config = json_decode($file_cache, true);
+					if (is_array($all_request_config)) {
+						return $all_request_config;
+					}
+				}
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. ' Caught exception: Cache read failed: ' . PHP_EOL
+					. ' exception message: '. $e->getMessage()
+					, logger::ERROR
+				);
+			}
+		}
+
+		// Search all records of request config section dd1244
+		$search_query_object = (object)[
+			'id'			=> 'search_all_request_config',
+			'mode'			=> 'list',
+			'section_tipo'	=> DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO, //'dd1244'
+			'limit'			=> 0,
+			'full_count'	=> false
+		];
+
+		$search		= search::get_instance($search_query_object);
+		$rows_data	= $search->search();
+		$ar_records = $rows_data->ar_records ?? [];
+
+		// Helper function to extract a component value
+		$get_component_value = function($tipo, $section_id) {
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component = component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
+			);
+			return $component->get_value() ?? '';
+		};
+
+		foreach ($ar_records as $record) {
+
+			$section_id = $record->section_id;
+
+			// Generate cache key parts
+			$tipo			= $get_component_value('dd1242', $section_id); // tipo
+			$section_tipo	= $get_component_value('dd642', $section_id);  // section_tipo
+			$mode			= $get_component_value('dd1246', $section_id);  // mode
+
+			$key_cache = implode('_', [$tipo, $section_tipo, $mode]);
+
+			// Get JSON config (dd625)
+				$tipo		= 'dd625';
+				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$component	= component_common::get_instance(
+					$model, // string model
+					$tipo, // string tipo
+					$record->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO // string section_tipo
+				);
+				$json_data		= $component->get_dato() ?? [];
+				$request_config	= $json_data[0] ?? [];
+
+				// Normalize input
+				$request_items = is_array($request_config) ? $request_config : [$request_config];
+
+			// normalize each request_config_object
+				$safe_request_config = [];
+				foreach ($request_items as $current_item) {
+					try {
+						if (!is_object($current_item)) {
+							throw new Exception("Invalid non object request_config_object item", 1);
+						}
+						$request_config_object = new request_config_object($current_item);
+						if (!empty($request_config_object)) {
+							$safe_request_config[] = $request_config_object;
+						}
+					} catch (Exception $e) {
+						debug_log(__METHOD__
+							. " Ignored invalid request_config_object item " . PHP_EOL
+							. ' current_item: ' . to_string($current_item) . PHP_EOL
+							. ' section_tipo: ' . $section_tipo  . PHP_EOL
+							. ' section_id: ' . $section_id
+							, logger::ERROR
+						);
+					}
+				}
+
+			// Only store if we have valid configs
+			if (!empty($safe_request_config)) {
+				$all_request_config[$key_cache] = [
+					'tipo'			=> $tipo,
+					'section_tipo'	=> $section_tipo,
+					'mode'			=> $mode,
+					'data'			=> $safe_request_config
+				];
+			}
+		}
+
+		// cache
+		if ($use_cache) {
+			// file cache
+			dd_cache::cache_to_file((object)[
+				'data'		=> $all_request_config,
+				'file_name'	=> request_config_presets::$cache_file_name
+			]);
+		}
+
+
+		return $all_request_config;
+	}//end get_all_request_config
+
+
+
+	/**
+	* GET_REQUEST_CONFIG
+	* Get user request config preset from DDBB section 'dd1244'
+	* or file cache if already calculated
+	* Layout map (request config) presets
+	* @param string $tipo
+	* @param string $section_tipo
+	* @param string $mode
+	* @return array $result
+	*/
+	public static function get_request_config( string $tipo, string $section_tipo, string $mode ) : array {
+
+		// Get cached list of all_request_config
+		$all_request_config = self::get_all_request_config();
+
+		// key_cache
+		$key_cache = implode('_', [$tipo, $section_tipo, $mode]);
+
+		// Check and return if valid data exists
+		if (
+			isset($all_request_config[$key_cache]) &&
+			is_array($all_request_config[$key_cache]) &&
+			isset($all_request_config[$key_cache]['data']) &&
+			is_array($all_request_config[$key_cache]['data'])
+		) {
+			return $all_request_config[$key_cache]['data'];
+		}
+
+		// Fallback if not found or invalid format
+		return [];
+	}//end get_request_config
 
 
 
@@ -23,18 +197,6 @@ class request_config_presets {
 	* @return array $result
 	*/
 	public static function search_request_config( string $tipo, string $section_tipo, int $user_id, string $mode, ?string $view=null ) : array {
-
-		// cache
-			$use_cache = true;
-			if ($use_cache===true) {
-				$key_cache = implode('_', [$tipo, $section_tipo, $user_id, $mode, $view]);
-				// if (isset(self::$cache_user_preset_layout_map[$key_cache])) {
-				// 	return self::$cache_user_preset_layout_map[$key_cache];
-				// }
-				if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache])) {
-					return $_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache];
-				}
-			}
 
 		// preset const
 			// $user_locator = new locator();
@@ -116,8 +278,6 @@ class request_config_presets {
 					'$and' => $filter
 				]
 			];
-			#dump($search_query_object, ' search_query_object ++ '.to_string());
-			#error_log('Preset layout_map search: '.PHP_EOL.json_encode($search_query_object));
 
 		$search		= search::get_instance($search_query_object);
 		$rows_data	= $search->search();
@@ -201,12 +361,6 @@ class request_config_presets {
 				}
 		}
 
-		// cache
-			if ($use_cache===true) {
-				// self::$cache_user_preset_layout_map[$key_cache] = $result;
-				$_SESSION['dedalo']['config']['user_preset_layout_map'][$key_cache] = $result;
-			}
-
 
 		return $result;
 	}//end search_request_config
@@ -217,14 +371,11 @@ class request_config_presets {
 	* CLEAN_CACHE
 	* @return bool
 	*/
-	public static function clean_cache() {
+	public static function clean_cache() : bool {
 
-		if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'])) {
-			unset($_SESSION['dedalo']['config']['user_preset_layout_map']);
-			return true;
-		}
-
-		return false;
+		return dd_cache::delete_cache_files([
+			request_config_presets::$cache_file_name
+		]);
 	}//end clean_cache
 
 
