@@ -47,6 +47,8 @@
 
 	if($options->get_data===true && $permissions>0) {
 
+		$start_time=start_time();
+
 		$user_id = logged_user_id();
 
 		// value
@@ -76,6 +78,12 @@
 			// datalist
 			if (isset($changes_files)) {
 				$item->changes_files = $changes_files;
+			}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				metrics::add_metric('data_total_time', $start_time);
+				metrics::add_metric('data_total_calls');
 			}
 
 		$data[] = $item;

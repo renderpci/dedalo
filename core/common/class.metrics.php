@@ -39,6 +39,51 @@ final class metrics {
 		static $section_save_total_time = 0;
 		static $section_save_total_calls = 0;
 
+	// context
+		static $structure_context_total_time = 0;
+		static $structure_context_total_calls = 0;
+
+	// data
+		static $data_total_time = 0;
+		static $data_total_calls = 0;
+
+
+
+	/**
+	* ADD_METRIC
+	* @param string $name
+	* 	e.g. data_total_time, data_total_calls
+	* @param float|null $start_time
+	* @return bool
+	*/
+	public static function add_metric( string $name, ?float $start_time=0 ) : bool {
+
+		if (!property_exists('metrics', $name)) {
+			return false;
+		}
+
+		// get last word (e.g. 'time' for 'data_total_time')
+		$beats	= explode('_', $name);
+		$type	= array_pop( $beats );
+
+		switch ($type) {
+
+			case 'time':
+				$total_time_ms = exec_time_unit($start_time, 'ms');
+				metrics::$$name += $total_time_ms;
+				break;
+
+			case 'calls':
+				metrics::$$name++;
+				break;
+
+			default:
+				return false;
+		}
+
+		return true;
+	}//end add_metric
+
 
 
 }//end class metrics

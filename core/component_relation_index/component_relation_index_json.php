@@ -26,6 +26,8 @@
 
 	if($permissions>0) {
 
+		$start_time=start_time();
+
 		// relation index use his own data_paginated
 		// data of get_dato is a full data as others portals
 		// and it can't be get all references of all calling sections
@@ -123,6 +125,12 @@
 						}
 				}
 		}//end if (!empty($dato))
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				metrics::add_metric('data_total_time', $start_time);
+				metrics::add_metric('data_total_calls');
+			}
 	}//end if $options->get_data===true && $permissions>0
 
 

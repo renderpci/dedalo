@@ -39,6 +39,8 @@
 
 	if($permissions>0) {
 
+		$start_time=start_time();
+
 		// short vars
 			$section_id	= $this->get_section_id();
 			$limit		= $this->pagination->limit ?? 10;
@@ -111,6 +113,12 @@
 					$data[] = $sub_value;
 				}
 			}//end if (!empty($dato))
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					metrics::add_metric('data_total_time', $start_time);
+					metrics::add_metric('data_total_calls');
+				}
 	}//end if $options->get_data===true && $permissions>0
 
 
