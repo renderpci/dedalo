@@ -31,6 +31,9 @@
 	$data = [];
 
 	if($options->get_data===true && $permissions>0) {
+
+		$start_time=start_time();
+
 		// value
 			switch ($mode) {
 
@@ -56,6 +59,12 @@
 			// data_list
 			if (isset($data_list) && !empty($data_list)) {
 				$item->datalist = $data_list;
+			}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				metrics::add_metric('data_total_time', $start_time);
+				metrics::add_metric('data_total_calls');
 			}
 
 		$data[] = $item;

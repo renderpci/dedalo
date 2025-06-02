@@ -36,6 +36,8 @@
 
 	if($options->get_data===true && $permissions>0) {
 
+		$start_time=start_time();
+
 		// value
 			switch ($mode) {
 				case 'list':
@@ -73,6 +75,12 @@
 
 				// restore the component lang to the original value
 				$this->set_lang($original_lang);
+			}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				metrics::add_metric('data_total_time', $start_time);
+				metrics::add_metric('data_total_calls');
 			}
 
 		$data[] = $item;

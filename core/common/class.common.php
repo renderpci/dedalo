@@ -1450,6 +1450,8 @@ abstract class common {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
+			// metrics
+			metrics::$structure_context_total_calls++;
 		}
 
 		// short vars
@@ -1886,6 +1888,9 @@ abstract class common {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$time = exec_time_unit($start_time,'ms');
+
+				// metrics
+				metrics::$structure_context_total_time += $time;
 
 				$debug = new stdClass();
 					$debug->exec_time	= $time.' ms';

@@ -36,6 +36,8 @@
 
 	if($options->get_data===true && $permissions>0) {
 
+		$start_time=start_time();
+
 		// value
 			switch ($mode) {
 
@@ -53,6 +55,12 @@
 			$item = $this->get_data_item($value);
 				$item->parent_tipo			= $this->get_tipo();
 				$item->parent_section_id	= $this->get_section_id();
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				metrics::add_metric('data_total_time', $start_time);
+				metrics::add_metric('data_total_calls');
+			}
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

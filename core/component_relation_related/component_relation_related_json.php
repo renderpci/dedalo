@@ -62,6 +62,8 @@
 
 	if($permissions>0) {
 
+		$start_time=start_time();
+
 		// get the data into DDBB
 			$dato 		= $this->get_dato();
 
@@ -120,6 +122,12 @@
 				if (!empty($references)) {
 					$item->references = $references;
 				}
+			}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				metrics::add_metric('data_total_time', $start_time);
+				metrics::add_metric('data_total_calls');
 			}
 
 

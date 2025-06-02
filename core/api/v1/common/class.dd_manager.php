@@ -163,6 +163,18 @@ final class dd_manager {
 						'section_save',
 						'--> section_save_total_time: ' . metrics::$section_save_total_time.' ms',
 						'--> section_save_total_calls: '. metrics::$section_save_total_calls,
+						// Context
+						'Context (all)',
+						'--> structure_context_total_time: ' . metrics::$structure_context_total_time.' ms',
+						'--> structure_context_total_calls: ' . metrics::$structure_context_total_calls,
+						// data
+						'Data (components)',
+						'--> data_total_time: ' . metrics::$data_total_time.' ms',
+						'--> data_total_calls: ' . metrics::$data_total_calls,
+						// Subdatum
+						// 'Subdatum',
+						// '--> subdatum_total_time: ' . metrics::$subdatum_total_time.' ms',
+						// '--> subdatum_total_calls: ' . metrics::$subdatum_total_calls,
 						// summary
 						'Summary',
 						'time: ' . (

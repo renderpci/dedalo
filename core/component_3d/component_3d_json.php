@@ -46,6 +46,8 @@
 
 	if($options->get_data===true && $permissions>0) {
 
+		$start_time=start_time();
+
 		// value
 			switch ($mode) {
 				case 'list':
@@ -72,6 +74,12 @@
 
 				// media info
 					$item->media_info = $this->get_media_streams();
+			}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				metrics::add_metric('data_total_time', $start_time);
+				metrics::add_metric('data_total_calls');
 			}
 
 		$data[] = $item;  // append to the end of the array
