@@ -58,6 +58,11 @@ $updates->$v = new stdClass();
 		]; // Note that only ONE argument encoded is sent
 	$updates->$v->run_scripts[] = $script_obj;
 
+	// converts matrix_notifications logged table to unlogged for faster write performance
+	// used for notifications only (lock component, user process id)
+	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+		ALTER TABLE "matrix_notifications" SET UNLOGGED;
+	');
 
 
 
@@ -78,7 +83,6 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
 		');
-
 
 
 
