@@ -1344,4 +1344,38 @@ class tools_register {
 
 
 
+	/**
+	* REMOVE_TOOL_CONFIGURATION
+	* Delete the configuration records in DDBB of specified tool	*
+	* @param string $tool_name | the name of the tool configuration to be delete as 'tool_transcription'
+	* @return bool
+	*/
+	public static function remove_tool_configuration( string $tool_name ) :bool {
+
+		if( empty($tool_name) ){
+			return false;
+		}
+
+		// get the tool_transctiprion register
+		$tool_transcription_register = tools_register::get_tool_data_by_name($tool_name , tools_register::$section_tools_config_tipo);
+
+
+		if( !empty($tool_transcription_register) ){
+
+			$sql = 'DELETE FROM "matrix_tools"
+					WHERE section_tipo = \''.tools_register::$section_tools_config_tipo.'\'
+					AND section_id = \''.$tool_transcription_register->section_id.'\';';
+
+			$result	= pg_query(DBi::_getConnection(), $sql);
+
+			if($result===false){
+				return false;
+			}
+		}
+
+		return true;
+	}//end remove_tool_configuration
+
+
+
 }//end class tools_register
