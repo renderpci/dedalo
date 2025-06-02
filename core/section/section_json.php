@@ -127,9 +127,6 @@
 					}
 			}
 		}
-		// dump($context, ' context ++ '.to_string());
-		// dump($data, ' data ++ '.to_string());
-
 	}//end if($options->get_data===true && $permissions>0)
 
 
