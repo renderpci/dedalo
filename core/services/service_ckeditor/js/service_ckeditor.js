@@ -8,7 +8,6 @@
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {common} from '../../../common/js/common.js'
 	import {clone, get_json_langs} from '../../../common/js/utils/index.js'
-	import {delete_instance} from '../../../common/js/instances.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
 
 
@@ -1922,25 +1921,30 @@ export const service_ckeditor = function() {
 
 	/**
 	* DESTROY
-	* @return void
+	* Asynchronously destroys the editor instance if it exists.
+	* Sets the 'this.editor' property to null after destruction.
+	* @returns {Promise<void>}
+	* 	A Promise that resolves when the editor is destroyed (or immediately if no editor exists).
 	*/
 	this.destroy = async function() {
-
+		// Check if an editor instance exists
 		if (this.editor) {
-			await this.editor.destroy()
-			.catch( error => {
-				console.error( error );
-			})
-
-			this.editor = null
+			try {
+				// Asynchronously call the editor's destroy method
+				await this.editor.destroy();
+				// If destruction is successful, set the editor reference to null
+				this.editor = null;
+			} catch (error) {
+				// Catch any errors that occur during the editor's destroy process
+				console.error('Error destroying editor:', error);
+			}
+		} else {
+			// If no editor exists, log a message for debugging
+			if(SHOW_DEBUG===true) {
+				console.warn('No editor instance to destroy.');
+			}
 		}
-
-		// delete_instance from instances register array
-		const instance_options = {
-			id : self.id
-		}
-		await delete_instance(instance_options)
-	}//end destroy
+	}// end destroy
 
 
 
