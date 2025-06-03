@@ -264,7 +264,7 @@ export const delete_instance = function(options) {
 			deleted_count++;
 		}
 	}else{
-		console.warn('Instance not found for deletion. instances length:', instances.length, 'options:', options, instances);
+		console.warn('Instance not found for deletion. instances length:', instances.length, 'options:', options);
 	}
 
 
