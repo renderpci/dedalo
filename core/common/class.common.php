@@ -412,6 +412,8 @@ abstract class common {
 	*/
 	public static function get_matrix_table_from_tipo(string $tipo) : ?string {
 
+		$start_time=start_time();
+
 		// check valid tipo
 			if (empty($tipo)) {
 				debug_log(__METHOD__
@@ -518,8 +520,8 @@ abstract class common {
 					// fallback to default
 						if (!isset($matrix_table)) {
 							debug_log(__METHOD__
-								. ' Using fallback to default table (matrix)'. PHP_EOL
-								. ' tipo: ' . to_string($tipo)
+								. ' Using fallback to default table (matrix) in '.exec_time_unit($start_time, 'ms').'ms'. PHP_EOL
+								. ' tipo: ' . to_string($tipo). PHP_EOL
 								, logger::WARNING
 							);
 							$matrix_table = 'matrix';
