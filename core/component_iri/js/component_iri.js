@@ -170,24 +170,37 @@ component_iri.prototype.focus_first_input = function() {
 
 
 /**
-* check_iri_value
-* Overwrites default behavior set in ui.component.activate
+* CHECK_IRI_VALUE
+* Verifies if the given URI is valid
+* @param string input_iri_value
 * @return bool
 */
 component_iri.prototype.check_iri_value = function( input_iri_value ) {
 
-	const self = this
+	// First check the input string with a strict regex before passing to URL
+	const strict_pattern = /^https?:\/\/([a-zA-Z0-9\-._~%]+)(:[0-9]+)?(\/.*)?$/i;
+	if (!strict_pattern.test(input_iri_value)) {
+		return false;
+	}
 
-	// check if url is valid
-		const regex = /(https?)?:\/\/.*\..+/;
+	try {
+		const uri = new URL(input_iri_value);
 
-		if(input_iri_value && !input_iri_value.match(regex)){
-			return false
+		// Must use http or https
+		if (!['http:', 'https:'].includes(uri.protocol)) {
+			return false;
 		}
 
-	return true
-}//end check_iri_value
+		// Hostname sanity: prevent multiple dots in a row
+		if (!/^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*$/.test(uri.hostname)) {
+			return false;
+		}
 
+		return true;
+	} catch (err) {
+		return false;
+	}
+}//end check_iri_value
 
 
 
