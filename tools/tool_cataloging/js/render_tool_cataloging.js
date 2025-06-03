@@ -89,8 +89,10 @@ const get_content_data_edit = async function(self) {
 			)
 			// view . Note that view is set in properties, but it set again to clarify the code
 			self.section_to_cataloging.view = 'tool_cataloging_mosaic'
-			const section_node = await self.section_to_cataloging.render()
-			left_container.appendChild(section_node)
+			self.section_to_cataloging.render()
+			.then(function(section_node){
+				left_container.appendChild(section_node)
+			})
 
 
 	// right_container

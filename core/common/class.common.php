@@ -521,7 +521,7 @@ abstract class common {
 						if (!isset($matrix_table)) {
 							debug_log(__METHOD__
 								. ' Using fallback to default table (matrix) in '.exec_time_unit($start_time, 'ms').'ms'. PHP_EOL
-								. ' tipo: ' . to_string($tipo). PHP_EOL
+								. ' tipo: ' . to_string($tipo)
 								, logger::WARNING
 							);
 							$matrix_table = 'matrix';
