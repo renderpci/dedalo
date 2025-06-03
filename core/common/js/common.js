@@ -725,7 +725,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 const do_delete_self = async function (self) {
 
 	// delete events. Delete the instance registered events
-		const events_tokens	= self.events_tokens
+		const events_tokens	= self.events_tokens || []
 		// remove all subscriptions
 		const events_tokens_length = events_tokens.length
 		for (let i = events_tokens_length - 1; i >= 0; i--) {
@@ -798,7 +798,8 @@ const do_delete_self = async function (self) {
 			instance_options.matrix_id = self.matrix_id
 		}
 
-	const result = await delete_instance(instance_options)
+	// Delete instance from global register
+	const result = delete_instance(instance_options)
 
 	// delete caller instance reference (ar_instances)
 		if (self.caller?.ar_instances) {
