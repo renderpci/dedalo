@@ -370,6 +370,8 @@ paginator.prototype.paginate = async function(offset) {
 		self.events_tokens.push(
 			event_manager.subscribe('render_'+self.caller.id, render_handler)
 		)
+		// on destroy, remove loading class to the node	(! do not include this subscription into events_tokens)
+		event_manager.subscribe('render_'+self.id, render_handler)
 
 
 	return true
