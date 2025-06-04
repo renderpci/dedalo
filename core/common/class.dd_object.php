@@ -43,7 +43,7 @@ class dd_object extends stdClass {
 		// sortable				: bool // Used by components (columns)
 		// fields_separator		: string like ", " // used by portal to join different fields
 		// records_separator	: string like " | " // used by portal to join different records (rows)
-		// legacy_model			: string like "component_autocomplet_hi"
+		// legacy_model			: string like "component_autocomplete_hi"
 		// autoload 			: bool // Used by tools
 		// role 				: string // 'main_component' // Used by tools
 		// section_map 			: object // {
@@ -58,7 +58,7 @@ class dd_object extends stdClass {
 									} Used by tools
 		// color 				: string // "#f1f1f1"
 		// matrix_table 		: string || 'matrix_dd'
-		// data_fn 				: string || 'get_calculation_data' used in mdcat2431 set the function to be used to get data of the ddo
+		// data_fn 				: string || 'get_calculation_data' used in 'mdcat2431' set the function to be used to get data of the ddo
 
 
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
@@ -95,7 +95,7 @@ class dd_object extends stdClass {
 	/**
 	* __CONSTRUCT
 	* @param object|null $data = null
-	* @return $this
+	* @return void
 	*/
 	public function __construct( ?object $data=null ) {
 

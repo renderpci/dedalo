@@ -34,18 +34,12 @@ abstract class filter {
 				//	"section_tipo": "ich1"
 				// }
 
-				$entences_sql = [];
-
-				// value 3 try
-				// $entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":3}]]\'';
-
-				// value 2 try
-				// $entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[[{"tipo":"'.$area_tipo.'","value":2}]]\'';
+				$sentences_sql = [];
 
 				// new v6 data format
-				$entences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":2}]\'';
+				$sentences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":2}]\'';
 
-				$ar_filter[] = '('. implode(' OR ', $entences_sql) .')';
+				$ar_filter[] = '('. implode(' OR ', $sentences_sql) .')';
 			}
 			$sql_filter = implode(' OR ', $ar_filter);
 

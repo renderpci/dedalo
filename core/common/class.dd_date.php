@@ -41,7 +41,7 @@ class dd_date extends stdClass {
 	* __CONSTRUCT
 	* @param object|null $data = null
 	* @param bool $constrain = false
-	* @return object dd_date
+	* @return void
 	*/
 	public function __construct( ?object $data=null, bool $constrain=false ) {
 
@@ -71,7 +71,7 @@ class dd_date extends stdClass {
 			foreach ($data as $key => $value) {
 
 				if (!isset($value) || is_null($value))  continue; // Skip empty non zero values
-				if($key==='format') continue; //  skip format from comopnent_date data
+				if($key==='format') continue; //  skip format from component_date data
 
 				$method = 'set_'.$key;
 				if (method_exists($this, $method)) {

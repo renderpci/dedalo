@@ -259,9 +259,9 @@ class ontology_data_io {
 		// check created file
 			if (!file_exists($file_path)) {
 				throw new Exception("Error Processing Request. File $file_path not created!", 1);
-				$response->msg		= 'Error Processing Request. File '.$file_path.' not created!';
-				$response->errors[]	= 'Target file was not created. Not found: '.$section_tipo;
-				return $response;
+				// $response->msg		= 'Error Processing Request. File '.$file_path.' not created!';
+				// $response->errors[]	= 'Target file was not created. Not found: '.$section_tipo;
+				// return $response;
 			}
 
 		// all was done
@@ -314,9 +314,9 @@ class ontology_data_io {
 		// check created file
 			if (!file_exists($file_path)) {
 				throw new Exception("Error Processing Request. File $file_path not created!", 1);
-				$response->msg		= 'Error Processing Request. File '.$file_path.' not created!';
-				$response->errors[]	= 'Target file was not created. Not found: matrix_dd.copy.gz';
-				return $response;
+				// $response->msg		= 'Error Processing Request. File '.$file_path.' not created!';
+				// $response->errors[]	= 'Target file was not created. Not found: matrix_dd.copy.gz';
+				// return $response;
 			}
 
 		// all was done

@@ -583,7 +583,7 @@ class ontology_converter {
 
 			// list thesaurus exception `dd144`
 			// until 6.4 list thesaurus is an array of objects without any kind of definition
-			// in 6.4 his defintion change to be a `show` object with a `ddo_map` as others
+			// in 6.4 his definition change to be a `show` object with a `ddo_map` as others
 			if($model === 'dd144' && !empty($properties) && is_array($properties) ){
 
 				// generate the new objects and assign the old properties

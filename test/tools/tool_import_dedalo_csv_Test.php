@@ -497,9 +497,9 @@ final class tool_import_dedalo_csv_test extends TestCase {
 				.' and is : '.gettype($response->msg)
 		);
 		$this->assertTrue(
-			gettype($response->error)==='string' || gettype($response->error)==='NULL',
-			'expected gettype error is string|null'
-				.' and is : '.gettype($response->error)
+			gettype($response->errors)==='array' || gettype($response->errors)==='NULL',
+			'expected gettype error is array|null'
+				.' and is : '.gettype($response->errors)
 		);
 	}//end test_get_csv_files
 
