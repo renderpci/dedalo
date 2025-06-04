@@ -617,6 +617,17 @@ export const render_ts_line = function(options) {
 					break;
 				}
 		}//end switch(true)
+
+		// ontology model case
+		if (current_element.model_value && self.caller.model==='area_ontology') {
+			const hide_class = self.caller.model_value_is_hide ? ' hide' : '';
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'list_thesaurus_element model_value' + hide_class,
+				text_content	: current_element.model_value,
+				parent			: fragment
+			})
+		}
 	}//end for (var j = 0; j < ch_len; j++)
 
 

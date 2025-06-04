@@ -485,6 +485,11 @@ class ts_object {
 								break;
 						}//end switch (true) value
 
+					// ontology model case. Used in area ontology to display the current element model like 'root'
+						if ($element_obj->value==='M') {
+							$element_obj->model_value = $component->get_value();
+						}
+
 					// set model. Only first element if more than one exists (multiple term cases with same model)
 						if (!isset($element_obj->model)) {
 							$element_obj->model = $model_name;
