@@ -159,3 +159,5 @@ class system{};
 function pg_escape_string(){};
 function get_called_class(){};
 class metrics{};
+function pg_fetch_assoc(){};
+function pg_fetch_object(){};

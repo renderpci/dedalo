@@ -68,9 +68,9 @@ class lang {
 	* using 'matrix_langs_hierarchy41_gin' index
 	* @param array $ar_lang_tld
 	* as ['spa','eng']
-	* @return array $items
+	* @return array|null $items
 	*/
-	public static function resolve_multiple(array $ar_lang_tld) {
+	public static function resolve_multiple(array $ar_lang_tld) : ?array {
 
 		// short vars
 			$tipo		= DEDALO_THESAURUS_CODE_TIPO; // hierarchy41

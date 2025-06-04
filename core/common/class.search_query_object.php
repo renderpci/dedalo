@@ -280,7 +280,7 @@ class search_query_object {
 	* @param bool|int $value
 	* @return bool
 	*/
-	public function set_full_count($value) : true {
+	public function set_full_count($value) : bool {
 
 		if (gettype($value)!=='integer' && gettype($value)!=='boolean') {
 			debug_log(__METHOD__." ERROR on set_full_count. Invalid full_count type ".gettype($value).". Only integer|boolean are valid", logger::ERROR);
