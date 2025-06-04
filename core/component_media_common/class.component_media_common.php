@@ -1905,7 +1905,7 @@ class component_media_common extends component_common {
 
 			if ($target_quality!==$original_quality && $target_quality!==$current_quality) {
 				// check file
-				$filename = $this->get_original_file_path($current_quality);
+				$filename = $this->get_original_file_path();
 				if (!empty($filename) && file_exists($filename)) {
 					return $current_quality;
 				}
@@ -2651,7 +2651,7 @@ class component_media_common extends component_common {
 		// short vars
 			$id					= $this->get_id();
 			$original_quality	= $this->get_original_quality();
-			$original_file_path	= $this->get_original_file_path($original_quality);
+			$original_file_path	= $this->get_original_file_path();
 			// check path from original file
 			if (empty($original_file_path)) {
 				$response->msg .= ' Invalid empty original_file_path. Skip conversion';

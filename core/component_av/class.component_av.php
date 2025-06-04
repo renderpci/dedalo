@@ -1138,7 +1138,7 @@ class component_av extends component_media_common implements component_media_int
 			}
 
 		// build_av_alternate_command. Creates the command and the sh file to run
-			$source_file_path = $this->get_original_file_path($source_quality);
+			$source_file_path = $this->get_original_file_path();
 			if (!file_exists($source_file_path)) {
 				debug_log(__METHOD__
 					. " original file do not exists. Falling back to default quality " . PHP_EOL

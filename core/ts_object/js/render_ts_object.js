@@ -414,7 +414,7 @@ export const render_ts_line = function(options) {
 						key				: j
 					})
 					fragment.appendChild(term_node)
-					//pointer
+					// set pointer
 					wrapper.term_node = term_node
 					break;
 				}
@@ -1348,7 +1348,7 @@ const render_ontology_term = function(options) {
 			}
 		}
 
-	// id_info. Like '[hierarchy1_246]' (Term terminoID )
+	// id_info. Like '[hierarchy1_246]' (Term terminoID)
 		const id_info = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'id_info ontology',
