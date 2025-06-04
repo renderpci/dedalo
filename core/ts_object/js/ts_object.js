@@ -989,7 +989,7 @@ export const ts_object = new function() {
 							)
 						}
 
-					return component_node
+				return component_node
 			}//end render_component_node
 
 		// data_contanier
