@@ -9,7 +9,8 @@
 		set_context_vars,
 		build_autoload
 	} from '../../common/js/common.js'
-	import {clone, dd_console, url_vars_to_object} from '../../common/js/utils/index.js'
+	import {clone, url_vars_to_object} from '../../common/js/utils/index.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
@@ -58,8 +59,14 @@ export const area_thesaurus = function() {
 
 	// display mode: string 'default|relation'
 	this.thesaurus_mode
+
 	// thesaurus_view_mode: string 'default|model'. Used to allow manage models
 	this.thesaurus_view_mode
+
+	// model_value_is_hide : bool default false. Used to store the Ontology model_value hidden status
+	// An event to keydown Ctr + m fires the changes in this property and is read by ts_object when render
+	// the ts_line (list_thesaurus_element model_value div node)
+	self.model_value_is_hide = false
 }//end area_thesaurus
 
 
@@ -160,6 +167,36 @@ area_thesaurus.prototype.init = async function(options) {
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('notification', notifications_handler)
+			)
+
+		// key commands
+			dd_request_idle_callback(
+				() => {
+					self.model_value_is_hide = localStorage.getItem('model_value_is_hide') || false
+					const keydown_handler = (e) => {
+						// control + m keys
+						if (e.key==='m' && e.ctrlKey===true) {
+							const model_value_list = document.querySelectorAll('.model_value')
+							if (self.model_value_is_hide) {
+								// already hidden case. Change to display
+								[...model_value_list].map((el)=>{
+									el.classList.remove('hide')
+								})
+								localStorage.removeItem("model_value_is_hide");
+								self.model_value_is_hide = false
+							}else{
+								// display case. Change to hide
+								[...model_value_list].map((el)=>{
+									el.classList.add('hide')
+								})
+								// save status for persistence
+								localStorage.setItem('model_value_is_hide', true);
+								self.model_value_is_hide = true
+							}
+						}
+					}
+					document.addEventListener('keydown', keydown_handler)
+				}
 			)
 
 	// URL vars
