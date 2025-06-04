@@ -369,8 +369,9 @@ export const render_ts_record = function( self, ts_record, i ){
 * 	self: object,
 * 	child_data: object {ar_elements:[{}], has_descriptor_children:true, is_descriptor:true, ..}
 * 	indexations_container_id: string as 'uhierarchy1_245_1730621944526'
+* 	show_arrow_opened: bool
 *	is_descriptor: bool
-*	show_arrow_opened: bool
+*	wrapper: HTMLElement
 * }
 * @return DocumentFragment fragment
 */
@@ -392,16 +393,18 @@ export const render_ts_line = function(options) {
 	const child_data_len = child_data.ar_elements.length
 	for (let j = 0; j < child_data_len; j++) {
 
+		const current_element = child_data.ar_elements[j]
+
 		const class_for_all		= 'list_thesaurus_element';
 		const children_dataset	= {
-			tipo	: child_data.ar_elements[j].tipo,
-			type	: child_data.ar_elements[j].type
+			tipo	: current_element.tipo,
+			type	: current_element.type
 		}
 
 		switch(true) {
 
 			// TERM
-				case (child_data.ar_elements[j].type==='term'): {
+				case (current_element.type==='term'): {
 
 					const render_handler = self.caller.model==='area_ontology'
 						? render_ontology_term
@@ -420,16 +423,16 @@ export const render_ts_line = function(options) {
 				}
 
 			// ND
-				case (child_data.ar_elements[j].type==='link_children_nd'): {
+				case (current_element.type==='link_children_nd'): {
 
 					const element_children_nd = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'link_children_nd ' + class_for_all + ' default term nd',
 						data_set		: children_dataset,
-						text_node		: child_data.ar_elements[j].value,
+						text_node		: current_element.value,
 						parent			: fragment
 					})
-
+					// mousedown event
 					const mousedown_handler = (e) => {
 						e.stopPropagation()
 
@@ -446,35 +449,35 @@ export const render_ts_line = function(options) {
 				}
 
 			// ARROW ICON
-				case (child_data.ar_elements[j].type==='link_children'): {
+				case (current_element.type==='link_children'): {
 
 					// button arrow link children
-						const link_children = render_link_children({
-							add_class			: class_for_all,
-							children_dataset	: children_dataset,
-							child_data_item		: child_data.ar_elements[j],
-							show_arrow_opened	: show_arrow_opened,
-							child_data			: child_data
-						})
-						fragment.appendChild(link_children)
-						//pointer
-						wrapper.link_children = link_children
+					const link_children = render_link_children({
+						add_class			: class_for_all,
+						children_dataset	: children_dataset,
+						child_data_item		: current_element,
+						show_arrow_opened	: show_arrow_opened,
+						child_data			: child_data
+					})
+					fragment.appendChild(link_children)
+					// set pointer
+					wrapper.link_children = link_children
 					break;
 				}
 
 			// INDEXATIONS
-				case (  child_data.ar_elements[j].model==='component_relation_index'
-					&& !child_data.ar_elements[j].show_data): {
+				case (  current_element.model==='component_relation_index'
+					&& !current_element.show_data): {
 
-					const total = parseInt( child_data.ar_elements[j].count_result.total )
+					const total = parseInt( current_element.count_result.total )
 
 					if(total > 0){
 						// button_show_indexations. Build button
-						const button_show_indexations	= ui.create_dom_element({
+						const button_show_indexations = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: class_for_all + ' button_show_indexations',
 							data_set		: children_dataset,
-							text_node		: child_data.ar_elements[j].value, // generates a span with the value like '<span>U:37</span>'
+							text_node		: current_element.value, // generates a span with the value like '<span>U:37</span>'
 							parent			: fragment
 						})
 						// mousedown event
@@ -483,7 +486,7 @@ export const render_ts_line = function(options) {
 
 							button_show_indexations.classList.add('loading')
 
-							const uid = child_data.ar_elements[j].tipo +'_'+ child_data.section_tipo +'_'+ child_data.section_id
+							const uid = current_element.tipo +'_'+ child_data.section_tipo +'_'+ child_data.section_id
 
 							self.show_indexations({
 								uid 				: uid,
@@ -491,15 +494,15 @@ export const render_ts_line = function(options) {
 								event				: e,
 								section_tipo		: child_data.section_tipo,
 								section_id			: child_data.section_id,
-								component_tipo		: child_data.ar_elements[j].tipo,
+								component_tipo		: current_element.tipo,
 								target_div			: document.getElementById(indexations_container_id),
 								value				: null,
-								total				: parseInt( child_data.ar_elements[j].count_result.total ),
-								totals_group		: child_data.ar_elements[j].count_result.totals_group,
+								total				: parseInt( current_element.count_result.total ),
+								totals_group		: current_element.count_result.totals_group,
 								filter_by_locators	: [{
 									section_tipo	: child_data.section_tipo,
 									section_id		: child_data.section_id,
-									tipo			: child_data.ar_elements[j].tipo
+									tipo			: current_element.tipo
 								}]
 							})
 							.then(function(){
@@ -511,56 +514,56 @@ export const render_ts_line = function(options) {
 					break;
 				}
 
-				case (child_data.ar_elements[j].model==='component_relation_index'
-					&& child_data.ar_elements[j].show_data === 'children'): {
-					// if(child_data.ar_elements[j].data_type === 'related') {
+				case (current_element.model==='component_relation_index'
+					&& current_element.show_data === 'children'): {
+					// if(current_element.data_type === 'related') {
 
 					// recursive indexations
-						const button_recusive_indexations = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: class_for_all + ' button_show_indexations',
-							data_set		: children_dataset,
-							text_node		: `⇣${child_data.ar_elements[j].value}`, // generates a span with the value like '<span>U:37</span>', // generates a span with the value like '<span>U:37</span>'
-							parent			: fragment
+					const button_recusive_indexations = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: class_for_all + ' button_show_indexations',
+						data_set		: children_dataset,
+						text_node		: `⇣${current_element.value}`, // generates a span with the value like '<span>U:37</span>', // generates a span with the value like '<span>U:37</span>'
+						parent			: fragment
+					})
+					// mousedown event
+					const mousedown_handler = (e) => {
+						e.stopPropagation()
+
+						button_recusive_indexations.classList.add('loading')
+
+						self.get_children_recursive({
+							section_tipo	: child_data.section_tipo,
+							section_id		: child_data.section_id
 						})
-						// mousedown event
-						const mousedown_handler = (e) => {
-							e.stopPropagation()
+						.then(function(children_recursive){
 
-							button_recusive_indexations.classList.add('loading')
-
-							self.get_children_recursive({
-								section_tipo	: child_data.section_tipo,
-								section_id		: child_data.section_id
+							self.show_indexations({
+								uid 				: `${current_element.tipo}_recursive`,
+								button_obj			: button_recusive_indexations,
+								event				: e,
+								section_tipo		: child_data.section_tipo,
+								section_id			: child_data.section_id,
+								component_tipo		: current_element.tipo,
+								target_div			: document.getElementById(indexations_container_id),
+								value				: null,
+								total				: null,
+								totals_group		: current_element.count_result.totals_group,
+								filter_by_locators	: children_recursive
 							})
-							.then(function(children_recursive){
-
-								self.show_indexations({
-									uid 				: `${child_data.ar_elements[j].tipo}_recursive`,
-									button_obj			: button_recusive_indexations,
-									event				: e,
-									section_tipo		: child_data.section_tipo,
-									section_id			: child_data.section_id,
-									component_tipo		: child_data.ar_elements[j].tipo,
-									target_div			: document.getElementById(indexations_container_id),
-									value				: null,
-									total				: null,
-									totals_group		: child_data.ar_elements[j].count_result.totals_group,
-									filter_by_locators	: children_recursive
-								})
-								.then(function(){
-									button_recusive_indexations.classList.remove('loading')
-								})
+							.then(function(){
+								button_recusive_indexations.classList.remove('loading')
 							})
-						}
-						button_recusive_indexations.addEventListener('mousedown', mousedown_handler)
+						})
+					}
+					button_recusive_indexations.addEventListener('mousedown', mousedown_handler)
 					break;
 				}
 
 			// IMG
-				case (child_data.ar_elements[j].type==='img'): {
+				case (current_element.type==='img'): {
 
-					if(child_data.ar_elements[j].value) {
+					if(current_element.value) {
 
 						const element_img = ui.create_dom_element({
 							element_type	: 'div',
@@ -583,7 +586,7 @@ export const render_ts_line = function(options) {
 						// image
 						ui.create_dom_element({
 							element_type	: 'img',
-							src				: child_data.ar_elements[j].value,
+							src				: current_element.value,
 							parent			: element_img
 						})
 					}
@@ -593,27 +596,28 @@ export const render_ts_line = function(options) {
 			// OTHERS
 				default: {
 
-					const current_value = child_data.ar_elements[j].value
+					const current_value = current_element.value
 
 					// Case common buttons and links
-					const element_show_component = ui.create_dom_element({
+					const button_show_component = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: class_for_all + ' default ' + child_data.ar_elements[j].tipo,
+						class_name		: class_for_all + ' default ' + current_element.tipo,
 						data_set		: children_dataset,
 						text_node		: current_value, // creates a span node with the value inside
 						parent 			: fragment
 					})
+					// mousedown event
 					const mousedown_handler = (e) => {
 						e.stopPropagation()
 
-						element_show_component.classList.add('loading')
+						button_show_component.classList.add('loading')
 
-						self.show_component_in_ts_object(element_show_component, e)
-						.then(function(){
-							element_show_component.classList.remove('loading')
+						self.show_component_in_ts_object(button_show_component, e)
+						.then(()=>{
+							button_show_component.classList.remove('loading')
 						})
 					}
-					element_show_component.addEventListener('mousedown', mousedown_handler)
+					button_show_component.addEventListener('mousedown', mousedown_handler)
 					break;
 				}
 		}//end switch(true)
@@ -640,7 +644,11 @@ export const render_ts_line = function(options) {
 * RENDER_TS_PAGINATION
 * Render pagination button with events
 * @param object options
-* @return DOM button_show_more
+* {
+* 	children_container: HTMLElement
+* 	pagination: object
+* }
+* @return HTMLElement button_show_more
 */
 export const render_ts_pagination = function(options) {
 
@@ -786,113 +794,109 @@ const render_id_column = function(options) {
 		default: {
 
 			// ADD . button + add element
-				if (children_data.permissions_button_new>=2) {
-					if(is_descriptor===true) {
-						const link_add = ui.create_dom_element({
-							element_type	: 'a',
-							class_name		: 'id_column_link ts_object_add',
-							title_label		: 'add',
-							parent			: id_column_content
-						})
-						// click event
-						const click_handler = function(e) {
-							e.stopPropagation()
+				if (children_data.permissions_button_new>=2 && is_descriptor) {
+					const link_add = ui.create_dom_element({
+						element_type	: 'a',
+						class_name		: 'id_column_link ts_object_add',
+						title_label		: 'add',
+						parent			: id_column_content
+					})
+					// click event
+					const click_handler = function(e) {
+						e.stopPropagation()
 
-							// mode set in dataset
-								link_add.dataset.mode = 'add_child'
+						// mode set in dataset
+							link_add.dataset.mode = 'add_child'
 
-							// wrap
-								const wrap = id_column_content.parentNode
+						// wrap
+							const wrap = id_column_content.parentNode
 
-							// link_children_element
-								const link_children_element = ts_object.get_link_children_from_wrap(wrap)
-								if(!link_children_element) {
-									console.log("Error on find link_children_element");
-									return
-								}
+						// link_children_element
+							const link_children_element = ts_object.get_link_children_from_wrap(wrap)
+							if(!link_children_element) {
+								console.log("Error on find link_children_element");
+								return
+							}
 
-							// short vars
-								const section_id	= wrap.dataset.section_id
-								const section_tipo	= wrap.dataset.section_tipo
-								const children_tipo	= wrap.dataset.children_tipo
+						// short vars
+							const section_id	= wrap.dataset.section_id
+							const section_tipo	= wrap.dataset.section_tipo
+							const children_tipo	= wrap.dataset.children_tipo
 
-							// add_child
-								self.add_child({
-									section_id		: section_id,
-									section_tipo	: section_tipo
-								})
-								.then((response)=>{
-
-									// new_section_id . Generated as response by the trigger add_child
-										const new_section_id = response.result
-										if (!new_section_id) {
-											return
-										}
-
-									// refresh children container
-										render_children({
-											link_children_element		: link_children_element,
-											section_tipo				: section_tipo,
-											section_id					: section_id,
-											pagination					: null,
-											clean_children_container	: true,
-											children_tipo				: children_tipo
-										})
-										.then(function(result){
-											// result could be an array of children_container nodes or bool false
-											// Open editor in new window
-											if (result) {
-												self.edit(link_add, null, new_section_id, section_tipo)
-											}
-										})
-								})
-						}
-						link_add.addEventListener('click', click_handler)
-
-						// add_icon_link_add
-							ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'ts_object_add_icon',
-								parent			: link_add
+						// add_child
+							self.add_child({
+								section_id		: section_id,
+								section_tipo	: section_tipo
 							})
-					}//if(is_descriptor===true)
+							.then((response)=>{
+
+								// new_section_id . Generated as response by the trigger add_child
+									const new_section_id = response.result
+									if (!new_section_id) {
+										return
+									}
+
+								// refresh children container
+									render_children({
+										link_children_element		: link_children_element,
+										section_tipo				: section_tipo,
+										section_id					: section_id,
+										pagination					: null,
+										clean_children_container	: true,
+										children_tipo				: children_tipo
+									})
+									.then(function(result){
+										// result could be an array of children_container nodes or bool false
+										// Open editor in new window
+										if (result) {
+											self.edit(link_add, null, new_section_id, section_tipo)
+										}
+									})
+							})
+					}
+					link_add.addEventListener('click', click_handler)
+
+					// add_icon_link_add
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'ts_object_add_icon',
+						parent			: link_add
+					})
 				}//end if (children_data.permissions_button_new>=2) {
 
 			// MOVE DRAG . button drag element
-				if (children_data.permissions_button_new>=2) {
-					if(is_descriptor===true) {
-						const dragger = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'id_column_link ts_object_drag',
-							title_label		: 'drag',
-							parent			: id_column_content
-						})
-						// mousedown event
-						const mousedown_handler = (e) => {
-							e.stopPropagation()
-							// event_handle. set with event value
-							wrapper.event_handle = e
-							// activate draggable
-							wrapper.draggable = true
-						}
-						dragger.addEventListener('mousedown', mousedown_handler)
-						// mouseup event . Reverts mousedown wrapper draggable set
-						const mouseup_handler = (e) => {
-							e.stopPropagation()
-							// event_handle. set with event value
-							wrapper.event_handle = null
-							// deactivate draggable
-							wrapper.draggable = false
-						}
-						dragger.addEventListener('mouseup', mouseup_handler)
+				if (children_data.permissions_button_new>=2 && is_descriptor) {
+					const dragger = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'id_column_link ts_object_drag',
+						title_label		: 'drag',
+						parent			: id_column_content
+					})
+					// mousedown event
+					const mousedown_handler = (e) => {
+						e.stopPropagation()
+						// event_handle. set with event value
+						wrapper.event_handle = e
+						// activate draggable
+						wrapper.draggable = true
+					}
+					dragger.addEventListener('mousedown', mousedown_handler)
+					// mouseup event . Reverts mousedown wrapper draggable set
+					const mouseup_handler = (e) => {
+						e.stopPropagation()
+						// event_handle. set with event value
+						wrapper.event_handle = null
+						// deactivate draggable
+						wrapper.draggable = false
+					}
+					dragger.addEventListener('mouseup', mouseup_handler)
 
-						// drag icon
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'ts_object_drag_icon',
-							parent			: dragger
-						})
-					}//if(is_descriptor===true)
+					// drag icon
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'ts_object_drag_icon',
+						parent			: dragger
+					})
 				}
 
 			// DELETE . button delete element
@@ -925,26 +929,22 @@ const render_id_column = function(options) {
 				}//end if (children_data.permissions_button_delete>=2)
 
 			// ORDER number element
-				if (children_data.permissions_button_new>=2) {
-					if(is_descriptor===true && mode!=='search') {
-						// var event_function = [{'type':'click','name':'ts_object.build_order_form'}];
-						const order_number = ui.create_dom_element({
-							element_type	: 'a',
-							class_name		: 'id_column_link ts_object_order_number',
-							text_node		: order,
-							parent			: id_column_content
-						})
-						// click event
-						const click_handler = (e) => {
-							e.stopPropagation()
-							self.build_order_form(order_number)
-						}
-						order_number.addEventListener('click', click_handler)
-					}//if(is_descriptor===true)
+				if (children_data.permissions_button_new>=2 && is_descriptor && mode!=='search') {
+					const order_number = ui.create_dom_element({
+						element_type	: 'a',
+						class_name		: 'id_column_link ts_object_order_number',
+						text_node		: order,
+						parent			: id_column_content
+					})
+					// click event
+					const click_handler = (e) => {
+						e.stopPropagation()
+						self.build_order_form(order_number)
+					}
+					order_number.addEventListener('click', click_handler)
 				}
 
 			// EDIT . button edit element
-				// var event_function 		= [{'type':'click','name':'ts_object.edit'}];
 				const link_edit = ui.create_dom_element({
 					element_type	: 'a',
 					class_name		: 'id_column_link ts_object_edit',
