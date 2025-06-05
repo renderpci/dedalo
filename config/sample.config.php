@@ -631,6 +631,9 @@
 		]
 	]);
 
+	// array exclude_diffusion_elements. Optional
+	// It is useful for hiding some diffusion elements from the tool_diffusion to prevent users from being confused by databases that are not usable, such as PRE environments.
+	// define('EXCLUDE_DIFFUSION_ELEMENTS', []);
 
 
 // remote_structure_server_code

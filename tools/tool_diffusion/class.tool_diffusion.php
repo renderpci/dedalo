@@ -38,6 +38,39 @@ class tool_diffusion extends tool_common {
 				true // bool connection_status
 			);
 
+		// safe diffusion_map
+			// EXCLUDE_DIFFUSION_ELEMENT
+			if (defined('EXCLUDE_DIFFUSION_ELEMENT') && is_array(EXCLUDE_DIFFUSION_ELEMENT)) {
+
+				$safe_diffusion_map = [];
+				$changed = false;
+				foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
+
+					$safe_diffusion_items = [];
+					foreach ($diffusion_items as $current_item) {
+						if (empty($current_item->element_tipo) || in_array($current_item->element_tipo, EXCLUDE_DIFFUSION_ELEMENT)) {
+							debug_log(__METHOD__
+								. " Excluded diffusion element '$current_item->element_tipo'. Included in config EXCLUDE_DIFFUSION_ELEMENT values" . PHP_EOL
+								. ' EXCLUDE_DIFFUSION_ELEMENT: ' . to_string(EXCLUDE_DIFFUSION_ELEMENT)
+								, logger::WARNING
+							);
+							$changed = true;
+							continue;
+						}
+						$safe_diffusion_items[] = $current_item;
+					}
+
+					// add if not empty
+					if (!empty($safe_diffusion_items)) {
+						$safe_diffusion_map[$diffusion_group] = $safe_diffusion_items;
+					}
+				}
+				if ($changed) {
+					// replace
+					$diffusion_map = $safe_diffusion_map;
+				}
+			}
+
 		// ar_data. Get data about table and fields of current section diffusion target
 			$ar_data = [];
 			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
