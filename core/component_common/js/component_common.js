@@ -1700,7 +1700,7 @@ export const delete_dataframe = async function(options) {
 
 	// ddo_dataframe.
 	// check if the show has any ddo that call to any dataframe section.
-		const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.model==='component_dataframe')
+		const ddo_dataframe = self.request_config_object?.show?.ddo_map?.find(el => el.model==='component_dataframe')
 
 		if(!ddo_dataframe){
 			return false
