@@ -1657,15 +1657,27 @@ final class dd_utils_api {
 		// valid code is defined in config.php constant of ONTOLOGY_SERVERS
 			$code = $options->code;
 
-			$ontology_servers = defined('ONTOLOGY_SERVERS') && !empty(ONTOLOGY_SERVERS)
-				? ONTOLOGY_SERVERS
-				: [['code' => STRUCTURE_SERVER_CODE]];
+			// validate code comparing with config definitions
+			if (defined('ONTOLOGY_SERVER_CODE')) {
 
-			$valid_code = false;
-			foreach ( $ontology_servers as $current_server_info ) {
-				if( $current_server_info['code'] === $code ){
-					$valid_code = true;
-					break;
+				// first try from ONTOLOGY_SERVER_CODE
+
+				$valid_code = ONTOLOGY_SERVER_CODE;
+
+			}else{
+
+				// second try from defined ONTOLOGY_SERVERS
+
+				$ontology_servers = defined('ONTOLOGY_SERVERS') && !empty(ONTOLOGY_SERVERS)
+					? ONTOLOGY_SERVERS
+					: [];
+
+				$valid_code = false;
+				foreach ( $ontology_servers as $current_server_info ) {
+					if( $current_server_info['code'] === $code ){
+						$valid_code = true;
+						break;
+					}
 				}
 			}
 
