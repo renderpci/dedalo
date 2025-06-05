@@ -229,14 +229,17 @@ abstract class diffusion  {
 								// check connection
 								try {
 
-									$conn = $conn ?? DBi::_getConnection_mysql(
-										MYSQL_DEDALO_HOSTNAME_CONN,
-										MYSQL_DEDALO_USERNAME_CONN,
-										MYSQL_DEDALO_PASSWORD_CONN,
-										$item->database_name,
-										MYSQL_DEDALO_DB_PORT_CONN,
-										MYSQL_DEDALO_SOCKET_CONN
-									);
+									if (!isset($conn) || $conn==false) {
+										// try again. Note that if there are multiple connections, they must be checked for each database.
+										$conn = DBi::_getConnection_mysql(
+											MYSQL_DEDALO_HOSTNAME_CONN,
+											MYSQL_DEDALO_USERNAME_CONN,
+											MYSQL_DEDALO_PASSWORD_CONN,
+											$item->database_name,
+											MYSQL_DEDALO_DB_PORT_CONN,
+											MYSQL_DEDALO_SOCKET_CONN
+										);
+									}
 
 								} catch (Exception $e) {
 									$conn = false;
