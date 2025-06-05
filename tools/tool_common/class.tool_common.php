@@ -204,6 +204,9 @@ class tool_common {
 			$labels = [];
 			if(!empty($tool_object->labels) && !empty($tool_object->labels[0])) {
 
+				// get the lang to be used to get the labels
+					$current_lang = lang::get_label_lang( DEDALO_APPLICATION_LANG );
+
 				// add label with lang fallback
 				foreach ($tool_object->labels as $current_label_value) {
 
@@ -225,7 +228,7 @@ class tool_common {
 								);
 							}
 
-							if ($item->lang===DEDALO_APPLICATION_LANG) {
+							if ($item->lang===$current_lang) {
 								$labels[$label_name] = $item;
 								continue 2;
 							}
