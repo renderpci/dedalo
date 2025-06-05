@@ -249,7 +249,7 @@ abstract class diffusion  {
 								if ($conn===false) {
 									$item->connection_status = (object)[
 										'result'	=> false,
-										'msg'		=> 'Unable to connect to database'
+										'msg'		=> 'Unable to connect to database '. $item->database_name
 									];
 								}else{
 									// check database
@@ -257,12 +257,12 @@ abstract class diffusion  {
 									if ($db_available===true) {
 										$item->connection_status = (object)[
 											'result'	=> true,
-											'msg'		=> 'Database is ready'
+											'msg'		=> 'Database is ready.'
 										];
 									}else{
 										$item->connection_status = (object)[
 											'result'	=> false,
-											'msg'		=> 'Database is NOT ready'
+											'msg'		=> 'Database is NOT ready.'
 										];
 									}
 								}

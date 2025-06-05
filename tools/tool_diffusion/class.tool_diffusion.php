@@ -39,8 +39,8 @@ class tool_diffusion extends tool_common {
 			);
 
 		// safe diffusion_map
-			// EXCLUDE_DIFFUSION_ELEMENT
-			if (defined('EXCLUDE_DIFFUSION_ELEMENT') && is_array(EXCLUDE_DIFFUSION_ELEMENT)) {
+			// EXCLUDE_DIFFUSION_ELEMENTS
+			if (defined('EXCLUDE_DIFFUSION_ELEMENTS') && is_array(EXCLUDE_DIFFUSION_ELEMENTS)) {
 
 				$safe_diffusion_map = [];
 				$changed = false;
@@ -48,10 +48,10 @@ class tool_diffusion extends tool_common {
 
 					$safe_diffusion_items = [];
 					foreach ($diffusion_items as $current_item) {
-						if (empty($current_item->element_tipo) || in_array($current_item->element_tipo, EXCLUDE_DIFFUSION_ELEMENT)) {
+						if (empty($current_item->element_tipo) || in_array($current_item->element_tipo, EXCLUDE_DIFFUSION_ELEMENTS)) {
 							debug_log(__METHOD__
-								. " Excluded diffusion element '$current_item->element_tipo'. Included in config EXCLUDE_DIFFUSION_ELEMENT values" . PHP_EOL
-								. ' EXCLUDE_DIFFUSION_ELEMENT: ' . to_string(EXCLUDE_DIFFUSION_ELEMENT)
+								. " Excluded diffusion element '$current_item->element_tipo'. Included in config EXCLUDE_DIFFUSION_ELEMENTS values" . PHP_EOL
+								. ' EXCLUDE_DIFFUSION_ELEMENTS: ' . to_string(EXCLUDE_DIFFUSION_ELEMENTS)
 								, logger::WARNING
 							);
 							$changed = true;
@@ -75,7 +75,15 @@ class tool_diffusion extends tool_common {
 			$ar_data = [];
 			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
 
-				$diffusion_element_tipo = $diffusion_items[0]->element_tipo; // like oh63 - Historia oral web
+				$diffusion_element_tipo = $diffusion_items[0]->element_tipo ?? null; // like oh63 - Historia oral web
+				if (!$diffusion_element_tipo) {
+					debug_log(__METHOD__
+						. " Invalid empty element_tipo " . PHP_EOL
+						. ' diffusion_items: ' . to_string($diffusion_items)
+						, logger::ERROR
+					);
+					continue;
+				}
 
 				// config: based on class_name and config.php definitions
 					$class_name = $diffusion_items[0]->class_name ?? null;
