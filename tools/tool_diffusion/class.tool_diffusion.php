@@ -42,9 +42,25 @@ class tool_diffusion extends tool_common {
 				true // bool connection_status
 			);
 
+		// tool_config. Look for 'EXCLUDE_DIFFUSION_ELEMENTS' definition in the tool config (section dd996 filtered by tool name)
+			$tool_config = tool_common::get_config('tool_diffusion');
+			// EXCLUDE_DIFFUSION_ELEMENTS sample:
+			// {
+			// 	"EXCLUDE_DIFFUSION_ELEMENTS" : ["navarra97","navarra67"]
+			// }
+			$EXCLUDE_DIFFUSION_ELEMENTS = isset($tool_config->config->EXCLUDE_DIFFUSION_ELEMENTS) && is_array($tool_config->config->EXCLUDE_DIFFUSION_ELEMENTS)
+				? $tool_config->config->EXCLUDE_DIFFUSION_ELEMENTS
+				: null;
+			// fallback to config EXCLUDE_DIFFUSION_ELEMENTS
+			if (!$EXCLUDE_DIFFUSION_ELEMENTS) {
+				// try with Dédalo config file definition
+				$EXCLUDE_DIFFUSION_ELEMENTS = defined('EXCLUDE_DIFFUSION_ELEMENTS') && is_array(EXCLUDE_DIFFUSION_ELEMENTS)
+					? EXCLUDE_DIFFUSION_ELEMENTS
+					: null;
+			}
+
 		// safe diffusion_map
-			// EXCLUDE_DIFFUSION_ELEMENTS
-			if (defined('EXCLUDE_DIFFUSION_ELEMENTS') && is_array(EXCLUDE_DIFFUSION_ELEMENTS)) {
+			if ($EXCLUDE_DIFFUSION_ELEMENTS) {
 
 				$safe_diffusion_map = [];
 				$changed = false;
@@ -52,10 +68,10 @@ class tool_diffusion extends tool_common {
 
 					$safe_diffusion_items = [];
 					foreach ($diffusion_items as $current_item) {
-						if (empty($current_item->element_tipo) || in_array($current_item->element_tipo, EXCLUDE_DIFFUSION_ELEMENTS)) {
+						if (empty($current_item->element_tipo) || in_array($current_item->element_tipo, $EXCLUDE_DIFFUSION_ELEMENTS)) {
 							debug_log(__METHOD__
 								. " Excluded diffusion element '$current_item->element_tipo'. Included in config EXCLUDE_DIFFUSION_ELEMENTS values" . PHP_EOL
-								. ' EXCLUDE_DIFFUSION_ELEMENTS: ' . to_string(EXCLUDE_DIFFUSION_ELEMENTS)
+								. ' EXCLUDE_DIFFUSION_ELEMENTS: ' . to_string($EXCLUDE_DIFFUSION_ELEMENTS)
 								, logger::WARNING
 							);
 							$changed = true;

@@ -3024,6 +3024,8 @@ Optional diffusion exclude elements (ontology diffusion element tipos like `Déd
 
 It is used for hiding some diffusion elements from the tool_diffusion to prevent users from being confused by databases that are not usable, such as PRE environments to remove the PRO diffusion element.
 
+`tool_diffusion` uses this value as a fallback when the tool configuration does not provide a value for this exclusion list. This means that if there is a value in the tool configuration it will be used, if not, it will try to use the value of the variable in the config.php file if it exists and is valid.
+
 Default is undefined.
 
 ```php
