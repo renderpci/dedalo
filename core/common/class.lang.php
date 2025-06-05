@@ -837,6 +837,25 @@ class lang {
 	}//end get_locale_from_code
 
 
+	/**
+	* GET_LABEL_LANG
+	* Set exceptions to the languages to be used to get the correct translation of the langs
+	* As Valencià === Català, the ontology is translated to Català but is the same for Valencià
+	* @param string $lang
+	* @return string $lang
+	*/
+	public static function get_label_lang( string $lang=DEDALO_APPLICATION_LANG ) {
+
+		// lang vlca fallback
+		if ($lang==='lg-vlca') {
+			$lang = 'lg-cat';
+		}
+
+
+		return $lang;
+	}//end get_label_lang
+
+
 
 	/**
 	* BUILD_RESOLVE_QUERY

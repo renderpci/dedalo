@@ -25,10 +25,8 @@ abstract class label {
 	*/
 	public static function get_ar_label( string $lang=DEDALO_APPLICATION_LANG, bool $use_file_cache=true ) : array {
 
-		// lang vlca fallback
-			if ($lang==='lg-vlca') {
-				$lang = 'lg-cat';
-			}
+		// get the lang to be used to get the labels
+			$lang = lang::get_label_lang( $lang );
 
 		// static cache case
 			if(isset(label::$ar_label[$lang])) {
@@ -83,9 +81,8 @@ abstract class label {
 	*/
 	public static function get_label(string $name, string $lang=DEDALO_APPLICATION_LANG) : string {
 
-		if ($lang==='lg-vlca') {
-			$lang = 'lg-cat';
-		}
+		// get the lang to be used to get the labels
+			$lang = lang::get_label_lang( $lang );
 
 		// Calculate values (is calculated once)
 		label::get_ar_label($lang);
@@ -110,9 +107,8 @@ abstract class label {
 	*/
 	public static function get_var_from_label($label, $lang=DEDALO_APPLICATION_LANG) : ?string {
 
-		if ($lang==='lg-vlca') {
-			$lang = 'lg-cat';
-		}
+		// get the lang to be used to get the labels
+			$lang = lang::get_label_lang( $lang );
 
 		// Calculate values (is calculated once)
 		label::get_ar_label($lang);
@@ -144,10 +140,8 @@ abstract class label {
 
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
-		// lang valencian fallback to catalan to unify
-			if ($lang==='lg-vlca') {
-				$lang = 'lg-cat';
-			}
+		// get the lang to be used to get the labels
+			$lang = lang::get_label_lang( $lang );
 
 		$ar_label	= array();
 		$cached		= false;

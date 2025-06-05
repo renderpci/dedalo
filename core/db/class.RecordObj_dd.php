@@ -320,10 +320,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		// safe lang fallback
 		$lang = $lang ?? DEDALO_DATA_LANG;
 
-		// vlca legacy exception
-		if ($lang==='lg-vlca') {
-			$lang = 'lg-cat';
-		}
+		// get the lang to be used to get the labels
+		$lang = lang::get_label_lang( $lang );
 
 		// term object
 		$RecordObject_dd	= new RecordObj_dd($terminoID);
@@ -1883,9 +1881,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 					break;
 				case 'label':
 					$term = $RecordObj_dd->get_term() ?? new stdClass();
-					$lang = DEDALO_APPLICATION_LANG==='lg-vlca'
-						? 'lg-cat'
-						: DEDALO_APPLICATION_LANG;
+
+					// get the lang to be used to get the labels
+					$lang = lang::get_label_lang( DEDALO_APPLICATION_LANG );
+
 					$label = $term->{$lang} ?? $term->{DEDALO_STRUCTURE_LANG} ?? null;
 					if (is_null($label)) {
 						// fallback to anything
