@@ -778,7 +778,37 @@ const render_automatic_transcription = function (options) {
 			nodes.button_automatic_transcription = button_automatic_transcription
 
 		const button_automatic_transcription_click_handler = async function(e){
-			if(button_automatic_transcription.active=== false){
+			e.stopPropagation()
+
+			// check for browser requirements. This check allows Edge (Chromium) too
+			const is_chrome137_or_higher = () => {
+				if (navigator.userAgentData) {
+					const brands = navigator.userAgentData.brands;
+					const chromeBrand = brands.find(b => b.brand === "Google Chrome" || b.brand === "Chromium");
+
+					if (chromeBrand) {
+						const version = parseInt(chromeBrand.version, 10);
+						return version >= 137;
+					}
+				}
+
+				// Fallback to userAgent
+				const ua = navigator.userAgent;
+				const match = ua.match(/Chrome\/(\d+)/i);
+				if (match && match[1]) {
+					const version = parseInt(match[1], 10);
+					return version >= 137;
+				}
+
+				return false;
+			}
+			if (!is_chrome137_or_higher()) {
+				if(!confirm("This feature requires Chrome version 136 or newer. Continue?")) {
+					return false
+				}
+			}
+
+			if(button_automatic_transcription.active === false){
 				return
 			}
 			const engine = transcriber_engine.find(el => el.name === nodes.transcriber_engine_select.value)
@@ -1027,7 +1057,7 @@ const render_automatic_transcription = function (options) {
 						quality_id,
 						'status'
 					).then(function( quality_saved ){
-						// change the valuw if the user was change it and the engine check box is not selected
+						// change the value if the user was change it and the engine check box is not selected
 						// if the engine is checked only can set the small version,
 						// any large model use more ram that can be handled in wasm
 						// only webGPU can load large models
@@ -1035,8 +1065,7 @@ const render_automatic_transcription = function (options) {
 							transcriber_engine_quality.value = quality_saved.value
 						}
 					})
-
-			}// end if(transcriber_quality)
+			}//end if(transcriber_quality)
 
 	// status
 		const status_container = ui.create_dom_element({

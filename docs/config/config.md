@@ -3012,6 +3012,28 @@ define('API_WEB_USER_CODE_MULTIPLE' , [
 
 > In a simple installation with only one DDBB you can use the param 'API_WEB_USER_CODE'.
 
+---
+
+### Defining diffusion exclude elements
+
+./dedalo/config/config.php
+
+EXCLUDE_DIFFUSION_ELEMENTS `array` *optional*
+
+Optional diffusion exclude elements (ontology diffusion element tipos like `Dédalo public web` [dd1099](https://dedalo.dev/ontology/dd1099)).
+
+It is used for hiding some diffusion elements from the tool_diffusion to prevent users from being confused by databases that are not usable, such as PRE environments to remove the PRO diffusion element.
+
+`tool_diffusion` uses this value as a fallback when the tool configuration does not provide a value for this exclusion list. This means that if there is a value in the tool configuration it will be used, if not, it will try to use the value of the variable in the config.php file if it exists and is valid.
+
+Default is undefined.
+
+```php
+define('EXCLUDE_DIFFUSION_ELEMENTS', []);
+```
+
+Introduced in version 6.6.2
+
 ## Maintenance variables
 
 Maintenance configure the variables that Dédalo will use to update the ontology, the code or check if the system is working properly.
