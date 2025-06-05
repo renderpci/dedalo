@@ -24,7 +24,7 @@ class section extends common {
 		public $section_virtual = false;
 		public $section_real_tipo;
 
-		static $active_section_id;
+		public static $active_section_id;
 
 		public $is_temp = false; // Used to force save data to session instead database. Default is false
 
@@ -144,7 +144,6 @@ class section extends common {
 				$cache_slice_on			= 400;
 				$total					= count(self::$ar_section_instances);
 				if ( $total > $max_cache_instances ) {
-					// self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
 					// new array
 					$new_array = [];
 					$i = 1;
@@ -157,15 +156,11 @@ class section extends common {
 					}
 					// replace matrix_instances array
 					self::$ar_section_instances = $new_array;
-
-					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced ar_section_instances cache from n '.$total.' to '.count($new_array));
-					// error_log('))))))))))))))))))))))))))))))))))))))))) Replaced ar_section_instances (1200/400) key: '. implode('_', [$section_id, $tipo, $mode]));
 				}
 
 			// find current instance in cache
 				$cache_key = implode('_', [$section_id, $tipo, $mode]);
 				if(isset($caller_dataframe)){
-					// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
 					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key;
 
 				}
@@ -267,14 +262,12 @@ class section extends common {
 			}
 
 			$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
-			$JSON_RecordObj_matrix	= isset($this->JSON_RecordObj_matrix)
-				? $this->JSON_RecordObj_matrix
-				: JSON_RecordObj_matrix::get_instance(
-					$matrix_table,
-					(int)$this->section_id, // int section_id
-					$this->tipo, // string section tipo
-					true // bool cache
-				);
+			$JSON_RecordObj_matrix	= $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
+				$matrix_table,
+				(int)$this->section_id, // int section_id
+				$this->tipo, // string section tipo
+				true // bool cache
+			);
 			$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
 			// force updates value
 			$JSON_RecordObj_matrix->set_bl_loaded_matrix_data(false);
@@ -333,19 +326,16 @@ class section extends common {
 		// data is loaded once
 			// JSON_RecordObj_matrix
 				$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
-				$JSON_RecordObj_matrix	= isset($this->JSON_RecordObj_matrix)
-					? $this->JSON_RecordObj_matrix
-					: JSON_RecordObj_matrix::get_instance(
-						$matrix_table,
-						(int)$this->section_id, // int section_id
-						$this->tipo, // string section tipo
-						true // bool cache
-					);
+				$JSON_RecordObj_matrix	= $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
+					$matrix_table,
+					(int)$this->section_id, // int section_id
+					$this->tipo, // string section tipo
+					true // bool cache
+				);
 				$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
 
 			// load dato from db
 				$dato = $JSON_RecordObj_matrix->get_dato();
-
 
 		// fix dato (force object)
 			$this->dato = (object)$dato;
@@ -370,14 +360,12 @@ class section extends common {
 		// update JSON_RecordObj_matrix cached data
 			if (!empty($this->section_id)) {
 				$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
-				$JSON_RecordObj_matrix	= isset($this->JSON_RecordObj_matrix)
-					? $this->JSON_RecordObj_matrix
-					: JSON_RecordObj_matrix::get_instance(
-						$matrix_table, // string matrix_table
-						(int)$this->section_id, // int section_id
-						$this->tipo, // string tipo
-						true // bool cache
-					);
+				$JSON_RecordObj_matrix	= $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
+					$matrix_table, // string matrix_table
+					(int)$this->section_id, // int section_id
+					$this->tipo, // string tipo
+					true // bool cache
+				);
 				$JSON_RecordObj_matrix->set_dato($dato);
 				$JSON_RecordObj_matrix->set_blIsLoaded(true);
 			}
@@ -561,7 +549,6 @@ class section extends common {
 
 		// save section result
 			$result = $this->Save( $save_options );
-
 
 			// #
 			// # DIFFUSION_INFO
@@ -759,7 +746,7 @@ class section extends common {
 		$this->remove_relations_from_component_tipo( $options );
 
 		// Remove all existing search locators of current component tipo
-		$options->relations_container	= 'relations_search';
+		$options->relations_container = 'relations_search';
 		$this->remove_relations_from_component_tipo( $options );
 
 		// add locators
@@ -932,7 +919,6 @@ class section extends common {
 					, logger::ERROR
 				);
 				throw new Exception("Error Processing Request. Unable to get matrix_table from tipo ($tipo - $this->section_id)", 1);
-				return null;
 			}
 
 
@@ -1063,7 +1049,7 @@ class section extends common {
 						$section_dato->created_by_userID	= (int)$user_id;
 
 					// Section created date
-						$section_dato->created_date			= (string)$date_now;	# Format 2012-11-05 19:50:44
+						$section_dato->created_date			= (string)$date_now; // Format 2012-11-05 19:50:44
 
 					// diffusion_info
 						$section_dato->diffusion_info		= null; // null by default
@@ -1095,9 +1081,6 @@ class section extends common {
 							'mode' => 'new_record'
 						]);
 
-					// Set as loaded
-						// $this->bl_loaded_matrix_data = true;
-
 			// Real data save
 				// Time machine data. We save only current new section in time machine once (section info not change, only components changes)
 					$time_machine_data = clone $this->dato;
@@ -1105,23 +1088,19 @@ class section extends common {
 						unset($time_machine_data->relations); 	// Remove unnecessary empty 'relations' object
 					$save_options = new stdClass();
 						$save_options->time_machine_data	= $time_machine_data;
-						$save_options->time_machine_lang	= DEDALO_DATA_NOLAN;	// Always nolan for section
+						$save_options->time_machine_lang	= DEDALO_DATA_NOLAN; // Always nolan for section
 						$save_options->time_machine_tipo	= $tipo;
 						$save_options->new_record			= true;
 						$save_options->save_tm				= $this->save_tm;
 
 				// Save JSON_RecordObj
-					$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
-						? $this->JSON_RecordObj_matrix
-						: JSON_RecordObj_matrix::get_instance(
-							$matrix_table, // string matrix_table
-							(int)$this->section_id, // int section_id
-							$tipo, // string tipo
-							true // bool cache
-						);
+					$JSON_RecordObj_matrix = $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
+						$matrix_table, // string matrix_table
+						(int)$this->section_id, // int section_id
+						$tipo, // string tipo
+						true // bool cache
+					);
 					$JSON_RecordObj_matrix->set_dato($this->dato);
-					#$JSON_RecordObj_matrix->set_section_id($this->section_id);
-					#$JSON_RecordObj_matrix->set_section_tipo($tipo);
 					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
 					if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
 						debug_log(__METHOD__
@@ -1132,9 +1111,6 @@ class section extends common {
 							. ' this->dato: ' . to_string($this->dato)
 							, logger::ERROR
 						);
-						// if(SHOW_DEBUG===true) {
-						// 	throw new Exception("Error creating new section", 1);
-						// }
 						return null;
 					}
 
@@ -1634,6 +1610,7 @@ class section extends common {
 
 	/**
 	* GET_SECTION_REAL_TIPO
+	* Resolves current section real tipo if is a virtual section
 	* @return string $section_real_tipo
 	*/
 	public function get_section_real_tipo() : string {
@@ -1654,12 +1631,13 @@ class section extends common {
 		}
 
 		return $section_real_tipo;
-	}//end get_section_real_tipo
+	} //end get_section_real_tipo
 
 
 
 	/**
 	* GET_SECTION_REAL_TIPO_STATIC
+	* Resolves current section real tipo if is a virtual section statically
 	* @param string $section_tipo
 	* @return string $section_real_tipo
 	*	If not exists related section, returns the same received section_tipo
@@ -1671,9 +1649,8 @@ class section extends common {
 			$section_tipo
 		);
 
-		$section_real_tipo = isset($ar_related[0])
-			? $ar_related[0]
-			: $section_tipo;
+		$section_real_tipo = $ar_related[0] ?? $section_tipo;
+
 
 		return $section_real_tipo;
 	}//end get_section_real_tipo_static
@@ -1773,7 +1750,7 @@ class section extends common {
 		$section_ar_children_tipo	= array();
 
 
-		# OBTENEMOS LOS ELEMENTOS HIJOS DE ESTA SECCIÓN
+		// we obtain the child elements of this section
 		if (count($ar_model_name_required)>1) {
 
 			if (true===$recursive) { // Default is recursive
@@ -2324,56 +2301,6 @@ class section extends common {
 
 
 	/**
-	* GET_AR_CHILDREN_BY_MODEL (!) REMOVED 31-05-2023 BECAUSE IS REDUNDANT. MOVED TO:
-	* 	@see section::get_ar_children_tipo_by_model_name_in_section
-	* Get the children of the section by modelo_name required
-	* children like relation_list or time machine_list
-	* @param string $section_tipo
-	* @param array $ar_model_name_required
-	* @return string|null $first_child
-	*/
-		// public static function get_ar_children_by_model(string $section_tipo, array $ar_model_name_required) : ?string {
-
-		// 	if(SHOW_DEBUG) $start_time = start_time();
-
-		// 	$current_section_tipo = $section_tipo;
-
-		// 	// $ar_model_name_required = [$model_name];
-
-		// 	// Locate children element in current section (virtual or not)
-		// 	$ar_childrens = section::get_ar_children_tipo_by_model_name_in_section(
-		// 		$current_section_tipo,
-		// 		$ar_model_name_required, // ar_model_name_required
-		// 		$from_cache=true,
-		// 		false, // resolve_virtual
-		// 		$recursive=false,
-		// 		$search_exact=true
-		// 	);
-
-		// 	// If not found children, try resolving real section
-		// 	if (empty($ar_childrens)) {
-		// 		$resolve_virtual = true;
-		// 		$ar_childrens = section::get_ar_children_tipo_by_model_name_in_section(
-		// 			$current_section_tipo,
-		// 			$ar_model_name_required,
-		// 			$from_cache=true,
-		// 			true, // resolve_virtual
-		// 			$recursive=false,
-		// 			$search_exact=true
-		// 		);
-		// 	}// end if (empty($ar_childrens))
-
-		// 	if(isset($ar_childrens[0])){
-		// 		$first_child = $ar_childrens[0];
-		// 		return $first_child;
-		// 	}
-
-		// 	return null;
-		// }//end get_ar_children_by_model
-
-
-
-	/**
 	* GET_AR_ALL_SECTION_RECORDS_UNFILTERED
 	* @see diffusion::build_table_data_recursive
 	*
@@ -2390,7 +2317,7 @@ class section extends common {
 			$n_rows = pg_num_rows($result);
 			if ($n_rows>1000) {
 				debug_log(__METHOD__
-					." WARNING: TOO MANY RESULTS IN THE QUERY. TO OPTIMISE MEMORY, DO NOT STORE RESULTS IN ARRAY IN THIS SEARCH. BEST USE 'get_resource_all_section_records_unfiltered' "
+					." WARNING: TOO MANY RESULTS IN THE QUERY. TO OPTIMIZE MEMORY, DO NOT STORE RESULTS IN ARRAY IN THIS SEARCH. BEST USE 'get_resource_all_section_records_unfiltered' "
 					, logger::ERROR
 				);
 			}
@@ -2427,8 +2354,8 @@ class section extends common {
 			);
 			return false;
 		}
-		$strQuery		= "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE section_tipo = '$section_tipo' ORDER BY section_id ASC ";
-		$result			= JSON_RecordObj_matrix::search_free($strQuery);
+		$strQuery   = "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE section_tipo = '$section_tipo' ORDER BY section_id ASC ";
+		$result		= JSON_RecordObj_matrix::search_free($strQuery);
 
 		return $result;
 	}//end get_resource_all_section_records_unfiltered
@@ -2593,7 +2520,7 @@ class section extends common {
 	*/
 	public function forced_create_record() : bool {
 
-		if(is_null($this->section_id)) {
+		if( $this->section_id === null ) {
 
 			// Save to obtain a new incremental section_id
 			$this->Save();
@@ -2684,7 +2611,7 @@ class section extends common {
 
 
 	/**
-	* add_DIFFUSION_INFO_DEFAULT
+	* ADD_DIFFUSION_INFO_DEFAULT
 	* Add default base diffusion_info to section only if not already set
 	* @param string $diffusion_element_tipo
 	* @return bool
@@ -2807,18 +2734,18 @@ class section extends common {
 
 		if (empty($this->section_id)) {
 			// The section does not exist yet. Return empty array
-			return array();
+			return [];
 		}
 
 		// Create a minimal locator based on current section
-			$filter_locator = new locator();
-				$filter_locator->set_section_tipo($this->tipo);
-				$filter_locator->set_section_id($this->section_id);
+		$filter_locator = new locator();
+			$filter_locator->set_section_tipo($this->tipo);
+			$filter_locator->set_section_id($this->section_id);
 
 		// Get calculated inverse locators for all matrix tables
-			$ar_inverse_locators = search_related::get_referenced_locators(
-				[$filter_locator]
-			);
+		$ar_inverse_locators = search_related::get_referenced_locators(
+			[$filter_locator]
+		);
 
 
 		return $ar_inverse_locators;
@@ -2916,39 +2843,6 @@ class section extends common {
 
 		return $removed_locators;
 	}//end remove_all_inverse_references
-
-
-
-	/**
-	* GET_RELATION_LIST_TIPO
-	* Resolve the relation_list tipo of current section
-	* Note that if current user do not have permissions
-	* @return string|null $relation_list_tipo
-	*/
-		// public function get_relation_list_tipo() : ?string {
-
-		// 	$section_tipo = $this->tipo;
-
-		// 	$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-		// 		$section_tipo,
-		// 		['relation_list'], // ar_model_name_required
-		// 		true, // from cache
-		// 		true, // resolve virtual
-		// 		false, // bool recursive
-		// 		true // bool search_exact
-		// 	);
-		// 	$relation_list_tipo	= $ar_children_tipo[0] ?? null;
-
-		// 	$permissions = !empty($relation_list_tipo)
-		// 		? common::get_permissions($section_tipo, $relation_list_tipo)
-		// 		: 0;
-
-		// 	if( isset($permissions) && $permissions>0 ) {
-		// 		return $relation_list_tipo;
-		// 	}
-
-		// 	return null;
-		// }//end get_relation_list_tipo
 
 
 
@@ -3257,7 +3151,6 @@ class section extends common {
 
 		// cache
 			static $section_map_cache = [];
-			// if(isset($section_map_cache[$section_tipo])) {
 			if (array_key_exists($section_tipo, $section_map_cache)) {
 				return $section_map_cache[$section_tipo];
 			}
@@ -3393,22 +3286,23 @@ class section extends common {
 		);
 
 		return $ar_tipos;
-	}//end get_modified_section_tipos
+	} //end get_modified_section_tipos
 
 
 
 	/**
-	* GET_MODIFIED_SECTION_TIPOS_BASIC
-	* @return
-	*/
+	 * GET_MODIFIED_SECTION_TIPOS_BASIC
+	 Return the list of fixed
+	 * @return array $ar_tipos
+	 */
 	public static function get_modified_section_tipos_basic() : array {
 
-		$ar_tipos = array(
-			'dd200',
-			'dd199',
+		$ar_tipos = [
+			'dd200', // Created by user
+			'dd199', // Creation date
 			DEDALO_SECTION_INFO_MODIFIED_BY_USER,
 			DEDALO_SECTION_INFO_MODIFIED_DATE
-		);
+		];
 
 		return $ar_tipos;
 	}//end get_modified_section_tipos_basic
@@ -3549,6 +3443,7 @@ class section extends common {
 
 	/**
 	* GET_AR_GROUPER_MODELS
+	* Returns the list of grouper models
 	* @return array $ar_groupers_models
 	*/
 	public static function get_ar_grouper_models() : array {
