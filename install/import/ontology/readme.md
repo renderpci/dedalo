@@ -1,10 +1,10 @@
 Repository for ontology files by tlds.
 
-**Changing the ontology** 
+**Changing the ontology**
 
 You have two different ways to use/change the Dédalo ontology.
 
-1.  By my own: If you want build your own ontology you don't need add your changes here, but your changes will be incompatible with the official ontology.
+1. By my own: If you want build your own ontology you don't need add your changes here, but your changes will be incompatible with the official ontology.
 2. Sharing changes: If you want to be compatible with the standard sections of the ontology, you will need to publish your changes, in this case, you can use the tld to identify the ontology terms and create the file with the tld name (like mht.sql.gz) in: /install/import/ontology/
 
 In the second case we have two different scenarios:
