@@ -1883,7 +1883,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 					break;
 				case 'label':
 					$term = $RecordObj_dd->get_term() ?? new stdClass();
-					$label = $term->{DEDALO_APPLICATION_LANG} ?? $term->{DEDALO_STRUCTURE_LANG} ?? null;
+					$lang = DEDALO_APPLICATION_LANG==='lg-vlca'
+						? 'lg-cat'
+						: DEDALO_APPLICATION_LANG;
+					$label = $term->{$lang} ?? $term->{DEDALO_STRUCTURE_LANG} ?? null;
 					if (is_null($label)) {
 						// fallback to anything
 						foreach ($term as $value) {
