@@ -289,9 +289,9 @@ abstract class diffusion  {
 			}//end foreach ($ar_diffusion_element_tipo as $element_tipo)
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
-		#dump($diffusion_map, ' diffusion_map by diffusion_group_tipo ++ '.to_string());
 
-		return (object)$diffusion_map;
+
+		return $diffusion_map;
 	}//end get_ar_diffusion_map
 
 

@@ -17,14 +17,18 @@ class tool_diffusion extends tool_common {
 	* Collect basic tool info needed to create user options
 	* Is called on tool build by client
 	* @param object $options
+	* {
+	* 	sction_tipo: string
+	* }
 	* @return object $response
-	* { result: [{}], msg: '' }
+	* 	{ result: [{}], msg: '' }
 	*/
 	public static function get_diffusion_info(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// options
 			$section_tipo = $options->section_tipo ?? null;
@@ -82,6 +86,7 @@ class tool_diffusion extends tool_common {
 						. ' diffusion_items: ' . to_string($diffusion_items)
 						, logger::ERROR
 					);
+					$response->errors[] = 'Invalid empty element_tipo';
 					continue;
 				}
 
@@ -123,11 +128,10 @@ class tool_diffusion extends tool_common {
 							// $ar_related = common::get_ar_related_by_model('component', $info_item->tipo, false);
 							$ar_related = RecordObj_dd::get_ar_terminos_relacionados($info_item->tipo, true, true);
 							if (isset($ar_related[0])) {
-								$current_name					= RecordObj_dd::get_termino_by_tipo($ar_related[0], null, true, true);
-								$info_item->related_tipo		= $ar_related[0];
-								$info_item->related_label		= $current_name;
-								// $info_item->related_model	= RecordObj_dd::get_modelo_name_by_tipo($ar_related[0],true);
-								$info_item->related_model		= RecordObj_dd::get_legacy_model_name_by_tipo($ar_related[0]);
+								$current_name				= RecordObj_dd::get_termino_by_tipo($ar_related[0], null, true, true);
+								$info_item->related_tipo	= $ar_related[0];
+								$info_item->related_label	= $current_name;
+								$info_item->related_model	= RecordObj_dd::get_legacy_model_name_by_tipo($ar_related[0]);
 							}
 							// add model
 							$info_item->model = RecordObj_dd::get_modelo_name_by_tipo($info_item->tipo, true);
@@ -155,7 +159,6 @@ class tool_diffusion extends tool_common {
 			// 	}
 
 			// 	foreach ($ar_diffusion_element as $obj_value) {
-
 			// 		$item = (object)[
 			// 			'section_tipo'				=> $section_tipo,
 			// 			'mode'						=> 'export_list',
@@ -183,7 +186,9 @@ class tool_diffusion extends tool_common {
 
 		// response
 			$response->result	= $result;
-			$response->msg		= 'OK. Request done successfully';
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning. request done with errors';
 
 
 		return $response;
@@ -461,7 +466,7 @@ class tool_diffusion extends tool_common {
 		// response OK
 			$response->result						= true;
 			$response->msg[]						= ($total_errors > 0)
-				? 'Request done with some errors: ' . $total_errors
+				? 'Warning. Request done with some errors: ' . $total_errors
 				: 'OK. Request done successfully';
 			$response->memory						= dd_memory_usage();
 			$response->last_update_record_response	= tool_diffusion::$last_update_record_response ?? null;
