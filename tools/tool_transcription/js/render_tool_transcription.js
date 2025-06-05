@@ -778,7 +778,37 @@ const render_automatic_transcription = function (options) {
 			nodes.button_automatic_transcription = button_automatic_transcription
 
 		const button_automatic_transcription_click_handler = async function(e){
-			if(button_automatic_transcription.active=== false){
+			e.stopPropagation()
+
+			// check for browser requirements. This check allows Edge (Chromium) too
+			const is_chrome137_or_higher = () => {
+				if (navigator.userAgentData) {
+					const brands = navigator.userAgentData.brands;
+					const chromeBrand = brands.find(b => b.brand === "Google Chrome" || b.brand === "Chromium");
+
+					if (chromeBrand) {
+						const version = parseInt(chromeBrand.version, 10);
+						return version >= 137;
+					}
+				}
+
+				// Fallback to userAgent
+				const ua = navigator.userAgent;
+				const match = ua.match(/Chrome\/(\d+)/i);
+				if (match && match[1]) {
+					const version = parseInt(match[1], 10);
+					return version >= 137;
+				}
+
+				return false;
+			}
+			if (!is_chrome137_or_higher()) {
+				if(!confirm("This feature requires Chrome version 136 or newer. Continue?")) {
+					return false
+				}
+			}
+
+			if(button_automatic_transcription.active === false){
 				return
 			}
 			const engine = transcriber_engine.find(el => el.name === nodes.transcriber_engine_select.value)
