@@ -132,6 +132,7 @@ class search {
 
 	/**
 	* __CONSTRUCT
+	* @param object $search_query_object
 	*/
 	private function __construct(object $search_query_object) {
 		// Set up class minim vars
@@ -714,7 +715,6 @@ class search {
 				// Replace filter array with components preparsed values
 				$this->search_query_object->filter = $new_search_query_object_filter ?? null;
 			}
-
 
 		// select
 			$new_search_query_object_select = [];

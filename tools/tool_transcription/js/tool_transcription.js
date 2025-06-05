@@ -350,7 +350,6 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'create_transcribable_audio_file')
 
-
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',

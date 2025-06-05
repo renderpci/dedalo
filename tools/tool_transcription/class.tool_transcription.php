@@ -139,7 +139,7 @@ class tool_transcription extends tool_common {
 		}
 
 		$response->result	= (string)$pdf_text;
-		$response->msg		= "Ok Processing Request pdf_automatic_transcription: text processed";
+		$response->msg		= "OK Processing Request pdf_automatic_transcription: text processed";
 		$response->original	= trim($original_text);
 
 
@@ -302,7 +302,7 @@ class tool_transcription extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// component to use
-			$media_ddo				= $options->media_ddo;
+			$media_ddo = $options->media_ddo;
 
 		// Source text . Get source text from component (source_lang)
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($media_ddo->component_tipo, true);

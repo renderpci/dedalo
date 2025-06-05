@@ -229,14 +229,17 @@ abstract class diffusion  {
 								// check connection
 								try {
 
-									$conn = $conn ?? DBi::_getConnection_mysql(
-										MYSQL_DEDALO_HOSTNAME_CONN,
-										MYSQL_DEDALO_USERNAME_CONN,
-										MYSQL_DEDALO_PASSWORD_CONN,
-										$item->database_name,
-										MYSQL_DEDALO_DB_PORT_CONN,
-										MYSQL_DEDALO_SOCKET_CONN
-									);
+									if (!isset($conn) || $conn==false) {
+										// try again. Note that if there are multiple connections, they must be checked for each database.
+										$conn = DBi::_getConnection_mysql(
+											MYSQL_DEDALO_HOSTNAME_CONN,
+											MYSQL_DEDALO_USERNAME_CONN,
+											MYSQL_DEDALO_PASSWORD_CONN,
+											$item->database_name,
+											MYSQL_DEDALO_DB_PORT_CONN,
+											MYSQL_DEDALO_SOCKET_CONN
+										);
+									}
 
 								} catch (Exception $e) {
 									$conn = false;
@@ -249,7 +252,7 @@ abstract class diffusion  {
 								if ($conn===false) {
 									$item->connection_status = (object)[
 										'result'	=> false,
-										'msg'		=> 'Unable to connect to database'
+										'msg'		=> 'Unable to connect to database '. $item->database_name
 									];
 								}else{
 									// check database
@@ -257,12 +260,12 @@ abstract class diffusion  {
 									if ($db_available===true) {
 										$item->connection_status = (object)[
 											'result'	=> true,
-											'msg'		=> 'Database is ready'
+											'msg'		=> 'Database is ready.'
 										];
 									}else{
 										$item->connection_status = (object)[
 											'result'	=> false,
-											'msg'		=> 'Database is NOT ready'
+											'msg'		=> 'Database is NOT ready.'
 										];
 									}
 								}
@@ -286,9 +289,9 @@ abstract class diffusion  {
 			}//end foreach ($ar_diffusion_element_tipo as $element_tipo)
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
-		#dump($diffusion_map, ' diffusion_map by diffusion_group_tipo ++ '.to_string());
 
-		return (object)$diffusion_map;
+
+		return $diffusion_map;
 	}//end get_ar_diffusion_map
 
 

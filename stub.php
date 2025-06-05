@@ -141,6 +141,8 @@ define('DEDALO_BINARY_BASE_PATH','');
 define('DEDALO_INSTALL_PATH', '');
 define('DEDALO_INSTALL_URL', '');
 define('DEDALO_CODE_FILES_URL', '');
+define('ONTOLOGY_SERVER_CODE','');
+define('EXCLUDE_DIFFUSION_ELEMENTS', []);
 
 function session_start_manager(){};
 function fix_cascade_config_var(){};
