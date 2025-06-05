@@ -1057,7 +1057,7 @@ const render_automatic_transcription = function (options) {
 						quality_id,
 						'status'
 					).then(function( quality_saved ){
-						// change the valuw if the user was change it and the engine check box is not selected
+						// change the value if the user was change it and the engine check box is not selected
 						// if the engine is checked only can set the small version,
 						// any large model use more ram that can be handled in wasm
 						// only webGPU can load large models
@@ -1065,8 +1065,7 @@ const render_automatic_transcription = function (options) {
 							transcriber_engine_quality.value = quality_saved.value
 						}
 					})
-
-			}// end if(transcriber_quality)
+			}//end if(transcriber_quality)
 
 	// status
 		const status_container = ui.create_dom_element({
