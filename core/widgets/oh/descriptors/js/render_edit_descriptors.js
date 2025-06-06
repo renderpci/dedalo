@@ -113,7 +113,7 @@ const get_content_data_edit = async function(self) {
 const get_value_element = async (i, data, self) => {
 
 	const indexation	= data.find(el => el.id==='indexation')
-	const value			= indexation.value
+	const value			= indexation?.value || 0
 
 	const fragment = new DocumentFragment()
 
@@ -133,7 +133,7 @@ const get_value_element = async (i, data, self) => {
 		})
 
 	// values dd_grid
-		if (value && value>0) {
+		if ( value > 0 ) {
 			// dd_grid build and append
 			render_values(self, data)
 			.then(function(dd_grid_node){
