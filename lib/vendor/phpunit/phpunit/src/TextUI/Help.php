@@ -262,10 +262,12 @@ final class Help
                 ['spacer' => ''],
 
                 ['arg' => '--debug', 'desc' => 'Replace default progress and result output with debugging information'],
+                ['arg' => '--with-telemetry', 'desc' => 'Include telemetry information in debugging information output'],
             ],
 
             'Logging' => [
                 ['arg' => '--log-junit <file>', 'desc' => 'Write test results in JUnit XML format to file'],
+                ['arg' => '--log-otr <file>', 'desc' => 'Write test results in Open Test Reporting XML format to file'],
                 ['arg' => '--log-teamcity <file>', 'desc' => 'Write test results in TeamCity format to file'],
                 ['arg' => '--testdox-html <file>', 'desc' => 'Write test results in TestDox format (HTML) to file'],
                 ['arg' => '--testdox-text <file>', 'desc' => 'Write test results in TestDox format (plain text) to file'],
@@ -276,6 +278,7 @@ final class Help
 
             'Code Coverage' => [
                 ['arg' => '--coverage-clover <file>', 'desc' => 'Write code coverage report in Clover XML format to file'],
+                ['arg' => '--coverage-openclover <file>', 'desc' => 'Write code coverage report in OpenClover XML format to file'],
                 ['arg' => '--coverage-cobertura <file>', 'desc' => 'Write code coverage report in Cobertura XML format to file'],
                 ['arg' => '--coverage-crap4j <file>', 'desc' => 'Write code coverage report in Crap4J XML format to file'],
                 ['arg' => '--coverage-html <dir>', 'desc' => 'Write code coverage report in HTML format to directory'],

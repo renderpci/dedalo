@@ -11,13 +11,15 @@ namespace PHPUnit\TestRunner\TestResult;
 
 use function array_values;
 use function assert;
+use function count;
 use function implode;
 use function str_contains;
 use PHPUnit\Event\Code\TestMethod;
-use PHPUnit\Event\EventFacadeIsSealedException;
 use PHPUnit\Event\Facade;
 use PHPUnit\Event\Test\AfterLastTestMethodErrored;
+use PHPUnit\Event\Test\AfterLastTestMethodFailed;
 use PHPUnit\Event\Test\BeforeFirstTestMethodErrored;
+use PHPUnit\Event\Test\BeforeFirstTestMethodFailed;
 use PHPUnit\Event\Test\ConsideredRisky;
 use PHPUnit\Event\Test\DeprecationTriggered;
 use PHPUnit\Event\Test\Errored;
@@ -44,7 +46,6 @@ use PHPUnit\Event\TestSuite\Skipped as TestSuiteSkipped;
 use PHPUnit\Event\TestSuite\Started as TestSuiteStarted;
 use PHPUnit\Event\TestSuite\TestSuiteForTestClass;
 use PHPUnit\Event\TestSuite\TestSuiteForTestMethodWithDataProvider;
-use PHPUnit\Event\UnknownSubscriberTypeException;
 use PHPUnit\TestRunner\IssueFilter;
 use PHPUnit\TestRunner\TestResult\Issues\Issue;
 
@@ -73,7 +74,7 @@ final class Collector
     private array $testErroredEvents = [];
 
     /**
-     * @var list<Failed>
+     * @var list<AfterLastTestMethodFailed|BeforeFirstTestMethodFailed|Failed>
      */
     private array $testFailedEvents = [];
 
@@ -167,10 +168,6 @@ final class Collector
      */
     private array $phpWarnings = [];
 
-    /**
-     * @throws EventFacadeIsSealedException
-     * @throws UnknownSubscriberTypeException
-     */
     public function __construct(Facade $facade, IssueFilter $issueFilter)
     {
         $facade->registerSubscribers(
@@ -181,7 +178,9 @@ final class Collector
             new TestPreparedSubscriber($this),
             new TestFinishedSubscriber($this),
             new BeforeTestClassMethodErroredSubscriber($this),
+            new BeforeTestClassMethodFailedSubscriber($this),
             new AfterTestClassMethodErroredSubscriber($this),
+            new AfterTestClassMethodFailedSubscriber($this),
             new TestErroredSubscriber($this),
             new TestFailedSubscriber($this),
             new TestMarkedIncompleteSubscriber($this),
@@ -277,6 +276,7 @@ final class Collector
 
         if ($testSuite->isForTestMethodWithDataProvider()) {
             assert($testSuite instanceof TestSuiteForTestMethodWithDataProvider);
+            assert(count($testSuite->tests()->asArray()) > 0);
 
             $test = $testSuite->tests()->asArray()[0];
 
@@ -313,9 +313,21 @@ final class Collector
         $this->numberOfTestsRun++;
     }
 
+    public function beforeTestClassMethodFailed(BeforeFirstTestMethodFailed $event): void
+    {
+        $this->testFailedEvents[] = $event;
+
+        $this->numberOfTestsRun++;
+    }
+
     public function afterTestClassMethodErrored(AfterLastTestMethodErrored $event): void
     {
         $this->testErroredEvents[] = $event;
+    }
+
+    public function afterTestClassMethodFailed(AfterLastTestMethodFailed $event): void
+    {
+        $this->testFailedEvents[] = $event;
     }
 
     public function testErrored(Errored $event): void
