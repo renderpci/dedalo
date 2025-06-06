@@ -8,6 +8,7 @@
 	import {ui} from '../../../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {event_manager} from '../../../../common/js/event_manager.js'
 
 
 
@@ -125,6 +126,21 @@ const get_content_data_edit = async function(self) {
 					mandatory	: true,
 					value		: prefix_tipos
 				}],
+				on_render : (nodes) => {
+					// make persistent the values
+					const input_nodes = nodes.input_nodes || []
+					const dedalo_prefix_tipos = input_nodes.find(el => el.name === 'dedalo_prefix_tipos')
+
+					const render_handler = function( server_selected ){
+						dedalo_prefix_tipos.value = !server_selected
+						 ? prefix_tipos
+						 : server_selected.join(',')
+					}
+					self.events_tokens.push(
+						event_manager.subscribe('ontology_server_select_change', render_handler)
+					)
+
+				},
 				on_submit		: async (e, values) => {
 
 					// ar_dedalo_prefix_tipos
@@ -401,6 +417,9 @@ export const render_servers_list = function (value) {
 				servers_grid.querySelectorAll('.label, .value').forEach( el => el.classList.remove('active') )
 				server_label.classList.add('active')
 				value_node.classList.add('active')
+				const current_server_tld = current_server.tld || null
+				event_manager.publish('ontology_server_select_change', current_server_tld )
+
 			}
 			input_radio.addEventListener('change', change_handler)
 			input_radio.addEventListener('click', (e) => {
