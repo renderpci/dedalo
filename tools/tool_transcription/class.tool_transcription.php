@@ -156,11 +156,12 @@ class tool_transcription extends tool_common {
 	* @param object $options
 	* @return object $response
 	*/
-	public static function automatic_transcription(object $options) : object {
+	public static function automatic_transcription( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// component to use
 			$source_lang			= $options->source_lang;
@@ -204,15 +205,15 @@ class tool_transcription extends tool_common {
 				DEDALO_DATA_NOLAN,
 				$media_ddo->section_tipo
 			);
-			$quality	= $component->get_quality();
 			$audio_file	= $component->quality_file_exist( 'audio' );
 			if($audio_file===false){
-				$component->build_version('audio', $async=false);
+				$component->build_version('audio', false);
 			}
 			$audio_file	= $component->quality_file_exist( 'audio' );
 
 			if($audio_file===false){
-				$response->msg		= 'Error. Audio file is not available.';
+				$response->msg = 'Error. Audio file is not available.';
+				$response->errors[] = 'audio file not found';
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
@@ -225,7 +226,7 @@ class tool_transcription extends tool_common {
 					// Not implemented yet
 					$response->msg = "Sorry. '{$transcriber_name}' is not implemented yet"; // error msg
 					return $response;
-					break;
+
 				case 'local':
 					$transcriber_engine = 'babel_transcriber';
 				case 'babel_transcriber':
@@ -233,7 +234,7 @@ class tool_transcription extends tool_common {
 					include_once(dirname(__FILE__) . '/transcribers/babel/class.babel_transcriber.php');
 
 					// babel use tld2 instead tld3
-					$lang_tld2	 = lang::get_alpha2_from_code($source_lang);
+					$lang_tld2 = lang::get_alpha2_from_code($source_lang);
 
 					$babel_transcriber = new babel_transcriber((object)[
 						'key'				=> $key,
@@ -261,8 +262,6 @@ class tool_transcription extends tool_common {
 					$response->result = $result;
 
 					return $response;
-
-					break;
 			}
 
 		//  debug
@@ -272,7 +271,8 @@ class tool_transcription extends tool_common {
 				$response->debug->raw_result		= $transcriber->raw_result;
 			}
 
-		return (object)$response;
+
+		return $response;
 	}//end automatic_transcription
 
 
@@ -295,11 +295,12 @@ class tool_transcription extends tool_common {
 	* }
 	* @return object $response
 	*/
-	public static function create_transcribable_audio_file( $options ) {
+	public static function create_transcribable_audio_file( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// component to use
 			$media_ddo = $options->media_ddo;
@@ -316,15 +317,15 @@ class tool_transcription extends tool_common {
 			);
 			$component->extension = 'wav';
 
-			$quality	= $component->get_quality();
 			$audio_file	= $component->quality_file_exist( 'audio_tr' );
 			if($audio_file===false){
-				$component->build_version('audio_tr', $async=false);
+				$component->build_version('audio_tr', false);
 			}
 			$audio_file	= $component->quality_file_exist( 'audio_tr' );
 
 			if($audio_file===false){
 				$response->msg		= 'Error. Audio file is not available.';
+				$response->errors[] = 'audio file not found';
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
@@ -332,7 +333,7 @@ class tool_transcription extends tool_common {
 			$av_url = DEDALO_PROTOCOL . DEDALO_HOST . $component->get_url('audio_tr');
 
 			$response->result	= $av_url;
-			$response->msg		= 'Ok: file was created';
+			$response->msg		= 'OK: file was created';
 
 
 		//  debug
@@ -341,7 +342,8 @@ class tool_transcription extends tool_common {
 				$response->debug->av_url	= $av_url;
 			}
 
-		return (object)$response;
+
+		return $response;
 	}//end create_transcribable_audio_file
 
 
@@ -362,14 +364,15 @@ class tool_transcription extends tool_common {
 	* }
 	* @return object $response
 	*/
-	public static function delete_transcribable_audio_file( $options ) {
+	public static function delete_transcribable_audio_file( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// component to use
-			$media_ddo				= $options->media_ddo;
+			$media_ddo = $options->media_ddo;
 
 		// Source text . Get source text from component (source_lang)
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($media_ddo->component_tipo, true);
@@ -387,7 +390,7 @@ class tool_transcription extends tool_common {
 			$audio_file	= $component->quality_file_exist( 'audio_tr' );
 			if($audio_file===false){
 				$response->result = true;
-				$response->msg	= 'Ok. File not exist in server, nothing to delete';
+				$response->msg	= 'OK. File not exist in server, nothing to delete';
 				return $response;
 			}
 
@@ -396,6 +399,7 @@ class tool_transcription extends tool_common {
 
 			if($deleted===false){
 				$response->msg		= 'Error. It was impossible to delete the audio file. View server log.';
+				$response->errors[] = 'unable to delete file';
 				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
 				return $response;
 			}
@@ -410,7 +414,8 @@ class tool_transcription extends tool_common {
 				$response->debug->deleted	= $file_path;
 			}
 
-		return (object)$response;
+
+		return $response;
 	}//end delete_transcribable_audio_file
 
 
@@ -423,11 +428,12 @@ class tool_transcription extends tool_common {
 	* @param object $options
 	* @return object $response
 	*/
-	public static function check_server_transcriber_status(object $options) : object {
+	public static function check_server_transcriber_status( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// component to use
 			$media_ddo				= $options->media_ddo;
@@ -472,8 +478,9 @@ class tool_transcription extends tool_common {
 				case 'google_translation':
 					// Not implemented yet
 					$response->msg = "Sorry. '{$transcriber_name}' is not implemented yet"; // error msg
+					$response->errors[] = 'transcriber not implemented';
 					return $response;
-					break;
+
 				case 'local':
 					$transcriber_engine = 'babel_transcriber';
 				case 'babel_transcriber':
@@ -507,7 +514,7 @@ class tool_transcription extends tool_common {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end check_server_transcriber_status
 
 
@@ -518,11 +525,12 @@ class tool_transcription extends tool_common {
 	* @param object $options
 	* @return object $response
 	*/
-	public static function build_subtitles_file(object $options) : object {
+	public static function build_subtitles_file( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// options
 			$component_tipo	= $options->component_tipo;
@@ -548,6 +556,7 @@ class tool_transcription extends tool_common {
 			$source_text	= trim($text);
 			if (empty($source_text)) {
 				$response->msg = 'Warning. Empty component value!';
+				$response->errors[] = 'empty value';
 				return $response;
 			}
 
@@ -587,6 +596,7 @@ class tool_transcription extends tool_common {
 			]);
 			if ($subtitles_response->result===false) {
 				$response->msg .= PHP_EOL . $subtitles_response->msg ?? 'Unknown error on build_subtitles_text';
+				$response->errors[] = 'unable to build subtitles';
 				return $response;
 			}
 
@@ -600,6 +610,7 @@ class tool_transcription extends tool_common {
 					. ' subtitles dir: ' . to_string($target_folder)
 					, logger::ERROR
 				);
+				$response->errors[] = 'subtitles dir not found '.$target_folder;
 				return $response;
 			}
 
@@ -612,6 +623,7 @@ class tool_transcription extends tool_common {
 					. ' subtitles_path: ' . to_string($subtitles_path)
 					, logger::ERROR
 				);
+				$response->errors[] = 'unable to write subtitles file';
 				return $response;
 			}
 

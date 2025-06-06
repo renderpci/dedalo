@@ -61,11 +61,13 @@ use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\Report\Clover;
 use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\Report\Cobertura;
 use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\Report\Crap4j;
 use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\Report\Html as CodeCoverageHtml;
+use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\Report\OpenClover;
 use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\Report\Php as CodeCoveragePhp;
 use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\Report\Text as CodeCoverageText;
 use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\Report\Xml as CodeCoverageXml;
 use PHPUnit\TextUI\XmlConfiguration\Logging\Junit;
 use PHPUnit\TextUI\XmlConfiguration\Logging\Logging;
+use PHPUnit\TextUI\XmlConfiguration\Logging\Otr;
 use PHPUnit\TextUI\XmlConfiguration\Logging\TeamCity;
 use PHPUnit\TextUI\XmlConfiguration\Logging\TestDox\Html as TestDoxHtml;
 use PHPUnit\TextUI\XmlConfiguration\Logging\TestDox\Text as TestDoxText;
@@ -143,6 +145,20 @@ final readonly class Loader
             );
         }
 
+        $otr     = null;
+        $element = $this->element($xpath, 'logging/otr');
+
+        if ($element !== null) {
+            $otr = new Otr(
+                new File(
+                    $this->toAbsolutePath(
+                        $filename,
+                        (string) $this->parseStringAttribute($element, 'outputFile'),
+                    ),
+                ),
+            );
+        }
+
         $teamCity = null;
         $element  = $this->element($xpath, 'logging/teamcity');
 
@@ -187,6 +203,7 @@ final readonly class Loader
 
         return new Logging(
             $junit,
+            $otr,
             $teamCity,
             $testDoxHtml,
             $testDoxText,
@@ -451,6 +468,20 @@ final readonly class Loader
             );
         }
 
+        $openClover = null;
+        $element    = $this->element($xpath, 'coverage/report/openclover');
+
+        if ($element !== null) {
+            $openClover = new OpenClover(
+                new File(
+                    $this->toAbsolutePath(
+                        $filename,
+                        (string) $this->parseStringAttribute($element, 'outputFile'),
+                    ),
+                ),
+            );
+        }
+
         $php     = null;
         $element = $this->element($xpath, 'coverage/report/php');
 
@@ -504,6 +535,7 @@ final readonly class Loader
             $cobertura,
             $crap4j,
             $html,
+            $openClover,
             $php,
             $text,
             $xml,

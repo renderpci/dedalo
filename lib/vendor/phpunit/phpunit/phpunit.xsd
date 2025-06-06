@@ -2,7 +2,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:annotation>
         <xs:documentation source="https://phpunit.de/documentation.html">
-            This Schema file defines the rules by which the XML configuration file of PHPUnit 12.1 may be structured.
+            This Schema file defines the rules by which the XML configuration file of PHPUnit 12.2 may be structured.
         </xs:documentation>
         <xs:appinfo source="https://phpunit.de/documentation.html"/>
     </xs:annotation>
@@ -289,6 +289,7 @@
             <xs:element name="cobertura" type="logToFileType" minOccurs="0"/>
             <xs:element name="crap4j" type="coverageReportCrap4JType" minOccurs="0" />
             <xs:element name="html" type="coverageReportHtmlType" minOccurs="0" />
+            <xs:element name="openclover" type="logToFileType" minOccurs="0"/>
             <xs:element name="php" type="logToFileType" minOccurs="0" />
             <xs:element name="text" type="coverageReportTextType" minOccurs="0" />
             <xs:element name="xml" type="logToDirectoryType" minOccurs="0" />
@@ -297,6 +298,7 @@
     <xs:group name="loggingGroup">
         <xs:all>
             <xs:element name="junit" type="logToFileType" minOccurs="0" />
+            <xs:element name="otr" type="logToFileType" minOccurs="0" />
             <xs:element name="teamcity" type="logToFileType" minOccurs="0" />
             <xs:element name="testdoxHtml" type="logToFileType" minOccurs="0" />
             <xs:element name="testdoxText" type="logToFileType" minOccurs="0" />

@@ -143,6 +143,11 @@
 			}
 		}
 
+		.error {
+			background-color: transparent !important;
+			color: @color_danger;
+		}
+
 		.left_container {
 			>.wrapper_component {
 				height: 100%;
@@ -413,8 +418,10 @@
 						font-size: 1.3rem;
 						font-weight: 200;
 						border-radius: 8px;
-						height: 2.6rem;
 						padding: 0.5rem;
+						height: 1.5em;
+						overflow: hidden;
+						margin-bottom: 0.5rem;
 
 						&.loading_status {
 							color: @color_grey_darken;
