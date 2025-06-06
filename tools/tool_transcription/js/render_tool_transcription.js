@@ -863,7 +863,8 @@ const render_automatic_transcription = function (options) {
 					.then((response)=>{
 
 						button_automatic_transcription.classList.remove('disable')
-						status_container.innerHTML = self.get_tool_label('transcription_completed') || 'Transcription completed.';
+						const msg = self.get_tool_label('transcription_completed') || 'Transcription completed.';
+						status_container.innerHTML = `<span class="success_text">${msg}</span>`;
 
 						// set value and implicit save action in component_text_area
 						self.transcription_component.set_value({
