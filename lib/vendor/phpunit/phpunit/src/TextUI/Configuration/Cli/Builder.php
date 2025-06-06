@@ -50,6 +50,7 @@ final class Builder
         'coverage-cobertura=',
         'coverage-crap4j=',
         'coverage-html=',
+        'coverage-openclover=',
         'coverage-php=',
         'coverage-text==',
         'only-summary-for-coverage-text',
@@ -90,6 +91,7 @@ final class Builder
         'list-tests',
         'list-tests-xml=',
         'log-junit=',
+        'log-otr=',
         'log-teamcity=',
         'migrate-configuration',
         'no-configuration',
@@ -142,6 +144,7 @@ final class Builder
         'log-events-verbose-text=',
         'version',
         'debug',
+        'with-telemetry',
         'extension=',
     ];
 
@@ -190,6 +193,7 @@ final class Builder
         $coverageCobertura                 = null;
         $coverageCrap4J                    = null;
         $coverageHtml                      = null;
+        $coverageOpenClover                = null;
         $coveragePhp                       = null;
         $coverageText                      = null;
         $coverageTextShowUncoveredFiles    = null;
@@ -247,6 +251,7 @@ final class Builder
         $includePath                       = null;
         $iniSettings                       = [];
         $junitLogfile                      = null;
+        $otrLogfile                        = null;
         $listGroups                        = false;
         $listSuites                        = false;
         $listTestFiles                     = false;
@@ -279,6 +284,7 @@ final class Builder
         $printerTestDox                    = null;
         $printerTestDoxSummary             = null;
         $debug                             = false;
+        $withTelemetry                     = false;
         $extensions                        = [];
 
         foreach ($options[0] as $option) {
@@ -356,6 +362,11 @@ final class Builder
 
                 case '--coverage-php':
                     $coveragePhp = $option[1];
+
+                    break;
+
+                case '--coverage-openclover':
+                    $coverageOpenClover = $option[1];
 
                     break;
 
@@ -564,6 +575,11 @@ final class Builder
 
                 case '--log-junit':
                     $junitLogfile = $option[1];
+
+                    break;
+
+                case '--log-otr':
+                    $otrLogfile = $option[1];
 
                     break;
 
@@ -977,6 +993,11 @@ final class Builder
 
                     break;
 
+                case '--with-telemetry':
+                    $withTelemetry = true;
+
+                    break;
+
                 case '--extension':
                     $extensions[] = $option[1];
 
@@ -1015,6 +1036,7 @@ final class Builder
             $coverageCobertura,
             $coverageCrap4J,
             $coverageHtml,
+            $coverageOpenClover,
             $coveragePhp,
             $coverageText,
             $coverageTextShowUncoveredFiles,
@@ -1064,6 +1086,7 @@ final class Builder
             $includePath,
             $iniSettings,
             $junitLogfile,
+            $otrLogfile,
             $listGroups,
             $listSuites,
             $listTestFiles,
@@ -1106,6 +1129,7 @@ final class Builder
             $printerTestDox,
             $printerTestDoxSummary,
             $debug,
+            $withTelemetry,
             $extensions,
         );
     }
