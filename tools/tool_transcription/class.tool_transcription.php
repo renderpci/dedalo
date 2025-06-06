@@ -98,7 +98,6 @@ class tool_transcription extends tool_common {
 		}
 		$pdf_text = file_get_contents($text_filename);	# Read current text file
 
-
 		#
 		# TEST STRING VALUE IS VALID
 		# Test is valid utf8
@@ -138,7 +137,7 @@ class tool_transcription extends tool_common {
 		    $i++;
 		}
 
-		$response->result	= (string)$pdf_text;
+		$response->result	= $pdf_text;
 		$response->msg		= "OK Processing Request pdf_automatic_transcription: text processed";
 		$response->original	= trim($original_text);
 
@@ -163,25 +162,21 @@ class tool_transcription extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->errors	= [];
 
-		// component to use
+		// options
 			$source_lang			= $options->source_lang;
 			$transcription_ddo		= $options->transcription_ddo;
 			$media_ddo				= $options->media_ddo;
 			$transcriber_engine		= $options->transcriber_engine;
 			$transcriber_quality	= $options->transcriber_quality;
 			$config					= $options->config;
-			$user_id				= logged_user_id();
-			$entity_name			= DEDALO_ENTITY;
 
-		// config
-			// get all tools config sections
-				$tool_name	= get_called_class();
-				$config = tool_common::get_config($tool_name);
-			// select current from all tool config matching tool name
-				// $tool_name	= get_called_class(); // tool_lang
-				// $config		= array_find($ar_config, function($el) use($tool_name) {
-				// 	return $el->name===$tool_name;
-				// });
+		// component to use
+			$user_id		= logged_user_id();
+			$entity_name	= DEDALO_ENTITY;
+
+		// tool config
+			$tool_name	= get_called_class();
+			$config		= tool_common::get_config($tool_name);
 
 		// config JSON . Must be compatible with tool properties transcriber_engine data
 			$ar_transcriber_configs	= $config->config->transcriber_config->value ?? [];
@@ -210,11 +205,14 @@ class tool_transcription extends tool_common {
 				$component->build_version('audio', false);
 			}
 			$audio_file	= $component->quality_file_exist( 'audio' );
-
+			// Audio file is not available case
 			if($audio_file===false){
 				$response->msg = 'Error. Audio file is not available.';
 				$response->errors[] = 'audio file not found';
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg "
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -225,10 +223,12 @@ class tool_transcription extends tool_common {
 				case 'google_translation':
 					// Not implemented yet
 					$response->msg = "Sorry. '{$transcriber_name}' is not implemented yet"; // error msg
-					return $response;
+					break;
 
 				case 'local':
 					$transcriber_engine = 'babel_transcriber';
+					// continue here only changing the transcriber_engine name
+
 				case 'babel_transcriber':
 				default:
 					include_once(dirname(__FILE__) . '/transcribers/babel/class.babel_transcriber.php');
@@ -259,16 +259,9 @@ class tool_transcription extends tool_common {
 					// check background process to check if the transcriber had done.
 					$babel_transcriber->exec_background_check_transcription($pid);
 
+					// result set from transcriber response
 					$response->result = $result;
-
-					return $response;
-			}
-
-		//  debug
-			if(SHOW_DEBUG===true) {
-				$response->debug = new stdClass();
-				$response->debug->transcribed_data	= $transcribed_data;
-				$response->debug->raw_result		= $transcriber->raw_result;
+					break;
 			}
 
 
@@ -407,8 +400,7 @@ class tool_transcription extends tool_common {
 			$response->result	= true;
 			$response->msg		= 'Ok: file was deleted';
 
-
-		//  debug
+		// debug
 			if(SHOW_DEBUG===true) {
 				$response->debug			= new stdClass();
 				$response->debug->deleted	= $file_path;
@@ -479,10 +471,12 @@ class tool_transcription extends tool_common {
 					// Not implemented yet
 					$response->msg = "Sorry. '{$transcriber_name}' is not implemented yet"; // error msg
 					$response->errors[] = 'transcriber not implemented';
-					return $response;
+					break;
 
 				case 'local':
 					$transcriber_engine = 'babel_transcriber';
+					// continue without break here
+
 				case 'babel_transcriber':
 				default:
 					include_once(dirname(__FILE__) . '/transcribers/babel/class.babel_transcriber.php');
@@ -500,17 +494,7 @@ class tool_transcription extends tool_common {
 					]);
 
 					$response->result = $result;
-
-					return $response;
-
 					break;
-			}
-
-		//  debug
-			if(SHOW_DEBUG===true) {
-				$response->debug = new stdClass();
-				$response->debug->transcribed_data	= $transcribed_data;
-				$response->debug->raw_result		= $transcriber->raw_result;
 			}
 
 
