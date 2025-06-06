@@ -371,6 +371,15 @@ class ontology_data_io {
 		// this delete existing data of current section_tipo and copy all file pg data
 			$import_response = backup::import_from_copy_file( $options );
 
+
+		// set the counter of import ontology to last section_id.
+			$matrix_table	= common::get_matrix_table_from_tipo( $section_tipo );
+			counter::consolidate_counter(
+				$section_tipo,
+				$matrix_table,
+				'matrix_counter'
+			);
+
 		// debug
 			$import_response->debug = (object)[
 				'file_path' => $file_path

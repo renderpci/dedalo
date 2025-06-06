@@ -3096,7 +3096,7 @@ define('IS_AN_ONTOLOGY_SERVER',         false);
 
 ---
 
-### Is an ontology master server
+### defining the  ontology master server code
 
 ./dedalo/config/config.php
 
@@ -3108,8 +3108,9 @@ It  defines the valid code for clients to validate to get ontology files.
 define('ONTOLOGY_SERVER_CODE',          'x3a0B4Y020Eg9w');
 ```
 
----
+This parameter needs to be included as `code` in [ONTOLOGY_SERVERS](#ontology-servers) defintion in every authorized client.
 
+---
 
 ### Ontology servers
 
@@ -3118,9 +3119,12 @@ define('ONTOLOGY_SERVER_CODE',          'x3a0B4Y020Eg9w');
 ONTOLOGY_SERVERS `array of objects`
 
 This parameter defines the ontology master servers to get the ontology updates. The servers could be:
+
 - the official dedalo.dev server
 - an external server for local Ontologies (private Ontologies of entities.)
 - local server, the current installation
+
+Configuration for the official dedalo.dev server:
 
 ```php
 define('ONTOLOGY_SERVERS',  [
@@ -3132,9 +3136,29 @@ define('ONTOLOGY_SERVERS',  [
 ]);
 ```
 
+It will get the tld from [DEDALO_PREFIX_TIPOS](#defining-prefix-tipos) definition.
+
+**optional** : Configuration for external server to provide local ontologies
+
+```php
+define('ONTOLOGY_SERVERS',  [
+    [
+        'name'  => 'Optional external Dédalo Ontology server',
+        'url'   => 'https://my_ontology_server_domain.org/dedalo/install/import/ontology/',
+        'code'  => 'my_super_code'
+        'tld'   => ['mytld','anothertld','localtld']
+    ]
+]);
+```
+
 Introduced in version 6.4.
 Local ontologies can be provided by other installations in parallel adding new servers to this constant.
 Every Dédalo server can provide his own ontologies.
+
+Introduced in version 6.6.2
+`tld` property for define specific TLD in array of strings format.
+When unofficial servers is defined to provide local ontology definitions,
+`tld` property defines witch tld's will be provided by the master external server.
 
 ---
 
