@@ -11,6 +11,7 @@
 	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
 	import {open_tool} from '../../tool_common/js/tool_common.js'
+	import {get_current_lang_info} from './tool_transcription.js'
 
 
 
@@ -360,8 +361,7 @@ const get_content_data_edit = function(self) {
 
 					if (transcriber_engine) {
 						const automatic_transcription_node = render_automatic_transcription({
-							self				: self,
-							source_select_lang	: self.transcription_component.lang
+							self : self
 						})
 						automatic_transcription_block.appendChild(automatic_transcription_node)
 					}//end if (transcriber_engine)
@@ -746,8 +746,7 @@ const get_server_status = function (options) {
 const render_automatic_transcription = function (options) {
 
 	// options
-		const self					= options.self
-		const source_select_lang	= options.source_select_lang
+		const self = options.self
 
 	const transcriber_engine = (self.context.config)
 		? self.context.config.transcriber_engine.value
@@ -816,6 +815,11 @@ const render_automatic_transcription = function (options) {
 				return
 			}
 			button_automatic_transcription.classList.add('disable')
+			// lang updated value form select lang selector at top
+			const lang = self.transcription_component.lang
+
+			// update the lang_info value
+			lang_info.innerHTML = get_current_lang_info(lang)
 
 			// options to be sent to engine
 			const automatic_transcription_options = {
@@ -823,7 +827,7 @@ const render_automatic_transcription = function (options) {
 				transcriber_quality	: nodes.transcriber_engine_quality && nodes.transcriber_engine_quality.value
 					? nodes.transcriber_engine_quality.value
 					: false,
-				source_lang			: source_select_lang,
+				source_lang			: lang,
 				nodes 				: nodes
 			}
 
@@ -1067,6 +1071,20 @@ const render_automatic_transcription = function (options) {
 						}
 					})
 			}//end if(transcriber_quality)
+
+		// lang info. Display target lang info as 'Greek | lg-ell | el'
+			const lang_info = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'lang_info',
+				parent			: configuration_container
+			})
+			// first value
+			lang_info.innerHTML = get_current_lang_info(self.transcription_component.lang)
+			// event component_text_area render on refresh (fired on change lang selector value)
+			const update_lang_info = () => {
+				lang_info.innerHTML = get_current_lang_info(self.transcription_component.lang)
+			}
+			event_manager.subscribe(`render_${self.transcription_component.id}`, update_lang_info);
 
 	// status
 		const status_container = ui.create_dom_element({

@@ -397,6 +397,10 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 						? lang_obj.tld2
 						: 'en'
 
+					if(SHOW_DEBUG===true) {
+						console.log('Automatic_transcription source lang:', lang);
+					}
+
 				// Manage the worker answers
 				// it could be the status of the process or the final transcription data
 				transcribe_worker.onmessage = function(e) {
@@ -662,6 +666,25 @@ tool_transcription.prototype.check_server_transcriber_status = async function(op
 			})
 		})
 }//end check_server_transcriber_status
+
+
+
+/**
+* GET_CURRENT_LANG_INFO
+* Resolve the current tool selected lang in this format:
+* 	Label | tld3 | tld2
+* 	Greek | lg-ell | el
+* @return string current_lang_info
+*/
+export const get_current_lang_info = function( lang ) {
+
+	const found = (page_globals.dedalo_projects_default_langs || []).find(el => el.value === lang)
+	const current_lang_info = found
+		? `${found.label} | ${found.value} | ${found.tld2}`
+		: 'Unknown lang';
+
+	return current_lang_info
+}//end get_current_lang_info
 
 
 
