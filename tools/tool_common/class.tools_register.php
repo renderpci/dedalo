@@ -564,7 +564,7 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato    = $component->get_dato_full();
+			$dato	= $component->get_dato_full();
 			$value	= [];
 			if (!empty($dato)) {
 				foreach ($dato as $current_lang => $current_value) {

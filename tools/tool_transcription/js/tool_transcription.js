@@ -412,7 +412,6 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 							const procesing_label = device==='webgpu' ? 'setting_up' : 'procesing';
 
-
 							// set the label for all status as initializing and the ready to Setting_up
 							// both labels are translated into the tool config.
 							const label = status==='ready'
@@ -473,7 +472,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				const audio_data	= await audio_ctx.decodeAudioData(audio_buffer);
 				const audio_chanel	= audio_data.getChannelData(0)
 
-				const options =  {
+				const options = {
 					audio_file	: audio_chanel,
 					language	: lang,
 					model		: transcriber_quality, //'onnx-community/whisper-large-v3-ONNX',// Xenova/whisper-small',
@@ -492,7 +491,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 
 /**
-* parse_DEDALO_FORMAT
+* PARSE_DEDALO_FORMAT
 * Process the segments into the HTML format supported by Dédalo with the time code tag format
 * every segment is enclosed by a paragraph a <p> element
 * @param array transcripts
@@ -502,7 +501,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 * 	[TC_00:00:05.600_TC] My transcription
 * <\p>
 */
-const parse_dedalo_format = function ( transcripts ){
+const parse_dedalo_format = function( transcripts ){
 
 	const transcripts_length = transcripts.length;
 
@@ -531,7 +530,6 @@ const parse_dedalo_format = function ( transcripts ){
 
 	return data;
 }// end parse_dedalo_format
-
 
 
 
@@ -639,13 +637,13 @@ tool_transcription.prototype.check_server_transcriber_status = async function(op
 			source	: source,
 			options	: {
 				media_ddo : {
-					component_tipo		: self.media_component.tipo,
-					section_id			: self.media_component.section_id,
-					section_tipo		: self.media_component.section_tipo
+					component_tipo	: self.media_component.tipo,
+					section_id		: self.media_component.section_id,
+					section_tipo	: self.media_component.section_tipo
 				},
 				transcriber_engine	: transcriber_engine,
 				config				: self.context.config,
-				pid 				: pid
+				pid					: pid
 			}
 		}
 
