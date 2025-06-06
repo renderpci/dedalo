@@ -40,7 +40,7 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -815,6 +815,8 @@ const render_automatic_transcription = function (options) {
 				return
 			}
 			button_automatic_transcription.classList.add('disable')
+			button_automatic_transcription.blur()
+
 			// lang updated value form select lang selector at top
 			const lang = self.transcription_component.lang
 
@@ -857,7 +859,6 @@ const render_automatic_transcription = function (options) {
 							check_current_server_status()
 						}
 					})
-
 					break;
 
 				case 'browser':
@@ -1013,7 +1014,6 @@ const render_automatic_transcription = function (options) {
 							}
 						}
 					})
-
 
 		// select quality of transcriber
 			if(transcriber_quality){
