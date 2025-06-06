@@ -180,6 +180,10 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      */
     private array $mockObjects = [];
     private TestStatus $status;
+
+    /**
+     * @var 0|positive-int
+     */
     private int $numberOfAssertionsPerformed = 0;
     private mixed $testResult                = null;
     private string $output                   = '';
@@ -524,6 +528,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
 
                 $emitter->testPreparationFailed(
                     $this->valueObjectForEvents(),
+                    Event\Code\ThrowableBuilder::from($e),
                 );
             }
 
@@ -550,9 +555,17 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
                 $this->status = TestStatus::error($e->getMessage());
 
                 if (!$this->wasPrepared) {
-                    $emitter->testPreparationFailed(
-                        $this->valueObjectForEvents(),
-                    );
+                    if ($e instanceof AssertionFailedError) {
+                        $emitter->testPreparationFailed(
+                            $this->valueObjectForEvents(),
+                            Event\Code\ThrowableBuilder::from($e),
+                        );
+                    } else {
+                        $emitter->testPreparationErrored(
+                            $this->valueObjectForEvents(),
+                            Event\Code\ThrowableBuilder::from($e),
+                        );
+                    }
                 }
 
                 $emitter->testErrored(
@@ -634,7 +647,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
 
         clearstatcache();
 
-        if ($currentWorkingDirectory !== getcwd()) {
+        if ($currentWorkingDirectory !== false && $currentWorkingDirectory !== getcwd()) {
             chdir($currentWorkingDirectory);
         }
 
@@ -801,6 +814,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
 
     /**
      * @internal This method is not covered by the backward compatibility promise for PHPUnit
+     *
+     * @return 0|positive-int
      */
     final public function numberOfAssertionsPerformed(): int
     {
@@ -1227,6 +1242,17 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
         return $partialMock;
     }
 
+    /**
+     * @param non-empty-string $additionalInformation
+     */
+    final protected function provideAdditionalInformation(string $additionalInformation): void
+    {
+        Event\Facade::emitter()->testProvidedAdditionalInformation(
+            $this->valueObjectForEvents(),
+            $additionalInformation,
+        );
+    }
+
     protected function transformException(Throwable $t): Throwable
     {
         return $t;
@@ -1264,15 +1290,19 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             if ($this->expectErrorLog) {
                 $this->assertNotEmpty($errorLogOutput, 'Test did not call error_log().');
             } else {
-                // strip date from logged error, see https://github.com/php/php-src/blob/c696087e323263e941774ebbf902ac249774ec9f/main/main.c#L905
-                print preg_replace('/\[.+\] /', '', $errorLogOutput);
+                if ($errorLogOutput !== false) {
+                    // strip date from logged error, see https://github.com/php/php-src/blob/c696087e323263e941774ebbf902ac249774ec9f/main/main.c#L905
+                    print preg_replace('/\[.+\] /', '', $errorLogOutput);
+                }
             }
         } catch (Throwable $exception) {
             if (!$this->expectErrorLog) {
                 $errorLogOutput = stream_get_contents($capture);
 
-                // strip date from logged error, see https://github.com/php/php-src/blob/c696087e323263e941774ebbf902ac249774ec9f/main/main.c#L905
-                print preg_replace('/\[.+\] /', '', $errorLogOutput);
+                if ($errorLogOutput !== false) {
+                    // strip date from logged error, see https://github.com/php/php-src/blob/c696087e323263e941774ebbf902ac249774ec9f/main/main.c#L905
+                    print preg_replace('/\[.+\] /', '', $errorLogOutput);
+                }
             }
 
             if (!$this->shouldExceptionExpectationsBeVerified($exception)) {
@@ -1968,6 +1998,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             $emitter,
             'beforeFirstTestMethodCalled',
             'beforeFirstTestMethodErrored',
+            'beforeFirstTestMethodFailed',
             'beforeFirstTestMethodFinished',
             false,
         );
@@ -1985,6 +2016,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             $emitter,
             'beforeTestMethodCalled',
             'beforeTestMethodErrored',
+            'beforeTestMethodFailed',
             'beforeTestMethodFinished',
         );
     }
@@ -2001,6 +2033,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             $emitter,
             'preConditionCalled',
             'preConditionErrored',
+            'preConditionFailed',
             'preConditionFinished',
         );
     }
@@ -2017,6 +2050,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             $emitter,
             'postConditionCalled',
             'postConditionErrored',
+            'postConditionFailed',
             'postConditionFinished',
         );
     }
@@ -2033,6 +2067,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             $emitter,
             'afterTestMethodCalled',
             'afterTestMethodErrored',
+            'afterTestMethodFailed',
             'afterTestMethodFinished',
         );
     }
@@ -2051,6 +2086,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             $emitter,
             'afterLastTestMethodCalled',
             'afterLastTestMethodErrored',
+            'afterLastTestMethodFailed',
             'afterLastTestMethodFinished',
             false,
         );
@@ -2059,11 +2095,12 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     /**
      * @param 'afterLastTestMethodCalled'|'afterTestMethodCalled'|'beforeFirstTestMethodCalled'|'beforeTestMethodCalled'|'postConditionCalled'|'preConditionCalled'             $calledMethod
      * @param 'afterLastTestMethodErrored'|'afterTestMethodErrored'|'beforeFirstTestMethodErrored'|'beforeTestMethodErrored'|'postConditionErrored'|'preConditionErrored'       $erroredMethod
+     * @param 'afterLastTestMethodFailed'|'afterTestMethodFailed'|'beforeFirstTestMethodFailed'|'beforeTestMethodFailed'|'postConditionFailed'|'preConditionFailed'             $failedMethod
      * @param 'afterLastTestMethodFinished'|'afterTestMethodFinished'|'beforeFirstTestMethodFinished'|'beforeTestMethodFinished'|'postConditionFinished'|'preConditionFinished' $finishedMethod
      *
      * @throws Throwable
      */
-    private function invokeHookMethods(HookMethodCollection $hookMethods, Event\Emitter $emitter, string $calledMethod, string $erroredMethod, string $finishedMethod, bool $forTestCase = true): void
+    private function invokeHookMethods(HookMethodCollection $hookMethods, Event\Emitter $emitter, string $calledMethod, string $erroredMethod, string $failedMethod, string $finishedMethod, bool $forTestCase = true): void
     {
         if ($forTestCase) {
             $test = $this->valueObjectForEvents();
@@ -2098,8 +2135,14 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             $methodsInvoked[] = $methodInvoked;
 
             if (isset($t) && !$t instanceof SkippedTest) {
+                if ($t instanceof AssertionFailedError) {
+                    $method = $failedMethod;
+                } else {
+                    $method = $erroredMethod;
+                }
+
                 /** @phpstan-ignore method.dynamicName */
-                $emitter->{$erroredMethod}(
+                $emitter->{$method}(
                     $test,
                     $methodInvoked,
                     Event\Code\ThrowableBuilder::from($t),

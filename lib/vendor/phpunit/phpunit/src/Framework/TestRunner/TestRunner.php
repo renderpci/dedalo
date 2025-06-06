@@ -10,6 +10,9 @@
 namespace PHPUnit\Framework;
 
 use const PHP_EOL;
+use function array_diff_assoc;
+use function array_intersect;
+use function array_unique;
 use function assert;
 use function extension_loaded;
 use function sprintf;
@@ -25,6 +28,7 @@ use PHPUnit\TextUI\Configuration\Configuration;
 use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
 use SebastianBergmann\CodeCoverage\Exception as CodeCoverageException;
 use SebastianBergmann\CodeCoverage\InvalidArgumentException;
+use SebastianBergmann\CodeCoverage\Test\Target\TargetCollection;
 use SebastianBergmann\CodeCoverage\UnintentionallyCoveredCodeException;
 use SebastianBergmann\Invoker\Invoker;
 use SebastianBergmann\Invoker\TimeoutException;
@@ -56,10 +60,22 @@ final class TestRunner
 
         $codeCoverageMetadataApi = new CodeCoverageMetadataApi;
 
+        $coversTargets = $codeCoverageMetadataApi->coversTargets(
+            $test::class,
+            $test->name(),
+        );
+
+        $usesTargets = $codeCoverageMetadataApi->usesTargets(
+            $test::class,
+            $test->name(),
+        );
+
         $shouldCodeCoverageBeCollected = $codeCoverageMetadataApi->shouldCodeCoverageBeCollectedFor(
             $test::class,
             $test->name(),
         );
+
+        $this->performSanityChecks($test, $coversTargets, $usesTargets, $shouldCodeCoverageBeCollected);
 
         $error      = false;
         $failure    = false;
@@ -135,30 +151,17 @@ final class TestRunner
 
         if ($collectCodeCoverage) {
             $append = !$risky && !$incomplete && !$skipped;
-            $covers = null;
-            $uses   = null;
 
             if (!$append) {
-                $covers = false;
-            }
-
-            if ($append) {
-                $covers = $codeCoverageMetadataApi->coversTargets(
-                    $test::class,
-                    $test->name(),
-                );
-
-                $uses = $codeCoverageMetadataApi->usesTargets(
-                    $test::class,
-                    $test->name(),
-                );
+                $coversTargets = false;
+                $usesTargets   = null;
             }
 
             try {
                 CodeCoverage::instance()->stop(
                     $append,
-                    $covers,
-                    $uses,
+                    $coversTargets,
+                    $usesTargets,
                 );
             } catch (UnintentionallyCoveredCodeException $cce) {
                 Facade::emitter()->testConsideredRisky(
@@ -334,5 +337,62 @@ final class TestRunner
         }
 
         return true;
+    }
+
+    private function performSanityChecks(TestCase $test, TargetCollection $coversTargets, TargetCollection $usesTargets, bool $shouldCodeCoverageBeCollected): void
+    {
+        if (!$shouldCodeCoverageBeCollected) {
+            if ($coversTargets->isNotEmpty() || $usesTargets->isNotEmpty()) {
+                Facade::emitter()->testTriggeredPhpunitWarning(
+                    $test->valueObjectForEvents(),
+                    '#[Covers*] and #[Uses*] attributes do not have an effect when the #[CoversNothing] attribute is used',
+                );
+            }
+        }
+
+        $coversAsString = [];
+        $usesAsString   = [];
+
+        foreach ($coversTargets as $coversTarget) {
+            $coversAsString[] = $coversTarget->description();
+        }
+
+        foreach ($usesTargets as $usesTarget) {
+            $usesAsString[] = $usesTarget->description();
+        }
+
+        $coversDuplicates = array_unique(array_diff_assoc($coversAsString, array_unique($coversAsString)));
+        $usesDuplicates   = array_unique(array_diff_assoc($usesAsString, array_unique($usesAsString)));
+        $coversAndUses    = array_intersect($coversAsString, $usesAsString);
+
+        foreach ($coversDuplicates as $target) {
+            Facade::emitter()->testTriggeredPhpunitWarning(
+                $test->valueObjectForEvents(),
+                sprintf(
+                    '%s is targeted multiple times by the same "Covers" attribute',
+                    $target,
+                ),
+            );
+        }
+
+        foreach ($usesDuplicates as $target) {
+            Facade::emitter()->testTriggeredPhpunitWarning(
+                $test->valueObjectForEvents(),
+                sprintf(
+                    '%s is targeted multiple times by the same "Uses" attribute',
+                    $target,
+                ),
+            );
+        }
+
+        foreach ($coversAndUses as $target) {
+            Facade::emitter()->testTriggeredPhpunitWarning(
+                $test->valueObjectForEvents(),
+                sprintf(
+                    '%s is targeted by both "Covers" and "Uses" attributes',
+                    $target,
+                ),
+            );
+        }
     }
 }

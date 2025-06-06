@@ -125,17 +125,17 @@
         },
         {
             "name": "nikic/php-parser",
-            "version": "v5.4.0",
-            "version_normalized": "5.4.0.0",
+            "version": "v5.5.0",
+            "version_normalized": "5.5.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "447a020a1f875a434d62f2a401f53b82a396e494"
+                "reference": "ae59794362fe85e051a58ad36b289443f57be7a9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/447a020a1f875a434d62f2a401f53b82a396e494",
-                "reference": "447a020a1f875a434d62f2a401f53b82a396e494",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/ae59794362fe85e051a58ad36b289443f57be7a9",
+                "reference": "ae59794362fe85e051a58ad36b289443f57be7a9",
                 "shasum": ""
             },
             "require": {
@@ -148,7 +148,7 @@
                 "ircmaxell/php-yacc": "^0.0.7",
                 "phpunit/phpunit": "^9.0"
             },
-            "time": "2024-12-30T11:07:19+00:00",
+            "time": "2025-05-31T08:24:38+00:00",
             "bin": [
                 "bin/php-parse"
             ],
@@ -180,23 +180,23 @@
             ],
             "support": {
                 "issues": "https://github.com/nikic/PHP-Parser/issues",
-                "source": "https://github.com/nikic/PHP-Parser/tree/v5.4.0"
+                "source": "https://github.com/nikic/PHP-Parser/tree/v5.5.0"
             },
             "install-path": "../nikic/php-parser"
         },
         {
             "name": "onelogin/php-saml",
-            "version": "4.2.0",
-            "version_normalized": "4.2.0.0",
+            "version": "4.3.0",
+            "version_normalized": "4.3.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SAML-Toolkits/php-saml.git",
-                "reference": "d3b5172f137db2f412239432d77253ceaaa1e939"
+                "reference": "bf5efce9f2df5d489d05e78c27003a0fc8bc50f0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SAML-Toolkits/php-saml/zipball/d3b5172f137db2f412239432d77253ceaaa1e939",
-                "reference": "d3b5172f137db2f412239432d77253ceaaa1e939",
+                "url": "https://api.github.com/repos/SAML-Toolkits/php-saml/zipball/bf5efce9f2df5d489d05e78c27003a0fc8bc50f0",
+                "reference": "bf5efce9f2df5d489d05e78c27003a0fc8bc50f0",
                 "shasum": ""
             },
             "require": {
@@ -217,7 +217,7 @@
                 "ext-openssl": "Install openssl lib in order to handle with x509 certs (require to support sign and encryption)",
                 "ext-zlib": "Install zlib"
             },
-            "time": "2024-05-30T15:10:40+00:00",
+            "time": "2025-05-25T14:28:00+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -377,17 +377,17 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "12.2.1",
-            "version_normalized": "12.2.1.0",
+            "version": "12.3.0",
+            "version_normalized": "12.3.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "448f2c504d86dbff3949dcd02c95aa85db2c7617"
+                "reference": "9075a8efc66e11bc55c319062e147bdb06777267"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/448f2c504d86dbff3949dcd02c95aa85db2c7617",
-                "reference": "448f2c504d86dbff3949dcd02c95aa85db2c7617",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/9075a8efc66e11bc55c319062e147bdb06777267",
+                "reference": "9075a8efc66e11bc55c319062e147bdb06777267",
                 "shasum": ""
             },
             "require": {
@@ -411,11 +411,11 @@
                 "ext-pcov": "PHP extension that provides line coverage",
                 "ext-xdebug": "PHP extension that provides line coverage as well as branch and path coverage"
             },
-            "time": "2025-05-04T05:25:05+00:00",
+            "time": "2025-05-23T15:49:03+00:00",
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "12.2.x-dev"
+                    "dev-main": "12.3.x-dev"
                 }
             },
             "installation-source": "dist",
@@ -445,7 +445,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
                 "security": "https://github.com/sebastianbergmann/php-code-coverage/security/policy",
-                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/12.2.1"
+                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/12.3.0"
             },
             "funding": [
                 {
@@ -726,17 +726,17 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "12.1.5",
-            "version_normalized": "12.1.5.0",
+            "version": "12.2.0",
+            "version_normalized": "12.2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "f93ef2198df8d54b3195bcee381a33be51d8705e"
+                "reference": "f3f6587947f9f53f009af8d18026776375d59145"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/f93ef2198df8d54b3195bcee381a33be51d8705e",
-                "reference": "f93ef2198df8d54b3195bcee381a33be51d8705e",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/f3f6587947f9f53f009af8d18026776375d59145",
+                "reference": "f3f6587947f9f53f009af8d18026776375d59145",
                 "shasum": ""
             },
             "require": {
@@ -750,7 +750,7 @@
                 "phar-io/manifest": "^2.0.4",
                 "phar-io/version": "^3.2.1",
                 "php": ">=8.3",
-                "phpunit/php-code-coverage": "^12.2.1",
+                "phpunit/php-code-coverage": "^12.3.0",
                 "phpunit/php-file-iterator": "^6.0.0",
                 "phpunit/php-invoker": "^6.0.0",
                 "phpunit/php-text-template": "^5.0.0",
@@ -758,7 +758,7 @@
                 "sebastian/cli-parser": "^4.0.0",
                 "sebastian/comparator": "^7.0.1",
                 "sebastian/diff": "^7.0.0",
-                "sebastian/environment": "^8.0.0",
+                "sebastian/environment": "^8.0.2",
                 "sebastian/exporter": "^7.0.0",
                 "sebastian/global-state": "^8.0.0",
                 "sebastian/object-enumerator": "^7.0.0",
@@ -766,14 +766,14 @@
                 "sebastian/version": "^6.0.0",
                 "staabm/side-effects-detector": "^1.0.5"
             },
-            "time": "2025-05-11T06:44:52+00:00",
+            "time": "2025-06-06T02:58:21+00:00",
             "bin": [
                 "phpunit"
             ],
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "12.1-dev"
+                    "dev-main": "12.2-dev"
                 }
             },
             "installation-source": "dist",
@@ -806,7 +806,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/12.1.5"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/12.2.0"
             },
             "funding": [
                 {
@@ -1209,17 +1209,17 @@
         },
         {
             "name": "sebastian/environment",
-            "version": "8.0.0",
-            "version_normalized": "8.0.0.0",
+            "version": "8.0.2",
+            "version_normalized": "8.0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/environment.git",
-                "reference": "8afe311eca49171bf95405cc0078be9a3821f9f2"
+                "reference": "d364b9e5d0d3b18a2573351a1786fbf96b7e0792"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/environment/zipball/8afe311eca49171bf95405cc0078be9a3821f9f2",
-                "reference": "8afe311eca49171bf95405cc0078be9a3821f9f2",
+                "url": "https://api.github.com/repos/sebastianbergmann/environment/zipball/d364b9e5d0d3b18a2573351a1786fbf96b7e0792",
+                "reference": "d364b9e5d0d3b18a2573351a1786fbf96b7e0792",
                 "shasum": ""
             },
             "require": {
@@ -1231,7 +1231,7 @@
             "suggest": {
                 "ext-posix": "*"
             },
-            "time": "2025-02-07T04:56:08+00:00",
+            "time": "2025-05-21T15:05:44+00:00",
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -1264,12 +1264,24 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/environment/issues",
                 "security": "https://github.com/sebastianbergmann/environment/security/policy",
-                "source": "https://github.com/sebastianbergmann/environment/tree/8.0.0"
+                "source": "https://github.com/sebastianbergmann/environment/tree/8.0.2"
             },
             "funding": [
                 {
                     "url": "https://github.com/sebastianbergmann",
                     "type": "github"
+                },
+                {
+                    "url": "https://liberapay.com/sebastianbergmann",
+                    "type": "liberapay"
+                },
+                {
+                    "url": "https://thanks.dev/u/gh/sebastianbergmann",
+                    "type": "thanks_dev"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/sebastian/environment",
+                    "type": "tidelift"
                 }
             ],
             "install-path": "../sebastian/environment"

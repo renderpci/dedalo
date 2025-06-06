@@ -11,18 +11,21 @@ namespace PHPUnit\Metadata\Api;
 
 use function array_key_exists;
 use function assert;
+use function count;
 use function get_debug_type;
 use function is_array;
 use function is_int;
 use function is_string;
+use function method_exists;
 use function sprintf;
 use PHPUnit\Event;
+use PHPUnit\Event\Code\TestMethod;
 use PHPUnit\Framework\InvalidDataProviderException;
 use PHPUnit\Metadata\DataProvider as DataProviderMetadata;
 use PHPUnit\Metadata\MetadataCollection;
 use PHPUnit\Metadata\Parser\Registry as MetadataRegistry;
 use PHPUnit\Metadata\TestWith;
-use ReflectionClass;
+use ReflectionMethod;
 use Throwable;
 
 /**
@@ -61,13 +64,42 @@ final readonly class DataProvider
             );
         }
 
+        $testMethodNumberOfParameters = (new ReflectionMethod($className, $methodName))->getNumberOfParameters();
+
         foreach ($data as $key => $value) {
             if (!is_array($value)) {
                 throw new InvalidDataProviderException(
                     sprintf(
                         'Data set %s is invalid, expected array but got %s',
-                        is_int($key) ? '#' . $key : '"' . $key . '"',
+                        $this->formatKey($key),
                         get_debug_type($value),
+                    ),
+                );
+            }
+
+            if ($testMethodNumberOfParameters < count($value)) {
+                assert(method_exists($className, $methodName));
+
+                $method = new ReflectionMethod($className, $methodName);
+
+                Event\Facade::emitter()->testTriggeredPhpunitWarning(
+                    new TestMethod(
+                        $className,
+                        $methodName,
+                        $method->getFileName(),
+                        $method->getStartLine(),
+                        Event\Code\TestDoxBuilder::fromClassNameAndMethodName(
+                            $className,
+                            $methodName,
+                        ),
+                        MetadataCollection::fromArray([]),
+                        Event\TestData\TestDataCollection::fromArray([]),
+                    ),
+                    sprintf(
+                        'Data set %s has more arguments (%d) than the test method accepts (%d)',
+                        $this->formatKey($key),
+                        count($value),
+                        $testMethodNumberOfParameters,
                     ),
                 );
             }
@@ -103,8 +135,7 @@ final readonly class DataProvider
             $methodsCalled[] = $dataProviderMethod;
 
             try {
-                $class  = new ReflectionClass($_dataProvider->className());
-                $method = $class->getMethod($_dataProvider->methodName());
+                $method = new ReflectionMethod($_dataProvider->className(), $_dataProvider->methodName());
 
                 if (!$method->isPublic()) {
                     throw new InvalidDataProviderException(
@@ -223,5 +254,15 @@ final readonly class DataProvider
         }
 
         return $result;
+    }
+
+    /**
+     * @param int|non-empty-string $key
+     *
+     * @return non-empty-string
+     */
+    private function formatKey(int|string $key): string
+    {
+        return is_int($key) ? '#' . $key : '"' . $key . '"';
     }
 }
