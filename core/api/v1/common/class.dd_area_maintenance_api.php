@@ -13,6 +13,7 @@ final class dd_area_maintenance_api {
 
 	/**
 	* CLASS_REQUEST
+	* Fixed caller class NOT include into the RQO : area_maintenance
 	* Call to class method given and return and object with the response
 	* Method must be static and accept a only one object argument
 	* Method must return an object like { result: mixed, msg: string }
