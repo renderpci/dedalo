@@ -10,7 +10,6 @@
 	import { common, create_source } from '../../../core/common/js/common.js'
 	import { tool_common } from '../../tool_common/js/tool_common.js'
 	import { render_tool_transcription } from './render_tool_transcription.js'
-	// import { transcribe } from '../transcribers/browser_whisper/browser_whisper.js'
 
 
 
@@ -377,13 +376,24 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					dd_console("-> transcription_component API response:",'DEBUG',response);
 				}
 
+				// error converting audio file
+					if (!response?.result) {
+						const msg = response?.msg || 'Error converting audio'
+						console.error(msg);
+						nodes.status_container.innerHTML = `<div class="error">${msg}</div>`;
+						nodes.button_automatic_transcription.classList.remove('disable');
+						return false;
+					}
+
 				// set the lang of the transcription
 					const json_langs = self.json_langs || await get_json_langs() || []
 					if (json_langs.length<1) {
-						console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
+						const msg = 'Error. Expected array of json_langs but empty result is obtained'
+						console.error(msg + ' :', json_langs);
+						nodes.status_container.innerHTML = `<div class="error">${msg}</div>`;
 					}
-					const lang_obj		= json_langs.find(item => item.dd_lang===source_lang)
-					const lang			= lang_obj
+					const lang_obj	= json_langs.find(item => item.dd_lang===source_lang)
+					const lang		= lang_obj
 						? lang_obj.tld2
 						: 'en'
 
@@ -453,6 +463,7 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				}
 				transcribe_worker.onerror = function(e) {
 					console.error('Worker error [transcribe]:', e);
+					nodes.status_container.innerHTML = `<div class="error">Worker error [transcribe]</div>`;
 				}
 
 				// Process the audio file to be sent to Worker
