@@ -198,7 +198,7 @@ const get_content_data = function(self) {
 			}
 		}
 		if (all_ar_section.length<1) {
-			const ontology_link = ui.get_ontoly_term_link(self.tipo)
+			const ontology_link = ui.get_ontology_term_link(self.tipo)
 			const msg = `Invalid target section tipo (empty).
 						Please, configure at least one target section tipo for current component:
 						${ontology_link.outerHTML}`
