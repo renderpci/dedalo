@@ -1524,7 +1524,7 @@ export const ui = {
 	create_dom_element : function(options) {
 
 		// options
-			const element_type		= options.element_type
+			const element_type		= options.element_type || 'div'
 			const type				= options.type
 			const id				= options.id
 			const parent			= options.parent
@@ -1552,14 +1552,19 @@ export const ui = {
 				element.id = id
 			}
 
+		// type
+			if (type && element_type!=='textarea') {
+				element.type = type
+			}
+
 		// element_type. A element. Add default href property to element
 			if(element_type==='a') {
 				element.href = href || 'javascript:;'
 			}
 
-		// type
-			if (type && element_type!=='textarea') {
-				element.type = type
+		// src. Source for images etc.
+			if(src) {
+				element.src = src
 			}
 
 		// class_name. Add CSS classes property to element
@@ -1611,11 +1616,6 @@ export const ui = {
 		// draggable
 			if(draggable) {
 				element.draggable = draggable
-			}
-
-		// src. Source for images etc.
-			if(src) {
-				element.src = src
 			}
 
 		// contenteditable
@@ -1989,8 +1989,8 @@ export const ui = {
 				: langs
 
 		// iterate array of langs and create option for each one
-			const ar_langs_lenght = ar_langs.length
-			for (let i = 0; i < ar_langs_lenght; i++) {
+			const ar_langs_length = ar_langs.length
+			for (let i = 0; i < ar_langs_length; i++) {
 
 				const current_option = ui.create_dom_element({
 					element_type	: 'option',
@@ -2982,27 +2982,27 @@ export const ui = {
 
 
 	/**
-	* GET_ONTOLY_TERM_LINK
+	* GET_ONTOLOGY_TERM_LINK
 	* Render a unified DOM node as Ontology link open in new window
 	* @param string tipo
-	* @return HTMLElement ontoly_term_link
+	* @return HTMLElement ontology_term_link
 	*/
-	get_ontoly_term_link(tipo) {
+	get_ontology_term_link(tipo) {
 
 		const url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
 
-		const ontoly_term_link = ui.create_dom_element({
+		const ontology_term_link = ui.create_dom_element({
 			element_type	: 'a',
 			href			: url,
 			text_content	: tipo,
 			title			: 'Local Ontology'
 		})
-		ontoly_term_link.target	= '_blank'
-		ontoly_term_link.rel	= 'noopener'
+		ontology_term_link.target = '_blank'
+		ontology_term_link.rel = 'noopener'
 
 
-		return ontoly_term_link
-	},//end get_ontoly_term_link
+		return ontology_term_link
+	},//end get_ontology_term_link
 
 
 
