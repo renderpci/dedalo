@@ -71,7 +71,11 @@ export const component_number = function(){
 * GET_FORMAT_NUMBER
 * Get number formatted as properties say int || float.
 * By default the number is a int
-* When float is defined, it say the precision of the decimals; float:2
+* When float is defined, it say the precision of the decimals as:
+*	{
+*		"type": "float",
+*		"precision": 16
+*	}
 * Example with int: input 85,35 | output 85
 * Example with float:2 : input 85.3568 | output 85.36
 * @return number format_number
@@ -108,7 +112,7 @@ component_number.prototype.fix_number_format = function( value ) {
 	const fixed_value = value.replace(/,/g, '.');
 
 	// remove non accepted chars
-	const regex		= /[^0-9\.,]/gm;
+	const regex		= /[a-zA-Z]/gm;
 	const result	= fixed_value.replace(regex, '');
 	if (!result.length) {
 		return null
