@@ -3,7 +3,7 @@
 ## Introduction
 
 Dédalo is an open-source cultural heritage management system designed to handle both tangible and intangible assets, including oral histories, archaeological asses and properties, ethnological objects, etc documented with multimedia archives.
-At the heart of Dédalo lies its Ontology—a dynamic, modular framework that defines the structure, behaviour, and interactions of all data and components within the system.
+At the heart of Dédalo lies its Ontology, a dynamic, modular framework that defines the structure, behaviour, and interactions of all data and components within the system.
 
 ## What Dédalo Ontology is?
 
@@ -31,7 +31,7 @@ This system ensures scalability and customisation. Every TLD defines a specific 
 | **rsc** | Resource, used to define media elements as `Audiovisual`, `Image`, `SVG`, `PDF`, etc. including `Publications`, `Restoration processes`, and other common sections shared across the system |
 | **ontology** | Ontology definition, used to create the ontology definition |
 | **hierarchy** | Thesaurus definition, used to manage any kind of thesaurus and taxonomies as `Onomastic`, `Material`, `Techniques`, etc. as well `Tipology` catalogues. |
-| **lg** | Languages, Definition for the languages in the thesaurus (used for all application to translate data and interface) |
+| **lg** | Languages, Definition for the languages in the thesaurus (used in all application to translate data and interface) |
 | **utoponymy** | Unofficial toponymy. Section definition for unofficial toponymy (unofficial places names), used to add places that are not inside the official toponymy of countries or the installation don't want import the official toponymy (use to point the place without the official term in some sections as Publications, to define any place of publication around the world) |
 | **oh** | Oral History, the definition sections and tools to be used for oral history projects such as `Interviews`, `Transcription`, `Indexation`, etc. |
 | **ich** | Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
@@ -81,12 +81,33 @@ Multiformat output and a linked data model facilitate integration with other sys
 Efficiency:
 Real-time object creation and dynamic behaviour adjustment reduce the need for extensive coding, streamlining the management process.
 
-
 ## Managing ontology
+
+## Shared, standardized and common ontologies
+
+Any Dédalo installation can implement a shared ontology. Shared ontologies are common definitions to manage specific cultural heritage.
+They are defined by the community and are used in different projects and institutions.
+Shared ontologies allows to create inventories, catalogs, archives and researches without the complexity of start from scratch.
+This common definitions has been refined by years with the curators and researches experience that are using Dédalo, and they are the result of large discussions, meetings about how Dédalo can manage the assets.
+Implement shared ontologies is a very good way to start using Dédalo.
+
+### Benefits of shared ontologies
+
+- As the definition is ready to be used, you can start to use Dédalo and create your data fast.
+- The ontology has a lots of features that cover practically any needs.
+- You can shared your data with other Dédalo installation easily.
+- You can get new definitions/configurations and updates automatically.
+- Data changes are implemented into the update process, so, your data will be coherent with the changes.
+- They are developed and maintained by the community. Projects doesn't needs to spend time and money to create new one.
+
+### drawbacks of shared ontologies
+
+- A shared ontology only changes when the community has consents about the change. It take time and could be large process.
+- They could not cover specific aspects or needs.
 
 ## Local ontology
 
-It is possible to create a local ontology by users or institutions not necessarily aligned with shared, global or standardised ontologies.
+It is possible to create a local ontology by users or institutions not necessarily aligned with shared, global or standardized ontologies.
 
 Dédalo provide two ways to add local ontology:
 
