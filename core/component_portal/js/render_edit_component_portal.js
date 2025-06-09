@@ -1002,7 +1002,6 @@ export const get_buttons = (self) => {
 				e.stopPropagation()
 
 				const caller_id = self.id || null
-				const hierarchy_sections = self.rqo.sqo.section_tipo || null
 				const hierarchy_terms = self.context.properties.source
 					&& self.context.properties.source.request_config
 					&& self.context.properties.source.request_config[0]
@@ -1024,9 +1023,11 @@ export const get_buttons = (self) => {
 					}
 
 					// hierarchy_sections
-					if (hierarchy_sections) {
-						url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
-					}
+					// ! Disable because without full path, is unable to draw the tree (e.g. you needs dd0, rsc0, ... to arrive to mht6)
+					// const hierarchy_sections = self.rqo.sqo.section_tipo || null
+					// if (hierarchy_sections) {
+					// 	url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
+					// }
 
 					// Optional hierarchy_terms. Add to url if present
 					if (hierarchy_terms) {
