@@ -9,7 +9,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {dd_request_idle_callback, when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
 		render_children,
@@ -1217,6 +1217,8 @@ export const ts_object = new function() {
 		const data_length = data.length
 		const ts_nodes = []
 
+		let node_to_scroll = null
+
 		for (let i = 0; i < data_length; i++) {
 			const item = data[i]
 			// render the ts_record
@@ -1233,6 +1235,9 @@ export const ts_object = new function() {
 				const term_node = node.term_node
 				if (term_node) {
 					term_node.classList.add('element_hilite');
+					if (!node_to_scroll) {
+						node_to_scroll = term_node
+					}
 				}
 			}
 			// store the result
@@ -1268,106 +1273,99 @@ export const ts_object = new function() {
 			}
 		}
 
-
-
-
-
-		// // iterate data object
-		// for (const key in data) {
-
-		// 	const element = data[key]
-
-		// 	// target section_tipo
-		// 		const target_section_tipo = element.section_tipo
-
-		// 	// clean div container
-		// 		if(is_recursion===false) {
-		// 			// Calculate main div of each root element
-		// 			// Search children place
-		// 			main_div = document.querySelector(`.hierarchy_root_node.${element.section_tipo}>.children_container`)
-		// 			if (main_div) {
-
-		// 				// Clean main div (Clean previous nodes from root)
-		// 				while (main_div.firstChild) {
-		// 					main_div.removeChild(main_div.firstChild);
-		// 				}
-
-		// 			}else{
-		// 				console.error("[ts_object.parse_search_result] Error on locate main_div:  "+'.hierarchy_root_node[data-section_id="'+element.section_id+'"] > .children_container')
-
-		// 				// // not parent elements case, attach to root node
-		// 				// // It search result node don't have parent, use root node as parent to allow display the term
-		// 				// if (!element.heritage) {
-		// 				// 	main_div = document.querySelector('.hierarchy_root_node[data-target_section_tipo="'+target_section_tipo+'"]>.children_container')
-		// 				// }
-		// 			}
-		// 		}
-
-		// 	// main_div conditional
-		// 		if(!main_div) {
-
-		// 			console.warn("[ts_object.parse_search_result] Warn: No main_div found! ", '.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container ', element);
-
-		// 		}else{
-
-		// 			const ar_children_data = []
-		// 				  ar_children_data.push(element)
-
-		// 			// render children. dom_parse_children (returns a promise)
-		// 				const ar_children_container = dom_parse_children({
-		// 					self							: self,
-		// 					ar_children_data				: ar_children_data,
-		// 					children_container				: main_div,
-		// 					// render options
-		// 					clean_children_container		: false, // Elements are added to existing main_div instead replace
-		// 					children_container_is_loaded	: false, // Set children container as loaded
-		// 					show_arrow_opened				: false, // Set icon arrow as opened
-		// 					target_section_tipo				: target_section_tipo, // add always !
-		// 					mode							: 'search'
-		// 				})
-		// 		}
-
-		// 	// hilite current term
-		// 		const term_hilite = to_hilite.find(el => el.section_id==element.section_id && el.section_tipo===element.section_tipo)
-		// 		if (term_hilite) {
-		// 			requestAnimationFrame(
-		// 				() => {
-		// 					const term_node = document.querySelector(`.term[data-section_tipo="${element.section_tipo}"][data-section_id="${element.section_id}"]`)
-		// 					if (term_node) {
-		// 						self.hilite_element(term_node, false);
-		// 					}
-		// 				}
-		// 			)
-		// 		}
-
-		// 	// Recursion when heritage is present
-		// 	// Note var self.current_main_div is set on each dom_parse_children call
-		// 	// (see render_ts_object.render_children_list)
-		// 		if (typeof element.heritage!=='undefined') {
-
-		// 			// Recursive parent element resolve
-		// 			const h_data = element.heritage
-		// 			self.parse_search_result(
-		// 				h_data,
-		// 				to_hilite,
-		// 				self.current_main_div,
-		// 				true
-		// 			)
-		// 		}
-
-		// 	// Open arrows and fix children container state
-		// 		// main_div.classList.remove('js_first_load')
-		// 		// var children_element = main_div.parentNode.querySelector('.elements_container > [data-type="link_children"]')
-		// 		// if (children_element.firstChild) {
-		// 		// 	children_element.firstChild.classList.add('ts_object_children_arrow_icon_open')
-		// 		// 	//console.log(children_element);
-		// 		// }
-
-		// }//end for (const key in data)
+		// scroll to first found element
+		if (node_to_scroll) {
+			scroll_to_node(node_to_scroll)
+		}
 
 
 		return true
 	}//end parser_search_result
+
+
+
+	/**
+	* SCROLL_TO_NODE
+	* Handles the page scroll to the search found item (first item only)
+	* @param HTMLElement node_to_scroll
+	* @return void
+	*/
+	const scroll_to_node = (node_to_scroll) => {
+
+		when_in_dom(node_to_scroll, ()=> {
+
+			const scroll_node = () => {
+				node_to_scroll.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" })
+			}
+
+			let scroll_interval = null;
+			let scroll_attempts = 0;
+			const MAX_SCROLL_ATTEMPTS = 10; // Prevent infinite scrolling
+
+			// Create observer
+			const observer = new IntersectionObserver((entries) => {
+				entries.forEach(entry => {
+
+					if (entry.isIntersecting) {
+						// console.error('Element is visible:', entry.target);
+
+						const visibilityPercentage = Math.round(entry.intersectionRatio * 100);
+						if (visibilityPercentage > 5) {
+							// Success - clean up everything
+							observer.disconnect();
+							if (scroll_interval) {
+								clearInterval(scroll_interval);
+								scroll_interval = null;
+							}				            					            	// try again to prevent slow tree parses
+							setTimeout(scroll_node, 2000)
+						}
+					} else {
+						// console.log('Element is not visible:', entry.target);
+
+						// Clear any existing interval
+						if (scroll_interval) {
+							clearInterval(scroll_interval);
+						}
+
+						// Initial scroll attempt
+						scroll_node();
+						scroll_attempts = 1;
+
+						// Set up interval with retry limit
+						const do_scroll = () => {
+							if (scroll_attempts >= MAX_SCROLL_ATTEMPTS) {
+								console.warn('Max scroll attempts reached, giving up');
+								clearInterval(scroll_interval);
+								observer.disconnect();
+								return;
+							}
+
+							console.log(`Scrolling attempt ${scroll_attempts + 1}`);
+							scroll_attempts++;
+							dd_request_idle_callback(scroll_node);
+						};
+
+						scroll_interval = setInterval(do_scroll, 350);
+					}
+				});
+			}, {
+				threshold: [0, 0.05, 0.1] // Check at 0%, 5%, and 10% visibility
+			})
+
+			observer.observe(node_to_scroll);
+
+			// Cleanup timeout as fallback
+			setTimeout(() => {
+				if (observer) {
+					observer.disconnect();
+				}
+				if (scroll_interval) {
+					clearInterval(scroll_interval);
+				}
+				console.log('Scroll operation timed out after 10 seconds');
+			}, 10000);
+		})
+	}//end scroll_to_node
 
 
 
