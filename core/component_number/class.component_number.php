@@ -304,7 +304,7 @@ class component_number extends component_common {
 		// this will be set new type and component_number behavior
 
 		// if the string has a letter or other characters, remove it.
-		$clean_string_value = preg_replace('/[^.,0-9]/', '', $string_value);
+		$clean_string_value = preg_replace('/[^-.,0-9]/', '', $string_value);
 
 		if($clean_string_value===''){
 			return null;
