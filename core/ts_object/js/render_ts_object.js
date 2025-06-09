@@ -1596,8 +1596,11 @@ export const render_link_children = function (options) {
 		const show_arrow_opened	= options.show_arrow_opened
 		const child_data		= options.child_data
 
-	// local_db_id
-		const local_db_id = 'ts_object_status_' + child_data.ts_id
+	// local_db_id. If thesaurus_mode is defined use a different status track
+	// to prevent overwrite the main status of the ts_object element
+		const local_db_id = self.thesaurus_mode
+			? 'ts_object_status_' + self.thesaurus_mode +'_'+ child_data.ts_id
+			: 'ts_object_status_' + child_data.ts_id
 
 	// Case link open children (arrow)
 		const link_children_element = ui.create_dom_element({
