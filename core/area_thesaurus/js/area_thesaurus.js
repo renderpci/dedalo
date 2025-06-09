@@ -423,10 +423,9 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 			// dd_request
 				// self.dd_request.show = self.build_rqo('show', self.context.request_config, 'get_data')
-				// console.log("-----------------------self.dd_request.show", self.dd_request.show);
 
 			// rebuild the request_config_object and rqo in the instance
-				// // request_config_object
+				// request_config_object
 				// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
 			// rqo config
@@ -444,7 +443,9 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 			// rqo regenerate
 				await generate_rqo()
-				console.log("AREA self.rqo after load:", clone(self.rqo));
+				if(SHOW_DEBUG===true) {
+					console.log("AREA self.rqo after load:", clone(self.rqo));
+				}
 		}//end if (autoload===true)
 
 	// update instance properties from context
@@ -477,14 +478,12 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				caller	: self,
 				mode	: self.mode
 			})
-			// self.filter.build()
 		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log("+ Time to build", self.model, " ms:", performance.now()-t0);
-			//load_section_data_debug(self.section_tipo, self.request_config, load_section_data_promise)
 		}
 
 	// status update

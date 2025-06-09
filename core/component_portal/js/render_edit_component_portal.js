@@ -990,7 +990,6 @@ export const get_buttons = (self) => {
 
 	// button_tree terms selector
 		if(show_interface.button_tree === true){
-
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button tree',
