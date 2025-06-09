@@ -1000,55 +1000,8 @@ export const get_buttons = (self) => {
 			// event mousedown. Add listener to the button
 			const mousedown_handler = (e) => {
 				e.stopPropagation()
-
-				const caller_id = self.id || null
-				const hierarchy_terms = self.context.properties.source
-					&& self.context.properties.source.request_config
-					&& self.context.properties.source.request_config[0]
-					&& self.context.properties.source.request_config[0].sqo
-					&& self.context.properties.source.request_config[0].sqo.fixed_filter
-						? self.context.properties.source.request_config[0].sqo.fixed_filter.filter(el => el.source === 'hierarchy_terms')
-						: null
-
-				// url vars
-					const is_ontology	= self.tipo.slice(-1) === '0'
-					const tipo			= is_ontology
-						? 'dd5' // ONTOLOGY_TIPO
-						: 'dd100'; // THESAURUS_TIPO
-
-					const url_vars = {
-						tipo			: tipo,
-						menu			: false,
-						thesaurus_mode	: 'relation'
-					}
-
-					// hierarchy_sections
-					// ! Disable because without full path, is unable to draw the tree (e.g. you needs dd0, rsc0, ... to arrive to mht6)
-					// const hierarchy_sections = self.rqo.sqo.section_tipo || null
-					// if (hierarchy_sections) {
-					// 	url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
-					// }
-
-					// Optional hierarchy_terms. Add to url if present
-					if (hierarchy_terms) {
-						url_vars.hierarchy_terms = JSON.stringify(hierarchy_terms)
-					}
-
-					if(caller_id){
-						url_vars.initiator = JSON.stringify(caller_id)
-					}
-
-				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-
-				// open window
-				if (!window.rel_window || window.rel_window.closed) {
-					window.rel_window = window.open(
-						url,
-						'rel_window',
-						'status=yes,scrollbars=yes,resizable=yes,left=0,top=0,width=900,height=650'
-					)
-				}
-				window.rel_window.focus()
+				// open new area_thesaurus/area_ontology window for relation
+				self.open_ontology_window('relation')
 			}
 			button_tree_selector.addEventListener('mousedown', mousedown_handler)
 		}

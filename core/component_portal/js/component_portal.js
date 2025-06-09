@@ -5,7 +5,7 @@
 
 
 // imports
-	import {clone,object_to_url_vars,open_window} from '../../common/js/utils/index.js'
+	import {clone,object_to_url_vars,open_window,get_section_id_from_tipo} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {get_instance} from '../../common/js/instances.js'
@@ -1510,6 +1510,89 @@ component_portal.prototype.focus_first_input = function() {
 
 	return true
 }//end focus_first_input
+
+
+
+/**
+* OPEN_ONTOLOGY_WINDOW
+* Unified open ontology window method used to relate terms or search a target tern in tree view (area_ontology)
+* @param string thesaurus_mode
+* 	default|relation
+* @param string search_tipos
+* 	Separated by commas list of tipos to search in ontology tree
+* 	e.g. 'rsc32,rsc88'
+* @return object tree_window
+* 	instance of the created/recycled window
+*/
+component_portal.prototype.open_ontology_window = function (thesaurus_mode, search_tipos) {
+
+	const self = this
+
+	// url vars
+		const url_vars = {}
+
+		// tipo
+		const is_ontology	= get_section_id_from_tipo(self.section_tipo) === '0'
+		const tipo			= is_ontology
+			? 'dd5' // ONTOLOGY_TIPO
+			: 'dd100' // THESAURUS_TIPO
+		url_vars.tipo = tipo
+
+		// menu
+		url_vars.menu = false
+
+		// thesaurus_mode
+		url_vars.thesaurus_mode = thesaurus_mode
+
+		if (is_ontology) {
+
+			// only for area_ontology
+
+			url_vars.search_tipos = search_tipos
+
+		}else{
+
+			// only for area_thesaurus
+
+			// hierarchy_sections. Add to url if present
+			const hierarchy_sections = self.rqo.sqo.section_tipo || null
+			if (hierarchy_sections) {
+				url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
+			}
+
+			// hierarchy_terms optional. Add to url if present
+			const hierarchy_terms = self.context?.properties?.source
+			&& self.context.properties.source.request_config
+			&& self.context.properties.source.request_config[0]
+			&& self.context.properties.source.request_config[0].sqo
+			&& self.context.properties.source.request_config[0].sqo.fixed_filter
+				? self.context.properties.source.request_config[0].sqo.fixed_filter.filter(el => el.source === 'hierarchy_terms')
+				: null
+			if (hierarchy_terms) {
+				url_vars.hierarchy_terms = JSON.stringify(hierarchy_terms)
+			}
+		}
+
+		// caller_id
+		const caller_id = self.id || null
+		if(caller_id){
+			url_vars.initiator = JSON.stringify(caller_id)
+		}
+
+	// url
+	const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+
+	// open window
+	const tree_window = open_window({
+		url		: url,
+		name	: 'tree_window',
+		width	: 1000,
+		height	: 800
+	})
+
+
+	return tree_window
+}//end open_ontology_window
 
 
 
