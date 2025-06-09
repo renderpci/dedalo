@@ -11,7 +11,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
-	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {open_window, object_to_url_vars,get_tld_from_tipo,get_section_id_from_tipo} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {when_in_viewport,dd_request_idle_callback,set_tool_event} from '../../common/js/events.js'
 	import {get_ontology_url} from '../../inspector/js/inspector.js'
@@ -1709,24 +1709,33 @@ const render_docu_links = function(self, tipo) {
 			local_ontology.addEventListener('mousedown', mousedown_handler_local)
 
 		// local ontology tree search
-			// const local_ontology_search = ui.create_dom_element({
-			// 	element_type	: 'a',
-			// 	class_name		: 'button tree',
-			// 	title			: 'Local Ontology tree search',
-			// 	parent			: fragment
-			// })
-			// // mousedown event
-			// const mousedown_handler_tree = async (e) => {
-			// 	e.stopPropagation()
-			// 	const docu_type	= 'local_ontology_search'
-			// 	const url		= await get_ontology_url(tipo, docu_type)
-			// 	open_ontology_window(
-			// 		self,
-			// 		url,
-			// 		docu_type
-			// 	)
-			// }
-			// local_ontology_search.addEventListener('mousedown', mousedown_handler_tree)
+			const local_ontology_search = ui.create_dom_element({
+				element_type	: 'a',
+				class_name		: 'button tree',
+				title			: 'Local Ontology tree search',
+				parent			: fragment
+			})
+			// mousedown event
+			const mousedown_handler_tree = async (e) => {
+				e.stopPropagation()
+				// url vars
+				const tld			= get_tld_from_tipo(tipo)
+				const section_id	= get_section_id_from_tipo(tipo)
+				const url_vars = {
+					tipo			: 'dd5',
+					menu			: false,
+					search_tipos	: tld + section_id
+				}
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+				// open window
+				const tree_window = open_window({
+					url		: url,
+					name	: 'tree_window',
+					width	: 1000,
+					height	: 800
+				})
+			}
+			local_ontology_search.addEventListener('mousedown', mousedown_handler_tree)
 
 		// master_ontology
 			const master_ontology = ui.create_dom_element({

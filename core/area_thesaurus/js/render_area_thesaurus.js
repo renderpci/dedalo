@@ -138,16 +138,25 @@ render_area_thesaurus.prototype.list = async function(options) {
 	// ts_search case
 		if (data.ts_search) {
 			const render_handler = () => {
-				self.ts_object.parse_search_result(
-					data.ts_search.result,
-					data.ts_search.found, // to hilite
-					null,
-					false
+				dd_request_idle_callback(
+					() => {
+						self.ts_object.parse_search_result(
+							data.ts_search.result,
+							data.ts_search.found, // to hilite
+							null,
+							false
+						)
+					}
 				)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('render_'+self.filter.id, render_handler)
 			)
+			// search_tipos Ontology case
+			// force filter render to fire the render event that parse the search result
+			if (self.model==='area_ontology' && self.search_tipos) {
+				self.filter.render()
+			}
 		}
 
 	// event keydown

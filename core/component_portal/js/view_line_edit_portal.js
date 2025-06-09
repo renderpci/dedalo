@@ -5,6 +5,7 @@
 
 
 // imports
+	import {get_section_id_from_tipo} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_error} from '../../common/js/render_common.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
@@ -327,6 +328,26 @@ view_line_edit_portal.render_column_id = function(options) {
 			title			: pen_title,
 			parent			: button_edit
 		})
+
+	// button_tree ontology only
+		const is_ontology = get_section_id_from_tipo(self.section_tipo) === '0'
+		if (is_ontology) {
+			// button_tree
+			const button_tree = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button tree',
+				title			: pen_title,
+				parent			: fragment
+			})
+			// mousedown event
+			const mousedown_handler = (e) => {
+				e.stopPropagation()
+				// open new area_ontology window and search the current term
+				const search_tipos = section_tipo + section_id
+				self.open_ontology_window('default', search_tipos)
+			}
+			button_tree.addEventListener('mousedown', mousedown_handler)
+		}
 
 
 	return fragment

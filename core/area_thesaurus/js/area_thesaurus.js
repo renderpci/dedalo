@@ -9,7 +9,13 @@
 		set_context_vars,
 		build_autoload
 	} from '../../common/js/common.js'
-	import {clone, url_vars_to_object} from '../../common/js/utils/index.js'
+	import {
+		clone,
+		url_vars_to_object,
+		JSON_parse_safely,
+		get_tld_from_tipo,
+		get_section_id_from_tipo
+	} from '../../common/js/utils/index.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -67,6 +73,10 @@ export const area_thesaurus = function() {
 	// An event to keydown Ctr + m fires the changes in this property and is read by ts_object when render
 	// the ts_line (list_thesaurus_element model_value div node)
 	self.model_value_is_hide = false
+
+	// search_tipos. Array of tipos to search in the request from URL
+	// Usually is added to the URL by Ontology node open in tree button
+	self.search_tipos
 }//end area_thesaurus
 
 
@@ -217,9 +227,103 @@ area_thesaurus.prototype.init = async function(options) {
 			|| url_vars.thesaurus_view_mode // page reload case
 			|| null
 
+	// search tipos
+	// Used by area_ontology to search and hilite terms in the tree
+	// e.g. https://localhost/dedalo/core/page/?tipo=dd5&mode=list&search_tipos=oh26,rs14
+		if (url_vars.search_tipos) {
+			const search_tipos = url_vars.search_tipos.split(',')
+			if (Array.isArray(search_tipos)) {
+				self.search_tipos = search_tipos
+			}
+		}
+
 
 	return common_init
 }//end init
+
+
+
+/**
+* PARSE_SEARCH_TIPOS_FILTER
+* Ontology function to create a SQO filter with given search_tipos
+* @param array search_tipos
+* 	e.g. ['rsc22',rsc89]
+* @return object|null filter
+*/
+const parse_search_tipos_filter = function (search_tipos) {
+
+	if (!Array.isArray(search_tipos)) {
+		return null
+	}
+
+	const filter_items = []
+
+	const search_tipos_length = search_tipos.length
+	for (let i = 0; i < search_tipos_length; i++) {
+		const tipo = search_tipos[i]
+
+		const tld			= get_tld_from_tipo(tipo)
+		const section_id	= get_section_id_from_tipo(tipo);
+
+		if (!tld || !section_id) {
+			console.error('Ignored invalid tipo:', tipo);
+			continue;
+		}
+
+		const filter_item = {
+			"$and": [
+				{
+					"q": [
+						tld
+					],
+					"q_operator": "=",
+					"path": [
+						{
+							"name": "tld",
+							"model": "component_input_text",
+							"section_tipo": "ontology1",
+							"component_tipo": "ontology7"
+						}
+					],
+					"q_split": false,
+					"type": "jsonb"
+				},
+				{
+					"q": [
+						section_id
+					],
+					"path": [
+						{
+							"name": "Id",
+							"model": "component_section_id",
+							"section_tipo": "ontology1",
+							"component_tipo": "ontology2"
+						}
+					],
+					"q_split": false,
+					"type": "jsonb"
+				}
+			]
+		}
+
+		filter_items.push(filter_item)
+	}
+
+	// zero items case
+	if (filter_items.length<1) {
+		return null;
+	}
+
+	// filter
+	const filter = filter_items.length === 1
+		? filter_items[0]
+		: {
+			"$or" : filter_items
+		  }
+
+
+	return filter
+}//end parse_search_tipos_filter
 
 
 
@@ -258,6 +362,17 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			const action	= 'get_data'
 			const add_show	= false
 			self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, action, add_show)
+
+			// self.search_tipos. Used in area_ontology to auto-search the given tipos from URL
+			// @see init search_tipos
+			if (self.model==='area_ontology' && self.search_tipos) {
+				const filter = parse_search_tipos_filter(self.search_tipos);
+				if (filter) {
+					self.rqo.sqo.filter = filter
+					self.rqo.sqo.section_tipo = self.search_tipos.map(el => get_tld_from_tipo(el) + '0')
+					self.rqo.source.search_action = 'search'
+				}
+			}
 
 			// self.thesaurus_view_mode
 			self.rqo.source.build_options = {
