@@ -496,7 +496,13 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_HIERARCHY_TERMS_SQO
+	* Creates a SQO with a custom filter using hierarchy_terms
 	* @param array $hierarchy_terms
+	* [
+	* 	{
+	* 		value : [{"section_tipo":"dd43","section_id":"2"}]
+	* 	}
+	* ]
 	* @return object $sqo
 	* 	Full Search query object
 	*/
@@ -523,7 +529,8 @@ class area_thesaurus extends area_common {
 
 		// hierarchy_terms
 			foreach ($hierarchy_terms as $current_term) {
-				foreach ($current_term->value as $item) {
+				$value = $current_term->value ?? [];
+				foreach ($value as $item) {
 
 					$current_section_tipo	= $item->section_tipo;
 					$current_section_id		= $item->section_id;
@@ -546,7 +553,6 @@ class area_thesaurus extends area_common {
 						$group->{OP_AND} = [$filter_item, $filter_item_section];
 
 					$filter_custom->{OP_OR}[] = $group;
-
 				}
 			}
 
