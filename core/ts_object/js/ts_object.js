@@ -1294,7 +1294,20 @@ export const ts_object = new function() {
 
 		when_in_dom(node_to_scroll, ()=> {
 
+			// user wheel event
+			// To prevent to change the early user scroll, check for user wheel event
+			// before to try it programmatically (less intrusive behavior)
+			let user_scroll = false
+			const wheel_handler = () => {
+				user_scroll = true
+				window.removeEventListener('wheel', wheel_handler, { passive: true });
+			}
+			window.addEventListener('wheel', wheel_handler, { passive: true });
+
 			const scroll_node = () => {
+				if (user_scroll) {
+					return
+				}
 				node_to_scroll.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" })
 			}
 
