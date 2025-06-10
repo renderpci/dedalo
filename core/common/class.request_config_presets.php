@@ -7,12 +7,6 @@ class request_config_presets {
 
 
 
-	// static $cache_user_preset_layout_map = [];
-	// cache file name
-	static $cache_file_name = 'all_request_config.json'; // file base name. Final e.g. 'development_1_all_request_config.json'
-
-
-
 	/**
 	* GET_ALL_REQUEST_CONFIG
 	* Search all request config records from database (matrix_list)
