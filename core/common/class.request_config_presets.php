@@ -17,36 +17,18 @@ class request_config_presets {
 	* GET_ALL_REQUEST_CONFIG
 	* Search all request config records from database (matrix_list)
 	* and save/get the result to a cache file when $use_cache is true
-	* @param bool $use_cache = true
 	* @return array
 	* 	Assoc array of request_config_object objects
 	*/
-	public static function get_all_request_config( bool $use_cache = true ) : array {
+	public static function get_all_request_config() : array {
+
+		// cache
+		static $all_request_config_cache;
+		if(isset($all_request_config_cache)) {
+			return $all_request_config_cache;
+		}
 
 		$all_request_config = [];
-
-		// Attempt to read from cache
-		if ($use_cache) {
-			try {
-				$file_cache = dd_cache::cache_from_file((object)[
-					'file_name'	=> request_config_presets::$cache_file_name
-				]);
-
-				if (!empty($file_cache)) {
-
-					$all_request_config = json_decode($file_cache, true);
-					if (is_array($all_request_config)) {
-						return $all_request_config;
-					}
-				}
-			} catch (Exception $e) {
-				debug_log(__METHOD__
-					. ' Caught exception: Cache read failed: ' . PHP_EOL
-					. ' exception message: '. $e->getMessage()
-					, logger::ERROR
-				);
-			}
-		}
 
 		// Search all records of request config section dd1244
 		$search_query_object = (object)[
@@ -136,14 +118,8 @@ class request_config_presets {
 			}
 		}
 
-		// cache
-		if ($use_cache) {
-			// file cache
-			dd_cache::cache_to_file((object)[
-				'data'		=> $all_request_config,
-				'file_name'	=> request_config_presets::$cache_file_name
-			]);
-		}
+		// $all_request_config_cache
+		$all_request_config_cache = $all_request_config;
 
 
 		return $all_request_config;
@@ -169,14 +145,15 @@ class request_config_presets {
 		// key_cache
 		$key_cache = implode('_', [$tipo, $section_tipo, $mode]);
 
-		// Check and return if valid data exists
-		if (
-			isset($all_request_config[$key_cache]) &&
-			is_array($all_request_config[$key_cache]) &&
-			isset($all_request_config[$key_cache]['data']) &&
-			is_array($all_request_config[$key_cache]['data'])
-		) {
-			return $all_request_config[$key_cache]['data'];
+		// base_data
+		$base_data = $all_request_config[$key_cache] ?? null;
+
+		// data (request config array)
+		if ($base_data) {
+			$data = $base_data['data'] ?? null;
+			if ($data){
+				return $data;
+			}
 		}
 
 		// Fallback if not found or invalid format
@@ -373,9 +350,10 @@ class request_config_presets {
 	*/
 	public static function clean_cache() : bool {
 
-		return dd_cache::delete_cache_files([
-			request_config_presets::$cache_file_name
-		]);
+		// $all_request_config_cache
+		// There's nothing to clear. The cache is static and is updated on every thread.
+
+		return true;
 	}//end clean_cache
 
 
