@@ -2715,7 +2715,14 @@ abstract class common {
 			if (!empty($user_preset)) {
 
 				// set resolved request_config value
-				$request_config = $user_preset;
+				// $request_config = $user_preset; // OLD WAY < 10-06-2025
+
+				// Overwrite properties request_config to allow get_ar_request_config do the unified hard work
+				$this->properties = $this->get_properties() ?? new stdClass();
+				if (!isset($this->properties->source)) {
+					$this->properties->source = new stdClass();
+				}
+				$this->properties->source->request_config = $user_preset;
 
 				debug_log(__METHOD__.
 					" request_config calculated from request_config_presets [$section_tipo-$tipo] ",
