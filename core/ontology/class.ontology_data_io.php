@@ -242,7 +242,11 @@ class ontology_data_io {
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
-				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip > {$file_path}';\" ";
+				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
+			// Notes about the previous command:
+			// 1. The gzip -c flag ensures gzip writes compressed data immediately to stdout as it receives input, rather than waiting
+			//   to process a complete file. This can help with the buffering/flushing issues.
+			// 2. The && sync is essentially a "make sure everything is really written to disk" safety measure.
 
 			// debug
 				if(SHOW_DEBUG===true) {
@@ -306,7 +310,11 @@ class ontology_data_io {
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
-				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_dd\") TO PROGRAM 'gzip > {$file_path}';\" ";
+				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_dd\") TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
+			// Notes about the previous command:
+			// 1. The gzip -c flag ensures gzip writes compressed data immediately to stdout as it receives input, rather than waiting
+			//   to process a complete file. This can help with the buffering/flushing issues.
+			// 2. The && sync is essentially a "make sure everything is really written to disk" safety measure.
 
 		// exec command in terminal
 			$command_result = shell_exec($command);
