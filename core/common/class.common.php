@@ -2025,8 +2025,8 @@ abstract class common {
 					debug_log(__METHOD__
 						. " Ignored empty show ddo_map " . PHP_EOL
 						. ' (tipo: '.$this->tipo.' - '. RecordObj_dd::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
-						. ' in request_config_object (It may be due to a lack of permissions in their children). request_config_object:' . PHP_EOL
-						. to_string($request_config_object),
+						. ' in request_config_object (It may be due to a lack of permissions in their children).' . PHP_EOL
+						. ' request_config_object: ' . to_string($request_config_object),
 						logger::WARNING
 					);
 					continue;
