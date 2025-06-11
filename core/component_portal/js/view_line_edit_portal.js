@@ -317,6 +317,14 @@ view_line_edit_portal.render_column_id = function(options) {
 			})
 		}
 		button_edit.addEventListener('mousedown', click_handler)
+		// focus event
+		const focus_handler = (e) => {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				ui.component.activate(self)
+			}
+		}
+		button_edit.addEventListener('focus', focus_handler)
 
 	// edit icon
 		const pen_title = SHOW_DEBUG
@@ -407,6 +415,14 @@ view_line_edit_portal.render_column_remove = function(options) {
 				})
 		}
 		button_remove.addEventListener('click', click_handler)
+		// focus event
+		const focus_handler = (e) => {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				ui.component.activate(self)
+			}
+		}
+		button_remove.addEventListener('focus', focus_handler)
 
 	// remove_icon
 		ui.create_dom_element({
