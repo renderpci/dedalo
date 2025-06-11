@@ -1701,7 +1701,22 @@ abstract class common {
 		// request_config
 			$request_config = ($add_request_config===true)
 				? $this->build_request_config() // array
-				:  null;
+				: null;
+
+		// label
+		// To overwrite the label using a user preset, add the
+			if (isset($properties->label)) {
+				if (isset($properties->label->{DEDALO_APPLICATION_LANG})) {
+					$label = $properties->label->{DEDALO_APPLICATION_LANG};
+				}else if (is_object($properties->label)) {
+					foreach ($properties->label as $current_label) {
+						if (!empty($current_label)) {
+							$label = $current_label;
+							break;
+						}
+					}
+				}
+			}
 
 		// columns_map (the final calculation was moved to common JS)
 			$columns_map = !empty($request_config)
@@ -2701,33 +2716,39 @@ abstract class common {
 				}//end if (!empty($requested_show))
 			}//end if( isset($requested_source) &&...
 
-		// create a new fresh request_config with fallback options
+		// Create a new fresh request_config with fallback options
 
-		// 4. Attempt to build from user presets
+			// short vars
 			$mode			= $this->get_mode();
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
-			$user_preset	= request_config_presets::get_request_config(
-				$tipo,
-				$section_tipo,
-				$mode
-			);
-			if (!empty($user_preset)) {
 
-				// set resolved request_config value
-				// $request_config = $user_preset; // OLD WAY < 10-06-2025
+		// 4. Attempt to build from user presets (section 'dd1244' Layout map (request config) presets)
+		// Currently, only sections can modify their default request configuration. It is possible that components could be added in time.
+			if (get_called_class()==='section') {
 
-				// Overwrite properties request_config to allow get_ar_request_config do the unified hard work
-				$this->properties = $this->get_properties() ?? new stdClass();
-				if (!isset($this->properties->source)) {
-					$this->properties->source = new stdClass();
-				}
-				$this->properties->source->request_config = $user_preset;
-
-				debug_log(__METHOD__.
-					" request_config calculated from request_config_presets [$section_tipo-$tipo] ",
-					logger::DEBUG
+				$user_preset = request_config_presets::get_request_config(
+					$tipo,
+					$section_tipo,
+					$mode
 				);
+				if (!empty($user_preset)) {
+
+					// set resolved request_config value
+					// $request_config = $user_preset; // OLD WAY < 10-06-2025
+
+					// Overwrite properties request_config to allow get_ar_request_config do the unified hard work
+					$this->properties = $this->get_properties() ?? new stdClass();
+					if (!isset($this->properties->source)) {
+						$this->properties->source = new stdClass();
+					}
+					$this->properties->source->request_config = $user_preset;
+
+					debug_log(__METHOD__.
+						" request_config calculated from request_config_presets [$section_tipo-$tipo] ",
+						logger::DEBUG
+					);
+				}
 			}
 
 		// 5. Attempt to build from Ontology
