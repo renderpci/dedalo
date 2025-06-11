@@ -103,18 +103,19 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		// focus event
-			select.addEventListener('focus', function(){
+			const focus_handler = () => {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
 					ui.component.activate(self)
 				}
-			})
+			}
+			select.addEventListener('focus', focus_handler)
 		// click event
 			select.addEventListener('click', function(e){
 				e.stopPropagation()
 			})
 		// change event
-			select.addEventListener('change', async function(e){
+			const change_handler = async function(e) {
 
 				const value = this.value
 					? JSON.parse(this.value)
@@ -196,7 +197,8 @@ const get_content_value = (i, current_value, self) => {
 						)
 						event_manager.publish('set_lang_value_' + self.id_base , datalist_item.section_id)
 					}
-			})
+			}
+			select.addEventListener('change', change_handler)
 
 	// select options
 		const datalist_length = datalist.length

@@ -608,7 +608,7 @@ component_portal.prototype.build = async function(autoload=false) {
 		//	 "section_tipo": "self",
 		//	 "value_with_parents": true
 		// }
-		const show_ddo_map				= self.request_config_object.show?.ddo_map || []
+		const show_ddo_map				= self.request_config_object?.show?.ddo_map || []
 		const ddo_value_with_parents	= show_ddo_map.find(el => el.value_with_parents)
 		self.add_component_info			= ddo_value_with_parents
 			? ddo_value_with_parents.value_with_parents
