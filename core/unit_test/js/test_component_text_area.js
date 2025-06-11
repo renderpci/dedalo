@@ -250,7 +250,9 @@ describe(`COMPONENT_TEXT_AREA WITH COMPONENT_IMAGE TEST`,  function() {
 
 		await pause(pause_time)
 
-		await component.destroy(true)
+		if (component) {
+			await component.destroy(true)
+		}
 
 		// clean nodes
 		while (component_container.firstChild) {
