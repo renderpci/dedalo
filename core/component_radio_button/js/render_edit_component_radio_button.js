@@ -209,6 +209,14 @@ const get_content_value = (i, datalist_item, self) => {
 			update_status(this)
 		}
 		input.addEventListener('change', change_handler)
+		// focus event
+		const focus_handler = () => {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				ui.component.activate(self)
+			}
+		}
+		input.addEventListener('focus', focus_handler)
 		// permissions. Set disabled on low permissions
 		if (self.permissions<2) {
 			input.disabled = 'disabled'
