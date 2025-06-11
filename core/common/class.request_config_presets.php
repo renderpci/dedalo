@@ -8,27 +8,55 @@ class request_config_presets {
 
 
 	/**
-	* GET_ALL_REQUEST_CONFIG
-	* Search all request config records from database (matrix_list)
-	* and save/get the result to a cache file when $use_cache is true
+	* GET_ACTIVE_REQUEST_CONFIG
+	* Search all active request config records from database (matrix_list)
+	* and save/get the result to a static cache '$active_request_config_cache'
 	* @return array
 	* 	Assoc array of request_config_object objects
 	*/
-	public static function get_all_request_config() : array {
+	public static function get_active_request_config() : array {
 
 		// cache
-		static $all_request_config_cache;
-		if(isset($all_request_config_cache)) {
-			return $all_request_config_cache;
+		static $active_request_config_cache;
+		if(isset($active_request_config_cache)) {
+			return $active_request_config_cache;
 		}
 
-		$all_request_config = [];
+		$active_request_config = [];
+
+		// filter for active only
+		$filter = json_decode('
+			{
+				"$and": [
+					{
+						"q": {
+							"section_tipo": "dd64",
+							"section_id": "1",
+							"from_component_tipo": "dd1566"
+						}
+						,
+						"q_operator": null,
+						"path": [
+							{
+								"section_tipo": "dd1244",
+								"component_tipo": "dd1566",
+								"model": "component_radio_button",
+								"name": "Active"
+							}
+						],
+						"q_split": false,
+						"type": "jsonb"
+					}
+				]
+			}
+		');
 
 		// Search all records of request config section dd1244
 		$search_query_object = (object)[
-			'id'			=> 'search_all_request_config',
+			'id'			=> 'search_active_request_config',
 			'mode'			=> 'list',
 			'section_tipo'	=> DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO, //'dd1244'
+			'filter'		=> $filter,
 			'limit'			=> 0,
 			'full_count'	=> false
 		];
@@ -51,35 +79,45 @@ class request_config_presets {
 			return $component->get_value() ?? '';
 		};
 
+		// Helper function to extract a component data
+		$get_component_data = function($tipo, $section_id) {
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component = component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
+			);
+			return $component->get_dato() ?? [];
+		};
+
 		foreach ($ar_records as $record) {
 
 			$section_id = $record->section_id;
 
-			// Generate cache key parts
+			// Generate values
 			$tipo			= $get_component_value('dd1242', $section_id); // tipo
 			$section_tipo	= $get_component_value('dd642', $section_id);  // section_tipo
 			$mode			= $get_component_value('dd1246', $section_id);  // mode
 
-			$key_cache = implode('_', [$tipo, $section_tipo, $mode]);
+			// Get user_id (dd654)
+				$user_id_data	= $get_component_data('dd654', $section_id);
+				$user_id		= $user_id_data[0]->section_id ?? null;
+
+			// Get public value (dd640)
+				$public_data	= $get_component_data('dd640', $section_id);
+				$public			= isset($public_data[0]->section_id) && $public_data[0]->section_id=='1';
 
 			// Get JSON config (dd625)
-				$tipo		= 'dd625';
-				$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$component	= component_common::get_instance(
-					$model, // string model
-					$tipo, // string tipo
-					$record->section_id, // string section_id
-					'list', // string mode
-					DEDALO_DATA_NOLAN, // string lang
-					DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO // string section_tipo
-				);
-				$json_data		= $component->get_dato() ?? [];
+				$json_data		= $get_component_data('dd625', $section_id);
 				$request_config	= $json_data[0] ?? [];
 
 				// Normalize input
 				$request_items = is_array($request_config) ? $request_config : [$request_config];
 
-			// normalize each request_config_object
+				// Normalize each request_config_object
 				$safe_request_config = [];
 				foreach ($request_items as $current_item) {
 					try {
@@ -103,21 +141,23 @@ class request_config_presets {
 
 			// Only store if we have valid configs
 			if (!empty($safe_request_config)) {
-				$all_request_config[$key_cache] = [
+				$active_request_config[] = (object)[
 					'tipo'			=> $tipo,
 					'section_tipo'	=> $section_tipo,
 					'mode'			=> $mode,
+					'user_id'		=> $user_id,
+					'public'		=> $public,
 					'data'			=> $safe_request_config
 				];
 			}
 		}
 
-		// $all_request_config_cache
-		$all_request_config_cache = $all_request_config;
+		// $active_request_config_cache
+		$active_request_config_cache = $active_request_config;
 
 
-		return $all_request_config;
-	}//end get_all_request_config
+		return $active_request_config;
+	}//end get_active_request_config
 
 
 
@@ -133,25 +173,45 @@ class request_config_presets {
 	*/
 	public static function get_request_config( string $tipo, string $section_tipo, string $mode ) : array {
 
-		// Get cached list of all_request_config
-		$all_request_config = self::get_all_request_config();
-
-		// key_cache
-		$key_cache = implode('_', [$tipo, $section_tipo, $mode]);
-
-		// base_data
-		$base_data = $all_request_config[$key_cache] ?? null;
-
-		// data (request config array)
-		if ($base_data) {
-			$data = $base_data['data'] ?? null;
-			if ($data){
-				return $data;
-			}
+		if(SHOW_DEBUG===true) {
+			$start_time=start_time();
+			metrics::add_metric('presets_total_calls');
 		}
 
-		// Fallback if not found or invalid format
-		return [];
+		// Get cached list of active_request_config
+		$active_request_config = self::get_active_request_config();
+
+		// search way (slower)
+		$found = array_find($active_request_config, function($el) use($tipo, $section_tipo, $mode) {
+			return ($el->tipo === $tipo &&
+					$el->section_tipo === $section_tipo &&
+					$el->mode === $mode &&
+					$el->user_id == logged_user_id()); // filter by owner user
+		});
+		// fallback to public presets
+		if (empty($found)) {
+			$found = array_find($active_request_config, function($el) use($tipo, $section_tipo, $mode) {
+				return ($el->tipo === $tipo &&
+						$el->section_tipo === $section_tipo &&
+						$el->mode === $mode &&
+						$el->public === true); // filter by public status
+			});
+		}
+
+		if(SHOW_DEBUG===true) {
+			metrics::add_metric('presets_total_time', $start_time);
+		}
+
+		// No presets found
+		if (empty($found)) {
+			return [];
+		}
+
+		// data (request config array)
+		$data = $found->data ?? [];
+
+
+		return $data;
 	}//end get_request_config
 
 
@@ -344,7 +404,7 @@ class request_config_presets {
 	*/
 	public static function clean_cache() : bool {
 
-		// $all_request_config_cache
+		// $active_request_config_cache
 		// There's nothing to clear. The cache is static and is updated on every thread.
 
 		return true;

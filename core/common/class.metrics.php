@@ -47,6 +47,10 @@ final class metrics {
 		static $data_total_time = 0;
 		static $data_total_calls = 0;
 
+	// presets
+		static $presets_total_time = 0;
+		static $presets_total_calls = 0;
+
 
 
 	/**
