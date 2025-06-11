@@ -2544,13 +2544,11 @@ class component_relation_common extends component_common {
 							{
 								"$and": [
 									{
-										"q": [
-											{
-												"section_tipo": "dd64",
-												"section_id": "1",
-												"from_component_tipo": "hierarchy4"
-											}
-										],
+										"q": {
+											"section_tipo": "dd64",
+											"section_id": "1",
+											"from_component_tipo": "hierarchy4"
+										},
 										"q_operator": null,
 										"path": [
 											{
