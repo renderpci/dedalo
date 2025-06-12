@@ -9,7 +9,7 @@ Dédalo manage two different databases, the main database is work system, it has
 
 Work system use PostgreSQL database, doing a backup of this database you will create the full copy of your data.
 
-Yoy can perform a backup in different ways:
+You can perform a backup in different ways:
 
 ### Automatic backup
 
