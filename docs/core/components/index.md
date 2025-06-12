@@ -232,6 +232,27 @@ const component = get_instance({
     ```javascript
     import {get_instance} from '../../common/js/instances.js'
     ```
+    
+## DOM structure
+Components follow a standardized basic DOM structure for main modes and views.
+
+- Mode 'edit' view 'default'
+
+``` shell
+── wrapper_component
+   ├── label
+   ├── buttons_container
+   └── content_data
+       └── content_value  
+           └── value  
+```
+
+- Mode 'list' view 'default'
+
+``` shell
+── wrapper_component
+   └── value 
+```
 
 ## Data management
 
