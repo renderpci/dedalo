@@ -50,37 +50,6 @@ class diffusion_rdf extends diffusion {
 
 
 	/**
-	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
-	* Used to determine when show publication button in sections
-	* Called from class diffusion to get the RDF portion of sections
-	* @see diffusion::get_diffusion_sections_from_diffusion_element
-	* @param string $diffusion_element_tipo
-	* @param string|null $class_name = null
-	* @return array $ar_diffusion_sections
-	*/
-	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
-
-		$ar_diffusion_sections = array();
-
-		// XML elements
-		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'owl:Class', 'children', true);
-		foreach ($elements as $current_element_tipo) {
-
-			# Pointer to section
-			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
-
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}
-		}
-
-
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
-
-
-
-	/**
 	* UPDATE_RECORD
 	* @see diffusion_sql::generate_rdf (called from)
 	* @param object $options
@@ -233,6 +202,37 @@ class diffusion_rdf extends diffusion {
 
 		return $response;
 	}//end update_record
+
+
+
+	/**
+	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* Used to determine when show publication button in sections
+	* Called from class diffusion to get the RDF portion of sections
+	* @see diffusion::get_diffusion_sections_from_diffusion_element
+	* @param string $diffusion_element_tipo
+	* @param string|null $class_name = null
+	* @return array $ar_diffusion_sections
+	*/
+	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
+
+		$ar_diffusion_sections = array();
+
+		// XML elements
+		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'owl:Class', 'children', true);
+		foreach ($elements as $current_element_tipo) {
+
+			# Pointer to section
+			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
+
+			if (isset($ar_related[0])) {
+				$ar_diffusion_sections[] = $ar_related[0];
+			}
+		}
+
+
+		return $ar_diffusion_sections;
+	}//end get_diffusion_sections_from_diffusion_element
 
 
 
