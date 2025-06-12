@@ -53,10 +53,9 @@ class diffusion_rdf extends diffusion {
 	* UPDATE_RECORD
 	* @see diffusion_sql::generate_rdf (called from)
 	* @param object $options
-	* @param bool $resolve_references = false
 	* @return object $response
 	*/
-	public function update_record( object $options, bool $resolve_references=false ) : object {
+	public function update_record( object $options ) : object {
 
 		set_time_limit ( 259200 );  // 3 days
 
@@ -64,13 +63,14 @@ class diffusion_rdf extends diffusion {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
+				$response->errors	= [];
 				$response->class	= get_called_class();
 
 		// options
 			$section_tipo			= $options->section_tipo ?? null;
 			$section_id				= $options->section_id ?? null;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
-			$save_file				= $options->save_file ?? true;
+			$save_file				= $options->save_file ?? true;			
 
 		// target_section_tipo
 			$RecordObj_dd			= new RecordObj_dd($diffusion_element_tipo);

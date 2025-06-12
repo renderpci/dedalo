@@ -31,7 +31,7 @@ class diffusion_socrata extends diffusion  {
 	/**
 	* UPDATE_RECORD
 	* Update one or any number of records ( array ) and references
-	* @param object|null $options = null
+	* @param object $options
 	* {
 	* 	section_tipo: string
 	* 	section_id: string|int
@@ -43,7 +43,9 @@ class diffusion_socrata extends diffusion  {
 	* }
 	* @return object $response
 	*/
-	public function update_record( ?object $options ) : object {
+	public function update_record( object $options ) : object {
+
+		set_time_limit ( 259200 );  // 3 days
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
