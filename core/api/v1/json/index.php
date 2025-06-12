@@ -126,6 +126,19 @@ $global_start_time = hrtime(true);
 	}
 
 
+// debug test
+	if (DEVELOPMENT_SERVER) {
+		// Approximate real conditions by adding a small delay to the development servers,
+		// such as the local host.
+		usleep( 12 * 1000 ); // 12 ms
+		// delay save
+		if (isset($rqo->action) && $rqo->action==='save') {
+			usleep( 300 * 1000 ); // 300 ms
+		}
+	}
+
+
+
 // recovery mode (fixed in in config_core)
 	// rqo->recovery_mode is set automatically by data_manager.request_config from environment page_globals
 	// to preserve the recovery status across API calls
@@ -238,6 +251,17 @@ $global_start_time = hrtime(true);
 	// 	// close current session
 	// 	// if (session_id()) session_write_close();
 	// }
+
+
+
+// debug (browser Server-Timing)
+	// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
+	// $current = (hrtime(true) - $global_start_time) / 1000000;
+	// header('Server-Timing: API;dur='.$current);
+// header X-Processing-Time
+	if (DEVELOPMENT_SERVER) {
+		header('X-Processing-Time: ' . (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']));
+	}
 
 
 
