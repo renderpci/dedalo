@@ -374,4 +374,4 @@ class diffusion_socrata extends diffusion  {
 
 
 
-}// end diffusion_socrata class
+}//end diffusion_socrata class
