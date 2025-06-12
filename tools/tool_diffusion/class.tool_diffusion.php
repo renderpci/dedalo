@@ -529,7 +529,8 @@ class tool_diffusion extends tool_common {
 				print_cli($pdata);
 			}
 
-			// update record
+			// UPDATE_RECORD
+			// This is the specific class method that does the hard work.
 			$update_record_response = $diffusion->update_record((object)[
 				'section_tipo'				=> $section_tipo,
 				'section_id'				=> (int)$section_id,
