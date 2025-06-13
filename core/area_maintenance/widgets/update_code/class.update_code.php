@@ -646,6 +646,30 @@ class update_code {
 				, logger::WARNING
 			);
 
+		// move local directory from old to the new directory like '../backup/code/dedalo_6.3.1/local' => '../httpdocs/dedalo_code/local'
+			$command = "mv {$old_copy_final_path}/local {$target}_code/local";
+			exec($command, $output, $result_code);
+			if ($result_code!=0) {
+				$response->errors[]	= 'move local dir failed';
+				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
+				debug_log(__METHOD__
+					. $response->msg  . PHP_EOL
+					. ' command: ' . to_string($command) . PHP_EOL
+					. ' output: ' . to_string($output) . PHP_EOL
+					. ' result_code: ' . to_string($result_code)
+					, logger::ERROR
+				);
+				return $response;
+			}
+			debug_log(__METHOD__
+				. " exec command" . PHP_EOL
+				. " command " . to_string($command) . PHP_EOL
+				. " output " . to_string($output) . PHP_EOL
+				. " result_code type " . gettype($result_code) . PHP_EOL
+				. " result_code " . to_string($result_code)
+				, logger::WARNING
+			);
+
 		// rename new version directory to final dir such as 'dedalo_code' => 'dedalo'
 			$command = "mv {$target}_code {$target}";
 			exec($command, $output, $result_code);
