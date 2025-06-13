@@ -136,6 +136,16 @@ final class dd_manager {
 						'--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count,
 						'--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms',
 						'--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls,
+						// get_tools stats
+						'Tools',
+						'--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms',
+						'--> get_tools_total_calls: '. metrics::$get_tools_total_calls,
+						'--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms',
+						'--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls,
+						// presets
+						'Presets (request config)',
+						'--> presets_total_time: '  . metrics::$presets_total_time.' ms',
+						'--> presets_total_calls: ' . metrics::$presets_total_calls,
 						// search stats
 						'Search',
 						'--> search_total_time: ' . metrics::$search_total_time.' ms',
@@ -154,22 +164,16 @@ final class dd_manager {
 						'--> search_free_total_time: ' . metrics::$search_free_total_time.' ms',
 						'--> search_free_total_calls: '. metrics::$search_free_total_calls,
 						// get_tools stats
-						'Get tools',
-						'--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms',
-						'--> get_tools_total_calls: '. metrics::$get_tools_total_calls,
-						'--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms',
-						'--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls,
-						// get_tools stats
 						'section_save',
 						'--> section_save_total_time: ' . metrics::$section_save_total_time.' ms',
 						'--> section_save_total_calls: '. metrics::$section_save_total_calls,
 						// Context
 						'Context (all)',
-						'--> structure_context_total_time: ' . metrics::$structure_context_total_time.' ms',
+						'--> structure_context_total_time: '  . metrics::$structure_context_total_time.' ms',
 						'--> structure_context_total_calls: ' . metrics::$structure_context_total_calls,
 						// data
 						'Data (components)',
-						'--> data_total_time: ' . metrics::$data_total_time.' ms',
+						'--> data_total_time: '  . metrics::$data_total_time.' ms',
 						'--> data_total_calls: ' . metrics::$data_total_calls,
 						// Subdatum
 						// 'Subdatum',

@@ -489,7 +489,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// add session SQO when is present in the context
 			// @see server `get_structure_context` sqo_session property addition
-			if (self.context?.sqo_session) {
+			if (self.context?.sqo_session && self.request_config_object) {
 
 				// request_config_object
 				// Update on every build to preserve sync with the server section session
@@ -1599,7 +1599,7 @@ section.prototype.update_pagination = async function (offset) {
 	// update section rqo sqo
 		self.rqo.sqo.offset = offset
 	// update section request_config_object sqo
-		if (self.request_config_object.sqo) {
+		if (self.request_config_object?.sqo) {
 			self.request_config_object.sqo.offset = offset
 		}
 

@@ -118,6 +118,23 @@ class tool_ontology_parser extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->errors	= [];
 
+		// set the current time and version of the exported process
+		// it is saved in properties component id dd1 (ontology40_1)
+		$result = ontology_data_io::update_ontology_info();
+		if (!$result) {
+			$response->errors[] = 'unable to update_ontology_info';
+			$response->msg . 'Unable to update ontology information in dd1 (ontology40_1)';
+			return $response;
+		}
+
+		// export the ontology information into a ontology.json file
+		$ontology_info_response = ontology_data_io::export_ontology_info();
+		if (!$ontology_info_response->result) {
+			$response->errors[] = 'unable to export ontology info JSON file';
+			$response->msg . 'Unable to export the ontology information JSON file';
+			return $response;
+		}
+
 		$done = 0;
 		$ar_msg = [];
 		foreach ($selected_ontologies as $tld) {
@@ -136,13 +153,6 @@ class tool_ontology_parser extends tool_common {
 
 			$done++;
 		}
-
-		// set the current time and version of the exported process
-		// it is saved in properties component id dd1 (ontology40_1)
-		ontology_data_io::update_ontology_info();
-
-		// export the ontology information into a ontology.json file
-		ontology_data_io::export_ontology_info();
 
 		// Process private list of matrix_dd node/s and change jer_dd rows
 			$private_list_response = ontology_data_io::export_private_lists_to_file();

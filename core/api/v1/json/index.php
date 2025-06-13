@@ -60,7 +60,7 @@ $global_start_time = hrtime(true);
 
 
 
-// php://input get post vars. file_get_contents returns a string
+// php://input get post vars. file_get_contents returns a JSON encoded string
 	$str_json = file_get_contents('php://input');
 	if (!empty($str_json)) {
 		$rqo = json_decode( $str_json );
@@ -124,6 +124,19 @@ $global_start_time = hrtime(true);
 		);
 		exit( 0 );
 	}
+
+
+// debug test
+	if (DEVELOPMENT_SERVER) {
+		// Approximate real conditions by adding a small delay to the development servers,
+		// such as the local host.
+		usleep( 12 * 1000 ); // 12 ms
+		// delay save
+		if (isset($rqo->action) && $rqo->action==='save') {
+			usleep( 300 * 1000 ); // 300 ms
+		}
+	}
+
 
 
 // recovery mode (fixed in in config_core)
@@ -211,13 +224,6 @@ $global_start_time = hrtime(true);
 
 
 
-// debug (browser Server-Timing)
-		// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
-		// $current = (hrtime(true) - $global_start_time) / 1000000;
-		// header('Server-Timing: API;dur='.$current);
-
-
-
 // output_string_and_close_connection
 	// function output_string_and_close_connection($string_to_output) {
 	// 	// set_time_limit(0);
@@ -238,6 +244,17 @@ $global_start_time = hrtime(true);
 	// 	// close current session
 	// 	// if (session_id()) session_write_close();
 	// }
+
+
+
+// debug (browser Server-Timing)
+	// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
+	// $current = (hrtime(true) - $global_start_time) / 1000000;
+	// header('Server-Timing: API;dur='.$current);
+// header X-Processing-Time
+	if (DEVELOPMENT_SERVER) {
+		header('X-Processing-Time: ' . (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']));
+	}
 
 
 
