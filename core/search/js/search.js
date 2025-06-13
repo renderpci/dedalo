@@ -890,6 +890,12 @@ search.prototype.update_state = async function(options) {
 		// section || area thesaurus
 			const caller = self.caller
 
+		// Delete caller search_tipos (Ontology feature).
+		// This allow to re-create the RQO clean on build the caller again ignoring the URL search_tipos value.
+			if(caller.search_tipos) {
+				caller.search_tipos = null
+			}
+
 		// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
 			const json_query_obj = self.parse_dom_to_json_filter({
 				mode : 'search'

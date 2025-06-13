@@ -294,12 +294,11 @@ common.prototype.render = async function (options={}) {
 			console.warn('))) render page_globals.api_errors:', self.model, page_globals.api_errors);
 
 			// render generic response_error node
-			const node = render_server_response_error(
+			self.node = render_server_response_error(
 				page_globals.api_errors
 			);
-			self.node = node
 
-			return node
+			return self.node
 		}
 
 	// context check
@@ -311,9 +310,9 @@ common.prototype.render = async function (options={}) {
 			}])
 		}
 
-	// permissions
+	// permissions check
 		const permissions = parseInt(self.permissions)
-		if(permissions<1) {
+		if(parseInt(permissions)<1) {
 
 			const label = (get_label.no_access || 'You don\'t have access here')
 						+ ' [' + self.tipo + ']'
@@ -335,27 +334,8 @@ common.prototype.render = async function (options={}) {
 				break;
 
 			case 'rendering':
-				// console.error(`[common.render] Ignored render already rendering '${self.model}'. current status:`, clone(self.status), render_level, self.model, self.id);
-				// return false
-
-				// event_manager.subscribe('render_'+self.id, function(result_node){
-				// })
-
-				// return new Promise(function(resolve){
-				// 	setTimeout(async function(){
-				// 		const node = await self.render(options)
-				// 			console.log("node:",node);
-				// 		resolve(node)
-				// 	}, 2000)
-				// })
-
-				// await new Promise(function(resolve){
-				// 	setTimeout(function(){
-				// 			console.log("hey:");
-				// 		resolve(true)
-				// 	}, 3000)
-				// })
-				break;
+				console.warn(`Render in progress ignored for ${self.model}. Status: rendering.`);
+				return false;
 
 			case 'rendered':
 				// if render mode is equal than current already rendered node, return node
@@ -398,12 +378,14 @@ common.prototype.render = async function (options={}) {
 		//console.log("typeof self[render_mode]:",typeof self[render_mode], self.model);
 
 	// render mode. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
-		const current_render_mode = (typeof self[render_mode]!=='function')
-			? (function(){
-				console.warn(`Invalid function (render_mode: ${render_mode} ) using fallback to 'list' mode on instance:`, self);
-				return 'list';
-			  })()
-			: render_mode
+		const current_render_mode = (typeof self[render_mode]==='function')
+			? render_mode
+			: 'list'
+
+		// warning when fallback render mode
+			if (current_render_mode!==render_mode) {
+				console.warn(`Invalid render_mode '${render_mode}', falling back to 'list'.`);
+			}
 
 		// render options
 			const render_options = Object.assign({
@@ -413,12 +395,11 @@ common.prototype.render = async function (options={}) {
 
 		// render function handler check
 			if (typeof self[current_render_mode]!=='function') {
-				console.warn('Invalid function call:', current_render_mode);
+				console.warn(`Render function not defined: ${current_render_mode}`);
+				return false;
 			}
 
-		const node = typeof self[current_render_mode]==='function'
-			? await self[current_render_mode](render_options)
-			: null
+		const node = await self[current_render_mode](render_options);
 
 	// result_node render based in render_level
 		const result_node = await (async () => {
@@ -432,9 +413,10 @@ common.prototype.render = async function (options={}) {
 						const wrapper = self.node
 
 					// current instance content_data node
-						const old_content_data_node	= wrapper.content_data
+						const old_content_data_node	= wrapper?.content_data
+
 						// warning if not found
-						if (typeof old_content_data_node==='undefined' || !old_content_data_node) {
+						if (!old_content_data_node) {
 
 							console.error("Invalid content_data pointer node found in render ("+self.model+") :", typeof old_content_data_node, old_content_data_node, self);
 
@@ -449,18 +431,18 @@ common.prototype.render = async function (options={}) {
 								// set pointers
 								self.node.content_data = new_content_data_node
 
-						}else{
-
-							// new content data node
-								const new_content_data_node = node
-									? node // use already calculated node
-									: await self[render_mode](render_options);
-
-							// replace
-								old_content_data_node.replaceWith(new_content_data_node);
-								// set pointers. Update the wrapper pointer to the new content_data node
-								self.node.content_data = new_content_data_node
+							return self.node
 						}
+
+					// new content data node
+						const new_content_data_node = node
+							? node // use already calculated node
+							: await self[render_mode](render_options);
+
+					// replace
+						old_content_data_node.replaceWith(new_content_data_node);
+						// set pointers. Update the wrapper pointer to the new content_data node
+						self.node.content_data = new_content_data_node
 
 					// return created node (content_data)
 					return self.node
@@ -468,6 +450,7 @@ common.prototype.render = async function (options={}) {
 
 				case 'full':
 				default:
+
 					// set
 						// replaces DOM node if the node exist,
 						// ex: when it's called by event that need change data in component (update_data event)
@@ -508,10 +491,9 @@ common.prototype.render = async function (options={}) {
 
 	// event publish
 		event_manager.publish('render_'+self.id, result_node)
-		// event_manager.publish('render_instance', self)
 
 	// activate_tooltips
-		if (self.mode==='edit') {
+		if (self.mode === 'edit') {
 			dd_request_idle_callback(
 				() => {
 					ui.activate_tooltips(result_node)

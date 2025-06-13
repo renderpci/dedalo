@@ -20,10 +20,11 @@
 			? json_decode($request_options)
 			: $request_options;
 
-		$data          = $params->data;
-		$options       = $params->options;
-		$total_days    = array_sum($data->total_days); //$data->total_days;
-		$month_days    = 30.42;
+		$data				= $params->data;
+		$options			= $params->options;
+		$data_total_days	= is_array($data->total_days) ? $data->total_days : [];
+		$total_days			= array_sum($data_total_days); //$data->total_days;
+		$month_days			= 30.42;
 
 		// check value
 		if (!is_numeric($total_days)) {

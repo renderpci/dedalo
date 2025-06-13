@@ -304,6 +304,122 @@ class request_config_object extends stdClass {
 
 
 	/**
+	* PARSE_REQUEST_CONFIG_ITEM
+	* Parses normalized request_config objects resolving 'self' vars
+	* and adding label, model, etc. to complete usable ddo_map elements.
+	* Used frequently to parse Layout map user presets.
+	* Based on common->get_ar_request_config method ddo_map parser for view, search, chose and hide
+	* @see request_config_presets::get_all_request_config()
+	* @return object $parsed_request_config
+	* @working
+	*/
+	public static function parse_request_config_item( object $request_config_object, string $section_tipo) : object {
+
+		// TODO: implement this method to atomize the big common->get_ar_request_config method
+		// Working on
+		throw new Error('This method is not implement yet');
+
+		// clone deeply to preserve the original object
+		$parsed_request_config = json_decode( json_encode($request_config_object) );
+
+		// resolve self vars
+		$ar_ddo_self_list = ['show','hide','search','choose'];
+		foreach ($ar_ddo_self_list as $ddo_name) {
+			$ddo_map = $parsed_request_config->{$ddo_name}->ddo_map ?? null;
+			if ($ddo_map) {
+
+				$final_ddo_map = [];
+
+				foreach ($ddo_map as $current_ddo) {
+
+					// check mandatory tipo
+						if (!isset($current_ddo->tipo)) {
+							debug_log(__METHOD__
+								.' ERROR. Ignored current_ddo: don\'t have tipo: '
+								.' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+								.' current_ddo: ' . to_string($current_ddo) . PHP_EOL
+								.' ddo_map type: ' . gettype($ddo_map) . PHP_EOL
+								.' ddo_map: ' . json_encode($ddo_map, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+							continue;
+						}
+
+					// check valid tipo (The model is unsolvable)
+						$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_ddo->tipo );
+						if ( $tipo_is_valid === false ) {
+							debug_log(__METHOD__
+								.' WARNING. Ignored current_ddo: is invalid '
+								.' current_ddo->tipo: ' . to_string($current_ddo->tipo) . PHP_EOL
+								.' current_ddo: ' . to_string($current_ddo) . PHP_EOL
+								.' ddo_map type: ' . gettype($ddo_map) . PHP_EOL
+								.' ddo_map: ' . json_encode($ddo_map, JSON_PRETTY_PRINT) . PHP_EOL
+								.' section_tipo: ' . $section_tipo . PHP_EOL
+								.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo)
+								, logger::WARNING
+							);
+							continue;
+						}
+
+					// check if the ddo is active into the ontology
+						$is_active = RecordObj_dd::check_active_tld($current_ddo->tipo);
+						if( $is_active === false ){
+							debug_log(__METHOD__
+								. " Removed ddo from ddo_map->show definition because the tld is not installed " . PHP_EOL
+								. to_string($current_ddo)
+								, logger::WARNING
+							);
+							continue;
+						}
+
+					// model. Calculated always to prevent errors
+						$current_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo, true);
+
+					// label. Add to all ddo_map items
+						if (!isset($current_ddo->label)) {
+							$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+						}
+
+					// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
+						if (isset($current_ddo->section_tipo) && $current_ddo->section_tipo==='self') {
+							$current_ddo->section_tipo = $section_tipo;
+						}
+
+					// parent. Set the default "self" value to the current tipo (the parent)
+						if (isset($current_ddo->parent) && $current_ddo->parent==='self') {
+							$current_ddo->parent = $section_tipo;
+						}
+
+					// fixed_mode. When the mode is set in properties or is set by tool or user templates
+					// set the fixed_mode to true, to preserve the mode across changes in render process
+						if( isset($current_ddo->mode) ) {
+							$current_ddo->fixed_mode = true;
+						}
+
+					// permissions check
+						if($current_ddo->model==='section') {
+							$check_section_tipo = is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo;
+							$permissions = common::get_permissions($check_section_tipo, $current_ddo->tipo);
+							if($permissions<1){
+								continue;
+							}
+						}
+
+					$final_ddo_map[] = $current_ddo;
+				}
+
+				// update current ddo_map ('show','hide','search','choose')
+				$parsed_request_config->{$ddo_name}->ddo_map = $final_ddo_map;
+			}
+		}
+
+
+		return $parsed_request_config;
+	}//end parse_request_config_item
+
+
+
+	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	* @param string $name
