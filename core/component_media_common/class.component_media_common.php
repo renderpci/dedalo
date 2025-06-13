@@ -1465,6 +1465,185 @@ class component_media_common extends component_common {
 
 
 	/**
+	* DUPLICATE_COMPONENT_MEDIA_FILES
+	* Duplicate all media file linked (copy all media files into a new section_id)
+	* of current component (all quality versions)
+	* Is triggered wen section that contain media elements is duplicated
+	* @see section:duplicate_current_section
+	* @param string|int $target_section_id
+	* @param array $ar_quality = []
+	* @param string|null $extension = null
+	* @return bool
+	* @test false
+	*/
+	public function duplicate_component_media_files( string|int $target_section_id, array $ar_quality=[], ?string $extension=null ) : bool {
+
+		$result = false;
+
+		// ar_quality. Get all if not received any
+			if (empty($ar_quality)) {
+				$ar_quality = $this->get_ar_quality();
+			}
+
+		// ar_extensions
+			$normalized_extension	= $this->get_extension();
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+			$allowed_extensions 	= $this->get_allowed_extensions();
+			$ar_extensions			= array_merge(
+				[$normalized_extension],
+				$alternative_extensions,
+				$allowed_extensions
+			);
+
+		// data
+			$dato = $this->get_dato();
+
+		// valid quality list
+			$valid_ar_quality = $this->get_ar_quality();
+
+
+		// target component
+			$target_component = component_common::get_instance(
+				$this->get_model(),
+				$this->get_tipo(),
+				$target_section_id,
+				'list',
+				$this->get_lang(),
+				$this->get_section_tipo()
+			);
+
+		// files remove of each quality
+			foreach ($ar_quality as $current_quality) {
+
+				// check valid quality
+					if (!in_array($current_quality, $valid_ar_quality)) {
+						debug_log(__METHOD__
+							. " Ignored invalid quality " . PHP_EOL
+							. to_string($current_quality)
+							, logger::WARNING
+						);
+						continue;
+					}
+
+				// original case. If defined 'original_normalized_name', add extension to list to duplicate
+					if ( $current_quality===$this->get_original_quality() ) {
+						$original_normalized_name	= isset($dato[0]) && isset($dato[0]->original_normalized_name)
+							? $dato[0]->original_normalized_name
+							: null;
+						if (isset($original_normalized_name)) {
+							$original_normalized_extension = get_file_extension($original_normalized_name);
+							if(!in_array($original_normalized_extension, $ar_extensions)) {
+								$ar_extensions[] = $original_normalized_extension;
+							}
+						}
+					}
+
+				// modified case. If defined 'modified_normalized_name', add extension to list to delete
+					if ( $current_quality===$this->get_modified_quality() ) {
+						$modified_normalized_name	= isset($dato[0]) && isset($dato[0]->modified_normalized_name)
+							? $dato[0]->modified_normalized_name
+							: null;
+						if (isset($modified_normalized_name)) {
+							$modified_normalized_extension = get_file_extension($modified_normalized_name);
+							if(!in_array($modified_normalized_extension, $ar_extensions)) {
+								$ar_extensions[] = $modified_normalized_extension;
+							}
+						}
+					}
+
+				// files by ar_extensions
+					foreach ($ar_extensions as $current_extension) {
+
+						if( isset($extension) && $current_extension !== $extension ){
+							continue;
+						}
+
+						// media_filepath is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
+							$source_file = $this->get_media_filepath($current_quality, $current_extension);
+							if (!file_exists($source_file)) {
+								// dump($source_file, ' SKIP media_filepath ++ '.to_string());
+								continue; // Skip
+							}
+							// get the target directory and create the new target filename
+							$target_media_path_dir	= $target_component->get_media_path_dir($current_quality);
+							$base_name				= $target_component->get_name();
+							$target_filename		= $base_name.'.'.$current_extension;
+							// build the full target file with its path
+							$target_file			= $target_media_path_dir.'/'.$target_filename;
+
+							// duplicate the file
+							$duplicate_file_options = new stdClass();
+								$duplicate_file_options->source_file	= $source_file;
+								$duplicate_file_options->target_file	= $target_file;
+
+							$move_file = $this->duplicate_file( $duplicate_file_options );
+
+							if( $move_file === false ) {
+								return false;
+							}
+
+						// debug
+							debug_log(__METHOD__
+								. ' Duplicated file'. PHP_EOL
+								. ' source_file: ' . $source_file . PHP_EOL
+								. ' target_file: ' . $target_file
+								, logger::WARNING
+							);
+					}//end foreach ($ar_extensions as $current_extension)
+
+				// fix result as true if any of qualities pass here
+					$result = true;
+			}//end foreach ($ar_quality as $current_quality)
+
+
+		return $result;
+	}//end duplicate_component_media_files
+
+
+
+	/**
+	* DUPLICATE_FILE
+	* @param object $options
+	* {
+	* 	source_file : string full path of the file to be copied
+	* 	target_file : string full path of the target file
+	* }
+	* @return bool
+	*/
+	public function duplicate_file( object $options) : bool {
+
+		//options
+		$source_file	= $options->source_file;
+		$target_file	= $options->target_file;
+
+		// target directory check
+			$target_dir = pathinfo($target_file)['dirname'];
+
+			// if the target directory doesn't exist create it.
+			$check_directory = create_directory($target_dir, 0750);
+
+			if( $check_directory === false ) {
+				return false;
+			}
+
+		// duplicate the file
+		if( !copy($source_file, $target_file) ) {
+			debug_log(__METHOD__
+				. " Error on copy files [1]. Permission denied . The file is not duplicated" . PHP_EOL
+				. ' source_file: ' . $source_file . PHP_EOL
+				. ' target_file: ' . $target_file
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end duplicate_file
+
+
+
+
+	/**
 	* GET_SORTABLE
 	* @return bool
 	* 	Default is true. Override when component is sortable
