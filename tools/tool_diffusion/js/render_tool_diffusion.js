@@ -368,41 +368,45 @@ export const render_publication_items = function(self) {
 				})
 
 			// database
-				const database_label = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: get_label.database || 'Database',
-					class_name		: 'label',
-					parent			: publication_items_grid
-				})
-				const database_value = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: item.database_name,
-					class_name		: 'value',
-					parent			: publication_items_grid
-				})
+				if (item.database_name) {
+					const database_label = ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: get_label.database || 'Database',
+						class_name		: 'label',
+						parent			: publication_items_grid
+					})
+					const database_value = ui.create_dom_element({
+						element_type	: 'div',
+						inner_html		: item.database_name,
+						class_name		: 'value',
+						parent			: publication_items_grid
+					})
+				}				
 
 			// table
-				const table_label = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: get_label.table || 'Table',
-					class_name		: 'label',
-					parent			: publication_items_grid
-				})
-				const table_value = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: data_item.table,
-					class_name		: 'value',
-					parent			: publication_items_grid
-				})
+				if (data_item.table) {
+					const table_label = ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: get_label.table || 'Table',
+						class_name		: 'label',
+						parent			: publication_items_grid
+					})
+					const table_value = ui.create_dom_element({
+						element_type	: 'div',
+						inner_html		: data_item.table,
+						class_name		: 'value',
+						parent			: publication_items_grid
+					})
+				}
 
 			// fields
-				const fields_label = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: get_label.fields || 'Fields',
-					class_name		: 'label',
-					parent			: publication_items_grid
-				})
-				if (data_item.table_fields_info && data_item.table_fields_info.length>0) {
+				if (data_item.table_fields_info?.length>0) {
+					const fields_label = ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: get_label.fields || 'Fields',
+						class_name		: 'label',
+						parent			: publication_items_grid
+					})					
 					const fields_value = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'value link icon_arrow unselectable',
@@ -474,24 +478,17 @@ export const render_publication_items = function(self) {
 							parent			: publication_items_grid
 						})
 						ar_fields_nodes.push(related_info_node)
-					}
-				}else{
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'value',
-						inner_html		: 'not used',
-						parent			: publication_items_grid
-					})
-				}
+					}					
+				}				
 
 			// DB connection_status
-				ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: get_label.connection_status || 'Connection status',
-					class_name		: 'label',
-					parent			: publication_items_grid
-				})
 				if (item.connection_status) {
+					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: get_label.connection_status || 'Connection status',
+						class_name		: 'label',
+						parent			: publication_items_grid
+					})
 					const class_status = item.connection_status.result===true
 						? 'success'
 						: 'fail'
@@ -501,14 +498,7 @@ export const render_publication_items = function(self) {
 						class_name		: 'value ' + class_status,
 						parent			: publication_items_grid
 					})
-				}else{
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'value',
-						inner_html		: 'not used',
-						parent			: publication_items_grid
-					})
-				}
+				}					
 
 			// properties (section_tables_map)
 				const properties = data_item.section_tables_map.properties || null

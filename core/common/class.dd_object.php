@@ -12,25 +12,27 @@ class dd_object extends stdClass {
 		// typo : "ddo"
 		public $typo = 'ddo';
 		/*
-		// type					: "component"  (section | component | grouper | button | tool ..)
-		// tipo					: 'oh14',
-		// section_tipo			: 'oh1',
-		// parent				: 'oh2', // caller section / portal  tipo
-		// parent_grouper		: 'oh7', // structure parent
-		// lang					: 'lg-eng',
-		// mode					: "list",
-		// model				: 'component_input_text',
-		// properties			: {}
-		// permissions			: 1
-		// label				: 'Title'
-		// labels				: ['Title']
-		// translatable			: true
-		// tools				: [] // array of tools dd_objects (context)
-		// buttons				: [] // array of buttons dd_objects (context)
-		// css					: {}
-		// target_sections		: [{'tipo':'dd125','label':'Projects']
-		// request_config		: [],
-		// columns_map			: array
+		// type					: string // e.g. "component"  (section | component | grouper | button | tool ..)
+		// tipo					: string // e.g. 'oh14',
+		// section_tipo			: string // e.g. 'oh1',
+		// parent				: string // e.g. 'oh2', // caller section / portal  tipo
+		// parent_grouper		: string // e.g. 'oh7', // structure parent
+		// lang					: string // e.g. 'lg-eng',
+		// mode					: string // e.g. "list",
+		// model				: string // e.g. 'component_input_text',
+		// id 					: string // optional parameter in order to identify current DDO inside a DDO_MAP chain. It is used to referent it in process as parser or widgets data.
+		// properties			: object // generic object to define custom properties of the DDO. Used to sent or overwrites the Ontology properties.
+		// permissions			: int // e.g. 1
+		// label				: string // e.g. 'Title'
+		// labels				: array // e.g. ['Title']
+		// translatable			: bool
+		// tools				: array // array of tools dd_objects (context)
+		// buttons				: array // array of buttons dd_objects (context)
+		// css					: object
+		// target_sections		: array // e.g. [{'tipo':'dd125','label':'Projects']
+		// request_config		: array		
+		// columns_map			: array // array of objects as [{"id": "e", "label": "numisdata1530","width": "5rem"}]
+		// column_id 			: string // id value that point to its column inside columns_map items e.g. 'e'
 		// view					: string|null like 'table'
 		// children_view		: string like "text"
 		// name					: string like 'tool_lang' // Used by tools
@@ -41,12 +43,12 @@ class dd_object extends stdClass {
 		// show_in_component	: bool // Used by tools
 		// config				: object // Used by tools and services
 		// sortable				: bool // Used by components (columns)
-		// fields_separator		: string like ", " // used by portal to join different fields
-		// records_separator	: string like " | " // used by portal to join different records (rows)
-		// legacy_model			: string like "component_autocomplete_hi"
+		// fields_separator		: string // e.g. ", " // used by portal to join different fields
+		// records_separator	: string // e.g. " | " // used by portal to join different records (rows)
+		// legacy_model			: string // e.g. "component_autocomplete_hi"
 		// autoload 			: bool // Used by tools
 		// role 				: string // 'main_component' // Used by tools
-		// section_map 			: object // {
+		// section_map 			: object // e.g. {
 										"thesaurus": {
 											"term": "hierarchy25",
 											"model": "hierarchy27",
@@ -56,9 +58,9 @@ class dd_object extends stdClass {
 											"is_descriptor": "hierarchy23"
 										}
 									} Used by tools
-		// color 				: string // "#f1f1f1"
-		// matrix_table 		: string || 'matrix_dd'
-		// data_fn 				: string || 'get_calculation_data' used in 'mdcat2431' set the function to be used to get data of the ddo
+		// color 				: string // e.g. "#f1f1f1"
+		// matrix_table 		: string // e.g. 'matrix_dd'
+		// data_fn 				: string // e.g. 'get_calculation_data' used in 'mdcat2431' set the function to be used to get data of the ddo
 
 
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
@@ -484,6 +486,32 @@ class dd_object extends stdClass {
 
 		return $this->model ?? null;
 	}//end get_model
+
+
+
+	/**
+	* SET_ID
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_id(?string $value) : bool {
+
+		$this->id = $value;
+
+		return true;
+	}//end set_id
+
+
+
+	/**
+	* GET_ID
+	* Return property value
+	* @return string|null $this->model
+	*/
+	public function get_id() : ?string {
+
+		return $this->id ?? null;
+	}//end get_id
 
 
 

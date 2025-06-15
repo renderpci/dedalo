@@ -167,6 +167,23 @@ Mode **edit** specifics
 
 * **properties** : Object optional, only for edit mode. Overwrites the default properties of the Ontology node **[properties](../dd_object.md#properties)**.
 This is usually used to change the CSS of a component or to add a custom label to it.  
+
+
+    - **css** : To change the CSS of a element, set a selector like *.wrapper_component* and add properties with the desired styles like *"grid-column": "span 3"* in JSON format.  
+    Components main selectors are defined from [Components DOM structure](../components/index.md#dom-structure) and must to be set with the '.' as prefix like '.wrapper_component'.   
+    
+    ``` shell
+    ── .wrapper_component (all component wrapper div)
+       ├── .label (name of the component div)
+       ├── .buttons_container (buttons div hidden by default. Visible when component is active)
+       └── .content_data (div containing all the component data)
+           └── .content_value (div with each component value)
+    ```
+    
+    
+    - **label** : To change the label of the component, set an object with the Dedalo language code (like 'lg-eng') as key and the label (like 'My component label') as value. Add as many languages as you need.  
+    Please note that if the current selected application language is not one of the defined values, the first value will be used as a fallback.
+    
 Sample:
 
 ```
