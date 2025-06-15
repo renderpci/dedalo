@@ -13,7 +13,7 @@ class diffusion_object extends stdClass {
 		// tipo : string e.g. 'rsc636'
 		// parent : string e.g. 'rsc630'
 		// name : string e.g. 'mmo:mint' (name of the column or node)
-		// ddo_map : array e.g. [{"tipo":"numisdata30","parent":"self","section_tipo":"self"}]
+		// data : array e.g. [{"id":"a","value":"Raspa"}] It will be passed as the first argument to the parser (see class.parser_text.php for a sample).
 		
 
 
