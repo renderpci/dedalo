@@ -4184,7 +4184,7 @@ class section extends common {
 					'component_info'
 				];
 
-			// relations
+			// relation components
 				$group_locators = []; // group locator to prevent save component for each locator
 				foreach ($source_dato->relations as $locator) {
 					$current_tipo = $locator->from_component_tipo ?? false;
@@ -4273,7 +4273,9 @@ class section extends common {
 					}
 				}
 
-			// components
+			// literal components
+				$ar_media_components = component_media_common::get_media_components();
+
 				foreach ($source_dato->components as $current_tipo => $component_full_dato) {
 					// tipo filter
 					if (in_array($current_tipo, $skip_tipos)) {
@@ -4296,10 +4298,25 @@ class section extends common {
 					if (in_array($current_model, $skip_models)) {
 						continue;
 					}
+					// media common cases
+					if( in_array($current_model, $ar_media_components) ){
+
+						$source_component = component_common::get_instance(
+							$current_model,
+							$current_tipo,
+							$this->section_id,
+							'list',
+							$lang,
+							$section_tipo
+						);
+
+						$source_component->duplicate_component_media_files( $new_section_id );
+					}
 					// its OK. Add value
 					foreach ($component_full_dato->dato as $lang => $local_value) {
 
-						$component = component_common::get_instance(
+						// target component
+						$target_component = component_common::get_instance(
 							$current_model,
 							$current_tipo,
 							$new_section_id,
@@ -4307,9 +4324,21 @@ class section extends common {
 							$lang,
 							$section_tipo
 						);
-						$component->set_dato($local_value); // set dato in current lang
-						$component->Save(); // save each lang to force to create a time machine and activity records
+						// media common cases
+						if( in_array($current_model, $ar_media_components) ){
+
+							// consolidate media files and save it
+							$target_component->regenerate_component( (object)[
+								'delete_normalized_files' => false
+							]);
+
+						}else{
+							// save in a common way
+							$target_component->set_dato($local_value); // set dato in current lang
+							$target_component->Save(); // save each lang to force to create a time machine and activity records
+						}
 					}
+
 				}
 
 
