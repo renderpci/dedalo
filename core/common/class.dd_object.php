@@ -20,7 +20,7 @@ class dd_object extends stdClass {
 		// lang					: 'lg-eng',
 		// mode					: "list",
 		// model				: 'component_input_text',
-		// properties			: {}
+		// id 					: string // optional parameter in order to identify current DDO inside a DDO_MAP chain. It is used to referent it in process as parser or widgets data.
 		// permissions			: 1
 		// label				: 'Title'
 		// labels				: ['Title']
@@ -484,6 +484,32 @@ class dd_object extends stdClass {
 
 		return $this->model ?? null;
 	}//end get_model
+
+
+
+	/**
+	* SET_ID
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_id(?string $value) : bool {
+
+		$this->id = $value;
+
+		return true;
+	}//end set_id
+
+
+
+	/**
+	* GET_ID
+	* Return property value
+	* @return string|null $this->model
+	*/
+	public function get_id() : ?string {
+
+		return $this->id ?? null;
+	}//end get_id
 
 
 
