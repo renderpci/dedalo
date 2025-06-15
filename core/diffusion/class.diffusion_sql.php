@@ -23,7 +23,7 @@ class diffusion_sql extends diffusion  {
 	* @param object|null $options = null
 	*  Default null
 	*/
-	function __construct( ?object $options=null ) {
+	public function __construct( ?object $options=null ) {
 
 		parent::__construct($options);
 	}//end __construct
