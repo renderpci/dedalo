@@ -28,7 +28,7 @@ class diffusion_rdf extends diffusion {
 	* CONSTRUCT
 	* @param object|null $options = null
 	*/
-	function __construct( ?object $options=null ) {
+	public function __construct( ?object $options=null ) {
 
 		parent::__construct($options);
 

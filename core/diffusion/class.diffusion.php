@@ -32,7 +32,7 @@ abstract class diffusion  {
 	* CONSTRUCT
 	* @param object $options = null
 	*/
-	function __construct( ?object $options=null ) {
+	public function __construct( ?object $options=null ) {
 
 		$this->domain = DEDALO_DIFFUSION_DOMAIN;
 	}//end __construct
