@@ -180,3 +180,6 @@ phpunit-results.*
 
 #ontology
 /install/import/ontology/
+
+#local files and configurations
+/local
