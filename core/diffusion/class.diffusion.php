@@ -1556,7 +1556,148 @@ abstract class diffusion  {
 		}
 
 		return $response;
-	}//end update_publication_schema
+	} //end update_publication_schema
+
+
+
+	/**
+	 * GET_DIFFUSION_OBJECTS
+	 * Collect all diffusion objects from diffusion_element_tipo
+	 * @param string $root_tipo
+	 * @param bool $include_self=false
+	 * @return array $diffusion_objects
+	 */
+	public function get_diffusion_objects(string $root_tipo, bool $include_self=false): array {
+
+		$diffusion_objects = [];
+
+		// Get recursively all children and iterate it
+		$children_objects = self::get_children_objects($root_tipo);
+
+		// include_self optional
+		if ($include_self) {
+			// add the self root tipo at beginning of the array
+			array_unshift($children_objects, (object)[
+				'tipo' => $root_tipo,
+				'parent' => null
+			]);
+		}
+		
+		foreach ($children_objects as $child_object) {
+
+			$child_tipo = $child_object->tipo;
+			$parent =  $child_object->parent;
+
+			$RecordObj_dd = new RecordObj_dd($child_tipo);
+			$properties = $RecordObj_dd->get_properties();
+			// all properties value is a request_config_object
+			$request_config_object = $properties ?? null;
+			$process = $request_config_object->process ?? null;
+			
+			// column / node name (from the Ontology term value)
+			$name = RecordObj_dd::get_termino_by_tipo($child_tipo, DEDALO_STRUCTURE_LANG);
+
+			// diffusion_object
+			$diffusion_object = new diffusion_object();
+			$diffusion_object->tipo = $child_tipo;
+			$diffusion_object->parent = $parent;
+			$diffusion_object->name = $name;
+			$diffusion_object->process = $process;
+
+			// add 
+			$diffusion_objects[] = $diffusion_object;			
+		}
+
+
+		return $diffusion_objects;
+	}//end get_diffusion_objects
+	
+	
+	
+	/**
+	 * GET_CHILDREN_OBJECTS
+	 * Resolve ontology children nodes recursively using
+	 * properties->children definition as fallback.
+	 * Using objects as {parent:a,tipo:b}
+	 * @param string $tipo
+	 * @return array $children_objects
+	 */
+	protected static function get_children_objects( string $tipo ) : array {
+
+		$children_objects = [];
+		
+		// Ontology typical resolution
+		$children = RecordObj_dd::get_ar_childrens($tipo);		
+		if (empty($children)) {
+			// fallback to properties definition
+			$RecordObj_dd = new RecordObj_dd($tipo);
+			$properties = $RecordObj_dd->get_properties();
+			$children = $properties->children ?? [];		
+		}	
+				
+		if (!empty($children)) {
+
+			// Create the pairs object tipo/parent
+			$children_objects = array_map(function ($el) use ($tipo) {
+				return (object)[
+					'tipo' => $el,
+					'parent' => $tipo
+				];
+			}, $children);
+
+			// recursion
+			foreach ($children as $child) {
+				$children_objects = array_merge(
+					$children_objects,
+					self::get_children_objects($child)
+				);
+			}
+		}
+		
+		
+		return $children_objects;
+	} //end get_children_objects
+
+
+
+	/**
+	 * LOAD_PARSERS
+	 * Include the classes of the parsers based on the diffusion_element 
+	 * properties definitions.
+	 * @param string $diffusion_element_tipo
+	 * @return bool
+	 */
+	public function load_parsers( string $diffusion_element_tipo ) : bool {
+	
+		static $parsers_loaded;
+		if (isset($parsers_loaded) && $parsers_loaded===true) {
+			return true;
+		}
+	
+		$RecordObj_dd = new RecordObj_dd($diffusion_element_tipo);
+		$properties = $RecordObj_dd->get_properties();		
+		$class_parser = $properties->diffusion->class_parser ?? null;
+		if ($class_parser) {
+			foreach ((array)$class_parser as $file_path) {				
+				try {
+					$full_path = DEDALO_ROOT_PATH . trim($file_path, " .");
+					include_once $full_path;
+				} catch (Exception $e) {					
+					debug_log(__METHOD__
+						. ' Ignored parser class file. File do not exists' . PHP_EOL
+						. ' file_path: ' . to_string($file_path) . PHP_EOL
+						. $e->getMessage()
+						, logger::ERROR
+					);
+				}				
+			}
+		}
+
+		$parsers_loaded = true;
+		
+		
+		return true;
+	}//end load_parsers
 
 
 
