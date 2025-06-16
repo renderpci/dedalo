@@ -357,18 +357,40 @@ abstract class diffusion  {
 				}
 			}
 
+		// default is false
 		$have_section_diffusion = false;
+		
+		// diffusion_map_elements
+		$ar_diffusion_map_elements = $ar_diffusion_map_elements ?? diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 
-		if (is_null($ar_diffusion_map_elements)) {
-			# calculate all
-			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
-		}
-		// dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo).' - DEDALO_DIFFUSION_DOMAIN:'.DEDALO_DIFFUSION_DOMAIN);
-		foreach ($ar_diffusion_map_elements as $diffusion_group_tipo => $obj_value) {
+		// iterate ar_diffusion_map_elements to check sections with diffusion allowed
+		foreach ($ar_diffusion_map_elements as $obj_value) {
 
-			$diffusion_element_tipo = $obj_value->element_tipo;
+			$current_diffusion_element_tipo = $obj_value->element_tipo ?? null;
+			if (empty($current_diffusion_element_tipo)) {
+				debug_log(__METHOD__
+					. " Ignored bad diffusion obj_value: element_tipo is mandatory!" . PHP_EOL
+					. ' obj_value : ' . to_string($obj_value)
+					, logger::ERROR
+				);
+				continue;
+			}
 
-			$ar_related = diffusion::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $obj_value->class_name);
+			$current_class_name = $obj_value->class_name ?? null;
+			if (empty($current_class_name)) {
+				debug_log(__METHOD__
+					. " Ignored bad diffusion obj_value: class_name is mandatory!" . PHP_EOL
+					. ' obj_value : ' . to_string($obj_value)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$ar_related = diffusion::get_diffusion_sections_from_diffusion_element(
+				$current_diffusion_element_tipo, 
+				$current_class_name
+			);
+
 			if(in_array($section_tipo, $ar_related)) {
 				$have_section_diffusion = true;
 				break;
