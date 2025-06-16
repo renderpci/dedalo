@@ -51,6 +51,7 @@ class diffusion_xml extends diffusion  {
 		$section_tipo			= $options->section_tipo;
 		$section_id				= (int)$options->section_id;
 		$diffusion_element_tipo	= $options->diffusion_element_tipo;
+		$handle_result			= $otpions->handle_result ?? 'file';
 		
 		// fix vars
 		$this->section_tipo             = $section_tipo;
@@ -85,13 +86,20 @@ class diffusion_xml extends diffusion  {
 			$parsed_result = $this->parse_diffusion_objects($diffusion_objects_resolved);
 	
 			// save result to file, database, etc..
-			$save_result = $this->save($parsed_result);
+			$save_result = $this->save($parsed_result);		
+
+			// add errors
+			$response->errors = array_merge($response->errors, $save_result->errors);
+
+			// add file path and url
+			$response->file_path	= $save_result->file_path ?? null;
+			$response->file_url		= $save_result->file_url ?? null;	
 			
 		} catch (\Throwable $th) {
 			$response->errors[] = $th->getMessage();
 		}
-		
-		// response
+				
+		// response result
 		$response->result = $save_result ?? false;
 		
 
@@ -101,19 +109,69 @@ class diffusion_xml extends diffusion  {
 
 
 	/**
+	* WRITE_FILE
+	* Writes one file per record (default)
+	* @param object $options
+	* @return object response
+	*/
+	private function write_file( object $options ) : object {
+		
+		$response = new stdClass();
+			$response->result		= false;
+			$response->msg			= 'Error. Request failed';
+			$response->errors		= [];
+			$response->file_path	= null;
+			$response->file_url		= null;
+
+		// options
+		$data = $options->data;		
+
+		$current_date	= new DateTime();
+		$date			= $current_date->format('Y-m-d H_i_s');
+		$sub_path		= 'xml';
+		$file_name		= $this->section_tipo.'_'.$this->section_id;
+		$xml_file_name	= $file_name.'_'. $date.'.xml';
+		$file_path		= DEDALO_MEDIA_PATH . $sub_path . $xml_file_name;
+		$file_url		= DEDALO_MEDIA_URL  . $sub_path . $xml_file_name;
+	
+		if( file_put_contents($file_path, $data) ){
+
+			debug_log(__METHOD__
+				. " Save file to " . PHP_EOL
+				. ' file_path: ' . to_string($file_path)
+				, logger::DEBUG
+			);
+
+			// add file path to locate the created file form client side
+			$response->file_path	= $file_path;
+			$response->file_url		= $file_url;
+
+		}else{
+
+			debug_log(__METHOD__
+				. " Fail to save file " . PHP_EOL
+				. ' file_path: ' . to_string($file_path)
+				, logger::ERROR
+			);
+		}			
+	
+
+		return $response;
+	}//end write_file
+
+
+
+	/**
 	 * SAVE
 	 * Saves the final parsed string to a file
 	 * @param string $parsed_result
-	 * @return bool $result
+	 * @return object $response
 	 */
-	private function save(string $parsed_result) : bool {
+	private function save(string $parsed_result) : object {
 		
-		dump($parsed_result, '$parsed_result');
-
-		$result = true;
-		
-		
-		return $result;
+		return $this->write_file((object)[
+			'data' => $parsed_result
+		]);
 	} //end save
 
 
@@ -130,7 +188,7 @@ class diffusion_xml extends diffusion  {
 		// Include the classes of the parsers based on the diffusion_element properties definitions.
 		$load_parsers = $this->load_parsers($this->diffusion_element_tipo);
 		
-		
+		// generate and hierarchizes the XML nodes.
 		
 		
 		$result = 'This is the fake final result string....';
