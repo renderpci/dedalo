@@ -425,9 +425,20 @@ abstract class diffusion  {
 
 		try {
 
-			include_once DEDALO_CORE_PATH.'/diffusion/class.'.$class_name.'.php';
+			$file_path = DEDALO_CORE_PATH.'/diffusion/class.'.$class_name.'.php';
+			include_once $file_path;
 
-			$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+			if ( method_exists($class_name, 'get_diffusion_sections_from_diffusion_element')) {
+				$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+			}else{
+				debug_log(__METHOD__
+					. " Ignored diffusion class without mandatory method: 'get_diffusion_sections_from_diffusion_element'." . PHP_EOL
+					. ' class_name: ' . to_string($class_name) . PHP_EOL
+					. ' method: ' . 'get_diffusion_sections_from_diffusion_element' . PHP_EOL
+					. ' file_path: ' . $file_path
+					, logger::WARNING
+				);
+			}			
 
 		} catch (Exception $e) {
 			error_log( 'Caught exception: ' . $e->getMessage() );
