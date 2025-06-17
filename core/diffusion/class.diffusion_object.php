@@ -10,11 +10,12 @@ class diffusion_object extends stdClass {
 
 
 	// properties
-		// tipo : string e.g. 'rsc636'
-		// parent : string e.g. 'rsc630'
-		// name : string e.g. 'mmo:mint' (name of the column or node)
-		// data : array e.g. [{"id":"a","value":"Raspa"}] It will be passed as the first argument to the parser (see class.parser_text.php for a sample).
-		
+		// tipo		: string e.g. 'rsc636'
+		// parent	: string e.g. 'rsc630'
+		// name		: string e.g. 'mmo:mint' (name of the column or node)
+		// data		: array e.g. [{"id":"a","value":"Raspa"}] It will be passed as the first argument to the parser (see class.parser_text.php for a sample).
+		// process	: object e.g { dd_map:[{section_tipo:string}], parser:[{fn:string, options:{}}] }
+
 
 
 	/**

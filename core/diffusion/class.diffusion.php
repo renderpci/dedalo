@@ -1632,10 +1632,10 @@ abstract class diffusion  {
 
 			// diffusion_object
 			$diffusion_object = new diffusion_object();
-			$diffusion_object->tipo = $child_tipo;
-			$diffusion_object->parent = $parent;
-			$diffusion_object->name = $name;
-			$diffusion_object->process = $process;
+				$diffusion_object->tipo		= $child_tipo;
+				$diffusion_object->parent	= $parent;
+				$diffusion_object->name		= $name;
+				$diffusion_object->process	= $process;
 
 			// add 
 			$diffusion_objects[] = $diffusion_object;			

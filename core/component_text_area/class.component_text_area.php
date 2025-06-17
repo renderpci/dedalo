@@ -1267,7 +1267,7 @@ class component_text_area extends component_common {
 			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 			if( $legacy_model === 'component_html_text' ){
 
-			// check if the component has a tags_reference component associated
+				// check if the component has a tags_reference component associated
 				// if the component has, the references need to be changed into a text ref in data-data property.
 				$tags_reference_tipo = $this->properties->tags_reference->tipo ?? null;
 				if( !empty($tags_reference_tipo) ){
