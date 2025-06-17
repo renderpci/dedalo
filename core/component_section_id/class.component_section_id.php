@@ -323,4 +323,34 @@ class component_section_id extends component_common {
 
 
 
+	/**
+	* GET_DIFFUSION_DATA
+	* Resolve the default diffusion data
+	* is used by the `diffusion_data`
+	* for component_section_id the default is its own data
+	* @param object $ddo
+	* @return array $diffusion_data
+	*
+	* @see class.diffusion_data.php
+	* @test false
+	*/
+	public function get_diffusion_data( object $ddo ) : array {
+
+		$diffusion_data = [];
+
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $this->tipo,
+			'lang'	=> null,
+			'value'	=> $this->get_dato(),
+			'id'	=> $ddo->id
+		]);
+
+		$diffusion_data[] = $diffusion_data_object;
+
+		return $diffusion_data;
+	}//end get_diffusion_data
+
+
+
+
 }//end class component_section_id
