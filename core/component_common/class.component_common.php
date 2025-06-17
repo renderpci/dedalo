@@ -2739,6 +2739,99 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_DIFFUSION_DATA
+	* Resolve the default diffusion data
+	* is used by the `diffusion_data`
+	* for component_section_id the default is its own data
+	* @param object $ddo
+	* @return array $diffusion_data
+	*
+	* @see class.diffusion_data.php
+	* @test false
+	*/
+	public function get_diffusion_data( object $ddo ) : array {
+
+		$diffusion_data = [];
+
+		// Default diffusion data object
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $this->tipo,
+			'lang'	=> null,
+			'value'	=> null,
+			'id'	=> $ddo->id
+		]);
+
+		$diffusion_data[] = $diffusion_data_object;
+
+		// Custom function case
+			// If ddo provide a specific function to get its diffusion data
+			// check if it exists and can be used by diffusion environment
+			// if all is ok, use this function and return the value returned by this function
+			$fn = $ddo->fn ?? null;
+
+			if( $fn ){
+				// check if the function exist
+				// if not, return a null value in diffusion data
+				// and stop the resolution
+				if( !function_exists($this->$fn) ){
+					debug_log(__METHOD__
+						. " function doesn't exist " . PHP_EOL
+						. " function name: ". $fn
+						, logger::ERROR
+					);
+
+					return $diffusion_data;
+				}
+
+				// not all functions are available for diffusion
+				// in the function is allowed get its value and return
+				// if the function is NOT allowed (default) return a diffusion value as null
+				switch ($fn) {
+					// functions allowed for diffusion environment
+
+
+					default:
+						// function is not allowed for diffusion environment
+						debug_log(__METHOD__
+							. " function is can not be used by diffusion " . PHP_EOL
+							. " function name: ". $fn
+							, logger::ERROR
+						);
+						$diffusion_value = null;
+
+						break;
+				}
+				// set the diffusion value and return the diffusion data
+				$diffusion_data_object->set_value( $diffusion_value );
+				return $diffusion_data;
+			}
+
+		// Resolve the data by default
+			// If the ddo doesn't provide any specific function the component will use a get_url as default.
+
+			$dato_full = $this->get_dato_full();
+			if(!empty($dato_full)) {
+				foreach ($dato_full as $current_lang => $value) {
+					if(!empty($value)) {
+
+						$diffusion_data_object = new diffusion_data_object( (object)[
+							'tipo'	=> $this->tipo,
+							'lang'	=> $current_lang,
+							'value'	=> $value,
+							'id'	=> $ddo->id
+						]);
+
+						$diffusion_data[] = $diffusion_data_object;
+					}
+				}
+			}
+
+		return $diffusion_data;
+	}//end get_diffusion_data
+
+
+
+	/**
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
