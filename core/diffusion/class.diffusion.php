@@ -1707,11 +1707,11 @@ abstract class diffusion  {
 			return true;
 		}
 	
-		$RecordObj_dd = new RecordObj_dd($diffusion_element_tipo);
-		$properties = $RecordObj_dd->get_properties();		
-		$class_parser = $properties->diffusion->class_parser ?? null;
-		if ($class_parser) {
-			foreach ((array)$class_parser as $file_path) {				
+		$RecordObj_dd	= new RecordObj_dd($diffusion_element_tipo);
+		$properties		= $RecordObj_dd->get_properties();
+		$parser			= $properties->diffusion->parser ?? null;
+		if ($parser) {
+			foreach ((array)$parser as $file_path) {				
 				try {
 					$full_path = DEDALO_ROOT_PATH . trim($file_path, " .");
 					include_once $full_path;

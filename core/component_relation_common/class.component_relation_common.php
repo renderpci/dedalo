@@ -1722,7 +1722,7 @@ class component_relation_common extends component_common {
 	* @test false
 	*/
 	public function get_diffusion_data( object $ddo ) : array {
-
+	
 		$diffusion_data = [];
 
 		// Default diffusion data object

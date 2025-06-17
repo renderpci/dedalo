@@ -15,17 +15,19 @@ class diffusion_data {
 	public static function get_ddo_map( string $diffusion_node_tipo, string $section_tipo) : array {
 
 		// ddo_map create or get from properties
-		$ddo_map			= [];
+		$ddo_map = [];
 		$ar_related_dd_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_node_tipo, 'component_', 'termino_relacionado', false);
 		// check if the ontology has his owm ddo_map defined, if not, it will create a ddo_map with related components.
 		if(isset($properties->process) && isset($properties->process->ddo_map)){
 
 			$ddo_map = $properties->process->ddo_map;
+			
 			// resolve the 'self' value for section_tipo or parent, if this properties are defined use it.
 			foreach ($ddo_map as $ddo) {
 				$ddo->section_tipo	= $ddo->section_tipo === 'self' ? $section_tipo : $ddo->section_tipo;
 				$ddo->parent		= $ddo->parent === 'self' ? $section_tipo : $ddo->parent;
 			}
+		
 		}else{
 			// create new ddo_map when the ontology doesn't has one ddo_map
 			foreach ($ar_related_dd_tipo as $current_tipo) {
@@ -38,6 +40,7 @@ class diffusion_data {
 				$ddo_map[] = $ddo;
 			}
 		}
+
 
 		return $ddo_map;
 	}//end get_ddo_map

@@ -1,7 +1,8 @@
 <?php declare(strict_types=1);
 /**
 * CLASS DIFFUSION_xml
-* Manages publication on Socrata Open Data system
+* Manages publication on XML format
+*
 */
 class diffusion_xml extends diffusion  {
 
@@ -9,7 +10,7 @@ class diffusion_xml extends diffusion  {
 
 	// section_tipo
 	public $section_tipo;
-	// section_id 
+	// section_id
 	public $section_id;
 	// diffusion_element_tipo
 	public $diffusion_element_tipo;
@@ -26,7 +27,8 @@ class diffusion_xml extends diffusion  {
 
 		// load parser classes files
 		// Include the classes of the parsers based on the diffusion_element properties definitions.
-		$load_parsers = $this->load_parsers( $this->diffusion_element_tipo );
+		$this->load_parsers( $this->diffusion_element_tipo );
+
 
 		parent::__construct($options);
 	}//end __construct
@@ -44,7 +46,7 @@ class diffusion_xml extends diffusion  {
 	* }
 	* @return object $response
 	*/
-	public function update_record( object $options ) : object {		
+	public function update_record( object $options ) : object {
 
 		// response
 		$response = new stdClass();
@@ -75,41 +77,43 @@ class diffusion_xml extends diffusion  {
 			$response->errors[] = 'section not defined in diffusion element';
 			return $response;
 		}
-	
-		// Get the diffusion objects, including self
+
+		// Get the diffusion objects recursively, including self
 		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true );
 
 		// resolve and parse values
 		foreach ($diffusion_objects as $diffusion_object) {
 
-			// resolving the data
+			// 1 resolving the data
 			// set data into node structure
 			$diffusion_object->data = $this->resolve_data( $diffusion_object );
 
-			// parse / format result
+			// 2 parse / format result
 			// set value into node structure
 			$diffusion_object->value = $this->parse_diffusion_object( $diffusion_object );
 		}
-					
+
 		try {
 
-			// save result to file, database, etc..
-			$save_result = $this->save($parsed_result);		
+			// 3 save result to file, database, etc..
+			$save_result = $this->save( $diffusion_objects );
 
 			// add errors
-			$response->errors = array_merge($response->errors, $save_result->errors);
+			if ($save_result->errors) {
+				$response->errors = array_merge($response->errors, $save_result->errors);
+			}
 
 			// add file path and url
 			$response->file_path	= $save_result->file_path ?? null;
-			$response->file_url		= $save_result->file_url ?? null;	
-			
+			$response->file_url		= $save_result->file_url ?? null;
+
 		} catch (\Throwable $th) {
-			$response->errors[] = $th->getMessage();
+			$response->errors[] = 'Exception: '.$th->getMessage();
 		}
-				
+
 		// response result
 		$response->result = $save_result ?? false;
-		
+
 
 		return $response;
 	} //end update_record
@@ -186,8 +190,8 @@ class diffusion_xml extends diffusion  {
 
 	/**
 	 * PARSE_DIFFUSION_OBJECT
-	 * Parses and format the final output based on resolved diffusion_object
-	 * @param array $diffusion_object
+	 * Parses and format the final output values based on resolved diffusion_object
+	 * @param object $diffusion_object
 	 * @return string|null $result
 	 */
 	private function parse_diffusion_object( object $diffusion_object ): ?string {
@@ -232,6 +236,7 @@ class diffusion_xml extends diffusion  {
 			$value = json_encode($value);
 		}
 
+
 		// return the last value
 		return $value;
 	} //end parse_diffusion_object
@@ -246,7 +251,7 @@ class diffusion_xml extends diffusion  {
 	 * @return string $root_tipo
 	 */
 	private function get_root_tipo( string $diffusion_element_tipo ) : ?string {
-	
+
 		$section_tipo = $this->section_tipo;
 
 		$children = RecordObj_dd::get_ar_childrens($diffusion_element_tipo);
@@ -258,7 +263,7 @@ class diffusion_xml extends diffusion  {
 			}
 			return $section === $section_tipo;
 		});
-		
+
 
 		return $root_tipo;
 	}//end get_root_tipo
@@ -272,7 +277,7 @@ class diffusion_xml extends diffusion  {
 	 * @return array $data
 	 */
 	private function resolve_data( object $diffusion_object ) : array {
-		
+
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
 		$tipo 			= $diffusion_object->tipo;
@@ -294,8 +299,8 @@ class diffusion_xml extends diffusion  {
 			$resolve_options->section_id	= $section_id;
 
 		$ar_data = diffusion_data::get_ddo_map_value( $resolve_options );
-		
-		
+
+
 		return $ar_data;
 	}//end resolve_data
 
