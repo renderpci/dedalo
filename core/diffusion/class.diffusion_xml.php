@@ -22,6 +22,12 @@ class diffusion_xml extends diffusion  {
 	 */
 	public function __construct( ?object $options=null ) {
 
+		$this->diffusion_element_tipo = $options->diffusion_element_tipo;
+
+		// load parser classes files
+		// Include the classes of the parsers based on the diffusion_element properties definitions.
+		$load_parsers = $this->load_parsers( $this->diffusion_element_tipo );
+
 		parent::__construct($options);
 	}//end __construct
 
@@ -50,16 +56,14 @@ class diffusion_xml extends diffusion  {
 		// options
 		$section_tipo			= $options->section_tipo;
 		$section_id				= (int)$options->section_id;
-		$diffusion_element_tipo	= $options->diffusion_element_tipo;
-		$handle_result			= $otpions->handle_result ?? 'file';
-		
+
 		// fix vars
-		$this->section_tipo             = $section_tipo;
-		$this->section_id               = $section_id;
-		$this->diffusion_element_tipo   = $diffusion_element_tipo;
+		$this->section_tipo		= $section_tipo;
+		$this->section_id		= $section_id;
+		$diffusion_element_tipo	= $this->diffusion_element_tipo;
 
 		// root tipo (children of diffusion_element that has relation with current section)
-		$root_tipo = $this->get_root_tipo($diffusion_element_tipo);
+		$root_tipo = $this->get_root_tipo( $diffusion_element_tipo );
 		if (!$root_tipo) {
 			$msg = 'Invalid diffusion definition for section: ' . $section_tipo;
 			$response->msg = $msg;
@@ -73,18 +77,22 @@ class diffusion_xml extends diffusion  {
 		}
 	
 		// Get the diffusion objects, including self
-		$diffusion_objects = $this->get_diffusion_objects($root_tipo, true);
+		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true );
 
 		// resolve and parse values
-		$diffusion_objects_resolved = [];
 		foreach ($diffusion_objects as $diffusion_object) {
-			$diffusion_objects_resolved[] = $this->resolve_value($diffusion_object);	
+
+			// resolving the data
+			// set data into node structure
+			$diffusion_object->data = $this->resolve_data( $diffusion_object );
+
+			// parse / format result
+			// set value into node structure
+			$diffusion_object->value = $this->parse_diffusion_object( $diffusion_object );
 		}
 					
 		try {
-			// parse / format result
-			$parsed_result = $this->parse_diffusion_objects($diffusion_objects_resolved);
-	
+
 			// save result to file, database, etc..
 			$save_result = $this->save($parsed_result);		
 
@@ -177,24 +185,56 @@ class diffusion_xml extends diffusion  {
 
 
 	/**
-	 * PARSE_DIFFUSION_OBJECTS
-	 * Parses and format the final output based on resolved diffusion_objects
-	 * @param array $diffusion_objects
-	 * @return string $result
+	 * PARSE_DIFFUSION_OBJECT
+	 * Parses and format the final output based on resolved diffusion_object
+	 * @param array $diffusion_object
+	 * @return string|null $result
 	 */
-	private function parse_diffusion_objects(array $diffusion_objects): string {
+	private function parse_diffusion_object( object $diffusion_object ): ?string {
 
-		// load parser classes files
-		// Include the classes of the parsers based on the diffusion_element properties definitions.
-		$load_parsers = $this->load_parsers($this->diffusion_element_tipo);
-		
-		// generate and hierarchizes the XML nodes.
-		
-		
-		$result = 'This is the fake final result string....';
+		$parser = $diffusion_object->process->parser ?? [(object)[
+			'fn'		=> 'parser_text::default_join',
+			'options'	=> (object)[
+				'records_separator'	=> ' | ',
+				'fields_separator'	=> ', '
+			]
+		]];
 
-		return $result;
-	} //end parse_diffusion_objects
+		$data = $diffusion_object->data;
+
+		foreach ($parser as $current_parser) {
+			$fn = $current_parser->fn ?? 'parser_text::invalid_fn';
+
+			if( !function_exists($fn) ){
+				debug_log(__METHOD__
+					. " The defined parser function does not exist " . PHP_EOL
+					. " fn: ". $fn
+					, logger::ERROR
+				);
+				continue;
+			}
+			//string
+			$value = {$fn}($data, $current_parser->options);
+
+			// set the data with the value for the next iteration
+			$data = [$value];
+		}
+
+		// check value
+		if( !is_string($value) && $value!==null ){
+			debug_log(__METHOD__
+				. " Parser return a invalid value type " . PHP_EOL
+				. " value: ". to_string( $value ) . PHP_EOL
+				. " type: ". gettype( $value ) . PHP_EOL
+				. " stringify the value: "
+				, logger::DEBUG
+			);
+			$value = json_encode($value);
+		}
+
+		// return the last value
+		return $value;
+	} //end parse_diffusion_object
 
 
 
@@ -226,119 +266,38 @@ class diffusion_xml extends diffusion  {
 
 
 	/**
-	 * RESOLVE_VALUE
+	 * RESOLVE_data
 	 * Resolve diffusion_object value
 	 * @param object $diffusion_object
-	 * @return object $diffusion_object
+	 * @return array $data
 	 */
-	private function resolve_value( object $diffusion_object) : object {
+	private function resolve_data( object $diffusion_object ) : array {
 		
-		$section_tipo = $this->section_tipo;
-		$section_id = $this->section_id;
+		$section_tipo	= $this->section_tipo;
+		$section_id		= $this->section_id;
+		$tipo 			= $diffusion_object->tipo;
 
-		// $tipo = $diffusion_object->tipo;
-		// $lang = $diffusion_object->lang ?? DEDALO_DATA_LANG;
+		$ar_data = [];
 
-		// // sample of properties
-		// // {
-		// // 	"process": {
-		// // 	  "ddo_map": [
-		// // 		{
-		// // 		  "tipo": "numisdata578",
-		// // 		  "config": {
-		// // 			"id": "catalog_filter",
-		// // 			"title": "nmo:hasTypeSeriesItem",
-		// // 			"result": {
-		// // 			  "ddo_map": [
-		// // 				{
-		// // 				  "tipo": "numisdata309",
-		// // 				  "parent": "self",
-		// // 				  "section_tipo": "self"
-		// // 				},
-		// // 				{
-		// // 				  "id": "a",
-		// // 				  "tipo": "numisdata303",
-		// // 				  "parent": "numisdata309",
-		// // 				  "value_fn": "get_diffusion_value",
-		// // 				  "section_tipo": "numisdata300"
-		// // 				},
-		// // 				{
-		// // 				  "tipo": "numisdata30",
-		// // 				  "parent": "self",
-		// // 				  "section_tipo": "self"
-		// // 				},
-		// // 				{
-		// // 				  "id": "b",
-		// // 				  "tipo": "numisdata16",
-		// // 				  "parent": "numisdata30",
-		// // 				  "value_fn": "get_diffusion_value",
-		// // 				  "section_tipo": "numisdata6"
-		// // 				},
-		// // 				{
-		// // 				  "id": "c",
-		// // 				  "tipo": "numisdata1007",
-		// // 				  "parent": "numisdata30",
-		// // 				  "value_fn": "get_diffusion_value",
-		// // 				  "section_tipo": "numisdata6"
-		// // 				},
-		// // 				{
-		// // 				  "id": "d",
-		// // 				  "tipo": "numisdata27",
-		// // 				  "parent": "self",
-		// // 				  "value_fn": "get_diffusion_value",
-		// // 				  "section_tipo": "self"
-		// // 				}
-		// // 			  ]
-		// // 			},
-		// // 			"process_fn": "filter_locators",
-		// // 			"section_tipo": "dd1010",
-		// // 			"component_tipo": "dd1578"
-		// // 		  },
-		// // 		  "parent": "self",
-		// // 		  "section_tipo": "self",
-		// // 		  "diffusion_properties": {
-		// // 			"process_dato_arguments": {
-		// // 			  "filter_section": [
-		// // 				"numisdata3"
-		// // 			  ],
-		// // 			  "component_method": "get_diffusion_value",
-		// // 			  "filter_component": [
-		// // 				"numisdata77"
-		// // 			  ],
-		// // 			  "target_component_tipo": "numisdata27"
-		// // 			}
-		// // 		  }
-		// // 		}
-		// // 	  ],
-		// // 	  "text_format": "${a}, ${b}, ${c}/${d}"
-		// // 	}
-		// // }
+		$ddo_map 		= diffusion_data::get_ddo_map($tipo, $section_tipo);
 
-		// // component
-		// $tipo = $diffusion_object->tipo;
-		// $model = RecordObj_dd::get_modelo_name_by_tipo($tipo);		
-		// $component = component_common::get_instance(
-		// 	$model,
-		// 	$tipo,
-		// 	$section_id,
-		// 	'list',
-		// 	$lang,
-		// 	$section_tipo
-		// );
+		if( empty($ddo_map) ){
+			return $ar_data;
+		}
 
-		// // default resolution
-		// $value = $component->get_value();
+		// resolve the ddo_map
+		// get the value of all ddo
+		$resolve_options = new stdClass();
+			$resolve_options->ddo_map		= $ddo_map;
+			$resolve_options->parent		= $section_tipo;
+			$resolve_options->section_tipo	= $section_tipo;
+			$resolve_options->section_id	= $section_id;
 
-
-		// more complicated things ....
-
-		$value = 'fake value from ' . $diffusion_object->tipo;
-
-		$diffusion_object->value = $value;
+		$ar_data = diffusion_data::get_ddo_map_value( $resolve_options );
 		
 		
-		return $diffusion_object;
-	}//end resolve_value
+		return $ar_data;
+	}//end resolve_data
 
 
 

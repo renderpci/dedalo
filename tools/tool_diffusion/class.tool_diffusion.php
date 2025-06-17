@@ -510,7 +510,9 @@ class tool_diffusion extends tool_common {
 		$errors = [];
 
 		// class diffusion instance
-		$diffusion = new $diffusion_class_name();
+		$diffusion = new $diffusion_class_name( (object)[
+			'diffusion_element_tipo' => $diffusion_element_tipo
+		]);
 
 		foreach ($rows as $row) {
 			$start_time=start_time();
@@ -534,7 +536,7 @@ class tool_diffusion extends tool_common {
 			$update_record_response = $diffusion->update_record((object)[
 				'section_tipo'				=> $section_tipo,
 				'section_id'				=> (int)$section_id,
-				'diffusion_element_tipo'	=> $diffusion_element_tipo,
+				'diffusion_element_tipo'	=> $diffusion_element_tipo, // compatibility with v5 model
 				'resolve_references'		=> true
 			]);
 
