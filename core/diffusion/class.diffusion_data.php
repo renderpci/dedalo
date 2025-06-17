@@ -16,8 +16,11 @@ class diffusion_data {
 
 		// ddo_map create or get from properties
 		$ddo_map = [];
-		$ar_related_dd_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_node_tipo, 'component_', 'termino_relacionado', false);
-		// check if the ontology has his owm ddo_map defined, if not, it will create a ddo_map with related components.
+
+		$RecordObj_dd	= new RecordObj_dd($diffusion_node_tipo);
+		$properties		= $RecordObj_dd->get_properties();
+		
+		// check if the ontology has his own ddo_map defined, if not, it will create a ddo_map with related components.
 		if(isset($properties->process) && isset($properties->process->ddo_map)){
 
 			$ddo_map = $properties->process->ddo_map;
@@ -29,6 +32,13 @@ class diffusion_data {
 			}
 		
 		}else{
+
+			$ar_related_dd_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$diffusion_node_tipo, 
+				'component_', 
+				'termino_relacionado', 
+				false
+			);
 			// create new ddo_map when the ontology doesn't has one ddo_map
 			foreach ($ar_related_dd_tipo as $current_tipo) {
 				$ddo = new stdClass();
