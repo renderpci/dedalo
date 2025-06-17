@@ -64,7 +64,7 @@ class diffusion_data {
 	* @param object $options
 	* @return array $ar_values
 	*/
-	private static function get_ddo_map_value( object $options ) : array {
+	public static function get_ddo_map_value( object $options ) : array {
 
 		$ddo_map		= $options->ddo_map;
 		$parent			= $options->section_tipo;
@@ -96,7 +96,7 @@ class diffusion_data {
 	* @param string|int $section_id
 	* @return array $ar_values
 	*/
-	private static function get_ddo_value( object $ddo, array $ddo_map, string $section_tipo, string|int $section_id ) : array {
+	public static function get_ddo_value( object $ddo, array $ddo_map, string $section_tipo, string|int $section_id ) : array {
 
 		$ar_values		= [];
 		$current_tipo	= $ddo->tipo;
