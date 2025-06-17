@@ -59,7 +59,7 @@ class diffusion_data_object extends stdClass {
 			}else{
 
 				debug_log(__METHOD__
-					.' Ignored received property: '.$key.' not defined as set method.'. PHP_EOL
+					.' Ignored received property: "'.$key.'"" not defined as set method.'. PHP_EOL
 					.' data: ' . to_string($data)
 					, logger::ERROR
 				);
@@ -114,7 +114,7 @@ class diffusion_data_object extends stdClass {
 
 		return null;
 	}
-	final public function __set( $name, $value ) {
+	final public function __set( string $name, $value ) {
 		$this->{$name} = $value;
 	}
 
