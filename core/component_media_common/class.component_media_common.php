@@ -362,6 +362,134 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_DATA
+	* Resolve the default diffusion data
+	* is used by the `diffusion_data`
+	* for component_section_id the default is its own data
+	* @param object $ddo
+	* @return array $diffusion_data
+	*
+	* @see class.diffusion_data.php
+	* @test false
+	*/
+	public function get_diffusion_data( object $ddo ) : array {
+
+		$diffusion_data = [];
+
+		// Default diffusion data object
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $this->tipo,
+			'lang'	=> null,
+			'value'	=> null,
+			'id'	=> $ddo->id
+		]);
+
+		$diffusion_data[] = $diffusion_data_object;
+
+		// Custom function case
+			// If ddo provide a specific function to get its diffusion data
+			// check if it exists and can be used by diffusion environment
+			// if all is ok, use this function and return the value returned by this function
+			$fn = $ddo->fn ?? null;
+
+			if( $fn ){
+				// check if the function exist
+				// if not, return a null value in diffusion data
+				// and stop the resolution
+				if( !function_exists($this->$fn) ){
+					debug_log(__METHOD__
+						. " function doesn't exist " . PHP_EOL
+						. " function name: ". $fn
+						, logger::ERROR
+					);
+
+					return $diffusion_data;
+				}
+
+				// not all functions are available for diffusion
+				// in the function is allowed get its value and return
+				// if the function is NOT allowed (default) return a diffusion value as null
+				switch ($fn) {
+					// functions allowed for diffusion environment
+					case 'get_posterframe_url':
+
+						$test_file		= $ddo->options->test_file ?? false;
+						$absolute		= $ddo->options->absolute ?? false;
+						$avoid_cache	= $ddo->options->avoid_cache ?? false;
+
+						$diffusion_value = $this->{$fn}($test_file, $absolute, $avoid_cache);
+
+						break;
+
+					default:
+						// function is not allowed for diffusion environment
+						debug_log(__METHOD__
+							. " function is can not be used by diffusion " . PHP_EOL
+							. " function name: ". $fn
+							, logger::ERROR
+						);
+						$diffusion_value = null;
+
+						break;
+				}
+				// set the diffusion value and return the diffusion data
+				$diffusion_data_object->set_value( $diffusion_value );
+				return $diffusion_data;
+			}
+
+		// Resolve the data by default
+			// If the ddo doesn't provide any specific function the component will use a get_url as default.
+
+			// set the options
+				$quality		= $ddo->options->quality ?? $this->get_default_quality();
+				$extension		= $ddo->options->extension ?? $this->get_extension();
+				$test_file		= $ddo->options->test_file ?? false;
+				$absolute		= $ddo->options->absolute ?? false;
+				$default_add	= $ddo->options->default_add ?? false;
+
+			// get data from DDBB without checking the files
+			// this check use the data of the component to check if the files exists
+			// this check is faster than check every media file.
+				$dato = $this->get_dato();
+				if (empty($dato) || empty($dato[0])) {
+					return $diffusion_data;
+				}
+				// get the files_info, it has the file_exist parameter that determinate if file exists in the media tree
+				$files_info = $dato[0]->files_info ?? [];
+				$found = array_find($files_info, function($el) use ($quality, $extension){
+					return $el->quality === $quality
+						&& $el->extension === $extension
+						&& $el->file_exist === true;
+				});
+				// if the file doesn't exist return the diffusion data with null value.
+				if (!is_object($found)) {
+					return $diffusion_data;
+				}
+
+			// If the files exists get its URI
+				// DEDALO_PUBLICATION_CLEAN_URL option
+					// Used to get the file name instead the full URI
+					// the parameter remove the full URL path and use the id of the media to build a diffusion control of the media files.
+					// in those cases the media files are provided by a web engine that handled the files, for example to add a watermark.
+				$diffusion_value = (defined('DEDALO_PUBLICATION_CLEAN_URL') && true===DEDALO_PUBLICATION_CLEAN_URL)
+					? ($this->get_id() .'.'. $extension)
+					: $this->get_url(
+						$quality,
+						$test_file,  // bool test_file
+						$absolute,  // bool absolute
+						$default_add // bool default_add
+					);
+
+			$diffusion_data_object->set_value( $diffusion_value );
+
+
+		return $diffusion_data;
+	}//end get_diffusion_data
+
+
+
+
+	/**
 	* GET_ID
 	* @return string|null $id
 	* @test true
