@@ -1730,7 +1730,7 @@ class component_relation_common extends component_common {
 			'tipo'	=> $this->tipo,
 			'lang'	=> null,
 			'value'	=> null,
-			'id'	=> $ddo->id
+			'id'	=> $ddo->id ?? null
 		]);
 
 		$diffusion_data[] = $diffusion_data_object;
