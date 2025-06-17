@@ -71,6 +71,58 @@ class diffusion_data_object extends stdClass {
 
 
 	/**
+	* SET_TIPO
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_tipo( ?string $value ) : bool  {
+
+		$this->tipo = $value;
+
+		return true;
+	}//end set_tipo
+
+
+
+	/**
+	* GET_TIPO
+	* Return property value
+	* @return string|null $this->tipo
+	*/
+	public function get_tipo() : ?string {
+
+		return $this->tipo ?? null;
+	}//end get_tipo
+
+
+
+	/**
+	* SET_LANG
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_lang( ?string $value ) : bool  {
+
+		$this->lang = $value;
+
+		return true;
+	}//end set_lang
+
+
+
+	/**
+	* GET_LANG
+	* Return property value
+	* @return string|null $this->lang
+	*/
+	public function get_lang() : ?string {
+
+		return $this->lang ?? null;
+	}//end get_lang
+
+
+
+	/**
 	* SET_VALUE
 	* @param mixed $value
 	* 	Could be array, string, object, null, etc.
@@ -96,6 +148,31 @@ class diffusion_data_object extends stdClass {
 		return $this->value ?? null;
 	}//end get_value
 
+
+
+	/**
+	* SET_ID
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_id( ?string $value ) : bool  {
+
+		$this->id = $value;
+
+		return true;
+	}//end set_id
+
+
+
+	/**
+	* GET_ID
+	* Return property value
+	* @return string|null $this->id
+	*/
+	public function get_id() : ?string {
+
+		return $this->id ?? null;
+	}//end get_id
 
 
 
