@@ -88,6 +88,15 @@
 */
 class parser_text {
 
+
+	/**
+	* DEFAULT_JOIN
+	* @return
+	*/
+	public static function default_join( array $data, object $options ) {
+
+	}//end default_join
+
 	/**
 	* TEXT_FORMAT
 	* @return
