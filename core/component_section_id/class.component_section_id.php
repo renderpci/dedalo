@@ -342,7 +342,7 @@ class component_section_id extends component_common {
 			'tipo'	=> $this->tipo,
 			'lang'	=> null,
 			'value'	=> $this->get_dato(),
-			'id'	=> $ddo->id
+			'id'	=> $ddo->id ?? null
 		]);
 
 		$diffusion_data[] = $diffusion_data_object;
