@@ -126,6 +126,64 @@ const get_content_data = function(self) {
 				})
 		}
 
+		// set the lang option checkbox when the component is translatable.
+		// It can change the language search behavior.
+		// lang option allow to set if the component will search in all langs or in current data lang.
+		// the default is search is set with all langs, checkbox in true.
+		// if the `q_lang has set with a language (instead 'all' or null),
+		// the search will be selective, only with the current data lang.
+		// 'all' and null values meaning the the search will be in all languages. see: class.search.php->get_sql_where()
+		if(self.context.translatable){
+			// sqo saves the q_lang as all or not set
+			// 'all' and null set the checkbox as true
+			const q_lang_state = self.data.q_lang===null || self.data.q_lang==='all'
+				? true
+				: false
+
+			// div_switcher
+			// by default the checkbox is set as true (without the class name off)
+			const div_switcher = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'switcher_translatable text_unselectable',
+				parent			: content_data
+			})
+			// translatable option
+				const lang_behavior_check = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					class_name		: 'lang_behavior_check',
+					parent			: div_switcher
+				})
+				// set the checkbox state
+				lang_behavior_check.checked = q_lang_state
+				if(!q_lang_state){
+					div_switcher.classList.add("off")
+				}
+
+				const change_handler = function(){
+					if(lang_behavior_check.checked){
+						div_switcher.classList.remove("off")
+
+						// q_lang. Fix the data in the instance previous to save
+						self.data.q_lang = null //all languages
+						// publish search. Event to update the DOM elements of the instance
+						event_manager.publish('change_search_element', self)
+
+
+					}else{
+						div_switcher.classList.add("off")
+
+						// q_lang. Fix the data in the instance previous to save
+						self.data.q_lang = self.data.lang // search only in the current data lang
+						// publish search. Event to update the DOM elements of the instance
+						event_manager.publish('change_search_element', self)
+					}
+				}
+				lang_behavior_check.addEventListener('change',change_handler)
+		}// end if
+
+
+
 
 	return content_data
 }//end get_content_data
