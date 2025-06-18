@@ -399,7 +399,7 @@ class diffusion_xml extends diffusion  {
 
 		$ar_data = [];
 
-		$ddo_map 		= diffusion_data::get_ddo_map($tipo, $section_tipo);
+		$ddo_map = diffusion_data::get_ddo_map($tipo, $section_tipo);
 
 		if( empty($ddo_map) ){
 			return $ar_data;

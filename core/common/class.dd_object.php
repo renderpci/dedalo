@@ -12,26 +12,26 @@ class dd_object extends stdClass {
 		// typo : "ddo"
 		public $typo = 'ddo';
 		/*
-		// type					: string // e.g. "component"  (section | component | grouper | button | tool ..)
-		// tipo					: string // e.g. 'oh14',
-		// section_tipo			: string // e.g. 'oh1',
-		// parent				: string // e.g. 'oh2', // caller section / portal  tipo
-		// parent_grouper		: string // e.g. 'oh7', // structure parent
-		// lang					: string // e.g. 'lg-eng',
-		// mode					: string // e.g. "list",
-		// model				: string // e.g. 'component_input_text',
-		// id 					: string // optional parameter in order to identify current DDO inside a DDO_MAP chain. It is used to referent it in process as parser or widgets data.
+		// type					: string|null // e.g. "component"  (section | component | grouper | button | tool ..)
+		// tipo					: string|null // e.g. 'oh14',
+		// section_tipo			: string|null // e.g. 'oh1',
+		// parent				: string|null // e.g. 'oh2', // caller section / portal  tipo
+		// parent_grouper		: string|null // e.g. 'oh7', // structure parent
+		// lang					: string|null // e.g. 'lg-eng',
+		// mode					: string|null // e.g. "list",
+		// model				: string|null // e.g. 'component_input_text',
+		// id 					: string|null // optional parameter in order to identify current DDO inside a DDO_MAP chain. It is used to referent it in process as parser or widgets data.
 		// info 				: string|null // optional short information about the ddo. e.g. 'Find(spot) - component_portal'
 		// properties			: object // generic object to define custom properties of the DDO. Used to sent or overwrites the Ontology properties.
 		// permissions			: int // e.g. 1
-		// label				: string // e.g. 'Title'
+		// label				: string|null // e.g. 'Title'
 		// labels				: array // e.g. ['Title']
 		// translatable			: bool
 		// tools				: array // array of tools dd_objects (context)
 		// buttons				: array // array of buttons dd_objects (context)
 		// css					: object
 		// target_sections		: array // e.g. [{'tipo':'dd125','label':'Projects']
-		// request_config		: array		
+		// request_config		: array
 		// columns_map			: array // array of objects as [{"id": "e", "label": "numisdata1530","width": "5rem"}]
 		// column_id 			: string // id value that point to its column inside columns_map items e.g. 'e'
 		// view					: string|null like 'table'
@@ -44,11 +44,11 @@ class dd_object extends stdClass {
 		// show_in_component	: bool // Used by tools
 		// config				: object // Used by tools and services
 		// sortable				: bool // Used by components (columns)
-		// fields_separator		: string // e.g. ", " // used by portal to join different fields
-		// records_separator	: string // e.g. " | " // used by portal to join different records (rows)
-		// legacy_model			: string // e.g. "component_autocomplete_hi"
+		// fields_separator		: string|null // e.g. ", " // used by portal to join different fields
+		// records_separator	: string|null // e.g. " | " // used by portal to join different records (rows)
+		// legacy_model			: string|null // e.g. "component_autocomplete_hi"
 		// autoload 			: bool // Used by tools
-		// role 				: string // 'main_component' // Used by tools
+		// role 				: string|null // 'main_component' // Used by tools
 		// section_map 			: object // e.g. {
 										"thesaurus": {
 											"term": "hierarchy25",
@@ -59,9 +59,9 @@ class dd_object extends stdClass {
 											"is_descriptor": "hierarchy23"
 										}
 									} Used by tools
-		// color 				: string // e.g. "#f1f1f1"
-		// matrix_table 		: string // e.g. 'matrix_dd'
-		// data_fn 				: string // e.g. 'get_calculation_data' used in 'mdcat2431' set the function to be used to get data of the ddo
+		// color 				: string|null // e.g. "#f1f1f1"
+		// matrix_table 		: string|null // e.g. 'matrix_dd'
+		// data_fn 				: string|null // e.g. 'get_calculation_data' used in 'mdcat2431' set the function to be used to get data of the ddo
 
 
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
@@ -1524,28 +1524,8 @@ class dd_object extends stdClass {
 	*/
 	final public function __get(string $name) {
 
-		if (isset($this->$name)) {
-			return $this->$name;
-		}
-
-		// if($name==='section') {
-		// 	dump($this, ' ))))))))) this ++ '.to_string());
-		// }
-
-		// $trace = debug_backtrace();
-		// debug_log(
-		// 	__METHOD__
-		// 	.' Undefined property via __get(): '.$name .
-		// 	' in ' . $trace[0]['file'] .
-		// 	' on line ' . $trace[0]['line'],
-		// 	logger::ERROR
-		// );
-
-		return null;
+		return $this->$name ?? null;
 	}
-	// final public function __set($name, $value) {
-	// 	$this->$name = $value;
-	// }
 
 
 

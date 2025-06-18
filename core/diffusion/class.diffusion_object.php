@@ -46,7 +46,7 @@ class diffusion_object extends stdClass {
 			$this->errors[] = $msg;
 			return;
 		}
-		
+
 		// set all properties
 		foreach ($data as $key => $value) {
 			$method = 'set_'.$key;
