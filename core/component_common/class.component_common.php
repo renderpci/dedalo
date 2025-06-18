@@ -3504,6 +3504,59 @@ abstract class component_common extends common {
 
 
 
+
+	/**
+	* RESOLVE_QUERY_OBJECT_LANG_BEHAVIOR
+	* Check the query_object language configuration
+	* if the lang is set as 'all', get all project lang and create new query_object with every lang
+	* if the lang is set as specific lang as 'lg-eng' use this lang to create new query_object
+	* in any case adds 'lg-nolan' query_object
+	* @param object $options
+	* {
+	* 	operator		: string $operator; 		// as '!='
+	*	q_parsed		: string | null $q_parsed	// as '\'[]\''
+	*	query_object	: object $query_object;		// as {"q":["*"],"q_operator":null,"path":[{"name":"Notas sobre la composición","model":"component_text_area","section_tipo":"numisdata5","component_tipo":"numisdata1475"}],"q_split":true,"type":"jsonb"}
+	*	lang			: string $lang;				// as 'all' for all languages or 'lg-spa' for specific lang
+	* }
+	* @return array $ar_query_object
+	*/
+	public static function resolve_query_object_lang_behavior( object $options ) :array {
+
+		// short vars
+		$operator		= $options->operator; // as '!='
+		$q_parsed		= $options->q_parsed ?? null; // as '\'[]\''
+		$query_object	= $options->query_object;
+		$lang			= $options->lang ?? 'all'; // as 'all' or 'lg-spa'
+		$translatable	= $options->translatable ?? true; // true | false.
+
+		$ar_query_object = [];
+		// get the ar langs when the $lang is set with 'all'
+		$ar_all_langs	 = $lang==='all'
+			? common::get_ar_all_langs()
+			: [$lang];
+		if(!$translatable){
+			$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+		}
+
+		// create the specific language query object
+			foreach ($ar_all_langs as $current_lang) {
+				$clone = clone($query_object);
+					$clone->operator	= $operator;
+					// Optional, some operators doesn't needs q_parser as 'IS NOT NULL'
+					if($q_parsed){
+						$clone->q_parsed = $q_parsed;
+					}
+					$clone->lang		= $current_lang;
+				$ar_query_object[] = $clone;
+			}
+
+
+		return $ar_query_object;
+	}//end resolve_query_object_lang_behavior
+
+
+
+
 	################################## //end SEARCH 2 ########################################################
 
 
