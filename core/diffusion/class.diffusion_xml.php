@@ -1,7 +1,8 @@
 <?php declare(strict_types=1);
 /**
 * CLASS DIFFUSION_xml
-* Manages publication on Socrata Open Data system
+* Manages publication on XML format
+*
 */
 class diffusion_xml extends diffusion  {
 
@@ -9,7 +10,7 @@ class diffusion_xml extends diffusion  {
 
 	// section_tipo
 	public $section_tipo;
-	// section_id 
+	// section_id
 	public $section_id;
 	// diffusion_element_tipo
 	public $diffusion_element_tipo;
@@ -26,7 +27,8 @@ class diffusion_xml extends diffusion  {
 
 		// load parser classes files
 		// Include the classes of the parsers based on the diffusion_element properties definitions.
-		$load_parsers = $this->load_parsers( $this->diffusion_element_tipo );
+		$this->load_parsers( $this->diffusion_element_tipo );
+
 
 		parent::__construct($options);
 	}//end __construct
@@ -44,7 +46,7 @@ class diffusion_xml extends diffusion  {
 	* }
 	* @return object $response
 	*/
-	public function update_record( object $options ) : object {		
+	public function update_record( object $options ) : object {
 
 		// response
 		$response = new stdClass();
@@ -75,41 +77,43 @@ class diffusion_xml extends diffusion  {
 			$response->errors[] = 'section not defined in diffusion element';
 			return $response;
 		}
-	
-		// Get the diffusion objects, including self
+
+		// Get the diffusion objects recursively, including self
 		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true );
 
 		// resolve and parse values
 		foreach ($diffusion_objects as $diffusion_object) {
 
-			// resolving the data
+			// 1 resolving the data
 			// set data into node structure
 			$diffusion_object->data = $this->resolve_data( $diffusion_object );
 
-			// parse / format result
+			// 2 parse / format result
 			// set value into node structure
 			$diffusion_object->value = $this->parse_diffusion_object( $diffusion_object );
 		}
-					
+
 		try {
 
-			// save result to file, database, etc..
-			$save_result = $this->save($parsed_result);		
+			// 3 save result to file, database, etc..
+			$save_result = $this->save( $diffusion_objects );
 
 			// add errors
-			$response->errors = array_merge($response->errors, $save_result->errors);
+			if ($save_result->errors) {
+				$response->errors = array_merge($response->errors, $save_result->errors);
+			}
 
 			// add file path and url
 			$response->file_path	= $save_result->file_path ?? null;
-			$response->file_url		= $save_result->file_url ?? null;	
-			
+			$response->file_url		= $save_result->file_url ?? null;
+
 		} catch (\Throwable $th) {
-			$response->errors[] = $th->getMessage();
+			$response->errors[] = 'Exception: '.$th->getMessage();
 		}
-				
+
 		// response result
 		$response->result = $save_result ?? false;
-		
+
 
 		return $response;
 	} //end update_record
@@ -122,8 +126,8 @@ class diffusion_xml extends diffusion  {
 	* @param object $options
 	* @return object response
 	*/
-	private function write_file( object $options ) : object {
-		
+	private function write_file( object $dom ) : object {
+
 		$response = new stdClass();
 			$response->result		= false;
 			$response->msg			= 'Error. Request failed';
@@ -131,38 +135,50 @@ class diffusion_xml extends diffusion  {
 			$response->file_path	= null;
 			$response->file_url		= null;
 
-		// options
-		$data = $options->data;		
-
 		$current_date	= new DateTime();
 		$date			= $current_date->format('Y-m-d H_i_s');
-		$sub_path		= 'xml';
 		$file_name		= $this->section_tipo.'_'.$this->section_id;
 		$xml_file_name	= $file_name.'_'. $date.'.xml';
-		$file_path		= DEDALO_MEDIA_PATH . $sub_path . $xml_file_name;
-		$file_url		= DEDALO_MEDIA_URL  . $sub_path . $xml_file_name;
-	
-		if( file_put_contents($file_path, $data) ){
+		$sub_path		= DEDALO_MEDIA_PATH . '/xml';
+		// Check that the target directory exists. If not, create it.
+		if(!create_directory($sub_path)){
+			$response->errors[] = 'unable to access/create the target directory: ' . $sub_path;
+			$response->msg = 'Error accessing target directory: ' . $sub_path;
+			return $response;
+		}
+		$file_path	= $sub_path .'/'. $xml_file_name;
+		$file_url	= DEDALO_MEDIA_URL  . $sub_path . $xml_file_name;
 
+		// save DOM nodes to file. Return the number of bytes, or false on failure.
+		$result = $dom->save( $file_path );
+
+		if ($result === false) {
+			$response->errors[] = 'wrong DOM save response (false). Expected int (number of bytes)';
+			$response->msg = 'Error saving DOM nodes to file';
 			debug_log(__METHOD__
-				. " Save file to " . PHP_EOL
-				. ' file_path: ' . to_string($file_path)
-				, logger::DEBUG
-			);
-
-			// add file path to locate the created file form client side
-			$response->file_path	= $file_path;
-			$response->file_url		= $file_url;
-
-		}else{
-
-			debug_log(__METHOD__
-				. " Fail to save file " . PHP_EOL
+				. " Failed to save file " . PHP_EOL
 				. ' file_path: ' . to_string($file_path)
 				, logger::ERROR
 			);
-		}			
-	
+			return $response;
+		}
+
+		// success response
+		$response->result = true;
+		$response->msg = empty($response->errors)
+			? 'OK. Request done successfully'
+			: 'Warning. Request don with errors';
+		// add file path to locate the created file form client side
+		$response->file_path	= $file_path;
+		$response->file_url		= $file_url;
+
+		// debug
+		debug_log(__METHOD__
+			. " Saved XML file to " . PHP_EOL
+			. ' file_path: ' . to_string($file_path)
+			, logger::DEBUG
+		);
+
 
 		return $response;
 	}//end write_file
@@ -172,22 +188,105 @@ class diffusion_xml extends diffusion  {
 	/**
 	 * SAVE
 	 * Saves the final parsed string to a file
-	 * @param string $parsed_result
+	 * @param array $diffusion_objects
 	 * @return object $response
 	 */
-	private function save(string $parsed_result) : object {
-		
-		return $this->write_file((object)[
-			'data' => $parsed_result
-		]);
-	} //end save
+	private function save( array $diffusion_objects ) : object {
+
+		// parse nodes as XML document
+		$dom = $this->render_dom( $diffusion_objects );
+
+		// $xml_string = $dom->saveXML();
+
+		// Save to file
+		// $dom->save( DEDALO_MEDIA_PATH . '/xml/test.xml');
+
+		$write_file_response = $this->write_file( $dom );
+
+		$response = new stdClass();
+			$response->result	= true;
+			$response->msg		= 'OK';
+			$response->errors	= [];
+		$write_file_response = $response;
+
+		return $write_file_response;
+	}//end save
+
+
+
+	/**
+	* RENDER_DOM
+	* Creates the XML nodes and hierarchize to create the final
+	* DOM XML string
+	* @param array $diffusion_objects
+	* @return DOMDocument $dom
+	*/
+	public function render_dom( array $diffusion_objects ) : DOMDocument {
+
+		$dom = new DOMDocument('1.0', 'UTF-8');
+		$dom->formatOutput = true; // For pretty-printing
+		// $dom->preserveWhiteSpace = true;
+
+		// 1 render all nodes without worry about hierarchy
+		$xml_nodes = [];
+		foreach ($diffusion_objects as $current_diffusion_object) {
+
+			// name
+			$name = $current_diffusion_object->name ?? '';
+			// Ensure the name is valid to use it in XML
+			$name = $this->sanitize_xml_node_name( $name );
+
+			// value. Ensure the value is always string
+			$value	= $current_diffusion_object->value ?? '';
+
+			// render DOM node
+			$node = $dom->createElement( $name, htmlspecialchars($value) );
+
+			$xml_nodes[] = (object)[
+				'tipo'		=> $current_diffusion_object->tipo,
+				'parent'	=> $current_diffusion_object->parent ?? null,
+				'node'		=> $node
+			];
+		}
+
+		// 2 hierarchize the rendered nodes
+		foreach ($xml_nodes as $xml_node) {
+
+			// attach the node to the DOM
+			$dom->appendChild( $xml_node->node );
+
+			$parent = $xml_node->parent ?? null;
+			if (!$parent) {
+				// first level node. Only add to the DOM
+				continue;
+			}
+
+			// find his parent node in the list of xml_nodes
+			$found = array_find($xml_nodes, function($el) use ($parent){
+				return $el->tipo === $parent;
+			});
+			if (is_object($found)) {
+				// hierarchize child node with parent
+				$found->node->appendChild( $xml_node->node );
+			}else{
+				debug_log(__METHOD__
+					. " Parent not found " . PHP_EOL
+					. ' xml_node: ' . to_string($xml_node)
+					, logger::WARNING
+				);
+			}
+		}
+
+
+		return $dom;
+	}//end render_dom
 
 
 
 	/**
 	 * PARSE_DIFFUSION_OBJECT
-	 * Parses and format the final output based on resolved diffusion_object
-	 * @param array $diffusion_object
+	 * Parses and format the final output values based on resolved diffusion_object
+	 * @param object $diffusion_object
 	 * @return string|null $result
 	 */
 	private function parse_diffusion_object( object $diffusion_object ): ?string {
@@ -202,21 +301,41 @@ class diffusion_xml extends diffusion  {
 
 		$data = $diffusion_object->data;
 
-		foreach ($parser as $current_parser) {
-			$fn = $current_parser->fn ?? 'parser_text::invalid_fn';
+		// default value
+		$value = null;
 
-			if( !function_exists($fn) ){
+		foreach ((array)$parser as $current_parser) {
+
+			// parser function
+			$fn = $current_parser->fn ?? 'parser_text::invalid_method';
+
+			// check if the function exists
+			$pieces	= explode('::', $fn);
+			$class	= $pieces[0];
+			$method	= $pieces[1] ?? 'invalid_method';
+			if( !method_exists($class, $method) ){
 				debug_log(__METHOD__
-					. " The defined parser function does not exist " . PHP_EOL
+					. " The defined parser method does not exist " . PHP_EOL
 					. " fn: ". $fn
 					, logger::ERROR
 				);
 				continue;
 			}
-			//string
-			$value = {$fn}($data, $current_parser->options);
 
-			// set the data with the value for the next iteration
+			// string expected from parser function execution
+			$value = $fn($data, $current_parser->options);
+
+			// check result format
+			if ($value!==null && !is_string($value)) {
+				debug_log(__METHOD__
+					. " Expected value type string or null  " . PHP_EOL
+					. ' gettype: ' . gettype($value) . PHP_EOL
+					. ' value: ' . to_string($value)
+					, logger::WARNING
+				);
+			}
+
+			// set (overwrite) the data with the current value for the next iteration
 			$data = [$value];
 		}
 
@@ -232,6 +351,7 @@ class diffusion_xml extends diffusion  {
 			$value = json_encode($value);
 		}
 
+
 		// return the last value
 		return $value;
 	} //end parse_diffusion_object
@@ -246,7 +366,7 @@ class diffusion_xml extends diffusion  {
 	 * @return string $root_tipo
 	 */
 	private function get_root_tipo( string $diffusion_element_tipo ) : ?string {
-	
+
 		$section_tipo = $this->section_tipo;
 
 		$children = RecordObj_dd::get_ar_childrens($diffusion_element_tipo);
@@ -258,7 +378,7 @@ class diffusion_xml extends diffusion  {
 			}
 			return $section === $section_tipo;
 		});
-		
+
 
 		return $root_tipo;
 	}//end get_root_tipo
@@ -272,7 +392,7 @@ class diffusion_xml extends diffusion  {
 	 * @return array $data
 	 */
 	private function resolve_data( object $diffusion_object ) : array {
-		
+
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
 		$tipo 			= $diffusion_object->tipo;
@@ -294,8 +414,8 @@ class diffusion_xml extends diffusion  {
 			$resolve_options->section_id	= $section_id;
 
 		$ar_data = diffusion_data::get_ddo_map_value( $resolve_options );
-		
-		
+
+
 		return $ar_data;
 	}//end resolve_data
 
@@ -330,6 +450,38 @@ class diffusion_xml extends diffusion  {
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element
 
+
+
+	/**
+	* SANITIZE_XML_NODE_NAME
+	* Ensure the node name is XML valid
+	* @param string $name
+	* @return string $sanitized_name
+	*/
+	private function sanitize_xml_node_name( string $name ): string {
+		// 1. Remove invalid characters
+		// Keep letters, digits, hyphens, underscores, and periods.
+		// Note: to consider extended Unicode letters if the XML might use them.
+		// For simplicity, we'll stick to basic ASCII letters.
+		$sanitized_name = preg_replace('/[^a-zA-Z0-9_\-.]/', '_', $name);
+
+		// 2. Ensure a valid starting character
+		// XML names must start with a letter or underscore.
+		if (!preg_match('/^[a-zA-Z_]/', $sanitized_name)) {
+			// If it starts with a digit or period, or is empty, prepend an underscore
+			$sanitized_name = '_' . $sanitized_name;
+		}
+
+		// 3. Handle reserved "xml" prefix
+		// If the name starts with "xml" (case-insensitive), prepend something
+		// to avoid conflicts with reserved XML keywords or attributes.
+		if (stripos($sanitized_name, 'xml') === 0) {
+			$sanitized_name = 'x' . $sanitized_name; // e.g., change "xmlData" to "xxmlData"
+		}
+
+
+		return $sanitized_name;
+	}//end sanitize_xml_node_name
 
 
 

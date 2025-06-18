@@ -89,20 +89,52 @@
 class parser_text {
 
 
+
 	/**
 	* DEFAULT_JOIN
-	* @return
+	* It is used as the default parser for data if no parser is set in the properties.
+	* @param array|null $data
+	* @param object $options
+	* @return string|null $value
 	*/
-	public static function default_join( array $data, object $options ) {
+	public static function default_join( ?array $data, object $options ) : ?string {
 
+		if(empty($data)) return null;
+
+		$values = [];
+		foreach ($data as $current_item) {
+			$values[] = json_encode( $current_item->value );
+		}
+
+		$value = 'Fake ' . implode(' | ', $values);
+
+		return $value;
 	}//end default_join
+
+
 
 	/**
 	* TEXT_FORMAT
-	* @return
+	* 
+	* @param array|null $data
+	* @param object $options
+	* @return string|null $value
 	*/
-	public static function text_format( array $data, object $options ) {
+	public static function text_format( ?array $data, object $options ) : ?string {
 
+		if(empty($data)) return null;
+
+		$values = [];
+		foreach ($data as $current_item) {
+			$values[] = json_encode( $current_item->value );
+		}
+
+		$value = 'Fake ' . implode(' | ', $values);
+
+
+		return $value;
 	}//end text_format
+
+
 
 }//end parser_text

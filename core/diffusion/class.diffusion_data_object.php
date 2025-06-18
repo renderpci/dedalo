@@ -59,7 +59,7 @@ class diffusion_data_object extends stdClass {
 			}else{
 
 				debug_log(__METHOD__
-					.' Ignored received property: '.$key.' not defined as set method.'. PHP_EOL
+					.' Ignored received property: "'.$key.'"" not defined as set method.'. PHP_EOL
 					.' data: ' . to_string($data)
 					, logger::ERROR
 				);
@@ -67,6 +67,58 @@ class diffusion_data_object extends stdClass {
 			}
 		}
 	}//end __construct
+
+
+
+	/**
+	* SET_TIPO
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_tipo( ?string $value ) : bool  {
+
+		$this->tipo = $value;
+
+		return true;
+	}//end set_tipo
+
+
+
+	/**
+	* GET_TIPO
+	* Return property value
+	* @return string|null $this->tipo
+	*/
+	public function get_tipo() : ?string {
+
+		return $this->tipo ?? null;
+	}//end get_tipo
+
+
+
+	/**
+	* SET_LANG
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_lang( ?string $value ) : bool  {
+
+		$this->lang = $value;
+
+		return true;
+	}//end set_lang
+
+
+
+	/**
+	* GET_LANG
+	* Return property value
+	* @return string|null $this->lang
+	*/
+	public function get_lang() : ?string {
+
+		return $this->lang ?? null;
+	}//end get_lang
 
 
 
@@ -98,6 +150,31 @@ class diffusion_data_object extends stdClass {
 
 
 
+	/**
+	* SET_ID
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_id( ?string $value ) : bool  {
+
+		$this->id = $value;
+
+		return true;
+	}//end set_id
+
+
+
+	/**
+	* GET_ID
+	* Return property value
+	* @return string|null $this->id
+	*/
+	public function get_id() : ?string {
+
+		return $this->id ?? null;
+	}//end get_id
+
+
 
 	/**
 	* GET METHODS
@@ -114,7 +191,7 @@ class diffusion_data_object extends stdClass {
 
 		return null;
 	}
-	final public function __set( $name, $value ) {
+	final public function __set( string $name, $value ) {
 		$this->{$name} = $value;
 	}
 

@@ -1,9 +1,10 @@
 <?php declare(strict_types=1);
 /**
 * DIFFUSION_DATA
-*
+* Handles the diffusion data resolution from ddom_map
 */
 class diffusion_data {
+
 
 
 	/**
@@ -12,32 +13,45 @@ class diffusion_data {
 	* @param string $section_tipo
 	* @return array $ddo_map
 	*/
-	public static function get_ddo_map( string $diffusion_node_tipo, string $section_tipo) : array {
+	public static function get_ddo_map( string $diffusion_node_tipo, string $section_tipo ) : array {
 
 		// ddo_map create or get from properties
-		$ddo_map			= [];
-		$ar_related_dd_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_node_tipo, 'component_', 'termino_relacionado', false);
-		// check if the ontology has his owm ddo_map defined, if not, it will create a ddo_map with related components.
+		$ddo_map = [];
+
+		$RecordObj_dd	= new RecordObj_dd($diffusion_node_tipo);
+		$properties		= $RecordObj_dd->get_properties();
+
+		// check if the ontology has his own ddo_map defined, if not, it will create a ddo_map with related components.
 		if(isset($properties->process) && isset($properties->process->ddo_map)){
 
 			$ddo_map = $properties->process->ddo_map;
+
 			// resolve the 'self' value for section_tipo or parent, if this properties are defined use it.
 			foreach ($ddo_map as $ddo) {
 				$ddo->section_tipo	= $ddo->section_tipo === 'self' ? $section_tipo : $ddo->section_tipo;
 				$ddo->parent		= $ddo->parent === 'self' ? $section_tipo : $ddo->parent;
 			}
+
 		}else{
+
+			$ar_related_dd_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$diffusion_node_tipo,
+				'component_',
+				'termino_relacionado',
+				false
+			);
 			// create new ddo_map when the ontology doesn't has one ddo_map
 			foreach ($ar_related_dd_tipo as $current_tipo) {
 				$ddo = new stdClass();
 					$ddo->tipo			= $current_tipo;
 					$ddo->section_tipo	= $section_tipo;
 					$ddo->parent		= $section_tipo;
-					$ddo->value_fn		= "get_diffusion_value";
+					$ddo->value_fn		= 'get_diffusion_value';
 
 				$ddo_map[] = $ddo;
 			}
 		}
+
 
 		return $ddo_map;
 	}//end get_ddo_map
@@ -46,27 +60,27 @@ class diffusion_data {
 
 	/**
 	* GET_DDO_MAP_VALUE
-	* resolve the ddo_map components
+	* Resolve the ddo_map value from components
 	* @param object $options
 	* @return array $ar_values
 	*/
 	public static function get_ddo_map_value( object $options ) : array {
 
-		$ddo_map		=  $options->ddo_map;
-		$parent			=  $options->section_tipo;
-		$section_tipo	=  $options->section_tipo;
-		$section_id		=  $options->section_id;
-
-		$ar_values = [];
+		$ddo_map		= $options->ddo_map;
+		$parent			= $options->section_tipo;
+		$section_tipo	= $options->section_tipo;
+		$section_id		= $options->section_id;
 
 		$children = array_filter($ddo_map, function($item) use($parent) {
 			return $item->parent===$parent;
 		});
 
+		$ar_values = [];
 		foreach ($children as $ddo) {
 			$result		= diffusion_data::get_ddo_value($ddo, $ddo_map, $section_tipo, $section_id);
 			$ar_values	= array_merge($ar_values, $result);
 		}
+
 
 		return $ar_values;
 	}//end get_ddo_map_value
@@ -75,14 +89,14 @@ class diffusion_data {
 
 	/**
 	* GET_DDO_VALUE
-	* resolve the ddo values
+	* Resolve the ddo values
 	* @param object $ddo
 	* @param array $ddo_map
 	* @param string $section_tipo
 	* @param string|int $section_id
 	* @return array $ar_values
 	*/
-	public static function get_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id) : array {
+	public static function get_ddo_value( object $ddo, array $ddo_map, string $section_tipo, string|int $section_id ) : array {
 
 		$ar_values		= [];
 		$current_tipo	= $ddo->tipo;
@@ -118,12 +132,13 @@ class diffusion_data {
 
 		if(empty($children)) {
 
+			// end of the chain case: get diffusion data
 			$diffusion_data	= $element->get_diffusion_data( $ddo );
 			$ar_values		= array_merge($ar_values, $diffusion_data);
 
 		}else{
 
-			// no empty($children) case
+			// no empty ($children) case: recursion
 			$ar_locators = $element->get_dato();
 			foreach ($ar_locators as $current_locator) {
 
@@ -141,6 +156,7 @@ class diffusion_data {
 
 		return $ar_values;
 	}//end get_ddo_value
+
 
 
 }//end diffusion_data

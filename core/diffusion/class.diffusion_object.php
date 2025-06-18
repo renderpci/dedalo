@@ -71,9 +71,6 @@ class diffusion_object extends stdClass {
 
 
 
-
-
-
 	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value,
@@ -89,7 +86,7 @@ class diffusion_object extends stdClass {
 
 		return null;
 	}
-	final public function __set( $name, $value ) {
+	final public function __set( string $name, $value ) {
 		$this->{$name} = $value;
 	}
 

@@ -2758,7 +2758,7 @@ abstract class component_common extends common {
 			'tipo'	=> $this->tipo,
 			'lang'	=> null,
 			'value'	=> null,
-			'id'	=> $ddo->id
+			'id'	=> $ddo->id ?? null
 		]);
 
 		$diffusion_data[] = $diffusion_data_object;
@@ -2818,7 +2818,7 @@ abstract class component_common extends common {
 							'tipo'	=> $this->tipo,
 							'lang'	=> $current_lang,
 							'value'	=> $value,
-							'id'	=> $ddo->id
+							'id'	=> $ddo->id ?? null
 						]);
 
 						$diffusion_data[] = $diffusion_data_object;
