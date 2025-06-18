@@ -405,6 +405,7 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 			let current_value	= filter.q
 			let q_operator		= filter.q_operator
+			let q_lang			= filter.lang
 
 			// Resolved check (useful for sequences or split strings)
 				const section_id = self.get_section_id()
@@ -414,6 +415,7 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 					if (clean_q===true) {
 						current_value	= ''
 						q_operator		= ''
+						q_lang 			= null
 					}
 
 					// Add. If not already resolved, add
@@ -422,6 +424,7 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 							path_plain		: JSON.stringify(filter.path),
 							current_value	: current_value,
 							q_operator		: q_operator,
+							q_lang			: q_lang,
 							section_id		: section_id
 						})
 
@@ -476,6 +479,7 @@ search.prototype.get_component_instance = async function(options) {
 		const model						= options.model
 		const value						= options.value || []
 		const q_operator				= options.q_operator
+		const q_lang					= options.q_lang
 		const path						= options.path
 		const ar_target_section_tipo	= options.ar_target_section_tipo
 
@@ -531,6 +535,7 @@ search.prototype.get_component_instance = async function(options) {
 
 	// add search options to the instance
 		component_instance.data.q_operator	= q_operator
+		component_instance.data.q_lang		= q_lang
 		component_instance.path				= path
 
 	// add instance
@@ -641,6 +646,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			let q			= null // default
 			let q_operator	= null // default
 			let q_split		= false // default is false
+			let q_lang		= null // default is null
 			// add_arguments . if true, calculate and save inputs value to preset (temp preset)
 			if (add_arguments!==false) {
 
@@ -665,6 +671,22 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 				// q_split
 					q_split = component_instance.q_split ?? false
+
+				// lang
+				//if the component is translatable it can set if the search is with all langs or selective(null) only for the current lang
+					q_lang = component_instance.data.q_lang ?? null
+			}
+			// create the search options with the component data.
+			const search_options = {
+				q			: q,
+				q_operator	: q_operator,
+				path		: JSON.parse(element.dataset.path),
+				q_split		: q_split,
+				type		: "jsonb"
+			}
+			// set the lang only when the component has this option.
+			if(q_lang){
+				search_options.lang = q_lang
 			}
 
 			// Add component
@@ -676,23 +698,11 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 					if( (!q || !q[0] || q[0].length===0) && (q_operator && q_operator.length>0) ) {
 						q = "only_operator"
 					}
-					query_group[operator].push({
-						q			: q,
-						q_operator	: q_operator,
-						path		: JSON.parse(element.dataset.path),
-						q_split		: q_split,
-						type		: "jsonb"
-					})
+					query_group[operator].push(search_options)
 				}
 			}else{
 				// Add always
-				query_group[operator].push({
-					q			: q,
-					q_operator	: q_operator,
-					path		: JSON.parse(element.dataset.path),
-					q_split		: q_split,
-					type		: "jsonb"
-				})
+				query_group[operator].push(search_options)
 			}
 
 		}
@@ -1265,6 +1275,9 @@ search.prototype.reset = async function () {
 				}
 				if (instance.data.q_operator) {
 					instance.data.q_operator = null
+				}
+				if (instance.data.q_lang) {
+					instance.data.q_lang = null
 				}
 				// refresh component without load DB data
 				await instance.refresh({

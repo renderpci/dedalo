@@ -602,6 +602,7 @@ render_search.prototype.build_search_component = async function(options) {
 	const path_plain		= options.path_plain
 	const current_value		= options.current_value
 	const q_operator		= options.q_operator
+	const q_lang			= options.q_lang
 	const section_id		= options.section_id
 
 	// short vars
@@ -630,6 +631,7 @@ render_search.prototype.build_search_component = async function(options) {
 				mode					: 'search',
 				value					: current_value || null, // value will be injected
 				q_operator				: q_operator || null,
+				q_lang					: q_lang || null,
 				path					: path
 			})
 
