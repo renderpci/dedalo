@@ -25,7 +25,7 @@
 *	}
 * inside `process->parser` property.
 *
-* Processing ata:
+* Processing data:
 * The data resolution of the `ddo_map` chain, will be sent to the parser function as an array of objects with the data resolution in `value` property.
 * Therefore, the called function here must be data compatible with the get data function defined in specific `ddo` in `ddo_map` chain.
 * By default the data function is: `get_value`, but is possible defines any other data functions of the component inside a `ddo` in `ddo_map` of the `process` object.
@@ -92,6 +92,7 @@ class parser_text {
 
 	/**
 	* DEFAULT_JOIN
+	* Creates a generic $separator concatenated string with all values (stringify non strings).
 	* It is used as the default parser for data if no parser is set in the properties.
 	* @param array|null $data
 	* @param object $options
@@ -108,6 +109,7 @@ class parser_text {
 
 		$value = 'Fake ' . implode(' | ', $values);
 
+
 		return $value;
 	}//end default_join
 
@@ -115,7 +117,7 @@ class parser_text {
 
 	/**
 	* TEXT_FORMAT
-	* 
+	* Generic text parser
 	* @param array|null $data
 	* @param object $options
 	* @return string|null $value

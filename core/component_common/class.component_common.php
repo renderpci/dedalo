@@ -2808,7 +2808,6 @@ abstract class component_common extends common {
 
 		// Resolve the data by default
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
-
 			$dato_full = $this->get_dato_full();
 			if(!empty($dato_full)) {
 				foreach ($dato_full as $current_lang => $value) {
@@ -2825,6 +2824,7 @@ abstract class component_common extends common {
 					}
 				}
 			}
+
 
 		return $diffusion_data;
 	}//end get_diffusion_data

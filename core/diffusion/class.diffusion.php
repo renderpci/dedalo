@@ -359,7 +359,7 @@ abstract class diffusion  {
 
 		// default is false
 		$have_section_diffusion = false;
-		
+
 		// diffusion_map_elements
 		$ar_diffusion_map_elements = $ar_diffusion_map_elements ?? diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 
@@ -387,7 +387,7 @@ abstract class diffusion  {
 			}
 
 			$ar_related = diffusion::get_diffusion_sections_from_diffusion_element(
-				$current_diffusion_element_tipo, 
+				$current_diffusion_element_tipo,
 				$current_class_name
 			);
 
@@ -438,7 +438,7 @@ abstract class diffusion  {
 					. ' file_path: ' . $file_path
 					, logger::WARNING
 				);
-			}			
+			}
 
 		} catch (Exception $e) {
 			error_log( 'Caught exception: ' . $e->getMessage() );
@@ -1615,7 +1615,7 @@ abstract class diffusion  {
 				'parent' => null
 			]);
 		}
-		
+
 		foreach ($children_objects as $child_object) {
 
 			$child_tipo = $child_object->tipo;
@@ -1644,9 +1644,9 @@ abstract class diffusion  {
 
 		return $diffusion_objects;
 	}//end get_diffusion_objects
-	
-	
-	
+
+
+
 	/**
 	 * GET_CHILDREN_OBJECTS
 	 * Resolve ontology children nodes recursively using
@@ -1658,16 +1658,16 @@ abstract class diffusion  {
 	protected static function get_children_objects( string $tipo ) : array {
 
 		$children_objects = [];
-		
+
 		// Ontology typical resolution
-		$children = RecordObj_dd::get_ar_childrens($tipo);		
+		$children = RecordObj_dd::get_ar_childrens($tipo);
 		if (empty($children)) {
 			// fallback to properties definition
 			$RecordObj_dd = new RecordObj_dd($tipo);
 			$properties = $RecordObj_dd->get_properties();
-			$children = $properties->children ?? [];		
-		}	
-				
+			$children = $properties->children ?? [];
+		}
+
 		if (!empty($children)) {
 
 			// Create the pairs object tipo/parent
@@ -1686,8 +1686,8 @@ abstract class diffusion  {
 				);
 			}
 		}
-		
-		
+
+
 		return $children_objects;
 	} //end get_children_objects
 
@@ -1695,40 +1695,40 @@ abstract class diffusion  {
 
 	/**
 	 * LOAD_PARSERS
-	 * Include the classes of the parsers based on the diffusion_element 
+	 * Include the classes of the parsers based on the diffusion_element
 	 * properties definitions.
 	 * @param string $diffusion_element_tipo
 	 * @return bool
 	 */
 	public function load_parsers( string $diffusion_element_tipo ) : bool {
-	
+
 		static $parsers_loaded;
 		if (isset($parsers_loaded) && $parsers_loaded===true) {
 			return true;
 		}
-	
+
 		$RecordObj_dd	= new RecordObj_dd($diffusion_element_tipo);
 		$properties		= $RecordObj_dd->get_properties();
 		$parser			= $properties->diffusion->parser ?? null;
 		if ($parser) {
-			foreach ((array)$parser as $file_path) {				
+			foreach ((array)$parser as $file_path) {
 				try {
 					$full_path = DEDALO_ROOT_PATH . trim($file_path, " .");
 					include_once $full_path;
-				} catch (Exception $e) {					
+				} catch (Exception $e) {
 					debug_log(__METHOD__
 						. ' Ignored parser class file. File do not exists' . PHP_EOL
 						. ' file_path: ' . to_string($file_path) . PHP_EOL
 						. $e->getMessage()
 						, logger::ERROR
 					);
-				}				
+				}
 			}
 		}
 
 		$parsers_loaded = true;
-		
-		
+
+
 		return true;
 	}//end load_parsers
 
