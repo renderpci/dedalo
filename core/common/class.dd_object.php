@@ -21,6 +21,7 @@ class dd_object extends stdClass {
 		// mode					: string // e.g. "list",
 		// model				: string // e.g. 'component_input_text',
 		// id 					: string // optional parameter in order to identify current DDO inside a DDO_MAP chain. It is used to referent it in process as parser or widgets data.
+		// info 				: string|null // optional short information about the ddo. e.g. 'Find(spot) - component_portal'
 		// properties			: object // generic object to define custom properties of the DDO. Used to sent or overwrites the Ontology properties.
 		// permissions			: int // e.g. 1
 		// label				: string // e.g. 'Title'
@@ -512,6 +513,32 @@ class dd_object extends stdClass {
 
 		return $this->id ?? null;
 	}//end get_id
+
+
+
+	/**
+	* SET_INFO
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_info(?string $value) : bool {
+
+		$this->info = $value;
+
+		return true;
+	}//end set_info
+
+
+
+	/**
+	* GET_INFO
+	* Return property value
+	* @return string|null $this->model
+	*/
+	public function get_info() : ?string {
+
+		return $this->info ?? null;
+	}//end get_info
 
 
 
