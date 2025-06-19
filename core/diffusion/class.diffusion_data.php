@@ -69,8 +69,12 @@ class diffusion_data {
 	*/
 	public static function get_ddo_map_value( object $options ) : array {
 
+		if (!isset($options->ddo_map, $options->parent, $options->section_tipo, $options->section_id)) {
+			throw new InvalidArgumentException('Missing required properties in options object');
+		}
+
 		$ddo_map		= $options->ddo_map;
-		$parent			= $options->section_tipo;
+		$parent			= $options->parent;
 		$section_tipo	= $options->section_tipo;
 		$section_id		= $options->section_id;
 
@@ -78,11 +82,12 @@ class diffusion_data {
 			return $item->parent===$parent;
 		});
 
-		$ar_values = [];
+		$values_collection = [];
 		foreach ($children as $ddo) {
-			$result		= diffusion_data::get_ddo_value($ddo, $ddo_map, $section_tipo, $section_id);
-			$ar_values	= array_merge($ar_values, $result);
+			$values_collection[] = diffusion_data::get_ddo_value($ddo, $ddo_map, $section_tipo, $section_id);
 		}
+		// merge all arrays in one flat array
+		$ar_values = array_merge(...$values_collection);
 
 
 		return $ar_values;
@@ -101,22 +106,12 @@ class diffusion_data {
 	*/
 	public static function get_ddo_value( object $ddo, array $ddo_map, string $section_tipo, string|int $section_id ) : array {
 
-		$ar_values		= [];
 		$current_tipo	= $ddo->tipo;
 		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
 
-		if($model_name==='relation_list') {
-
-			$element = new relation_list(
-				$current_tipo,
-				$section_id,
-				$section_tipo,
-				'list'
-			);
-
-		}else{
-
-			$element = component_common::get_instance(
+		$element = $model_name === 'relation_list'
+			? new relation_list($current_tipo, $section_id, $section_tipo, 'list')
+			: component_common::get_instance(
 				$model_name,
 				$current_tipo,
 				$section_id,
@@ -124,9 +119,8 @@ class diffusion_data {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-		}
 
-		$parent		= $ddo->tipo;
+		$parent		= $current_tipo;
 		$children	= array_values(
 			array_filter($ddo_map, function($item) use($parent) {
 				return $item->parent===$parent;
@@ -134,27 +128,27 @@ class diffusion_data {
 		);
 
 		if(empty($children)) {
-
 			// end of the chain case: get diffusion data
-			$diffusion_data	= $element->get_diffusion_data( $ddo );
-			$ar_values		= array_merge($ar_values, $diffusion_data);
+			return $element->get_diffusion_data($ddo);
+		}
 
-		}else{
+		// no empty ($children) case: recursion
+		$ar_locators = $element->get_dato() ?? [];
 
-			// no empty ($children) case: recursion
-			$ar_locators = $element->get_dato();
-			foreach ($ar_locators as $current_locator) {
+		$ar_values_collection = [];
+		foreach ($ar_locators as $current_locator) {
 
-				$resolve_options = new stdClass();
-					$resolve_options->ddo_map		= $ddo_map;
-					$resolve_options->parent		= $parent;
-					$resolve_options->section_tipo	= $current_locator->section_tipo;
-					$resolve_options->section_id	= $current_locator->section_id;
+			$resolve_options = new stdClass();
+				$resolve_options->ddo_map		= $ddo_map;
+				$resolve_options->parent		= $parent;
+				$resolve_options->section_tipo	= $current_locator->section_tipo;
+				$resolve_options->section_id	= $current_locator->section_id;
 
-				$diffusion_data	= diffusion_data::get_ddo_map_value( $resolve_options );
-				$ar_values = array_merge($ar_values, $diffusion_data);
-			}
-		}//end if(empty($children))
+			$ar_values_collection[] = diffusion_data::get_ddo_map_value( $resolve_options );
+		}
+
+		// flat array merging all values
+		$ar_values = array_merge(...$ar_values_collection);
 
 
 		return $ar_values;
