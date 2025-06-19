@@ -142,11 +142,11 @@ class diffusion_xml extends diffusion  {
 
 	/**
 	* WRITE_FILE
-	* Writes one file per record (default)
-	* @param object $options
+	* Writes one XML file per record
+	* @param DOMDocument $doc
 	* @return object response
 	*/
-	private function write_file( object $dom ) : object {
+	private function write_file( DOMDocument $doc ) : object {
 
 		$response = new stdClass();
 			$response->result		= false;
@@ -170,7 +170,7 @@ class diffusion_xml extends diffusion  {
 		$file_url	= DEDALO_MEDIA_URL  . $sub_path . $xml_file_name;
 
 		// save DOM nodes to file. Return the number of bytes, or false on failure.
-		$result = $dom->save( $file_path );
+		$result = $doc->save( $file_path );
 
 		if ($result === false) {
 			$response->errors[] = 'wrong DOM save response (false). Expected int (number of bytes)';
