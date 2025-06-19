@@ -22,14 +22,16 @@ class diffusion_data {
 		$properties		= $RecordObj_dd->get_properties();
 
 		// check if the ontology has his own ddo_map defined, if not, it will create a ddo_map with related components.
-		if(isset($properties->process) && isset($properties->process->ddo_map)){
+		if(isset($properties->process, $properties->process->ddo_map)){
 
-			$ddo_map = $properties->process->ddo_map;
+			foreach ($properties->process->ddo_map as $ddo) {
 
-			// resolve the 'self' value for section_tipo or parent, if this properties are defined use it.
-			foreach ($ddo_map as $ddo) {
+				// resolve the 'self' value for section_tipo or parent, if this properties are defined use it.
 				$ddo->section_tipo	= $ddo->section_tipo === 'self' ? $section_tipo : $ddo->section_tipo;
 				$ddo->parent		= $ddo->parent === 'self' ? $section_tipo : $ddo->parent;
+
+				// add a new safe ddo
+				$ddo_map[] = new dd_object($ddo);
 			}
 
 		}else{
@@ -42,11 +44,12 @@ class diffusion_data {
 			);
 			// create new ddo_map when the ontology doesn't has one ddo_map
 			foreach ($ar_related_dd_tipo as $current_tipo) {
-				$ddo = new stdClass();
-					$ddo->tipo			= $current_tipo;
-					$ddo->section_tipo	= $section_tipo;
-					$ddo->parent		= $section_tipo;
-					$ddo->value_fn		= 'get_diffusion_value';
+
+				$ddo = new dd_object((object)[
+					'tipo'			=> $current_tipo,
+					'section_tipo'	=> $section_tipo,
+					'parent'		=> $section_tipo
+				]);
 
 				$ddo_map[] = $ddo;
 			}

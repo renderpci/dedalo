@@ -2,8 +2,8 @@
 /**
 * CLASS DIFFUSION_OBJECT
 * Defines object with normalized properties and checks
-* Represents each of Ontology diffusion nodes used to 
-* parse and resolve for publication output as XML, RDF, SQL, etc. 
+* Represents each of Ontology diffusion nodes used to
+* parse and resolve for publication output as XML, RDF, SQL, etc.
 */
 class diffusion_object extends stdClass {
 
