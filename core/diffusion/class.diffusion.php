@@ -1602,6 +1602,12 @@ abstract class diffusion  {
 	 */
 	public function get_diffusion_objects(string $root_tipo, bool $include_self=false): array {
 
+		// diffusion_objects_cache. Cache for performance on multiple records
+		static $diffusion_objects_cache;
+		if (isset($diffusion_objects_cache)) {
+			return $diffusion_objects_cache;
+		}
+
 		$diffusion_objects = [];
 
 		// Get recursively all children and iterate it
@@ -1642,6 +1648,9 @@ abstract class diffusion  {
 			// add
 			$diffusion_objects[] = $diffusion_object;
 		}
+
+		// cache
+		$diffusion_objects_cache = $diffusion_objects;
 
 
 		return $diffusion_objects;
