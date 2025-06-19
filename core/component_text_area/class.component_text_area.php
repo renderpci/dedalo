@@ -1839,7 +1839,7 @@ class component_text_area extends component_common {
 		// q
 		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
 			$q = is_array($query_object->q)
-				? reset($query_object->q)
+				? (!empty($query_object->q[0]) ? $query_object->q[0] : '')
 				: ($query_object->q ?? '');
 
 		// split q case
