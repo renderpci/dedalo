@@ -100,14 +100,16 @@ class parser_date {
 	public static function string_date( ?array $data, object $options ) : ?string {
 
 		// options
-		$pattern	= $options->pattern ?? "Y-m-d H:i:s";
-		$separator	= $options->separator ?? ',';
+		$pattern			= $options->pattern ?? 'Y-m-d'; // Y-m-d H:i:s
+		$records_separator	= $options->records_separator ?? ' | ';
+		$fields_separator	= $options->fields_separator ?? ', ';
+		$date_mode			= $options->date_mode ?? 'date';
+		$lang				= isset($options->lang) && $options->lang!==DEDALO_DATA_NOLAN
+			? $options->lang
+			: DEDALO_DATA_LANG;
 
+		// empty data case. Nothing to parse
 		if(empty($data)) return null;
-
-		// TEMPORAL !!!!!!!!!!!!!!!!!!
-			$date_mode	= 'date';
-			$lang		= DEDALO_DATA_LANG;
 
 		$ar_values = [];
 		foreach ($data as $data_item) {
@@ -115,31 +117,32 @@ class parser_date {
 			$data_item_value = $data_item->value ?? [];
 			foreach ($data_item_value as $date_value) {
 
-				// DES
+				// date_mode conditional
 				switch ($date_mode) {
+
 					case 'range':
 					case 'time_range':
-						$ar_date=array();
+						$ar_date = [];
 						// start
-						if (isset($date_value->start) && isset($date_value->start->year)) {
-							$dd_date 		= new dd_date($date_value->start);
-							$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-							$ar_date[] 		= $timestamp;
+						if (isset($date_value->start->year)) {
+							$dd_date	= new dd_date($date_value->start);
+							$timestamp	= $dd_date->get_dd_timestamp($pattern);
+							$ar_date[]	= $timestamp;
 						}
 						// end
-						if (isset($date_value->end) && isset($date_value->end->year)) {
-							$dd_date 		= new dd_date($date_value->end);
-							$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-							$ar_date[] 		= $timestamp;
+						if (isset($date_value->end->year)) {
+							$dd_date	= new dd_date($date_value->end);
+							$timestamp	= $dd_date->get_dd_timestamp($pattern);
+							$ar_date[]	= $timestamp;
 						}
-						$ar_values[] = implode(',',$ar_date);
+						if (!empty($ar_date)) {
+							$ar_values[] = implode($fields_separator, $ar_date);
+						}
 						break;
 
 					case 'period':
-						// Compute days
+						// Compute days / month / years
 						if (isset($date_value->period)) {
-							# $seconds = $date_value->period->time;
-							# $days = ceil($seconds/3600/24);
 							$ar_string_period = [];
 							if (isset($date_value->period->year)) {
 								$ar_string_period[] = $date_value->period->year .' '. label::get_label('years', $lang);
@@ -150,13 +153,15 @@ class parser_date {
 							if (isset($date_value->period->day)) {
 								$ar_string_period[] = $date_value->period->day .' '. label::get_label('days', $lang);
 							}
-							$ar_values[] = implode(' ',$ar_string_period);
+							if (!empty($ar_string_period)) {
+								$ar_values[] = implode($fields_separator, $ar_string_period);
+							}
 						}
 						break;
 
 					case 'date':
 					default:
-						if (isset($date_value->start) && isset($date_value->start->year)) {
+						if (isset($date_value->start->year)) {
 							$dd_date		= new dd_date($date_value->start);
 							$timestamp		= $dd_date->get_dd_timestamp( $pattern );
 							$ar_values[]	= $timestamp;
@@ -166,7 +171,7 @@ class parser_date {
 			}
 		}
 
-		$value = implode($separator, $ar_values);
+		$value = implode($records_separator, $ar_values);
 
 
 		return $value;
