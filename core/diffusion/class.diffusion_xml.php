@@ -214,20 +214,17 @@ class diffusion_xml extends diffusion  {
 	private function save( array $diffusion_objects ) : object {
 
 		// parse nodes as XML document
-		$dom = $this->render_dom( $diffusion_objects );
-
-		// $xml_string = $dom->saveXML();
+		$doc = $this->render_dom( $diffusion_objects );
 
 		// Save to file
-		// $dom->save( DEDALO_MEDIA_PATH . '/xml/test.xml');
-
-		$write_file_response = $this->write_file( $dom );
+		$write_file_response = $this->write_file( $doc );
 
 		$response = new stdClass();
 			$response->result	= true;
 			$response->msg		= 'OK';
 			$response->errors	= [];
 		$write_file_response = $response;
+
 
 		return $write_file_response;
 	}//end save
@@ -239,13 +236,12 @@ class diffusion_xml extends diffusion  {
 	* Creates the XML nodes and hierarchize to create the final
 	* DOM XML string
 	* @param array $diffusion_objects
-	* @return DOMDocument $dom
+	* @return DOMDocument $doc
 	*/
 	public function render_dom( array $diffusion_objects ) : DOMDocument {
 
-		$dom = new DOMDocument('1.0', 'UTF-8');
-		$dom->formatOutput = true; // For pretty-printing
-		// $dom->preserveWhiteSpace = true;
+		$doc = new DOMDocument('1.0', 'UTF-8');
+		$doc->formatOutput = true; // For pretty-printing
 
 		// 1 render all nodes without worry about hierarchy
 		$xml_nodes = [];
