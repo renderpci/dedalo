@@ -775,8 +775,14 @@ export const render_lang_behavior_check = function (self) {
 
 			div_switcher.title = title_on
 		}
+
+		// reset tool tip
+		ui.activate_tooltips(div_switcher, null, true)
 	}
 	lang_behavior_check.addEventListener('change', change_handler)
+
+	// activate tool tip
+	ui.activate_tooltips(div_switcher, null)
 
 
 	return div_switcher
