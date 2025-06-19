@@ -538,7 +538,6 @@ class component_input_text extends component_common {
 				$final_query_json = new stdClass;
 					$final_query_json->$logical_operator = [$langs_query_json];
 				$query_object = $final_query_json;
-
 				break;
 			# IS DIFFERENT
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
