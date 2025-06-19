@@ -43,6 +43,8 @@ class component_date extends component_common {
 
 	// American data format
 	public static $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
+	// default date mode
+	public static $default_date_mode = 'date';
 
 
 
@@ -180,10 +182,26 @@ class component_date extends component_common {
 	public function get_date_mode() {
 
 		$properties	= $this->get_properties();
-		$date_mode	= $properties->date_mode ?? 'date';
+		$date_mode	= $properties->date_mode ?? component_date::$default_date_mode;
 
 		return $date_mode;
 	}//end get_date_mode
+
+
+
+	/**
+	* GET_DATE_MODE_STATIC
+	* Get date_mode from ontology definition of the component
+	* @return string
+	*/
+	public static function get_date_mode_static( string $tipo ) : string {
+
+		$RecordObj_dd = new RecordObj_dd($tipo);
+		$properties	= $RecordObj_dd->get_properties();
+		$date_mode	= $properties->date_mode ?? component_date::$default_date_mode;
+
+		return $date_mode;
+	}//end get_date_mode_static
 
 
 
