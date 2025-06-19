@@ -100,14 +100,19 @@ class parser_text {
 	*/
 	public static function default_join( ?array $data, object $options ) : ?string {
 
+		// options
+		$separator = $options->separator ?? ' | ';
+
 		if(empty($data)) return null;
 
 		$values = [];
 		foreach ($data as $current_item) {
-			$values[] = json_encode( $current_item->value );
+			$values[] = is_string($current_item->value)
+				? $current_item->value
+				: json_encode( $current_item->value );
 		}
 
-		$value = 'Fake ' . implode(' | ', $values);
+		$value = implode($separator, $values);
 
 
 		return $value;
@@ -124,14 +129,35 @@ class parser_text {
 	*/
 	public static function text_format( ?array $data, object $options ) : ?string {
 
+		// options
+		$pattern = $options->pattern ?? null;
+
 		if(empty($data)) return null;
 
-		$values = [];
-		foreach ($data as $current_item) {
-			$values[] = json_encode( $current_item->value );
-		}
+		// pattern case
+		if ($pattern) {
+			// replace the text template with the data ex: "${a}, ${b}, ${c}/${d}"
+			foreach ($data as $current_ddo_to_join) {
 
-		$value = 'Fake ' . implode(' | ', $values);
+				$search = '${'.$current_ddo_to_join->id.'}';
+
+				$current_value = is_string($current_ddo_to_join->value) || $current_ddo_to_join->value===null
+					? $current_ddo_to_join->value
+					: json_encode($current_ddo_to_join->value);
+
+				$replace_value	= is_array($current_value)
+					? implode(',', $current_value)
+					: ($current_value ?? '');
+
+				$pattern = !empty($pattern)
+					? str_replace($search, $replace_value, $pattern)
+					: $pattern;
+			}
+
+			$value = $pattern ?? null;
+		}else{
+			$value = self::default_join($data, $options);
+		}
 
 
 		return $value;
