@@ -448,13 +448,8 @@ class component_input_text extends component_common {
 		// type. Always set fixed values
 			$query_object->type = 'string';
 
-		// Prepend if exists
-			// if (isset($query_object->q_operator)) {
-			// 	$q = $query_object->q_operator . $q;
-			// }
-
 		switch (true) {
-			# EMPTY VALUE (in current lang data)
+			# EMPTY VALUE
 			case ($q==='!*'):
 				$operator	= 'IS NULL';
 				$q_clean	= '';
@@ -497,13 +492,12 @@ class component_input_text extends component_common {
 					$langs_query_json = new stdClass;
 						$langs_query_json->$logical_operator = $lang_query_objects;
 
-
 				$logical_operator = '$and';
 				$final_query_json = new stdClass;
 					$final_query_json->$logical_operator = [$langs_query_json];
 				$query_object = $final_query_json;
 				break;
-			# NOT EMPTY (in any project lang data)
+			# NOT EMPTY
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
@@ -667,9 +661,6 @@ class component_input_text extends component_common {
 
 		return $query_object;
 	}//end resolve_query_object_sql
-
-
-
 
 
 
