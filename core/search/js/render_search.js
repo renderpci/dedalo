@@ -422,18 +422,17 @@ render_search.prototype.render_search_buttons = function(){
 		})
 
 	// Reset button
-		const reset_fn = (e) => {
-			e.stopPropagation()
-			self.reset()
-		}
 		const reset_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button reload',
 			title			: get_label.reload || 'Reload',
 			parent			: reset_group
-
 		})
-		reset_button.addEventListener('mousedown', reset_fn)
+		const reset_mousedown_handler = (e) => {
+			e.stopPropagation()
+			self.reset()
+		}
+		reset_button.addEventListener('mousedown', reset_mousedown_handler)
 
 	// Show all
 		const show_all_fn = (e) => {
@@ -479,7 +478,7 @@ render_search.prototype.render_search_buttons = function(){
 * RENDER_SEARCH_GROUP
 * Create the basic search element node. Includes nodes:
 * 	operator, button add, search_component wrapper
-* @param DOM node parent_div
+* @param HTMLElement parent_div
 * @param object options = {}
 * @return HTMLElement search_group
 */
@@ -592,6 +591,7 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 * BUILD_SEARCH_COMPONENT
 * Creates a instance of component and render it placing result in given parent_div
 * Add too, button close and optional label
+* @param object options
 * @return promise bool true
 */
 render_search.prototype.build_search_component = async function(options) {
