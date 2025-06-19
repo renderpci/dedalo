@@ -1858,7 +1858,7 @@ class component_text_area extends component_common {
 		$query_object->type = 'string';
 
 		switch (true) {
-			# IS NULL
+			# EMPTY VALUE
 			case ($q==='!*'):
 
 				$operator	= 'IS NULL';
@@ -1901,13 +1901,12 @@ class component_text_area extends component_common {
 					$langs_query_json = new stdClass;
 						$langs_query_json->$logical_operator = $lang_query_objects;
 
-
 				$logical_operator = '$and';
 				$final_query_json = new stdClass;
 					$final_query_json->$logical_operator = [$langs_query_json];
 				$query_object = $final_query_json;
 				break;
-			# IS NOT NULL
+			# NOT EMPTY
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
@@ -2009,7 +2008,7 @@ class component_text_area extends component_common {
 				break;
 		}//end switch (true)
 
-	// dump($query_object, '$query_object +--------------+ '.to_string());
+
 		return $query_object;
 	}//end resolve_query_object_sql
 
