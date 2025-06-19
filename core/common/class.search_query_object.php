@@ -24,6 +24,7 @@
 											q_split : true || false // bool, define if the q need to be split into multiple WHERE queries
 											unaccent : true || false // bool, define if the q will us the unaccent function in WHERE
 											type : 'jsonb' || 'string' // define the type of data to be searched
+											lang : string || null  // defines if the search will be lang selective. If not defined lang = all langs, if defined lang = the lang sent as `lg-eng
 										}]
 								  } || null
 		select					: [{	// array of objects optional
