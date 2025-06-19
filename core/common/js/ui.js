@@ -3243,30 +3243,43 @@ export const ui = {
 	* Add tooltip to buttons based on title attribute
 	* @param HTMLElement wrapper
 	* 	Element (page, section, component, inspector, etc.) wrapper
-	* @param string selector = '.button'
+	* @param string|null selector = '.button'
+	* 	To select self wrapper, pass null as value
+	* @param bool reset = false
+	* 	On true, forces to regenerate the tooltip
 	* @return void
 	*/
-	activate_tooltips : function(wrapper, selector='.button') {
-
-		// mobile do not use tooltip
-		if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-			return
-		}
+	activate_tooltips : function(wrapper, selector='.button', reset=false) {
 
 		if (!ui.tooltip) {
+
+			// mobile do not use tooltip
+			if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+				return
+			}
+
 			ui.tooltip = new Tooltip();
 		}
+
 		const tooltip = ui.tooltip
 
 		const mouseover_handler = (e) => {
 			e.target.title = ''
 		}
 
-		const buttons = wrapper.querySelectorAll(selector)
+		const buttons = selector
+			? wrapper.querySelectorAll(selector)
+			: [wrapper]
 		const buttons_length = buttons.length
 		for (let i = 0; i < buttons_length; i++) {
 
 			const button = buttons[i]
+
+			// reset case
+			if (reset) {
+				button.active_tooltip = false
+				button.dispatchEvent(new Event('mouseleave'));
+			}
 
 			if (button.active_tooltip) {
 				continue;
@@ -3284,6 +3297,11 @@ export const ui = {
 
 			// set as active to prevent double activation
 			button.active_tooltip = true
+
+			// reset case
+			if (reset) {
+				button.dispatchEvent(new Event('mouseenter'));
+			}
 		}
 	},//end activate_tooltips
 
