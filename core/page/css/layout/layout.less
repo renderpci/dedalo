@@ -412,6 +412,34 @@
 		&.search {
 			flex: 1 1 100%;
 			overflow: visible; // enable to see the tool-tip
+
+			.switcher_translatable {
+				cursor: pointer;
+
+				&::after {
+					-webkit-mask-image: url('../../themes/default/icons/lang.svg');
+					mask-image: url('../../themes/default/icons/lang.svg');
+					content: ' ';
+					background-color: @color_grey_dark;
+					background-size: contain;
+					background-repeat: no-repeat;
+					height: 1.35em;
+					width: 1.35em;
+					display: inline-flex;
+					align-items: center;
+					margin-left: 0.2rem;
+					margin-right: 0.2rem;
+					margin-top: 0.27rem;
+				}
+
+				&.off::after {
+					background-color: #000;
+				}
+
+				input {
+					display: none;
+				}
+			}
 		}
 
 		&.list {

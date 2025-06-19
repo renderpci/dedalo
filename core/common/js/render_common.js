@@ -708,4 +708,80 @@ export const render_error = function (error) {
 
 
 
+/**
+* RENDER_LANG_BEHAVIOR_CHECK
+* Set the lang option checkbox when the component is translatable.
+* It can change the language search behavior.
+* lang option allow to set if the component will search in all langs or in current data lang.
+* the default is search is set with all langs, checkbox in true.
+* if the `q_lang has set with a language (instead 'all' or null),
+* the search will be selective, only with the current data lang.
+* 'all' and null values meaning the the search will be in all languages. see: class.search.php->get_sql_where()
+* @param object self Component instance
+* @return HTMLElement lang_behavior_check
+* @see render_search_component_text_area, render_search_component_input_text
+*/
+export const render_lang_behavior_check = function (self) {
+
+	// sqo saves the q_lang as all or not set
+	// 'all' and null set the checkbox as true
+	const q_lang_state = self.data.q_lang===null || self.data.q_lang==='all'
+		? true // searching in all langs
+		: false // searching in current data lang
+
+	const title_on	= get_label.search_in_current_lang || 'Search in current lang'
+	const title_off	= get_label.search_in_all_langs || 'Search in all langs'
+
+	// div_switcher
+	// by default the checkbox is set as true (without the class name off)
+	const div_switcher = ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'switcher_translatable text_unselectable',
+		title			: title_off
+	})
+	// translatable option
+	const lang_behavior_check = ui.create_dom_element({
+		element_type	: 'input',
+		type			: 'checkbox',
+		class_name		: 'lang_behavior_check',
+		parent			: div_switcher
+	})
+	// set the checkbox state
+	lang_behavior_check.checked = q_lang_state
+	if(!q_lang_state){
+		div_switcher.classList.add('off')
+		div_switcher.title = title_on
+		self.data.q_lang = self.data.lang // searching in current data lang
+	}
+	// change event
+	const change_handler = function(){
+		if(lang_behavior_check.checked){
+			div_switcher.classList.remove('off')
+
+			// q_lang. Fix the data in the instance previous to save
+			self.data.q_lang = null //all languages
+			// publish search. Event to update the DOM elements of the instance
+			event_manager.publish('change_search_element', self)
+
+			div_switcher.title = title_off
+
+		}else{
+			div_switcher.classList.add('off')
+
+			// q_lang. Fix the data in the instance previous to save
+			self.data.q_lang = self.data.lang // search only in the current data lang
+			// publish search. Event to update the DOM elements of the instance
+			event_manager.publish('change_search_element', self)
+
+			div_switcher.title = title_on
+		}
+	}
+	lang_behavior_check.addEventListener('change', change_handler)
+
+
+	return div_switcher
+}//end render_lang_behavior_check
+
+
+
 // @license-end

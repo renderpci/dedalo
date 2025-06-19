@@ -65,41 +65,14 @@
 	}
 
 	&.search {
-		.content_value{
+
+		.content_value {
 			display: flex;
 			flex-direction: row;
 			flex-wrap: nowrap;
 		}
-		.q_operator {
 
-		}
-		.input_value {
-			// width: calc(100% - 2.5rem);
-		}
-		.switcher_translatable{
-			cursor: pointer;
-			&::after {
-				-webkit-mask-image: url('../../themes/default/icons/lang.svg');
-				mask-image: url('../../themes/default/icons/lang.svg');
-				content: ' ';
-				background-color: #9A9A9A;
-				background-size: contain;
-				background-repeat: no-repeat;
-				height: 1.5em;
-				width: 1.5em;
-				display: inline-flex;
-				align-items: center;
-				margin-left: 0.25rem;
-				margin-right: 0.1rem;
-			}
-			&.off::after{
-				background-color: #000;
-			}
-
-			input {
-				display: none;
-			}
-		}
+		// .switcher_translatable : moved to layout.less for unification
 	}
 
 }//end .component_input_text
