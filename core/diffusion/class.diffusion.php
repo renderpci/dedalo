@@ -1626,19 +1626,21 @@ abstract class diffusion  {
 			// all properties value is a request_config_object
 			$request_config_object = $properties ?? null;
 			$process = $request_config_object->process ?? null;
-			
+
 			// column / node name (from the Ontology term value)
 			$name = RecordObj_dd::get_termino_by_tipo($child_tipo, DEDALO_STRUCTURE_LANG);
 
-			// diffusion_object
-			$diffusion_object = new diffusion_object();
-				$diffusion_object->tipo		= $child_tipo;
-				$diffusion_object->parent	= $parent;
-				$diffusion_object->name		= $name;
-				$diffusion_object->process	= $process;
+			// create a new diffusion_object
+			$diffusion_object = new diffusion_object((object)[
+				'tipo'		=> $child_tipo,
+				'parent'	=> $parent,
+				'name'		=> $name,
+				'model'		=> RecordObj_dd::get_modelo_name_by_tipo($child_tipo,true),
+				'process'	=> $process
+			]);
 
-			// add 
-			$diffusion_objects[] = $diffusion_object;			
+			// add
+			$diffusion_objects[] = $diffusion_object;
 		}
 
 

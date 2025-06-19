@@ -2761,8 +2761,6 @@ abstract class component_common extends common {
 			'id'	=> $ddo->id ?? null
 		]);
 
-		$diffusion_data[] = $diffusion_data_object;
-
 		// Custom function case
 			// If ddo provide a specific function to get its diffusion data
 			// check if it exists and can be used by diffusion environment
@@ -2779,6 +2777,8 @@ abstract class component_common extends common {
 						. " function name: ". $fn
 						, logger::ERROR
 					);
+
+					$diffusion_data[] = $diffusion_data_object;
 
 					return $diffusion_data;
 				}
@@ -2803,6 +2803,9 @@ abstract class component_common extends common {
 				}
 				// set the diffusion value and return the diffusion data
 				$diffusion_data_object->set_value( $diffusion_value );
+
+				$diffusion_data[] = $diffusion_data_object;
+
 				return $diffusion_data;
 			}
 
