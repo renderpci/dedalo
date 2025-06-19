@@ -10,11 +10,14 @@ class diffusion_object extends stdClass {
 
 
 	// properties
+		// typo : "dfo"
+		public $typo = 'dfo';
 		// tipo		: string e.g. 'rsc636'
 		// parent	: string e.g. 'rsc630'
 		// name		: string e.g. 'mmo:mint' (name of the column or node)
 		// data		: array e.g. [{"id":"a","value":"Raspa"}] It will be passed as the first argument to the parser (see class.parser_text.php for a sample).
 		// process	: object e.g { dd_map:[{section_tipo:string}], parser:[{fn:string, options:{}}] }
+		// model 	: string|null e.g. 'component_input_text' Used to select the proper process->fn when is not defined.
 
 
 
@@ -72,23 +75,161 @@ class diffusion_object extends stdClass {
 
 
 	/**
-	* GET METHODS
-	* By accessors. When property exits, return property value,
-	* else return null
-	* @param string $name
-	* @return mixed
+	* SET_TIPO
+	* @param ?string $value
+	* @return bool
 	*/
-	final public function __get( string $name ) {
+	public function set_tipo( ?string $value ) : bool  {
 
-		if (isset($this->{$name})) {
-			return $this->{$name};
-		}		
+		$this->tipo = $value;
 
-		return null;
-	}
-	final public function __set( string $name, $value ) {
-		$this->{$name} = $value;
-	}
+		return true;
+	}//end set_tipo
+
+
+
+	/**
+	* GET_TIPO
+	* Return property value
+	* @return ?string $this->tipo
+	* 	array|string|null
+	*/
+	public function get_tipo() : ?string {
+
+		return $this->tipo ?? null;
+	}//end get_tipo
+
+
+
+	/**
+	* SET_PARENT
+	* @param ?string $value
+	* @return bool
+	*/
+	public function set_parent( ?string $value ) : bool  {
+
+		$this->parent = $value;
+
+		return true;
+	}//end set_parent
+
+
+
+	/**
+	* GET_PARENT
+	* Return property value
+	* @return ?string $this->parent
+	* 	array|string|null
+	*/
+	public function get_parent() : ?string {
+
+		return $this->parent ?? null;
+	}//end get_parent
+
+
+
+	/**
+	* SET_NAME
+	* @param ?string $value
+	* @return bool
+	*/
+	public function set_name( ?string $value ) : bool  {
+
+		$this->name = $value;
+
+		return true;
+	}//end set_name
+
+
+
+	/**
+	* GET_NAME
+	* Return property value
+	* @return ?string $this->name
+	* 	array|string|null
+	*/
+	public function get_name() : ?string {
+
+		return $this->name ?? null;
+	}//end get_name
+
+
+
+	/**
+	* SET_DATA
+	* @param ?array $value
+	* @return bool
+	*/
+	public function set_data( ?array $value ) : bool  {
+
+		$this->data = $value;
+
+		return true;
+	}//end set_data
+
+
+
+	/**
+	* GET_DATA
+	* Return property value
+	* @return ?array $this->data
+	*/
+	public function get_data() : ?array {
+
+		return $this->data ?? null;
+	}//end get_data
+
+
+
+	/**
+	* SET_PROCESS
+	* @param ?object $value
+	* @return bool
+	*/
+	public function set_process( ?object $value ) : bool  {
+
+		$this->process = $value;
+
+		return true;
+	}//end set_process
+
+
+
+	/**
+	* GET_PROCESS
+	* Return property value
+	* @return ?object $this->process
+	*/
+	public function get_process() : ?object {
+
+		return $this->process ?? null;
+	}//end get_process
+
+
+
+	/**
+	* SET_MODEL
+	* @param ?string $value
+	* @return bool
+	*/
+	public function set_model( ?string $value ) : bool  {
+
+		$this->model = $value;
+
+		return true;
+	}//end set_model
+
+
+
+	/**
+	* GET_MODEL
+	* Return property value
+	* @return ?string $this->model
+	*/
+	public function get_model() : ?string {
+
+		return $this->model ?? null;
+	}//end get_model
 
 
 
