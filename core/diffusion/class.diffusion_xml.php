@@ -247,16 +247,23 @@ class diffusion_xml extends diffusion  {
 		$xml_nodes = [];
 		foreach ($diffusion_objects as $current_diffusion_object) {
 
-			// name
-			$name = $current_diffusion_object->name ?? '';
-			// Ensure the name is valid to use it in XML
-			$name = $this->sanitize_xml_node_name( $name );
+			// name. Ensure the name is valid to use it in XML
+			$name = $this->sanitize_xml_node_name( $current_diffusion_object->name ?? '' );
+
+			// Skip if name is empty after sanitization
+			if (empty($name)) {
+				continue;
+			}
 
 			// value. Ensure the value is always string
-			$value	= $current_diffusion_object->value ?? '';
+			$value = (string)($current_diffusion_object->value ?? '');
 
 			// render DOM node
-			$node = $dom->createElement( $name, htmlspecialchars($value) );
+			// $node = $doc->createElement( $name, htmlspecialchars($value) );
+			$node = $doc->createElement( $name );
+			if (!empty($value)) {
+				$node->appendChild($doc->createTextNode( $value ));
+			}
 
 			$xml_nodes[] = (object)[
 				'tipo'		=> $current_diffusion_object->tipo,
@@ -266,14 +273,16 @@ class diffusion_xml extends diffusion  {
 		}
 
 		// 2 hierarchize the rendered nodes
+		$root_nodes = [];
 		foreach ($xml_nodes as $xml_node) {
 
-			// attach the node to the DOM
-			$dom->appendChild( $xml_node->node );
+			// attach the node to the DOM doc
+			$doc->appendChild( $xml_node->node );
 
 			$parent = $xml_node->parent ?? null;
 			if (!$parent) {
-				// first level node. Only add to the DOM
+				// Root level node - collect for later addition
+				$root_nodes[] = $xml_node->node;
 				continue;
 			}
 
@@ -281,10 +290,14 @@ class diffusion_xml extends diffusion  {
 			$found = array_find($xml_nodes, function($el) use ($parent){
 				return $el->tipo === $parent;
 			});
+
 			if (is_object($found)) {
 				// hierarchize child node with parent
 				$found->node->appendChild( $xml_node->node );
 			}else{
+				// Parent not found - treat as root node
+				$root_nodes[] = $xml_node->node;
+
 				debug_log(__METHOD__
 					. " Parent not found " . PHP_EOL
 					. ' xml_node: ' . to_string($xml_node)
@@ -293,9 +306,75 @@ class diffusion_xml extends diffusion  {
 			}
 		}
 
+		// Add root nodes to document
+		foreach ($root_nodes as $root_node) {
+			$doc->appendChild( $root_node );
+		}
 
-		return $dom;
+
+		return $doc;
 	}//end render_dom
+
+
+
+	/**
+	* GET_DEFAULT_PROCESS_PARSER
+	* Get the default parser based on data items number and the model.
+	* @param diffusion_object $diffusion_object
+	* @return array
+	* 	Array of objects (parsers)
+	*/
+	public function get_default_process_parser( diffusion_object $diffusion_object ) : array {
+
+		// default parser
+		$default_parser = [(object)[
+			'fn'		=> 'parser_text::default_join',
+			'options'	=> (object)[
+				'records_separator'	=> ' | ',
+				'fields_separator'	=> ', '
+			]
+		]];
+
+		// data
+		$data = $diffusion_object->data ?? [];
+
+		// empty data case.
+		// No parser is necessary
+		if (empty($data)) {
+			return [];
+		}
+
+		// multiple data case.
+		// If data items are multiple, return the default text join parser
+		if (count($data)>1) {
+			return $default_parser;
+		}
+
+		// One data item case. Switch by model
+		$tipo	= $data[0]->tipo ?? null;
+		$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		switch ($model) {
+
+			case 'component_date':
+				// Set a generic date parser
+				return [(object)[
+					'fn'		=> 'parser_date::string_date',
+					'options'	=> (object)[
+						'pattern'			=> 'Y-m-d',
+						'records_separator'	=> ' | ',
+						'fields_separator'	=> ', ',
+						'date_mode'			=> component_date::get_date_mode_static($tipo),
+						'lang'				=> DEDALO_DATA_LANG
+					]
+				]];
+
+			case 'component_input_text':
+			case 'component_text_area':
+			default:
+				// Creates a generic $separator concatenated string with all values (stringify non strings)
+				return $default_parser;
+		}
+	}//end get_default_process_parser
 
 
 
@@ -307,20 +386,71 @@ class diffusion_xml extends diffusion  {
 	 */
 	private function parse_diffusion_object( object $diffusion_object ): ?string {
 
-		$parser = $diffusion_object->process->parser ?? [(object)[
-			'fn'		=> 'parser_text::default_join',
-			'options'	=> (object)[
-				'records_separator'	=> ' | ',
-				'fields_separator'	=> ', '
-			]
-		]];
+		// pre-parser
+		// preparsed items are processed before like dates to include in a text
+		$pre_parser = $diffusion_object->process->pre_parser ?? null;
+		if ($pre_parser) {
+			// overwrite data with preparsed values
+			$this->exec_parsers($pre_parser, $diffusion_object);
+		}
+
+		// parser with fallback by model
+		// Process the final process to the data. It will always be parsed, even if no parser is specified.
+		$parser	= $diffusion_object->process->parser ?? $this->get_default_process_parser($diffusion_object);
+		$value	= $this->exec_parsers($parser, $diffusion_object);
+
+		// check value
+			if( !is_string($value) && $value!==null ){
+				debug_log(__METHOD__
+					. " Parser return a invalid value type. The value will be safe JSON strignified." . PHP_EOL
+					. " value: ". to_string( $value ) . PHP_EOL
+					. " type: ". gettype( $value )
+					, logger::ERROR
+				);
+				$value = json_encode($value);
+			}
+
+
+		return $value;
+	}//end parse_diffusion_object
+
+
+
+	/**
+	* EXEC_PARSERS
+	* Applies the parsers to the diffusion_object data.
+	* It is sequential, parsing the previous parser result when multiple parsers are defined.
+	* @param array $parser
+	* 	Array of one or more parsers to apply to the data
+	* @param object $diffusion_object
+	* @return string|null $value
+	*/
+	public function exec_parsers( array $parser, object $diffusion_object ) : ?string {
 
 		$data = $diffusion_object->data;
 
-		// default value
-		$value = null;
+		foreach ($parser as $current_parser) {
 
-		foreach ((array)$parser as $current_parser) {
+			$current_data = $data;
+
+			// pre-parser cases
+			if (isset($current_parser->tipo)) {
+				$found = array_find($data, function($el) use ($current_parser){
+					return $el->tipo === $current_parser->tipo;
+				});
+
+				if (!is_object($found)) {
+					debug_log(__METHOD__
+						. " Ignored parser where 'tipo' is not found in the data " . PHP_EOL
+						. ' current_parser: ' . to_string($current_parser) . PHP_EOL
+						. ' data: ' . to_string($data)
+						, logger::WARNING
+					);
+					continue;
+				}
+
+				$current_data = [$found];
+			}
 
 			// parser function
 			$fn = $current_parser->fn ?? 'parser_text::invalid_method';
@@ -339,7 +469,13 @@ class diffusion_xml extends diffusion  {
 			}
 
 			// string expected from parser function execution
-			$value = $fn($data, $current_parser->options);
+			$value = $fn($current_data, $current_parser->options);
+
+			// pre-parser cases
+			if (isset($current_parser->tipo)) {
+				// overwrite the data value with the preparsed value (resolved as manageable string)
+				$found->value = [$value];
+			}
 
 			// check result format
 			if ($value!==null && !is_string($value)) {
@@ -352,25 +488,15 @@ class diffusion_xml extends diffusion  {
 			}
 
 			// set (overwrite) the data with the current value for the next iteration
-			$data = [$value];
+			$current_data = [$value];
 		}
 
-		// check value
-		if( !is_string($value) && $value!==null ){
-			debug_log(__METHOD__
-				. " Parser return a invalid value type " . PHP_EOL
-				. " value: ". to_string( $value ) . PHP_EOL
-				. " type: ". gettype( $value ) . PHP_EOL
-				. " stringify the value: "
-				, logger::DEBUG
-			);
-			$value = json_encode($value);
-		}
+		// value: Note that if more than one parser is applied,
+		// the value will be overwritten by the next parser consecutively
+		// and only the last value is returned.
 
-
-		// return the last value
-		return $value;
-	} //end parse_diffusion_object
+		return $value ?? null;
+	}//end exec_parsers
 
 
 
@@ -402,7 +528,7 @@ class diffusion_xml extends diffusion  {
 
 
 	/**
-	 * RESOLVE_data
+	 * RESOLVE_DATA
 	 * Resolve diffusion_object value
 	 * @param object $diffusion_object
 	 * @return array $data
@@ -434,6 +560,100 @@ class diffusion_xml extends diffusion  {
 
 		return $ar_data;
 	}//end resolve_data
+
+
+
+	/**
+	* RESOLVE_LANGS
+	* @return
+	*/
+	private function resolve_langs( object $diffusion_object ) : array {
+
+		$diffusion_object_langs = [];
+
+		$data = $diffusion_object->data ?? null;
+
+		if( empty($data) ){
+			$diffusion_object_langs[] = $diffusion_object;
+			return $diffusion_object_langs;
+		}
+
+		// create unique array with all languages of the data, it will used to fill the gaps in the components that has to be joined and doesn't has done the translation
+		$ar_langs = [];
+		foreach ($data as $data_item) {
+			if (!in_array($data_item->lang, $ar_langs) && $data_item->lang !== null) {
+				$ar_langs[] = $data_item->lang;
+			}
+		}
+
+		$ddo_map = $diffusion_object->process->ddo_map;
+		$end_ddo = [];
+		foreach ($ddo_map as $ddo) {
+			$children = array_filter($ddo_map, function($item) use($ddo) {
+				return $item->parent===$ddo->tipo;
+			});
+			if(empty($children)){
+				$end_ddo[] = $ddo;
+			}
+		}
+
+		$langs_count = count($ar_langs);
+		foreach ($ar_langs as $current_lang) {
+
+			if($current_lang===DEDALO_DATA_NOLAN && $langs_count===1){
+				$diffusion_object_langs[] = $diffusion_object;
+				return $diffusion_object_langs;
+			}
+
+			if($current_lang===DEDALO_DATA_NOLAN && $langs_count>1){
+				continue;
+			}
+
+			$lang_data = [];
+			foreach ($end_ddo as $current_ddo) {
+
+				$found = array_find($data, function($item) use($current_lang, $current_ddo) {
+					return $item->tipo===$current_ddo->tipo
+					&& ($item->lang===$current_lang || $item->lang===DEDALO_DATA_NOLAN);
+				});
+
+				if (!is_object($found)) {
+					$found = (object)[
+						'tipo'	=> $current_ddo->tipo,
+						'lang'	=> $current_lang,
+						'value'	=> null,
+						'id'	=> $current_ddo->id
+					];
+				}
+
+				$lang_data[] = $found;
+			}
+
+			$lang_tld2 = lang::get_alpha2_from_code($current_lang);
+			$lang_tipo = str_replace('lg-', '', $current_lang);
+
+			// create the new diffusion_object for current lang
+			$new_diffusion_object = new diffusion_object((object)[
+				'tipo'		=> $lang_tipo . $diffusion_object->tipo,
+				'parent'	=> $diffusion_object->tipo,
+				'name'		=> $lang_tld2,
+				'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo,true),
+				'process'	=> $diffusion_object->process,
+				'data'		=> $lang_data
+			]);
+
+			// add
+			$diffusion_object_langs[] = $new_diffusion_object;
+		}
+
+		// remove the main $diffusion_object data (is split into lang diffusion objects)
+		$diffusion_object->data = [];
+		// add to the list
+		$diffusion_object_langs[] = $diffusion_object;
+
+
+		return $diffusion_object_langs;
+	}//end resolve_langs
 
 
 
