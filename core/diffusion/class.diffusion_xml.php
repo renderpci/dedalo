@@ -56,12 +56,24 @@ class diffusion_xml extends diffusion  {
 			$response->class	= get_called_class();
 
 		// options
-		$section_tipo			= $options->section_tipo;
-		$section_id				= (int)$options->section_id;
+		if (!isset($options->section_tipo) || !is_string($options->section_tipo)) {
+			$response->errors[] = 'section_tipo is missing or invalid.';
+			return $response;
+		}
+		if (!isset($options->section_id)) {
+			$response->errors[] = 'section_id is missing or invalid.';
+			return $response;
+		}
+		$section_tipo	= $options->section_tipo;
+		$section_id		= (int)$options->section_id;
 
 		// fix vars
-		$this->section_tipo		= $section_tipo;
-		$this->section_id		= $section_id;
+		$this->section_tipo	= $section_tipo;
+		$this->section_id	= $section_id;
+
+		// diffusion_element_tipo. Is the Ontology start point to resolve the diffusion nodes
+		// It is set on construct the class
+		// @see tool_diffusion::export_list
 		$diffusion_element_tipo	= $this->diffusion_element_tipo;
 
 		// root tipo (children of diffusion_element that has relation with current section)
@@ -82,21 +94,29 @@ class diffusion_xml extends diffusion  {
 		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true );
 
 		// resolve and parse values
+		$parsed_diffusion_objects_collection = [];
 		foreach ($diffusion_objects as $diffusion_object) {
 
 			// 1 resolving the data
 			// set data into node structure
 			$diffusion_object->data = $this->resolve_data( $diffusion_object );
 
-			// 2 parse / format result
+			// 2 resolve langs
+			$parsed_diffusion_objects_collection[] = $this->resolve_langs( $diffusion_object );
+		}
+		// merge all arrays in one flat array
+		$final_parsed_diffusion_objects = array_merge(...$parsed_diffusion_objects_collection);
+
+		foreach ($final_parsed_diffusion_objects as $current_diffusion_object) {
+			// 3 parse / format result
 			// set value into node structure
-			$diffusion_object->value = $this->parse_diffusion_object( $diffusion_object );
+			$current_diffusion_object->value = $this->parse_diffusion_object( $current_diffusion_object );
 		}
 
 		try {
 
-			// 3 save result to file, database, etc..
-			$save_result = $this->save( $diffusion_objects );
+			// 4 save result to file, database, etc..
+			$save_result = $this->save( $final_parsed_diffusion_objects );
 
 			// add errors
 			if ($save_result->errors) {
