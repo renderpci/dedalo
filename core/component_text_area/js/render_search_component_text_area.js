@@ -98,6 +98,8 @@ const add_events = function(self, wrapper) {
 
 /**
 * GET_CONTENT_DATA
+* Render component's content data node
+* @param object self Component instance
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {

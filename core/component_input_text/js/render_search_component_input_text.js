@@ -86,6 +86,10 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* Render component's content value node
+* @param int i Array key of current value from data
+* @param string current_value
+* @param object self Component instance
 * @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
