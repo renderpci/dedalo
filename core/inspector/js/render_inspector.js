@@ -889,6 +889,14 @@ export const render_component_info = function(self, component) {
 		// parse data. This time out prevents lock component selection
 		const callback = () => {
 
+			// Limit data size to display (data.value is an array of values)
+			// e.g. component_security_access case. Do not try to parse the big array of the data.
+				if (component.data?.value?.length > 25) {
+					value_node.textContent = 'Data is too big for display'
+					value_node.classList.add('loading')
+					return
+				}
+
 			// set value
 				const value = component.data?.value
 					? JSON.stringify(component.data.value, null, 1)
