@@ -9,7 +9,7 @@
 	import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {dd_request_idle_callback, when_in_viewport} from '../../common/js/events.js'
 
 
 /**
@@ -511,22 +511,35 @@ const render_area_item = function(item, datalist, value, self) {
 				})
 
 				// children create radio_group for permissions_global
-					dd_request_idle_callback(
-						() => {
-							self.get_children(item, datalist)
-							.then(function(children){
-								const radio_group = create_global_radio_group(
-									self,
-									item,
-									permissions,
-									datalist,
-									branch, // HTMLElement components_container
-									children // array of nodes
-								)
-								permissions_global.appendChild(radio_group)
+					// exclude some root areas/sections to reduce the CPU usage
+					const exclude_sections = ['dd5','ontology40','dd242','dd69','dd35','dd630','dd207','dd770','dd356','dd100','dd355','dd14']
+					if (!exclude_sections.includes(section_tipo) && section_tipo.indexOf('ontologytype')===-1) {
+						when_in_viewport(permissions_global, () => {
+							const loading_node = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'loading_node loading',
+								inner_html		: 'Checking... ',
+								parent			: permissions_global
 							})
-						}
-					)
+							dd_request_idle_callback(
+								() => {
+									self.get_children(item, datalist)
+									.then(function(children){
+										loading_node.remove()
+										const radio_group = create_global_radio_group(
+											self,
+											item,
+											permissions,
+											datalist,
+											branch, // HTMLElement components_container
+											children // array of nodes
+										)
+										permissions_global.appendChild(radio_group)
+									})
+								}
+							)
+						})
+					}
 
 			// add branch at last position
 			li.appendChild(branch)
@@ -659,23 +672,35 @@ const create_permissions_radio_group = function(self, item, permissions) {
 				const change_handler = async () => {
 
 					const input_value = parseInt(radio_input.value)
+
+					self.node.classList.add('loading')
+					const loading_node = ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: '&nbsp;Propagating...',
+						parent			: radio_input.parentNode.parentNode.parentNode
+					})
+
 					// get the all parents of the item
-
-					// set the data of the parents and change the DOM node with update_value event
-						const children			= await self.get_children(item)
-						const children_length	= children.length
-						for (let i = children_length - 1; i >= 0; i--) {
-							const current_child = children[i]
-							self.update_value(current_child, input_value)
-						}
-
-					// update self item data
-						self.update_value(item, input_value)
 
 					// parents_radio_butons. update the state of all parents, checking his children state
 						dd_request_idle_callback(
-							() => {
-								self.update_parents_radio_butons(item, input_value)
+							async () => {
+
+								// set the data of the parents and change the DOM node with update_value event
+									const children			= await self.get_children(item)
+									const children_length	= children.length
+									for (let i = children_length - 1; i >= 0; i--) {
+										const current_child = children[i]
+										self.update_value(current_child, input_value)
+									}
+
+								// update self item data
+									self.update_value(item, input_value)
+
+								await self.update_parents_radio_butons(item, input_value)
+
+								self.node.classList.remove('loading')
+								loading_node.remove()
 							}
 						)
 
@@ -787,38 +812,40 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 
 				const input_value = parseInt(radio_input.value)
 
-				// radio_button_children
-					// const radio_button_children = (item.tipo===item.section_tipo)
-					// 	? datalist.filter(el => el.parent === item.tipo) // section / area case
-					// 	: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
-					// console.log('item:', item);
-					// console.log('datalist parents:', datalist.map(el => el.parent));
-					// const a = datalist.map(el => el.parent).filter(el => el==='rsc176')
-					// console.log('a parent rsc176:', a);
-					// console.log('++ rsc5:', self.data.datalist.filter(el => el.tipo==='rsc5') );
-					// console.log('radio_button_children:', item.tipo, radio_button_children);
-					// console.log('children:', children);
-					// return
-
-				for (let j = 0; j < children_length; j++) {
-
-					const child = children[j]
-					if(child.tipo===child.section_tipo){
-						// areas case
-						event_manager.publish(
-							'update_area_radio_' + self.id + '_' + child.tipo + '_' + child.section_tipo,
-							input_value
-						)
-					}else{
-						// components case
-						self.update_value(child, input_value)
-					}
-				}
+				// set style as loading to lock the component while the value is propagated
+				self.node.classList.add('loading')
+				const loading_node = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: '&nbsp;Propagating...',
+					parent			: radio_input.parentNode.parentNode
+				})
 
 				// update_parents_radio_butons
 					dd_request_idle_callback(
 						() => {
+
+							// update value
+							for (let j = 0; j < children_length; j++) {
+
+								const child = children[j]
+								if(child.tipo===child.section_tipo){
+									// areas case
+									event_manager.publish(
+										'update_area_radio_' + self.id + '_' + child.tipo + '_' + child.section_tipo,
+										input_value
+									)
+								}else{
+									// components case
+									self.update_value(child, input_value)
+								}
+							}
+
+							// update parents
 							self.update_parents_radio_butons(item, input_value)
+
+							// remove loading style. The value is propagated
+							self.node.classList.remove('loading')
+							loading_node.remove()
 						}
 					)
 
