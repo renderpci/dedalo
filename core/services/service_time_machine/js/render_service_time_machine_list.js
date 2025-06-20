@@ -186,20 +186,13 @@ export const get_content_data = async function(ar_section_record, self) {
 			// rows
 
 			// parallel render
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise_node = ar_section_record[i].render()
-					ar_promises.push(render_promise_node)
-				}
+			const ar_promises = ar_section_record.map(record => record.render())
+            const section_record_nodes = await Promise.all(ar_promises)
 
-			// once rendered, append it preserving the order
-				await Promise.all(ar_promises)
-				.then(function(section_record_nodes) {
-					for (let i = 0; i < ar_section_record_length; i++) {
-						const section_record_node = section_record_nodes[i]
-						fragment.appendChild(section_record_node)
-					}
-				});
+            // once rendered, append it preserving the order
+            section_record_nodes.forEach(node => {
+                fragment.appendChild(node)
+            })
 		}
 
 	// content_data
