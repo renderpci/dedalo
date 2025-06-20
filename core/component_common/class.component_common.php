@@ -1059,7 +1059,9 @@ abstract class component_common extends common {
 					: ' | ');
 
 		// fallback value. Overwrite in translatable components like input_text or text_area
-			$fallback_value = $data ?? null;
+			$fallback_value = (isset($data) && $this->is_translatable())
+				? $data
+				: null;
 
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
