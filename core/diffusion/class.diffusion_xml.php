@@ -93,43 +93,72 @@ class diffusion_xml extends diffusion  {
 		// Get the diffusion objects recursively, including self
 		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true );
 
-		// resolve and parse values
-		$parsed_diffusion_objects_collection = [];
-		foreach ($diffusion_objects as $diffusion_object) {
+		// Resolve and parse values.
+		// Obtain the diffusion objects data
+		// some components will return multiple rows (as portals or relation_list)
+		// some components are translatable and its data will return multiple languages.
 
-			// 1 resolving the data
-			// set data into node structure
-			$diffusion_object->data = $this->resolve_data( $diffusion_object );
+		// 1 resolving the data
+			$data_diffusion_objects_collection = [];
+			foreach ($diffusion_objects as $diffusion_object) {
 
-			// 2 resolve langs
-			$parsed_diffusion_objects_collection[] = $this->resolve_langs( $diffusion_object );
-		}
-		// merge all arrays in one flat array
-		$final_parsed_diffusion_objects = array_merge(...$parsed_diffusion_objects_collection);
+				// set data into node structure
+				$diffusion_object->data = $this->resolve_data( $diffusion_object );
 
-		foreach ($final_parsed_diffusion_objects as $current_diffusion_object) {
-			// 3 parse / format result
-			// set value into node structure
-			$current_diffusion_object->value = $this->parse_diffusion_object( $current_diffusion_object );
-		}
-
-		try {
-
-			// 4 save result to file, database, etc..
-			$save_result = $this->save( $final_parsed_diffusion_objects );
-
-			// add errors
-			if ($save_result->errors) {
-				$response->errors = array_merge($response->errors, $save_result->errors);
+				// create multiple diffusion objects when the component return multiple locators
+				// for every locator is necessary a new diffusion_object in order to group the record data.
+				// in XML will be create a node with every locator data as follows:
+				// 	<informant>
+				//		<row>First informant</row>
+				//		<row>Second informant</row>
+				//	</informant>
+				$data_diffusion_objects_collection[] = $this->resolve_data_rows( $diffusion_object );
 			}
 
-			// add file path and url
-			$response->file_path	= $save_result->file_path ?? null;
-			$response->file_url		= $save_result->file_url ?? null;
+			// merge all arrays in one flat array
+			$final_data_diffusion_objects = array_merge(...$data_diffusion_objects_collection);
 
-		} catch (\Throwable $th) {
-			$response->errors[] = 'Exception: '.$th->getMessage();
-		}
+		// 2 resolve langs
+			$parsed_diffusion_objects_collection = [];
+			foreach ($final_data_diffusion_objects as $diffusion_object) {
+
+				// translatable components send multiple language data.
+				// for every language is necessary a new diffusion object in order to group the language data.
+				// in XML structure will be create a node for every language data as follows:
+				// <title>
+				//		<es>Mi título</es>
+				//		<en>My title</en>
+				// </title>
+				$parsed_diffusion_objects_collection[] = $this->resolve_langs( $diffusion_object );
+			}
+
+			// merge all arrays in one flat array
+			$final_parsed_diffusion_objects = array_merge(...$parsed_diffusion_objects_collection);
+
+		// 3 parse / format result
+			foreach ($final_parsed_diffusion_objects as $current_diffusion_object) {
+
+				// set value into node structure
+				$current_diffusion_object->value = $this->parse_diffusion_object( $current_diffusion_object );
+			}
+
+		// 4 save result to file, database, etc..
+			try {
+
+				$save_result = $this->save( $final_parsed_diffusion_objects );
+
+				// add errors
+				if ($save_result->errors) {
+					$response->errors = array_merge($response->errors, $save_result->errors);
+				}
+
+				// add file path and url
+				$response->file_path	= $save_result->file_path ?? null;
+				$response->file_url		= $save_result->file_url ?? null;
+
+			} catch (\Throwable $th) {
+				$response->errors[] = 'Exception: '.$th->getMessage();
+			}
 
 		// response result
 		$response->result = $save_result ?? false;
@@ -137,6 +166,94 @@ class diffusion_xml extends diffusion  {
 
 		return $response;
 	} //end update_record
+
+
+	/**
+	* RESOLVE_DATA_ROWS
+	* Components with multiple relation data will provide multiple records
+	* for every locator will set a unique key property for group the data
+	* to represent it in XML must be create a new diffusion object with locator data
+	* if the component has only 1 locator will be represented as follows:
+	* 	<informant>
+	* 		First informant
+	* 	</informant>
+	* but if the component has multiple locators will be structured as follows:
+	* 	<informant>
+	* 		<row>First informant</row>
+	* 		<row>Second informant</row>
+	* 	</informant>
+	* @param diffusion_object $diffusion_object
+	* @return array $diffusion_object_rows
+	*/
+	private function resolve_data_rows( diffusion_object $diffusion_object ) : array {
+
+		$data = $diffusion_object->data ?? [];
+
+		// when the component has not data, return it.
+		if( empty($data) ){
+			$diffusion_object_rows[] = $diffusion_object;
+			return $diffusion_object_rows;
+		}
+
+		// create the data groups by the unique key of the data.
+		// every ddo data as a unique key (with the main section_tipo and section_id)
+		// so group the data into an array
+		$grouped = [];
+		foreach ($data as $item) {
+			$key = $item->key;
+			if (!isset($grouped[$key])) {
+				$grouped[$key] = [];
+			}
+			$grouped[$key][] = $item;
+		}
+
+		// check the length of the data groups
+		$grouped_count = count($grouped);
+
+		// when the component has only one dataset, return it.
+		// if the grouper has only 1 dataset use the original diffusion object configuration
+		if( $grouped_count===1 ){
+			$diffusion_object_rows[] = $diffusion_object;
+			return $diffusion_object_rows;
+		}
+
+		$diffusion_object_rows = [];
+		// if the grouper has multiple datasets
+		// creates new diffusion object for grouping the datasets
+		// it is a clone of the original diffusion group
+		// create the new diffusion_object for current lang
+		$grouper_diffusion_object = new diffusion_object((object)[
+			'tipo'		=> $diffusion_object->tipo,
+			'parent'	=> $diffusion_object->parent,
+			'name'		=> $diffusion_object->name,
+			'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo, true),
+			'process'	=> $diffusion_object->process,
+			'data'		=> []
+		]);
+		$diffusion_object_rows[] = $grouper_diffusion_object;
+
+
+		// create the new diffusion groups for every dataset
+		// if the grouper has multiple datasets use the `row` name and link they to the diffusion object grouper.
+		foreach ($grouped as $key => $data_group) {
+
+			// create the new diffusion_object for current lang
+			$new_diffusion_object = new diffusion_object((object)[
+				'tipo'		=> $key . $diffusion_object->tipo,
+				'parent'	=> $diffusion_object->tipo,
+				'name'		=> 'row',
+				'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo, true),
+				'process'	=> $diffusion_object->process,
+				'data'		=> $data_group
+			]);
+
+			// adds it to the final array
+			$diffusion_object_rows[] = $new_diffusion_object;
+		}
+
+
+		return $diffusion_object_rows;
+	}//end resolve_data_rows
 
 
 
@@ -565,7 +682,17 @@ class diffusion_xml extends diffusion  {
 
 	/**
 	* RESOLVE_LANGS
-	* @return
+	* Diffusion objects can resolve their data with or without languages.
+	* Translatable components will send a data DDO for each language.
+	* Non-translatable components will only send one DDO.
+	* When the component is translatable, a new diffusion object will be created for each language
+	* to obtain an XML node for each language and create the hierarchy with the parent component as follows:
+	* 	<title>
+	*		<en>My title</en>
+	*		<es>Mi título</es>
+	*	</title>
+	* @param object $diffusion_object
+	* @return array $diffusion_object_langs
 	*/
 	private function resolve_langs( object $diffusion_object ) : array {
 
@@ -573,6 +700,9 @@ class diffusion_xml extends diffusion  {
 
 		$data = $diffusion_object->data ?? null;
 
+		// if data is empty the current diffusion object needs to be returned as is
+		// empty nodes are groupers without data.
+		// they will use to create the hierarchy of nodes.
 		if( empty($data) ){
 			$diffusion_object_langs[] = $diffusion_object;
 			return $diffusion_object_langs;
@@ -585,7 +715,9 @@ class diffusion_xml extends diffusion  {
 				$ar_langs[] = $data_item->lang;
 			}
 		}
-
+		// get the last ddo from the ddo_map
+		// last ddo will use to check its data
+		// last ddo usually is the literal data with the final data
 		$ddo_map = $diffusion_object->process->ddo_map;
 		$end_ddo = [];
 		foreach ($ddo_map as $ddo) {
@@ -597,38 +729,54 @@ class diffusion_xml extends diffusion  {
 			}
 		}
 
+		// For every lang will create a new diffusion object with the specific lang data
+		// it will create a XML node with the lang as the node label in this form:
+		// <en>my English data<\en>
+		// the diffusion node of every lang will be a child of original diffusion object to create the nested nodes is this way:
+		// 	<title>
+		//		<en>My title</en>
+		//		<es>Mi título</es>
+		//	</title>
 		$langs_count = count($ar_langs);
 		foreach ($ar_langs as $current_lang) {
 
+			// If the diffusion object has only 1 language return it.
 			if($current_lang===DEDALO_DATA_NOLAN && $langs_count===1){
 				$diffusion_object_langs[] = $diffusion_object;
 				return $diffusion_object_langs;
 			}
 
+			// If the diffusion object is not translatable return it.
 			if($current_lang===DEDALO_DATA_NOLAN && $langs_count>1){
 				continue;
 			}
-
+			// Create the lang diffusion objects
 			$lang_data = [];
 			foreach ($end_ddo as $current_ddo) {
-
+				// get the ddo with the same lang that are part of the same string.
+				// as, get the ddo with the same tipo and same lang
 				$found = array_find($data, function($item) use($current_lang, $current_ddo) {
 					return $item->tipo===$current_ddo->tipo
 					&& ($item->lang===$current_lang || $item->lang===DEDALO_DATA_NOLAN);
 				});
 
+				// if the original diffusion object has not the lang
+				// create new data for fill the hole of the data
+				// the value is set as null to be parsed as empty.
 				if (!is_object($found)) {
 					$found = (object)[
 						'tipo'	=> $current_ddo->tipo,
 						'lang'	=> $current_lang,
 						'value'	=> null,
-						'id'	=> $current_ddo->id
+						'id'	=> $current_ddo->id,
+						'key'	=> $current_ddo->key
 					];
 				}
 
 				$lang_data[] = $found;
 			}
 
+			// use the alpha2 lang code for the XML nodes instead the native Dédalo lang.
 			$lang_tld2 = lang::get_alpha2_from_code($current_lang);
 			$lang_tipo = str_replace('lg-', '', $current_lang);
 
@@ -637,7 +785,7 @@ class diffusion_xml extends diffusion  {
 				'tipo'		=> $lang_tipo . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> $lang_tld2,
-				'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo,true),
+				// 'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo,true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $lang_data
 			]);
