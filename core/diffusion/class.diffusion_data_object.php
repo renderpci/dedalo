@@ -177,6 +177,33 @@ class diffusion_data_object extends stdClass {
 
 
 	/**
+	* SET_SECTION_ID
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_section_id( string|int|null $value ) : bool  {
+
+		$this->section_id = $value;
+
+		return true;
+	}//end set_section_id
+
+
+
+	/**
+	* GET_SECTION_ID
+	* Return property value
+	* @return string|null $this->id
+	*/
+	public function get_section_id() : string|int|null {
+
+		return $this->section_id ?? null;
+	}//end get_section_id
+
+
+
+
+	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value,
 	* else return null
