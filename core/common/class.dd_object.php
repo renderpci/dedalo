@@ -80,6 +80,7 @@ class dd_object extends stdClass {
 		static $ar_type_allowed = [
 			'area',
 			'section',
+			'relation_list',
 			'component',
 			'grouper',
 			'button',
@@ -163,6 +164,9 @@ class dd_object extends stdClass {
 					break;
 				case $model==='section' :
 					$type = 'section';
+					break;
+				case $model==='relation_list' :
+					$type = 'relation_list';
 					break;
 				case in_array($model, section::get_ar_grouper_models()) :
 					$type = 'grouper';

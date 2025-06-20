@@ -141,13 +141,13 @@ class parser_text {
 
 				$search = '${'.$current_ddo_to_join->id.'}';
 
-				$current_value = is_string($current_ddo_to_join->value) || $current_ddo_to_join->value===null
-					? $current_ddo_to_join->value
-					: json_encode($current_ddo_to_join->value);
+				$current_value	= is_array($current_ddo_to_join->value)
+					? implode(',', $current_ddo_to_join->value)
+					: ($current_ddo_to_join->value ?? '');
 
-				$replace_value	= is_array($current_value)
-					? implode(',', $current_value)
-					: ($current_value ?? '');
+				$replace_value = is_string($current_value) || $current_value===null
+					? $current_value
+					: json_encode($current_value);
 
 				$pattern = !empty($pattern)
 					? str_replace($search, $replace_value, $pattern)
