@@ -211,19 +211,19 @@ const get_content_data = async function(self) {
 
 							render_promise
 							.then(function(current_instance_node){
-									// bad node case
-									if (!current_instance_node) {
-										console.error('Invalid instance_node', current_instance);
-										reject(false)
-										return
-									}
+								// bad node case
+								if (!current_instance_node) {
+									console.error('Invalid instance_node', current_instance);
+									reject(false)
+									return
+								}
 
-									resolve(true)
-								}).catch((errorMsg) => {
-									// error occurred case
-									console.error(errorMsg);
-								})
-							}
+								resolve(true)
+							}).catch((errorMsg) => {
+								// error occurred case
+								console.error(errorMsg);
+							})
+						}
 					})
 					ar_promises.push(current_promise)
 				}//end for (let k = 0; k < ar_instances_length; k++)
