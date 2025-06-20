@@ -139,6 +139,94 @@ class diffusion_xml extends diffusion  {
 	} //end update_record
 
 
+	/**
+	* RESOLVE_DATA_ROWS
+	* Components with multiple relation data will provide multiple records
+	* for every locator will set a unique key property for group the data
+	* to represent it in XML must be create a new diffusion object with locator data
+	* if the component has only 1 locator will be represented as follows:
+	* 	<informant>
+	* 		First informant
+	* 	</informant>
+	* but if the component has multiple locators will be structured as follows:
+	* 	<informant>
+	* 		<row>First informant</row>
+	* 		<row>Second informant</row>
+	* 	</informant>
+	* @param diffusion_object $diffusion_object
+	* @return array $diffusion_object_rows
+	*/
+	private function resolve_data_rows( diffusion_object $diffusion_object ) : array {
+
+		$data = $diffusion_object->data ?? [];
+
+		// when the component has not data, return it.
+		if( empty($data) ){
+			$diffusion_object_rows[] = $diffusion_object;
+			return $diffusion_object_rows;
+		}
+
+		// create the data groups by the unique key of the data.
+		// every ddo data as a unique key (with the main section_tipo and section_id)
+		// so group the data into an array
+		$grouped = [];
+		foreach ($data as $item) {
+			$key = $item->key;
+			if (!isset($grouped[$key])) {
+				$grouped[$key] = [];
+			}
+			$grouped[$key][] = $item;
+		}
+
+		// check the length of the data groups
+		$grouped_count = count($grouped);
+
+		// when the component has only one dataset, return it.
+		// if the grouper has only 1 dataset use the original diffusion object configuration
+		if( $grouped_count===1 ){
+			$diffusion_object_rows[] = $diffusion_object;
+			return $diffusion_object_rows;
+		}
+
+		$diffusion_object_rows = [];
+		// if the grouper has multiple datasets
+		// creates new diffusion object for grouping the datasets
+		// it is a clone of the original diffusion group
+		// create the new diffusion_object for current lang
+		$grouper_diffusion_object = new diffusion_object((object)[
+			'tipo'		=> $diffusion_object->tipo,
+			'parent'	=> $diffusion_object->parent,
+			'name'		=> $diffusion_object->name,
+			'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo, true),
+			'process'	=> $diffusion_object->process,
+			'data'		=> []
+		]);
+		$diffusion_object_rows[] = $grouper_diffusion_object;
+
+
+		// create the new diffusion groups for every dataset
+		// if the grouper has multiple datasets use the `row` name and link they to the diffusion object grouper.
+		foreach ($grouped as $key => $data_group) {
+
+			// create the new diffusion_object for current lang
+			$new_diffusion_object = new diffusion_object((object)[
+				'tipo'		=> $key . $diffusion_object->tipo,
+				'parent'	=> $diffusion_object->tipo,
+				'name'		=> 'row',
+				'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo, true),
+				'process'	=> $diffusion_object->process,
+				'data'		=> $data_group
+			]);
+
+			// adds it to the final array
+			$diffusion_object_rows[] = $new_diffusion_object;
+		}
+
+
+		return $diffusion_object_rows;
+	}//end resolve_data_rows
+
+
 
 	/**
 	* WRITE_FILE
