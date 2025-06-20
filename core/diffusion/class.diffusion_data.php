@@ -84,7 +84,8 @@ class diffusion_data {
 
 		$values_collection = [];
 		foreach ($children as $ddo) {
-			$values_collection[] = diffusion_data::get_ddo_value($ddo, $ddo_map, $section_tipo, $section_id);
+			$ddo_value = diffusion_data::get_ddo_value($ddo, $ddo_map, $section_tipo, $section_id);
+			$values_collection[] = $ddo_value;
 		}
 		// merge all arrays in one flat array
 		$ar_values = array_merge(...$values_collection);
@@ -135,8 +136,16 @@ class diffusion_data {
 		// no empty ($children) case: recursion
 		$ar_locators = $element->get_dato() ?? [];
 
+		$valid_sections_tipo = array_map( function($ddo){
+			return $ddo->section_tipo;
+		}, $children);
+
 		$ar_values_collection = [];
 		foreach ($ar_locators as $current_locator) {
+
+			if( !in_array($current_locator->section_tipo, $valid_sections_tipo)){
+				continue;
+			}
 
 			$resolve_options = new stdClass();
 				$resolve_options->ddo_map		= $ddo_map;
@@ -144,7 +153,15 @@ class diffusion_data {
 				$resolve_options->section_tipo	= $current_locator->section_tipo;
 				$resolve_options->section_id	= $current_locator->section_id;
 
-			$ar_values_collection[] = diffusion_data::get_ddo_map_value( $resolve_options );
+			$ddo_map_value = diffusion_data::get_ddo_map_value( $resolve_options );
+
+			if( !empty($ddo_map_value) ){
+				foreach ($ddo_map_value as $current_value) {
+					$current_value->key	= $current_locator->section_tipo.'_'.$current_locator->section_id;
+				}
+			}
+			$ar_values_collection[] = $ddo_map_value;
+			// $ar_values_collection[] = diffusion_data::get_ddo_map_value( $resolve_options );
 		}
 
 		// flat array merging all values
