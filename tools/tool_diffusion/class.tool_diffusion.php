@@ -290,6 +290,10 @@ class tool_diffusion extends tool_common {
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
 			$resolve_levels			= $options->resolve_levels;
 
+		// diffusion_data init.
+		// It is used to store the returned values from the called diffusion class
+			$diffusion_data = [];
+
 		// fix levels on each call
 			if (!empty($resolve_levels)) {
 				$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = (int)$resolve_levels;
@@ -427,7 +431,7 @@ class tool_diffusion extends tool_common {
 					}
 
 					// iterate chunk of <=1000 records
-					$chunk_errors = tool_diffusion::iterate_rows(
+					$chunk_response = tool_diffusion::iterate_rows(
 						$rows_data->ar_records, // rows
 						$diffusion_element_tipo,
 						$diffusion_class_name,
@@ -435,9 +439,14 @@ class tool_diffusion extends tool_common {
 						$pdata, // passed by reference
 					);
 
+					// store diffusion_data
+					if (!empty($chunk_response->diffusion_data)) {
+						$diffusion_data[] = $chunk_response->diffusion_data;
+					}
+
 					// store errors if occurred
-					if (!empty($chunk_errors)) {
-						$response->errors = array_merge($response->errors, $chunk_errors);
+					if (!empty($chunk_response->errors)) {
+						$response->errors = array_merge($response->errors, $chunk_response->errors);
 					}
 
 					// CLI process data
@@ -480,11 +489,12 @@ class tool_diffusion extends tool_common {
 			$total_errors = count($response->errors);
 
 		// response OK
-			$response->result						= true;
-			$response->msg[]						= ($total_errors > 0)
+			$response->result			= true;
+			$response->diffusion_data	= array_merge(...$diffusion_data); // flatten array
+			$response->msg[]			= ($total_errors > 0)
 				? 'Warning. Request done with some errors: ' . $total_errors
 				: 'OK. Request done successfully';
-			$response->memory						= dd_memory_usage();
+			$response->memory			= dd_memory_usage();
 			$response->last_update_record_response	= tool_diffusion::$last_update_record_response ?? null;
 
 
@@ -508,10 +518,12 @@ class tool_diffusion extends tool_common {
 	* 		errors: []
 	* 	}
 	*/
-	public static function iterate_rows(array $rows, string $diffusion_element_tipo, string $diffusion_class_name, int &$counter, object &$pdata) : array {
+	public static function iterate_rows(array $rows, string $diffusion_element_tipo, string $diffusion_class_name, int &$counter, object &$pdata) : object {
 
 		// errors
 		$errors = [];
+		// diffusion_data
+		$diffusion_data = [];
 
 		// class diffusion instance
 		$diffusion = new $diffusion_class_name( (object)[
@@ -544,12 +556,16 @@ class tool_diffusion extends tool_common {
 				'resolve_references'		=> true
 			]);
 
+			// handle diffusion_data
+			// E.g. Array of URL returned by the XML diffusion class as ['file.xml','file2.xml']
+			$diffusion_data[] = $update_record_response->diffusion_data ?? [];
+
+			// handle errors
 			$response_errors = $update_record_response->errors ?? [];
 			foreach ($response_errors as $current_error) {
 				// append errors
 				$errors[] = $current_error;
 			}
-
 			// manage errors
 			if ($update_record_response->result===false) {
 				if (isset($update_record_response->code) && $update_record_response->code===2) {
@@ -584,8 +600,13 @@ class tool_diffusion extends tool_common {
 			}
 		}//end foreach ((array)$rows_data->ar_records as $row)
 
+		// response object
+		$response = new stdClass();
+			$response->diffusion_data	= array_merge(...$diffusion_data); // flatten data array of arrays
+			$response->errors			= $errors;
 
-		return $errors;
+
+		return $response;
 	}//end iterate_rows
 
 
