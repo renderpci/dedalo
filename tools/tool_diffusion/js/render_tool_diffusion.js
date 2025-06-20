@@ -878,6 +878,7 @@ const render_process_report = function(options) {
 	// options
 		const last_sse_response				= options.last_sse_response || {}
 		const last_update_record_response	= last_sse_response.data?.last_update_record_response
+		const diffusion_data				= last_sse_response.data?.diffusion_data || []
 		const container						= options.container
 
 	// last_update_record_response
@@ -897,28 +898,57 @@ const render_process_report = function(options) {
 		const class_name = last_update_record_response.class
 		// cases
 		switch (class_name) {
+
+			case 'diffusion_mysql':
+				// Nothing specific to do
+				break;
+
 			case 'diffusion_rdf':
-				// RDF export case (return a url from created RDF file)
-				if (last_update_record_response.url) {
-					const name = last_update_record_response.url.split('\\').pop().split('/').pop();
-					// download button
-					const button_download = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'download warning',
-						inner_html		: (get_label.download || 'Download') + ' ' + name,
-						parent			: container
-					})
-					button_download.addEventListener('click', function(e) {
-						e.stopPropagation()
-						open_window({
-							url : last_update_record_response.url
+				// RDF export case (returns diffusion_data a list of URL from created RDF files)
+				if (diffusion_data.length) {
+
+					diffusion_data.forEach((el) => {
+						const name = el.file_url.split('\\').pop().split('/').pop();
+						// download button
+						const button_download = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'download warning',
+							inner_html		: (get_label.download || 'Download') + ' ' + name,
+							parent			: container
+						})
+						button_download.addEventListener('click', function(e) {
+							e.stopPropagation()
+							const url = window.location.origin + el.file_url
+							open_window({
+								url : url
+							})
 						})
 					})
 				}
 				break;
 
-			case 'diffusion_mysql':
-				// Nothing specific to do
+			case 'diffusion_xml':
+				// XML export case (returns diffusion_data a list of URL from created RDF files)
+				if (diffusion_data.length) {
+
+					diffusion_data.forEach((el) => {
+						const name = el.file_url.split('\\').pop().split('/').pop();
+						// download button
+						const button_download = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'download warning',
+							inner_html		: (get_label.download || 'Download') + ' ' + name,
+							parent			: container
+						})
+						button_download.addEventListener('click', function(e) {
+							e.stopPropagation()
+							const url = window.location.origin + el.file_url
+							open_window({
+								url : url
+							})
+						})
+					})
+				}
 				break;
 
 			default:
