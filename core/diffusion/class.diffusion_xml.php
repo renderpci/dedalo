@@ -93,43 +93,72 @@ class diffusion_xml extends diffusion  {
 		// Get the diffusion objects recursively, including self
 		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true );
 
-		// resolve and parse values
-		$parsed_diffusion_objects_collection = [];
-		foreach ($diffusion_objects as $diffusion_object) {
+		// Resolve and parse values.
+		// Obtain the diffusion objects data
+		// some components will return multiple rows (as portals or relation_list)
+		// some components are translatable and its data will return multiple languages.
 
-			// 1 resolving the data
-			// set data into node structure
-			$diffusion_object->data = $this->resolve_data( $diffusion_object );
+		// 1 resolving the data
+			$data_diffusion_objects_collection = [];
+			foreach ($diffusion_objects as $diffusion_object) {
 
-			// 2 resolve langs
-			$parsed_diffusion_objects_collection[] = $this->resolve_langs( $diffusion_object );
-		}
-		// merge all arrays in one flat array
-		$final_parsed_diffusion_objects = array_merge(...$parsed_diffusion_objects_collection);
+				// set data into node structure
+				$diffusion_object->data = $this->resolve_data( $diffusion_object );
 
-		foreach ($final_parsed_diffusion_objects as $current_diffusion_object) {
-			// 3 parse / format result
-			// set value into node structure
-			$current_diffusion_object->value = $this->parse_diffusion_object( $current_diffusion_object );
-		}
-
-		try {
-
-			// 4 save result to file, database, etc..
-			$save_result = $this->save( $final_parsed_diffusion_objects );
-
-			// add errors
-			if ($save_result->errors) {
-				$response->errors = array_merge($response->errors, $save_result->errors);
+				// create multiple diffusion objects when the component return multiple locators
+				// for every locator is necessary a new diffusion_object in order to group the record data.
+				// in XML will be create a node with every locator data as follows:
+				// 	<informant>
+				//		<row>First informant</row>
+				//		<row>Second informant</row>
+				//	</informant>
+				$data_diffusion_objects_collection[] = $this->resolve_data_rows( $diffusion_object );
 			}
 
-			// add file path and url
-			$response->file_path	= $save_result->file_path ?? null;
-			$response->file_url		= $save_result->file_url ?? null;
+			// merge all arrays in one flat array
+			$final_data_diffusion_objects = array_merge(...$data_diffusion_objects_collection);
 
-		} catch (\Throwable $th) {
-			$response->errors[] = 'Exception: '.$th->getMessage();
-		}
+		// 2 resolve langs
+			$parsed_diffusion_objects_collection = [];
+			foreach ($final_data_diffusion_objects as $diffusion_object) {
+
+				// translatable components send multiple language data.
+				// for every language is necessary a new diffusion object in order to group the language data.
+				// in XML structure will be create a node for every language data as follows:
+				// <title>
+				//		<es>Mi título</es>
+				//		<en>My title</en>
+				// </title>
+				$parsed_diffusion_objects_collection[] = $this->resolve_langs( $diffusion_object );
+			}
+
+			// merge all arrays in one flat array
+			$final_parsed_diffusion_objects = array_merge(...$parsed_diffusion_objects_collection);
+
+		// 3 parse / format result
+			foreach ($final_parsed_diffusion_objects as $current_diffusion_object) {
+
+				// set value into node structure
+				$current_diffusion_object->value = $this->parse_diffusion_object( $current_diffusion_object );
+			}
+
+		// 4 save result to file, database, etc..
+			try {
+
+				$save_result = $this->save( $final_parsed_diffusion_objects );
+
+				// add errors
+				if ($save_result->errors) {
+					$response->errors = array_merge($response->errors, $save_result->errors);
+				}
+
+				// add file path and url
+				$response->file_path	= $save_result->file_path ?? null;
+				$response->file_url		= $save_result->file_url ?? null;
+
+			} catch (\Throwable $th) {
+				$response->errors[] = 'Exception: '.$th->getMessage();
+			}
 
 		// response result
 		$response->result = $save_result ?? false;
