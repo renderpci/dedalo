@@ -167,7 +167,6 @@ class diffusion_rdf extends diffusion {
 			$response->result	= true;
 			$response->data		= $build_response->data;
 			$response->msg		= array_merge($response->msg, $build_response->msg);
-			$response->url		= null;
 
 		// saves publication data
 			diffusion::update_publication_data($section_tipo, $section_id);
@@ -199,8 +198,10 @@ class diffusion_rdf extends diffusion {
 						, logger::DEBUG
 					);
 
-					// response add URL
-					$response->url = $url_file;
+					// add file URL to data response. The client will recover this list of files available for download.
+					$response->diffusion_data = [(object)[
+						'file_url' => $url_file
+					]];
 
 				}else{
 
