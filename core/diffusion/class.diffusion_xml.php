@@ -154,9 +154,11 @@ class diffusion_xml extends diffusion  {
 					$response->errors = array_merge($response->errors, $save_result->errors);
 				}
 
-				// add file path and url
-				$response->file_path	= $save_result->file_path ?? null;
-				$response->file_url		= $save_result->file_url ?? null;
+				// add file URL to data response. The client will recover this list of files available for download.
+				$response->diffusion_data = [(object)[
+					'file_url' => $save_result->file_url ?? null
+				]];
+
 
 			} catch (\Throwable $th) {
 				$response->errors[] = 'Exception: '.$th->getMessage();
@@ -338,20 +340,39 @@ class diffusion_xml extends diffusion  {
 	 */
 	private function save( array $diffusion_objects ) : object {
 
-		// parse nodes as XML document
-		$doc = $this->render_dom( $diffusion_objects );
-
-		// Save to file
-		$write_file_response = $this->write_file( $doc );
-
 		$response = new stdClass();
-			$response->result	= true;
-			$response->msg		= 'OK';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
-		$write_file_response = $response;
+
+		try {
+
+			// parse nodes as XML document
+			$doc = $this->render_dom( $diffusion_objects );
+
+			// Save to file
+			$write_file_response = $this->write_file( $doc );
+
+			// errors
+			$response->errors = $write_file_response->errors ?? [];
+
+			// file_url
+			$response->file_url	= $write_file_response->file_url ?? null;
+
+			// result
+			$response->result = $write_file_response->result ?? false;
+
+		} catch (Exception $e) {
+
+			$response->errors[] = $e->getMessage();
+		}
+
+		$response->msg	= !empty($response->errors)
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
 
 
-		return $write_file_response;
+		return $response;
 	}//end save
 
 
