@@ -172,8 +172,18 @@ class diffusion_rdf extends diffusion {
 		// save file
 			if ($save_file===true) {
 
-				$rdf_name			= RecordObj_dd::get_termino_by_tipo($owl_class_tipo);
-				$rdf_file_name		= $rdf_name.'_'. $date.'.rdf';
+				$rdf_name = RecordObj_dd::get_termino_by_tipo($owl_class_tipo) ?? '';
+
+				$name_parts = [
+					$rdf_name,
+					$section_tipo,
+					$section_id,
+					logged_user_id(),
+					$date
+				];
+
+				$file_name			= implode('_', $name_parts);
+				$rdf_file_name		= $file_name .'.rdf';
 				$save_to_file_path	= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name;
 				$url_file			= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
 				$data				= $build_response->data;
