@@ -272,19 +272,25 @@ class diffusion_xml extends diffusion  {
 			$response->file_path	= null;
 			$response->file_url		= null;
 
-		$current_date	= new DateTime();
-		$date			= $current_date->format('Y-m-d H_i_s');
-		$file_name		= $this->section_tipo.'_'.$this->section_id;
-		$xml_file_name	= $file_name.'_'. $date.'.xml';
-		$sub_path		= DEDALO_MEDIA_PATH . '/xml';
+		// name compound
+		$name_parts = [
+			$this->section_tipo,
+			$this->section_id,
+			logged_user_id(),
+			new DateTime()->format('Y-m-d')
+		];
+		$file_name		= implode('_', $name_parts);
+		$xml_file_name	= $file_name .'.xml';
+		$xml_dir		= '/xml';
+		$base_path		= DEDALO_MEDIA_PATH . $xml_dir;
 		// Check that the target directory exists. If not, create it.
-		if(!create_directory($sub_path)){
-			$response->errors[] = 'unable to access/create the target directory: ' . $sub_path;
-			$response->msg = 'Error accessing target directory: ' . $sub_path;
+		if(!create_directory($base_path)){
+			$response->errors[] = 'unable to access/create the target directory: ' . $base_path;
+			$response->msg = 'Error accessing target directory: ' . $base_path;
 			return $response;
 		}
-		$file_path	= $sub_path .'/'. $xml_file_name;
-		$file_url	= DEDALO_MEDIA_URL  . $sub_path . $xml_file_name;
+		$file_path	= DEDALO_MEDIA_PATH . $xml_dir .'/'. $xml_file_name;
+		$file_url	= DEDALO_MEDIA_URL  . $xml_dir .'/'. $xml_file_name;
 
 		// save DOM nodes to file. Return the number of bytes, or false on failure.
 		$result = $doc->save( $file_path );
