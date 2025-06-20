@@ -37,7 +37,8 @@ class diffusion_xml extends diffusion  {
 
 	/**
 	* UPDATE_RECORD
-	* Update one or any number of records ( array ) and references
+	* Unified diffusion start point to publish one record.
+	* Creates an XML file with the resultant nodes of process given record.
 	* @param object $options
 	* {
 	* 	section_tipo: string
@@ -50,10 +51,11 @@ class diffusion_xml extends diffusion  {
 
 		// response
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg		= [];
-			$response->errors	= [];
-			$response->class	= get_called_class();
+			$response->result			= false;
+			$response->msg				= [];
+			$response->errors			= [];
+			$response->class			= get_called_class();
+			$response->diffusion_data	= [];
 
 		// options
 		if (!isset($options->section_tipo) || !is_string($options->section_tipo)) {

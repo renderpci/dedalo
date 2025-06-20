@@ -500,9 +500,13 @@ class tool_diffusion extends tool_common {
 	* @param array $rows
 	* @param string $diffusion_element_tipo
 	* @param string $diffusion_class_name
-	* @param int &$counter
-	* @param object &$pdata
-	* @return array $errors
+	* @param int &$counter Process counter
+	* @param object &$pdata Process data
+	* @return object $response
+	* 	{
+	* 		data: [{}]
+	* 		errors: []
+	* 	}
 	*/
 	public static function iterate_rows(array $rows, string $diffusion_element_tipo, string $diffusion_class_name, int &$counter, object &$pdata) : array {
 

@@ -278,7 +278,7 @@ export const render_publication_items = function(self) {
 			const data_item	= ar_data[diffusion_group_key]
 
 			// skip disable cases
-			if (item.class_name==='diffusion_mysql' && !data_item.table) {				
+			if (item.class_name==='diffusion_mysql' && !data_item.table) {
 				continue;
 			}
 
@@ -381,7 +381,7 @@ export const render_publication_items = function(self) {
 						class_name		: 'value',
 						parent			: publication_items_grid
 					})
-				}				
+				}
 
 			// table
 				if (data_item.table) {
@@ -406,7 +406,7 @@ export const render_publication_items = function(self) {
 						inner_html		: get_label.fields || 'Fields',
 						class_name		: 'label',
 						parent			: publication_items_grid
-					})					
+					})
 					const fields_value = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'value link icon_arrow unselectable',
@@ -478,8 +478,8 @@ export const render_publication_items = function(self) {
 							parent			: publication_items_grid
 						})
 						ar_fields_nodes.push(related_info_node)
-					}					
-				}				
+					}
+				}
 
 			// DB connection_status
 				if (item.connection_status) {
@@ -498,7 +498,7 @@ export const render_publication_items = function(self) {
 						class_name		: 'value ' + class_status,
 						parent			: publication_items_grid
 					})
-				}					
+				}
 
 			// properties (section_tables_map)
 				const properties = data_item.section_tables_map.properties || null
@@ -612,7 +612,7 @@ export const render_publication_items = function(self) {
 					})
 				}
 				publication_button.addEventListener('click', click_handler)
-				
+
 				// disable cases :
 					if (
 						(item.connection_status && item.connection_status.result===false) ||
