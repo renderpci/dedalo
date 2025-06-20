@@ -80,35 +80,61 @@ render_list_dd_grid.prototype.list = async function(options) {
 /**
 * GET_TEXT_COLUMN
 * Render a span DOM node with given value
-* @param object data_item
-* @param bool use_fallback
-* @return HTMLElement text_node (span)
+* @param {Object} data_item - The data object containing value and configuration
+* @param {*} data_item.value - The value to display (should be an array)
+* @param {*} [data_item.fallback_value] - Fallback value if main value is empty
+* @param {string} [data_item.class_list=''] - CSS classes to apply
+* @param {string} [data_item.records_separator=' | '] - Separator for joining array values
+* @param {boolean} [use_fallback=false] - Whether to use fallback value when main value is empty
+* @return HTMLElement text_node (span element containing the formatted text)
 */
-export const get_text_column = function(data_item, use_fallback) {
+export const get_text_column = function(data_item, use_fallback=false) {
 
-	const class_list = data_item.class_list || ''
+	// Input validation
+	if (!data_item || typeof data_item !== 'object') {
+		throw new Error('data_item must be a valid object');
+	}
 
+	const class_list		= data_item.class_list || '';
+	const records_separator	= data_item.records_separator || ' | ';
+
+	// Determine which value to use
 	const value = use_fallback===true
 		? (data_item.value && data_item.value[0]!==undefined ? data_item.value : data_item.fallback_value)
 		: data_item.value
 
-	const records_separator = (data_item.records_separator)
-		? data_item.records_separator
-		: ' | '
-
+	// Convert value to string
 	const value_string = value
-		? value.join(records_separator)
+		? (()=>{
+			if (Array.isArray(value)) {
+				// Check array length limit
+				if (value.length > 25) {
+					return 'Data is too big';
+				} else {
+					return value.join(records_separator);
+				}
+			}else{
+				// Handle non-array values
+				return String(value);
+			}
+		  })()
 		: ''
 
-	const add_style = value_string.length>0
-		? ''
-		: ' empty'
+	// safe_value_string. Max chars is 2000 characters
+	const safe_value_string = value_string.length > 2000
+		? 'Data is too big'
+		: value_string;
 
+	// Determine additional CSS class
+	const add_style = value_string.length === 0 ? 'empty' : ''
+
+	// Create and return DOM element
 	const text_node = ui.create_dom_element({
 		element_type	: 'span',
-		class_name		: class_list + add_style,
-		inner_html		: value_string
+		class_name		: [class_list, add_style].join(' ').trim(),
+		inner_html		: safe_value_string
 	})
+
 
 	return text_node
 }//end get_text_column
