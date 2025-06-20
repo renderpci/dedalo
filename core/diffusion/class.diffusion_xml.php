@@ -798,7 +798,7 @@ class diffusion_xml extends diffusion  {
 						'lang'	=> $current_lang,
 						'value'	=> null,
 						'id'	=> $current_ddo->id,
-						'key'	=> $current_ddo->key
+						'key'	=> $current_ddo->key ?? null
 					];
 				}
 
