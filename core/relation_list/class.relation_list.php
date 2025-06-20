@@ -901,4 +901,61 @@ class relation_list extends common {
 
 
 
+	/**
+	* GET_DATO
+	* Resolve the inverse references (who are calling to this section)
+	* and creates its own data with the result as an array of locators
+	* data is not filtered, it get the inverse references as its own data
+	* @return array $data
+	*
+	* @test false
+	*/
+	public function get_dato() : array {
+
+		// sqo . Common used to get inverse locators
+			$sqo = (object)[
+				'section_tipo'			=> ['all'],
+				'mode'					=> 'related',
+				'limit'					=> false,
+				'offset'				=> 0,
+				'filter_by_locators'	=> [
+					(object)[
+						'section_tipo'	=> $this->section_tipo,
+						'section_id'	=> $this->section_id
+					]
+				]
+			];
+
+		// inverse_references
+			$ar_inverse_references = $this->get_inverse_references($sqo);
+				// sample. Full section dato
+				// {
+				//     "section_tipo": "numisdata300",
+				//     "section_id": "1",
+				//     "datos": {
+				//         "label": "Catalog",
+				//         "relations": [
+				//             {
+				//                 "type": "dd675",
+				//                 "section_id": "1",
+				//                 "section_tipo": "dd153",
+				//                 "from_component_tipo": "numisdata304"
+				//             }, ...
+				//          ]
+				//     }
+				// }
+
+		// create its data with the inverse references
+		$data = array_map( function($el) {
+			return (object)[
+				'section_tipo' => $el->section_tipo,
+				'section_id' => $el->section_id
+			];
+		}, $ar_inverse_references);
+
+
+		return $data;
+	}//end get_dato
+
+
 }//end class relation_list
