@@ -99,9 +99,11 @@ filter                  : {
                                                         }]
                                         format      : 'direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function' // string, use to change the WHERE format
                                         use_function : 'relations_flat_fct_st_si' // if format is function use_function define the PostgreSQL function to be used.
-                                        q_split     : true || false // bool, define if the q need to be split into multiple WHERE queries
-                                        unaccent    : true || false // bool, define if the q will us the unaccent function in WHERE
-                                        type        : 'jsonb' || 'string' // define the type of data to be searched
+                                        q_split     : true || false // bool, defines if the q need to be split into multiple WHERE queries
+                                        unaccent    : true || false // bool, defines if the q will us the unaccent function in WHERE
+                                        type        : 'jsonb' || 'string' // defines the type of data to be searched
+                                        lang        : string || null  // defines if the search will be lang selective. If not defined lang = all langs, if defined lang = the lang sent as `lg-eng
+
                                     }]
                             } || null
 limit                   : 1 // int
@@ -681,7 +683,6 @@ Functions implemented:
 - relations_flat_ty_st
 - f_unaccent
 
-
 ##### q_split
 
 Defines if the words or the query (in [q](#q) parameter) need to be split into multiple WHERE statements. When q_split is set to true, it create multiple WHERE for every word in the query and add a AND operator between them because the words will be searched at any place of the text, be default it set in true.
@@ -860,6 +861,106 @@ Example: search interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh
         ]
     }
 }
+```
+
+##### lang
+
+Defines if the search will be language sensitive, searching in the specific language, or will be transversal to all languages.
+Used by translatable components as `component_input_text` or `compnent_text_area` to chain the query behavior.
+By default it is set as `null`.
+
+It can be defined with specific language as `lg-fra` to resting the query to this specific language.
+When the parameter is set with `null` or `all` the query will use all possible data languages that are defined in [DEDALO_PROJECTS_DEFAULT_LANGS](../config/config.md#defining-default-projects-languages).
+
+Non translatable components as `component_number`, `component_image`, etc. will set this parameter with `lg-nolan`, but is not necessary to set it in SQO calls, the component will parse it to set automatically.
+
+The `null` and `all` values meaning the same:
+
+- for non translatable components = lg-nolan.
+- for tanslatable components = all languages.
+
+!!! note About relation components
+    Relation components, as `component_portal`, doesn't use this parameter because relational data has not language definition.
+
+Definition: `string` (`string` || `null`) defines the lang of data to be searched **optional**, ex: 'lg-eng'
+
+Example: search interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) = `Raspa` only in Spanish.
+
+```json
+{
+ "section_tipo": ["oh1"],
+    "filter": {
+        "$and": [
+            {
+                "q": "Raspa",
+                "path": [
+                    {
+                        "section_tipo": "oh1",
+                        "component_tipo": "oh16"
+                    }
+                ],
+                "lang": "lg-spa"
+            }
+        ]
+    }
+}
+```
+
+The SQL where query will be restricted to the Spanish language as follows:
+
+```sql
+SELECT DISTINCT *
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND
+  (oh1.datos#>>'{components,oh16,dato,lg-spa}' = 'Raspa')
+ORDER BY oh1.section_id ASC
+LIMIT 10
+```
+
+Example: search interviews [oh1](https://dedalo.dev/ontology/oh1) if title [oh16](https://dedalo.dev/ontology/oh16) has data in any language.
+
+```json
+{
+ "section_tipo": ["oh1"],
+    "filter": {
+        "$and": [
+            {
+                "q": "*",
+                "path": [
+                    {
+                        "section_tipo": "oh1",
+                        "component_tipo": "oh16"
+                    }
+                ],
+                "lang": "all"
+            }
+        ]
+    }
+}
+```
+
+The SQL where query will be set with every language defines in [DEDALO_PROJECTS_DEFAULT_LANGS](../config/config.md#defining-default-projects-languages) as follows:
+
+```php
+define('DEDALO_PROJECTS_DEFAULT_LANGS', [ 'lg-spa', 'lg-eng', 'lg-fra', 'lg-cat']);
+```
+
+```sql
+SELECT DISTINCT *
+FROM matrix AS oh1
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND
+(
+  (oh1.datos#>>'{components,oh16,dato,lg-spa}' != '[]') OR
+  (oh1.datos#>>'{components,oh16,dato,lg-eng}' != '[]') OR
+  (oh1.datos#>>'{components,oh16,dato,lg-fra}' != '[]') OR
+  (oh1.datos#>>'{components,oh16,dato,lg-cat}' != '[]') OR
+  (oh1.datos#>>'{components,oh16,dato,lg-spa}' IS NOT NULL) OR
+  (oh1.datos#>>'{components,oh16,dato,lg-eng}' IS NOT NULL) OR
+  (oh1.datos#>>'{components,oh16,dato,lg-fra}' IS NOT NULL) OR
+  (oh1.datos#>>'{components,oh16,dato,lg-cat}' IS NOT NULL) 
+)
+ORDER BY oh1.section_id ASC
+LIMIT 10
 ```
 
 ### limit
