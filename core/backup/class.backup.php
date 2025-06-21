@@ -203,14 +203,14 @@ abstract class backup {
 				." ERROR: $msg "
 				, logger::ERROR
 			);
-			return false;
+			return [];
 		}
 		$tableList = array();
 		while($rows = pg_fetch_assoc($result)) {
 			$tableList[] = $rows['table_name'];
 		}
 
-		return (array)$tableList;
+		return $tableList;
 	}//end get_tables
 
 
