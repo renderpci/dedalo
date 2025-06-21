@@ -103,8 +103,8 @@ self.get_children = function(item, datalist) {
 
 	// optimized (stack way)
 		const children = (item.tipo === item.section_tipo)
-			? datalist.filter(el => el.parent === item.tipo)
-			: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo);
+			? datalist.filter(el => el.parent === item.tipo) // section / area case
+			: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo); // components case
 
 		const ar_children = [];
 		const stack = [...children];
