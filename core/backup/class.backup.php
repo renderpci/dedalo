@@ -581,82 +581,189 @@ abstract class backup {
 	* }
 	*/
 	public static function import_from_copy_file( object $options ) : object {
-		$start_time=start_time();
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
-		// options
+		// options validation
 			$section_tipo	= $options->section_tipo ?? null;
 			$file_path		= $options->file_path ?? '';
-			$matrix_table	= $options->matrix_table;
+			$matrix_table	= $options->matrix_table ?? null;
 			$delete_table	= $options->delete_table ?? false;
 			$columns		= $options->columns ?? ['section_id','section_tipo','datos'];
 
-		// check if file exists
-			if (!file_exists($file_path)) {
-				$response->msg = 'Error. The required file do not exists: '.$file_path;
-				$response->errors[] = 'File do not exists';
+		// validate required parameters
+			if (empty($file_path)) {
+				$response->msg = 'Error. file_path is required';
+				$response->errors[] = 'Missing file_path parameter';
 				return $response;
 			}
 
-		// uncompressed file
-			$uncompressed_file = substr( $file_path, 0, -3 );
+			if (empty($matrix_table)) {
+				$response->msg = 'Error. matrix_table is required';
+				$response->errors[] = 'Missing matrix_table parameter';
+				return $response;
+			}
 
-		// terminal gunzip command
-			$command = 'gunzip --keep --force -v '.$file_path.';'; // -k (keep original file) -f (force overwrite without prompt)
+			if ($delete_table === false && empty($section_tipo)) {
+				$response->msg = 'Error. section_tipo is required when delete_table is false';
+				$response->errors[] = 'Missing section_tipo parameter';
+				return $response;
+			}
+
+		// validate file path and matrix table name for security
+			if (!preg_match('/^[a-zA-Z0-9_\/\.\-]+$/', $file_path)) {
+				$response->msg = 'Error. Invalid file_path format';
+				$response->errors[] = 'Invalid file_path contains unsafe characters';
+				return $response;
+			}
+
+			if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $matrix_table)) {
+				$response->msg = 'Error. Invalid matrix_table name';
+				$response->errors[] = 'Invalid matrix_table name format';
+				return $response;
+			}
+
+		// validate columns array
+			foreach ($columns as $column) {
+				if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column)) {
+					$response->msg = 'Error. Invalid column name: ' . $column;
+					$response->errors[] = 'Invalid column name format';
+					return $response;
+				}
+			}
+
+		// check if file exists
+			if (!file_exists($file_path)) {
+				$response->msg = 'Error. The required file does not exist: '.$file_path;
+				$response->errors[] = 'File does not exist';
+				return $response;
+			}
+
+		// determine uncompressed file path
+			$path_info = pathinfo($file_path);
+			if (strtolower($path_info['extension']) !== 'gz') {
+				$response->msg = 'Error. File must have .gz extension';
+				$response->errors[] = 'Invalid file extension';
+				return $response;
+			}
+			$uncompressed_file = $path_info['dirname'] . '/' . $path_info['filename'];
+
+		// decompress file using gunzip
+			$file_path_escaped = escapeshellarg($file_path);
+			$command = 'gunzip --keep --force -v ' . $file_path_escaped;
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 
-			$command_res = shell_exec($command);
-			debug_log(__METHOD__." Exec response 1 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+			$command_output = [];
+			$command_return_code = 0;
+			exec($command, $command_output, $command_return_code);
+
+			if ($command_return_code !== 0) {
+				$response->msg = 'Error. Failed to decompress file';
+				$response->errors[] = 'Gunzip command failed with code: ' . $command_return_code;
+				$response->errors[] = 'Output: ' . implode('\n', $command_output);
+				return $response;
+			}
+
+			debug_log(__METHOD__." Gunzip response: ".json_encode($command_output), logger::DEBUG);
+
+		// verify uncompressed file exists
+			if (!file_exists($uncompressed_file)) {
+				$response->msg = 'Error. Uncompressed file was not created';
+				$response->errors[] = 'Uncompressed file missing after gunzip';
+				return $response;
+			}
 
 		// command base. A PostgreSQL connection. used by all DDBB connections
 			$command_base = DB_BIN_PATH.'psql -d ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 
-		// terminal command psql delete previous records
-			$command = $command_base
-				.' --echo-errors -c "DELETE FROM "'.$matrix_table.'"';
-				if( $delete_table !== true ){
-					$command .= " WHERE section_tipo = '$section_tipo'";
+		// delete previous records with proper escaping
+			$delete_query = 'DELETE FROM "' . $matrix_table . '"';
+			if ($delete_table !== true) {
+				// escape section_tipo for SQL
+				$section_tipo_escaped = str_replace("'", "''", $section_tipo);
+				$delete_query .= " WHERE section_tipo = '" . $section_tipo_escaped . "'";
+			}
+
+			$command = $command_base . ' --echo-errors -c ' . escapeshellarg($delete_query);
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+
+			$command_output = [];
+			$command_return_code = 0;
+			exec($command, $command_output, $command_return_code);
+
+			if ($command_return_code !== 0) {
+				$response->msg = 'Error. Failed to delete previous records';
+				$response->errors[] = 'Delete command failed with code: ' . $command_return_code;
+				$response->errors[] = 'Output: ' . implode('\n', $command_output);
+				// cleanup uncompressed file before returning
+				if (file_exists($uncompressed_file)) {
+					unlink($uncompressed_file);
 				}
-				$command .= ';";';
+				return $response;
+			}
+
+			debug_log(__METHOD__." Delete response: ".json_encode($command_output), logger::DEBUG);
+
+		// copy data from file with proper escaping
+			$columns_list = implode(',', array_map(function($col) { return '"' . $col . '"'; }, $columns));
+			$copy_query = '\copy "' . $matrix_table . '" (' . $columns_list . ') from ' . escapeshellarg($uncompressed_file);
+
+			$command = $command_base . ' --echo-errors -c ' . escapeshellarg($copy_query);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 
-			$command_res = shell_exec($command);
-			debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+			$command_output = [];
+			$command_return_code = 0;
+			exec($command, $command_output, $command_return_code);
 
-		// terminal command psql copy data from file
-			$command = $command_base
-				.' --echo-errors -c "\copy '.$matrix_table.' ('.implode(',', $columns).') from '.$uncompressed_file.'";';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+			if ($command_return_code !== 0) {
+				$response->msg = 'Error. Failed to copy data from file';
+				$response->errors[] = 'Copy command failed with code: ' . $command_return_code;
+				$response->errors[] = 'Output: ' . implode('\n', $command_output);
+				// cleanup uncompressed file before returning
+				if (file_exists($uncompressed_file)) {
+					unlink($uncompressed_file);
+				}
+				return $response;
+			}
 
-			$command_res = shell_exec($command);
-			debug_log(__METHOD__." Exec response 3 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+			debug_log(__METHOD__." Copy response: ".json_encode($command_output), logger::DEBUG);
 
 		// update sequence value
-			$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';
-			$command = $command_base
-				.' --echo-errors '
-				.'-c "'.$query.';";';
+			$sequence_query = 'SELECT setval(\'' . $matrix_table . '_id_seq\', (SELECT MAX(id) FROM "' . $matrix_table . '")+1)';
+			$command = $command_base . ' --echo-errors -c ' . escapeshellarg($sequence_query);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 
-			$command_res = shell_exec($command);
-			debug_log(__METHOD__." Exec response 4 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+			$command_output = [];
+			$command_return_code = 0;
+			exec($command, $command_output, $command_return_code);
 
-		// delete uncompressed_file
-			$command  = 'rm '.$uncompressed_file.';';
-			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+			if ($command_return_code !== 0) {
+				$response->msg = 'Error. Failed to update sequence value';
+				$response->errors[] = 'Sequence update failed with code: ' . $command_return_code;
+				$response->errors[] = 'Output: ' . implode('\n', $command_output);
+				// Note: This is not critical, so we continue but log the warning
+				debug_log(__METHOD__." Warning: Sequence update failed but continuing", logger::WARNING);
+			}
 
-			$command_res = shell_exec($command);
-			debug_log(__METHOD__." Exec response 5 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+			debug_log(__METHOD__." Sequence update response: ".json_encode($command_output), logger::DEBUG);
 
-		// response
+		// cleanup: delete uncompressed file
+			if (file_exists($uncompressed_file)) {
+				$unlink_result = unlink($uncompressed_file);
+				if (!$unlink_result) {
+					debug_log(__METHOD__." Warning: Failed to delete uncompressed file: " . $uncompressed_file, logger::WARNING);
+					// Not critical, but log the warning
+				}
+			}
+
+		// success response
 			$response->result	= true;
 			$response->msg		= 'OK. Request done successfully [import_from_copy_file] ' . basename($file_path);
 			$response->msg	   .= ' | '. exec_time_unit($start_time,'ms').' ms';
-
 
 		return $response;
 	}//end import_from_copy_file
