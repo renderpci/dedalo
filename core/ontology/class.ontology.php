@@ -1974,21 +1974,38 @@ class ontology {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
+		// Validate input
+		if (!isset($sqo->section_tipo)) {
+			$response->errors[] = 'Missing section_tipo in sqo';
+			return $response;
+		}
+
 		$search = search::get_instance(
 			$sqo, // object sqo
 		);
 		$search_response	= $search->search();
 		$ar_records			= $search_response->ar_records;
 
+		// Check if we have records to process
+		if (empty($ar_records) || !is_array($ar_records)) {
+			$response->result	= true;
+			$response->msg		= 'OK. No records found to process [set_records_in_jer_dd] ' .$sqo->section_tipo;
+			$response->msg		.= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
+			$response->total	= 0;
+			return $response;
+		}
+
 		// active_elements: current active main sections
 		$active_tld = array_map(function($el){
 			return $el->tld;
 		}, ontology::get_active_elements());
 
+		$processed_count = 0;
 		foreach ($ar_records as $current_record) {
 
 			$section_tipo	= $current_record->section_tipo;
 			$section_id		= $current_record->section_id;
+			$term_id		= null;
 
 			if ($section_tipo===self::$main_section_tipo) {
 
@@ -2042,14 +2059,27 @@ class ontology {
 
 			if( empty($term_id ) ){
 				$response->errors[] = 'Failed insert into jer_dd with section_tipo: ' . $section_tipo .' section_id: '. $section_id;
+			}else{
+				$processed_count++;
 			}
 		}
 
 		if( empty($response->errors) ){
-			$response->result	= true;
-			$response->msg		= 'OK. Request done successfully [set_records_in_jer_dd] ' .to_string($sqo->section_tipo);
-			$response->msg	   .= ' | '. exec_time_unit($start_time,'ms').' ms';
-			$response->total	= count($ar_records);
+			$response->result			= true;
+			$response->msg				= 'OK. Request done successfully [set_records_in_jer_dd] ' .to_string($sqo->section_tipo);
+			$response->msg				.= ' | '. exec_time_unit($start_time,'ms').' ms';
+			$response->total			= count($ar_records);
+			$response->processed_count	= $processed_count;
+		}else{
+			// Partial success case
+			if($processed_count > 0){
+				$response->result	= true; // Consider partial success as success
+				$response->msg		= 'Partial success. Some records processed [set_records_in_jer_dd] ' .$sqo->section_tipo;
+				$response->msg	   .= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
+				$response->total	= $processed_count;
+			}else{
+				$response->msg .= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
+			}
 		}
 
 
