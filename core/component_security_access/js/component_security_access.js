@@ -186,16 +186,16 @@ component_security_access.prototype.update_value = function(item, input_value) {
 
 	const self = this
 
-	// value . Copy of current data.value
-		const value = self.filled_value
-			? [...self.filled_value]
-			: []
-
 	// item check
 		if (!item) {
 			console.error("Ignored undefined item:", input_value);
 			return value
 		}
+
+	// value . Copy of current data.value
+		const value = self.filled_value
+			? [...self.filled_value]
+			: []
 
 	// find if already exists
 		const found = value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)
@@ -240,42 +240,22 @@ component_security_access.prototype.update_value = function(item, input_value) {
 		tipo: "mht55"
 		section_tipo: "mht5"
 	}
-* @param array datalist
-* @return promise
-* 	resolve array ar_parents
+* @param array|undefined datalist
+* @return array parents
 */
 component_security_access.prototype.get_parents = function(item, datalist) {
-	const t1 = performance.now()
 
 	const self = this
 
-	datalist = datalist || self.data.datalist
+	const current_datalist = datalist || self.data.datalist
 
-	return new Promise(function(resolve){
-
-		const current_worker = new Worker(self.worker_path, {
-			type : 'module'
-		})
-		current_worker.onmessage = function(e) {
-			const parents = e.data.result
-			current_worker.terminate()
-
-			// debug
-				if(SHOW_DEBUG===true) {
-					// console.log('parents:', parents);
-					console.log("__***Time performance.now()-t1 get_parents:", item.tipo, parents.length, performance.now()-t1);
-				}
-
-			resolve( parents )
-		}
-		current_worker.onerror = function(e) {
-			console.error('Worker error [get_parents]:', e);
-		}
-		current_worker.postMessage({
-			fn		: 'get_parents',
-			params	: [item, datalist]
-		})
+	const parents = current_datalist.filter(el =>{
+		const ar_parent_set = new Set(item.ar_parent);
+		return ar_parent_set.has(el.tipo);
 	})
+
+
+	return parents;
 }//end get_parents
 
 
@@ -292,42 +272,22 @@ component_security_access.prototype.get_parents = function(item, datalist) {
 		tipo: "mht55"
 		section_tipo: "mht5"
 	}
-* @param array datalist
-* @return promise
-* 	resolve array ar_children
+* @param array|undefined datalist
+* @return array children
 */
 component_security_access.prototype.get_children = function(item, datalist) {
-	const t1 = performance.now()
 
 	const self = this
 
-	datalist = datalist || self.data.datalist
+	const current_datalist = datalist || self.data.datalist
 
-	return new Promise(function(resolve){
+	const children = current_datalist.filter(el => {
+		const ar_parent_set = new Set(el.ar_parent);
+		return ar_parent_set.has(item.tipo);
+	});
 
-		const current_worker = new Worker(self.worker_path, {
-			type : 'module'
-		})
-		current_worker.onmessage = function(e) {
-			const children = e.data.result
-			current_worker.terminate()
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					// console.log('children:', children);
-					console.log("__***Time performance.now()-t1 get_children:", item.tipo, children.length, performance.now()-t1);
-				}
-
-			resolve( children )
-		}
-		current_worker.onerror = function(e) {
-			console.error('Worker error [get_children]:', e);
-		}
-		current_worker.postMessage({
-			fn		: 'get_children',
-			params	: [item, datalist]
-		})
-	})
+	return children
 }//end get_children
 
 
@@ -348,12 +308,12 @@ component_security_access.prototype.get_children = function(item, datalist) {
 * @param integer input_value
 * @return bool diff_value
 */
-component_security_access.prototype.update_parents_radio_butons = async function(item, input_value) {
+component_security_access.prototype.update_parents_radio_butons = function(item, input_value) {
 
 	const self = this
 
 	// parents (recursive)
-	const parents = await self.get_parents(item)
+	const parents = self.get_parents(item)
 
 	let diff_value = false
 	// set the data of the parents and change the DOM node with update_value event
@@ -366,7 +326,7 @@ component_security_access.prototype.update_parents_radio_butons = async function
 			if(diff_value===false) {
 
 				// check values of every child finding a different value from last value found
-				const current_children			= await self.get_children(current_parent)
+				const current_children			= self.get_children(current_parent)
 				const current_children_length	= current_children.length
 				for (let k = current_children_length - 1; k >= 0; k--) {
 

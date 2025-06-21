@@ -44,6 +44,11 @@ class component_security_access extends component_common {
 	/**
 	* GET_DATALIST
 	* Generates the whole component datalist (ontology tree) to set access permissions by admins
+	* The datalist will use to represent the tree hierarchy,
+	* The datalist has not the permissions because it is a common tree for all profiles, and permissions are different for every profile.
+	* As only section children nodes has permissions data (0,1,2)
+	* Areas and Sections render and propagate permissions to its children making a calculation of the real data (provided by its own children).
+	* Datalist includes all parents chain to locate easily all children of one node or get all parents of one node.
 	* Note that login sequence launch a background process to calculate this datalist because
 	* the resolution is considerably expensive (about 3 to 6 secs)
 	* @param int $user_id
@@ -131,46 +136,71 @@ class component_security_access extends component_common {
 				$ar_areas = $ar_auth_areas;
 			}
 
-		// duplicates check
-			$ar_clean = [];
-			foreach ($ar_areas as $area) {
-				$key = $area->tipo .'_'. $area->parent; // .'_' .$area->section_tipo
-				if (isset($ar_clean[$key])) {
-					debug_log(__METHOD__
-						." Duplicate item ".to_string($area)
-						, logger::ERROR
-					);
-				}else{
-					$ar_clean[$key] = $area;
-				}
-			}
-			$ar_areas = array_values($ar_clean);
-
 		// datalist. resolve section (real and virtual) components
-			$datalist = [];
+			$ar_check	= [];
+			$datalist	= [];
+			$ar_parent	= [];
 			$ar_areas_length = sizeof($ar_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
 
 				$current_area = $ar_areas[$i];
 				$section_tipo = $current_area->tipo; // same as tipo
 
-				// area could be area, area_thesaurus, section, ...
-					$datalist[] = (object)[
-						'tipo'			=> $current_area->tipo,
-						'section_tipo'	=> $section_tipo,
-						'model'			=> $current_area->model,
-						'label'			=> $current_area->label,
-						'parent'		=> $current_area->parent
-					];
+				// check for duplicates
+				$duplicate_key = $section_tipo .'_'. $current_area->parent;
+				if (isset($ar_check[$duplicate_key])) {
+					debug_log(__METHOD__
+						.' Ignored duplicated area item ' . PHP_EOL
+						.' current_area: ' . to_string($current_area)
+						, logger::ERROR
+					);
+					continue;
+				}else{
+					$ar_check[$duplicate_key] = true;
+				}
 
-				// section case
-					if ($current_area->model==='section') {
-						// recursive calculated children area added too
-						$datalist = array_merge(
-							$datalist,
-							self::get_element_datalist($current_area->tipo)
-						);
+				// Set all parents chain
+				// store the all parents to be used in client filters to speed up its resolution to represent the tree
+				// and the calculated permissions hierarchy of areas and sections (inheritance from the combination of components permissions)
+				// if the parent doesn't exists in the parent chain add it
+				// if the parent is set previously remove all the parents from the current parent position
+				$parent_key = $current_area->parent;
+				$position = array_search($parent_key, $ar_parent);
+				if( $position===false ){
+					$ar_parent[] = $parent_key;
+				}else{
+					// the splice must contain the current parent, therefore the position is +1 to include it.
+					array_splice($ar_parent, $position+1);
+				}
+
+				// area could be area, area_thesaurus, section, ...
+				$datalist_item = (object)[
+					'tipo'			=> $current_area->tipo,
+					'section_tipo'	=> $section_tipo,
+					'model'			=> $current_area->model,
+					'label'			=> $current_area->label,
+					'parent'		=> $current_area->parent,
+					'ar_parent'		=> $ar_parent
+				];
+
+				$datalist[] = $datalist_item;
+
+				// section case. Add components, groupers, buttons, etc.
+				if ($current_area->model==='section') {
+
+					// recursive calculated children area added too
+					$children = self::get_element_datalist($current_area->tipo);
+					// add already calculated section parents to the chain
+					foreach ($children as $child) {
+						$section_parents = array_merge( $ar_parent, $child->ar_parent);
+						$child->ar_parent = $section_parents;
 					}
+
+					$datalist = array_merge(
+						$datalist,
+						$children
+					);
+				}
 			}//end for ($i=0; $i < $ar_areas_length ; $i++)
 
 		// fix value
@@ -272,14 +302,26 @@ class component_security_access extends component_common {
 			}
 
 
+		$ar_parent = [];
+
 		foreach ($children_list as $current_child) {
+
+			$parent_key = $current_child->parent;
+			$position = array_search($parent_key, $ar_parent);
+			if( $position===false ){
+				$ar_parent[] = $parent_key;
+			}else{
+				array_splice($ar_parent, $position+1);
+			}
+
 			// add
 			$item = (object)[
 				'tipo'			=> $current_child->tipo,
 				'section_tipo'	=> $section_tipo, // force current section_tipo
 				'model'			=> $current_child->model,
 				'label'			=> $current_child->label,
-				'parent'		=> $current_child->parent
+				'parent'		=> $current_child->parent,
+				'ar_parent'		=> $ar_parent
 			];
 			$datalist[] = $item;
 		}
