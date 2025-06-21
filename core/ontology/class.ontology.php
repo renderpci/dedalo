@@ -1652,27 +1652,29 @@ class ontology {
 
 	/**
 	* GET_NODE_COMPONENT_DATA
-	* Get the CSS properties data of the node.
+	* Get the data of the component from given tipo.
 	* @param locator $locator
-	* @return array|null $properties_rqo_data
+	* @param string $tipo
+	* @return array|null $data
 	*/
-	private static function get_node_component_data( locator $locator, string $properties_tipo ) : ?array {
+	private static function get_node_component_data( locator $locator, string $tipo ) : ?array {
 
-		$properties_model	= RecordObj_dd::get_modelo_name_by_tipo( $properties_tipo  );
+		$properties_model	= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
 		$component			= component_common::get_instance(
 			$properties_model,
-			$properties_tipo ,
+			$tipo ,
 			$locator->section_id,
 			'list',
 			DEDALO_DATA_NOLAN,
 			$locator->section_tipo
 		);
-		$properties_data = $component->get_dato();
+		$dato = $component->get_dato();
 
 		// Unify the empty values to null (relations return a empty array when they has not data)
-		$properties_data = empty( $properties_data ) ? null : $properties_data;
+		$data = empty( $dato ) ? null : $dato;
 
-		return $properties_data;
+
+		return $data;
 	}//end get_node_component_data
 
 

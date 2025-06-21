@@ -359,26 +359,23 @@ class ontology_data_io {
 
 		// options
 			$section_tipo	= $file_item->section_tipo;
-			$tld			= $file_item->tld;
 			$url			= $file_item->url;
 
 		// file_name
 			$file_name = basename( $url );
 
 		// import ontology path
-			$ontology_io_path = ontology_data_io::get_ontology_io_path();
+			$ontology_io_path	= ontology_data_io::get_ontology_io_path();
+			$file_path			= $ontology_io_path .'/'. $file_name;
 
-			$file_path = $ontology_io_path.'/'.$file_name;
-
+		// import records from file *.copy.gz
+		// this delete existing data of current section_tipo and copy all file pg data
 			$options = new stdClass();
 				$options->section_tipo	= $section_tipo;
 				$options->file_path		= $file_path;
 				$options->matrix_table	= 'matrix_ontology';
 
-		// import records from file *.copy.gz
-		// this delete existing data of current section_tipo and copy all file pg data
 			$import_response = backup::import_from_copy_file( $options );
-
 
 		// set the counter of import ontology to last section_id.
 			$matrix_table	= common::get_matrix_table_from_tipo( $section_tipo );
@@ -434,7 +431,7 @@ class ontology_data_io {
 
 			$import_response = backup::import_from_copy_file( $options );
 
-			// debug
+		// debug
 			$import_response->debug = (object)[
 				'file_path' => $file_path
 			];
@@ -465,6 +462,13 @@ class ontology_data_io {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
+
+		// validate URL
+			if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+				$response->errors[] = 'Invalid URL provided';
+				$response->msg .= ' Invalid URL';
+				return $response;
+			}
 
 		// file_name
 			$file_name = basename( $url );
@@ -530,25 +534,41 @@ class ontology_data_io {
 			}
 
 		// Write downloaded file to local directory
-		$write = file_put_contents($ontology_io_path .'/'. $file_name, $data);
-		if ($write===false) {
-			debug_log(__METHOD__
-				. " Error writing downloaded ontology file " . PHP_EOL
-				. ' path: ' .to_string($ontology_io_path .'/'. $file_name) . PHP_EOL
-				. ' url param: ' . to_string($url)
-				, logger::ERROR
-			);
-			$response->errors[] = 'file writing fails';
-			$response->msg .= ' Error writing downloaded ontology file '.$file_name;
-			return $response;
+			$file_path = $ontology_io_path .'/'. $file_name;
+			$write = file_put_contents($file_path, $data);
+			if ($write===false) {
+				debug_log(__METHOD__
+					. " Error writing downloaded ontology file " . PHP_EOL
+					. ' path: ' .to_string($ontology_io_path .'/'. $file_name) . PHP_EOL
+					. ' url param: ' . to_string($url)
+					, logger::ERROR
+				);
+				$response->errors[] = 'file writing fails';
+				$response->msg .= ' Error writing downloaded ontology file '.$file_name;
+				return $response;
+			}
+
+		// file size
+		try {
+			$file_size = format_size_units( filesize($file_path) );
+		} catch (Exception $e) {
+			$response->errors[] = $e->getMessage();
+			$file_size = null;
 		}
+
+		// total time
+		$total_time = exec_time_unit($start_time,'ms').' ms';
 
 		// response
 		$response->result = true;
 		$response->msg = count($response->errors)===0
 			? 'OK. Request done successfully [download_remote_ontology_file] file: ' . $file_name
 			: 'Request done with errors [download_remote_ontology_file] file: ' . $file_name;
-		$response->msg .= ' | '. exec_time_unit($start_time,'ms').' ms';
+		$response->msg .= ' | '. $total_time;
+		$response->total_time	= $total_time;
+		$response->file_path	= $file_path;
+		$response->file_size	= $file_size;
+
 
 		return $response;
 	}//end download_remote_ontology_file
