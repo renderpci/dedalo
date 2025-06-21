@@ -375,61 +375,91 @@ const render_area_item = function(item, datalist, value, self) {
 			const change_handler = async (e) => {
 				e.preventDefault()
 
-				// input_value
-					const input_value = input_checkbox.checked
-							? 2
-							: input_checkbox.indeterminate
-								? 1
-								: 0
+				// add main node loading style
+				self.node.classList.add('loading')
 
-				// parents. propagate value to parents
-					const parents = await self.get_parents(input_checkbox.item)
-					const parents_length = parents.length
+				// execute decoupled
+				dd_request_idle_callback(
+				() => {
 
-					if (input_value>=2) {
+					// input_value
+						const input_value = input_checkbox.checked
+								? 2
+								: input_checkbox.indeterminate
+									? 1
+									: 0
 
-						for (let i = 0; i < parents_length; i++) {
+					// parents. propagate value to parents
+						const parents = self.get_parents(input_checkbox.item);
+						const parents_length = parents.length;
 
-							const current_parent = parents[i]
+						// children
+						const children = self.get_children(input_checkbox.item);
+						const children_length = children.length;
 
-							// update parent item data
-								self.update_value(current_parent, 2)
+						for (let i = children_length - 1; i >= 0; i--) {
+							const child = children[i]
+							if( child.tipo === child.section_tipo){
+								self.update_value(child, input_value)
+							}
 						}
 
-					}else{
+						// Parents
+						// if the value is >= 2 set all parents with the value (give access to all parent chain)
+						if (input_value>=2) {
 
-						parents_loop : for (let i = 0; i < parents_length; i++) {
+							for (let i = 0; i < parents_length; i++) {
 
-							const current_parent = parents[i]
+								const current_parent = parents[i]
 
-							// children
-							const current_children			= datalist.filter(el => el.parent===current_parent.tipo)
-							const current_children_length	= current_children.length
-							for (let j = 0; j < current_children_length; j++) {
-
-								const child = current_children[j]
-
-								// exclude self
-									if (child.tipo===input_checkbox.item.tipo) {
-										continue;
-									}
-
-								const found = self.filled_value.find(el => el.tipo===child.tipo)
-								if (found && found.value>=2) {
-									break parents_loop;
-								}
+								// update parent item data
+									self.update_value(current_parent, 2)
 							}
 
-							// update parent item data
+						}else{
+							// if the value is 1 or 0
+							// check all direct children or all the parents chain
+							// if any child has set 2 as value stop because its necessary give access to it by its parents chain.
+							parents_loop : for (let i = 0; i < parents_length; i++) {
+
+								const current_parent = parents[i]
+								// children
+								// only direct children are necessary
+								// because the children of the children give the access of its parent (the sibling of the node)
+								const current_children			= datalist.filter(el => el.parent===current_parent.tipo)
+								const current_children_length	= current_children.length
+								for (let j = 0; j < current_children_length; j++) {
+
+									const child = current_children[j]
+
+									// exclude self
+									// its value has changed to 0 so it doesn't need give access by the parent chain
+										if (child.tipo===input_checkbox.item.tipo) {
+											continue;
+										}
+									// find every value of the direct children
+									// if any child has value set to 2, stop the propagation because it need give access from its parents.
+									// break the parent loop
+									const found = self.filled_value.find(el => el.tipo===child.tipo)
+									if (found && found.value>=2) {
+										break parents_loop;
+									}
+								}
+								// only when the all direct child of the parent chain has not value
+								// update parent item data
 								self.update_value(current_parent, input_value)
+							}
 						}
-					}
 
-				// update self item data
-					self.update_value(item, input_value)
+					// update self item data
+						self.update_value(item, input_value)
 
-				// show_save_button_
-					event_manager.publish( 'show_save_button_' + self.id )
+					// show_save_button_
+						event_manager.publish( 'show_save_button_' + self.id )
+
+					// remove main node loading style
+					self.node.classList.remove('loading')
+				})
 			}//end change_handler
 			input_checkbox.addEventListener('change', change_handler)
 
@@ -510,36 +540,34 @@ const render_area_item = function(item, datalist, value, self) {
 					parent			: li
 				})
 
+				// loading_node. Display an text 'Checking...' while radio group is preparing
+				const loading_node = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'loading',
+					inner_html		: 'Checking...',
+					parent			: li
+				})
+
 				// children create radio_group for permissions_global
-					// exclude some root areas/sections to reduce the CPU usage
-					const exclude_sections = ['dd5','ontology40','dd242','dd69','dd35','dd630','dd207','dd770','dd356','dd100','dd355','dd14']
-					if (!exclude_sections.includes(section_tipo) && section_tipo.indexOf('ontologytype')===-1) {
-						when_in_viewport(permissions_global, () => {
-							const loading_node = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'loading_node loading',
-								inner_html		: 'Checking... ',
-								parent			: permissions_global
-							})
-							dd_request_idle_callback(
-								() => {
-									self.get_children(item, datalist)
-									.then(function(children){
-										loading_node.remove()
-										const radio_group = create_global_radio_group(
-											self,
-											item,
-											permissions,
-											datalist,
-											branch, // HTMLElement components_container
-											children // array of nodes
-										)
-										permissions_global.appendChild(radio_group)
-									})
-								}
+					dd_request_idle_callback(
+						() => {
+
+							const children = self.get_children(item, datalist)
+
+							const radio_group = create_global_radio_group(
+								self,
+								item,
+								permissions,
+								datalist,
+								branch, // HTMLElement components_container
+								children // array of nodes
 							)
-						})
-					}
+
+							loading_node.remove()
+
+							permissions_global.appendChild(radio_group)
+						}
+					)
 
 			// add branch at last position
 			li.appendChild(branch)
@@ -569,7 +597,6 @@ const render_permissions_item = function(item, datalist, value, self) {
 	// short vars
 		const section_tipo			= item.section_tipo
 		const tipo					= item.tipo
-		// const direct_children	= datalist.find(el => el.section_tipo===section_tipo && el.parent===tipo)
 		const direct_children		= datalist.find(el => el.parent===tipo)
 
 	// item_value (permissions). get the item value
@@ -680,25 +707,26 @@ const create_permissions_radio_group = function(self, item, permissions) {
 						parent			: radio_input.parentNode.parentNode.parentNode
 					})
 
-					// get the all parents of the item
-
+					// Update all parents of the item
 					// parents_radio_butons. update the state of all parents, checking his children state
 						dd_request_idle_callback(
 							async () => {
 
 								// set the data of the parents and change the DOM node with update_value event
-									const children			= await self.get_children(item)
-									const children_length	= children.length
-									for (let i = children_length - 1; i >= 0; i--) {
-										const current_child = children[i]
-										self.update_value(current_child, input_value)
-									}
+								const children			= self.get_children(item)
+								const children_length	= children.length
+								for (let i = children_length - 1; i >= 0; i--) {
+									const current_child = children[i]
+									self.update_value(current_child, input_value)
+								}
 
 								// update self item data
-									self.update_value(item, input_value)
+								self.update_value(item, input_value)
 
-								await self.update_parents_radio_butons(item, input_value)
+								// update parents
+								self.update_parents_radio_butons(item, input_value)
 
+								// remove
 								self.node.classList.remove('loading')
 								loading_node.remove()
 							}
@@ -747,32 +775,29 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 	const fragment = new DocumentFragment()
 
 	// child_value
-		const children_length = children.length
 		// by default the child_value is 0 (without any permission)
 		// if all children has the same value (0,1 or 2) child_value will be the this common value
 		// else (if any child has a different value) the value has to be null, because is not possible represent all values in the node
-		let child_value			= 0
-		let last_value			= null
-		for (let i = children_length - 1; i >= 0; i--) {
+		const children_length = children.length
 
-			const child = children[i]
+		const children_keys = children.map(el =>{
+			return el.tipo+'_'+el.section_tipo
+		})
 
-			if(child.tipo === child.section_tipo) continue; // exclude areas
+		const children_key = new Set(children_keys);
 
-			const data_found = self.filled_value.find(el => el.tipo===child.tipo && el.section_tipo===child.section_tipo)
-			if(data_found){
-				if (last_value && data_found.value!==last_value) {
-					child_value = null
-					break;
-				}
-				last_value	= data_found.value
-				child_value	= data_found.value
-			}else{
-				// if any child has data, all of them will has 0
-				child_value = 0
-				break;
-			}
-		}
+		const children_data = self.filled_value.filter(el => {
+			const child_key = el.tipo+'_'+el.section_tipo
+			return  el.tipo !== el.section_tipo && children_key.has(child_key);
+		})
+
+		const data_values = children_data.map(el =>{
+			return el.value
+		})
+		const child_value = data_values.every(val => val === data_values[0])
+			? data_values[0]
+			: null;
+
 
 	const create_radio = (radio_value, title) => {
 
@@ -824,21 +849,29 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 					dd_request_idle_callback(
 						() => {
 
-							// update value
-							for (let j = 0; j < children_length; j++) {
+							const filled_length = self.filled_value.length
+							for (let i = filled_length - 1; i >= 0; i--) {
+								const item = self.filled_value[i];
+								const child_key = item.tipo+'_'+item.section_tipo;
+								if(children_key.has(child_key)){
 
-								const child = children[j]
-								if(child.tipo===child.section_tipo){
-									// areas case
-									event_manager.publish(
-										'update_area_radio_' + self.id + '_' + child.tipo + '_' + child.section_tipo,
-										input_value
-									)
-								}else{
-									// components case
-									self.update_value(child, input_value)
-								}
-							}
+									if(item.tipo===item.section_tipo){
+										// areas case
+										event_manager.publish(
+											'update_area_radio_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
+											input_value
+										)
+									}else{
+										// components case
+										item.value = parseInt(input_value)
+
+										event_manager.publish(
+											'update_item_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
+											input_value
+										);
+									};
+								};
+							};
 
 							// update parents
 							self.update_parents_radio_butons(item, input_value)
@@ -869,6 +902,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 		fragment.appendChild( create_radio(0, 'x') )
 		fragment.appendChild( create_radio(1, 'r') )
 		fragment.appendChild( create_radio(2, 'rw') )
+
 
 
 	return fragment
