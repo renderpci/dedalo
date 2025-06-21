@@ -1257,6 +1257,7 @@ class ontology {
 	* @test true
 	*/
 	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?RecordObj_dd {
+		$start_time=start_time();
 
 		// overwrite locator
 		// It check if exist any definition in local installation that overwrite the main node.
@@ -1273,7 +1274,8 @@ class ontology {
 
 		// tld
 			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  section_id)
-			$tld_tipo		= 'ontology7';
+			$tld_tipo	= 'ontology7';
+			$tld_data	= null;
 
 			// 1 get the tld data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1304,15 +1306,17 @@ class ontology {
 
 		// parent
 		// parent needs to know the parent tld of the locator to build the term_id
-			$parent_tipo		= 'ontology15';
+			$parent_tipo	= 'ontology15';
+			$parent_data	= null;
+
 			// 1 get the parent data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
-				$model_data = self::get_node_component_data( $overwrite_locator, $parent_tipo );
+				$parent_data = self::get_node_component_data( $overwrite_locator, $parent_tipo );
 			}
 			// 2 if the parent data has not defined, because it has not any overwrite (default behavior),
 			// or the overwrite has not value defined (partial definition in overwrite node),
 			// get the parent data with the main node definition.
-			$parent_data = $model_data ?? self::get_node_component_data( $locator, $parent_tipo );
+			$parent_data = $parent_data ?? self::get_node_component_data( $locator, $parent_tipo );
 
 			if( empty($parent_data) || empty($parent_data[0]) ){
 				// main dd nodes exception
@@ -1355,11 +1359,9 @@ class ontology {
 			// overwrites creates a incoherent situation in the ontology that can not be resolved.
 			// Models can be overwritten, but NOT if the term is a model or not!
 
-			$is_model_tipo		= 'ontology30';
+			$is_model_tipo = 'ontology30';
 			// get the component data
 			$is_model_data = self::get_node_component_data( $locator, $is_model_tipo );
-
-
 
 			if(empty($is_model_data)){
 
@@ -1382,6 +1384,7 @@ class ontology {
 
 		// model. Get the model tld and id
 			$model_tipo = 'ontology6';
+			$model_data = null;
 
 			// 1 get the model data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1431,6 +1434,7 @@ class ontology {
 			$jer_dd_record->set_model( $model_resolution );
 
 		// Descriptor
+			$descriptor = null;
 
 			// 1 get the descriptor value data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1490,6 +1494,7 @@ class ontology {
 			}
 
 		// translatable
+			$translatable = null;
 
 			// 1 get the translatable value data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1503,6 +1508,7 @@ class ontology {
 			$jer_dd_record->set_traducible( $translatable );
 
 		// relations
+			$relations = null;
 
 			// 1 get the relations data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1516,7 +1522,8 @@ class ontology {
 			$jer_dd_record->set_relaciones( $relations );
 
 		// Properties V5
-			$properties_v5_tipo			= 'ontology19';
+			$properties_v5_tipo	= 'ontology19';
+			$properties_v5_data	= null;
 
 			// 1 get v5 properties data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1538,6 +1545,7 @@ class ontology {
 
 		// Properties
 			$properties_tipo = 'ontology18';
+			$properties_data = null;
 
 			// 1 get properties data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1567,6 +1575,7 @@ class ontology {
 
 		// Properties CSS
 			$properties_css_tipo = 'ontology16';
+			$properties_css_data = null;
 
 			// 1 get the CSS properties data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1584,6 +1593,7 @@ class ontology {
 
 		// Properties RQO
 			$properties_rqo_tipo = 'ontology17';
+			$properties_rqo_data = null;
 
 			// 1 get the RQO properties data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1609,6 +1619,7 @@ class ontology {
 			$jer_dd_record->set_properties( $properties );
 
 		// term
+			$term = null;
 
 			// 1 get the term value from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1621,6 +1632,17 @@ class ontology {
 
 			// set the term into jet_dd_record
 			$jer_dd_record->set_term( $term );
+
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$total =  exec_time_unit($start_time).' ms';
+				debug_log(__METHOD__
+					.' jer_dd_record exec_time_unit: ' . $total . " [$section_tipo-$section_id]" . PHP_EOL
+					.' overwrite_locator: ' . json_encode($overwrite_locator)
+					, logger::DEBUG
+				);
+			}
 
 
 		return $jer_dd_record;
