@@ -1274,8 +1274,8 @@ class ontology {
 
 		// tld
 			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  section_id)
-			$tld_tipo	= 'ontology7';
-			$tld_data	= null;
+			$tld_tipo = 'ontology7';
+			$tld_data = null;
 
 			// 1 get the tld data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1297,17 +1297,17 @@ class ontology {
 				return null;
 			}
 			// create the term_id
-			$tld = reset( $tld_data );
-			$terminoID = $tld . $section_id;
+			$tld		= $tld_data[0];
+			$terminoID	= $tld . $section_id;
 
-		// create the RecordObj_dd with the term_id and set the tld
+			// create the RecordObj_dd with the term_id and set the tld
 			$jer_dd_record = new RecordObj_dd( $terminoID );
 			$jer_dd_record->set_tld( $tld );
 
 		// parent
 		// parent needs to know the parent tld of the locator to build the term_id
-			$parent_tipo	= 'ontology15';
-			$parent_data	= null;
+			$parent_tipo = 'ontology15';
+			$parent_data = null;
 
 			// 1 get the parent data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1352,7 +1352,6 @@ class ontology {
 			}
 
 		// is model
-
 			// IMPORTANT
 			// NOT overwrite it!, needs to be coherent with the main definition.
 			// Models are defined and can't be created locally.
@@ -1383,8 +1382,8 @@ class ontology {
 			$jer_dd_record->set_esmodelo( $is_model );
 
 		// model. Get the model tld and id
-			$model_tipo = 'ontology6';
-			$model_data = null;
+			$model_tipo	= 'ontology6';
+			$model_data	= null;
 
 			// 1 get the model data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
@@ -1957,6 +1956,7 @@ class ontology {
 	* @test true
 	*/
 	public static function insert_jer_dd_record( string $section_tipo, string|int $section_id ) : ?string {
+		$start_time=start_time();
 
 		$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $section_tipo, $section_id );
 		if (empty($jer_dd_record)) {
@@ -1970,6 +1970,13 @@ class ontology {
 		}
 
 		$term_id = $jer_dd_record->insert();
+
+		if(SHOW_DEBUG===true) {
+			debug_log(__METHOD__
+				. " Total time insert_jer_dd_record: " . exec_time_unit($start_time,'ms').' ms'
+				, logger::DEBUG
+			);
+		}
 
 
 		return $term_id;
@@ -2005,7 +2012,7 @@ class ontology {
 		}
 
 		$search = search::get_instance(
-			$sqo, // object sqo
+			$sqo // object sqo
 		);
 		$search_response	= $search->search();
 		$ar_records			= $search_response->ar_records;
