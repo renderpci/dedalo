@@ -477,11 +477,6 @@ data_manager.request = async function(options) {
 */
 async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
 
-	// Check offline first
-	if (!navigator.onLine) {
-		throw new Error('Offline - please check your network connection');
-	}
-
 	let attempts = 0;
 
 	while (attempts < retries) {
