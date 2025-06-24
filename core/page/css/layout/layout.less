@@ -1014,11 +1014,15 @@
 		font-size: 1em;
 		background-color: @color_white_dirty;
 
+		// first UL defines max height
+		>ul {
+			max-height: 80vh;
+			overflow: auto;
+		}
+
 		ul {
 			display: block;
 			position: relative;
-			max-height: 80vh;
-			overflow: auto;
 
 			// Standard section container (receive all JSON elements inside)
 			&.list_container {
@@ -1045,6 +1049,7 @@
 					color: @color_white;
 					// Avoid click events affect here (received with :after)
 					pointer-events: none;
+					padding-right: 0.33rem;
 
 					&:after {
 						content: 'X';
