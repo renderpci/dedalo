@@ -565,6 +565,13 @@ export const open_tool = async (options) => {
 			 : options.tool_context
 				? clone(options.tool_context) // (!) full clone here to avoid circular references
 				: null
+
+		// check tool context
+		if (!tool_context) {
+			console.error('The tool cannot be opened without context. Check the tools registration in the current user\'s profile.');
+			return false
+		}
+
 		// caller. Instance that calls the tool, normally a component or section
 		const caller = options.caller
 		// caller_options. Object with additional data for the the tool
