@@ -2830,6 +2830,7 @@ class diffusion_sql extends diffusion  {
 							. " Ignored table '$current_table_tipo'. Bad structure configuration for 'real_table' of 'table_alias'. Empty real table" . PHP_EOL
 							. ' current_table_tipo: ' . to_string($current_table_tipo) . PHP_EOL
 							. ' current_table model: ' . to_string($model_name) . PHP_EOL
+							. ' ar_related_tables: ' . to_string($ar_related_tables) . PHP_EOL
 							. ' current_table label: ' . RecordObj_dd::get_termino_by_tipo($current_table_tipo, true)
 							, logger::ERROR
 						);
