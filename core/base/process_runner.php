@@ -37,7 +37,7 @@
 	}
 
 // config. Starts a new session with forced id from command arguments
-	include (dirname(dirname(dirname(__FILE__)))) .'/config/config.php';
+	include dirname(__FILE__, 3).'/config/config.php';
 
 // unlock session. Only use for read
 	session_write_close();

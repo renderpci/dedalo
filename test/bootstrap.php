@@ -17,7 +17,7 @@
 	define('IS_UNIT_TEST', true);
 
 // config file
-	require_once dirname(dirname(__FILE__)) . '/config/config.php';
+	require_once dirname(__FILE__, 2) . '/config/config.php';
 
 // check is development server. if not, throw to prevent malicious access
 	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {

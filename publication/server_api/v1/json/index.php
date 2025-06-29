@@ -28,7 +28,7 @@
 
 
 // headers (configure it to allow CORS access, etc.)
-	$headers_file = dirname(dirname(__FILE__)) . '/config_api/server_config_headers.php';
+	$headers_file = dirname(__FILE__, 2). '/config_api/server_config_headers.php';
 	include $headers_file;
 
 	// print as JSON data
@@ -87,7 +87,7 @@
 // config . Load server api config vars
 	// If received code if different to defined code, and error was launched
 	// lang for the api was fixed here with received lang var or default value is used if not
-	if(!include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php')) {
+	if(!include(dirname(__FILE__, 2) .'/config_api/server_config_api.php')) {
 		exit("Error. Server API config file not found");
 	}
 

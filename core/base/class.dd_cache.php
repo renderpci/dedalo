@@ -20,7 +20,7 @@ class dd_cache {
 
 		// options
 			// string process_file. File to manage the data process
-			// Sample: dirname(dirname(__FILE__)) . '/component_security_access/calculate_tree.php'
+			// Sample: dirname(__FILE__, 2) . '/component_security_access/calculate_tree.php'
 			$process_file	= $options->process_file;
 			// object data
 			$data			= $options->data;

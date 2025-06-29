@@ -42,11 +42,11 @@ $global_start_time = hrtime(true);
 
 
 // php version check
-	$version = explode('.', phpversion());
-	if ($version[0]<8 || ($version[0]==8 && $version[1]<3)) {
+	$minimum_version = '8.3.0';
+	if (version_compare(phpversion(), $minimum_version, '<')) { // Check for PHP 8.3.0 or higher
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed. This PHP version is not supported ('.phpversion().'). You need: >=8.1';
+			$response->msg		= 'Error. Request failed. This PHP version is not supported ('.phpversion().'). You need: >='.$minimum_version;
 		error_log('Error: '.$response->msg);
 		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		exit( 0 );
@@ -56,7 +56,8 @@ $global_start_time = hrtime(true);
 
 // file includes
 	// config dedalo
-	include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
+	define('APP_ROOT', dirname(__DIR__, 4)); // Go up 4 directories from this file to the root
+	include APP_ROOT . '/config/config.php';
 
 
 

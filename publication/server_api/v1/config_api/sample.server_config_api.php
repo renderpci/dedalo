@@ -7,7 +7,7 @@
 
 
 // api_root. API base directory
-	define('API_ROOT', dirname(dirname(__FILE__)));
+	define('API_ROOT', dirname(__FILE__, 2));
 
 
 

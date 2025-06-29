@@ -42,7 +42,7 @@ $text = trim(stripslashes(urldecode($text)));
 $text = strip_tags($text, '');
 
 // tag type
-	$tag_image_dir = dirname(dirname(dirname(__FILE__))) . '/themes/default/tag_base';
+	$tag_image_dir = dirname(__FILE__, 3). '/themes/default/tag_base';
 	$type = false;
 	$fill_color = new stdClass();
 		$fill_color->n = '#FFaa00'; // normal state
@@ -231,7 +231,7 @@ $text = strip_tags($text, '');
 				error_log('Ignored bad locator from text:' . $text);
 				return;
 			}
-			include(dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php');
+			require_once dirname(__FILE__, 4).'/config/config.php';
 			$section_tipo	= $locator->section_tipo;
 			$section_id		= $locator->section_id;
 			$component_tipo	= $locator->component_tipo;
