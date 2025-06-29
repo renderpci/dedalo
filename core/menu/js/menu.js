@@ -295,7 +295,7 @@ menu.prototype.open_tool_user_admin_handler = function() {
 	// tool_user_admin Get the user_admin tool to be fired
 		const tool_user_admin = self.context.tools.find(el => el.model==='tool_user_admin')
 		if (!tool_user_admin) {
-			console.error('Tool user admin is not available in tools:', self.context.tools);
+			console.error('Tool user admin is not available in tools. Check your user profile tools:', self.context.tools);
 			return
 		}
 
