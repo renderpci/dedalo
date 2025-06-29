@@ -43,7 +43,7 @@
 		}
 
 		.warning {
-			color: #fb6c0f;
+			color: @color_warning;
 			font-weight: 500;
 		}
 
@@ -79,10 +79,10 @@
 			input {
 				width: 100%;
 				&.mandatory {
-					border-left: 2px solid red;
+					border-left: 2px solid @color_danger;
 
 					&.empty {
-						border-right: 2em solid red;
+						border-right: 2em solid @color_danger;
 					}
 				}
 			}
