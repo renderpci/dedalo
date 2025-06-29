@@ -1,5 +1,5 @@
 <?php
-$root_dir = dirname(dirname(dirname(dirname(dirname(__FILE__)))));
+$root_dir = dirname(__FILE__, 5);
 // includes server api
 include(dirname(__FILE__).'/class.ts_term.php');
 include(dirname(__FILE__).'/class.indexation_node.php');

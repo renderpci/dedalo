@@ -14,10 +14,11 @@
 // column_id (section_tool list)
 .column_section_id > .button_edit.list_tool_subtitles {
 
-	&:hover{
+	&:hover {
 		background-color: @tool_color;
 	}
-	>.icon{
+
+	>.icon {
 		-webkit-mask-image: url('../img/icon.svg');
 		mask-image: url('../img/icon.svg');
 	}
@@ -53,9 +54,11 @@
 			>.lang_selector {
 				display: flex;
 				align-items: center;
+
 				>.lang_label {
 					padding-right: 0.33rem;
 				}
+
 				>select {
 
 				}
@@ -111,20 +114,21 @@
 				}
 			}
 
-			.av_control_buttons{
+			.av_control_buttons {
 				text-align: center;
 			}
 
 			.slider_container {
 				margin: 1em;
-				text-alignt: center;
+				text-align: center;
 
-				.slider_label{
+				.slider_label {
 					font-size: 14px;
 					font-weight: lighter;
 					width: 100%;
 					padding: 10px 0px;
 				}
+
 				.slider {
 					width: 100%;
 					position: relative;
@@ -203,11 +207,8 @@
 				>.btn_subtitles {
 					width: 12rem;
 					margin: 1rem;
-
-					&:hover {
-
-					}
 				}
+
 				>input{
 					margin: 1rem;
 					width: 6rem;
@@ -238,9 +239,6 @@
 	background-color: @tool_color;
 }
 
-
-
-
 /* COMMON
 ------------------------------------------------------ */
 	.tool_subtitles_left, .tool_subtitles_right {
@@ -251,13 +249,11 @@
 		height: 98%;
 	}
 
-
 /* LEFT AREA (text)
 ------------------------------------------------------ */
 	.tool_subtitles_left {
 		width: 44.5%;
 	}
-
 
 /* RIGHT AREA (media)
 ------------------------------------------------------ */
@@ -265,12 +261,12 @@
 		width: 55.3%;
 		overflow: hide;
 		margin: 0;
-		}
-		/*-- image content --*/
-		.tool_subtitles_right .css_wrap_image {
+
+		// image content
+		.css_wrap_image {
 			height: 100%;
-			}
-			.tool_subtitles_right .css_wrap_image > .content_data {
+
+			>.content_data {
 				position: absolute;
 				padding: 0;
 				width: 100%;
@@ -278,11 +274,12 @@
 				display: block;
 				overflow: auto;
 			}
-			canvas {
-				display: block;
-			}
+		}
+	}
 
-
+	canvas {
+		display: block;
+	}
 
 /* INSPECTOR
 ------------------------------------------------------ */
@@ -309,8 +306,6 @@
 		user-select: none;          /* Likely future */
 	}
 
-
-
 /* TAGS INSPECTOR
 ------------------------------------------------------ */
 	#tags_inspector {
@@ -319,14 +314,11 @@
 		width: 100%;
 	}
 
-
-
 /* AV ADD-ON
 ------------------------------------------------------ */
 	.video_options {
 
-		}
-		.video_options h1 {
+		h1 {
 			font-size: 20px;
 			padding: 0;
 			padding-left: 15px;
@@ -336,105 +328,105 @@
 			float: left;
 			margin-right: 10px;
 		}
-		ul.tool_subtitles_keys {
-			/*background-color: #DEBCA1;*/
-			width: 100%;
-			padding-left: 15px;
-			padding-right: 15px;
-			text-align: center;
-			}
-			.tool_subtitles_keys li {
-				/*background-color: #B9DECA;*/
-				display: inline-block;
-				margin: 0;
-				text-align: left;
-				//width: 150px;
-				min-width: 135px;
-				}
-				.tool_subtitles_keys li label {
-					display: block;
-					padding: 4px;
-					padding-left: 0;
-				}
-				.tool_subtitles_keys li input {
-					width: 40px;
-					text-align: center;
-					padding: 4px;
-				}
-				.tool_subtitles_keys li span {
-					display: inline-block;
-					padding: 4px;
-					text-transform: uppercase;
-				}
+	}
 
-		.tool_subtitles_wrap {
+	ul.tool_subtitles_keys {
+		/*background-color: #DEBCA1;*/
+		width: 100%;
+		padding-left: 15px;
+		padding-right: 15px;
+		text-align: center;
+	}
 
-			}
-			.tool_subtitles_wrap .css_button_generic {
-				margin-top: 0
-			}
+	.tool_subtitles_keys li {
+		display: inline-block;
+		margin: 0;
+		text-align: left;
+		min-width: 135px;
+	}
 
+	.tool_subtitles_keys li label {
+		display: block;
+		padding: 4px;
+		padding-left: 0;
+	}
+
+	.tool_subtitles_keys li input {
+		width: 40px;
+		text-align: center;
+		padding: 4px;
+	}
+
+	.tool_subtitles_keys li span {
+		display: inline-block;
+		padding: 4px;
+		text-transform: uppercase;
+	}
+
+	.tool_subtitles_wrap {
+
+		.css_button_generic {
+			margin-top: 0
+		}
+	}
 
 	/* tools_container
 	---------------------------------------- */
 	.tools_container {
-		//background-color: #B0F5C3;
 		width: 100%;
 		line-height: 1em;
-		}
-		.tools_container .link {
+
+		.link {
 			float: left;
 			padding-left: 5px;
 			padding-right: 5px;
 		}
-		.tools_container .icon_bs {
+
+		.icon_bs {
 			zoom: 1.3;
 			vertical-align: text-bottom;
 			margin-right: 2px;
 		}
+	}
 
-		/* text_area_tool_subtitles wrap
-		---------------------------------------- */
-		.wrap_component.text_area_tool_subtitles {
-			position: absolute;
-			height: calc(100% + 1px); //width: calc(100.5% + 4px); // Adjust as needed
-			//background-color: #40F588
-			//padding: 0;
+	/* text_area_tool_subtitles wrap
+	---------------------------------------- */
+	.wrap_component.text_area_tool_subtitles {
+		position: absolute;
+		height: calc(100% + 1px);
+	}
+
+
+	// LEFT Override
+	#tool_subtitles_left {
+
+		// TEXT AREA Override
+		.wrap_component.text_area_tool_subtitles.viewing_glyphs {
+			height: 50vh;
+			background-color: #CDF6CF;
+			position: relative;
+			float: none;
+			display: block;
+			overflow: hidden;
 		}
 
+		// AUTOCOMPLETE HI Override
+		.wrap_component_tool_subtitles {
+			height: 50vh;
+			background-color: #FAF6B1;
 
+			.content_data {
+				width: 100%;
+			}
 
-		// LEFT Override
-		#tool_subtitles_left {
+			.css_autocomplete_hi_button_close, .css_autocomplete_hi_valor {
+				display: none;
+			}
 
-			// TEXT AREA Override
-			.wrap_component.text_area_tool_subtitles.viewing_glyphs {
-				height: 50vh;
-				background-color: #CDF6CF;
+			.toponymy_list_button_options {
 				position: relative;
-				float: none;
-				display: block;
-				overflow: hidden;
+				top: 5px;
+				right: 5px;
 			}
-
-			// AUTOCOMPLETE HI Override
-			.wrap_component_tool_subtitles {
-				height: 50vh;
-				background-color: #FAF6B1;
-				//display: none;
-
-				.content_data {
-					width: 100%;
-				}
-				.css_autocomplete_hi_button_close, .css_autocomplete_hi_valor {
-					display: none;
-				}
-
-				.toponymy_list_button_options {
-					position: relative;
-					top: 5px;
-					right: 5px;
-				}
-			}
-
 		}
+	}

@@ -13,7 +13,9 @@ $global_start_time = hrtime(true);
 	define('PREVENT_SESSION_LOCK', true);
 
 // config file
-	if( !include_once dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php' ) {
+	$config_path = dirname(__DIR__, 3) . '/config/config.php'; // Go up 3 directories from this file to the root
+	if( !include_once $config_path ) {
+
 		echo '
 		window.page_globals = { "error" : "Error loading config file" };
 		const SHOW_DEBUG = false,

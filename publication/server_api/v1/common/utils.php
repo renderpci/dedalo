@@ -3,7 +3,7 @@
  * CORE_FUNCTIONS
  * Include core_functions to prevent duplicate functions in the publication server
  */
-include dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/shared/core_functions.php';
+include dirname(__FILE__, 5) . '/shared/core_functions.php';
 
 
 

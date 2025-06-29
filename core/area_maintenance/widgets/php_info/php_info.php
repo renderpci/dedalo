@@ -2,7 +2,7 @@
 
 
 // config dedalo
-require dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
+require dirname(__FILE__, 5).'/config/config.php';
 
 
 if(login::is_logged()!==true) {

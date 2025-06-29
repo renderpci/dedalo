@@ -35,7 +35,7 @@
 		define('DEDALO_PROTOCOL', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
 
 	// root paths
-		define('DEDALO_ROOT_PATH',	dirname(dirname(__FILE__)));
+		define('DEDALO_ROOT_PATH',	dirname(__FILE__, 2));
 		define('DEDALO_ROOT_WEB',	php_sapi_name()==='cli'
 			? '/dedalo'
 			: '/' . explode('/', $_SERVER["REQUEST_URI"])[1]
@@ -140,7 +140,7 @@
 
 
 // SESSIONS
-	define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
+	define('DEDALO_SESSIONS_PATH', dirname(DEDALO_ROOT_PATH, 2) . '/sessions');
 
 	if (session_status()!==PHP_SESSION_ACTIVE) {
 
@@ -219,7 +219,7 @@
 	// Note that backups are fired in background when user is logging when the time lapse is bigger than this value
 	define('DEDALO_BACKUP_TIME_RANGE', 8);
 	// backups paths. Keep the backup directory outside the scope of httpdocs for security reasons.
-	define('DEDALO_BACKUP_PATH',			dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
+	define('DEDALO_BACKUP_PATH',			dirname(DEDALO_ROOT_PATH, 2) . '/backups');
 	define('DEDALO_BACKUP_PATH_TEMP',		DEDALO_BACKUP_PATH . '/temp');
 	define('DEDALO_BACKUP_PATH_DB',			DEDALO_BACKUP_PATH . '/db');
 	define('DEDALO_BACKUP_PATH_ONTOLOGY',	DEDALO_BACKUP_PATH . '/ontology');
