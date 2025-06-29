@@ -340,18 +340,22 @@ const render_image_node = function(self, file_info, content_value) {
 			object_node.data			= base_svg_url_default
 
 			if (self.permissions>1) {
-				// upload tool is open on click
-				content_value.addEventListener('click', function(e) {
-					e.stopPropagation();
-					// tool_upload. Get the tool context to be opened
-					const tool_upload = self.tools.find(el => el.model==='tool_upload')
-					// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-				})
-				content_value.classList.add('clickable')
+				// tool_upload. Get the tool context to be opened
+				const tool_upload = self.tools.find(el => el.model==='tool_upload')
+				if (tool_upload) {
+					// upload tool is open on click
+					const click_handler = (e) => {
+						e.stopPropagation();
+
+						// open_tool (tool_common)
+						open_tool({
+							tool_context	: tool_upload,
+							caller			: self
+						})
+					}
+					content_value.addEventListener('click', click_handler)
+					content_value.classList.add('clickable')
+				}
 			}
 		}
 
