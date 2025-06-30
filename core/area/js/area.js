@@ -41,12 +41,10 @@ export const area = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* extend area functions from area common
 */
 // prototypes assign
 	area.prototype.init				= area_common.prototype.init
-	// area.prototype.build			= area_common.prototype.build
-	// area.prototype.render		= common.prototype.render
 	area.prototype.refresh			= common.prototype.refresh
 	area.prototype.destroy			= common.prototype.destroy
 	area.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -184,10 +182,11 @@ area.prototype.build = async function(autoload=true) {
 
 /**
 * RENDER
+* Handles DOM render nodes.
 * @param object options
 *	render_level : level of deep that is rendered (full | content)
-* @return promise
-*	node first DOM node stored in instance 'node' array
+* @return result_node
+*	first DOM node stored in instance 'node' array (wrapper)
 */
 area.prototype.render = async function(options={}) {
 

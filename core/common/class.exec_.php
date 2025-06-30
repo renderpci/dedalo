@@ -10,16 +10,19 @@ class exec_ {
 
 	/**
 	* EXEC COMMAND
+	* Exec the given command in the php CLI
+	* @param string $command
+	* @param string $to='2>&1'
 	* @return bool
 	*/
 	public static function exec_command(string $command, string $to='2>&1') : bool {
 
-		$output = NULL;
+		$output = null;
 
 		try {
 
 			// escape command for security
-			$command = escapeshellcmd($command) . ' '.$to;
+			$command = escapeshellcmd( $command ) . ' '. $to;
 
 			// Exec command and get output
 			$output = shell_exec( $command );
@@ -49,9 +52,9 @@ class exec_ {
 				, logger::ERROR
 			);
 
-			// return ('Exception: '. $e->getMessage(). "\n");
 			return false;
 		}
+
 
 		return true;
 	}//end exec_command
@@ -82,7 +85,6 @@ class exec_ {
 						. ' file: ' . $file
 						, logger::WARNING
 					);
-					// throw new Exception("Error Processing media file", 1);
 				}
 
 			// PID. Output returns the PID as ["3647"]
@@ -99,8 +101,6 @@ class exec_ {
 				. ' Exception message: ' . $e->getMessage()
 				, logger::ERROR
 			);
-
-			// return ('Exception: '. $e->getMessage(). "\n");
 		}
 
 		return $PID;
@@ -286,7 +286,7 @@ class exec_ {
 	    return array (
 			'exit_status'	=> $matches[0],
 			'output'		=> str_replace("Exit status : " . $matches[0], '', nl2br( trim($complete_output) ))
-         );
+        );
 	}//end live_execute_command
 
 
