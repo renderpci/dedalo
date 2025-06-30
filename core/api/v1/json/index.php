@@ -57,7 +57,9 @@ $global_start_time = hrtime(true);
 // file includes
 	// config dedalo
 	define('APP_ROOT', dirname(__DIR__, 4)); // Go up 4 directories from this file to the root
-	include APP_ROOT . '/config/config.php';
+	if (!include APP_ROOT . '/config/config.php') {
+		throw new Exception('Config file not found');
+	}
 
 
 
