@@ -168,7 +168,7 @@ $global_start_time = hrtime(true);
 
 
 // dd_dd_manager
-	// try {
+	try {
 
 		$dd_manager	= new dd_manager();
 		$response	= $dd_manager->manage_request( $rqo );
@@ -194,34 +194,21 @@ $global_start_time = hrtime(true);
 					: null;
 			}
 
-	// } catch (Throwable $e) { // For PHP 7
+	} catch (Throwable $e) {
 
-	// 	$response = new stdClass();
-	// 		$response->result	= false;
-	// 		$response->msg		= (SHOW_DEBUG===true)
-	// 			? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
-	// 			: 'Throwable Exception when calling Dédalo API. Contact with your admin';
-	// 		$response->errors	= ['Throwable Exception when calling Dédalo API'];
-	// 		$response->debug	= (object)[
-	// 			'rqo' => $rqo
-	// 		];
+		// Final fallback error handling
+		http_response_code(500);
 
-	// 	// trigger_error($e->getMessage());
-
-	// } catch (Exception $e) { // For PHP 5
-
-	// 	$response = new stdClass();
-	// 		$response->result	= false;
-	// 		$response->msg	= (SHOW_DEBUG===true)
-	// 			? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
-	// 			: 'Exception when calling Dédalo API. Contact with your admin';
-	// 		$response->errors	= ['Exception when calling Dédalo API'];
-	// 		$response->debug	= (object)[
-	// 			'rqo' => $rqo
-	// 		];
-
-	// 	// trigger_error($e->getMessage());
-	// }
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= (SHOW_DEBUG===true)
+				? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
+				: 'Throwable Exception when calling Dédalo API. Contact with your admin';
+			$response->errors	= ['Throwable Exception when calling Dédalo API'];
+			$response->debug	= (object)[
+				'rqo' => $rqo
+			];
+	}
 
 
 
