@@ -12,7 +12,7 @@ $global_start_time = hrtime(true);
 
 
 // header print as JSON data
-	header('Content-Type: application/json');
+	header('Content-Type: application/json; charset=utf-8');
 
 
 
