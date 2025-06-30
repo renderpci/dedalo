@@ -2617,14 +2617,16 @@ final class dd_core_api {
 	* GET_LANG_LABELS
 	* Load requested lang file content
 	* (JSON object generated on update Ontology)
+	* Uses fallback to DEDALO_APPLICATION_LANGS_DEFAULT when the file do not exists
 	* @param string $lang
-	* 	Normally DEDALO_APPLICATION_LANG like 'lg-eng'
+	*  Normally DEDALO_APPLICATION_LANG like 'lg-eng'
 	* @return string $lang_labels
-	* {
+	*  Stringified object with all definitions
+	*  {
 	* 	"diameter": "Diameter",
 	*	"code": "Code",
 	* 	...
-	* }
+	*  }
 	*/
 	public static function get_lang_labels(string $lang) : string {
 
@@ -2632,12 +2634,17 @@ final class dd_core_api {
 		$lang_labels	= file_get_contents(DEDALO_CORE_PATH . $lang_path);
 
 		// file not found case
-		if ($lang_labels===false) {
+		if ($lang_labels===false || empty($lang_labels)) {
 			debug_log(__METHOD__
-				.' File not found: ' . DEDALO_CORE_PATH . $lang_path
+				.' Lang file not found. Falling back to DEDALO_APPLICATION_LANGS_DEFAULT: ' . DEDALO_APPLICATION_LANGS_DEFAULT . PHP_EOL
+				.' lang_path: ' . $lang_path . PHP_EOL
+				.' lang_labels: ' . to_string($lang_labels)
 				, logger::ERROR
 			);
-			$lang_labels = '{"invalid_lang_file" : "Error on get current lang file: '.$lang_path.'"};' . PHP_EOL;
+
+			// fallback to default application lang
+			$lang_path		= '/common/js/lang/' . DEDALO_APPLICATION_LANGS_DEFAULT . '.js';
+			$lang_labels	= file_get_contents(DEDALO_CORE_PATH . $lang_path);
 		}
 
 
