@@ -2876,8 +2876,7 @@ abstract class common {
 		// check section tipo model (allow areas)
 			if ($section_tipo!=='self') {
 				$section_model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
-				if ($section_model!=='section' && strpos($section_model, 'area_')===false) {
-					// throw new Exception("Error Processing Request. Model is not section ($section_tipo - $section_model)", 1);
+				if ($section_model!=='section' && strpos($section_model, 'area')!==0) {
 					debug_log(__METHOD__
 						. " Error. Invalid section/area tipo " . PHP_EOL
 						. ' section_tipo: '  . to_string($section_tipo) . PHP_EOL

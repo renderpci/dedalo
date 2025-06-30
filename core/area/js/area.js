@@ -92,11 +92,11 @@ area.prototype.build = async function(autoload=true) {
 			}
 
 			// rqo build
-			const action	= 'search'
+			const action	= 'get_data'
 			const add_show	= self.add_show ? self.add_show : self.mode==='tm' ? true : false
 			self.rqo = self.rqo || await self.build_rqo_show(
 				self.request_config_object, // object request_config_object
-				action,  // string action like 'search'
+				action,  // string action like 'get_data'
 				add_show // bool add_show
 			)
 		}
