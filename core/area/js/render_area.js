@@ -24,7 +24,11 @@ export const render_area = function() {
 /**
 * EDIT
 * Render node for use in edit
-* @return HTMLElement
+* @param object options
+* {
+* 	render_level : string
+* }
+* @return HTMLElement wrapper
 */
 render_area.prototype.edit = async function(options) {
 
@@ -39,12 +43,12 @@ render_area.prototype.edit = async function(options) {
 		}
 
 	// buttons
-		//const current_buttons = await buttons(self);
+		// const current_buttons = await buttons(self);
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper =	ui.area.build_wrapper_edit(self, {
 			content_data : content_data
-			//buttons 	 : current_buttons
+			// buttons 	 : current_buttons
 		})
 
 	// css v6
@@ -86,6 +90,10 @@ render_area.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
+* @param object options
+* {
+* 	render_level : string 'full'
+* }
 * @return HTMLElement
 */
 render_area.prototype.list = async function(options={render_level:'full'}) {
@@ -97,21 +105,21 @@ render_area.prototype.list = async function(options={render_level:'full'}) {
 
 /**
 * CONTENT_DATA
+* Render content data DOM node
+* @param object self
+* 	area instance
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
-	const fragment = new DocumentFragment()
-
-
 	// content_data
-		const content_data = document.createElement("div")
-			  content_data.classList.add("content_data", self.type)
-			  content_data.appendChild(fragment)
+	const content_data = document.createElement('div')
+		  content_data.classList.add('content_data', self.type)
 
 
 	return content_data
 }//end content_data
+
 
 
 // @license-end

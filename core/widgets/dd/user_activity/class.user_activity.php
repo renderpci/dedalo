@@ -197,7 +197,6 @@ class user_activity extends widget_common {
 
 
 		}//end foreach ($ipo as $ipo_key => $current_ipo)
-			dump($dato, ' dato ++ '.to_string());
 
 
 		return $dato;
