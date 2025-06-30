@@ -1,5 +1,10 @@
-<?php
+<?php declare(strict_types=1);
+/**
+* Dédalo API Entry Point
+*/
 $global_start_time = hrtime(true);
+
+
 
 // Turn off PHP output compression
 	// ini_set('zlib.output_compression', false);
@@ -129,14 +134,17 @@ $global_start_time = hrtime(true);
 	}
 
 
+
 // debug test
 	if (DEVELOPMENT_SERVER) {
+		define('DEV_SERVER_DEFAULT_DELAY_MS', 12);
+		define('DEV_SERVER_SAVE_DELAY_MS', 300);
 		// Approximate real conditions by adding a small delay to the development servers,
 		// such as the local host.
-		usleep( 12 * 1000 ); // 12 ms
+		usleep( DEV_SERVER_DEFAULT_DELAY_MS * 1000 ); // 12 ms
 		// delay save
 		if (isset($rqo->action) && $rqo->action==='save') {
-			usleep( 300 * 1000 ); // 300 ms
+			usleep( DEV_SERVER_SAVE_DELAY_MS * 1000 ); // 300 ms
 		}
 	}
 
@@ -241,7 +249,7 @@ $global_start_time = hrtime(true);
 	// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
 	// $current = (hrtime(true) - $global_start_time) / 1000000;
 	// header('Server-Timing: API;dur='.$current);
-// header X-Processing-Time
+	// header X-Processing-Time
 	if (DEVELOPMENT_SERVER) {
 		header('X-Processing-Time: ' . (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']));
 	}
