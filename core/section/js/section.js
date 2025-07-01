@@ -460,14 +460,10 @@ section.prototype.build = async function(autoload=false) {
 
 			if (!self.context) {
 				// request_config_object. get the request_config_object from request_config
-				self.request_config_object = self.request_config
-					? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
-					: {}
+				self.request_config_object = self.request_config?.find(el => el.api_engine==='dedalo' && el.type==='main') || {}
 			}else{
 				// request_config_object. get the request_config_object from context
-				self.request_config_object = self.context && self.context.request_config
-					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
-					: {}
+				 self.request_config_object = self.context?.request_config?.find(el => el.api_engine==='dedalo' && el.type==='main') || {};
 			}
 
 			// check request_config_object misconfigured issues (type = 'main' missed in request_config cases)
