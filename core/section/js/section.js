@@ -617,16 +617,16 @@ section.prototype.build = async function(autoload=false) {
 		self.mode = self.context.mode;
 
 			// set Data
-				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections') || {}
-				self.section_id	= self.mode!=='list' && self.data && self.data.value
-					? (() =>{
-						const found = self.data.value.find(el => el.section_tipo===self.section_tipo)
-						if (found && found.section_id) {
-							return found.section_id
-						}
-						console.warn('Empty value found in self.data.value: ', self.data.value)
-						return null
-					  })()
+				self.data		= self.datum?.data?.find(el => el.tipo===self.tipo && el.typo==='sections') || {}
+				self.section_id = null; // Initialize to null
+				if (self.mode !== 'list' && self.data && Array.isArray(self.data.value)) {
+					const found = self.data.value.find(el => el.section_tipo === self.section_tipo);
+					if (found && found.section_id) {
+						self.section_id = found.section_id;
+					} else {
+						console.warn('Empty value found or section_id missing in self.data.value: ', self.data.value);
+					}
+				}
 					: null
 
 			// rqo regenerate
