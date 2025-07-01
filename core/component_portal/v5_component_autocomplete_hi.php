@@ -304,6 +304,12 @@
 
 				}else if ($key==='custom_parents') {
 
+					// format
+					// It is used to modify the output format @see dmmgobes126
+					// e.g. default format outputs a comma separated items string as 'Valencia'
+					// e.g. term_id format outputs a JSON encoded array as '["es1_8842"]'
+					$format	= $value->format ?? 'default';
+
 					$ar_diffusion_value = [];
 					foreach ($dato as $current_locator) {
 
@@ -392,15 +398,31 @@
 										}
 									}
 
-									$term = ts_object::get_term_by_locator(
-										$parent_locator,
-										$lang,
-										true // bool from_cache
-									);
+									$term = null; // init term value on each iteration
+									switch ($format) {
+										case 'term_id':
+											// used in dmmgobes126 to resolve Province as term_id like 'es1_8842' for 'Valencia'
+											$current_section_tipo	= $parent_locator->section_tipo ?? null;
+											$current_section_id		= $parent_locator->section_id ?? null;
+											if ($current_section_tipo && $current_section_id) {
+												$term = $current_section_tipo . '_' . $current_section_id;
+											}
+											break;
+
+										default:
+											// default resolve value from locator
+											$term = ts_object::get_term_by_locator(
+												$parent_locator,
+												$lang,
+												true // bool from_cache
+											);
+											break;
+									}
+
 									if (!empty($term)) {
 										$ar_terms[] = $term;
 									}
-							}
+							}//end foreach ($ar_parents as $parent_locator)
 
 						// append whole or part of results when no empty
 							if (!empty($ar_terms)) {
@@ -433,8 +455,15 @@
 							}//end if (!empty($ar_terms))
 
 						// join locator terms and append
-							$ar_diffusion_value[] = implode(', ', $locator_terms);
+							switch ($format) {
+								case 'term_id':
+									$ar_diffusion_value[] = json_encode($locator_terms);
+									break;
 
+								default:
+									$ar_diffusion_value[] = implode(', ', $locator_terms);
+									break;
+							}
 					}//end foreach ($dato as $current_locator)
 
 					// join all locator values
