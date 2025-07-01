@@ -7,7 +7,7 @@
 
 
 	/**
-	* GET VALOR
+	* GET_VALOR
 	* Get resolved string representation of current thesaurus value
 	* @param $lang=DEDALO_DATA_LANG
 	* @param $format='string'
@@ -55,7 +55,7 @@
 				// $current_locator_string				= json_encode($current_locator);
 				// $ar_valor[$current_locator_string]	= $current_valor;
 				$ar_valor[]								= $current_valor;
-			}//end foreach ($dato as $key => $current_locator)
+			}//end foreach ($dato as $current_locator)
 
 		// set value based on format
 			$valor = ($format==='array')
@@ -97,7 +97,7 @@
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* (!) To force to use custom separator, set 'propiedades' as
 	* 	{
@@ -136,7 +136,7 @@
 		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 			$fields_separator_default = ' - ';
 			// fields_separator
-			// $fields_separator   = $this->get_fields_separator();
+			// $fields_separator = $this->get_fields_separator();
 			switch (true) {
 				case isset($option_obj->divisor):
 					$fields_separator = $option_obj->divisor;
@@ -156,7 +156,7 @@
 		// records_separator_default
 			$records_separator_default = ', ';
 			// records_separator
-			// $records_separator   = $this->get_records_separator();
+			// $records_separator = $this->get_records_separator();
 			switch (true) {
 				case isset($option_obj->records_separator):
 					$records_separator = $option_obj->records_separator;
@@ -201,7 +201,6 @@
 					if (isset($option_obj->check_publishable) && $option_obj->check_publishable===true) {
 						$current_is_publicable = diffusion::get_is_publicable($current_locator);
 						if ($current_is_publicable!==true) {
-							// debug_log(__METHOD__." +++ Skip locator non publishable ".to_string($current_locator), logger::ERROR);
 							continue;
 						}
 					}
