@@ -759,17 +759,23 @@
 		// 	'country_code'	=> 'countryCode' // property where look country code for flag
 		// ]);
 	// ipapi ***
-		define('IP_API', [
-			'url'			=> 'https://ipapi.co/$ip/json/', // https capable as free
-			'href'			=> 'https://ipapi.co/?q=$ip', // page to jump on click
-			'country_code'	=> 'country_code' // property where look country code for flag
-		]);
+		// define('IP_API', [
+		// 	'url'			=> 'https://ipapi.co/$ip/json/', // https capable as free
+		// 	'href'			=> 'https://ipapi.co/?q=$ip', // page to jump on click
+		// 	'country_code'	=> 'country_code' // property where look country code for flag
+		// ]);
 	// Free IP API
 		// define('IP_API', [
 		// 	'url'			=> 'https://freeipapi.com/api/json/$ip', // 60 Requests per minute
 		// 	'href'			=> 'https://ip-api.com/#$ip', // page to jump (Jump to another server because freeipapi don't provide this service)
 		// 	'country_code'	=> 'countryCode' // property where look country code fro flag
 		// ]);
+	// api.country.is
+		define('IP_API', [
+			'url'			=> 'https://api.country.is/$ip', // 10 Requests per second
+			'href'			=> 'https://ip-api.com/#$ip', // page to jump (Jump to another server because api.country.is don't provide this service)
+			'country_code'	=> 'country' // property where look country code fro flag
+		]);
 
 
 
