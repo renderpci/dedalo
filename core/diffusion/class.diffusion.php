@@ -681,7 +681,7 @@ abstract class diffusion  {
 					break;
 
 				case (is_object($properties) && property_exists($properties, 'process_dato')):
-					# Process dato with function
+					// Process dato with function
 					$options = $request_options;
 						$options->properties		= $properties;
 						$options->tipo				= $tipo;
@@ -693,7 +693,7 @@ abstract class diffusion  {
 					break;
 
 				default:
-					# Set unified diffusion value
+					// Set unified diffusion value
 					$field_value = $current_component->get_diffusion_value($lang);
 					break;
 			}//switch (true)
@@ -1601,7 +1601,7 @@ abstract class diffusion  {
 		}
 
 		return $response;
-	} //end update_publication_schema
+	}//end update_publication_schema
 
 
 
