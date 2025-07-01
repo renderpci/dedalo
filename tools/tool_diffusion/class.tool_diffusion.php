@@ -93,6 +93,7 @@ class tool_diffusion extends tool_common {
 
 		// ar_data. Get data about table and fields of current section diffusion target
 			$ar_data = [];
+			$safe_diffusion_map = [];
 			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
 
 				$diffusion_element_tipo = $diffusion_items[0]->element_tipo ?? null; // like oh63 - Historia oral web
@@ -121,6 +122,16 @@ class tool_diffusion extends tool_common {
 						default:
 							$config = null;
 							break;
+					}
+
+				// Check if current diffusion element have the current section in some item
+				// If not, skip non applicable diffusion map element (excluded from $safe_diffusion_map array)
+					$ar_related = diffusion::get_diffusion_sections_from_diffusion_element(
+						$diffusion_element_tipo,
+						$class_name
+					);
+					if(!in_array($section_tipo, $ar_related)) {
+						continue;
 					}
 
 				// section_tables_map
@@ -163,29 +174,10 @@ class tool_diffusion extends tool_common {
 					'config'				=> $config
 				];
 				$ar_data[] = $data_item;
-			}
 
-		// groups
-			// $groups = [];
-			// foreach ($diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
-
-			// 	$have_section_diffusion = diffusion::have_section_diffusion( $section_tipo, $ar_diffusion_element );
-			// 	if ($have_section_diffusion===false) {
-			// 		continue; # ignore
-			// 	}
-
-			// 	foreach ($ar_diffusion_element as $obj_value) {
-			// 		$item = (object)[
-			// 			'section_tipo'				=> $section_tipo,
-			// 			'mode'						=> 'export_list',
-			// 			'diffusion_element_tipo'	=> $obj_value->element_tipo,
-			// 			'label'						=> RecordObj_dd::get_termino_by_tipo($obj_value->element_tipo, DEDALO_DATA_LANG, true, false),
-			// 			'database_name'				=> $obj_value->database_name ?? MYSQL_DEDALO_DATABASE_CONN,
-			// 			'levels'					=> $resolve_levels
-			// 		];
-			// 		$groups[] = $item;
-			// 	}
-			// }
+				// safe_diffusion_map add
+				$safe_diffusion_map[$diffusion_group] = $diffusion_items;
+			}//end foreach ($diffusion_map as $diffusion_group => $diffusion_items)
 
 		// skip_publication_state_check
 			$skip_publication_state_check = isset($_SESSION['dedalo']['config']['skip_publication_state_check'])
@@ -196,7 +188,7 @@ class tool_diffusion extends tool_common {
 			$result = (object)[
 				'resolve_levels'				=> $resolve_levels,
 				'skip_publication_state_check'	=> $skip_publication_state_check,
-				'diffusion_map'					=> $diffusion_map,
+				'diffusion_map'					=> $safe_diffusion_map,
 				'ar_data'						=> $ar_data
 			];
 
