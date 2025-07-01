@@ -535,35 +535,24 @@ section.prototype.build = async function(autoload=false) {
 
 			// pagination. Set pagination from saved local_db_data if exists
 			// Updates the rqo.sqo pagination properties with local DB values
-				const saved_pagination = self.session_save===false
-					? false
-					: await data_manager.get_local_db_data(
+				if (self.session_save) {
+					// Get pagination value from local database
+					const saved_pagination = await data_manager.get_local_db_data(
 						`${self.tipo}_${self.mode}`,
 						'pagination'
 					);
-				const default_limit		= saved_pagination?.value?.limit || (self.mode==='edit' ? 1 : 10);
-				const default_offset	= saved_pagination?.value?.offset || 0;
-				// fill sqo empty values with final values if necessary
-				if (self.rqo.sqo.limit===null) {
-					self.rqo.sqo.limit = default_limit
-				}
-				if (self.rqo.sqo.offset===null) {
-					self.rqo.sqo.offset = default_offset
-				}
-				// always fix current pagination value, even if is not different
-				// Updates local DB pagination values. Don't await here
-					if (self.session_save===true) {
-						data_manager.set_local_db_data(
-							{
-								id		: `${self.tipo}_${self.mode}`,
-								value	: {
-									limit	: self.rqo.sqo.limit,
-									offset	: self.rqo.sqo.offset
-								}
-							},
-							'pagination'
-						)
+
+					// ! Do not apply here default values to prevent overwrite server custom limit like 'dd542' (Activity)
+					const saved_limit	= saved_pagination?.value?.limit ?? null;
+					const saved_offset	= saved_pagination?.value?.offset ?? null;
+					// fill sqo empty values with final values if necessary (check null and undefined cases)
+					if (self.rqo.sqo.limit==null && saved_limit!==null) {
+						self.rqo.sqo.limit = saved_limit;
 					}
+					if (self.rqo.sqo.offset==null && saved_offset!==null) {
+						self.rqo.sqo.offset = saved_offset;
+					}
+				}
 
 			// build_autoload
 			// Use unified way to load context and data with
@@ -627,10 +616,45 @@ section.prototype.build = async function(autoload=false) {
 						console.warn('Empty value found or section_id missing in self.data.value: ', self.data.value);
 					}
 				}
-					: null
 
 			// rqo regenerate
 				await generate_rqo()
+
+			// pagination update
+				const request_config		= self.context?.request_config || []
+				const request_config_dedalo	= request_config.find(el => el.api_engine==='dedalo') || {}
+				// fill values that are not defined previously with safe fallback to defaults (check null and undefined cases)
+				if (self.rqo.sqo.limit==null) {
+					self.rqo.sqo.limit = request_config_dedalo.show?.sqo_config?.limit ?? (self.mode==='edit' ? 1 : 10)
+				}
+				if (self.rqo.sqo.offset==null) {
+					self.rqo.sqo.offset = request_config_dedalo.show?.sqo_config?.offset ?? 0
+				}
+				// On session_save, always fix current pagination value, even if is not different
+				// Updates local DB pagination values. Don't await here
+				if (self.session_save) {
+					data_manager.set_local_db_data(
+						{
+							id		: `${self.tipo}_${self.mode}`,
+							value	: {
+								limit	: self.rqo.sqo.limit,
+								offset	: self.rqo.sqo.offset
+							}
+						},
+						'pagination'
+					)
+					.catch(error => {
+						console.error("Error saving pagination to local DB:", error);
+					});
+				}else{
+					// editing one record case in session_save false
+					if (self.mode==='edit' && self.section_id) {
+						// fix offset to 0 but do not store the value
+						self.rqo.sqo.offset = 0
+						// reset total to 1 to allow paginator render properly
+						self.total = 1
+					}
+				}
 
 			// view
 				if (self.context.view) {
