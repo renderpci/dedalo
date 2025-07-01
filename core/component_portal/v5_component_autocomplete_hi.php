@@ -82,7 +82,7 @@
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
 
 		$valor_export = $this->get_valor($lang);

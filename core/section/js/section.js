@@ -596,10 +596,10 @@ section.prototype.build = async function(autoload=false) {
 				}
 
 			// section_list_thesurus
-		self.context.mode = self.context.mode === 'list_thesaurus'
-			? 'list'
-			: self.context.mode;
-		self.mode = self.context.mode;
+				self.context.mode = self.context.mode === 'list_thesaurus'
+					? 'list'
+					: self.context.mode;
+				self.mode = self.context.mode;
 
 			// set Data
 				self.data		= self.datum?.data?.find(el => el.tipo===self.tipo && el.typo==='sections') || {}

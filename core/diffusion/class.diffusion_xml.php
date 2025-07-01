@@ -281,7 +281,7 @@ class diffusion_xml extends diffusion  {
 			$this->section_tipo,
 			$this->section_id,
 			logged_user_id(),
-			new DateTime()->format('Y-m-d')
+			date('Y-m-d') // date now as 2025-01-23
 		];
 		$file_name		= implode('_', $name_parts);
 		$xml_file_name	= $file_name .'.xml';
