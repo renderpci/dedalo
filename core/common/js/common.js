@@ -1590,6 +1590,7 @@ export const get_ar_inverted_paths = function(full_ddo_map) {
 * BUILD_RQO_SHOW
 * @param object _request_config_object
 * @param string action
+* 	e.g. 'get_data'
 * @param bool add_show = false
 * @return object rqo
 */

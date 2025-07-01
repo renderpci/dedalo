@@ -1,9 +1,16 @@
 <?php
-if (defined('DIFFUSION_CUSTOM') && DIFFUSION_CUSTOM!==false) {
-	include_once(DIFFUSION_CUSTOM);
+if (defined('DIFFUSION_CUSTOM') && !empty(DIFFUSION_CUSTOM)) {
+	if (!include_once DIFFUSION_CUSTOM) {
+		debug_log(__METHOD__
+			. " DIFFUSION_CUSTOM file not found" . PHP_EOL
+			. ' DIFFUSION_CUSTOM: ' . to_string(DIFFUSION_CUSTOM)
+			, logger::ERROR
+		);
+	}
 }
 /**
 * CLASS DIFUSSION
+* Handles the diffusion main tasks
 */
 abstract class diffusion  {
 
@@ -157,7 +164,12 @@ abstract class diffusion  {
 		#
 		# DIFFUSION_GROUP
 		# Search inside current diffusion_domain and iterate all diffusion_group
-		$ar_diffusion_group = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain_tipo, $model_name='diffusion_group', $relation_type='children', $search_exact=true);
+		$ar_diffusion_group = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$diffusion_domain_tipo,
+			'diffusion_group', // model_name
+			'children', // relation_type
+			true // search_exact
+		);
 		foreach ($ar_diffusion_group as $diffusion_group_tipo) {
 
 			$diffusion_map->{$diffusion_group_tipo} = array();

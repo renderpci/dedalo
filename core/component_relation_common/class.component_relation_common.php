@@ -3247,6 +3247,7 @@ class component_relation_common extends component_common {
 				// is full locator. Inject safe fixed properties to avoid errors
 					$locator = new locator($current_locator);
 
+						// check_locator
 						$check_response = $locator->check_locator();
 						if ($check_response->result!==true) {
 
