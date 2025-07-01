@@ -18,7 +18,7 @@ class tool_diffusion extends tool_common {
 	* Is called on tool build by client
 	* @param object $options
 	* {
-	* 	sction_tipo: string
+	* 	section_tipo: string
 	* }
 	* @return object $response
 	* 	{ result: [{}], msg: '' }
@@ -93,7 +93,7 @@ class tool_diffusion extends tool_common {
 
 		// ar_data. Get data about table and fields of current section diffusion target
 			$ar_data = [];
-			$safe_diffusion_map = [];
+			$final_diffusion_map = [];
 			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
 
 				$diffusion_element_tipo = $diffusion_items[0]->element_tipo ?? null; // like oh63 - Historia oral web
@@ -109,6 +109,7 @@ class tool_diffusion extends tool_common {
 
 				// config: based on class_name and config.php definitions
 					$class_name = $diffusion_items[0]->class_name ?? null;
+					$config = null;
 					switch ($class_name) {
 						case 'diffusion_socrata':
 							// add config values
@@ -125,7 +126,7 @@ class tool_diffusion extends tool_common {
 					}
 
 				// Check if current diffusion element have the current section in some item
-				// If not, skip non applicable diffusion map element (excluded from $safe_diffusion_map array)
+				// If not, skip non applicable diffusion map element (excluded from $final_diffusion_map array)
 					$ar_related = diffusion::get_diffusion_sections_from_diffusion_element(
 						$diffusion_element_tipo,
 						$class_name
@@ -176,7 +177,7 @@ class tool_diffusion extends tool_common {
 				$ar_data[] = $data_item;
 
 				// safe_diffusion_map add
-				$safe_diffusion_map[$diffusion_group] = $diffusion_items;
+				$final_diffusion_map[$diffusion_group] = $diffusion_items;
 			}//end foreach ($diffusion_map as $diffusion_group => $diffusion_items)
 
 		// skip_publication_state_check
@@ -188,7 +189,7 @@ class tool_diffusion extends tool_common {
 			$result = (object)[
 				'resolve_levels'				=> $resolve_levels,
 				'skip_publication_state_check'	=> $skip_publication_state_check,
-				'diffusion_map'					=> $safe_diffusion_map,
+				'diffusion_map'					=> $final_diffusion_map,
 				'ar_data'						=> $ar_data
 			];
 
@@ -207,7 +208,13 @@ class tool_diffusion extends tool_common {
 	/**
 	* EXPORT
 	* Redirects to proper export manager based on mode (edit/list)
-	* @param object $options
+	* @param object $options {
+	*	@property string $section_tipo
+	*	@property int|string|null $section_id
+	*	@property string $diffusion_element_tipo
+	*	@property int|null $resolve_levels
+	*	@property bool|null $skip_publication_state_check
+	* }
 	* @return object $response
 	*/
 	public static function export(object $options) : object {
@@ -518,6 +525,9 @@ class tool_diffusion extends tool_common {
 		$diffusion_data = [];
 
 		// class diffusion instance
+		if (!class_exists($diffusion_class_name)) {
+			throw new Exception("Class $diffusion_class_name not found.");
+		}
 		$diffusion = new $diffusion_class_name( (object)[
 			'diffusion_element_tipo' => $diffusion_element_tipo
 		]);
@@ -526,6 +536,11 @@ class tool_diffusion extends tool_common {
 			$start_time=start_time();
 
 			$counter++;
+
+			if (!isset($row->section_id, $row->section_tipo)) {
+				$errors[] = "Invalid row data: missing section_id or section_tipo.";
+				continue;
+			}
 
 			$section_id		= $row->section_id;
 			$section_tipo	= $row->section_tipo;
