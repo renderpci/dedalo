@@ -2964,21 +2964,25 @@ abstract class common {
 			$limit	= isset($this->pagination->limit)
 				? $this->pagination->limit
 				: (function() use($model, $mode, $properties) {
+					$limit = null;
 					// from properties try
 					if (isset($properties->source) && isset($properties->source->request_config)) {
 						$found = array_find($properties->source->request_config ?? [], function($el){
 							return isset($el->api_engine) && $el->api_engine==='dedalo';
 						});
 						if (is_object($found) && isset($found->sqo) && isset($found->sqo->limit)) {
-							return $found->sqo->limit;
+							$limit = $found->sqo->limit;
+						}
+					}
+					if (empty($limit)) {
+						if ($model==='section') {
+							$limit = $mode==='list' ? 10 : 1;
+						}else{
+							$limit = $mode==='list' ? 1 : 10;
 						}
 					}
 
-					if ($model==='section') {
-						return $mode==='list' ? 10 : 1;
-					}else{
-						return $mode==='list' ? 1 : 10;
-					}
+					return $limit;
 				  })();
 
 		// ar_request_query_objects
