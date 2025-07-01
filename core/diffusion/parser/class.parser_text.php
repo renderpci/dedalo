@@ -139,7 +139,7 @@ class parser_text {
 			// replace the text template with the data ex: "${a}, ${b}, ${c}/${d}"
 			foreach ($data as $current_ddo_to_join) {
 
-				$search = '${'.$current_ddo_to_join->id.'}';
+				$search = '${' . ($current_ddo_to_join->id ?? '') .'}';
 
 				$current_value	= is_array($current_ddo_to_join->value)
 					? implode(',', $current_ddo_to_join->value)
