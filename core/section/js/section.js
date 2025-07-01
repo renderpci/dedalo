@@ -587,9 +587,9 @@ section.prototype.build = async function(autoload=false) {
 				// but it's necessary preserve the specific ddo_map configuration in the new context.
 				// Context is set and changed in section_record.js to get the ddo_map configuration
 				if(!self.context){
-					const context = self.datum.context.find(el => el.section_tipo===self.section_tipo) || {}
-					if (!context) {
-						console.error("context not found in api_response:", api_response);
+					const context = self.datum?.context?.find(el => el.section_tipo===self.section_tipo) || {}
+					if (Object.keys(context).length === 0) { // Checks if it's literally an empty object
+						console.error("Context not found for section_tipo:", self.section_tipo, "in self.datum.context:", self.datum?.context);
 					}else{
 						self.context = context
 					}
