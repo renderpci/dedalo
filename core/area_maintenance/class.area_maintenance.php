@@ -1909,6 +1909,15 @@ class area_maintenance extends area_common {
 		// update jer_dd with the imported records
 			foreach ($files_to_import as $current_file_item) {
 
+				if (!is_object($current_file_item) || !isset($current_file_item->tld, $current_file_item->section_tipo)) {
+					debug_log(__METHOD__
+						. " Ignored file item: Missing 'tld' or 'section_tipo' properties. " . PHP_EOL
+						. ' current_file_item: ' . to_string($current_file_item)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 				// private list, matrix_dd, doesn't process it as jer_dd nodes
 				if($current_file_item->tld === 'matrix_dd'){
 					continue;
@@ -1939,9 +1948,11 @@ class area_maintenance extends area_common {
 			db_tasks::optimize_tables($ar_tables);
 
 		// delete all session data except auth
-			foreach ($_SESSION['dedalo'] as $key => $value) {
-				if ($key==='auth') continue;
-				unset($_SESSION['dedalo'][$key]);
+			if (isset($_SESSION['dedalo']) && is_array($_SESSION['dedalo'])) {
+				foreach ($_SESSION['dedalo'] as $key => $value) {
+					if ($key==='auth') continue;
+					unset($_SESSION['dedalo'][$key]);
+				}
 			}
 
 		// update javascript labels

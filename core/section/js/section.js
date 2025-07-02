@@ -577,15 +577,15 @@ section.prototype.build = async function(autoload=false) {
 				self.datum = api_response.result
 
 			// set Context
-				// context is only set when it's empty the origin context,
-				// if the instance has previous context, it will need to preserve.
+				// context is set only when the origin context is empty,
+				// if the instance has a previous context, it will need to be preserved.
 				// because the context could be modified by ddo configuration and it can no be changed
 				// ddo_map -----> context
 				// ex: oh27 define the specific ddo_map for rsc368
 				// 		{ mode: list, view: line, children_view: text ... }
 				// if you call to API to get the context of the rsc368 the context will be the default config
 				// 		{ mode: edit, view: default }
-				// but it's necessary preserve the specific ddo_map configuration in the new context.
+				// but it's necessary to preserve the specific ddo_map configuration in the new context.
 				// Context is set and changed in section_record.js to get the ddo_map configuration
 				if(!self.context){
 					const context = self.datum?.context?.find(el => el.section_tipo===self.section_tipo) || {}
@@ -596,10 +596,12 @@ section.prototype.build = async function(autoload=false) {
 					}
 				}
 
-			// section_list_thesurus
-				self.context.mode = self.context.mode === 'list_thesaurus'
-					? 'list'
-					: self.context.mode;
+			// Update mode.
+			// Take care of the 'list_thesaurus' mode case. It is used only to retrieve custom data from server (on build section)
+			// but in client is not used. Instead, change it to 'list' mode after getting the API data.
+				if (self.context.mode === 'list_thesaurus') {
+					self.context.mode = 'list';
+				}
 				self.mode = self.context.mode;
 
 			// set Data
@@ -732,10 +734,12 @@ section.prototype.build = async function(autoload=false) {
 				}
 		}//end if (autoload===true)
 
-	// section_list_thesurus cas
-		self.context.mode = self.context.mode === 'list_thesaurus'
-			? 'list'
-			: self.context.mode;
+	// Safe update mode.
+	// Take care of the 'list_thesaurus' mode case. It is used only to retrieve custom data from server
+	// but in client is not used. Instead, always change it to 'list' mode.
+		if (self.context.mode === 'list_thesaurus') {
+			self.context.mode = 'list';
+		}
 		self.mode = self.context.mode;
 
 	// update instance properties from context

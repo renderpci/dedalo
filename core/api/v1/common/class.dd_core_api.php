@@ -1819,6 +1819,13 @@ final class dd_core_api {
 
 							$safe_sqo = clone $sqo;
 
+							if (session_status() !== PHP_SESSION_ACTIVE) {
+								debug_log(__METHOD__
+									. " Unable to write session because session is not active " . PHP_EOL
+									. ' PHP_SESSION_ACTIVE: ' . to_string(PHP_SESSION_ACTIVE)
+									, logger::ERROR
+								);
+							}
 							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $safe_sqo;
 							debug_log(__METHOD__
 								. " -> saved in session sqo sqo_id: '$sqo_id'" . PHP_EOL
