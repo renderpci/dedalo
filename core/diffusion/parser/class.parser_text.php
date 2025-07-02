@@ -121,13 +121,13 @@ class parser_text {
 
 
 	/**
-	* TEXT_FORMAT
+	* TEXT_FORMAT_LEGACY
 	* Generic text parser
 	* @param array|null $data
 	* @param object $options
 	* @return string|null $value
 	*/
-	public static function text_format( ?array $data, object $options ) : ?string {
+	public static function text_format_legacy( ?array $data, object $options ) : ?string {
 
 		// options
 		$pattern = $options->pattern ?? null;
@@ -159,6 +159,133 @@ class parser_text {
 			$value = self::default_join($data, $options);
 		}
 
+
+		return $value;
+	}//end text_format_legacy
+
+
+
+	/**
+	 * TEXT_FORMAT - Generic Text Pattern Processor
+	 *
+	 * This method processes an array of structured data objects and formats them according to
+	 * a specified pattern template. It's designed to work with data objects that have 'id' and
+	 * 'value' properties, extracting the values and substituting them into a pattern string.
+	 *
+	 * The method supports two modes:
+	 * 1. Pattern-based formatting using placeholders like '${a}, ${b} : ${c}'
+	 * 2. Default joining fallback when no pattern is provided
+	 *
+	 * @param array|null $data Array of objects, each containing 'id' and 'value' properties
+	 *                         Example: [
+	 *                             (object)['id' => 'name', 'value' => 'John'],
+	 *                             (object)['id' => 'surname', 'value' => 'Doe'],
+	 *                             (object)['id' => 'city', 'value' => 'London']
+	 *                         ]
+	 *
+	 * @param object $options Configuration object that may contain:
+	 *                       - pattern: String template with ${variable} placeholders
+	 *                       - Additional options passed to default_join() if no pattern
+	 *
+	 * @return string|null Formatted string according to pattern, or null if no data provided
+	 *
+	 * @example
+	 * $data = [
+	 *     (object)['id' => 'firstName', 'value' => 'John'],
+	 *     (object)['id' => 'lastName', 'value' => 'Doe'],
+	 *     (object)['id' => 'city', 'value' => 'London']
+	 * ];
+	 * $options = (object)['pattern' => '${firstName} ${lastName} from ${city}'];
+	 * $result = self::text_format($data, $options);
+	 * // Returns: "John Doe from London"
+	 */
+	public static function text_format(?array $data, object $options): ?string {
+
+		// Extract pattern from options, default to null if not provided
+		$pattern = $options->pattern ?? null;
+
+		// Early return if no data provided - nothing to format
+		if (empty($data)) {
+			return null;
+		}
+
+		// pattern-based processing
+		if ($pattern) {
+			// Initialize array to collect processed values from data objects
+			$values = [];
+
+			// Process each data item and extract values for pattern replacement
+			foreach ($data as $index => $item) {
+
+				// Validate that each item is a properly structured data object
+				// Expected structure: object with 'id' and 'value' properties
+				if (!is_object($item) ||
+					!property_exists($item, 'id') ||
+					!property_exists($item, 'value')) {
+
+					// Log validation error for debugging purposes
+					debug_log(
+						__METHOD__ . " Ignored invalid data object at index {$index}" . PHP_EOL .
+						' item: ' . to_string($item),
+						logger::ERROR
+					);
+
+					// Add null placeholder to maintain array index consistency
+					// This ensures pattern replacement positions remain aligned
+					$values[] = null;
+					continue;
+				}
+
+				// value type processing and conversion
+				$itemValue = $item->value;
+
+				// Handle different value types appropriately for string interpolation
+				if (is_array($itemValue)) {
+					// Convert arrays to comma-separated strings
+					// Example: ['apple', 'banana', 'cherry'] → 'apple,banana,cherry'
+					$values[] = implode(',', $itemValue);
+
+				} elseif (is_scalar($itemValue) || $itemValue === null) {
+					// Handle scalar types (int, float, string, bool) and null
+					// Explicit string casting ensures consistent type for pattern replacement
+					$values[] = ($itemValue !== null) ? (string) $itemValue : null;
+
+				} else {
+					// Handle complex types (objects, resources, etc.) by JSON encoding
+					// This provides a readable string representation of complex data
+					$values[] = json_encode($itemValue);
+				}
+			}
+
+			// pattern replacement execution
+			try {
+				// Use the pattern_replacer class to perform sophisticated replacement
+				// This handles empty values, spacing, and punctuation cleanup
+				$replacer = new pattern_replacer();
+				$value = $replacer->replace($pattern, $values);
+
+			} catch (Exception $e) {
+				// Log pattern replacement errors
+				debug_log(
+					__METHOD__ . " Pattern replacement failed" . PHP_EOL .
+					" Pattern: {$pattern}" . PHP_EOL .
+					" Values: " . json_encode($values) . PHP_EOL .
+					" Error: " . $e->getMessage(),
+					logger::ERROR
+				);
+
+				// Fallback to default join on pattern replacement failure
+				$value = self::default_join($data, $options);
+			}
+
+		} else {
+
+			// fallback to default join
+
+			// When no pattern is specified, use the default joining method
+			// This provides a fallback formatting option with simpler logic
+			$value = self::default_join($data, $options);
+		}
 
 		return $value;
 	}//end text_format
