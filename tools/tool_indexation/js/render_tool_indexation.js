@@ -540,8 +540,15 @@ const render_related_list = function(self){
 		const related_list_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'related_list_container',
-			inner_html		: (get_label.approach || 'Aproch') + ': &nbsp;',
 			parent			: fragment
+		})
+
+	// label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'container_label',
+			inner_html		: (get_label.approach || 'Aproch'),
+			parent			: related_list_container
 		})
 
 	// select -> options
@@ -561,7 +568,7 @@ const render_related_list = function(self){
 	// select node
 		const select = ui.create_dom_element({
 			element_type	: 'select',
-			class_name		: 'hidden selector',
+			class_name		: 'hidden selector related_list_selector',
 			parent			: related_list_container
 		})
 
@@ -690,8 +697,15 @@ const render_viewer_selector = function(self, wrapper){
 		const viewer_selector_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'viewer_selector_container',
-			// inner_html		: (get_label.viewer || 'Viewer') + ': &nbsp;',
 			parent			: fragment
+		})
+
+	// label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'container_label',
+			inner_html		: (get_label.viewer || 'Viewer'),
+			parent			: viewer_selector_container
 		})
 
 	// select viewer
