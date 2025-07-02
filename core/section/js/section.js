@@ -533,8 +533,9 @@ section.prototype.build = async function(autoload=false) {
 			// Updates the rqo.sqo pagination properties with local DB values
 				if (self.session_save) {
 					// Get pagination value from local database
+					const pagination_mode = self.mode==='edit' ? self.mode : 'list';
 					const saved_pagination = await data_manager.get_local_db_data(
-						`${self.tipo}_${self.mode}`,
+						`${self.tipo}_${pagination_mode}`,
 						'pagination'
 					);
 
@@ -629,9 +630,10 @@ section.prototype.build = async function(autoload=false) {
 				// On session_save, always fix current pagination value, even if is not different
 				// Updates local DB pagination values. Don't await here
 				if (self.session_save) {
+					const pagination_mode = self.mode==='edit' ? self.mode : 'list';
 					data_manager.set_local_db_data(
 						{
-							id		: `${self.tipo}_${self.mode}`,
+							id		: `${self.tipo}_${pagination_mode}`,
 							value	: {
 								limit	: self.rqo.sqo.limit,
 								offset	: self.rqo.sqo.offset
