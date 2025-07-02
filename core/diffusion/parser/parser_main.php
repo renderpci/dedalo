@@ -19,5 +19,6 @@
 * text parser, utilities to join, split, merge, cut, etc texts
 */
 
-include_once(DEDALO_CORE_PATH . '/diffusion/parser/class.parser_text.php');
-include_once(DEDALO_CORE_PATH . '/diffusion/parser/class.parser_date.php');
+include_once DEDALO_CORE_PATH . '/diffusion/parser/class.pattern_replacer.php';
+include_once DEDALO_CORE_PATH . '/diffusion/parser/class.parser_text.php';
+include_once DEDALO_CORE_PATH . '/diffusion/parser/class.parser_date.php';
