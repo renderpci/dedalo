@@ -777,7 +777,7 @@ section.prototype.build = async function(autoload=false) {
 		}//end if (!self.paginator)
 
 	// inspector
-		if (self.inspector===null && self.mode==='edit' && self.permissions) {
+		if (self.inspector==null && self.mode==='edit' && self.permissions) {
 
 			const current_inspector = new inspector()
 			current_inspector.init({
