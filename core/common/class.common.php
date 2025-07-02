@@ -2975,10 +2975,16 @@ abstract class common {
 						}
 					}
 					if (empty($limit)) {
-						if ($model==='section') {
-							$limit = $mode==='list' ? 10 : 1;
-						}else{
-							$limit = $mode==='list' ? 1 : 10;
+						if ($mode === 'edit') {
+							// If in 'edit' mode:
+							// 'section' model gets limit 1
+							// other models get limit 10
+							$limit = ($model === 'section') ? 1 : 10;
+						} else {
+							// If NOT in 'edit' mode:
+							// 'section' model gets limit 10
+							// other models get limit 1
+							$limit = ($model === 'section') ? 10 : 1;
 						}
 					}
 
