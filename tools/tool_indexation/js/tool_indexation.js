@@ -245,8 +245,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			const people_section_ddo	= self.tool_config.ddo_map.find(el => el.role==='people_section')
 			self.people_section			= self.ar_instances.find(el => el.tipo===people_section_ddo.tipo)
 			// set instance in thesaurus mode 'relation'
-			// self.people_section.caller					= self
-			self.people_section.linker					= self.indexing_component
+			self.people_section.linker	= self.indexing_component
 
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
