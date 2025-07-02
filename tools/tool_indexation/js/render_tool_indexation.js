@@ -715,11 +715,9 @@ const render_viewer_selector = function(self, wrapper){
 			parent			: viewer_selector_container
 		})
 		// change event
-		select.addEventListener('change', async function(e){
-
+		const change_handler = async (e) => {
 			// fix the new viewer name
 			self.viewer = e.target.value
-			// console.log('Fixed new self.viewer:', self.viewer);
 
 			const left_container		= wrapper.content_data.left_container
 			const area_thesaurus_node	= left_container.area_thesaurus_node
@@ -741,11 +739,10 @@ const render_viewer_selector = function(self, wrapper){
 					people_section_node.classList.add('hide')
 				}
 			}
+			hidde_all();
 
 			switch (self.viewer) {
 				case 'media_component':
-
-					hidde_all();
 
 					// show media_component_node
 					if (media_component_node) {
@@ -764,8 +761,6 @@ const render_viewer_selector = function(self, wrapper){
 
 				case 'people_section':
 
-					hidde_all();
-
 					// show people_section_node
 					if (people_section_node) {
 						people_section_node.classList.remove('hide')
@@ -780,17 +775,19 @@ const render_viewer_selector = function(self, wrapper){
 						})
 					}
 					break;
+
 				case 'area_thesaurus':
 				default:
-
-					hidde_all();
 
 					// show area_thesaurus_node
 					area_thesaurus_node.classList.remove('hide')
 					break;
 			}
 
-		})
+			// store selected viewer
+			localStorage.setItem('tool_indexation_viewer', self.viewer)
+		}
+		select.addEventListener('change', change_handler)
 
 	// option label
 		const option_blank = ui.create_dom_element({
@@ -818,6 +815,13 @@ const render_viewer_selector = function(self, wrapper){
 				option.selected = true // select default (Thesaurus)
 			}
 		}
+
+	// last_viewer. Set last selection if present.
+	const last_viewer = localStorage.getItem('tool_indexation_viewer')
+	if (last_viewer) {
+		select.value = last_viewer
+		select.dispatchEvent(new Event('change'))
+	}
 
 
 	return fragment
