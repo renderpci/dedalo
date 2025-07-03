@@ -207,7 +207,6 @@ $global_start_time = hrtime(true);
 	} catch (Throwable $e) {
 
 		// Final fallback error handling
-		http_response_code(500);
 
 		$response = new stdClass();
 			$response->result	= false;
