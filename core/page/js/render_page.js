@@ -50,6 +50,14 @@ render_page.prototype.edit = async function(options) {
 		// fix node before finish render to allow select by render_notification_msg
 		self.node = wrapper
 
+	// bubbles_notification_container
+		const bubbles_notification_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'bubbles_notification_container',
+			parent			: wrapper
+		})
+		self.bubbles_notification_container = bubbles_notification_container
+
 
  	return wrapper
 }//end edit

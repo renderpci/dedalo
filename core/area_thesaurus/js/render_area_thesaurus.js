@@ -127,14 +127,6 @@ render_area_thesaurus.prototype.list = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// bubbles_notification_container
-		const bubbles_notification_container =	ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'bubbles_notification_container',
-			parent			: wrapper
-		})
-		self.bubbles_notification_container = bubbles_notification_container
-
 	// ts_search case
 		if (data.ts_search) {
 			const render_handler = () => {

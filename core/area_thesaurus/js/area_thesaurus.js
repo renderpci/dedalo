@@ -157,28 +157,6 @@ area_thesaurus.prototype.init = async function(options) {
 				event_manager.subscribe('render_'+self.id, render_handler)
 			)
 
-		// notifications. Render inspector bubbles into the activity container.
-		// Mainly used to inform users that a network error has occurred.
-		// @see data_manager render_msg_to_inspector for other uses.
-			const notifications_handler = async (options) => {
-
-				// container
-					const container	= self.bubbles_notification_container
-					if (!container) {
-						console.error('bubbles_notification_container is undefined!');
-						return
-					}
-
-				// render notification bubble
-					const node_info = render_node_info(options)
-
-				// prepend node (at top of the list)
-					container.prepend(node_info)
-			}
-			self.events_tokens.push(
-				event_manager.subscribe('notification', notifications_handler)
-			)
-
 		// key commands
 			dd_request_idle_callback(
 				() => {
