@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 /**
-* CLASS DIFFUSION_xml
+* CLASS DIFFUSION_XML
 * Manages publication on XML format
 *
 */
