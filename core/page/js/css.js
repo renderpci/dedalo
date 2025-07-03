@@ -3,11 +3,12 @@
 /*eslint no-undef: "error"*/
 
 
+
 /**
 * ROOT_CSS
 *   Real target object where styles are stored
 */
-const root_css = {};
+const root_css = new Map()
 
 
 
@@ -59,15 +60,15 @@ const root_css = {};
 export const set_element_css = async (key, value, replace=false) => {
 
 	// Check if key already exists and replace is disabled
-	if (replace===false && root_css[key]!==undefined) {
+	if (replace===false && root_css.has(key)) {
 		// console.log("Ignored existing key (set_element_css):", key, value);
 		return false
 	}
 
 	// Validate value parameter - must be non-empty object
-	if (!value || Object.keys(value).length===0) {
-		// empty object
-		return false
+	if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length === 0) {
+		// empty object or invalid type
+		return false;
 	}
 
 	// set root_css property
@@ -177,7 +178,7 @@ const update_style_sheet = async function(key, value) {
 		// console.log("cssRules:",css_style_sheet.cssRules);
 
 	// store as already set
-		root_css[key] = value
+		root_css.set(key, value)
 
 
 	return true
