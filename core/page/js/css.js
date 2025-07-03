@@ -5,8 +5,14 @@
 
 
 /**
+ * DYNAMIC CSS MANAGER
+ */
+
+
+
+/**
 * ROOT_CSS
-*   Real target object where styles are stored
+* Registry for storing CSS rules
 */
 const root_css = new Map()
 
@@ -57,7 +63,7 @@ const root_css = new Map()
 *	padding: '10px 20px'
 * }); // returns true
 */
-export const set_element_css = async (key, value, replace=false) => {
+export const set_element_css = (key, value, replace=false) => {
 
 	// Check if key already exists and replace is disabled
 	if (replace===false && root_css.has(key)) {
@@ -101,12 +107,6 @@ export const set_element_css = async (key, value, replace=false) => {
 */
 const update_style_sheet = function(key, value) {
 
-	// already exits case
-		// if (root_css[key]!==undefined) {
-		// 	console.log("Duplicated key (ignored):", key, value);
-		// 	return false
-		// }
-
 	// style_sheet
 		const css_style_sheet = get_elements_style_sheet()
 
@@ -117,24 +117,12 @@ const update_style_sheet = function(key, value) {
 				continue;
 			}
 
-			// mixin. Compatibility with v5 mixin 'width'
-				// if (value[selector].mixin) {
-				// 	// width from mixin
-				// 	const found = value[selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
-				// 	if (found) { //  && found!=='.width_50'
-				// 		value[selector].style = value[selector].style || {}
-				// 		// added to style like any other
-				// 		value[selector].style.width = found.substring(7) + '%';
-				// 	}
-				// }
-
 			// style values like {"width": "12%", height : "150px"}
 				const json_css_values = value[selector] || null
 				if (!json_css_values) {
 					console.log("Ignored invalid style:", key, value[selector]);
 					continue;
 				}
-				// console.log("json_css_values:", key, selector, json_css_values);
 
 			if (typeof json_css_values==='function') {
 
@@ -158,24 +146,16 @@ const update_style_sheet = function(key, value) {
 						? ''
 						: '>'
 
-				// full_selector compatible v5 like '.wrap_component.oh1_rsc75'
-				// const full_selector = selector==='.wrapper_component'
-				// 	? `.${key}.wrapper_component` // like .oh1_rsc75.wrap_component
-				// 	: `.${key}.wrapper_component ${operator} ${selector}`	// like .oh1_rsc75 > .content_data
-
 				const full_selector = selector.indexOf('.wrapper')===0
 					? `.${key}${selector}` // like .oh1_rsc75.wrap_component
 					: `.${key} ${operator} ${selector}`	// like .oh1_rsc75 > .content_data
 
 				// const full_selector = `.${key}${selector}` // like .oh1_rsc75.wrap_component
 
-				// console.log("full_selector:", full_selector, json_css_values);
-
 				// insert rule
 				insert_rule(full_selector, json_css_values, css_style_sheet, false)
 			}
 		}
-		// console.log("cssRules:",css_style_sheet.cssRules);
 
 	// store as already set
 		root_css.set(key, value)
@@ -203,81 +183,63 @@ const update_style_sheet = function(key, value) {
 */
 const insert_rule = function(selector, json_css_values, css_style_sheet, skip_insert) {
 
-	// console.log("Object.keys(json_css_values):",Object.keys(json_css_values));
-
 	const rules = []
+
 	for(const key in json_css_values) {
-		// console.log("key:",key);
-		// console.log("json_css_values[key]:",json_css_values[key]);
 
-		// prevent old styles to apply
-			// if (key==='width' || key==='height') {
-			// 	continue;
-			// }
+		const value = json_css_values[key];
 
-		if (typeof json_css_values[key]==='string') {
-			const propText = key==='content'
-				? `${key}:'${json_css_values[key]}'`
-				: `${key}:${json_css_values[key]}`
-			// console.log("+++++++++++++++++++ propText:",propText);
+		if (typeof value==='string') {
+			// Handle content property with quotes, others without
+			const propText = key === 'content'
+				? `${key}:'${value}'`
+				: `${key}:${value}`
+
 			rules.push(propText)
 		}
 		else if(
-			typeof json_css_values[key]==='object'
-			&& !Array.isArray(json_css_values[key])
-			&& json_css_values[key]!==null)
+			typeof value==='object'
+			&& !Array.isArray(value)
+			&& value!==null)
 			{
 
 			const deep_rules = insert_rule(
 				selector,
-				json_css_values[key],
+				value,
 				css_style_sheet,
 				true // skip_insert
 			)
-			// console.log('deep_rules:', deep_rules); // used ?
-			const _joined	= deep_rules.join('; ')
-			const rule		= `
-			${key} {
+
+			const joined = deep_rules.join('; ');
+
+			// Create nested rule (assuming key is a media query or pseudo-selector)
+			const rule = `${key} {
 				${selector} {
-					${_joined};
+					${joined};
 				}
-			}`
-			// console.log("... FINAL RULE 1:", rule);
+			}`;
+			// const rule		= `
+			// ${key} {
+			// 	${selector} {
+			// 		${joined};
+			// 	}
+			// }`
+
 			css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
-			// window.requestAnimationFrame(inserting_inside)
-			// function inserting_inside() {
-			// 	css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
-			// }
 		}
 	}
-	// console.log("rules:",rules);
 
 	// resolving deep_rules cases
 		if (skip_insert) {
 			return rules
 		}
 
-	// const propText = Object.keys(json_css_values).map(function (p) {
-	// 	return p + ':' + (p==='content' ? "'" + json_css_values[p] + "'" : json_css_values[p]);
-	// }).join(';');
-	// console.log("//////////// propText:",propText);
+	 // Combine all rules for the main selector
+		if (rules.length > 0) {
+			const rule = `${selector} { ${rules.join('; ')} }`;
+			css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
+		}
 
-	// combine all rules
-		const rule = selector + '{ ' + rules.join('; ') + ' }'
-		// const rule =  rules.join('; ')
-		// const rule = `@media screen and (min-width: 900px) {
-		//   .example {
-		//     background-color: blue;
-		//   }
-		// }`;
-		// console.log("... FINAL RULE 2:", rule);
-
-	css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
-	// console.log('index:', index);
-	// window.requestAnimationFrame(inserting)
-	// function inserting() {
-	// 	css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
-	// }
 
 	return rules
 }//end insert_rule
@@ -297,15 +259,14 @@ export const get_elements_css_object = function() {
 
 /**
 * GET_ELEMENTS_STYLE_SHEET
-*  Get / create new styleSheet if not already exists
-* @return instance window.elements_style_sheet
+* Get / create new styleSheet if not already exists
+* @return {CSSStyleSheet} instance window.elements_style_sheet
 */
 export const get_elements_style_sheet = function() {
 
 	if (!window.elements_style_sheet) {
 
 		const style = document.createElement('style');
-		// style.type	= 'text/css'
 		style.id	= 'elements_style_sheet'
 
 		// Append <style> element to <head>
@@ -313,6 +274,11 @@ export const get_elements_style_sheet = function() {
 
 		// Grab style element's sheet
 		window.elements_style_sheet = style.sheet;
+
+		// Verify the sheet was created successfully
+		if (!window.elements_style_sheet) {
+			throw new Error('Failed to create stylesheet');
+		}
 	}
 
 	return window.elements_style_sheet
