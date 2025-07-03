@@ -3573,6 +3573,16 @@ abstract class common {
 			}else{
 				// V5 model
 
+				// Check for legacy v5 relationship components that are no longer supported
+				$v5_unsupported = ['component_relation_parent','component_relation_children'];
+				if ( in_array($model, $v5_unsupported) ) {
+					$msg = "Error . Invalid component [$model] configuration. v5 resolution fallback is not longer supported! Configure an RQO for the node $tipo";
+					debug_log(__METHOD__ . $msg
+						, logger::ERROR
+					);
+					throw new Exception($msg, 1);
+				}
+
 				// ar_related
 					switch ($mode) {
 						case 'edit':
