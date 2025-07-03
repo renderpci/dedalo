@@ -24,7 +24,11 @@ export function render_node_info(options) {
 		const api_response	= options.api_response // optional object|null
 		const msg			= options.msg // string optional event message
 		const type			= options.type || 'save'
-		const remove_time	= options.remove_time
+		const remove_time	= options.remove_time > 1000
+			? options.remove_time // passed milliseconds as 15000
+			: options.remove_time
+				? (options.remove_time * 1000)  // passed seconds case as 15
+				: null;
 
 	// node_info. create temporal node info
 		const node_info = ui.create_dom_element({
@@ -34,6 +38,7 @@ export function render_node_info(options) {
 
 	// fade_away
 		const fade_away = (bubble, delay = 10000) => {
+
 			// remove node on timeout
 			setTimeout(()=>{
 				// node_info.remove()
@@ -62,7 +67,7 @@ export function render_node_info(options) {
 			node_info.insertAdjacentHTML('afterbegin', text)
 			// remove node on timeout
 			if (remove_time) {
-				fade_away(node_info, remove_time)
+				fade_away(node_info, remove_time || 30000)
 			}
 			break;
 		}
@@ -73,7 +78,7 @@ export function render_node_info(options) {
 			node_info.insertAdjacentHTML('afterbegin', text)
 			// remove node on timeout
 			if (remove_time) {
-				fade_away(node_info, remove_time)
+				fade_away(node_info, remove_time || 3000)
 			}
 			break;
 		}

@@ -17,6 +17,7 @@
 		JSON_parse_safely,
 		object_to_url_vars
 	} from '../../common/js/utils/index.js'
+	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {render_page, render_notification_msg} from './render_page.js'
 
@@ -205,6 +206,32 @@ page.prototype.init = async function(options) {
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('render_page', render_page_handler)
+			)
+
+		// event notifications. Render inspector bubbles into the activity container.
+		// Mainly used to inform users that a network error has occurred.
+		// @see data_manager render_msg_to_inspector for other uses.
+		// @see common.build_autoload case use
+			const notifications_handler = (options) => {
+				dd_request_idle_callback(
+					() => {
+						// container
+							const container	= self.bubbles_notification_container
+							if (!container) {
+								console.error('bubbles_notification_container is undefined!');
+								return
+							}
+
+						// render notification bubble
+							const node_info = render_node_info(options)
+
+						// prepend node (at top of the list)
+							container.prepend(node_info)
+					}
+				)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('notification', notifications_handler)
 			)
 
 	// events listeners. Add window/document general events
