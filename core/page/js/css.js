@@ -72,7 +72,7 @@ export const set_element_css = async (key, value, replace=false) => {
 	}
 
 	// set root_css property
-	const result = await update_style_sheet(key, value)
+	const result = update_style_sheet(key, value)
 
 
 	return result
@@ -99,7 +99,7 @@ export const set_element_css = async (key, value, replace=false) => {
 	}
 * @return bool
 */
-const update_style_sheet = async function(key, value) {
+const update_style_sheet = function(key, value) {
 
 	// already exits case
 		// if (root_css[key]!==undefined) {
