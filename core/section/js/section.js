@@ -134,7 +134,10 @@ section.prototype.init = async function(options) {
 		self.section_tipo			= options.section_tipo
 		self.section_id				= options.section_id
 		self.section_id_selected	= options.section_id_selected
-		self.mode					= options.mode
+
+		// mode. Check for valid mode. If is not valid, use default 'list'
+		self.mode					= validate_mode(options.mode)
+
 		self.lang					= options.lang
 
 		// DOM
@@ -1677,6 +1680,32 @@ section.prototype.focus_first_input = function() {
 
 	return false
 }//end focus_first_input
+
+
+
+/**
+* VALIDATE_MODE
+* Check given mode to prevent unwanted or not valid mode.
+* If the mode is not accepted, fallback to default mode 'list'
+* @return string mode
+*/
+function validate_mode(mode) {
+
+    const valid_modes = ['edit', 'list', 'list_thesaurus'];
+    const default_mode = 'list';
+
+    if (!mode) {
+        return default_mode;
+    }
+
+    if (valid_modes.includes(mode)) {
+        return mode;
+    }
+
+    console.error(`Invalid mode '${mode}' received. Using default mode '${default_mode}'. Valid modes: ${valid_modes.join(', ')}`);
+
+    return default_mode;
+}//end validate_mode
 
 
 
