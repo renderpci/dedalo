@@ -1082,10 +1082,13 @@ export const render_configuration_options = function (self, options_container, c
 			parent			: control_section_id_switcher
 		})
 		// label_section_id_check_box
+		const current_label = import_mode==='direct'
+			? self.get_tool_label('name_indicates_id') || 'Name indicates id'
+			: get_label.name_to_record_id || 'Prefix indicates id'
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'checkbox-label',
-			inner_html		: get_label.name_to_record_id || 'Prefix indicates id',
+			inner_html		: current_label,
 			parent			: name_control_section_id
 		})
 
