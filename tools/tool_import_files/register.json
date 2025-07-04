@@ -33,7 +33,7 @@
     },
     {
       "type": "dd151",
-      "section_id": "1",
+      "section_id": "-1",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 20,
-              "hour": 20,
-              "time": 65089514370,
+              "day": 4,
+              "hour": 21,
+              "time": 65101525543,
               "year": 2025,
-              "month": 2,
-              "minute": 39,
-              "second": 30
+              "month": 7,
+              "minute": 5,
+              "second": 43
             }
           }
         ]
@@ -151,7 +151,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.1.1"
+          "1.1.2"
         ]
       }
     },
@@ -591,6 +591,56 @@
               "lang": "lg-ita",
               "name": "replace_existing_files",
               "value": "Sostituire i file esistenti"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "name_indicates_id",
+              "value": "Name indicates id"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "name_indicates_id",
+              "value": "Nombre indica id"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "name_indicates_id",
+              "value": "Nom indica id"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "name_indicates_id",
+              "value": "Izenak identifikazioa adierazten du"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "name_indicates_id",
+              "value": "Name gibt ID an"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "name_indicates_id",
+              "value": "Το όνομα υποδεικνύει την ταυτότητα"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "name_indicates_id",
+              "value": "Nom indique id"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "name_indicates_id",
+              "value": "Il nome indica l'ID"
+            },
+            {
+              "lang": "lg-por",
+              "name": "name_indicates_id",
+              "value": "Nome indica id"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "name_indicates_id",
+              "value": "नामले पहिचान जनाउँछ"
             }
           ]
         ]
@@ -608,9 +658,9 @@
   "section_id": 19,
   "created_date": "2021-08-08 18:48:26",
   "section_tipo": "dd1340",
-  "modified_date": "2025-02-20 20:39:30",
+  "modified_date": "2025-07-04 21:05:43",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
-  "modified_by_userID": 1
+  "modified_by_userID": -1
 }
