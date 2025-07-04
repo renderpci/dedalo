@@ -446,6 +446,7 @@ class tool_import_files extends tool_common {
 		// check files data
 			if (empty($files_data)) {
 				$response->msg = 'Error. Empty files_data';
+				$response->errors[] = 'Empty files data';
 				return $response;
 			}
 
@@ -526,6 +527,7 @@ class tool_import_files extends tool_common {
 							.' file_full_path: ' .$file_full_path
 							, logger::ERROR
 						);
+						$response->errors[] = $msg;
 						common::$pdata->errors[] = $msg;
 						continue; // Skip file
 					}
@@ -538,6 +540,7 @@ class tool_import_files extends tool_common {
 							, logger::ERROR
 						);
 						$ar_msg[] = $msg;
+						$response->errors[] = $msg;
 						common::$pdata->errors[] = $msg;
 						continue; // Skip file
 					}
@@ -605,11 +608,12 @@ class tool_import_files extends tool_common {
 										$target_file	= $tmp_dir . '/' . $target_filename;
 										if (false===copy($source_file, $target_file)) {
 											debug_log(__METHOD__
-												.' Error coping file: ' . PHP_EOL
+												. ' Error coping file: ' . PHP_EOL
 												. ' source_file: ' . $source_file . PHP_EOL
 												. ' target_file: ' . $target_file
 												, logger::ERROR
 											);
+											$response->errors[] = 'Error coping file';
 										}
 									}
 
@@ -909,7 +913,7 @@ class tool_import_files extends tool_common {
 				: 'Import files done successfully. Imported: '.$total_processed." of " .$total;
 			$response->time		= exec_time_unit_auto($start_time);
 			$response->memory	= dd_memory_usage();
-			$response->errors	= common::$pdata->errors;
+			$response->errors	= array_unique( array_merge($response->errors, common::$pdata->errors) );
 
 
 		return $response;
