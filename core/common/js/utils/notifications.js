@@ -11,7 +11,7 @@
 
 /**
 * RENDER_NODE_INFO
-* render a node with the information sent by the server when the components save, if all go ok it will be green with the msg from server if no it will be red.
+* Renders a node with the information sent by the server when the components save, if all go ok it will be green with the msg from server if no it will be red.
 * @param options object
 * 	Has the instance and the api_response from the 'save' event sent by the components
 * @return node node_info

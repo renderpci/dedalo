@@ -1814,8 +1814,8 @@ final class dd_core_api {
 					// session sqo. Store section SQO in session.
 					// It's not used to main navigation, but it's needed by some tools like tool_export
 					// in addition to section_tool navigation (like transcription, translation, etc.)
-						$save_modes = ['edit','list','list_thesaurus'];
-						if ($model==='section' && $session_save===true && in_array($mode, $save_modes)) {
+						$session_save_modes = ['edit','list','list_thesaurus'];
+						if ($model==='section' && $session_save===true && in_array($mode, $session_save_modes)) {
 
 							$safe_sqo = clone $sqo;
 

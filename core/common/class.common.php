@@ -1,7 +1,16 @@
 <?php declare(strict_types=1);
 /**
 * COMMON (ABSTRACT CLASS)
-* Shared methods by sections and components
+* Shared methods by sections and components.
+*
+* This abstract class serves as a base for all section and component classes in the application.
+* It defines shared functionality and reusable logic that is common across different components,
+* such as data handling, validation, and permission checks.
+*
+* Sub-classes such as 'section' or 'component_common' extend this class, implementing or overriding
+* specific methods to fulfill their specific behaviors.
+*
+* Note: This class is not meant to be instantiated directly.
 */
 abstract class common {
 
@@ -3576,7 +3585,7 @@ abstract class common {
 				// Check for legacy v5 relationship components that are no longer supported
 				$v5_unsupported = ['component_relation_parent','component_relation_children'];
 				if ( in_array($model, $v5_unsupported) ) {
-					$msg = "Error . Invalid component [$model] configuration. v5 resolution fallback is not longer supported! Configure an RQO for the node $tipo";
+					$msg = "Error. Invalid component [$model] configuration. v5 resolution fallback is not longer supported. Configure an RQO for the node $tipo";
 					debug_log(__METHOD__ . $msg
 						, logger::ERROR
 					);
