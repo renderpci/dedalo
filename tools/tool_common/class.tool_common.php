@@ -390,7 +390,17 @@ class tool_common {
 			if (!empty($tool_config)) {
 				// parse and resolve ddo_map self
 					if (isset($tool_config->ddo_map)) {
-						$tool_config->ddo_map = array_map(function($el) use($tipo, $section_tipo){
+						$tool_config->ddo_map = array_map(function($el) use($tipo, $section_tipo, $tool_config){
+
+							if (!is_object($el)) {
+								debug_log(__METHOD__
+									. " Error. Bad ddo_map item" . PHP_EOL
+									. ' el: ' . to_string($el) . PHP_EOL
+									. ' tool_config->ddo_map: ' . to_string($tool_config->ddo_map)
+									, logger::ERROR
+								);
+							}
+
 							if ($el->tipo==='self') {
 								$el->tipo = $tipo;
 							}

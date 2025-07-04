@@ -6,8 +6,6 @@
 
 // imports
 	import {ui} from '../../../common/js/ui.js'
-	import {data_manager} from '../../../common/js/data_manager.js'
-	import {create_source} from '../../../common/js/common.js'
 
 
 
@@ -80,7 +78,7 @@ export const get_content_data = async function(self) {
 /**
 * RENDER_TMP_COMPONENTS
 * @object self
-* @return HTMLElement DocumentFragment
+* @return HTMLElement fragment
 */
 const render_tmp_components = async function(self) {
 
@@ -91,6 +89,11 @@ const render_tmp_components = async function(self) {
 	for (let i = 0; i < ar_instances_length; i++) {
 
 		const current_instance = ar_instances[i]
+
+		// mode check
+		if (current_instance.mode!=='edit') {
+			console.warn('Warning. Expected mode is edit but instance mode is :', current_instance.mode);
+		}
 
 		// show_interface
 		current_instance.show_interface.tools = true
