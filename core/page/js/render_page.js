@@ -214,6 +214,7 @@ const render_recovery_msg = function() {
 /**
 * RENDER_NOTIFICATION_MSG
 * Render HTML from environment notification data
+* @param object page instance
 * @param object dedalo_notification
 * 	Sample
 * 	{
