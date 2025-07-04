@@ -182,22 +182,25 @@ tool_import_files.prototype.import_files = function(options) {
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'import_files')
 
+	// rqo_options
+		const rqo_options = {
+			background_running		: true, // set run in background CLI
+			tipo					: self.caller.tipo,
+			section_tipo			: self.caller.section_tipo,
+			section_id				: self.caller.section_id,
+			tool_config				: self.tool_config,
+			files_data				: safe_files_data,
+			components_temp_data	: components_temp_data,
+			key_dir					: self.key_dir,
+			custom_target_quality	: self.custom_target_quality
+		}
+
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source,
-			options : {
-				background_running		: true, // set run in background CLI
-				tipo					: self.caller.tipo,
-				section_tipo			: self.caller.section_tipo,
-				section_id				: self.caller.section_id,
-				tool_config				: self.tool_config,
-				files_data				: safe_files_data,
-				components_temp_data	: components_temp_data,
-				key_dir					: self.key_dir,
-				custom_target_quality	: self.custom_target_quality
-			}
+			options : rqo_options
 		}
 
 	// call to the API, fetch data and get response

@@ -160,9 +160,10 @@ const get_content_data_edit = async function(self) {
 			const components_temp_data = self.service_tmp_section.get_components_data()
 
 			// get the global configuration (to apply in the server)
-			self.tool_config.import_file_name_mode = (self.tool_config.import_mode === 'section' && options_container.control_section_id_check_box.checked)
+			const is_section_or_direct_mode = ['section', 'direct'].includes(self.tool_config.import_mode);
+			self.tool_config.import_file_name_mode = ( is_section_or_direct_mode && options_container.control_section_id_check_box.checked)
 				? 'enumerate'
-				: (self.tool_config.import_mode === 'section' && options_container.same_name_check_box.checked)
+				: (is_section_or_direct_mode && options_container.same_name_check_box.checked)
 					? 'named'
 					: null
 
@@ -579,7 +580,8 @@ export const render_file_processor_selector = function (self, options_container,
 	select_process.appendChild(default_option_node)
 
 	// other options
-	for (let i = 0; i < file_processor_options.length; i++) {
+	const file_processor_options_length = file_processor_options?.length
+	for (let i = 0; i < file_processor_options_length; i++) {
 
 		const option = file_processor_options[i]
 
@@ -757,13 +759,15 @@ export const render_matching_options = function (self, options_container, conten
 	// file name control
 	// hide the options when the tool is caller by components, the import_mode is defined in preferences.
 	const import_mode = self.tool_config?.import_mode
-	const class_name_configuration = ['section','direct'].includes(import_mode) ? '' : ' hide';
 
 	// matching_options_container
 	const matching_options_container = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'tool_name_match_options' + class_name_configuration
+		class_name		: 'tool_name_match_options'
 	})
+	if (!['section'].includes(import_mode)) {
+		matching_options_container.classList.add('hide')
+	}
 
 	// replace_existing_images_label
 	ui.create_dom_element({
@@ -843,7 +847,6 @@ export const render_matching_options = function (self, options_container, conten
 	})
 	// set the node to be used when data will send to server
 	options_container.name_with_id_match_check_box = name_with_id_match_check_box
-
 
 	// name_match_container
 	const name_match_container = ui.create_dom_element({
@@ -926,13 +929,15 @@ export const render_configuration_options = function (self, options_container, c
 	// file name control
 	// hide the options when the tool is caller by components, the import_mode is defined in preferences.
 	const import_mode = self.tool_config?.import_mode
-	const class_name_configuration = ['section','direct'].includes(import_mode) ? '' : ' hide';
 
 	// tool_configuration_options_container
 	const tool_configuration_options_container = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'tool_configuration_options' + class_name_configuration
+		element_type	: 'div',
+		class_name		: 'tool_configuration_options'
 	})
+	if (!['section','direct'].includes(import_mode)) {
+		tool_configuration_options_container.classList.add('hide')
+	}
 
 	// new_files_label
 	ui.create_dom_element({
@@ -942,7 +947,7 @@ export const render_configuration_options = function (self, options_container, c
 		parent			: tool_configuration_options_container
 	})
 
-	// NAME
+	// NAME (Suffix indicates field)
 
 		// name_control_field
 		const name_control_field = ui.create_dom_element({
@@ -950,6 +955,9 @@ export const render_configuration_options = function (self, options_container, c
 			class_name		: 'name_control name_control_field',
 			parent			: tool_configuration_options_container
 		})
+		if (import_mode==='direct') {
+			name_control_field.classList.add('hide')
+		}
 
 		// switcher
 		const control_field_switcher = ui.create_dom_element({
@@ -1022,7 +1030,7 @@ export const render_configuration_options = function (self, options_container, c
 			})
 		}//end for (let i = 0; i < option_components.length; i++)
 
-	// SECTION ID
+	// SECTION ID (Prefix indicates id)
 
 		// name_control_to_section_id
 		const name_control_section_id = ui.create_dom_element({
@@ -1081,7 +1089,7 @@ export const render_configuration_options = function (self, options_container, c
 			parent			: name_control_section_id
 		})
 
-	// SAME NAME
+	// SAME NAME (Same name same record. Create new ID)
 
 		// same_name_same_section
 		const same_name_same_section = ui.create_dom_element({
@@ -1089,6 +1097,9 @@ export const render_configuration_options = function (self, options_container, c
 			class_name 		: 'name_control same_name_same_section',
 			parent 			: tool_configuration_options_container
 		})
+		if (import_mode==='direct') {
+			same_name_same_section.classList.add('hide')
+		}
 
 		// switcher
 		const same_name_same_section_switcher = ui.create_dom_element({
