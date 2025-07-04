@@ -986,7 +986,6 @@ class tool_import_files extends tool_common {
 
 
 
-
 	/**
 	* GET_MEDIA_SECTION_MATCH
 	* uses the name of the uploaded file as: 7ftTgmN-Mn.tiff | 456Mnc.mov

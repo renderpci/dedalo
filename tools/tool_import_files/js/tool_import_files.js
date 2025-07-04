@@ -130,11 +130,12 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 		// Service tmp_section
 			// init service tmp_section
+			const tmp_section_ddo_map = self.tool_config.ddo_map.filter(el => el.role==='input_component')
 			self.service_tmp_section = await get_instance({
 				model	: 'service_tmp_section',
 				mode	: 'edit',
 				caller	: self,
-				ddo_map	: self.tool_config.ddo_map.filter(el => el.role==='input_component')
+				ddo_map	: tmp_section_ddo_map
 			})
 			await self.service_tmp_section.build()
 

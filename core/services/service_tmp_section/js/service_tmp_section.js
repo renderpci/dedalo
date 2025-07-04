@@ -5,10 +5,7 @@
 
 
 // import
-	import {event_manager} from '../../../common/js/event_manager.js'
-	import {data_manager} from '../../../common/js/data_manager.js'
 	import {get_instance} from '../../../common/js/instances.js'
-	import {dd_console} from '../../../common/js/utils/index.js'
 	import {common} from '../../../common/js/common.js'
 	import {render_edit_service_tmp_section} from './render_edit_service_tmp_section.js'
 
@@ -114,7 +111,6 @@ service_tmp_section.prototype.build = async function(autoload=false) {
 
 	// set on finish
 		await Promise.all(ar_promises).then((ar_instances) => {
-			// dd_console(`ar_instances`, 'DEBUG', ar_instances)
 			self.ar_instances = ar_instances
 		})
 
