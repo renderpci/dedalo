@@ -423,6 +423,7 @@ class tool_import_files extends tool_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// options
 			// tipo. string component tipo like 'oh17'
@@ -452,6 +453,9 @@ class tool_import_files extends tool_common {
 		// Note that the tool buttons are conditional upon import mode.
 			$import_mode = $tool_config->import_mode ?? 'default';
 
+		// import_file_name_mode
+			$import_file_name_mode = $tool_config->import_file_name_mode ?? null;
+
 		// ddo_map
 			$ar_ddo_map = $tool_config->ddo_map ?? [];
 
@@ -460,7 +464,8 @@ class tool_import_files extends tool_common {
 				return $item->role==='target_component';
 			});
 			if (!is_object($target_ddo_component)) {
-				$response->msg .= ' Invalid target_component';
+				$response->msg .= ' Invalid target_component. Role "target_component" is not defined in Ontology tool configuration properties.';
+				$response->errors[] = 'Invalid target component';
 				return $response;
 			}
 			$target_component_tipo	= $target_ddo_component->tipo;
@@ -646,6 +651,7 @@ class tool_import_files extends tool_common {
 								// continue 2 skip the switch() and the foreach() of images.
 								continue 2;
 								breaK;
+
 							case 'enumerate':
 								if (!empty($file_data['regex']->section_id)) {
 									// Direct numeric case like 1.jpg
@@ -659,6 +665,7 @@ class tool_import_files extends tool_common {
 								}
 								$section_id = (int)$_base_section_id;
 								break;
+
 							case 'named':
 								// String case like ánfora.jpg
 								// Look already imported files
@@ -682,8 +689,7 @@ class tool_import_files extends tool_common {
 								break;
 
 							default:
-								# IMPORT
-								# Create new section
+								// Create new section
 								$section 		= section::get_instance(null, $section_tipo);
 								$section->Save();
 								$section_id 	= $section->get_section_id();
@@ -694,6 +700,17 @@ class tool_import_files extends tool_common {
 						$target_ddo = array_find($ar_ddo_map, function($item) use($current_component_option_tipo){
 							return $item->role === 'component_option' && $item->tipo===$current_component_option_tipo;
 						});
+
+						if (!is_object($target_ddo)) {
+							debug_log(__METHOD__
+								." target_ddo is empty and will be ignored "
+								.' role: component_option' .  PHP_EOL
+								.' role: tipo' .  to_string($current_component_option_tipo)
+								, logger::ERROR
+							);
+							$response->errors[] = 'empty target_ddo for role "component_option" and tipo "$current_component_option_tipo"';
+							continue;
+						}
 
 						// check if the section is not defined in the target_ddo (as virtual sections):
 						// in those cases it will defined as 'self' and needs to be replace by the current section_tipo.
@@ -715,6 +732,7 @@ class tool_import_files extends tool_common {
 							." target_ddo is empty and will be ignored "
 							, logger::ERROR
 						);
+						$response->errors[] = 'target_ddo is empty and will be ignored';
 						continue;
 					}
 
@@ -733,6 +751,7 @@ class tool_import_files extends tool_common {
 								.' current value_obj: '. json_encode( $value_obj )
 								, logger::ERROR
 							);
+							$response->errors[] = 'Undefined file processor properties';
 							continue;
 						}
 						$processor_options = new stdClass();
