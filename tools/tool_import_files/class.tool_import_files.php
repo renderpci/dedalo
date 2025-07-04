@@ -448,9 +448,9 @@ class tool_import_files extends tool_common {
 				return $response;
 			}
 
-		// import_mode
-			$import_mode			= $tool_config->import_mode ?? 'default';
-			$import_file_name_mode	= $tool_config->import_file_name_mode ?? null;
+		// import_mode: section|direct|default
+		// Note that the tool buttons are conditional upon import mode.
+			$import_mode = $tool_config->import_mode ?? 'default';
 
 		// ddo_map
 			$ar_ddo_map = $tool_config->ddo_map ?? [];
@@ -541,7 +541,7 @@ class tool_import_files extends tool_common {
 					$file_data = tool_import_files::get_file_data($tmp_dir, $current_file_name);
 
 				// target_ddo
-					if ($import_mode==='section') {
+					if ($import_mode==='section' || $import_mode==='direct') {
 						// switch import_file_name_mode
 						switch ($import_file_name_mode) {
 							// match case
@@ -757,49 +757,64 @@ class tool_import_files extends tool_common {
 						// Create new media section and set the imported file to it.
 						// Media files that has not file_processor as splits or other process.
 
-						// component portal. Component (expected portal)
-							$component_portal = component_common::get_instance(
-								$target_ddo->model,
-								$target_ddo->tipo,
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$target_ddo->section_tipo
-							);
-							// Portal target_section_tipo
-							$target_section_tipo = $target_ddo->target_section_tipo ?? $component_portal->get_ar_target_section_tipo()[0];
+						// import_mode conditional
+						// All cases are section or default except direct import from resources (rsc170  - Images)
+						switch ($import_mode) {
+							case 'direct':
+								// Fix new section created as current_section_id
+								$target_section_id		= $section_id;
+								$target_section_tipo	= $section_tipo;
+								break;
 
-						// section. Create a new section for each file from current portal
-							$portal_response = (object)$component_portal->add_new_element((object)[
-								'target_section_tipo' => $target_section_tipo
-							]);
-							if ($portal_response->result===false) {
-								$response->result 	= false;
-								$response->msg 		= "Error on create portal children: ".$portal_response->msg;
-								debug_log(__METHOD__." $response->msg ", logger::ERROR);
-								return $response;
-							}
+							case 'section':
+							case 'default':
+								// component portal. Component (expected portal)
+								$component_portal = component_common::get_instance(
+									$target_ddo->model,
+									$target_ddo->tipo,
+									$section_id,
+									'list',
+									DEDALO_DATA_NOLAN,
+									$target_ddo->section_tipo
+								);
+								// Portal target_section_tipo
+								$target_section_tipo = $target_ddo->target_section_tipo ?? $component_portal->get_ar_target_section_tipo()[0];
 
-							// save portal if all is all ok
-							$component_portal->Save();
+								// section. Create a new section for each file from current portal
+								$portal_response = (object)$component_portal->add_new_element((object)[
+									'target_section_tipo' => $target_section_tipo
+								]);
+								if ($portal_response->result===false) {
+									$current_msg = "Error on create portal children: ".$portal_response->msg;
+									$response->result 	= false;
+									$response->msg 		= $current_msg;
+									$response->errors[] = $current_msg;
+									debug_log(__METHOD__." $response->msg ", logger::ERROR);
+									return $response;
+								}
 
-							// Fix new section created as current_section_id
-							$target_section_id = $portal_response->section_id;
+								// save portal if all is all ok
+								$component_portal->Save();
 
-						// component portal new section order. Order portal record when is $import_file_name_mode=enumerate
-							// if ($import_file_name_mode==='enumerate' || $import_file_name_mode==='named' ) {
-							// 	$portal_norder = $regex']->portal_order!=='' ? (int)$regex']->portal_order : false;
-							// 	if ($portal_norder!==false) {
-							// 		$changed_order = $component_portal->set_locator_order( $portal_response->added_locator, $portal_norder );
-							// 		if ($changed_order===true) {
-							// 			$component_portal->Save();
-							// 		}
-							// 		debug_log(__METHOD__
-							// 			." CHANGED ORDER FOR : ".$regex']->portal_order." ".to_string($regex'])
-							// 			, logger::DEBUG
-							// 		);
-							// 	}
-							// }
+								// Fix new section created as current_section_id
+								$target_section_id = $portal_response->section_id;
+
+								// component portal new section order. Order portal record when is $import_file_name_mode=enumerate
+									// if ($import_file_name_mode==='enumerate' || $import_file_name_mode==='named' ) {
+									// 	$portal_norder = $regex']->portal_order!=='' ? (int)$regex']->portal_order : false;
+									// 	if ($portal_norder!==false) {
+									// 		$changed_order = $component_portal->set_locator_order( $portal_response->added_locator, $portal_norder );
+									// 		if ($changed_order===true) {
+									// 			$component_portal->Save();
+									// 		}
+									// 		debug_log(__METHOD__
+									// 			." CHANGED ORDER FOR : ".$regex']->portal_order." ".to_string($regex'])
+									// 			, logger::DEBUG
+									// 		);
+									// 	}
+									// }
+								break;
+						}
 
 						// Set components data
 						// set data into target section of the component adding information provided by the user.
