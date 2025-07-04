@@ -531,8 +531,8 @@ class tool_import_files extends tool_common {
 					}
 
 				// Check proper mode config
-					if ($import_file_name_mode==='enumerate' && $import_mode!=='section') {
-						$msg = "Invalid import mode: $import_mode . Ignored action";
+					if ($import_file_name_mode==='enumerate' && !in_array($import_mode, ['section','direct'])) {
+						$msg = "Incompatible import mode: '$import_mode' with import_file_name_mode: 'enumerate'. Ignored action";
 						debug_log(__METHOD__
 							." $msg "
 							, logger::ERROR

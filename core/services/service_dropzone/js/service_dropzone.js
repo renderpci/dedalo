@@ -132,8 +132,9 @@ const get_system_info = async function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_utils_api',
-			action	: 'get_system_info'
+			dd_api			: 'dd_utils_api',
+			action			: 'get_system_info',
+			prevent_lock	: true
 		}
 
 	// call to the API, fetch data and get response

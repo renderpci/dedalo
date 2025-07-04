@@ -788,10 +788,11 @@ const render_template = async function(self) {
 
 		// rqo
 			const rqo = {
-				dd_api	: 'dd_utils_api',
-				action	: 'list_uploaded_files',
-				source	: source,
-				options	: {
+				dd_api			: 'dd_utils_api',
+				action			: 'list_uploaded_files',
+				source			: source,
+				prevent_lock	: true,
+				options			: {
 					key_dir : self.key_dir
 				}
 			}
