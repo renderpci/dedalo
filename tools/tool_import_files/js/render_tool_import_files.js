@@ -250,534 +250,66 @@ const get_content_data_edit = async function(self) {
 */
 const render_options_container = function (self, content_data) {
 
-	// options_container
-		const options_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'options_container'
-		})
-
-	// filter processor options of the files, it could be defined in the preferences or could be the caller
-		const ar_file_processor = self.tool_config.file_processor || null
-		if(ar_file_processor){
-
-			const processor = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'processor',
-				parent			: options_container
-			})
-			options_container.processor = processor
-
-				// label
-				const label = self.get_tool_label('file_processor') || 'Processor'
-					ui.create_dom_element({
-						element_type	: 'label',
-						class_name		: 'processor label',
-						inner_html		: label + ': ',
-						parent			: processor
-					})
-				// options process
-					const select_process = ui.create_dom_element({
-						element_type	: 'select',
-						class_name		: 'component select',
-						parent			: processor
-					})
-
-					select_process.addEventListener('change', function(){
-						const file_processor_nodes = document.querySelectorAll('select.file_processor_select')
-						const len = file_processor_nodes.length
-						for (let i = len - 1; i >= 0; i--) {
-							file_processor_nodes[i].value = select_process.value
-						}
-					})
-
-				const default_option_node = new Option('', null, true, false);
-					select_process.appendChild(default_option_node)
-
-				for (let i = 0; i < ar_file_processor.length; i++) {
-					const option = ar_file_processor[i]
-
-						const option_procesor_node = ui.create_dom_element({
-							element_type	: 'option',
-							class_name		: 'component select',
-							inner_html		: self.get_tool_label(option.function_name),
-							parent			: select_process
-						})
-						option_procesor_node.value = option.function_name
-				}//end for
-		}//end if(ar_file_processor)
-
 	// component options to store the file, normally the component_portal,
 	// it could be defined in the preferences or it could be the caller
-		const ddo_option_components = self.tool_config.ddo_map.filter(el => el.role === 'component_option')
+	const ddo_option_components = self.tool_config.ddo_map.filter(el => el.role === 'component_option')
+	const option_components = (ddo_option_components.length > 0)
+		? ddo_option_components
+		: [{
+			role				: 'component_option',
+			tipo				: self.caller.tipo,
+			map_name			: null,
+			label				: self.caller.label,
+			section_id			: 'self',
+			section_tipo		: self.caller.tipo,
+			target_section_tipo	: self.tool_config.ddo_map.find(el => el.role === 'target_component').section_tipo
+		  }]
 
-		const option_components = (ddo_option_components.length > 0)
-			? ddo_option_components
-			: [
-				{
-					role				: 'component_option',
-					tipo				: self.caller.tipo,
-					map_name			: null,
-					label				: self.caller.label,
-					section_id			: 'self',
-					section_tipo		: self.caller.tipo,
-					target_section_tipo	: self.tool_config.ddo_map.find(el => el.role === 'target_component').section_tipo
-				}
-			]
+	// options_container
+	const options_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'options_container'
+	})
 
-			// target_component
-			const target_component = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'target_component',
-				parent			: options_container
-			})
-			options_container.target_component = target_component
+	// processor
+	// file processor options of the files, it could be defined in the preferences or could be the caller
+	const file_processor_options = self.tool_config?.file_processor;
+	if(file_processor_options){
+		const processor_selector_container = render_file_processor_selector(self, options_container, file_processor_options);
+		options_container.appendChild(processor_selector_container)
+		// set pointer
+		options_container.processor = processor_selector_container
+	}
 
-				// label
-				const target_component_label = self.get_tool_label('target_component') || 'Target field'
-				ui.create_dom_element({
-					element_type	: 'label',
-					class_name		: 'target_component label',
-					inner_html		: target_component_label + ': ',
-					parent			: target_component
-				})
+	// target field
+	const target_field_selector_container = render_target_field_selector(self, options_container, option_components);
+	options_container.appendChild(target_field_selector_container)
+	// set pointer
+	options_container.target_component = target_field_selector_container
 
-				// select_options
-				const select_options = ui.create_dom_element({
-					element_type	: 'select',
-					class_name		: 'component select',
-					parent			: target_component
-				})
-				select_options.addEventListener('change', function(){
-					const option_component_nodes = document.querySelectorAll('select.option_component_select')
-					const len = option_component_nodes.length
-					for (let i = len - 1; i >= 0; i--) {
-						option_component_nodes[i].value = select_options.value
-					}
-				})
-				for (let i = 0; i < option_components.length; i++) {
-
-					const option = option_components[i]
-
-					const option_node = ui.create_dom_element({
-						element_type	: 'option',
-						class_name		: 'component select',
-						inner_html		: option.label,
-						parent			: select_options
-					})
-					if(option.default){
-						option_node.selected = true
-					}
-					option_node.value = option.tipo
-				}
-
+	// quality
 	// Define the quality target to upload the files
-		const features = self.target_component_context.features || null
-		if(features){
+	const features = self.target_component_context.features || null
+	if(features){
 
-			const ar_quality				= features.ar_quality || ['original']
-			const default_target_quality	= features.default_target_quality || 'original'
-			self.custom_target_quality		= default_target_quality || null
+		const ar_quality				= features.ar_quality || ['original']
+		const default_target_quality	= features.default_target_quality || 'original'
+		self.custom_target_quality		= default_target_quality || null
 
-			// target_quality
-				const target_quality = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'target_quality',
-					parent			: options_container
-				})
+		const quality_selector_container = render_quality_selector(self, options_container, ar_quality, default_target_quality)
+		options_container.appendChild(quality_selector_container)
+	}//end if(features)
 
-			// label
-				const quality_label = self.get_tool_label('quality') || 'Quality'
-				ui.create_dom_element({
-					element_type	: 'label',
-					class_name		: 'quality label',
-					inner_html		: quality_label + ': ',
-					parent			: target_quality
-				})
+	// matching options
+	// name_match previous uploaded images.
+	// Note that this options are rendered always but are only displayed for 'section' and 'direct' import modes
+	const matching_options_container = render_matching_options(self, options_container, content_data)
+	options_container.appendChild(matching_options_container)
 
-			// select_quality. options process
-				const select_quality = ui.create_dom_element({
-					element_type	: 'select',
-					class_name		: 'component select',
-					parent			: target_quality
-				})
-				select_quality.addEventListener('change', function(){
-					self.custom_target_quality = select_quality.value
-				})
-
-				const default_option_node = new Option(default_target_quality, default_target_quality, true, true);
-				select_quality.appendChild(default_option_node)
-
-				for (let i = 0; i < ar_quality.length; i++) {
-					const option = ar_quality[i]
-					if(option===default_target_quality){
-						continue
-					}
-					const option_procesor_node = ui.create_dom_element({
-						element_type	: 'option',
-						class_name		: 'component select',
-						inner_html		: option,
-						parent			: select_quality
-					})
-					option_procesor_node.value = option
-				}//end for (let i = 0; i < ar_quality.length; i++)
-
-		}//end if(ar_quality)
-
-	// name_match previous uploaded images
-
-		// file name control
-		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
-			const class_name_configuration = (self.tool_config.import_mode && self.tool_config.import_mode==='section')
-				? ''
-				: ' hide'
-
-		// tool_name_match_options
-			const tool_name_match_options = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'tool_name_match_options'+class_name_configuration,
-				parent			: options_container
-			})
-			const replace_existing_images_label = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'label title',
-				inner_html		: self.get_tool_label('replace_existing_files') || 'Replace existing files',
-				parent			: tool_name_match_options
-			})
-
-			const tool_name_match_label = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'label match',
-				inner_html		: self.get_tool_label('match_name_with_previous_upload') || 'Matching the name with a previous upload:',
-				parent			: tool_name_match_options
-			})
-
-			const name_match_id = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'name_control name_match',
-				parent			: tool_name_match_options
-			})
-			// switcher name_match id
-				const name_match_switcher = ui.create_dom_element({
-					element_type	: 'label',
-					class_name		: 'switcher text_unselectable',
-					parent			: name_match_id
-				})
-				// check_box
-					const name_with_id_match_check_box = ui.create_dom_element({
-						element_type	: 'input',
-						type			: 'checkbox',
-						class_name		: 'ios-toggle',
-						parent			: name_match_switcher
-					})
-					name_with_id_match_check_box.addEventListener('change', function(e) {
-						control_field_check_box.checked			= false
-						same_name_check_box.checked				= false
-						control_section_id_check_box.checked	= false
-						free_name_match_check_box.checked		= false
-						content_data.template_container.classList.remove('name_id','same_name_section','match_freename')
-						if(name_with_id_match_check_box.checked === true){
-							content_data.template_container.classList.add('match')
-							if(options_container.processor){
-								options_container.processor.classList.add('lock')
-							}
-							if(options_container.target_component){
-								options_container.target_component.classList.add('lock')
-							}
-						}else{
-							content_data.template_container.classList.remove('match')
-							if(options_container.processor){
-								options_container.processor.classList.remove('lock')
-							}
-							if(options_container.target_component){
-								options_container.target_component.classList.remove('lock')
-							}
-						}
-
-					})
-					// switch_label
-					ui.create_dom_element({
-						element_type	: 'i',
-						parent			: name_match_switcher
-					})
-
-				// label_section_id_check_box
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'checkbox-label',
-						inner_html		: self.get_tool_label('matching_id') || 'Matching ID',
-						parent			: name_match_id
-					})
-				// set the node to be used when data will send to server
-					options_container.name_with_id_match_check_box = name_with_id_match_check_box
-
-			const name_match = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'name_control name_match',
-				parent			: tool_name_match_options
-			})
-
-			// switcher free names
-				const free_names_match_switcher = ui.create_dom_element({
-					element_type	: 'label',
-					class_name		: 'switcher text_unselectable',
-					parent			: name_match
-				})
-				// check_box
-					const free_name_match_check_box = ui.create_dom_element({
-						element_type	: 'input',
-						type			: 'checkbox',
-						class_name		: 'ios-toggle',
-						parent			: free_names_match_switcher
-					})
-					free_name_match_check_box.addEventListener('change', function(e) {
-						control_field_check_box.checked			= false
-						same_name_check_box.checked				= false
-						control_section_id_check_box.checked	= false
-						name_with_id_match_check_box.checked	= false
-						content_data.template_container.classList.remove('name_id','same_name_section','match')
-						if(free_name_match_check_box.checked === true){
-							content_data.template_container.classList.add('match_freename')
-							if(options_container.processor){
-								options_container.processor.classList.add('lock')
-							}
-							if(options_container.target_component){
-								options_container.target_component.classList.add('lock')
-							}
-						}else{
-							content_data.template_container.classList.remove('match_freename')
-							if(options_container.processor){
-								options_container.processor.classList.remove('lock')
-							}
-							if(options_container.target_component){
-								options_container.target_component.classList.remove('lock')
-							}
-						}
-
-					})
-					// switch_label
-					ui.create_dom_element({
-						element_type	: 'i',
-						parent			: free_names_match_switcher
-					})
-
-				// label_section_id_check_box
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'checkbox-label',
-						inner_html		: self.get_tool_label('matching_name') || 'Matching name',
-						parent			: name_match
-					})
-				// set the node to be used when data will send to server
-					options_container.free_name_match_check_box = free_name_match_check_box
-
-
-
-
-		// tool_configuration_options
-			const tool_configuration_options = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'tool_configuration_options'+class_name_configuration,
-				parent			: options_container
-			})
-
-			const new_files_label = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'label title',
-				inner_html		: self.get_tool_label('new_files') || 'New files',
-				parent			: tool_configuration_options
-			})
-
-			// name_control_field
-				const name_control_field = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'name_control name_control_field',
-					parent			: tool_configuration_options
-				})
-
-				// switcher
-					const control_field_switcher = ui.create_dom_element({
-						element_type	: 'label',
-						class_name		: 'switcher text_unselectable',
-						parent			: name_control_field
-					})
-
-				// check_box
-					const control_field_check_box = ui.create_dom_element({
-						element_type	: 'input',
-						type			: 'checkbox',
-						parent			: control_field_switcher
-					})
-					control_field_check_box.addEventListener('change', function(e) {
-						// match deactivate
-							name_with_id_match_check_box.checked	= false
-							free_name_match_check_box.checked	= false
-							if(options_container.processor){
-								options_container.processor.classList.remove('lock')
-							}
-							if(options_container.target_component){
-								options_container.target_component.classList.remove('lock')
-							}
-						content_data.template_container.classList.remove('match','match_freename')
-
-						set_import_mode(self, this.checked)
-					})
-					// when the images was added (drop) set the import mode
-					// (check the name and assign the field)
-					const drop_zone_addedfile_handler = () => {
-						set_import_mode(self, control_field_check_box.checked)
-					}
-					self.events_tokens.push(
-						event_manager.subscribe('drop_zone_addedfile', drop_zone_addedfile_handler)
-					)
-
-					// switch_label
-					ui.create_dom_element({
-						element_type	: 'i',
-						parent			: control_field_switcher
-					})
-
-					// label_field_check_box
-					const label_field_check_box = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'checkbox-label',
-						inner_html		: get_label.name_to_field || 'Suffix indicates field',
-						parent			: name_control_field
-					})
-
-					// info_options_select
-						const info_options = ui.create_dom_element({
-							element_type	: 'select',
-							class_name		: 'info_options_select',
-							parent			: name_control_field
-						})
-						for (let i = 0; i < option_components.length; i++) {
-
-							const option	= option_components[i]
-							const map_name	= option.map_name ? `- ${option.map_name} -> ` : ''
-
-							// option_node
-							ui.create_dom_element({
-								element_type	: 'option',
-								inner_html		: map_name + option.label,
-								parent			: info_options
-							})
-						}//end for (let i = 0; i < option_components.length; i++)
-
-			// name_control_to_section_id
-				const name_control_section_id = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'name_control name_control_section_id',
-					parent			: tool_configuration_options
-				})
-				// switcher
-					const control_section_id_switcher = ui.create_dom_element({
-						element_type	: 'label',
-						class_name		: 'switcher text_unselectable',
-						parent			: name_control_section_id
-					})
-					// check_box
-						const control_section_id_check_box = ui.create_dom_element({
-							element_type	: 'input',
-							type			: 'checkbox',
-							class_name		: 'ios-toggle',
-							parent			: control_section_id_switcher
-						})
-						control_section_id_check_box.addEventListener('change', function(e) {
-							// match deactivate
-								name_with_id_match_check_box.checked	= false
-								free_name_match_check_box.checked		= false
-								if(options_container.processor){
-									options_container.processor.classList.remove('lock')
-								}
-								if(options_container.target_component){
-									options_container.target_component.classList.remove('lock')
-								}
-							content_data.template_container.classList.remove('match','match_freename')
-							if(control_section_id_check_box.checked){
-								content_data.template_container.classList.add('name_id')
-							}else{
-								content_data.template_container.classList.remove('name_id')
-							}
-							if(same_name_check_box.checked){
-								same_name_check_box.checked = false
-								content_data.template_container.classList.remove('same_name_section')
-							}
-						})
-						// switch_label
-						ui.create_dom_element({
-							element_type	: 'i',
-							parent			: control_section_id_switcher
-						})
-
-					// label_section_id_check_box
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'checkbox-label',
-							inner_html		: get_label.name_to_record_id || 'Prefix indicates id',
-							parent			: name_control_section_id
-						})
-					// set the node to be used when data will send to server
-						options_container.control_section_id_check_box = control_section_id_check_box
-
-			// same_name_same_section
-				const same_name_same_section = ui.create_dom_element({
-					element_type	: 'div',
-					class_name 		: 'name_control same_name_same_section',
-					parent 			: tool_configuration_options
-				})
-
-				// switcher
-					const same_name_same_section_switcher = ui.create_dom_element({
-						element_type	: 'label',
-						class_name		: 'switcher text_unselectable',
-						parent			: same_name_same_section
-					})
-
-					// check_box
-						const same_name_check_box = ui.create_dom_element({
-							element_type	: 'input',
-							type			: 'checkbox',
-							class_name		: 'ios-toggle',
-							parent			: same_name_same_section_switcher
-						})
-						same_name_check_box.addEventListener('change', function(e) {
-							// match deactivate
-								name_with_id_match_check_box.checked	= false
-								free_name_match_check_box.checked		= false
-								if(options_container.processor){
-									options_container.processor.classList.remove('lock')
-								}
-								if(options_container.target_component){
-									options_container.target_component.classList.remove('lock')
-								}
-							content_data.template_container.classList.remove('match','match_freename')
-							if(control_section_id_check_box.checked){
-								control_section_id_check_box.checked = false
-								content_data.template_container.classList.remove('name_id')
-							}
-							if(same_name_check_box.checked){
-								content_data.template_container.classList.add('same_name_section')
-							}else{
-								content_data.template_container.classList.remove('same_name_section')
-							}
-						})
-
-						// switch_label
-						ui.create_dom_element({
-							element_type	: 'i',
-							parent			: same_name_same_section_switcher
-						})
-
-					// label_same_name_check_box
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'checkbox-label',
-							inner_html		: get_label.same_name_same_record || 'Same name same record. Create new ID',
-							parent			: same_name_same_section
-						})
-
-					// set the node to be used when data will send to server
-						options_container.same_name_check_box = same_name_check_box
+	// configuration options
+	// Includes check-boxes for name, section_id, same name
+	const tool_configuration_options_container = render_configuration_options(self, options_container, content_data, option_components)
+	options_container.appendChild(tool_configuration_options_container)
 
 
 	return options_container
@@ -999,6 +531,619 @@ const set_import_mode = function (self, apply) {
 
 	return true
 }//end set_import_mode
+
+
+
+/**
+* RENDER_FILE_PROCESSOR_SELECTOR
+* Renders the file processor selector with given options
+* @param object self instance of the tool
+* @param HTMLElement options_container (used for link nodes access)
+* @param array file_processor_options
+* @return HTMLElement processor_selector_container
+*/
+export const render_file_processor_selector = function (self, options_container, file_processor_options) {
+
+	const processor_selector_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'processor_selector_container'
+	})
+
+	// label
+	const label = self.get_tool_label('file_processor') || 'Processor'
+	ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'processor label',
+		inner_html		: label + ': ',
+		parent			: processor_selector_container
+	})
+
+	// select_process
+	const select_process = ui.create_dom_element({
+		element_type	: 'select',
+		class_name		: 'component select',
+		parent			: processor_selector_container
+	})
+	// change event handler
+	const select_process_change_handler = () => {
+		const file_processor_nodes = document.querySelectorAll('select.file_processor_select')
+		const len = file_processor_nodes.length
+		for (let i = len - 1; i >= 0; i--) {
+			file_processor_nodes[i].value = select_process.value
+		}
+	}
+	select_process.addEventListener('change', select_process_change_handler)
+
+	// default option
+	const default_option_node = new Option('', null, true, false);
+	select_process.appendChild(default_option_node)
+
+	// other options
+	for (let i = 0; i < file_processor_options.length; i++) {
+
+		const option = file_processor_options[i]
+
+		if (!option || !option.function_name) {
+			console.warn(`Invalid option at index ${i}:`, option);
+			continue;
+		}
+
+		const option_procesor_node = ui.create_dom_element({
+			element_type	: 'option',
+			class_name		: 'component select',
+			inner_html		: self.get_tool_label(option.function_name),
+			parent			: select_process
+		})
+		option_procesor_node.value = option.function_name
+	}//end for (let i = 0; i < file_processor_options.length; i++)
+
+
+	return processor_selector_container
+}//end render_file_processor_selector
+
+
+
+/**
+* RENDER_TARGET_FIELD_SELECTOR
+* Renders the target field selector with given options
+* @param object self instance of the tool
+* @param HTMLElement options_container (used for link nodes access)
+* @param array option_components
+* @return HTMLElement target_field_selector_container
+*/
+export const render_target_field_selector = function (self, options_container, option_components) {
+
+	// target_component
+	const target_field_selector_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'target_component'
+	})
+
+	// label
+	const target_component_label = self.get_tool_label('target_component') || 'Target field'
+	ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'target_component label',
+		inner_html		: target_component_label + ': ',
+		parent			: target_field_selector_container
+	})
+
+	// select_options
+	const select_options = ui.create_dom_element({
+		element_type	: 'select',
+		class_name		: 'component select',
+		parent			: target_field_selector_container
+	})
+	// set pointer
+	options_container.select_options = select_options
+	// change event handler
+	const change_handler = () => {
+		const option_component_nodes = document.querySelectorAll('select.option_component_select')
+		const len = option_component_nodes.length
+		for (let i = len - 1; i >= 0; i--) {
+			option_component_nodes[i].value = select_options.value
+		}
+	}
+	select_options.addEventListener('change', change_handler)
+
+	// options
+	for (let i = 0; i < option_components.length; i++) {
+
+		const option = option_components[i]
+
+		if (!option || !option.tipo) {
+			console.warn(`Invalid option at index ${i}:`, option);
+			continue;
+		}
+
+		const option_node = ui.create_dom_element({
+			element_type	: 'option',
+			class_name		: 'component select',
+			inner_html		: option.label,
+			parent			: select_options
+		})
+
+		if(option.default){
+			option_node.selected = true
+		}
+
+		option_node.value = option.tipo
+	}
+
+
+	return target_field_selector_container
+}//end render_target_field_selector
+
+
+
+/**
+* RENDER_QUALITY_SELECTOR
+* Renders the quality selector with given options
+* @param object self instance of the tool
+* @param HTMLElement options_container (used for link nodes access)
+* @param array ar_quality
+* @param string default_target_quality
+* @return HTMLElement quality_selector_container
+*/
+export const render_quality_selector = function (self, options_container, ar_quality, default_target_quality) {
+
+	// target_quality
+	const quality_selector_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'target_quality'
+	})
+
+	// label
+	const quality_label = self.get_tool_label('quality') || 'Quality'
+	ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'quality label',
+		inner_html		: quality_label + ': ',
+		parent			: quality_selector_container
+	})
+
+	// select_quality. options process
+	const select_quality = ui.create_dom_element({
+		element_type	: 'select',
+		class_name		: 'component select',
+		parent			: quality_selector_container
+	})
+	// set pointer
+	options_container.select_quality = select_quality
+	// change event handler
+	const change_handler = () => {
+		self.custom_target_quality = select_quality.value
+	}
+	select_quality.addEventListener('change', change_handler)
+
+	// default option
+	const default_option_node = new Option(default_target_quality, default_target_quality, true, true);
+	select_quality.appendChild(default_option_node)
+
+	// other options
+	for (let i = 0; i < ar_quality.length; i++) {
+
+		const option = ar_quality[i]
+
+		if(option===default_target_quality){
+			continue
+		}
+
+		const option_procesor_node = ui.create_dom_element({
+			element_type	: 'option',
+			class_name		: 'component select',
+			inner_html		: option,
+			parent			: select_quality
+		})
+		option_procesor_node.value = option
+	}//end for (let i = 0; i < ar_quality.length; i++)
+
+
+	return quality_selector_container
+}//end render_quality_selector
+
+
+
+/**
+* RENDER_MATCHING_OPTIONS
+* Renders the matching options with given options
+* @param object self instance of the tool
+* @param HTMLElement options_container (used for link nodes access)
+* @param HTMLElement content_data
+* @return HTMLElement matching_options_container
+*/
+export const render_matching_options = function (self, options_container, content_data) {
+
+	// file name control
+	// hide the options when the tool is caller by components, the import_mode is defined in preferences.
+	const import_mode = self.tool_config?.import_mode
+	const class_name_configuration = ['section','direct'].includes(import_mode) ? '' : ' hide';
+
+	// matching_options_container
+	const matching_options_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'tool_name_match_options' + class_name_configuration
+	})
+
+	// replace_existing_images_label
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label title',
+		inner_html		: self.get_tool_label('replace_existing_files') || 'Replace existing files',
+		parent			: matching_options_container
+	})
+
+	// tool_name_match_label
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label match',
+		inner_html		: self.get_tool_label('match_name_with_previous_upload') || 'Matching the name with a previous upload:',
+		parent			: matching_options_container
+	})
+
+
+	// name_match_id
+	const name_match_id = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'name_control name_match',
+		parent			: matching_options_container
+	})
+
+	// switcher name_match id
+	const name_match_switcher = ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'switcher text_unselectable',
+		parent			: name_match_id
+	})
+	// check_box
+	const name_with_id_match_check_box = ui.create_dom_element({
+		element_type	: 'input',
+		type			: 'checkbox',
+		class_name		: 'ios-toggle',
+		parent			: name_match_switcher
+	})
+	// event change
+	const name_with_id_match_check_box_change_handler = () => {
+		options_container.control_field_check_box.checked		= false
+		options_container.same_name_check_box.checked			= false
+		options_container.control_section_id_check_box.checked	= false
+		options_container.free_name_match_check_box.checked		= false
+		content_data.template_container.classList.remove('name_id','same_name_section','match_freename')
+		if(name_with_id_match_check_box.checked === true){
+			content_data.template_container.classList.add('match')
+			if(options_container.processor){
+				options_container.processor.classList.add('lock')
+			}
+			if(options_container.target_component){
+				options_container.target_component.classList.add('lock')
+			}
+		}else{
+			content_data.template_container.classList.remove('match')
+			if(options_container.processor){
+				options_container.processor.classList.remove('lock')
+			}
+			if(options_container.target_component){
+				options_container.target_component.classList.remove('lock')
+			}
+		}
+	}
+	name_with_id_match_check_box.addEventListener('change', name_with_id_match_check_box_change_handler)
+	// switch_label
+	ui.create_dom_element({
+		element_type	: 'i',
+		parent			: name_match_switcher
+	})
+
+	// label_section_id_check_box
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'checkbox-label',
+		inner_html		: self.get_tool_label('matching_id') || 'Matching ID',
+		parent			: name_match_id
+	})
+	// set the node to be used when data will send to server
+	options_container.name_with_id_match_check_box = name_with_id_match_check_box
+
+
+	// name_match_container
+	const name_match_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'name_control name_match',
+		parent			: matching_options_container
+	})
+
+	// switcher free names
+	const free_names_match_switcher = ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'switcher text_unselectable',
+		parent			: name_match_container
+	})
+	// check_box
+	const free_name_match_check_box = ui.create_dom_element({
+		element_type	: 'input',
+		type			: 'checkbox',
+		class_name		: 'ios-toggle',
+		parent			: free_names_match_switcher
+	})
+	// set pointer. Set the node to be used when data will send to server
+	options_container.free_name_match_check_box = free_name_match_check_box
+	// change event
+	const free_name_match_check_box_change_handler = () => {
+		options_container.control_field_check_box.checked		= false
+		options_container.same_name_check_box.checked			= false
+		options_container.control_section_id_check_box.checked	= false
+		options_container.name_with_id_match_check_box.checked	= false
+		content_data.template_container.classList.remove('name_id','same_name_section','match')
+		if(free_name_match_check_box.checked === true){
+			content_data.template_container.classList.add('match_freename')
+			if(options_container.processor){
+				options_container.processor.classList.add('lock')
+			}
+			if(options_container.target_component){
+				options_container.target_component.classList.add('lock')
+			}
+		}else{
+			content_data.template_container.classList.remove('match_freename')
+			if(options_container.processor){
+				options_container.processor.classList.remove('lock')
+			}
+			if(options_container.target_component){
+				options_container.target_component.classList.remove('lock')
+			}
+		}
+	}
+	free_name_match_check_box.addEventListener('change', free_name_match_check_box_change_handler)
+	// switch_label
+	ui.create_dom_element({
+		element_type	: 'i',
+		parent			: free_names_match_switcher
+	})
+	// label_section_id_check_box
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'checkbox-label',
+		inner_html		: self.get_tool_label('matching_name') || 'Matching name',
+		parent			: name_match_container
+	})
+
+
+	return matching_options_container
+}//end render_matching_options
+
+
+
+/**
+* RENDER_CONFIGURATION_OPTIONS
+* Renders the configuration options with given options
+* @param object self instance of the tool
+* @param HTMLElement options_container (used for link nodes access)
+* @param HTMLElement content_data
+* @param array option_components
+* @return HTMLElement tool_configuration_options_container
+*/
+export const render_configuration_options = function (self, options_container, content_data, option_components) {
+
+	// file name control
+	// hide the options when the tool is caller by components, the import_mode is defined in preferences.
+	const import_mode = self.tool_config?.import_mode
+	const class_name_configuration = ['section','direct'].includes(import_mode) ? '' : ' hide';
+
+	// tool_configuration_options_container
+	const tool_configuration_options_container = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'tool_configuration_options' + class_name_configuration
+	})
+
+	// new_files_label
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'label title',
+		inner_html		: self.get_tool_label('new_files') || 'New files',
+		parent			: tool_configuration_options_container
+	})
+
+	// NAME
+
+		// name_control_field
+		const name_control_field = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'name_control name_control_field',
+			parent			: tool_configuration_options_container
+		})
+
+		// switcher
+		const control_field_switcher = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'switcher text_unselectable',
+			parent			: name_control_field
+		})
+
+		// control_field_check_box
+		const control_field_check_box = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			parent			: control_field_switcher
+		})
+		// set pointer
+		options_container.control_field_check_box = control_field_check_box
+		// change event
+		const control_field_check_box_change_handler = () => {
+			// match deactivate
+				options_container.name_with_id_match_check_box.checked	= false
+				options_container.free_name_match_check_box.checked		= false
+				if(options_container.processor){
+					options_container.processor.classList.remove('lock')
+				}
+				if(options_container.target_component){
+					options_container.target_component.classList.remove('lock')
+				}
+			content_data.template_container.classList.remove('match','match_freename')
+
+			set_import_mode(self, control_field_check_box.checked)
+		}
+		control_field_check_box.addEventListener('change', control_field_check_box_change_handler)
+		// when the images was added (drop) set the import mode
+		// (check the name and assign the field)
+		const drop_zone_addedfile_handler = () => {
+			set_import_mode(self, control_field_check_box.checked)
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('drop_zone_addedfile', drop_zone_addedfile_handler)
+		)
+		// switch_label
+		ui.create_dom_element({
+			element_type	: 'i',
+			parent			: control_field_switcher
+		})
+		// label_field_check_box
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'checkbox-label',
+			inner_html		: get_label.name_to_field || 'Suffix indicates field',
+			parent			: name_control_field
+		})
+
+		// info_options_select
+		const info_options = ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'info_options_select',
+			parent			: name_control_field
+		})
+		for (let i = 0; i < option_components.length; i++) {
+
+			const option	= option_components[i]
+			const map_name	= option.map_name ? `- ${option.map_name} -> ` : ''
+
+			// option_node
+			ui.create_dom_element({
+				element_type	: 'option',
+				inner_html		: map_name + option.label,
+				parent			: info_options
+			})
+		}//end for (let i = 0; i < option_components.length; i++)
+
+	// SECTION ID
+
+		// name_control_to_section_id
+		const name_control_section_id = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'name_control name_control_section_id',
+			parent			: tool_configuration_options_container
+		})
+		// switcher
+		const control_section_id_switcher = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'switcher text_unselectable',
+			parent			: name_control_section_id
+		})
+		// check_box
+		const control_section_id_check_box = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			class_name		: 'ios-toggle',
+			parent			: control_section_id_switcher
+		})
+		// set pointer. Set the node to be used when data will send to server
+		options_container.control_section_id_check_box = control_section_id_check_box
+		// change event
+		const control_section_id_check_box_change_handler = () => {
+			// match deactivate
+			options_container.name_with_id_match_check_box.checked	= false
+			options_container.free_name_match_check_box.checked		= false
+			if(options_container.processor){
+				options_container.processor.classList.remove('lock')
+			}
+			if(options_container.target_component){
+				options_container.target_component.classList.remove('lock')
+			}
+			content_data.template_container.classList.remove('match','match_freename')
+			if(control_section_id_check_box.checked){
+				content_data.template_container.classList.add('name_id')
+			}else{
+				content_data.template_container.classList.remove('name_id')
+			}
+			if(options_container.same_name_check_box.checked){
+				options_container.same_name_check_box.checked = false
+				content_data.template_container.classList.remove('same_name_section')
+			}
+		}
+		control_section_id_check_box.addEventListener('change', control_section_id_check_box_change_handler)
+		// switch_label
+		ui.create_dom_element({
+			element_type	: 'i',
+			parent			: control_section_id_switcher
+		})
+		// label_section_id_check_box
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'checkbox-label',
+			inner_html		: get_label.name_to_record_id || 'Prefix indicates id',
+			parent			: name_control_section_id
+		})
+
+	// SAME NAME
+
+		// same_name_same_section
+		const same_name_same_section = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'name_control same_name_same_section',
+			parent 			: tool_configuration_options_container
+		})
+
+		// switcher
+		const same_name_same_section_switcher = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'switcher text_unselectable',
+			parent			: same_name_same_section
+		})
+		// check_box
+		const same_name_check_box = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			class_name		: 'ios-toggle',
+			parent			: same_name_same_section_switcher
+		})
+		// set pointer. Set the node to be used when data will send to server
+		options_container.same_name_check_box = same_name_check_box
+		// change event
+		const same_name_check_box_change_handler = () => {
+			// match deactivate
+				options_container.name_with_id_match_check_box.checked	= false
+				options_container.free_name_match_check_box.checked		= false
+				if(options_container.processor){
+					options_container.processor.classList.remove('lock')
+				}
+				if(options_container.target_component){
+					options_container.target_component.classList.remove('lock')
+				}
+			content_data.template_container.classList.remove('match','match_freename')
+			if(control_section_id_check_box.checked){
+				control_section_id_check_box.checked = false
+				content_data.template_container.classList.remove('name_id')
+			}
+			if(same_name_check_box.checked){
+				content_data.template_container.classList.add('same_name_section')
+			}else{
+				content_data.template_container.classList.remove('same_name_section')
+			}
+		}
+		same_name_check_box.addEventListener('change', same_name_check_box_change_handler)
+		// switch_label
+		ui.create_dom_element({
+			element_type	: 'i',
+			parent			: same_name_same_section_switcher
+		})
+		// label_same_name_check_box
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'checkbox-label',
+			inner_html		: get_label.same_name_same_record || 'Same name same record. Create new ID',
+			parent			: same_name_same_section
+		})
+
+
+	return tool_configuration_options_container
+}//end render_configuration_options
 
 
 
