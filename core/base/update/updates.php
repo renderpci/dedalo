@@ -50,7 +50,7 @@ $updates->$v = new stdClass();
 
 	// Re-index and vacuum tables
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-			VACUUM FULL VERBOSE ANALYZE public.hierarchy;
+			VACUUM FULL VERBOSE ANALYZE public.matrix_hierarchy;
 		');
 
 $v=663; #####################################################################################
