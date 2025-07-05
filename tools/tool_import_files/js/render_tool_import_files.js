@@ -160,10 +160,10 @@ const get_content_data_edit = async function(self) {
 			const components_temp_data = self.service_tmp_section.get_components_data()
 
 			// get the global configuration (to apply in the server)
-			const is_section_or_direct_mode = ['section', 'direct'].includes(self.tool_config.import_mode);
-			self.tool_config.import_file_name_mode = ( is_section_or_direct_mode && options_container.control_section_id_check_box.checked)
+			const is_section_or_section_resource_mode = ['section', 'section_resource'].includes(self.tool_config.import_mode);
+			self.tool_config.import_file_name_mode = ( is_section_or_section_resource_mode && options_container.control_section_id_check_box.checked)
 				? 'enumerate'
-				: (is_section_or_direct_mode && options_container.same_name_check_box.checked)
+				: (is_section_or_section_resource_mode && options_container.same_name_check_box.checked)
 					? 'named'
 					: null
 
@@ -303,7 +303,7 @@ const render_options_container = function (self, content_data) {
 
 	// matching options
 	// name_match previous uploaded images.
-	// Note that this options are rendered always but are only displayed for 'section' and 'direct' import modes
+	// Note that this options are rendered always but are only displayed for 'section' and 'section_resource' import modes
 	const matching_options_container = render_matching_options(self, options_container, content_data)
 	options_container.appendChild(matching_options_container)
 
@@ -935,7 +935,7 @@ export const render_configuration_options = function (self, options_container, c
 		element_type	: 'div',
 		class_name		: 'tool_configuration_options'
 	})
-	if (!['section','direct'].includes(import_mode)) {
+	if (!['section','section_resource'].includes(import_mode)) {
 		tool_configuration_options_container.classList.add('hide')
 	}
 
@@ -955,7 +955,7 @@ export const render_configuration_options = function (self, options_container, c
 			class_name		: 'name_control name_control_field',
 			parent			: tool_configuration_options_container
 		})
-		if (import_mode==='direct') {
+		if (import_mode==='section_resource') {
 			name_control_field.classList.add('hide')
 		}
 
@@ -1082,7 +1082,7 @@ export const render_configuration_options = function (self, options_container, c
 			parent			: control_section_id_switcher
 		})
 		// label_section_id_check_box
-		const current_label = import_mode==='direct'
+		const current_label = import_mode==='section_resource'
 			? self.get_tool_label('name_indicates_id') || 'Name indicates id'
 			: get_label.name_to_record_id || 'Prefix indicates id'
 		ui.create_dom_element({
@@ -1100,7 +1100,7 @@ export const render_configuration_options = function (self, options_container, c
 			class_name 		: 'name_control same_name_same_section',
 			parent 			: tool_configuration_options_container
 		})
-		if (import_mode==='direct') {
+		if (import_mode==='section_resource') {
 			same_name_same_section.classList.add('hide')
 		}
 
