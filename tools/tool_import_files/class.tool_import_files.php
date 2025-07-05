@@ -1,8 +1,8 @@
 <?php
 /**
 * CLASS TOOL_IMPORT_FILES
-*
-*
+* Specialized tool class for handling file import operations.
+* Extends the base tool_common class to provide file import functionality.
 */
 class tool_import_files extends tool_common {
 
