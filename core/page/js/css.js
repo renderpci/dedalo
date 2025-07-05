@@ -105,7 +105,7 @@ export const set_element_css = (key, value, replace=false) => {
 	}
 * @return bool
 */
-const update_style_sheet = function(key, value) {
+const update_style_sheet = async function(key, value) {
 
 	// style_sheet
 		const css_style_sheet = get_elements_style_sheet()
@@ -213,17 +213,12 @@ const insert_rule = function(selector, json_css_values, css_style_sheet, skip_in
 			const joined = deep_rules.join('; ');
 
 			// Create nested rule (assuming key is a media query or pseudo-selector)
-			const rule = `${key} {
+			const rule = `
+			${key} {
 				${selector} {
 					${joined};
 				}
 			}`;
-			// const rule		= `
-			// ${key} {
-			// 	${selector} {
-			// 		${joined};
-			// 	}
-			// }`
 
 			css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
 		}
