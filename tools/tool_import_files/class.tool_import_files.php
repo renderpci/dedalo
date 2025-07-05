@@ -450,7 +450,7 @@ class tool_import_files extends tool_common {
 				return $response;
 			}
 
-		// import_mode: section|direct|default
+		// import_mode: section|section_resource|default
 		// Note that the tool buttons are conditional upon import mode.
 			$import_mode = $tool_config->import_mode ?? 'default';
 
@@ -533,7 +533,7 @@ class tool_import_files extends tool_common {
 					}
 
 				// Check proper mode config
-					if ($import_file_name_mode==='enumerate' && !in_array($import_mode, ['section','direct'])) {
+					if ($import_file_name_mode==='enumerate' && !in_array($import_mode, ['section','section_resource'])) {
 						$msg = "Incompatible import mode: '$import_mode' with import_file_name_mode: 'enumerate'. Ignored action";
 						debug_log(__METHOD__
 							." $msg "
@@ -549,7 +549,7 @@ class tool_import_files extends tool_common {
 					$file_data = tool_import_files::get_file_data($tmp_dir, $current_file_name);
 
 				// target_ddo
-					if ($import_mode==='section' || $import_mode==='direct') {
+					if ($import_mode==='section' || $import_mode==='section_resource') {
 						// switch import_file_name_mode
 						switch ($import_file_name_mode) {
 							// match case
@@ -781,9 +781,9 @@ class tool_import_files extends tool_common {
 						// Media files that has not file_processor as splits or other process.
 
 						// import_mode conditional
-						// All cases are section or default except direct import from resources (rsc170  - Images)
+						// All cases are section or default except section_resource import from resources (rsc170  - Images)
 						switch ($import_mode) {
-							case 'direct':
+							case 'section_resource':
 								// Fix new section created as current_section_id
 								$target_section_id		= $section_id;
 								$target_section_tipo	= $section_tipo;
