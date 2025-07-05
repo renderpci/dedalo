@@ -2853,15 +2853,15 @@ export const build_autoload = async function(self) {
 			}
 			if (api_response && api_response.dedalo_last_error) {
 				console.error('SERVER: api_response.dedalo_last_error:', api_response.dedalo_last_error);
-				// notification.
-				// Fires a notification event that is listened by page and rendered in bubbles_notification_container
-				if (api_response.dedalo_last_error) {
-					event_manager.publish('notification', {
-						msg			: api_response.dedalo_last_error,
-						type		: 'error',
-						remove_time	: 10000 // 10 secs
-					})
-				}
+				// // notification.
+				// // Fires a notification event that is listened by page and rendered in bubbles_notification_container
+				// if (api_response.dedalo_last_error) {
+				// 	event_manager.publish('notification', {
+				// 		msg			: api_response.dedalo_last_error,
+				// 		type		: 'error',
+				// 		remove_time	: 10000 // 10 secs
+				// 	})
+				// }
 			}
 		}
 
