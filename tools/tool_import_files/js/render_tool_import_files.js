@@ -161,7 +161,8 @@ const get_content_data_edit = async function(self) {
 			inner_html		: get_label.import || 'IMPORT',
 			parent			: buttons_bottom_container
 		})
-		button_process_import.addEventListener('click', async function(e){
+		// click event
+		const button_process_import_click_handler = async (e) => {
 			e.stopPropagation()
 
 			if(self.files_data.length < 1){
@@ -225,7 +226,8 @@ const get_content_data_edit = async function(self) {
 					lock_items	: lock_items,
 					self		: self
 				})
-		})//end button_process_import.addEventListener('click')
+		}
+		button_process_import.addEventListener('click', button_process_import_click_handler)
 
 		// drop_zone_success. On upload file success, re-activate button
 		const drop_zone_success_handler = () => {
