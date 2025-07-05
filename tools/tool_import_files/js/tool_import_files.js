@@ -126,7 +126,6 @@ tool_import_files.prototype.build = async function(autoload=false) {
 				component_option	: self.tool_config.ddo_map.filter(el => el.role === 'component_option'),
 				file_processor		: self.tool_config.file_processor || null
 			})
-			await self.service_dropzone.build()
 
 		// Service tmp_section
 			// init service tmp_section
@@ -137,7 +136,6 @@ tool_import_files.prototype.build = async function(autoload=false) {
 				caller	: self,
 				ddo_map	: tmp_section_ddo_map
 			})
-			await self.service_tmp_section.build()
 
 	} catch (error) {
 		self.error = error

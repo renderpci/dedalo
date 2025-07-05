@@ -9,6 +9,7 @@
 	import {time_unit_auto} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
+	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
 
 
@@ -87,12 +88,25 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'template_container',
 			parent			: content_data
 		})
+		// set pointer
+		content_data.template_container = template_container
 		lock_items.push(template_container)
 
-		const template = await self.service_dropzone.render()
-		template_container.appendChild(template)
-
-		content_data.template_container = template_container
+		// const template = await self.service_dropzone.render()
+		// template_container.appendChild(template)
+		dd_request_idle_callback(
+			() => {
+				ui.load_item_with_spinner({
+					container			: template_container,
+					preserve_content	: true,
+					label				: 'Drop zone',
+					callback			: async () => {
+						await self.service_dropzone.build()
+						return await self.service_dropzone.render()
+					}
+				})
+			}
+		);
 
 	// inputs components container label
 		const inputs_container = ui.create_dom_element({
@@ -111,8 +125,19 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// service_tmp_section
-		const inputs_nodes = await self.service_tmp_section.render()
-		inputs_container.appendChild(inputs_nodes)
+		dd_request_idle_callback(
+			() => {
+				ui.load_item_with_spinner({
+					container			: inputs_container,
+					preserve_content	: true,
+					label				: 'Input components',
+					callback			: async () => {
+						await self.service_tmp_section.build()
+						return await self.service_tmp_section.render();
+					}
+				})
+			}
+		);
 
 	// response_message
 		const response_message = ui.create_dom_element({
