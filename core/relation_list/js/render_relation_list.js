@@ -181,7 +181,7 @@ const build_grid_html = function(self, context, columns, data, count_data, CSS_s
 
 			// target window
 			// By default, the same window is used (recycled) but,
-			// if user clicks with ALT key, anew window
+			// if user clicks with ALT key, a new window is opened
 			const target_window = (e.altKey===true)
 				? section_tipo +'_'+ (new Date()).getTime()
 				: null
