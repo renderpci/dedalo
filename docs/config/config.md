@@ -3374,9 +3374,9 @@ By default Dédalo use the ipapi.co service with free unsigned account. Is possi
 
 ```php
 define('IP_API', [
-    'url'           => 'https://ipapi.co/$ip/json/', // https capable as free
-    'href'          => 'https://ipapi.co/?q=$ip', // page to jump on click
-    'country_code'  => 'country_code' // / property where look country code for flag
+    'url'           => 'https://api.country.is/$ip', // https capable as free
+    'href'          => 'https://ip-api.com/#$ip', // page to jump on click
+    'country_code'  => 'country' // / property where look country code for flag
 ]);
 ```
 
