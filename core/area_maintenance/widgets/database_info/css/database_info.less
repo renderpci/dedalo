@@ -7,20 +7,51 @@
 
 	.version_info {
 		background-color: transparent;
-		margin-bottom: 1rem;
 	}
 
 	.button_rebuild_indexes {
 
 	}
 
-	.info_node {
-		padding: 0px;
-		line-height: 1.1rem;
 
-		.response_node {
-			padding: 1rem;
-			white-space: pre;
+
+	>.content_data {
+
+		>.group_container {
+			padding: 0;
+			margin-bottom: 1rem;
+			border-top: 1px solid @color_grey_dark;
+			padding-top: 1rem;
+
+			>.group_label {
+				padding-bottom: 0.25rem;
+			}
+
+			>.info_node {
+				padding: 0px;
+				line-height: 1.1rem;
+				margin-bottom: 0.25rem;
+			}
+
+			>.form_container {
+				padding-top: 0px;
+			}
+
+			.response_node {
+				padding: 1rem;
+				white-space: pre;
+				position: relative;
+
+				&::after {
+					content: "X";
+					position: absolute;
+					top: 0.5rem;
+					right: 0.5rem;
+					color: @color_grey_dark;
+					cursor: pointer;
+				}
+			}
 		}
 	}
+
 }//end database_info
