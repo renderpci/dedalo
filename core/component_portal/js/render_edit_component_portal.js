@@ -8,7 +8,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
-	import {object_to_url_vars, open_window, open_records_in_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {view_default_edit_portal} from './view_default_edit_portal.js'
@@ -25,6 +25,7 @@
 		on_dragend,
 		on_drop
 	} from './drag_and_drop.js'
+	import {buttons} from './buttons.js'
 
 
 
@@ -698,11 +699,8 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
-		const show_interface		= self.show_interface
-		const target_section		= self.target_section || []
-		const target_section_length	= target_section.length
-			  // sort section by label ascendant
-			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
+		const show_interface	= self.show_interface
+		const target_section	= self.target_section || []
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
@@ -716,34 +714,12 @@ export const get_buttons = (self) => {
 
 	// button_external: button_update_data_external
 		if(show_interface.button_external === true){
-
-			// button_update data external
-			const button_update_data_external = ui.create_dom_element({
-				element_type	: 'span',
-				title			: get_label.update || 'Update',
-				class_name		: 'button sync',
-				parent			: buttons_fold
-			})
-			// event click
-			const update_data_external_click_handler = async function(e) {
-				e.stopPropagation()
-				// force server data to calculate external data
-				const source = self.rqo.source
-				source.build_options = {
-					get_dato_external : true
-				}
-				// refresh
-				self.refresh({
-					build_autoload	: true,
-					render_level	: 'content'
-				})
-			}
-			button_update_data_external.addEventListener('click', update_data_external_click_handler)
-		}//end button external
+			const button_update_data_external = buttons.render_button_update_data_external(self)
+			buttons_fold.appendChild(button_update_data_external)
+		}
 
 	// button_add
 		if(show_interface.button_add === true){
-
 			// section_buttons. Get target section_buttons (defined in request config -> sqo -> section). Sample:
 				// {
 				//     "typo": "ddo",
@@ -768,297 +744,40 @@ export const get_buttons = (self) => {
 			const button_new			= section_buttons.find(el => el.model==='button_new')
 
 			if (button_new && button_new.permissions > 1) {
-				const button_add = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button add',
-					title			: get_label.new || 'New',
-					parent			: buttons_fold
-				})
-				// event click
-				const fn_add = async function(e) {
-					e.stopPropagation()
-
-					// target_section_tipo. to add section selector
-						const target_section_tipo = target_section_length > 1
-							? false
-							: target_section[0].tipo
-						if (!target_section_tipo) {
-							alert('Error. Empty or invalid target_section');
-							return
-						}
-
-					// add_new_element
-						const result = await self.add_new_element(target_section_tipo)
-						if (result===true) {
-
-							// last_value. Get the last value of the portal to open the new section
-								const last_value	= self.data.value[self.data.value.length-1]
-								const section_tipo	= last_value.section_tipo
-								const section_id	= last_value.section_id
-
-							// section. Create the new section instance
-								const section = await get_instance({
-									model			: 'section',
-									mode			: 'edit',
-									tipo			: section_tipo,
-									section_tipo	: section_tipo,
-									section_id		: section_id,
-									inspector		: false,
-									session_save	: false,
-									session_key		: 'section_' + section_tipo + '_' + self.tipo
-								})
-								await section.build(true)
-								const section_node = await section.render()
-
-							// header
-								const header = (get_label.new || 'New section') + ' ' + target_section[0].label
-
-							// modal. Create a modal to attach the section node
-								const modal = ui.attach_to_modal({
-									header		: header,
-									body		: section_node
-								})
-								modal.on_close = function(){
-									self.refresh().then(function(response){
-										event_manager.publish('add_row_'+ self.id)
-									})
-								}
-
-							// activate_first_component. Get the first ddo in ddo_map to be focused
-								ui.activate_first_component({
-									section	: section
-								})
-						}//end if (result===true)
-
-					// remove aux items
-						if (window.page_globals.service_autocomplete) {
-							window.page_globals.service_autocomplete.destroy(true, true, true)
-						}
-				}
-				button_add.addEventListener('click', fn_add)
+				const button_add = buttons.render_button_add(self)
+				buttons_fold.appendChild(button_add)
 			}
 		}//end button_add
 
 	// button_link
 		if(show_interface.button_link === true){
-
-			const button_link = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button link',
-				title			: get_label.vincular_recurso || 'Link resource',
-				parent			: buttons_fold
-			})
-			// event mousedown
-			const fn_link = async function(e) {
-				e.stopPropagation()
-
-				const section_tipo = target_section[0]?.tipo;
-				if (!section_tipo) {
-					alert("Error on get section_tipo");
-					return
-				}
-
-				// iframe
-					( () => {
-
-						const get_iframe_url = (tipo) => {
-
-							const session_key = 'section_' + tipo + '_' + self.tipo
-
-							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-								tipo		: tipo,
-								mode		: 'list',
-								session_key	: session_key, // used to save server and local DDB custom SQO
-								menu		: false,
-								initiator	: self.id // initiator is the caller (self)
-							})
-
-							return url
-						}
-
-						// modal_body
-							const iframe_container = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'iframe_container'
-							})
-							const iframe = ui.create_dom_element({
-								element_type	: 'iframe',
-								class_name		: 'fixed',
-								src				: get_iframe_url(section_tipo),
-								parent			: iframe_container
-							})
-
-						// modal_header
-							// header_custom
-							const header_custom = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'header_custom'
-							})
-							// header label
-							ui.create_dom_element({
-								element_type	: 'span',
-								inner_html		: get_label.section,
-								class_name		: 'label',
-								parent			: header_custom
-							})
-
-						// select_section
-							const select_section = ui.create_dom_element({
-								element_type	: 'select',
-								class_name		: 'select_section' + (target_section_length===1 ? ' mono' : ''),
-								parent			: header_custom
-							})
-							select_section.addEventListener('click', function(e){
-								e.stopPropagation()
-							})
-							select_section.addEventListener('mousedown', function(e){
-								e.stopPropagation()
-							})
-							select_section.addEventListener('change', function(){
-								iframe.src = get_iframe_url(this.value)
-							})
-							// options for select_section
-								for (let i = 0; i < target_section_length; i++) {
-									const item = target_section[i]
-									ui.create_dom_element({
-										element_type	: 'option',
-										value			: item.tipo,
-										inner_html		: item.label + ' [' + item.tipo + ']',
-										parent			: select_section
-									})
-								}
-
-						// fix modal to allow close later, on set value
-							self.modal = ui.attach_to_modal({
-								header	: header_custom,
-								body	: iframe_container,
-								footer	: null,
-								size	: 'big'
-							})
-
-					})()
-					return
-			}
-			button_link.addEventListener('mousedown', fn_link)
+			const button_link = buttons.render_button_link(self)
+			buttons_fold.appendChild(button_link)
 		}//end button_link
 
 	// button_list (go to target section in list mode)
 		if(show_interface.button_list === true){
 
-			const first_section = target_section[0] || null
-			if (first_section) {
-				// Note that in some component_autocomplete_hi items, target_section_tipo
-				// resolution could result in zero sections. Check this value to prevent
-				// errors in this cases (example: oh126 in section oh1)
+			// Note that in some component_autocomplete_hi items, target_section_tipo
+			// resolution could result in zero sections. Check this value to prevent
+			// errors in this cases (example: oh126 in section oh1)
 
-				const label = (SHOW_DEBUG===true)
-					? `${first_section.label} [${first_section.tipo}]`
-					: first_section.label
-
-				const button_list = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button pen',
-					title			: label.replace( /(<([^>]+)>)/ig, ''),
-					parent			: buttons_fold
-				})
-				// event mousedown
-				const fn_click = function(e){
-					e.stopPropagation()
-
-					// open a new window
-						const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-							tipo	: first_section.tipo,
-							mode	: 'list',
-							menu	: false
-						})
-						open_window({
-							url		: url,
-							name	: 'section_view',
-							width	: 1280,
-							height	: 740,
-							on_blur : () => {
-								// refresh current instance
-								self.refresh({
-									build_autoload : true
-								})
-							}
-						})
-				}//end fn_click
-				button_list.addEventListener('mousedown', fn_click)
+			if (target_section[0]) {
+				const button_list = buttons.render_button_list(self)
+				buttons_fold.appendChild(button_list)
 			}
 		}
 
 	// button list_from_component_data
 		if(show_interface.list_from_component_data === true){
-
-			const list_from_component_data_button = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button list hide',
-				title			: get_label.list_from_component_data || 'List from component data',
-				parent			: buttons_fold
-			})
-			// event mousedown. Add listener to the button
-			const mousedown_handler = (e) => {
-				e.stopPropagation()
-
-				const value = self.data?.value || []
-				if (value.length === 0) {
-					return
-				}
-
-				// section tipo
-				const ar_section_tipo 			= value.map(el => el?.section_tipo).filter(tipo => tipo !== undefined)
-				const unique_ar_section_tipo	= [...new Set(ar_section_tipo)];
-
-				if (unique_ar_section_tipo.length > 1) {
-					alert("Multiple target sections. Displaying only " + unique_ar_section_tipo[0]);
-				}
-				const section_tipo = unique_ar_section_tipo[0]
-				if (!section_tipo) {
-					console.warn('No valid section_tipo found')
-					return
-				}
-
-				// section_id list
-				const ar_section_id = value
-					.filter(el => el.section_tipo === section_tipo && el.section_id)
-					.map(el => el.section_id)
-
-				// open_records_in_window
-				open_records_in_window(self, section_tipo, ar_section_id, null);
-			}
-			list_from_component_data_button.addEventListener('mousedown', mousedown_handler)
-			// event change data
-			event_manager.subscribe('update_value_' + self.id_base, () =>{
-				const value = self.data?.value || []
-				if (value.length === 0) {
-					list_from_component_data_button.classList.add('hide')
-				}else{
-					list_from_component_data_button.classList.remove('hide')
-				}
-			})
-			// display only if contains data
-			const value = self.data?.value || []
-			if (value.length > 0) {
-				list_from_component_data_button.classList.remove('hide')
-			}
+			const list_from_component_data_button = buttons.render_list_from_component_data_button(self)
+			buttons_fold.appendChild(list_from_component_data_button)
 		}
 
 	// button_tree terms selector
 		if(show_interface.button_tree === true){
-			const button_tree_selector = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button tree',
-				title			: get_label.vincular_recurso || 'Link resource',
-				parent			: buttons_fold
-			})
-			// event mousedown. Add listener to the button
-			const mousedown_handler = (e) => {
-				e.stopPropagation()
-				// open new area_thesaurus/area_ontology window for relation
-				self.open_ontology_window('relation')
-			}
-			button_tree_selector.addEventListener('mousedown', mousedown_handler)
+			const button_tree_selector = buttons.render_button_tree_selector(self)
+			buttons_fold.appendChild(button_tree_selector)
 		}
 
 	// buttons tools
