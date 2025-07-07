@@ -7,7 +7,8 @@
 // imports
 	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
+	import {object_to_url_vars, open_window, open_records_in_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {view_default_edit_portal} from './view_default_edit_portal.js'
@@ -24,7 +25,6 @@
 		on_dragend,
 		on_drop
 	} from './drag_and_drop.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
 
 
 
@@ -985,6 +985,62 @@ export const get_buttons = (self) => {
 						})
 				}//end fn_click
 				button_list.addEventListener('mousedown', fn_click)
+			}
+		}
+
+	// button list_from_component_data
+		if(show_interface.list_from_component_data === true){
+
+			const list_from_component_data_button = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button list hide',
+				title			: get_label.list_from_component_data || 'List from component data',
+				parent			: buttons_fold
+			})
+			// event mousedown. Add listener to the button
+			const mousedown_handler = (e) => {
+				e.stopPropagation()
+
+				const value = self.data?.value || []
+				if (value.length === 0) {
+					return
+				}
+
+				// section tipo
+				const ar_section_tipo 			= value.map(el => el?.section_tipo).filter(tipo => tipo !== undefined)
+				const unique_ar_section_tipo	= [...new Set(ar_section_tipo)];
+
+				if (unique_ar_section_tipo.length > 1) {
+					alert("Multiple target sections. Displaying only " + unique_ar_section_tipo[0]);
+				}
+				const section_tipo = unique_ar_section_tipo[0]
+				if (!section_tipo) {
+					console.warn('No valid section_tipo found')
+					return
+				}
+
+				// section_id list
+				const ar_section_id = value
+					.filter(el => el.section_tipo === section_tipo && el.section_id)
+					.map(el => el.section_id)
+
+				// open_records_in_window
+				open_records_in_window(self, section_tipo, ar_section_id, null);
+			}
+			list_from_component_data_button.addEventListener('mousedown', mousedown_handler)
+			// event change data
+			event_manager.subscribe('update_value_' + self.id_base, () =>{
+				const value = self.data?.value || []
+				if (value.length === 0) {
+					list_from_component_data_button.classList.add('hide')
+				}else{
+					list_from_component_data_button.classList.remove('hide')
+				}
+			})
+			// display only if contains data
+			const value = self.data?.value || []
+			if (value.length > 0) {
+				list_from_component_data_button.classList.remove('hide')
 			}
 		}
 
