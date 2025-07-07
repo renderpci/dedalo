@@ -4,7 +4,8 @@
 
 
 
-import {data_manager} from '../../../common/js/data_manager.js'
+import {data_manager} from '../../js/data_manager.js'
+import {get_instance} from '../../js/instances.js'
 
 
 
@@ -593,6 +594,86 @@ export function prevent_open_new_window() {
 	return false
 	// return (navigator.userAgent.indexOf('Safari')!==-1 && navigator.userAgent.indexOf('Chrome')===-1)
 }//end prevent_open_new_window
+
+
+
+/**
+* OPEN_RECORDS_IN_WINDOW
+* Target section filter is calculated and fixed in server.
+* Then, opens a new window to navigate the results
+* @param object caller (caller instance)
+* @param string section_tipo
+* @param array ar_section_id
+* @param string|null target_window
+* @return bool true
+*/
+export const open_records_in_window = async function(caller, section_tipo, ar_section_id, target_window) {
+
+	// create a dummy section with calculated section_id array as filter
+
+	// ! NOTE: This session server solution is adopted because passing the whole list of section_id
+	// using the URL is not feasible for large arrays (e.g., for person relationships),
+	// and events between windows is very unstable depending on whether the window is new or recycled, etc.
+
+	// request_config
+		const request_config = [{
+			api_engine	: 'dedalo',
+			type		: 'main',
+			show		: { ddo_map : [] },
+			sqo : {
+				section_tipo	: [section_tipo],
+				limit			: 10,
+				offset			: 0,
+				filter			: {
+					'$and' : [
+						{
+							q : [ ar_section_id.join(',') ],
+							path : [{
+								section_tipo	:  section_tipo,
+								component_tipo	: 'section_id',
+								model			: 'component_section_id',
+								name			: 'Id'
+							}]
+						}
+					]
+				}
+			}
+		}]
+
+	// instance_options (context)
+		const instance_options = {
+			type			: 'section',
+			typo			: 'ddo',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: null,
+			lang			: page_globals.dedalo_data_nolan,
+			mode			: 'edit',
+			model			: 'section',
+			add_show		: true, // force to use request_config 'show' value
+			caller			: caller,
+			request_config	: request_config,
+			id_variant		: 'relation_list_' + (new Date()).getTime()
+		}
+
+	// dummy section init and build
+		const section = await get_instance(instance_options)
+		// build. Forces to load section data and fix filter in server session
+		await section.build(true)
+		// destroy after use it (only affects client side)
+		section.destroy()
+
+	// open a new window without additional params.
+		// Note that the new window will be use the session value fixed in server
+		// for this section tipo by the previous dummy section build
+		open_window({
+			url		: `${DEDALO_CORE_URL}/page/?tipo=${section_tipo}&menu=false`,
+			target	: target_window
+		})
+
+
+	return true
+}//end open_records_in_window
 
 
 
