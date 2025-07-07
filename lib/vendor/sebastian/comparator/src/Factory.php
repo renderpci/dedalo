@@ -56,7 +56,9 @@ final class Factory
             }
         }
 
+        // @codeCoverageIgnoreStart
         throw new RuntimeException('No suitable Comparator implementation found');
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -95,6 +97,7 @@ final class Factory
 
     private function registerDefaultComparators(): void
     {
+        $this->registerDefaultComparator(new ClosureComparator);
         $this->registerDefaultComparator(new MockObjectComparator);
         $this->registerDefaultComparator(new DateTimeComparator);
         $this->registerDefaultComparator(new DOMNodeComparator);

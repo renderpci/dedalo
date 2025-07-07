@@ -2,6 +2,58 @@
 
 All notable changes of the PHPUnit 12.2 release series are documented in this file using the [Keep a CHANGELOG](https://keepachangelog.com/) principles.
 
+## [12.2.6] - 2025-07-04
+
+### Fixed
+
+* [#6104](https://github.com/sebastianbergmann/phpunit/issues/6104): Test with dependencies and data provider fails
+* [#6163](https://github.com/sebastianbergmann/phpunit/issues/6163): `@no-named-arguments` leads to static analysis errors for variadic arguments
+
+## [12.2.5] - 2025-06-27
+
+### Fixed
+
+* [#6249](https://github.com/sebastianbergmann/phpunit/issues/6249): No meaningful error when `<testsuite>` element is missing required `name` attribute
+
+## [12.2.4] - 2025-06-26
+
+### Changed
+
+* Including information about the Git repository (such as the commit hash and branch name) in the Open Test Reporting XML format is now an opt-in feature that can be enabled via the `--include-git-information` CLI option or the `includeGitInformation` attribute in the XML configuration file
+
+### Fixed
+
+* If Git information is included in the Open Test Reporting XML format (see above), any credentials that may be configured as part the `remote.origin.url` setting in Git were written to the `originUrl` attribute of `<git:repository>` elements. For example, when cloning a GitHub repository using a URL like `https://username:password@github.com/organization/repository.git` both username and password were included in the XML report. Since this report may be shared, published, or archived (for example, on a CI server) while including this information, this was reported as a potential security vulnerability ([CVE-2025-53103](https://github.com/junit-team/junit-framework/security/advisories/GHSA-m43g-m425-p68x)). Any credentials are now removed before writing them to the XML report.
+
+## [12.2.3] - 2025-06-20
+
+### Added
+
+* [#6236](https://github.com/sebastianbergmann/phpunit/issues/6236): `failOnPhpunitWarning` attribute on the `<phpunit>` element of the XML configuration file and `--fail-on-phpunit-warning` CLI option for controlling whether PHPUnit should fail on PHPUnit warnings (default: `true`)
+* [#6239](https://github.com/sebastianbergmann/phpunit/issues/6239): `--do-not-fail-on-deprecation`, `--do-not-fail-on-phpunit-warning`, `--do-not-fail-on-phpunit-deprecation`, `--do-not-fail-on-empty-test-suite`, `--do-not-fail-on-incomplete`, `--do-not-fail-on-notice`, `--do-not-fail-on-risky`, `--do-not-fail-on-skipped`, and `--do-not-fail-on-warning` CLI options
+* `--do-not-report-useless-tests` CLI option as a replacement for `--dont-report-useless-tests`
+
+### Deprecated
+
+* [#6240](https://github.com/sebastianbergmann/phpunit/issues/6240): `--dont-report-useless-tests` CLI option (use `--do-not-report-useless-tests` instead)
+
+### Fixed
+
+* [#6243](https://github.com/sebastianbergmann/phpunit/issues/6243): Constraints cannot be implemented without using internal class `ExpectationFailedException`
+
+## [12.2.2] - 2025-06-13
+
+### Fixed
+
+* [#6222](https://github.com/sebastianbergmann/phpunit/issues/6222): Data Provider seems to mess up Test Dependencies
+* `shortenArraysForExportThreshold` XML configuration setting has no effect on all arrays exported for event-related value objects
+
+## [12.2.1] - 2025-06-07
+
+### Fixed
+
+* [#6228](https://github.com/sebastianbergmann/phpunit/pull/6228): Variadic test methods should not warn about too many arguments from data provider
+
 ## [12.2.0] - 2025-06-06
 
 ### Added
@@ -47,4 +99,10 @@ This feature is experimental and the generated XML may change to enhance complia
 * A warning is now emitted when more than one of `#[Small]`, `#[Medium]`, or `#[Large]` is used on a test class
 * A warning is now emitted when a data provider provides data sets that have more values than the test method consumes using arguments
 
+[12.2.6]: https://github.com/sebastianbergmann/phpunit/compare/12.2.5...12.2.6
+[12.2.5]: https://github.com/sebastianbergmann/phpunit/compare/12.2.4...12.2.5
+[12.2.4]: https://github.com/sebastianbergmann/phpunit/compare/12.2.3...12.2.4
+[12.2.3]: https://github.com/sebastianbergmann/phpunit/compare/12.2.2...12.2.3
+[12.2.2]: https://github.com/sebastianbergmann/phpunit/compare/12.2.1...12.2.2
+[12.2.1]: https://github.com/sebastianbergmann/phpunit/compare/12.2.0...12.2.1
 [12.2.0]: https://github.com/sebastianbergmann/phpunit/compare/12.1.6...12.2.0
