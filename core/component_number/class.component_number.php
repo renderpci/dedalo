@@ -420,8 +420,8 @@ class component_number extends component_common {
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
 				$ar_parts 	= explode($between_separator, $q);
-				$first_val  = !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
-				$second_val = !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
+				$first_val  = !empty($ar_parts[0]) ? trim($ar_parts[0]) : 0;
+				$second_val = !empty($ar_parts[1]) ? trim($ar_parts[1]) : $first_val;
 
 				// @@ '$[*] >= 1'
 				$query_object_one = clone $query_object;
