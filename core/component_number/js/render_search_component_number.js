@@ -104,18 +104,18 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @param int i
+* @param int i (array position from value)
 * @param number current_value
-* @param object self
-* @return HTMLElement input
+* @param object self (component instance)
+* @return HTMLElement content_value
 */
 const get_input_element = (i, current_value, self) => {
 
 	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value'
-		})
+	const content_value = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'content_value'
+	})
 
 	// input field
 		const input = ui.create_dom_element({
@@ -123,9 +123,9 @@ const get_input_element = (i, current_value, self) => {
 			type			: 'text',
 			class_name		: 'input_value',
 			value			: current_value,
-			parent			: content_value
-		})
-		input.addEventListener('change', function() {
+		value			: current_value,
+		parent			: content_value
+	})
 
 			// parsed_value
 				const parsed_value = (this.value.length>0)

@@ -55,7 +55,6 @@ export const get_api_health_url = () => {
 
 
 
-
 /**
 * CHECK_SERVER_HEALTH
 * Checks a lightweight PHP endpoint specifically for health checks.
