@@ -149,9 +149,16 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 		// change event
-			input.addEventListener('change', (e) => {
-				change_handler(e, i, self)
-			})
+		input.addEventListener('change', (e) => {
+			change_handler(e, i, self)
+		})
+
+		// input event
+		const input_check_value_handler = (e) => {
+			// fix value to valid format as '5.21' from '5,21'
+			e.target.value = self.clean_value(e.target.value)
+		}
+		input.addEventListener('input', input_check_value_handler)
 
 	// button remove
 		if (i>0) {
@@ -279,22 +286,20 @@ export const get_buttons = (self) => {
 */
 export const change_handler = function(e, key, self) {
 
-	// fix value to valid format as '5.21' from '5,21'
-		const safe_value = (e.target.value.length>0)
-			? self.fix_number_format(e.target.value)
-			: null
+	// set the value in the configured number format. e.g. 'float'
+	const parsed_value = self.fix_number_format(e.target.value)
 
-	// if the safe_value is different than the value of user had enter set the safe_value
-		if(safe_value!=e.target.value) {
-			e.target.value = safe_value
-		}
+	if (parsed_value != e.target.value) {
+		// replace changed value
+		e.target.value = parsed_value
+	}
 
 	// change data
-		const changed_data_item = Object.freeze({
-			action	: 'update',
-			key		: key,
-			value	: safe_value
-		})
+	const changed_data_item = Object.freeze({
+		action	: 'update',
+		key		: key,
+		value	: parsed_value
+	})
 
 	// change_value (save data)
 	self.change_value({
