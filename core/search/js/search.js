@@ -119,6 +119,9 @@ search.prototype.init = async function(options) {
 			? self.caller.get_sections_selector_data()
 			: null
 
+	// json_filter default value
+		self.json_filter = {"$and": []};
+
 	// DOM stored pointers
 		self.wrapper							= null
 		self.search_global_container			= null
@@ -224,8 +227,11 @@ search.prototype.build = async function() {
 								);
 							}
 						}
-					// fix value
-					self.json_filter = json_filter || {"$and":[]}
+
+					// Override self.json_filter if json_filter is valid
+					if (json_filter && typeof json_filter === 'object' && Object.keys(json_filter).length > 0) {
+						self.json_filter = json_filter;
+					}
 
 					resolve(self.json_filter)
 				})
