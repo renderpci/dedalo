@@ -647,11 +647,12 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			let q_operator	= null // default
 			let q_split		= false // default is false
 			let q_lang		= null // default is null
-			// add_arguments . if true, calculate and save inputs value to preset (temp preset)
-			if (add_arguments!==false) {
 
-				const component_wrapper		= element.querySelector('.wrapper_component')
-				const component_instance	= self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
+			// add_arguments . if true, calculate and save inputs value to preset (temp preset)
+			if (add_arguments !== false) {
+
+				const component_wrapper	 = element.querySelector('.wrapper_component')
+				const component_instance = self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
 
 				if(!component_instance){
 					console.log('Error. Ignored not found component instance id:', component_wrapper.id);
@@ -666,15 +667,15 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 					: component_instance.data.value
 
 				// overwrite
-					q			= search_value
-					q_operator	= component_instance.data.q_operator
+				q			= search_value
+				q_operator	= component_instance.data.q_operator
 
 				// q_split
-					q_split = component_instance.q_split ?? false
+				q_split = component_instance.q_split ?? false
 
 				// lang
 				//if the component is translatable it can set if the search is with all langs or selective(null) only for the current lang
-					q_lang = component_instance.data.q_lang ?? null
+				q_lang = component_instance.data.q_lang ?? null
 			}
 			// create the search options with the component data.
 			const search_options = {
@@ -684,6 +685,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				q_split		: q_split,
 				type		: "jsonb"
 			}
+
 			// set the lang only when the component has this option.
 			if(q_lang){
 				search_options.lang = q_lang
@@ -700,6 +702,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 					}
 					query_group[operator].push(search_options)
 				}
+
 			}else{
 				// Add always
 				query_group[operator].push(search_options)
@@ -1202,18 +1205,18 @@ export const is_filter_empty = function(filter_obj) {
 
 	// Recursive function to get every filter state
 	 const check_deep_filter = (filter_obj) => {
-	 	// store if q filters are empty (true) or not (false)
-	 	const ar_empty = []
-	 	// get the operator key ($and, $or)
-	 	const ar_operators = Object.keys(filter_obj)
-	 	const operators_length = ar_operators.length
-	 	for (let i = operators_length - 1; i >= 0; i--) {
-	 		// get current filter with the operator
-	 		const current_operator 	= ar_operators[i]
-	 		const filter			= filter_obj[current_operator]
+		// store if q filters are empty (true) or not (false)
+		const ar_empty = []
+		// get the operator key ($and, $or)
+		const ar_operators = Object.keys(filter_obj)
+		const operators_length = ar_operators.length
+		for (let i = operators_length - 1; i >= 0; i--) {
+			// get current filter with the operator
+			const current_operator 	= ar_operators[i]
+			const filter			= filter_obj[current_operator]
 
-	 		// check if the filter is empty
-	 		const is_empty_current_filter = (filter.length<1) ? true : false
+			// check if the filter is empty
+			const is_empty_current_filter = (filter.length<1) ? true : false
 			if(is_empty_current_filter === false){
 
 				// check if the current filter has q

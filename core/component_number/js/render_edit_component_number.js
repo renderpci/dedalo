@@ -120,29 +120,34 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		input.step = self.get_steps()
+
 		// mousedown event. Capture event propagation
-			input.addEventListener('mousedown', (e) => {
-				e.stopPropagation()
-			})
+		input.addEventListener('mousedown', (e) => {
+			e.stopPropagation()
+		})
+
 		// focus event
-			input.addEventListener('focus', function() {
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self, false)
-				}
-			})
+		input.addEventListener('focus', function() {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				ui.component.activate(self, false)
+			}
+		})
+
 		// keydown event
-			input.addEventListener('keydown', function(e) {
-				e.stopPropagation()
-				if(e.key==='Tab'){
-					ui.component.deactivate(self)
-					return
-				}
-			})
+		input.addEventListener('keydown', function(e) {
+			e.stopPropagation()
+			if(e.key==='Tab'){
+				ui.component.deactivate(self)
+				return
+			}
+		})
+
 		// click event. Capture event propagation
-			input.addEventListener('click', (e) => {
-				e.stopPropagation()
-			})
+		input.addEventListener('click', (e) => {
+			e.stopPropagation()
+		})
+
 		// change event
 			input.addEventListener('change', (e) => {
 				change_handler(e, i, self)
@@ -292,10 +297,10 @@ export const change_handler = function(e, key, self) {
 		})
 
 	// change_value (save data)
-		self.change_value({
-			changed_data	: [changed_data_item],
-			refresh			: false
-		})
+	self.change_value({
+		changed_data	: [changed_data_item],
+		refresh			: false
+	})
 
 
 	return true
