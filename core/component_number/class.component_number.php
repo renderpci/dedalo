@@ -347,6 +347,9 @@ class component_number extends component_common {
 		// q_operator
 		$q_operator = $query_object->q_operator ?? null;
 
+		// q_only_operator string. Applied in client to the q value when only q_operator is introduced.
+		$q_only_operator = 'only_operator';
+
 		// Always set fixed values
 		$query_object->type = 'number';
 
@@ -469,8 +472,9 @@ class component_number extends component_common {
 				$operator = '>=';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = 0;
+				}
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] >='.$q_clean.'\'';
 				break;
@@ -480,8 +484,9 @@ class component_number extends component_common {
 				$operator = '<=';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = 0;
+				}
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] <='.$q_clean.'\'';
 				break;
@@ -491,8 +496,9 @@ class component_number extends component_common {
 				$operator = '>';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = 0;
+				}
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] >'.$q_clean.'\'';
 				break;
@@ -502,8 +508,9 @@ class component_number extends component_common {
 				$operator = '<';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = 0;
+				}
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] <'.$q_clean.'\'';
 				break;
