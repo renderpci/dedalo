@@ -619,6 +619,12 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 	const self = this
 
+	// Validate input
+	if (!group_dom_obj) {
+		console.error('Error: group_dom_obj is required');
+		return {};
+	}
+
 	const operator = self.get_search_group_operator(group_dom_obj)
 
 	const query_group = {}
@@ -677,13 +683,23 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				//if the component is translatable it can set if the search is with all langs or selective(null) only for the current lang
 				q_lang = component_instance.data.q_lang ?? null
 			}
+
+			// Parse path with error handling
+			let path;
+			try {
+			    path = JSON.parse(element.dataset.path);
+			} catch (e) {
+			    console.error('Invalid JSON in dataset.path:', element.dataset.path);
+			    continue;
+			}
+
 			// create the search options with the component data.
 			const search_options = {
 				q			: q,
 				q_operator	: q_operator,
-				path		: JSON.parse(element.dataset.path),
+				path		: path,
 				q_split		: q_split,
-				type		: "jsonb"
+				type		: 'jsonb'
 			}
 
 			// set the lang only when the component has this option.
@@ -692,15 +708,35 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			}
 
 			// Add component
-			if (mode==="search") {
-				// Add only if not empty
-				if ( (q && q.length>0 && q[0]) || (q_operator && q_operator.length>0) ) { //
+			if ( mode === 'search' ) {
 
-					// If empty q but not q_operator, set q as 'only_operator' for avoid send empty q value
-					if( (!q || !q[0] || q[0].length===0) && (q_operator && q_operator.length>0) ) {
-						q = "only_operator"
+				// Add only if not empty
+
+				// Normalize q to always work with arrays for consistency
+				const q_array = Array.isArray(q) ? q : [q];
+
+				// Check for valid query content
+				const has_valid_query = (
+					q_array.length > 0 &&
+					q_array[0] !== null &&
+					q_array[0] !== undefined &&
+					q_array[0] !== '' &&
+					q_array[0] !== false
+				) || q === 0;
+
+				// Check for valid operator
+				const has_valid_operator = q_operator && q_operator.length > 0;
+
+				// Proceed if we have either valid query or operator
+				if (has_valid_query || has_valid_operator) {
+					// If no valid query but we have an operator, set placeholder
+					if (!has_valid_query && has_valid_operator) {
+						// Overwrites q
+						search_options.q = 'only_operator';
 					}
-					query_group[operator].push(search_options)
+
+					// Add search_options value
+					query_group[operator].push(search_options);
 				}
 
 			}else{
