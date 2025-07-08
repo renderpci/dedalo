@@ -442,6 +442,7 @@ class component_number extends component_common {
 
 				$query_object = $new_query_object;
 				break;
+
 			# SEQUENCE
 			/*case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
@@ -462,8 +463,9 @@ class component_number extends component_common {
 				$query_object = $new_object;
 				break;
 				*/
+
 			// BIGGER OR EQUAL THAN
-			case (substr($q, 0, 2)==='>='):
+			case ($q_operator==='>=' || substr($q, 0, 2)==='>='):
 				$operator = '>=';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
@@ -472,8 +474,9 @@ class component_number extends component_common {
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] >='.$q_clean.'\'';
 				break;
+
 			// SMALLER OR EQUAL THAN
-			case (substr($q, 0, 2)==='<='):
+			case ($q_operator==='<=' || substr($q, 0, 2)==='<='):
 				$operator = '<=';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
@@ -482,8 +485,9 @@ class component_number extends component_common {
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] <='.$q_clean.'\'';
 				break;
-			# BIGGER THAN
-			case (substr($q, 0, 1)==='>'):
+
+			// BIGGER THAN
+			case ($q_operator==='>' || substr($q, 0, 1)==='>'):
 				$operator = '>';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
@@ -492,8 +496,9 @@ class component_number extends component_common {
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] >'.$q_clean.'\'';
 				break;
-			# SMALLER THAN
-			case (substr($q, 0, 1)==='<'):
+
+			// SMALLER THAN
+			case ($q_operator==='<' || substr($q, 0, 1)==='<'):
 				$operator = '<';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
@@ -502,6 +507,7 @@ class component_number extends component_common {
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] <'.$q_clean.'\'';
 				break;
+
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';
