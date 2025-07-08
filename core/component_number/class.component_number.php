@@ -339,6 +339,11 @@ class component_number extends component_common {
 			? reset($query_object->q)
 			: $query_object->q;
 
+		// force to string
+		if (!is_string($q)) {
+			$q = to_string($q);
+		}
+
 		// q_operator
 		$q_operator = $query_object->q_operator ?? null;
 
