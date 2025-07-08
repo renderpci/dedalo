@@ -294,11 +294,15 @@ export const change_handler = function(e, key, self) {
 		e.target.value = parsed_value
 	}
 
+	const safe_value = (parsed_value !== '')
+		? parsed_value
+		: null;
+
 	// change data
 	const changed_data_item = Object.freeze({
 		action	: 'update',
 		key		: key,
-		value	: parsed_value
+		value	: safe_value
 	})
 
 	// change_value (save data)

@@ -77,14 +77,16 @@ const get_content_data = function(self) {
 			class_name		: 'q_operator',
 			parent			: content_data
 		})
-		input_q_operator.addEventListener('change', function() {
+		// change event
+		const change_handler = (e) => {
 			// value
-				const value = this.value
+			const q_operator_value = e.target.value
 			// q_operator. Fix the data in the instance previous to save
-				self.data.q_operator = value
+			self.data.q_operator = q_operator_value
 			// publish search. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-		})
+			event_manager.publish('change_search_element', self)
+		}
+		input_q_operator.addEventListener('change', change_handler)
 
 	// values (inputs)
 		const inputs_value	= value
@@ -122,16 +124,16 @@ const get_input_element = (i, current_value, self) => {
 		element_type	: 'input',
 		type			: 'text',
 		class_name		: 'input_value',
-		placeholder		: 'Number',
 		value			: current_value,
 		parent			: content_value
 	})
 
-	// input_check_value_handler
+	// input handler
 	const input_check_value_handler = (e) => {
 		// fix value to valid format as '5.21' from '5,21'
 		e.target.value = self.clean_value(e.target.value)
 	}
+	input.addEventListener('input', input_check_value_handler)
 
 	// change event
 	const change_handler = (e) => {
@@ -144,11 +146,22 @@ const get_input_element = (i, current_value, self) => {
 			e.target.value = parsed_value
 		}
 
+		// Prevent to save values without numbers like '..', '-', ...
+		const has_digit = /\d/.test(parsed_value);
+
+		if (!has_digit) {
+			e.target.value = null
+		}
+
+		const safe_value = (has_digit)
+			? parsed_value
+			: null;
+
 		// changed_data
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: i,
-			value	: parsed_value
+			value	: safe_value
 		})
 
 		// update the instance data (previous to save)
@@ -158,7 +171,17 @@ const get_input_element = (i, current_value, self) => {
 		event_manager.publish('change_search_element', self)
 	}
 	input.addEventListener('change', change_handler)
-	input.addEventListener('input', input_check_value_handler)
+
+	// keydown event
+	const keydown_handler = (e) => {
+		// Check if the key is NOT a number. If true, add a informative placeholder
+		if (isNaN(e.key) && ![' ','-','.',',','Backspace','Tab','Enter'].includes(e.key)) {
+			// Handle non-numeric key
+			input.placeholder = 'Insert number';
+			input.removeEventListener('keydown', keydown_handler)
+		}
+	}
+	input.addEventListener('keydown', keydown_handler)
 
 
 	return content_value
