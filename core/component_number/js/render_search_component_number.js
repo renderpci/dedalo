@@ -118,33 +118,47 @@ const get_input_element = (i, current_value, self) => {
 	})
 
 	// input field
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'input_value',
-			value			: current_value,
+	const input = ui.create_dom_element({
+		element_type	: 'input',
+		type			: 'text',
+		class_name		: 'input_value',
+		placeholder		: 'Number',
 		value			: current_value,
 		parent			: content_value
 	})
 
-			// parsed_value
-				const parsed_value = (this.value.length>0)
-					? this.value
-					: null
+	// input_check_value_handler
+	const input_check_value_handler = (e) => {
+		// fix value to valid format as '5.21' from '5,21'
+		e.target.value = self.clean_value(e.target.value)
+	}
 
-			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: parsed_value
-				})
+	// change event
+	const change_handler = (e) => {
 
-			// update the instance data (previous to save)
-				self.update_data_value(changed_data_item)
+		// Do not fix_number_format here to preserve between operator (...) like '1...7'
+		const parsed_value = e.target.value
 
-			// publish search. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-		})//end event change
+		if (parsed_value != e.target.value) {
+			// replace changed value
+			e.target.value = parsed_value
+		}
+
+		// changed_data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: i,
+			value	: parsed_value
+		})
+
+		// update the instance data (previous to save)
+		self.update_data_value(changed_data_item)
+
+		// publish search. Event to update the DOM elements of the instance
+		event_manager.publish('change_search_element', self)
+	}
+	input.addEventListener('change', change_handler)
+	input.addEventListener('input', input_check_value_handler)
 
 
 	return content_value
