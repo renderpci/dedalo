@@ -324,6 +324,30 @@
 		}
 	}
 
+	// next spinner proposal
+	.spinner_next {
+		// position
+		position: absolute;
+		left: calc(50% - 1.5rem);
+		top: calc(50% - 1.5rem);
+
+		// size
+		height: 3rem;
+		width: 3rem;
+
+		background: @color_orange_dedalo; /* the color */
+
+		aspect-ratio: 1;
+		border-radius: 50%;
+		mask:
+			conic-gradient(#0000,#000) subtract,
+			conic-gradient(#000 0 0) content-box;
+		animation: load 1s linear infinite;
+	}
+	@keyframes load {
+		to{rotate: 1turn}
+	}
+
 	// fade out animation
 	.fade-out {
 		--speed: 1s;
