@@ -393,6 +393,13 @@ class diffusion_xml extends diffusion  {
 		$xml_nodes = [];
 		foreach ($diffusion_objects as $current_diffusion_object) {
 
+			// check model
+			$model = RecordObj_dd::get_modelo_name_by_tipo($current_diffusion_object->tipo,true);
+			if (in_array($model, ['box elements'])) {
+				// ignore
+				continue;
+			}
+
 			// name. Ensure the name is valid to use it in XML
 			$name = $this->sanitize_xml_node_name( $current_diffusion_object->name ?? '' );
 
