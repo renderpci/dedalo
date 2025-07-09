@@ -14,6 +14,8 @@ class diffusion_xml extends diffusion  {
 	public $section_id;
 	// diffusion_element_tipo
 	public $diffusion_element_tipo;
+	// lang
+	public $lang;
 
 
 
@@ -28,6 +30,10 @@ class diffusion_xml extends diffusion  {
 		// load parser classes files
 		// Include the classes of the parsers based on the diffusion_element properties definitions.
 		$this->load_parsers( $this->diffusion_element_tipo );
+
+		// lang. Language for XML diffusion will be English always. This value diverges from
+		// historical 'lg-spa' (DEDALO_STRUCTURE_LANG) and is adopted from now for new diffusion code revisions.
+		$this->lang = 'lg-eng';
 
 
 		parent::__construct($options);
@@ -93,7 +99,8 @@ class diffusion_xml extends diffusion  {
 		}
 
 		// Get the diffusion objects recursively, including self
-		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true );
+		// (!) Note that 'lg-eng' is passed as lang here, NOT the DEDALO_STRUCTURE_LANG.
+		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true, $this->lang);
 
 		// Resolve and parse values.
 		// Obtain the diffusion objects data
