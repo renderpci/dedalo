@@ -1610,9 +1610,10 @@ abstract class diffusion  {
 	 * Collect all diffusion objects from diffusion_element_tipo
 	 * @param string $root_tipo
 	 * @param bool $include_self=false
+	 * @param string $lang = DEDALO_STRUCTURE_LANG
 	 * @return array $diffusion_objects
 	 */
-	public function get_diffusion_objects(string $root_tipo, bool $include_self=false): array {
+	public function get_diffusion_objects(string $root_tipo, bool $include_self=false, string $lang=DEDALO_STRUCTURE_LANG): array {
 
 		// diffusion_objects_cache. Cache for performance on multiple records
 		static $diffusion_objects_cache;
@@ -1646,7 +1647,7 @@ abstract class diffusion  {
 			$process = $request_config_object->process ?? null;
 
 			// column / node name (from the Ontology term value)
-			$name = RecordObj_dd::get_termino_by_tipo($child_tipo, DEDALO_STRUCTURE_LANG);
+			$name = RecordObj_dd::get_termino_by_tipo($child_tipo, $lang);
 
 			// create a new diffusion_object
 			$diffusion_object = new diffusion_object((object)[
