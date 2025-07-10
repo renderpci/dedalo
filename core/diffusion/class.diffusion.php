@@ -202,6 +202,9 @@ abstract class diffusion  {
 				$properties				= $RecordObj_dd->get_propiedades(true);
 				$diffusion_class_name	= isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
 				$name					= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, false);
+				if (empty($name)) {
+					$name = '<em>'.RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, true).'</em>';
+				}
 
 				# Database of current diffusion element
 				$ar_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database', $relation_type='children', $search_exact=true);
