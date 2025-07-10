@@ -670,9 +670,9 @@ const render_related_list = function(self){
 const render_viewer_selector = function(self, wrapper){
 
 	// short vars
-		const media_component	= self.media_component
-		const area_thesaurus	= self.area_thesaurus
-		const people_section	= self.people_section
+		const media_component	= self.media_component || {label:'Media component role is not defined'}
+		const area_thesaurus	= self.area_thesaurus || {label:'Area thesaurus role is not defined'}
+		const people_section	= self.people_section || {label:'People role is not defined'}
 		const items = [
 			{
 				label : area_thesaurus.label,
