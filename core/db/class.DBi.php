@@ -9,7 +9,93 @@ abstract class DBi {
 
 
 	/**
+	 * @var PgSql\Connection|null Stores the cached PgSql\Connection instance.
+	 */
+	private static ?PgSql\Connection $pg_conn_cache = null;
+
+
+
+	/**
 	* _GETCONNECTION
+	* Returns an PgSql\Connection instance on success, or false on failure.
+	* @param string|null $host = DEDALO_HOSTNAME_CONN
+	* @param string $user = DEDALO_USERNAME_CONN
+	* @param string $password = DEDALO_PASSWORD_CONN
+	* @param string $database = DEDALO_DATABASE_CONN
+	* @param string|int|null $port = DEDALO_DB_PORT_CONN
+	* @param string|null $socket = DEDALO_SOCKET_CONN
+	* @param bool $cache = true
+	* @return PgSql\Connection|false $pg_conn
+	*/
+	public static function _getConnection(
+		string|null		$host		= DEDALO_HOSTNAME_CONN,
+		string			$user		= DEDALO_USERNAME_CONN,
+		string			$password	= DEDALO_PASSWORD_CONN,
+		string			$database	= DEDALO_DATABASE_CONN,
+		string|int|null	$port		= DEDALO_DB_PORT_CONN,
+		string|null		$socket		= DEDALO_SOCKET_CONN,
+		bool			$cache		= true
+		) : PgSql\Connection|false {
+
+		// If caching is enabled and a connection is already cached and active, return it.
+		if ($cache && self::$pg_conn_cache instanceof PgSql\Connection && pg_connection_status(self::$pg_conn_cache) === PGSQL_CONNECTION_OK) {
+			return self::$pg_conn_cache;
+		}
+
+		// Build connection string parameters
+		$params = [
+			"dbname=$database",
+			"user=$user",
+			"password=$password"
+		];
+
+		if ($host !== null) {
+			$params[] = "host=$host";
+		}
+
+		// Only add port if it's a non-null and non-zero value, or if host is null (implies socket or default host)
+		// If host is null and socket is also null, PostgreSQL will try to connect via default socket.
+		if ($host !== null && $port !== null && (int)$port > 0) {
+			$params[] = "port=" . (int)$port;
+		} elseif ($host === null && $socket !== null) {
+			// Use socket if host is null and socket is provided
+			$params[] = "host=$socket"; // PostgreSQL uses 'host' parameter for socket path
+		}
+
+		$str_connect = implode(' ', $params);
+
+		$pg_conn_real = (defined('PERSISTENT_CONNECTION') && PERSISTENT_CONNECTION===true)
+			? pg_pconnect($str_connect) // persistent version. Use with caution, or consider using 'pg_bouncer' or a similar tool.
+			: pg_connect($str_connect); // default
+
+		if ($pg_conn_real === false) {
+			$errorMessage = pg_last_error() ?: "Unknown PostgreSQL connection error.";
+			debug_log(
+				__METHOD__ . ' Error. Could not connect to database (52) for ' . to_string($database) . '. Details: ' . $errorMessage,
+				logger::ERROR
+			);
+			if (SHOW_DEBUG) {
+				// throw new Exception("Error. Could not connect to database (52): " . $errorMessage, 1);
+			}
+			return false;
+		}
+
+		// If caching is not requested, return the fresh connection immediately
+		if (!$cache) {
+			return $pg_conn_real;
+		}
+
+		// Cache the successful connection
+		self::$pg_conn_cache = $pg_conn_real;
+
+
+		return self::$pg_conn_cache;
+	}//end _getConnection
+
+
+
+	/**
+	* _GETCONNECTION_LEGACY
 	* Returns an PgSql\Connection instance on success, or false on failure.
 	* @param string|null $host = DEDALO_HOSTNAME_CONN
 	* @param string $user = DEDALO_USERNAME_CONN
@@ -22,7 +108,7 @@ abstract class DBi {
 	* 	>=8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
 	* 	false on failure
 	*/
-	public static function _getConnection(
+	public static function _getConnection_legacy(
 		string|null		$host		= DEDALO_HOSTNAME_CONN,
 		string			$user		= DEDALO_USERNAME_CONN,
 		string			$password	= DEDALO_PASSWORD_CONN,
@@ -72,7 +158,7 @@ abstract class DBi {
 
 
 		return $pg_conn;
-	}//end _getConnection
+	}//end _getConnection_legacy
 
 
 
@@ -239,7 +325,7 @@ abstract class DBi {
 				return false;
 			}
 			if ($mysqli->connect_errno) {
-			    debug_log(__METHOD__
+				debug_log(__METHOD__
 					. " Error on connect to MYSQL database [2]. ". PHP_EOL
 					. ' connect_error: ' . $mysqli->connect_error
 					, logger::DEBUG
