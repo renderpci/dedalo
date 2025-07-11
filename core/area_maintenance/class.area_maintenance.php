@@ -191,19 +191,12 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// check_config *
-			$config_status = self::check_config();
-			$missing = [];
-			foreach ($config_status->result as $el) {
-				$missing = array_merge($missing, $el->sample_vs_config);
-			}
 			$item = new stdClass();
 				$item->id		= 'check_config';
 				$item->class	= empty($missing) ? 'success' : 'danger';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('check_config') ?? 'Check config';
-				$item->value	= (object)[
-					'info' => $config_status
-				];
+				$item->value	= null; // get from widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -700,80 +693,6 @@ class area_maintenance extends area_common {
 
 		return $constants_list;
 	}//end get_file_constants
-
-
-
-	/**
-	* CHECK_CONFIG
-	* Check Dédalo config files and vars
-	* @return object $response
-	*/
-	public static function check_config() : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ';
-
-		// result
-			$result = [];
-
-		// ar_files_name iterate
-			$ar_files_name = [
-				'config',
-				'config_db',
-				'config_core'
-			];
-			foreach ($ar_files_name as $file_name) {
-
-				$item = new stdClass();
-					$item->file_name		= $file_name;
-					$item->config_vs_sample	= [];
-					$item->sample_vs_config	= [];
-
-				// sample_config_constants_list
-					$sample_config_constants_list = area_maintenance::get_file_constants(
-						DEDALO_CONFIG_PATH . '/sample.'.$file_name.'.php'
-					);
-					$item->sample_config_constants_list	= $sample_config_constants_list;
-
-				// config_constants_list
-					$config_constants_list = area_maintenance::get_file_constants(
-						DEDALO_CONFIG_PATH . '/'.$file_name.'.php'
-					);
-					$item->config_constants_list = $config_constants_list;
-
-				// config_vs_sample. Compares defined config constants vs sample config
-					$ignore = ['DEDALO_MAINTENANCE_MODE_CUSTOM','DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','EXPORT_HIERARCHY_PATH'];
-					foreach ($config_constants_list as $const_name) {
-						if (!in_array($const_name, $sample_config_constants_list)) {
-							// exceptions (ignore optional constants that could be disabled)
-							if (!in_array($const_name, $ignore)) {
-								$item->config_vs_sample[] = $const_name;
-							}
-						}
-					}
-
-				// sample_vs_config. Compares defined sample constants vs config
-					$ignore = ['DEDALO_MAINTENANCE_MODE','DEDALO_API_URL'];
-					foreach ($sample_config_constants_list as $const_name) {
-						if (!in_array($const_name, $ignore) && !defined($const_name)) {
-							$item->sample_vs_config[] = $const_name;
-						}
-					}
-
-				// add
-					$result[] = $item;
-			}//end foreach
-
-
-		// response
-			$response->result						= $result;
-			$response->msg							= 'OK. Request done successfully';
-			$response->sample_config_constants_list	= $sample_config_constants_list;
-
-
-		return $response;
-	}//end check_config
 
 
 
