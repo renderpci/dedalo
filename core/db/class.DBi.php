@@ -17,6 +17,7 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTION
+	* This is the main DB connector of Dédalo.
 	* Returns an PgSql\Connection instance on success, or false on failure.
 	* @param string|null $host = DEDALO_HOSTNAME_CONN
 	* @param string $user = DEDALO_USERNAME_CONN
