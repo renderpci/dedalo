@@ -6,6 +6,7 @@
 
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {render_check_config} from './render_check_config.js'
 
 
@@ -48,6 +49,44 @@ export const check_config = function() {
 	// // render
 	check_config.prototype.edit		= render_check_config.prototype.list
 	check_config.prototype.list		= render_check_config.prototype.list
+
+
+
+/**
+* GET_WIDGET_VALUE
+* Get widget value from class maintenance
+* The options 'name' property is the class method name
+* @return array result
+* [{
+*   config_constants_list : array as ["DEDALO_HOST","DEDALO_PROTOCOL"]
+*   config_vs_sample : array as ["DEDALO_OLD_HOST"],
+* 	sample_config_constants_list :["DEDALO_HOST",..]
+* 	sample_vs_config : []
+* }]
+*/
+check_config.prototype.get_widget_value = async () => {
+
+	// get value info
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'get_widget_value',
+			source	: {
+				type	: 'widget',
+				model	: 'check_config'
+			}
+		}
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) get_widget_value check_config api_response:', api_response);
+	}
+
+	const result = api_response?.result || []
+
+
+	return result
+}//end get_widget_value
 
 
 
