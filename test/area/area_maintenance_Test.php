@@ -165,21 +165,61 @@ final class area_maintenance_test extends TestCase {
 
 
 	/**
-	* TEST_check_config
+	* TEST_widgets_value
 	* @return void
 	*/
-	public function test_check_config() {
+	public function test_widgets_value() {
 
-		$area = $this->build_instance();
+		$ar_widgets = [
+			'add_hierarchy',
+			'build_database_version',
+			'check_config',
+			'counters_status',
+			'database_info',
+			'dedalo_api_test_environment',
+			'dedalo_version',
+			'environment',
+			'export_hierarchy',
+			'lock_components',
+			'make_backup',
+			'move_locator',
+			'move_tld',
+			'move_to_portal',
+			'move_to_table',
+			'php_info',
+			'php_user',
+			'publication_api',
+			'regenerate_relations',
+			'register_tools',
+			'sequences_status',
+			'sqo_test_environment',
+			'system_info',
+			'unit_test',
+			'update_code',
+			'update_data_version',
+			'update_ontology'
+		];
 
-		$result = $area->check_config();
+		foreach ($ar_widgets as $name) {
 
-		$this->assertTrue(
-			gettype($result)==='object' ,
-			'expected object' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_check_config
+			$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/$name/class.$name.php";
+			if (!file_exists($class_file)) {
+				continue;
+			}
+
+			include_once $class_file;
+
+			$result = $name::get_value();
+
+			$this->assertTrue(
+				gettype($result)==='object' ,
+				'expected object' . PHP_EOL
+					. gettype($result)
+			);
+		}
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+	}//end test_widgets_value
 
 
 
