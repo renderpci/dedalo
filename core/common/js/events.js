@@ -153,20 +153,29 @@ export const when_in_dom = function(node, callback) {
 */
 export const when_in_viewport = function(node, callback, once=true) {
 
+	if (!(node instanceof HTMLElement)) {
+		throw new Error("Invalid node passed to when_in_viewport");
+	}
+
+	if (typeof callback !== 'function') {
+		console.warn("when_in_viewport: callback is not a function");
+		return;
+	}
+
 	// observer. Exec the callback when element is in viewport
 	const observer = new IntersectionObserver(
 		function(entries, observer) {
 
-			const entry = entries[1] || entries[0]
-			if (entry.isIntersecting===true || entry.intersectionRatio > 0) {
+			const entry = entries[0]
+			if (entry.isIntersecting || entry.intersectionRatio > 0) {
 
 				// default is true (executes the callback once)
-				if (once===true) {
+				if (once) {
 					observer.disconnect();
 				}
 
-				// callback()
-				window.requestAnimationFrame(callback)
+				// Execute callback with proper context
+				window.requestAnimationFrame(() => callback(entry));
 			}
 		},
 		{
