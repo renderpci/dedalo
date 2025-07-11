@@ -50,6 +50,7 @@ final class DBi_test extends TestCase {
 			);
 
 		// explicit vars
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$conn = DBi::_getConnection(
 				DEDALO_HOSTNAME_CONN,
 				DEDALO_USERNAME_CONN,
@@ -81,6 +82,7 @@ final class DBi_test extends TestCase {
 			);
 
 		// explicit vars without cache
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$conn = DBi::_getConnection(
 				DEDALO_HOSTNAME_CONN,
 				DEDALO_USERNAME_CONN,
@@ -112,8 +114,9 @@ final class DBi_test extends TestCase {
 			);
 
 		// explicit vars invalid port and socket
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$conn = DBi::_getConnection(
-				DEDALO_HOSTNAME_CONN,
+				'patata_host',
 				DEDALO_USERNAME_CONN,
 				DEDALO_PASSWORD_CONN,
 				DEDALO_DATABASE_CONN,
@@ -132,7 +135,7 @@ final class DBi_test extends TestCase {
 			$eq		= $type==='boolean';
 			$this->assertTrue(
 				$eq,
-				'expected true (class===object) and received type: ' .$type
+				'expected type boolean and received type: ' .$type
 			);
 
 			$eq		= $conn===false;
