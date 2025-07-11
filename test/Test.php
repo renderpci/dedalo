@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestDox;
 // bootstrap
 require_once dirname(__FILE__) . '/bootstrap.php';
 
