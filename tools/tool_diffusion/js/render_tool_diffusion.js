@@ -573,77 +573,8 @@ export const render_publication_items = function(self) {
 				}
 
 			// container_bottom
-				const container_bottom = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'container_bottom',
-					parent			: publication_items_grid
-				})
-
-				// response_message
-				const response_message = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_message',
-					parent			: container_bottom
-				})
-
-				// publication_button
-				const publication_button = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'warning publication_button',
-					inner_html		: get_label.publish || 'Publish',
-					parent			: container_bottom
-				})
-				lock_items.push(publication_button)
-				// click event
-				const click_handler = (e) => {
-					e.stopPropagation()
-
-					// user confirmation
-					if (!confirm(get_label.sure || 'Sure?')) {
-						return
-					}
-
-					// publish content exec
-					publish_content(self, {
-						response_message		: response_message,
-						publication_button		: publication_button,
-						diffusion_element_tipo	: current_diffusion_element_tipo,
-						local_db_id				: local_db_id
-					})
-				}
-				publication_button.addEventListener('click', click_handler)
-
-				// disable cases :
-					if (
-						(item.connection_status && item.connection_status.result===false) ||
-						(item.class_name==='diffusion_mysql' && !data_item.table)
-						) {
-							publication_button.classList.add('loading')
-					}else{
-						when_in_viewport(publication_button, ()=>{
-							publication_button.focus()
-						})
-					}
-
-				// check process status always
-				const check_process_data = () => {
-					data_manager.get_local_db_data(
-						local_db_id,
-						'status'
-					)
-					.then(function(local_data){
-						if (local_data && local_data.value) {
-							update_process_status({
-								pid			: local_data.value.pid,
-								pfile		: local_data.value.pfile,
-								local_db_id	: local_db_id,
-								container	: response_message,
-								lock_items	: lock_items
-							})
-						}
-					})
-				}
-				check_process_data()
+				const container_bottom = render_container_bottom(self, item, lock_items, local_db_id, current_diffusion_element_tipo)
+				publication_items_grid.appendChild(container_bottom)
 		}//end for (let i = 0; i < current_diffusion_map_length; i++)
 
 		diffusion_group_key++
@@ -652,6 +583,139 @@ export const render_publication_items = function(self) {
 
 	return publication_items
 }//end render_publication_items
+
+
+
+/**
+* RENDER_CONTAINER_BOTTOM
+* Render container_bottom nodes
+* @param object item
+* @param array lock_items
+* @param string local_db_id
+* @return HTMLElement container_bottom
+*/
+export const render_container_bottom = function (self, item, lock_items, local_db_id, current_diffusion_element_tipo) {
+
+	const container_bottom = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'container_bottom'
+	})
+
+	// buttons_container
+		const buttons_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_container',
+			parent			: container_bottom
+		})
+
+	// publication_button
+		const publication_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning publication_button',
+			inner_html		: get_label.publish || 'Publish',
+			parent			: buttons_container
+		})
+		lock_items.push(publication_button)
+		// click event
+		const click_handler = (e) => {
+			e.stopPropagation()
+
+			// user confirmation
+			if (!confirm(get_label.sure || 'Sure?')) {
+				return
+			}
+
+			// publish content exec
+			publish_content(self, {
+				response_message		: response_message,
+				publication_button		: publication_button,
+				diffusion_element_tipo	: current_diffusion_element_tipo,
+				local_db_id				: local_db_id
+			})
+		}
+		publication_button.addEventListener('click', click_handler)
+
+	// disable cases :
+		if (
+			(item.connection_status && item.connection_status.result===false) ||
+			(item.class_name==='diffusion_mysql' && !data_item.table)
+			) {
+				publication_button.classList.add('loading')
+		}else{
+			when_in_viewport(publication_button, ()=>{
+				publication_button.focus()
+			})
+		}
+
+	// check process status always
+		const check_process_data = () => {
+			data_manager.get_local_db_data(
+				local_db_id,
+				'status'
+			)
+			.then(function(local_data){
+				if (local_data && local_data.value) {
+					update_process_status({
+						pid			: local_data.value.pid,
+						pfile		: local_data.value.pfile,
+						local_db_id	: local_db_id,
+						container	: response_message,
+						lock_items	: lock_items
+					})
+				}
+			})
+		}
+		check_process_data()
+
+	// bottom_additions
+		const bottom_additions = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'bottom_additions',
+			parent			: buttons_container
+		})
+		switch (item.class_name) {
+			case 'diffusion_xml':
+				const combine_files_label = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'unselectable',
+					inner_html		: self.get_tool_label('combine_xml_files') || 'Combine XML files',
+					parent			: bottom_additions
+				})
+				const combine_files_check_node = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					class_name		: '',
+					name			: 'combine_files_check',
+					value			: 1
+				})
+				combine_files_label.prepend(combine_files_check_node)
+				// change event
+				const change_handler = (e) => {
+					// post_actions
+					// e.g combine_rendered_files. This is used to merge all rendered XML files nodes
+					// into one single file containing all nodes.
+					self.additions_options.post_actions = e.target.checked
+						? 'diffusion_xml::combine_rendered_files'
+						: null;
+				}
+				combine_files_check_node.addEventListener('change', change_handler)
+				break;
+
+			default:
+
+				break;
+		}
+
+	// response_message
+		const response_message = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'response_message',
+			parent			: container_bottom
+		})
+
+
+	return container_bottom;
+}//end render_container_bottom
 
 
 
@@ -675,7 +739,7 @@ const publish_content = async (self, options) => {
 
 	// export API call
 		const api_response = await self.export({
-			diffusion_element_tipo : diffusion_element_tipo
+			diffusion_element_tipo	: diffusion_element_tipo
 		})
 
 	// debug

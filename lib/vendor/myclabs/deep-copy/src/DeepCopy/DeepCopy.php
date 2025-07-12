@@ -87,9 +87,11 @@ class DeepCopy
     /**
      * Deep copies the given object.
      *
-     * @param mixed $object
+     * @template TObject
      *
-     * @return mixed
+     * @param TObject $object
+     *
+     * @return TObject
      */
     public function copy($object)
     {

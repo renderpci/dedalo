@@ -34,6 +34,11 @@ export const tool_diffusion = function () {
 	this.diffusion_info = null
 	this.skip_publication_state_check
 
+	// optional options. Custom options like XML group files
+	this.additions_options = {
+		info : 'Custom diffusion class options'
+	}
+
 
 	return true
 }//end page
@@ -172,6 +177,7 @@ tool_diffusion.prototype.export = function(options) {
 		const section_tipo					= self.caller.section_tipo
 		const section_id					= self.caller.section_id || null
 		const skip_publication_state_check	= self.skip_publication_state_check
+		const additions_options				= self.additions_options || {}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -189,7 +195,8 @@ tool_diffusion.prototype.export = function(options) {
 				mode							: mode,
 				diffusion_element_tipo			: diffusion_element_tipo,
 				resolve_levels					: resolve_levels,
-				skip_publication_state_check	: skip_publication_state_check
+				skip_publication_state_check	: skip_publication_state_check,
+				additions_options				: additions_options
 			}
 		}
 

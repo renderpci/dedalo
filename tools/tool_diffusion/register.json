@@ -45,7 +45,7 @@
     },
     {
       "type": "dd151",
-      "section_id": "-1",
+      "section_id": "2",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 17,
-              "hour": 16,
-              "time": 65089239941,
+              "day": 11,
+              "hour": 13,
+              "time": 65102102893,
               "year": 2025,
-              "month": 2,
-              "minute": 25,
-              "second": 41
+              "month": 7,
+              "minute": 28,
+              "second": 13
             }
           }
         ]
@@ -142,7 +142,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.4"
+          "2.0.5"
         ]
       }
     },
@@ -328,6 +328,56 @@
               "lang": "lg-nep",
               "name": "skip_publication_state_check",
               "value": "प्रकाशन गर्दा अस्थायी रूपमा प्रकाशन स्थितिलाई बेवास्ता गर्नुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "combine_xml_files",
+              "value": "Combine XML files"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "combine_xml_files",
+              "value": "Combinar archivos XML"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "combine_xml_files",
+              "value": "Combinar fitxers XML"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "combine_xml_files",
+              "value": "XML fitxategiak konbinatu"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "combine_xml_files",
+              "value": "XML-Dateien kombinieren"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "combine_xml_files",
+              "value": "Συνδυάστε αρχεία XML"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "combine_xml_files",
+              "value": "Combiner des fichiers XML"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "combine_xml_files",
+              "value": "Combinare i file XML"
+            },
+            {
+              "lang": "lg-por",
+              "name": "combine_xml_files",
+              "value": "Combinar ficheiros XML"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "combine_xml_files",
+              "value": "XML फाइलहरू संयोजन गर्नुहोस्"
             }
           ]
         ]
@@ -345,9 +395,9 @@
   "section_id": 12,
   "created_date": "2022-03-01 20:37:27",
   "section_tipo": "dd1340",
-  "modified_date": "2025-02-17 16:25:41",
+  "modified_date": "2025-07-11 13:28:13",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "modified_by_userID": 2
 }

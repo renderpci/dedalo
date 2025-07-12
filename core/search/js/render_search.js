@@ -1112,48 +1112,46 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 // toggles
 
+
+
 	/**
 	* TOGGLE_SEARCH_PANEL
-	* @param object self
-	* @return bool
+	* @param object self (search instance)
+	* @return void
 	*/
-	export const toggle_search_panel = (self) => {
+	export const toggle_search_panel = async (self) => {
 
 		// short vars
 			const search_global_container	= self.search_global_container
 			const status_id					= 'open_search_panel'
 			const status_table				= 'status'
 
-		if (search_global_container && search_global_container.classList.contains('hide')) {
-
-			self.search_panel_is_open = true
-
-			search_global_container.classList.remove('hide')
-
-			const data = {
-				id		: status_id,
-				value	: true
-			}
-			data_manager.set_local_db_data(
-				data,
-				status_table
-			)
-
-		}else{
-
-			self.search_panel_is_open = false
-
-			if (search_global_container && !search_global_container.classList.contains('hide')) {
-				search_global_container.classList.add('hide')
-			}
-
-			data_manager.delete_local_db_data(
-				status_id,
-				status_table
-			)
+		// Add null check
+		if (!search_global_container) {
+			console.error('search_global_container not found');
+			return;
 		}
 
-		return true;
+		if (search_global_container.classList.contains('hide')) {
+
+			search_global_container.classList.remove('hide');
+
+			self.search_panel_is_open = true;
+
+			const data = {
+				id: status_id,
+				value: true
+			};
+
+			await data_manager.set_local_db_data(data, status_table);
+		} else {
+
+			search_global_container.classList.add('hide');
+
+			self.search_panel_is_open = false;
+
+			await data_manager.delete_local_db_data(status_id, status_table);
+		}
 	}//end toggle_search_panel
 
 

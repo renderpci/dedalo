@@ -76,7 +76,13 @@
 		ON public.jer_dd USING btree
 		(modelo COLLATE pg_catalog."default" ASC NULLS LAST)
 		TABLESPACE pg_default;
-		-- Index: jer_dd_norden
+
+		-- DROP INDEX IF EXISTS public.jer_dd_model;
+
+		CREATE INDEX IF NOT EXISTS jer_dd_model
+		ON public.jer_dd USING btree
+		(modelo COLLATE pg_catalog."default" ASC NULLS LAST)
+		TABLESPACE pg_default;
 
 		-- DROP INDEX IF EXISTS public.jer_dd_norden;
 
@@ -84,7 +90,6 @@
 		ON public.jer_dd USING btree
 		(norden ASC NULLS LAST)
 		TABLESPACE pg_default;
-		-- Index: jer_dd_parent
 
 		-- DROP INDEX IF EXISTS public.jer_dd_parent;
 
@@ -92,7 +97,6 @@
 		ON public.jer_dd USING btree
 		(parent COLLATE pg_catalog."default" ASC NULLS LAST)
 		TABLESPACE pg_default;
-		-- Index: jer_dd_parent_esdescriptor_norden
 
 		-- DROP INDEX IF EXISTS public.jer_dd_parent_esdescriptor_norden;
 
@@ -100,7 +104,6 @@
 		ON public.jer_dd USING btree
 		(parent COLLATE pg_catalog."default" ASC NULLS LAST, esdescriptor ASC NULLS LAST, norden ASC NULLS LAST)
 		TABLESPACE pg_default;
-		-- Index: jer_dd_relaciones
 
 		-- DROP INDEX IF EXISTS public.jer_dd_relaciones;
 
@@ -108,7 +111,6 @@
 		ON public.jer_dd USING btree
 		(relaciones COLLATE pg_catalog."default" ASC NULLS LAST)
 		TABLESPACE pg_default;
-		-- Index: jer_dd_traducible
 
 		-- DROP INDEX IF EXISTS public.jer_dd_traducible;
 
@@ -116,7 +118,6 @@
 		ON public.jer_dd USING btree
 		(traducible ASC NULLS LAST)
 		TABLESPACE pg_default;
-		-- Index: jer_dd_usableindex
 
 		-- DROP INDEX IF EXISTS public.jer_dd_usableindex;
 
@@ -124,7 +125,6 @@
 		ON public.jer_dd USING btree
 		(tld COLLATE pg_catalog."default" ASC NULLS LAST)
 		TABLESPACE pg_default;
-		-- Index: jer_dd_visible
 
 		-- DROP INDEX IF EXISTS public.jer_dd_visible;
 

@@ -294,15 +294,7 @@ final readonly class Application
             }
 
             $shellExitCode = (new ShellExitCodeCalculator)->calculate(
-                $configuration->failOnDeprecation() || $configuration->failOnAllIssues(),
-                $configuration->failOnPhpunitDeprecation() || $configuration->failOnAllIssues(),
-                $configuration->failOnPhpunitNotice() || $configuration->failOnAllIssues(),
-                $configuration->failOnEmptyTestSuite() || $configuration->failOnAllIssues(),
-                $configuration->failOnIncomplete() || $configuration->failOnAllIssues(),
-                $configuration->failOnNotice() || $configuration->failOnAllIssues(),
-                $configuration->failOnRisky() || $configuration->failOnAllIssues(),
-                $configuration->failOnSkipped() || $configuration->failOnAllIssues(),
-                $configuration->failOnWarning() || $configuration->failOnAllIssues(),
+                $configuration,
                 $result,
             );
 
@@ -663,8 +655,9 @@ final readonly class Application
         if ($configuration->hasLogfileOtr()) {
             try {
                 new OtrXmlLogger(
-                    $configuration->logfileOtr(),
                     EventFacade::instance(),
+                    $configuration->logfileOtr(),
+                    $configuration->includeGitInformationInOtrLogfile(),
                 );
             } catch (CannotOpenUriForWritingException $e) {
                 EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(

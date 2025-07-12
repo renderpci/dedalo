@@ -316,7 +316,7 @@ section.prototype.init = async function(options) {
 		// render_ event
 			const render_handler = () => {
 				// menu label control
-					const update_menu = (menu) => {
+					const update_menu = (menu, section_label) => {
 
 						// menu instance check. Get from caller page
 						if (!menu) {
@@ -326,80 +326,77 @@ section.prototype.init = async function(options) {
 							return
 						}
 
-						// Resolve the label of the section
-						// if the section is called by a section_tool as 'oh81', get his label (transcription, indexation, etc. )
-						// it's stored into the tool_congext of the config.
-						// else get the section label
-						const section_label = self.config?.tool_context?.label
-							? self.config.tool_context.label
-							: self.label
+						const section_label_click_handler = (e) => {
+							e.stopPropagation();
+							// goto_list
+							return self.goto_list();
+						}
 
 						// update_section_label. Show icon Inspector and activate the link event
 						menu.update_section_label({
 							value					: section_label,
 							mode					: self.mode,
-							section_label_on_click	: section_label_on_click
+							section_label_on_click	: section_label_click_handler
 						})
-						async function section_label_on_click(e) {
-							e.stopPropagation();
-							// goto_list
-							return self.goto_list();
-						}//end section_label_on_click
 					}//end update_menu
 
-				// call only for direct page created sections
+				// call menu label only for direct page created sections
 					if ( self.caller?.model==='page' ) {
+						dd_request_idle_callback( () => {
+							// Resolve the label of the section
+							// if the section is called by a section_tool as 'oh81', get his label (transcription, indexation, etc. )
+							// it's stored into the tool_congext of the config.
+							// else get the section label
+							const section_label = self.config?.tool_context?.label
+								? self.config.tool_context.label
+								: self.label
 
-						// Resolve the label of the section
-						// if the section is called by a section_tool as 'oh81', get his label (transcription, indexation, etc. )
-						// it's stored into the tool_congext of the config.
-						// else get the section label
-						const section_label = self.config?.tool_context?.label
-							? self.config.tool_context.label
-							: self.label
+							// set the window document.title
+							const page_title = ( self.mode === 'edit' )
+								? `${self.section_id} - ${section_label} - ${self.tipo}`
+								: `${get_label.list || 'List'} - ${section_label} - ${self.tipo}`
 
-						// set the window document.title
-						const page_title = ( self.mode === 'edit' )
-							? `${self.section_id} - ${section_label} - ${self.tipo}`
-							: `${get_label.list || 'List'} - ${section_label} - ${self.tipo}`
+							self.caller.set_document_title(page_title)
 
-						self.caller.set_document_title(page_title)
-
-						// menu. Get instance from caller page
-						const menu_instance = self.caller.ar_instances.find(el => el.model==='menu')
-						if (menu_instance) {
-							update_menu( menu_instance )
-						}
+							// menu. Get instance from caller page
+							const menu_instance = self.caller.ar_instances.find(el => el.model==='menu')
+							if (menu_instance) {
+								update_menu( menu_instance, section_label )
+							}
+						})
 					}
 
 				// search control
-					if (!self.search_container || !self.filter) {
-						// console.log('stop event no filter 2:', this);
-						return
-					}
-					// open_search_panel. local DDBB table status
-					const status_id			= 'open_search_panel'
-					const collapsed_table	= 'status'
-					data_manager.get_local_db_data(status_id, collapsed_table, true)
-					.then(async function(ui_status){
-						// (!) Note that ui_status only exists when element is open
-						const is_open = typeof ui_status==='undefined' || ui_status.value===false
-							? false
-							: true
-						if (is_open===true && self.search_container && self.search_container.children.length===0) {
-							// add_to_container(self.search_container, self.filter)
-							await ui.load_item_with_spinner({
-								container	: self.search_container,
-								label		: 'filter',
-								callback	: async () => {
-									await self.filter.build()
-									return self.filter.render()
+					if (self.search_container && self.filter) {
+						dd_request_idle_callback( () => {
+							// open_search_panel. local DDBB table status
+							const status_id		= 'open_search_panel'
+							const status_table	= 'status'
+							data_manager.get_local_db_data(status_id, status_table, true)
+							.then(async function(ui_status){
+								// (!) Note that ui_status only exists when element is open
+								const is_open = typeof ui_status==='undefined' || ui_status.value===false
+									? false
+									: true
+								if (is_open===true && self.search_container && self.search_container.children.length===0) {
+									// add_to_container(self.search_container, self.filter)
+									await ui.load_item_with_spinner({
+										container	: self.search_container,
+										label		: 'filter',
+										callback	: async () => {
+											await self.filter.build()
+											const node = await self.filter.render()
+											// display hidden search_global_container
+											self.filter.search_global_container.classList.remove('hide')
+											return node
+										}
+									})
 								}
 							})
-							toggle_search_panel(self.filter)
-						}
-					})
+						})
+					}
 
+				// debug
 				if(SHOW_DEBUG===true) {
 					console.log('section. event_manager.events.length:', event_manager.events.length);
 				}
