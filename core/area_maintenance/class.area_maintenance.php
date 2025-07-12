@@ -733,7 +733,7 @@ class area_maintenance extends area_common {
 			$result = db_tasks::consolidate_table( $table );
 
 			if($result === false){
-				$response->errors[]	= 'Consolidate table is not possible: '.$table;
+				$response->errors[]	= 'It is not possible to consolidate the table: '.$table;
 				return $response;
 			}
 		}
