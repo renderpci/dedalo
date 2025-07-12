@@ -34,6 +34,23 @@
 global $updates;
 $updates = new stdClass();
 
+$v=665; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 6;
+	$updates->$v->version_minor			= 5;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 6;
+	$updates->$v->update_from_minor		= 4;
+
+	// Remove the old People section counter, it is unused, all people was moved into rsc197
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			DELETE FROM "matrix_counter" WHERE "tipo" = \'rsc194\' ;
+		');
 
 $v=664; #####################################################################################
 $updates->$v = new stdClass();
