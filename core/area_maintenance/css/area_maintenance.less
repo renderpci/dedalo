@@ -26,7 +26,7 @@
 		}
 
 		button {
-			border: 1px solid #dadada;
+			border: 1px solid @color_grey_medium;
 			font-size: 1em;
 			color: @color_grey_dark_1;
 			margin-bottom: 0.25rem;
@@ -54,7 +54,7 @@
 			padding: 0.5rem;
 			margin-top: 0.5rem;
 			grid-gap: 0.5rem;
-			border: 1px solid #f6d2aa;
+			border: 1px solid @color_grey_lighter;
 			border-radius: 4px;
 
 			.value {
@@ -104,7 +104,7 @@
 
 			&.blue {
 				>.widget_label {
-					background-color: #3070d8;
+					background-color: @color_blue_2;
 				}
 				>.widget_body {
 					background-color: @color_grey_light;
@@ -113,19 +113,19 @@
 
 			&.green {
 				>.widget_label {
-					background-color: #21984b;
+					background-color: @color_green_ontology;
 				}
 				>.widget_body {
-					background-color: #c0e4cd;
+					background-color: @color_green_light;
 				}
 			}
 
 			&.violet {
 				>.widget_label {
-					background-color: #777bb3;
+					background-color: @color_php;
 				}
 				>.widget_body {
-					background-color: #9999cc;
+					background-color: @color_php;
 				}
 			}
 
@@ -161,7 +161,7 @@
 			// body
 			>.widget_body {
 				padding: 1rem;
-				background-color: #fce8d2;
+				background-color: @color_hilite ;
 				min-height: 9.5rem;
 				flex-grow: 1; // grow vertical to fill
 				resize: vertical;
@@ -178,7 +178,7 @@
 					}
 					&:before {
 						content: ' ';
-						.fn_build_button('arrow-circle-right.svg', #3f3f3f, 1);
+						.fn_build_button('arrow-circle-right.svg', @color_dark, 1);
 						vertical-align: text-bottom;
 						padding: 0px;
 						margin: 0px;
@@ -189,7 +189,7 @@
 
 				.body_info {
 					font-size: 0.9em;
-					color: #676464;
+					color: @color_grey_dark_3;
 
 					h6 {
 						font-size: 1.33rem;
@@ -199,7 +199,7 @@
 
 					.alert_update {
 						padding: 1.55rem;
-						color: red;
+						color: @color_danger;
 						line-height: 1.7rem;
 
 						// pre reset to allow highlightjs do the work
@@ -218,8 +218,8 @@
 						font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 						font-size: 0.8rem;
 						padding: 0.5em;
-						border: 1px solid #ccc;
-						background-color: #f5f5f5;
+						border: 1px solid @color_grey_lighter;
+						background-color: @color_grey_mediumlight;
 						// display: flex;
 						margin-bottom: 0.25em;
 
@@ -231,7 +231,7 @@
 							font-size: 3.5em;
 							padding: 0.25em;
 							position: relative;
-							background-color: #ccc;
+							background-color: @color_grey_lighter;
 							min-width: 6rem;
 							text-align: right;
 						}
@@ -254,13 +254,12 @@
 						}
 
 						&.disable {
-							background-color: #f5f5f566;
-							border: 1px solid #cccccc7a;
+							opacity: 0.8;
 							>.vkey {
-								background-color: #cccccc7d;
+								opacity: 0.5;
 							}
 							>.vkey_value {
-								opacity: 0.6;
+								opacity: 0.5;
 							}
 						}
 					}

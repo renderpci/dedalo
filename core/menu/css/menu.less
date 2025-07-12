@@ -7,15 +7,8 @@
 @import (once) '../../page/css/layout/vars';
 @import (once) '../../page/css/layout/buttons';
 
-@menu_bg_color_active: #ffa43d;
+@menu_bg_color_active: @color_tag_indexation_normal; //#ffa43d;
 @menu_box_shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
-
-// v6.3.1 compatibility only
-// Only to prevent issues on updates from 6.3.1 to 6.4
-// Adding of 'content_data' to the menu in v6.4 creates a CSS problem if the administrator
-// do not logout and login from Dédalo when exec updates from v6.3.1 or earlier.
-// This is a temporal hack to fix this situation
-@import (once) 'menu-6.3';
 
 .menu {
 	margin: 0px;
@@ -35,20 +28,13 @@
 		flex-wrap: wrap;
 		align-items: center;
 		box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
-		background-color: darken(@color_grey_ultradark, 3%);
+		background-color: @color_grey_dark_1;
 		font-size: 1rem;
 		color: @color_white;
 		line-height: 1.2em;
 
-		// temporal v 6.3.0 beta !
-		// .v6_5_0_dev&, .v6_5_0& {
-		.v6_5_0_dev& {
-			// background-color: #943228;
-			background-color: #9717a1;
-		}
-
 		&.master {
-			background-color: #28946c;
+			background-color: @color_green_ontology;
 		}
 
 		// prevents menu don't scroll in mobile
@@ -145,7 +131,7 @@
 
 				// link common
 				a {
-					color: #EEECEC;
+					color: @color_grey_light;
 					text-decoration: none;
 					display: block;
 					width: 100%;
@@ -199,14 +185,14 @@
 					position: absolute;
 					top: var(--menu_heigth);
 					box-shadow: @menu_box_shadow;
-					border: 1px solid #B4B4B4;
+					border: 1px solid @color_grey_medium_2;
 					border-radius: 4px;
 					border-top-left-radius: 0;
 					max-height: calc(100vh - var(--menu_heigth));
 					overflow: auto;
 
 					a {
-						color: #4F4F4F;
+						color: @color_dark;
 					}
 				}
 
@@ -273,7 +259,7 @@
 					vertical-align: middle;
 					border-bottom: 5px solid transparent;
 					border-top: 5px solid transparent;
-					border-left: 5px solid #000000;
+					border-left: 5px solid @color_black;
 					pointer-events: none;
 				}
 
@@ -315,7 +301,7 @@
 			>.menu_mobile_wrapper {
 				width: 100%;
 				position: relative;
-				background-color: #2d2d2d;
+				background-color: @color_grey_ultradark;
 				font-size: 1.25rem;
 				padding: 1rem;
 
@@ -333,7 +319,7 @@
 					cursor: pointer;
 
 					&.with_children {
-						color: #9d9d9d;
+						color: @color_grey_darken_2;
 
 						&:after {
 							content: " ";
@@ -344,7 +330,7 @@
 							vertical-align: middle;
 							border-bottom: 5px solid transparent;
 							border-top: 5px solid transparent;
-							border-left: 5px solid #9d9d9d;
+							border-left: 5px solid @color_grey_darken_2;
 							position: absolute;
 							top: 0.66em;
 							right: 0.66em;
@@ -370,7 +356,7 @@
 
 		// Ontology link
 			>.ontology {
-				color: #c9c9c9;
+				color: @color_grey_lighter;
 				margin-left: 0.5rem;
 				margin-right: 0.5rem;
 				cursor: pointer;
@@ -384,12 +370,12 @@
 
 		// username of current logged user
 			>.logged_user_name {
-				color: #a6a6a6;
+				color: @color_grey_darken_2;
 				margin-left: 0.5rem;
 				cursor: pointer;
 
 				&:hover {
-					color: #F9F9F9;
+					color: @color_grey_light;
 				}
 
 				&.is_root {
@@ -406,7 +392,7 @@
 				max-width: 99.9%;
 				padding-left: 0.6em;
 				padding-right: 1em;
-				color: #cccccc;
+				color: @color_grey_lighter;
 				border: none;
 				cursor: pointer;
 				font-size: 1.05rem;
@@ -436,7 +422,7 @@
 				}
 
 				&.unsync {
-					color: #fdcf39;
+					color: @color_tag_indexation_normal;
 					opacity: 0.9;
 				}
 			}
@@ -518,7 +504,7 @@
 
 				>div {
 					padding-left: 1em;
-					color: #9d9d9d;
+					color: @color_grey_darken_2;
 					font-size: 94%;
 				}
 
@@ -547,7 +533,7 @@
 					height: 2.2rem;
 					display: inline-block;
 					margin-left: 0.9rem;
-					background-color: #9d9d9d;
+					background-color: @color_grey_darken_2;
 
 					@media screen and (max-width: @width_break_point_0) { // 1024px
 						height: 1.5rem;

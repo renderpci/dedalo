@@ -8,7 +8,7 @@
 	@import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-	@tool_color: #fd7f26; // @color_orange_dedalo;
+	@tool_color:  @color_orange_dedalo; // @color_orange_dedalo;
 
 .wrapper_tool.tool_cataloging {
 
@@ -21,34 +21,6 @@
 
 		@media screen and (max-width: @width_break_point_0) {
 			flex-wrap: wrap;
-		}
-
-		>.tool_buttons_container {
-			display: flex;
-			align-items: flex-start;
-
-			@media screen and (max-width: @width_break_point_0) {
-				flex-wrap: wrap;
-				margin-top: 1rem;
-			}
-
-			>div, button {
-				margin: 0rem;
-				margin-left: 0.5rem;
-				margin-right: 0rem;
-				min-height: 2rem;
-
-				&.active{
-					background-color: #ffe589;
-					border-color: #616161;
-				}
-
-				@media screen and (max-width: @width_break_point_0) {
-					margin-bottom: 1rem;
-					flex: 1 0 auto;
-				}
-
-			}
 		}
 	}//end >.tool_header
 
@@ -104,7 +76,7 @@
 						cursor: pointer;
 
 						.section_record {
-							background-color:#ffffff;
+							background-color: @color_white;
 							display: flex;
 							align-items: center;
 
@@ -123,9 +95,9 @@
 								top: 1px;
 								bottom: -5px;
 								z-index: 9;
-								outline: 1px solid #cccccc;
-								background-color: rgba(255, 255, 255, 1);// ?
-								box-shadow: 2px 2px 12px rgba(128, 128, 128, 0.1);
+								outline: 1px solid @color_grey_lighter;
+								background-color: @color_white ;// ?
+								box-shadow: 2px 2px 12px @color_light;
 							}
 
 							.component_image {
@@ -142,13 +114,6 @@
 								.options_left_contaniner{
 									display: flex;
 									flex-direction: column;
-
-									.label_drag{
-										background-color: #bff8bc;
-									}
-									.label_copy{
-										background-color: #f8bcbc;
-									}
 								}
 
 								.dragger {
@@ -164,14 +129,14 @@
 									width: 34px;
 
 									&.used{
-										opacity: 0.8;
-										background-color: #ffda86;
+										opacity: 1;
+										background-color: @color_hilite_2 ;
 									}
 
 									&:hover{
-										-webkit-filter: invert(100%);
-											filter: invert(100%);
-										background-color: #9B9B9B;
+										// -webkit-filter: invert(100%);
+										// 	filter: invert(100%);
+										background-color: @color_grey_dark;
 										opacity: 0.7;
 									}
 								}
@@ -189,9 +154,8 @@
 							display: grid;
 							grid-template-columns: 73px auto 73px;
 							grid-template-rows: minmax(3rem, auto) 2fr minmax(3rem, auto);
-							border: 0.1rem solid #333333;
 							overflow: hidden;
-							@bg_color_buttons: rgb(245 245 245 / 100%);
+							@bg_color_buttons: @color_grey_mediumlight;
 
 							>.column {
 								z-index: 2;
@@ -272,7 +236,7 @@
 								&:hover {
 									background-color: @color_orange_dedalo;
 									>.button.info {
-										background-color: white;
+										background-color: @color_white;
 									}
 								}
 
@@ -312,7 +276,7 @@
 					.button.info {
 						height: 1.5rem;
 						width: 1.5rem;
-						background-color: black;
+						background-color: @color_black;
 						margin: 0.33rem;
 						z-index: 1;
 						opacity: 1;
@@ -352,54 +316,17 @@
 					}
 				}
 
-
-				.column.dragover {
-					outline: 2px dashed orange;
-				}
-				.column.drop_ordered_coins {
-					animation-duration: 1s;
-					animation-name: outline_to_green;
-					@keyframes outline_to_green {
-						from {
-							outline: 2px dashed green;
-						}
-						to {
-							outline: 2px dashed transparent;
-						}
-					}
-				}
-
 			}//end .component_portal.view_coins_mosaic, .portal.view_coins_mosaic
 		}
 
 		.right_container {
-
-			.coins_container {
-				position: sticky;
-				top: 1px;
-				background: white;
-				z-index: 3;
-			}
-			.portal_container {
-				display: grid;
-				grid-template-columns: 50% 50%;
-
-				>* {
-					grid-area: unset;
-				}
-			}
-			.text_container {
-				>.wrapper_component >.content_data {
-					min-height: 1.5em;
-				}
-
-				>.wrapper_component >.count {
-					color: #a8a8a8;
-					margin: 0.5em;
-					z-index: 2;
-				}
-			}
 		}
 	}//end .content_data
 
 }//end .wrapper_tool
+
+// modal and new window header tool modification
+.tool_header.tool_cataloging {
+	background-color: @tool_color;
+}
+

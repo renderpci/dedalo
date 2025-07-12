@@ -6,7 +6,7 @@
 
 // search_component (shared at least by unit_test preview)
 	.search_component {
-		background-color: rgba(251, 251, 251, 0.48);
+		background-color: @color_light;
 		display: flex;
 		position: relative;
 		margin: 2px;
@@ -70,9 +70,9 @@
 		// button_save_preset
 		.button_save_preset {
 			z-index: 3;
-			background-color: #db0303;
+			background-color: @color_danger;
 			width: calc(100% - 1rem);
-			color: white;
+			color: @color_white ;
 			margin: 0.5rem;
 			font-weight: 500;
 		}
@@ -83,7 +83,7 @@
 			position: relative;
 			width: 100%;
 			z-index: 1;
-			outline: 0.5px solid #dcdcdc;
+			outline: 0.5px solid @color_grey_medium;
 
 			.list&, .relation& {
 				margin-top: 0.5em;
@@ -102,7 +102,7 @@
 				margin: 0px;
 
 				&.sections {
-					background-color: #a0a0a0;
+					background-color: @color_grey_dark;
 				}
 			}
 
@@ -139,7 +139,7 @@
 						padding: 1px;
 						padding-right: 17px;
 						padding-left: 23px;
-						background-color: rgba(255, 255, 255, 0.5);
+						background-color: @color_grey_ultralight;
 						position: relative;
 						width: 100%;
 						display: grid;
@@ -188,8 +188,7 @@
 							left: 0px;
 							top: 0px;
 							margin: 0px;
-							padding: 0.25rem;
-							border-right: 1px solid rgba(123, 150, 177, 0.45);
+							padding: 0.27rem;
 							text-align: center;
 							max-width: 32px;
 							writing-mode: vertical-lr;
@@ -199,7 +198,7 @@
 							-moz-user-select: none;
 							-webkit-user-select: none;
 							letter-spacing: 1px;
-							color: #fcf4ff;
+							color: @color_grey_light;
 							opacity: 0.6;
 
 							&:hover {
@@ -224,7 +223,7 @@
 							position: absolute;
 							right: 0px;
 							top: 1.4em;
-							color: #080808;
+							color: @color_black;
 						}
 
 					}//end .search_group
@@ -255,7 +254,7 @@
 							padding-left: 0.25rem;
 							padding-right: 0.25rem;
 							font-size: 1em;
-							background-color: #f99c29;
+							background-color: @color_tag_indexation_normal;
 							opacity: 1;
 							color: @color_white;
 							border: 1px solid @color_white;
@@ -263,7 +262,7 @@
 							word-break: break-word;
 
 							&:hover {
-								background-color: darken(#f99c29, 10%);
+								background-color: darken(@color_tag_indexation_normal, 10%);
 							}
 						}
 
@@ -384,7 +383,7 @@
 
 			// right: user presets list
 			.search_container_selection_presets {
-				background-color: rgba(201,201,201,0.3);
+				background-color: @color_grey_medium;
 				width: 160px;
 				min-width: 140px;
 				display: block;
@@ -393,7 +392,7 @@
 				>.component_presets_label {
 					display: inline-flex;
 					width: 100%;
-					background-color: #575a5c;
+					background-color: @color_grey_dark_3;
 					color: @color_white;
 					text-align: center;
 					padding: 4px;
@@ -405,8 +404,8 @@
 					}
 
 					>.button.add {
-						color: #565a5c;
-						background-color: #f3f3f3;
+						color: @color_grey_dark_3;
+						background-color: @color_grey_mediumlight;
 						cursor: pointer;
 						z-index: 9;
 						margin-left: 0.33rem;
@@ -432,10 +431,10 @@
 							&.selected {
 								background-color: @color_orange_dedalo;
 								.button.icon {
-									background-color: white;
+									background-color: @color_white ;
 								}
 								.wrapper_component {
-									color: white;
+									color: @color_white ;
 								}
 							}
 						}
@@ -495,7 +494,7 @@
 		writing-mode: vertical-lr;
 		text-transform: uppercase;
 		cursor: pointer;
-		color: #f0f8ff;
+		color: @color_light;
 		padding: 0.25rem;
 		padding-top: 0.75rem;
 		letter-spacing: 1px;
