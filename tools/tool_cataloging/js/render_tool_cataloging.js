@@ -47,7 +47,7 @@ render_tool_cataloging.prototype.edit = async function(options={render_level:'fu
 		// set pointers
 		wrapper.content_data = content_data
 
-	// transcription_options are the buttons to get access to other tools (buttons in the header)
+	// tool options are the buttons to get access to other tools (buttons in the header)
 		const header_options_node = await render_header_options(self, content_data)
 		wrapper.tool_buttons_container.appendChild(header_options_node)
 
