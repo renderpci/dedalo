@@ -50,7 +50,7 @@
 	right: -2.25rem;
 
 	>.button {
-		background-color: #ffffff;
+		background-color: @color_white ;
 
 		&.open_layer_selector {
 			text-align: center;
@@ -94,12 +94,12 @@
 
 		}
 		&.button_color_picker {
-			border: 0.5px solid #3f3f3f;
+			border: 0.5px solid @color_dark;
 		}
 
 		&.vector_tool_active {
 			opacity: 1;
-			background-color: #000000 !important;
+			background-color: @color_black !important;
 		}
 	}//end buttons
 
@@ -139,27 +139,27 @@
 					grid-template-columns: 1.5em 1.2em auto 1.5em 1em;
 					height: 30px;
 					align-items: center;
-					border-bottom: 1px solid #777;
-					border-left: 1px solid #777;
-					border-right: 1px solid #777;
+					border-bottom: 1px solid @color_grey_darken;
+					border-left: 1px solid @color_grey_darken;
+					border-right: 1px solid @color_grey_darken;
 					cursor: pointer;
-					background-color: #ffffff;
+					background-color: @color_white ;
 
 					&:hover {
 						background-color: @color_orange_dedalo;
-						color: #ffffff;
+						color: @color_white ;
 						&.raster_layer {
-							background-color: #ffffff;
+							background-color: @color_white ;
 							color: initial;
 						}
 					}
 					&:active {
 						background-color: @color_orange_dedalo;
-						color: #000000;
+						color: @color_black;
 					}
 					&.active {
 						background-color: @color_grey_medium;
-						color: #000000;
+						color: @color_black;
 						user-select: none;
 						.user_layer_name {
 							font-weight: bold;
@@ -172,7 +172,7 @@
 					}
 
 					.layer_icon {
-						background-color: black;
+						background-color: @color_black;
 						justify-self: center;
 						opacity: 0.2;
 						&:hover {
@@ -186,7 +186,7 @@
 
 					}
 					.user_layer_name {
-						color		: #555555;
+						color		: @color_grey_dark_3;
 						font-size	: 0.96rem;
 						font-weight	: normal;
 						width		: 100%;
@@ -196,7 +196,7 @@
 						overflow	: auto;
 					}
 					.layer_delete {
-						background-color: black;
+						background-color:  @color_black;
 						justify-self: center;
 					}
 					.layer_color {
@@ -206,7 +206,7 @@
 					}
 				}
 				>li:first-child {
-					border-top: 0.5px solid #777777;
+					border-top: 0.5px solid @color_grey_darken;
 				}
 			}
 		}//end layer_selector
