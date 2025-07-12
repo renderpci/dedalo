@@ -83,8 +83,8 @@
 			display: grid;
 			margin: 0px;
 			margin-top: 1rem;
-			color: #aaa;
-			background-color: #fafafa;
+			color: @color_grey_medium_2;
+			background-color: @color_page_bg_color;
 			width: 100%;
 			max-width: 1600px;
 			overflow: auto;
@@ -100,8 +100,8 @@
 					display: flex;
 					justify-content: flex-end;
 					align-items: center;
-					background-color: white;
-					border-right: 1px #ececec solid;
+					background-color: @color_white;
+					border-right: 1px @color_grey_light solid;
 				}
 
 				.file_info {
@@ -110,27 +110,27 @@
 					flex-wrap: wrap;
 					justify-content: center;
 					align-content: center;
-					border-bottom: #ececec 1px solid;
+					border-bottom: @color_grey_light 1px solid;
 
 					span {
-						color: #525252;
+						color: @color_grey_dark_3;
 						font-size: 0.9rem;
 
 						&.button {
 							font-size: 1.1rem;
-							background-color: #767676;
+							background-color: @color_grey_darken;
 						}
 					}
 
 					.button {
-						background-color: #767676;
+						background-color: @color_grey_darken;
 						&:active {
 							opacity: 0.5;
 						}
 					}
 
 					&.default {
-						background-color: #f2f2f2;
+						background-color: @color_grey_light;
 					}
 
 					.cell_node {

@@ -14,8 +14,8 @@
 	--user_login_image : ''; // Added on login, like url('../../themes/default/raspas/raspa_pantalla_1.jpg');
 
 	>.content_data {
-		background-color: rgba(243, 243, 243, 0.76);
-		border: solid 1px #e1e1e1;
+		background-color: @color_grey_mediumlight;
+		border: solid 1px @color_grey_medium;
 		border-radius: 0.5em;
 		.centered;
 		max-width: 24em;
@@ -23,8 +23,8 @@
 		padding-bottom: 1em;
 
 		&.overlay {
-			background-color: rgb(255 255 255);
-			box-shadow: 10px 10px 62px 0px rgba(0,0,0,0.43);
+			background-color: @color_white;
+			box-shadow: 10px 10px 62px 0px @color_grey_darken_2;
 		}
 
 		&.error_message {
@@ -72,14 +72,14 @@
 			background: url('../../themes/default/icons/select_arrows.svg');
 			background-repeat: no-repeat;
 			background-position: 97%;
-			background-size: 1rem;
+			background-size: 0.8rem;
 			-moz-appearance: none;
 			-webkit-appearance: none;
 			appearance: none;
 			padding-left: 1em;
 			background-color: @color_grey_ultralight;
 			opacity: 0.7;
-			border: 1px solid #e0e0e0;
+			border: 1px solid @color_grey_medium;
 		}
 
 		// form
@@ -185,7 +185,7 @@
 					margin: 0px;
 					text-align: center;
 					transition: all 0.17s ease, padding 0s;
-					.fn_append_icon('saml.svg', #ffffff, 1);
+					.fn_append_icon('saml.svg', @color_white, 1);
 
 					&:active {
 						opacity: 0.5;
@@ -231,7 +231,7 @@
 
 					&.error {
 						padding-left: 0.5em;
-						color: white;
+						color: @color_white;
 					}
 				}
 			}
@@ -244,7 +244,7 @@
 		height: 200px;
 		width: 200px;
 		margin: 1rem auto;
-		box-shadow: 0px 0px 1em #e4e4e4;
+		box-shadow: 0px 0px 1em @color_grey_medium;
 		border-radius: 100%;
 		position: relative;
 		text-align: center;
@@ -267,17 +267,17 @@
 			border-radius: 100%;
 
 			// text counter like '80%'
-			box-shadow: inset 0px 0px 1em #e4e4e4;
+			box-shadow: inset 0px 0px 1em @color_grey_medium;
 			content: attr(data-pct); //'%';
 			font-size: 2em;
-			color: white;
-			text-shadow: 0 0 0.5em black;
+			color: @color_white;
+			text-shadow: 0 0 0.5em @color_black;
 			line-height: 160px;
 		}
 
 		#svg circle {
 		  stroke-dashoffset: 0;
-		  stroke: #666666;
+		  stroke: @color_grey_darken;
 		  stroke-width: 1em;
 		}
 		#svg #bar {

@@ -68,7 +68,6 @@
 
 		// ul .thesaurus_list_wrapper
 		>.thesaurus_list_wrapper {
-			background-color: rgba(255, 255, 255, 0.84);
 			width: 100%;
 			height: 100%;
 			padding: 0.25rem;
@@ -81,45 +80,45 @@
 				&.model {
 
 					>.typology_name {
-						background-color: #f59e3d;
-						color: white;
+						background-color: @color_tag_indexation_normal;
+						color: @color_white;
 						&::before {
 							content: " [M] ";
 						}
 						&:after {
-							background-color: white;
+							background-color: @color_white ;
 						}
 						&:hover {
-							background-color: darken(#f59e3d, 10%);
+							background-color: darken(@color_tag_indexation_normal, 10%);
 						}
 					}
 
 					.term_text, mark {
-						color: darken(#f59e3d, 18%) !important;
+						color: darken(@color_tag_indexation_normal, 18%) !important;
 					}
 				}
 
 				// typology_name like 'Toponymy'
 				>.typology_name {
-					background-color: rgba(230, 230, 230, 0.88);
+					background-color: @color_grey_light;
 					text-transform: uppercase;
 					padding: 0.5em;
 					margin-bottom: 0.25em;
 					margin-top: 0.25em;
 					font-size: 1em;
 					line-height: 1em;
-					color: #636363;
+					color: @color_grey_dark_3;
 					cursor: pointer;
 					&:hover {
-						background-color: #e0e0e0;
+						background-color: @color_grey_medium;
 					}
 					&:active {
-						background-color: #bbbbbb;
-						color: #ffffff;
+						background-color: @color_grey_medium_2;
+						color: @color_white;
 					}
 
 					// default opacity (collapsed)
-					opacity: 0.35;
+					opacity: 0.5;
 					// expanded case (visible)
 					&.up {
 						opacity: unset;

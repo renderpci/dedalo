@@ -40,7 +40,7 @@
 }
 
 // fn_append_icon (used by tag element 'button')
-.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
+.fn_append_icon(@icon_name, @color: @color_dark, @opacity:1) {
 
 	--icon-path : url('../../themes/default/icons/@{icon_name}');
 
@@ -72,7 +72,7 @@
 // button : generic to apply to span elements and get a icon button without text
 // @icon_name:null, @color:black, @opacity:0.7, @size:1em
 .button, .icon_button {
-	background-color: #000000;
+	background-color: @color_black;
 	cursor: pointer;
 	display: inline-flex;
 	height: 1em;
@@ -95,12 +95,12 @@
 
 // inside buttons_container, all buttons are white
 	.buttons_container & {
-		background-color: #ffffff;
+		background-color: @color_white ;
 		margin-top: 0px;
 	}
 // variants after create button
 	&.white {
-		background-color: #ffffff !important;
+		background-color: @color_white  !important;
 	}
 	&.grey {
 		background-color: @color_grey_dark;
@@ -163,9 +163,9 @@ button {
 		@color: @color_primary;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: #ffffff;
+		color: @color_white ;
 		&:before {
-			background-color: #ffffff !important;
+			background-color: @color_white  !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);
@@ -176,9 +176,9 @@ button {
 		@color: @color_secondary;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: #ffffff;
+		color: @color_white ;
 		&:before {
-			background-color: #ffffff !important;
+			background-color: @color_white  !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);
@@ -189,9 +189,9 @@ button {
 		@color: @color_success;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: #ffffff;
+		color: @color_white ;
 		&:before {
-			background-color: #ffffff !important;
+			background-color: @color_white  !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);
@@ -202,9 +202,9 @@ button {
 		@color: @color_danger;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: #ffffff;
+		color: @color_white ;
 		&:before {
-			background-color: #ffffff !important;
+			background-color: @color_white  !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);
@@ -215,9 +215,9 @@ button {
 		@color: @color_orange_dedalo;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: #ffffff;
+		color: @color_white ;
 		&:before {
-			background-color: #ffffff !important;
+			background-color: @color_white  !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);
@@ -228,9 +228,9 @@ button {
 		@color: @color_info;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: #ffffff;
+		color: @color_white ;
 		&:before {
-			background-color: #ffffff !important;
+			background-color: @color_white  !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);
@@ -254,9 +254,9 @@ button {
 		@color: @color_dark;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: #ffffff;
+		color: @color_white ;
 		&:before {
-			background-color: #ffffff !important;
+			background-color: @color_white  !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);
@@ -275,7 +275,7 @@ button {
 	}
 
 	&:focus {
-		border: 1.2px solid #0059fa !important;
+		border: 1.2px solid @color_blue !important;
 		opacity: 1;
 	}
 }//end button
@@ -612,7 +612,7 @@ button {
 	border-top-right-radius: 0.25em;
 
 	>.button {
-		color: white;
+		color: @color_white ;
 
 		&:before {
 			content: ' ';
@@ -626,16 +626,16 @@ button {
 		}
 
 		&.bold:before {
-			.fn_build_button('bold.svg', black, 1);
+			.fn_build_button('bold.svg', @color_black, 1);
 		}
 		&.italic:before {
-			.fn_build_button('italic.svg', black, 1);
+			.fn_build_button('italic.svg', @color_black, 1);
 		}
 		&.underline:before {
-			.fn_build_button('underline.svg', black, 1);
+			.fn_build_button('underline.svg', @color_black, 1);
 		}
 		&.replace:before {
-			.fn_build_button('exchange.svg', black, 1);
+			.fn_build_button('exchange.svg', @color_black, 1);
 		}
 	}
 }//end .contenteditable_buttons

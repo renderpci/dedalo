@@ -9,8 +9,8 @@
 // hilite (used on focus)
 	.hilite_mixin(@outline_offset:0) {
 		outline-offset: @outline_offset;
-		outline: 1px solid @color_hilite;
-		box-shadow: 0px 0px 10px @color_hilite;
+		outline: 1px solid @color_input_focus;
+		box-shadow: 0px 0px 10px @color_input_focus;
 		opacity: 1;
 		z-index: 1;
 	}
@@ -18,9 +18,9 @@
 	.hilite_element {
 		will-change: transform; // @see https://developer.mozilla.org/en-US/docs/Web/CSS/will-change
 		transition: background-color 600ms linear;
-		background-color: #fae5c8;// #ffdca9;
+		background-color: @color_hilite ;
 		.label {
-			color: #757575;
+			color: @color_dark;
 		}
 	}
 
@@ -137,11 +137,11 @@
 		>.wrapper_error_title {
 			text-transform: uppercase;
 			padding-bottom: .25rem;
-			border-bottom: 1px solid #cbcac9;
+			border-bottom: 1px solid @color_grey_lighter;
 			margin-bottom: 0.5rem;
 
 			>.icon {
-				background-color: white;
+				background-color: @color_white ;
 				float: right;
 			}
 		}
@@ -221,7 +221,7 @@
 			display: none;
 			flex: 0 1 1em;
 			z-index: 1;
-			box-shadow: 0px 0px 0px 1px #f49d46;
+			box-shadow: 0px 0px 0px 1px @color_tag_indexation_normal;
 			right: 0px;
 			width: auto;
 			padding: 0px;
@@ -323,7 +323,7 @@
 
 			>.label {
 				height: var(--component_label_height);
-				color: @color_grey_darken_2; //#636363
+				color: @color_grey_darken_2;
 
 				>.icon {
 					vertical-align: bottom;
@@ -579,11 +579,11 @@
 			display: flex;
 			padding: 1rem;
 			background-color: @color_orange_dedalo;
-			color: white;
+			color: @color_white ;
 			font-weight: normal;
 			z-index: 2;
 			// shadow like menu
-			box-shadow: 0 2px 3px rgba(0,0,0,.4);
+			box-shadow: 0 2px 3px @color_grey_dark;
 
 			&.label, &.content, >div.label, >span.label {
 				font-size: 1.4em;
@@ -843,50 +843,6 @@
 		}
 	}//end .component_message
 
-
-// EXPERIMENTAL . singular for checking assignments only
-	.singular {
-
-		&.wrapper_component {
-			background-color: #F0FBA1 !important;
-		}
-		&.label {
-			background-color: #7CFCDD !important;
-			flex: 100% !important;
-		}
-		&.content_data {
-			background-color: #F8CAB7 !important;
-			flex: 0 0 90% !important;
-		}
-
-		&:after {
-			content: "*";
-		}
-	}
-
-// EXPERIMENTAL section custom test
-	.green {
-		&[class^="wrapper_"] { // affects all classes starting with 'wrapper_' (wrapper_section, wrapper_component, etc.)
-		// &.wrapper_section {
-			background-color: #87FA88 !important;
-			padding: 1em;
-			border-radius: 0.5em;
-		}
-	}
-	.red {
-		&.content_data {
-			background-color: #ffbcaa !important;
-		}
-	}
-
-// EXPERIMENTAL component custom test
-	.full {
-		&.wrapper_component {
-			background-color: #35F9E1 !important;
-			flex: 100% !important;
-		}
-	}
-
 // input_tex_area contenteditable
 	.input_tex_area {
 		width: 100%;
@@ -987,7 +943,7 @@
 // json_editor
 	.jse-main {
 
-		--jse-theme-color: #949494;
+		--jse-theme-color: @color_grey_darken_2;
 		// resize: vertical;
 		overflow: auto;
 
@@ -1086,7 +1042,7 @@
 						&:after {
 							content: " ";
 							mask-image: url(../../themes/default/icons/arrow_down.svg);
-							background-color: #5b5b5b;
+							background-color: @color_grey_dark_3;
 							transition: transform .26s ease-out;
 							position: absolute;
 							right: 0.33rem;
@@ -1122,7 +1078,7 @@
 					&.element_draggable {
 						cursor: move;
 						background-image: url('../../themes/default/draggable.svg');
-						background-color: rgba(0, 0, 0, 0);
+						background-color: @color_black;
 						background-position-x: 0%;
 						background-position-y: 0%;
 						background-size: auto auto;
@@ -1164,14 +1120,6 @@
 		}//end ul.components_list_container
 	}//end .components_list_container
 
-.bg_warning {
-	background-color: #ffe9e9;
-	background-image: url('../../themes/default/dedalo_logo.svg');
-	border: 1px dashed #ef9b9b;
-	background-size: 5rem;
-	background-repeat: space;
-}
-
 // media components base CSS unified
 .media_wrapper.edit.wrapper_component {
 
@@ -1191,7 +1139,7 @@
 		outline: none;
 		border-radius: 4px;
 		z-index: 1;
-		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+		box-shadow: @color_grey_dark 0px 2px 8px 0px;
 		cursor: pointer;
 
 		.fullscreen& {
@@ -1427,7 +1375,7 @@
 .grid_choose_container {
 	position: absolute;
 	background-color: @color_light;
-	box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+	box-shadow: @color_grey_lighter 0px 5px 15px;
 	width: 20rem;
 	min-width: 15rem;
 	max-height: 70vh;
@@ -1486,7 +1434,7 @@
 		z-index: 1;
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
-		border-bottom: 1px solid #e7e6e6;
+		border-bottom: 1px solid @color_grey_medium;
 
 		.column {
 			outline: none;
@@ -1494,7 +1442,7 @@
 	}
 
 	>.wrapper_component {
-		border: 1px solid #e7e6e6;
+		border: 1px solid @color_grey_medium;
 		border-radius: 0.3em;
 	}
 

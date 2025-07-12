@@ -5,8 +5,6 @@
 */
 .component_pdf {
 
-	@color_grey_viewer: #3f3f3f;
-
 	&.disabled_component {
 		>.content_data {
 			pointer-events: initial !important;
@@ -63,14 +61,14 @@
 					display: block;
 					height: calc(100% - 30px);
 					width: 100%;
-					border-right: 1px solid @color_grey_viewer;
-					background-color: @color_grey_viewer;
+					border-right: 1px solid @color_dark;
+					background-color: @color_dark;
 				}
 
 				>.fields {
 					height: 30px;
 					flex: 0 0 100%;
-					background-color: @color_grey_viewer; // @color_grey_dark;
+					background-color: @color_dark; // @color_grey_dark;
 					padding: 0px;
 					padding-left: 1.25em;
 					margin: 0px;
@@ -83,7 +81,7 @@
 					width: 100%;
 
 					span {
-						color: white;
+						color: @color_white ;
 						text-transform: capitalize;
 					}
 					input {
@@ -93,7 +91,7 @@
 						height: 20px;
 						background-color: @color_grey_dark;
 						outline-color: darken(@color_grey_dark, 10%);
-						color: white;
+						color: @color_white ;
 					}
 				}
 			}
