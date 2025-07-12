@@ -77,14 +77,16 @@ const get_content_data = function(self) {
 			class_name		: 'q_operator',
 			parent			: content_data
 		})
-		input_q_operator.addEventListener('change', function() {
+		// change event
+		const change_handler = (e) => {
 			// value
-				const value = this.value
+			const q_operator_value = e.target.value
 			// q_operator. Fix the data in the instance previous to save
-				self.data.q_operator = value
+			self.data.q_operator = q_operator_value
 			// publish search. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-		})
+			event_manager.publish('change_search_element', self)
+		}
+		input_q_operator.addEventListener('change', change_handler)
 
 	// values (inputs)
 		const inputs_value	= value
@@ -104,47 +106,82 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @param int i
+* @param int i (array position from value)
 * @param number current_value
-* @param object self
-* @return HTMLElement input
+* @param object self (component instance)
+* @return HTMLElement content_value
 */
 const get_input_element = (i, current_value, self) => {
 
 	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value'
-		})
+	const content_value = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'content_value'
+	})
 
 	// input field
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'input_value',
-			value			: current_value,
-			parent			: content_value
+	const input = ui.create_dom_element({
+		element_type	: 'input',
+		type			: 'text',
+		class_name		: 'input_value',
+		value			: current_value,
+		parent			: content_value
+	})
+
+	// input handler
+	const input_check_value_handler = (e) => {
+		// fix value to valid format as '5.21' from '5,21'
+		e.target.value = self.clean_value(e.target.value)
+	}
+	input.addEventListener('input', input_check_value_handler)
+
+	// change event
+	const change_handler = (e) => {
+
+		// Do not fix_number_format here to preserve between operator (...) like '1...7'
+		const parsed_value = e.target.value
+
+		if (parsed_value != e.target.value) {
+			// replace changed value
+			e.target.value = parsed_value
+		}
+
+		// Prevent to save values without numbers like '..', '-', ...
+		const has_digit = /\d/.test(parsed_value);
+
+		if (!has_digit) {
+			e.target.value = null
+		}
+
+		const safe_value = (has_digit)
+			? parsed_value
+			: null;
+
+		// changed_data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: i,
+			value	: safe_value
 		})
-		input.addEventListener('change', function() {
 
-			// parsed_value
-				const parsed_value = (this.value.length>0)
-					? this.value
-					: null
+		// update the instance data (previous to save)
+		self.update_data_value(changed_data_item)
 
-			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: parsed_value
-				})
+		// publish search. Event to update the DOM elements of the instance
+		event_manager.publish('change_search_element', self)
+	}
+	input.addEventListener('change', change_handler)
 
-			// update the instance data (previous to save)
-				self.update_data_value(changed_data_item)
-
-			// publish search. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-		})//end event change
+	// keydown event
+	const keydown_handler = (e) => {
+		// Check if the key is NOT a number. If true, add a informative placeholder
+		if (isNaN(e.key) && ![' ','-','.',',','Backspace','Tab','Enter'].includes(e.key)) {
+			// Handle non-numeric key
+			input.placeholder = 'Insert number';
+			input.removeEventListener('keydown', keydown_handler)
+		}
+	}
+	input.addEventListener('keydown', keydown_handler)
 
 
 	return content_value

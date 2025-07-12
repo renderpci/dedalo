@@ -42,8 +42,8 @@ export const system_info = function() {
 // prototypes assign
 	// // lifecycle
 	system_info.prototype.init		= widget_common.prototype.init
-	system_info.prototype.build		= widget_common.prototype.build
-	system_info.prototype.render		= widget_common.prototype.render
+	// system_info.prototype.build	= widget_common.prototype.build
+	system_info.prototype.render	= widget_common.prototype.render
 	system_info.prototype.destroy	= widget_common.prototype.destroy
 	// // render
 	system_info.prototype.edit		= render_system_info.prototype.list

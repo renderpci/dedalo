@@ -339,8 +339,16 @@ class component_number extends component_common {
 			? reset($query_object->q)
 			: $query_object->q;
 
+		// force to string
+		if (!is_string($q)) {
+			$q = to_string($q);
+		}
+
 		// q_operator
 		$q_operator = $query_object->q_operator ?? null;
+
+		// q_only_operator string. Applied in client to the q value when only q_operator is introduced.
+		$q_only_operator = 'only_operator';
 
 		// Always set fixed values
 		$query_object->type = 'number';
@@ -415,8 +423,8 @@ class component_number extends component_common {
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
 				$ar_parts 	= explode($between_separator, $q);
-				$first_val  = !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
-				$second_val = !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
+				$first_val  = !empty($ar_parts[0]) ? trim($ar_parts[0]) : 0;
+				$second_val = !empty($ar_parts[1]) ? trim($ar_parts[1]) : $first_val;
 
 				// @@ '$[*] >= 1'
 				$query_object_one = clone $query_object;
@@ -437,6 +445,7 @@ class component_number extends component_common {
 
 				$query_object = $new_query_object;
 				break;
+
 			# SEQUENCE
 			/*case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
@@ -457,46 +466,55 @@ class component_number extends component_common {
 				$query_object = $new_object;
 				break;
 				*/
+
 			// BIGGER OR EQUAL THAN
-			case (substr($q, 0, 2)==='>='):
+			case ($q_operator==='>=' || substr($q, 0, 2)==='>='):
 				$operator = '>=';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = 0;
+				}
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] >='.$q_clean.'\'';
 				break;
+
 			// SMALLER OR EQUAL THAN
-			case (substr($q, 0, 2)==='<='):
+			case ($q_operator==='<=' || substr($q, 0, 2)==='<='):
 				$operator = '<=';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = 0;
+				}
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] <='.$q_clean.'\'';
 				break;
-			# BIGGER THAN
-			case (substr($q, 0, 1)==='>'):
+
+			// BIGGER THAN
+			case ($q_operator==='>' || substr($q, 0, 1)==='>'):
 				$operator = '>';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = 0;
+				}
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] >'.$q_clean.'\'';
 				break;
-			# SMALLER THAN
-			case (substr($q, 0, 1)==='<'):
+
+			// SMALLER THAN
+			case ($q_operator==='<' || substr($q, 0, 1)==='<'):
 				$operator = '<';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = 0;
+				}
 				$query_object->operator = '@@';
 				$query_object->q_parsed	= '\'$[*] <'.$q_clean.'\'';
 				break;
+
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';

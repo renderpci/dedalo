@@ -214,6 +214,7 @@ class tool_diffusion extends tool_common {
 	*	@property string $diffusion_element_tipo
 	*	@property int|null $resolve_levels
 	*	@property bool|null $skip_publication_state_check
+	* 	@property object|null $additions_options
 	* }
 	* @return object $response
 	*/
@@ -226,6 +227,7 @@ class tool_diffusion extends tool_common {
 			$diffusion_element_tipo			= $options->diffusion_element_tipo;
 			$resolve_levels					= $options->resolve_levels ?? 1;
 			$skip_publication_state_check	= $options->skip_publication_state_check ?? null;
+			$additions_options				= $options->additions_options ?? null;
 
 		// CLI process data
 			if ( running_in_cli()===true ) {
@@ -248,7 +250,8 @@ class tool_diffusion extends tool_common {
 				'section_tipo'				=> $section_tipo,
 				'section_id'				=> $section_id,
 				'diffusion_element_tipo'	=> $diffusion_element_tipo,
-				'resolve_levels'			=> $resolve_levels
+				'resolve_levels'			=> $resolve_levels,
+				'additions_options'			=> $additions_options
 			];
 
 		// response
@@ -288,6 +291,7 @@ class tool_diffusion extends tool_common {
 			$section_id				= $options->section_id ?? null;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
 			$resolve_levels			= $options->resolve_levels;
+			$additions_options		= $options->additions_options;
 
 		// diffusion_data init.
 		// It is used to store the returned values from the called diffusion class
@@ -435,7 +439,7 @@ class tool_diffusion extends tool_common {
 						$diffusion_element_tipo,
 						$diffusion_class_name,
 						$counter, // passed by reference
-						$pdata, // passed by reference
+						$pdata // passed by reference
 					);
 
 					// store diffusion_data
@@ -471,6 +475,34 @@ class tool_diffusion extends tool_common {
 					gc_collect_cycles();
 				}
 
+				// post_actions
+				// This actions are set in the client side and need to be processed at the end of the records iteration.
+				// e.g. 'combine_rendered_files' used to merge all rendered XML files nodes into a one single file containing all nodes.
+					$post_actions = $additions_options->post_actions ?? false;
+					if ($post_actions) {
+						$parts	= explode('::', $post_actions);
+						if (count($parts) === 2) {
+							$class	= $parts[0];
+							$method	= $parts[1];
+							if (class_exists($class) && method_exists($class, $method)) {
+
+								$post_actions_options = (object)[
+									'diffusion_data' => $diffusion_data
+								];
+								$post_actions_response = $class::$method( $post_actions_options );
+
+								// Check if the response is an object and has the expected properties
+								if (is_object($post_actions_response) && $post_actions_response->result && $post_actions_response->diffusion_data) {
+									// replace output diffusion_data
+									$diffusion_data = $post_actions_response->diffusion_data;
+								}else{
+									// Log or handle the case where the post_action method's response is not as expected
+									error_log("Post action '{$class}::{$method}' did not return an expected response object.");
+								}
+							}
+						}
+					}
+
 			}catch (Exception $e) {
 				$response->result	= false;
 				$response->msg[]	= 'EXCEPTION caught [export_list]: ' . $e->getMessage();
@@ -481,7 +513,7 @@ class tool_diffusion extends tool_common {
 					, logger::ERROR
 				);
 			}
-			//remove the bulk_process_id
+			// remove the bulk_process_id
 			diffusion::$bulk_process_id = null;
 
 		// errors

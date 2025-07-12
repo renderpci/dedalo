@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {dd_request_idle_callback} from '../../../../common/js/events.js'
+	import {dd_request_idle_callback,when_in_viewport} from '../../../../common/js/events.js'
 
 
 
@@ -67,17 +67,12 @@ render_check_config.prototype.list = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
-	// short vars
-		const value		= self.value || {}
-		const info		= value.info || {}
-		const errors	= info.errors
-		const result	= info.result || []
-
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
 		})
 
+	// maintenance_mode, recovery_mode, notification
 	// root only
 		if (page_globals.is_root===true) {
 
@@ -90,36 +85,64 @@ const get_content_data_edit = async function(self) {
 				content_data.appendChild(recovery_mode_container)
 
 			// notification
-			/* Disable (Experimental with serious security implications) */
 				const notification_container = render_notification(self)
 				content_data.appendChild(notification_container)
 
-
 		}//end if (page_globals.is_root===true)
 
+	// config vars status
+	// config_vars_status_container
+		const config_vars_status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'config_vars_status_container',
+			parent			: content_data
+		})
+		when_in_viewport(
+			config_vars_status_container,
+			() => {
+				ui.load_item_with_spinner({
+					container			: config_vars_status_container,
+					preserve_content	: false,
+					label				: 'Config vars status',
+					callback			: async () => {
+						// render
+						const node = await render_config_vars_status(self)
+						return node
+					}
+				})
+			}
+		)
 
-	// errors
-		if (errors && errors.length>0) {
-			const errors_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'errors_container',
-				inner_html		: 'Some errors found',
-				parent			: content_data
-			})
-			ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: 'error_pre',
-				inner_html		: errors.join('\n'),
-				parent			: errors_container
-			})
-		}
+
+	return content_data
+}//end get_content_data_edit
+
+
+
+/**
+* RENDER_CONFIG_VARS_STATUS
+*
+* @param object self Widget instance
+* @return HTMLElement config_vars_status_container
+*/
+const render_config_vars_status = async function (self) {
+
+	// load value
+		const result = await self.get_widget_value();
+
+	// config_vars_status_container
+		const config_vars_status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'config_vars_status_container'
+		})
 
 	// tables
 		const tables = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'tables',
-			parent			: content_data
+			parent			: config_vars_status_container
 		})
+
 
 	// missing_container
 		const missing_container = ui.create_dom_element({
@@ -215,7 +238,7 @@ const get_content_data_edit = async function(self) {
 					element_type	: 'div',
 					class_name		: 'datalist_container show_list',
 					inner_html		: '<span class="button icon eye"></span>Display all sample.'+item.file_name+' constants list',
-					parent			: content_data
+					parent			: config_vars_status_container
 				})
 				const_list_node.addEventListener('click', function(e) {
 					e.stopPropagation();
@@ -228,14 +251,12 @@ const get_content_data_edit = async function(self) {
 					inner_html		: JSON.stringify(const_list, null, 2),
 					parent			: const_list_node
 				})
-
 			}
-
 		}//end for (let i = 0; i < result_length; i++)
 
 
-	return content_data
-}//end get_content_data_edit
+	return config_vars_status_container;
+}//end render_config_vars_status
 
 
 

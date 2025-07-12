@@ -185,6 +185,7 @@ class install extends common {
 			'matrix_ontology_main',// ontology data
 			'matrix_indexations',	// indexation data
 			'matrix_layout',		// print presets layout table
+			'matrix_layout_dd',		// print presets layout table (former oh1 print presets)
 			'matrix_list',			// public list values
 			'matrix_nexus',
 			'matrix_nexus_main',
@@ -199,6 +200,8 @@ class install extends common {
 			'matrix_time_machine',	// data versions table
 			'matrix_users',			// users table (user 'root' will be re-created later)
 			'relations',			// search relations table
+			'matrix_dataframe',		// dataframe records (ratings mainly)
+			'matrix_test',			// test table
 			// 'sessions'			// optional sessions table
 		];
 

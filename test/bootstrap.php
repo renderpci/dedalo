@@ -21,7 +21,12 @@
 
 // check is development server. if not, throw to prevent malicious access
 	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
-		throw new Exception("Error. Only development servers can use this method", 1);
+		die("Error. Only development servers can use this method.");
+	}
+
+// check is in maintenance mode
+	if (DEDALO_MAINTENANCE_MODE || DEDALO_MAINTENANCE_MODE_CUSTOM) {
+		die("Error. System is in maintenance mode. Unable to test in this mode.");
 	}
 
 // PHPUnit classes

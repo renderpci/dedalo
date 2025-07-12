@@ -14,6 +14,10 @@ class diffusion_xml extends diffusion  {
 	public $section_id;
 	// diffusion_element_tipo
 	public $diffusion_element_tipo;
+	// lang
+	public $lang;
+	// saved_files. Array of strings as ['/path/file1.xml','/path/file2.xml']
+	public static $saved_files = [];
 
 
 
@@ -23,11 +27,17 @@ class diffusion_xml extends diffusion  {
 	 */
 	public function __construct( ?object $options=null ) {
 
-		$this->diffusion_element_tipo = $options->diffusion_element_tipo;
+		$this->diffusion_element_tipo = $options->diffusion_element_tipo ?? null;
 
 		// load parser classes files
 		// Include the classes of the parsers based on the diffusion_element properties definitions.
-		$this->load_parsers( $this->diffusion_element_tipo );
+		if ($this->diffusion_element_tipo) {
+			$this->load_parsers( $this->diffusion_element_tipo );
+		}
+
+		// lang. Language for XML diffusion will be English always. This value diverges from
+		// historical 'lg-spa' (DEDALO_STRUCTURE_LANG) and is adopted from now for new diffusion code revisions.
+		$this->lang = 'lg-eng';
 
 
 		parent::__construct($options);
@@ -93,7 +103,8 @@ class diffusion_xml extends diffusion  {
 		}
 
 		// Get the diffusion objects recursively, including self
-		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true );
+		// (!) Note that 'lg-eng' is passed as lang here, NOT the DEDALO_STRUCTURE_LANG.
+		$diffusion_objects = $this->get_diffusion_objects( $root_tipo, true, $this->lang);
 
 		// Resolve and parse values.
 		// Obtain the diffusion objects data
@@ -169,7 +180,7 @@ class diffusion_xml extends diffusion  {
 
 
 		return $response;
-	} //end update_record
+	}//end update_record
 
 
 	/**
@@ -310,6 +321,9 @@ class diffusion_xml extends diffusion  {
 			return $response;
 		}
 
+		// save file path to collect files (used when combine_files is called)
+		diffusion_xml::$saved_files[] = $file_path;
+
 		// success response
 		$response->result = true;
 		$response->msg = empty($response->errors)
@@ -392,6 +406,13 @@ class diffusion_xml extends diffusion  {
 		// 1 render all nodes without worry about hierarchy
 		$xml_nodes = [];
 		foreach ($diffusion_objects as $current_diffusion_object) {
+
+			// check model
+			$model = RecordObj_dd::get_modelo_name_by_tipo($current_diffusion_object->tipo,true);
+			if (in_array($model, ['box elements'])) {
+				// ignore
+				continue;
+			}
 
 			// name. Ensure the name is valid to use it in XML
 			$name = $this->sanitize_xml_node_name( $current_diffusion_object->name ?? '' );
@@ -895,6 +916,141 @@ class diffusion_xml extends diffusion  {
 
 		return $sanitized_name;
 	}//end sanitize_xml_node_name
+
+
+
+	/**
+	* COMBINE_XML_FILES
+	* Combines multiple XML files into a single XML file.
+	* @param array $xml_files The list of XML files to combine.
+	* @param string $output_file_path The full path and filename for the output XML file.
+	* @param string $root_element_name The name of the root element for the new combined XML file.
+	* @param string $nodes_to_import_query An optional XPath query to select specific nodes to import from each source XML file.
+	* If not provided, the entire document element (root) of each source file will be imported.
+	* @return object True on success, false on failure.
+	*/
+	protected function combine_xml_files(
+		array $xml_files,
+		string $output_file_path,
+		string $root_element_name = 'combined_data', // combined_data
+		string $nodes_to_import_query = ''
+		): object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// 1. Create a new DOMDocument for the consolidated file
+		$output_dom = new DOMDocument('1.0', 'UTF-8');
+		$output_dom->formatOutput = true; // For nice formatting of the output XML
+
+		// Create the root element for the new combined XML file
+		$root_element = $output_dom->createElement($root_element_name);
+		$output_dom->appendChild($root_element);
+
+		if (empty($xml_files)) {
+			$response->msg = 'Error. Empty XML files list';
+			return $response;
+		}
+
+		foreach ($xml_files as $xml_file) {
+
+			// 2. Load each individual XML file
+			$input_dom = new DOMDocument();
+			if (!$input_dom->load($xml_file)) {
+				$response->errors[] = "Error: Could not load XML file: {$xml_file}";
+				continue; // Skip to the next file
+			}
+
+			// 3. Import nodes
+			if (!empty($nodes_to_import_query)) {
+				// Use XPath to select specific nodes to import
+				$xpath = new DOMXPath($input_dom);
+				$nodes_to_import = $xpath->query($nodes_to_import_query);
+
+				if ($nodes_to_import) {
+					foreach ($nodes_to_import as $node) {
+						$imported_node = $output_dom->importNode($node, true); // true for deep import (including children)
+						$root_element->appendChild($imported_node);
+					}
+				} else {
+					$response->errors[] = "Warning: No nodes found for query '{$nodes_to_import_query}' in file: {$xml_file}";
+				}
+			} else {
+				// If no specific query, import the entire document element (root)
+				$imported_node = $output_dom->importNode($input_dom->documentElement, true);
+				$root_element->appendChild($imported_node);
+			}
+		}
+
+		// 5. Save the consolidated file
+		if (!$output_dom->save($output_file_path)) {
+			$response->msg = "Error: Could not save the combined XML file to: {$output_file_path}";
+			return $response;
+		}
+
+		// response success
+		$response->result	= $output_file_path;
+		$response->msg		= empty($response->errors)
+			? 'OK. Successfully combined XML file'
+			: 'Warning. Combined XML file with errors';
+
+
+		return $response;
+	}//end combine_xml_files
+
+
+
+	/**
+	* COMBINE_RENDERED_FILES
+	* Combines files saved previously on every 'update_record' execution in a
+	* single one XML file, reading and parsing file by file and combining the XML nodes inside.
+	* @param object $options
+	* 	{
+	* 		diffusion_data : array
+	* 	}
+	* @return object $response
+	*/
+	public static function combine_rendered_files( object $options ) : object {
+
+		$response = new stdClass();
+			$response->result			= false;
+			$response->msg				= 'Error. Request failed';
+			$response->errors			= [];
+			$response->diffusion_data	= null;
+
+		// xml_files. Values saved previously on every 'update_record' execution
+		$xml_files = diffusion_xml::$saved_files;
+		if (empty($xml_files)) {
+			return $response;
+		}
+
+		// output_file_path
+		$first_file = $xml_files[0];
+		$output_file_path = str_replace('.xml', '_combined.xml', $first_file);
+
+		$diffusion_xml = new diffusion_xml();
+
+		$response = $diffusion_xml->combine_xml_files(
+			$xml_files,
+			$output_file_path
+		);
+
+		// diffusion_data
+		// Overwrite
+		$file_url = str_replace(DEDALO_ROOT_PATH, DEDALO_ROOT_WEB, $output_file_path);
+		$response->diffusion_data = [
+			[
+				(object)[
+					'file_url' => $file_url
+				]
+			]
+		];
+
+
+		return $response;
+	}//end combine_rendered_files
 
 
 

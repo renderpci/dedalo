@@ -211,7 +211,6 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(self, autoload)
 
-
 	try {
 
 		// transcription_component. fix transcription_component for convenience
@@ -242,10 +241,21 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			self.media_component.show_interface.tools = false
 
 		// people_section. fix people_section for convenience
-			const people_section_ddo	= self.tool_config.ddo_map.find(el => el.role==='people_section')
-			self.people_section			= self.ar_instances.find(el => el.tipo===people_section_ddo.tipo)
-			// set instance in thesaurus mode 'relation'
-			self.people_section.linker	= self.indexing_component
+			const people_section_ddo = self.tool_config.ddo_map.find(el => el.role==='people_section')
+			if (people_section_ddo) {
+				self.people_section = self.ar_instances.find(el => el.tipo===people_section_ddo.tipo)
+				// set instance in thesaurus mode 'relation'
+				self.people_section.linker = self.indexing_component
+			}else{
+				console.error('people_section_ddo is not defined')
+				if(SHOW_DEBUG===true) {
+					event_manager.publish('notification', {
+						msg			: 'Warning: people_section_ddo is not defined',
+						type		: 'error',
+						remove_time	: 10000
+					})
+				}
+			}
 
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
@@ -277,6 +287,14 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	} catch (error) {
 		self.error = error
 		console.error(error)
+		// show bubble error
+		if(SHOW_DEBUG===true) {
+			event_manager.publish('notification', {
+				msg			: error,
+				type		: 'error',
+				remove_time	: 10000
+			})
+		}
 	}
 
 
@@ -432,12 +450,14 @@ tool_indexation.prototype.update_active_values = function(values) {
 
 	const self = this
 
+	const active_elements = self.active_elements || []
+
 	const values_length = values.length
 	for (let i = 0; i < values_length; i++) {
 
 		const item = values[i]
 
-		const founds = self.active_elements.filter(el => el.name===item.name)
+		const founds = active_elements.filter(el => el.name===item.name)
 		for (let j = 0; j < founds.length; j++) {
 
 			const found = founds[j]

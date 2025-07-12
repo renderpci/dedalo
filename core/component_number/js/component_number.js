@@ -82,6 +82,14 @@ export const component_number = function(){
 */
 const get_format_number = function ( self, number ) {
 
+	// If the number is NaN (e.g., "" or just "-")
+	// or if the number only contained a minus sign which resulted in 0,
+	// then it's not a valid number.
+	if (isNaN(number)) {
+		console.error('Invalid number (isNaN):', number);
+		return null;
+	}
+
 	// get properties or default values
 	// (!) Note that Ontology previous to 04/07/2024 used a wrong object format like "type":{"float":2}
 	const type		= self.context.properties?.type || 'float'
@@ -97,6 +105,43 @@ const get_format_number = function ( self, number ) {
 
 
 /**
+* CLEAN_VALUE
+* Remove and changes non accepted chars.
+* Example: Change 17,2 to 17.2
+* @param string|number|null value
+* @return string|null cleaned
+*/
+component_number.prototype.clean_value = function( value ) {
+
+	// Ensure the input is treated as a string to prevent errors
+	// if value is null, undefined, or a number.
+	const string_value = String(value);
+
+	// Replace commas with dots
+	const fixed_value = string_value.replace(/,/g, '.');
+
+	// remove non accepted chars
+	let cleaned = fixed_value.replace(/[^0-9.-]/g, '');
+
+	if (!cleaned.length) {
+		return null;
+	}
+
+	// Handling multiple dots: note that the search allows the use of the '...' operator.
+	// Do not remove the dots here; do it in 'fix_number_format' instead.
+
+	// Handle minus sign – only allow one at the start
+	if (cleaned.includes('-')) {
+		cleaned = (cleaned.startsWith('-') ? '-' : '') + cleaned.replace(/-/g, '');
+	}
+
+
+	return cleaned
+}//end clean_value
+
+
+
+/**
 * FIX_NUMBER_FORMAT
 * Force unified number format.
 * Format used is floating point ( , used in Spanish or other languages are avoided, only . will be valid for decimals)
@@ -108,25 +153,53 @@ component_number.prototype.fix_number_format = function( value ) {
 
 	const self = this
 
-	// replace , by .
-	const fixed_value = value.replace(/,/g, '.');
-
-	// remove non accepted chars
-	const regex		= /[a-zA-Z]/gm;
-	const result	= fixed_value.replace(regex, '');
-	if (!result.length) {
-		return null
+	// Initial check for null, undefined, or empty string.
+	// Also handles if value is a number 0, which would be falsy but valid.
+	// For robust string handling, String(value) is still recommended as in clean_value.
+	if (value === null || value === undefined || value === '') {
+		return null;
 	}
 
-	// format the number
-	const new_number = get_format_number(self, Number(result) )
+	// 1. Clean the input string using the existing clean_value function.
+	//    clean_value is expected to return a cleaned string (e.g., "17.2") or null.
+	let cleaned_string = self.clean_value(value);
 
-	// non number case
-	if(isNaN(new_number)) {
-		return null
+	// Handle multiple dots - keep only the first one
+	const parts = cleaned_string.split('.');
+	if (parts.length > 2) {
+		cleaned_string = parts[0] + '.' + parts.slice(1).join('');
 	}
 
-	return Number( new_number )
+	// If cleaning resulted in no valid numeric characters, return null.
+	if (cleaned_string === null) {
+		return null;
+	}
+
+	// 2. Convert the cleaned string to a JavaScript number.
+	const numeric_value = Number(cleaned_string);
+
+	// If the conversion results in NaN (e.g., cleanedString was "" or just "-")
+	// or if the cleanedString only contained a minus sign which resulted in 0,
+	// then it's not a valid number.
+	if (isNaN(numeric_value)) {
+		return null;
+	}
+
+	// 3. Apply additional formatting using get_format_number.
+    //    Since get_format_number returns a NUMBER, we can directly use its result.
+    const final_formatted_number = get_format_number(self, numeric_value);
+
+    // 4. Final check: Ensure that get_format_number itself didn't return NaN.
+    //    This is a safety net in case get_format_number has edge cases where it
+    //    might produce an invalid number (e.g., if it attempts a division by zero).
+    if (isNaN(final_formatted_number)) {
+        // Log a warning if get_format_number behaved unexpectedly.
+        console.error("get_format_number returned NaN for input:", numeric_value);
+        return null;
+    }
+
+
+    return final_formatted_number;
 }//end fix_number_format
 
 
@@ -153,7 +226,6 @@ component_number.prototype.get_steps = function() {
 
 	return Number( steps )
 }//end get_steps
-
 
 
 
