@@ -181,8 +181,9 @@ const render_rebuild_indexes = (self) => {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
 					source	: {
 						action : 'rebuild_db_indexes'
 					},
@@ -275,7 +276,7 @@ const render_consolidate_table_sequences = (self) => {
 		confirm_text	: get_label.seguro || 'Sure?',
 		body_info		: consolidate_table_sequences_container,
 		body_response	: body_response,
-		on_submit	: async (e) => {
+		on_submit		: async (e) => {
 
 			// clean body_response nodes
 			while (body_response.firstChild) {
@@ -294,8 +295,9 @@ const render_consolidate_table_sequences = (self) => {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
 					source	: {
 						action : 'consolidate_tables'
 					},
@@ -426,8 +428,9 @@ const render_rebuild_user_stats = (self) => {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
 					source	: {
 						action : 'rebuild_user_stats'
 					},

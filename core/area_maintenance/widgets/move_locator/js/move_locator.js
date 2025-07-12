@@ -59,8 +59,6 @@ export const move_locator = function() {
 */
 move_locator.prototype.exec_move_locator = async (files_selected) => {
 
-	console.log('files_selected:', files_selected);
-
 	if (!files_selected.length) {
 		return
 	}
@@ -68,9 +66,10 @@ move_locator.prototype.exec_move_locator = async (files_selected) => {
 	// move_locator process fire
 	const response = await data_manager.request({
 		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source			: {
 				action	: 'move_locator',
 			},
 			options : {
