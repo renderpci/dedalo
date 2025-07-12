@@ -346,7 +346,7 @@
 					>.empty_note {
 						height: 100%;
 						padding: 1.5rem;
-						border: 1px solid #dddddd;
+						border: 1px solid @color_grey_medium;
 					}
 				}
 			}//end >.indexation_container
@@ -358,7 +358,7 @@
 				margin-left: -1px;
 				font-weight: 600;
 				text-align: center;
-				color: #bbbbbb;
+				color: @color_grey_dark;
 				border: 1px solid transparent;
 				-webkit-user-select: none;
 				-khtml-user-select: none;
@@ -376,16 +376,16 @@
 				}
 
 				&:hover {
-					color: #888888;
+					color: @color_grey_darken;
 					cursor: pointer;
 				}
 
 				&.active {
-					background-color: rgba(249, 249, 249, 0.65);
+					background-color: @color_grey_light;
 					background-color: @color_white;
-					color: #555555;
-					border: 1px solid #dddddd;
-					border-top: 2px solid orange;
+					color: @color_grey_dark_3;
+					border: 1px solid @color_grey_medium;
+					border-top: 2px solid @color_tag_indexation_normal;
 					border-bottom: 1px solid @color_white;
 					margin-bottom: 0px;
 					z-index: 2;
