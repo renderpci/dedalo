@@ -1688,7 +1688,7 @@ section.prototype.focus_first_input = function() {
 */
 function validate_mode(mode) {
 
-    const valid_modes = ['edit', 'list', 'list_thesaurus'];
+    const valid_modes = ['edit', 'list', 'list_thesaurus','solved'];
     const default_mode = 'list';
 
     if (!mode) {
