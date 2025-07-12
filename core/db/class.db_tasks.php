@@ -200,108 +200,102 @@ class db_tasks {
 
 	/**
 	* CONSOLIDATE_TABLE
-	* Remunerates table id column to consolidate id sequence from 1,2,...
+	* Renumbers table id column to consolidate id sequence from 1,2,...
 	* It gets the first id and the total rows,
-	* if the first id is lower than total rows the table do not needs consolidate.
+	* if the first id is lower than total rows the table does not need consolidation.
 	* @return bool
 	*/
 	public static function consolidate_table( string $table ) : bool {
-
 		// Get first id
-			$first_id_query = '
-				SELECT id
-				FROM "'.$table.'"
-				ORDER BY "id" ASC
-				LIMIT 1;
-			';
+		$first_id_query = '
+			SELECT id
+			FROM "' . $table . '"
+			ORDER BY "id" ASC
+			LIMIT 1;
+		';
+		$first_id_result = pg_query(DBi::_getConnection(), $first_id_query);
+		if($first_id_result === false) {
+			debug_log(__METHOD__
+				. ' Failed consolidate_table: ' . $table . PHP_EOL
+				. 'strQuery: ' . to_string($first_id_query)
+				, logger::ERROR
+			);
+			return false;
+		}
 
-			$first_id_result = pg_query(DBi::_getConnection(), $first_id_query);
-
-				if($first_id_result===false) {
-					debug_log(__METHOD__
-						. ' Failed consolidate_table: '.$table. PHP_EOL
-						. 'strQuery: ' . to_string($first_id_query)
-						, logger::ERROR
-					);
-					return false;
-				}
-
-			$first_id = null;
-			while ($row = pg_fetch_assoc($first_id_result)) {
-				$first_id = $row['id'];
-			}
+		$first_id = null;
+		$row = pg_fetch_assoc($first_id_result);
+		if ($row !== false) {
+			$first_id = $row['id'];
+		}
 
 		// Get the total rows
-			$count_rows_query = '
-				SELECT COUNT(*)
-				FROM "'.$table.'";
-			';
+		$count_rows_query = '
+			SELECT COUNT(*) as count
+			FROM "' . $table . '";
+		';
+		$count_rows_result = pg_query(DBi::_getConnection(), $count_rows_query);
+		if($count_rows_result === false) {
+			debug_log(__METHOD__
+				. ' Failed consolidate_table: ' . $table . PHP_EOL
+				. 'strQuery: ' . to_string($count_rows_query)
+				, logger::ERROR
+			);
+			return false;
+		}
 
-			$count_rows_result = pg_query(DBi::_getConnection(), $count_rows_query);
+		$count_rows = null;
+		$row = pg_fetch_assoc($count_rows_result);
+		if ($row !== false) {
+			$count_rows = $row['count'];
+		}
 
-				if($count_rows_result===false) {
-					debug_log(__METHOD__
-						. ' Failed consolidate_table: '.$table. PHP_EOL
-						. 'strQuery: ' . to_string($count_rows_query)
-						, logger::ERROR
-					);
-					return false;
-				}
+		// Check the result
+		if( $first_id === null || $count_rows === null ){
+			debug_log(__METHOD__
+				. ' Failed consolidate_table, impossible to know the id and total rows: ' . $table . PHP_EOL
+				, logger::ERROR
+			);
+			return false;
+		}
 
-			$count_rows = null;
-			while ($row = pg_fetch_assoc($count_rows_result)) {
-				$count_rows = $row['count'];
-			}
+		// Test if the table needs to be consolidated
+		// Only tables with first id > total rows need renumbering.
+		if( (int)$first_id <= (int)$count_rows ){
+			debug_log(__METHOD__
+				. ' Database does not need consolidation ' . $table . PHP_EOL
+				, logger::WARNING
+			);
+			return true;
+		}
 
-		// check the result
-			if( empty($first_id) || empty($count_rows) ){
-				debug_log(__METHOD__
-					. ' Failed consolidate_table, impossible to know the id and total rows: '.$table. PHP_EOL
-					, logger::ERROR
-				);
-				return false;
-			}
+		// Set a logical order of the data
+		// It depends on the table.
+		$order = ($table === 'jer_dd')
+			? 'tld, id'
+			: 'section_tipo, section_id';
 
-		// test if the table needs to be consolidate
-		// Only tables with first id > total rows needs remunerate it.
-			if( (int)$first_id < (int)$count_rows ){
-
-				debug_log(__METHOD__
-					. ' Database do not need consolidate '.$table. PHP_EOL
-					, logger::WARNING
-				);
-				return true;
-			}
-
-		// set a logical order of the data
-		// it depends of the table.
-			$order = ($table==='jer_dd')
-				? 'tld, id'
-				: 'section_tipo, section_id';
-
-		// remunerate the table.
-		// create a new_id column and set it in id
+		// Renumber the table.
+		// Create a new_id column and set it in id
 		// Update the sequence to the last id.
-			$strQuery = '
-				UPDATE '.$table.' t  -- intermediate unique violations are ignored now
-				SET id = t1.new_id
-				FROM (SELECT id, row_number() OVER (ORDER BY '.$order.') AS new_id FROM '.$table.') t1
-				WHERE t.id = t1.id;
+		$strQuery = '
+			UPDATE "' . $table . '" t  -- intermediate unique violations are ignored now
+			SET id = t1.new_id
+			FROM (SELECT id, row_number() OVER (ORDER BY ' . $order . ') AS new_id FROM "' . $table . '") t1
+			WHERE t.id = t1.id;
+			SELECT setval(\'' . $table . '_id_seq\', max(id)) FROM "' . $table . '";  -- reset sequence
+		';
 
-				SELECT setval(\''.$table.'_id_seq\', max(id)) FROM '.$table.';  -- reset sequence
-			';
-
-		// apply to DDBB
-			$result = pg_query(DBi::_getConnection(), $strQuery);
-			if($result===false) {
-				debug_log(__METHOD__
-					. ' Failed consolidate_table: '.$table. PHP_EOL
-					. 'strQuery: ' . to_string($strQuery)
-					, logger::ERROR
-				);
-				return false;
-			}
-
+		// Apply to database
+		$result = pg_query(DBi::_getConnection(), $strQuery);
+		if($result === false) {
+			debug_log(__METHOD__
+				. ' Failed consolidate_table: ' . $table . PHP_EOL
+				. 'strQuery: ' . to_string($strQuery)
+				, logger::ERROR
+			);
+			return false;
+		}
 
 		return true;
 	}//end consolidate_table
