@@ -92,6 +92,7 @@ const render_content_value = function(options) {
 	// short vars
 		const data	= self.data || {}
 		const value	= data.value || []
+		const default_bk_color = '#006ed2';
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -147,12 +148,12 @@ const render_content_value = function(options) {
 					? rating_data.datalist.find(el => el.section_id === rating_value.section_id )
 					: {
 						hide:[{
-							literal: '#006ed2' // '#60acfe' '#eeeeee' gray/blue when the datalist is empty (the rating is not set)
+							literal: default_bk_color // gray/blue when the datalist is empty (the rating is not set)
 						}]
 					}
 
 				// update background color
-					const bg_color = rating.hide[0].literal || '#f78a1c'
+					const bg_color = rating.hide[0].literal || default_bk_color
 					button_activate.style.backgroundColor = bg_color
 
 				// update text color based on background
