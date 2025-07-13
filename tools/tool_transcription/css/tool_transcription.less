@@ -62,7 +62,7 @@
 				opacity: 1;
 				padding: 0.33rem;
 				padding-right: 2rem;
-				background-color: @color_light;
+				background-color: @color_grey_15;
 				border-radius: 3px;
 				margin-right: 0px;
 				max-width: 20rem;
@@ -218,29 +218,29 @@
 						appearance: none !important;
 						width: 100%;
 						height: 15px;
-						background-color: #fbfbfb;;
-						border: 1px solid #cccccc;
+						background-color: @color_grey_15;
+						border: 1px solid @color_grey_11;
 						border-radius: 10px;
 						margin: auto;
 						transition: all 0.3s ease;
 					}
 					input[type="range"]:hover {
-						background-color: #fbfbfb;
+						background-color: @color_grey_15;
 					}
 					input[type="range"]::-webkit-slider-thumb {
 						-webkit-appearance: none !important;
 						width: 20px;
 						height: 20px;
-						background-color: #cccccc;
+						background-color: @color_grey_11;
 						border-radius: 30px;
 						transition: all 0.5s ease;
 					}
 					input[type="range"]::-webkit-slider-thumb:hover {
-						background-color: #ffb505;
+						background-color: @color_orange_dedalo;
 					}
 					input[type="range"]::-webkit-slider-thumb:active {
-						background-color: #ffb505;
-						box-shadow: 0px 0px 1px #ffb505;
+						background-color: @color_orange_dedalo;
+						box-shadow: 0px 0px 1px @color_orange_dedalo;
 					}
 					.speed_range_value {
 						text-align: center;
@@ -249,7 +249,7 @@
 						margin: auto;
 						padding: 0px 10px;
 						width: 100%;
-						color: @color_grey_ultradark;
+						color: @color_grey_4;
 						position: absolute;
 						top: -48px;
 					}
@@ -278,7 +278,7 @@
 			}
 
 			.block_separator {
-				border-top: 1px solid @color_grey_light;
+				border-top: 1px solid @color_grey_14;
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -294,7 +294,7 @@
 					&:hover{
 						background-color: @tool_color;
 						border-color: darken(@tool_color, 10%);
-						color: #ffffff;
+						color: @color_white;
 					}
 				}
 
@@ -317,13 +317,13 @@
 						height: 3em;
 						position: relative;
 						border-radius: 8px;
-	  					box-shadow: 0 0 0 1px rgba(0,0,0,.01);
-	  					background: @color_light;
+	  					box-shadow: 0 0 0 1px @color_grey_16;
+	  					background: @color_grey_15;
 
 						&:hover {
 							background-color: @tool_color;
 							border-color: darken(@tool_color, 10%);
-							color: #ffffff;
+							color: @color_white;
 						}
 
 						&.disable {
@@ -434,12 +434,12 @@
 						margin-bottom: 0.5rem;
 
 						&.loading_status {
-							color: @color_grey_darken;
+							color: @color_grey_7;
 							font-family: monospace;
 						}
 
 						&.processing {
-							color: #13bb87;
+							color: @color_green_success;
 							font-weight: 400;
 							animation: 1s blink ease infinite;
 							animation-direction: alternate;

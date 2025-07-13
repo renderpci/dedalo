@@ -4,8 +4,11 @@
 * Loaded on tool init
 */
 
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
 // local vars
-@tool_color: #28946c;
+@tool_color: @color_green_ontology;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -51,7 +54,7 @@
 
 			button {
 				background-color: @tool_color;
-				border-color: darken(@tool_color, 5%);
+				border-color: @tool_color;
 			}
 
 			.checkbox-label {
@@ -67,7 +70,7 @@
 			padding: 1rem;
 			padding-left: 1rem;
 			line-height: 1.25rem;
-			color: #7a7a7a;
+			color: @color_grey_7;
 			font-size: 1.05rem;
 			min-height: 3.5rem;
 			text-align: center;
@@ -79,7 +82,7 @@
 
 			&.error {
 				background-color: transparent !important;
-				color: red;
+				color: @color_danger;
 			}
 		}
 	}//end content_data

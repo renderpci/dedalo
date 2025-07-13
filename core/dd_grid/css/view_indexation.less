@@ -9,7 +9,7 @@
 .wrapper_dd_grid.view_indexation {
 
 	@padding_left: 140px;
-	@color_grey_light: #bfbfbf;
+	@color_grey_14: @color_grey_10;
 	--icon_height: 1.05rem;
 
 	max-height: 80vh;
@@ -17,7 +17,7 @@
 	position: relative;
 
 	.top_container {
-		background-color: #ffffff;
+		background-color: @color_white;
 		display: grid;
 		grid-template-columns: 1fr auto;
 		align-items: center;
@@ -26,7 +26,7 @@
 		z-index: 2;
 
 		.filter_section_container {
-			background-color: #ffffff;
+			background-color: @color_white;
 			margin-left: 4rem;
 			padding-top: 1.02rem;
 			padding-bottom: 1rem;
@@ -34,12 +34,12 @@
 			flex-wrap: nowrap;
 
 			.checkbox_label {
-				background-color: #f9f9f9;
+				background-color: @color_grey_16;
 				margin-right: 0.5rem;
 				padding: 1rem;
 				padding-top: 0.5rem;
 				padding-bottom: 0.5rem;
-				border: 1px solid #c9c9c9;
+				border: 1px solid @color_grey_11;
 				border-radius: 0.5rem;
 				cursor: pointer;
 				width: max-content;
@@ -100,7 +100,7 @@
 
 		// value (text values)
 		span {
-			color: #000000;
+			color: @color_black;
 			padding: 0.5em;
 			display: inline-block;
 			width: 100%;
@@ -110,7 +110,7 @@
 
 		// img
 		img:not(.tc, .index) {
-			background-color: @color_grey_medium;
+			background-color: @color_grey_13;
 			object-fit: cover;
 			object-position: center;
 			width: 8rem;
@@ -121,7 +121,7 @@
 
 		// button
 		img.button {
-			background-color: @color_grey_medium;
+			background-color: @color_grey_13;
 			display: inline-block;
 			object-fit: contain;
 			object-position: center;
@@ -146,7 +146,7 @@
 				margin-left: 4rem;
 				box-shadow: none;
 
-				--base_color: @color_grey_ultradark; // default value. Will be overwrite with section color form properties
+				--base_color: @color_grey_4; // default value. Will be overwrite with section color form properties
 
 				// label generic
 				>label {
@@ -169,7 +169,7 @@
 				// row generic
 				.row {
 					display: flex;
-					background-color: @color_grey_ultralight;
+					background-color: @color_grey_16;
 					width: 100%;
 
 					.column {
@@ -186,19 +186,18 @@
 
 				// oh1 . Oral History (uses view_indexation_audiovisual.less too)
 				&.oh1 {
-					@base_color: #86458c;
 				}//end .oh1
 
 				// actv1 . Activities (uses view_indexation_audiovisual.less too)
 				&.actv1 {
-					@base_color: #a93f25;
+
 				}
 
 				// rsc205 publication . Publications (Bibliography)
 				&.rsc205 {
-					@base_color: #6c72b6;
+
 					>.row {
-						background-color: lighten(@base_color, 54%);
+						// background-color: color-mix(in srgb, var(--base_color), transparent 65%);
 						width: 100%;
 
 						>.column {
@@ -236,9 +235,7 @@
 
 				// isad1 . ISAD Archive
 				&.isad1 {
-					@base_color: #d2984b;
 					>.row {
-						background-color: lighten(@base_color, 49%);
 						>.column {
 							box-shadow: none;
 						}
@@ -253,7 +250,6 @@
 						}
 					}//end >.row
 					>.row.head {
-						background-color: lighten(@base_color, 53%);
 						width: 100%;
 						display: grid;
 						grid-template-columns: 102px 1fr 1fr 1fr 1fr;
@@ -275,9 +271,8 @@
 
 				// ich100 . Intangible Heritage (Elements and processes)
 				&.ich100 {
-					@base_color: #a97687;
+
 					>.row {
-						background-color: lighten(@base_color, 41%);
 						width: 100%;
 						display: grid;
 						grid-template-columns: 4rem 20rem auto;
@@ -285,11 +280,11 @@
 					}//end >.row
 				}//end .ich100
 
-				// rsc197 . People under study
+				// rsc197 . People
 				&.rsc197 {
-					@base_color: #f08a30;
+
 					>.row {
-						background-color: lighten(@base_color, 41%);
+						
 						width: 100%;
 						display: grid;
 						grid-template-columns: 4rem 4fr 4fr 2fr;
@@ -302,7 +297,7 @@
 					>.row.line {
 						display: grid;
 						grid-template-columns: auto 13.4rem 1fr 1fr 1fr 1fr 1fr;
-						border-bottom: 1px solid @color_grey_medium;
+						border-bottom: 1px solid @color_grey_13;
 
 						img {
 							width: 6.7rem;

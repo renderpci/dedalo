@@ -5,12 +5,11 @@
 */
 .component_geolocation {
 
-	@color_blue_sea: #aad3df;
 	@elements_over_z_index : 1000;
 
 	// shared
 	.leaflet_map {
-		background-color: @color_blue_sea;
+		background-color: @color_blue_light_2;
 	}
 	// map
 	.leaflet_map.leaflet-container {
@@ -23,7 +22,7 @@
 		padding-bottom: 5px;
 		z-index: 0;
 
-		background-color: @color_blue_sea;
+		background-color: @color_blue_light_2;
 		max-height: 100%;
 
 		.leaflet-control-zoom a {
@@ -54,7 +53,7 @@
 	    	>.content_value {
 				flex: 1 1 auto;
 				flex-direction: column;
-				background-color: @color_blue_sea;
+				background-color: @color_blue_light_2;
 				resize: vertical;
 				overflow: hidden;
 
@@ -108,7 +107,7 @@
 				top: 10px;
 				left: 48px;
 				margin-right: 3rem;
-				background-color: rgb(255, 255, 255);
+				background-color: @color_white;
 				padding: 0.4em;
 				padding-bottom: 2px;
 				padding-top: 3px;
@@ -118,9 +117,9 @@
 				align-items: center;
 				z-index: 1;
 				// From new leaflet 1.0 (removed shadow and add solid line around)
-				border: 2px solid rgba(0, 0, 0, 0.2);
+				border: 2px solid 	@color_grey_10;
 				background-clip: padding-box;
-				color: @color_grey_dark;
+				color: @color_grey_10;
 			}
 			.map_inputs span:not(:nth-of-type(1)) {
 				padding-left: 5px;
@@ -154,7 +153,7 @@
 			}
 			.map_inputs	.map_reload:active {
 				opacity: 1;
-				background: #fe8000;
+				background: @color_orange_dedalo;
 			}
 
 			.map_inputs	.map_point {
@@ -167,7 +166,7 @@
 			}
 			.map_inputs	.map_point:active {
 				opacity: 1;
-				background: #fe8000;
+				background: @color_orange_dedalo;
 			}
 
 		// PLAYER container (Transcription) ----------------------

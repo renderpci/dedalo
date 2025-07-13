@@ -153,7 +153,7 @@ class search {
 		$this->search_query_object = (object)$search_query_object;
 
 		// section tipo check and fixes
-		if (!isset($this->search_query_object->section_tipo)) {
+		if (!isset($this->search_query_object->section_tipo) || empty($this->search_query_object->section_tipo) ) {
 			throw new Exception("Error: section_tipo is not defined!", 1);
 		}
 

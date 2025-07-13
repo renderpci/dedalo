@@ -8,7 +8,7 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@color_bg_tool : #5e77b3;
+@tool_color : #5e77b3;
 
 // tool wrapper
 .wrapper_tool.tool_import_rdf {
@@ -43,8 +43,8 @@
 		.button_apply {
 			width: 8rem;
 			margin-top: 2rem;
-			background-color: @color_bg_tool;
-			border-color: darken(@color_bg_tool, 10%);
+			background-color: @tool_color;
+			border-color: darken(@tool_color, 10%);
 		}
 		.component_data_label {
 			font-size: 16px;
@@ -71,5 +71,5 @@
 
 // modal header tool modification
 .tool_header.tool_import_rdf {
-	background-color: @color_bg_tool;
+	background-color: @tool_color;
 }
