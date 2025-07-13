@@ -7,14 +7,14 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-@tool_main_color: #794960;
+@tool_color: #794960;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 .wrapper_tool.tool_pdf_extractor {
 
 	.spinner {
-		border-top-color: @tool_main_color;
+		border-top-color: @tool_color;
 	}
 
 	>.content_data {
@@ -50,8 +50,8 @@
 		}
 
 		>.button_submit {
-			background-color: @tool_main_color;
-			border-color: darken(@tool_main_color, 3%);
+			background-color: @tool_color;
+			border-color: darken(@tool_color, 3%);
 
 			.icon {
 				margin-right: 0.5rem;
@@ -81,8 +81,8 @@
 
 
 		>.button_select {
-			background-color: @tool_main_color;
-			border-color: darken(@tool_main_color, 3%);
+			background-color: @tool_color;
+			border-color: darken(@tool_color, 3%);
 			color: @color_white;
 			margin-left: calc(50% - 5rem);
 			margin-top: 1.5rem;
@@ -109,5 +109,5 @@
 
 // modal header tool modification
 .tool_header.tool_pdf_extractor {
-	background-color: @tool_main_color;
+	background-color: @tool_color;
 }
