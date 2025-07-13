@@ -208,8 +208,9 @@ component_image.prototype.load_vector_editor = async function() {
 
 	const self = this
 
-	const data	= self.data || {}
-	const value	= data.value || []
+	const data					= self.data || {}
+	const value					= data.value || []
+	const default_layer_color	= '#ffffff';
 
 	// options
 		// const load		= options.load || 'full'
@@ -254,7 +255,7 @@ component_image.prototype.load_vector_editor = async function() {
 				: [{
 					layer_id		: 0,
 					layer_data		: [],
-					layer_color		: '#ffffff',
+					layer_color		: default_layer_color,
 					layer_opacity	: 0.3,
 					user_layer_name	: 'raster',
 					name 			: 'layer_0',

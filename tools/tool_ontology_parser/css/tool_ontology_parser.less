@@ -7,6 +7,9 @@
 // local vars
 @tool_color: #276f67;
 
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 .wrapper_tool.tool_ontology_parser {
@@ -51,11 +54,11 @@
 
 				// only parent labels
 				&.typology_label {
-					background-color: #f7f7f7;
+					background-color: @color_grey_15;
 					font-size: 1.25rem;
 					letter-spacing: 0.25px;
 					line-height: 1.25rem;
-					border-bottom: 1px solid #dbdbdb;
+					border-bottom: 1px solid @color_grey_10;
 					padding-bottom: 0.33rem;
 					padding-top: 0.33rem;
 					border-top-left-radius: 4px;
@@ -92,7 +95,7 @@
 
 			button.gear {
 				background-color: @tool_color;
-				border-color: darken(@tool_color, 5%);
+				border-color: @tool_color;
 				margin-right: 1rem;
 			}
 
@@ -109,11 +112,11 @@
 			padding: 1rem;
 			padding-left: 1rem;
 			line-height: 1.25rem;
-			color: #7a7a7a;
+			color: @color_grey_7;
 			font-size: 1.05rem;
 
 			&.process_messages{
-				background-color: #f7f7f7;
+				background-color: @color_grey_15;
 				overflow: auto;
 				width: 49%;
 				max-height: 15rem;
@@ -123,12 +126,12 @@
 
 			&.process_error {
 				margin-left: 1%;
-				background-color: #f7f7f7;
+				background-color: @color_grey_15;
 				overflow: auto;
 				max-height: 15rem;
 				width: 49%;
 				// background-color: transparent !important;
-				color: red;
+				color: @color_danger;
 				display: inline-block;
 			}
 		}

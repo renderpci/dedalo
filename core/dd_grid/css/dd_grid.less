@@ -9,7 +9,7 @@
 	display: block;
 
 	@padding_left: 140px;
-	@color_grey_light: @color_grey_dark;
+	@color_grey_14: @color_grey_10;
 
 	// view_default.
 	&.view_default {
@@ -25,13 +25,13 @@
 
 				// oral history
 				&.oh {
-					background-color: @color_grey_medium;
+					background-color: @color_grey_13;
 					display: grid;
 					grid-template-columns: @padding_left 1fr 1fr 1fr 1fr;
 				}
 				// publications (bibliography)
 				&.publication {
-					background-color: #f89292;
+					background-color: @color_red_light;
 					display: grid;
 					grid-template-columns: @padding_left 1fr 1fr 1fr 1fr 1fr;
 				}
@@ -43,7 +43,7 @@
 			display: flex;
 			flex-wrap: wrap;
 			flex: 1 1 auto;
-			outline: 1px solid @color_grey_light;
+			outline: 1px solid @color_grey_14;
 			max-height: 100%;
 
 			&.caption {
@@ -55,7 +55,7 @@
 				margin-left: 90px;
 
 				>label {
-					background-color: @color_dark;
+					background-color: @color_grey_3;
 					border-top-left-radius: 4px;
 					border-top-right-radius: 4px;
 					line-height: 0.8em;
@@ -83,7 +83,7 @@
 
 		// img
 		img {
-			background-color: @color_grey_medium;
+			background-color: @color_grey_13;
 			object-fit: cover;
 			object-position: center;
 			width: 100%;
@@ -94,7 +94,7 @@
 
 		// button
 		img.button {
-			background-color: @color_grey_medium;
+			background-color: @color_grey_13;
 			display: inline-block;
 			object-fit: contain;
 			object-position: center;
@@ -115,18 +115,18 @@
 		.row_header {
 
 			th {
-				background-color: @color_grey_dark;
+				background-color: @color_grey_10;
 				color: @color_white ;
 			}
 		}
 
 		>tr:nth-child(even) {
-			background-color: @color_light;
+			background-color: @color_grey_15;
 		}
 
 		// td
 		td, th {
-			border: 1px solid @color_grey_lighter;
+			border: 1px solid @color_grey_11;
 			padding: 0.33em;
 			text-align: left;
 		}
@@ -136,7 +136,7 @@
 		}
 
 		td {
-			color: black;
+			color: @color_black;
 
 			>img {
 				width: 100%;

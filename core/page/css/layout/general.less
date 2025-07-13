@@ -10,8 +10,8 @@
 	html {
 		// global_font. Defined in fonts.less
 		.global_font;
-		color: @color_grey_ultradark;
-		background-color: @color_page_bg_color; // usually '#fafafa' 98%
+		color: @color_grey_4;
+		background-color: @color_white;
 
 		// font size. Note that default browser font size is 16px
 		font-size: 0.8125rem;
@@ -68,11 +68,11 @@
 	}
 
 	code {
-		color: #9fa5ad;
+		color: @color_grey_8;
 		font-size: 1.3rem;
 		display: block;
 		padding: 1rem;
-		background-color: @color_grey_dark_2;
+		background-color: @color_grey_2;
 		font-weight: 200;
 		font-family: 'Menlo', monospace;
 		border-radius: 3px;
@@ -127,7 +127,7 @@
 		color: @color_white;
 		font-size: 1.5rem;
 		text-align: center;
-		box-shadow: inset 0px -1px 0 #d6d6d6;
+		box-shadow: inset 0px -1px 0 @color_grey_13;
 
 		// sticky way
 		// position: sticky;
@@ -142,7 +142,7 @@
 		color: @color_white;
 		font-size: 1.5rem;
 		text-align: center;
-		box-shadow: inset 0px -1px 0 #d6d6d6;
+		box-shadow: inset 0px -1px 0 @color_grey_13;
 		text-transform: uppercase;
 	}
 
@@ -176,7 +176,7 @@
 			}
 
 			&.grey {
-				background-color: @color_grey_dark;
+				background-color: @color_grey_10;
 			}
 
 			&.error {
@@ -296,20 +296,20 @@
 
 		// Create a curve at the top
 		border-radius: 50%;
-		border: 4px solid @color_grey_medium_1;
+		border: 4px solid @color_grey_12;
 		border-top-color: @color_orange_dedalo;
 
 		&.medium {
 			height: 2rem;
 			width: 2rem;
-			border: 3px solid @color_grey_medium_1;
+			border: 3px solid @color_grey_12;
 			border-top-color: @color_orange_dedalo;
 		}
 
 		&.small {
 			height: 1.5rem;
 			width: 1.5rem;
-			border: 2px solid @color_grey_medium_1;
+			border: 2px solid @color_grey_12;
 			border-top-color: @color_orange_dedalo;
 		}
 
@@ -340,8 +340,8 @@
 		aspect-ratio: 1;
 		border-radius: 50%;
 		mask:
-			conic-gradient(#0000,#000) subtract,
-			conic-gradient(#000 0 0) content-box;
+			conic-gradient(@color_black, @color_black) subtract,
+			conic-gradient(@color_black 0 0) content-box;
 		animation: load 1s linear infinite;
 	}
 	@keyframes load {
@@ -410,7 +410,7 @@
 	.separator {
 		margin-left: 0.2rem;
 		margin-right: 0.2rem;
-		color: @color_grey_medium_2;
+		color: @color_grey_9;
 	}
 
 // icon_arrow
@@ -422,7 +422,7 @@
 
 		&:after {
 			.fn_add_mask('arrow_down.svg');
-			background-color: @color_grey_dark;
+			background-color: @color_grey_10;
 			content: ' ';
 			cursor: pointer;
 			height: 1em;
@@ -471,7 +471,7 @@
 		width: 100%;
 		margin-right: 0.5em;
 		border: none;
-		outline: 1px solid @color_grey_light;
+		outline: 1px solid @color_grey_14;
 		will-change: auto; // @see https://developer.mozilla.org/en-US/docs/Web/CSS/will-change
 		transition: all 0.5s ease, padding 0s;
 		opacity: 0.75;
@@ -482,7 +482,7 @@
 
 		li & {
 			max-width: 100%;
-			outline: 1px solid @color_grey_light;
+			outline: 1px solid @color_grey_14;
 			outline-offset: 0;
 		}
 
@@ -496,7 +496,7 @@
 		width: auto;
 		// removes browser appearance style
 		background: url('../../themes/default/icons/select_arrows.svg');
-		background-color: @color_grey_ultralight;
+		background-color: @color_grey_16;
 		background-repeat: no-repeat;
 		background-position: 97%;
 		background-size: 0.8rem;
@@ -504,7 +504,7 @@
 		-webkit-appearance: none;
 		appearance: none;
 		padding-left: 1em;
-		outline: 1px solid @color_grey_medium;
+		outline: 1px solid @color_grey_13;
 		opacity: 0.3;
 
 		li & {
@@ -683,7 +683,7 @@
 		line-height: 1.1rem;
 
 		.debug_container {
-			background-color: @color_grey_light;
+			background-color: @color_grey_14;
 			display: grid;
 			grid-template-columns: 1fr 1fr 1fr;
 			padding: 0px;
@@ -696,7 +696,7 @@
 
 		pre {
 			z-index: 0;
-			outline: 1px solid #cad0d4;
+			outline: 1px solid @color_grey_12;
 			overflow-wrap: anywhere;
 		}
 
@@ -783,7 +783,7 @@
 			position: absolute;
 			top: calc(100% + 1em);
 			right: 1em;
-			background-color: rgba(0, 0, 0, 0.9);
+			background-color: @color_grey_2;//rgba(0, 0, 0, 0.9);
 			color: @color_white;
 			padding: 1em;
 			line-height: 1.5em;
@@ -807,7 +807,7 @@
 				height: 0px;
 				width: 0px;
 				pointer-events: none;
-				border-bottom-color: rgba(0, 0, 0, 0.8);
+				border-bottom-color: @color_grey_1;//rgba(0, 0, 0, 0.8);
 				border-width: 10px;
 				margin-left: -10px;
 			}
@@ -829,6 +829,6 @@
 /* mandatory common
 ------------------------------------------------------- */
 	.wrapper_component .mandatory {
-		background-color: rgba(255, 0, 0, 0.11);
+		background-color: @color_mandatory;
 		border: 1px solid @color_danger;
 	}

@@ -12,7 +12,7 @@
 
 	>.row.head {
 		margin-left: 0px;
-		background-color: #f5f5f5;
+		background-color: @color_grey_15;
 		display: grid;
 		// ------------- posterframe|code|project|name|municipality
 		grid-template-columns: 102px 8rem 10.5rem 20rem 1fr;
@@ -81,7 +81,7 @@
 					content: ", ";
 					display: inline-block;
 					height: 1rem;
-					color: #000000;
+					color: @color_black;
 					padding-right: 0.25rem;
 				}
 			}
@@ -128,7 +128,7 @@
 
 					.fn_build_tag_indexation(
 						@color_tag_indexation_normal,
-						white
+						@color_white
 					);
 				}
 			}
@@ -164,7 +164,7 @@
 					vertical-align: top;
 
 					&:hover {
-						background-color: #fcf8e2;
+						background-color: @color_hilite;
 					}
 
 					&.full {

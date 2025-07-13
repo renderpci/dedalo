@@ -74,7 +74,7 @@
 				padding-right: 1.33rem;
 				padding-top: 0px;
 				padding-bottom: 0px;
-				background-color: @color_light;
+				background-color: @color_grey_15;
 				border-radius: 3px;
 				margin-right: 0px;
 				max-width: 20rem;
@@ -285,17 +285,17 @@
 						}
 
 						.fn_background(@bg_color) {
-							background-image: radial-gradient(12% 100% ellipse at 101% 50%, transparent 15px, transparent 25px, @bg_color 27px);
+							background-image: radial-gradient(9% 100% ellipse at 100% 50%, transparent 15px, transparent 25px, @bg_color 27px);
 						}
 
 						&.n {
-							.fn_background(#facc6d);
+							.fn_background(@color_orange);
 						}
 						&.d {
-							.fn_background(#c8dff9);
+							.fn_background(@color_blue_light);
 						}
 						&.r {
-							.fn_background(#ff9e87);
+							.fn_background(@color_red_light);
 						}
 
 						>* {
@@ -346,7 +346,7 @@
 					>.empty_note {
 						height: 100%;
 						padding: 1.5rem;
-						border: 1px solid @color_grey_medium;
+						border: 1px solid @color_grey_13;
 					}
 				}
 			}//end >.indexation_container
@@ -358,7 +358,7 @@
 				margin-left: -1px;
 				font-weight: 600;
 				text-align: center;
-				color: @color_grey_dark;
+				color: @color_grey_10;
 				border: 1px solid transparent;
 				-webkit-user-select: none;
 				-khtml-user-select: none;
@@ -376,15 +376,15 @@
 				}
 
 				&:hover {
-					color: @color_grey_darken;
+					color: @color_grey_7;
 					cursor: pointer;
 				}
 
 				&.active {
-					background-color: @color_grey_light;
+					background-color: @color_grey_14;
 					background-color: @color_white;
-					color: @color_grey_dark_3;
-					border: 1px solid @color_grey_medium;
+					color: @color_grey_5;
+					border: 1px solid @color_grey_13;
 					border-top: 2px solid @color_tag_indexation_normal;
 					border-bottom: 1px solid @color_white;
 					margin-bottom: 0px;
@@ -407,7 +407,7 @@
 
 	// split
 	.gutter {
-		background-color: @color_grey_mediumlight;
+		background-color: @color_grey_15;
 		background-repeat: no-repeat;
 		background-position: 50%;
 	}

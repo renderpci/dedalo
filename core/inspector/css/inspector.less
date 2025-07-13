@@ -11,8 +11,8 @@
 	margin-bottom: 0.5rem;
 	padding: 0px;
 	width: 100%;
-	background-color: @color_grey_ultralight;
-	outline: 1px solid @color_grey_light;
+	background-color: @color_grey_16;
+	outline: 1px solid @color_grey_14;
 
 	&.inspector_fixed {
 		position: fixed;
@@ -28,7 +28,7 @@
 		position: relative;
 
 		>div {
-			border-bottom: 1px solid #eeeeee;
+			border-bottom: 1px solid @color_grey_13;
 		}
 
 		// icon_arrow
@@ -52,7 +52,7 @@
 				font-weight: 500;
 				font-size: 1.2rem;
 				line-height: 1rem;
-				color: @color_grey_darken_2;
+				color: @color_grey_8;
 
 				@media screen and (max-width: @width_break_point_0) {
 					top: 1rem;
@@ -84,7 +84,7 @@
 				cursor: pointer;
 				float: right;
 				vertical-align: middle;
-				background-color: @color_grey_dark;
+				background-color: @color_grey_10;
 
 				&:active {
 					opacity: 0.4;
@@ -113,7 +113,7 @@
 			}
 
 			.key {
-				background-color: @color_grey_light;
+				background-color: @color_grey_14;
 				padding: 0.25rem;
 				text-align: right;
 				text-transform: capitalize;
@@ -140,7 +140,7 @@
 					white-space: pre-wrap;
 					display: flex;
 					flex-direction: column;
-					background-color: @color_grey_ultralight;
+					background-color: @color_grey_16;
 
 					&.monospace {
 						word-break: break-all;
@@ -208,7 +208,7 @@
 				padding-bottom: 1rem;
 				padding-top: 1rem;
 				font-size: 0.78rem;
-				color: white;
+				color: @color_white;
 			}
 		}
 
@@ -281,7 +281,7 @@
 		}
 
 		&.is_pinned {
-			box-shadow: 0px 1px 3px 0px @color_grey_medium_1;
+			box-shadow: 0px 1px 3px 0px @color_grey_12;
 			// padding-top: calc(0.33em + 1px);
 		}
 	}

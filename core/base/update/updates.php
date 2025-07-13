@@ -52,26 +52,10 @@ $updates->$v = new stdClass();
 			DELETE FROM "matrix_counter" WHERE "tipo" = \'rsc194\' ;
 		');
 
-
-// draft update. Working here for the next update !
-// $v=665; #####################################################################################
-// $updates->$v = new stdClass();
-
-// 	# UPDATE TO
-// 	$updates->$v->version_major			= 6;
-// 	$updates->$v->version_medium		= 6;
-// 	$updates->$v->version_minor			= 5;
-
-// 	# MINIMUM UPDATE FROM
-// 	$updates->$v->update_from_major		= 6;
-// 	$updates->$v->update_from_medium	= 6;
-// 	$updates->$v->update_from_minor		= 4;
-
-// 	// Add missing jer_dd index 'jer_dd_model'
-// 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-// 			CREATE INDEX IF NOT EXISTS jer_dd_model ON public.jer_dd USING btree (model);
-// 		');
-
+	// Add missing jer_dd index 'jer_dd_model'
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS jer_dd_model ON public.jer_dd USING btree (model);
+		');
 
 
 $v=664; #####################################################################################

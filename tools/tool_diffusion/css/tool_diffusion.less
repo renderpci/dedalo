@@ -38,7 +38,7 @@
 			.section_tipo {
 				font-size: 1.5rem;
 				padding: 1rem;
-				color: #959595;
+				color: @color_grey_8;
 				font-weight: 200;
 			}
 		}
@@ -55,9 +55,9 @@
 
 				input {
 					text-align: center;
-					background-color: #f7f6f6;
+					background-color: @color_grey_15;
 					width: 3rem;
-					border: 1px solid #e7e5e5;
+					border: 1px solid @color_grey_13;
 					border-radius: 3px;
 					margin-left: 1rem;
 					margin-right: 1rem;
@@ -119,7 +119,7 @@
 				font-weight: 600;
 				min-height: 2rem;
 				background-color: @tool_color;
-				color: white;
+				color: @color_white;
 				margin-top: 0.33rem;
 				cursor: pointer;
 				text-transform: uppercase;
@@ -142,7 +142,7 @@
 
 				&:after {
 					right: 0.25rem;
-					background-color: @color_grey_light;
+					background-color: @color_grey_14;
 				}
 			}
 
@@ -150,13 +150,13 @@
 
 				>.publication_items_grid {
 			    	width: 100%;
-					background-color: #f7f6f6;
+					background-color: @color_grey_15;
 					display: grid;
 					gap: 0.75rem;
 					align-content: space-between;
 					grid-template-columns: 1fr 3fr;
 					margin-bottom: 1rem;
-					border: 1px solid @color_grey_medium;
+					border: 1px solid @color_grey_13;
 					padding: 1rem;
 					z-index: 0;
 
@@ -172,17 +172,17 @@
 						font-weight: bold;
 
 						&.fail {
-							color: red;
+							color: @color_danger;
 						}
 						&.success {
-							color: green;
+							color: @color_success;
 						}
 
 						&.light {
 							font-weight: 100;
 							font-family: monospace;
 							font-size: 0.95rem;
-							color: @color_grey_dark;
+							color: @color_grey_10;
 						}
 					}
 
@@ -218,7 +218,7 @@
 						line-height: 0.95rem;
 						padding-left: 1.25rem;
 						font-size: 80%;
-						color: #acacac;
+						color: @color_grey_9;
 					}
 
 					.container_bottom {

@@ -40,7 +40,7 @@
 }
 
 // fn_append_icon (used by tag element 'button')
-.fn_append_icon(@icon_name, @color: @color_dark, @opacity:1) {
+.fn_append_icon(@icon_name, @color: @color_grey_3, @opacity:1) {
 
 	--icon-path : url('../../themes/default/icons/@{icon_name}');
 
@@ -103,7 +103,7 @@
 		background-color: @color_white  !important;
 	}
 	&.grey {
-		background-color: @color_grey_dark;
+		background-color: @color_grey_10;
 		opacity: 0.75;
 	}
 	&.transparent {
@@ -115,7 +115,7 @@
 .icon {
 	&.loading {
 		// spinner
-		border: 1px solid @color_grey_medium_1;
+		border: 1px solid @color_grey_12;
 		border-top-color: @color_orange_dedalo;
 		border-radius: 50%;
 		mask: unset !important;
@@ -151,7 +151,7 @@ button {
 	transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 
 	// color
-	color: @color_grey_dark_1; // default dark grey
+	color: @color_grey_1; // default dark grey
 
 	&.folding {
 		@media screen and (max-width: @width_break_point_1) {
@@ -173,7 +173,7 @@ button {
 		}
 	}
 	&.secondary {
-		@color: @color_secondary;
+		@color: @color_grey_6;
 		background-color: @color;
 		border-color: darken(@color, 2%);
 		color: @color_white ;
@@ -238,12 +238,12 @@ button {
 		}
 	}
 	&.light {
-		@color: @color_light;
+		@color: @color_grey_15;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: @color_grey_dark_1;
+		color: @color_grey_1;
 		&:before {
-			background-color: @color_grey_dark_1 !important;
+			background-color: @color_grey_1 !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);
@@ -251,7 +251,7 @@ button {
 		}
 	}
 	&.dark {
-		@color: @color_dark;
+		@color: @color_grey_3;
 		background-color: @color;
 		border-color: darken(@color, 2%);
 		color: @color_white ;
