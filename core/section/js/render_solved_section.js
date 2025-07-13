@@ -70,6 +70,8 @@ export const get_d3_data = function(options) {
 	const nodes = []
 	const links = []
 
+	const default_color = '#dddddd';
+
 	const sources_length = sources.length
 	for (let i = sources_length - 1; i >= 0; i--) {
 		// source
@@ -98,7 +100,7 @@ export const get_d3_data = function(options) {
 					section_id		: current_souce.section_id,
 					section_tipo	: current_souce.section_tipo
 				},
-				color 			: (source_section && source_section.color) ? source_section.color : '#dddddd'
+				color 			: (source_section?.color) ? source_section.color : default_color
 			}
 			if(!source_found){
 				nodes.push(source)
@@ -134,7 +136,7 @@ export const get_d3_data = function(options) {
 					section_id		: current_target.section_id,
 					section_tipo	: current_target.section_tipo
 				},
-				color 			: (target_color && target_color) ? target_color.color : '#dddddd'
+				color 			: (target_color?.color) ? target_color.color : default_color
 			}
 			if(!target_found){
 				nodes.push(target)

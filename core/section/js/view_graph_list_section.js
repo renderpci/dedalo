@@ -245,7 +245,7 @@ const rebuild_columns_map = async function(self) {
 	// columns base
 		const base_columns_map = await self.columns_map
 
-		const remove_columns = self.context.properties.view_config.remove_columns || []
+		const remove_columns = self.context.properties?.view_config?.remove_columns || []
 		const base_columns_map_length = base_columns_map.length
 
 		for (let i = 0; i < base_columns_map_length; i++) {
