@@ -10,8 +10,8 @@
 	display: flex;
 	flex-wrap: wrap;
 	position: absolute;
-	background-color: #ffffff;
-	box-shadow: 0px 1px 0px 0px @color_grey_medium;
+	background-color: @color_white;
+	box-shadow: 0px 1px 0px 0px @color_grey_13;
 	left: 6px;
 	top: 6px;
 	height: auto;
@@ -33,13 +33,13 @@
 		}
 
 		&:hover {
-			background-color: #dddddd;
+			background-color: @color_grey_11;
 		}
 		&:active {
 			opacity: 0.6;
 		}
 		&.active {
-			background-color: #dddddd;
+			background-color: @color_grey_11;
 		}
 		&.disable {
 			opacity: 25%;
@@ -150,11 +150,13 @@
 
 dd-modal .find_and_replace {
 
+	background-color: @color_grey_15;
+
 	input{
 		margin-bottom: 1px;
 		&:focus{
-			background-color: #fff3e7;
-			outline: 1px solid #ff7b0e;
+			background-color: @color_mandatory;
+			outline: 1px solid @color_orange_dedalo;
 			box-shadow: none;
 		}
 	}
@@ -187,7 +189,7 @@ dd-modal .find_and_replace {
 			width: 3em;
 			height: 1.6em;
 			border-radius: 1em;
-			background: #eeeeee;
+			background: @color_grey_13;
 			cursor: pointer;
 			-webkit-user-select: none;
 			-moz-user-select: none;
@@ -201,8 +203,8 @@ dd-modal .find_and_replace {
 			width: 1.2em;
 			height: 1.2em;
 			border-radius: 1em;
-			background: #fff;
-			box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
+			background: @color_white;
+			box-shadow: 2px 0px 5px @color_grey_10;
 			position: absolute;
 			left: 0.2em;
 			top: 0.2em;
@@ -213,7 +215,7 @@ dd-modal .find_and_replace {
 			background: @color_green_success;
 		}
 		.check input[type="checkbox"]:checked + label:before {
-			box-shadow: -2px 0px 5px rgba(0, 0, 0, 0.2);
+			box-shadow: -2px 0px 5px @color_grey_10;
 			left: 1.6em;
 		}
  		/* toggle-pill-color end */

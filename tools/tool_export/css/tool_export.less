@@ -9,7 +9,6 @@
 
 // local vars
 @tool_color : #7152a5;
-@tool_color_light : #faf9f9;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -55,7 +54,7 @@
 
 				// ul list_container
 				>.list_container {
-					border-left: 1px solid @color_grey_dark;
+					border-left: 1px solid @color_grey_10;
 					max-height: unset;
 				}
 			}//end components_list_container
@@ -78,7 +77,7 @@
 					margin-bottom: 1.5rem;
 					overflow: visible;
 					min-height: 35vh;
-					background-color: @tool_color_light;
+					background-color: @color_grey_16;
 					padding: 0px;
 					padding-left: 0.33rem;
 					padding-right: 0.33rem;
@@ -111,7 +110,7 @@
 					}
 
 					>.export_component {
-						background-color: @tool_color_light;
+						background-color: @color_grey_16;
 						display: flex;
 						width: 100%;
 						position: relative;
@@ -122,7 +121,7 @@
 						padding: 0px;
 						padding-left: 0.75rem;
 						border-left: 1px solid @color_orange_dedalo;
-						border-bottom: 1px solid #f2f2f2ee;
+						border-bottom: 1px solid @color_grey_14;
 						transition: opacity 150ms;
 
 						&:last-of-type {
@@ -149,10 +148,10 @@
 
 						&:active {
 							background-color: lighten(@tool_color, 5%);
-							color: #ffffff;
+							color: @color_white;
 
 							>.button {
-								background-color: #ffffff;
+								background-color: @color_white;
 							}
 						}
 
@@ -162,13 +161,13 @@
 							@keyframes active_animation {
 								0%  {
 									background-color: lighten(@tool_color, 5%);
-									color: #ffffff;
+									color: @color_white;
 								}
 								65%  {
-									color: #ffffff;
+									color: @color_white;
 								}
 								100% {
-									background-color: @tool_color_light;
+									background-color: @color_grey_16;
 									color: unset;
 								}
 							}
@@ -181,7 +180,7 @@
 
 							>span {
 								padding-left: 1rem;
-								color: #a6a6a6;
+								color: @color_grey_9;
 								font-size: 0.9rem;
 							}
 						}
@@ -201,7 +200,7 @@
 
 			// export_buttons_config. Mode selector and export button (at right)
 			>.export_buttons_config {
-				background-color: @tool_color_light;
+				background-color: @color_grey_16;
 				padding: 1em;
 				padding-top: 0;
 				position: relative;
@@ -222,7 +221,7 @@
 				}
 
 				>.records_info {
-					background-color: #7ee4f2;
+					background-color: @color_cyan;
 				}
 
 				>.section_label {
@@ -291,7 +290,7 @@
 		>.export_buttons_options {
 			width: 100%;
 			margin-top: 1em;
-			background-color: rgb(255 255 255 / 89%);
+			background-color: @color_grey_14;
 			padding-top: 1rem;
 			padding-bottom: 1rem;
 			z-index: 1;
@@ -333,7 +332,7 @@
 
 				>th {
 					background-color: @tool_color;
-					color: white;
+					color: @color_white;
 				}
 			}
 		}

@@ -4,6 +4,9 @@
 * Loaded on tool init
 */
 
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
 // local vars
 @tool_color: #c80000;
 
@@ -60,12 +63,12 @@
 			padding: 1rem;
 			padding-left: 1rem;
 			line-height: 1.25rem;
-			color: #7a7a7a;
+			color: @color_grey_7;
 			font-size: 1.05rem;
 
 			&.error {
 				background-color: transparent !important;
-				color: red;
+				color: @color_danger;
 			}
 		}
 	}//end content_data

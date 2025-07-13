@@ -23,14 +23,14 @@
 			cursor: pointer;
 
 			&:hover {
-				color: #000000;
+				color: @color_black;
 			}
 		}
 
 		// buttons definitions
 		.btn {
 			&.paginator_first_icon {
-				.fn_build_button('forward.svg', black, 1, 2em);
+				.fn_build_button('forward.svg', @color_black, 1, 2em);
 				transform: scaleX(-1);
 				mask-size: 70%;
 				-webkit-mask-size: 70%;
@@ -39,16 +39,16 @@
 			}
 
 			&.paginator_prev_icon {
-				.fn_build_button('play.svg', black, 1, 2em);
+				.fn_build_button('play.svg', @color_black, 1, 2em);
 				transform: scaleX(-1);
 			}
 
 			&.paginator_next_icon {
-				.fn_build_button('play.svg', black, 1, 2em);
+				.fn_build_button('play.svg', @color_black, 1, 2em);
 			}
 
 			&.paginator_last_icon {
-				.fn_build_button('forward.svg', black, 1, 2em);
+				.fn_build_button('forward.svg', @color_black, 1, 2em);
 				mask-size: 70%;
 				-webkit-mask-size: 70%;
 				mask-repeat: no-repeat;
@@ -70,7 +70,7 @@
 				min-height: 1.5rem;
 				margin-right: 0px;
 				margin-left: 0px;
-				background-color: @color_grey_dark;
+				background-color: @color_grey_10;
 				mask-size: contain;
 				transition: opacity 0.2s linear;
 
@@ -132,7 +132,7 @@
 				margin-right: 0.33rem;
 				width: 4ch;
 				border-radius: 0.2rem;
-				border: 1px solid #ececec;
+				border: 1px solid @color_grey_13;
 				-moz-appearance: textfield;
 
 				&.invalid {

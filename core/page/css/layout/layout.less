@@ -20,19 +20,19 @@
 		transition: background-color 600ms linear;
 		background-color: @color_hilite ;
 		.label {
-			color: @color_dark;
+			color: @color_grey_3;
 		}
 	}
 
 // label_top. It's used in section group and inspector labels
 	.label_top {
-		background-color: @color_grey_light;
+		background-color: @color_grey_14;
 		position: relative;
 		padding: 0.33em;
 		padding-left: 0.5em;
 		cursor: pointer;
 		text-transform: uppercase;
-		color: @color_grey_ultradark;
+		color: @color_grey_4;
 
 		@media screen and (max-width: @width_break_point_1) {
 			padding: 1rem;
@@ -46,7 +46,7 @@
 		margin-right: 0.5em;
 		padding: 0.25em;
 		border: none;
-		outline: 1px solid @color_grey_medium;
+		outline: 1px solid @color_grey_13;
 		transition: all .5s ease, padding 0s;
 		opacity: 0.75;
 		vertical-align: bottom;
@@ -137,7 +137,7 @@
 		>.wrapper_error_title {
 			text-transform: uppercase;
 			padding-bottom: .25rem;
-			border-bottom: 1px solid @color_grey_lighter;
+			border-bottom: 1px solid @color_grey_11;
 			margin-bottom: 0.5rem;
 
 			>.icon {
@@ -168,7 +168,7 @@
 		margin: 0px;
 		padding: 0px;
 		z-index: auto; // (!) important to allow fullscreen configs
-		color: @color_grey_ultradark;
+		color: @color_grey_4;
 
 		&.edit {
 			display: grid;
@@ -288,7 +288,7 @@
 
 		// content_data
 		>.content_data {
-			color: @color_grey_ultradark;
+			color: @color_grey_4;
 			height: inherit;
 			display: flex;
 			flex: 1 1 100%;
@@ -302,7 +302,7 @@
 
 		&.edit, &.search, &.player {
 			// grey line left and down of wrapper
-			box-shadow: -1px 1px 0 @color_grey_light, inset -1px 1px 0 @color_grey_light;
+			box-shadow: -1px 1px 0 @color_grey_14, inset -1px 1px 0 @color_grey_14;
 
 			// inside column, remove shadow
 			.column & {
@@ -323,13 +323,13 @@
 
 			>.label {
 				height: var(--component_label_height);
-				color: @color_grey_darken_2;
+				color: @color_grey_8;
 
 				>.icon {
 					vertical-align: bottom;
 
 					&.alternative {
-						background-color: @color_grey_dark;
+						background-color: @color_grey_10;
 					}
 					&.deprecated {
 						background-color: @color_orange_dedalo;
@@ -420,7 +420,7 @@
 					-webkit-mask-image: url('../../themes/default/icons/lang.svg');
 					mask-image: url('../../themes/default/icons/lang.svg');
 					content: ' ';
-					background-color: @color_grey_dark;
+					background-color: @color_grey_10;
 					background-size: contain;
 					background-repeat: no-repeat;
 					height: 1.35em;
@@ -433,7 +433,7 @@
 				}
 
 				&.off::after {
-					background-color: #000;
+					background-color: @color_black;
 				}
 
 				input {
@@ -539,7 +539,7 @@
 
 				&.vertical {
 					flex: 1 1 100%;
-					background-color: @color_grey_dark_3;
+					background-color: @color_grey_5;
 					justify-content: center;
 					flex-flow: unset;
 				}
@@ -583,7 +583,7 @@
 			font-weight: normal;
 			z-index: 2;
 			// shadow like menu
-			box-shadow: 0 2px 3px @color_grey_dark;
+			box-shadow: 0 2px 3px @color_grey_10;
 
 			&.label, &.content, >div.label, >span.label {
 				font-size: 1.4em;
@@ -943,7 +943,7 @@
 // json_editor
 	.jse-main {
 
-		--jse-theme-color: @color_grey_darken_2;
+		--jse-theme-color: @color_grey_8;
 		// resize: vertical;
 		overflow: auto;
 
@@ -952,7 +952,7 @@
 // json-container. Is the JSON data viewer used to show fold-able data like
 // server messages in area_development widgets
 	.json-container {
-		background-color: @color_white_dirty;
+		background-color: @color_grey_16;
 		margin: 0px;
 		margin-top: 1em;
 		padding: 0.5rem;
@@ -968,9 +968,9 @@
 	.components_list_container {
 		display: flex;
 		width: fit-content;
-		border-right: 1px solid @color_grey_dark;
+		border-right: 1px solid @color_grey_10;
 		font-size: 1em;
-		background-color: @color_white_dirty;
+		background-color: @color_grey_16;
 
 		// first UL defines max height
 		>ul {
@@ -989,7 +989,7 @@
 
 			&.target_list_container {
 				display: flex;
-				border-left: 1px solid @color_grey_dark;
+				border-left: 1px solid @color_grey_10;
 			}
 
 			li {
@@ -1003,7 +1003,7 @@
 				// Section label bar
 				&.section_bar_label {
 					display: block;
-					background-color: @color_grey_dark_3;
+					background-color: @color_grey_5;
 					color: @color_white;
 					// Avoid click events affect here (received with :after)
 					pointer-events: none;
@@ -1028,7 +1028,7 @@
 
 				// section_group_label
 				&.section_group_label {
-					background-color: @color_grey_dark;
+					background-color: @color_grey_10;
 					color: @color_white;
 					cursor: pointer;
 
@@ -1042,7 +1042,7 @@
 						&:after {
 							content: " ";
 							mask-image: url(../../themes/default/icons/arrow_down.svg);
-							background-color: @color_grey_dark_3;
+							background-color: @color_grey_5;
 							transition: transform .26s ease-out;
 							position: absolute;
 							right: 0.33rem;
@@ -1056,7 +1056,7 @@
 				// component_label
 				&.component_label {
 					background-color: @color_white;
-					border-bottom: 0.5px solid @color_grey_dark_3;
+					border-bottom: 0.5px solid @color_grey_5;
 
 					// truncate text
 					padding-right: 2.0em;
@@ -1078,7 +1078,7 @@
 					&.element_draggable {
 						cursor: move;
 						background-image: url('../../themes/default/draggable.svg');
-						background-color: @color_black;
+						background-color: @color_white;
 						background-position-x: 0%;
 						background-position-y: 0%;
 						background-size: auto auto;
@@ -1139,7 +1139,7 @@
 		outline: none;
 		border-radius: 4px;
 		z-index: 1;
-		box-shadow: @color_grey_dark 0px 2px 8px 0px;
+		box-shadow: @color_grey_10 0px 2px 8px 0px;
 		cursor: pointer;
 
 		.fullscreen& {
@@ -1265,7 +1265,7 @@
 		font-size: 1.7rem;
 		margin: 0.67em 0;
 		margin-bottom: 0px;
-		color: @color_grey_darken;
+		color: @color_grey_7;
 		font-weight: 200;
 	}
 
@@ -1305,7 +1305,7 @@
 		display: flex;
 		top: 0.72rem;
 		right: 0.5rem;
-		background-color: @color_grey_light;
+		background-color: @color_grey_14;
 		border-radius: 2.5rem;
 		z-index: 1;
 		height: 2.6rem;
@@ -1320,7 +1320,7 @@
 
 		// div msg_node
 		>.msg_node {
-			background-color: @color_grey_ultralight;
+			background-color: @color_grey_16;
 			display: block;
 			width: 100%;
 			min-height: 4rem;
@@ -1374,8 +1374,8 @@
 // by service_autocomplete to display special datalist like in countermarks case
 .grid_choose_container {
 	position: absolute;
-	background-color: @color_light;
-	box-shadow: @color_grey_lighter 0px 5px 15px;
+	background-color: @color_grey_15;
+	box-shadow: @color_grey_11 0px 5px 15px;
 	width: 20rem;
 	min-width: 15rem;
 	max-height: 70vh;
@@ -1434,7 +1434,7 @@
 		z-index: 1;
 		padding-top: 0.5rem;
 		padding-bottom: 0.5rem;
-		border-bottom: 1px solid @color_grey_medium;
+		border-bottom: 1px solid @color_grey_13;
 
 		.column {
 			outline: none;
@@ -1442,7 +1442,7 @@
 	}
 
 	>.wrapper_component {
-		border: 1px solid @color_grey_medium;
+		border: 1px solid @color_grey_13;
 		border-radius: 0.3em;
 	}
 

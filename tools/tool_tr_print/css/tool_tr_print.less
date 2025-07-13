@@ -4,6 +4,9 @@
 * Loaded on tool init
 */
 
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
 // local vars
 @tool_color: #9d535e;
 
@@ -24,7 +27,7 @@
 				align-items: center;
 				padding-bottom: 2em;
 				margin-bottom:  2em;
-				border-bottom: 1px dotted #eeeeee;
+				border-bottom: 1px dotted @color_grey_13;
 
 				>.lang_container {
 					display: flex;
@@ -41,7 +44,7 @@
 				}
 
 				.option_container {
-					border-right: 1px solid #eeeeee;
+					border-right: 1px solid @color_grey_13;
 
 					label {
 						cursor: pointer;
@@ -59,7 +62,8 @@
 				margin: auto;
 				text-align: justify;
 				padding: 5ch;
-				box-shadow: 0 0px 10px 0px #dddddd;
+				background-color: white;//always white is the page background, don't change it to variable.
+				box-shadow: 0 0px 10px 0px @color_grey_12;
 
 				.data_block {
 					display: grid;
@@ -68,14 +72,14 @@
 					// width: 80ch;
 
 						.right_block {
-							border-left: 1px solid #555;
+							border-left: 1px solid @color_grey_5;
 							padding-left: 1em;
 							// display: grid;
 							word-wrap: break-word;
 							grid-column: 2;
 
 							.tc {
-								color: #2c6133;
+								color: #2c6133; // always green, don't change it to variable
 								padding-right: 1em;
 								font-family: 'Menlo',monospace;
 							}
@@ -112,7 +116,7 @@
 								}
 							}
 						}:target {
-							background: #eeeeee;
+							background: @color_grey_13;
 						}
 					// }
 				}
@@ -126,7 +130,7 @@
 				.right_container_head {
 					text-align: center;
 					font-size: 1.1em;
-					border-bottom: 1px solid #eeeeee;
+					border-bottom: 1px solid @color_grey_13;
 					margin-bottom: 1em;
 
 					.head{
@@ -159,7 +163,7 @@
 
 
 				.right_block.border_top{
-					border-top: 1px solid #cccccc;
+					border-top: 1px solid @color_grey_11;
 				}
 
 
@@ -182,7 +186,7 @@
 						padding: 10px;
 						background-color: transparent;
 						font-family: sans-serif;
-						color: #000000;
+						color: black;
 					}
 				#btn_save_vtt {
 					float: left;

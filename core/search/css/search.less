@@ -6,7 +6,7 @@
 
 // search_component (shared at least by unit_test preview)
 	.search_component {
-		background-color: @color_light;
+		background-color: @color_grey_15;
 		display: flex;
 		position: relative;
 		margin: 2px;
@@ -83,7 +83,7 @@
 			position: relative;
 			width: 100%;
 			z-index: 1;
-			outline: 0.5px solid @color_grey_medium;
+			outline: 0.5px solid @color_grey_13;
 
 			.list&, .relation& {
 				margin-top: 0.5em;
@@ -102,7 +102,7 @@
 				margin: 0px;
 
 				&.sections {
-					background-color: @color_grey_dark;
+					background-color: @color_grey_10;
 				}
 			}
 
@@ -116,7 +116,7 @@
 			>.search_container_selection {
 				flex-grow: 1;
 				align-self: flex-start;
-				background-color: @color_grey_light;
+				background-color: @color_grey_14;
 				padding-top: 0px;
 				position: sticky;
 				top: 0.25rem;
@@ -139,7 +139,7 @@
 						padding: 1px;
 						padding-right: 17px;
 						padding-left: 23px;
-						background-color: @color_grey_ultralight;
+						background-color: @color_grey_16;
 						position: relative;
 						width: 100%;
 						display: grid;
@@ -198,7 +198,7 @@
 							-moz-user-select: none;
 							-webkit-user-select: none;
 							letter-spacing: 1px;
-							color: @color_grey_light;
+							color: @color_grey_14;
 							opacity: 0.6;
 
 							&:hover {
@@ -206,10 +206,10 @@
 							}
 
 							&.and {
-								background-color: #3fb630;
+								background-color: @color_green_success;
 							}
 							&.or {
-								background-color: #3379b8;
+								background-color: @color_primary;
 							}
 						}//end >.operator
 
@@ -383,7 +383,7 @@
 
 			// right: user presets list
 			.search_container_selection_presets {
-				background-color: @color_grey_medium;
+				background-color: @color_grey_13;
 				width: 160px;
 				min-width: 140px;
 				display: block;
@@ -392,7 +392,7 @@
 				>.component_presets_label {
 					display: inline-flex;
 					width: 100%;
-					background-color: @color_grey_dark_3;
+					background-color: @color_grey_5;
 					color: @color_white;
 					text-align: center;
 					padding: 4px;
@@ -404,8 +404,8 @@
 					}
 
 					>.button.add {
-						color: @color_grey_dark_3;
-						background-color: @color_grey_mediumlight;
+						color: @color_grey_5;
+						background-color: @color_grey_15;
 						cursor: pointer;
 						z-index: 9;
 						margin-left: 0.33rem;
@@ -426,7 +426,7 @@
 						.section_record {
 							display: grid;
 							grid-template-columns: 1.5rem 1.1rem 1fr 1.5rem;
-							border-bottom: 1px solid @color_grey_dark;
+							border-bottom: 1px solid @color_grey_10;
 
 							&.selected {
 								background-color: @color_orange_dedalo;
@@ -448,7 +448,7 @@
 							}
 
 							.button.icon {
-								background-color: @color_grey_dark;
+								background-color: @color_grey_10;
 								margin: 0px;
 								margin-top: 0.27rem;
 								margin-right: 025rem;
@@ -460,7 +460,7 @@
 
 							.button_apply_preset {
 								transform: scaleX(-1);
-								background-color: @color_grey_dark;
+								background-color: @color_grey_10;
 							}
 						}
 						.column_edit {
@@ -490,11 +490,11 @@
 
 // button toggle container_selector (list of fields) and button toggle presets
 	.toggle_container_selector, .toggle_container_selection_presets {
-		background-color: @color_grey_dark;
+		background-color: @color_grey_11;
 		writing-mode: vertical-lr;
 		text-transform: uppercase;
 		cursor: pointer;
-		color: @color_light;
+		color: @color_grey_15;
 		padding: 0.25rem;
 		padding-top: 0.75rem;
 		letter-spacing: 1px;

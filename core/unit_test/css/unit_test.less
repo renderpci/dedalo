@@ -21,33 +21,32 @@ body {
 }
 
 #mocha .test pre.error {
-	background-color: #fafafa !important;
-	// background-color: #808080;
+	background-color: @color_grey_16 !important;
 }
 
 .wrapper_component {
 	@media (prefers-color-scheme: dark) {
-		background-color: white;
+		background-color: @color_white;
 	}
 	color: var(--mocha-color);
 }
 
 .wrapper.page {
 	@media (prefers-color-scheme: dark) {
-		background-color: white;
+		background-color: @color_white;
 	}
 }
 
 .pair_container {
 	padding: 2rem;
-	border-top: 1px solid #7f7f7f;
+	border-top: 1px solid @color_grey_7;
 	margin-bottom: 4rem;
 	display: block;
-	background-color: white;
+	background-color: @color_white;
 
 	>.wrapper_component {
 		margin-bottom: 2rem;
-		outline: 1px solid #eeeeee;
+		outline: 1px solid @color_grey_13;
 
 		&.list {
 
@@ -65,7 +64,7 @@ body {
 		line-height: 1.2rem;
 		padding: 0.5rem;
 		font-size: 1.1rem;
-		color: #9d9d9d;
+		color: @color_grey_8;
 	}
 }
 

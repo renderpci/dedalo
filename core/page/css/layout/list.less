@@ -65,12 +65,12 @@
 
 // hilite_row
 	.hilite_row {
-		@line_color : #acacac;
-		background-color: #dedede42;
+		@line_color : @color_grey_10;
+		background-color: @color_grey_7;
 		display: block;
 		position: absolute;
 		z-index: 1;
-		box-shadow: 0px 2px 4px 0px #8e8e8e;
+		box-shadow: 0px 2px 4px 0px @color_grey_7;
 		pointer-events: none;
 	}
 
@@ -123,7 +123,7 @@
 						align-items: center;
 						height: 100%;
 						width: 22%;
-						background-color: @color_grey_light;
+						background-color: @color_grey_14;
 						padding: 0.25rem;
 						padding-left: 0.5rem;
 						word-break: break-word;
@@ -134,14 +134,14 @@
 						left: -0.2rem;
 						top: -0.5rem;
 						height: calc(100% + 0.5rem);
-						border-bottom: 1px solid @color_grey_medium;
+						border-bottom: 1px solid @color_grey_13;
 					}
 					&.column_section_id {
 						position: -webkit-sticky;
 						position: sticky;
 						top: 0px;
 						z-index: 1;
-						box-shadow: 0px 4px 2px 0px @color_grey_medium_2;
+						box-shadow: 0px 4px 2px 0px @color_grey_9;
 						font-size: 1.5rem;
 						overflow: hidden;
 						margin-top: 2rem;
@@ -188,11 +188,11 @@
 		// head_column
 		.head_column {
 			display: flex;
-			background-color: @color_grey_light;
-			border-right: 1px solid @color_grey_medium;
-			box-shadow: 0px 1px 0px 0px #e5e5e5;
+			background-color: @color_grey_14;
+			border-right: 1px solid @color_grey_13;
+			box-shadow: 0px 1px 0px 0px @color_grey_13;
 			overflow: hidden;
-			color: @color_grey_dark_3;
+			color: @color_grey_5;
 			font-weight: 300;
 			padding: 0px;
 			padding-left: 0.25rem;
@@ -242,7 +242,7 @@
 
 			// inside component (portal case)
 			.wrapper_component & {
-				outline: 1px solid @color_grey_light;
+				outline: 1px solid @color_grey_14;
 			}
 
 			// header column sub-labels inside sub_header container
@@ -324,7 +324,7 @@
 		padding-bottom: 0.11rem;
 
 		// cell outline
-		box-shadow: 0px 1px 0px 0px @color_grey_medium;
+		box-shadow: 0px 1px 0px 0px @color_grey_13;
 
 		@common_padding: 0.12rem;
 
@@ -464,7 +464,7 @@
 		@height_line : 1.2em;
 
 		>.edit_line {
-			background-color: #f8f8f8;
+			background-color: @color_grey_16;
 			flex: 1 1 100%;
 			display: flex;
 			flex-wrap: wrap;
@@ -496,7 +496,7 @@
 
 // column_section_id
 	.column.column_section_id {
-		background-color: @color_grey_mediumlight;
+		background-color: @color_grey_15;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -514,7 +514,7 @@
 			border-radius: 0px;
 			justify-content: flex-end;
 			text-decoration: none;
-			color: @color_dark;
+			color: @color_grey_3;
 
 			&.link_button {
 				font-size: 1.25rem;
@@ -597,7 +597,7 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: flex-start;
-		background-color: @color_grey_mediumlight;
+		background-color: @color_grey_15;
 		padding: 0px;
 
 		>button.button_remove {

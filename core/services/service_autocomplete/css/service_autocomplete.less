@@ -11,7 +11,7 @@
 	border: 0px;
 	border-bottom-left-radius: 5px;
 	border-bottom-right-radius: 5px;
-	color: @color_dark;
+	color: @color_grey_3;
 	position: absolute;
 	left: -1px;
 	margin-left: 0px;
@@ -23,7 +23,7 @@
 	z-index: 1;
 
 	&.search {
-		background-color: @color_page_bg_color;
+		background-color: @color_white;
 		opacity: 1;
 		top: 1.42rem;
 		left: 4rem;
@@ -31,7 +31,7 @@
 		min-width: unset;
 		border-bottom-left-radius: unset;
 		border-bottom-right-radius: unset;
-		border: 1px solid @color_page_bg_color;
+		border: 1px solid @color_white;
 		border-right: none !important;
 		left: unset;
 		right: 1px;
@@ -43,16 +43,16 @@
 			position: absolute;
 			right: 0px;
 			top: 0px;
-			background-color: @color_dark;
+			background-color: @color_grey_3;
 		}
 
 		&:has(>.options_hidden.visible) {
-			border : 1px solid @color_grey_dark;
+			border : 1px solid @color_grey_10;
 		}
 
 		&.hilite_element{
-			background-color: #ffdca9;
-			border: 1px solid #ffdca9;
+			background-color: @color_hilite;
+			border: 1px solid @color_hilite;
 		}
 
 		>.autocomplete_data {
@@ -88,7 +88,7 @@
 		}
 
 		>.source_selector {
-			background-color: @color_grey_dark;
+			background-color: @color_grey_10;
 			color: @color_white ;
 			display: flex;
 			line-height: 1.25em;
@@ -115,7 +115,7 @@
 
 		// filter_node. Box of checkboxes with all available sections
 		ul.filter_node {
-			background-color: @color_grey_dark;
+			background-color: @color_grey_10;
 			border-bottom: 1px solid @color_white;
 			display: table;
 			padding: 0.5em;
@@ -155,7 +155,7 @@
 		}
 
 		>.inputs_list {
-			background-color: @color_grey_light;
+			background-color: @color_grey_14;
 			padding: 0.5em;
 
 			>.input_group {
@@ -179,7 +179,7 @@
 
 		// search_operators_div
 		>.search_operators_div {
-			background-color: @color_grey_light;
+			background-color: @color_grey_14;
 			padding: 0.25em;
 			padding-left: 0.5em;
 			display: flex;
@@ -263,7 +263,7 @@
 		z-index: 5;
 		width: max-content;
 		min-width: 100%;
-		background-color: @color_grey_light;
+		background-color: @color_grey_14;
 		border-left: 1px solid @color_orange_dedalo;
 		border-right: 1px solid @color_orange_dedalo;
 		max-width: 100%;
@@ -277,7 +277,7 @@
 
 		// li autocomplete_data_li
 		>.autocomplete_data_li {
-			border-top: 1px solid @color_grey_lighter;
+			border-top: 1px solid @color_grey_11;
 			cursor: pointer;
 			padding: 0.5em;
 			min-height: 2.04rem;
@@ -286,7 +286,7 @@
 			padding-bottom: 0.33rem;
 
 			&.selected {
-				background-color: @color_grey_lighter;
+				background-color: @color_grey_11;
 			}
 
 			&:active {

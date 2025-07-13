@@ -14,14 +14,14 @@
 			display: flex;
 			flex-wrap: wrap;
 			align-items: center;
-			border-bottom: 1px solid #eeeeee;
+			border-bottom: 1px solid @color_grey_13;
 			width: 100%;
 			margin: 0px;
 			margin-bottom: 1px;
 			overflow: hidden;
 
 			&:hover {
-				background-color: @color_grey_ultralight;
+				background-color: @color_grey_16;
 			}
 
 			// section_record view default
@@ -58,7 +58,7 @@
 				}
 
 				&.column_info {
-					color: #8c8c8c;
+					color: @color_grey_8;
 					text-align: right;
 					flex: 2 1 auto;
 					display: block;
@@ -107,19 +107,19 @@
 						&.index{
 							.fn_build_tag_indexation(
 								@color_tag_indexation_normal,
-								white
+								@color_white
 							);
 						}
 						&.reference {
 							.fn_build_tag_reference (
 								@color_tag_indexation_normal,
-								#fff
+								@color_white
 							);
 						}
 						&.draw{
 							.fn_build_tag_draw (
 								@color_tag_indexation_normal,
-								#fff
+								@color_white
 							);
 						}
 
@@ -127,8 +127,8 @@
 				}
 
 				>.no_tag {
-					background-color: #4065ce;
-					color: white;
+					background-color: @color_blue_2;
+					color: @color_white;
 					margin-left: 0.25rem;
 					border-radius: 3px;
 					padding: 0.25rem;
@@ -160,26 +160,26 @@
 					&.index{
 						.fn_build_tag_indexation(
 							@color_tag_indexation_normal,
-							white
+							@color_white
 						);
 					}
 					&.reference {
 						.fn_build_tag_reference (
 							@color_tag_indexation_normal,
-							#fff
+							@color_white
 						);
 					}
 					&.draw{
 						.fn_build_tag_draw (
 							@color_tag_indexation_normal,
-							#fff
+							@color_white
 						);
 					}
 				}
 
 				// contains hierarchy name and button delete
 				>.note.italic {
-					color: @color_grey_medium_2;
+					color: @color_grey_9;
 					text-align: right;
 					flex: 2 1 auto;
 					display: block;
@@ -212,8 +212,8 @@
 				}
 
 				>.no_tag {
-					background-color: #4065ce;
-					color: white;
+					background-color: @color_blue_2;
+					color: @color_white;
 					margin-left: 0.25rem;
 					border-radius: 3px;
 					padding: 0.25rem;
