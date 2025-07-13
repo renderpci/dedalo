@@ -18,9 +18,8 @@
 
 	// local vars
 	@ts_object_line_height: 20px;
-	@grey_color: #c3c3c3;
-	@grey_dark_color: @color_grey_dark_1;
-	@yellow_color: #b5a83a;
+	@grey_color: @color_grey_11;
+	@grey_dark_color: @color_grey_1;
 
 	// mixins
 		// inline_common
@@ -95,7 +94,7 @@
 		.ts_icons_all;
 		background-image: url('../../themes/default/icons/add_light.svg');
 		&:hover {
-			background-color: @yellow_color;
+			background-color: @color_blue_3;
 			border-radius: 3px;
 			filter: invert(100%);
 		}
@@ -110,7 +109,7 @@
 		background-image: url('../../themes/default/icons/move.svg');
 
 		&:hover {
-			background-color: @yellow_color;
+			background-color: @color_orange_dedalo;
 			border-radius: 3px;
 			filter: invert(100%);
 		}
@@ -126,7 +125,7 @@
 			margin-right: 2px;
 
 			&:hover {
-				background-color: #3dfff5;
+				background-color: @color_cyan;
 				border-radius: 3px;
 				filter: invert(100%);
 			}
@@ -149,7 +148,7 @@
 		width: 22px;
 		margin-right: 5px;
 		margin-left: 3px;
-		border: 1px solid #fd7f26;
+		border: 1px solid @color_warning;
 		border-radius: 2px;
 		opacity: 1 !important;
 		position: relative;
@@ -160,7 +159,7 @@
 	.ts_object_edit {
 
 		&:hover {
-			background-color: #ff7ef3;
+			background-color: @color_purple;
 			border-radius: 3px;
 			filter: invert(100%);
 		}
@@ -233,7 +232,7 @@
 			}
 
 			mark {
-				color: @color_grey_ultradark !important;
+				color: @color_grey_4 !important;
 				font-style: italic;
 			}
 
@@ -260,7 +259,7 @@
 					left: 30%;
 					width: 1.1rem;
 					height: 1.1rem;
-					border: 2px solid @color_grey_medium_1;
+					border: 2px solid @color_grey_12;
 					border-top-color: @color_orange_dedalo;
 					border-radius: 50%;
 					animation: run_spinner 800ms linear infinite;
@@ -269,7 +268,7 @@
 
 			// model_value (used in Ontology to display de model value of each term)
 			&.model_value {
-				// color: @color_grey_darken_2;
+				// color: @color_grey_8;
 				color: @color_orange_dedalo;
 				opacity: 1;
 				font-size: 0.98rem;
@@ -311,7 +310,7 @@
 					left: 0px;
 					width: 1.1rem;
 					height: 1.1rem;
-					border: 2px solid @color_grey_medium_1;
+					border: 2px solid @color_grey_12;
 					border-top-color: @color_orange_dedalo;
 					border-radius: 50%;
 					animation: run_spinner 800ms linear infinite;
@@ -327,14 +326,14 @@
 
 		.element_hilite > span {
 			background-color: @color_hilite_yellow;
-			color: #000000;
+			color: @color_black;
 			padding-left: 7px;
 			padding-right: 7px;
 			margin-left: -7px;
 		}
 
 		.id_info {
-			color: #a6a6a6;
+			color: @color_grey_9;
 			font-size: 80%;
 			vertical-align: text-top;
 			padding-left: 5px;
@@ -387,25 +386,25 @@
 
 			// ontology CSS properties
 			&.ontology16 {
-				background-color: #826b85;
-				color: white;
+				background-color: @color_ontology_css;
+				color: @color_white;
 			}
 
 			// ontology RQO properties
 			&.ontology17 {
-				background-color: #9d4a4a;
-				color: white;
+				background-color: @color_ontology_rqo;
+				color: @color_white;
 			}
 
 			// ontology properties
 			&.ontology18 {
-				background-color: #1b531f;
-				color: white;
+				background-color: @color_ontology_properties;
+				color: @color_white;
 			}
 
 			// ontology v5 properties
 			&.ontology19 {
-				background-color: #e9dd9f;
+				background-color: @color_ontology_properties_v5;
 				color: @grey_dark_color;
 				&:hover {
 					color: @grey_dark_color !important;
@@ -422,8 +421,8 @@
 				opacity: 1;
 			}
 			&:active {
-				background-color: @color_grey_medium;
-				color: #717171 !important;
+				background-color: @color_grey_13;
+				color: @color_grey_7 !important;
 			}
 
 			&.loading {
@@ -440,7 +439,7 @@
 					left: 32%;
 					width: 1.1rem;
 					height: 1.1rem;
-					border: 2px solid @color_grey_medium_1;
+					border: 2px solid @color_grey_12;
 					border-top-color: @color_orange_dedalo;
 					border-radius: 50%;
 					animation: run_spinner 800ms linear infinite;
@@ -515,7 +514,7 @@
 
 			// ontology children arrow
 			.area_ontology & {
-				border-color: transparent transparent transparent @color_grey_ultradark;
+				border-color: transparent transparent transparent @color_grey_4;
 			}
 
 			&:hover {
@@ -535,7 +534,7 @@
 
 			// ontology children arrow
 			.area_ontology & {
-				border-color: #373737 transparent transparent;
+				border-color: @color_grey_4 transparent transparent;
 			}
 
 			&.arrow_spinner {
@@ -576,7 +575,7 @@
 			left: -6px;
 			width: 1.1rem;
 			height: 1.1rem;
-			border: 2px solid @color_grey_medium_1;
+			border: 2px solid @color_grey_12;
 			border-top-color: @color_orange_dedalo;
 			border-radius: 50%;
 			animation: run_spinner 800ms linear infinite;
@@ -589,7 +588,7 @@
 
 		.area_ontology & {
 			&:after {
-				border-top-color: @color_grey_dark_3;
+				border-top-color: @color_grey_5;
 			}
 		}
 	}
@@ -694,14 +693,14 @@
 		.blink {
 			position: relative;
 			top: 2px;
-			color: #727272;
+			color: @color_grey_7;
 			font-size: 13px;
 		}
 	}//end .indexations_container
 
 	// drag and drop
 	.drag_over > .elements_container {
-		background-color: #4a57c5;
+		background-color: @color_blue_2;
 		border-radius: 3px;
 		color: @color_white !important;
 
@@ -712,7 +711,7 @@
 
 	// no_descriptor term span
 	.no_descriptor {
-		color: #a5a5a5;
+		color: @color_grey_9;
 
 		&:before {
 			content: '[ND] ';
@@ -720,7 +719,7 @@
 	}
 
 	.wrap_ts_object_nd {
-		color: @color_grey_darken;
+		color: @color_grey_7;
 		padding: 2px;
 		padding-left: 0px;
 		padding-right: 0px;
@@ -729,11 +728,6 @@
 		> .id_column_content > .ts_object_edit {
 			margin-left: 17px;
 		}
-	}
-
-	.visible_element {
-		background-color: #81c943;
-		visibility: visible !important;
 	}
 
 }//end .wrap_ts_object
