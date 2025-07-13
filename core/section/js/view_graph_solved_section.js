@@ -17,7 +17,6 @@
 	// - cd '/mylocalpath/v6/master_dedalo/lib/d3/d3-7.8.5'
 	// - rollup -c
 	// import * as d3 from '../../../lib/d3/d3-7.8.5/dist/d3.min.js'
-
 	import {
 		get_d3_data
 	} from './render_solved_section.js'
@@ -68,7 +67,7 @@ view_graph_solved_section.render = async function(self, options) {
 			? self.properties.from_map
 			: {
 				name : 'nexus48'
-			}
+			  }
 
 	// right side
 		const right_node = ui.create_dom_element({
@@ -625,6 +624,9 @@ const get_graph = async function(options) {
 					const api_response = await data_manager.request({
 						body : rqo
 					})
+					if(SHOW_DEBUG===true) {
+						console.log('create new record api_response:', api_response);
+					}
 			}
 		}
 
