@@ -83,7 +83,7 @@
 			width: 2.2rem;
 			height: 2.5rem;
 			opacity: 1;
-			background-color: @color_grey_mediumlight;
+			background-color: @color_grey_15;
 			display: block;
 			z-index: 2;
 			border-top-left-radius: 0.33rem;
@@ -94,14 +94,14 @@
 			}
 
 			&.dragging {
-				 background-color: #d9f720;
+				background-color: @color_hilite_yellow;
 				cursor: move;
 				border-radius: 0.33rem;
 			}
 		}
 
 		&.dragover {
-			background-color: #ffffff;
+			background-color: @color_white;
 			outline: 4px dotted @color_orange_dedalo;
 			z-index: 3;
 			opacity: 0.5;
@@ -114,7 +114,7 @@
 			left: 0px;
 
 			&.dragover {
-				background-color: #ffffff8c;
+				background-color: @color_grey_11;
 				outline: 4px dotted @color_orange_dedalo;
 				z-index: 3;
 				width: 100%;
@@ -131,7 +131,7 @@
 
 		.draggable {
 			&.dragover {
-				background-color: #ffffff;
+				background-color: @color_white;
 				outline: 4px dotted @color_orange_dedalo !important;
 				z-index: 3;
 				opacity: 0.5;
@@ -159,7 +159,7 @@
 		.input_value {
 			width: calc(100% - 4rem);
 			// background image search lens
-			background: #fff url(../../themes/default/icons/search.svg);
+			background: @color_white url(../../themes/default/icons/search.svg);
 			background-position: bottom 6px right 8px;
 			background-repeat: no-repeat;
 			background-size: auto 60%;

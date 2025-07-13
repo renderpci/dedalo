@@ -47,10 +47,10 @@
 						padding: 0.6em;
 						text-align: center;
 						background-color: @tool_color;
-						color: #fff;
+						color: @color_white;
 						font-weight: 400;
 						z-index: 2;
-						border-right: 1px solid #ffffff;
+						border-right: 1px solid @color_white;
 
 						&.name {
 							background-color: darken(@tool_color, 15%);
@@ -61,11 +61,11 @@
 				&.label_data {
 					// system info
 					>.label {
-						border: 1px solid gray;
+						border: 1px solid @color_grey_7;
 
 						&[contentEditable=true]:empty:not(:focus):before{
 						    content:attr(data-placeholder);
-							color: #aaa;
+							color: @color_grey_11;
 						}
 					}
 				}

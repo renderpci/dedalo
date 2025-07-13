@@ -9,7 +9,6 @@
 
 // local vars
 @tool_color: #17a2b8;
-@active_color: #0075ff;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -47,7 +46,7 @@
 		>.files_list {
 
 			>.file_item {
-				background-color: #f8f8f8;
+				background-color: @color_grey_15;
 				margin-bottom: 0.75rem;
 				padding: 0.75rem;
 				padding-bottom: 0.5rem;
@@ -65,11 +64,11 @@
 
 					.button.csv {
 						font-size: 1.5rem;
-						background-color: #a6a6a6;
+						background-color: @color_grey_9;
 						margin-right: 0.5rem;
 
 						&.active {
-							background-color: @active_color;
+							background-color: @color_blue_3;
 						}
 					}
 
@@ -88,14 +87,14 @@
 					.arrow_right {
 					    -webkit-mask-image: url(../../../core/themes/default/icons/arrow_down.svg);
 						mask-image: url(../../../core/themes/default/icons/arrow_down.svg);
-						background-color: @color_grey_dark;
+						background-color: @color_grey_10;
 						margin-left: 1rem;
 						padding: 0.5rem;
 						right: 0;
 						transform: rotate(-90deg);
 
 						&.active {
-							background-color: @active_color;
+							background-color: @color_blue_3;
 						}
 					}
 
@@ -103,14 +102,14 @@
 						display: flex;
 						align-items: center;
 						margin-left: 1rem;
-						color: #a0a0a0;
+						color: @color_grey_9;
 
 						>input {
 							width: 9rem;
 							text-align: center;
 							font-size: 0.9rem;
 							margin-left: 0.33rem;
-							border: 1px solid @color_grey_medium;
+							border: 1px solid @color_grey_13;
 							border-radius: 3px;
 						}
 
@@ -123,7 +122,7 @@
 							display: inline-block;
 							margin-left: 0.5rem;
 							font-weight: 600;
-							color: @color_grey_ultradark;
+							color: @color_grey_4;
 						}
 					}
 
@@ -168,7 +167,7 @@
 
 				.warning {
 					background-color: @color_orange_dedalo;
-					color: white;
+					color: @color_white;
 					padding: 0.5rem;
 					border-radius: 3px;
 				}
@@ -181,7 +180,7 @@
 						}
 					}
 					.bulk_process_name_label {
-						color: #a0a0a0;
+						color: @color_grey_9;
 						margin-left: 3rem;
 					}
 					.bulk_process_label {
@@ -196,7 +195,7 @@
 				}
 
 				>.preview {
-					background-color: #caf7da;
+					background-color: @color_green_light;
 					font-size: 0.8rem;
 					white-space: pre;
 					overflow: auto;
@@ -211,14 +210,14 @@
 					>.columns_header {
 						width: 100%;
 						padding: 0.5rem;
-						background-color: #eeeeee;
-						color: @color_grey_ultradark;
+						background-color: @color_grey_13;
+						color: @color_grey_4;
 						cursor: pointer;
 					}
 					>.columns_body {
 						display: grid;
 						grid-template-columns: minmax(5rem,10rem) minmax(9rem,14rem) minmax(7rem,10rem) minmax(3rem,4.5rem) minmax(7rem,30rem) minmax(7rem,auto);
-						background-color: @color_grey_light;
+						background-color: @color_grey_14;
 						border-radius: 5px;
 
 						>.columns_mapper_line {
@@ -235,8 +234,8 @@
 							&.names > div{
 								padding-top: 0.33rem;
 								padding-bottom: 0.33rem;
-								background-color: #19a2b8;
-								color: white;
+								background-color: @color_info;
+								color: @color_white;
 								position: sticky;
 								top: 0;
 								z-index: 1;
@@ -251,7 +250,7 @@
 									width: 98%;
 									background: none;
 									appearance: auto;
-									background-color: white;
+									background-color: @color_white;
 								}
 								.mapped_to_options_container {
 
@@ -262,7 +261,7 @@
 									.decimal_select {
 										background: none;
 										appearance: auto;
-										background-color: white;
+										background-color: @color_white;
 									}
 								}
 							}
@@ -271,10 +270,10 @@
 							display: block;
 							>.columns_mapper_line {
 								display: block;
-								border-bottom: 1px solid black;
+								border-bottom: 1px solid @color_black;
 
 								> * {
-									border-bottom: 1px solid #e1e1e1;
+									border-bottom: 1px solid @color_grey_13;
 									padding-top: 0.2rem;
 									padding-bottom: 0.2rem;
 								}
@@ -340,7 +339,7 @@
 
 					>.result_info_container {
 						margin-top: 1em;
-						border-top: 1px solid #e6e2e2;
+						border-top: 1px solid @color_grey_13;
 						padding: 1rem;
 
 						>.header {

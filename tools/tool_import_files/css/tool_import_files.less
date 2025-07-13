@@ -59,7 +59,7 @@
 					margin-right: .5rem;
 					width: @switch_width;
 					height: @switch_height;
-					background-color: @color_grey_medium;
+					background-color: @color_grey_13;
 					border-radius: 23px;
 					vertical-align: text-bottom;
 					transition: all 0.3s linear;
@@ -70,7 +70,7 @@
 						position: absolute;
 						width: 37px;
 						height: 16px;
-						background-color: #eee;
+						background-color: @color_grey_14;
 						border-radius: 11px;
 						transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
 						transition: all 0.25s linear;
@@ -84,7 +84,7 @@
 						width: 16px;
 						background-color: @color_white;
 						border-radius: 11px;
-						box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.24);
+						box-shadow: 0px 2px 2px @color_grey_11;
 						transform: translate3d(2px, 2px, 0);
 						transition: all 0.2s ease-in-out;
 					}
@@ -180,12 +180,12 @@
 
 
 		>.drop_zone {
-			background-color: #b0feee;
+			background-color: @color_blue_light;
 		}
 
 		// template_container. Where de rows are placed
 		>.template_container {
-			outline: 1px solid @color_grey_medium;
+			outline: 1px solid @color_grey_13;
 			padding: 0.25rem;
 			padding-left: 0.25rem;
 			padding-bottom: 0.25rem;
@@ -193,16 +193,16 @@
 			border-radius: 1em;
 
 			&.match{
-				background-color: #f1b6b6;
+				background-color: @color_mandatory;
 			}
 			&.match_freename{
-				background-color: #b6f1c4;
+				background-color: @color_green_light;
 			}
 			&.name_id{
-				background-color: #f9da9aa1;
+				background-color: @color_hilite;
 			}
 			&.same_name_section{
-				background-color: #aa6a9ea1;
+				background-color: @color_purple_light;
 			}
 
 			// container for buttons and progress bar
@@ -241,7 +241,7 @@
 					display: flex;
 					align-items: center;
 					flex-direction: column;
-					outline: 1px solid @color_grey_medium;
+					outline: 1px solid @color_grey_13;
 					margin-bottom: .75rem;
 					padding: .75rem;
 
@@ -286,7 +286,7 @@
 
 						strong {
 							font-weight: normal;
-							color: @color_grey_darken;
+							color: @color_grey_7;
 						}
 					}
 				}
@@ -299,7 +299,7 @@
 
 			.inputs_container_caption {
 				display: inline-block;
-				background-color: @color_grey_medium;
+				background-color: @color_grey_13;
 				width: auto;
 				padding: 0.5rem;
 				padding-left: 2rem;

@@ -53,11 +53,11 @@
 					.change {
 
 						&.selected{
-							background-color: #fff0e0;
+							background-color: @color_hilite ;
 						}
 
 						.parents_labels {
-							border-top: 0.1rem solid @color_grey_light;
+							border-top: 0.1rem solid @color_grey_14;
 							padding-top: 0.5rem;
 							margin-top: 0.5rem;
 						}
@@ -70,7 +70,7 @@
 
 						}
 						.children_container {
-							color: #676767;
+							color: @color_grey_7;
 							margin: 0.5rem;
 							margin-left: 1.0rem;
 							line-height: 1.1rem;
@@ -87,7 +87,7 @@
 				height: inherit;
 				max-height: inherit;
 				font-size: 13px;
-				border-left: 0.1rem solid @color_grey_light;
+				border-left: 0.1rem solid @color_grey_14;
 
 				@media screen and (max-width: @width_break_point_0) {
 					border-left: none;
@@ -117,7 +117,7 @@
 					margin-left: 1.5rem;
 
 					&.permissions {
-						color: #676767;
+						color: @color_grey_5;
 						font-weight: 300;
 
 						>.radio_buttons_container {
@@ -189,7 +189,7 @@
 
 					&.selected{
 						font-weight: bold;
-						background-color: #fff0e0;
+						background-color: @color_hilite;
 					}
 
 					&.icon_arrow {
@@ -197,11 +197,11 @@
 					}
 
 					&.component {
-						color: orange;
+						color: @color_tag_indexation_normal;
 					}
 
 					.info_text {
-						color: #999999;
+						color: @color_grey_10;
 						padding-left: 0.5rem;
 						padding-right: 0.25rem;
 						font-weight: 300;
@@ -228,19 +228,19 @@
 							height: 0.95rem;
 							padding: 1px;
 							background-clip: content-box;
-							border: 1px solid #c8c7ca;
-							background-color: #f3f3f3;
+							border: 1px solid @color_grey_11;
+							background-color: @color_grey_16;
 							border-radius: 50%;
 							vertical-align: bottom;
 
 							/* appearance for checked radiobutton */
 							&:checked {
-							  background-color: #4dbb4a; // green
+							  background-color: @color_green_success; // green
 							  &.val_0 {
-							  	background-color: #f16053; // red
+							  	background-color: @color_danger; // red
 							  }
 							  &.val_1 {
-							  	background-color: #f8b544; // orange
+							  	background-color: @color_orange; // orange
 							  }
 							}
 						}
@@ -254,7 +254,7 @@
 
 					&:after {
 						cursor: pointer;
-						background-color: #0075ff;
+						background-color: @color_primary;
 						right: -1.45rem;
 						height: 1.2rem;
 						transform: rotate(270deg);
@@ -262,7 +262,7 @@
 
 					&.has_child_section {
 						&:after {
-							background-color: @color_grey_dark;
+							background-color: @color_grey_10;
 						}
 					}
 

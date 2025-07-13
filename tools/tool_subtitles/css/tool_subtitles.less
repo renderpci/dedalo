@@ -46,7 +46,7 @@
 			select {
 				opacity: 1;
 				padding: 0.33rem;
-				background-color: @color_light;
+				background-color: @color_grey_15;
 				border-radius: 3px;
 				margin-right: 0;
 			}
@@ -138,29 +138,29 @@
 						appearance: none !important;
 						width: 100%;
 						height: 15px;
-						background-color: #fbfbfb;;
-						border: 1px solid #cccccc;
+						background-color: @color_grey_14;
+						border: 1px solid @color_grey_11;
 						border-radius: 10px;
 						margin: auto;
 						transition: all 0.3s ease;
 					}
 					input[type="range"]:hover {
-						background-color: #fbfbfb;
+						background-color: @color_grey_14;
 					}
 					input[type="range"]::-webkit-slider-thumb {
 						-webkit-appearance: none !important;
 						width: 20px;
 						height: 20px;
-						background-color: #cccccc;
+						background-color: @color_grey_11;
 						border-radius: 30px;
 						transition: all 0.5s ease;
 					}
 					input[type="range"]::-webkit-slider-thumb:hover {
-						background-color: #ffb505;
+						background-color: @color_orange;
 					}
 					input[type="range"]::-webkit-slider-thumb:active {
-						background-color: #ffb505;
-						box-shadow: 0px 0px 1px #ffb505;
+						background-color: @color_orange;
+						box-shadow: 0px 0px 1px @color_orange;
 					}
 					.speed_range_value {
 						text-align: center;
@@ -198,7 +198,7 @@
 			}
 
 			.subtitles_block {
-				border-top: 1px solid @color_grey_light;
+				border-top: 1px solid @color_grey_14;
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -309,7 +309,7 @@
 /* TAGS INSPECTOR
 ------------------------------------------------------ */
 	#tags_inspector {
-		background-color: #99C9F5;
+		background-color: @color_blue_light;
 		height: 24px;
 		width: 100%;
 	}
@@ -324,14 +324,13 @@
 			padding-left: 15px;
 			font-weight: 300;
 			text-transform: uppercase;
-			color: #ABABAB;
+			color: @color_grey_9;
 			float: left;
 			margin-right: 10px;
 		}
 	}
 
 	ul.tool_subtitles_keys {
-		/*background-color: #DEBCA1;*/
 		width: 100%;
 		padding-left: 15px;
 		padding-right: 15px;
@@ -403,7 +402,7 @@
 		// TEXT AREA Override
 		.wrap_component.text_area_tool_subtitles.viewing_glyphs {
 			height: 50vh;
-			background-color: #CDF6CF;
+			background-color: @color_green_light;
 			position: relative;
 			float: none;
 			display: block;
@@ -413,7 +412,7 @@
 		// AUTOCOMPLETE HI Override
 		.wrap_component_tool_subtitles {
 			height: 50vh;
-			background-color: #FAF6B1;
+			background-color: @color_hilite;
 
 			.content_data {
 				width: 100%;

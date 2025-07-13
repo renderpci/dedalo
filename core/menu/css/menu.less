@@ -7,7 +7,7 @@
 @import (once) '../../page/css/layout/vars';
 @import (once) '../../page/css/layout/buttons';
 
-@menu_bg_color_active: @color_tag_indexation_normal; //#ffa43d;
+@menu_bg_color_active: @color_tag_indexation_normal;
 @menu_box_shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
 
 .menu {
@@ -27,8 +27,8 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
-		background-color: @color_grey_dark_1;
+		box-shadow: 0 2px 3px @color_grey_7;
+		background-color: @color_grey_1;
 		font-size: 1rem;
 		color: @color_white;
 		line-height: 1.2em;
@@ -131,7 +131,7 @@
 
 				// link common
 				a {
-					color: @color_grey_light;
+					color: @color_grey_14;
 					text-decoration: none;
 					display: block;
 					width: 100%;
@@ -176,7 +176,7 @@
 				ul:not(#dd1) {
 					-webkit-backdrop-filter: blur(10px);
 					backdrop-filter: blur(10px);
-					background: @color_grey_ultralight;
+					background: @color_grey_16;
 					margin: 0px;
 					margin-left: 1px;
 					margin-top: -1px;
@@ -185,14 +185,14 @@
 					position: absolute;
 					top: var(--menu_heigth);
 					box-shadow: @menu_box_shadow;
-					border: 1px solid @color_grey_medium_2;
+					border: 1px solid @color_grey_9;
 					border-radius: 4px;
 					border-top-left-radius: 0;
 					max-height: calc(100vh - var(--menu_heigth));
 					overflow: auto;
 
 					a {
-						color: @color_dark;
+						color: @color_grey_3;
 					}
 				}
 
@@ -202,7 +202,7 @@
 				}
 
 				ul li {
-					border: 1px solid @color_grey_darken;
+					border: 1px solid @color_grey_7;
 					border-style: none none inset;
 					float: none;
 					margin: 0px;
@@ -301,7 +301,7 @@
 			>.menu_mobile_wrapper {
 				width: 100%;
 				position: relative;
-				background-color: @color_grey_ultradark;
+				background-color: @color_grey_4;
 				font-size: 1.25rem;
 				padding: 1rem;
 
@@ -319,7 +319,7 @@
 					cursor: pointer;
 
 					&.with_children {
-						color: @color_grey_darken_2;
+						color: @color_grey_8;
 
 						&:after {
 							content: " ";
@@ -330,7 +330,7 @@
 							vertical-align: middle;
 							border-bottom: 5px solid transparent;
 							border-top: 5px solid transparent;
-							border-left: 5px solid @color_grey_darken_2;
+							border-left: 5px solid @color_grey_8;
 							position: absolute;
 							top: 0.66em;
 							right: 0.66em;
@@ -356,7 +356,7 @@
 
 		// Ontology link
 			>.ontology {
-				color: @color_grey_lighter;
+				color: @color_grey_11;
 				margin-left: 0.5rem;
 				margin-right: 0.5rem;
 				cursor: pointer;
@@ -370,12 +370,12 @@
 
 		// username of current logged user
 			>.logged_user_name {
-				color: @color_grey_darken_2;
+				color: @color_grey_8;
 				margin-left: 0.5rem;
 				cursor: pointer;
 
 				&:hover {
-					color: @color_grey_light;
+					color: @color_grey_14;
 				}
 
 				&.is_root {
@@ -392,7 +392,7 @@
 				max-width: 99.9%;
 				padding-left: 0.6em;
 				padding-right: 1em;
-				color: @color_grey_lighter;
+				color: @color_grey_11;
 				border: none;
 				cursor: pointer;
 				font-size: 1.05rem;
@@ -485,7 +485,7 @@
 
 		// debug info bar
 			>.debug_info_bar {
-				background-color: lighten(@color_grey_ultradark, 2%);
+				background-color: lighten(@color_grey_4, 2%);
 				width: 100%;
 				margin: 0px;
 				padding: 0px;
@@ -504,7 +504,7 @@
 
 				>div {
 					padding-left: 1em;
-					color: @color_grey_darken_2;
+					color: @color_grey_8;
 					font-size: 94%;
 				}
 
@@ -533,7 +533,7 @@
 					height: 2.2rem;
 					display: inline-block;
 					margin-left: 0.9rem;
-					background-color: @color_grey_darken_2;
+					background-color: @color_grey_8;
 
 					@media screen and (max-width: @width_break_point_0) { // 1024px
 						height: 1.5rem;

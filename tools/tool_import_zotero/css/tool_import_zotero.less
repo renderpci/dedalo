@@ -6,14 +6,14 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-@tool_main_color: #cc2936; // blue
+@tool_color: #cc2936; // blue
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 .wrapper_tool.tool_import_zotero {
 
 	.spinner {
-		border-top-color: @tool_main_color;
+		border-top-color: @tool_color;
 	}
 
 	>.content_data {
@@ -48,7 +48,7 @@
 					margin-right: .5rem;
 					width: @switch_width;
 					height: @switch_height;
-					background-color: @color_grey_medium;
+					background-color: @color_grey_13;
 					border-radius: 23px;
 					vertical-align: text-bottom;
 					transition: all 0.3s linear;
@@ -59,7 +59,7 @@
 						position: absolute;
 						width: 37px;
 						height: 16px;
-						background-color: #eee;
+						background-color: @color_grey_13;
 						border-radius: 11px;
 						transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
 						transition: all 0.25s linear;
@@ -71,9 +71,9 @@
 						position: absolute;
 						height: 16px;
 						width: 16px;
-						background-color: #ffffff;
+						background-color: @color_white;
 						border-radius: 11px;
-						box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.24);
+						box-shadow: 0px 2px 2px @color_grey_16;
 						transform: translate3d(2px, 2px, 0);
 						transition: all 0.2s ease-in-out;
 					}
@@ -135,19 +135,12 @@
 
 		// template_container. Where de rows are placed
 		>.template_container {
-			outline: 1px solid @color_grey_medium;
+			outline: 1px solid @color_grey_13;
 			padding: 0.25rem;
 			padding-left: 0.25rem;
 			padding-bottom: 0.25rem;
 			margin-top: 1em;
 			border-radius: 1em;
-
-			&.name_id {
-				background-color: #e3bf75a1;
-			}
-			&.same_name_section {
-				background-color: #aa6a9ea1;
-			}
 
 			// container for buttons and progress bar
 			>.row {
@@ -183,7 +176,7 @@
 
 			.inputs_container_caption {
 				display: inline-block;
-				background-color: @color_grey_medium;
+				background-color: @color_grey_13;
 				width: auto;
 				padding: 0.5rem;
 				padding-left: 2rem;
@@ -203,8 +196,8 @@
 				margin: 2rem;
 				padding-left: 1.5em;
 				padding-right: 1.5em;
-				background-color: @tool_main_color;
-				border-color: darken(@tool_main_color, 3%);
+				background-color: @tool_color;
+				border-color: darken(@tool_color, 3%);
 			}
 		}
 	}//end content_data
@@ -221,5 +214,5 @@
 
 // modal header tool modification
 .tool_header.tool_import_zotero {
-	background-color: @tool_main_color;
+	background-color: @tool_color;
 }
