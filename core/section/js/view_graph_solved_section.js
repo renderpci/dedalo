@@ -88,29 +88,34 @@ view_graph_solved_section.render = async function(self, options) {
 			const label_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'label_container',
+				text_content	: 'Loading..',
 				parent			: right_node
 			})
 
-			const url_vars = url_vars_to_object()
-			if(url_vars.fst && url_vars.fsi){
+			dd_request_idle_callback(
+				async () => {
+					const url_vars = url_vars_to_object()
+					if(url_vars.fst && url_vars.fsi){
 
-				const section_tipo	= url_vars.fst
-				const section_id	= url_vars.fsi
-				const tipo			= self.from_map.name
+						const section_tipo	= url_vars.fst
+						const section_id	= url_vars.fsi
+						const tipo			= self.from_map.name
 
-				// component_name
-				get_instance({
-					tipo			: tipo,
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					mode			: 'solved',
-					inspector		: false
-				})
-				.then(async function(component_name){
-					await component_name.build(true)
-					label_container.textContent = component_name.data.literal || self.label
-				})
-			}
+						// component_name
+						const component_name = await get_instance({
+							tipo			: tipo,
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							mode			: 'solved',
+							inspector		: false
+						})
+
+						await component_name.build(true)
+
+						label_container.textContent = component_name.data.literal || self.label || component_name.tipo
+					}
+				}
+			)
 
 		// buttons
 			const buttons_node = get_buttons(self);
