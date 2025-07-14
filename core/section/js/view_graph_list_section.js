@@ -424,7 +424,7 @@ const get_buttons = function(self) {
 /**
 * RENDER_COLUMN_GRAPH
 * @param object DocumentFragment
-* @return HTMLElement fragment
+* @return DocumentFragment fragment
 */
 const render_column_graph = function(options) {
 
@@ -443,17 +443,41 @@ const render_column_graph = function(options) {
 		parent			: fragment
 	})
 	// mouseup event
-	graph_button.addEventListener('mouseup', async function(e) {
+	let is_processing = false
+	const mouseup_handler = async (e) => {
 
-		const target_section_value	= self.context.properties.view_config.target_section_value || 'nexus53'
-		const target_section_data	= self.datum.data.find(el =>
-			el.section_id	=== section_id &&
-			el.section_tipo	=== section_tipo &&
-			el.tipo			=== target_section_value
-		)
-		const target_section_tipo = target_section_data.value[0]
+		// Prevent multiple simultaneous executions
+		if (is_processing) {
+			return;
+		}
+		is_processing = true
 
-		// target section
+		try {
+
+			const target_section_value	= self.context?.properties?.view_config?.target_section_value || 'nexus53'
+
+			// Validate self.datum.data exists
+			if (!self.datum?.data || !Array.isArray(self.datum.data)) {
+				console.error('render_column_graph: self.datum.data is not available or not an array');
+				return;
+			}
+
+			// Find target section data
+			const target_section_data	= self.datum.data.find(el =>
+				el.section_id	=== section_id &&
+				el.section_tipo	=== section_tipo &&
+				el.tipo			=== target_section_value
+			)
+
+			// Extract target section type
+			const target_section_tipo = target_section_data?.value?.[0];
+
+			if (!target_section_tipo) {
+				console.warn('render_column_graph: Empty target_section_data value:', target_section_data);
+				return;
+			}
+
+			// target section
 			const section = await get_instance({
 				model 			: 'section',
 				tipo			: target_section_tipo,
@@ -461,17 +485,32 @@ const render_column_graph = function(options) {
 				mode 			: 'solved',
 				inspector 		: false
 			})
+
+			if (!section) {
+                throw new Error('render_column_graph: Failed to create section instance');
+            }
+
 			await section.build(true)
+
+			// Configure section
 			section.view = 'graph'
 			section.caller = self.caller // injected caller (page), needed because to render new menu label
-			const section_node = await section.render()
-			// add to DOM
-			self.node.after(section_node)
 
-		// remove current section instance and nodes
+			// Render section
+			const section_node = await section.render()
+
+			// Add to DOM
+            if (self.node && self.node.after) {
+                self.node.after(section_node);
+            } else {
+                console.error('render_column_graph: self.node.after is not available');
+                return;
+            }
+
+			// remove current section instance and nodes
 			self.destroy(true, true, true)
 
-		// navigation (update browser URL and history)
+			// navigation (update browser URL and history)
 			const source	= create_source(section, null)
 			const sqo		= section.request_config_object.sqo
 			const title		= section.id
@@ -492,7 +531,13 @@ const render_column_graph = function(options) {
 				title	: title,
 				url		: url
 			})
-	})//end mouseup
+		} catch (error) {
+			console.error('render_column_graph: Error in mouseup handler:', error);
+		} finally {
+			is_processing = false;
+		}
+	}
+	graph_button.addEventListener('mouseup', mouseup_handler)
 
 
 	return fragment
