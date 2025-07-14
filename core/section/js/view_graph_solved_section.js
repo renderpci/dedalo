@@ -173,22 +173,27 @@ const get_content_data = async function(self) {
 			  content_data.classList.add('content_data', self.mode)
 
 	// d3 data and graph
-		when_in_dom(content_data, async ()=>{
+		when_in_dom(content_data, ()=>{
 
-			// get d3 data
-				const d3_data = get_d3_data({
-					graph_map	: self.graph_map,
-					datum		: self.datum
-				})
+			dd_request_idle_callback(
+				async () => {
 
-			// get d3 node
-				const d3_node = await get_graph({
-					self 			: self,
-					content_data	: content_data,
-					data			: d3_data
-				})
-				// append node
-				content_data.appendChild(d3_node)
+					// get d3 data
+					const d3_data = get_d3_data({
+						graph_map	: self.graph_map,
+						datum		: self.datum
+					})
+
+					// get d3 node
+					const d3_node = await get_graph({
+						self			: self,
+						content_data	: content_data,
+						data			: d3_data
+					})
+					// append node
+					content_data.appendChild(d3_node)
+				}
+			)
 		})
 
 
