@@ -54,17 +54,22 @@ $updates->$v = new stdClass();
 		$alert->command .= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
 			<p>
-			<strong>This update will move your data from old thesaurus qdp280 or tch280 to new actv1.</strong>
+			<strong>This update will move your Exhibitions data from old thesaurus qdp280 or tch280 to new actv1.</strong>
 			</p>
 			<p>
-			If you are using the activities hierarchy using tch280 or qdp280, they are totally deprecated and obsolete.
+			If you are using the activities hierarchy as exhibitions, news or didactic, using tch280 or qdp280, they are totally deprecated and obsolete.
 			This update will change your data to set it as general actv1 thesaurus.
 			</p>
+
 			<p>
-			Review your hierarchy definition to create the new hierarchies pointing to actv1.
+			actv1 section is used as main section for different activities, as conferences, exhibitions, meetings, etc. Therefore, you need to create a hierarchies according your own uses.
+			</p>
+
+			<p>
+			Please review your hierarchy definition to create the new hierarchies that point to actv1 instead of tch280 or qdp280 using any local TLD.
 			</p>
 			<p>
-			By default this update will move the tch280 or qdp280 to exhibition1, but you can change the following files to use other TLD:
+			By default this update will move the tch280 or qdp280 to exhibition1(as local TLD), but you can change the following files to use any other TLD:
 			</p>
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
 			..dedalo/core/base/transform_defintion_files/move_tld/tch280_to_actv1.json
