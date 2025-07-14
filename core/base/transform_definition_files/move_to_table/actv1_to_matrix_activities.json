@@ -1,0 +1,23 @@
+[
+	{
+		"section_tipo": "actv1",
+		"source_table": "matrix_hierarchy",
+		"target_table": "matrix_activities"
+	},
+	{
+		"section_tipo": "exhibition1",
+		"source_table": "matrix_hierarchy",
+		"target_table": "matrix_activities"
+	},
+	{
+		"section_tipo": "learn1",
+		"source_table": "matrix_hierarchy",
+		"target_table": "matrix_activities"
+	},
+	{
+		"section_tipo": "news1",
+		"source_table": "matrix_hierarchy",
+		"target_table": "matrix_activities"
+	}
+
+]
