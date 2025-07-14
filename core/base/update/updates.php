@@ -61,7 +61,10 @@ $updates->$v = new stdClass();
 			This update will change your data to set it as general actv1 thesaurus.
 			</p>
 			<p>
-			Review your hierarchy definition to create the new hierarchies pointing to actv1. By default this update will move the tch280 or qdp280 to exhibition1, but you can change the files to use other TLD:
+			Review your hierarchy definition to create the new hierarchies pointing to actv1.
+			</p>
+			<p>
+			By default this update will move the tch280 or qdp280 to exhibition1, but you can change the following files to use other TLD:
 			</p>
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
 			..dedalo/core/base/transform_defintion_files/move_tld/tch280_to_actv1.json
@@ -106,7 +109,7 @@ $updates->$v = new stdClass();
 		];
 
 		$json_files =[
-			'chronological_hierarchy_peri1_to_dc1.json'
+			'tch280_to_actv1.json'
 		];
 		// 1 move the tch280 to actv1
 		$script_obj = new stdClass();
