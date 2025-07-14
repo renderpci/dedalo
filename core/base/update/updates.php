@@ -61,13 +61,18 @@ $updates->$v = new stdClass();
 			This update will change your data to set it as general actv1 thesaurus.
 			</p>
 			<p>
-			Review your hierarchy definition to create the new hierarchies pointing to actv1.
+			Review your hierarchy definition to create the new hierarchies pointing to actv1. By default this update will move the tch280 or qdp280 to exhibition1, but you can change the files to use other TLD:
+			</p>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+			..dedalo/core/base/transform_defintion_files/move_tld/tch280_to_actv1.json
+			..dedalo/core/base/transform_defintion_files/move_to_table/actv1_to_matrix_activities.json
+			</pre>
 			</p>
 			<p>
 			The update is mapped to move data from:
 			</p>
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
-				qdp280 OR tch280 -----> exhibition1 OR actv1
+				qdp280 OR tch280 -----> exhibition1
 				qdp400 OR tch400 -----> news1
 				qdp458 OR tch458 -----> learn1
 			</pre>
