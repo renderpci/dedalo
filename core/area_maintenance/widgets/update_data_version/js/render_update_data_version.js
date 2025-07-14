@@ -290,10 +290,11 @@ const get_content_data = async function(self) {
 			// update_data_version process fire
 			const response = await data_manager.request({
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
-						action	: 'update_data_version',
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
+					source			: {
+						action : 'update_data_version',
 					},
 					options : {
 						background_running	: true, // set run in background CLI

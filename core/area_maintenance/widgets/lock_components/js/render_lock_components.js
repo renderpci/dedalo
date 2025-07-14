@@ -118,12 +118,15 @@ const get_content_data_edit = async function(self) {
 				const api_response = await data_manager.request({
 					use_worker	: true,
 					body		: {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'lock_components_actions',
-						options	: {
+						dd_api			: 'dd_area_maintenance_api',
+						action			: 'lock_components_actions',
+						prevent_lock	: true,
+						options			: {
 							fn_action : 'get_active_users'
 						}
-					}
+					},
+					retries : 1, // one try only
+					timeout : 3600 * 1000 // 1 hour waiting response
 				})
 
 				if (api_response.result) {
@@ -195,13 +198,16 @@ const get_content_data_edit = async function(self) {
 				const api_response = await data_manager.request({
 					use_worker	: true,
 					body		: {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'lock_components_actions',
-						options	: {
+						dd_api			: 'dd_area_maintenance_api',
+						action			: 'lock_components_actions',
+						prevent_lock	: true,
+						options			: {
 							fn_action	: 'force_unlock_all_components',
 							user_id		: user_id || null
 						}
-					}
+					},
+					retries : 1, // one try only
+					timeout : 3600 * 1000 // 1 hour waiting response
 				})
 
 				info_node.innerHTML = JSON.stringify({

@@ -96,8 +96,9 @@ register_tools.prototype.get_widget_value = async () => {
 	const api_response = await data_manager.request({
 		use_worker	: true,
 		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'get_widget_value',
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'get_widget_value',
+			prevent_lock	: true,
 			source	: {
 				type	: 'widget',
 				model	: 'register_tools'

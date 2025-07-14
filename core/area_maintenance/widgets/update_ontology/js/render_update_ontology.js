@@ -183,10 +183,11 @@ const get_content_data_edit = async function(self) {
 						const server_ontology_api_response = await data_manager.request({
 							url		: server.url,
 							body	: {
-								dd_api	: 'dd_utils_api',
-								action	: 'get_ontology_update_info',
-								source	: {
-									action	: 'update_ontology',
+								dd_api			: 'dd_utils_api',
+								action			: 'get_ontology_update_info',
+								prevent_lock	: true,
+								source			: {
+									action : 'update_ontology',
 								},
 								options : {
 									version	: page_globals.dedalo_version,
@@ -566,9 +567,10 @@ const render_rebuild_lang_files = function () {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
+					source			: {
 						action : 'rebuild_lang_files'
 					},
 					options	: {}
@@ -741,9 +743,10 @@ const render_export_to_translate = function (self, prefix_tipos) {
 						const api_response = await data_manager.request({
 							use_worker	: true,
 							body		: {
-								dd_api	: 'dd_area_maintenance_api',
-								action	: 'widget_request',
-								source	: {
+								dd_api			: 'dd_area_maintenance_api',
+								action			: 'widget_request',
+								prevent_lock	: true,
+								source			: {
 									type	: 'widget',
 									model	: 'update_ontology',
 									action	: 'export_to_translate'

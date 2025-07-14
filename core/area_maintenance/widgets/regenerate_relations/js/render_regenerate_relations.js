@@ -128,10 +128,11 @@ const get_content_data_edit = async function(self) {
 
 			// regenerate_relations process fire
 			const response = await data_manager.request({
-				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
+				body : {
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
+					source			: {
 						action	: 'regenerate_relations',
 					},
 					options : {

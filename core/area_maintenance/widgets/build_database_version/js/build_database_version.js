@@ -70,7 +70,9 @@ build_database_version.prototype.get_widget_value = async () => {
 				type	: 'widget',
 				model	: 'build_database_version'
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 	if(SHOW_DEBUG===true) {
 		console.log('))) get_widget_value update_ontology api_response:', api_response);;
@@ -92,13 +94,14 @@ build_database_version.prototype.get_widget_value = async () => {
 build_database_version.prototype.build_install_version = async function () {
 
 	const api_response  = await data_manager.request({
-		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
-				action	: 'build_install_version',
+		body : {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source			: {
+				action : 'build_install_version',
 			},
-			options : {
+			options			: {
 				background_running	: true // set run in background CLI
 			}
 		},
@@ -120,10 +123,11 @@ build_database_version.prototype.build_install_version = async function () {
 build_database_version.prototype.build_recovery_version_file = async function () {
 
 	const api_response  = await data_manager.request({
-		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
+		body : {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source			: {
 				action	: 'build_recovery_version_file',
 			},
 			options : {
@@ -149,11 +153,12 @@ build_database_version.prototype.build_recovery_version_file = async function ()
 build_database_version.prototype.restore_jer_dd_recovery_from_file = async function () {
 
 	const api_response  = await data_manager.request({
-		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
-				action	: 'restore_jer_dd_recovery_from_file',
+		body : {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source			: {
+				action : 'restore_jer_dd_recovery_from_file',
 			},
 			options : {
 				background_running	: false // set run in background CLI
