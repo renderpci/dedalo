@@ -329,9 +329,10 @@ const render_optimize_tables = (self) => {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'widget_request',
-					source	: {
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'widget_request',
+					prevent_lock	: true,
+					source			: {
 						type	: 'widget',
 						model	: 'database_info',
 						action	: 'optimize_tables'

@@ -125,14 +125,17 @@ update_code.prototype.get_code_update_info = async ( server ) => {
 	const api_response = await data_manager.request({
 		url		: url,
 		body	: {
-			dd_api	: 'dd_utils_api',
-			action	: 'get_code_update_info',
-			source	: {},
-			options : {
+			dd_api			: 'dd_utils_api',
+			action			: 'get_code_update_info',
+			prevent_lock	: true,
+			source			: {},
+			options			: {
 				version	: dedalo_version,
 				code	: code
 			}
-		}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 	if(SHOW_DEBUG===true) {
 		console.log('))) get_code_update_info update_code api_response:', api_response);
@@ -178,9 +181,10 @@ update_code.prototype.update_code = async ( options ) => {
 	const api_response = await data_manager.request({
 		use_worker	: true,
 		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'widget_request',
-			source	: {
+			dd_api		: 'dd_area_maintenance_api',
+			action		: 'widget_request',
+			prevent_lock	: true,
+			source		: {
 				type	: 'widget',
 				model	: 'update_code',
 				action	: 'update_code'

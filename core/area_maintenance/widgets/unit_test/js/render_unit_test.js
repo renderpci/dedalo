@@ -167,10 +167,11 @@ const render_long_process = function() {
 			// counter long process fire
 			const response  = await data_manager.request({
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
 					source	: {
-						action	: 'long_process_stream',
+						action : 'long_process_stream',
 					},
 					options : {
 						background_running	: true, // set run in background CLI

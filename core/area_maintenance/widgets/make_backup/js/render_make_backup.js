@@ -181,9 +181,10 @@ const get_content_data = async function(self) {
 			data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
+					source			: {
 						action : 'get_dedalo_backup_files'
 					},
 					options	: {
@@ -238,9 +239,10 @@ const get_content_data = async function(self) {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
+					source			: {
 						action : 'make_backup'
 					},
 					options	: {}
@@ -341,9 +343,10 @@ const refresh_files_list = async (type, container) => {
 	const api_response = await data_manager.request({
 		use_worker	: true,
 		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source			: {
 				action : 'get_dedalo_backup_files'
 			},
 			options	: {
