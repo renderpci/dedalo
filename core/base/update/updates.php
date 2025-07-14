@@ -47,6 +47,36 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium	= 6;
 	$updates->$v->update_from_minor		= 4;
 
+	$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= '';
+		$alert->command .= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<p>
+			<strong>This update will move your data from old thesaurus qdp280 or tch280 to actv1.</strong>
+			</p>
+			<p>
+			If you are using the activities hierarchy using tch280 or qdp280, they are totally deprecated and obsolete.
+			This update will change your data to set it as general actv1 thesaurus.
+			</p>
+			<p>
+			Review your hierarchy definition to create the new hierarchies pointing to actv1.
+			</p>
+			<p>
+			The update is mapped to move data from:
+			</p>
+			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				qdp280 OR tch280 -----> exhibition1 OR actv1
+				qdp400 OR tch400 -----> news1
+				qdp458 OR tch458 -----> learn1
+			</pre>
+			Please review your hierarchy definitions according to this change, you can find more information <a href=\"https://agora.dedalo.dev/d/233\"> here</a>.
+			</p>
+		";
+		$updates->$v->alert_update[] = $alert;
+
+
 	// Remove the old People section counter, it is unused, all people was moved into rsc197
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DELETE FROM "matrix_counter" WHERE "tipo" = \'rsc194\' ;
@@ -56,6 +86,50 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			CREATE INDEX IF NOT EXISTS jer_dd_model ON public.jer_dd USING btree (model);
 		');
+
+	// Change the thc280 to actv1
+		$ar_tables = [
+			// 'new_matrix'
+			'matrix',
+			'matrix_activities',
+			'matrix_activity',
+			'matrix_counter',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_indexations',
+			'matrix_layout',
+			'matrix_layout_dd',
+			'matrix_list',
+			'matrix_time_machine'
+		];
+
+		$json_files =[
+			'chronological_hierarchy_peri1_to_dc1.json'
+		];
+		// 1 move the tch280 to actv1
+		$script_obj = new stdClass();
+			$script_obj->info			= "Change tld's from tch280 thesaurus to actv1";
+			$script_obj->script_class	= "transform_data";
+			$script_obj->script_method	= "changes_in_tipos";
+			$script_obj->script_vars	= [
+				$ar_tables,
+				$json_files
+			]; // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
+
+		// 2 move data between matrix
+			$json_files =[
+				'actv1_to_matrix_activities.json'
+			];
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Move actv1 data between matrix tables";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "move_data_between_matrix_tables";
+				$script_obj->script_vars	= [
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
 
 
 $v=664; #####################################################################################
