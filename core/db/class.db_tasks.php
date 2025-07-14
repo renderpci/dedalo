@@ -142,58 +142,123 @@ class db_tasks {
 	* OPTIMIZE_TABLES
 	* Exec VACUUM ANALYZE command on every received table
 	* @param array $tables
-	* @return string|false|null $res
+	* @return object
 	*/
-	public static function optimize_tables( array $tables ) : string|false|null {
+	public static function optimize_tables( array $tables ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+			$response->reindex	= [];
+			$response->vacuum	= [];
+
+		// Validate and sanitize table names
+		$valid_tables = [];
+		foreach ($tables as $table) {
+
+			if (empty($table) || !is_string($table)) {
+				$response->errors[] = "Invalid table name: " . var_export($table, true);
+				debug_log(__METHOD__
+					. " Ignored Invalid table name " . PHP_EOL
+					. ' table: ' . to_string($table)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Sanitize table name - only allow alphanumeric, underscores, and dots
+			if (!preg_match('/^[a-zA-Z0-9_\.]+$/', $table)) {
+				$response->errors[] = "Invalid table name format: " . $table;
+				debug_log(__METHOD__
+					. " Ignored Invalid table name format " . PHP_EOL
+					. ' table: ' . to_string($table)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			if (!DBi::check_table_exists($table)) {
+				$response->errors[] = "Table does not exist: " . $table;
+				debug_log(__METHOD__
+					. " Ignored non existing table " . PHP_EOL
+					. ' table: ' . to_string($table)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$valid_tables[] = $table;
+		}
+
+		if (empty($valid_tables)) {
+			$response->errors[] = "No valid tables to optimize";
+			return $response;
+		}
 
 		// command_base
-			$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
+		$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 
-		// re-index
-			$index_commands = [];
-			foreach ($tables as $current_table) {
+		// REINDEX each table individually
+		foreach ($valid_tables as $table) {
 
-				if (!DBi::check_table_exists($current_table)) {
-					debug_log(__METHOD__
-						. " Ignored non existing table " . PHP_EOL
-						. ' table: ' . to_string($current_table)
-						, logger::ERROR
-					);
-					continue;
-				}
+			$escaped_table = pg_escape_identifier(DBi::_getConnection(), $table);
+			$command = $command_base . ' -c ' . escapeshellarg("REINDEX TABLE $escaped_table;");
 
-				$index_commands[] = 'REINDEX TABLE "'.$current_table.'"';
+			$res = shell_exec($command . ' 2>&1');
+			$response->reindex[$table] = $res;
+
+			// Check if command failed (basic error detection)
+			if ($res === null || strpos(strtolower($res), 'error') !== false) {
+				$response->errors[] = "REINDEX failed for table: $table";
+				debug_log(__METHOD__
+					. ' REINDEX result for table "' . $table . '": ' . to_string($res) . PHP_EOL
+					. ' command: ' . to_string($command)
+					, logger::ERROR
+				);
 			}
 
-			if (empty($index_commands)) {
-				return false;
+			// debug
+			debug_log(__METHOD__
+				. ' REINDEX result for ' . $table . ': ' . to_string($res) . PHP_EOL
+				. ' command: ' . to_string($command)
+				, logger::WARNING
+			);
+		}
+
+		// VACUUM each table individually
+		foreach ($valid_tables as $table) {
+
+			$escaped_table = pg_escape_identifier(DBi::_getConnection(), $table);
+			$command = $command_base . ' -c ' . escapeshellarg("VACUUM ANALYZE $escaped_table;");
+
+			$res = shell_exec($command . ' 2>&1');
+			$response->vacuum[$table] = $res;
+
+			// Check if command failed (basic error detection)
+			if ($res === null || strpos(strtolower($res), 'error') !== false) {
+				$response->errors[] = "VACUUM failed for table: $table";
+				debug_log(__METHOD__
+					. " VACUUM failed for table: '$table'"
+					, logger::ERROR
+				);
 			}
 
-			$command = $command_base . ' -c \''.implode('; ', $index_commands).';\'';
-			// exec command
-				$res = shell_exec($command);
 			// debug
-				debug_log(__METHOD__
-					. ' result: ' . to_string($res) . PHP_EOL
-					. ' command: ' . to_string($command)
-					, logger::WARNING
-				);
+			debug_log(__METHOD__
+				. ' VACUUM result for "' . $table . '": ' . to_string($res) . PHP_EOL
+				. ' command: ' . to_string($command)
+				, logger::WARNING
+			);
+		}
 
-		// VACUUM
-			// safe tables only
-			$tables = array_filter($tables, 'DBi::check_table_exists');
-			$command = $command_base . ' -c \'VACUUM ' . implode(', ', $tables) .';\'';
-			// exec command
-				$res = shell_exec($command);
-			// debug
-				debug_log(__METHOD__
-					. ' result ' . to_string($res) . PHP_EOL
-					. ' command: ' . to_string($command)
-					, logger::WARNING
-				);
+		$response->result	= true;
+		$response->msg		= empty($reponse->errors)
+			? 'Successfully optimized ' . count($valid_tables) . ' table(s)'
+			: 'Optimization completed with errors for some tables';
 
 
-		return $res;
+		return $response;
 	}//end optimize_tables
 
 
@@ -319,6 +384,12 @@ class db_tasks {
 
 		// import file with all definitions of indexes
 		require_once dirname(__FILE__) . '/db_indexes.php';
+
+		// Validation for db_indexes vars.
+		if (!isset($ar_sql_query) || !is_array($ar_sql_query) || empty($ar_sql_query)) {
+			$response->errors[] = "No SQL queries found in db_indexes.php";
+			return $response;
+		}
 
 		// exec
 		foreach ($ar_sql_query as $sql_query) {
