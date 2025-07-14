@@ -1474,6 +1474,16 @@ class component_relation_common extends component_common {
 			$q	= preg_replace($re, '$2', $q);
 		}
 
+		// safe q
+		if (strpos($q, '{')===false) {
+			debug_log(__METHOD__
+				. ' Ignored invalid unsafe q ' . PHP_EOL
+				. ' q: ' . to_string($q) . PHP_EOL
+				. ' query_object: ' . to_string($query_object)
+				, logger::ERROR
+			);
+			$q = '[]';
+		}
 		$q_operator		= $query_object->q_operator ?? null;
 		$component_tipo	= end($query_object->path)->component_tipo;
 
