@@ -77,29 +77,35 @@ const get_content_data = function(self) {
 	const fragment = new DocumentFragment()
 
 	// widgets
-		const widgets = self.widgets || []
-		const widgets_length = widgets.length
+		const widgets = self.widgets || [];
+		const widgets_length = widgets.length;
 		for (let i = 0; i < widgets_length; i++) {
 
 			const widget = widgets[i]
 
-			const widget_dom = build_widget(widget, self);
-			fragment.appendChild(widget_dom)
+			// container
+			const container = ui.create_dom_element({
+				id				: widget.id,
+				element_type	: 'div',
+				dataset			: {},
+				class_name		: 'widget_container ' + (widget.class || ''),
+				parent			: fragment
+			})
+
+			ui.load_item_with_spinner({
+				container			: container,
+				replace_container	: false,
+				label				: widget.label ,
+				callback			: async () => {
+					return await render_widget(widget, self)
+				}
+			})
 		}
 
 	// content_data
 		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.type, 'invisible')
+			  content_data.classList.add('content_data', self.type || '')
 			  content_data.appendChild(fragment)
-
-		 // remove invisible class to prevent flickering
-			when_in_viewport(content_data, ()=>{
-				dd_request_idle_callback(
-					() => {
-						content_data.classList.remove('invisible')
-					}
-				)
-			})
 
 
 	return content_data
@@ -108,60 +114,66 @@ const get_content_data = function(self) {
 
 
 /**
-* BUILD_WIDGET
+* RENDER_WIDGET
 * Renders widget DOM nodes
 * @param object item
+* 	Widget object definitions
 * @param object self
 * 	Instance of current area
-* @return HTMLElement container
+* @return DocumentFragment fragment
 */
-const build_widget = (item, self) => {
+const render_widget = async (item, self) => {
 
-	// container
-		const container = ui.create_dom_element({
-			id				: item.id,
-			element_type	: 'div',
-			dataset			: {},
-			class_name		: 'widget_container ' + (item.class || '')
-		})
+	const fragment = new DocumentFragment()
+
+	// Validate item.id early to prevent issues with path construction and module loading.
+	if (!item || !item.id) {
+		console.error('RENDER_WIDGET Error: Widget item or item.id is missing.', item);
+		return fragment; // Return an empty fragment or handle as appropriate
+	}
 
 	// label
 		const label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'widget_label icon_arrow',
 			inner_html		: item.label || '',
-			parent			: container,
+			parent			: fragment,
 		})
 
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'widget_body hide',
-			parent			: container
+			parent			: fragment
 		})
 
 	// collapse_toggle_track
-		when_in_viewport(label, ()=>{
-			ui.collapse_toggle_track({
-				toggler				: label,
-				container			: body,
-				collapsed_id		: 'collapsed_' + item.id,
-				collapse_callback	: collapse,
-				expose_callback		: expose,
-				default_state		: 'closed'
-			})
-		})
-		function collapse() {
+		const collapse = () => {
 			label.classList.remove('up')
 		}
-		function expose() {
+		const expose = () => {
 			label.classList.add('up')
 		}
+		ui.collapse_toggle_track({
+			toggler				: label,
+			container			: body,
+			collapsed_id		: 'collapsed_' + item.id,
+			collapse_callback	: collapse,
+			expose_callback		: expose,
+			default_state		: 'closed'
+		})
 
 	// widget module check. Use if exists
-		const path = `../widgets/${item.id}/js/${item.id}.js`
-		import(path)
-		.then(async function(module){
+		try {
+
+			const path = `../widgets/${item.id}/js/${item.id}.js`
+
+			const module = await import(path)
+
+			// Ensure the module exports a constructor with the item.id name
+			if (typeof module[item.id] !== 'function') {
+				throw new Error(`Widget module for ID '${item.id}' found, but does not export a constructor named '${item.id}'.`);
+			}
 
 			// instance widget
 			const widget = new module[item.id]()
@@ -180,32 +192,34 @@ const build_widget = (item, self) => {
 			})
 
 			// render and append widget node
-			ui.load_item_with_spinner({
-				container			: body,
-				preserve_content	: false,
-				label				: item.id,
-				callback			: async () => {
 
-					// build
-					await widget.build(false)
+			// build
+			await widget.build(false)
 
-					// render
-					const node = await widget.render()
+			// render
+			const node = await widget.render()
 
-					// add CSS class for selection
-					node.classList.add('body_info')
+			 // Ensure the rendered node is an element before adding class
+			if (node instanceof Element) {
+				// add CSS class for selection
+				node.classList.add('body_info');
 
-					return node
-				}
-			});
-		})
-		.catch((err) => {
-			console.error(err)
-		});
+				body.appendChild(node)
+			} else {
+				console.warn(`Widget '${item.id}' render() did not return an HTML element. Cannot add 'body_info' class.`);
+			}
+
+		} catch (error) {
+			if (error.message.includes('Failed to fetch dynamically imported module') || error.message.includes('Cannot find module')) {
+				console.error(`RENDER_WIDGET Error: Widget module for '${item.id}' could not be loaded or found. Path: ../widgets/${item.id}/js/${item.id}.js`, error);
+			} else {
+				console.error(`RENDER_WIDGET Error during widget '${item.id}' processing:`, error);
+			}
+		}
 
 
-	return container
-}//end build_widget
+	return fragment
+}//end render_widget
 
 
 
@@ -348,10 +362,11 @@ export const build_form = function(widget_object) {
 						const api_response = await data_manager.request({
 							use_worker	: true,
 							body		: {
-								dd_api	: trigger.dd_api,
-								action	: trigger.action,
-								source	: trigger.source || null,
-								options	: options
+								dd_api			: trigger.dd_api,
+								action			: trigger.action,
+								prevent_lock	: true,
+								source			: trigger.source || null,
+								options			: options
 							},
 							retries : 1, // one try only
 							timeout : 3600 * 1000 // 1 hour waiting response

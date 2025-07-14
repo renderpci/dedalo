@@ -235,9 +235,12 @@ const render_health_list = function (self) {
 	const get_environment = async () => {
 		return data_manager.request({
 			body : {
-				'dd_api'	: 'dd_core_api',
-				'action'	: 'get_environment'
-			}
+				dd_api			: 'dd_core_api',
+				action			: 'get_environment',
+				prevent_lock	: true,
+			},
+			retries : 1, // one try only
+			timeout : 3600 * 1000 // 1 hour waiting response
 		})
 	}
 
