@@ -18,6 +18,7 @@
 				font-size: 2rem;
 				margin-bottom: 1rem;
 			}
+
 			.grouper_block {
 				display: grid;
 
@@ -27,7 +28,7 @@
 
 					.section_record.list {
 						display: inline-grid;
-						grid-template-columns: 2fr 1fr 1fr 3fr 3fr ;
+						grid-template-columns: 2fr 1fr 1fr 3fr 3fr;
 					}
 
 					.column.column_section_id {
@@ -48,7 +49,7 @@
 					}
 				}
 
-				.button.graph{
+				.button.graph {
 					background-color:#7092e0;
 					height: 100%;
 				}
@@ -68,11 +69,16 @@
 
 				.section_select {
 					width: 100%;
-					font-size: 1.1rem;
+					font-size: 1rem;
+					opacity: 0.7;
 				}
 			}
 
 			.section_container {
+
+				.wrapper_section {
+					padding-top: 0.85rem;
+				}
 
 				.paginator_container {
 					height: unset;
@@ -89,7 +95,7 @@
 								height: 100%;
 								position: absolute;
 
-								 .drag_node {
+								.drag_node {
 									position: absolute;
 									width: max-content;
 									top: -10000px;
@@ -106,6 +112,7 @@
 
 			.label_container {
 				font-size: 1.9rem;
+				height: 1.9rem;
 			}
 
 			.buttons_container {
@@ -138,7 +145,6 @@
 				}
 			}
 		}
-
 	}//end edit
 
 }//end .view_graph_section

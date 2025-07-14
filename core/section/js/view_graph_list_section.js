@@ -100,7 +100,6 @@ view_graph_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param array ar_section_record
 * @para object self
 * @return HTMLElement content_data
 */
@@ -111,7 +110,7 @@ const get_content_data = async function(self) {
 			  content_data.classList.add('content_data', self.mode, self.type)
 
 	// get values by typologies
-		const order_key = self.context.properties.view_config.group_by || 'nexus46'
+		const order_key = self.context?.properties?.view_config?.group_by || 'nexus46'
 		const data_to_be_grouped = self.datum.data.filter(el => el.tipo === order_key)
 
 		const group_by = function(array, key) {
@@ -123,6 +122,7 @@ const get_content_data = async function(self) {
 		const order_value = group_by(data_to_be_grouped, 'value')
 
 		for (const group_label in order_value) {
+
 			const current_group = order_value[group_label]
 
 			const grouped_value = []
@@ -137,12 +137,17 @@ const get_content_data = async function(self) {
 			}
 
 			// ar_section_record. section_record instances (initialized and built)
-			const current_instances = await get_section_records({caller: self, view: self.view, value: grouped_value})
+			const current_instances = await get_section_records({
+				caller	: self,
+				view	: self.view,
+				value	: grouped_value
+			})
 			self.ar_instances.push(...current_instances)
 
 			const current_block = await render_grouper_block(self, group_label, current_instances)
-
-			content_data.appendChild(current_block)
+			if (current_block) {
+				content_data.appendChild(current_block)
+			}
 		}//end for (const group_label in order_value)
 
 
@@ -153,9 +158,10 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_GROUPER_BLOCK
-* @param array ar_section_record
-* @para object self
-* @return HTMLElement content_data
+* @param {object} self
+* @param {string} group_label
+* @param {array} ar_section_record
+* @return {HTMLElement} content_data
 */
 const render_grouper_block = async function(self, group_label, ar_section_record) {
 
@@ -181,18 +187,18 @@ const render_grouper_block = async function(self, group_label, ar_section_record
 	})
 
 	// rows. parallel mode
-		const ar_section_record_length = ar_section_record.length
-		const ar_promises = []
-		for (let i = 0; i < ar_section_record_length; i++) {
-			const render_promise_node = ar_section_record[i].render()
-			ar_promises.push(render_promise_node)
-		}
-		await Promise.all(ar_promises).then(function(values) {
-			for (let i = 0; i < ar_section_record_length; i++) {
-				const section_record_node = values[i]
-				group_content.appendChild(section_record_node)
-			}
-		});
+	const ar_section_record_length = ar_section_record.length
+	const ar_promises = []
+	for (let i = 0; i < ar_section_record_length; i++) {
+		const render_promise_node = ar_section_record[i].render()
+		ar_promises.push(render_promise_node)
+	}
+
+	const values = await Promise.all(ar_promises)
+	for (let i = 0; i < ar_section_record_length; i++) {
+		const section_record_node = values[i]
+		group_content.appendChild(section_record_node)
+	}
 
 
 	return fragment
@@ -424,7 +430,7 @@ const get_buttons = function(self) {
 /**
 * RENDER_COLUMN_GRAPH
 * @param object DocumentFragment
-* @return HTMLElement fragment
+* @return DocumentFragment fragment
 */
 const render_column_graph = function(options) {
 
@@ -443,17 +449,41 @@ const render_column_graph = function(options) {
 		parent			: fragment
 	})
 	// mouseup event
-	graph_button.addEventListener('mouseup', async function(e) {
+	let is_processing = false
+	const mouseup_handler = async (e) => {
 
-		const target_section_value	= self.context.properties.view_config.target_section_value || 'nexus53'
-		const target_section_data	= self.datum.data.find(el =>
-			el.section_id	=== section_id &&
-			el.section_tipo	=== section_tipo &&
-			el.tipo			=== target_section_value
-		)
-		const target_section_tipo = target_section_data.value[0]
+		// Prevent multiple simultaneous executions
+		if (is_processing) {
+			return;
+		}
+		is_processing = true
 
-		// target section
+		try {
+
+			const target_section_value	= self.context?.properties?.view_config?.target_section_value || 'nexus53'
+
+			// Validate self.datum.data exists
+			if (!self.datum?.data || !Array.isArray(self.datum.data)) {
+				console.error('render_column_graph: self.datum.data is not available or not an array');
+				return;
+			}
+
+			// Find target section data
+			const target_section_data	= self.datum.data.find(el =>
+				el.section_id	=== section_id &&
+				el.section_tipo	=== section_tipo &&
+				el.tipo			=== target_section_value
+			)
+
+			// Extract target section type
+			const target_section_tipo = target_section_data?.value?.[0];
+
+			if (!target_section_tipo) {
+				console.warn('render_column_graph: Empty target_section_data value:', target_section_data);
+				return;
+			}
+
+			// target section
 			const section = await get_instance({
 				model 			: 'section',
 				tipo			: target_section_tipo,
@@ -461,17 +491,32 @@ const render_column_graph = function(options) {
 				mode 			: 'solved',
 				inspector 		: false
 			})
+
+			if (!section) {
+                throw new Error('render_column_graph: Failed to create section instance');
+            }
+
 			await section.build(true)
+
+			// Configure section
 			section.view = 'graph'
 			section.caller = self.caller // injected caller (page), needed because to render new menu label
-			const section_node = await section.render()
-			// add to DOM
-			self.node.after(section_node)
 
-		// remove current section instance and nodes
+			// Render section
+			const section_node = await section.render()
+
+			// Add to DOM
+            if (self.node && self.node.after) {
+                self.node.after(section_node);
+            } else {
+                console.error('render_column_graph: self.node.after is not available');
+                return;
+            }
+
+			// remove current section instance and nodes
 			self.destroy(true, true, true)
 
-		// navigation (update browser URL and history)
+			// navigation (update browser URL and history)
 			const source	= create_source(section, null)
 			const sqo		= section.request_config_object.sqo
 			const title		= section.id
@@ -492,7 +537,13 @@ const render_column_graph = function(options) {
 				title	: title,
 				url		: url
 			})
-	})//end mouseup
+		} catch (error) {
+			console.error('render_column_graph: Error in mouseup handler:', error);
+		} finally {
+			is_processing = false;
+		}
+	}
+	graph_button.addEventListener('mouseup', mouseup_handler)
 
 
 	return fragment

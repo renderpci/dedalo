@@ -301,16 +301,12 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// database_info *
-			$info = pg_version(DBi::_getConnection());
-			$info['host'] = to_string(DEDALO_HOSTNAME_CONN);
 			$item = new stdClass();
 				$item->id		= 'database_info';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DATABASE INFO';
-				$item->value	= (object)[
-					'info' => $info
-				];
+				$item->value	= null;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -733,7 +729,7 @@ class area_maintenance extends area_common {
 			$result = db_tasks::consolidate_table( $table );
 
 			if($result === false){
-				$response->errors[]	= 'Consolidate table is not possible: '.$table;
+				$response->errors[]	= 'It is not possible to consolidate the table: '.$table;
 				return $response;
 			}
 		}
