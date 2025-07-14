@@ -39,7 +39,7 @@
 	{"old":"tch276"	,"new": "actv23"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Children"},
 	{"old":"tch475"	,"new": "actv25"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Indexations"},
 	{"old":"tch403"	,"new": "actv24"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Related Terms"},
-	{"old":"tch220"	,"new": "actv126"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Audivovisuales identificativos"},
+	{"old":"tch220"	,"new": "actv126"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Identifying audiovisuals"},
 	{"old":"tch218"	,"new": "actv28"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Identifying images"},
 
 	{"old":"qdp266"	,"new": "actv40"		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Visualization typologies"},
@@ -82,6 +82,6 @@
 	{"old":"qdp276"	,"new": "actv23"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Children"},
 	{"old":"qdp475"	,"new": "actv25"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Indexations"},
 	{"old":"qdp403"	,"new": "actv24"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Related Terms"},
-	{"old":"qdp220"	,"new": "actv126"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Audivovisuales identificativos"},
+	{"old":"qdp220"	,"new": "actv126"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Identifying audiovisuals"},
 	{"old":"qdp218"	,"new": "actv28"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Identifying images"}
 ]
