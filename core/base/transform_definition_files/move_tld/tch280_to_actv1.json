@@ -10,7 +10,7 @@
 
 	{"old":"tch280"	,"new": "exhibition1"	,"type":"section"	,"perform":["replace_tipo"]	,"info":"Exhibitions"},
 	{"old":"tch400"	,"new": "news1"			,"type":"section"	,"perform":["replace_tipo"]	,"info":"News"},
-	{"old":"tch458"	,"new": "learn1"		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Didactics"},
+	{"old":"tch458"	,"new": "didactic1"		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Didactics"},
 
 	{"old":"tch250"	,"new": "actv4"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Public"},
 	{"old":"tch477"	,"new": "actv6"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Tipología"},
@@ -53,7 +53,7 @@
 
 	{"old":"qdp280"	,"new": "exhibition1"	,"type":"section"	,"perform":["replace_tipo"]	,"info":"Exhibitions"},
 	{"old":"qdp400"	,"new": "news1"			,"type":"section"	,"perform":["replace_tipo"]	,"info":"News"},
-	{"old":"qdp458"	,"new": "learn1"		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Didactics"},
+	{"old":"qdp458"	,"new": "didactic1"		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Didactics"},
 
 	{"old":"qdp250"	,"new": "actv4"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Public"},
 	{"old":"qdp477"	,"new": "actv6"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Tipología"},

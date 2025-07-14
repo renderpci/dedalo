@@ -77,7 +77,7 @@ $updates->$v = new stdClass();
 			<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
 				qdp280 OR tch280 -----> exhibition1
 				qdp400 OR tch400 -----> news1
-				qdp458 OR tch458 -----> learn1
+				qdp458 OR tch458 -----> didactic1
 			</pre>
 			Please review your hierarchy definitions according to this change, you can find more information <a href=\"https://agora.dedalo.dev/d/233\"> here</a>.
 			</p>
