@@ -439,4 +439,35 @@ class db_tasks {
 
 
 
+	/**
+	* GET_TABLES
+	* Get the full list of tables (in 'public' schema) from Dédalo DDBB
+	* @return array $tables
+	*/
+	public static function get_tables() : array {
+		$sql = "
+			SELECT tablename
+			FROM pg_tables
+			WHERE schemaname = 'public';
+		";
+		$result = pg_query(DBi::_getConnection(), $sql);
+
+		// Error handling for the query
+		if (!$result) {
+			throw new Exception('Database query failed: ' . pg_last_error());
+		}
+
+		$tables = [];
+		while ($row = pg_fetch_assoc($result)) {
+			$tables[] = $row['tablename'];
+		}
+
+		// Free the result resource
+		pg_free_result($result);
+
+		return $tables;
+	}//end get_tables
+
+
+
 }//end db_tasks
