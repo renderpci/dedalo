@@ -31,7 +31,7 @@
 	{"old":"tch258"	,"new": "tch503"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Objects"},
 	{"old":"tch259"	,"new": "tch504"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Photographs"},
 	{"old":"tch355"	,"new": "tchi95"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Property"},
-	{"old":"tch266"	,"new": "actv31"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Images"},
+	{"old":"tch226"	,"new": "actv31"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Images"},
 	{"old":"tch224"	,"new": "actv29"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Audiovisual"},
 	{"old":"tch453"	,"new": "actv119"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Bibliographic references"},
 	{"old":"tch223"	,"new": "actv32"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Documents"},
@@ -40,6 +40,7 @@
 	{"old":"tch475"	,"new": "actv25"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Indexations"},
 	{"old":"tch403"	,"new": "actv24"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Related Terms"},
 	{"old":"tch220"	,"new": "actv126"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Audivovisuales identificativos"},
+	{"old":"tch218"	,"new": "actv28"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Identifying images"},
 
 	{"old":"qdp266"	,"new": "actv40"		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Visualization typologies"},
 	{"old":"qdp269"	,"new": "actv44"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Title"},
@@ -73,7 +74,7 @@
 	{"old":"qdp258"	,"new": "tch503"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Objects"},
 	{"old":"qdp259"	,"new": "tch504"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Photographs"},
 	{"old":"qdp355"	,"new": "tchi95"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Property"},
-	{"old":"qdp266"	,"new": "actv31"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Images"},
+	{"old":"qdp226"	,"new": "actv31"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Images"},
 	{"old":"qdp224"	,"new": "actv29"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Audiovisual"},
 	{"old":"qdp453"	,"new": "actv119"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Bibliographic references"},
 	{"old":"qdp223"	,"new": "actv32"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Documents"},
@@ -81,5 +82,6 @@
 	{"old":"qdp276"	,"new": "actv23"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Children"},
 	{"old":"qdp475"	,"new": "actv25"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Indexations"},
 	{"old":"qdp403"	,"new": "actv24"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Related Terms"},
-	{"old":"qdp220"	,"new": "actv126"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Audivovisuales identificativos"}
+	{"old":"qdp220"	,"new": "actv126"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Audivovisuales identificativos"},
+	{"old":"qdp218"	,"new": "actv28"		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Identifying images"}
 ]
