@@ -469,7 +469,7 @@ export const render_ts_line = function(options) {
 				case (  current_element.model==='component_relation_index'
 					&& !current_element.show_data): {
 
-					const total = parseInt( current_element.count_result.total )
+					const total = parseInt(current_element.count_result?.total || 0)
 
 					if(total > 0){
 						// button_show_indexations. Build button
@@ -488,6 +488,8 @@ export const render_ts_line = function(options) {
 
 							const uid = current_element.tipo +'_'+ child_data.section_tipo +'_'+ child_data.section_id
 
+							const current_total = parseInt(current_element.count_result?.total || 0)
+
 							self.show_indexations({
 								uid 				: uid,
 								button_obj			: button_show_indexations,
@@ -497,8 +499,8 @@ export const render_ts_line = function(options) {
 								component_tipo		: current_element.tipo,
 								target_div			: document.getElementById(indexations_container_id),
 								value				: null,
-								total				: parseInt( current_element.count_result.total ),
-								totals_group		: current_element.count_result.totals_group,
+								total				: current_total,
+								totals_group		: current_element.count_result?.totals_group,
 								filter_by_locators	: [{
 									section_tipo	: child_data.section_tipo,
 									section_id		: child_data.section_id,

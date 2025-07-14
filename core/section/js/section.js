@@ -1697,6 +1697,13 @@ function validate_mode(mode) {
 
     if (valid_modes.includes(mode)) {
         return mode;
+    }else{
+    	// temporal
+    	console.error(`Invalid mode '${mode}' received. Using it temporally !!. Valid modes: ${valid_modes.join(', ')}`);
+    	if(SHOW_DEBUG===true) {
+    		alert(`Invalid mode '${mode}' received. Using it temporally !!.\n Valid modes: ${valid_modes.join(', ')}`);
+    	}
+    	return mode
     }
 
     console.error(`Invalid mode '${mode}' received. Using default mode '${default_mode}'. Valid modes: ${valid_modes.join(', ')}`);
