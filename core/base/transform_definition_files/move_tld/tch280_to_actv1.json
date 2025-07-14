@@ -12,7 +12,6 @@
 	{"old":"tch400"	,"new": "news1"			,"type":"section"	,"perform":["replace_tipo"]	,"info":"News"},
 	{"old":"tch458"	,"new": "learn1"		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Didactics"},
 
-	{"old":"tch280"	,"new": "actv1"			,"type":"section"	,"perform":["replace_tipo"]	,"info":"Activities"},
 	{"old":"tch250"	,"new": "actv4"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Public"},
 	{"old":"tch477"	,"new": "actv6"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Tipología"},
 	{"old":"tch265"	,"new": "actv7"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Display typology"},
@@ -55,7 +54,6 @@
 	{"old":"qdp400"	,"new": "news1"			,"type":"section"	,"perform":["replace_tipo"]	,"info":"News"},
 	{"old":"qdp458"	,"new": "learn1"		,"type":"section"	,"perform":["replace_tipo"]	,"info":"Didactics"},
 
-	{"old":"qdp280"	,"new": "actv1"			,"type":"section"	,"perform":["replace_tipo"]	,"info":"Activities"},
 	{"old":"qdp250"	,"new": "actv4"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Public"},
 	{"old":"qdp477"	,"new": "actv6"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Tipología"},
 	{"old":"qdp265"	,"new": "actv7"			,"type":"component"	,"perform":["replace_tipo"]	,"info":"Display typology"},
