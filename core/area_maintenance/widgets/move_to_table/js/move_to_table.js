@@ -66,10 +66,11 @@ move_to_table.prototype.exec_move_to_table = async (files_selected) => {
 
 	// move_to_table process fire
 	const response = await data_manager.request({
-		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
+		body : {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source			: {
 				action	: 'move_to_table',
 			},
 			options : {

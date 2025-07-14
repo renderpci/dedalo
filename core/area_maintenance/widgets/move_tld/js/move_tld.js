@@ -59,18 +59,17 @@ export const move_tld = function() {
 */
 move_tld.prototype.exec_move_tld = async (files_selected) => {
 
-	console.log('files_selected:', files_selected);
-
 	if (!files_selected.length) {
 		return
 	}
 
 	// move_tld process fire
 	const response = await data_manager.request({
-		body		: {
-			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
-			source	: {
+		body : {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source			: {
 				action	: 'move_tld',
 			},
 			options : {

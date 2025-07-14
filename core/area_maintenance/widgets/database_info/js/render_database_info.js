@@ -101,6 +101,10 @@ const get_content_data_edit = async function(self) {
 		const rebuild_indexes_container = render_rebuild_indexes(self)
 		content_data.appendChild(rebuild_indexes_container)
 
+		// render_optimize_tables
+		const optimize_tables_container = render_optimize_tables(self)
+		content_data.appendChild(optimize_tables_container)
+
 		// consolidate table sequences
 		const consolidate_table_sequences_container = render_consolidate_table_sequences(self)
 		content_data.appendChild(consolidate_table_sequences_container)
@@ -140,7 +144,7 @@ const render_rebuild_indexes = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Forces rebuilding of PostgreSQL main indexes, extensions and functions',
+		inner_html		: 'Forces rebuilding of PostgreSQL main indexes, extensions and functions.',
 		parent			: rebuild_indexes_container
 	})
 
@@ -181,8 +185,9 @@ const render_rebuild_indexes = (self) => {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
 					source	: {
 						action : 'rebuild_db_indexes'
 					},
@@ -226,6 +231,153 @@ const render_rebuild_indexes = (self) => {
 
 	return rebuild_indexes_container
 }//end render_rebuild_indexes
+
+
+
+/**
+* RENDER_OPTIMIZE_TABLES
+* @param object self widget instance
+* @return HTMLElement rebuild_indexes_container
+*/
+const render_optimize_tables = (self) => {
+
+	// tables
+	const source_tables = self.value?.tables || []
+
+	const optimize_tables_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'group_container optimize_tables_container'
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'h3',
+		class_name		: 'group_label',
+		inner_html		: get_label.optimize_tables || 'Optimize tables',
+		parent			: optimize_tables_container
+	})
+
+	// info_text
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'info_text',
+		inner_html		: 'Re-index and vacuum analyze the selected tables.',
+		parent			: optimize_tables_container
+	})
+
+	const body_response = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'body_response'
+	})
+	// dblclick event
+	const dblclick_handler = (e) => {
+		// clean body_response nodes
+		while (body_response.firstChild) {
+			body_response.removeChild(body_response.firstChild);
+		}
+	}
+	body_response.addEventListener('dblclick', dblclick_handler)
+
+	self.caller.init_form({
+		submit_label	: 'Optimize tables',
+		confirm_text	: get_label.seguro || 'Sure?',
+		body_info		: optimize_tables_container,
+		body_response	: body_response,
+		inputs			: [{
+			type		: 'text',
+			name		: 'tables',
+			label		: 'Tables list as jer_dd,matrix_ontology,matrix',
+			value		: source_tables.join(','),
+			mandatory	: true
+		}],
+		on_submit	: async (e, values) => {
+
+			// clean body_response nodes
+			while (body_response.firstChild) {
+				body_response.removeChild(body_response.firstChild);
+			}
+
+			// loading add
+			e.target.classList.add('lock')
+			const spinner = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner'
+			})
+			body_response.prepend(spinner)
+
+			// value
+			const tables = values.filter(el => el.name==='tables')
+				.map(el => el.value)[0]
+				.split(',')
+				.map(el => el.trim())
+
+			if (!tables || tables.length < 1) {
+				// loading  remove
+				spinner.remove()
+				e.target.classList.remove('lock')
+				return
+			}
+
+			if (tables.length === source_tables.length) {
+				const label = (get_label.all || 'All') + ' ?';
+				if (!confirm(label)) {
+					return
+				}
+			}
+
+			// API worker call
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'widget_request',
+					source	: {
+						type	: 'widget',
+						model	: 'database_info',
+						action	: 'optimize_tables'
+					},
+					options	: {
+						tables : tables
+					}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
+			})
+
+			// loading remove
+			spinner.remove()
+			e.target.classList.remove('lock')
+
+			// remove annoying rqo_string from object
+			if (api_response?.debug?.rqo_string) {
+				delete api_response.debug.rqo_string
+			}
+
+			// response_node pre JSON response
+			if (api_response) {
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'response_node',
+					inner_html		: JSON.stringify(api_response, null, 2),
+					parent			: body_response
+				})
+			}else{
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'response_node error',
+					inner_html		: 'Unknown error calling API',
+					parent			: body_response
+				})
+			}
+		}
+	})
+
+	// add body_response at end
+	optimize_tables_container.appendChild(body_response)
+
+
+	return optimize_tables_container
+}//end render_optimize_tables
 
 
 
@@ -275,7 +427,7 @@ const render_consolidate_table_sequences = (self) => {
 		confirm_text	: get_label.seguro || 'Sure?',
 		body_info		: consolidate_table_sequences_container,
 		body_response	: body_response,
-		on_submit	: async (e) => {
+		on_submit		: async (e) => {
 
 			// clean body_response nodes
 			while (body_response.firstChild) {
@@ -294,8 +446,9 @@ const render_consolidate_table_sequences = (self) => {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
 					source	: {
 						action : 'consolidate_tables'
 					},
@@ -366,7 +519,7 @@ const render_rebuild_user_stats = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Re-create the user activity stats, calculated from table matix_activity and saved in section dd1521 as daily summaries',
+		inner_html		: 'Re-create the user activity stats, calculated from table matix_activity and saved in section dd1521 as daily summaries.',
 		parent			: rebuild_user_stats_container
 	})
 
@@ -426,8 +579,9 @@ const render_rebuild_user_stats = (self) => {
 			const api_response = await data_manager.request({
 				use_worker	: true,
 				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
 					source	: {
 						action : 'rebuild_user_stats'
 					},

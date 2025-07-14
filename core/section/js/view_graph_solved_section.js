@@ -5,7 +5,7 @@
 
 
 // imports
-	import {when_in_dom} from '../../common/js/events.js'
+	import {dd_request_idle_callback, when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_instance} from '../../common/js/instances.js'
@@ -88,29 +88,34 @@ view_graph_solved_section.render = async function(self, options) {
 			const label_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'label_container',
+				text_content	: 'Loading..',
 				parent			: right_node
 			})
 
-			const url_vars = url_vars_to_object()
-			if(url_vars.fst && url_vars.fsi){
+			dd_request_idle_callback(
+				async () => {
+					const url_vars = url_vars_to_object()
+					if(url_vars.fst && url_vars.fsi){
 
-				const section_tipo	= url_vars.fst
-				const section_id	= url_vars.fsi
-				const tipo			= self.from_map.name
+						const section_tipo	= url_vars.fst
+						const section_id	= url_vars.fsi
+						const tipo			= self.from_map.name
 
-				// component_name
-				get_instance({
-					tipo			: tipo,
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					mode			: 'solved',
-					inspector		: false
-				})
-				.then(async function(component_name){
-					await component_name.build(true)
-					label_container.textContent = component_name.data.literal || self.label
-				})
-			}
+						// component_name
+						const component_name = await get_instance({
+							tipo			: tipo,
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							mode			: 'solved',
+							inspector		: false
+						})
+
+						await component_name.build(true)
+
+						label_container.textContent = component_name.data.literal || self.label || component_name.tipo
+					}
+				}
+			)
 
 		// buttons
 			const buttons_node = get_buttons(self);
@@ -168,22 +173,27 @@ const get_content_data = async function(self) {
 			  content_data.classList.add('content_data', self.mode)
 
 	// d3 data and graph
-		when_in_dom(content_data, async ()=>{
+		when_in_dom(content_data, ()=>{
 
-			// get d3 data
-				const d3_data = get_d3_data({
-					graph_map	: self.graph_map,
-					datum		: self.datum
-				})
+			dd_request_idle_callback(
+				async () => {
 
-			// get d3 node
-				const d3_node = await get_graph({
-					self 			: self,
-					content_data	: content_data,
-					data			: d3_data
-				})
-				// append node
-				content_data.appendChild(d3_node)
+					// get d3 data
+					const d3_data = get_d3_data({
+						graph_map	: self.graph_map,
+						datum		: self.datum
+					})
+
+					// get d3 node
+					const d3_node = await get_graph({
+						self			: self,
+						content_data	: content_data,
+						data			: d3_data
+					})
+					// append node
+					content_data.appendChild(d3_node)
+				}
+			)
 		})
 
 
