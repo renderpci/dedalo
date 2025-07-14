@@ -146,7 +146,7 @@ area_maintenance.prototype.build = async function(autoload=true) {
 
 			// rebuild the request_config_object and rqo in the instance
 			// request_config_object
-				self.request_config_object	= self.context
+				self.request_config_object = self.context
 					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: null
 

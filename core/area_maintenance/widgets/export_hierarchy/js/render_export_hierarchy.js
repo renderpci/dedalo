@@ -160,11 +160,12 @@ const get_content_data_edit = async function(self) {
 
 				// counter long process fire
 				data_manager.request({
-					body		: {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'class_request',
-						source	: {
-							action	: 'export_hierarchy',
+					body : {
+						dd_api			: 'dd_area_maintenance_api',
+						action			: 'class_request',
+						prevent_lock	: true,
+						source			: {
+							action : 'export_hierarchy',
 						},
 						options : {
 							section_tipo : section_tipo // string like '*' or 'es1,es2'

@@ -485,16 +485,19 @@ const render_notification = (self) => {
 					: false
 
 				const api_response = await data_manager.request({
-					body		: {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'class_request',
-						source	: {
-							action	: 'set_notification',
+					body : {
+						dd_api			: 'dd_area_maintenance_api',
+						action			: 'class_request',
+						prevent_lock	: true,
+						source			: {
+							action : 'set_notification',
 						},
 						options : {
 							value	: notification_value // string|false
 						}
-					}
+					},
+					retries : 1, // one try only
+					timeout : 3600 * 1000 // 1 hour waiting response
 				})
 				if(SHOW_DEBUG===true) {
 					console.log('debug set_notification api_response:', api_response);
