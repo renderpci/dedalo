@@ -1460,7 +1460,6 @@ class component_relation_common extends component_common {
 			);
 		}
 
-
 		// For unification, all non string are JSON encoded
 		// This allow accept mixed values (encoded and no encoded)
 		if (!is_string($q)) {
@@ -1484,14 +1483,25 @@ class component_relation_common extends component_common {
 			);
 			$q = '[]';
 		}
+
 		$q_operator		= $query_object->q_operator ?? null;
-		$component_tipo	= end($query_object->path)->component_tipo;
+		$path			= $query_object->path ?? [];
+		$last_path_item	= end($path);
+		$component_tipo	= $last_path_item->component_tipo ?? null;
+		if (empty($component_tipo)) {
+			debug_log(__METHOD__
+				. " Invalid component tipo from path " . PHP_EOL
+				. ' path: ' . to_string($path) . PHP_EOL
+				. ' query_object: ' . to_string($query_object)
+				, logger::ERROR
+			);
+		}
 
 		switch (true) {
 			// IS DIFFERENT
 			case ($q_operator==='!=' && !empty($q)):
 				$operator = '@>';
-				$q_clean  = '\'['.$q.']\'::jsonb=FALSE';
+				$q_clean = '\'['.$q.']\'::jsonb=FALSE';
 				$query_object->operator = $operator;
 				$query_object->q_parsed = $q_clean;
 				break;
@@ -1499,12 +1509,12 @@ class component_relation_common extends component_common {
 			case ($q_operator==='!*'):
 				$operator = '@>';
 				if (!empty($query_object->use_function)) {
-					$q_clean  = '\'['.$q.']\' = FALSE';
+					$q_clean = '\'['.$q.']\' = FALSE';
 				}else{
 					$q_obj = new stdClass();
 						$q_obj->from_component_tipo = $component_tipo ;
-					$ar_q		= array($q_obj);
-					$q_clean	= '\''.json_encode($ar_q).'\'::jsonb IS DISTINCT FROM TRUE';
+					$ar_q = array($q_obj);
+					$q_clean = '\''.json_encode($ar_q).'\'::jsonb IS DISTINCT FROM TRUE';
 				}
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
@@ -1514,15 +1524,15 @@ class component_relation_common extends component_common {
 				$operator = '@>';
 				$q_obj = new stdClass();
 					$q_obj->from_component_tipo = $component_tipo ;
-				$ar_q 	  = array($q_obj);
-				$q_clean  = '\''.json_encode($ar_q).'\'';
+				$ar_q = array($q_obj);
+				$q_clean = '\''.json_encode($ar_q).'\'';
 				$query_object->operator = $operator;
 				$query_object->q_parsed = $q_clean;
 				break;
 			// CONTAIN
 			default:
 				$operator = '@>';
-				$q_clean  = '\'['.$q.']\'';
+				$q_clean = '\'['.$q.']\'';
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
 				break;
@@ -3193,12 +3203,23 @@ class component_relation_common extends component_common {
 						}
 						$target_section_tipo = $ar_target_section_tipo[0] ?? null;
 
+						if (empty($target_section_tipo)) {
+							$properties = $this->get_properties();
+							debug_log(__METHOD__
+								." Unable to resolve target_section_tipo for this component. Review the RQO configuration and ensure that target section exists." .PHP_EOL
+								.' tipo: '. $this->tipo . PHP_EOL
+								.' section_tipo: '. $this->section_tipo . PHP_EOL
+								.' properties: '. json_encode($properties, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+						}
+
 						// check valid target_section_tipo
 						if (!safe_tipo($target_section_tipo)) {
 
 							debug_log(__METHOD__
 								." Trying to import invalid target_section_tipo" .PHP_EOL
-								.' section_id: '. to_string($target_section_tipo)
+								.' target_section_tipo: '. to_string($target_section_tipo)
 								, logger::ERROR
 							);
 

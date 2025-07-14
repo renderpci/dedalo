@@ -1405,24 +1405,24 @@ export const ts_object = new function() {
 
 			// keydown event
 			const keydown_handler = (e) => {
+				// prevent to fire open search panel
 				e.stopPropagation()
-				// Enter key
-				if (e.keyCode === 13) {
-					ts_object.save_order(button_obj, parseInt(input.value) )
-				}
-				// esc key
-				if (e.keyCode===27) {
-					input.blur()
-				}
 			}
 			input.addEventListener('keydown', keydown_handler);
+
+			// change event
+			const change_handler = (e) => {
+				ts_object.save_order(button_obj, parseInt(input.value) )
+				input.blur()
+			}
+			input.addEventListener('change', change_handler);
 
 			// blur event
 			const blur_handler = (e) => {
 				e.stopPropagation()
 				e.preventDefault()
 				input.remove()
-				button_obj.style.display = ''
+				button_obj.classList.remove('hide')
 			}
 			input.addEventListener('blur', blur_handler);
 
@@ -1430,7 +1430,7 @@ export const ts_object = new function() {
 			button_obj.parentNode.insertBefore(input, button_obj.nextSibling);
 
 		// Hide button_obj
-			button_obj.style.display = 'none'
+			button_obj.classList.add('hide')
 
 		// Focus and select new input element
 			input.focus();
