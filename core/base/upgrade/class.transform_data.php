@@ -769,10 +769,26 @@ class transform_data {
 			$path = DEDALO_CORE_PATH.'/base/transform_definition_files/move_tld/';
 			$ar_transform_map = [];
 			foreach ($json_files as $current_json_file) {
-				$contents			= file_get_contents($path.$current_json_file);
-				$transform_map		= json_decode($contents);
+
+				$contents = file_get_contents($path.$current_json_file);
+				if ($contents === false) {
+					debug_log(__METHOD__ . " ERROR: Failed to read JSON file: " . $path, logger::ERROR);
+					continue; // Skip to next file
+				}
+
+				$transform_map = json_decode($contents);
+				if (json_last_error() !== JSON_ERROR_NONE || !is_array($transform_map) && !is_object($transform_map)) {
+					debug_log(__METHOD__ . " ERROR: Failed to decode JSON from file: " . $path . ". Error: " . json_last_error_msg(), logger::ERROR);
+					continue; // Skip to next file
+				}
+
 				foreach ($transform_map as $transform_object) {
-					$ar_transform_map[$transform_object->old] = $transform_object;
+					// Ensure $transform_object is an object and has 'old' property
+					if (is_object($transform_object) && isset($transform_object->old)) {
+						$ar_transform_map[$transform_object->old] = $transform_object;
+					} else {
+						debug_log(__METHOD__ . " WARNING: Ignored Invalid transform object found in " . $path . ": " . json_encode($transform_object), logger::ERROR);
+					}
 				}
 			}
 
@@ -783,12 +799,12 @@ class transform_data {
 			// ar_old_section_tipo without keys like ["numisdata279"]
 			$ar_old_section_tipo = array_map(function($el){
 				return $el->old;
-			}, $ar_section_elements, []);
+			}, $ar_section_elements);
 
 		// skip_virtuals
 			$skip_virtuals = array_map(function($el){
 				return $el->skip_virtuals ?? [];
-			}, $ar_section_elements, []);
+			}, $ar_section_elements);
 			$skip_virtuals = array_flatten($skip_virtuals);
 
 		// CLI process data
@@ -815,10 +831,10 @@ class transform_data {
 				// CLI process data
 					if ( running_in_cli()===true ) {
 						common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': changes_in_tipos'
-							. ' | table: ' 			. $table
-							. ' | id: ' 			. $id .' - ' . $max
-							. ' | section_tipo: ' 	. $section_tipo
-							. ' | section_id: '  	. ($row['section_id'] ?? '');
+							. ' | table: '			. $table
+							. ' | id: '				. $id .' - ' . $max
+							. ' | section_tipo: '	. $section_tipo
+							. ' | section_id: '		. ($row['section_id'] ?? '');
 						common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
 							? dd_memory_usage() // update memory information once every 5000 items
 							: common::$pdata->memory;
@@ -964,8 +980,7 @@ class transform_data {
 											// check method already exists
 												if(!method_exists('transform_data', $action)) {
 													debug_log(__METHOD__
-														. " Error. Calling undefined method transform_data::$action . Ignored action !" . PHP_EOL
-														. to_string()
+														. " Error. Calling undefined method transform_data::$action . Ignored action !"
 														, logger::ERROR
 													);
 													continue;
@@ -2695,8 +2710,24 @@ class transform_data {
 			//	}]
 			$ar_transform_map = [];
 			foreach ($json_files as $current_json_file) {
-				$contents			= file_get_contents($path.$current_json_file);
+
+				$contents = file_get_contents($path.$current_json_file);
+				if ($contents === false) {
+					debug_log(__METHOD__ . " Error reading file: " . $path.$current_json_file, logger::ERROR);
+					continue;
+				}
+
 				$transform_map		= json_decode($contents);
+
+				if (json_last_error() !== JSON_ERROR_NONE) {
+					debug_log(__METHOD__ . " Error decoding JSON from file: " . $current_json_file . " - " . json_last_error_msg(), logger::ERROR);
+					continue;
+				}
+				if (!is_array($transform_map)) {
+					debug_log(__METHOD__ . " Decoded JSON is not an array from file: " . $current_json_file, logger::ERROR);
+					continue;
+				}
+
 				foreach ($transform_map as $transform_object) {
 					$ar_transform_map[] = $transform_object;
 				}
@@ -2715,9 +2746,25 @@ class transform_data {
 		// iterate items
 		foreach ($ar_transform_map as $item) {
 
+			if (!isset($item->section_tipo) || !isset($item->source_table) || !isset($item->target_table)) {
+				debug_log(__METHOD__ . " Ignored Malformed transform object in JSON file. Missing required properties.", logger::ERROR);
+				continue; // Skip this malformed item
+			}
+
 			$section_tipo	= $item->section_tipo;
 			$source_table	= $item->source_table;
 			$target_table	= $item->target_table;
+
+			$conn = DBi::_getConnection();
+
+			// safe section_tipo
+			$section_tipo = pg_escape_string($conn, $section_tipo);
+
+			// Start transaction
+			if (!pg_query($conn, "BEGIN")) {
+				debug_log(__METHOD__ . " Failed to start transaction: " . pg_last_error($conn), logger::ERROR);
+				return false;
+			}
 
 			// Move rows between tables
 				// select only section_id, section_tipo and datos, id columns could exist in the target_table and the constrain would fail.
@@ -2730,12 +2777,13 @@ class transform_data {
 					);
 				");
 
-				$result = pg_query(DBi::_getConnection(), $str_query);
+				$result = pg_query($conn, $str_query);
 				if($result===false) {
+					pg_query($conn, "ROLLBACK"); // Rollback on error
 					// error case
 					debug_log(__METHOD__
 						." Error Processing SQL request in move_data_between_matrix_tables ". PHP_EOL
-						. pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. pg_last_error($conn) .PHP_EOL
 						. 'str_query: '.to_string($str_query)
 						, logger::ERROR
 					);
@@ -2748,18 +2796,27 @@ class transform_data {
 					WHERE \"section_tipo\" = '$section_tipo';
 				");
 
-				$result = pg_query(DBi::_getConnection(), $delete_str_query);
+				$result = pg_query($conn, $delete_str_query);
 				if($result===false) {
+					 pg_query($conn, "ROLLBACK"); // Rollback on error
 					// error case
 					debug_log(__METHOD__
 						." Error Processing SQL request in move_data_between_matrix_tables ". PHP_EOL
-						. pg_last_error(DBi::_getConnection()) .PHP_EOL
+						. pg_last_error($conn) .PHP_EOL
 						. 'delete_str_query: '.to_string($delete_str_query)
 						, logger::ERROR
 					);
 					return false;
 				}
+
+			// Commit transaction if both successful
+			if (!pg_query($conn, "COMMIT")) {
+				debug_log(__METHOD__ . " Commit failed: ".pg_last_error($conn), logger::ERROR);
+				return false;
+			}
+
 		}//end foreach ($ar_transform_map as $item)
+
 
 		return true;
 	}//end move_data_between_matrix_tables
