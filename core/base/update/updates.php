@@ -54,7 +54,7 @@ $updates->$v = new stdClass();
 		$alert->command .= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
 			<p>
-			<strong>This update will move your data from old thesaurus qdp280 or tch280 to actv1.</strong>
+			<strong>This update will move your data from old thesaurus qdp280 or tch280 to new actv1.</strong>
 			</p>
 			<p>
 			If you are using the activities hierarchy using tch280 or qdp280, they are totally deprecated and obsolete.
@@ -96,9 +96,6 @@ $updates->$v = new stdClass();
 			'matrix_counter',
 			'matrix_hierarchy',
 			'matrix_hierarchy_main',
-			'matrix_indexations',
-			'matrix_layout',
-			'matrix_layout_dd',
 			'matrix_list',
 			'matrix_time_machine'
 		];
