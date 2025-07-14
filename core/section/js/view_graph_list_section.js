@@ -100,7 +100,6 @@ view_graph_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param array ar_section_record
 * @para object self
 * @return HTMLElement content_data
 */
@@ -111,7 +110,7 @@ const get_content_data = async function(self) {
 			  content_data.classList.add('content_data', self.mode, self.type)
 
 	// get values by typologies
-		const order_key = self.context.properties.view_config.group_by || 'nexus46'
+		const order_key = self.context?.properties?.view_config?.group_by || 'nexus46'
 		const data_to_be_grouped = self.datum.data.filter(el => el.tipo === order_key)
 
 		const group_by = function(array, key) {
@@ -123,6 +122,7 @@ const get_content_data = async function(self) {
 		const order_value = group_by(data_to_be_grouped, 'value')
 
 		for (const group_label in order_value) {
+
 			const current_group = order_value[group_label]
 
 			const grouped_value = []
@@ -137,12 +137,17 @@ const get_content_data = async function(self) {
 			}
 
 			// ar_section_record. section_record instances (initialized and built)
-			const current_instances = await get_section_records({caller: self, view: self.view, value: grouped_value})
+			const current_instances = await get_section_records({
+				caller	: self,
+				view	: self.view,
+				value	: grouped_value
+			})
 			self.ar_instances.push(...current_instances)
 
 			const current_block = await render_grouper_block(self, group_label, current_instances)
-
-			content_data.appendChild(current_block)
+			if (current_block) {
+				content_data.appendChild(current_block)
+			}
 		}//end for (const group_label in order_value)
 
 
@@ -153,9 +158,10 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_GROUPER_BLOCK
-* @param array ar_section_record
-* @para object self
-* @return HTMLElement content_data
+* @param {object} self
+* @param {string} group_label
+* @param {array} ar_section_record
+* @return {HTMLElement} content_data
 */
 const render_grouper_block = async function(self, group_label, ar_section_record) {
 
@@ -181,18 +187,18 @@ const render_grouper_block = async function(self, group_label, ar_section_record
 	})
 
 	// rows. parallel mode
-		const ar_section_record_length = ar_section_record.length
-		const ar_promises = []
-		for (let i = 0; i < ar_section_record_length; i++) {
-			const render_promise_node = ar_section_record[i].render()
-			ar_promises.push(render_promise_node)
-		}
-		await Promise.all(ar_promises).then(function(values) {
-			for (let i = 0; i < ar_section_record_length; i++) {
-				const section_record_node = values[i]
-				group_content.appendChild(section_record_node)
-			}
-		});
+	const ar_section_record_length = ar_section_record.length
+	const ar_promises = []
+	for (let i = 0; i < ar_section_record_length; i++) {
+		const render_promise_node = ar_section_record[i].render()
+		ar_promises.push(render_promise_node)
+	}
+
+	const values = await Promise.all(ar_promises)
+	for (let i = 0; i < ar_section_record_length; i++) {
+		const section_record_node = values[i]
+		group_content.appendChild(section_record_node)
+	}
 
 
 	return fragment
