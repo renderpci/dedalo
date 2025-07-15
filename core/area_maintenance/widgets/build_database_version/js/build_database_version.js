@@ -83,7 +83,7 @@ build_database_version.prototype.build = async function(autoload=false) {
 /**
 * GET_WIDGET_VALUE
 * Get widget value from class maintenance
-* The options 'name' property is the class method name
+* The options 'model' property is the class method name
 * @return object result
 */
 build_database_version.prototype.get_widget_value = async () => {
