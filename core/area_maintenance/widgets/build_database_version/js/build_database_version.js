@@ -52,6 +52,35 @@ export const build_database_version = function() {
 
 
 /**
+* BUILD
+* Custom build overwrites common widget method
+* @param bool autoload = false
+* @return bool
+*/
+build_database_version.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// call generic common tool build
+		const common_build = await widget_common.prototype.build.call(this, autoload);
+
+	try {
+
+		// specific actions.. like fix main_element for convenience
+		self.value = await self.get_widget_value()
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
+
+
+	return common_build
+}//end build_custom
+
+
+
+/**
 * GET_WIDGET_VALUE
 * Get widget value from class maintenance
 * The options 'name' property is the class method name
@@ -59,7 +88,7 @@ export const build_database_version = function() {
 */
 build_database_version.prototype.get_widget_value = async () => {
 
-	// get files list updated
+	// get value from API
 	const api_response = await data_manager.request({
 		use_worker	: true,
 		body		: {
@@ -75,7 +104,7 @@ build_database_version.prototype.get_widget_value = async () => {
 		timeout : 3600 * 1000 // 1 hour waiting response
 	})
 	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value update_ontology api_response:', api_response);;
+		console.log('))) get_widget_value build_database_version api_response:', api_response);;
 	}
 
 	const result = api_response.result
