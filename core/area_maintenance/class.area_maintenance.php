@@ -216,18 +216,11 @@ class area_maintenance extends area_common {
 
 		// add_hierarchy *
 			$item = new stdClass();
-				$install_config = install::get_config();
-
 				$item->id		= 'add_hierarchy';
 				$item->type		= 'widget';
 				$item->class	= 'success width_100';
 				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
-				$item->value	= (object)[
-					'hierarchies'				=> install::get_available_hierarchy_files()->result,
-					'active_hierarchies'		=> hierarchy::get_active_elements(),
-					'hierarchy_files_dir_path'	=> $install_config->hierarchy_files_dir_path,
-					'hierarchy_typologies'		=> $install_config->hierarchy_typologies
-				];
+				$item->value	= null;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
