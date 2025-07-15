@@ -55,7 +55,7 @@ export const check_config = function() {
 /**
 * GET_WIDGET_VALUE
 * Get widget value from class maintenance
-* The options 'name' property is the class method name
+* The options 'model' property is the class method name
 * @return array result
 * [{
 *   config_constants_list : array as ["DEDALO_HOST","DEDALO_PROTOCOL"]

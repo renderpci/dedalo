@@ -60,7 +60,7 @@ export const update_code = function() {
 /**
 * GET_VALUE
 * Get widget value from class maintenance
-* The options 'name' property is the class method name
+* The options 'model' property is the class method name
 * @return result
 * {
 	"datalist": array as [{"name":"cpu","value":"Linux",..}]

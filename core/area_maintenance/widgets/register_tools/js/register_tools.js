@@ -83,7 +83,7 @@ register_tools.prototype.build = async function(autoload=false) {
 /**
 * GET_WIDGET_VALUE
 * Get widget value from class maintenance
-* The options 'name' property is the class method name
+* The options 'model' property is the class method name
 * @return result
 * {
 *	"datalist": array as [{"developer":"Dédalo Team","name":"tool_cataloging",..}]

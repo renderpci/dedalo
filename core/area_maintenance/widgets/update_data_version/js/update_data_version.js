@@ -112,7 +112,7 @@ update_data_version.prototype.build = async function(autoload=false) {
 /**
 * GET_WIDGET_VALUE
 * Get widget value from class maintenance
-* The options 'name' property is the class method name
+* The options 'model' property is the class method name
 * @return result
 * {
     "update_version": null,
