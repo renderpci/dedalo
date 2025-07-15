@@ -132,21 +132,28 @@ const render_header_options = async function(self, content_data) {
 		parent			: fragment
 	})
 
+	const order_active = {}
+
+	// set a order object to define the current active option
+
 	const order_by_weight = ui.create_dom_element({
 		element_type	: 'button',
 		class_name		: 'tool_button order_by_weight light',
 		text_content	: self.get_tool_label('weight') || 'Weight',
 		parent			: fragment
 	})
+	// mouseup event
+	const order_by_weight_mouseup_handler = (e) => {
+		e.stopPropagation()
 
-	// set a order object to define the current active option
-	const order_active = {}
-	order_by_weight.addEventListener('mouseup', ()=>{
 		order_by_diameter.classList.remove('active')
+
 		order_active.button_node	= order_by_weight
-		order_active.tipo	= 'numisdata133'
+		order_active.tipo			= 'numisdata133'
+
 		order_by(order_active)
-	})
+	}
+	order_by_weight.addEventListener('mouseup', order_by_weight_mouseup_handler)
 
 	const order_by_diameter = ui.create_dom_element({
 		element_type	: 'button',
@@ -154,32 +161,43 @@ const render_header_options = async function(self, content_data) {
 		text_content	: self.get_tool_label('diameter') || 'Diameter',
 		parent			: fragment
 	})
+	// mouseup event
+	const order_by_diameter_mouseup_handler = (e) => {
+		e.stopPropagation()
 
-	order_by_diameter.addEventListener('mouseup', ()=>{
 		order_by_weight.classList.remove('active')
-		order_active.button_node = order_by_diameter
-		order_active.tipo	= 'numisdata135'
+
+		order_active.button_node	= order_by_diameter
+		order_active.tipo			= 'numisdata135'
+
 		order_by(order_active)
-	})
+	}
+	order_by_diameter.addEventListener('mouseup', order_by_diameter_mouseup_handler)
 
 	// subscribe to window_blur of the portal coins
-	event_manager.subscribe('window_bur_'+self.coins.id, fn_reorder)
-
-	function fn_reorder(options) {
+	const fn_reorder = () => {
+		if (!order_active.button_node) {
+			return
+		}
 		order_active.button_node.classList.remove('active')
 		order_by(order_active)
 	}
+	self.events_tokens.push(
+		event_manager.subscribe('window_bur_'+self.coins.id, fn_reorder)
+	)
 
 	// order_by, get data and order by components or by section_id
 	const order_by = async function (options) {
-		//options
+
+		// options
 		const button_node	= options.button_node
 		const tipo			= options.tipo
 
 		button_node.classList.toggle('active')
 
-		const data			= self.coins.data
+		const data = self.coins.data
 		const order_data_value = []
+
 		// if the button is active order by the component
 		// else order by id (reorder the original data)
 		if(button_node.classList.contains('active')){
