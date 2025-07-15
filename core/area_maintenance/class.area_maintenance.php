@@ -166,6 +166,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('build_database_version') ?? 'Build database version';
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -185,8 +186,7 @@ class area_maintenance extends area_common {
 				$item->id		= 'update_code';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
-				$item->value	= null;
-
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -196,7 +196,7 @@ class area_maintenance extends area_common {
 				$item->class	= empty($missing) ? 'success' : 'danger';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('check_config') ?? 'Check config';
-				$item->value	= null; // get from widget
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -211,16 +211,6 @@ class area_maintenance extends area_common {
 						? EXPORT_HIERARCHY_PATH
 						: null)
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
-		// add_hierarchy *
-			$item = new stdClass();
-				$item->id		= 'add_hierarchy';
-				$item->type		= 'widget';
-				$item->class	= 'success width_100';
-				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
-				$item->value	= null;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -242,6 +232,16 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
+		// add_hierarchy *
+			$item = new stdClass();
+				$item->id		= 'add_hierarchy';
+				$item->type		= 'widget';
+				$item->class	= 'success width_100';
+				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
+				$item->value	= null; // loaded from self widget
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
 		// dedalo_api_test_environment *
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
@@ -249,7 +249,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
-				$item->value	= (object)[];
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -260,7 +260,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
-				$item->value	= (object)[];
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -301,30 +301,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DATABASE INFO';
-				$item->value	= null;
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
-		// php_user *
-			$php_user_info		= system::get_php_user_info();
-			$php_error_log_path	= system::get_error_log_path();
-			$item = new stdClass();
-				$item->id		= 'php_user';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'PHP USER';
-				$item->value	= (object)[
-					'info' => $php_user_info,
-					'php_error_log_path' => $php_error_log_path
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
-		// unit_test *
-			$item = new stdClass();
-				$item->id		= 'unit_test';
-				$item->type		= 'widget';
-				$item->label	= 'Unit test area';
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -333,6 +310,16 @@ class area_maintenance extends area_common {
 				$item->id		= 'environment';
 				$item->type		= 'widget';
 				$item->label	= 'Environment';
+				$item->value	= null; // loaded from self widget
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+		// unit_test *
+			$item = new stdClass();
+				$item->id		= 'unit_test';
+				$item->type		= 'widget';
+				$item->label	= 'Unit test area';
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -350,10 +337,11 @@ class area_maintenance extends area_common {
 		// counters_status *
 			$item = new stdClass();
 				$item->id		= 'counters_status';
+				$item->class	= 'width_100';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DEDALO COUNTERS STATUS';
-				$item->value	= null;
+				$item->value	= null; // loaded from self widget
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 

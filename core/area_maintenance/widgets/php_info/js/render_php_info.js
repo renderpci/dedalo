@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-
+	import {dd_request_idle_callback, when_in_viewport} from '../../../../common/js/events.js'
 
 
 /**
@@ -72,9 +72,18 @@ const get_content_data_edit = async function(self) {
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'iframe',
-			class_name		: 'php_info_iframe',
-			src				: src
+			class_name		: 'php_info_iframe'
 		})
+
+	// load event
+		// observe in viewport
+		dd_request_idle_callback(
+			() => {
+				when_in_viewport(content_data, () => {
+					content_data.src = src
+				})
+			}
+		)
 
 
 	return content_data
