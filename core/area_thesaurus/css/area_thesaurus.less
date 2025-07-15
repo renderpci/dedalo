@@ -82,15 +82,14 @@
 					>.typology_name {
 						background-color: @color_tag_indexation_normal;
 						color: @color_white;
+
 						&::before {
 							content: " [M] ";
 						}
+
 						&:after {
 							background-color: @color_white ;
-						}
-						&:hover {
-							background-color: darken(@color_tag_indexation_normal, 10%);
-						}
+						}	
 					}
 
 					.term_text, mark {
@@ -109,12 +108,14 @@
 					line-height: 1em;
 					color: @color_grey_5;
 					cursor: pointer;
-					&:hover {
-						background-color: @color_grey_13;
-					}
-					&:active {
+
+					&::active {
 						background-color: @color_grey_9;
 						color: @color_white;
+					}
+
+					&::after {
+						right: 0.33rem;
 					}
 
 					// default opacity (collapsed)
