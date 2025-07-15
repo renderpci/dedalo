@@ -346,13 +346,12 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 		// counters_status *
-			$response = counter::check_counters();
 			$item = new stdClass();
 				$item->id		= 'counters_status';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DEDALO COUNTERS STATUS';
-				$item->value	= $response;
+				$item->value	= null;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
