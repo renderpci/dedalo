@@ -3018,52 +3018,72 @@ export const ui = {
 	* 		preserve_content	: bool false,
 	* 		replace_container 	: bool false
 	* 		label				: string,
+	*    	model               : string,
 	* 		callback			: function,
 	* 		style 				: object
 	* 	}
-	* @return HTMLElement result_node
+	* @return HTMLElement|DocumentFragment|null result_node
 	*/
 	load_item_with_spinner : async function(options) {
 
 		// options
-			const container			= options.container
-			const preserve_content	= options.preserve_content || false
-			const replace_container = options.replace_container || false
-			const label				= options.label || ''
-			const model				= options.model || null
-			const callback			= options.callback
-			const style				= options.style
+		const container			= options.container
+		const preserve_content	= options.preserve_content || false
+		const replace_container	= options.replace_container || false
+		const label				= options.label || ''
+		const model				= options.model || null
+		const callback			= options.callback
+		const style				= options.style
 
-		// clean container
-			if (preserve_content===false) {
-				while (container.firstChild) {
-					container.removeChild(container.firstChild)
-				}
+		// Validate container
+		if (!container instanceof HTMLElement) {
+			console.error('Container is not a valid HTMLElement.', container);
+			return null;
+		}
+
+		// Validate callback
+		if (typeof callback !== 'function') {
+			console.error('Callback is not a function.', callback);
+			return null;
+		}
+
+		// Clean container if content should not be preserved
+		if (!preserve_content) {
+			while (container.firstChild) {
+				container.removeChild(container.firstChild)
 			}
+		}
 
-		// placeholder_class
-			const placeholder_class = model
-				? ` ${model}_placeholder` + (SHOW_DEBUG ? ` placeholder_debug` : '')
-				: ''
+		// Prepare placeholder classes
+	    const placeholder_class_names = ['container', 'container_placeholder'];
+	    if (model) {
+	        placeholder_class_names.push(`${model}_placeholder`);
+	    }
+	    if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG) {
+	        placeholder_class_names.push('placeholder_debug');
+	    }
 
-		// container_placeholder
+		// Create container placeholder with spinner
 			const container_placeholder = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'container container_placeholder' + placeholder_class,
+				class_name		: placeholder_class_names.join(' '),
 				inner_html		: (get_label.loading || 'Loading') + ' ' + label,
 				parent			: container
 			})
+
 			if (style) {
 				Object.assign(container_placeholder.style, style);
 			}
-			// spinner
+
+			// Spinner element
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'spinner medium',
 				parent			: container_placeholder
 			})
 
-		// callback wait (expect promise resolving DOM node) and handle the result
+		// Execute callback and handle the result.
+		// callback wait (expects promise resolving DOM node)
 			try {
 				const result_node = await callback();
 
@@ -3073,7 +3093,7 @@ export const ui = {
 					return null;
 				}
 
-				if (!result_node instanceof HTMLElement && !result_node instanceof DocumentFragment) {
+				if (!(result_node instanceof HTMLElement || result_node instanceof DocumentFragment)) {
 					console.error('Callback did not return a valid DOM node type.', typeof result_node);
 					container_placeholder.remove();
 					return null;
@@ -3092,6 +3112,7 @@ export const ui = {
 				)
 
 				return result_node;
+
 			} catch (error) {
 				console.error('Error during callback execution:', error);
 				container_placeholder.remove();
