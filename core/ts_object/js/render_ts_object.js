@@ -804,8 +804,12 @@ const render_id_column = function(options) {
 						parent			: id_column_content
 					})
 					// click event
-					const click_handler = function(e) {
+					const add_click_handler = function(e) {
 						e.stopPropagation()
+
+						if (!confirm(get_label.sure || 'Sure?')) {
+							return
+						}
 
 						// mode set in dataset
 							link_add.dataset.mode = 'add_child'
@@ -856,7 +860,7 @@ const render_id_column = function(options) {
 									})
 							})
 					}
-					link_add.addEventListener('click', click_handler)
+					link_add.addEventListener('click', add_click_handler)
 
 					// add_icon_link_add
 					ui.create_dom_element({
