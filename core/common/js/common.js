@@ -13,7 +13,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {get_elements_css_object} from '../../page/js/css.js'
 	import {render_relogin} from '../../login/js/render_login.js'
-	import {render_server_response_error} from '../../common/js/render_common.js'
+	import {render_server_response_error, render_stream} from '../../common/js/render_common.js'
 
 
 
@@ -2971,6 +2971,97 @@ export const set_environment = function (api_response_environment) {
 		}
 	}
 }//end set_environment
+
+
+
+/**
+* UPDATE_PROCESS_STATUS
+* Call to work API and get the current process status.
+* Once read, update the container info about.
+* @param string id - Unique identifier for the process.
+* @param string|number pid - Process ID.
+* @param string pfile - Path to the process file.
+* @param HTMLElement container - The DOM element to update with status info.
+* @param number update_rate = 1000 - Rate in milliseconds for server updates.
+* @param function callback - Optional callback function to execute when the stream finishes.
+* @return void
+*/
+export const update_process_status = function (id, pid, pfile, container, update_rate=1000, callback) {
+
+	// Validate essential parameters
+    if (!container || !(container instanceof HTMLElement)) {
+        console.error('Error: "container" must be a valid HTMLElement.');
+        return;
+    }
+    if (typeof id !== 'string' || (typeof pid !== 'string' && typeof pid !== 'number') || typeof pfile !== 'string') {
+        console.error('Error: Invalid id, pid, or pfile types.');
+        return;
+    }
+    if (typeof update_rate !== 'number' || update_rate <= 0) {
+        console.warn('Warning: Invalid update_rate. Using default 1000ms.');
+        update_rate = 1000;
+    }
+
+    if(SHOW_DEBUG===true) {
+    	console.log(`Initiating process status update for ID: ${id}, PID: ${pid}`);
+    }
+
+	// get_process_status from API and returns a SEE stream
+	data_manager.request_stream({
+		body : {
+			dd_api		: 'dd_utils_api',
+			action		: 'get_process_status',
+			update_rate	: update_rate, // int milliseconds
+			options		: {
+				pid		: pid,
+				pfile	: pfile
+			}
+		}
+	})
+	.then((stream) => {
+
+		if (!stream) {
+            console.error('Error: data_manager.request_stream did not return a valid stream.');
+            return;
+        }
+
+		// render base nodes and set functions to manage
+		// the stream reader events
+		const render_stream_response = render_stream({
+			container		: container,
+			id				: id,
+			pid				: pid,
+			pfile			: pfile,
+			display_json	: true
+		})
+
+		// on_read event (called on every chunk from stream reader)
+		const on_read = (sse_response) => {
+			// fire update_info_node on every reader read chunk
+			render_stream_response.update_info_node(sse_response)
+		}
+
+		// on_done event (called once at finish or cancel the stream read)
+		const on_done = () => {
+
+			// is triggered at the reader's closing
+			render_stream_response.done()
+
+			// optional callback on done
+			if (callback && typeof callback === 'function') {
+				callback()
+			}
+		}
+
+		// read stream. Creates ReadableStream that fire
+		// 'on_read' function on each stream chunk at update_rate
+		// (1 second default) until stream is done (PID is no longer running)
+		data_manager.read_stream(stream, on_read, on_done)
+	})
+	.catch(function(error) {
+		console.error(`Stream request for ID: ${id}, PID: ${pid} failed:`, error);
+	});
+}//end update_process_status
 
 
 
