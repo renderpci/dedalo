@@ -68,7 +68,7 @@ render_build_database_version.prototype.list = async function(options) {
 const get_content_data = async function(self) {
 
 	// short vars
-		const value = await self.get_widget_value()
+		const value = self.value || {}
 
 	// content_data
 		const content_data = ui.create_dom_element({
