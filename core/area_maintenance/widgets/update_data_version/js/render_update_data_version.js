@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {when_in_dom} from '../../../../common/js/events.js'
-	import {render_stream} from '../../../../common/js/render_common.js'
+	import {update_process_status} from '../../../../common/js/common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
@@ -271,6 +271,7 @@ const get_content_data = async function(self) {
 							update_data_version()
 							.then(function(response){
 								update_process_status(
+									local_db_id,
 									response.pid,
 									response.pfile,
 									body_response
@@ -308,52 +309,6 @@ const get_content_data = async function(self) {
 			return response
 		}//end update_data_version
 
-	// update_process_status
-		const update_process_status = function(pid, pfile, container) {
-
-			// get_process_status from API and returns a SEE stream
-				data_manager.request_stream({
-					body : {
-						dd_api		: 'dd_utils_api',
-						action		: 'get_process_status',
-						update_rate	: 1000, // int milliseconds
-						options		: {
-							pid		: pid,
-							pfile	: pfile
-						}
-					}
-				})
-				.then(function(stream){
-
-					// render base nodes and set functions to manage
-					// the stream reader events
-					const render_stream_response = render_stream({
-						container		: container,
-						id				: local_db_id,
-						pid				: pid,
-						pfile			: pfile,
-						display_json	: true
-					})
-
-					// on_read event (called on every chunk from stream reader)
-					const on_read = (sse_response) => {
-						// fire update_info_node on every reader read chunk
-						render_stream_response.update_info_node(sse_response)
-					}
-
-					// on_done event (called once at finish or cancel the stream read)
-					const on_done = () => {
-						// is triggered at the reader's closing
-						render_stream_response.done()
-					}
-
-					// read stream. Creates ReadableStream that fire
-					// 'on_read' function on each stream chunk at update_rate
-					// (1 second default) until stream is done (PID is no longer running)
-					data_manager.read_stream(stream, on_read, on_done)
-				})
-		}//end update_process_status
-
 		// check process status always
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
@@ -363,6 +318,7 @@ const get_content_data = async function(self) {
 			.then(function(local_data){
 				if (local_data && local_data.value) {
 					update_process_status(
+						local_db_id,
 						local_data.value.pid,
 						local_data.value.pfile,
 						body_response

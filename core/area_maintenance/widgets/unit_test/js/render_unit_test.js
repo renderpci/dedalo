@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {render_stream} from '../../../../common/js/render_common.js'
+	import {update_process_status} from '../../../../common/js/common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
@@ -147,6 +147,8 @@ const get_content_data_edit = async function(self) {
 */
 const render_long_process = function() {
 
+	const local_db_id = 'process_test_long_process'
+
 	// long_process_container
 		const long_process_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -186,67 +188,16 @@ const render_long_process = function() {
 			return response
 		}//end long_process_stream
 
-	// update_process_status
-		const update_process_status = function(pid, pfile, container) {
-
-			const update_rate = input_update_rate.value
-				? parseInt(input_update_rate.value)
-				: 1000
-
-			// get_process_status from API and returns a SEE stream
-				data_manager.request_stream({
-					body : {
-						dd_api		: 'dd_utils_api',
-						action		: 'get_process_status',
-						update_rate	: update_rate, // int milliseconds
-						options		: {
-							pid		: pid,
-							pfile	: pfile
-						}
-					}
-				})
-				.then(function(stream){
-
-					// render base nodes and set functions to manage
-					// the stream reader events
-					const render_stream_response = render_stream({
-						container		: container,
-						id				: 'process_test_long_process',
-						pid				: pid,
-						pfile			: pfile,
-						display_json	: true
-					})
-
-					// on_read event (called on every chunk from stream reader)
-					const on_read = (sse_response) => {
-						// fire update_info_node on every reader read chunk
-						render_stream_response.update_info_node(sse_response)
-					}
-
-					// on_done event (called once at finish or cancel the stream read)
-					const on_done = () => {
-						// is triggered at the reader's closing
-						render_stream_response.done()
-						// unlocks the button submit
-						button_run_long_process.classList.remove('loading')
-					}
-
-					// read stream. Creates ReadableStream that fire
-					// 'on_read' function on each stream chunk at update_rate
-					// (1 second default) until stream is done (PID is no longer running)
-					data_manager.read_stream(stream, on_read, on_done)
-				})
-		}//end fn_long_process
-
 		// check process status always
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
-				'process_test_long_process',
+				local_db_id,
 				'status'
 			)
 			.then(function(local_data){
 				if (local_data && local_data.value) {
 					update_process_status(
+						local_db_id,
 						local_data.value.pid,
 						local_data.value.pfile,
 						long_process_response
@@ -280,6 +231,7 @@ const render_long_process = function() {
 			long_process_stream(iterations)
 			.then(function(response){
 				update_process_status(
+					local_db_id,
 					response.pid,
 					response.pfile,
 					long_process_response

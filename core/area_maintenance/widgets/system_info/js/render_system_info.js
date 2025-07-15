@@ -92,8 +92,10 @@ const render_content_data = async function(self) {
 		const datalist_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'datalist_container',
+			inner_html		: 'Collecting system info. Please wait..',
 			parent			: content_data
 		})
+
 		// get system data from API
 		let load_status = null
 		const load_data = () => {
@@ -101,6 +103,12 @@ const render_content_data = async function(self) {
 			if (load_status!==null) {
 				return
 			}
+
+			// clean node
+			while (datalist_container.firstChild) {
+				datalist_container.removeChild(datalist_container.firstChild);
+			}
+
 			load_status = 'loading'
 			const spinner = ui.create_dom_element({
 				element_type	: 'span',
@@ -125,12 +133,8 @@ const render_content_data = async function(self) {
 				render_datalist(self, datalist_container)
 			})
 		}
-		when_in_viewport(
-			datalist_container,
-			load_data
-		)
 		// force load system info to allow update widget label color
-		setTimeout(load_data, 2000)
+		setTimeout(load_data, 1500)
 
 	// body_response
 		const body_response = ui.create_dom_element({

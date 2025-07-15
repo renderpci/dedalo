@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {render_stream} from '../../../../common/js/render_common.js'
+	import {update_process_status} from '../../../../common/js/common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
@@ -134,54 +134,6 @@ const render_build_install_version = function (self, value) {
 			class_name		: 'info_text',
 			parent			: fragment
 		})
-
-	// update_process_status
-		const update_process_status = function(pid, pfile, container) {
-
-			// get_process_status from API and returns a SEE stream
-				data_manager.request_stream({
-					body : {
-						dd_api		: 'dd_utils_api',
-						action		: 'get_process_status',
-						update_rate	: 1000, // int milliseconds
-						options		: {
-							pid		: pid,
-							pfile	: pfile
-						}
-					}
-				})
-				.then(function(stream){
-
-					// render base nodes and set functions to manage
-					// the stream reader events
-					const render_stream_response = render_stream({
-						container		: container,
-						id				: 'process_build_install_version',
-						pid				: pid,
-						pfile			: pfile,
-						display_json	: true
-					})
-
-					// on_read event (called on every chunk from stream reader)
-					const on_read = (sse_response) => {
-						// fire update_info_node on every reader read chunk
-						render_stream_response.update_info_node(sse_response)
-					}
-
-					// on_done event (called once at finish or cancel the stream read)
-					const on_done = () => {
-						// is triggered at the reader's closing
-						render_stream_response.done()
-						// unlocks the button submit
-						button_process.classList.remove('loading')
-					}
-
-					// read stream. Creates ReadableStream that fire
-					// 'on_read' function on each stream chunk at update_rate
-					// (1 second default) until stream is done (PID is no longer running)
-					data_manager.read_stream(stream, on_read, on_done)
-				})
-		}//end update_process_status
 
 		// check process status always
 		const check_process_data = () => {

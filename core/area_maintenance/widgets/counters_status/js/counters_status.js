@@ -43,13 +43,77 @@ export const counters_status = function() {
 // prototypes assign
 	// // lifecycle
 	counters_status.prototype.init		= widget_common.prototype.init
-	counters_status.prototype.build		= widget_common.prototype.build
+	// counters_status.prototype.build	= widget_common.prototype.build
 	counters_status.prototype.render	= widget_common.prototype.render
 	counters_status.prototype.refresh	= widget_common.prototype.refresh
 	counters_status.prototype.destroy	= widget_common.prototype.destroy
 	// // render
 	counters_status.prototype.edit		= render_counters_status.prototype.list
 	counters_status.prototype.list		= render_counters_status.prototype.list
+
+
+
+/**
+* BUILD
+* Custom build overwrites common widget method
+* @param bool autoload = false
+* @return bool
+*/
+counters_status.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// call generic common tool build
+		const common_build = await widget_common.prototype.build.call(this, autoload);
+
+	try {
+
+		// specific actions.. like fix main_element for convenience
+		self.value = await self.get_widget_value()
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
+
+
+	return common_build
+}//end build_custom
+
+
+
+/**
+* GET_WIDGET_VALUE
+* Get widget value from class maintenance
+* The options 'model' property is the class method name
+* @return object result
+*/
+counters_status.prototype.get_widget_value = async () => {
+
+	// get value from API
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'get_widget_value',
+			prevent_lock	: true,
+			source			: {
+				type	: 'widget',
+				model	: 'counters_status'
+			}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) get_widget_value counters_status api_response:', api_response);;
+	}
+
+	const result = api_response.result
+
+
+	return result
+}//end get_widget_value
 
 
 

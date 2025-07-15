@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {when_in_viewport} from '../../../../common/js/events.js'
+	import {dd_request_idle_callback, when_in_viewport} from '../../../../common/js/events.js'
 	import {createJSONEditor} from '../../../../../lib/jsoneditor/dist/standalone.js'
 	import {print_response} from '../../../js/render_area_maintenance.js'
 
@@ -151,6 +151,7 @@ const get_content_data_edit = async function(self) {
 
 				// JSON editor
 					const load_editor = () => {
+
 						// localStorage
 						const sample_data	= '{"section_tipo":["rsc170"],"limit":5,"offset":0}'
 						const saved_value	= localStorage.getItem('json_editor_sqo')
@@ -182,7 +183,11 @@ const get_content_data_edit = async function(self) {
 					}
 
 					// observe in viewport
-					when_in_viewport(json_editor_api_container, load_editor)
+					dd_request_idle_callback(
+						() => {
+							when_in_viewport(json_editor_api_container, load_editor)
+						}
+					)
 
 				// add at end body_response
 					const body_response = ui.create_dom_element({

@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {render_stream} from '../../../../common/js/render_common.js'
+	import {update_process_status} from '../../../../common/js/common.js'
 
 
 
@@ -105,58 +105,6 @@ const get_content_data = async function(self) {
 			class_name		: 'body_response',
 			parent			: content_data
 		})
-
-	// update_process_status
-		const update_process_status = (pid, pfile, container) => {
-
-			// locks the button submit
-			button_submit.classList.add('loading')
-
-			// get_process_status from API and returns a SEE stream
-			data_manager.request_stream({
-				body : {
-					dd_api		: 'dd_utils_api',
-					action		: 'get_process_status',
-					update_rate	: 1000, // int milliseconds
-					options		: {
-						pid		: pid,
-						pfile	: pfile
-					}
-				}
-			})
-			.then(function(stream){
-
-				// render base nodes and set functions to manage
-				// the stream reader events
-				const render_response = render_stream({
-					container	: container,
-					id			: 'process_make_backup',
-					pid			: pid,
-					pfile		: pfile
-				})
-
-				// on_read event (called on every chunk from stream reader)
-				const on_read = (sse_response) => {
-					// fire update_info_node on every reader read chunk
-					render_response.update_info_node(sse_response)
-					// get files list updated with last file only
-					update_last_file_info()
-				}
-
-				// on_done event (called once at finish or cancel the stream read)
-				const on_done = () => {
-					// is triggered at the reader's closing
-					render_response.done()
-					// unlocks the button submit
-					button_submit.classList.remove('loading')
-				}
-
-				// read stream. Creates ReadableStream that fire
-				// 'on_read' function on each stream chunk at update_rate
-				// (1 second default) until stream is done (PID is no longer running)
-				data_manager.read_stream(stream, on_read, on_done)
-			})
-		}
 
 	// check process status always
 		const check_process_data = () => {

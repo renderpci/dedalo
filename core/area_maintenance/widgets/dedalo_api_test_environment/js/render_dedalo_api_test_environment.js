@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {when_in_viewport} from '../../../../common/js/events.js'
+	import {dd_request_idle_callback, when_in_viewport} from '../../../../common/js/events.js'
 	import {createJSONEditor} from '../../../../../lib/jsoneditor/dist/standalone.js'
 	import {print_response} from '../../../js/render_area_maintenance.js'
 
@@ -145,6 +145,7 @@ const get_content_data_edit = async function(self) {
 
 				// JSON editor
 					const load_editor = () => {
+
 						// localStorage
 						const sample_data	= '{"id":"section_oh1_edit_lg-eng","action":"read","source":{"typo":"source","type":"section","action":"search","model":"section","tipo":"rsc170","section_tipo":"rsc170","section_id":null,"mode":"edit","view":null,"lang":"lg-eng"},"sqo":{"section_tipo":["rsc170"],"limit":1,"offset":0}}'
 						const saved_value	= localStorage.getItem('json_editor_api')
@@ -176,7 +177,11 @@ const get_content_data_edit = async function(self) {
 					}
 
 					// observe in viewport
-					when_in_viewport(json_editor_api_container, load_editor)
+					dd_request_idle_callback(
+						() => {
+							when_in_viewport(json_editor_api_container, load_editor)
+						}
+					)
 
 				// add at end body_response
 					const body_response = ui.create_dom_element({
