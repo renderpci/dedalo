@@ -26,109 +26,7 @@ However, not all data are equally valid, the data must meet stringent quality st
 
 The overarching objective is to construct robust, computationally viable data models that comprehensively encapsulate the multidimensional facets of cultural heritage: its physical artifacts, intangible attributes, dynamic processes, and the socio-historical narratives embedded within.
 
-### The Raspa Data Quality Score: A Cumulative Scale for Cultural Heritage Data Assessment
-
-To ensure the effective documentation, processing, and long-term preservation of cultural heritage information, the **Dédalo project** proposes the **Raspa Data Quality Score** a cumulative metric that evaluates data across ten progressive levels of computational readiness, semantic richness, and ethical transparency. This scale reflects the project's commitment to structured, interoperable, and ethically-managed data built entirely on **Free and Open Source Software (FOSS)**.
-
-The Raspa data quality score has two dimensions; **Technical dimension** and **Community / social dimension**
-
-#### Technical dimension
-
-The Raspa score begins at **Level 0**, assigned to **unstructured data** such as books, Word documents, and PDFs. While these formats may contain valuable knowledge, they remain machine-opaque and unsuitable for computational processing without prior transformation. Their human readability is not sufficient for automated reasoning or integration into structured knowledge systems like Dédalo (Dédalo can handle this data but it is used as media).
-
-At **Level 1**, **structured data formats** such as spreadsheets (CSV, Excel) and relational databases (SQL) become machine-readable and receive 1 Raspa point. However, they exhibit significant limitations: structural rigidity, limited support for semantic relationships, and insufficient compatibility with the conceptual models required in cultural heritage documentation.
-
-**Level 2** introduces **ontologically modeled data**, where information is structured using formal ontologies. These representations enable the explicit definition of entities and relationships, domain-specific modeling, and support for inferencing, critical capabilities for managing complex heritage knowledge.
-
-Advancing to **Level 3**, **computable data** employs standardized computational primitives (e.g., [TC39 Temporal](https://tc39.es/proposal-temporal/docs/cookbook.html) for time representation), eliminating syntactic ambiguities and enabling precise temporal and spatial reasoning.
-
-At **Level 4**, data becomes **traceable**, incorporating robust provenance tracking and version control. These systems record the full history of modifications, including who made each change, when it occurred, and the rationale behind it, ensuring transparency, accountability, and scholarly reproducibility. Traceable data enables users to assess the origin, evolution, and reliability of the information, supporting responsible reuse and long-term stewardship.
-
-**Level 5** assesses the **epistemological flexibility** of the model, awarding points to data structures capable of representing multiple perspectives, evolving knowledge, and supporting non-destructive schema changes. This capacity is particularly relevant for heritage knowledge, which is inherently interpretive and temporally dynamic.
-
-At **Level 6**, **contextualization** becomes paramount. Data is enriched with metadata that articulates certainty levels, establishes source attribution chains, and embeds domain-specific framing—allowing users to assess the reliability and interpretative lens of the information.
-
-#### Community / Social dimension
-
-**Level 7** recognizes **translatable data**, where linguistic content is decoupled from core data structures. Systems at this level support internationalization and localization, preserving semantic meaning across multiple languages, an essential requirement for global cultural heritage platforms.
-
-**Level 8** concerns **openness**, recognizing data that is made publicly accessible under clear licensing terms (e.g., Creative Commons) and distributed via REST APIs or equivalent open standards. This level ensures that data is not only reusable but also free from proprietary constraints that hinder scholarly and public access.
-
-At **Level 9**, data demonstrates **multi-standard interoperability**. Such datasets maintain compliance with multiple domain standards (e.g., CIDOC CRM, Dublin Core, Nomisma) and support lossless transformation between schemas, ensuring semantic alignment across institutions, disciplines, and technologies.
-
-Finally, **Level 10** is reserved for data that is **processed entirely through Free and Open Source Software**. This level guarantees end-to-end transparency, reproducibility, and ethical integrity by eliminating dependencies on proprietary tools. It reflects the Dédalo project's core philosophy: that cultural heritage data should be freely accessible, verifiably processed, and ethically managed within open infrastructures.
-
-##### Extra point
-
-Sustainable data.
-Data that is sustainable over time receives the an extra Raspa score, reflecting its resilience, long-term accessibility, and preservation-readiness. Sustainable data is not only well-structured and ethically processed, but also designed to withstand technological, organizational, and epistemological change.
-
-Key characteristics of sustainable data include:
-
-- Format durability: Use of open, standardized, and non-obsolete formats (e.g., JSON, XML, TIFF).
-- Long-term storage strategy: Integration with digital preservation infrastructures.
-- Documentation continuity: Thorough metadata, contextual notes, and technical documentation that support future interpretation and migration.
-- Community stewardship and participation: Maintained by active institutions or open communities that ensure updates, backups, and governance.
-
-Sustainable data ensures that cultural heritage remains accessible, intelligible, and reusable not just today, but decades into the future, even as technologies evolve.
-
-### The Raspa score table
-
-#### Technical dimension
-
-| Raspa Score | Data Quality Tier | Key Characteristics | Technical Requirements |
-| --- | ---| --- | ---|
-| 0 | Unstructured Data | Human-readable only (books, PDFs) | No computational structure |
-| 1 | Basic Structured Data | Machine-readable tables (CSV, Excel, SQL) | Relational schemas |
-| 2 | Ontologically Modeled | Formal semantic relationships | Domain ontologies |
-| 3 | Computable Data | Native machine processing ([ECMA TC39 temporal dates]([TC39 temporal](https://tc39.es/proposal-temporal/docs/cookbook.html)), [geocoordinates as geojson](https://datatracker.ietf.org/doc/html/rfc7946)) | Data type standardization |
-| 5 | Traceable Data | Full provenance tracking | Immutable logs, version control (W3C PROV) |
-| 6 | Reinterpretable Data | Epistemic flexibility for future revisions | Non-destructive schema evolution |
-| 7 | Contextualized Data | Embedded certainty levels and source attribution | Data-frame metadata structures |
-
-#### Community and social dimension
-
-| Raspa Score | Data Quality Tier | Key Characteristics | Technical Requirements |
-| --- | ---| --- | ---|
-| 7 | Translatable Data | Language-agnostic representation | Internationalization frameworks, Unicode compliance |
-| 8 | Open Data | Standards-compliant public access | Open APIs (REST, GraphQL, etc.), CC licensing |
-| 9 | Multi-Standard Interoperable | Crosswalk capability across schemas | CIDOC CRM, Dublin Core, schema.org,, etc. mappings |
-| 10 | Free Software Processed | End-to-end open toolchain | FOSS stack verification |
-| +1 | Sustainable data | Log-term preservation and community evolve | Standardized formats, checksums and backups, network working data |
-
-### The Raspa score diagram
-
-```mermaid
-graph TD
-    A[0: Unstructured Data «Books, PDFs»] -->|structural conversion| B[1: Structured Data «CSV, SQL»]
-    B -->|semantic modeling| C[2: Ontological Data ]
-    C -->|computational primitives| D[3: Computable Data ]
-    D -->|i18n frameworks| E[4: Translatable Data ]
-    E -->|provenance tracking| F[5: Traceable Data ]
-    F -->|epistemic flexibility| G[6: Reinterpretable Data]
-    G -->|context embedding| H[7: Contextualized Data, Data-frames]
-    H -->|open standards| I[8: Open Data «CC licenses»]
-    I -->|crosswalk mappings| J[9: Multi-Standard Data «CIDOC CRM»]
-    J -->|FOSS compliance| K[10: Free Software Processed]
-
-    classDef default fill:#f8f9fa,stroke:#333,stroke-width:2px;
-    classDef level0 fill:#ffecec,stroke:#ff6b6b;
-    classDef level10 fill:#e6f7e6,stroke:#40c057;
-    class A level0;
-    class K level10;
-```
-
-### Raspa Acronym Definition
-
-**R** – Reliable & Reproducible
-
-**A** – Adaptable & Aligned
-
-**S** – Structured & Sustainable
-
-**P** – Public & Participatory
-
-**A** – Actionable & Archivable
+To assess data quality across projects (including Dédalo itself), Dédalo proposes the [Raspa Data Quality Score](raspa_score.md) as an evaluation metric.
 
 ## Dédalo ecosystem
 
@@ -329,11 +227,11 @@ Then you will need to create the logic with the specific query to get all posibl
 
 ```SQL
 SELECT Quality.id, Quality."Quality"
-FROM "Quality" 
+FROM "Quality"
 ```
 
 Or doing a join if you want to see it in list mode (without all results). With the data you will need to build the html code to create the select.
 
 The problem here are the changes, because the schema, the logic and the render is specific and rigid, if you need  change quality, you will need change the schema of the database, the logic in your code and the html associated. In simple cases or specific uses than not has changes it is not a problem, but in a large and complex situation it could be very hard. Dédalo ontology is a abstraction of all of this process and you will not change your databases or the logic associated opening the possibility to grow and change in a flexible way.
 
-You can find specific documentation on the Dedalo ontology [here.](./ontology/index.md)
+You can find specific documentation on the [Dedalo ontology here.](./ontology/index.md)
