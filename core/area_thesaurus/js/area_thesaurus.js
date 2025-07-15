@@ -458,6 +458,11 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			})
 		}
 
+	// model_value_is_hide. Thesaurus default is false, but Ontology default is true.
+		self.model_value_is_hide = (self.model==='area_ontology')
+			? false
+			: true;
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
