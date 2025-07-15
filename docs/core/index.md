@@ -26,7 +26,7 @@ However, not all data are equally valid, the data must meet stringent quality st
 
 The overarching objective is to construct robust, computationally viable data models that comprehensively encapsulate the multidimensional facets of cultural heritage: its physical artifacts, intangible attributes, dynamic processes, and the socio-historical narratives embedded within.
 
-To assess data quality across projects (including Dédalo itself), Dédalo proposes the [Raspa Data Quality Score](raspa_score.md) as an evaluation metric.
+To assess data quality across projects (including Dédalo itself), Dédalo proposes the [Raspa Data Quality Score](raspa_score.md) as an evaluation metric. ![raspa](assets/20250715_175300_paw.svg){width="20"}
 
 ## Dédalo ecosystem
 
