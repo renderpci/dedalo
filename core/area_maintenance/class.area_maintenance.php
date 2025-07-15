@@ -280,15 +280,17 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-		// dedalo_version *
+		// php_user *
+			$php_user_info		= system::get_php_user_info();
+			$php_error_log_path	= system::get_error_log_path();
 			$item = new stdClass();
-				$item->id		= 'dedalo_version';
+				$item->id		= 'php_user';
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->label	= 'DEDALO VERSION';
+				$item->label	= 'PHP USER';
 				$item->value	= (object)[
-					'dedalo_version'	=> DEDALO_VERSION,
-					'dedalo_build'		=> DEDALO_BUILD
+					'info' => $php_user_info,
+					'php_error_log_path' => $php_error_log_path
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
