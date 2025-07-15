@@ -625,7 +625,7 @@ export const render_ts_line = function(options) {
 		}//end switch(true)
 
 		// ontology model case
-		if (current_element.model_value && self.caller.model==='area_ontology') {
+		if (current_element.model_value) {
 			const hide_class = self.caller.model_value_is_hide ? ' hide' : '';
 			ui.create_dom_element({
 				element_type	: 'div',
