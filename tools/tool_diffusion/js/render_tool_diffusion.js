@@ -573,7 +573,7 @@ export const render_publication_items = function(self) {
 				}
 
 			// container_bottom
-				const container_bottom = render_container_bottom(self, item, lock_items, local_db_id, current_diffusion_element_tipo)
+				const container_bottom = render_container_bottom(self, item, lock_items, local_db_id, current_diffusion_element_tipo, data_item)
 				publication_items_grid.appendChild(container_bottom)
 		}//end for (let i = 0; i < current_diffusion_map_length; i++)
 
@@ -594,7 +594,7 @@ export const render_publication_items = function(self) {
 * @param string local_db_id
 * @return HTMLElement container_bottom
 */
-export const render_container_bottom = function (self, item, lock_items, local_db_id, current_diffusion_element_tipo) {
+export const render_container_bottom = function (self, item, lock_items, local_db_id, current_diffusion_element_tipo, data_item) {
 
 	const container_bottom = ui.create_dom_element({
 		element_type	: 'div',
