@@ -11,30 +11,17 @@
 
 
 /**
-* ROOT_CSS
-* Registry for storing CSS rules
+* INSERTED_RULES
+* Registry for style sheet inserted CSS rules
+* value e.g. {
+*    "key": "#col_section_id::before",
+*    "value": {
+*        "rule_text": "#col_section_id::before { content:'Id' }",
+*        "index": 0
+*    }
+*  }
 */
-const root_css = new Map()
-
-
-
-/**
-* ELEMENTS_CSS
-*   Proxy object where styles are set
-*/
-	// export const elements_css = new Proxy(root_css, {
-	// 	set: function (target, key, value) {
-	// 		// update style sheet value
-	// 		update_style_sheet(key, value)
-	// 		.then(function(result){
-	// 			if (result===true) {
-	// 				// update proxy var value
-	// 				target[key] = value;
-	// 			}
-	// 		})
-	// 		return true;
-	// 	}
-	// });
+const inserted_rules = new Map();
 
 
 
@@ -63,52 +50,13 @@ const root_css = new Map()
 *	padding: '10px 20px'
 * }); // returns true
 */
-export const set_element_css = (key, value, replace=false) => {
-
-	// Check if key already exists and replace is disabled
-	if (replace===false && root_css.has(key)) {
-		// console.log("Ignored existing key (set_element_css):", key, value);
-		return false
-	}
+export const set_element_css = async function(key, value) {
 
 	// Validate value parameter - must be non-empty object
 	if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length === 0) {
 		// empty object or invalid type
 		return false;
 	}
-
-	// set root_css property
-	const result = update_style_sheet(key, value)
-
-
-	return result
-}//end set_element_css
-
-
-
-/**
-* UPDATE_STYLE_SHEET
-* @param string key
-* 	like 'rsc170_rsc76'
-* @param value object
-* 	like
-	{
-		"rsc732": {
-		  ".wrapper_component": {
-			  "grid-row": "1 / 5",
-			  "grid-column": "9 / 11",
-			  "@media screen and (min-width: 900px)": {
-				"width": "50%"
-			}
-		  }
-		}
-	}
-* @return bool
-*/
-const update_style_sheet = async function(key, value) {
-
-	// style_sheet
-		const css_style_sheet = get_elements_style_sheet()
 
 	// add all
 		for(const selector in value) {
@@ -134,8 +82,8 @@ const update_style_sheet = async function(key, value) {
 					const full_selector	= data.selector
 					const json_values	= data.value
 
-				// insert rule
-				insert_rule(full_selector, json_values, css_style_sheet, false)
+				// process and insert rule
+				process_rule(full_selector, json_values, false)
 
 			}else{
 
@@ -150,38 +98,31 @@ const update_style_sheet = async function(key, value) {
 					? `.${key}${selector}` // like .oh1_rsc75.wrap_component
 					: `.${key} ${operator} ${selector}`	// like .oh1_rsc75 > .content_data
 
-				// const full_selector = `.${key}${selector}` // like .oh1_rsc75.wrap_component
-
-				// insert rule
-				insert_rule(full_selector, json_css_values, css_style_sheet, false)
+				// process and insert rule
+				process_rule(full_selector, json_css_values, false)
 			}
 		}
 
-	// store as already set
-		root_css.set(key, value)
-
 
 	return true
-}//end update_style_sheet
+}//end set_element_css
 
 
 
 /**
-* INSERT_RULE
+* PROCESS_RULE
 * Execute a standard 'insertRule' order with given values
 *
 * @param string selector
 * 	like: '.rsc170_rsc20.wrapper_component'
 * @param object json_css_values
 * 	like:
-* @param HTML stylesheet css_style_sheet
-* 	Virtual css file stylesheet
 * @param boolean skip_insert
 * 	Used to control deep recursive resolutions
 *
 * @return array rules
 */
-const insert_rule = function(selector, json_css_values, css_style_sheet, skip_insert) {
+const process_rule = function(selector, json_css_values, skip_insert) {
 
 	const rules = []
 
@@ -203,24 +144,25 @@ const insert_rule = function(selector, json_css_values, css_style_sheet, skip_in
 			&& value!==null)
 			{
 
-			const deep_rules = insert_rule(
+			// recursion
+			const deep_rules = process_rule(
 				selector,
 				value,
-				css_style_sheet,
 				true // skip_insert
 			)
 
 			const joined = deep_rules.join('; ');
 
 			// Create nested rule (assuming key is a media query or pseudo-selector)
-			const rule = `
-			${key} {
-				${selector} {
-					${joined};
-				}
-			}`;
+			// const rule = `
+			// ${key} {
+			// 	${selector} {
+			// 		${joined};
+			// 	}
+			// }`;
 
-			css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
+			const rule_body = `${selector} { ${joined} }`
+			queue_style_update(key, rule_body)
 		}
 	}
 
@@ -231,24 +173,140 @@ const insert_rule = function(selector, json_css_values, css_style_sheet, skip_in
 
 	 // Combine all rules for the main selector
 		if (rules.length > 0) {
-			const rule = `${selector} { ${rules.join('; ')} }`;
-			css_style_sheet.insertRule(rule, css_style_sheet.cssRules.length);
+
+			const rule_body = rules.join('; ');
+			queue_style_update(selector, rule_body)
 		}
 
 
 	return rules
-}//end insert_rule
+}//end process_rule
 
 
 
 /**
-* GET_ELEMENTS_CSS_OBJECT
-* @return object root_css
+* QUEUE_RULE
+* Batch Insert Rules.
+* Debounce the rules injection for rule deduplication
+* @param object rule
+* @return void
 */
-export const get_elements_css_object = function() {
+const style_update_queue	= new Map(); // selector -> rule_body
+let style_update_scheduled	= false;
+const queue_style_update = function(selector, rule_body) {
 
-	return root_css
-}//end get_elements_css_object
+	const current = style_update_queue.get(selector);
+	if (current === rule_body) {
+		return; // skip identical queued rule
+	}
+
+	style_update_queue.set(selector, rule_body);
+
+	if (!style_update_scheduled) {
+		style_update_scheduled = true;
+		requestAnimationFrame(flush_style_updates);
+	}
+}//end queue_style_update
+
+
+
+/**
+* FLUSH_RULES
+* Insert batch rules in a pack of various between a requestAnimationFrame
+*/
+const flush_style_updates = function() {
+	style_update_scheduled = false;
+	for (const [rule_selector, rule_body] of style_update_queue.entries()) {
+		safe_insert_rule(rule_selector, rule_body);
+	}
+	style_update_queue.clear();
+}//end flush_style_updates
+
+
+
+/**
+* SAFE_INSERT_RULE
+* Add new styleSheet rules if not already exists
+* @param string selector
+* @param string rule_body
+* @return bool
+*/
+const safe_insert_rule = function(selector, rule_body) {
+
+	// sheet
+	const sheet = get_elements_style_sheet()
+
+	// rule_text
+	const rule_text = `${selector} { ${rule_body} }`;
+
+	// check for already inserted rule
+	if (inserted_rules.has(selector)) {
+
+		const { rule_text: old_text, index } = inserted_rules.get(selector);
+
+		if (old_text === rule_text) {
+			// if(SHOW_DEBUG===true) {
+			// 	console.log('Ignored already existing rule:', selector, rule_text);
+			// }
+			return false; // No change needed
+		}
+
+		try {
+			sheet.deleteRule(index);
+		} catch (e) {
+			console.warn('Failed to delete rule', e);
+		}
+	}
+
+	try {
+		const index = sheet.insertRule(rule_text, sheet.cssRules.length);
+		inserted_rules.set(selector, { rule_text, index });
+	} catch (e) {
+		console.warn('Failed to insert rule', rule_text, e);
+		return false;
+	}
+
+
+	return true;
+}//end safe_insert_rule
+
+
+
+/**
+* PRUNE_RULES
+* Clean up unused rules
+* @param condition_fn - Function returning boolean
+*/
+export const prune_rules = function(condition_fn) {
+
+	const sheet = get_elements_style_sheet();
+
+	for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
+
+		const rule			= sheet.cssRules[i];
+		const rule_selector	= rule.selectorText; // e.g. '.oh1_oh62.edit.wrapper_component'
+
+		if (condition_fn(rule)) {
+
+			// delete sheet rule by index
+			sheet.deleteRule(i);
+
+			// inserted_rules delete to keep the cache in sync
+			inserted_rules.delete(rule_selector);
+		}
+	}
+}//end prune_rules
+
+
+
+/**
+* GET_INSERTED_RULES
+* @return Map inserted_rules
+*/
+export const get_inserted_rules = function() {
+
+	return inserted_rules
+}//end get_inserted_rules
 
 
 
