@@ -101,7 +101,6 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 			'counters_status',
 			'database_info',
 			'dedalo_api_test_environment',
-			'dedalo_version',
 			'environment',
 			'export_hierarchy',
 			'lock_components',
