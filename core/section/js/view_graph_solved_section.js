@@ -945,6 +945,7 @@ const render_source_section = async function(options) {
 		section_tipo	: section_tipo,
 		mode			: 'list',
 		request_config	: request_config,
+		id_variant		: 'into_graph_solved',
 		add_show		: true
 	}
 
