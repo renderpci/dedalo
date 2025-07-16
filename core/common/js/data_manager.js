@@ -388,8 +388,8 @@ data_manager.request = async function(options) {
 		const json_response = await (await handle_errors(fetch_response)).json();
 
 		if(SHOW_DEBUG) {
-			console.log(`Time to request: ${(performance.now() - request_start_time).toFixed(2)}ms`);
-			console.log(`Time to download data: ${(performance.now() - data_start_time).toFixed(2)}ms`);
+			console.log(`_*_Time to request: ${(performance.now() - request_start_time).toFixed(2)}ms`);
+			console.log(`_*_Time to download data: ${(performance.now() - data_start_time).toFixed(2)}ms`);
 		}
 
 		// Error occurred. Catch and alert
