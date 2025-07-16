@@ -140,6 +140,7 @@ class web_data {
 
 	/**
 	* FIND_EQUALITY
+	* @param string $value
 	* @return bool
 	*/
 	public static function find_equality($value) {
@@ -346,7 +347,7 @@ class web_data {
 		* GET_ROWS_DATA
 		* Función genérica de consulta a las tablas de difusión generadas por Dédalo tras la publicación web
 		* Devuelve array con los rows de los campos solicitados
-		* @param object $options . Object with options like table, ar_fields, lang, etc..
+		* @param object $request_options . Object with options like table, ar_fields, lang, etc..
 		* @return object $response
 		*/
 		public static function get_rows_data( $request_options ) : object {
@@ -668,6 +669,7 @@ class web_data {
 		* GET_BIBLIOGRAPHY_ROWS
 		*	Special bibliography (publications) records request
 		*	Sorts in custom way using author name using special columns (author_main, author_others, authors_count)
+		* @param object $request_options
 		* @return object $response
 		*/
 		public static function get_bibliography_rows($request_options) {
@@ -3914,7 +3916,9 @@ class web_data {
 
 		/**
 		* GET_THESAURUS_PARENTS
-		* @return
+		* Resolves the given term parents
+		* @param object $request_options
+		* @return object $response
 		*/
 		public static function get_thesaurus_parents( $request_options ) {
 			global $table_thesaurus_map; // From server api config
