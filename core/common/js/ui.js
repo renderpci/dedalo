@@ -151,9 +151,6 @@ export const ui = {
 			// options
 				const add_styles = options.add_styles || null
 
-			// fragment
-				const fragment = new DocumentFragment()
-
 			// wrapper
 				const wrapper = document.createElement('div')
 
@@ -266,12 +263,12 @@ export const ui = {
 					wrapper.appendChild(options.buttons)
 				}
 
-			// filter
+			// filter. Is appended asynchronously after the wrapper is returned.
 				if (instance.filter) {
 					const filter = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'filter',
-						parent			: fragment
+						parent			: wrapper
 					})
 					instance.filter.build()
 					.then(function(){
@@ -279,10 +276,12 @@ export const ui = {
 						.then(filter_wrapper =>{
 							filter.appendChild(filter_wrapper)
 						})
+						.catch(error => console.error("Error rendering filter:", error)); // Add error handling
 					})
+					.catch(error => console.error("Error building filter:", error)); // Add error handling
 				}
 
-			// paginator
+			// paginator. Is appended asynchronously after the wrapper is returned.
 				if (instance.paginator) {
 					const paginator = ui.create_dom_element({
 						element_type	: 'div',
@@ -293,6 +292,7 @@ export const ui = {
 					.then(paginator_wrapper => {
 						paginator.appendChild(paginator_wrapper)
 					})
+					.catch(error => console.error("Error rendering paginator:", error)); // Add error handling
 				}
 
 			// list_body
