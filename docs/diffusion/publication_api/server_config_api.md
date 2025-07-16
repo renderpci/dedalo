@@ -435,6 +435,23 @@ define('DEDALO_NOTES_TEXT_TIPO', 'rsc329');
 
 ---
 
+### Defining the component_tipo used for store the children data
+
+./dedalo/publication/server_api/v1/config_api/server_config_api.php
+
+DEDALO_RELATION_TYPE_CHILDREN_TIPO `string`
+
+Defines the `tipo` for component_relation_children
+from the thesaurus section.
+
+It is used to filter 'from_component_tipo' locators in the web_data::get_thesaurus_parents() method called from Publication API `/thesaurus_parents` entry point.
+
+```php
+define('DEDALO_RELATION_TYPE_CHILDREN_TIPO', 'dd48');
+```
+
+---
+
 ### Setting the current lang to get data
 
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php

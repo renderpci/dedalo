@@ -3959,10 +3959,12 @@ class web_data {
 				$section_tipo 	= $ar_parts [0];
 				$section_id 	= $ar_parts [1];
 
+				$dedalo_relation_type_children_tipo = defined('DEDALO_RELATION_TYPE_CHILDREN_TIPO') ? DEDALO_RELATION_TYPE_CHILDREN_TIPO : 'dd48';
+
 				$sd_options = new stdClass();
 					$sd_options->table 	 	= $table;
 					$sd_options->ar_fields  = $ar_fields;
-					$sd_options->sql_filter = "childrens LIKE '%\"type\":\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
+					$sd_options->sql_filter = "childrens LIKE '%\"type\":\"".$dedalo_relation_type_children_tipo."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
 					#$sd_options->sql_filter = "parent = '".$current_term_id."' ";
 					#$sd_options->order 	 = "section_id ASC";
 					$sd_options->lang 	 	= $lang;
