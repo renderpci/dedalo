@@ -80,6 +80,11 @@
 	define('DEDALO_COMPONENT_RESOURCES_TR_TIPO',			'rsc36');
 	// DEDALO_NOTES_TEXT_TIPO. av notes component tipo (used to locate notes in data)
 	define('DEDALO_NOTES_TEXT_TIPO',						'rsc329');
+	// DEDALO_RELATION_TYPE_CHILDREN_TIPO.
+	// This constant defines the tipo (type identifier) for component_relation_children
+	// from the thesaurus section. It is used to filter 'from_component_tipo' locators
+	// in the web_data::get_thesaurus_parents() method.
+	define('DEDALO_RELATION_TYPE_CHILDREN_TIPO',			'dd48');
 
 
 
