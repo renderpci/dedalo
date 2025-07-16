@@ -821,7 +821,7 @@ export const instantiate_page_element = async function(self, source) {
 		const instance = await get_instance(instance_options)
 
 	// caller. Set element caller. Useful to update menu section label from modal section
-	// ! Do not overwrite already existing caller (tool case)
+	// ! Do not overwrite already existing caller (tool case like tool_transcription)
 		if (instance && !instance.caller) {
 			instance.caller = self
 		}
