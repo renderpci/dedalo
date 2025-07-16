@@ -314,29 +314,31 @@ export const ui = {
 		/**
 		* BUILD_CONTENT_DATA
 		* Unified component content_data container render
-		* @param object instance
-		* @param object options = {}
-		* @return HTMLElement content_data
+		* @param object instance - The instance object containing type and context.
+		* @param object options = {} - Optional configuration for the function. Unused at now.
+		* @return HTMLElement content_data - The created content_data div element.
 		*/
 		build_content_data : (instance, options={}) => {
 
 			// options
-				const type			= instance.type
-				const component_css	= instance.context.css || {}
+			const type			= instance.type
+			const component_css	= instance.context.css || {}
 
 			// div container
-				const content_data = document.createElement('div')
+			const content_data = document.createElement('div')
 
-			// css
-				const content_data_structure_css = typeof component_css.content_data!=='undefined'
-					? component_css.content_data
-					: []
-				const ar_css = [
-					'content_data',
-					type,
-					...content_data_structure_css
-				]
-				content_data.classList.add(...ar_css)
+			 // Get content_data specific CSS classes, defaulting to an empty array.
+			const content_data_structure_css = component_css.content_data || []
+
+			// Combine all CSS classes to be added.
+			const css_classes_to_add = [
+				'content_data',
+				type,
+				...content_data_structure_css
+			]
+
+			// Add classes to the content_data element.
+			content_data.classList.add(...css_classes_to_add)
 
 
 			return content_data
