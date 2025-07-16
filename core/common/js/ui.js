@@ -410,50 +410,51 @@ export const ui = {
 		*/
 		build_wrapper_list : (instance, options={}) => {
 
-			// options
-				const value_string	= options.value_string
-				const add_styles	= options.add_styles || null
+			// Options destructuring with defaults
+				const {
+					value_string,
+					add_styles = null
+				} = options;
 
-			// short vars
-				const model			= instance.model 		// like component_input-text
-				const type			= instance.type 		// like 'component'
-				const tipo			= instance.tipo 		// like 'rsc26'
-				const section_tipo	= instance.section_tipo // like 'oh1'
+			// Instance properties
+				const model			= instance.model 		// e.g., 'component_input_text'
+				const type			= instance.type 		// e.g., 'component'
+				const tipo			= instance.tipo 		// e.g., 'rsc26'
+				const section_tipo	= instance.section_tipo // e.g., 'oh1'
 				const view			= instance.view || instance.context.view || 'default'
 				const element_css	= instance.context.css || {}
+				const mode			= instance.context.mode
 
 			// wrapper
 				const wrapper = document.createElement('div')
 
 				// css
-					const ar_css = [
-						'wrapper_' + type,
-						model,
-						tipo,
-						section_tipo +'_'+ tipo,
-						'list',
-						'view_' + view
-					]
-					// custom added styles
-					if (add_styles) {
-						ar_css.push(...add_styles)
-					}
-					wrapper.classList.add(...ar_css)
+				const classes_to_add = [
+					'wrapper_' + type,
+					model,
+					tipo,
+					section_tipo +'_'+ tipo,
+					'list',
+					'view_' + view
+				]
+				// Add custom styles if provided
+			    if (add_styles && Array.isArray(add_styles)) {
+			        classes_to_add.push(...add_styles);
+			    }
+				wrapper.classList.add(...classes_to_add)
 
 				// Ontology CSS definition
 				// Get the ontology CSS defined into the ontology properties.
 				// And insert the rules into CSS style set.
 				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
-					if (model!=='component_filter') {
-						// CSS is moved from properties to specific property in context
-						// Into tool time machine visualization case, do not add custom CSS from properties
-						if (instance.context.css && instance.context.mode!=='tm') {
-							set_element_css(
-								`${section_tipo}_${tipo}.${tipo}.${'list'}`, // CSS selector
-								element_css // properties CSS object
-							)
-						}
-					}
+				if (model !== 'component_filter' && mode !== 'tm' && Object.keys(element_css).length > 0) {
+					// CSS is moved from properties to specific property in context
+					// Into tool time machine visualization case, do not add custom CSS from properties
+					set_element_css(
+						`${section_tipo}_${tipo}.${tipo}.list`, // CSS selector
+						element_css // properties CSS object
+					)
+				}
 
 			// value_string. span value. Add span if value_string is received
 				if (value_string) {
