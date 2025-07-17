@@ -113,36 +113,33 @@ view_default_list_portal.render = async function(self, options) {
 */
 const get_content_data = async function(self, ar_section_record) {
 
-	// build_values
-		const fragment = new DocumentFragment()
-
-	// add all section_record rendered nodes
-		const ar_section_record_length	= ar_section_record.length
-		if (ar_section_record_length===0) {
-
-			// no records found case
-			// const row_item = no_records_node()
-			// fragment.appendChild(row_item)
-		}else{
-
-			const ar_promises = []
-			for (let i = 0; i < ar_section_record_length; i++) {
-				const render_promise = ar_section_record[i].render()
-				ar_promises.push(render_promise)
-			}
-			await Promise.all(ar_promises).then(function(values) {
-			  for (let i = 0; i < ar_section_record_length; i++) {
-
-				const section_record = values[i]
-				fragment.appendChild(section_record)
-			  }
-			});
-		}//end if (ar_section_record_length===0)
-
 	// content_data
-		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.mode, self.type)
-			  content_data.appendChild(fragment)
+	const content_data = document.createElement('div')
+		  content_data.classList.add('content_data', self.mode, self.type)
+
+	const section_record_count	= ar_section_record.length
+
+	// empty cases
+	if (section_record_count === 0) {
+		return content_data;
+	}
+
+	// Render promises
+	const render_promises = ar_section_record.map(record => record.render());
+
+	// fragment
+	const fragment = new DocumentFragment()
+
+	// Add all section_record rendered nodes to the fragment
+	const rendered_nodes = await Promise.all(render_promises);
+	for (let i = 0; i < section_record_count; i++) {
+		if (rendered_nodes[i]) {
+			fragment.appendChild(rendered_nodes[i])
+		}
+	}
+
+	// Append final fragment at end
+	content_data.appendChild(fragment)
 
 
 	return content_data
