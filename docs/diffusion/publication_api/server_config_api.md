@@ -204,7 +204,12 @@ Set the username that will use the API server to read MySQl database. For the AP
 define('MYSQL_DEDALO_USERNAME_CONN','dedalo_api_demo');
 ```
 
-> The username used in this config file is used only for the front-end, don't use the privileged user of the back-end, for the API use a read-only user.
+The username in this configuration file is exclusively for front-end access. Do not use privileged back-end credentials here. For API connections, implement a read-only user as shown below:
+
+```sql
+CREATE USER 'dedalo_api_demo'@'localhost' IDENTIFIED BY '';
+GRANT SELECT ON `web\_default`.* TO 'dedalo_api_demo'@'localhost';
+```
 
 ---
 
