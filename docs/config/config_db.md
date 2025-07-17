@@ -260,11 +260,25 @@ define('MYSQL_DEDALO_PASSWORD_CONN', 'password');
 
 MYSQL_DEDALO_DATABASE_CONN `string`
 
-This parameter defines the name of the database in MariaDB or MySQL.
+This parameter specifies the primary database name for MariaDB/MySQL. Note that the Diffusion ontology definition will override this value.
+
+All ontology-defined databases must:
+
+- Use the same connection parameters as specified here
+- Grant full access permissions to the user [MYSQL_DEDALO_USERNAME_CONN](#dédalo-database-username-for-mysql).
 
 ```php
 define('MYSQL_DEDALO_DATABASE_CONN' , 'web_dedalo');
 ```
+
+All Diffusion databases must be created with full privileges for the configured user, as shown below:
+
+```sql
+CREATE USER'dedalo_write'@'localhost' IDENTIFIED BY ''
+GRANT ALL PRIVILEGES ON `web\_dedalo`.* TO 'username'@'localhost'
+```
+
+See the multiple [diffusion databases](../diffusion/diffusion_multiple_databases.md) documentation.
 
 ---
 
