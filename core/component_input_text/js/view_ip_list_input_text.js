@@ -55,33 +55,51 @@ view_ip_list_input_text.render = async function(self, options) {
 				break;
 
 			default:
+				// Executes the IP resolution with low priority
 				dd_request_idle_callback(
 					async () => {
-						// cache
+						try {
+
 							// cache create if not exists or reset if is too big
-							if (!window.resolved_ip_data || Object.keys(window.resolved_ip_data).length>300) {
-								window.resolved_ip_data = {}
-							}
-							// cache set function call
-							if (!window.resolved_ip_data[ip]) {
-								window.resolved_ip_data[ip] = resolve_ip_data(ip)
+							if (!window.resolved_ip_data) {
+								window.resolved_ip_data = new Map();
+							}else if( window.resolved_ip_data.size > 300 ) {
+								window.resolved_ip_data.clear()
 							}
 
-						// exec function and wait if is not already resolved
-							const response = await window.resolved_ip_data[ip]
-							if (!response) {
-								return
+							// Helper function to render and append link
+							const render_and_append_link = (ip_data) => {
+								console.log('ip_data:', ip_data);
+								const link_node = render_link(ip_data.href, ip_data.label);
+								requestAnimationFrame(() => {
+									wrapper.appendChild(link_node);
+								});
+							};
+
+							// Check cache first
+							if( window.resolved_ip_data.has(ip) ) {
+								// Already calculated case
+								const ip_data = window.resolved_ip_data.get(ip)
+								render_and_append_link(ip_data);
+								return;
 							}
 
-						// create the link with flag
-							const link = ui.create_dom_element({
-								element_type	: 'a',
-								href			: response.href,
-								class_name		: 'link',
-								inner_html		: response.label,
-								parent			: wrapper
+							// Resolve new IP data
+							resolve_ip_data(ip)
+							.then(function(ip_data){
+
+								if (!ip_data) {
+									console.warn(`Failed to resolve IP data for: ${ip}`);
+									return
+								}
+
+								// Cache the result and render
+								window.resolved_ip_data.set(ip, ip_data);
+								render_and_append_link(ip_data);
 							})
-							link.target = '_blank'
+						} catch (error) {
+							console.error('Error in IP resolution:', error);
+						}
 					}
 				)
 				break;
@@ -94,40 +112,84 @@ view_ip_list_input_text.render = async function(self, options) {
 
 
 /**
+* RENDER_LINK
+* Creates the link with flag
+* @param string href
+* @param string label
+* @return HTMLElement link_node
+*/
+export const render_link = function (href, label) {
+
+	const link_node = ui.create_dom_element({
+		element_type	: 'a',
+		href			: href,
+		class_name		: 'link',
+		inner_html		: label
+	})
+	link_node.target = '_blank'
+
+
+	return link_node
+}//end render_link
+
+
+
+/**
 * RESOLVE_IP_DATA
 * Create a font emoji from country code like 'ES'
 * @param string ip
 * @return object|null result
+* sample data: {
+*	 href: "https://ip-api.com/#2c7c:5a84:a00b:4c30:3806:a0c2:e867:11a2"
+*	 label: "🇪🇸"
+*	 url: "https://api.country.is/2c7c:5a84:a00b:4c30:3806:a0c2:e867:11a2"
+* }
 */
 const resolve_ip_data = async function(ip) {
 
-	// end_point. From config IP_API
-		if (!page_globals.ip_api) {
-			return null
-		}
+	// Validate input
+    if (!ip || typeof ip !== 'string') {
+        return null;
+    }
+
+	// Check config end_point. From config IP_API
+	if (!page_globals.ip_api) {
+		return null
+	}
+
+	try {
+
 		const url	= page_globals.ip_api.url.replace(/(\$ip)/, ip);
 		const href	= page_globals.ip_api.href.replace(/(\$ip)/, ip);
 
-	// fetch data
-		const response		= await fetch(url);
-		const parsed_data	= await response.json();
+		// fetch data
+		const response = await fetch(url);
 
-	// country_code from data, like 'AQ'
-		const country_code = parsed_data[page_globals.ip_api.country_code]
+		if (!response.ok) {
+            console.error(`API request failed: ${response.status}`);
+            return null;
+        }
+
+		const parsed_data = await response.json();
+
+		// Safely get country code. like 'AQ'
+		const country_code = parsed_data?.[page_globals.ip_api.country_code];
 
 		const label = country_code
 			? get_flag_emoji(country_code)
 			: 'unknown'
 
-	// result object
-		const result = {
+		// result object
+		return {
 			url		: url, // api url
 			href	: href, // website to go on user click
 			label	: label // text to show (emoji flag)
 		}
 
-
-	return result
+	} catch (error) {
+        console.error('Error resolving IP data:', error);
+        return null;
+    }
 }//end resolve_ip_data
 
 
