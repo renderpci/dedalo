@@ -71,7 +71,8 @@ export const get_instance = async function(options) {
 			const element_context_response = await data_manager.get_element_context({
 				tipo			: tipo,
 				section_tipo	: section_tipo,
-				section_id		: section_id
+				section_id		: section_id,
+				mode			: mode
 			})
 
 			if(SHOW_DEBUG===true || !element_context_response.result) {

@@ -909,60 +909,80 @@ const render_left = async (self) => {
 /**
 * RENDER_SOURCE_SECTION
 * Render source section node
-* @param object options
+* @param object options - Configuration options
 * @return HTMLElement section_node
 */
 const render_source_section = async function(options) {
 
 	// options
-		const section_tipo	= options.section_tipo
-		const rqo			= options.rqo
+	const {
+		section_tipo,
+		rqo
+	} = options
 
+	// Create a new ddo_map based on given rqo
 	const old_ddo_map = rqo.show.ddo_map.filter(el => el.section_tipo === section_tipo)
-
-	const ddo_map = old_ddo_map.map(el =>{
-		el.parent = section_tipo
-		return el
-	})
+	const ddo_map = old_ddo_map.map(el => ({
+		...el, // Spread all existing properties
+		parent : section_tipo // Add new property parent
+	}));
 
 	// request_config
-		const request_config = [{
-			api_engine	: 'dedalo',
-			type		: 'main',
-			sqo			: {
-				section_tipo	: [{tipo:section_tipo}],
-				limit			: 10,
-				offset			: 0
-			},
-			show		: {
-				ddo_map : ddo_map
-			}
-		}]
+	const request_config = [{
+		api_engine	: 'dedalo',
+		type		: 'main',
+		sqo			: {
+			section_tipo	: [{tipo:section_tipo}],
+			limit			: 10,
+			offset			: 0
+		},
+		show		: {
+			ddo_map : ddo_map
+		}
+	}]
 
+	// Section instance options
 	const section_options = {
 		model			: 'section',
 		tipo			: section_tipo,
 		section_tipo	: section_tipo,
 		mode			: 'list',
 		request_config	: request_config,
+		id_variant		: 'into_graph_solved',
 		add_show		: true
 	}
 
-	const section = await get_instance(section_options)
-	await section.build(true)
-	// section.fixed_columns_map = true
+	try {
+		const section = await get_instance(section_options)
 
-	// section.columns_map = await rebuild_columns_map(section)
-	section.rebuild_columns_map = rebuild_columns_map;
+		if (!section) {
+			throw new Error('Failed to get section instance');
+		}
 
-	// view
-	section.view = 'base'
+		await section.build(true)
 
-	// render
-	const section_node = await section.render()
+		// rebuild_columns_map
+		if (typeof rebuild_columns_map !== 'function') {
+			throw new Error('rebuild_columns_map function is not available');
+		}
+		section.rebuild_columns_map = rebuild_columns_map;
 
+		// view set before render
+		section.view = 'base'
 
-	return section_node
+		// render
+		const section_node = await section.render()
+
+		if (!section_node) {
+			throw new Error('Failed to render section');
+		}
+
+		return section_node;
+
+	} catch (error) {
+		console.error('Error in render_source_section:', error);
+		throw error; // Re-throw or handle appropriately
+	}
 }//end render_source_section
 
 

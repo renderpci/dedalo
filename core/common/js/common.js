@@ -11,7 +11,7 @@
 	import {delete_instance} from '../../common/js/instances.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
-	import {get_elements_css_object} from '../../page/js/css.js'
+	import {get_inserted_rules} from '../../page/js/css.js'
 	import {render_relogin} from '../../login/js/render_login.js'
 	import {render_server_response_error, render_stream} from '../../common/js/render_common.js'
 
@@ -2423,7 +2423,7 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 			const combi = {
 				'debug'					: response.debug,
 				'rqo_show_original'		: rqo_show_original,
-				'elements_css_object'	: get_elements_css_object()
+				'elements_css_object'	: get_inserted_rules()
 			};
 			const response_debug_pre = ui.create_dom_element({
 				element_type	: 'pre',

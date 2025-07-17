@@ -87,8 +87,7 @@
 	import {common} from '../../common/js/common.js'
 	import {render_relation_list} from './render_relation_list.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance} from '../../common/js/instances.js'
-	import {clone, open_window} from '../../common/js/utils/index.js'
+	import {clone, open_records_in_window} from '../../common/js/utils/index.js'
 
 
 

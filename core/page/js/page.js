@@ -19,6 +19,7 @@
 	} from '../../common/js/utils/index.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
+	import {prune_rules,get_inserted_rules} from '../../page/js/css.js'
 	import {render_page, render_notification_msg} from './render_page.js'
 
 
@@ -486,6 +487,9 @@ const navigate = async function(user_navigation_options) {
 				instances_to_stay[i].destroyable = false
 			}
 
+		// clean CSS and other garbage
+			dd_garbage_collector();
+
 		// refresh page. Force to load new context elements data from DDBB
 			const refresh_result = await self.refresh({
 				build_autoload	: false,
@@ -817,7 +821,7 @@ export const instantiate_page_element = async function(self, source) {
 		const instance = await get_instance(instance_options)
 
 	// caller. Set element caller. Useful to update menu section label from modal section
-	// ! Do not overwrite already existing caller (tool case)
+	// ! Do not overwrite already existing caller (tool case like tool_transcription)
 		if (instance && !instance.caller) {
 			instance.caller = self
 		}
@@ -899,6 +903,34 @@ page.prototype.set_document_title = function (title) {
 
 	return true
 }//end set_document_title
+
+
+
+/**
+* DD_GARBAGE_COLLECTORç
+* This function serves as a memory management tool for CSS rule injection systems.
+* It prevents memory bloat by automatically removing CSS rules when the collection
+* grows beyond a specified limit, helping maintain optimal application performance.
+* @return void
+*/
+const dd_garbage_collector = function () {
+
+	dd_request_idle_callback(
+		() => {
+			const inserted_rules	= get_inserted_rules();
+			const max_size			= 500;
+			if (inserted_rules.size > max_size) {
+
+				// Delete all CSS injected rules to optimize memory
+				prune_rules(() => true);
+
+				if(SHOW_DEBUG===true) {
+					console.log('Deleted CSS inserted_rules to reduce memory footprint. Max size: ', max_size );
+				}
+			}
+		}
+	);
+}//end dd_garbage_collector
 
 
 

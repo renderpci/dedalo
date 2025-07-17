@@ -140,6 +140,7 @@ class web_data {
 
 	/**
 	* FIND_EQUALITY
+	* @param string $value
 	* @return bool
 	*/
 	public static function find_equality($value) {
@@ -346,7 +347,7 @@ class web_data {
 		* GET_ROWS_DATA
 		* Función genérica de consulta a las tablas de difusión generadas por Dédalo tras la publicación web
 		* Devuelve array con los rows de los campos solicitados
-		* @param object $options . Object with options like table, ar_fields, lang, etc..
+		* @param object $request_options . Object with options like table, ar_fields, lang, etc..
 		* @return object $response
 		*/
 		public static function get_rows_data( $request_options ) : object {
@@ -668,6 +669,7 @@ class web_data {
 		* GET_BIBLIOGRAPHY_ROWS
 		*	Special bibliography (publications) records request
 		*	Sorts in custom way using author name using special columns (author_main, author_others, authors_count)
+		* @param object $request_options
 		* @return object $response
 		*/
 		public static function get_bibliography_rows($request_options) {
@@ -3914,7 +3916,9 @@ class web_data {
 
 		/**
 		* GET_THESAURUS_PARENTS
-		* @return
+		* Resolves the given term parents
+		* @param object $request_options
+		* @return object $response
 		*/
 		public static function get_thesaurus_parents( $request_options ) {
 			global $table_thesaurus_map; // From server api config
@@ -3955,10 +3959,12 @@ class web_data {
 				$section_tipo 	= $ar_parts [0];
 				$section_id 	= $ar_parts [1];
 
+				$dedalo_relation_type_children_tipo = defined('DEDALO_RELATION_TYPE_CHILDREN_TIPO') ? DEDALO_RELATION_TYPE_CHILDREN_TIPO : 'dd48';
+
 				$sd_options = new stdClass();
 					$sd_options->table 	 	= $table;
 					$sd_options->ar_fields  = $ar_fields;
-					$sd_options->sql_filter = "childrens LIKE '%\"type\":\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
+					$sd_options->sql_filter = "childrens LIKE '%\"type\":\"".$dedalo_relation_type_children_tipo."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
 					#$sd_options->sql_filter = "parent = '".$current_term_id."' ";
 					#$sd_options->order 	 = "section_id ASC";
 					$sd_options->lang 	 	= $lang;
