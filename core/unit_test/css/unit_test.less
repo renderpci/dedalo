@@ -2,6 +2,8 @@
 * unit_test
 *
 */
+// imports
+@import (once) '../../../core/page/css/layout/vars';
 
 html {
 	// from mocha css depending on dark mode
@@ -18,6 +20,15 @@ body {
 	padding: 4rem;
 	padding-top: 0px;
 	margin-top: 60px;
+
+	&.section_container {
+		padding: 0px;
+		margin: 0px;
+	}
+}
+
+#mocha {
+	margin-bottom: 3rem;
 }
 
 #mocha .test pre.error {

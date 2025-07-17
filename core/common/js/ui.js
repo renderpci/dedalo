@@ -151,9 +151,6 @@ export const ui = {
 			// options
 				const add_styles = options.add_styles || null
 
-			// fragment
-				const fragment = new DocumentFragment()
-
 			// wrapper
 				const wrapper = document.createElement('div')
 
@@ -266,12 +263,12 @@ export const ui = {
 					wrapper.appendChild(options.buttons)
 				}
 
-			// filter
+			// filter. Is appended asynchronously after the wrapper is returned.
 				if (instance.filter) {
 					const filter = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'filter',
-						parent			: fragment
+						parent			: wrapper
 					})
 					instance.filter.build()
 					.then(function(){
@@ -279,10 +276,12 @@ export const ui = {
 						.then(filter_wrapper =>{
 							filter.appendChild(filter_wrapper)
 						})
+						.catch(error => console.error("Error rendering filter:", error)); // Add error handling
 					})
+					.catch(error => console.error("Error building filter:", error)); // Add error handling
 				}
 
-			// paginator
+			// paginator. Is appended asynchronously after the wrapper is returned.
 				if (instance.paginator) {
 					const paginator = ui.create_dom_element({
 						element_type	: 'div',
@@ -293,6 +292,7 @@ export const ui = {
 					.then(paginator_wrapper => {
 						paginator.appendChild(paginator_wrapper)
 					})
+					.catch(error => console.error("Error rendering paginator:", error)); // Add error handling
 				}
 
 			// list_body
@@ -314,29 +314,31 @@ export const ui = {
 		/**
 		* BUILD_CONTENT_DATA
 		* Unified component content_data container render
-		* @param object instance
-		* @param object options = {}
-		* @return HTMLElement content_data
+		* @param object instance - The instance object containing type and context.
+		* @param object options = {} - Optional configuration for the function. Unused at now.
+		* @return HTMLElement content_data - The created content_data div element.
 		*/
 		build_content_data : (instance, options={}) => {
 
 			// options
-				const type			= instance.type
-				const component_css	= instance.context.css || {}
+			const type			= instance.type
+			const component_css	= instance.context.css || {}
 
 			// div container
-				const content_data = document.createElement('div')
+			const content_data = document.createElement('div')
 
-			// css
-				const content_data_structure_css = typeof component_css.content_data!=='undefined'
-					? component_css.content_data
-					: []
-				const ar_css = [
-					'content_data',
-					type,
-					...content_data_structure_css
-				]
-				content_data.classList.add(...ar_css)
+			 // Get content_data specific CSS classes, defaulting to an empty array.
+			const content_data_structure_css = component_css.content_data || []
+
+			// Combine all CSS classes to be added.
+			const css_classes_to_add = [
+				'content_data',
+				type,
+				...content_data_structure_css
+			]
+
+			// Add classes to the content_data element.
+			content_data.classList.add(...css_classes_to_add)
 
 
 			return content_data
@@ -408,50 +410,51 @@ export const ui = {
 		*/
 		build_wrapper_list : (instance, options={}) => {
 
-			// options
-				const value_string	= options.value_string
-				const add_styles	= options.add_styles || null
+			// Options destructuring with defaults
+				const {
+					value_string,
+					add_styles = null
+				} = options;
 
-			// short vars
-				const model			= instance.model 		// like component_input-text
-				const type			= instance.type 		// like 'component'
-				const tipo			= instance.tipo 		// like 'rsc26'
-				const section_tipo	= instance.section_tipo // like 'oh1'
+			// Instance properties
+				const model			= instance.model 		// e.g., 'component_input_text'
+				const type			= instance.type 		// e.g., 'component'
+				const tipo			= instance.tipo 		// e.g., 'rsc26'
+				const section_tipo	= instance.section_tipo // e.g., 'oh1'
 				const view			= instance.view || instance.context.view || 'default'
 				const element_css	= instance.context.css || {}
+				const mode			= instance.context.mode
 
 			// wrapper
 				const wrapper = document.createElement('div')
 
 				// css
-					const ar_css = [
-						'wrapper_' + type,
-						model,
-						tipo,
-						section_tipo +'_'+ tipo,
-						'list',
-						'view_' + view
-					]
-					// custom added styles
-					if (add_styles) {
-						ar_css.push(...add_styles)
-					}
-					wrapper.classList.add(...ar_css)
+				const classes_to_add = [
+					'wrapper_' + type,
+					model,
+					tipo,
+					section_tipo +'_'+ tipo,
+					'list',
+					'view_' + view
+				]
+				// Add custom styles if provided
+			    if (add_styles && Array.isArray(add_styles)) {
+			        classes_to_add.push(...add_styles);
+			    }
+				wrapper.classList.add(...classes_to_add)
 
 				// Ontology CSS definition
 				// Get the ontology CSS defined into the ontology properties.
 				// And insert the rules into CSS style set.
 				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
-					if (model!=='component_filter') {
-						// CSS is moved from properties to specific property in context
-						// Into tool time machine visualization case, do not add custom CSS from properties
-						if (instance.context.css && instance.context.mode!=='tm') {
-							set_element_css(
-								`${section_tipo}_${tipo}.${tipo}.${'list'}`, // CSS selector
-								element_css // properties CSS object
-							)
-						}
-					}
+				if (model !== 'component_filter' && mode !== 'tm' && Object.keys(element_css).length > 0) {
+					// CSS is moved from properties to specific property in context
+					// Into tool time machine visualization case, do not add custom CSS from properties
+					set_element_css(
+						`${section_tipo}_${tipo}.${tipo}.list`, // CSS selector
+						element_css // properties CSS object
+					)
+				}
 
 			// value_string. span value. Add span if value_string is received
 				if (value_string) {
@@ -3018,52 +3021,72 @@ export const ui = {
 	* 		preserve_content	: bool false,
 	* 		replace_container 	: bool false
 	* 		label				: string,
+	*    	model               : string,
 	* 		callback			: function,
 	* 		style 				: object
 	* 	}
-	* @return HTMLElement result_node
+	* @return HTMLElement|DocumentFragment|null result_node
 	*/
 	load_item_with_spinner : async function(options) {
 
 		// options
-			const container			= options.container
-			const preserve_content	= options.preserve_content || false
-			const replace_container = options.replace_container || false
-			const label				= options.label || ''
-			const model				= options.model || null
-			const callback			= options.callback
-			const style				= options.style
+		const container			= options.container
+		const preserve_content	= options.preserve_content || false
+		const replace_container	= options.replace_container || false
+		const label				= options.label || ''
+		const model				= options.model || null
+		const callback			= options.callback
+		const style				= options.style
 
-		// clean container
-			if (preserve_content===false) {
-				while (container.firstChild) {
-					container.removeChild(container.firstChild)
-				}
+		// Validate container
+		if (!container instanceof HTMLElement) {
+			console.error('Container is not a valid HTMLElement.', container);
+			return null;
+		}
+
+		// Validate callback
+		if (typeof callback !== 'function') {
+			console.error('Callback is not a function.', callback);
+			return null;
+		}
+
+		// Clean container if content should not be preserved
+		if (!preserve_content) {
+			while (container.firstChild) {
+				container.removeChild(container.firstChild)
 			}
+		}
 
-		// placeholder_class
-			const placeholder_class = model
-				? ` ${model}_placeholder` + (SHOW_DEBUG ? ` placeholder_debug` : '')
-				: ''
+		// Prepare placeholder classes
+	    const placeholder_class_names = ['container', 'container_placeholder'];
+	    if (model) {
+	        placeholder_class_names.push(`${model}_placeholder`);
+	    }
+	    if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG) {
+	        placeholder_class_names.push('placeholder_debug');
+	    }
 
-		// container_placeholder
+		// Create container placeholder with spinner
 			const container_placeholder = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'container container_placeholder' + placeholder_class,
+				class_name		: placeholder_class_names.join(' '),
 				inner_html		: (get_label.loading || 'Loading') + ' ' + label,
 				parent			: container
 			})
+
 			if (style) {
 				Object.assign(container_placeholder.style, style);
 			}
-			// spinner
+
+			// Spinner element
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'spinner medium',
 				parent			: container_placeholder
 			})
 
-		// callback wait (expect promise resolving DOM node) and handle the result
+		// Execute callback and handle the result.
+		// callback wait (expects promise resolving DOM node)
 			try {
 				const result_node = await callback();
 
@@ -3073,7 +3096,7 @@ export const ui = {
 					return null;
 				}
 
-				if (!result_node instanceof HTMLElement && !result_node instanceof DocumentFragment) {
+				if (!(result_node instanceof HTMLElement || result_node instanceof DocumentFragment)) {
 					console.error('Callback did not return a valid DOM node type.', typeof result_node);
 					container_placeholder.remove();
 					return null;
@@ -3092,6 +3115,7 @@ export const ui = {
 				)
 
 				return result_node;
+
 			} catch (error) {
 				console.error('Error during callback execution:', error);
 				container_placeholder.remove();

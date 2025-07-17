@@ -96,6 +96,29 @@ class tool_diffusion extends tool_common {
 			$final_diffusion_map = [];
 			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
 
+				// check model
+				$current_model = RecordObj_dd::get_modelo_name_by_tipo($diffusion_group, true);
+				if ($current_model!=='diffusion_group') {
+					debug_log(__METHOD__
+						. ' Ignored non diffusion group element' . PHP_EOL
+						. ' model: ' . to_string($current_model) . PHP_EOL
+						. ' diffusion_group: ' . to_string($diffusion_group)
+						, logger::WARNING
+					);
+					continue;
+				}
+
+				// diffusion_group without children case
+				if (empty($diffusion_items) || empty($diffusion_items[0])) {
+					debug_log(__METHOD__
+						. ' Ignored empty diffusion group' . PHP_EOL
+						. ' diffusion_group: ' . to_string($diffusion_group) . PHP_EOL
+						. ' diffusion_items: ' . to_string($diffusion_items)
+						, logger::WARNING
+					);
+					continue;
+				}
+
 				$diffusion_element_tipo = $diffusion_items[0]->element_tipo ?? null; // like oh63 - Historia oral web
 				if (!$diffusion_element_tipo) {
 					debug_log(__METHOD__
