@@ -93,49 +93,48 @@ view_line_list_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
-* @param object self
-* @param array ar_section_record
+* @param object self - Component instance
+* @param array ar_section_record - List of records
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
-	// build_values
-		const fragment = new DocumentFragment()
+	// content_data
+	const content_data = ui.component.build_content_data(self, {
+		autoload : true
+	})
 
-	// add all section_record rendered nodes
-		const ar_section_record_length = ar_section_record.length
-		if (ar_section_record_length===0) {
+	const section_record_count = ar_section_record.length
 
-			// no records found case
-			// const row_item = no_records_node()
-			// fragment.appendChild(row_item)
-		}else{
+	// empty cases
+	if (section_record_count === 0) {
+		return content_data;
+	}
 
-			const ar_promises = []
-			for (let i = 0; i < ar_section_record_length; i++) {
-				const render_promise = ar_section_record[i].render()
-				ar_promises.push(render_promise)
-			}
-			await Promise.all(ar_promises).then(function(values) {
-			  for (let i = 0; i < ar_section_record_length; i++) {
+	// Render promises
+	const render_promises = ar_section_record.map(record => record.render());
 
-				const section_record = values[i]
-				fragment.appendChild(section_record)
-			  }
-			});
-		}//end if (ar_section_record_length===0)
+	// fragment
+	const fragment = new DocumentFragment()
 
-	// build references
-		if(self.data.references && self.data.references.length > 0){
-			const references_node = render_references(self.data.references)
+	// Add all section_record rendered nodes to the fragment
+	const rendered_nodes = await Promise.all(render_promises);
+	for (let i = 0; i < section_record_count; i++) {
+		if (rendered_nodes[i]) {
+			fragment.appendChild(rendered_nodes[i])
+		}
+	}
+
+	// Add references if they exist.
+	if(self.data.references?.length > 0){
+		const references_node = render_references(self.data.references)
+		if (references_node) {
 			fragment.appendChild(references_node)
 		}
+	}
 
-	// content_data
-		const content_data = ui.component.build_content_data(self, {
-			autoload : true
-		})
-		content_data.appendChild(fragment)
+	// Append final fragment at end
+	content_data.appendChild(fragment)
 
 
 	return content_data
