@@ -25,7 +25,7 @@ export const render_components_list = function(options) {
 	const ar_components = []
 
 	// options
-		const self					= options.self
+		const caller				= options.self // caller instance 'search' or 'tool_export'
 		const section_tipo			= options.section_tipo
 		const target_div			= options.target_div
 		const path					= options.path
@@ -106,11 +106,11 @@ export const render_components_list = function(options) {
 
 			default: {
 				// Calculated path (from DOM position)
-				const calculated_component_path = self.calculate_component_path( element, path )
+				const calculated_component_path = caller.calculate_component_path( element, path )
 
 				const class_names	= 'component_label element_draggable'
 				const is_draggable	= true
-				const section_id	= self.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
+				const section_id	= caller.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
 
 				// component node
 					const component	= ui.create_dom_element({
@@ -130,7 +130,7 @@ export const render_components_list = function(options) {
 					component.path	= calculated_component_path
 
 				// drag events
-					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
+					component.addEventListener('dragstart',function(e){caller.on_dragstart(this,e)})
 
 				// add
 					ar_components.push(component)
@@ -149,14 +149,14 @@ export const render_components_list = function(options) {
 							target_list_container.classList.add('loading')
 
 							// section_elements_context
-								const current_section_elements = await self.get_section_elements_context({
+								const current_section_elements = await caller.get_section_elements_context({
 									section_tipo			: target_section,
 									ar_components_exclude	: ar_components_exclude
 								})
 
 							// recursion render_components_list
 								render_components_list({
-									self				: self,
+									self				: caller,
 									section_tipo		: target_section,
 									target_div			: target_list_container,
 									path				: calculated_component_path,
