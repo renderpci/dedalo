@@ -4648,16 +4648,13 @@ abstract class common {
 					}
 
 				// item context simple
-					$item_context = [
-						$element->get_structure_context_simple(
-							$section_permisions,
-							false // bool add_rqo
-						)
-					];
+					$ddo =$element->get_structure_context_simple(
+						$section_permisions,
+						false // bool add_rqo
+					);
 
 				// target section tipo add
 					if ($model==='component_portal' || $model==='component_dataframe') {
-						$ddo = reset($item_context);
 						$target_section_tipo = $element->get_ar_target_section_tipo();
 						$ddo->target_section_tipo = $target_section_tipo;
 					}
@@ -4687,9 +4684,10 @@ abstract class common {
 						// add all target_section possibilities to the ddo
 						// see in get_component_instance() in search.js
 						// see get_list_of_values() in class.component_common.php
-						$ddo = reset($item_context);
 						$ddo->ar_target_section_tipo = $ar_el_target_section_tipo;
 					}
+
+					$item_context = [$ddo];
 
 				// context add
 					$context = array_merge($context, $item_context);
