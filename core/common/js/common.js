@@ -206,7 +206,8 @@ export const set_context_vars = function(self) {
 				button_fullscreen				: true, // bool false
 				button_save						: true, // bool true (used by component_geolocation, text_area...)
 				show_autocomplete				: true, // bool true
-				show_section_id					: true // bool true
+				show_section_id					: true, // bool true
+				list_from_component_data 		: true
 			}
 			// set the instance show_interface
 			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
