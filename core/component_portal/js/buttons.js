@@ -428,7 +428,12 @@ buttons.render_list_from_component_data_button = (self) => {
 			// read_raw from Dédalo API
 			const rqo = {
 				action			: 'read_raw',
-				source			: create_source(self),
+				options			: {
+					type			: 'section',
+					section_tipo	: self.section_tipo,
+					tipo			: self.tipo,
+					model			: self.model
+				},
 				sqo				: sqo
 			}
 

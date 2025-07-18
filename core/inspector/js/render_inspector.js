@@ -368,7 +368,12 @@ const get_content_data = function(self) {
 				// read from Dédalo API
 				const rqo = {
 					action			: 'read_raw',
-					source			: create_source(self.caller),
+					options			: {
+						type			: 'section',
+						section_tipo	: self.caller.section_tipo,
+						tipo			: self.caller.section_tipo,
+						model			: self.caller.model
+					},
 					sqo				: sqo,
 					pretty_print	: true
 				}
@@ -416,7 +421,12 @@ const get_content_data = function(self) {
 					// read from Dédalo API
 						const rqo = {
 							action	: 'read_raw',
-							source	: create_source(self.caller),
+							options	: {
+								type			: 'section',
+								section_tipo	: self.caller.section_tipo,
+								tipo			: self.caller.section_tipo,
+								model			: self.caller.model
+							},
 							sqo		: sqo
 						}
 						data_manager.request({
