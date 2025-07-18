@@ -193,10 +193,10 @@ menu.prototype.build = async function(autoload=true) {
 /**
 * REFRESH
 * Deletes the local menu database and call common refresh
-* @param object options
+* @param object options = {}
 * @return bool
 */
-menu.prototype.refresh = async function(options) {
+menu.prototype.refresh = async function(options={}) {
 
 	const self = this
 
