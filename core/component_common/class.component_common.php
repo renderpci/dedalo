@@ -2631,7 +2631,7 @@ abstract class component_common extends common {
 	/**
 	* GET_AR_TARGET_SECTION_TIPO
 	* Section/s from which the portal/autocomplete feeds with records.
-	* Not to be confused with the section in which the portal is
+	* This should not be confused with the section in which the portal is located.
 	* @return array ar_target_section_tipo
 	* 	Array of string tipo like ['dd153']
 	*/
