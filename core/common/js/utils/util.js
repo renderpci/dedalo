@@ -607,13 +607,22 @@ export function prevent_open_new_window() {
 * @param string|null target_window
 * @return bool true
 */
-export const open_records_in_window = async function(caller, section_tipo, ar_section_id, target_window) {
+export const open_records_in_window = async function( options ) {
 
 	// create a dummy section with calculated section_id array as filter
 
 	// ! NOTE: This session server solution is adopted because passing the whole list of section_id
 	// using the URL is not feasible for large arrays (e.g., for person relationships),
 	// and events between windows is very unstable depending on whether the window is new or recycled, etc.
+
+	const caller		= options.caller
+	const section_tipo	= options.section_tipo
+	const ar_section_id	= options.ar_section_id
+	const target_window	= options.target_window
+	const width			= options.width 	|| 1280
+	const height		= options.height 	|| 900
+	const left			= options.left 		|| 0
+	const top			= options.top 		|| 0
 
 	// request_config
 		const request_config = [{
@@ -663,12 +672,15 @@ export const open_records_in_window = async function(caller, section_tipo, ar_se
 		// destroy after use it (only affects client side)
 		section.destroy()
 
+		const features = `width=${width},height=${height},left=${left},top=${top}`;
+
 	// open a new window without additional params.
 		// Note that the new window will be use the session value fixed in server
 		// for this section tipo by the previous dummy section build
 		open_window({
-			url		: `${DEDALO_CORE_URL}/page/?tipo=${section_tipo}&menu=false`,
-			target	: target_window
+			url			: `${DEDALO_CORE_URL}/page/?tipo=${section_tipo}&menu=false`,
+			target		: target_window,
+			features	: features
 		})
 
 
