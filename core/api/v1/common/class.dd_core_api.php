@@ -672,7 +672,12 @@ final class dd_core_api {
 
 	/**
 	* READ_RAW
-	* Get full record data of section
+	* Get full raw data
+	* Apply the SQO given to select specific rows.
+	* When the source is a section it get the full data in DDBB
+	* When the source is a component it resolve the section_records and select the component specific data.
+	* for literal components, it returns the full data with all languages.
+	* for relation components, it returns all locators associated.
 	* @param object $rqo
 	* sample:
 	* {
@@ -686,6 +691,16 @@ final class dd_core_api {
 	*        "mode": "edit",
 	*        "lang": "lg-eng"
 	*    }
+	* 	"sqo" : {
+	* 		"section_tipo" : ["rsc167"],
+	* 		"limit" 	   : 1,
+	* 		"filter_by_locators": [
+	*			{
+	*				"section_tipo": "rsc167",
+	*				"section_id": "1"
+	*			}
+	*		]
+	* 	}
 	* }
 	* @return object $response
 	*/
@@ -703,23 +718,57 @@ final class dd_core_api {
 				return $response;
 			}
 
-		// short vars
+		// options
+			$sqo			= $rqo->sqo ?? null;
+			$source			= $rqo->source ?? null;
 			$section_tipo	= $rqo->source->section_tipo;
-			$section_id		= $rqo->source->section_id;
 
-		// safe section_id
-			if ( (int)$section_id<1 ) {
-				$response->msg .= 'Invalid section_id: '.to_string($section_id);
-				$response->errors[] = 'invalid section_id';
-				return $response;
+		$raw_data = [];
+
+		// search if not empty
+		if (!empty($sqo)) {
+
+			// search exec
+				$search				= search::get_instance($sqo);
+				$search_response	= $search->search();
+
+			// check the type of the caller
+			switch ($source->type) {
+				case 'component':
+					// check if the component is a related or literal
+					$is_related = in_array( $source->model, component_relation_common::get_components_with_relations() );
+
+					if($is_related) {
+						// related cases
+						foreach ($search_response->ar_records as $section_record) {
+							// get all data in relations
+							$relations_data = $section_record->datos->relations ?? [];
+							// get the component data
+							foreach ($relations_data as $current_locator) {
+								if($source->tipo === $current_locator->from_component_tipo){
+									$raw_data[] = $current_locator;
+								}
+							}
+						}
+					}else{
+						// literal cases
+						foreach ($search_response->ar_records as $section_record) {
+
+							$components_data = $section_record->datos->components ?? new stdClass();
+							// get full data of the component including all languages
+							$raw_data[] = $components_data->$source->tipo->dato ?? null;
+						}
+					}
+					break;
+
+				case 'section':
+					$raw_data = $search_response->ar_records;
+					break;
 			}
-
-		// section data raw
-			$section	= section::get_instance($section_id, $section_tipo);
-			$dato		= $section->get_dato();
+		}
 
 		// response success
-			$response->result	= $dato;
+			$response->result	= $raw_data;
 			$response->table	= common::get_matrix_table_from_tipo($section_tipo);
 			$response->msg		= empty($response->errors)
 				? 'OK. Request done'
@@ -1794,7 +1843,7 @@ final class dd_core_api {
 						// 			$lang // string $lang = DEDALO_DATA_NOLAN
 						// 		);
 						// 		$element->set_dato( $full_data );
-						// }else{
+						// }
 
 							// prevent edit mode set limit greater than 1
 								if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || (int)$sqo->limit > 1)) {
@@ -1809,7 +1858,7 @@ final class dd_core_api {
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
-						// }
+
 
 					// session sqo. Store section SQO in session.
 					// It's not used to main navigation, but it's needed by some tools like tool_export

@@ -356,16 +356,32 @@ const get_content_data = function(self) {
 				e.stopPropagation()
 				e.preventDefault()
 
-				const url = DEDALO_API_URL + '?' + object_to_url_vars({
+				const sqo = {
+					section_tipo: [self.caller.section_tipo],
+					limit: 1,
+					filter_by_locators:[{
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id
+					}]
+				}
+
+				// read from Dédalo API
+				const rqo = {
 					action			: 'read_raw',
-					section_tipo	: self.caller.section_tipo,
-					section_id		: self.caller.section_id,
+					source			: create_source(self.caller),
+					sqo				: sqo,
 					pretty_print	: true
+				}
+
+				const url = DEDALO_API_URL + '?' + object_to_url_vars({
+					rqo : JSON.stringify(rqo)
 				})
+
 				open_window({
 					url			: url,
 					features	: 'new_tab'
 				})
+
 			}//end fn_data_link
 			data_link.addEventListener('mousedown', fn_data_link)
 
@@ -388,10 +404,20 @@ const get_content_data = function(self) {
 							return false
 						}
 
+					const sqo = {
+						section_tipo: [self.caller.section_tipo],
+						limit: 1,
+						filter_by_locators:[{
+							section_tipo	: self.caller.section_tipo,
+							section_id		: self.caller.section_id
+						}]
+					}
+
 					// read from Dédalo API
 						const rqo = {
 							action	: 'read_raw',
-							source	: create_source(self.caller)
+							source	: create_source(self.caller),
+							sqo		: sqo
 						}
 						data_manager.request({
 							body : rqo
@@ -405,7 +431,7 @@ const get_content_data = function(self) {
 								}
 
 							// download blob as JSON file
-								const data = api_response.result;
+								const data = api_response.result[0]?.datos || null;
 								download_data(data, file_name)
 						})
 				}//end fn_register
