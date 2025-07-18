@@ -346,7 +346,14 @@ relation_list.prototype.open_related_records = async function(section_tipo, ar_s
 
 	const self = this
 
-	return open_records_in_window(self, section_tipo, ar_section_id, target_window)
+	const window_options = {
+		caller			: self,
+		section_tipo	: section_tipo,
+		ar_section_id	: ar_section_id,
+		target_window	: target_window
+	}
+
+	return open_records_in_window( window_options )
 }//end open_related_records
 
 
