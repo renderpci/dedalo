@@ -431,7 +431,13 @@ buttons.render_list_from_component_data_button = (self) => {
 				.map(el => el.section_id)
 
 			// open_records_in_window
-			open_records_in_window(self, section_tipo, ar_section_id, null);
+				const window_options = {
+					caller			: self,
+					section_tipo	: section_tipo,
+					ar_section_id	: ar_section_id,
+					target_window	: null
+				}
+			open_records_in_window( window_options );
 
 		} catch (error) {
             console.error('Error in mousedown_handler:', error);
