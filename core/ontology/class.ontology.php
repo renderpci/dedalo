@@ -1726,7 +1726,7 @@ class ontology {
 	*/
 	private static function resolve_translatable( locator $locator ) : string {
 
-		$translatable_tipo		= 'ontology8';
+		$translatable_tipo = 'ontology8';
 
 		// get the translatable data of the node.
 		$translatable_data =  self::get_node_component_data( $locator, $translatable_tipo );
@@ -1762,7 +1762,7 @@ class ontology {
 	*/
 	private static function resolve_relations( locator $locator ) : ?array {
 
-		$relations_tipo			= 'ontology10';
+		$relations_tipo = 'ontology10';
 
 		// get the relations data of the node.
 		$relations_data =  self::get_node_component_data( $locator, $relations_tipo );

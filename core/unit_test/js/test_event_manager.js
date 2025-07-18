@@ -92,17 +92,26 @@ describe(`EVENT_MANAGER`, async () => {
 			const all_events = event_manager.get_events()
 
 			// asserts
-			assert.equal(all_events.length, 1, 'all_events must be 1')
+			assert.equal(
+				all_events.length,
+				1,
+				'all_events must be 1.  - Total: ' + all_events.length
+			);
+
 
 		// add one event
 			const callback_e = (e) => {}
 			const token = event_manager.subscribe(
 				'subscribe_test',
 				callback_e
-			)
-
+			);
+			
 			// asserts
-			assert.equal(all_events.length, 2, 'all_events must be 2')
+			assert.equal(
+				event_manager.get_events().length,
+				2,
+				'all_events must be 2'
+			);
 
 		// remove one event
 			event_manager.unsubscribe(token)
@@ -182,7 +191,11 @@ describe(`EVENT_MANAGER`, async () => {
 		const count2 = event_manager.get_events().length
 
 		// asserts
-		assert.equal(token_c, 'event_3', 'token_b must be event_3');
+		assert.equal(
+			token_c,
+			'event_3',
+			'token_b must be event_3'
+		);
 		assert.equal( (count1 + 1), count2, 'same length');
 
 	});
