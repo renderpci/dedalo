@@ -1696,21 +1696,21 @@ section.prototype.focus_first_input = function() {
 */
 function validate_mode(mode) {
 
-	const valid_modes = ['edit', 'list', 'list_thesaurus', 'solved', 'tm'];
+	const valid_modes = new Set(['edit', 'list', 'list_thesaurus', 'solved', 'tm'])
 	const default_mode = 'list';
 
 	if (!mode) {
 		return default_mode;
 	}
 
-	if (valid_modes.includes(mode)) {
+	if (valid_modes.has(mode)) {
 		return mode;
 	}
 
 	// Temporarily returns the given mode until this list is final.
-	console.error(`Invalid mode '${mode}' received. Using it temporarily !!. Valid modes: ${valid_modes.join(', ')}`);
+	console.error(`Invalid mode '${mode}' received. Using it temporarily !!. Valid modes: ${[...valid_modes].join(', ')}`);
 	if(SHOW_DEBUG===true) {
-		alert(`Invalid mode '${mode}' received. Using it temporarily !!.\n Valid modes: ${valid_modes.join(', ')}`);
+		alert(`Invalid mode '${mode}' received. Using it temporarily !!.\n Valid modes: ${[...valid_modes].join(', ')}`);
 	}
 
 	return mode // It will return to the default mode in the future.
