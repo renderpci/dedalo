@@ -222,6 +222,7 @@ const get_content_data = async function(self) {
 							}).catch((errorMsg) => {
 								// error occurred case
 								console.error(errorMsg);
+								reject(false)
 							})
 						}
 					})

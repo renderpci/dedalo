@@ -98,14 +98,12 @@ describe(`EVENT_MANAGER`, async () => {
 				'all_events must be 1.  - Total: ' + all_events.length
 			);
 
-
 		// add one event
 			const callback_e = (e) => {}
 			const token = event_manager.subscribe(
 				'subscribe_test',
 				callback_e
 			);
-			
 			// asserts
 			assert.equal(
 				event_manager.get_events().length,
