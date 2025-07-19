@@ -777,9 +777,9 @@ const do_delete_self = async function (self) {
 				const item = self.caller.ar_instances[i]
 				if (item.id===self.id) {
 					self.caller.ar_instances.splice(i, 1)
-					if(SHOW_DEBUG===true) {
-						// console.log('))))) deleted caller instance reference:', self.caller.model, self.id);
-					}
+					// if(SHOW_DEBUG===true) {
+					// 	console.log('))))) deleted caller instance reference:', self.caller.model, self.id);
+					// }
 					break;
 				}
 			}
