@@ -133,7 +133,7 @@ const get_content_data_edit = async function(self) {
 			)
 			.then(function(response){
 				const target_section_tipo = self.target_section_tipo[0]
-				if (response && response.value && response.value[target_section_tipo]) {
+				if (response?.value && response.value[target_section_tipo]) {
 					// call for each saved ddo
 					for (let i = 0; i < response.value[target_section_tipo].length; i++) {
 						const ddo = response.value[target_section_tipo][i]
@@ -148,8 +148,6 @@ const get_content_data_edit = async function(self) {
 					if(SHOW_DEBUG===true) {
 						console.log(`Added ddo items from saved local db ${target_section_tipo}. Items:`, response.value[target_section_tipo]);
 					}
-				}else{
-					console.error('Something was wrong were get_local_db_data '+ id)
 				}
 			})
 
