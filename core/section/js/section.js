@@ -398,7 +398,7 @@ section.prototype.init = async function(options) {
 
 				// debug
 				if(SHOW_DEBUG===true) {
-					console.log('section. event_manager.events.length:', event_manager.events.length);
+					console.log('section. event_manager.events.length:', event_manager.get_events().length);
 				}
 			}
 			self.events_tokens.push(

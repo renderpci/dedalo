@@ -352,13 +352,8 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 				// event subscribe
 				// On user hover mosaic a event that we subscribe here to show the
 				// proper hover record and hide the others
-					const event_id_hover = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_hover = event_manager.events.find(el => el.event_name===event_id_hover)
-					if (!found_hover) {
-						const token = event_manager.subscribe(event_id_hover, fn_mosaic_hover)
-						self.events_tokens.push(token)
-					}
-					function fn_mosaic_hover(caller_node) {
+					// over event
+					const fn_mosaic_hover = function(caller_node) {
 						// hide all
 							const ar_children_nodes	= hover_body.children;
 							const len			= ar_children_nodes.length
@@ -371,22 +366,30 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 							caller_node.prepend(section_record_node)
 							section_record_node.classList.remove('display_none')
 					}
-					const event_id_mouseleave	= `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_mouseleave		= event_manager.events.find(el => el.event_name===event_id_mouseleave)
-					if (!found_mouseleave) {
-						const token = event_manager.subscribe(event_id_mouseleave, fn_mosaic_mouseleave)
+					const event_id_hover = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+					const found_hover	 = event_manager.event_name_exists(event_id_hover)
+					if (!found_hover) {
+						const token = event_manager.subscribe(event_id_hover, fn_mosaic_hover)
 						self.events_tokens.push(token)
 					}
-					function fn_mosaic_mouseleave() {
+
+					// leave event
+					const fn_mosaic_mouseleave = function() {
 						// return
 						hover_body.appendChild(section_record_node)
 						// hide all
-							const ar_children_nodes	= hover_body.children;
-							const len				= ar_children_nodes.length
-							for (let i = len - 1; i >= 0; i--) {
-								const node = ar_children_nodes[i]
-								node.classList.add('display_none')
-							}
+						const ar_children_nodes	= hover_body.children;
+						const len				= ar_children_nodes.length
+						for (let i = len - 1; i >= 0; i--) {
+							const node = ar_children_nodes[i]
+							node.classList.add('display_none')
+						}
+					}
+					const event_id_mouseleave	= `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+					const found_mouseleave		= event_manager.event_name_exists(event_id_mouseleave)
+					if (!found_mouseleave) {
+						const token = event_manager.subscribe(event_id_mouseleave, fn_mosaic_mouseleave)
+						self.events_tokens.push(token)
 					}
 
 				// section record append
