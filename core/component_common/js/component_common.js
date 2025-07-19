@@ -5,16 +5,16 @@
 
 
 // imports
-	import {clone, dd_console, is_equal} from '../../common/js/utils/index.js'
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {set_before_unload,dd_request_idle_callback} from '../../common/js/events.js'
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance, get_all_instances} from '../../common/js/instances.js'
-	import {set_context_vars, create_source} from '../../common/js/common.js'
-	import {events_subscription} from './events_subscription.js'
-	import {ui} from '../../common/js/ui.js'
-	import {render_relogin} from '../../login/js/render_login.js'
-	import {set_element_css} from '../../page/js/css.js'
+	import { clone, dd_console, is_equal } from '../../common/js/utils/index.js'
+	import { event_manager } from '../../common/js/event_manager.js'
+	import { set_before_unload,dd_request_idle_callback } from '../../common/js/events.js'
+	import { data_manager } from '../../common/js/data_manager.js'
+	import { get_instance, get_all_instances } from '../../common/js/instances.js'
+	import { set_context_vars, create_source } from '../../common/js/common.js'
+	import { events_subscription } from './events_subscription.js'
+	import { ui } from '../../common/js/ui.js'
+	import { render_relogin } from '../../login/js/render_login.js'
+	import { set_element_css } from '../../page/js/css.js'
 
 
 

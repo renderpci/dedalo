@@ -5,16 +5,31 @@
 
 
 // import
-	import {ui} from '../../common/js/ui.js'
-	import {create_source} from '../../common/js/common.js'
-	import {data_manager, download_data} from '../../common/js/data_manager.js'
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {get_instance} from '../../common/js/instances.js'
-	import {render_node_info} from '../../common/js/utils/notifications.js'
-	import {open_window, object_to_url_vars,get_tld_from_tipo,get_section_id_from_tipo} from '../../common/js/utils/index.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {when_in_viewport,dd_request_idle_callback,set_tool_event} from '../../common/js/events.js'
-	import {get_ontology_url} from '../../inspector/js/inspector.js'
+	import { ui } from '../../common/js/ui.js'
+	import { create_source } from '../../common/js/common.js'
+	import { event_manager } from '../../common/js/event_manager.js'
+	import { get_instance } from '../../common/js/instances.js'
+	import { render_node_info } from '../../common/js/utils/notifications.js'
+	import { get_ontology_url } from '../../inspector/js/inspector.js'
+	import { open_tool } from '../../../tools/tool_common/js/tool_common.js'
+	import { render_open_list_with_direct_relations } from '../../section/js/render_open_list_with_direct_relations.js'
+	import {
+		data_manager,
+		download_data
+	} from '../../common/js/data_manager.js'
+	import {
+		when_in_viewport,
+		dd_request_idle_callback,
+		set_tool_event
+	} from '../../common/js/events.js'
+	import {
+		open_window,
+		object_to_url_vars,
+		get_tld_from_tipo,
+		get_section_id_from_tipo,
+		clone
+	} from '../../common/js/utils/index.js'
+
 
 
 
@@ -216,6 +231,40 @@ const get_content_data = function(self) {
 				button_delete.addEventListener('click', button_delete_click_handler)
 			}
 
+		// button_target_section
+			const button_target_section = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light list',
+				title			: get_label.open_relationships || 'Open relationships',
+				parent			: buttons_container
+			})
+			const button_target_section_mousedown_handler = (e) => {
+				e.stopPropagation()
+
+				const target_sections = self.caller.get_all_target_sections()
+				target_sections.sort((a, b) => a.label.localeCompare(b.label));
+
+				const options ={
+					target_sections	: target_sections,
+					sqo				: clone(self.caller.rqo?.sqo) || {},
+					caller_tipo		: null,
+					rqo_options		: {
+						type			: 'target_section',
+						section_tipo	: null,
+						tipo			: null,
+						model			: 'section'
+					},
+					label		: self.caller.label,
+					total		: self.caller.total,
+					self_caller : self,
+					self_caller : self.caller
+				}
+				render_open_list_with_direct_relations( options )
+
+			}
+			button_target_section.addEventListener('mousedown', button_target_section_mousedown_handler)
+
+
 		// button_diffusion
 			const tool_diffusion = self.caller.tools.find(el => el.name==='tool_diffusion')
 			if (tool_diffusion) {
@@ -368,7 +417,12 @@ const get_content_data = function(self) {
 				// read from Dédalo API
 				const rqo = {
 					action			: 'read_raw',
-					source			: create_source(self.caller),
+					options			: {
+						type			: 'section',
+						section_tipo	: self.caller.section_tipo,
+						tipo			: self.caller.section_tipo,
+						model			: self.caller.model
+					},
 					sqo				: sqo,
 					pretty_print	: true
 				}
@@ -416,7 +470,12 @@ const get_content_data = function(self) {
 					// read from Dédalo API
 						const rqo = {
 							action	: 'read_raw',
-							source	: create_source(self.caller),
+							options	: {
+								type			: 'section',
+								section_tipo	: self.caller.section_tipo,
+								tipo			: self.caller.section_tipo,
+								model			: self.caller.model
+							},
 							sqo		: sqo
 						}
 						data_manager.request({

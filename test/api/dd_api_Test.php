@@ -808,7 +808,7 @@ final class dd_api_Test extends TestCase {
 		$rqo = json_decode('
 			{
 				"action": "read_raw",
-				"source": {
+				"options": {
 					"typo": "source",
 					"type": "section",
 					"tipo": "test3",
