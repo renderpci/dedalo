@@ -186,7 +186,12 @@ class search {
 						. ' current_tipo: ' . to_string($current_tipo)
 						, logger::WARNING
 					);
-					continue;
+					// If the current tipo is the last tipo, we try to
+					// resolve matrix table even when no model is resolved.
+					// This happens in non installed Ontologies rare cases.
+					if ( $current_tipo === !end($this->ar_section_tipo) ) {
+						continue;
+					}
 				}
 
 				$current_matrix_table = common::get_matrix_table_from_tipo($current_tipo);
