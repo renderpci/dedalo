@@ -395,7 +395,7 @@ class hierarchy extends ontology {
 				}
 
 			// target section with the created sections
-			// when the process was finished inset the target section into the components
+			// when the process was finished insert the target section into the components
 				$target_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;	//'hierarchy53';
 				$model_name					= RecordObj_dd::get_modelo_name_by_tipo($target_tipo, true);
 				$component_target_section	= component_common::get_instance(
@@ -1273,6 +1273,174 @@ class hierarchy extends ontology {
 
 		return $active_elements;
 	}//end get_active_elements
+
+
+
+	/**
+	* CREATE_THESAURUS_GENERAL_TERM
+	* It creates the section to display as root term in the Thesaurus,
+	* and add to `General Term` (hierarchy45) portal data.
+	* Before to create it, check for already existing one.
+	* @param string $section_tipo - Expected 'hierarchy1'
+	* @param string|int $section_id - Id of the current hierarchy
+	* @param string $general_term_tipo
+	* 	'hierarchy45' for General term
+	* 	'hierarchy59' for General term model
+	* @return bool
+	*/
+	public static function create_thesaurus_general_term( string $section_tipo, string|int $section_id, string $general_term_tipo ) : bool {
+
+		// General term tipo. ! Please note that this is no longer a component_children, now is a component_portal
+		if (!in_array($general_term_tipo, ['hierarchy45','hierarchy59'])) {
+			debug_log(__METHOD__
+				. " Invalid tipo form general_term_tipo. Only 'hierarchy45','hierarchy59' are valid  " . PHP_EOL
+				. ' general_term_tipo : ' . to_string($general_term_tipo)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$model		= RecordObj_dd::get_modelo_name_by_tipo($general_term_tipo,true);
+		$component	= component_common::get_instance(
+			$model, // string model
+			$general_term_tipo, // string tipo
+			$section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$section_tipo // string section_tipo
+		);
+
+		$dato = $component->get_dato();
+		if (!empty($dato)) {
+			// Already contains data. Skip creation
+			return false;
+		}
+
+		// target_section_tipo. Get from component 'Target thesaurus' (hierarchy53)
+		$target_tipo = $general_term_tipo==='hierarchy59'
+			? DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO // hierarchy58 Model case
+			: DEDALO_HIERARCHY_TARGET_SECTION_TIPO; // hierarchy58 Term case
+
+		$target_model_name			= RecordObj_dd::get_modelo_name_by_tipo($target_tipo, true);
+		$component_target_section	= component_common::get_instance(
+			$target_model_name,
+			$target_tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
+		$target_section_tipo =  $component_target_section->get_value();
+		if (empty($target_section_tipo)) {
+			debug_log(__METHOD__
+				. " Error getting target_section_tipo from 'General Term' component  " . PHP_EOL
+				. ' tipo : ' . to_string($general_term_tipo)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// add_new_element
+		$response = $component->add_new_element( (object)[
+			'target_section_tipo' => $target_section_tipo
+		]);
+		if ( !$response->result || empty($response->section_id) ) {
+			debug_log(__METHOD__
+				. " Error adding new element (add_new_element) to 'General Term' component  " . PHP_EOL
+				. ' tipo (general_term_tipo) : ' . to_string($general_term_tipo) . PHP_EOL
+				. ' target_section_tipo : ' . to_string($target_section_tipo)
+				, logger::ERROR
+			);
+			return false;
+		}
+		// save the component
+		$component->Save();
+		$new_section_id = $response->section_id;
+
+		// get current hierarchy name as 'Exhibition'
+		$hierarchy_name = hierarchy::get_hierarchy_name($section_tipo, $section_id) ?? "General term from hierarchy $section_tipo - $section_id";
+
+		// set new section 'Term' value based on current Hierarchy name as 'Exhibition'
+		$set_term_value_result = hierarchy::set_term_value($target_section_tipo, $new_section_id, $hierarchy_name);
+
+
+		return $set_term_value_result;
+	}//end create_thesaurus_general_term
+
+
+
+	/**
+	* GET_HIERARCHY_NAME
+	* Gets the hierarchy name from the component 'Name' (hierarchy5) value
+	* @param string $section_tipo - Expected 'hierarchy1'
+	* @param string|int $section_id - Id of the current hierarchy
+	* @return string|null
+	*/
+	public static function get_hierarchy_name(  string $section_tipo, string|int $section_id ) : string|null {
+
+		// Term name tipo (componentinput_text)
+		$term_tipo = DEDALO_HIERARCHY_TERM_TIPO; // 'hierarchy5'
+
+		$model = RecordObj_dd::get_modelo_name_by_tipo($term_tipo,true);
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$term_tipo, // string tipo
+			$section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$section_tipo // string section_tipo
+		);
+
+		$value = $component->get_value();
+
+		return $value;
+	}//end get_hierarchy_name
+
+
+
+	/**
+	* SET_TERM_VALUE
+	* Sets the 'Term' (usually 'hierarchy25') string value
+	* @param string $section_tipo - (target section tipo as 'es1')
+	* @param string|int $section_id
+	* @param string $name
+	* @return bool
+	*/
+	public static function set_term_value( string $section_tipo, string|int $section_id, string $name ) : bool {
+
+		// section map resolution for term
+		$term_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
+		if (empty($term_tipo)) {
+			debug_log(__METHOD__
+				. " Section without section map definition or bad configured. 'term' is not resolved " . PHP_EOL
+				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+				. ' section_id: ' . to_string($section_id)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$model = RecordObj_dd::get_modelo_name_by_tipo($term_tipo,true);
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$term_tipo, // string tipo
+			$section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_LANG, // string lang
+			$section_tipo // string section_tipo
+		);
+
+		$component->set_dato( [$name] );
+
+		$save_result = $component->Save();
+
+		$result = empty($save_result) ? false : true;
+
+
+		return $result;
+	}//end set_term_value
 
 
 

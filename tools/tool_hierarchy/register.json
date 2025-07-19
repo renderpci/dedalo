@@ -8,6 +8,12 @@
       "from_component_tipo": "dd200"
     },
     {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
       "type": "dd675",
       "section_id": "1",
       "section_tipo": "dd153",
@@ -17,7 +23,7 @@
       "type": "dd151",
       "section_id": "1",
       "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
+      "from_component_tipo": "dd1331"
     },
     {
       "type": "dd151",
@@ -36,12 +42,6 @@
       "section_id": "2",
       "section_tipo": "dd64",
       "from_component_tipo": "dd1601"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
     },
     {
       "type": "dd151",
@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 3,
-              "hour": 13,
-              "time": 65066591153,
-              "year": 2024,
-              "month": 6,
-              "minute": 5,
-              "second": 53
+              "day": 18,
+              "hour": 16,
+              "time": 65102717691,
+              "year": 2025,
+              "month": 7,
+              "minute": 14,
+              "second": 51
             }
           }
         ]
@@ -125,6 +125,9 @@
         "lg-eng": [
           "Hierarchy tool"
         ],
+        "lg-eus": [
+          "Hierarkia tresna"
+        ],
         "lg-fra": [
           "Outil de hiérarchisation"
         ],
@@ -154,7 +157,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.2"
+          "1.0.3"
         ]
       }
     },
@@ -405,6 +408,101 @@
               "lang": "lg-nep",
               "name": "force_to_create",
               "value": "सिर्जना गर्न बाध्य पार्नुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "all_fields_mandatory",
+              "value": "All fields are mandatory."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "all_fields_mandatory",
+              "value": "Todos los campos son obligatorios."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "all_fields_mandatory",
+              "value": "Alle Felder sind obligatorisch."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "all_fields_mandatory",
+              "value": "Όλα τα πεδία είναι υποχρεωτικά."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "all_fields_mandatory",
+              "value": "Tous les champs sont obligatoires."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "all_fields_mandatory",
+              "value": "Tutti i campi sono obbligatori."
+            },
+            {
+              "lang": "lg-por",
+              "name": "all_fields_mandatory",
+              "value": "Todos os campos são obrigatórios."
+            },
+            {
+              "lang": "lg-nep",
+              "name": "all_fields_mandatory",
+              "value": "सबै क्षेत्रहरू अनिवार्य छन्।"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "all_fields_mandatory",
+              "value": "Tots els camps són obligatoris."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "all_fields_mandatory",
+              "value": "Eremu guztiak derrigorrezkoak dira."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "insert_value",
+              "value": "Please, insert a valid value to continue."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "insert_value",
+              "value": "Mesedez, sartu baliozko balio bat jarraitzeko."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "insert_value",
+              "value": "Si us plau, inseriu un valor vàlid per continuar."
+            },
+            {
+              "lang": "lg-nep",
+              "name": "insert_value",
+              "value": "कृपया जारी राख्नको लागि मान्य मान घुसाउनुहोस्।"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "insert_value",
+              "value": "Por favor, introduzca un valor válido para continuar."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "insert_value",
+              "value": "Bitte geben Sie einen gültigen Wert ein, um fortzufahren."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "insert_value",
+              "value": "Παρακαλώ, εισάγετε μια έγκυρη τιμή για να συνεχίσετε."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "insert_value",
+              "value": "Veuillez insérer une valeur valide pour continuer."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "insert_value",
+              "value": "Inserisci un valore valido per continuare."
             }
           ]
         ]
@@ -422,7 +520,7 @@
   "section_id": 15,
   "created_date": "2023-03-16 16:43:35",
   "section_tipo": "dd1340",
-  "modified_date": "2024-06-03 13:05:53",
+  "modified_date": "2025-07-18 16:14:51",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
