@@ -8,7 +8,7 @@
 	import {clone, url_vars_to_object, object_to_url_vars, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance} from '../../common/js/instances.js'
+	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import {
 		common,
 		set_context_vars,
@@ -859,7 +859,14 @@ section.prototype.render = async function(options={}) {
 		self.node = result_node
 
 	// debug
-		dd_console(`__Time to render ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
+		if(SHOW_DEBUG===true) {
+			dd_console(`__Time to render ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
+			console.log('get_all_instances:', get_all_instances().length);
+			console.log('event_manager.get_events():', event_manager.get_events().length);
+			console.log('self.datum.context.length:', self.datum.context.length);
+			console.log('self.datum.data.length:', self.datum.data.length);
+		}
+
 
 	return result_node
 }//end render
