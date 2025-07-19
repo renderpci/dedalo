@@ -11,7 +11,6 @@ class tool_hierarchy extends tool_common {
 	/**
 	* GENERATE_VIRTUAL_SECTION
 	* Exec a custom action called from client
-	* Note that tool config is stored in the tool section data (tools_register)
 	* @param object $options
 	* @return object $response
 	*/

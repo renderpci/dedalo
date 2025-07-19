@@ -3347,6 +3347,11 @@ class component_relation_common extends component_common {
 		// target_section_tipo check
 			if(empty($target_section_tipo)){
 				$response->msg .= ' Is mandatory to specify target_section_tipo';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' options: ' . to_string($options)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -3384,9 +3389,13 @@ class component_relation_common extends component_common {
 			$new_section_id = $section_new->Save( $save_options );
 
 			if($new_section_id<1) {
-				$msg = __METHOD__." Error on create new section: new section_id is not valid ! ";
+				$msg = "Error on create new section: new section_id is not valid ! ";
 				$response->msg .= $msg;
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' save_options: ' . to_string($save_options)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -3402,7 +3411,13 @@ class component_relation_common extends component_common {
 			$added = $this->add_locator_to_dato($locator);
 			if ($added!==true) {
 				$response->msg .= 'Error add_locator_to_dato. New locator is not added !';
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' locator: ' . to_string($locator) . PHP_EOL
+					.' target_section_tipo: ' . to_string($target_section_tipo) . PHP_EOL
+					.' new_section_id: ' . to_string($new_section_id)
+					, logger::ERROR
+				);
 				return $response;
 			}
 

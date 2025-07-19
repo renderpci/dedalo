@@ -1684,31 +1684,29 @@ section.prototype.focus_first_input = function() {
 * VALIDATE_MODE
 * Check given mode to prevent unwanted or not valid mode.
 * If the mode is not accepted, fallback to default mode 'list'
-* @return string mode
+* @param string mode - The mode to validate.
+* @return string mode - A valid mode.
 */
 function validate_mode(mode) {
 
-    const valid_modes = ['edit', 'list', 'list_thesaurus','solved'];
-    const default_mode = 'list';
+	const valid_modes = ['edit', 'list', 'list_thesaurus', 'solved', 'tm'];
+	const default_mode = 'list';
 
-    if (!mode) {
-        return default_mode;
-    }
+	if (!mode) {
+		return default_mode;
+	}
 
-    if (valid_modes.includes(mode)) {
-        return mode;
-    }else{
-    	// temporal
-    	console.error(`Invalid mode '${mode}' received. Using it temporally !!. Valid modes: ${valid_modes.join(', ')}`);
-    	if(SHOW_DEBUG===true) {
-    		alert(`Invalid mode '${mode}' received. Using it temporally !!.\n Valid modes: ${valid_modes.join(', ')}`);
-    	}
-    	return mode
-    }
+	if (valid_modes.includes(mode)) {
+		return mode;
+	}
 
-    console.error(`Invalid mode '${mode}' received. Using default mode '${default_mode}'. Valid modes: ${valid_modes.join(', ')}`);
+	// Temporarily returns the given mode until this list is final.
+	console.error(`Invalid mode '${mode}' received. Using it temporarily !!. Valid modes: ${valid_modes.join(', ')}`);
+	if(SHOW_DEBUG===true) {
+		alert(`Invalid mode '${mode}' received. Using it temporarily !!.\n Valid modes: ${valid_modes.join(', ')}`);
+	}
 
-    return default_mode;
+	return mode // It will return to the default mode in the future.
 }//end validate_mode
 
 
