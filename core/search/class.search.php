@@ -310,6 +310,15 @@ class search {
 				metrics::$search_total_calls++;
 			}
 
+		// check valid matrix table
+			if (empty($this->matrix_table) && !in_array('all', $this->ar_section_tipo)) {
+				debug_log(__METHOD__
+					. ' Error: Matrix table is mandatory. Check your ar_section_tipo to safe tipos with resolvable model.' . PHP_EOL
+					. ' $this->ar_section_tipo: ' . to_string($this->ar_section_tipo)
+					, logger::ERROR
+				);
+			}
+
 		// parse SQO. Converts JSON search_query_object to SQL query string
 			$sql_query = $this->parse_search_query_object( $full_count=false );
 			if(SHOW_DEBUG===true) {
