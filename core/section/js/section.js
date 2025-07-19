@@ -1710,5 +1710,39 @@ function validate_mode(mode) {
 }//end validate_mode
 
 
+/**
+* GET_ALL_TARGET_SECTIONS
+* Select all portal components of the section
+* Give the unique target sections defined into every rqo of the component
+* Get first component (inside first section_record) and activate it
+* @return bool
+*/
+section.prototype.get_all_target_sections = function() {
+
+	const self = this
+
+	const section_portals = self.datum.context.filter( el =>
+		el.model ==='component_portal'
+		&& el.section_tipo === self.tipo
+	)
+
+	const target_sections = Object.values(
+		section_portals
+			.flatMap(el =>
+				el.request_config.flatMap(rqo =>
+				rqo.sqo.section_tipo // get all objects inside the sqo `section_tipo` as target section_tipo
+			)
+		)
+			// reduce to unique target section tipo as some components can call to the same section
+			.reduce((acc, obj) => {
+				if (!acc[obj.tipo]) {  // Use `tipo` as the unique key
+					acc[obj.tipo] = obj;
+				}
+				return acc;
+			}, {})
+	);
+
+	return target_sections
+}//end get_all_target_sections
 
 // @license-end
