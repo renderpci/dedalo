@@ -96,28 +96,37 @@ tool_export.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = await tool_common.prototype.init.call(this, options);
+	const common_init = await tool_common.prototype.init.call(this, options);
 
-	// build the section that call, it's necessary to build the rqo
-		await self.caller.build(true)
+	try {
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.lang	= options.lang // from page_globals.dedalo_data_lang
-		self.langs	= page_globals.dedalo_projects_default_langs
+		// build the section that call, it's necessary to build the rqo
+			if (!self.caller || typeof self.caller.build!=='function') {
+				throw new Error("Caller build is not available.");
+			}
+			await self.caller.build(true)
 
-	// short vars
-		self.events_tokens			= []
-		self.parent_node			= null
-		self.components_list		= {}
-		self.ar_instances			= []
-		self.source					= self.caller.rqo.source
-		self.sqo					= self.caller.rqo.sqo
-		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo
-		self.limit					= self.sqo.limit ?? 10
-		self.ar_ddo_to_export		= []
+		// set the self specific vars not defined by the generic init (in tool_common)
+			self.lang	= options.lang // from page_globals.dedalo_data_lang
+			self.langs	= page_globals.dedalo_projects_default_langs
 
-		// const load_promise = import('../../../lib/sheetjs/dist/xlsx.full.min.js')
-		// await common.prototype.load_script(DEDALO_ROOT_WEB + '/lib/sheetjs/dist/xlsx.full.min.js')
+		// short vars
+			self.events_tokens			= []
+			self.parent_node			= null
+			self.components_list		= {}
+			self.ar_instances			= []
+			self.source					= self.caller.rqo.source
+			self.sqo					= self.caller.rqo.sqo
+			self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo
+			self.limit					= self.sqo.limit ?? 10
+			self.ar_ddo_to_export		= []
+
+			// const load_promise = import('../../../lib/sheetjs/dist/xlsx.full.min.js')
+			// await common.prototype.load_script(DEDALO_ROOT_WEB + '/lib/sheetjs/dist/xlsx.full.min.js')
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_init
