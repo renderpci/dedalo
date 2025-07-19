@@ -712,16 +712,19 @@ final class dd_core_api {
 			$response->errors	= [];
 
 		// validate input data
-			if (empty($rqo->source->section_tipo)) {
-				$response->msg = 'API Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
-				$response->errors[] = 'empty source section_tipo';
+			if (empty($rqo->options->section_tipo)) {
+				$response->msg = 'API Error: ('.__FUNCTION__.') Empty options \'section_tipo\' (is mandatory)';
+				$response->errors[] = 'empty options section_tipo';
 				return $response;
 			}
 
 		// options
 			$sqo			= $rqo->sqo ?? null;
-			$source			= $rqo->source ?? null;
-			$section_tipo	= $rqo->source->section_tipo;
+			$options		= $rqo->options ?? null;
+			$section_tipo	= $rqo->options->section_tipo;
+			$tipo			= $options->tipo;
+			$model			= $options->model;
+			$type 			= $options->type;
 
 		$raw_data = [];
 
@@ -733,10 +736,10 @@ final class dd_core_api {
 				$search_response	= $search->search();
 
 			// check the type of the caller
-			switch ($source->type) {
+			switch ($type) {
 				case 'component':
 					// check if the component is a related or literal
-					$is_related = in_array( $source->model, component_relation_common::get_components_with_relations() );
+					$is_related = in_array( $model, component_relation_common::get_components_with_relations() );
 
 					if($is_related) {
 						// related cases
@@ -745,7 +748,7 @@ final class dd_core_api {
 							$relations_data = $section_record->datos->relations ?? [];
 							// get the component data
 							foreach ($relations_data as $current_locator) {
-								if($source->tipo === $current_locator->from_component_tipo){
+								if($tipo === $current_locator->from_component_tipo){
 									$raw_data[] = $current_locator;
 								}
 							}
@@ -756,13 +759,28 @@ final class dd_core_api {
 
 							$components_data = $section_record->datos->components ?? new stdClass();
 							// get full data of the component including all languages
-							$raw_data[] = $components_data->$source->tipo->dato ?? null;
+							$raw_data[] = $components_data->$tipo->dato ?? null;
 						}
 					}
 					break;
 
 				case 'section':
 					$raw_data = $search_response->ar_records;
+					break;
+
+				case 'target_section':
+					// uses the relations to get all locators that call to target section given
+					// related cases
+					foreach ($search_response->ar_records as $section_record) {
+						// get all data in relations
+						$relations_data = $section_record->datos->relations ?? [];
+						// get the component data
+						foreach ($relations_data as $current_locator) {
+							if($tipo === $current_locator->section_tipo){
+								$raw_data[] = $current_locator;
+							}
+						}
+					}
 					break;
 			}
 		}

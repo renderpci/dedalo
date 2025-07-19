@@ -1739,5 +1739,19 @@
 		"typology": 11,
 		"active_in_thesaurus": true,
 		"install_checked_default": false
+	},
+	{
+		"tld": "tchicontext",
+		"label": "Site context",
+		"typology": 1,
+		"active_in_thesaurus": true,
+		"install_checked_default": false
+	},
+	{
+		"tld": "tchicategory",
+		"label": "Site category",
+		"typology": 1,
+		"active_in_thesaurus": true,
+		"install_checked_default": false
 	}
 ]

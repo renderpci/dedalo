@@ -172,6 +172,35 @@
 
 }//end .section
 
+.open_relations_modal{
+	font-size: 1.1em;
+
+	.label{
+		line-height: 1.2em;
+	}
+
+	.target_sections_content{
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		padding-top: 2rem;
+		grid-row-gap: 0.5rem;
+	}
+
+	.radio_button_content{
+		text-align: center;
+		padding: 2rem;
+
+		.found_records_label{
+			padding-left: 2rem;
+		}
+	}
+	.button_open_container{
+		text-align: center;
+		.success{
+			font-size: 1.2em;
+		}
+	}
+}
 
 @import (once) './view_graph_section';
 @import (once) './view_base_section';
