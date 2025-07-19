@@ -318,7 +318,10 @@ export const key_instances_builder = function(options) {
 
 		const current_value = options[order[i]] ? options[order[i]].toString() : '';
 		if (options.hasOwnProperty(order[i]) && typeof current_value!=='undefined' && current_value!==null && current_value.length>0){
-			key_parts.push( options[order[i]] )
+
+			const string_value = String(options[order[i]]); // Safely convert to string
+
+			key_parts.push( string_value )
 		}
 	}
 
