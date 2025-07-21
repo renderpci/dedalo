@@ -89,7 +89,7 @@
 	* CALCULATE_IMPORT_MAJOR
 	* @return int
 	*/
-	function calculate_import_major(object $options) : array {
+	function calculate_import_major(object $options) {
 
 		$data = $options->data;
 		$total_days = array_sum($data->total_days);
