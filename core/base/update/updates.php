@@ -71,10 +71,10 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium	= 6;
 	$updates->$v->update_from_minor		= 4;
 
-	$alert					= new stdClass();
-		$alert->notification	= 'V '.$v;
+	$alert = new stdClass();
+		$alert->notification = 'V '.$v;
 
-		$alert->command			= '';
+		$alert->command = '';
 		$alert->command .= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
 			<p>
@@ -112,7 +112,6 @@ $updates->$v = new stdClass();
 			</p>
 		";
 		$updates->$v->alert_update[] = $alert;
-
 
 	// Remove the old People section counter, it is unused, all people was moved into rsc197
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
@@ -166,6 +165,7 @@ $updates->$v = new stdClass();
 			$updates->$v->run_scripts[] = $script_obj;
 
 
+
 $v=664; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -183,6 +183,8 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_hierarchy;
 		');
+
+
 
 $v=663; #####################################################################################
 $updates->$v = new stdClass();
@@ -203,6 +205,7 @@ $updates->$v = new stdClass();
 		');
 
 
+
 $v=662; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -220,6 +223,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
 		');
+
 
 
 $v=661; #####################################################################################
