@@ -428,7 +428,9 @@ common.prototype.render = async function (options={}) {
 									class_name		: 'no_access',
 									inner_html		: label
 								})
-								self.node.appendChild(new_content_data_node)
+								requestAnimationFrame(()=>{
+									self.node.appendChild(new_content_data_node)
+								})
 								// set pointers
 								self.node.content_data = new_content_data_node
 
