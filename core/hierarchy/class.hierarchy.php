@@ -1444,4 +1444,91 @@ class hierarchy extends ontology {
 
 
 
+	/**
+	* SYNC_HIERARCHY_ACTIVE_STATUS
+	* Sync Hierarchy 'Active' with 'Active in thesaurus' status.
+	* Propagates 'Active in thesaurus' to 'Active' to prevent large list of
+	* apparently unused toponymies
+	* @return bool
+	*/
+	public static function sync_hierarchy_active_status() : bool {
+
+		// Get Hierarchy active sections
+		$active_hierarchies = hierarchy::get_active_elements();
+
+		// Check if we have any active hierarchies to process
+		if (empty($active_hierarchies)) {
+			return true; // Nothing to process, but not an error
+		}
+
+		$error_count = 0;
+
+		// Iterate to sync with 'Active in thesaurus' values
+		foreach ($active_hierarchies as $item) {
+
+			 // Validate required properties exist
+			if (!isset($item->section_id) || !isset($item->section_tipo)) {
+				continue; // Skip invalid items
+			}
+
+			// Get component hierarchy125 'Active in thesaurus' value to compare
+			$tipo		= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;
+			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+			$component	= component_common::get_instance(
+				$model,
+				$tipo ,
+				$item->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$item->section_tipo
+			);
+			$component_data		= $component->get_dato();
+			$value_section_id	= $component_data[0]->section_id ?? null;
+			$to_update			= $value_section_id !== NUMERICAL_MATRIX_VALUE_YES;
+
+			if (!$to_update) {
+				continue; // Already has correct value
+			}
+
+			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
+			$active_model	= RecordObj_dd::get_modelo_name_by_tipo( $active_tipo );
+			$component	= component_common::get_instance(
+				$active_model,
+				$active_tipo ,
+				$item->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$item->section_tipo
+			);
+
+			$locator = new locator();
+				$locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+				$locator->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
+
+			$component->set_dato( [$locator] );
+
+			$save_result = $component->Save();
+			if (!$save_result) {
+				// Log error or handle save failure
+				debug_log(__METHOD__
+					. " Failed to save component for section_id: " . PHP_EOL
+					. ' $item->section_id: ' . to_string($item->section_id)
+					, logger::ERROR
+				);
+				$error_count++;
+			}else{
+				debug_log(__METHOD__
+					. " Updated value for for section_id: " . PHP_EOL
+					. ' $item->section_id: ' . to_string($item->section_id)
+					, logger::WARNING
+				);
+			}
+		}
+
+
+		return $error_count === 0;
+	}//end sync_hierarchy_active_status
+
+
+
 }//end class hierarchy
