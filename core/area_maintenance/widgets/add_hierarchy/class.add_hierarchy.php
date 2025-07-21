@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * ADD_HIERARCHY
-* Widget to manage Dédalo database tasks
+* Widget to manage Dédalo hierarchy tasks
 */
 class add_hierarchy {
 
