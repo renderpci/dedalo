@@ -1008,26 +1008,6 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* EXPORT_HIERARCHY
-	* Alias of hierarchy::export_hierarchy
-	* @param object $options
-	* @return object $response
-	*/
-	public static function export_hierarchy(object $options) : object {
-
-		// options
-			$section_tipo = $options->section_tipo ?? null;
-
-		// export_hierarchy
-			$response = hierarchy::export_hierarchy($section_tipo);
-
-
-		return $response;
-	}//end export_hierarchy
-
-
-
-	/**
 	* UPDATE_DATA_VERSION
 	* Updates Dédalo data version.
 	* Allow change components data format or add new tables or index
