@@ -6,6 +6,7 @@
 
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {render_export_hierarchy} from './render_export_hierarchy.js'
 
 
@@ -47,6 +48,78 @@ export const export_hierarchy = function() {
 	// render
 	export_hierarchy.prototype.edit		= render_export_hierarchy.prototype.list
 	export_hierarchy.prototype.list		= render_export_hierarchy.prototype.list
+
+
+
+/**
+* EXEC_EXPORT_HIERARCHY
+* Call working API to exec the  export_hierarchy action.
+* @param string section_tipo
+* @return object result
+*/
+export_hierarchy.prototype.exec_export_hierarchy = async (section_tipo) => {
+
+	// get value from API
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source			: {
+				type	: 'widget',
+				model	: 'export_hierarchy',
+				action	: 'export_hierarchy'
+			},
+			options : {
+				section_tipo : section_tipo // string like '*' or 'es1,es2'
+			}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) exec_export_hierarchy export_hierarchy api_response:', api_response);
+	}
+
+
+	return api_response
+}//end exec_export_hierarchy
+
+
+
+/**
+* sync_hierarchy_active_status
+* Call working API to exec the  sync_hierarchy_active_status action.
+* @return object result
+*/
+export_hierarchy.prototype.sync_hierarchy_active_status = async () => {
+
+	// get value from API
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source			: {
+				type	: 'widget',
+				model	: 'export_hierarchy',
+				action	: 'sync_hierarchy_active_status',
+			},
+			options : {}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('))) sync_hierarchy_active_status sync_hierarchy_active_status api_response:', api_response);
+	}
+
+
+	return api_response
+}//end sync_hierarchy_active_status
+
 
 
 
