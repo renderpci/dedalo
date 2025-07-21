@@ -30,9 +30,33 @@
 * }
 *
 */
-
 global $updates;
 $updates = new stdClass();
+
+
+
+$v=670; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 7;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 6;
+	$updates->$v->update_from_minor		= 5;
+
+	// sync active hierarchies with active ontologies
+		$script_obj = new stdClass();
+			$script_obj->info			= "Sync active hierarchies with active in thesaurus";
+			$script_obj->script_class	= "hierarchy";
+			$script_obj->script_method	= "sync_hierarchy_active_status";
+			$script_obj->script_vars	= []; // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
+
+
 
 $v=665; #####################################################################################
 $updates->$v = new stdClass();
