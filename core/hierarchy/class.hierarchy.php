@@ -1461,19 +1461,28 @@ class hierarchy extends ontology {
 			return true; // Nothing to process, but not an error
 		}
 
+		// ignore target_section_tipo
+		$ignore_target_section_tipo = [
+			'rsc197' // 'People' hierarchy
+		];
+
 		$error_count = 0;
 
 		// Iterate to sync with 'Active in thesaurus' values
 		foreach ($active_hierarchies as $item) {
 
-			if( $item->active_in_thesaurus ) {
+			if ( $item->active_in_thesaurus ) {
 				continue; // It's in sync
+			}
+
+			if ( in_array($item->target_section_tipo, $ignore_target_section_tipo) ) {
+				continue; // Ignore some hierarchies like 'People'
 			}
 
 			// No active in thesaurus cases. Set as inactive
 			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
 			$active_model	= RecordObj_dd::get_modelo_name_by_tipo( $active_tipo );
-			$component	= component_common::get_instance(
+			$component		= component_common::get_instance(
 				$active_model,
 				$active_tipo ,
 				$item->section_id,
