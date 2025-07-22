@@ -407,19 +407,21 @@ class security {
 	public static function get_ar_authorized_areas_for_user() : array {
 
 		// filter area_permissions
-			$area_permissions = [];
+		$area_permissions = [];
 
-		// cached permissions_table
-			$full_permissions_table = security::get_permissions_table();
-			foreach ($full_permissions_table as $key => $value) {
-				$ar_parts = explode('_', $key);
-				if ($ar_parts[0]===$ar_parts[1]) {
-					$area_permissions[] = (object)[
-						'tipo'	=> $ar_parts[0],
-						'value'	=> $value
-					];
-				}
+		// cached permissions_table from file xxx_cache_permissions_table.json
+		$full_permissions_table = security::get_permissions_table();
+
+		// filter items with same tipo and section_tipo such as {"tchi1_tchi1": 2}
+		foreach ($full_permissions_table as $key => $value) {
+			// Match pattern where first two parts separated by _ are identical
+			if (preg_match('/^([^_]+)_\1(?:_|$)/', $key, $matches)) {
+				$area_permissions[] = (object)[
+					'tipo' => $matches[1], // as 'tchi1'
+					'value' => $value // as 2
+				];
 			}
+		}
 
 
 		return $area_permissions;
