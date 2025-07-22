@@ -112,7 +112,9 @@ class area_thesaurus extends area_common {
 				}
 
 			// children tipo. It is used for fast resolution across API class form client.
-				$children_tipo = section::get_ar_children_tipo_by_model_name_in_section($element->target_section_tipo, ['component_relation_children'], true, true, true, true)[0] ?? null;
+				$children_tipo = $class_name==='ontology'
+					? ontology::$children_tipo // 'ontology14'
+					: section::get_ar_children_tipo_by_model_name_in_section($element->target_section_tipo, ['component_relation_children'], true, true, true, true)[0] ?? null;
 
 			// item
 				$item = new stdClass();

@@ -11,6 +11,9 @@ class ontology {
 	static $main_table			= 'matrix_ontology_main';
 	static $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 
+	// children_tipo
+	static $children_tipo = 'ontology14';
+
 
 
 	/**
@@ -504,7 +507,7 @@ class ontology {
 				$children_data[] = $child_locator;
 			}
 
-			$children_tipo		= 'ontology14';
+			$children_tipo		= ontology::$children_tipo; // 'ontology14';
 			$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo );
 			$children_component	= component_common::get_instance(
 				$children_model,
@@ -1925,7 +1928,7 @@ class ontology {
 
 		// get the component data
 		// using the locator
-		$children_tipo		= 'ontology14';
+		$children_tipo		= ontology::$children_tipo; // 'ontology14';
 		$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo  );
 		$children_component	= component_common::get_instance(
 			$children_model,
