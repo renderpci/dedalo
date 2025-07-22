@@ -826,7 +826,7 @@ final class dd_api_Test extends TestCase {
 			$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
 
 		// expected running without errors
-			$this->assertTrue( gettype($response->result)==='object' );
+			$this->assertTrue( gettype($response->result)==='array' );
 
 		// expected result as false
 			$this->assertTrue( $response->result!==false );
