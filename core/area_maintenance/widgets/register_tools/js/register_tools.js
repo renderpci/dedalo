@@ -6,7 +6,7 @@
 
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
-	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_register_tools} from './render_register_tools.js'
 
 
@@ -45,6 +45,7 @@ export const register_tools = function() {
 	register_tools.prototype.build		= widget_common.prototype.build
 	register_tools.prototype.render		= widget_common.prototype.render
 	register_tools.prototype.destroy	= widget_common.prototype.destroy
+	register_tools.prototype.get_value	= area_maintenance.prototype.get_value
 	// // render
 	register_tools.prototype.edit		= render_register_tools.prototype.list
 	register_tools.prototype.list		= render_register_tools.prototype.list
@@ -67,7 +68,7 @@ register_tools.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-		self.value = await self.get_widget_value()
+		self.value = await self.get_value()
 
 	} catch (error) {
 		self.error = error
@@ -77,45 +78,6 @@ register_tools.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
-
-
-/**
-* GET_WIDGET_VALUE
-* Get widget value from class maintenance
-* The options 'model' property is the class method name
-* @return result
-* {
-*	"datalist": array as [{"developer":"Dédalo Team","name":"tool_cataloging",..}]
-*	"errors": array|null
-* }
-*/
-register_tools.prototype.get_widget_value = async () => {
-
-	// get files list updated
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'get_widget_value',
-			prevent_lock	: true,
-			source	: {
-				type	: 'widget',
-				model	: 'register_tools'
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value resgister_tools api_response:', api_response);;
-	}
-
-	const result = api_response.result
-
-
-	return result
-}//end get_widget_value
 
 
 

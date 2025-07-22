@@ -8,6 +8,7 @@
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_counters_status} from './render_counters_status.js'
 
 
@@ -47,6 +48,7 @@ export const counters_status = function() {
 	counters_status.prototype.render	= widget_common.prototype.render
 	counters_status.prototype.refresh	= widget_common.prototype.refresh
 	counters_status.prototype.destroy	= widget_common.prototype.destroy
+	counters_status.prototype.get_value	= area_maintenance.prototype.get_value
 	// // render
 	counters_status.prototype.edit		= render_counters_status.prototype.list
 	counters_status.prototype.list		= render_counters_status.prototype.list
@@ -69,7 +71,7 @@ counters_status.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-		self.value = await self.get_widget_value()
+		self.value = await self.get_value()
 
 	} catch (error) {
 		self.error = error
@@ -79,41 +81,6 @@ counters_status.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
-
-
-/**
-* GET_WIDGET_VALUE
-* Get widget value from class maintenance
-* The options 'model' property is the class method name
-* @return object result
-*/
-counters_status.prototype.get_widget_value = async () => {
-
-	// get value from API
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'get_widget_value',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'counters_status'
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value counters_status api_response:', api_response);;
-	}
-
-	const result = api_response.result
-
-
-	return result
-}//end get_widget_value
 
 
 

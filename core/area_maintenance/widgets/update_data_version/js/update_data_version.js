@@ -6,7 +6,7 @@
 
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
-	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_update_data_version} from './render_update_data_version.js'
 
 
@@ -48,6 +48,7 @@ export const update_data_version = function() {
 	update_data_version.prototype.render	= widget_common.prototype.render
 	update_data_version.prototype.refresh	= widget_common.prototype.refresh
 	update_data_version.prototype.destroy	= widget_common.prototype.destroy
+	update_data_version.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
 	update_data_version.prototype.edit		= render_update_data_version.prototype.list
 	update_data_version.prototype.list		= render_update_data_version.prototype.list
@@ -96,7 +97,7 @@ update_data_version.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-		self.value = await self.get_widget_value()
+		self.value = await self.get_value()
 
 	} catch (error) {
 		self.error = error
@@ -106,45 +107,6 @@ update_data_version.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
-
-
-/**
-* GET_WIDGET_VALUE
-* Get widget value from class maintenance
-* The options 'model' property is the class method name
-* @return result
-* {
-    "update_version": null,
-    "current_version_in_db": [6,2,9],
-    "dedalo_version": [6,3,0],
-    "updates": null
-  }
-*/
-update_data_version.prototype.get_widget_value = async () => {
-
-	// get files list updated
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'get_widget_value',
-			prevent_lock	: true,
-			source	: {
-				type	: 'widget',
-				model	: 'update_data_version'
-			}
-		}
-	})
-	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value update_data_version api_response:', api_response);
-	}
-
-	const result = api_response.result
-
-
-	return result
-}//end get_widget_value
 
 
 

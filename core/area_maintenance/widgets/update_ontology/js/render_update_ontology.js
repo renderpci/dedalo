@@ -71,7 +71,7 @@ render_update_ontology.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// value
-		const value = await self.get_widget_value()
+		const value = await self.get_value()
 
 	// short vars
 		const current_ontology		= value.current_ontology

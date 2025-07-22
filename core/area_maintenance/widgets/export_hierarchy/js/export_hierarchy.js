@@ -7,6 +7,7 @@
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_export_hierarchy} from './render_export_hierarchy.js'
 
 
@@ -41,13 +42,43 @@ export const export_hierarchy = function() {
 */
 // prototypes assign
 	// lifecycle
-	export_hierarchy.prototype.init		= widget_common.prototype.init
-	export_hierarchy.prototype.build	= widget_common.prototype.build
-	export_hierarchy.prototype.render	= widget_common.prototype.render
-	export_hierarchy.prototype.destroy	= widget_common.prototype.destroy
+	export_hierarchy.prototype.init			= widget_common.prototype.init
+	export_hierarchy.prototype.build		= widget_common.prototype.build
+	export_hierarchy.prototype.render		= widget_common.prototype.render
+	export_hierarchy.prototype.destroy		= widget_common.prototype.destroy
+	export_hierarchy.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
-	export_hierarchy.prototype.edit		= render_export_hierarchy.prototype.list
-	export_hierarchy.prototype.list		= render_export_hierarchy.prototype.list
+	export_hierarchy.prototype.edit			= render_export_hierarchy.prototype.list
+	export_hierarchy.prototype.list			= render_export_hierarchy.prototype.list
+
+
+
+/**
+* BUILD
+* Custom build overwrites common widget method
+* @param bool autoload = false
+* @return bool
+*/
+export_hierarchy.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// call generic common tool build
+		const common_build = await widget_common.prototype.build.call(this, autoload);
+
+	try {
+
+		// specific actions. like fix main_element for convenience
+		self.value = await self.get_value()
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
+
+
+	return common_build
+}//end build_custom
 
 
 
