@@ -1466,30 +1466,11 @@ class hierarchy extends ontology {
 		// Iterate to sync with 'Active in thesaurus' values
 		foreach ($active_hierarchies as $item) {
 
-			 // Validate required properties exist
-			if (!isset($item->section_id) || !isset($item->section_tipo)) {
-				continue; // Skip invalid items
+			if( $item->active_in_thesaurus ) {
+				continue; // It's in sync
 			}
 
-			// Get component hierarchy125 'Active in thesaurus' value to compare
-			$tipo		= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo );
-			$component	= component_common::get_instance(
-				$model,
-				$tipo ,
-				$item->section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$item->section_tipo
-			);
-			$component_data		= $component->get_dato();
-			$value_section_id	= $component_data[0]->section_id ?? null;
-			$to_update			= $value_section_id !== NUMERICAL_MATRIX_VALUE_YES;
-
-			if (!$to_update) {
-				continue; // Already has correct value
-			}
-
+			// No active in thesaurus cases. Set as inactive
 			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
 			$active_model	= RecordObj_dd::get_modelo_name_by_tipo( $active_tipo );
 			$component	= component_common::get_instance(
