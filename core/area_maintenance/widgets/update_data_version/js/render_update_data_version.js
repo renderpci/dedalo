@@ -251,7 +251,7 @@ const get_content_data = async function(self) {
 				break;
 			default:
 				// create the submit button
-				self.caller.init_form({
+				self.caller?.init_form({
 					submit_label	: self.name,
 					confirm_text	: get_label.sure || 'Sure?',
 					body_info		: content_data,

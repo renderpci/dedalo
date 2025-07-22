@@ -212,6 +212,11 @@ area_maintenance.prototype.init_form = function(widget_object) {
 */
 area_maintenance.prototype.get_value = async function () {
 
+	if (!this.id || !this.id.length) {
+		console.warn('this:', this);
+		throw new Error('Invalid widget id')
+	}
+
 	// get files list updated
 	const api_response = await data_manager.request({
 		use_worker	: true,
