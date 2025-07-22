@@ -96,6 +96,9 @@ class search {
 		// control for duplicated operator to include itself in the where ( operator !! )
 		public $skip_duplicated = false;
 
+		// sql_query. Used only to easy debug the class
+		public $sql_query;
+
 
 
 	/**
@@ -310,19 +313,23 @@ class search {
 				metrics::$search_total_calls++;
 			}
 
-		// check valid matrix table
-			if (empty($this->matrix_table) && !in_array('all', $this->ar_section_tipo)) {
-				debug_log(__METHOD__
-					. ' Error: Matrix table is mandatory. Check your ar_section_tipo to safe tipos with resolvable model.' . PHP_EOL
-					. ' $this->ar_section_tipo: ' . to_string($this->ar_section_tipo)
-					, logger::ERROR
-				);
-			}
-
 		// parse SQO. Converts JSON search_query_object to SQL query string
 			$sql_query = $this->parse_search_query_object( $full_count=false );
 			if(SHOW_DEBUG===true) {
 				$parsed_time = round(start_time()-$start_time,3);
+				$this->sql_query = $sql_query;
+			}
+
+		// check valid matrix table
+			if (get_called_class()==='search' && empty($this->matrix_table) && !in_array('all', $this->ar_section_tipo)) {
+				debug_log(__METHOD__
+					. ' Error: Matrix table is mandatory. Check your ar_section_tipo to safe tipos with resolvable model.' . PHP_EOL
+					. ' $this->ar_section_tipo: ' . to_string($this->ar_section_tipo) . PHP_EOL
+					. ' sql_query: ' . $sql_query. PHP_EOL
+					. ' class: ' . get_called_class() . PHP_EOL
+					. ' this: ' . to_string($this)
+					, logger::ERROR
+				);
 			}
 
 		// search
