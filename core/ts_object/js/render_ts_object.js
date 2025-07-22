@@ -212,18 +212,19 @@ export const render_children_list = function(options) {
 
 	const ar_children_c = []
 
-	// const fragment = new DocumentFragment();
-
 	const ar_children_data_len = ar_children_data.length
 	for (let i = 0; i < ar_children_data_len; i++) {
-			const item = ar_children_data[i]
+		const item = ar_children_data[i]
 
-			const node = render_ts_record( self, item, i )
+		const node = render_ts_record( self, item, i )
 
-			const parent_node = (item.is_descriptor===true) ? children_container : parent_nd_container
+		const parent_node = (item.is_descriptor===true) ? children_container : parent_nd_container
 
-			parent_node.appendChild( node )
-
+		requestAnimationFrame(
+			() => {
+				parent_node.appendChild( node )
+			}
+		);
 	}//end for (let i = 0; i < ar_childrens_data_len; i++)
 
 	// unpacks each wrapper
