@@ -338,7 +338,9 @@ class section extends common {
 				$dato = $JSON_RecordObj_matrix->get_dato();
 
 		// fix dato (force object)
-			$this->dato = (object)$dato;
+			$this->dato = is_object($dato)
+				? $dato
+				: (empty($dato) ? null : (object)$dato);
 
 
 		return $this->dato;
