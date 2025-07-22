@@ -340,7 +340,7 @@ class section extends common {
 		// fix dato (force object)
 			$this->dato = is_object($dato)
 				? $dato
-				: (empty($dato) ? null : (object)$dato);
+				: (empty($dato) ? new stdClass() : (object)$dato);
 
 
 		return $this->dato;
