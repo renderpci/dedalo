@@ -8,6 +8,7 @@
 	import {common, build_autoload} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_area_maintenance, build_form} from './render_area_maintenance.js'
 
 
@@ -201,6 +202,40 @@ area_maintenance.prototype.init_form = function(widget_object) {
 
 	return build_form(widget_object)
 }//end init_form
+
+
+
+/**
+* GET_VALUE
+* @return mixed result
+* 	API response value
+*/
+area_maintenance.prototype.get_value = async function () {
+
+	// get files list updated
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'get_widget_value',
+			prevent_lock	: true,
+			source	: {
+				type	: 'widget',
+				model	: this.id
+			}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+	if(SHOW_DEBUG===true) {
+		console.log(`))) get_value ${this.id} api_response:`, api_response);
+	}
+
+	const result = api_response?.result
+
+
+	return result
+}//end get_value
 
 
 

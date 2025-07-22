@@ -8,6 +8,36 @@ class export_hierarchy {
 
 
 	/**
+	* GET_VALUE
+	* Returns updated widget value
+	* It is used to update widget data dynamically
+	* @return object $response
+	*/
+	public static function get_value() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
+
+		$result = (object)[
+			'export_hierarchy_path' => (defined('EXPORT_HIERARCHY_PATH')
+				? EXPORT_HIERARCHY_PATH
+				: null)
+		];
+
+		$response = new stdClass();
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done successfully';
+			$response->errors	= [];
+
+
+		return $response;
+	}//end get_value
+
+
+
+	/**
 	* EXPORT_HIERARCHY
 	* Alias of hierarchy::export_hierarchy
 	* @param object $options

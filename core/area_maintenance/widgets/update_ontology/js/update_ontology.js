@@ -4,9 +4,10 @@
 
 
 
-// imports
-	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+// imports	
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_update_ontology} from './render_update_ontology.js'
 
 
@@ -45,6 +46,7 @@ export const update_ontology = function() {
 	update_ontology.prototype.build		= widget_common.prototype.build
 	update_ontology.prototype.render	= widget_common.prototype.render
 	update_ontology.prototype.destroy	= widget_common.prototype.destroy
+	update_ontology.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
 	update_ontology.prototype.edit		= render_update_ontology.prototype.list
 	update_ontology.prototype.list		= render_update_ontology.prototype.list
@@ -84,45 +86,8 @@ update_ontology.prototype.supported_code_version = (required_version) => {
 
 
 /**
-* GET_WIDGET_VALUE
-* Get widget value from class maintenance
-* The options 'model' property is the class method name
-* @return result
-* {
-    "datalist": array as [{"name":"cpu","value":"Linux",..}]
-    "errors": array|null
-  }
-*/
-update_ontology.prototype.get_widget_value = async () => {
-
-	// get files list updated
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'get_widget_value',
-			prevent_lock	: true,
-			source	: {
-				type	: 'widget',
-				model	: 'update_ontology'
-			}
-		}
-	})
-	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value update_ontology api_response:', api_response);;
-	}
-
-	const result = api_response.result
-
-
-	return result
-}//end get_widget_value
-
-
-
-/**
 * UPDATE_ONTOLOGY
-*
+* Execs the update_ontology action on server using the Working API dd_area_maintenance_api
 * @param object options
 * {
 * 	server	: server,

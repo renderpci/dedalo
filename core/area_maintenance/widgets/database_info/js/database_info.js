@@ -5,8 +5,8 @@
 
 
 // imports
-	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_database_info} from './render_database_info.js'
 
 
@@ -45,6 +45,7 @@ export const database_info = function() {
 	// database_info.prototype.build	= widget_common.prototype.build
 	database_info.prototype.render		= widget_common.prototype.render
 	database_info.prototype.destroy		= widget_common.prototype.destroy
+	database_info.prototype.get_value	= area_maintenance.prototype.get_value
 	// // render
 	database_info.prototype.edit		= render_database_info.prototype.list
 	database_info.prototype.list		= render_database_info.prototype.list
@@ -67,7 +68,7 @@ database_info.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-		self.value = await self.get_widget_value()
+		self.value = await self.get_value()
 
 	} catch (error) {
 		self.error = error
@@ -77,45 +78,6 @@ database_info.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
-
-
-/**
-* GET_WIDGET_VALUE
-* Get widget value from class maintenance
-* The options 'model' property is the class method name
-* @return result
-* {
-*	"datalist": array as [{"developer":"Dédalo Team","name":"tool_cataloging",..}]
-*	"errors": array|null
-* }
-*/
-database_info.prototype.get_widget_value = async () => {
-
-	// get files list updated
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'get_widget_value',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'database_info'
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value database_info api_response:', api_response);;
-	}
-
-	const result = api_response.result
-
-
-	return result
-}//end get_widget_value
 
 
 

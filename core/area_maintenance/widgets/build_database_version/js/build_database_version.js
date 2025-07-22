@@ -7,6 +7,7 @@
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_build_database_version} from './render_build_database_version.js'
 
 
@@ -45,6 +46,7 @@ export const build_database_version = function() {
 	build_database_version.prototype.build		= widget_common.prototype.build
 	build_database_version.prototype.render		= widget_common.prototype.render
 	build_database_version.prototype.destroy	= widget_common.prototype.destroy
+	build_database_version.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
 	build_database_version.prototype.edit		= render_build_database_version.prototype.list
 	build_database_version.prototype.list		= render_build_database_version.prototype.list
@@ -67,7 +69,7 @@ build_database_version.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-		self.value = await self.get_widget_value()
+		self.value = await self.get_value()
 
 	} catch (error) {
 		self.error = error
@@ -77,41 +79,6 @@ build_database_version.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
-
-
-/**
-* GET_WIDGET_VALUE
-* Get widget value from class maintenance
-* The options 'model' property is the class method name
-* @return object result
-*/
-build_database_version.prototype.get_widget_value = async () => {
-
-	// get value from API
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'get_widget_value',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'build_database_version'
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value build_database_version api_response:', api_response);;
-	}
-
-	const result = api_response.result
-
-
-	return result
-}//end get_widget_value
 
 
 

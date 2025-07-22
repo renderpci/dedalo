@@ -5,9 +5,10 @@
 
 
 // imports
-	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
-	import {render_update_code} from './render_update_code.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
+	import {render_update_code} from './render_update_code.js'
 
 
 
@@ -51,49 +52,10 @@ export const update_code = function() {
 	update_code.prototype.build		= widget_common.prototype.build
 	update_code.prototype.render	= widget_common.prototype.render
 	update_code.prototype.destroy	= widget_common.prototype.destroy
+	update_code.prototype.get_value	= area_maintenance.prototype.get_value
 	// render
 	update_code.prototype.edit		= render_update_code.prototype.list
 	update_code.prototype.list		= render_update_code.prototype.list
-
-
-
-/**
-* GET_VALUE
-* Get widget value from class maintenance
-* The options 'model' property is the class method name
-* @return result
-* {
-	"datalist": array as [{"name":"cpu","value":"Linux",..}]
-	"errors": array|null
-  }
-*/
-update_code.prototype.get_value = async () => {
-
-	// get files list updated
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'get_widget_value',
-			prevent_lock	: true,
-			source	: {
-				type	: 'widget',
-				model	: 'update_code'
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-	if(SHOW_DEBUG===true) {
-		console.log('))) get_value update_code api_response:', api_response);;
-	}
-
-	const result = api_response.result
-
-
-	return result
-}//end get_value
-
 
 
 
