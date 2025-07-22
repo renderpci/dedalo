@@ -319,12 +319,17 @@ const get_content_data_edit = async function(self) {
 					// JSON response PRE
 						const response_string = JSON.stringify(api_response, null, 2)
 							.replace(/\\n/g, '<br />');
-						ui.create_dom_element({
+						const response_node_json = ui.create_dom_element({
 							element_type	: 'pre',
 							class_name		: 'response_node_json',
 							inner_html		: response_string,
 							parent			: body_response
 						})
+						const dblclick_handler = (e) => {
+							e.stopPropagation()
+							response_node_json.remove()
+						}
+						response_node_json.addEventListener('dblclick', dblclick_handler)
 
 					// menu force to update (server cache files are deleted previously)
 						dd_request_idle_callback(

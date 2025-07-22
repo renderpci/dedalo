@@ -48,20 +48,29 @@ describe(`EVENT_MANAGER`, async () => {
 			const token = event_manager.subscribe(
 				'subscribe_test',
 				callback
-			)
+			);
+			// console.log('token:', token);
 
 			// asserts
 			assert.equal(typeof token, 'string', 'token must be string');
-			assert.equal(token, 'event_0', 'token must be event_0');
+			assert.equal(
+				token,
+				'event_1',
+				'token must be event_1 and is: '+ token
+			);
 
 		// token_b
 			const token_b = event_manager.subscribe(
 				'subscribe_test',
 				callback_b
-			)
+			);
+			// console.log('token_b:', token_b);
 
 			// asserts
-			assert.equal(token_b, 'event_1', 'token_b must be event_1');
+			assert.equal(token_b,
+				'event_2',
+				'token_b must be event_2'
+			);
 	});
 
 	// unsubscribe
@@ -69,19 +78,17 @@ describe(`EVENT_MANAGER`, async () => {
 
 		// existing token case
 		const result = event_manager.unsubscribe(
-			'event_0'
-		)
-
+			'event_1'
+		);
 		// asserts
 		assert.equal(result, true, 'result must be true');
 
 		// non existing token case
-		const result2 = event_manager.unsubscribe(
-			'event_0'
+		const result3 = event_manager.unsubscribe(
+			'event_fake'
 		)
-
 		// asserts
-		assert.equal(result2, false, 'result2 must be false');
+		assert.equal(result3, false, 'result2 must be false');
 	});
 
 
