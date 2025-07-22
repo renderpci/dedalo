@@ -113,12 +113,13 @@ export const render_export_hierarchy_node = function (options) {
 
 	const fragment = new DocumentFragment()
 
-	ui.create_dom_element({
-		element_type	: 'h6',
-		class_name		: '',
-		inner_html		: `Export hierarchies`,
-		parent			: fragment
-	})
+	// title
+		ui.create_dom_element({
+			element_type	: 'h6',
+			class_name		: '',
+			inner_html		: `Export hierarchies`,
+			parent			: fragment
+		})
 
 	// export_hierarchy_path check
 		if (!export_hierarchy_path) {
@@ -126,7 +127,18 @@ export const render_export_hierarchy_node = function (options) {
 				element_type	: 'div',
 				class_name		: 'info_text',
 				inner_html		: `To enable exporting, define var EXPORT_HIERARCHY_PATH in the configuration file`,
-				parent			: content_data
+				parent			: fragment
+			})
+			return fragment
+		}
+
+	// Running without caller
+		if (!self.caller) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_text',
+				inner_html		: `Running without caller`,
+				parent			: fragment
 			})
 			return fragment
 		}
@@ -249,20 +261,32 @@ export const render_sync_hierarchy_active_status_node = function (options) {
 
 	const fragment = new DocumentFragment()
 
-	ui.create_dom_element({
-		element_type	: 'h6',
-		inner_html		: `Sync Hierarchy status`,
-		class_name		: '',
-		parent			: fragment
-	})
+	// title
+		ui.create_dom_element({
+			element_type	: 'h6',
+			inner_html		: `Sync Hierarchy status`,
+			class_name		: '',
+			parent			: fragment
+		})
+
+	// Running without caller
+		if (!self.caller) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_text',
+				inner_html		: `Running without caller`,
+				parent			: fragment
+			})
+			return fragment
+		}
 
 	// info
-	ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'info_text',
-		inner_html		: `Sync the 'Active' status with the 'Active in thesaurus' status.`,
-		parent			: fragment
-	})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_text',
+			inner_html		: `Sync the 'Active' status with the 'Active in thesaurus' status.`,
+			parent			: fragment
+		})
 
 	// body_response
 		const body_response = ui.create_dom_element({
