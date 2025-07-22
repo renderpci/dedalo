@@ -94,7 +94,8 @@ export const get_content_data = function(self) {
 					// set the pointer
 					content_data[i] = input_element_node
 				}
-			)
+			);
+			break;
 		}
 
 	return content_data
@@ -319,28 +320,27 @@ export const get_content_value = (i, current_value, self) =>{
 		content_value.map_container = map_container
 
 	// init the map with the wrapper when container node is in viewport
-		if (map_container) {
-			when_in_viewport(
-				map_container,
-				() => {
-					self.get_map(map_container, i)
-					.then(()=>{
-						self.layers_loader({
-							load: 'full'
-						})
-						// add resize content_value event to allow user to resize the map
-						new ResizeObserver( function(){
-							dd_request_idle_callback(
-								() => {
-									self.refresh_map(self.map)
-								}
-							)
-						})
-						.observe( content_value )
+		when_in_viewport(
+			map_container,
+			() => {
+				self.get_map(map_container, i)
+				.then(()=>{
+					self.layers_loader({
+						load: 'full'
 					})
-				}
-			)
-		}
+					// add resize content_value event to allow user to resize the map
+					new ResizeObserver( function(){
+						dd_request_idle_callback(
+							() => {
+								self.refresh_map(self.map)
+							}
+						)
+					})
+					.observe( content_value )
+				})
+			}
+		);
+
 
 	return content_value
 }//end get_content_value
@@ -381,19 +381,18 @@ export const get_content_value_read = (i, current_value, self) =>{
 		content_value.map_container = map_container
 
 	// init the map with the wrapper when container node is in viewport
-		if (map_container) {
-			when_in_viewport(
-				map_container,
-				() => {
-					self.get_map(map_container, i)
-					.then(()=>{
-						self.layers_loader({
-							load: 'full'
-						})
+		when_in_viewport(
+			map_container,
+			() => {
+				self.get_map(map_container, i)
+				.then(()=>{
+					self.layers_loader({
+						load: 'full'
 					})
-				}
-			)
-		}
+				})
+			}
+		);
+
 
 	return content_value
 }//end get_content_value_read

@@ -32,7 +32,6 @@ export const component_common = function(){
 * @return bool true
 */
 component_common.prototype.init = async function(options) {
-	// const t0 = performance.now()
 
 	const self = this
 

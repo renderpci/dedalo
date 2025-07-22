@@ -75,7 +75,7 @@
 				$item->datalist = $datalist;
 			}
 
-			// datalist
+			// changes_files
 			if (isset($changes_files)) {
 				$item->changes_files = $changes_files;
 			}

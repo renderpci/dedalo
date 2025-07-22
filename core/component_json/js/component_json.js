@@ -6,7 +6,6 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
-	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_json} from '../../component_json/js/render_edit_component_json.js'
 	import {render_list_component_json} from '../../component_json/js/render_list_component_json.js'

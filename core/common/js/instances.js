@@ -84,6 +84,7 @@ const key_order = ['model','tipo','section_tipo','section_id','mode','lang','par
 * @return promise - A promise resolving to the instance or `null` on failure.
 */
 export const get_instance = async function(options) {
+	const start = performance.now()
 
 	// options. main vars
 		const tipo			= options.tipo

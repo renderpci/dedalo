@@ -75,7 +75,7 @@ class component_security_access extends component_common {
 				// cache_file_name. Like 'cache_tree_'.DEDALO_APPLICATION_LANG.'.json'
 					$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
 
-				// cache from file. (!) This file is generated in background on every user login
+				// cache from file. (!) This file is generated in background on every user login as 'entity_userID_cache_tree_lg-eng.json'
 					$contents = dd_cache::cache_from_file((object)[
 						'file_name' => $cache_file_name
 					]);
