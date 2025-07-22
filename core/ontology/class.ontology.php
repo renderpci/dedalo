@@ -1183,7 +1183,7 @@ class ontology {
 				DEDALO_DATA_LANG, // string lang
 				$section_tipo // string section_tipo
 			);
-			$main_lang = $component->get_value();
+			$main_lang = $component->get_value_code();
 
 		// Typology
 			$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
