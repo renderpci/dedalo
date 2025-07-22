@@ -6,8 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {when_in_viewport} from '../../common/js/events.js'
-	import {createJSONEditor} from '../../../lib/jsoneditor/dist/standalone.js'
+	import {dd_request_idle_callback, when_in_viewport} from '../../common/js/events.js'
 
 
 
@@ -70,7 +69,7 @@ view_default_edit_json.render = async function(self, options) {
 */
 const get_content_data = function(self) {
 
-	const value = self.data.value
+	const value = self.data.value || {}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -114,7 +113,9 @@ const get_content_value = (key, current_value, self) => {
 		})
 
 	// load_editor and init
-		const load_editor = () => {
+		const load_editor = async () => {
+
+			const module = await import('../../../lib/jsoneditor/dist/standalone.js');
 
 			// value for editor
 			const content = current_value
@@ -122,7 +123,7 @@ const get_content_value = (key, current_value, self) => {
 				: {text : ''}
 
 			// editor
-			const editor = createJSONEditor({
+			const editor = module.createJSONEditor({
 				target	: content_value,
 				props	: {
 					content		: content,
@@ -164,7 +165,7 @@ const get_content_value = (key, current_value, self) => {
 		}//end load_editor
 
 	// observe in viewport
-		when_in_viewport(content_value, load_editor)
+		when_in_viewport(content_value, dd_request_idle_callback(load_editor));
 
 
 	return content_value

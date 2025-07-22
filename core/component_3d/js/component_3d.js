@@ -10,10 +10,10 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
+	import {upload} from '../../services/service_upload/js/service_upload.js'
 	import {render_edit_component_3d} from '../../component_3d/js/render_edit_component_3d.js'
 	import {render_list_component_3d} from '../../component_3d/js/render_list_component_3d.js'
 	import {render_search_component_3d} from '../../component_3d/js/render_search_component_3d.js'
-	import {upload} from '../../services/service_upload/js/service_upload.js'
 
 
 

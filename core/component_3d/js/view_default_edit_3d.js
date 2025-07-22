@@ -9,7 +9,6 @@
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import { viewer } from './viewer/viewer.js';
 
 
 
@@ -88,21 +87,20 @@ const get_content_data_edit = function(self) {
 		content_data.classList.add('media_content_data')
 
 	// values (inputs)
-		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
-		const value_length	= inputs_value.length
+		const inputs_value	= value || [] // force one empty input at least
+		const value_length	= inputs_value.length || 1
+		if (value_length>1) {
+			console.warn('More than one value in component_3d is not allowed at now. Ignored next values. N values: ', value_length);
+		}
 		for (let i = 0; i < value_length; i++) {
 
-			// force new separate task
-			dd_request_idle_callback(
-				() => {
-					const content_value = (self.permissions===1)
-						? get_content_value_read(i, inputs_value[i], self)
-						: get_content_value(i, inputs_value[i], self)
-					content_data.appendChild(content_value)
-					// set pointer
-					content_data[i] = content_value
-				}
-			)
+			const content_value = (self.permissions===1)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
+			content_data.appendChild(content_value)
+			// set pointer
+			content_data[i] = content_value
+			break; // only one is used for the time being
 		}
 
 
@@ -167,7 +165,7 @@ export const get_content_value = (i, current_value, self) => {
 		}
 
 	// init viewer when content_value node is in in browser viewport
-	when_in_viewport(content_value, async function(){
+	const load_viewer = async () => {
 
 		// url
 		const file_url = external_source
@@ -178,8 +176,10 @@ export const get_content_value = (i, current_value, self) => {
 
 		if(file_url) {
 
+			const module = await import('./viewer/viewer.js');
+
 			// viewer_3d
-			const viewer_3d = await viewer.init({
+			const viewer_3d = await module.viewer.init({
 				cache : false
 			})
 			// fix viewer
@@ -204,6 +204,7 @@ export const get_content_value = (i, current_value, self) => {
 					}
 				)
 			});
+
 		}else{
 
 			// add fallback image
@@ -213,29 +214,35 @@ export const get_content_value = (i, current_value, self) => {
 					class_name		: 'posterframe',
 					parent			: content_value
 				})
-				// image background color
-				content_value.posterframe.addEventListener('load', set_bg_color, false)
-				function set_bg_color() {
-					this.removeEventListener('load', set_bg_color, false)
+				// load event. Set image background color
+				const load_handler = function(e) {
+					this.removeEventListener('load', load_handler, false)
 					// if (content_value.posterframe.src!==page_globals.fallback_image) {
-						// ui.set_background_image(this, content_value)
+					// 	ui.set_background_image(this, content_value)
 					// }
 				}
+				content_value.posterframe.addEventListener('load', load_handler, false)
 				content_value.posterframe.src = posterframe_url
 
-			content_value.classList.add('link')
-			content_value.addEventListener('mousedown', function(e) {
-				e.stopPropagation();
+			// content_value
+				content_value.classList.add('link')
+				// mousedown event
+				const mousedown_handler = (e) => {
+					e.stopPropagation();
 
-				const tool_upload = self.tools.find(el => el.model==='tool_upload')
-				// open_tool (tool_common)
+					const tool_upload = self.tools.find(el => el.model==='tool_upload')
+					// open_tool (tool_common)
 					open_tool({
 						tool_context	: tool_upload,
 						caller			: self
 					})
-			})
+				}
+				content_value.addEventListener('mousedown', mousedown_handler);
 		}
-	});//end when_in_viewport
+	};
+
+	// observe in viewport
+	when_in_viewport(content_value, dd_request_idle_callback(load_viewer));
 
 
 	return content_value
