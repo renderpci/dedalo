@@ -131,13 +131,13 @@ const hilite_row = function(wrapper) {
 /**
 * GET_CONTENT_DATA
 * Render all the columns into a Document Fragment
-* @param object self
+* @param object self - Section record instance
 * @return DocumentFragment
 */
 const get_content_data = async function(self) {
 
 	// ar_columns_instances
-		const ar_columns_instances	= await self.get_ar_columns_instances_list()
+		const ar_columns_instances	= await self.get_ar_columns_instances_list() // around 10 - 20 instances
 		const columns_map			= self.columns_map
 
 	// fragment
@@ -147,100 +147,69 @@ const get_content_data = async function(self) {
 		const columns_map_length = columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 
+			const t = performance.now()
+
 			const current_column = columns_map[i]
 
 			// callback column case
 			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
 				if(current_column.callback && typeof current_column.callback==='function'){
-
-					// column_node (standard section_record empty column to be filled with content_node)
-						const column_node = render_column_node_callback(current_column, self)
-
-					// content_node. Normally a DocumentFragment
-						const content_node = await current_column.callback({
-							section_tipo		: self.section_tipo,
-							section_id			: self.section_id,
-							row_key				: self.row_key,
-							paginated_key		: self.paginated_key,
-							caller				: self.caller,
-							matrix_id			: self.matrix_id, // tm var
-							modification_date	: self.modification_date || null, // tm var
-							locator				: self.locator,
-							ar_instances		: self.ar_instances
-						})
-						if (content_node) {
-							column_node.appendChild(content_node)
-						}
-
+					const column_node = render_callback(self, current_column)
 					fragment.appendChild(column_node)
 					continue;
 				}
 
 			// get the specific instances for the current column
-				const ar_instances			= ar_columns_instances.filter(el => el.column_id === current_column.id)
-				const ar_instances_length	= ar_instances.length
-
-			// loop the instances for select the parent node
+				const column_instances			= ar_columns_instances.filter(el => el.column_id === current_column.id)
+				const column_instances_length	= column_instances.length
 
 			// case zero (user don't have enough privileges cases)
-				if (ar_instances_length===0) {
-					// empty column
+				if (column_instances_length===0) {
+					// empty column case
 					const column_node = render_empty_column_node(current_column, self)
 					fragment.appendChild(column_node)
 					continue;
 				}
 
+			// loop the instances for select the parent node
+
 			// render all instances in parallel before create the columns nodes (to get the internal nodes)
-				const ar_promises = []
-				for (let k = 0; k < ar_instances_length; k++) {
-					const current_promise = new Promise(function(resolve, reject){
+				const promises = column_instances.map(async (instance, index) => {
 
-						const current_instance = ar_instances[k]
+					// Already rendered case
+					if (instance.node !== null) {
+						return { success: true, index };
+					}
 
-						// already rendered case
-						if (current_instance.node!==null) {
-							resolve(true)
-						}else{
-							// render the instance
-							// if the column has defined a render_callback use it to render the instance
-							// else use the common render
-							// render_callback allow to add event listeners to the instance nodes
-							const render_promise = (current_column.render_callback && typeof current_column.render_callback==='function')
-								? current_column.render_callback(current_instance)
-								: current_instance.render()
+					// render the instance
+					// if the column has defined a render_callback use it to render the instance
+					// else use the common render
+					// render_callback allow to add event listeners to the instance nodes
+					const instance_node = (current_column.render_callback && typeof current_column.render_callback==='function')
+						? await current_column.render_callback(instance)
+						: await instance.render()
 
-							render_promise
-							.then(function(current_instance_node){
-								// bad node case
-								if (!current_instance_node) {
-									console.error('Invalid instance_node', current_instance);
-									reject(false)
-									return
-								}
+					// Validate the returned node
+					if (!instance_node) {
+						console.error('Invalid instance_node at index', index, instance);
+						return { success: false, index, error: 'Invalid instance node' };
+					}
 
-								resolve(true)
-							}).catch((errorMsg) => {
-								// error occurred case
-								console.error(errorMsg);
-								reject(false)
-							})
-						}
-					})
-					ar_promises.push(current_promise)
-				}//end for (let k = 0; k < ar_instances_length; k++)
+					return { success: true, index, node: instance_node };
+				});
 
 				// nodes. Await all instances are parallel rendered
-				await Promise.all(ar_promises)// render work done safely
+				await Promise.allSettled(promises)// render work done safely
 
 			// create the column nodes and assign the instances nodes to it.
 				const ar_column_nodes = []
-				for (let j = 0; j < ar_instances_length; j++) {
+				for (let j = 0; j < column_instances_length; j++) {
 
-					const current_instance = ar_instances[j]
+					const current_instance = column_instances[j]
 
 					// check instance
-						if (typeof current_instance==="undefined") {
-							console.error("Undefined current_instance:", current_instance, j, ar_instances);
+						if (!current_instance) {
+							console.error("Undefined current_instance:", current_instance, j, column_instances);
 							continue;
 						}
 						// check if the current_instance has column_id. If not, an error was occur on common creating the columns.
@@ -250,7 +219,7 @@ const get_content_data = async function(self) {
 						}
 
 					// ar_sub_columns_map
-						const ar_sub_columns_map = current_instance.columns_map || ar_instances
+						const ar_sub_columns_map = current_instance.columns_map || column_instances
 
 					// column_node. If column already exists, place the component node into the column.
 					// Else, creates a new column and place it into the fragment
@@ -267,14 +236,62 @@ const get_content_data = async function(self) {
 								return new_column_node
 							  })()
 						// append current_instance wrapper node
-						column_node.appendChild( current_instance.node )
-				}//end for (let j = 0; j < ar_instances_length; j++)
+						if (current_instance.node) column_node.appendChild( current_instance.node );
+				}//end for (let j = 0; j < column_instances_length; j++)
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					const time = performance.now() - t
+					if (time > 25) {
+						console.warn('current_column render time is big: ', time, current_column);
+					}
+				}
 		}//end for (let i = 0; i < columns_map_length; i++)
 
 
 	return fragment
 }//end get_content_data
+
+
+
+/**
+* RENDER_CALLBACK
+* Create the DOM nodes for callback functions passed to the
+* section record, usually column id or column delete.
+* Creates a full column DOM node.
+* @param object self - Section record instance
+* @param object column - Column definition
+* @return HTMLElement column_node
+*/
+const render_callback = function (self, column) {
+
+	// column_node (standard section_record empty column to be filled with content_node)
+	const column_node = render_column_node_callback(column, self)
+
+	try {
+        // content_node. Normally a DocumentFragment
+        const content_node = column.callback({
+			section_tipo		: self.section_tipo,
+			section_id			: self.section_id,
+			row_key				: self.row_key,
+			paginated_key		: self.paginated_key,
+			caller				: self.caller,
+			matrix_id			: self.matrix_id, // tm var
+			modification_date	: self.modification_date || null, // tm var
+			locator				: self.locator,
+			ar_instances		: self.ar_instances
+		})
+
+        if (content_node) {
+            column_node.appendChild(content_node)
+        }
+    } catch (error) {
+        console.error('Error in render_callback:', error)
+    }
+
+
+	return column_node
+}//end render_callback
 
 
 
