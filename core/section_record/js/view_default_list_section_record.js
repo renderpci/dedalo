@@ -138,7 +138,7 @@ const get_content_data = async function(self) {
 
 	// ar_columns_instances
 		const ar_columns_instances	= await self.get_ar_columns_instances_list()
-		const columns_map			= await self.columns_map
+		const columns_map			= self.columns_map
 
 	// fragment
 		const fragment = new DocumentFragment()

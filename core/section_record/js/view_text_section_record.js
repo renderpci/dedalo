@@ -34,7 +34,7 @@ view_text_section_record.render = async function(self, options) {
 
 	// ar_columns_instances
 		const ar_columns_instances	= await self.get_ar_columns_instances_list()
-		const columns_map			= await self.columns_map
+		const columns_map			= self.columns_map
 
 	// section_record wrapper
 		const wrapper = ui.create_dom_element({
