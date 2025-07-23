@@ -340,7 +340,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 
 	// columns_map. Build from ddo_map
 	// @see common.get_columns_map for a better overview
-		const columns_map = await self.columns_map || []
+		const columns_map = self.columns_map || []
 
 	// request config
 	// get the request_config with all ddo, it will be use to create the instances
