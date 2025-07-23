@@ -2,7 +2,14 @@
 
 
 
-// data
+/**
+ * DATA
+ * Functions to generate pseudo random data for the test
+ *
+ */
+
+
+
 	export const random_string = function(length=128) {
 
 		let result = '';
@@ -104,7 +111,7 @@
 		return value
 	}
 
-	function convert_date_to_seconds(dd_date, mode) {
+	const convert_date_to_seconds = function(dd_date, mode) {
 
 		let time = 0;
 
@@ -174,7 +181,7 @@
 			}
 
 		return time
-	}//end convert_date_to_seconds
+	}
 
 	export const random_email = function() {
 		let result				= ''
@@ -236,8 +243,6 @@
 
 		return result
 	}
-
-
 
 	export const random_3d_data = function() {
 
@@ -313,9 +318,7 @@
 		}
 
 		return [value]
-	}//end random_3d_data
-
-
+	}
 
 	export const random_av_data = function() {
 
@@ -393,9 +396,7 @@
 		}
 
 		return [value]
-	}//end random_av_data
-
-
+	}
 
 	export const random_image_data = function() {
 
@@ -527,9 +528,7 @@
 		}
 
 		return [value]
-	}//end random_image_data
-
-
+	}
 
 	export const random_pdf_data = function() {
 
@@ -641,9 +640,7 @@
 		}
 
 		return [value]
-	}//end random_pdf_data
-
-
+	}
 
 	export const random_svg_data = function() {
 
@@ -719,7 +716,7 @@
 		}
 
 		return [value]
-	}//end random_svg_data
+	}
 
 
 

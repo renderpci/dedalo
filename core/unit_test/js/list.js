@@ -75,7 +75,7 @@ import {elements} from './elements.js'
 				// link
 				ui.create_dom_element({
 					element_type	: 'a',
-					href			: `./?area=component_full_test&model=${element.model}`,
+					href			: `./?area=test_component_full&model=${element.model}`,
 					class_name		: 'list_of_test_element link',
 					inner_html		: element.model + ` [${element.tipo}]`,
 					parent			: container
