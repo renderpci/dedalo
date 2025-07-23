@@ -747,14 +747,14 @@ final class RecordObj_dd_test extends TestCase {
 
 
 	/**
-	* TEST_get_ar_childrens_of_this
+	* TEST_get_ar_children_of_this
 	* @return void
 	*/
-	public function test_get_ar_childrens_of_this(): void {
+	public function test_get_ar_children_of_this(): void {
 
 		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
 
-		$result = $RecordObj_dd->get_ar_childrens_of_this();
+		$result = $RecordObj_dd->get_ar_children_of_this();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -778,17 +778,17 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_childrens_of_this
+	}//end test_get_ar_children_of_this
 
 
 
 	/**
-	* TEST_get_ar_childrens
+	* TEST_get_ar_children
 	* @return void
 	*/
-	public function test_get_ar_childrens(): void {
+	public function test_get_ar_children(): void {
 
-		$result = RecordObj_dd::get_ar_childrens('dd1');
+		$result = RecordObj_dd::get_ar_children('dd1');
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -812,18 +812,18 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_childrens
+	}//end test_get_ar_children
 
 
 
 	/**
-	* TEST_get_ar_recursive_childrens_of_this
+	* TEST_get_ar_recursive_children_of_this
 	* @return void
 	*/
-	public function test_get_ar_recursive_childrens_of_this(): void {
+	public function test_get_ar_recursive_children_of_this(): void {
 
 		$RecordObj_dd	= new RecordObj_dd('dd242');
-		$result			= $RecordObj_dd->get_ar_recursive_childrens_of_this('dd242');
+		$result			= $RecordObj_dd->get_ar_recursive_children_of_this('dd242');
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -843,17 +843,17 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_recursive_childrens_of_this
+	}//end test_get_ar_recursive_children_of_this
 
 
 
 	/**
-	* TEST_get_ar_recursive_childrens
+	* TEST_get_ar_recursive_children
 	* @return void
 	*/
-	public function test_get_ar_recursive_childrens(): void {
+	public function test_get_ar_recursive_children(): void {
 
-		$result = RecordObj_dd::get_ar_recursive_childrens('dd242');
+		$result = RecordObj_dd::get_ar_recursive_children('dd242');
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -873,7 +873,7 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_recursive_childrens
+	}//end test_get_ar_recursive_children
 
 
 

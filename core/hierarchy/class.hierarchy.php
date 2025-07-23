@@ -912,7 +912,7 @@ class hierarchy extends ontology {
 
 			$real_section = section::get_section_real_tipo_static($current_section);
 
-			$ar_children = RecordObj_dd::get_ar_recursive_childrens(
+			$ar_children = RecordObj_dd::get_ar_recursive_children(
 				$real_section,
 				false,
 				null,

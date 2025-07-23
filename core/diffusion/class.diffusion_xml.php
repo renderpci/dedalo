@@ -678,7 +678,7 @@ class diffusion_xml extends diffusion  {
 
 		$section_tipo = $this->section_tipo;
 
-		$children = RecordObj_dd::get_ar_childrens($diffusion_element_tipo);
+		$children = RecordObj_dd::get_ar_children($diffusion_element_tipo);
 		$root_tipo = array_find($children, function($el) use($section_tipo){
 			$ar_found = common::get_ar_related_by_model('section', $el);
 			$section = $ar_found[0] ?? false;

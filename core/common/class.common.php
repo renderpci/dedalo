@@ -561,7 +561,7 @@ abstract class common {
 
 		// tables
 			$ar_tables_with_relations = [];
-			$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
+			$ar_children_tables = RecordObj_dd::get_ar_children('dd627', 'norden');
 			foreach ($ar_children_tables as $table_tipo) {
 
 				// model
@@ -3619,7 +3619,7 @@ abstract class common {
 								);
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
-								$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+								$ar_related = (array)RecordObj_dd::get_ar_children($tipo);
 							}else{
 								// components
 								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados(
@@ -3697,7 +3697,7 @@ abstract class common {
 								}
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
-								$ar_related = (array)RecordObj_dd::get_ar_childrens($tipo);
+								$ar_related = (array)RecordObj_dd::get_ar_children($tipo);
 							}else{
 								// portal cases
 								// case section list is defined

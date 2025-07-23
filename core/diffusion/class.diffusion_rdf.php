@@ -287,7 +287,7 @@ class diffusion_rdf extends diffusion {
 			}
 
 		// DES
-			// $ontology_chidren = RecordObj_dd::get_ar_childrens($ontology_tipo);
+			// $ontology_chidren = RecordObj_dd::get_ar_children($ontology_tipo);
 
 			// $owl_class_tipo = null;
 			// $ar_owl_ObjectProperty = [];
@@ -384,7 +384,7 @@ class diffusion_rdf extends diffusion {
 							$node_graph = $rdf_graph->resource($uri, $object_name);
 
 							// recursion: all children need to be processed
-								$ar_owl_ObjectProperty	= RecordObj_dd::get_ar_childrens($ObjectProperty_tipo);
+								$ar_owl_ObjectProperty	= RecordObj_dd::get_ar_children($ObjectProperty_tipo);
 								if(!empty($ar_owl_ObjectProperty)){
 									foreach ($ar_owl_ObjectProperty as $current_ObjectProperty_tipo) {
 										$sub_node_graph = $this->build_rdf_node($rdf_graph, $node_graph, $current_ObjectProperty_tipo, $section_tipo, $section_id);
@@ -584,7 +584,7 @@ class diffusion_rdf extends diffusion {
 							// create the new resource (the $new_node_graph is the new graph used for recursive)
 							$new_node_graph = $rdf_graph->resource($uri);
 							// recursion, with the components children of the current term.
-								$ar_owl_ObjectProperty	= RecordObj_dd::get_ar_childrens($ObjectProperty_tipo);
+								$ar_owl_ObjectProperty	= RecordObj_dd::get_ar_children($ObjectProperty_tipo);
 								$sub_node_graph = false;
 								if(!empty($ar_owl_ObjectProperty)){
 									foreach ($ar_owl_ObjectProperty as $current_ObjectProperty_tipo) {

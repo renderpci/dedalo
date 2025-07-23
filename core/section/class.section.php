@@ -1759,7 +1759,7 @@ class section extends common {
 				$ar_recursive_children = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
 			}else{
 				$RecordObj_dd			= new RecordObj_dd($tipo);
-				$ar_recursive_children	= $RecordObj_dd->get_ar_childrens_of_this();
+				$ar_recursive_children	= $RecordObj_dd->get_ar_children_of_this();
 			}
 
 		}else{
@@ -1772,7 +1772,7 @@ class section extends common {
 				// Others (section_xx, buttons, etc.) are in the first level
 				default:
 					$RecordObj_dd			= new RecordObj_dd($tipo);
-					$ar_recursive_children	= $RecordObj_dd->get_ar_childrens_of_this();
+					$ar_recursive_children	= $RecordObj_dd->get_ar_children_of_this();
 					break;
 			}
 		}
@@ -1846,7 +1846,7 @@ class section extends common {
 			: $default_ar_exclude_models;
 
 
-		$ar_recursive_children = RecordObj_dd::get_ar_recursive_childrens(
+		$ar_recursive_children = RecordObj_dd::get_ar_recursive_children(
 			$tipo, // string tipo
 			false, // bool is recursion
 			$exclude_models, // array ar_exclude_models
@@ -4174,7 +4174,7 @@ class section extends common {
 			$new_section->get_dato();
 
 			// ar_section_info_tipos. Ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
-				$ar_section_info_tipos = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);
+				$ar_section_info_tipos = RecordObj_dd::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
 			// tipos to skip on copy
 				$skip_tipos = $ar_section_info_tipos;

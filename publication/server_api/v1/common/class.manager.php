@@ -137,7 +137,6 @@ class manager {
 				$dedalo_data = (object)web_data::get_thesaurus_video_view_data( $options );
 				break;
 
-			case 'thesaurus_childrens':
 			case 'thesaurus_children':
 				#
 				# Execute data retrieving
