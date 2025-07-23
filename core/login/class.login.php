@@ -1346,7 +1346,7 @@ class login extends common {
 			$properties->login_items = [];
 
 			// login_items
-				$children = RecordObj_dd::get_ar_childrens($tipo);
+				$children = RecordObj_dd::get_ar_children($tipo);
 				foreach ($children as $children_tipo) {
 					$item = (object)[
 						'tipo'	=> $children_tipo,

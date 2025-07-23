@@ -491,7 +491,7 @@ class ontology {
 
 			$section_id	= $row['section_id'];
 			$node_tipo	= $tld.$section_id;
-			$children	= RecordObj_dd::get_ar_childrens($node_tipo);
+			$children	= RecordObj_dd::get_ar_children($node_tipo);
 
 			$children_data = [];
 			foreach ($children as $child_tipo) {

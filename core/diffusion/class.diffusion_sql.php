@@ -575,7 +575,7 @@ class diffusion_sql extends diffusion  {
 			$table_tipo			= $options->table_tipo ?? null;
 			$table_name			= $options->table_name ?? null;
 			$database_name		= $options->database_name ?? null;
-			$ar_childrens_tipo	= $options->ar_childrens_tipo ?? null;
+			$ar_children_tipo	= $options->ar_children_tipo ?? null;
 			$table_from_alias	= $options->table_from_alias ?? null;
 
 		// ar_table_data
@@ -607,16 +607,16 @@ class diffusion_sql extends diffusion  {
 			$ar_table_data['ar_fields'][] = self::create_field( $options );
 
 		// other fields . Normal columns
-			$ar_table_children = $ar_childrens_tipo;
+			$ar_table_children = $ar_children_tipo;
 			if (empty($ar_table_children)) {
 				$RecordObj_dd		= new RecordObj_dd($table_tipo);
-				$ar_table_children	= $RecordObj_dd->get_ar_childrens_of_this();
+				$ar_table_children	= $RecordObj_dd->get_ar_children_of_this();
 
 				// Add from table alias too
 				if (!empty($table_from_alias)) {
 
 					$RecordObj_dd_alias			= new RecordObj_dd($table_from_alias);
-					$ar_table_alias_children	= $RecordObj_dd_alias->get_ar_childrens_of_this();
+					$ar_table_alias_children	= $RecordObj_dd_alias->get_ar_children_of_this();
 
 					// merge all
 					$ar_table_children = self::replace_fields(
@@ -928,7 +928,7 @@ class diffusion_sql extends diffusion  {
 				$options->table_from_alias				= null;
 				$options->ar_result						= false;
 				$options->diffusion_element_tipo		= null;
-				$options->ar_childrens_tipo				= null;
+				$options->ar_children_tipo				= null;
 				$options->component_publication_tipo	= null;
 				$options->build_mode					= 'default';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
@@ -1016,15 +1016,15 @@ class diffusion_sql extends diffusion  {
 
 		#
 		# TABLE CHILDREN (FIELDS)
-			$ar_table_children = $ar_childrens_tipo;
+			$ar_table_children = $ar_children_tipo;
 			if (empty($ar_table_children)) {
 				$RecordObj_dd 	   = new RecordObj_dd($table_tipo);
-				$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
+				$ar_table_children = $RecordObj_dd->get_ar_children_of_this();
 
 				# Add from table alias too
 				if (!empty($table_from_alias)) {
 					$RecordObj_dd_alias			= new RecordObj_dd($table_from_alias);
-					$ar_table_alias_children	= (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
+					$ar_table_alias_children	= (array)$RecordObj_dd_alias->get_ar_children_of_this();
 
 					# Merge all
 					$ar_table_children = self::replace_fields(
@@ -4365,7 +4365,7 @@ class diffusion_sql extends diffusion  {
 				if ($mode==='get_children') {
 
 					$RecordObj_dd	= new RecordObj_dd($term_id);
-					$tipos			= $RecordObj_dd->get_ar_childrens($term_id);
+					$tipos			= $RecordObj_dd->get_ar_children($term_id);
 
 					$value = ($resolve_label===true && !empty($tipos))
 						? array_map(function($item) use($lang){

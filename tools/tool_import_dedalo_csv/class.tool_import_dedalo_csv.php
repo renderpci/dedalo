@@ -837,7 +837,7 @@ class tool_import_dedalo_csv extends tool_common {
 			// 	'dd1224',
 			// 	'dd1225'
 			// ];
-			$ar_section_info = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);
+			$ar_section_info = RecordObj_dd::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
 		// ar_component_tipo
 			$ar_possible_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
@@ -1213,7 +1213,7 @@ class tool_import_dedalo_csv extends tool_common {
 			if (!empty($components_list)) {
 
 				// section info components
-				$section_info_components = RecordObj_dd::get_ar_childrens(DEDALO_SECTION_INFO_SECTION_GROUP);
+				$section_info_components = RecordObj_dd::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 				foreach ($section_info_components as $tipo) {
 					$components_list[] = $tipo;
 				}

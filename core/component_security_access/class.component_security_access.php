@@ -384,7 +384,7 @@ class component_security_access extends component_common {
 			default:
 				# Areas or section groups ...
 				$RecordObj_dd	= new RecordObj_dd($tipo);
-				$ar_ts_children	= $RecordObj_dd->get_ar_childrens_of_this();
+				$ar_ts_children	= $RecordObj_dd->get_ar_children_of_this();
 				break;
 		}
 
@@ -465,8 +465,8 @@ class component_security_access extends component_common {
 		if(!empty($ar_result[0])) {
 			$tipo					= $ar_result[0];
 			$obj					= new RecordObj_dd($tipo);
-			$ar_childrens_of_this	= $obj->get_ar_childrens_of_this();
-			$ar_tesauro				= $ar_childrens_of_this;
+			$ar_children_of_this	= $obj->get_ar_children_of_this();
+			$ar_tesauro				= $ar_children_of_this;
 		}
 		// We add the term itself as the father of the tree
 		// array_push($ar_tesauro, $tipo);

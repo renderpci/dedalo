@@ -98,8 +98,8 @@ abstract class diffusion  {
 			if($current_name===$diffusion_domain_name) {
 
 				// NUEVO MODO (más rápido) : Por propiedad 'class_name' . Evita la necesidad de utilizar el modelo cuando no es un modelo estándar de Dédalo
-				$ar_childrens = RecordObj_dd::get_ar_childrens($current_tipo);
-				foreach ($ar_childrens as $current_children) {
+				$ar_children = RecordObj_dd::get_ar_children($current_tipo);
+				foreach ($ar_children as $current_children) {
 
 					$RecordObj_dd	= new RecordObj_dd($current_children);
 					$properties		= $RecordObj_dd->get_propiedades(true);
@@ -806,12 +806,12 @@ abstract class diffusion  {
 		}
 
 		$RecordObj_dd 	   = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->table);
-		$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
+		$ar_table_children = $RecordObj_dd->get_ar_children_of_this();
 
 		# Add children from table alias too
 			if (!empty($diffusion_element_tables_map->from_alias)) {
 				$RecordObj_dd_alias 	 = new RecordObj_dd($diffusion_element_tables_map->{$section_tipo}->from_alias);
-				$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_childrens_of_this();
+				$ar_table_alias_children = (array)$RecordObj_dd_alias->get_ar_children_of_this();
 
 				# Merge all
 				$ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
@@ -1687,7 +1687,7 @@ abstract class diffusion  {
 		$children_objects = [];
 
 		// Ontology typical resolution
-		$children = RecordObj_dd::get_ar_childrens($tipo);
+		$children = RecordObj_dd::get_ar_children($tipo);
 		if (empty($children)) {
 			// fallback to properties definition
 			$RecordObj_dd = new RecordObj_dd($tipo);

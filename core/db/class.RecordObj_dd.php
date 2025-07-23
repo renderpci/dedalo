@@ -28,7 +28,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $filtroTerminos ;
 
 	// optional specific loads
-	protected $ar_recursive_childrens_of_this = [];
+	protected $ar_recursive_children_of_this = [];
 
 	// default table. Can be changed on the fly base on DEDALO_RECOVERY_MODE
 	public static $table = 'jer_dd';
@@ -755,16 +755,16 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* GET_AR_CHILDRENS_OF_THIS
+	* GET_AR_CHILDREN_OF_THIS
 	* Get array of terms (terminoID) with parent = $this->terminoID
 	* Its mean that only direct children (first level) will be returned
 	* @param string|null $esdescriptor = 'si'
 	* @param string|null $esmodelo = null
 	* @param string|null $order_by = 'norden'
 	* @param bool $use_cache = true
-	* @return array $ar_childrens_of_this
+	* @return array $ar_children_of_this
 	*/
-	public function get_ar_childrens_of_this( ?string $esdescriptor='si', ?string $esmodelo=null, $order_by='norden', bool $use_cache=true ) : array {
+	public function get_ar_children_of_this( ?string $esdescriptor='si', ?string $esmodelo=null, $order_by='norden', bool $use_cache=true ) : array {
 
 		// check self terminoID
 		if(empty($this->terminoID))	{
@@ -772,10 +772,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		// static cache
-		static $ar_childrens_of_this_stat_data;
+		static $ar_children_of_this_stat_data;
 		$key = $this->terminoID.'_'.$esdescriptor.'_'.$esmodelo.'_'.$order_by;
-		if($use_cache===true && isset($ar_childrens_of_this_stat_data[$key])) {
-			return $ar_childrens_of_this_stat_data[$key];
+		if($use_cache===true && isset($ar_children_of_this_stat_data[$key])) {
+			return $ar_children_of_this_stat_data[$key];
 		}
 
 		// search
@@ -802,32 +802,32 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		$this->use_cache = $use_cache;
 
-		$ar_childrens_of_this = $this->search($arguments);
+		$ar_children_of_this = $this->search($arguments);
 
 		// store cache data
-		$ar_childrens_of_this_stat_data[$key] = $ar_childrens_of_this;
+		$ar_children_of_this_stat_data[$key] = $ar_children_of_this;
 
 
-		return $ar_childrens_of_this;
-	}//end get_ar_childrens_of_this
+		return $ar_children_of_this;
+	}//end get_ar_children_of_this
 
 
 
 	/**
-	* GET_AR_CHILDRENS
+	* GET_AR_CHILDREN
 	* Resolves all terms that have given tipo as parent
 	* Not discriminates descriptors or models, result includes all children
 	* @param string $tipo
 	* @param string $order_by = 'norden'
-	* @return array $ar_childrens
+	* @return array $ar_children
 	*/
-	public static function get_ar_childrens( string $tipo, string $order_by='norden' ) : array {
+	public static function get_ar_children( string $tipo, string $order_by='norden' ) : array {
 
 		// static cache
-		static $get_ar_childrens_data;
+		static $get_ar_children_data;
 		$key = $tipo.'_'.$order_by;
-		if(isset($get_ar_childrens_data[$key])) {
-			return $get_ar_childrens_data[$key];
+		if(isset($get_ar_children_data[$key])) {
+			return $get_ar_children_data[$key];
 		}
 
 		// search
@@ -840,61 +840,61 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
-		$ar_childrens	= $RecordObj_dd->search($arguments);
+		$ar_children	= $RecordObj_dd->search($arguments);
 
 		// store cache data
-		$get_ar_childrens_data[$key] = $ar_childrens;
+		$get_ar_children_data[$key] = $ar_children;
 
 
-		return $ar_childrens;
-	}//end get_ar_childrens
+		return $ar_children;
+	}//end get_ar_children
 
 
 
 	/**
-	* GET_AR_RECURSIVE_CHILDRENS_OF_THIS
+	* GET_AR_RECURSIVE_CHILDREN_OF_THIS
 	* Resolves all the children of the current term recursively.
 	* @param string $terminoID
 	* @param int $is_recursion = 0
-	* @return array $this->ar_recursive_childrens_of_this
+	* @return array $this->ar_recursive_children_of_this
 	*/
-	public function get_ar_recursive_childrens_of_this( string $terminoID, int $is_recursion=0 ) : array {
+	public function get_ar_recursive_children_of_this( string $terminoID, int $is_recursion=0 ) : array {
 
 		# IMPORTANTE: NO HACER CACHE DE ESTE MÉTODO (AFECTA A COMPONENT_FILTER_MASTER)
 
 		# Creamos una instancia independiente de RecordObj_dd y resolvemos los hijos directos
 		$RecordObj_dd			= new RecordObj_dd($terminoID);
-		$ar_childrens_of_this	= $RecordObj_dd->get_ar_childrens_of_this(
+		$ar_children_of_this	= $RecordObj_dd->get_ar_children_of_this(
 			null, // esdescriptor
 			null, // esmodelo
 			null // order_by
 		);
-		$ar_childrens_of_this_size = sizeof($ar_childrens_of_this);
+		$ar_children_of_this_size = sizeof($ar_children_of_this);
 
 		// iterate children
-		for ($i=0; $i < $ar_childrens_of_this_size; $i++) {
+		for ($i=0; $i < $ar_children_of_this_size; $i++) {
 
-			$children_terminoID = $ar_childrens_of_this[$i];
+			$children_terminoID = $ar_children_of_this[$i];
 
 			// Add current element
-			$this->ar_recursive_childrens_of_this[] = $children_terminoID;
+			$this->ar_recursive_children_of_this[] = $children_terminoID;
 
 			// Recursion
-			$this->get_ar_recursive_childrens_of_this( $children_terminoID, 1 );
+			$this->get_ar_recursive_children_of_this( $children_terminoID, 1 );
 		}
 
-		if(isset($this->ar_recursive_childrens_of_this)) {
-			return $this->ar_recursive_childrens_of_this;
+		if(isset($this->ar_recursive_children_of_this)) {
+			return $this->ar_recursive_children_of_this;
 		}
 
 		return [];
-	}//end get_ar_recursive_childrens_of_this
+	}//end get_ar_recursive_children_of_this
 
 
 
 	/**
-	* GET_AR_RECURSIVE_CHILDRENS
-	*  	Static version of get_ar_recursive_childrens_of_this
+	* get_ar_recursive_children
+	*  	Static version of get_ar_recursive_children_of_this
 	* 	No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	* @param string $terminoID
 	* @param bool $is_recursion = false
@@ -903,7 +903,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param bool $use_cache = true
 	* @return array $ar_resolved
 	*/
-	public static function get_ar_recursive_childrens( string $terminoID, bool $is_recursion=false, ?array $ar_exclude_models=null, ?string $order_by=null, bool $use_cache=true ) : array {
+	public static function get_ar_recursive_children( string $terminoID, bool $is_recursion=false, ?array $ar_exclude_models=null, ?string $order_by=null, bool $use_cache=true ) : array {
 
 		$ar_resolved=array();
 
@@ -912,18 +912,18 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		$RecordObj_dd	= new RecordObj_dd($terminoID);
-		$ar_childrens	= $RecordObj_dd->get_ar_childrens_of_this(
+		$ar_children	= $RecordObj_dd->get_ar_children_of_this(
 			'si', // string esdescriptor
 			null, // string esmodelo
 			$order_by, // string order_by
 			$use_cache
 		);
-		$ar_childrens_size = sizeof($ar_childrens);
+		$ar_children_size = sizeof($ar_children);
 
-		// foreach($ar_childrens as $current_terminoID) {
-		for ($i=0; $i < $ar_childrens_size; $i++) {
+		// foreach($ar_children as $current_terminoID) {
+		for ($i=0; $i < $ar_children_size; $i++) {
 
-			$current_terminoID = $ar_childrens[$i];
+			$current_terminoID = $ar_children[$i];
 
 			// Exclude models optional
 			if (!empty($ar_exclude_models)) {
@@ -936,13 +936,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 			// Recursion
 			$ar_resolved = array_merge(
 				$ar_resolved,
-				RecordObj_dd::get_ar_recursive_childrens($current_terminoID, true, $ar_exclude_models, $order_by, $use_cache)
+				RecordObj_dd::get_ar_recursive_children($current_terminoID, true, $ar_exclude_models, $order_by, $use_cache)
 			);
 		}
 
 
 		return $ar_resolved;
-	}//end get_ar_recursive_childrens
+	}//end get_ar_recursive_children
 
 
 
@@ -1186,10 +1186,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 				// we get the children
 				$RecordObj_dd	= new RecordObj_dd($tipo);
-				$ar_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
+				$ar_children	= $RecordObj_dd->get_ar_children_of_this();
 
 				// we go through them to filter by model
-				if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
+				if(is_array($ar_children)) foreach($ar_children as $terminoID) {
 
 					$RecordObj_dd	= new RecordObj_dd($terminoID);
 					$modelo			= $RecordObj_dd->get_modelo();
@@ -1223,10 +1223,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 				// We get the children recursively
 				$RecordObj_dd	= new RecordObj_dd($tipo);
-				$ar_childrens	= $RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
+				$ar_children	= $RecordObj_dd->get_ar_recursive_children_of_this($tipo);
 
 				// we go through them to filter by model
-				if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
+				if(is_array($ar_children)) foreach($ar_children as $terminoID) {
 
 					$RecordObj_dd	= new RecordObj_dd($terminoID);
 					$modelo			= $RecordObj_dd->get_modelo();

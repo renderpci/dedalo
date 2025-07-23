@@ -109,7 +109,7 @@ class ts_term extends stdClass {
                     [term] => Descriptors of the media
                     [model] =>
                     [parent] => ["hierarchy1_245"]
-                    [childrens] => [{"type":"dd48","section_id":"2399","section_tipo":"on1","from_component_tipo":"hierarchy49"},{"type":"dd48","section_id":"2466","section_tipo":"on1","from_component_tipo":"hierarchy49"},{"type":"dd48","section_id":"5621","section_tipo":"on1","from_component_tipo":"hierarchy49"}]
+                    [children] => [{"type":"dd48","section_id":"2399","section_tipo":"on1","from_component_tipo":"hierarchy49"},{"type":"dd48","section_id":"2466","section_tipo":"on1","from_component_tipo":"hierarchy49"},{"type":"dd48","section_id":"5621","section_tipo":"on1","from_component_tipo":"hierarchy49"}]
                     [indexation] => []
                     [related] => []
                     [time] =>
@@ -123,7 +123,6 @@ class ts_term extends stdClass {
                     */
 
 			if (isset($rows_data->result[0])) {
-				#$rows_data->result[0] = (array)web_data::no_descriptor_to_descriptor( (object)$rows_data->result[0] );
 
 				// Store some resolved vars for reuse
 					$this->indexation 	= (string)$rows_data->result[0]['indexation'];
@@ -142,9 +141,9 @@ class ts_term extends stdClass {
 			}
 		}
 
-		if (!isset($this->ar_childrens)) {
-			$ar_childrens 		= ts_term::get_ar_children($this->term_id, $this->table);
-			$this->ar_childrens = $ar_childrens;
+		if (!isset($this->ar_children)) {
+			$ar_children		= ts_term::get_ar_children($this->term_id, $this->table);
+			$this->ar_children	= $ar_children;
 		}
 
 
@@ -171,9 +170,6 @@ class ts_term extends stdClass {
 			$term_filter .= '(parent = \''.$current_term_id.'\' OR parent = \''.substr($current_term_id, 2, strlen($current_term_id)-2).'\')';
 		}
 
-		# Remove unused terms
-		#$term_filter .= ' AND (indexation IS NOT NULL OR childrens IS NOT NULL)';
-
 		$options = new stdClass();
 			$options->table 		= (string)$table;
 			$options->ar_fields 	= array('term_id',FIELD_NORDER,'descriptor');
@@ -188,7 +184,7 @@ class ts_term extends stdClass {
 
 			$ar_restricted_terms = json_decode(AR_RESTRICTED_TERMS);
 
-			foreach ($rows_data->result as $key => $value) {
+			foreach ($rows_data->result as $value) {
 
 				$current_term_id 	= $value['term_id'];
 				$current_descriptor = $value['descriptor'];
@@ -203,18 +199,8 @@ class ts_term extends stdClass {
 					continue;
 				}
 
-				#$have_childrens 	= self::have_childrens($current_term_id);
-				#$have_indexations 	= self::have_indexations($current_term_id);
-
-				// Filter childrens without childrens or indexations to simplify tree
-				#if ($have_childrens==true || !empty($public_ar_index)) {	// || !empty($public_index)
-				#if ($have_childrens===false && $have_indexations===false) {	// || !empty($public_index)
-					# Ignore children
-				#}else{
-					$ar_children[] = $current_term_id;
-				#}
-
-			}//end foreach ($rows_data->result as $key => $value) {
+				$ar_children[] = $current_term_id;
+			}//end foreach ($rows_data->result as $key => $value)
 		}
 
 
@@ -224,12 +210,12 @@ class ts_term extends stdClass {
 
 
 	/**
-	* HAVE_CHILDRENS
-	* Método rápido para saber si un término tinene o no hijos
+	* HAVE_CHILDREN
+	* Quick method to find out if a term has children or not
 	* @param string $current_term_id
-	* @return bool $have_childrens
+	* @return bool $have_children
 	*/
-	public static function have_childrens($current_term_id, $table=TABLE_THESAURUS) {
+	public static function have_children($current_term_id, $table=TABLE_THESAURUS) {
 
 		# Compatibility with old parent data (single)
 		$term_filter = '';
@@ -238,9 +224,6 @@ class ts_term extends stdClass {
 		}else{
 			$term_filter .= '(parent = \''.$current_term_id.'\' OR parent = \''.substr($current_term_id, 2, strlen($current_term_id)-2).'\')';
 		}
-
-		# Remove unused terms
-		#$term_filter .= ' AND (indexation IS NOT NULL OR childrens IS NOT NULL)';
 
 		$options = new stdClass();
 			$options->table 		= (string)$table;
@@ -251,13 +234,13 @@ class ts_term extends stdClass {
 
 		$rows_data	= (object)web_data::get_rows_data( $options );
 		if (!empty($rows_data->result)) {
-			$have_childrens = true;
+			$have_children = true;
 		}else{
-			$have_childrens = false;
+			$have_children = false;
 		}
 
-		return (bool)$have_childrens;
-	}//end have_childrens
+		return (bool)$have_children;
+	}//end have_children
 
 
 
@@ -269,9 +252,6 @@ class ts_term extends stdClass {
 
 		$term_filter  = 'term_id = \''.$current_term_id.'\'';
 
-		# Remove unused terms
-		#$term_filter .= ' AND indexation IS NOT NULL';
-
 		$options = new stdClass();
 			$options->table 		= (string)$table;
 			$options->ar_fields 	= array('id');
@@ -279,7 +259,7 @@ class ts_term extends stdClass {
 			$options->sql_filter 	= $term_filter;
 			$options->limit 		= 1;
 
-		$rows_data	= (object)web_data::get_rows_data( $options );
+		$rows_data = (object)web_data::get_rows_data( $options );
 
 		if (!empty($rows_data->result)) {
 			$have_indexations = true;

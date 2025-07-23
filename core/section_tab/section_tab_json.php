@@ -33,7 +33,7 @@
 				// children
 					$current_context->children = [];
 					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$children_tipo	= $RecordObj_dd->get_ar_childrens_of_this();
+					$children_tipo	= $RecordObj_dd->get_ar_children_of_this();
 
 					// get the valid tabs of the section
 					$valid_tabs = section::get_ar_children_tipo_by_model_name_in_section(

@@ -170,7 +170,7 @@ class area extends area_common  {
 
 		// short vars
 		$RecordObj_dd			= new RecordObj_dd($terminoID);
-		$ar_ts_children			= $RecordObj_dd->get_ar_childrens_of_this();
+		$ar_ts_children			= $RecordObj_dd->get_ar_children_of_this();
 		$ar_ts_children_size	= sizeof($ar_ts_children);
 
 		if ($ar_ts_children_size>0) {

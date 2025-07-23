@@ -2921,7 +2921,7 @@ class web_data {
 							continue;
 						}
 
-						# Create a object 'ts_term' and get term info
+						# Create a object 'ts_term' and get term info
 						$ts_term_options = new stdClass();
 							$ts_term_options->table 	  = $thesaurus_table;
 							$ts_term_options->parent_term = $term;
@@ -2930,20 +2930,14 @@ class web_data {
 						# Force to load data from database
 						$ts_term->load_data();
 
-						# Add to array
-						#if (empty($ts_term->ar_childrens) && empty($ts_term->indexation)) {
-							# ignore term
-						#}else{
-							$ar_ts_terms[$current_tld][] = $ts_term;
-							#$ar_ts_terms[] = $ts_term;
-						#}
+						$ar_ts_terms[$current_tld][] = $ts_term;
 					}
 
-				}//end foreach ((array)$rows_data->result) as $current_tld) {
-				// dump($ar_ts_terms, ' $ar_ts_terms ++ '.to_string()); #die();
+				}//end foreach ((array)$rows_data->result) as $current_tld)
 
 			$response = new stdClass();
-				$response->result 	= (array)$ar_ts_terms;
+				$response->result = (array)$ar_ts_terms;
+
 
 			return $response;
 		}//end get_thesaurus_root_list
@@ -3087,7 +3081,7 @@ class web_data {
 			}
 			#dump($search_data, ' search_data ++ '.to_string());
 
-			# Add vars for pagination
+			# Add vars for pagination
 			$search_data->page_number	= $options->page_number;
 			$search_data->rows_per_page	= $options->rows_per_page;
 
@@ -3801,7 +3795,7 @@ class web_data {
 
 				# Remove unused terms
 				if ($remove_unused_terms===true) {
-					$term_filter .= ' AND ('.$field_indexation.' IS NOT NULL OR childrens IS NOT NULL)';
+					$term_filter .= ' AND ('.$field_indexation.' IS NOT NULL OR children IS NOT NULL)';
 				}
 				#error_log($term_filter);
 
@@ -3842,75 +3836,6 @@ class web_data {
 
 			return $response;
 		}//end get_thesaurus_children
-
-
-
-		/**
-		* GET_THESAURUS_CHILDRENS__OLD
-		* @return
-		*/ /*
-		public static function get_thesaurus_childrens__OLD( $request_options ) {
-			global $table_thesaurus_map; // From server api config
-
-			$options = new stdClass();
-				$options->term_id  		= null;
-				$options->recursive 	= false;
-				$options->lang 		   	= WEB_CURRENT_LANG_CODE;
-				$options->ar_fields 	= array('*');
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-			$section_tipo 	= explode('_', $options->term_id)[0];
-			$table 			= $table_thesaurus_map[$section_tipo];
-			$lang 			= $options->lang;
-			$recursive 		= $options->recursive;
-			$ar_fields 		= $options->ar_fields;
-
-			// get_items. Recursion is optional
-			// if (!function_exists('get_items'))
-			function get_items($current_term_id, $table, $lang, $ar_fields, $recursive) {
-
-				# Compatibility with old parent data (single)
-				$term_filter = '';
-				if (strpos($current_term_id,'["')===false) {
-					$term_filter .= 'parent = \'["'.$current_term_id.'"]\' OR parent = \''.$current_term_id.'\'';
-				}else{
-					$term_filter .= 'parent = \''.$current_term_id.'\' OR parent = \''.substr($current_term_id, 2, strlen($current_term_id)-2).'\'';
-				}
-				#error_log($term_filter);
-
-				$sd_options = new stdClass();
-					$sd_options->table 	 	= $table;
-					$sd_options->ar_fields  = $ar_fields;
-					#$sd_options->sql_filter = "childrens LIKE '%\"type\":\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
-					$sd_options->sql_filter = $term_filter; //"parent = '".$term_id_search."' ";
-					#$sd_options->order 	 = "section_id ASC";
-					$sd_options->lang 	 	= $lang;
-
-				$search_data = (object)web_data::get_rows_data( $sd_options );
-					#dump($search_data, ' search_data ++ '.to_string($sd_options));
-
-				$ar_data = (array)$search_data->result;
-
-				if ($recursive===true && !empty($search_data->result)) {
-					foreach ($search_data->result as $current_row) {
-						$ar_data = array_merge($ar_data, get_items($current_row["term_id"], $table, $lang, $ar_fields, $recursive));
-					}
-				}
-
-				return (array)$ar_data;
-			}//end get_items
-			$ar_children = get_items($options->term_id, $table, $lang, $ar_fields, $recursive);
-				#dump($ar_children, ' ar_children ++ '.to_string());
-
-
-			$response = new stdClass();
-				$response->result 	= $ar_children;
-				$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
-
-
-			return $response;
-		}//end get_thesaurus_childrens__OLD
-		*/
 
 
 
@@ -3964,7 +3889,7 @@ class web_data {
 				$sd_options = new stdClass();
 					$sd_options->table 	 	= $table;
 					$sd_options->ar_fields  = $ar_fields;
-					$sd_options->sql_filter = "childrens LIKE '%\"type\":\"".$dedalo_relation_type_children_tipo."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
+					$sd_options->sql_filter = "children LIKE '%\"type\":\"".$dedalo_relation_type_children_tipo."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
 					#$sd_options->sql_filter = "parent = '".$current_term_id."' ";
 					#$sd_options->order 	 = "section_id ASC";
 					$sd_options->lang 	 	= $lang;
@@ -4119,7 +4044,7 @@ class web_data {
 				$ar_free_nodes[] = $free_node;
 			}//end foreach ($rows_data->result as $key => $obj_value)
 
-			# Add vars for pagination
+			# Add vars for pagination
 			$response->page_number 	 = $options->page_number;
 			$response->rows_per_page = $options->rows_per_page;
 			$response->total 		 = $rows_data->total;
@@ -4389,14 +4314,13 @@ class web_data {
 				return $response;
 			}
 
-
-			# Add vars for pagination
+			# Add vars for pagination
 			$response->page_number 	 = $options->page_number;
 			$response->rows_per_page = $options->rows_per_page;
 			$response->total 		 = $rows_data->total;
 
 			$response->result 		 = $rows_data->result;
-			$response->msg 			 = 'Ok. Request global_search done successfully';
+			$response->msg 			 = 'OK. Request global_search done successfully';
 
 
 			return $response;
@@ -5520,7 +5444,6 @@ class web_data {
 			$options->term_id 	= null;
 			$options->lang 		= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-				#dump($options, ' options ++ '.to_string());
 
 		// search
 			$search_options = new stdClass();
@@ -5531,32 +5454,30 @@ class web_data {
 				$search_options->sql_filter = '`parent` = \''.$options->term_id.'\'';
 				$search_options->order 		= '`norder` ASC';
 			$data = self::get_rows_data($search_options);
-				#dump($data, ' data ++ '.to_string($search_options));
 
 		$ar_data = $data->result;
-			#dump($ar_data, ' ar_data ++ '.to_string($term_id));
 
 		foreach ((array)$data->result as $key => $value) {
 
 			$value 		= (object)$value;
-			$childrens 	= !empty($value->childrens)
-				? json_decode($value->childrens)
+			$children 	= !empty($value->children)
+				? json_decode($value->children)
 				: [];
 
-			if (!empty($childrens)) {
+			if (!empty($children)) {
 
-				$childrens_options = clone $options;
-					$childrens_options->term_id = $value->term_id;
+				$children_options = clone $options;
+					$children_options->term_id = $value->term_id;
 
-				$current_data = self::get_menu_tree_plain($childrens_options);
+				$current_data = self::get_menu_tree_plain($children_options);
 				$ar_data = array_merge($ar_data, $current_data->result);
 			}
 		}
-		#dump($ar_data, ' ar_data ++ '.to_string());
 
 		// set response
 			$response->result 	= $ar_data;
-			$response->msg 		= 'Ok. Request done!';
+			$response->msg 		= 'OK. Request done!';
+
 
 		return $response;
 	}//end get_menu_tree_plain

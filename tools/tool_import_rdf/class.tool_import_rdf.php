@@ -120,7 +120,7 @@ class tool_import_rdf extends tool_common {
 				// $rdf_types = $rdf_graph->toRdfPhp();
 				$rdf_type = $rdf_graph->type($base_uri);
 
-				$ontology_children = RecordObj_dd::get_ar_childrens($ontology_tipo);
+				$ontology_children = RecordObj_dd::get_ar_children($ontology_tipo);
 
 				$dd_obj = tool_import_rdf::get_class_map_to_dd($ontology_children, $rdf_type, $rdf_graph, $base_uri, $locator);
 
@@ -160,7 +160,7 @@ class tool_import_rdf extends tool_common {
 			$class_name = RecordObj_dd::get_termino_by_tipo($owl_class_tipo);
 
 			if ($class_name === $rdf_type) {
-				$ar_owl_ObjectProperty = RecordObj_dd::get_ar_childrens($owl_class_tipo);
+				$ar_owl_ObjectProperty = RecordObj_dd::get_ar_children($owl_class_tipo);
 				$current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($owl_class_tipo, 'section', 'termino_relacionado', false);
 			}
 		}
