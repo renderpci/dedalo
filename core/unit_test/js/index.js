@@ -4,7 +4,7 @@
 
 /**
 * UNIT_TEST
-* 	To check Dédalo elements basic functionalities
+* To check Dédalo elements basic functionalities
 */
 
 
@@ -16,6 +16,7 @@
 
 // check url vars
 	const url_vars = url_vars_to_object(window.location.search);
+
 
 
 // page start

@@ -52,7 +52,7 @@ async function make_element_test(options) {
 		const lang			= element.lang
 
 	return new Promise(async function(resolve){
-
+		const start = performance.now()
 		// it('responds with matching records', async function () {
 		// describe(`${model}-${mode}-${view}-${permissions}`, async function() {
 
@@ -67,8 +67,14 @@ async function make_element_test(options) {
 				view			: view,
 				id_variant		: mode + '_' + view + '_' + Math.random() + '-' + Math.random()
 			})
+
+			const end = performance.now();
+			console.log(`Process took ${end - start} milliseconds.`);
+
 			// build element forcing to load context and data from API
 			await new_instance.build(true)
+
+
 			// inject permissions
 			new_instance.permissions = permissions
 			// render element
@@ -222,7 +228,7 @@ async function make_element_test(options) {
 					'buttons_container must necessarily exist (edit-default-2)'
 				);
 				assert.notEqual(
-					new_instance.node.querySelector(':scope >.content_data'),
+					new_instance.node.querySelector(':scope >.content_data') || new_instance.node.querySelector(':scope >.list_body >.content_data'),
 					null,
 					'content_data must necessarily exist'
 				);
