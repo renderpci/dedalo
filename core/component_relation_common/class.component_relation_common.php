@@ -460,8 +460,8 @@ class component_relation_common extends component_common {
 					? (object)[
 						'section_tipo'		=> $ddo->section_tipo,
 						'section_id_key'	=> $locator->section_id,
-						'section_tipo_key'	=> $locator->section_tipo_key
-					]
+						'section_tipo_key'	=> $locator->section_tipo_key ?? null
+					  ]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
