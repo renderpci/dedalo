@@ -1407,7 +1407,7 @@ export const ui = {
 				tool_button.insertAdjacentHTML('beforeend', tool_context.label)
 
 			// Events
-				const click_handler = (e) => {
+				const mousedown_handler = (e) => {
 					e.stopPropagation()
 
 					// open_tool (tool_common)
@@ -1416,7 +1416,7 @@ export const ui = {
 							caller			: self
 						})
 				}
-				tool_button.addEventListener('click', click_handler)
+				tool_button.addEventListener('mousedown', mousedown_handler)
 
 
 			return tool_button
