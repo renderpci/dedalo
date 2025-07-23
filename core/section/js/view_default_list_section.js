@@ -323,11 +323,13 @@ const get_buttons = function(self) {
 			inner_html		: get_label.find || 'Search',
 			parent			: buttons_container
 		})
-		filter_button.addEventListener('mousedown', function(e) {
+		// mousedown event
+		const mousedown_handler = (e) => {
 			e.stopPropagation()
 			// Note that self section is who is observing this event (init)
 			event_manager.publish('toggle_search_panel_'+self.id)
-		})
+		}
+		filter_button.addEventListener('mousedown', mousedown_handler)
 
 	// non_editable_sections. Activity section 'dd542'
 		const non_editable_sections = [
