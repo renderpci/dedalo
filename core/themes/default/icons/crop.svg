@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 1024 1024" style="enable-background:new 0 0 1024 1024;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;stroke:#000000;stroke-width:120;stroke-linejoin:round;stroke-miterlimit:10;}
+	.st1{fill:none;stroke:#000000;stroke-width:120;stroke-miterlimit:10;}
+</style>
+<polyline class="st0" points="831.8,1024 831.8,837.1 190.2,837.1 190.2,192.9 0,192.9 "/>
+<g>
+	<polyline class="st0" points="831.8,747.7 831.8,192.9 279.5,192.9 	"/>
+	<line class="st1" x1="831.8" y1="837.1" x2="1024" y2="837.1"/>
+	<line class="st1" x1="190.2" y1="192.9" x2="190.2" y2="0"/>
+</g>
+</svg>
