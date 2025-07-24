@@ -50,7 +50,7 @@ $updates->$v = new stdClass();
 
 	// sync active hierarchies with active ontologies
 		$script_obj = new stdClass();
-			$script_obj->info			= "Sync active hierarchies with active in thesaurus";
+			$script_obj->info			= "Synchronize Active and Active in thesaurus between Hierarchies and Ontologies";
 			$script_obj->script_class	= "hierarchy";
 			$script_obj->script_method	= "sync_hierarchy_active_status";
 			$script_obj->script_vars	= []; // Note that only ONE argument encoded is sent
