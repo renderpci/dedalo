@@ -366,6 +366,18 @@ export const render_publication_items = function(self) {
 					class_name		: 'value',
 					parent			: publication_items_grid
 				})
+				const diffusion_element_link_node = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button tree',
+					title			: get_label.open || 'Open',
+					parent			: diffusion_element_value
+				})
+				const click_handler = async (e) => {
+					e.stopPropagation()
+					const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${current_diffusion_element_tipo}`
+					window.open(url, 'docu_window')
+				}
+				diffusion_element_link_node.addEventListener('click', click_handler)
 
 			// database
 				if (item.database_name) {
@@ -381,6 +393,26 @@ export const render_publication_items = function(self) {
 						class_name		: 'value',
 						parent			: publication_items_grid
 					})
+					if (data_item.database_tipo) {
+						const database_tipo_node = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'value_info',
+							inner_html		: `[${data_item.database_tipo}]`,
+							parent			: database_value
+						})
+						const database_tipo_link_node = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'button tree',
+							title			: get_label.open || 'Open',
+							parent			: database_value
+						})
+						const click_handler = async (e) => {
+							e.stopPropagation()
+							const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${data_item.database_tipo}`
+							window.open(url, 'docu_window')
+						}
+						database_tipo_link_node.addEventListener('click', click_handler)
+					}
 				}
 
 			// table
@@ -397,6 +429,26 @@ export const render_publication_items = function(self) {
 						class_name		: 'value',
 						parent			: publication_items_grid
 					})
+					if (data_item.table_tipo) {
+						const table_tipo_node = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'value_info',
+							inner_html		: `[${data_item.table_tipo}]`,
+							parent			: table_value
+						})
+						const table_tipo_link_node = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'button tree',
+							title			: get_label.open || 'Open',
+							parent			: table_value
+						})
+						const click_handler = async (e) => {
+							e.stopPropagation()
+							const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${data_item.table_tipo}`
+							window.open(url, 'docu_window')
+						}
+						table_tipo_link_node.addEventListener('click', click_handler)
+					}
 				}
 
 			// fields
