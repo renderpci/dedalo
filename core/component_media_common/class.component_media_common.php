@@ -1119,8 +1119,17 @@ class component_media_common extends component_common {
 					if (file_exists($modified_file_path)) {
 						// file_info
 						$quality_file_info = $this->get_quality_file_info($modified_quality, $file_extension);
-						// add
-						$files_info[] = $quality_file_info;
+
+						// check if file path exists previously
+						$current_file_path = $quality_file_info->file_path;
+						$found = array_find($files_info, function($item) use($current_file_path) {
+							return $item->file_path === $current_file_path;
+						});
+
+						if(empty($found)){
+							// add
+							$files_info[] = $quality_file_info;
+						}
 					}
 			}
 
