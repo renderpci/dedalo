@@ -496,9 +496,9 @@ final class ImageMagick {
 				$color =  "-alpha set -virtual-pixel transparent -background none -interpolate Mesh";
 			};
 			if($rotation_mode === 'expanded'){
-				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color +distort SRT $degrees '$target'";
+				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color +distort SRT $degrees +repage '$target'";
 			}else{
-				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color -distort SRT $degrees '$target'";
+				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color -distort SRT $degrees +repage '$target'";
 			}
 
 			$result = shell_exec($command);
@@ -513,6 +513,55 @@ final class ImageMagick {
 
 		return $result;
 	}//end rotate
+
+
+
+
+	/**
+	* CROP
+	* Crop with the given area and save source image to target (self or other)
+	* @param object $options
+	* {
+	*	"tipo"				: "rsc29", 		// string
+	*	"section_tipo"		: "rsc170", 	// string
+	*	"section_id"		: "1",			// string
+	*	"crop_area" 		: // crop area coordinates to apply to the image
+	* 	{
+	* 		x : x 			// Starting X position
+	* 		y : y 			// Starting Y position
+	* 		width : width 	// Crop width
+	* 		height : height // Crop height
+	*	}
+	* }
+	*
+	* @return string|null $result
+	*/
+	public static function crop( object $options ) : ?string {
+
+		$source				= $options->source;
+		$target				= $options->target;
+		$crop_area			= $options->crop_area;
+
+		$width	= $crop_area->width;
+		$height	= $crop_area->height;
+		$x		= $crop_area->x;
+		$y		= $crop_area->y;
+
+		// command
+		$command = ImageMagick::get_imagemagick_installed_path() ." '$source' -crop {$width}x{$height}+{$x}+{$y} +repage '$target'";
+
+		$result = shell_exec($command);
+
+		// debug
+			debug_log(__METHOD__
+				." Exec Command:" . PHP_EOL
+				. $command
+				, logger::DEBUG
+			);
+
+
+		return $result;
+	}//end crop
 
 
 
