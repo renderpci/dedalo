@@ -154,7 +154,7 @@ const get_content_data = async function(self) {
 			// callback column case
 			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
 				if(current_column.callback && typeof current_column.callback==='function'){
-					const column_node = render_callback(self, current_column)
+					const column_node = await render_callback(self, current_column)
 					fragment.appendChild(column_node)
 					continue;
 				}
@@ -263,14 +263,14 @@ const get_content_data = async function(self) {
 * @param object column - Column definition
 * @return HTMLElement column_node
 */
-const render_callback = function (self, column) {
+const render_callback = async function (self, column) {
 
 	// column_node (standard section_record empty column to be filled with content_node)
 	const column_node = render_column_node_callback(column, self)
 
 	try {
         // content_node. Normally a DocumentFragment
-        const content_node = column.callback({
+        const content_node = await column.callback({
 			section_tipo		: self.section_tipo,
 			section_id			: self.section_id,
 			row_key				: self.row_key,
