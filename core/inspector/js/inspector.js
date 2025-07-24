@@ -277,7 +277,7 @@ export const get_ontology_url = async function (tipo, target) {
 				return `${DEDALO_CORE_URL}/page/?tipo=${ontology_info.section_tipo}&section_id=${ontology_info.section_id}&session_save=false&menu=false`
 			}
 		case 'local_ontology_search':
-			return DEDALO_CORE_URL + `/ontology/v5/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
+			return DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${tipo}`
 
 		case 'master_ontology':
 			const section_tipo_base	= get_tld_from_tipo(tipo) + '0'; // as 'tch0'
