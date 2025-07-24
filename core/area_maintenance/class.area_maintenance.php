@@ -206,11 +206,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('export_hierarchy') ?? 'Export hierarchy';
-				$item->value	= (object)[
-					'export_hierarchy_path' => (defined('EXPORT_HIERARCHY_PATH')
-						? EXPORT_HIERARCHY_PATH
-						: null)
-				];
+				$item->value	= null;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
@@ -1004,26 +1000,6 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end build_install_version
-
-
-
-	/**
-	* EXPORT_HIERARCHY
-	* Alias of hierarchy::export_hierarchy
-	* @param object $options
-	* @return object $response
-	*/
-	public static function export_hierarchy(object $options) : object {
-
-		// options
-			$section_tipo = $options->section_tipo ?? null;
-
-		// export_hierarchy
-			$response = hierarchy::export_hierarchy($section_tipo);
-
-
-		return $response;
-	}//end export_hierarchy
 
 
 

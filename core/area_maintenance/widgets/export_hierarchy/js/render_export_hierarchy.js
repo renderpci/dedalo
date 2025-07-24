@@ -69,11 +69,56 @@ const get_content_data_edit = async function(self) {
 	// short vars
 		const value					= self.value || {}
 		const export_hierarchy_path	= value.export_hierarchy_path || null
-		const confirm_text			= value.confirm_text || 'Sure?'
 
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
+		})
+
+	// export_hierarchy_node
+		const export_hierarchy_node = render_export_hierarchy_node({
+			self,
+			export_hierarchy_path
+		})
+		content_data.appendChild(export_hierarchy_node)
+
+	// sync_hierarchy_active_status_node
+		const sync_hierarchy_active_status_node = render_sync_hierarchy_active_status_node({
+			self
+		})
+		content_data.appendChild(sync_hierarchy_active_status_node)
+
+
+	return content_data
+}//end get_content_data_edit
+
+
+
+/**
+* RENDER_EXPORT_HIERARCHY_NODE
+* Generates de DOM nodes about Export hierarchies
+* @param object options
+* {
+* 	self : object - Widget instance
+* 	export_hierarchy_path: string|null
+* }
+* @return DocumentFragment
+*/
+export const render_export_hierarchy_node = function (options) {
+
+	const {
+		self,
+		export_hierarchy_path
+	} = options
+
+	const fragment = new DocumentFragment()
+
+	// title
+		ui.create_dom_element({
+			element_type	: 'h6',
+			class_name		: '',
+			inner_html		: `Export hierarchies`,
+			parent			: fragment
 		})
 
 	// export_hierarchy_path check
@@ -82,9 +127,20 @@ const get_content_data_edit = async function(self) {
 				element_type	: 'div',
 				class_name		: 'info_text',
 				inner_html		: `To enable exporting, define var EXPORT_HIERARCHY_PATH in the configuration file`,
-				parent			: content_data
+				parent			: fragment
 			})
-			return content_data
+			return fragment
+		}
+
+	// Running without caller
+		if (!self.caller) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_text',
+				inner_html		: `Running without caller`,
+				parent			: fragment
+			})
+			return fragment
 		}
 
 	// info
@@ -92,7 +148,7 @@ const get_content_data_edit = async function(self) {
 			element_type	: 'div',
 			class_name		: 'info_text',
 			inner_html		: `Creates files like es1.copy.gz in /install/import/hierarchy (for MASTER toponymy export)`,
-			parent			: content_data
+			parent			: fragment
 		})
 
 	// body_response
@@ -105,7 +161,7 @@ const get_content_data_edit = async function(self) {
 			const config_grid = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'config_grid',
-				parent			: content_data
+				parent			: fragment
 			})
 			const add_to_grid = (label, value) => {
 				ui.create_dom_element({
@@ -128,8 +184,8 @@ const get_content_data_edit = async function(self) {
 	// form init
 		self.caller.init_form({
 			submit_label	: 'Export hierarchy',
-			confirm_text	: confirm_text,
-			body_info		: content_data,
+			confirm_text	: get_label.sure || 'Sure?',
+			body_info		: fragment,
 			body_response	: body_response,
 			inputs			: [{
 				type		: 'text',
@@ -138,12 +194,116 @@ const get_content_data_edit = async function(self) {
 				mandatory	: true,
 				value		: ''
 			}],
-			on_submit	: (e, values) => {
+			on_submit		: (e, values) => {
 
 				const input			= values.find(el => el.name==='section_tipo')
 				const section_tipo	= input?.value // string like '*'
 
-				const form_container = content_data.querySelector('.form_container')
+				const form_container = e.target
+
+				// clean
+				while (body_response.firstChild) {
+					body_response.removeChild(body_response.firstChild);
+				}
+
+				// spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner'
+				})
+				body_response.prepend(spinner)
+				form_container.classList.add('lock')
+
+				// API process fire
+				self.exec_export_hierarchy(section_tipo)
+				.then(function(response){
+
+					form_container.classList.remove('lock')
+					spinner.remove()
+
+					const json_node =ui.create_dom_element({
+						element_type	: 'pre',
+						inner_html		: JSON.stringify(response, null, 2),
+						parent			: body_response
+					})
+					const dblclick_handler = (e) => {
+						json_node.remove()
+					}
+					json_node.addEventListener('dblclick', dblclick_handler)
+				})
+			}
+		})
+
+	// add at end body_response
+		fragment.appendChild(body_response)
+
+
+	return fragment
+}//end render_export_hierarchy_node
+
+
+
+/**
+* RENDER_SYNC_HIERARCHY_ACTIVE_STATUS_NODE
+* Generates de DOM nodes about Export hierarchies
+* @param object options
+* {
+* 	self : object - Widget instance
+* 	export_hierarchy_path: string|null
+* }
+* @return DocumentFragment
+*/
+export const render_sync_hierarchy_active_status_node = function (options) {
+
+	const {
+		self
+	} = options
+
+	const fragment = new DocumentFragment()
+
+	// title
+		ui.create_dom_element({
+			element_type	: 'h6',
+			inner_html		: `Sync Hierarchy status`,
+			class_name		: '',
+			parent			: fragment
+		})
+
+	// Running without caller
+		if (!self.caller) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_text',
+				inner_html		: `Running without caller`,
+				parent			: fragment
+			})
+			return fragment
+		}
+
+	// info
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_text',
+			inner_html		: `Sync the 'Active' status with the 'Active in thesaurus' status.`,
+			parent			: fragment
+		})
+
+	// body_response
+		const body_response = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body_response'
+		})
+
+	// form init
+		self.caller.init_form({
+			submit_label	: 'Sync Hierarchy',
+			confirm_text	: get_label.sure || 'Sure?',
+			body_info		: fragment,
+			body_response	: body_response,
+			inputs			: [],
+			on_submit		: (e, values) => {
+
+				const form_container = e.target
 
 				// clean
 					while (body_response.firstChild) {
@@ -158,44 +318,32 @@ const get_content_data_edit = async function(self) {
 					body_response.prepend(spinner)
 					form_container.classList.add('lock')
 
-				// counter long process fire
-				data_manager.request({
-					body : {
-						dd_api			: 'dd_area_maintenance_api',
-						action			: 'class_request',
-						prevent_lock	: true,
-						source			: {
-							action : 'export_hierarchy',
-						},
-						options : {
-							section_tipo : section_tipo // string like '*' or 'es1,es2'
-						}
-					},
-					retries : 1, // one try only
-					timeout : 3600 * 1000 // 1 hour waiting response
-				})
+				// API process fire
+				self.sync_hierarchy_active_status()
 				.then(function(response){
-					console.log('response:', response);
+
 					form_container.classList.remove('lock')
 					spinner.remove()
 
-					ui.create_dom_element({
+					const json_node = ui.create_dom_element({
 						element_type	: 'pre',
 						inner_html		: JSON.stringify(response, null, 2),
 						parent			: body_response
 					})
-
-
+					const dblclick_handler = (e) => {
+						json_node.remove()
+					}
+					json_node.addEventListener('dblclick', dblclick_handler)
 				})
 			}
 		})
 
 	// add at end body_response
-		content_data.appendChild(body_response)
+		fragment.appendChild(body_response)
 
 
-	return content_data
-}//end get_content_data_edit
+	return fragment
+}//end render_sync_hierarchy_active_status_node
 
 
 

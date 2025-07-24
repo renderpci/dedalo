@@ -161,7 +161,7 @@ const render_rebuild_indexes = (self) => {
 	}
 	body_response.addEventListener('dblclick', dblclick_handler)
 
-	self.caller.init_form({
+	self.caller?.init_form({
 		submit_label	: 'Re-build indexes',
 		confirm_text	: get_label.seguro || 'Sure?',
 		body_info		: rebuild_indexes_container,
@@ -278,7 +278,7 @@ const render_optimize_tables = (self) => {
 	}
 	body_response.addEventListener('dblclick', dblclick_handler)
 
-	self.caller.init_form({
+	self.caller?.init_form({
 		submit_label	: 'Optimize tables',
 		confirm_text	: get_label.seguro || 'Sure?',
 		body_info		: optimize_tables_container,
@@ -423,7 +423,7 @@ const render_consolidate_table_sequences = (self) => {
 	}
 	body_response.addEventListener('dblclick', dblclick_handler)
 
-	self.caller.init_form({
+	self.caller?.init_form({
 		submit_label	: 'Consolidate tables',
 		confirm_text	: get_label.seguro || 'Sure?',
 		body_info		: consolidate_table_sequences_container,
@@ -537,7 +537,7 @@ const render_rebuild_user_stats = (self) => {
 	}
 	body_response.addEventListener('dblclick', dblclick_handler)
 
-	self.caller.init_form({
+	self.caller?.init_form({
 		submit_label	: 'Re-build user stats',
 		confirm_text	: 'Sure? \nThis action deletes all user dd1521 (User activity) records and recreate the stats records from matrix_activity data.',
 		body_info		: rebuild_user_stats_container,

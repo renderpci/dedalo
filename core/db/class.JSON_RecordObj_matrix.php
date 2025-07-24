@@ -264,14 +264,14 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	* 	Matrix id from target table record
 	*/
 	public function Save( ?object $save_options=null ) : ?int {
-		$start_time = start_time();
+		// $start_time = start_time();
 
 		// test_can_save
 			if( $this->test_can_save()!==true ) {
 				$msg = " Error (test_can_save). No matrix data is saved! ";
 				trigger_error($msg, E_USER_ERROR);
 				debug_log(__METHOD__." $msg - matrix_table: $this->matrix_table - $this->section_tipo - $this->section_id - save_options: ".to_string($save_options), logger::ERROR);
-				return false;
+				return null;
 			}
 
 		# MATRIX SAVE (with parent RecordDataBoundObject)

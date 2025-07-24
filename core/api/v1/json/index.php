@@ -207,13 +207,12 @@ $global_start_time = hrtime(true);
 	} catch (Throwable $e) {
 
 		// Final fallback error handling
-		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__
-				. ' API caught exception ' . PHP_EOL
-				. $e->getTraceAsString()
-				, logger::ERROR
-			);
-		}
+
+		debug_log(__METHOD__
+			. ' API end point caught exception ' . PHP_EOL
+			. json_encode($e->getTrace(), JSON_PRETTY_PRINT)
+			, logger::ERROR
+		);
 
 		$response = new stdClass();
 			$response->result	= false;

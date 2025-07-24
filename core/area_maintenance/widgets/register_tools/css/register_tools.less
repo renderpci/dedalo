@@ -33,19 +33,38 @@
 		.tool_name {
 			word-break: break-all;
 		}
+
 		.tool_version {
 			text-align: right;
 		}
+
 		.tool_installed_version {
 			text-align: right;
 		}
+
 		.developer {
 			word-break: break-all;
 		}
+		
 		.tool_warning {
 			color: @color_orange_dedalo;
 		}
+
+		.warning {
+
+			&.tool_installed_version {
+				color: @color_white;
+				font-weight: normal;
+				background-color: @color_danger;
+				padding: 0.25rem;
+				padding-top: 0px;
+				padding-bottom: 0px;
+				border-radius: 3px;
+			}
+		}
 	}
+
+
 
 	// errors
 	.info_text {

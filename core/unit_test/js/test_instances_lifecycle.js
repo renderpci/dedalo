@@ -10,6 +10,7 @@ import {
 	get_instance,
 	get_all_instances,
 	delete_instance,
+	delete_instances,
 	find_instances,
 	key_instances_builder
 } from '../../common/js/instances.js'
@@ -52,7 +53,7 @@ describe(`INSTANCES LIFE-CYCLE`, async function() {
 		[
 			'get_instance',
 			'get_all_instances',
-			'delete_instance',
+			'delete_instances',
 			'find_instances',
 			'key_instances_builder'
 
@@ -199,11 +200,11 @@ async function life_cycle_test(element) {
 		});
 
 		// delete_instance
-		it(`delete_instance`, async function() {
+		it(`delete_instances`, async function() {
 
 			const total_instances_length = get_all_instances().length
 
-			const deleted = await delete_instance({
+			const deleted = delete_instances({
 				tipo			: options.tipo,
 				section_tipo	: options.section_tipo,
 				section_id		: options.section_id,
@@ -215,7 +216,7 @@ async function life_cycle_test(element) {
 
 			// asserts
 				assert.equal(deleted, 1, 'deleted must be 1');
-					assert.equal(new_total_instances_length, total_instances_length - 1);
+				assert.equal(new_total_instances_length, total_instances_length - 1);
 		});
 
 		// destroy instance
@@ -236,9 +237,9 @@ async function life_cycle_test(element) {
 				})
 				element.caller.ar_instances.push(to_destroy_instance)
 				const destroyed = await to_destroy_instance.destroy(true)
-
+				
 			// asserts
-				assert.deepEqual(destroyed, { delete_self : 1 })
+				assert.deepEqual(destroyed, { delete_self : true })
 
 			// find into caller
 				const caller_found = element.caller.ar_instances.find(el => el.id===to_destroy_instance.id)

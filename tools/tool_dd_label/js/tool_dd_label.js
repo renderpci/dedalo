@@ -67,7 +67,10 @@ tool_dd_label.prototype.init = async function(options) {
 			self.loaded_langs = page_globals.dedalo_projects_default_langs
 
 		// editor
-			const editor = self.caller.editors[0]
+			const editor = self.caller?.editors?.[0];
+			if (!editor) {
+				throw new Error("Editor not found.");
+			}
 
 		// data.
 			// Get directly from editor instead from component. This allow get the current
@@ -85,6 +88,7 @@ tool_dd_label.prototype.init = async function(options) {
 				return json_data
 			})()
 
+			// Ensure ar_data is always an array
 			const ar_data = Array.isArray(editor_data)
 				? editor_data
 				: editor_data
@@ -94,7 +98,7 @@ tool_dd_label.prototype.init = async function(options) {
 		// fix ar_data
 			self.ar_data = ar_data
 
-		// ar_names. Columns name array
+		// ar_names. Column names: Extract unique 'name' values from ar_data
 			self.ar_names = [...new Set(self.ar_data.map(item => item.name))];
 
 	} catch (error) {

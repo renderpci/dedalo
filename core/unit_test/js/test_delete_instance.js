@@ -8,7 +8,7 @@ import {
 	mode,
 	lang
 } from './elements.js'
-import {get_instance, delete_instance} from '../../common/js/instances.js'
+import {get_instance, delete_instances} from '../../common/js/instances.js'
 
 
 
@@ -25,7 +25,7 @@ describe("INSTANCES : DELETE_INSTANCE", function() {
 				mode			: mode,
 				lang			: lang
 			}
-			const deleted = await delete_instance(options);
+			const deleted = await delete_instances(options);
 			assert.equal(deleted, expected);
 		});
 	});
@@ -42,7 +42,7 @@ describe("INSTANCES : DELETE_INSTANCE", function() {
 				lang			: lang
 			}
 			const instance = await get_instance( structuredClone(options) )
-			const deleted = await delete_instance(options);
+			const deleted = await delete_instances(options);
 			await instance.destroy()
 
 			assert.equal(deleted, expected);
@@ -57,7 +57,7 @@ describe("INSTANCES : DELETE_INSTANCE", function() {
 			}
 			// console.log('----------- options:', options);
 			const instance = await get_instance( structuredClone(options) )
-			const result = await delete_instance(options);
+			const result = await delete_instances(options);
 			await instance.destroy()
 
 			assert.equal(result, expected);

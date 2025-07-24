@@ -119,7 +119,7 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 
-	// hierarchies_import_node
+	// hierarchies_import_node. It built from render_install because is the same rendered.
 		const hierarchies_import_options = {
 			hierarchies					: hierarchies,
 			active_hierarchies			: active_hierarchies,

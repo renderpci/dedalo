@@ -103,7 +103,6 @@
 
 		// subdata add
 			$data[] = $item;
-
 	}//end if $options->get_data===true && $permissions>0
 
 

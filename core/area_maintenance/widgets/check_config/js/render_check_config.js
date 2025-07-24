@@ -97,21 +97,8 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'config_vars_status_container',
 			parent			: content_data
 		})
-		when_in_viewport(
-			config_vars_status_container,
-			() => {
-				ui.load_item_with_spinner({
-					container			: config_vars_status_container,
-					preserve_content	: false,
-					label				: 'Config vars status',
-					callback			: async () => {
-						// render
-						const node = await render_config_vars_status(self)
-						return node
-					}
-				})
-			}
-		)
+		const config_vars_node = render_config_vars_status(self)
+		config_vars_status_container.appendChild(config_vars_node)
 
 
 	return content_data
@@ -121,28 +108,23 @@ const get_content_data_edit = async function(self) {
 
 /**
 * RENDER_CONFIG_VARS_STATUS
-*
+* Create the necessary DOM nodes to display the config vars status.
 * @param object self Widget instance
-* @return HTMLElement config_vars_status_container
+* @return DocumentFragment
 */
-const render_config_vars_status = async function (self) {
+const render_config_vars_status = function (self) {
 
-	// load value
-		const result = await self.get_widget_value();
+	// value
+	const value = self.value || [];
 
-	// config_vars_status_container
-		const config_vars_status_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'config_vars_status_container'
-		})
+	const fragment = new DocumentFragment();
 
 	// tables
 		const tables = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'tables',
-			parent			: config_vars_status_container
+			parent			: fragment
 		})
-
 
 	// missing_container
 		const missing_container = ui.create_dom_element({
@@ -171,9 +153,10 @@ const render_config_vars_status = async function (self) {
 		})
 
 	// result iterate
-		const result_length = result.length
-		for (let i = 0; i < result_length; i++) {
-			const item = result[i]
+		const value_length = value.length
+		for (let i = 0; i < value_length; i++) {
+
+			const item = value[i]
 
 			// missing
 			{
@@ -238,7 +221,7 @@ const render_config_vars_status = async function (self) {
 					element_type	: 'div',
 					class_name		: 'datalist_container show_list',
 					inner_html		: '<span class="button icon eye"></span>Display all sample.'+item.file_name+' constants list',
-					parent			: config_vars_status_container
+					parent			: fragment
 				})
 				const_list_node.addEventListener('click', function(e) {
 					e.stopPropagation();
@@ -252,10 +235,10 @@ const render_config_vars_status = async function (self) {
 					parent			: const_list_node
 				})
 			}
-		}//end for (let i = 0; i < result_length; i++)
+		}//end for (let i = 0; i < value_length; i++)
 
 
-	return config_vars_status_container;
+	return fragment;
 }//end render_config_vars_status
 
 

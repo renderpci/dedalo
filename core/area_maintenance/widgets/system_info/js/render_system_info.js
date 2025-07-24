@@ -122,7 +122,7 @@ const render_content_data = async function(self) {
 				parent			: datalist_container
 			})
 
-			self.get_widget_value()
+			self.get_value()
 			.then(function(value){
 				load_status = 'loaded'
 				spinner.remove()

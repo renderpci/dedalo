@@ -909,11 +909,12 @@ final class ontology_test extends TestCase {
 		$found = array_find($result, function($el) {
 			return $el->section_id == 4;
 		});
+		$children_tipo = ontology::$children_tipo; // ontology14
 		$expected = json_decode('
 			{
 		        "section_tipo": "rsc0",
 				"section_id": "4",
-				"from_component_tipo": "ontology14",
+				"from_component_tipo": "'.$children_tipo.'",
 				"type": "dd48"
 		    }
 		');
