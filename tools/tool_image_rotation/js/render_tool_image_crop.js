@@ -442,8 +442,13 @@ render_tool_image_crop.reset_selection = function() {
 
 	const self = this
 
-	self.nodes.crop_selection.style.display	= 'none';
-	self.nodes.status_container.textContent	= '';
+	if(self.nodes?.crop_selection){
+		self.nodes.crop_selection.style.display	= 'none';
+	}
+	if(self.nodes?.status_container){
+		self.nodes.status_container.textContent	= '';
+	}
+
 	self.crop_area = null
 
 }// end reset_selection
