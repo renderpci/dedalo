@@ -246,13 +246,14 @@ describe("OTHERS LIFE-CYCLE", async function() {
 
 					// init widget
 					await new_instance.init({
-						id_variant		: Math.random() + '-' + Math.random(),
-						lang			: element.lang,
-						mode			: element.mode, // list
-						model			: 'widget',
-						name			: element.name,
-						value			: element.value,
-						caller			: null
+						id			:element.name,
+						id_variant	: Math.random() + '-' + Math.random(),
+						lang		: element.lang,
+						mode		: element.mode, // list
+						model		: 'widget',
+						name		: element.name,
+						value		: element.value,
+						caller		: null
 					})
 
 					assert.equal(new_instance.status, expected);

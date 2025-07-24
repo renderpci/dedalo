@@ -10,34 +10,68 @@
 
 
 /**
-* INSTANCES CACHE STORE
+* INSTANCES_MAP
 * Create the cache instances const.
-* The cache will be the storage for all active instances of the components.
-* type: array of objects, every object will be one instance
+* The cache will be the storage for all active instances of the components, sections, areas, widgets, services, menu, etc.
+* type: Map, every value will be one instance
 * Sample:
-* [
-*  {
-*	"model"			: "component_input_text",
-*	"tipo"			: "oh15",
-*	"section_tipo"	: "oh1",
-*	"section_id"	: "2",
-*	"mode"			: "edit",
-*	"lang"			: "lg-eng",
-*	"key"			: "component_input_text_oh15_oh1_2_edit_lg-eng",
-*	"instance"		: {instance_object}
-*  }
-* ]
+* [Entries] [{
+*	"key": "component_input_text_test52_test3_tm_lg-eng",
+*	"value": {
+*		"id": "component_input_text_test52_test3_tm_lg-eng",
+*		"model": "component_input_text",
+*		"tipo": "test52",
+*		"section_tipo": "test3",
+*		"mode": "tm",
+*		"lang": "lg-eng",
+*		"context": null,
+*		"data": null,
+*		"node": null,
+*		"tools": null,
+*		"duplicates": false,
+*		"minimum_width_px": 90,
+*		"q_split": true,
+*		"id_base": "test3__test52",
+*		"is_init": true,
+*		"status": "initialized",
+*		"matrix_id": null,
+*		"type": "component",
+*		"datum": null,
+*		"events_tokens": [],
+*		"ar_instances": [],
+*		"standalone": true,
+*		"active": false,
+*		"change_value_pool": [],
+*		"is_data_changed": false,
+*		"init_events_subscribed": false,
+*		"saving": false
+*	}
+* }]
 */
-export const instances = []
+const instances_map = new Map();
+
+
+
+/**
+ * KEY_ORDER
+ * Defines de vars and the order to create the instances key
+ */
+const key_order = ['model','tipo','section_tipo','section_id','mode','lang','parent','matrix_id','id_variant','column_id'];
 
 
 
 /**
 * GET_INSTANCE
-* Get the instance, first use the storage of the instances cache, if the instance is not init will be create and stored for use.
-* for create the instance is necessary access to every init code of every component, do it take time,
-* and this method create one promise to wait for the creation instance of every component,
-* @param object options
+*
+* Returns an instance of a component by either retrieving it from a cache or dynamically importing and initializing it.
+*
+* - If the instance is cached, it is returned immediately.
+* - If not cached, the appropriate module is dynamically imported based on the model name, instantiated, initialized, cached, and returned.
+* - If `model` is not provided in the options, it is resolved via an API call to `data_manager.get_element_context`.
+*
+* This method is asynchronous and returns a `Promise` that resolves to the component instance.
+*
+* @param object options - Configuration options for creating or retrieving an instance.
 * Sample:
 * {
 *	"model"			: "component_input_text",
@@ -47,7 +81,7 @@ export const instances = []
 *	"mode"			: "edit",
 *	"lang"			: "lg-eng"
 * }
-* @return promise
+* @return promise - A promise resolving to the instance or `null` on failure.
 */
 export const get_instance = async function(options) {
 
@@ -62,6 +96,7 @@ export const get_instance = async function(options) {
 
 	// Resolve the model if not provided
 		const model = options.model || await ( async () => {
+			// fetch context and model from backend
 
 			if (!tipo) {
 				console.error('Error: unable to get element context without tipo. options:', options);
@@ -104,7 +139,8 @@ export const get_instance = async function(options) {
 			return null
 		}
 
-	// Fill missing options with defaults
+		// Ensure required options are set.
+		// Fill missing options with defaults. Note that whole options will be passed to the new instance
 		if (!options.model) {
 			options.model = model
 		}
@@ -115,47 +151,27 @@ export const get_instance = async function(options) {
 			options.lang = lang
 		}
 
-	// key. build the key locator of the instance
+	// key. Build instance key of the instance.
 		const key = options.key || key_instances_builder(options)
 
 	// search. Check if the instance is already in the cache
-		const instances_length = instances.length
-		for (let i = instances_length - 1; i >= 0; i--) {
-			if (instances[i].id===key) {
-				// if(SHOW_DEBUG===true) {
-				// 	console.log('))))) found_instance:', instances[i]);
-				// }
-				return instances[i]
-			}
+		const found_instance = instances_map.get(key)
+		if (found_instance) {
+			return found_instance;
 		}
 
 	// Return a promise that resolves the instance
-	return new Promise(async function(resolve) {
+	return new Promise(function(resolve) {
 
-		// element file import path. Determine the path for importing the module
+		// Determine module path
+		const module_path = model.startsWith('tool_')
+		  ? `../../../tools/${model}/js/${model}.js` // tools
+		  : model.startsWith('service_')
+		  ? `../../../core/services/${model}/js/${model}.js` // services
+		  : `../../../core/${model}/js/${model}.js`; // default
+
 		// import element module file once (and wait until finish)
-		const module = (()=>{
-			switch (true) {
-
-				// tools (/tools: tool_transcriptions, tool_upload, ...)
-				case (model.indexOf('tool_')!==-1) : {
-					const short_path = model + '/js/' + model
-					return import(`../../../tools/${short_path}.js`)
-				}
-
-				// service (/core/services: servide_time_machine, service_autocomplete, ..)
-				case (model.indexOf('service_')!==-1) : {
-					const short_path = model + '/js/' + model
-					return import(`../../../core/services/${short_path}.js`)
-				}
-
-				// default (/core: page, section, menu, components..)
-				default: {
-					const short_path = model + '/js/' + model
-					return import(`../../../core/${short_path}.js`)
-				}
-			}
-		})()
+		import(module_path)
 		.then(async function(module) {
 
 			// check module
@@ -167,6 +183,11 @@ export const get_instance = async function(options) {
 
 			// instance the element
 				const instance_element = new module[module_main_function]()
+
+				if (typeof instance_element !== 'object') {
+					console.warn(`Module "${model}" is not an valid object.`);
+					return null;
+				}
 
 			// serialize element id
 			// add the id for init the instance with the id
@@ -181,7 +202,7 @@ export const get_instance = async function(options) {
 				await instance_element.init(options)
 
 			// add to the instances cache
-				instances.push(instance_element)
+				instances_map.set(key, instance_element)
 
 			// return the new created instance
 				resolve(instance_element)
@@ -198,104 +219,49 @@ export const get_instance = async function(options) {
 
 /**
 * GET_ALL_INSTANCES
-* Get all created instances from global 'instances' array list
-* where are stored the new instances
-* @return array instances
+* Retrieves all created instances stored in the `instances_map` as an array.
+* @return array instances - Array of objects (instances)
 */
 export const get_all_instances = function() {
 
-	return instances
+	return [...instances_map.values()]
 }//end get_all_instances
 
 
 
 /**
-* DELETE_INSTANCE
-* Delete the found instance/s from the 'instances' array list based on options.
-* @param object options
-* 	An object containing key-value pairs to match against instances.
-* @returns int deleted_count
-* 	The number of instances deleted.
-*/
-export const delete_instance = function(options) {
-
-	// check the options
-	if (!options || Object.keys(options).length === 0) {
-		console.warn('Ignored delete_instance. Empty options', options);
-		return 0
-	}
-
-	const indices_to_delete = [];
-	let found_count = 0;
-
-	// Iterate instances (form this module vars 'instances' array)
-	for (let i = 0; i < instances.length; i++) {
-
-		const item = instances[i];
-
-		let match = true;
-
-		for (const key in options) {
-			if (Object.prototype.hasOwnProperty.call(options, key)) {
-				const value = options[key];
-				if (typeof value !== 'undefined' && value !== null) {
-					if (item[key] !== value) {
-						match = false;
-						break; // No need to check other keys if one doesn't match
-					}
-				}
-			}
-		}
-
-		if (match) {
-			indices_to_delete.push(i); // More efficient than unshift
-			found_count++;
-		}
-	}
-
-	// Reverse to delete from highest index first
-    indices_to_delete.reverse();
-
-	// delete by array index
-	let deleted_count = 0;
-	if (indices_to_delete.length > 0) {
-		for (const index of indices_to_delete) {
-			// console.warn('))) Deleted Instance. index:', index, options);
-			instances.splice(index, 1);
-			deleted_count++;
-		}
-	}else{
-		console.warn('Instance not found for deletion. instances length:', instances.length, 'options:', options);
-	}
-
-
-	return deleted_count;
-}//end delete_instance
-
-
-
-/**
 * FIND_INSTANCES
-* Get all created instances from global 'instances' array list
+* Get all created instances from global instances_map
 * that matches the given options
 * @param object options
 * @return array found_instances
 */
 export const find_instances = function(options) {
 
-	const tipo			= options.tipo
-	const section_tipo	= options.section_tipo
-	const section_id	= options.section_id
-	const mode			= options.mode
-	const lang			= options.lang
+	if (!options || typeof options !== 'object') return [];
 
-	const found_instances = instances.filter(el =>
-		el.tipo			=== tipo &&
-		el.section_tipo	=== section_tipo &&
-		el.section_id	=== section_id &&
-		el.mode			=== mode &&
-		el.lang			=== lang
-	)
+	// options
+	const {
+		tipo,
+		section_tipo,
+		section_id,
+		mode,
+		lang
+	} = options;
+
+	const found_instances = []
+	for (const instance of instances_map.values()) {
+
+		if (instance.tipo === tipo &&
+			instance.section_tipo === section_tipo &&
+			instance.section_id === section_id &&
+			instance.mode === mode &&
+			instance.lang === lang
+			) {
+
+			found_instances.push( instance );
+		}
+	}
 
 	return found_instances
 }//end find_instances
@@ -303,26 +269,100 @@ export const find_instances = function(options) {
 
 
 /**
-* KEY_INSTANCES_BUILDER
-* Creates string normalized key from several parameters
-* @param object options
-* @return string key
+* DELETE_INSTANCE
+* Delete one instance based in given key if exists.
+* The key is the 'instances_map' key, which is equal to the instance ID.
+* @param string key
+* 	An string used to match the map element by key.
+* 	E.g. 'component_input_text_rsc21_rsc170_1_edit_lg-nolan_12711607_tool_time_machine'
+* @returns bool
+* 	This is true if the instance exists and has been deleted successfully; otherwise, it is false.
 */
-export const key_instances_builder = function(options) {
+export const delete_instance = function(key) {
 
-	const order = ['model','tipo','section_tipo','section_id','mode','lang','parent','matrix_id','id_variant','column_id']
-	const key_parts = []
+	// check the options
+	if (!key || key.length === 0) {
+		console.warn('Ignored delete_instance. Empty key', key);
+		return false
+	}
 
-	const order_length = order.length
-	for (let i = 0; i < order_length; i++) {
+	const result = instances_map.delete( key )
 
-		const current_value = options[order[i]] ? options[order[i]].toString() : '';
-		if (options.hasOwnProperty(order[i]) && typeof current_value!=='undefined' && current_value!==null && current_value.length>0){
-			key_parts.push( options[order[i]] )
+
+	return result;
+}//end delete_instance
+
+
+
+/**
+* DELETE_INSTANCES
+* Delete the found multiple instance/s from the 'instances_map' based on options.
+* @param object options
+* 	An object containing key-value pairs to match against instances.
+* @returns int deleted_count
+* 	The number of instances deleted.
+*/
+export const delete_instances = function(options) {
+
+	// check the options
+	if (!options || Object.keys(options).length === 0) {
+		console.warn('Ignored delete_instances. Empty options', options);
+		return 0
+	}
+
+	let deleted_count = 0;
+
+	for (const [map_key, item] of instances_map.entries()) {
+
+		let match = true;
+
+		// check all properties defined in options.
+		for (const key in options) {
+			if (Object.prototype.hasOwnProperty.call(options, key)) {
+
+				const expected	= options[key];
+				const actual	= item[key];
+
+				if (expected != null && expected !== actual) {
+					match = false;
+					break; // There is no need to check the other keys if one of them does not match.
+				}
+			}
+		}
+
+		// If all options properties match, delete it
+		if (match) {
+			instances_map.delete(map_key)
+			deleted_count++;
 		}
 	}
 
-	// join all non empty elements in an string used as id for the instance
+
+	return deleted_count;
+}//end delete_instances
+
+
+
+/**
+* KEY_INSTANCES_BUILDER
+* Builds a normalized string key from selected properties of the given `options` object.
+* The key is used to uniquely identify an instance based on a defined order of parameters.
+* @param object options
+* @return string key - A concatenated, underscore-delimited string key composed of non-empty values.
+*/
+export const key_instances_builder = function(options) {
+
+	const key_parts = []
+
+	for (const prop of key_order) {
+		const value = options[prop];
+		if (value !== undefined && value !== null && value !== '') {
+			const string_value = String(value);
+			key_parts.push(string_value);
+		}
+	}
+
+	// join all non empty elements in an string used as ID for the instance
 	const key = key_parts.join('_')
 
 

@@ -8,7 +8,7 @@
 	import {clone, url_vars_to_object, object_to_url_vars, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance} from '../../common/js/instances.js'
+	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import {
 		common,
 		set_context_vars,
@@ -398,7 +398,7 @@ section.prototype.init = async function(options) {
 
 				// debug
 				if(SHOW_DEBUG===true) {
-					console.log('section. event_manager.events.length:', event_manager.events.length);
+					console.log('section. event_manager.events.length:', event_manager.get_events().length);
 				}
 			}
 			self.events_tokens.push(
@@ -664,72 +664,70 @@ section.prototype.build = async function(autoload=false) {
 			// debug
 				if(SHOW_DEBUG===true) {
 
-					let debug_token
+					// render_handler
+					const render_handler = () => {
+						
+						// remove event subscription
+						event_manager.unsubscribe(debug_token)
 
-					// fn_show_debug_info
-						const render_handler = () => {
+						const debug = document.getElementById('debug')
+						if (!debug) {
+							console.log('Ignored debug');
+							return
+						}
 
-							// remove event subscription
-							event_manager.unsubscribe(debug_token)
-
-							const debug = document.getElementById('debug')
-							if (!debug) {
-								console.log('Ignored debug');
-								return
+						// clean
+							while (debug.firstChild) {
+								debug.removeChild(debug.firstChild)
 							}
 
-							// clean
-								while (debug.firstChild) {
-									debug.removeChild(debug.firstChild)
+						// button_debug add
+							const button_debug = ui.create_dom_element({
+								element_type	: 'button',
+								class_name		: 'info eye',
+								inner_html		: get_label.debug || "Debug",
+								parent			: debug
+							})
+							button_debug.tabIndex = -1;
+							const click_handler = () => {
+
+								if (debug_container.hasChildNodes()) {
+									debug_container.classList.toggle('hide')
+									return
 								}
 
-							// button_debug add
-								const button_debug = ui.create_dom_element({
-									element_type	: 'button',
-									class_name		: 'info eye',
-									inner_html		: get_label.debug || "Debug",
-									parent			: debug
-								})
-								button_debug.tabIndex = -1;
-								const click_handler = () => {
-
-									if (debug_container.hasChildNodes()) {
-										debug_container.classList.toggle('hide')
-										return
+								// collect debug data
+								load_data_debug(self, api_response, self.rqo)
+								.then(function(info_node){
+									// debug.classList.add("hide")
+									if (info_node) {
+										debug_container.appendChild(info_node)
 									}
 
-									// collect debug data
-									load_data_debug(self, api_response, self.rqo)
-									.then(function(info_node){
-										// debug.classList.add("hide")
-										if (info_node) {
-											debug_container.appendChild(info_node)
-										}
-
-										// scroll debug to top of page
-											const bodyRect	= document.body.getBoundingClientRect()
-											const elemRect	= debug.getBoundingClientRect()
-											const offset	= elemRect.top - bodyRect.top
-											window.scrollTo({
-												top			: offset,
-												left		: 0,
-												behavior	: 'smooth'
-											});
-									})
-								}
-								button_debug.addEventListener('click', click_handler)
-
-							// debug_container
-								const debug_container = ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'debug_container',
-									parent			: debug
+									// scroll debug to top of page
+										const bodyRect	= document.body.getBoundingClientRect()
+										const elemRect	= debug.getBoundingClientRect()
+										const offset	= elemRect.top - bodyRect.top
+										window.scrollTo({
+											top			: offset,
+											left		: 0,
+											behavior	: 'smooth'
+										});
 								})
+							}
+							button_debug.addEventListener('click', click_handler)
 
-							// show debug node removing hide style
-								debug.classList.remove('hide')
-						}
-					debug_token = event_manager.subscribe('render_'+self.id, render_handler)
+						// debug_container
+							const debug_container = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'debug_container',
+								parent			: debug
+							})
+
+						// show debug node removing hide style
+							debug.classList.remove('hide')
+					}
+					const debug_token = event_manager.subscribe('render_'+self.id, render_handler)
 					self.events_tokens.push(debug_token)
 				}
 		}//end if (autoload===true)
@@ -859,7 +857,14 @@ section.prototype.render = async function(options={}) {
 		self.node = result_node
 
 	// debug
-		dd_console(`__Time to render ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
+		if(SHOW_DEBUG===true) {
+			dd_console(`__Time to render ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
+			console.log('get_all_instances:', get_all_instances().length);
+			console.log('event_manager.get_events():', event_manager.get_events().length);
+			console.log('self.datum.context.length:', self.datum.context.length);
+			console.log('self.datum.data.length:', self.datum.data.length);
+		}
+
 
 	return result_node
 }//end render
@@ -1689,21 +1694,21 @@ section.prototype.focus_first_input = function() {
 */
 function validate_mode(mode) {
 
-	const valid_modes = ['edit', 'list', 'list_thesaurus', 'solved', 'tm'];
+	const valid_modes = new Set(['edit', 'list', 'list_thesaurus', 'solved', 'tm'])
 	const default_mode = 'list';
 
 	if (!mode) {
 		return default_mode;
 	}
 
-	if (valid_modes.includes(mode)) {
+	if (valid_modes.has(mode)) {
 		return mode;
 	}
 
 	// Temporarily returns the given mode until this list is final.
-	console.error(`Invalid mode '${mode}' received. Using it temporarily !!. Valid modes: ${valid_modes.join(', ')}`);
+	console.error(`Invalid mode '${mode}' received. Using it temporarily !!. Valid modes: ${[...valid_modes].join(', ')}`);
 	if(SHOW_DEBUG===true) {
-		alert(`Invalid mode '${mode}' received. Using it temporarily !!.\n Valid modes: ${valid_modes.join(', ')}`);
+		alert(`Invalid mode '${mode}' received. Using it temporarily !!.\n Valid modes: ${[...valid_modes].join(', ')}`);
 	}
 
 	return mode // It will return to the default mode in the future.

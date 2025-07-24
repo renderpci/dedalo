@@ -56,18 +56,25 @@ tool_pdf_extractor.prototype.init = async function(options) {
 	const self = this
 
 	// call the generic common tool init
-		const common_init = await tool_common.prototype.init.call(this, options);
+	const common_init = await tool_common.prototype.init.call(this, options);
 
-	// get the pages offset to set the page tags between pages
-		const offset = self.caller.data.value[0].offset
+	try {
 
-	// specific init variables
+		// get the pages offset to set the page tags between pages
+		const offset = self.caller?.data?.value?.[0].offset || 0
+
+		// specific init variables
 		self.config = {
 			method		: 'text_engine',
 			page_in		: false,
 			page_out	: false,
 			offset		: offset
 		}
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 	return common_init
 }//end init

@@ -428,7 +428,9 @@ common.prototype.render = async function (options={}) {
 									class_name		: 'no_access',
 									inner_html		: label
 								})
-								self.node.appendChild(new_content_data_node)
+								requestAnimationFrame(()=>{
+									self.node.appendChild(new_content_data_node)
+								})
 								// set pointers
 								self.node.content_data = new_content_data_node
 
@@ -766,23 +768,9 @@ const do_delete_self = async function (self) {
 			delete self.filter
 		}
 
-	// delete_instance from instances register array
-		const instance_options = {
-			id				: self.id
-			// model		: self.model,
-			// tipo			: self.tipo,
-			// section_tipo	: self.section_tipo,
-			// section_id	: self.section_id,
-			// mode			: self.mode,
-			// lang			: self.lang
-		}
-		// time machine case
-		if (self.matrix_id) {
-			instance_options.matrix_id = self.matrix_id
-		}
-
-	// Delete instance from global register
-	const result = delete_instance(instance_options)
+	// Delete instance from global instances register.
+	// self.id is equivalent to the intances_map key
+	const result = delete_instance( self.id )
 
 	// delete caller instance reference (ar_instances)
 		if (self.caller?.ar_instances) {
@@ -791,9 +779,9 @@ const do_delete_self = async function (self) {
 				const item = self.caller.ar_instances[i]
 				if (item.id===self.id) {
 					self.caller.ar_instances.splice(i, 1)
-					if(SHOW_DEBUG===true) {
-						// console.log('))))) deleted caller instance reference:', self.caller.model, self.id);
-					}
+					// if(SHOW_DEBUG===true) {
+					// 	console.log('))))) deleted caller instance reference:', self.caller.model, self.id);
+					// }
 					break;
 				}
 			}

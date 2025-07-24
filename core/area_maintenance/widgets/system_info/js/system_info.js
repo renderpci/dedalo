@@ -6,7 +6,7 @@
 
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
-	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_system_info} from './render_system_info.js'
 
 
@@ -45,6 +45,7 @@ export const system_info = function() {
 	// system_info.prototype.build	= widget_common.prototype.build
 	system_info.prototype.render	= widget_common.prototype.render
 	system_info.prototype.destroy	= widget_common.prototype.destroy
+	system_info.prototype.get_value	= area_maintenance.prototype.get_value
 	// // render
 	system_info.prototype.edit		= render_system_info.prototype.list
 	system_info.prototype.list		= render_system_info.prototype.list
@@ -79,45 +80,6 @@ system_info.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
-
-
-/**
-* GET_WIDGET_VALUE
-* Get widget value from class maintenance
-* The options 'model' property is the class method name
-* @return result
-* {
-*   "datalist": array as [{"name":"cpu","value":"Linux",..}]
-*   "errors": array|null
-* }
-*/
-system_info.prototype.get_widget_value = async () => {
-
-	// get files list updated
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'get_widget_value',
-			prevent_lock	: true,
-			source	: {
-				type	: 'widget',
-				model	: 'system_info'
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
-	if(SHOW_DEBUG===true) {
-		console.log('))) get_widget_value system_info api_response:', api_response);;
-	}
-
-	const result = api_response.result
-
-
-	return result
-}//end get_widget_value
 
 
 

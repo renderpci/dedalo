@@ -266,7 +266,7 @@ const drag_and_drop = function(options) {
 	// 					// const event_id = 'mosaic_show_' + section_record_node.id + '_' + self.section_tipo + '_' + self.section_id
 	// 					const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 	// 					// console.log("// subscribe event_id:",event_id);
-	// 					const found = event_manager.events.find(el => el.event_name===event_id)
+	//					const found = event_manager.event_name_exists(event_id)
 	// 					if (!found) {
 	// 						const token = event_manager.subscribe(event_id, fn_mosaic_show_alt)
 	// 						self.events_tokens.push(token)
@@ -361,7 +361,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 				// On user hover mosaic a event that we subscribe here to show the
 				// proper hover record and hide the others
 					const event_id_hover = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_hover = event_manager.events.find(el => el.event_name===event_id_hover)
+					const found_hover 	 = event_manager.event_name_exists(event_id_hover)
 					if (!found_hover) {
 						const token = event_manager.subscribe(event_id_hover, fn_mosaic_hover)
 						self.events_tokens.push(token)
@@ -379,8 +379,8 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 							caller_node.prepend(section_record_node)
 							section_record_node.classList.remove('display_none')
 					}
-					const event_id_mouseleave	= `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-					const found_mouseleave		= event_manager.events.find(el => el.event_name===event_id_mouseleave)
+					const event_id_mouseleave = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+					const found_mouseleave	  = event_manager.event_name_exists(event_id_mouseleave)
 					if (!found_mouseleave) {
 						const token = event_manager.subscribe(event_id_mouseleave, fn_mosaic_mouseleave)
 						self.events_tokens.push(token)

@@ -75,7 +75,7 @@ render_update_data_version.prototype.list = async function(options) {
 const get_content_data = async function(self) {
 
 	// short vars
-		const value					= self.value
+		const value					= self.value || {}
 		const update_version		= value.update_version
 		const current_version_in_db	= value.current_version_in_db
 		const dedalo_version		= value.dedalo_version
@@ -251,7 +251,7 @@ const get_content_data = async function(self) {
 				break;
 			default:
 				// create the submit button
-				self.caller.init_form({
+				self.caller?.init_form({
 					submit_label	: self.name,
 					confirm_text	: get_label.sure || 'Sure?',
 					body_info		: content_data,

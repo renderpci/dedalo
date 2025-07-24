@@ -30,9 +30,33 @@
 * }
 *
 */
-
 global $updates;
 $updates = new stdClass();
+
+
+
+$v=670; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 7;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 6;
+	$updates->$v->update_from_minor		= 5;
+
+	// sync active hierarchies with active ontologies
+		$script_obj = new stdClass();
+			$script_obj->info			= "Sync active hierarchies with active in thesaurus";
+			$script_obj->script_class	= "hierarchy";
+			$script_obj->script_method	= "sync_hierarchy_active_status";
+			$script_obj->script_vars	= []; // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
+
+
 
 $v=665; #####################################################################################
 $updates->$v = new stdClass();
@@ -47,10 +71,10 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium	= 6;
 	$updates->$v->update_from_minor		= 4;
 
-	$alert					= new stdClass();
-		$alert->notification	= 'V '.$v;
+	$alert = new stdClass();
+		$alert->notification = 'V '.$v;
 
-		$alert->command			= '';
+		$alert->command = '';
 		$alert->command .= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
 			<p>
@@ -88,7 +112,6 @@ $updates->$v = new stdClass();
 			</p>
 		";
 		$updates->$v->alert_update[] = $alert;
-
 
 	// Remove the old People section counter, it is unused, all people was moved into rsc197
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
@@ -142,6 +165,7 @@ $updates->$v = new stdClass();
 			$updates->$v->run_scripts[] = $script_obj;
 
 
+
 $v=664; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -159,6 +183,8 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.matrix_hierarchy;
 		');
+
+
 
 $v=663; #####################################################################################
 $updates->$v = new stdClass();
@@ -179,6 +205,7 @@ $updates->$v = new stdClass();
 		');
 
 
+
 $v=662; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -196,6 +223,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			VACUUM FULL VERBOSE ANALYZE public.jer_dd;
 		');
+
 
 
 $v=661; #####################################################################################

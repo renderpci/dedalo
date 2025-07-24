@@ -165,7 +165,7 @@ const render_content_data = async function(self) {
 				on_done : async () => {
 
 					// get and update value
-					self.value = await self.get_widget_value()
+					self.value = await self.get_value()
 
 					// render datalist again
 					render_datalist(self, datalist_container)
