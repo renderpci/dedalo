@@ -5,12 +5,21 @@
 */
 .component_portal.view_mosaic, .portal.view_mosaic {
 
+	>.label {
+		max-width: 10.5rem;
+	}
+
 	>.paginator_container {
 		right: 0px;
 		top: 0px;
 		width: auto;
 		position: absolute;
 		padding-right: 0.5rem;
+
+		>.wrapper_paginator >.content_data {
+			padding-top: 0.2rem;
+			color: @color_grey_6;
+		}
 	}
 
 	// list_body
