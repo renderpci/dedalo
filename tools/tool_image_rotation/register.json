@@ -8,6 +8,12 @@
       "from_component_tipo": "dd200"
     },
     {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
       "type": "dd675",
       "section_id": "1",
       "section_tipo": "dd153",
@@ -33,19 +39,13 @@
     },
     {
       "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd151",
       "section_id": "20",
       "section_tipo": "dd1342",
       "from_component_tipo": "dd1330"
     },
     {
       "type": "dd151",
-      "section_id": "-1",
+      "section_id": "1",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 28,
-              "hour": 20,
-              "time": 65074133255,
-              "year": 2024,
-              "month": 8,
-              "minute": 7,
-              "second": 35
+              "day": 21,
+              "hour": 21,
+              "time": 65102996358,
+              "year": 2025,
+              "month": 7,
+              "minute": 39,
+              "second": 18
             }
           }
         ]
@@ -177,7 +177,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.2"
+          "2.0.0"
         ]
       }
     },
@@ -185,7 +185,7 @@
       "inf": "Versión Dédalo mínima [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "6.2.6"
+          "6.7.0"
         ]
       }
     },
@@ -397,7 +397,392 @@
             {
               "lang": "lg-eus",
               "name": "expand",
-              "value": ""
+              "value": "Hedatu"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "remove_background",
+              "value": "Remove background"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "remove_background",
+              "value": "Eliminar fondo"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "remove_background",
+              "value": "Eliminar el fons"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "remove_background",
+              "value": "Atzealdea kendu"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "remove_background",
+              "value": "Hintergrund entfernen"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "remove_background",
+              "value": "Αφαίρεση φόντου"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "remove_background",
+              "value": "إزالة الخلفية"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "remove_background",
+              "value": "Supprimer l'arrière-plan"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "remove_background",
+              "value": "Rimuovi lo sfondo"
+            },
+            {
+              "lang": "lg-por",
+              "name": "remove_background",
+              "value": "Remover fundo"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "backgroun_removal_completed",
+              "value": "Eliminación de fondo completada."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "backgroun_removal_completed",
+              "value": "Background removal completed."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "backgroun_removal_completed",
+              "value": "Eliminació del fons completada."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "backgroun_removal_completed",
+              "value": "Atzealdea kentzea amaitu da."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "backgroun_removal_completed",
+              "value": "Hintergrundentfernung abgeschlossen."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "backgroun_removal_completed",
+              "value": "Η αφαίρεση φόντου ολοκληρώθηκε."
+            },
+            {
+              "lang": "lg-ara",
+              "name": "backgroun_removal_completed",
+              "value": " اكتملت إزالة الخلفية."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "backgroun_removal_completed",
+              "value": "Suppression de l'arrière-plan terminée."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "backgroun_removal_completed",
+              "value": "Rimozione dello sfondo completata."
+            },
+            {
+              "lang": "lg-por",
+              "name": "backgroun_removal_completed",
+              "value": "Remoção de fundo concluída."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "bk_colour",
+              "value": "Atzeko kolorea"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "bk_colour",
+              "value": "لون الخلفية"
+            },
+            {
+              "lang": "lg-por",
+              "name": "bk_colour",
+              "value": "Cor de fundo"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "degrees",
+              "value": "Gradu"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "degrees",
+              "value": " درجات"
+            },
+            {
+              "lang": "lg-por",
+              "name": "degrees",
+              "value": "Graus"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "rotation",
+              "value": "Biratzea"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "rotation",
+              "value": "دوران"
+            },
+            {
+              "lang": "lg-por",
+              "name": "rotation",
+              "value": "Rotação"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "transparent",
+              "value": "Gardena"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "transparent",
+              "value": "شفاف"
+            },
+            {
+              "lang": "lg-por",
+              "name": "transparent",
+              "value": "Transparente"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "expand",
+              "value": "توسيع"
+            },
+            {
+              "lang": "lg-por",
+              "name": "expand",
+              "value": "Expandir"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "processing_image",
+              "value": "Processing image..."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "processing_image",
+              "value": "Procesando imagen..."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "processing_image",
+              "value": "Processant imatge..."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "processing_image",
+              "value": "Irudia prozesatzen..."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "processing_image",
+              "value": "Bild wird verarbeitet..."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "processing_image",
+              "value": "Επεξεργασία εικόνας... "
+            },
+            {
+              "lang": "lg-ara",
+              "name": "processing_image",
+              "value": "جاري معالجة الصورة... "
+            },
+            {
+              "lang": "lg-fra",
+              "name": "processing_image",
+              "value": "Traitement de l'image..."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "processing_image",
+              "value": "Elaborazione dell'immagine..."
+            },
+            {
+              "lang": "lg-por",
+              "name": "processing_image",
+              "value": "Processando imagem..."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "setting_up",
+              "value": "Setting up the neural network"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "setting_up",
+              "value": "Preparando la red neuronal"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "setting_up",
+              "value": "Preparant la xarxa neuronal"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "setting_up",
+              "value": "Einrichten des neuronalen Netzwerks"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "setting_up",
+              "value": "Ρύθμιση του νευρωνικού δικτύου "
+            },
+            {
+              "lang": "lg-fra",
+              "name": "setting_up",
+              "value": "Préparation du réseau neuronal"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "setting_up",
+              "value": "Sare neuronala konfiguratzen"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "setting_up",
+              "value": "جاري إعداد الشبكة العصبية "
+            },
+            {
+              "lang": "lg-ita",
+              "name": "setting_up",
+              "value": "Configurazione della rete neurale"
+            },
+            {
+              "lang": "lg-por",
+              "name": "setting_up",
+              "value": "Configurando a rede neural"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "setting_up",
+              "value": "तंत्रिका सञ्जालको तयारी गर्दै"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "cpu_device",
+              "value": "More compatible, slower."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "cpu_device",
+              "value": "Más compatible, más lento."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "cpu_device",
+              "value": "Més compatible, més lent."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "cpu_device",
+              "value": "Bateragarriagoa, motelagoa."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "cpu_device",
+              "value": "Kompatibler, aber langsamer."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "cpu_device",
+              "value": "Πιο συμβατό, πιο αργό. "
+            },
+            {
+              "lang": "lg-ara",
+              "name": "cpu_device",
+              "value": " أكثر توافقًا، أبطأ."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "cpu_device",
+              "value": "Plus compatible, mais plus lent."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "cpu_device",
+              "value": "Più compatibile, più lento."
+            },
+            {
+              "lang": "lg-por",
+              "name": "cpu_device",
+              "value": "Mais compatível, mais lento."
+            },
+            {
+              "lang": "lg-nep",
+              "name": "cpu_device",
+              "value": "अझ मिल्दो, ढिलो।"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "procesing",
+              "value": "Procesando... espere."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "procesing",
+              "value": "Processing... wait."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "procesing",
+              "value": "Processant... espereu."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "procesing",
+              "value": "Prozesatzen... itxaron."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "procesing",
+              "value": "Wird verarbeitet... warten."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "procesing",
+              "value": "Επεξεργασία... περιμένετε."
+            },
+            {
+              "lang": "lg-ara",
+              "name": "procesing",
+              "value": "جاري المعالجة... انتظر."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "procesing",
+              "value": "Traitement en cours... veuillez patienter."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "procesing",
+              "value": "Elaborazione... attendere."
+            },
+            {
+              "lang": "lg-por",
+              "name": "procesing",
+              "value": "Processando... aguarde."
+            },
+            {
+              "lang": "lg-nep",
+              "name": "procesing",
+              "value": "प्रशोधन गर्दै... पर्खनुहोस्।"
             }
           ]
         ]
@@ -415,9 +800,9 @@
   "section_id": 29,
   "created_date": "2024-03-07 17:20:47",
   "section_tipo": "dd1340",
-  "modified_date": "2024-08-28 20:07:35",
+  "modified_date": "2025-07-21 21:39:18",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "modified_by_userID": 1
 }

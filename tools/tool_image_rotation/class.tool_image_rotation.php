@@ -30,6 +30,7 @@ class tool_image_rotation extends tool_common {
 			$background_color	= $options->background_color ?? '#ffffff';
 			$alpha				= $options->alpha?? null;
 			$rotation_mode		= $options->rotation_mode?? 'default';
+			$crop_area 			= $options->crop_area ?? null;
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
@@ -47,29 +48,75 @@ class tool_image_rotation extends tool_common {
 		// $value
 
 		$result = true;
-		foreach ($files_info as $value) {
+		if($degrees !== "0"){
+			foreach ($files_info as $value) {
 
-			if($value->quality === 'original'){
-				continue;
-			}
-			if($value->file_exist === true){
+				if($value->quality === 'original'){
+					continue;
+				}
+				if($value->file_exist === true){
 
-				$rotation_options = new stdClass();
-					$rotation_options->quality			= $value->quality;
-					$rotation_options->extension		= $value->extension;
-					$rotation_options->degrees			= $degrees;
-					$rotation_options->rotation_mode	= $rotation_mode;
-					$rotation_options->background_color	= $background_color;
-					$rotation_options->alpha			= $alpha ?? null;
+					$rotation_options = new stdClass();
+						$rotation_options->quality			= $value->quality;
+						$rotation_options->extension		= $value->extension;
+						$rotation_options->degrees			= $degrees;
+						$rotation_options->rotation_mode	= $rotation_mode;
+						$rotation_options->background_color	= $background_color;
+						$rotation_options->alpha			= $alpha ?? null;
 
-				// result boolean
-				$command_result = $component->rotate($rotation_options);
-				if (!empty($command_result)){
-					$result				= false;
-					$response->errors[]	= $command_result;
+					// result boolean
+					$command_result = $component->rotate($rotation_options);
+					if (!empty($command_result)){
+						$result				= false;
+						$response->errors[]	= $command_result;
+					}
 				}
 			}
 		}
+
+		// crop
+		if( isset($crop_area) && isset($crop_area->x) ){
+			$default_quality	= $component->get_default_quality();
+			$default_file		= $component->get_media_filepath($default_quality);
+			$default_size		= $component->get_image_dimensions($default_file);
+
+			foreach ($files_info as $value) {
+
+				if($value->quality === 'original'){
+					continue;
+				}
+				if($value->file_exist === true){
+
+					$current_file		= $component->get_media_filepath($value->quality, $value->extension);
+					$current_size		= $component->get_image_dimensions($current_file);
+					// get the area proportions
+					$width_proportion	= $current_size->width / $default_size->width;
+					$height_proportion	= $current_size->height / $default_size->height;
+					// set the area to crop with the proportions of the current image size
+					$current_crop_area = (object)[
+						'x'			=> $crop_area->x 		* $width_proportion,
+						'y'			=> $crop_area->y 		* $height_proportion,
+						'width'		=> $crop_area->width 	* $width_proportion,
+						'height'	=> $crop_area->height 	* $height_proportion
+					];
+
+					$crop_options = new stdClass();
+						$crop_options->quality			= $value->quality;
+						$crop_options->extension		= $value->extension;
+						$crop_options->crop_area		= $current_crop_area;
+
+					// result boolean
+					$command_result = $component->crop($crop_options);
+					if (!empty($command_result)){
+						$result				= false;
+						$response->errors[]	= $command_result;
+					}
+				}
+			}
+		}
+
+
+
 		// response
 		$response->result	= $result;
 		$response->msg		= ($result === true)
