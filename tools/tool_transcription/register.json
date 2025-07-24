@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 5,
+              "day": 21,
               "hour": 21,
-              "time": 65098935332,
+              "time": 65102996325,
               "year": 2025,
-              "month": 6,
-              "minute": 35,
-              "second": 32
+              "month": 7,
+              "minute": 38,
+              "second": 45
             }
           }
         ]
@@ -148,7 +148,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "3.0.2"
+          "3.0.3"
         ]
       }
     },
@@ -869,22 +869,22 @@
             {
               "lang": "lg-por",
               "name": "setting_up",
-              "value": "Preparar a rede neural"
+              "value": "Configurando a rede neural"
             },
             {
               "lang": "lg-ita",
               "name": "setting_up",
-              "value": "Preparazione della rete neurale"
+              "value": "Configurazione della rete neurale"
             },
             {
               "lang": "lg-deu",
               "name": "setting_up",
-              "value": "Vorbereiten des neuronalen Netzes"
+              "value": "Einrichten des neuronalen Netzwerks"
             },
             {
               "lang": "lg-ell",
               "name": "setting_up",
-              "value": "Προετοιμασία του νευρωνικού δικτύου"
+              "value": "Ρύθμιση του νευρωνικού δικτύου "
             },
             {
               "lang": "lg-nep",
@@ -1104,7 +1104,7 @@
             {
               "lang": "lg-fra",
               "name": "cpu_device",
-              "value": "Plus compatible, plus lent."
+              "value": "Plus compatible, mais plus lent."
             },
             {
               "lang": "lg-ita",
@@ -1134,12 +1134,12 @@
             {
               "lang": "lg-cat",
               "name": "procesing",
-              "value": "Procesant... espere."
+              "value": "Processant... espereu."
             },
             {
               "lang": "lg-deu",
               "name": "procesing",
-              "value": "Verarbeitung... Moment."
+              "value": "Wird verarbeitet... warten."
             },
             {
               "lang": "lg-ell",
@@ -1149,17 +1149,17 @@
             {
               "lang": "lg-fra",
               "name": "procesing",
-              "value": "Traitement... attendez."
+              "value": "Traitement en cours... veuillez patienter."
             },
             {
               "lang": "lg-ita",
               "name": "procesing",
-              "value": "Elaborazione... aspetta."
+              "value": "Elaborazione... attendere."
             },
             {
               "lang": "lg-por",
               "name": "procesing",
-              "value": "Processamento... espera."
+              "value": "Processando... aguarde."
             },
             {
               "lang": "lg-nep",
@@ -1210,6 +1210,36 @@
               "lang": "lg-por",
               "name": "large_turbo",
               "value": "Alta, rápido"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "setting_up",
+              "value": "Sare neuronala konfiguratzen"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "setting_up",
+              "value": "جاري إعداد الشبكة العصبية"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "cpu_device",
+              "value": "Bateragarriagoa, motelagoa."
+            },
+            {
+              "lang": "lg-ara",
+              "name": "cpu_device",
+              "value": "أكثر توافقًا، أبطأ."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "procesing",
+              "value": "Prozesatzen... itxaron."
+            },
+            {
+              "lang": "lg-ara",
+              "name": "procesing",
+              "value": "جاري المعالجة... انتظر."
             }
           ]
         ]
@@ -1265,7 +1295,7 @@
   "section_id": 28,
   "created_date": "2025-01-27 13:51:03",
   "section_tipo": "dd1340",
-  "modified_date": "2025-06-05 21:35:32",
+  "modified_date": "2025-07-21 21:38:45",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
