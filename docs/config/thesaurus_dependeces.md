@@ -22,6 +22,7 @@ The next table show the dependencies between main catalog tld and thesaurus tld.
 
 | Thesaurus name | Typology | tld | tch | tchi | ich | numisdata | oh | isad | dmm |
 | --- | --- | --- |  --- |  --- |  --- |  --- |  --- |  --- |  --- |
+| Art Style | Thematic | style | √ | * | * | * | * | * | * |
 | Chronology | Thematic | dc | √ | √ | √ | √ | √ | √ | √ |
 | Culture | Thematic | culture | √ | √ | √ | √ | x | x | x |
 | Deposition type | Thematic | depositiontype | x | x | x | √ | x | x | x |
@@ -30,11 +31,15 @@ The next table show the dependencies between main catalog tld and thesaurus tld.
 | Immovable property | Thematic | tchi | √ | √ | √ | √ | x | x | x |
 | Material | Thematic | material | √ | √ | √ | √ | x | x | x |
 | Onomastic | Thematic | on | √ | √ | √ | √ | √ | √ | √ |
+| Site category | Thematic | tchicategory | x | √ | x | √ | x | x | x |
+| Site context | Thematic | tchicontext | x | √ | x | √ | x | x | x |
 | Technique | Thematic | technique | √ | √ | √ | √ | x | x | x |
 | Thematic | Thematic | ts | √ | √ | √ | √ | √ | √ | √ |
+| Ceramic | Typology | ceramic | √ | * | x | * | x | x | x |
 | Object | Typology | object | √ | √ | √ | √ | x | x | x |
 | Flora | Typology | flora | √ | √ | √ | √ | x | x | x |
 | Fauna | Typology | fauna | √ | √ | √ | √ | x | x | x |
+| Numismatic | Typology | numismatic | √ | √ | x | √ | x | x | x |
 | ISAD(g) | Catalog | isad | x | x | x | x | x | √ | x |
 | Location | Ubications | ubication | √ | √ | x | √ | x | x | x |
 | Historical toponymy | Toponymy | htoponymy | √ | √ | x | √ | * | * | * |
