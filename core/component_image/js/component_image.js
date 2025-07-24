@@ -509,4 +509,28 @@ component_image.prototype.get_original_file_name = function( key=0 ) {
 	return quality_file_info
 }//end get_original_file_name
 
+
+
+/**
+* GET_ACTIVE_EXTENSIONS
+* mix the main extension and all alternative extension and return an array
+*
+* @return array
+*/
+component_image.prototype.get_active_extensions = function() {
+
+	const self = this
+
+	const extension					= self.context.features.extension
+	const alternative_extensions	= self.context.features.alternative_extensions || []
+
+	const active_extensions = [extension, ...alternative_extensions]
+
+	return active_extensions
+}//end get_active_extensions
+
+
+
+
+
 // @license-end
