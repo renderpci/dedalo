@@ -136,17 +136,17 @@ $global_start_time = hrtime(true);
 
 
 // debug test
-	if (DEVELOPMENT_SERVER) {
-		define('DEV_SERVER_DEFAULT_DELAY_MS', 12);
-		define('DEV_SERVER_SAVE_DELAY_MS', 300);
-		// Approximate real conditions by adding a small delay to the development servers,
-		// such as the local host.
-		usleep( DEV_SERVER_DEFAULT_DELAY_MS * 1000 ); // 12 ms
-		// delay save
-		if (isset($rqo->action) && $rqo->action==='save') {
-			usleep( DEV_SERVER_SAVE_DELAY_MS * 1000 ); // 300 ms
-		}
-	}
+	// if (DEVELOPMENT_SERVER) {
+	// 	define('DEV_SERVER_DEFAULT_DELAY_MS', 12);
+	// 	define('DEV_SERVER_SAVE_DELAY_MS', 300);
+	// 	// Approximate real conditions by adding a small delay to the development servers,
+	// 	// such as the local host.
+	// 	usleep( DEV_SERVER_DEFAULT_DELAY_MS * 1000 ); // 12 ms
+	// 	// delay save
+	// 	if (isset($rqo->action) && $rqo->action==='save') {
+	// 		usleep( DEV_SERVER_SAVE_DELAY_MS * 1000 ); // 300 ms
+	// 	}
+	// }
 
 
 

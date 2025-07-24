@@ -22,12 +22,13 @@ describe(`SECTION PUBLICATION IMAGE TEST`,  function() {
 	const section_tipo	= 'rsc170' // images rsc170
 	const section_id	= 1;
 
-	const options =  {
+	const options = {
 		tipo			: section_tipo,
 		section_tipo	: section_tipo,
 		mode			: 'edit',
 		model			: 'section',
-		section_id		: section_id
+		section_id		: section_id,
+		id_variant		: 'image_1_test'
 	};
 
 	let section
@@ -97,12 +98,13 @@ describe(`SECTION PUBLICATION IMAGE 2 TEST`,  function() {
 	const section_tipo	= 'rsc170' // images rsc170
 	const section_id	= 2;
 
-	const options =  {
+	const options = {
 		tipo			: section_tipo,
 		section_tipo	: section_tipo,
 		mode			: 'edit',
 		model			: 'section',
-		section_id		: section_id
+		section_id		: section_id,
+		id_variant		: 'image_2_test'
 	};
 
 	let section
@@ -217,12 +219,12 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 		}
 	]
 
-	const options =  {
+	const options = {
 		tipo			: section_tipo,
 		section_tipo	: section_tipo,
 		mode			: 'list',
 		model			: 'section',
-		request_config	: request_config
+		id_variant		: 'list_mode_test'
 	};
 
 	let section
@@ -230,6 +232,7 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 	it(`Create section`, async function() {
 
 		section = await get_instance(options)
+		
 		console.log('section:', section);
 
 		await section.build(true)
