@@ -19,6 +19,7 @@
 	--color_2: #9c6dd3;
 	--color_3: #6196c0;
 	--color_4: #b36f7c;
+	--color_5: #aaa50a;
 
 	.spinner {
 		border-top-color: @tool_color;
@@ -170,6 +171,8 @@
 
 					.value {
 						font-weight: bold;
+						display: flex;
+						align-items: center;
 
 						&.fail {
 							color: @color_danger;
@@ -186,20 +189,36 @@
 						}
 					}
 
+					.value_info {
+						margin-left: 1rem;
+						font-weight: 300;
+						font-size: 0.9rem;
+						color: @color_grey_8;
+					}
+
+					.button.tree {
+						zoom: 0.9;
+						vertical-align: middle;
+						margin-left: 0.5rem;
+						background-color: @color_orange_dedalo;
+					}
+
 					.pre {
 						z-index: 0;
 					}
 
 					.fields_grid_value.label {
-						margin-left: 1rem;
+						margin-left: 3rem;
 					}
 
 					.fields_grid_value.link {
 						cursor: pointer;
+
 						&:hover {
 							color: darken(@tool_color, 50%);
 							font-weight: 400;
 						}
+
 						&:active {
 							opacity: 0.4;
 						}
@@ -207,6 +226,8 @@
 
 					.value.link {
 						padding: 0px;
+						display: inline-block;
+
 						&:after {
 							right: unset;
 							padding-left: 3rem;
@@ -217,6 +238,7 @@
 					.fields_grid_value_obs {
 						line-height: 0.95rem;
 						padding-left: 1.25rem;
+						margin-left: 2rem;
 						font-size: 80%;
 						color: @color_grey_9;
 					}
@@ -281,20 +303,26 @@
 				}
 
 				&:nth-of-type(4) {
-					>.publication_items_grid .publication_button {
+					>.publication_items_grid .container_bottom >.buttons_container >.publication_button {
 						background-color: var(--color_2);
 					}
 				}
 
 				&:nth-of-type(6) {
-					>.publication_items_grid .publication_button {
+					>.publication_items_grid .container_bottom >.buttons_container >.publication_button {
 						background-color: var(--color_3);
 					}
 				}
 
 				&:nth-of-type(8) {
-					>.publication_items_grid .publication_button {
+					>.publication_items_grid .container_bottom >.buttons_container >.publication_button {
 						background-color: var(--color_4);
+					}
+				}
+
+				&:nth-of-type(10) {
+					>.publication_items_grid .container_bottom >.buttons_container >.publication_button {
+						background-color: var(--color_5);
 					}
 				}
 			}
