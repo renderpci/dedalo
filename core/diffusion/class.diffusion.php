@@ -138,10 +138,11 @@ abstract class diffusion  {
 	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN, $connection_status=false ) : object {
 
 		// cache
-			static $diffusion_map;
-			if (isset($diffusion_map)) {
-				return $diffusion_map;
-			}
+		static $diffusion_map_cache;
+		$cache_key = $diffusion_domain_name .'_' . to_string($connection_status);
+		if (isset($diffusion_map_cache[$cache_key])) {
+			return $diffusion_map_cache[$cache_key];
+		}
 
 		$diffusion_map = new stdClass();
 
@@ -174,140 +175,214 @@ abstract class diffusion  {
 
 			$diffusion_map->{$diffusion_group_tipo} = array();
 
-			#
-			# DIFFUSION_ELEMENT
-			# Search inside current diffusion_group and iterate all diffusion_element
+			// DIFFUSION_ELEMENT
+			// Search inside current diffusion_group and iterate all diffusion_element
 			$ar_diffusion_elements = [];
 
 			// 1 get the diffusion element alias
-			$ar_diffusion_element_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $model_name='diffusion_element_alias', $relation_type='children', $search_exact=true);
-
+			$ar_diffusion_element_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$diffusion_group_tipo,
+				'diffusion_element_alias', // model_name
+				'children', // relation_type
+				true // search_exact
+			);
+			// Add the resolved real diffusion_element tipos
 			if(!empty($ar_diffusion_element_alias_tipo)){
-				foreach ($ar_diffusion_element_alias_tipo as $element_alias) {
-					$ar_real_diffusion_element = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_alias, 'diffusion_element', 'termino_relacionado', false);
-					$ar_diffusion_elements[] = reset($ar_real_diffusion_element);
+				foreach ($ar_diffusion_element_alias_tipo as $diffusion_element_alias_tipo) {
+					$ar_real_diffusion_element = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$diffusion_element_alias_tipo,
+						'diffusion_element', // model_name
+						'termino_relacionado', // relation_type
+						false // search_exact
+					);
+					$real_diffusion_element_tipo = $ar_real_diffusion_element[0] ?? null;
+					if ($real_diffusion_element_tipo) {
+						$ar_diffusion_elements[] = $real_diffusion_element_tipo;
+					}
 				}
 			}
+
 			// 2 get direct diffusion element
-			$direct_diffusion_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_group_tipo, $model_name='diffusion_element', $relation_type='children', $search_exact=true);
+			$direct_diffusion_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$diffusion_group_tipo,
+				'diffusion_element', // model_name
+				'children', // relation_type
+				true // search_exact
+			);
 
 			// 3 mix to final array of diffusion_elements
-			$ar_diffusion_element_tipo = !empty($ar_diffusion_elements)
-				? array_merge($ar_diffusion_elements, $direct_diffusion_elements)
-				: $direct_diffusion_elements;
+			$ar_diffusion_element_tipo = array_merge($ar_diffusion_elements, $direct_diffusion_elements);
 
-			foreach ($ar_diffusion_element_tipo as $element_tipo) {
+			foreach ($ar_diffusion_element_tipo as $diffusion_element_tipo) {
 
-				$RecordObj_dd			= new RecordObj_dd($element_tipo);
-				$properties				= $RecordObj_dd->get_propiedades(true);
-				$diffusion_class_name	= isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
-				$name					= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, false);
-				if (empty($name)) {
-					$name = '<em>'.RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_STRUCTURE_LANG, true, true).'</em>';
-				}
+				$RecordObj_dd	= new RecordObj_dd($diffusion_element_tipo);
+				$properties		= $RecordObj_dd->get_propiedades(true);
 
-				# Database of current diffusion element
-				$ar_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database', $relation_type='children', $search_exact=true);
+				// class name. Class handler to current diffusion element (e.g. diffusion_mysql, diffusion_rdf, diffusion_xml, ..)
+				$diffusion_class_name = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
 
-				$diffusion_database_tipo = !empty($ar_children)
-					? reset($ar_children)
-					: null;
+				// name (e.g. 'Web numisdata'). Try to resolve it with DEDALO_STRUCTURE_LANG
+				$name = RecordObj_dd::get_termino_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, false)
+					?? '<em>'.RecordObj_dd::get_termino_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, true).'</em>'; // empty case
 
-				// database_alias case try
+				// database name
+				$with_database_classes = ['diffusion_mysql','diffusion_socrata'];
+				if (in_array($diffusion_class_name, $with_database_classes)) {
+
+					// tipo of the real database from current diffusion element (e.g. 'web_numisdata')
+					$diffusion_database_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$diffusion_element_tipo,
+						'database', // model_name
+						'children', // relation_type
+						true // search_exact
+					)[0] ?? null;
+
+					// database_alias case try
 					if (empty($diffusion_database_tipo)) {
-						$ar_children			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='database_alias', $relation_type='children', $search_exact=true);
-						$database_alias_tipo	= reset($ar_children);
-						$ar_real_database_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', false);
+						// Get database alias
+						$database_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$diffusion_element_tipo,
+							'database_alias',
+							'children',
+							true // search_exact
+						)[0] ?? null;
+						if (empty($database_alias_tipo)) {
+							debug_log(__METHOD__
+								. " Ignored diffusion element without real database or database_alias. Define a database element to continue." . PHP_EOL
+								. ' diffusion_element_tipo: ' . to_string($diffusion_element_tipo)
+								, logger::ERROR
+							);
+							continue;
+						}
+						// Try to resolve real database to ensure if properly configured
+						$diffusion_database_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$database_alias_tipo,
+							'database',
+							'termino_relacionado',
+							false
+						)[0] ?? null;
+						if (empty($diffusion_database_tipo)) {
+							debug_log(__METHOD__
+								. " Unable to resolve the real database from database_alias. Configure your database_alias to continue" . PHP_EOL
+								. ' database_alias tipo: ' . to_string($diffusion_database_tipo)
+								, logger::ERROR
+							);
+							continue;
+						}
 
-						$diffusion_database_tipo = reset($ar_real_database_tipo);
+						// Get db name from the alias
 						$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($database_alias_tipo, DEDALO_STRUCTURE_LANG, true, false);
-						// dump($ar_real_database_tipo, ' ar_real_database_tipo ++ diffusion_database_name: '.to_string($diffusion_database_name));
-
-						// overwrite element_tipo (!)
-						// $element_tipo = $diffusion_database_tipo;
 
 					}else{
+
+						// Get db name from real database item
 						$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					}
+				}//end if (in_array($diffusion_class_name, $with_database_classes))
 
+				// Create the diffusion map element
 				$item = new stdClass();
-					$item->element_tipo		= $element_tipo;
+					$item->element_tipo		= $diffusion_element_tipo;
+					$item->model			= RecordObj_dd::get_modelo_name_by_tipo($diffusion_element_tipo,true);
 					$item->name				= $name;
 					$item->class_name		= $diffusion_class_name;
-					$item->database_name	= $diffusion_database_name;
-					$item->database_tipo	= $diffusion_database_tipo;
+					$item->database_name	= $diffusion_database_name ?? null;
+					$item->database_tipo	= $diffusion_database_tipo ?? null;
 
-				// add connection DDBB status. Check connection is reachable
+					// add connection DDBB status. Check connection is reachable
 					if ($connection_status===true) {
-						switch ($item->class_name) {
-							case 'diffusion_mysql':
-								// check connection
-								try {
-
-									if (!isset($conn) || $conn==false) {
-										// try again. Note that if there are multiple connections, they must be checked for each database.
-										$conn = DBi::_getConnection_mysql(
-											MYSQL_DEDALO_HOSTNAME_CONN,
-											MYSQL_DEDALO_USERNAME_CONN,
-											MYSQL_DEDALO_PASSWORD_CONN,
-											$item->database_name,
-											MYSQL_DEDALO_DB_PORT_CONN,
-											MYSQL_DEDALO_SOCKET_CONN
-										);
-									}
-
-								} catch (Exception $e) {
-									$conn = false;
-									debug_log(__METHOD__
-										."  Caught exception on connect to MySQL (database_name: $item->database_name): ". PHP_EOL
-										. $e->getMessage()
-										, logger::WARNING
-									);
-								}
-								if ($conn===false) {
-									$item->connection_status = (object)[
-										'result'	=> false,
-										'msg'		=> 'Unable to connect to database '. $item->database_name
-									];
-								}else{
-									// check database
-									$db_available = diffusion_mysql::database_exits($item->database_name);
-									if ($db_available===true) {
-										$item->connection_status = (object)[
-											'result'	=> true,
-											'msg'		=> 'Database is ready.'
-										];
-									}else{
-										$item->connection_status = (object)[
-											'result'	=> false,
-											'msg'		=> 'Database is NOT ready.'
-										];
-									}
-								}
-								// error log when fails
-									if ($item->connection_status->result===false) {
-										debug_log(__METHOD__
-											." ".$item->connection_status->msg . ' ['.$item->database_name.']'
-											, logger::WARNING
-										);
-									}
-								break;
-
-							default:
-								// ignore
-								break;
-						}
-					}//end if ($connection_status===true)
+						$item->connection_status = diffusion::get_connection_status( $item );
+					}
 
 				// add diffusion_map item
 					$diffusion_map->{$diffusion_group_tipo}[] = $item;
-			}//end foreach ($ar_diffusion_element_tipo as $element_tipo)
+			}//end foreach ($ar_diffusion_element_tipo as $diffusion_element_tipo)
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
+
+		// cache
+		$diffusion_map_cache[$cache_key] = $diffusion_map;
 
 
 		return $diffusion_map;
 	}//end get_ar_diffusion_map
+
+
+
+	/**
+	* GET_CONNECTION_STATUS
+	* Check the status of the connection for the given $item->class_name
+	* E.g. 'diffusion_mysql' => {result: true, msg: 'Database is ready'}
+	* @param object $item
+	* @return object|null $connection_status
+	*/
+	public static function get_connection_status( object $item ) : ?object {
+
+		$connection_status = null;
+
+		switch ($item->class_name) {
+
+			case 'diffusion_mysql':
+				// check connection
+				try {
+
+					if (!isset($conn) || $conn==false) {
+						// try again. Note that if there are multiple connections, they must be checked for each database.
+						$conn = DBi::_getConnection_mysql(
+							MYSQL_DEDALO_HOSTNAME_CONN,
+							MYSQL_DEDALO_USERNAME_CONN,
+							MYSQL_DEDALO_PASSWORD_CONN,
+							$item->database_name,
+							MYSQL_DEDALO_DB_PORT_CONN,
+							MYSQL_DEDALO_SOCKET_CONN
+						);
+					}
+
+				} catch (Exception $e) {
+					$conn = false;
+					debug_log(__METHOD__
+						."  Caught exception on connect to MySQL (database_name: $item->database_name): ". PHP_EOL
+						. $e->getMessage()
+						, logger::WARNING
+					);
+				}
+				if ($conn===false) {
+					$connection_status = (object)[
+						'result'	=> false,
+						'msg'		=> 'Unable to connect to database '. $item->database_name
+					];
+				}else{
+					// check database
+					$db_available = diffusion_mysql::database_exits($item->database_name);
+					if ($db_available===true) {
+						$connection_status = (object)[
+							'result'	=> true,
+							'msg'		=> 'Database is ready.'
+						];
+					}else{
+						$connection_status = (object)[
+							'result'	=> false,
+							'msg'		=> 'Database is NOT ready.'
+						];
+					}
+				}
+				// error log when fails
+					if ($connection_status->result===false) {
+						debug_log(__METHOD__
+							." ".$connection_status->msg . ' ['.$item->database_name.']'
+							, logger::WARNING
+						);
+					}
+				break;
+
+			default:
+				// ignore
+				break;
+		}
+
+
+		return $connection_status;
+	}//end get_connection_status
 
 
 
