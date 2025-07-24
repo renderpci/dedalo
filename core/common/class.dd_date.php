@@ -17,7 +17,7 @@ class dd_date extends stdClass {
 	// Virtual month days
 	static $virtual_month_days = 31;
 	// errors status
-	// public $errors;
+	public $errors = [];
 	// day
 	// protected $day;
 	// // month
@@ -84,7 +84,8 @@ class dd_date extends stdClass {
 				}else{
 
 					debug_log(__METHOD__
-						.' Ignored received property: '.$key.' not defined as set method.'. PHP_EOL
+						.' Ignored received property: "'.$key.'". Is not defined as set method.'. PHP_EOL
+						.' property: ' . to_string($key) . PHP_EOL
 						.' data: ' . to_string($data)
 						, logger::ERROR
 					);
@@ -102,6 +103,32 @@ class dd_date extends stdClass {
 				$this->errors[] = 'Invalid value for day value: '.$this->day;
 			}
 	}//end __construct
+
+
+	/**
+	* SET_ERRORS
+	* Store array of errors
+	* @param int $value
+	* @return void
+	*/
+	public function set_errors(mixed $value) : void {
+
+		$this->errors = is_array($value)
+			? $value
+			: [$value];
+	}//end set_errors
+
+
+
+	/**
+	* GET_ERRORS
+	* Get the errors property value
+	* @return array
+	*/
+	public function get_errors() : array {
+
+		return $this->errors;
+	}//end get_errors
 
 
 
