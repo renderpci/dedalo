@@ -5,7 +5,8 @@
 
 
 // imports
-	import {ui} from '../../../core/common/js/ui.js'
+	import { ui } from '../../../core/common/js/ui.js'
+	import { render_tool_image_crop } from './render_tool_image_crop.js'
 
 
 
@@ -73,6 +74,15 @@ const get_content_data = async function(self) {
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
+	// buttons_container
+		const buttons_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'buttons_container',
+			parent			: fragment
+		})
+		const buttons_wrapper = get_buttons(self)
+		buttons_container.appendChild(buttons_wrapper)
+
 	// main_element_container
 		const main_element_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -91,6 +101,7 @@ const get_content_data = async function(self) {
 		// main_element_image. Temporal image to show while main_element is rebuilt and rendered
 			const main_element_image = ui.create_dom_element({
 				element_type	: 'img',
+				class_name		: 'noevents',
 				parent			: image_container
 			})
 			// set pointer
@@ -146,14 +157,8 @@ const get_content_data = async function(self) {
 				parent			: main_element_container
 			})
 
-	// buttons_container
-		const buttons_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'buttons_container',
-			parent			: fragment
-		})
-		const buttons_wrapper = get_buttons(self)
-		buttons_container.appendChild(buttons_wrapper)
+			self.axis_container	= axis_container
+			self.circle_axis	= circle_axis
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -174,6 +179,18 @@ const get_content_data = async function(self) {
 const get_buttons = function(self) {
 
 	const fragment = new DocumentFragment()
+
+	// nodes pointer
+	// storage of the nodes to be used for check and change status.
+		const nodes = {}
+
+	// status
+		const status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_container'
+		})
+		//save the pointer
+			nodes.status_container = status_container
 
 	// slider_range
 		const slider_container = ui.create_dom_element({
@@ -218,8 +235,10 @@ const get_buttons = function(self) {
 					output.value = range.value
 					self.main_element_image.style.transform = "rotate("+ (range.value % 360) +"deg)"
 					if(expanded_checkbox.checked === true){
-						const image_size = self.main_element_image.getBoundingClientRect()
-						self.image_container.style.width	= image_size.width +'px'
+						const image_size		= self.main_element_image.getBoundingClientRect()
+						// Resize the container_size to fit
+						self.image_container.style.width = `${image_size.width}px`;
+						self.image_container.style.height = `${image_size.height}px`;
 					}
 				})
 
@@ -299,23 +318,69 @@ const get_buttons = function(self) {
 					if(e.target.checked === true){
 						const image_size = self.main_element_image.getBoundingClientRect()
 							self.image_container.style.width	= image_size.width +'px'
+							self.image_container.style.height	= image_size.height +'px'
 					}else{
 						self.image_container.style.width	= self.image_container.dd_options.width +'px'
 						self.image_container.style.height	= self.image_container.dd_options.height +'px'
 					}
 				})
 
+	// options container
+	const options_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'options_container',
+		parent			: fragment
+	})
+
+	// crop button
+		const crop_button_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'crop_button_container',
+			parent			: options_container
+		})
+
+		// crop_button
+			const crop_button = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light crop_button',
+				// inner_html		:  self.get_tool_label('crop_image') || 'Crop image',
+				parent			: crop_button_container
+			})
+
+			const crop_button_click_handler = function(){
+
+				if(crop_button.active === true){
+					crop_button.active = false
+					crop_button.classList.remove('active')
+					render_tool_image_crop.destroy()
+					return
+				}
+				crop_button.active = true
+				crop_button.classList.add('active')
+
+				self.axis_container.classList.add('hide')
+				self.circle_axis.classList.add('hide')
+
+				render_tool_image_crop.build({
+					container				: self.image_container,
+					image					: self.main_element_image,
+					status_container		: status_container,
+					crop_button_container	: crop_button_container
+				})
+			}
+			crop_button.addEventListener('click', crop_button_click_handler)
+
 	// apply_rotation_button_container
 		const apply_rotation_button_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'apply_rotation_button_container',
-			parent			: fragment
+			parent			: options_container
 		})
 
 		// button_apply_rotation
 			const button_apply_rotation = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning gear apply_rotation',
+				class_name		: 'light gear apply_rotation',
 				inner_html		: get_label.create || 'Create',
 				parent			: apply_rotation_button_container
 			})
@@ -326,7 +391,8 @@ const get_buttons = function(self) {
 					rotation_degrees	: rotation_degrees,
 					background_color	: color_picker.value,
 					alpha				: alpha_checkbox.checked,
-					rotation_mode		: expanded_checkbox.checked ? 'expanded' : 'default'
+					rotation_mode		: expanded_checkbox.checked ? 'expanded' : 'default',
+					crop_area			: render_tool_image_crop.crop_area || null,
 				})
 				if (result===true) {
 					// reload the image
@@ -335,20 +401,147 @@ const get_buttons = function(self) {
 					output.value	= 0
 					range.value		= 0
 					self.main_element_image.style.transform = null
+					// reset the crop
+					render_tool_image_crop.reset_selection()
 				}
 				self.node.content_data.classList.remove('loading')
 			})
 
-	// buttons_wrapper
-		// const buttons_wrapper = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'buttons_wrapper'
-		// })
-		// buttons_wrapper.appendChild(fragment)
+	// remove background
+		const remove_background_button_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'remove_background_button_container',
+			parent			: options_container
+		})
 
+		// button_remove_background
+			const button_remove_background = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light button_remove_background',
+				inner_html		:  self.get_tool_label('remove_background') || 'Remove background',
+				parent			: remove_background_button_container
+			})
+
+			//save the pointer
+			nodes.button_remove_background = button_remove_background
+
+		// fire the remove background process
+		const button_remove_background_click_handler = async function(e){
+			e.stopPropagation()
+
+			// Get the most quality image, mainly the origianl quality
+			const image_file = ( self.main_element.get_quality_file_info('original') )
+				? self.main_element.get_quality_file_info('original')
+				: (self.main_element.get_quality_file_info('modified'))
+					? self.main_element.get_quality_file_info('modified')
+					: self.main_element.get_quality_file_info('1.5MB')
+
+			if( !image_file ){
+				return
+			}
+			// set the image URL to be used in the process worker
+			const image = DEDALO_MEDIA_URL + image_file?.file_path
+			nodes.main_element_image = self.main_element_image
+
+			// check for browser requirements. This check allows Edge (Chromium) too
+			const is_chrome137_or_higher = () => {
+				if (navigator.userAgentData) {
+					const brands = navigator.userAgentData.brands;
+					const chromeBrand = brands.find(b => b.brand === "Google Chrome" || b.brand === "Chromium");
+
+					if (chromeBrand) {
+						const version = parseInt(chromeBrand.version, 10);
+						return version >= 137;
+					}
+				}
+
+				// Fallback to userAgent
+				const ua = navigator.userAgent;
+				const match = ua.match(/Chrome\/(\d+)/i);
+				if (match && match[1]) {
+					const version = parseInt(match[1], 10);
+					return version >= 137;
+				}
+
+				return false;
+			}
+			if (!is_chrome137_or_higher()) {
+				if(!confirm("This feature requires Chrome version 136 or newer. Continue?")) {
+					return false
+				}
+			}
+
+			if(button_remove_background.active === false){
+				return
+			}
+			const engine = 'briaai/RMBG-1.4' // 'Xenova/rmbg-1.4'
+			if(!engine){
+				return
+			}
+			button_remove_background.classList.add('disable')
+			button_remove_background.blur()
+
+			// options to be sent to engine
+			const background_removal_options = {
+				self_caller			: self.main_element,
+				engine				: engine,
+				image				: image,
+				original_file_name	: self.main_element.get_original_file_name(),
+				nodes				: nodes
+			}
+
+			// process with the engine
+			// type = browser -> (Default) the engine will be use the default transformer process in client browser
+			// return a Promise with the data to be saved into transcription component.
+			self.automatic_background_removal(background_removal_options)
+			.then( async (response)=>{
+
+				// set the status done
+				button_remove_background.classList.remove('disable')
+				const msg = self.get_tool_label('backgroun_removal_completed') || 'Background removal completed.';
+				status_container.innerHTML = `<span class="success_text">${msg}</span>`;
+
+				// // create the image
+				// const image = URL.createObjectURL(blob)
+				await self.main_element.build(true)
+
+				// Get the valid extensions and check if any match with the images in the component
+				// The process only show the result correctly when you have a transparent format as default extension
+				// or in alternative extensions in the constant `DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS` in `config.php`
+				const supported_formats = ['avif','png']
+				const active_extensions = self.main_element.get_active_extensions()
+
+				const valid_transparent_extension = supported_formats.find(item => active_extensions.includes(item))
+				// if the config has not valid transparent format use the default extension to get the processed image.
+				const extension = (valid_transparent_extension)
+					? valid_transparent_extension
+					: self.main_element.context.features.extension
+
+				// get the processed image file
+				const image_file = self.main_element.get_quality_file_info('1.5MB', extension)
+
+				if( !image_file ){
+					return
+				}
+				// asing the new processed image to the tool to show it
+				const image = DEDALO_MEDIA_URL + image_file?.file_path
+				nodes.main_element_image.src = image;
+			})
+		}
+		button_remove_background.addEventListener('click', button_remove_background_click_handler)
+
+	// status container set its parent
+		options_container.appendChild(status_container)
 
 	return fragment
 }//end get_buttons
+
+
+
+
+const get_crop_interface = function(self){
+
+}
 
 
 

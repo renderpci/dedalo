@@ -26,19 +26,23 @@
 		position: relative;
 
 		>.main_element_container {
+			display: flex;
+			justify-content: center;
 			overflow: hidden;
 			width: 100%;
 			text-align: center;
 			position: relative;
-			margin-top: 2rem;
-			margin-bottom: 2rem;
+			margin-top: 1.5rem;
+			// margin-bottom: 0.5rem;
 			background-color: @color_grey_14;
 
 			>.image_container{
+				display: flex;
+				justify-content: center;
+				align-content: center;
+				align-items: center;
+				position: relative;
 				overflow: hidden;
-				display: inline-block;
-				border-left: 0.01rem solid @color_grey_9;
-				border-right: 0.01rem solid @color_grey_9;
 				background-color: @color_white ;
 
 				&.checkborad{
@@ -46,6 +50,31 @@
 					background-size: 2rem;
 					background-color: @color_grey_9;
 				}
+
+				.crop_selection {
+					position: absolute;
+					border: 2px dashed rgba(255,255,255,0.8);
+					box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+					display: none;
+					cursor: move;
+				}
+				.resize_handle {
+					position: absolute;
+					width: 10px;
+					height: 10px;
+					background: white;
+					border: 1px solid black;
+					z-index: 2;
+				}
+				.nw { top: -5px; left: -5px; cursor: nw-resize; }
+				.ne { top: -5px; right: -5px; cursor: ne-resize; }
+				.sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+				.se { bottom: -5px; right: -5px; cursor: se-resize; }
+				.n { top: -5px; left: calc(50% - 5px); cursor: n-resize; }
+				.s { bottom: -5px; left: calc(50% - 5px); cursor: s-resize; }
+				.w { left: -5px; top: calc(50% - 5px); cursor: w-resize; }
+				.e { right: -5px; top: calc(50% - 5px); cursor: e-resize; }
+
 			}
 
 			>.axis_container {
@@ -90,7 +119,7 @@
 		// buttons and preview container
 		>.buttons_container {
 			width: 100%;
-			z-index: 20;
+			z-index: unset;
 			background-color: @color_white;
 			display: flex;
 			color: @color_grey_9;
@@ -100,7 +129,7 @@
 			flex-direction: column;
 			align-content: center;
 			align-items: center;
-			padding-bottom: 2rem;
+
 			padding-top: 1rem;
 
 			.slider_container {
@@ -176,13 +205,157 @@
 				margin-right: 0.3em;
 			}
 
-			.apply_rotation_button_container{
-				margin-top: 2rem ;
-			}
+			.options_container{
+				z-index: 0;
+				margin-top: 1rem;
+				display: flex;
+				flex-wrap: wrap;
+				flex-direction: row;
+				align-items: center;
+				justify-content: center;
 
-			.apply_rotation{
-				background-color: @tool_color;
-				border: @tool_color;
+				.crop_button{
+					background-image: url('../img/crop.svg');
+					background-size: 1.9rem;
+					background-repeat: no-repeat;
+					background-position : center ;
+					width: 5rem;
+					margin: 1rem;
+					height: 3em;
+					background-color: unset;
+
+					&.active {
+
+						background-color: @tool_color;
+						background-image: unset;
+
+						&::after {
+							content: "";
+							mask: url(../img/crop.svg) no-repeat center;
+							mask-size: 1.9rem;
+							height: 100%;
+							width: 100%;
+							background-color: @color_white;
+						}
+					}
+				}
+
+				.apply_rotation{
+					width: 14rem;
+					margin: 1rem;
+					height: 3em;
+					position: relative;
+					border-radius: 8px;
+					box-shadow: 0 0 0 1px @color_grey_16;
+					background: @color_grey_15;
+
+					&:hover {
+						background-color: @tool_color;
+						border-color: darken(@tool_color, 10%);
+						color: @color_white;
+					}
+				}
+
+				.remove_background_button_container {
+					display: flex;
+					flex-direction: column;
+					align-content: center;
+					align-items: center;
+					flex-wrap: wrap;
+					position: relative;
+
+					>.button_remove_background {
+						width: 14rem;
+						margin: 1rem;
+						height: 3em;
+						position: relative;
+						border-radius: 8px;
+	  					box-shadow: 0 0 0 1px @color_grey_16;
+	  					background: @color_grey_15;
+
+						&:hover {
+							background-color: @tool_color;
+							border-color: darken(@tool_color, 10%);
+							color: @color_white;
+
+						}
+
+						&.disable {
+							pointer-events: none;
+
+							&::after {
+								pointer-events: none;
+								position: absolute;
+								content: "";
+								top: 0px;
+								left: 0;
+								right: 0;
+								z-index: -1;
+								height: 100%;
+								width: 100%;
+								filter: blur(7px);
+								background: linear-gradient(
+									60deg,
+									#ffb7c2,
+									#ff5770,
+									#e4428d,
+									#c42da8,
+									#9e16c3,
+									#6501de,
+									#9e16c3,
+									#c42da8,
+									#e4428d,
+									#ff5770,
+									#ffb7c2
+								);
+								background-size: 200% 200%;
+								animation: animateGlow 2.15s linear infinite;
+							}
+						}
+
+						@keyframes animateGlow {
+							0% {
+								background-position: 0% 50%;
+							}
+							100% {
+								background-position: 200% 50%;
+							}
+						}
+					}
+				}
+
+				>.status_container {
+					width: 100%;
+					text-align: center;
+					font-size: 1.3rem;
+					font-weight: 200;
+					border-radius: 8px;
+					padding: 0.5rem;
+					height: 1.5em;
+					overflow: hidden;
+					// margin-bottom: 0.5rem;
+
+					&.loading_status {
+						color: @color_grey_7;
+						font-family: monospace;
+					}
+
+					&.processing {
+						color: @color_green_success;
+						font-weight: 400;
+						animation: 1s blink ease infinite;
+						animation-direction: alternate;
+					}
+					@keyframes blink {
+
+						from {
+							opacity: 1;
+						}
+						to {
+							opacity: 0;
+						}
+					}
+				}
 			}
 		}//end .buttons_container
 
