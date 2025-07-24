@@ -189,9 +189,15 @@ class tool_diffusion extends tool_common {
 						}
 					}
 
+				$table_tipo = isset($section_tables_map->from_alias) && $section_tables_map->from_alias
+					? $section_tables_map->from_alias
+					: ($section_tables_map->table ?? null);
+
 				$data_item = (object)[
-					'database'				=> $section_tables_map->database_name,
+					'database'				=> $section_tables_map->database_name ?? null,
+					'database_tipo'			=> $section_tables_map->database_tipo ?? null,
 					'table'					=> $section_tables_map->name,
+					'table_tipo'			=> $table_tipo,
 					'fields'				=> $table_fields,
 					'section_tables_map'	=> $section_tables_map,
 					'table_fields_info'		=> $table_fields_info,
