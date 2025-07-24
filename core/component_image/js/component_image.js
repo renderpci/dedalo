@@ -470,4 +470,24 @@ component_image.prototype.get_default_file_info = function(key=0) {
 
 
 
+/**
+* GET_QUALITY_FILE_INFO
+* Select specific quality information of the given extension
+*
+* @param string quality
+* @param string extension
+* @param int key
+* @return object|null default_file_info
+*/
+component_image.prototype.get_quality_file_info = function( quality='original', extension='jpg', key=0) {
+
+	const self = this
+
+	const quality_file_info = (quality && self.data.value[key])
+		? self.data.value[key].files_info.find(el => el.quality === quality && el.extension === extension)
+		: null
+
+	return quality_file_info
+}//end get_quality_file_info
+
 // @license-end
