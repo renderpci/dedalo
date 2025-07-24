@@ -1187,6 +1187,46 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
+	* CROP
+	* crops the given quality image file
+	* @param object $options
+	* {
+	* 	quality 	: 'modified',
+	* 	extension 	: 'png',
+	* 	crop_area 	: {
+	* 		x : x 			// Starting X position
+	* 		y : y 			// Starting Y position
+	* 		width : width 	// Crop width
+	* 		height : height // Crop height
+	*	}
+	* }
+	* @return string $result
+	*/
+	public function crop( $options) : ?string {
+
+		$quality			= $options->quality ?? null;
+		$extension			= $options->extension ?? null;
+		$crop_area			= $options->crop_area;
+
+		// get the source file path
+		$source = $this->get_media_filepath($quality, $extension);
+
+		// fallback target to source (overwrite file)
+		$target = $source;
+
+		$crop_options = new stdClass();
+			$crop_options->source			= $source;
+			$crop_options->target			= $target;
+			$crop_options->crop_area		= $crop_area;
+
+		$command_result = ImageMagick::crop($crop_options);
+
+		return $command_result;
+	}//end crop
+
+
+
+	/**
 	* CONVERT_QUALITY
 	* Creates a version of source image file with target quality
 	* using ImageMagick.
