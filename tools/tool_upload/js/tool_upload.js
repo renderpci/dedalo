@@ -30,6 +30,7 @@ export const tool_upload = function () {
 	this.events_tokens	= null
 	this.type			= null
 	this.caller			= null
+	this.service_upload = null
 
 	this.max_size_bytes	= null
 }//end tool_upload
@@ -114,7 +115,7 @@ tool_upload.prototype.build = async function(autoload=false) {
 
 
 /**
-* PROCESS_UPLOADED_FILE
+* PROCESS_UPLOADED_FILE_CONTROLLER
 * @param object file_data
 * Sample:
 * {
@@ -133,13 +134,90 @@ tool_upload.prototype.build = async function(autoload=false) {
 * @return promise
 * 	Resolve: object API response
 */
-tool_upload.prototype.process_uploaded_file = async function(file_data, process_options) {
+tool_upload.prototype.process_uploaded_file_controller = async function(file_data, process_options) {
 
 	const self = this
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'process_uploaded_file')
+
+	// process_file_options
+		const process_file_options = {
+			file_data		: file_data,
+			process_options : process_options,
+			caller			: self,
+			tipo			: self.caller.tipo,
+			section_tipo	: self.caller.section_tipo,
+			section_id		: self.caller.section_id,
+			caller_type		: self.caller.context.type, // like 'tool' or 'component'. Switch different process actions on tool_upload class
+			quality			: self.caller.context.target_quality || self.caller.context.features.default_target_quality || null, // only for components
+			target_dir		: self.caller.context.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
+		}
+
+
+	// call to the API, fetch data and get response
+		const api_response = await process_uploaded_file( process_file_options )
+
+	// events
+		event_manager.publish('process_uploaded_file_done_' + self.id, api_response)
+
+
+	return api_response
+}//end process_uploaded_file_controller
+
+
+
+
+/**
+* PROCESS_UPLOADED_FILE
+* @param object options
+* {
+* 	file_data : {
+*		error		: 0
+*		extension	: "tiff"
+*		name		: "proclamacio.tiff"
+*		size		: 184922784
+*		tmp_name	: "/hd/media/upload/service_upload/tmp/image/phpPJQvCp"
+*		type		: "image/tiff"
+* 	},
+*	process_options : {
+*	 	ocr			: true
+*	 	ocr_lang	: "lg-spa"
+*	 },
+* 	caller : {
+* 		type	: "tool",
+		model	: "tool_upload"
+* 	},
+* 	tipo			: "rsc29",
+* 	section_tipo	: "rsc170",
+* 	section_id		: "1",
+* 	caller_type		: "tool",
+* 	quality			: "original",
+* 	target_dir		: "custom_dir"
+* }
+* @return promise
+* 	Resolve: object API response
+*/
+export const process_uploaded_file = async function( options ) {
+
+	const file_data			= options.file_data
+	const process_options	= options.process_options
+	const caller			= options.caller
+	const tipo				= options.tipo
+	const section_tipo		= options.section_tipo
+	const section_id		= options.section_id
+	const caller_type		= options.caller_type // like 'tool' or 'component'. Switch different process actions on tool_upload class
+	const quality			= options.quality || null // only for components
+	const target_dir		= options.target_dir || null
+
+	if(caller.model !=='tool_upload'){
+		console.error("Error caller is not a tool upload:", caller);
+		return false
+	}
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(caller, 'process_uploaded_file')
 
 	// rqo
 		const rqo = {
@@ -149,12 +227,12 @@ tool_upload.prototype.process_uploaded_file = async function(file_data, process_
 			options	: {
 				file_data		: file_data,
 				process_options : process_options,
-				tipo			: self.caller.tipo,
-				section_tipo	: self.caller.section_tipo,
-				section_id		: self.caller.section_id,
-				caller_type		: self.caller.context.type, // like 'tool' or 'component'. Switch different process actions on tool_upload class
-				quality			: self.caller.context.target_quality || self.caller.context.features.default_target_quality || null, // only for components
-				target_dir		: self.caller.context.target_dir || null // optional object like {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH' // defined in config}
+				tipo			: tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				caller_type		: caller_type, // like 'tool' or 'component'. Switch different process actions on tool_upload class
+				quality			: quality,
+				target_dir		: target_dir
 			}
 		}
 
@@ -170,12 +248,11 @@ tool_upload.prototype.process_uploaded_file = async function(file_data, process_
 			dd_console("-> process_uploaded_file API api_response:",'DEBUG', api_response);
 		}
 
-	// events
-		event_manager.publish('process_uploaded_file_done_' + self.id, api_response)
-
 
 	return api_response
 }//end process_uploaded_file
+
+
 
 
 

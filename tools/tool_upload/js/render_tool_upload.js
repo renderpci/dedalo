@@ -146,7 +146,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		self.process_file.appendChild(spinner)
 
 	// process uploaded file (move temp uploaded file to definitive location and name)
-		const response = await self.process_uploaded_file(file_data, process_options)
+		const response = await self.process_uploaded_file_controller(file_data, process_options)
 
 	// spinner remove
 		spinner.remove()

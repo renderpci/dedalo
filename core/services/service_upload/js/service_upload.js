@@ -5,11 +5,11 @@
 
 
 // import
-	import {event_manager} from '../../../common/js/event_manager.js'
-	import {data_manager} from '../../../common/js/data_manager.js'
-	import {dd_console,JSON_parse_safely} from '../../../common/js/utils/index.js'
-	import {common} from '../../../common/js/common.js'
-	import {render_edit_service_upload} from './render_edit_service_upload.js'
+	import { event_manager } from '../../../common/js/event_manager.js'
+	import { data_manager } from '../../../common/js/data_manager.js'
+	import { dd_console,JSON_parse_safely } from '../../../common/js/utils/index.js'
+	import { common, create_source } from '../../../common/js/common.js'
+	import { render_edit_service_upload } from './render_edit_service_upload.js'
 
 
 
@@ -497,7 +497,7 @@ export const upload = async function(options) {
 /**
 * UPLOAD_FILE
 * Upload selected file to server using the API and when is done, process the target file
-* calling caller component across process_uploaded_file tool method
+* calling caller component across process_uploaded_file_controller tool method
 * @param object options
 * @return object response
 */
