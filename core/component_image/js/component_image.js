@@ -490,4 +490,23 @@ component_image.prototype.get_quality_file_info = function( quality='original', 
 	return quality_file_info
 }//end get_quality_file_info
 
+
+/**
+* GET_ORIGINAL_FILE_NAME
+* Get the original file name (the original name of the image when the users upload it)
+*
+* @param int key
+* @return string|null quality_file_info
+*/
+component_image.prototype.get_original_file_name = function( key=0 ) {
+
+	const self = this
+
+	const quality_file_info = (self.data.value[key].original_file_name)
+		? self.data.value[key].original_file_name
+		: null
+
+	return quality_file_info
+}//end get_original_file_name
+
 // @license-end
