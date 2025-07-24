@@ -368,13 +368,13 @@ class component_relation_parent extends component_relation_common {
 			if (empty($ar_parent_tipo)) {
 				debug_log(__METHOD__
 					." Ignored search get_parent because this section ($section_tipo) do not have any component of model: component_relation_parent " . PHP_EOL
-					.'section_tipo: ' . $section_tipo . PHP_EOL
+					.' section_tipo: ' . $section_tipo
 					, logger::ERROR
 				);
-				if(SHOW_DEBUG===true) {
-					$bt = debug_backtrace();
-					dump($bt, ' bt ++ '.to_string());
-				}
+				// if(SHOW_DEBUG===true) {
+				// 	$bt = debug_backtrace();
+				// 	dump($bt, ' bt ++ '.to_string());
+				// }
 				return $children_tipo;
 			}
 			$children_tipo = reset($ar_parent_tipo);

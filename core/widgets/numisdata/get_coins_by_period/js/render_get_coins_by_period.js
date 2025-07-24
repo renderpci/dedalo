@@ -6,12 +6,11 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {event_manager} from '../../../../common/js/event_manager.js'
 
 
 
 /**
-* RENDER_get_coins_by_period
+* RENDER_GET_COINS_BY_PERIOD
 * Manages the component's logic and appearance in client side
 */
 export const render_get_coins_by_period = function() {
@@ -60,16 +59,16 @@ const get_content_data_edit = async function(self) {
 	// values container
 		const values_container = ui.create_dom_element({
 			element_type	: 'ul',
-			class_name 		: 'values_container',
-			parent 			: fragment
+			class_name		: 'values_container',
+			parent			: fragment
 		})
 
 	// values
-		const ipo 			= self.ipo
-		const ipo_length 	= ipo.length
+		const ipo			= self.ipo
+		const ipo_length	= ipo.length
 
 		for (let i = 0; i < ipo_length; i++) {
-			const data 		= self.value.filter(item => item.key === i)
+			const data = self.value.filter(item => item.key === i)
 			get_value_element(i, data , values_container, self)
 		}
 
@@ -87,39 +86,40 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return HTMLElement li
+* @return HTMLElement DocumentFragment
 */
 const get_value_element = (i, data, values_container, self) => {
 
 const fragment = new DocumentFragment()
-	//period
-		const value = data.find(item => item.id === 'period').value
-	console.log("value:",value);
-		for (const [order, period] of Object.entries(value)) {
-			// li
-				const li = ui.create_dom_element({
-					element_type	: 'li',
-					class_name		: 'widget_item get_coins_by_period ',
-					parent			: values_container
-				})
 
-			//period
-			// label
-				const period_label = ui.create_dom_element({
-					element_type: 'span',
-					class_name	: 'label',
-					inner_html 	: `${period.label}`,
-					parent 		: li
-				})
+	// period
+	const value = data.find(item => item.id === 'period').value
 
-			// value
-				const period_count = ui.create_dom_element({
-					element_type: 'span',
-					class_name	: 'value',
-					inner_html 	: `${period.count}`,
-					parent 		: li
-				})
-		}
+	for (const [order, period] of Object.entries(value)) {
+
+		// li
+		const li = ui.create_dom_element({
+			element_type	: 'li',
+			class_name		: 'widget_item get_coins_by_period ',
+			parent			: values_container
+		})
+
+		// label
+		const period_label = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: `${period.label}`,
+			parent			: li
+		})
+
+		// value
+		const period_count = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: `${period.count}`,
+			parent			: li
+		})
+	}
 
 	return fragment
 }//end get_value_element
