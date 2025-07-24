@@ -1,199 +1,335 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
-/*eslint no-undef: "error"*/
 
 
 
 /**
-* EVENT_MANAGER
-* the event_manager is created by the page and used by all instances: section, section_group, components, etc
-* the event manager is a observable-observer pattern but we implement connection with the instances with tokens
-* The token is stored in the instances and the events is a array of objects. Each event is auto-explained
-* The instances has control to create news and destroy it.
+* EVENTMANAGER_CLASS
+* A high-performance event system for managing subscriptions and publications
 *
-* events format:
-* 	[{
-*		event_name 	: string. The common name of the events for fired by publish/changes as 'activate_component'
-*		token 		: string. Unique id stored in the instance for control the event as 'event_19'
-*		callback 	: function. The function that will fired when publish/change will fired
-*	}]
+* This class provides a robust event management system with O(1) operations for most methods.
+* It uses Maps and Sets for optimal performance and supports duplicate detection, token-based
+* unsubscription, and efficient event publishing.
+*
+* @example
+* // Basic usage
+* const manager = new event_manager_class();
+* const token = manager.subscribe('user-login', (data) => {
+*   console.log('User logged in:', data.username);
+* });
+*
+* manager.publish('user-login', { username: 'john_doe' });
+* manager.unsubscribe(token);
 */
-const event_manager_class = function(){
-
-
-
-	this.events		= []
-	this.last_token	= -1
-
-
+class event_manager_class {
 
 	/**
-	* SUBSCRIBE
-	* Add received event to the events list array
-	* @param string event_name
-	* 	Like: 'activate_component'
-	* @param function callback
-	* 	Like: 'fn_activate_component'
-	* @return string|null token
-	* 	custom string incremental like: 'event_270'
-	*/
-	this.subscribe = function(event_name, callback) {
-
-		// new event. Init. Create the unique token
-			const token = "event_"+String(++this.last_token)
-
-		// check if already exists
-			const exists = this.event_exists(event_name, callback)
-			if (exists===true) {
-				console.error(')))) Found duplicated subscription: ' + event_name);
-				if(SHOW_DEBUG===true) {
-					alert("Found duplicated subscription " + event_name);
-				}
-				// We will not return yet (only debug detection for now)
-			}
-
-		// create the event
-			const new_event = {
-				event_name	: event_name,
-				token		: token,
-				callback	: callback
-			}
-
-		// add the event to the global events of the page
-			this.events.push(new_event)
-
-		// return the token to save into the events_tokens properties inside the caller instance
-			return token
-	}//end subscribe
-
-
+	 * Creates a new event_manager_class instance
+	 *
+	 * Initializes internal data structures:
+	 * - eventMap: Maps event names to Sets of callback functions
+	 * - tokenMap: Maps subscription tokens to event metadata
+	 * - last_token: Counter for generating unique subscription tokens
+	 */
+	constructor() {
+		this.eventMap = new Map();  // event_name -> Set(callback)
+		this.tokenMap = new Map();  // token -> {event_name, callback}
+		this.last_token = 0;       // Start from 0, no need for negative
+	}
 
 	/**
-	* UNSUBSCRIBE
-	* Removes event subscriptions based on token value
-	* event_token is a unique string returned on each subscription
-	* @param string event_token
-	* 	custom string incremental like: 'event_270'
-	* @return bool
-	*/
-	this.unsubscribe = function(event_token) {
+	 * Subscribes a callback function to an event
+	 *
+	 * Creates a new subscription for the specified event. Each subscription receives
+	 * a unique token that can be used for unsubscription. Duplicate callbacks for
+	 * the same event are detected when debugging is enabled.
+	 *
+	 * @param {string} event_name - The name of the event to subscribe to
+	 * @param {Function} callback - The callback function to execute when the event is published
+	 * @returns {string} A unique token string for this subscription (format: "event_N")
+	 *
+	 * @example
+	 * const token = manager.subscribe('data-updated', (data) => {
+	 *   console.log('Received update:', data);
+	 * });
+	 *
+	 * @throws {Error} Logs error if duplicate callback is detected (debug mode only)
+	 */
+	subscribe(event_name, callback) {
+		const token = `event_${++this.last_token}`;
 
-		const self = this
-
-		if (!event_token) {
-			if(SHOW_DEBUG===true) {
-				console.error('Ignored empty event_token from unsubscribe:', event_token);
-			}
-			return false
+		// Get or create callbacks set
+		let callbacks = this.eventMap.get(event_name);
+		if (!callbacks) {
+			callbacks = new Set();
+			this.eventMap.set(event_name, callbacks);
 		}
 
-		// find the event in the global events and remove it
-			const events_length = self.events.length
-			for (let i = 0; i < events_length; i++) {
-				const event = self.events[i]
-				if (event.token===event_token) {
-					self.events.splice(i, 1)
-					return true
-				}
-			}
-
-
-		return false
-	}//end unsubscribe
-
-
-
-	/**
-	* PUBLISH
-	* Exec the callback of all subscriptions
-	* When the publication event is fired, it is necessary to propagate it to the subscribers' events.
-	* @param string event_name
-	* 	Like: 'activate_component'
-	* @param array|false data
-	* 	A new array with each element being the result of the callback function.
-	* 	Sample: [undefined, undefined]
-	*/
-	this.publish = function(event_name, data={}) {
-
-		// find the events that has the same event_name for exec
-		const current_events = this.events.filter(current_event => current_event.event_name===event_name)
-
-		// if don't find events, don't run
-		if (current_events.length<1) {
-			return false
+		// Check for duplicates (only if debugging is enabled)
+		if (SHOW_DEBUG === true && callbacks.has(callback)) {
+			console.error(`)))) Found duplicated subscription: ${event_name}`);
+			alert(`Found duplicated subscription ${event_name}`);
 		}
 
-		// exec the subscribed events callbacks
-		const result = current_events.map(current_event => current_event.callback(data))
+		// Add callback and store token mapping
+		callbacks.add(callback);
+		this.tokenMap.set(token, { event_name, callback });
 
-
-		return result
-	}//end publish
-
-
+		return token;
+	}
 
 	/**
-	* GET_EVENTS
-	* @return array this.events
-	* 	list of registered events (objects) as
-	* [{
-	* 	callback: ƒ fn_activate_component(actived_component)
-	*	event_name: "activate_component"
-	*	token: "event_270"
-	* }]
-	*/
-	this.get_events = function() {
+	 * Unsubscribes a callback using its subscription token
+	 *
+	 * Removes the subscription associated with the provided token. Automatically
+	 * cleans up empty event entries to prevent memory leaks.
+	 *
+	 * @param {string} token - The subscription token returned by subscribe()
+	 * @returns {boolean} true if the subscription was found and removed, false otherwise
+	 *
+	 * @example
+	 * const token = manager.subscribe('user-action', callback);
+	 * const success = manager.unsubscribe(token); // Returns true if successful
+	 */
+	unsubscribe(token) {
+		const entry = this.tokenMap.get(token);
+		if (!entry) {
+			if (SHOW_DEBUG === true) {
+				// console.error('Ignored empty or unknown event_token from unsubscribe:', token);
+			}
+			return false;
+		}
 
-		return this.events
-	}//end get_events
+		const { event_name, callback } = entry;
+		const callbacks = this.eventMap.get(event_name);
 
-
-
-	/**
-	* EVENT_EXISTS
-	* Check if given event already exists in the main events register array
-	* @param string event_name
-	* @param callable callback
-	* @return bool
-	*/
-	this.event_exists = function(event_name, callback) {
-
-		// iterate events
-		const events = this.get_events()
-		const events_length = events.length
-		for (let i = 0; i < events_length; i++) {
-
-			const event = events[i]
-
-			if (event_name===event.event_name && callback===event.callback) {
-				return true
+		// Remove callback and cleanup if empty
+		if (callbacks) {
+			callbacks.delete(callback);
+			if (callbacks.size === 0) {
+				this.eventMap.delete(event_name);
 			}
 		}
 
+		this.tokenMap.delete(token);
+		return true;
+	}
 
-		return false
-	}//end event_exists
+	/**
+	 * Publishes an event to all subscribed callbacks
+	 *
+	 * Executes all callback functions subscribed to the specified event, passing
+	 * the provided data to each callback. Returns an array of all callback return values.
+	 *
+	 * @param {string} event_name - The name of the event to publish
+	 * @param {*} data - Data to pass to each callback function (defaults to empty object)
+	 * @returns {Array|boolean} Array of callback return values, or false if no subscribers
+	 *
+	 * @example
+	 * // Publish with data
+	 * const results = manager.publish('user-updated', {
+	 *   id: 123,
+	 *   name: 'John Doe'
+	 * });
+	 *
+	 * // Publish without data
+	 * manager.publish('app-ready');
+	 */
+	publish(event_name, data = {}) {
+		const callbacks = this.eventMap.get(event_name);
+		if (!callbacks || callbacks.size === 0) return false;
+
+		// Use forEach for better performance than for...of with array creation
+		const results = [];
+		callbacks.forEach(callback => {
+			results.push(callback(data));
+		});
+
+		return results;
+	}
+
+	/**
+	 * Retrieves all active event subscriptions
+	 *
+	 * Returns an array containing details of all current subscriptions including
+	 * event names, tokens, and callback references. Useful for debugging and
+	 * subscription management.
+	 *
+	 * @returns {Array<Object>} Array of subscription objects
+	 * @returns {string} returns[].event_name - The event name
+	 * @returns {string} returns[].token - The subscription token
+	 * @returns {Function} returns[].callback - The callback function reference
+	 *
+	 * @example
+	 * const events = manager.get_events();
+	 * console.log(`Active subscriptions: ${events.length}`);
+	 * events.forEach(event => {
+	 *   console.log(`${event.event_name}: ${event.token}`);
+	 * });
+	 */
+	get_events() {
+		// Pre-allocate array for better performance
+		const events = new Array(this.tokenMap.size);
+		let i = 0;
+
+		for (const [token, { event_name, callback }] of this.tokenMap) {
+			events[i++] = { event_name, token, callback };
+		}
+
+		return events;
+	}
+
+	/**
+	 * Checks if a specific callback is subscribed to an event
+	 *
+	 * Determines whether the given callback function is already subscribed
+	 * to the specified event. Useful for preventing duplicate subscriptions
+	 * programmatically.
+	 *
+	 * @param {string} event_name - The event name to check
+	 * @param {Function} callback - The callback function to look for
+	 * @returns {boolean} true if the callback is subscribed to the event
+	 *
+	 * @example
+	 * const myCallback = (data) => console.log(data);
+	 *
+	 * if (!event_manager.event_exists('user-login', myCallback)) {
+	 *   event_manager.subscribe('user-login', myCallback);
+	 * }
+	 */
+	event_exists(event_name, callback) {
+		const callbacks = this.eventMap.get(event_name);
+		return callbacks ? callbacks.has(callback) : false;
+	}
 
 
+	/**
+	 * Checks if a specific event name is already defined
+	 *
+	 * @param {string} event_name - The event name to check
+	 * @returns {boolean} true if a event is subscribed whit given name.
+	 *
+	 * @example
+	 *
+	 * if (!event_manager.event_name_exists('user-login')) {
+	 *   // Do something
+	 * }
+	 */
+	event_name_exists(event_name, callback) {
+		return this.eventMap.get(event_name);
+	}
 
-}//end event_manager_class
 
+	/**
+	 * Removes all subscriptions for a specific event
+	 *
+	 * Efficiently clears all callbacks associated with the given event name.
+	 * This is more efficient than unsubscribing individual tokens when you
+	 * need to clear an entire event.
+	 *
+	 * @param {string} event_name - The event name to clear
+	 * @returns {boolean} true if the event existed and was cleared, false otherwise
+	 *
+	 * @example
+	 * event_manager.clear_event('temporary-notifications');
+	 */
+	clear_event(event_name) {
+		const callbacks = this.eventMap.get(event_name);
+		if (!callbacks) return false;
 
+		// Remove all tokens for this event
+		for (const [token, entry] of this.tokenMap) {
+			if (entry.event_name === event_name) {
+				this.tokenMap.delete(token);
+			}
+		}
+
+		this.eventMap.delete(event_name);
+		return true;
+	}
+
+	/**
+	 * Clears all events and subscriptions
+	 *
+	 * Removes all event subscriptions and resets the event_manager_class to its
+	 * initial state. This is useful for cleanup operations or testing.
+	 *
+	 * @example
+	 * // Clean up before page unload
+	 * window.addEventListener('beforeunload', () => {
+	 *   manager.clear_all();
+	 * });
+	 */
+	clear_all() {
+		this.eventMap.clear();
+		this.tokenMap.clear();
+	}
+
+	/**
+	 * Gets the number of subscribers for a specific event
+	 *
+	 * Returns the count of callback functions subscribed to the given event.
+	 * Useful for monitoring subscription levels and debugging.
+	 *
+	 * @param {string} event_name - The event name to count subscribers for
+	 * @returns {number} The number of subscribers (0 if event doesn't exist)
+	 *
+	 * @example
+	 * const count = manager.get_event_count('user-activity');
+	 * console.log(`${count} handlers listening for user activity`);
+	 */
+	get_event_count(event_name) {
+		const callbacks = this.eventMap.get(event_name);
+		return callbacks ? callbacks.size : 0;
+	}
+
+	/**
+	 * Gets the total number of active subscriptions
+	 *
+	 * Returns the total count of all active event subscriptions across
+	 * all events. Useful for memory usage monitoring and performance analysis.
+	 *
+	 * @returns {number} Total number of active subscriptions
+	 *
+	 * @example
+	 * const total = manager.get_total_events();
+	 * console.log(`Total active subscriptions: ${total}`);
+	 *
+	 * // Monitor subscription growth
+	 * setInterval(() => {
+	 *   if (manager.get_total_events() > 1000) {
+	 *     console.warn('High number of subscriptions detected');
+	 *   }
+	 * }, 5000);
+	 */
+	get_total_events() {
+		return this.tokenMap.size;
+	}
+}
 
 /**
-* Create and export a new instance of event_manager_class
-*/
-export const event_manager = new event_manager_class()
+ * Global event_manager_class instance
+ *
+ * Pre-instantiated event_manager_class for immediate use throughout the application.
+ * This singleton pattern ensures consistent event management across modules.
+ *
+ * @type {event_manager_class}
+ * @example
+ * import { event_manager } from './event-manager.js';
+ *
+ * event_manager.subscribe('app-ready', () => {
+ *   console.log('Application is ready!');
+ * });
+ */
+export const event_manager = new event_manager_class();
 
-
-
-/**
-* WINDOW.EVENT_MANAGER
-* Set as global window var to be available for all, included
-* iframes calling as parent.window
-*/
-if (typeof window!=='undefined') {
-	window.event_manager = event_manager
+// Make available globally in browser environments
+if (typeof window !== 'undefined') {
+	/**
+	 * Global window reference to event_manager_class instance
+	 * Available as window.event_manager for direct browser console access
+	 * included iframes calling as parent.window
+	 */
+	window.event_manager = event_manager;
 }
 
 
