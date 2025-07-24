@@ -2733,16 +2733,15 @@ class diffusion_sql extends diffusion  {
 				);
 			}
 
-		// database_alias check . $tipo, $model_name, $relation_type, $search_exact=false
-			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true);
-			if (!empty($direct_child)) {
-				$database_alias_tipo = reset($direct_child);
-				$real_db_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true);
-				if (!empty($real_db_tipo)) {
-					$diffusion_element_tipo_tables = reset($real_db_tipo);
+		// database_alias check
+			$database_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true)[0] ?? null;
+			if (!empty($database_alias_tipo)) {
+				$real_database_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true)[0] ?? null;
+				if (!empty($real_database_tipo)) {
+					// overwrite
+					$diffusion_element_tipo_tables = $real_database_tipo;
 				}
 			}
-
 
 		#
 		# TABLES
@@ -2755,13 +2754,11 @@ class diffusion_sql extends diffusion  {
 			);
 
 			// database_alias case
-				$database_alias_tipo = $diffusion_element_tipo;
-				if ($diffusion_element_tipo_tables!==$database_alias_tipo) {
-
+				// $database_alias_tipo = $diffusion_element_tipo;
+				if ($database_alias_tipo && $diffusion_element_tipo_tables !== $diffusion_element_tipo) {
 					// replace current tables list with modified parsed version
 					$ar_table_tipo = diffusion::parse_database_alias_tables($ar_table_tipo, $database_alias_tipo);
 				}
-
 
 		// diffusion_element
 			$diffusion_element = self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
@@ -5254,25 +5251,26 @@ class diffusion_sql extends diffusion  {
 
 		$ar_diffusion_sections = array();
 
+		// root point of reference to search tables
 		$reference_root_element = $diffusion_element_tipo;
 
 		// database_alias check . $tipo, $model_name, $relation_type, $search_exact=false
-			$direct_child = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$database_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 				$diffusion_element_tipo,
 				'database_alias',
 				'children',
 				true
-			);
-			if (!empty($direct_child)) {
-				$database_alias_tipo = reset($direct_child);
-				$real_db_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			)[0] ?? null;
+			if ($database_alias_tipo) {
+				$real_database_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 					$database_alias_tipo,
 					'database',
 					'termino_relacionado',
 					true
-				);
-				if (!empty($real_db_tipo)) {
-					$reference_root_element = reset($real_db_tipo);
+				)[0] ?? null;
+				if (!empty($real_database_tipo)) {
+					// override reference_root_element
+					$reference_root_element = $real_database_tipo;
 				}
 			}
 
@@ -5285,8 +5283,8 @@ class diffusion_sql extends diffusion  {
 			);
 
 		// database_alias case
-			$database_alias_tipo = $diffusion_element_tipo;
-			if ($reference_root_element!==$database_alias_tipo) {
+			// $database_alias_tipo = $diffusion_element_tipo;
+			if ($database_alias_tipo && $reference_root_element!==$database_alias_tipo) {
 				// replace current tables list with modified parsed version
 				$ar_table_tipo = diffusion::parse_database_alias_tables($ar_table_tipo, $database_alias_tipo);
 			}
