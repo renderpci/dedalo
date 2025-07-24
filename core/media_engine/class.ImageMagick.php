@@ -496,9 +496,9 @@ final class ImageMagick {
 				$color =  "-alpha set -virtual-pixel transparent -background none -interpolate Mesh";
 			};
 			if($rotation_mode === 'expanded'){
-				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color +distort SRT $degrees '$target'";
+				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color +distort SRT $degrees +repage '$target'";
 			}else{
-				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color -distort SRT $degrees '$target'";
+				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color -distort SRT $degrees +repage '$target'";
 			}
 
 			$result = shell_exec($command);
