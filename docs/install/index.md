@@ -14,8 +14,8 @@ Recommended server:
 
 OS:
 
-- Minimal: Ubuntu 20.04 LTS/ Rocky 8 / RedHat 8
-- Recommended:  Ubuntu 22.04 LTS / Rocky 9 / RedHat 9
+- Minimal: Ubuntu 22.04 LTS/ Rocky 8 / RedHat 8
+- Recommended:  Ubuntu 24.04 LTS / Rocky 9 / RedHat 9
 
 > Note: if you want, you can use other OS as MacOs or Windows, their could be fine to develop or test it, but we do not recommended these options for production.
 
@@ -74,11 +74,17 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
         sudo apt update
         ```
 
-        Install PHP 8.3
+        Install PHP 8.4
 
         ```shell
-        sudo apt install php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-pgsql php8.3-gd php8.3-mbstring php8.3-xml php8.3-pspell php8.3-tidy php8.3-bcmath php8.3-imap php8.3-soap php8.3-opcache php8.3-fpm php8.3-zip php8.3-curl
+        sudo apt install php8.4 php8.4-cli php8.4-common php8.4-mysql php8.4-pgsql php8.4-gd php8.4-mbstring php8.4-xml php8.4-pspell php8.4-tidy php8.4-bcmath php8.4-imap php8.4-soap php8.4-opcache php8.4-fpm php8.4-zip php8.4-curl
         ```
+
+        ??? tip "PHP 8.3"
+
+            ```shell
+            sudo apt install php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-pgsql php8.3-gd php8.3-mbstring php8.3-xml php8.3-pspell php8.3-tidy php8.3-bcmath php8.3-imap php8.3-soap php8.3-opcache php8.3-fpm php8.3-zip php8.3-curl
+            ```
 
     2. Install Apache and activate the modules.
 
@@ -89,13 +95,21 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
         Active modules
 
         ```shell
-        sudo a2enconf php8.3-fpm
+        sudo a2enconf php8.4-fpm
         sudo a2enmod actions fcgid alias proxy_fcgi
         sudo a2enmod ssl
         sudo a2enmod headers
         sudo a2enmod http2
         sudo a2enmod rewrite
         ```
+
+        ??? tip "PHP 8.3"
+
+            Replace the previous `a2enconf` with:
+
+            ```shell
+            sudo a2enconf php8.4-fpm
+            ```
 
     3. Install PostgreSQL
 
