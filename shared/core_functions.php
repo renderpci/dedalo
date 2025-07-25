@@ -2669,7 +2669,7 @@ function get_relation_name( ?string $tipo ) : string {
 
 /**
 * ARRAY_FIND_KEY
-* Replacement for compatibility with PHP < 8.4
+* PHP 8.4 array_find_key replacement for compatibility with PHP < 8.4
 */
 if (!function_exists('array_find_key')) {
 	function array_find_key($array, $callback) {
