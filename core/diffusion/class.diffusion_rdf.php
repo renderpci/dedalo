@@ -1474,8 +1474,11 @@ class diffusion_rdf extends diffusion {
 			$config				= $options->config;
 			$config_properties	= $options->config_properties;
 
-		// section_tipo
-			$section_tipo = reset($value)->section_tipo;
+		// section_tipo. Mandatory from properties configuration resolution
+			$section_tipo = $value[0]->section_tipo ?? null;
+			if (empty($section_tipo)) {
+				throw new Exception("Error Processing Request. Section tipo from value is empty", 1);
+			}
 
 		// ddo_map
 			$ddo_map = $config_properties->result->ddo_map ?? null;
