@@ -876,7 +876,7 @@ class diffusion_rdf extends diffusion {
 				$value = $element->get_diffusion_dato();
 
 				$config_properties = $ddo->config ?? null;
-				if($config_properties){
+				if( $config_properties && !empty($value) ){
 					$config = $this->resolve_configuration($config_properties);
 					$result = $this->{$config_properties->process_fn}((object)[
 						'config_properties'	=> $config_properties,
