@@ -1623,11 +1623,12 @@ abstract class diffusion  {
 
 			switch ($current_table_model) {
 				case 'table':
+				case 'table_alias':
 					$key = array_find_key($given_tables_list, function($el) use($current_table_name){
 						return $el->name === $current_table_name;
 					});
 					if ($key!==null) {
-						// Exist a table with same name. Replace
+						// Exist a table with same name. Replace it.
 						$given_tables_list[$key] = $table_item;
 					}else{
 						// add
@@ -1635,26 +1636,28 @@ abstract class diffusion  {
 					}
 					break;
 
-				case 'table_alias':
-					// resolve real table
-					$real_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-						$current_table_tipo, // Original database
-						'table', // modelo_name
-						'termino_relacionado', // relation_type
-						true // search_exact (allow only 'table')
-					)[0] ?? null;
-					// search for replacements based on the same name of the tables
-					if ($real_table_tipo) {
-						// replace it found
-						$key = array_find_key($given_tables_list, function($el) use($real_table_tipo){
-							return $el->tipo === $real_table_tipo;
-						});
-						if ($key!==null) {
-							// Exist a table with same name. Replace it.
-							$given_tables_list[$key] = $table_item;
-						}
-					}
-					break;
+				// Working here to solve some casuistic not taken into account.
+				// case 'table_alias':
+				// 	// resolve real table
+				// 	$real_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				// 		$current_table_tipo, // Original database
+				// 		'table', // modelo_name
+				// 		'termino_relacionado', // relation_type
+				// 		true // search_exact (allow only 'table')
+				// 	)[0] ?? null;
+				// 	// search for replacements based on the same name of the tables
+				// 	if ($real_table_tipo) {
+				// 			dump($real_table_tipo, '$real_table_tipo +////////////////////////////////////////////+ '.to_string($current_table_tipo));
+				// 		// replace it found
+				// 		$key = array_find_key($given_tables_list, function($el) use($real_table_tipo){
+				// 			return $el->tipo === $real_table_tipo;
+				// 		});
+				// 		if ($key!==null) {
+				// 			// Exist a table with same name. Replace it.
+				// 			$given_tables_list[$key] = $table_item;
+				// 		}
+				// 	}
+				// 	break;
 			}
 		}//end foreach ($original_ar_table_tipo as $key => $current_table_tipo)
 

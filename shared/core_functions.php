@@ -2664,3 +2664,20 @@ function get_relation_name( ?string $tipo ) : string {
 		default:		return 'Not defined';
 	}
  }//end get_relation_name
+
+
+
+/**
+* ARRAY_FIND_KEY
+* Replacement for compatibility with PHP < 8.4
+*/
+if (!function_exists('array_find_key')) {
+	function array_find_key($array, $callback) {
+	    foreach ($array as $key => $value) {
+	        if ($callback($value, $key)) {
+	            return $key;
+	        }
+	    }
+	    return null;
+	}
+}//end array_find_key
