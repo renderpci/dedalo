@@ -135,7 +135,7 @@ $global_start_time = hrtime(true);
 
 
 
-// debug test
+// debug test. Activate for debug only
 	// if (DEVELOPMENT_SERVER) {
 	// 	define('DEV_SERVER_DEFAULT_DELAY_MS', 12);
 	// 	define('DEV_SERVER_SAVE_DELAY_MS', 300);
