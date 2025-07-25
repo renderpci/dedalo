@@ -15,31 +15,18 @@ class system_info {
 	*/
 	public static function get_value() : object {
 
-		// get overall system info
-			$info = system::get_info();
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// requeriments_list
-			// installation elements test
+		$requeriments_list = [];
 
-			$requeriments_list = [];
+		try {
 
-			// moved to update ontology widget !
-				// Ontology server (master.dedalo.dev)
-				// $check = backup::check_remote_server();
-				// $code = $check->code ?? null;
-				// $requeriments_list[] = (object)[
-				// 	'name'	=> 'Available Ontology master server',
-				// 	'value'	=> $code===200,
-				// 	'info'	=> 'Code: ' . $code
-				// ];
-
-			// moved to update code widget !
-				// Code server (master.dedalo.dev)
-				// $requeriments_list[] = (object)[
-				// 	'name'	=> 'Available Dédalo master code server',
-				// 	'value'	=> check_url(DEDALO_SOURCE_VERSION_URL),
-				// 	'info'	=> 'URL: '.DEDALO_SOURCE_VERSION_URL
-				// ];
+			// get overall system info
+			$info = system::get_info();
 
 			// RAM
 			$total_gb	= system::get_ram();
@@ -75,7 +62,7 @@ class system_info {
 			];
 
 			// Apache version
-			$version = system::get_apache_version();
+			$version = system::get_apache_version() ?? 'Unknown';
 			$requeriments_list[] = (object)[
 				'name'	=> 'Apache supported version',
 				'value'	=> system::test_apache_version_supported('2.4.6'),
@@ -83,7 +70,7 @@ class system_info {
 			];
 
 			// PostgreSQL version
-			$version = system::get_postgresql_version();
+			$version = system::get_postgresql_version() ?? 'Unknown';
 			$requeriments_list[] = (object)[
 				'name'	=> 'PostgreSQL supported version',
 				'value'	=> system::test_postgresql_version_supported('16.1'),
@@ -103,7 +90,7 @@ class system_info {
 						'info'	=> 'Not installed'
 					];
 				} else {
-					$version = system::get_mysql_version($mysql_server);
+					$version = system::get_mysql_version($mysql_server) ?? 'Unknown';
 					if ($mysql_server==='mariadb') {
 						$requeriments_list[] = (object)[
 							'name'	=> 'MariaDB supported version',
@@ -174,7 +161,7 @@ class system_info {
 			$libx264_installed = Ffmpeg::check_lib('libx264');
 			$requeriments_list[] = (object)[
 				'name'	=> 'FFMPEG libx264 installed',
-				'value'	=> $libx264_installed,
+				'value'	=> to_string($libx264_installed),
 				'info'	=> 'FFMPEG lib libx264 enable'
 			];
 
@@ -303,14 +290,19 @@ class system_info {
 				'value'	=> $info->getProcessStats()
 			];
 
-		$response = new stdClass();
-			$response->result	= (object)[
-				'requeriments_list'	=> $requeriments_list,
-				'system_list'		=> $system_list,
-				'errors'			=> null
-			];
-			$response->msg		= 'OK. Request done successfully';
-			$response->errors	= [];
+		} catch (Exception $e) {
+			$response->errors[] = $e->getMessage();
+		}
+
+		// response OK
+		$response->result	= (object)[
+			'requeriments_list'	=> $requeriments_list,
+			'system_list'		=> $system_list,
+			'errors'			=> null
+		];
+		$response->msg		= empty($response->errors)
+			? 'OK. Request done successfully.'
+			: 'Warning. Request done with errors.';
 
 
 		return $response;
