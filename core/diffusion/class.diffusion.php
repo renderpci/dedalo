@@ -1598,6 +1598,7 @@ abstract class diffusion  {
 			}
 
 		// from param array $ar_table_tipo
+		// These tables are from the real database to which this virtual one points.
 		$given_tables_list = array_map(function($tipo){
 			return (object)[
 				'tipo' => $tipo,
@@ -1607,6 +1608,7 @@ abstract class diffusion  {
 		}, $ar_table_tipo);
 
 		// resolve original tables names
+		// These tables are to extend/overwrite with new tables from the database alias.
 		$original_tables_list = array_map(function($tipo){
 			return (object)[
 				'tipo' => $tipo,
@@ -1624,6 +1626,7 @@ abstract class diffusion  {
 			switch ($current_table_model) {
 				case 'table':
 				case 'table_alias':
+					// check for math table name like 'real_db -> hoards === alias_db -> hoards'
 					$key = array_find_key($given_tables_list, function($el) use($current_table_name){
 						return $el->name === $current_table_name;
 					});
@@ -1647,7 +1650,6 @@ abstract class diffusion  {
 				// 	)[0] ?? null;
 				// 	// search for replacements based on the same name of the tables
 				// 	if ($real_table_tipo) {
-				// 			dump($real_table_tipo, '$real_table_tipo +////////////////////////////////////////////+ '.to_string($current_table_tipo));
 				// 		// replace it found
 				// 		$key = array_find_key($given_tables_list, function($el) use($real_table_tipo){
 				// 			return $el->tipo === $real_table_tipo;

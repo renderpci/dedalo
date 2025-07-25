@@ -75,7 +75,9 @@ final class dd_date_test extends TestCase {
 			$dd_date = new dd_date($options);
 			$this->assertTrue(
 				!empty($dd_date->errors),
-				'expected true, but received is: ' . to_string( !empty($dd_date->errors) )
+					'expected true, but received is: ' . PHP_EOL
+					. to_string( !empty($dd_date->errors) ) . PHP_EOL
+					. to_string( $dd_date )
 			);
 
 		// invalid month
