@@ -138,11 +138,11 @@ abstract class diffusion  {
 	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN, $connection_status=false ) : object {
 
 		// cache
-		static $diffusion_map_cache;
-		$cache_key = $diffusion_domain_name .'_' . to_string($connection_status);
-		if (isset($diffusion_map_cache[$cache_key])) {
-			return $diffusion_map_cache[$cache_key];
-		}
+		// static $diffusion_map_cache;
+		// $cache_key = $diffusion_domain_name .'_' . to_string($connection_status);
+		// if (isset($diffusion_map_cache[$cache_key])) {
+		// 	return $diffusion_map_cache[$cache_key];
+		// }
 
 		$diffusion_map = new stdClass();
 
@@ -301,7 +301,7 @@ abstract class diffusion  {
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
 
 		// cache
-		$diffusion_map_cache[$cache_key] = $diffusion_map;
+		// $diffusion_map_cache[$cache_key] = $diffusion_map;
 
 
 		return $diffusion_map;

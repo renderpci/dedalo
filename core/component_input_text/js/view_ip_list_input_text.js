@@ -69,7 +69,6 @@ view_ip_list_input_text.render = async function(self, options) {
 
 							// Helper function to render and append link
 							const render_and_append_link = (ip_data) => {
-								console.log('ip_data:', ip_data);
 								const link_node = render_link(ip_data.href, ip_data.label);
 								requestAnimationFrame(() => {
 									wrapper.appendChild(link_node);
