@@ -16,8 +16,6 @@ class dd_date extends stdClass {
 	static $virtual_year_days  = 372;
 	// Virtual month days
 	static $virtual_month_days = 31;
-	// errors status
-	private $errors = [];
 	// day
 	// protected $day;
 	// // month
