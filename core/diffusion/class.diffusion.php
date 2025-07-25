@@ -1633,6 +1633,12 @@ abstract class diffusion  {
 					if ($key!==null) {
 						// Exist a table with same name. Replace it.
 						$given_tables_list[$key] = $table_item;
+						debug_log(__METHOD__
+							. " Replaced table " . PHP_EOL
+							. ' $current_table_name: ' . to_string($current_table_name) . PHP_EOL
+							. ' table_item: ' . to_string($table_item)
+							, logger::WARNING
+						);
 					}else{
 						// add
 						$given_tables_list[] = $table_item;

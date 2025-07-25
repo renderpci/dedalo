@@ -60,7 +60,7 @@ class tool_diffusion extends tool_common {
 			}
 
 		// safe diffusion_map
-			if ($EXCLUDE_DIFFUSION_ELEMENTS) {
+			if (!empty($EXCLUDE_DIFFUSION_ELEMENTS)) {
 
 				$safe_diffusion_map = [];
 				$changed = false;
@@ -96,7 +96,7 @@ class tool_diffusion extends tool_common {
 			$final_diffusion_map = [];
 			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
 
-				// check model
+				// check diffusion_group model
 				$current_model = RecordObj_dd::get_modelo_name_by_tipo($diffusion_group, true);
 				if ($current_model!=='diffusion_group') {
 					debug_log(__METHOD__
@@ -119,6 +119,7 @@ class tool_diffusion extends tool_common {
 					continue;
 				}
 
+				// diffusion_element_tipo
 				$diffusion_element_tipo = $diffusion_items[0]->element_tipo ?? null; // like oh63 - Historia oral web
 				if (!$diffusion_element_tipo) {
 					debug_log(__METHOD__
