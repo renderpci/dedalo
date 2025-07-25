@@ -177,11 +177,13 @@ class system {
 		$commands = [];
 
 		$name		= 'httpd';
+		// With full binary path
 		$cmd		= $binary_base_path . '/'.$name.' -v | sed -n "s/Server version: Apache\/\([-0-9.]*\).*/\1/p;" ';
 		$commands[] = $cmd;
 		$version	= shell_exec($cmd);
 		if (empty($version)) {
-			$cmd		= $name.' -V | sed -n "s/Server version: Apache\/\([-0-9.]*\).*/\1/p;" ';
+			// Without binary path
+			$cmd		= $name.' -v | sed -n "s/Server version: Apache\/\([-0-9.]*\).*/\1/p;" ';
 			$commands[] = $cmd;
 			$version	= shell_exec($cmd);
 		}
@@ -200,7 +202,7 @@ class system {
 		if (empty($version)) {
 			debug_log(__METHOD__
 				." Apache (httpd or apache2) not found " . PHP_EOL
-				.' commands: ' . to_string($commands) . PHP_EOL
+				.' commands: ' . json_encode($commands, JSON_PRETTY_PRINT) . PHP_EOL
 				.' binary_base_path: ' . $binary_base_path
 				, logger::ERROR
 			);
