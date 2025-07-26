@@ -695,7 +695,7 @@ export const ui = {
 								if (!document.activeElement) {
 									return false
 								}
-								const all_inputs = component.node.content_data && component.node.content_data
+								const all_inputs = component.node?.content_data
 									? component.node.content_data.querySelectorAll('input, select')
 									: [];
 								const all_inputs_length = all_inputs.length
