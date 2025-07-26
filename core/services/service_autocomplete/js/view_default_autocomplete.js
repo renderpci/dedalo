@@ -168,6 +168,10 @@ view_default_autocomplete.render = async function (self, options) {
 	// fix node
 		self.node = wrapper
 
+	// event publish
+		event_manager.publish('render_'+self.id, self.node)
+
+
 
 	return wrapper
 }//end render
