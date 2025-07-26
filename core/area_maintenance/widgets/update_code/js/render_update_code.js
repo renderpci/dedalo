@@ -578,24 +578,24 @@ const render_info_modal = function( self, versions_info ) {
 						return
 					}
 
-					if (page_globals.dedalo_entity==='development') {
-						// message development
-						alert('To avoid accidental overwrites, the development installation does not allow updating the code.');
-						return
-					}
-
 					button_update.classList.add('hide')
 					update_mode_container.classList.add('hide')
 					body.classList.add('loading')
 
 					// spinner
 					const spinner = ui.create_dom_element({
-						element_type	: 'pre',
+						element_type	: 'span',
 						class_name		: 'spinner',
 						parent			: footer
 					})
 
 					response.innerHTML = 'Updating. Please wait'
+
+					if (page_globals.dedalo_entity==='development') {
+						// message development
+						alert('To avoid accidental overwrites, the development installation does not allow updating the code.');
+						return
+					}
 
 					// update_code
 					const api_response = await self.update_code({
