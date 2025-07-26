@@ -3172,6 +3172,12 @@ class component_relation_common extends component_common {
 		// the component tipo are always the first tipo in the column name
 			$ar_tipos				= explode(locator::DELIMITER, $column_name);
 			$from_component_tipo	= $ar_tipos[0];
+			// check if the first part of the columns name has a user name or it has the current component_tipo
+			// if not, set the from_component_tipo as current component tipo. Because the user can set something as 'residence_es1'
+			// instead 'rsc92_es1'
+			if($this->tipo !== $from_component_tipo){
+				$from_component_tipo = $this->tipo;
+			}
 			$target_section_tipo	= $ar_tipos[1] ?? null;
 
 		// check if the value is not a valid JSON or if it's a int,
