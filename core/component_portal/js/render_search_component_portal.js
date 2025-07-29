@@ -69,12 +69,6 @@ render_search_component_portal.prototype.search = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// autocomplete
-		wrapper.addEventListener('click', function(e) {
-			e.stopPropagation()
-			activate_autocomplete(self, wrapper)
-		})
-
 
 	return wrapper
 }//end search
@@ -126,34 +120,47 @@ const render_content_data = async function(self, ar_section_record) {
 	// users will click in it in the middle of the component
 	// to activate the autocomplete service
 		if (ar_section_record_length===0 && self.show_interface.show_autocomplete===true ) {
-			const input_value = ui.create_dom_element({
+
+			const fake_input_value = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
 				class_name		: 'input_value noevents',
 				parent			: fragment
 			})
-			input_value.setAttribute('readonly', true);
+			fake_input_value.setAttribute('readonly', true);
 			// click event
-			const click_handler = (e) => {
+			const click_handler = async (e) => {
 				e.preventDefault()
-			}
-			input_value.addEventListener('click', click_handler)
-			// activate_component event
-			const activate_component_handler = (component) => {
-				if(component.id !== self.id){
+
+				if (self.active===true) {
 					return
 				}
-				input_value.classList.add('input_disable')
+
+				// Draw placeholder 'Loading.. ' text while service is loading
+				fake_input_value.placeholder = get_label.loading || 'Loading..'
+
+				// Fire service autocomplete load and activation
+				await activate_autocomplete(self, self.node)
+
+				// Hide fake_input_value on finish render service autocomplete
+				fake_input_value.classList.add('input_disable')
+
+				// Reset placeholder text
+				fake_input_value.placeholder = ''
 			}
-			event_manager.subscribe('activate_component', activate_component_handler)
+			fake_input_value.addEventListener('click', click_handler)
 			// deactivate_component event
 			const deactivate_component_handler = (component) => {
+				// Ignore others components deactivation events
 				if(component.id !== self.id){
 					return
 				}
-				input_value.classList.remove('input_disable')
+				// Display again the fake input
+				fake_input_value.classList.remove('input_disable')
 			}
-			event_manager.subscribe('deactivate_component', deactivate_component_handler)
+			self.events_tokens.push(
+				event_manager.subscribe('deactivate_component', deactivate_component_handler)
+			);
 		}
 
 	// ar_section_record
