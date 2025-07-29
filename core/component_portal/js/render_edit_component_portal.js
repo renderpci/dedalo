@@ -854,7 +854,8 @@ export const activate_autocomplete = async function(self, wrapper) {
 				tipo			: self.tipo,
 				section_tipo	: self.section_tipo,
 				request_config	: self.context.request_config,
-				properties		: self.context.properties.service_autocomplete || null
+				properties		: self.context.properties.service_autocomplete || null,
+				id_variant		: self.id_variant
 			})
 			await self.autocomplete.build()
 			// render. Build_autocomplete_input nodes
