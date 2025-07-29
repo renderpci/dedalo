@@ -136,10 +136,11 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 			self.component_to_propagate.data.section_id	= 'tmp'
 
 		// show_interface. Change to add link and add buttons and remove save animation
-			self.component_to_propagate.show_interface.button_add		= true
-			self.component_to_propagate.show_interface.button_link		= true
-			self.component_to_propagate.show_interface.save_animation	= false
-			self.component_to_propagate.show_interface.tools			= false
+			self.component_to_propagate.show_interface.button_add				= true
+			self.component_to_propagate.show_interface.button_link				= true
+			self.component_to_propagate.show_interface.save_animation			= false
+			self.component_to_propagate.show_interface.tools					= false
+			self.component_to_propagate.show_interface.list_from_component_data	= false
 
 		// set value and save to tmp section (temporal session stored)
 			const changed_data_item = Object.freeze({
