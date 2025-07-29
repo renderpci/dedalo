@@ -911,21 +911,37 @@ export const render_download_modal = (self) => {
 			switch (model) {
 
 				case 'component_image':
-					quality_parse[model] = {
-						source : page_globals.dedalo_image_quality_default,
-						target : page_globals.dedalo_image_quality_default
-					}
-					ui.create_dom_element({
-						element_type	: 'option',
-						value			: page_globals.dedalo_image_quality_default,
-						text_node		: page_globals.dedalo_image_quality_default,
-						parent			: quality_selector
+					// Get the context of the default component image from resources
+					// (Any is valid to get the a generic context)
+					data_manager.get_element_context({
+						model			: 'component_image',
+						tipo			: 'rsc29',
+						section_tipo	: 'rsc170'
 					})
-					ui.create_dom_element({
-						element_type	: 'option',
-						value			: 'original',
-						text_node		: 'original',
-						parent			: quality_selector
+					.then(function(api_response){
+						if(!api_response.result) {
+							console.error('Failed component image context request:', api_response);
+							return
+						}
+
+						const ar_quality = api_response.result?.[0].features?.ar_quality || []
+
+						quality_parse[model] = {
+							source : page_globals.dedalo_image_quality_default,
+							target : page_globals.dedalo_image_quality_default
+						}
+
+						ar_quality.map(quality => {
+							const select_option = ui.create_dom_element({
+								element_type	: 'option',
+								value			: quality,
+								text_node		: quality,
+								parent			: quality_selector
+							})
+							if (quality === page_globals.dedalo_image_quality_default) {
+								select_option.selected = true
+							}
+						})
 					})
 					break;
 
