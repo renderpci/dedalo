@@ -116,6 +116,9 @@ const get_content_data = async function(self) {
 					width	: image_size.width,
 					height	: image_size.height
 				}
+				// remove the event,
+				// it change the container dimension when the image is changed with background removal process done.
+				main_element_image.removeEventListener('load', load_handler)
 			}
 			main_element_image.addEventListener('load', load_handler)
 			// set source
