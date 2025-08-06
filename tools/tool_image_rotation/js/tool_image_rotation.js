@@ -302,8 +302,8 @@ tool_image_rotation.prototype.automatic_background_removal = async function(opti
 		const upload_image = async( options )=>{
 
 			// set the extension to the main image name
-			const image_blob = options.image_blob
-			image_blob.name = original_file_name.replace(/\.[^/.]+$/, '.png');
+			const image_blob	= options.image_blob
+			image_blob.name		= original_file_name.replace(/\.[^/.]+$/, '.png');
 
 			// upload file (using service_upload)
 			// upload file as another images to tmp directory

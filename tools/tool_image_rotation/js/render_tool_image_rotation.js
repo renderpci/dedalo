@@ -481,17 +481,21 @@ const get_buttons = function(self) {
 			button_remove_background.classList.add('disable')
 			button_remove_background.blur()
 
+			const original_file_name = self.main_element.get_original_file_name()
+				? self.main_element.get_original_file_name()
+				: image_file.file_name
+
 			// options to be sent to engine
 			const background_removal_options = {
 				self_caller			: self.main_element,
 				engine				: engine,
 				image				: image,
-				original_file_name	: self.main_element.get_original_file_name(),
+				original_file_name	: original_file_name || 'original.jpg',
 				nodes				: nodes
 			}
 
 			// process with the engine
-			// type = browser -> (Default) the engine will be use the default transformer process in client browser
+			// type = browser -> 012(Default) the engine will be use the default transformer process in client browser
 			// return a Promise with the data to be saved into transcription component.
 			self.automatic_background_removal(background_removal_options)
 			.then( async (response)=>{
