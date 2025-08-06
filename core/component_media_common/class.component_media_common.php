@@ -2552,7 +2552,7 @@ class component_media_common extends component_common {
 				$quality
 			);
 
-			if ( $media_filepath!==$uploaded_file && file_exists($media_filepath) ) {
+			if ( $media_filepath!==$uploaded_file && file_exists($media_filepath) && isset($uploaded_file) && file_exists($uploaded_file) ) {
 
 				$move_file_options = new stdClass();
 					$move_file_options->quality			= $quality;
@@ -2667,11 +2667,14 @@ class component_media_common extends component_common {
 			}
 
 		// original_file_name: from target_filename (use example: component_image rsc29)
-		// When original_file_name is not defined, we look in the properties definition for
+		// When original_file_name is not defined, we look in the properties definition
+		// to get the filename in the target_filename defined (as component_input_text)
 			if (!isset($dato[0]->original_file_name)) {
 
 				$properties = $this->get_properties();
 				if (isset($properties->target_filename)) {
+
+					// get the target filename defined in properties as `Original file name` rsc398
 					$tipo  = $properties->target_filename;
 					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 					$component = component_common::get_instance(
