@@ -367,8 +367,10 @@ component_image.prototype.get_default_file_info = function(key=0) {
 
 	const default_quality = self.context.features.default_quality
 
-	const default_file_info = (default_quality && self.data.value[key])
-		? self.data.value[key].files_info.find(el => el.quality === default_quality)
+	const value = self.data.value || [];
+
+	const default_file_info = (default_quality && value[key])
+		? value[key].files_info.find(el => el.quality === default_quality)
 		: null
 
 	return default_file_info
@@ -389,8 +391,10 @@ component_image.prototype.get_quality_file_info = function( quality='original', 
 
 	const self = this
 
-	const quality_file_info = (quality && self.data.value[key])
-		? self.data.value[key].files_info.find(el => el.quality === quality && el.extension === extension)
+	const value = self.data.value || [];
+
+	const quality_file_info = (quality && value[key])
+		? value[key].files_info.find(el => el.quality === quality && el.extension === extension)
 		: null
 
 	return quality_file_info
@@ -409,8 +413,10 @@ component_image.prototype.get_original_file_name = function( key=0 ) {
 
 	const self = this
 
-	const original_file_name = (self.data.value[key].original_file_name)
-		? self.data.value[key].original_file_name
+	const value = self.data.value || [];
+
+	const original_file_name = (value[key].original_file_name)
+		? value[key].original_file_name
 		: null
 
 	return original_file_name
@@ -429,8 +435,10 @@ component_image.prototype.get_original_normalized_file_name = function( key=0 ) 
 
 	const self = this
 
-	const original_normalized_file_name = (self.data.value[key].original_normalized_name)
-		? self.data.value[key].original_normalized_name
+	const value = self.data.value || [];
+
+	const original_normalized_file_name = (value[key].original_normalized_name)
+		? value[key].original_normalized_name
 		: null
 
 	return original_normalized_file_name
