@@ -419,6 +419,26 @@ component_image.prototype.get_original_file_name = function( key=0 ) {
 
 
 /**
+* GET_ORIGINAL_NORMALIZED_FILE_NAME
+* Get the original file name (the original name of the image when the users upload it)
+*
+* @param int key
+* @return string|null original_file_name
+*/
+component_image.prototype.get_original_normalized_file_name = function( key=0 ) {
+
+	const self = this
+
+	const original_normalized_file_name = (self.data.value[key].original_normalized_name)
+		? self.data.value[key].original_normalized_name
+		: null
+
+	return original_normalized_file_name
+}//end get_original_normalized_file_name
+
+
+
+/**
 * GET_ACTIVE_EXTENSIONS
 * mix the main extension and all alternative extension and return an array
 *
