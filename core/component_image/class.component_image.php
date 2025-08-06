@@ -1397,7 +1397,8 @@ class component_image extends component_media_common implements component_media_
 					.' source_file: ' . to_string($source_file) . PHP_EOL
 					.' tipo: ' . to_string($this->tipo) . PHP_EOL
 					.' section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
-					.' section_id: ' . to_string($this->section_id)
+					.' section_id: ' . to_string($this->section_id) . PHP_EOL
+					.' quality: ' . to_string($quality)
 					, logger::ERROR
 				);
 
