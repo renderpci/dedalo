@@ -38,6 +38,12 @@ export const tool_media_versions = function () {
 		delete_normalized_files : false
 	}
 
+	this.files_info_db
+	this.files_info_disk
+	this.original_file_name
+	this.original_normalized_name
+
+
 	return true
 }//end tool_media_versions
 
@@ -107,6 +113,12 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 			// files info real (read from disk)
 				self.files_info_disk = await self.get_files_info()
+
+			// original_file_name
+				self.original_file_name = value[0]?.original_file_name
+
+			// original_normalized_name
+				self.original_normalized_name = value[0]?.original_normalized_name
 
 			// ar_quality
 				self.ar_quality	= self.caller.context.features.ar_quality
