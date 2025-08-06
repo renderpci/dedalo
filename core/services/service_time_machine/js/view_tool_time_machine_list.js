@@ -200,7 +200,7 @@ const rebuild_columns_map = async function(self) {
 * @param object options
 * @return DocumentFragment
 */
-const render_column_id = async function(options) {
+const render_column_id = function(options) {
 
 	// options
 		const service_time_machine	= options.caller
@@ -281,7 +281,7 @@ const render_column_id = async function(options) {
 		// siblings can use click too to easy set preview value
 		dd_request_idle_callback(
 			() => {
-				const children			= button_view.parentNode.parentNode.children
+				const children			= button_view.parentNode?.parentNode?.children || []
 				const children_length	= children.length
 				for (let i = children_length - 1; i >= 0; i--) {
 					if(children[i]!==button_view) {
