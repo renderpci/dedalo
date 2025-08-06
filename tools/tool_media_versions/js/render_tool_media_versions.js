@@ -123,6 +123,12 @@ const render_sync_data = function(self) {
 	// files info from disk
 		const files_info_disk = self.files_info_disk || []
 
+	// original_file_name
+		const original_file_name = self.original_file_name
+
+	// original_normalized_name
+		const original_normalized_name = self.original_normalized_name
+
 	// is_sync
 		const is_sync = files_info_db.length === files_info_disk.length
 
@@ -231,8 +237,8 @@ const render_sync_data = function(self) {
 				inner_html		: JSON.stringify({
 					files_info_db				: files_info_db,
 					files_info_disk				: files_info_disk,
-					original_file_name			: self.main_element?.data?.value[0]?.original_file_name,
-					original_normalized_name	: self.main_element?.data?.value[0]?.original_normalized_name
+					original_file_name			: original_file_name,
+					original_normalized_name	: original_normalized_name
 				}, null, 2),
 				parent			: sync_data_wrapper
 			})
