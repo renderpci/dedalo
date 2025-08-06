@@ -2552,7 +2552,7 @@ class component_media_common extends component_common {
 				$quality
 			);
 
-			if ( $media_filepath!==$uploaded_file && file_exists($media_filepath) ) {
+			if ( $media_filepath!==$uploaded_file && file_exists($media_filepath) && isset($uploaded_file) && file_exists($uploaded_file) ) {
 
 				$move_file_options = new stdClass();
 					$move_file_options->quality			= $quality;
