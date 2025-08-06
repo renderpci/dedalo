@@ -155,7 +155,12 @@ const get_content_data = async function(self) {
 			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
 				if(current_column.callback && typeof current_column.callback==='function'){
 					const column_node = await render_callback(self, current_column)
-					fragment.appendChild(column_node)
+					if (column_node instanceof Node || column_node instanceof DocumentFragment) {
+						fragment.appendChild(column_node)
+					}else{
+						console.error('Ignored non valid DOM node on render callback: ', column_node);
+						fragment.appendChild( render_empty_column_node(current_column, self) )
+					}
 					continue;
 				}
 
