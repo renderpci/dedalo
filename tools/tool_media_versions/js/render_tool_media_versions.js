@@ -229,8 +229,10 @@ const render_sync_data = function(self) {
 				element_type	: 'pre',
 				class_name		: 'pre hide',
 				inner_html		: JSON.stringify({
-					files_info_db	: files_info_db,
-					files_info_disk	: files_info_disk
+					files_info_db				: files_info_db,
+					files_info_disk				: files_info_disk,
+					original_file_name			: self.main_element?.data?.value[0]?.original_file_name,
+					original_normalized_name	: self.main_element?.data?.value[0]?.original_normalized_name
 				}, null, 2),
 				parent			: sync_data_wrapper
 			})
