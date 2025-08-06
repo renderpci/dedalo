@@ -736,7 +736,7 @@ const view_modal = async function(options) {
 							return wrapper;
 						} catch (error) {
 							console.log('tool_instance:', tool_instance);
-							console.error(error.message, caller);
+							console.error(error, caller);
 							return render_invalid_tool();
 						}
 					}
