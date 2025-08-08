@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
 * CLASS v6_to_v7
 *
@@ -8,24 +7,32 @@ declare(strict_types=1);
 class v6_to_v7 {
 
 
-	protected static $value_type_map = (object)[
-		"component_input_text"		=>	DEDALO_VALUE_TYPE_STRING,
-		"component_text_area"		=>	DEDALO_VALUE_TYPE_STRING,
-		"component_email"			=>	DEDALO_VALUE_TYPE_STRING,
-		"component_password"		=>	DEDALO_VALUE_TYPE_STRING,
-		"component_number"			=>	DEDALO_VALUE_TYPE_NUMBER,
-		"component_date"			=>	DEDALO_VALUE_TYPE_DATE,
-		"component_3d"				=>	DEDALO_VALUE_TYPE_MEDIA,
-		"component_av"				=>	DEDALO_VALUE_TYPE_MEDIA,
-		"component_image"			=>	DEDALO_VALUE_TYPE_MEDIA,
-		"component_pdf"				=>	DEDALO_VALUE_TYPE_MEDIA,
-		"component_svg"				=>	DEDALO_VALUE_TYPE_MEDIA,
-		"component_iri"				=>	DEDALO_VALUE_TYPE_IRI,
-		"component_geolocation"		=>	DEDALO_VALUE_TYPE_GEO,
-		"component_json"			=>	DEDALO_VALUE_TYPE_JSON,
-		"component_filter_records"	=>	DEDALO_VALUE_TYPE_JSON,
-		"component_security_access"	=>	DEDALO_VALUE_TYPE_JSON
-	];
+
+	/**
+	* GET_VALUE_TYPE_MAP
+	* @return object
+	*/
+	public static function get_value_type_map() : object {
+
+		return (object)[
+			'component_input_text'		=>	DEDALO_VALUE_TYPE_STRING,
+			'component_text_area'		=>	DEDALO_VALUE_TYPE_STRING,
+			'component_email'			=>	DEDALO_VALUE_TYPE_STRING,
+			'component_password'		=>	DEDALO_VALUE_TYPE_STRING,
+			'component_number'			=>	DEDALO_VALUE_TYPE_NUMBER,
+			'component_date'			=>	DEDALO_VALUE_TYPE_DATE,
+			'component_3d'				=>	DEDALO_VALUE_TYPE_MEDIA,
+			'component_av'				=>	DEDALO_VALUE_TYPE_MEDIA,
+			'component_image'			=>	DEDALO_VALUE_TYPE_MEDIA,
+			'component_pdf'				=>	DEDALO_VALUE_TYPE_MEDIA,
+			'component_svg'				=>	DEDALO_VALUE_TYPE_MEDIA,
+			'component_iri'				=>	DEDALO_VALUE_TYPE_IRI,
+			'component_geolocation'		=>	DEDALO_VALUE_TYPE_GEO,
+			'component_json'			=>	DEDALO_VALUE_TYPE_JSON,
+			'component_filter_records'	=>	DEDALO_VALUE_TYPE_JSON,
+			'component_security_access'	=>	DEDALO_VALUE_TYPE_JSON
+		];
+	}//end get_value_type_map
 
 
 
@@ -60,6 +67,8 @@ class v6_to_v7 {
 			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 			, logger::WARNING
 		);
+
+		$value_type_map = v6_to_v7::get_value_type_map();
 
 		// CLI process data
 			if ( running_in_cli()===true ) {
@@ -225,7 +234,7 @@ class v6_to_v7 {
 											$new_literal_obj->key	= $key+1; // add 1 to the array key
 											$new_literal_obj->lang	= $lang;
 											$new_literal_obj->value	= $value;
-											$new_literal_obj->type	= v6_to_v7::$value_type_map->$model ?? DEDALO_VALUE_TYPE_JSON;
+											$new_literal_obj->type	= $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_JSON;
 
 											// set first time if not already set
 											if (!property_exists($new_matrix_data->literals, $literal_tipo)) {
