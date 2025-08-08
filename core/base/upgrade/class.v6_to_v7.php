@@ -154,7 +154,8 @@ class v6_to_v7 {
 												. " component tipo: ". $literal_tipo . PHP_EOL
 												. " section tipo: ". $section_tipo . PHP_EOL
 												. " section id: ". $section_id . PHP_EOL
-												. " value: ". $ar_value . PHP_EOL
+												. " value: ". to_string( $ar_value ). PHP_EOL
+												. " type: " . gettype( $ar_value )
 												, logger::ERROR
 											);
 											continue;
@@ -189,7 +190,7 @@ class v6_to_v7 {
 													. " component tipo: ". $literal_tipo . PHP_EOL
 													. " section tipo: ". $section_tipo . PHP_EOL
 													. " section id: ". $section_id . PHP_EOL
-													. " value: ". $value . PHP_EOL
+													. " value: ". to_string( $ar_value ). PHP_EOL
 													. " key: ". $key . PHP_EOL
 													, logger::ERROR
 												);
