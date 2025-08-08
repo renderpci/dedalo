@@ -8,16 +8,16 @@
       "from_component_tipo": "dd200"
     },
     {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
       "type": "dd151",
       "section_id": "1",
       "section_tipo": "dd64",
       "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
     },
     {
       "type": "dd151",
@@ -34,19 +34,21 @@
   ],
   "components": {
     "dd199": {
-      "lg-nolan": [
-        {
-          "start": {
-            "day": 6,
-            "hour": 9,
-            "time": 65032019098,
-            "year": 2023,
-            "month": 5,
-            "minute": 44,
-            "second": 58
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 6,
+              "hour": 9,
+              "time": 65032019098,
+              "year": 2023,
+              "month": 5,
+              "minute": 44,
+              "second": 58
+            }
           }
-        }
-      ]
+        ]
+      }
     },
     "dd201": {
       "inf": "modified_date [component_date]",
@@ -54,13 +56,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 5,
-              "hour": 11,
-              "time": 65082827480,
-              "year": 2024,
-              "month": 12,
-              "minute": 11,
-              "second": 20
+              "day": 8,
+              "hour": 10,
+              "time": 65104510787,
+              "year": 2025,
+              "month": 8,
+              "minute": 19,
+              "second": 47
             }
           }
         ]
@@ -92,9 +94,6 @@
         ],
         "lg-spa": [
           "<p>Para importar ficheros en formato en Marc21.</p>"
-        ],
-        "lg-vlca": [
-          null
         ]
       }
     },
@@ -113,10 +112,12 @@
         "lg-eng": [
           "Import Marc21"
         ],
+        "lg-eus": [
+          "Inportatu Marc21"
+        ],
         "lg-fra": [
           "Importation Marc21"
         ],
-        "lg-ita": [],
         "lg-nep": [
           "मार्च २१ आयात गर्नुहोस्"
         ],
@@ -140,7 +141,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.3"
+          "2.0.4"
         ]
       }
     },
@@ -159,146 +160,6 @@
           {
             "open_as": "window",
             "windowFeatures": null
-          }
-        ]
-      }
-    },
-    "dd1353": {
-      "inf": "Simple tool object [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "name": "tool_import_marc21",
-            "label": [
-              {
-                "lang": "lg-cat",
-                "value": "Importar Marc21"
-              },
-              {
-                "lang": "lg-eng",
-                "value": "Import Marc21"
-              },
-              {
-                "lang": "lg-spa",
-                "value": "Importar Marc21"
-              }
-            ],
-            "labels": [
-              {
-                "lang": "lg-spa",
-                "name": "file_processor",
-                "value": "Procesado"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "file_processor",
-                "value": "Procesat"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "file_processor",
-                "value": "Processor"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "file_processor",
-                "value": "Prozessor"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "file_processor",
-                "value": "Processore"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "file_processor",
-                "value": "Processeur"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "target_componet",
-                "value": "Campo de destino"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "target_componet",
-                "value": "Camp de destí"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "target_componet",
-                "value": "Champ cible"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "target_componet",
-                "value": "Campo obiettivo"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "target_componet",
-                "value": "Zielfeld"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "target_componet",
-                "value": "Target field"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "quality",
-                "value": "Calidad"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "quality",
-                "value": "Qualité"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "quality",
-                "value": "Qualità"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "quality",
-                "value": "Qualität"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "quality",
-                "value": "Qualitat"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "quality",
-                "value": "Quality"
-              }
-            ],
-            "version": "2.0.0",
-            "ontology": null,
-            "developer": [],
-            "dd_version": "6.0.0",
-            "properties": {
-              "open_as": "window",
-              "windowFeatures": null
-            },
-            "section_id": 28,
-            "description": [
-              {
-                "lang": "lg-eng",
-                "value": [
-                  "<p>To import Marc21 files.</p>"
-                ]
-              }
-            ],
-            "section_tipo": "dd1324",
-            "always_active": false,
-            "affected_tipos": null,
-            "affected_models": null,
-            "show_in_component": false,
-            "show_in_inspector": false,
-            "requirement_translatable": false
           }
         ]
       }
@@ -911,9 +772,9 @@
     }
   },
   "section_id": 17,
-  "created_date": "2023-10-09 19:37:41",
+  "created_date": "2025-01-27 13:51:03",
   "section_tipo": "dd1340",
-  "modified_date": "2024-12-05 11:11:20",
+  "modified_date": "2025-08-08 10:19:47",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
