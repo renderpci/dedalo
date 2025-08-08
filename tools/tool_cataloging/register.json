@@ -3,6 +3,12 @@
   "relations": [
     {
       "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd151",
       "section_id": "1",
       "section_tipo": "dd64",
       "from_component_tipo": "dd1354"
@@ -35,30 +41,26 @@
       "type": "dd151",
       "section_id": "-1",
       "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
   ],
   "components": {
     "dd199": {
-      "lg-nolan": [
-        {
-          "start": {
-            "day": 12,
-            "hour": 18,
-            "time": 65021854469,
-            "year": 2023,
-            "month": 1,
-            "minute": 14,
-            "second": 29
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 12,
+              "hour": 18,
+              "time": 65021854469,
+              "year": 2023,
+              "month": 1,
+              "minute": 14,
+              "second": 29
+            }
           }
-        }
-      ]
+        ]
+      }
     },
     "dd201": {
       "inf": "modified_date [component_date]",
@@ -66,29 +68,23 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 19,
-              "time": 65047777317,
-              "year": 2023,
-              "month": 11,
-              "minute": 1,
-              "second": 57
+              "day": 8,
+              "hour": 9,
+              "time": 65104509584,
+              "year": 2025,
+              "month": 8,
+              "minute": 59,
+              "second": 44
             }
           }
         ]
-      }
-    },
-    "dd271": {
-      "inf": "Primera publicación [component_date]",
-      "dato": {
-        "lg-nolan": []
       }
     },
     "dd612": {
       "inf": "Descripción [component_text_area]",
       "dato": {
         "lg-cat": [
-          "Agrupació i jerarquització de béns culturals."
+          "<p>Agrupació i jerarquització de béns culturals.</p>"
         ],
         "lg-deu": [
           "<p>Gruppierung und Hierarchie von Kulturgütern.</p>"
@@ -100,7 +96,7 @@
           "<p>Grouping and hierarchization of cultural assets.</p>"
         ],
         "lg-fra": [
-          "Groupement et hiérarchisation de biens culturels."
+          "<p>Groupement et hiérarchisation de biens culturels.</p>"
         ],
         "lg-spa": [
           "<p>Agrupación y jerarquización de bienes culturales.</p>"
@@ -122,6 +118,9 @@
         "lg-eng": [
           "Cataloging of cultural properties"
         ],
+        "lg-eus": [
+          "Ondasunen katalogazioa"
+        ],
         "lg-fra": [
           "Catalogage des biens culturels"
         ],
@@ -131,12 +130,6 @@
         "lg-spa": [
           "Catalogación de bienes"
         ]
-      }
-    },
-    "dd1223": {
-      "inf": "Última publicación [component_date]",
-      "dato": {
-        "lg-nolan": []
       }
     },
     "dd1326": {
@@ -151,7 +144,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -161,12 +154,6 @@
         "lg-nolan": [
           "6.0.0"
         ]
-      }
-    },
-    "dd1334": {
-      "inf": "Ontologia [component_json]",
-      "dato": {
-        "lg-nolan": null
       }
     },
     "dd1335": {
@@ -181,120 +168,12 @@
         ]
       }
     },
-    "dd1350": {
-      "inf": "Afecta a tipos: [component_json]",
-      "dato": {
-        "lg-nolan": null
-      }
-    },
-    "dd1353": {
-      "inf": "Simple tool object [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "name": "tool_cataloging",
-            "label": [
-              {
-                "lang": "lg-cat",
-                "value": "Catalogació de bens culturals"
-              },
-              {
-                "lang": "lg-deu",
-                "value": "Katalogisierung von Kulturgütern"
-              },
-              {
-                "lang": "lg-ell",
-                "value": "Καταλογογράφηση πολιτιστικών αγαθών"
-              },
-              {
-                "lang": "lg-eng",
-                "value": "Cataloging cultural properties."
-              },
-              {
-                "lang": "lg-fra",
-                "value": "Catalogage des biens culturels"
-              },
-              {
-                "lang": "lg-ita",
-                "value": "Catalogazione dei beni culturali"
-              },
-              {
-                "lang": "lg-spa",
-                "value": "Catalogación de bienes"
-              }
-            ],
-            "labels": null,
-            "version": "2.0.0",
-            "ontology": null,
-            "developer": [],
-            "dd_version": "6.0.0",
-            "properties": {
-              "view": "tool_cataloging_mosaic",
-              "open_as": "window",
-              "windowFeatures": null
-            },
-            "section_id": 1,
-            "description": [
-              {
-                "lang": "lg-cat",
-                "value": [
-                  "Agrupació i jerarquització de béns culturals."
-                ]
-              },
-              {
-                "lang": "lg-deu",
-                "value": [
-                  "<p>Gruppierung und Hierarchie von Kulturgütern.</p>"
-                ]
-              },
-              {
-                "lang": "lg-ell",
-                "value": [
-                  "<p>Ομαδοποίηση και ιεράρχηση πολιτιστικών αγαθών.</p>"
-                ]
-              },
-              {
-                "lang": "lg-eng",
-                "value": [
-                  "<p>Grouping and hierarchy of cultural properties.</p>"
-                ]
-              },
-              {
-                "lang": "lg-fra",
-                "value": [
-                  "Groupement et hiérarchisation de biens culturels."
-                ]
-              },
-              {
-                "lang": "lg-spa",
-                "value": [
-                  "<p>Agrupación y jerarquización de bienes culturales.</p>"
-                ]
-              }
-            ],
-            "section_tipo": "dd1324",
-            "always_active": false,
-            "affected_tipos": null,
-            "affected_models": null,
-            "show_in_component": false,
-            "show_in_inspector": false,
-            "requirement_translatable": false
-          }
-        ]
-      }
-    },
     "dd1362": {
-      "inf": "Dev info [component_text_area]",
+      "inf": "Implementación [component_text_area]",
       "dato": {
         "lg-nolan": [
           "<p>Use this tool to create a thesaurus with different data from different sections, as types or mints to create a tree catalog, ex: types inside mints.</p><p>Define the tool config and assign with the 2 ddo list to view in the right and left.</p><p>for the right panel: define a ddo of the main section with the &nbsp;components to show.</p><p>the role property need to be: \"section_to_cataloging\"</p><p>for the left pane: define the ddo with the area_thesarurs (filtered by hierarche_types or other concept):</p><p>the role property need to be: \"area_thesaurus\",</p><p>{</p><p>&nbsp; &nbsp; \"mode\": \"relation\",</p><p>&nbsp; &nbsp; \"role\": \"area_thesaurus\",</p><p>&nbsp; &nbsp; \"tipo\": \"dd100\",</p><p>&nbsp; &nbsp; \"properties\": {</p><p>&nbsp; &nbsp; &nbsp; \"hierarchy_types\": [8]</p><p>&nbsp; &nbsp; },</p><p>&nbsp; &nbsp; \"section_id\": null,</p><p>&nbsp; &nbsp; \"section_tipo\": \"dd100\"</p><p>}</p><p></p><p>The catalog tool create new section when the user drag any record from section to the thesaurus and it's necessary define where will be storage the locator drag as:</p><p>\"set_new_thesaurus_value\": {</p><p>&nbsp; &nbsp; \"tipo\": \"numisdata656\",</p><p>&nbsp; &nbsp; \"section_tipo\": \"numisdata665\"</p><p>}</p>"
         ]
-      }
-    },
-    "dd1372": {
-      "inf": "Etiquetas [component_json]",
-      "dato": {
-        "lg-nolan": null
       }
     },
     "dd1644": {
@@ -309,7 +188,7 @@
   "section_id": 22,
   "created_date": "2023-11-02 18:55:50",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-02 19:01:57",
+  "modified_date": "2025-08-08 09:59:44",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
