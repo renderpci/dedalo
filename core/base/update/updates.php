@@ -35,6 +35,88 @@ $updates = new stdClass();
 
 
 
+
+$v=700; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 7;
+	$updates->$v->version_medium		= 0;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 7;
+	$updates->$v->update_from_minor		= 2;
+
+	// Re-index and vacuum tables
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			ALTER TABLE "matrix" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_activities" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_activity" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_dataframe" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_dd" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_hierarchy" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_hierarchy_main" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_indexations" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_langs" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_layout" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_layout_dd" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_list" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_nexus" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_nexus_main" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_notes" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_ontology" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_ontology_main" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_profiles" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_projects" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_stats" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_test" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_tools" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+			ALTER TABLE "matrix_users" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
+		');
+
+
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			$ar_tables = [
+				// 'matrix',
+				// 'matrix_activities',
+				// 'matrix_activity',
+				// 'matrix_dataframe',
+				// 'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_ontology',
+				'matrix_ontology_main',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_test',
+				'matrix_tools',
+				'matrix_users'
+			];
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.v6_to_v7.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Update all data in PostgreSQL with new format";
+				$script_obj->script_class	= "v6_to_v7";
+				$script_obj->script_method	= "reformat_matrix_data";
+				$script_obj->script_vars	= [
+					$ar_tables
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+
+
 $v=672; #####################################################################################
 $updates->$v = new stdClass();
 
