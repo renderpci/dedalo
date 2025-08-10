@@ -68,8 +68,6 @@ class v6_to_v7 {
 			, logger::WARNING
 		);
 
-		$value_type_map = v6_to_v7::get_value_type_map();
-
 		// CLI process data
 			if ( running_in_cli()===true ) {
 				if (!isset(common::$pdata)) {
@@ -111,6 +109,7 @@ class v6_to_v7 {
 				if( isset($datos) ){
 
 					$new_matrix_data = new stdClass();
+					$value_type_map = v6_to_v7::get_value_type_map();
 
 					// datos properties
 					foreach ($datos as $datos_key => $datos_value) {
