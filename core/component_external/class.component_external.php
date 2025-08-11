@@ -27,6 +27,18 @@ class component_external extends component_common {
 				return $data_from_remote_cache[$uid];
 			}
 
+		// zenon_is_available.
+		// If Zenon is not available, is saved in session to prevent to try to load again and again.
+		// On user quits, the status is reset and Dédalo try to connect again.
+			$zenon_is_available = $_SESSION['dedalo']['config']['zenon_is_available'] ?? null;
+			if ($zenon_is_available===false) {
+				debug_log(__METHOD__
+					." ERROR. Unable to load data from_remote. Remote host (zenon) is unavailable 1. NULL is returned as data. Quit session to try again."
+					, logger::ERROR
+				);
+				return null;
+			}
+
 		// section_properties
 			$RecordObj_dd		= new RecordObj_dd($section_tipo);
 			$section_properties	= $RecordObj_dd->get_properties();
@@ -117,7 +129,7 @@ class component_external extends component_common {
 					$request_response = curl_request((object)[
 						'url'		=> $url, // string
 						'header'	=> false, // bool
-						'timeout'	=> 6 // int in secs
+						'timeout'	=> 4 // int in secs
 					]);
 					$response_obj = !empty($request_response->result)
 						? json_decode($request_response->result)
@@ -130,6 +142,9 @@ class component_external extends component_common {
 					.' request_response: ' . to_string($request_response)
 					, logger::ERROR
 				);
+				// Fix Zenon as not available to prevent to try access again and again.
+				$_SESSION['dedalo']['config']['zenon_is_available'] = false;
+
 				return null;
 			}
 
