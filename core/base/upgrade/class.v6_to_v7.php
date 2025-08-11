@@ -226,7 +226,13 @@ class v6_to_v7 {
 												continue;
 											}
 
+											// empty case. Ignore empty values
 											if (empty($value)) {
+												continue;
+											}
+
+											// empty media. Skip save empty media values
+											if (json_encode($value)==='{"files_info":[]}') {
 												continue;
 											}
 
@@ -234,6 +240,14 @@ class v6_to_v7 {
 											$new_literal_obj->lang	= $lang;
 											$new_literal_obj->value	= $value;
 											$new_literal_obj->type	= $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_JSON;
+
+											// temporal add info for easy debug in beta 7
+												// if (isset($new_literal_obj->literal_value->info)) {
+												// 	$new_literal_obj->info = $new_literal_obj->literal_value->info;
+												// }else{
+												// 	$label = RecordObj_dd::get_termino_by_tipo($literal_tipo);
+												// 	$new_literal_obj->info = "$label [$model]";
+												// }
 
 											// set first time if not already set
 											if (!property_exists($new_matrix_data->literals, $literal_tipo)) {
