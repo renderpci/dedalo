@@ -676,9 +676,10 @@ class ontology_data_io {
 
 		// rqo
 			$rqo = new stdClass();
-				$rqo->dd_api	= "dd_utils_api";
-				$rqo->action	= "get_server_ready_status";
-				$rqo->options	= new stdClass();
+				$rqo->dd_api		= "dd_utils_api";
+				$rqo->action		= "get_server_ready_status";
+				$rqo->prevent_lock	= true;
+				$rqo->options		= new stdClass();
 					$rqo->options->check = 'ontology_server';
 
 			$rqo_string = 'rqo=' . json_encode($rqo);
