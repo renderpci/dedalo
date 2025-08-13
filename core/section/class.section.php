@@ -477,50 +477,54 @@ class section extends common {
 			if ($component_data_type==='relation') {
 
 				// relation components
-					// previous component dato from unchanged section dato
-					// previous component is used to check time_machine data
-					// when time_machine has not previous data of the component, because was a explicit not time_machine save
-					// the previous_component_dato will used to set as previous time_machine_data.
-					// It prevent lost the previous changes in data.
-					$previous_component_dato = array_values(
-						array_filter($this->get_relations(), function($el) use ($component_tipo, $component_obj){
 
-							// dataframe case
-							// by default, component_dataframe is built with caller_dataframe except when import data.
-							// When import data from CSV files, the component is built without dataframe
-							// because is not possible to create different instances for every dataframe data.
-							// In those cases the component_dataframe manage its data as other components with whole data.
-							$previous_dato = (get_class($component_obj)==='component_dataframe' && isset($component_obj->caller_dataframe) )
-								? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
-									&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
-									&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
-								: isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+				// previous component dato from unchanged section dato object
+				// It is used to check time_machine data when time_machine has not previous
+				// data of the component, because was a explicit not time_machine save.
+				// The previous_component_dato will be used to set it as previous time_machine_data.
+				// It avoids losing previous data modifications.
+				$previous_component_dato = array_values(
+					array_filter($this->get_relations(), function($el) use ($component_tipo, $component_obj){
 
-							 return $previous_dato;
-						})
-					);
-					$this->set_component_relation_dato( $component_obj );
+						// dataframe case
+						// by default, component_dataframe is built with caller_dataframe except when import data.
+						// When import data from CSV files, the component is built without dataframe
+						// because is not possible to create different instances for every dataframe data.
+						// In those cases the component_dataframe manage its data as other components with whole data.
+						$previous_dato = (get_class($component_obj)==='component_dataframe' && isset($component_obj->caller_dataframe) )
+							? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
+								&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
+								&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
+							: isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+
+						 return $previous_dato;
+					})
+				);
+
+				$this->set_component_relation_dato( $component_obj );
 
 			}else{
 
 				// direct components
-					// previous component dato from unchanged section dato
-					$previous_component_dato = $this->get_component_dato(
-						$component_tipo,
-						$component_lang,
-						false // bool lang_fallback
-					);
-					$this->set_component_direct_dato( $component_obj );
-		}
+
+				// previous component dato from unchanged section dato object
+				$previous_component_dato = $this->get_component_dato(
+					$component_tipo,
+					$component_lang,
+					false // bool lang_fallback
+				);
+
+				$this->set_component_direct_dato( $component_obj );
+			}
 
 		// diffusion_info
 			$this->dato->diffusion_info = null;	// Always reset section diffusion_info on save components
 
 		// optional stop the save process to delay DDBB access
 			if($save_to_database===false) {
-				# Stop here (remember make a real section save later!)
-				# No component time machine data will be saved when section saves later
-				#debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
+				// Stop here (remember make a real section save later!)
+				// No component time machine data will be saved when section saves later
+				// debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
 				return $this->section_id;
 			}
 
@@ -541,27 +545,23 @@ class section extends common {
 					// use the main component
 					$main_tipo = $component_obj->get_main_component_tipo();
 					$save_options->time_machine_tipo	= $main_tipo;
-
 				}
-
+				// bulk_process_id column
 				if( isset($component_obj->bulk_process_id) ){
 					$save_options->time_machine_bulk_process_id	= $component_obj->bulk_process_id;
 				}
 
-
 		// save section result
 			$result = $this->Save( $save_options );
 
-			// #
-			// # DIFFUSION_INFO
-			// # Note that this process can be very long if there are many inverse locators in this section
-			// # To optimize save process in scripts of importation, you can disable this option if is not really necessary
-			// #
-			// #$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
-			// #register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
+			// DIFFUSION_INFO
+			// Note that this process can be very long if there are many inverse locators in this section
+			// To optimize save process in scripts of importation, you can disable this option if is not really necessary
+			//
+			// $dato->diffusion_info = null;	// Always reset section diffusion_info on save components
+			// register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
 			if ($component_obj->update_diffusion_info_propagate_changes===true) {
 				$this->diffusion_info_propagate_changes();
-				# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
 			}
 
 		// post_save_component_processes
