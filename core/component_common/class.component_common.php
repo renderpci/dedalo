@@ -808,30 +808,12 @@ abstract class component_common extends common {
 				return $this->dato_resolved;
 			}
 
-		/*
-			#
-			# IS TEMP CASE
-			# Sometimes we need use component as temporal element without save real data to database. Is this case
-			# data is saved to session as temporal data
-			if (isset($this->is_temp) && $this->is_temp===true) {
-				$temp_data_uid = $this->tipo.'_'.$this->parent.'_'.$this->lang.'_'.$this->section_tipo;
-				if (isset($_SESSION['dedalo']['component_temp_data'][$temp_data_uid])) {
-					$this->dato = $_SESSION['dedalo']['component_temp_data'][$temp_data_uid];
-				}else{
-					$this->dato = null;
-				}
-
-			}else{
-
-				# MATRIX DATA : Load matrix data
-				$this->load_component_dato();
-			}
-			*/
-
-		# MATRIX DATA : Load matrix data
+		// MATRIX DATA : Load matrix data
 		$this->load_component_dato();
 
 		$dato = $this->dato;
+
+		// invalid data formats case. Expected array|null
 		if (!is_null($dato) && !is_array($dato)) {
 			$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
 			if ($matrix_table==='matrix_dd') {
@@ -3506,7 +3488,6 @@ abstract class component_common extends common {
 
 		return $string;
 	}//end remove_first_and_last_quotes
-
 
 
 
