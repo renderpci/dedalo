@@ -76,32 +76,120 @@ $updates->$v = new stdClass();
 			ALTER TABLE "matrix_users" ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
 		');
 
+// SELECT * FROM matrix WHERE data_relations_flat_st_si(data) @> '["dd64_1"]'::jsonb;
+
+	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+
+		DROP FUNCTION IF EXISTS public.relations_flat_st_si(jsonb);
+		DROP FUNCTION IF EXISTS public.relations_flat_fct_st_si(jsonb);
+		DROP FUNCTION IF EXISTS public.relations_flat_ty_st_si(jsonb);
+		DROP FUNCTION IF EXISTS public.relations_flat_ty_st(jsonb);
+
+
+		DROP INDEX IF EXISTS public.matrix_datos_gin;
+
+		DROP INDEX IF EXISTS public.matrix_relations_flat_st_si;
+		DROP INDEX IF EXISTS public.matrix_relations_flat_fct_st_si;
+		DROP INDEX IF EXISTS public.matrix_relations_flat_ty_st_si;
+		DROP INDEX IF EXISTS public.matrix_relations_flat_ty_st;
+
+		DROP INDEX IF EXISTS matrix_relations_gin;
+		DROP INDEX IF EXISTS matrix_order_id_desc;
+
+	");
+
+
+	// SELECT * FROM matrix WHERE data_relations_flat_fct_st_si(data) @> '["tchi7_dd64_1"]'::jsonb;
+
+	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+
+
+		DROP INDEX IF EXISTS matrix_data_relations_flat_fct_st_si;
+		DROP INDEX IF EXISTS matrix_hierarchy_data_relations_flat_fct_st_si;
+		DROP INDEX IF EXISTS matrix_activities_data_relations_flat_fct_st_si;
+		DROP INDEX IF EXISTS matrix_list_data_relations_flat_fct_st_si;
+
+		CREATE INDEX matrix_data_relations_flat_fct_st_si ON matrix
+		USING gin (data_relations_flat_fct_st_si(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_hierarchy_data_relations_flat_fct_st_si ON matrix_hierarchy
+		USING gin (data_relations_flat_fct_st_si(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_activities_data_relations_flat_fct_st_si ON matrix_activities
+		USING gin (data_relations_flat_fct_st_si(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_list_data_relations_flat_fct_st_si ON matrix_list
+		USING gin (data_relations_flat_fct_st_si(data) jsonb_path_ops);
+	");
+
+
+	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+
+		DROP INDEX IF EXISTS matrix_data_relations_flat_ty_st_si;
+		DROP INDEX IF EXISTS matrix_hierarchy_data_relations_flat_ty_st_si;
+		DROP INDEX IF EXISTS matrix_activities_data_relations_flat_ty_st_si;
+		DROP INDEX IF EXISTS matrix_list_data_relations_flat_ty_st_si;
+
+		CREATE INDEX matrix_data_relations_flat_ty_st_si ON matrix
+		USING gin (data_relations_flat_ty_st_si(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_hierarchy_data_relations_flat_ty_st_si ON matrix_hierarchy
+		USING gin (data_relations_flat_ty_st_si(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_activities_data_relations_flat_ty_st_si ON matrix_activities
+		USING gin (data_relations_flat_ty_st_si(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_list_data_relations_flat_ty_st_si ON matrix_list
+		USING gin (data_relations_flat_ty_st_si(data) jsonb_path_ops);
+	");
+
+	$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+
+		DROP INDEX IF EXISTS matrix_data_relations_flat_ty_st;
+		DROP INDEX IF EXISTS matrix_hierarchy_data_relations_flat_ty_st;
+		DROP INDEX IF EXISTS matrix_activities_data_relations_flat_ty_st;
+		DROP INDEX IF EXISTS matrix_list_data_relations_flat_ty_st;
+
+
+		CREATE INDEX matrix_data_relations_flat_ty_st ON matrix
+		USING gin (data_relations_flat_ty_st(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_hierarchy_data_relations_flat_ty_st ON matrix_hierarchy
+		USING gin (data_relations_flat_ty_st(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_activities_data_relations_flat_ty_st ON matrix_activities
+		USING gin (data_relations_flat_ty_st(data) jsonb_path_ops);
+
+		CREATE INDEX matrix_list_data_relations_flat_ty_st ON matrix_list
+		USING gin (data_relations_flat_ty_st(data) jsonb_path_ops);
+	");
+
 
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			$ar_tables = [
-				// 'matrix',
-				// 'matrix_activities',
-				// 'matrix_activity',
-				// 'matrix_dataframe',
-				// 'matrix_dd',
-				// 'matrix_hierarchy',
-				// 'matrix_hierarchy_main',
-				// 'matrix_indexations',
-				// 'matrix_langs',
-				// 'matrix_layout',
-				// 'matrix_layout_dd',
-				// 'matrix_list',
-				// 'matrix_nexus',
-				// 'matrix_nexus_main',
-				// 'matrix_notes',
-				// 'matrix_ontology',
-				// 'matrix_ontology_main',
-				// 'matrix_profiles',
-				// 'matrix_projects',
-				// 'matrix_stats',
-				// 'matrix_test',
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_ontology',
+				'matrix_ontology_main',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_test',
 				'matrix_tools',
 				'matrix_users'
 			];
