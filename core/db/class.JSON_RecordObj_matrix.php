@@ -156,13 +156,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		$this->section_tipo = $section_tipo;
 		$this->section_id 	= $section_id;
 
-		if ( !empty($section_id) ) {
-			# Ignore other vars
-			//parent::__construct($section_id, $section_tipo);
-			parent::__construct(null);
-		}else{
-			parent::__construct(null);
-		}
+		parent::__construct(null);
 	}//end __construct
 
 
@@ -229,37 +223,37 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	* (json matrix)
 	* Call RecordDataBounceObject->Save() and RecordObj_time_machine->Save()
 	* @param object $save_options = null
-	* Sample:
-	* {
-	*	"is_portal": false,
-	*	"portal_tipo": false,
-	*	"main_components_obj": false,
-	*	"main_relations": false,
-	*	"top_tipo": "oh1",
-	*	"top_id": false,
-	*	"new_record": false,
-	*	"forced_create_record": false,
-	*	"time_machine_data": [
-	*		"Título entrevista uno b"
-	*	],
-	*	"time_machine_lang": "lg-eng",
-	*	"time_machine_tipo": "oh16",
-	*	"time_machine_section_id": 1,
-	* 	"previous_component_dato": [
-	*		{
-	*			"type": "dd151",
-	*			"section_id": "5",
-	*			"section_tipo": "dd898",
-	*			"from_component_tipo": "oh18"
-	*		},
-	*		{
-	*			"type": "dd151",
-	*			"section_id": "10",
-	*			"section_tipo": "dd898",
-	*			"from_component_tipo": "oh18"
-	*		}
-	*	]
-	* }
+		* Sample:
+		* {
+		*	"is_portal": false,
+		*	"portal_tipo": false,
+		*	"main_components_obj": false,
+		*	"main_relations": false,
+		*	"top_tipo": "oh1",
+		*	"top_id": false,
+		*	"new_record": false,
+		*	"forced_create_record": false,
+		*	"time_machine_data": [
+		*		"Título entrevista uno b"
+		*	],
+		*	"time_machine_lang": "lg-eng",
+		*	"time_machine_tipo": "oh16",
+		*	"time_machine_section_id": 1,
+		* 	"previous_component_dato": [
+		*		{
+		*			"type": "dd151",
+		*			"section_id": "5",
+		*			"section_tipo": "dd898",
+		*			"from_component_tipo": "oh18"
+		*		},
+		*		{
+		*			"type": "dd151",
+		*			"section_id": "10",
+		*			"section_tipo": "dd898",
+		*			"from_component_tipo": "oh18"
+		*		}
+		*	]
+		* }
 	* @return int|null $id
 	* 	Matrix id from target table record
 	*/

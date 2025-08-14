@@ -67,8 +67,6 @@ class section extends common {
 			*/
 			public $caller_dataframe;
 
-
-
 		/**
 		* @param object $JSON_RecordObj_matrix
 		*/
