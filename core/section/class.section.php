@@ -51,6 +51,10 @@ class section extends common {
 		// time machine save control
 		public $save_tm = true;
 
+		// V7 PROPERTIES //
+
+		// object|null data. Section data value from V7 DB column 'data'
+		protected $data;
 
 		/**
 		* SECTIONS FOR DATAFRAME
@@ -4410,6 +4414,95 @@ class section extends common {
 
 		return $sqo_id;
 	}//end build_sqo_id
+
+
+
+	// V7 METHODS //
+
+
+
+	/**
+	* GET_JSON_RECORDOBJ_MATRIX
+	* Gets or creates the JSON_RecordObj_matrix instance.
+	* @return JSON_RecordObj_matrix $this->JSON_RecordObj_matrix
+	*/
+	private function get_JSON_RecordObj_matrix() : JSON_RecordObj_matrix {
+
+		$this->JSON_RecordObj_matrix = $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
+			common::get_matrix_table_from_tipo($this->tipo),
+			(int)$this->section_id, // int section_id
+			$this->tipo, // string section tipo
+			true // bool enable cache
+		);
+
+		return $this->JSON_RecordObj_matrix;
+	}//end get_JSON_RecordObj_matrix
+
+
+
+	/**
+	* GET_DATA
+	* Gets database column 'data' value for this record (section_tipo, section_id)
+	* @return object|null $this->data
+	*/
+	public function get_data() : ?object {
+
+		// Retrieve the matrix instance
+		$this->JSON_RecordObj_matrix = $this->get_JSON_RecordObj_matrix();
+
+		// load dato from db
+		// data is loaded once and cached into JSON_RecordObj_matrix 'data' property
+		$this->data = $this->JSON_RecordObj_matrix->get_data();
+
+
+		return $this->data;
+	}//end get_data
+
+
+
+	/**
+	* GET_COMPONENT_DATA
+	* It gets all the data from the component as the database is stored,
+	* with all languages, using the whole section data object.
+	* @param string $tipo
+	* 	Component tipo
+	* @param string data_container
+	* 	JSON object data_container where to get the data: literals|relations
+	* @return array|null $component_data
+	*/
+	public function get_component_data( string $tipo, string $data_container ) : ?array {
+
+		$section_data = $this->data ?? $this->get_data();
+
+		// check section_data
+		if (!is_object($section_data)) {
+			debug_log(__METHOD__
+				. " Section without JSON data object " . PHP_EOL
+				. ' tipo: ' . to_string($this->tipo) . PHP_EOL
+				. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+				. ' section_data: ' . to_string($section_data)
+				, logger::ERROR
+			);
+			return null;
+		}
+
+		// check data_container
+		if (!is_object($section_data->{$data_container})) {
+			debug_log(__METHOD__
+				. " Section without JSON data_container object " . PHP_EOL
+				. ' tipo: ' . to_string($this->tipo) . PHP_EOL
+				. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+				. ' data_container: ' . to_string($data_container)
+				, logger::ERROR
+			);
+			return null;
+		}
+
+		$component_data = $section_data->{$data_container}->{$tipo} ?? null;
+
+
+		return $component_data;
+	}//end get_component_data
 
 
 

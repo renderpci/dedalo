@@ -124,6 +124,15 @@ abstract class component_common extends common {
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
 
+		// data_container. JSON object data_container where to get the data: literals|relations
+		// Default value is 'literals'. Overwrite it in component_relation_common.
+		protected $data_container = 'literals';
+
+		// V7 PROPERTIES //
+
+		// object|null data. Component data value from DB column 'data->literals|relations->tipo'
+		protected $data;
+
 
 
 	/**
@@ -4170,6 +4179,26 @@ abstract class component_common extends common {
 
 		return null;
 	}//end get_regenerate_options
+
+
+
+	// V7 METHODS //
+
+
+
+	/**
+	* GET_DATA
+	* It gets all the data from the component as the database is stored,
+	* with all languages, using the whole section data object.
+	* @return array|null $this->data
+	*/
+	public function get_data() : ?array {
+
+		$section = $this->get_my_section();
+		$this->data = $section->get_component_data( $this->tipo, $this->data_container );
+
+		return $this->data;
+	}//end get_data
 
 
 
