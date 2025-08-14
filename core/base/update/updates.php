@@ -80,39 +80,55 @@ $updates->$v = new stdClass();
 		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			$ar_tables = [
-				// 'matrix',
-				// 'matrix_activities',
-				// 'matrix_activity',
-				// 'matrix_dataframe',
-				// 'matrix_dd',
-				// 'matrix_hierarchy',
-				// 'matrix_hierarchy_main',
-				// 'matrix_indexations',
-				// 'matrix_langs',
-				// 'matrix_layout',
-				// 'matrix_layout_dd',
-				// 'matrix_list',
-				// 'matrix_nexus',
-				// 'matrix_nexus_main',
-				// 'matrix_notes',
-				// 'matrix_ontology',
-				// 'matrix_ontology_main',
-				// 'matrix_profiles',
-				// 'matrix_projects',
-				// 'matrix_stats',
-				// 'matrix_test',
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_ontology',
+				'matrix_ontology_main',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_test',
 				'matrix_tools',
 				'matrix_users'
 			];
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.v6_to_v7.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Update all data in PostgreSQL with new format";
-				$script_obj->script_class	= "v6_to_v7";
-				$script_obj->script_method	= "reformat_matrix_data";
-				$script_obj->script_vars	= [
-					$ar_tables
-				]; // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
+
+			// Only checks data without save
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Check all data in PostgreSQL to use v7 new format (ONLY CHECKS DATA WITHOUT SAVE. STOPS THE UPDATE IF FOUND ERRORS)',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'reformat_matrix_data',
+				'stop_on_error'	=> true,
+				'script_vars'	=> [
+					$ar_tables,
+					false // save option. On false, only data review is made. Not save
+				] // Note that only ONE argument encoded is sent
+			];
+
+			// Update all data in PostgreSQL with new format
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Update all data in PostgreSQL with new v7 format (SAVE DATA IGNORING FOUND ERRORS)',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'reformat_matrix_data',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+					$ar_tables,
+					true // save option. On false, only data review is made. Not save
+				] // Note that only ONE argument encoded is sent
+			];
 
 
 

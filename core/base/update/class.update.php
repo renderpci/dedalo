@@ -324,8 +324,8 @@ class update {
 						file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 					$run_scripts_response	= update::run_scripts($current_script);
-					$cmsg			= $run_scripts_response->msg;
-					$msg[]			= "Updated run scripts: ".to_string($cmsg);
+					$cmsg					= $run_scripts_response->msg;
+					$msg[]					= "Updated run scripts: ".to_string($cmsg);
 
 					if ($run_scripts_response->result===false) {
 
