@@ -211,6 +211,14 @@ class component_string_common extends component_common {
 				}
 			}
 
+		// Validate path and calculate translatable
+			if (empty($query_object->path) || !is_array($query_object->path)) {
+				throw new Exception("Invalid component path");
+			}
+			$path_end = end($query_object->path);
+			$component_tipo = $path_end->component_tipo;
+			$translatable = RecordObj_dd::get_translatable($component_tipo);
+
 		// escape q string for DB
 			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
@@ -233,15 +241,6 @@ class component_string_common extends component_common {
 				$query_object->unaccent	= false;
 
 				// Search empty only in current lang
-				// Resolve based on if is translatable
-					$path_end		= end($query_object->path);
-					$component_tipo	= $path_end->component_tipo;
-					$translatable = RecordObj_dd::get_translatable($component_tipo);
-
-					// $lang = (isset($query_object->lang) && $query_object->lang!=='all')
-					// 	? $query_object->lang
-					// 	: 'all';
-
 					$lang = $translatable===true
 						? DEDALO_DATA_LANG
 						: DEDALO_DATA_NOLAN;
@@ -428,9 +427,8 @@ class component_string_common extends component_common {
 				$query_object->unaccent		= false; // (!) always false
 				$query_object->duplicated	= true;
 				// Resolve lang based on if is translatable
-					$path_end			= end($query_object->path);
-					$component_tipo		= $path_end->component_tipo;
-					$query_object->lang	= RecordObj_dd::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$lang = $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$query_object->lang	= $lang;
 				break;
 
 			// DEFAULT CONTAINS
