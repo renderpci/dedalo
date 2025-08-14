@@ -591,7 +591,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public static function get_model_terminoID( string $model ) : ?string {
 
 		// `where` clause of SQL query
-		$sql_code = 'esmodelo = \'si\' AND term @> \'{"'.DEDALO_STRUCTURE_LANG.'":"'.$model.'"}\'';
+		$sql_code = 'esmodelo = \'si\' AND tld = \'dd\' AND term @> \'{"'.DEDALO_STRUCTURE_LANG.'":"'.$model.'"}\'';
 
 		$RecordObj_dd	= new RecordObj_dd(null, 'dd');
 		$ar_result		= $RecordObj_dd->search(
