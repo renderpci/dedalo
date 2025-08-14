@@ -27,6 +27,11 @@ abstract class JSON_RecordDataBoundObject {
 	#protected static $ar_RecordDataObject_query_search_cache;
 	protected $force_insert_on_save = false;
 
+	// V7 PROPERTIES //
+
+	// data. Column 'data' in matrix table (replaces old 'datos' v6 column)
+	protected $data;
+
 	abstract protected function defineTableName();
 	abstract protected function defineRelationMap();
 	abstract protected function definePrimaryKeyName();
@@ -112,12 +117,13 @@ abstract class JSON_RecordDataBoundObject {
 			$section_id = intval($this->section_id);
 
 		// sql query
-			$strQuery = 'SELECT "datos" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $section_id .' AND "section_tipo" = \''. $section_tipo .'\';';
+			$strQuery = 'SELECT "datos", "data" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $section_id .' AND "section_tipo" = \''. $section_tipo .'\';';
 
 		// cache
 		// Si se le pasa un query que ya ha sido recibido, no se conecta con la db y se le devuelve el resultado del query idéntico ya calculado
 		// que se guarda en un array estático
 		static $ar_JSON_RecordDataObject_load_query_cache = [];
+		static $data_cache = [];
 
 		# CACHE RUN-IN
 		$use_cache = $this->use_cache;
@@ -128,6 +134,7 @@ abstract class JSON_RecordDataBoundObject {
 		if ($use_cache===true && array_key_exists($strQuery, $ar_JSON_RecordDataObject_load_query_cache)) {
 
 			$dato = $ar_JSON_RecordDataObject_load_query_cache[$strQuery];
+			$data = $data_cache[$strQuery] ?? null;
 
 		}else{
 
@@ -185,10 +192,16 @@ abstract class JSON_RecordDataBoundObject {
 					? json_handler::decode($arRow['datos'])
 					: null;
 
+			// data
+				$data = isset($arRow['data'])
+					? json_handler::decode($arRow['data'])
+					: null;
+
 			// cache results. Note: Avoid use cache in long imports (memory overloads)
 				if($use_cache===true) {
 					// store value
 					$ar_JSON_RecordDataObject_load_query_cache[$strQuery] = $dato;
+					$data_cache[$strQuery] = $data;
 				}
 
 			// debug
@@ -220,6 +233,7 @@ abstract class JSON_RecordDataBoundObject {
 
 		# Set returned dato (decoded) to object
 		$this->dato = $dato;
+		$this->data = $data;
 
 		# Fix loaded state
 		$this->blIsLoaded = true;
