@@ -124,6 +124,15 @@ abstract class component_common extends common {
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
 
+		// data_container. JSON object data_container where to get the data: literals|relations
+		// Default value is 'literals'. Overwrite it in component_relation_common.
+		protected $data_container = 'literals';
+
+		// V7 PROPERTIES //
+
+		// object|null data. Component data value from DB column 'data->literals|relations->tipo'
+		protected $data;
+
 
 
 	/**
@@ -808,30 +817,12 @@ abstract class component_common extends common {
 				return $this->dato_resolved;
 			}
 
-		/*
-			#
-			# IS TEMP CASE
-			# Sometimes we need use component as temporal element without save real data to database. Is this case
-			# data is saved to session as temporal data
-			if (isset($this->is_temp) && $this->is_temp===true) {
-				$temp_data_uid = $this->tipo.'_'.$this->parent.'_'.$this->lang.'_'.$this->section_tipo;
-				if (isset($_SESSION['dedalo']['component_temp_data'][$temp_data_uid])) {
-					$this->dato = $_SESSION['dedalo']['component_temp_data'][$temp_data_uid];
-				}else{
-					$this->dato = null;
-				}
-
-			}else{
-
-				# MATRIX DATA : Load matrix data
-				$this->load_component_dato();
-			}
-			*/
-
-		# MATRIX DATA : Load matrix data
+		// MATRIX DATA : Load matrix data
 		$this->load_component_dato();
 
 		$dato = $this->dato;
+
+		// invalid data formats case. Expected array|null
 		if (!is_null($dato) && !is_array($dato)) {
 			$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
 			if ($matrix_table==='matrix_dd') {
@@ -3509,7 +3500,6 @@ abstract class component_common extends common {
 
 
 
-
 	/**
 	* RESOLVE_QUERY_OBJECT_LANG_BEHAVIOR
 	* Check the query_object language configuration
@@ -4189,6 +4179,26 @@ abstract class component_common extends common {
 
 		return null;
 	}//end get_regenerate_options
+
+
+
+	// V7 METHODS //
+
+
+
+	/**
+	* GET_DATA
+	* It gets all the data from the component as the database is stored,
+	* with all languages, using the whole section data object.
+	* @return array|null $this->data
+	*/
+	public function get_data() : ?array {
+
+		$section = $this->get_my_section();
+		$this->data = $section->get_component_data( $this->tipo, $this->data_container );
+
+		return $this->data;
+	}//end get_data
 
 
 
