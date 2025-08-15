@@ -322,9 +322,9 @@ final class component_input_text_test extends TestCase {
 				.' value: '.to_string($value->operator)
 		);
 		$this->assertTrue(
-			$value->q_parsed==="'.*\".*as.*'",
+			$value->q_parsed==="'.*\[\".*as.*'",
 				'expected value do not match:' . PHP_EOL
-				.' expected: '. "'.*\".*as.*'" . PHP_EOL
+				.' expected: '. "'.*\[\".*as.*'" . PHP_EOL
 				.' value: '.to_string($value->q_parsed)
 		);
 		$this->assertTrue(

@@ -1900,7 +1900,9 @@ final class dd_core_api {
 								, logger::DEBUG
 							);
 							// close current session and set as read only to unlock thread
-							session_write_close();
+							// session_write_close();
+							// (!) Moved to after resolve context to allow component external to write
+							// server availability (Zenon issues)
 						}
 
 					// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
@@ -2154,6 +2156,9 @@ final class dd_core_api {
 					$response->errors[] = 'invalid element';
 					$context = $data = [];
 				}
+
+		// close current session and set as read only to unlock thread
+			session_write_close();
 
 		// result. Set result object
 			$result->context	= $context;

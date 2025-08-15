@@ -54,11 +54,17 @@ class v6_to_v7 {
 	* REFORMAT_MATRIX_DATA
 	* Converts v6 data to v7 data format
 	* @param array $ar_tables
-	* @return bool
+	* @param bool $save. On false, only data review is made.
+	* @return object $response
 	*/
-	public static function reformat_matrix_data( array $ar_tables ) : bool {
+	public static function reformat_matrix_data( array $ar_tables, bool $save ) : object {
 
 		// ALTER TABLE "matrix" ADD "data" jsonb NULL;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		debug_log(__METHOD__ . PHP_EOL
 			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -81,7 +87,7 @@ class v6_to_v7 {
 		// iterate tables
 		update::tables_rows_iterator(
 			$ar_tables, // array of tables to iterate
-			function($row, $table, $max) { // callback function
+			function($row, $table, $max) use ($response, $save) { // callback function
 
 				$id				= $row['id'];
 				$section_tipo	= $row['section_tipo'] ?? null;
@@ -128,6 +134,22 @@ class v6_to_v7 {
 								$relations = $datos_value ?? [];
 
 								foreach ($relations as $locator) {
+
+									// check locator from_component_tipo
+									if( !isset($locator->from_component_tipo) ){
+										$locator_string = json_encode($locator);
+										debug_log(__METHOD__
+											. " **-------- ERROR locator without from_component_tipo --------** " . PHP_EOL
+											. " section tipo: ". $section_tipo . PHP_EOL
+											. " section id: ". $section_id . PHP_EOL
+											. " table: ". $table . PHP_EOL
+											. " locator: ". $locator_string
+											, logger::ERROR
+										);
+										$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' locator: '$locator_string'";
+										continue;
+									}
+
 									if(!isset($new_matrix_data->{$datos_key}->{$locator->from_component_tipo})){
 										$new_matrix_data->{$datos_key}->{$locator->from_component_tipo} = [];
 									}
@@ -145,27 +167,33 @@ class v6_to_v7 {
 								foreach ($literal_components as $literal_tipo => $literal_value) {
 
 									$model = RecordObj_dd::get_modelo_name_by_tipo($literal_tipo);
+
+									// skip v5 data
 									if( in_array($model, ['component_filter','component_section_id']) ){
 										continue;
 									}
 
+									// literal without v6 'dato' property case
 									if( !isset($literal_value->dato) ){
 										debug_log(__METHOD__
-											. " **-------- STOP Literal without information --------** " . PHP_EOL
+											. " **-------- ERROR Literal without v6 'dato' property --------** " . PHP_EOL
 											. " model: " . $model. PHP_EOL
 											. " component tipo: ". $literal_tipo . PHP_EOL
 											. " section tipo: ". $section_tipo . PHP_EOL
 											. " section id: ". $section_id . PHP_EOL
+											. " table: ". $table . PHP_EOL
 											. " literal_value: ". json_encode( $literal_value ). PHP_EOL
 											. " literal_value type: " . gettype( $literal_value )
 											, logger::ERROR
 										);
-										die();
+										$response->errors[] = "Bad component data (literal without v6 'dato' property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' component_tipo: '$literal_tipo'";
+										continue;
 									}
 
 									$old_data = $literal_value->dato;
 									foreach ($old_data as $lang => $ar_value) {
 
+										// Ignore empty component values
 										if( !isset($ar_value) || empty($ar_value) ){
 											debug_log(__METHOD__
 												. " **-------- IGNORED Data without information --------** " . PHP_EOL
@@ -173,6 +201,7 @@ class v6_to_v7 {
 												. " component tipo: ". $literal_tipo . PHP_EOL
 												. " section tipo: ". $section_tipo . PHP_EOL
 												. " section id: ". $section_id . PHP_EOL
+												. " table: ". $table . PHP_EOL
 												. " value: ". json_encode( $ar_value ). PHP_EOL
 												. " value type: " . gettype( $ar_value )
 												, logger::WARNING
@@ -187,7 +216,7 @@ class v6_to_v7 {
 												continue;
 											}
 											// ignore TinyMCE empty data values
-											if($ar_value==='<br data-mce-bogus="1">'){
+											if($ar_value==='<br data-mce-bogus="1">' || $ar_value==='[<br data-mce-bogus="1">]'){
 												continue;
 											}
 											// ignore not used anymore component_layout dd23
@@ -195,11 +224,12 @@ class v6_to_v7 {
 												continue;
 											}
 											debug_log(__METHOD__
-												. " <<-------- CHANGED Data with wrong format is not array -------->> " . PHP_EOL
+												. " <<-------- CHANGED Data with wrong format: is not array -------->> " . PHP_EOL
 												. " model: " . $model. PHP_EOL
 												. " component tipo: ". $literal_tipo . PHP_EOL
 												. " section tipo: ". $section_tipo . PHP_EOL
 												. " section id: ". $section_id . PHP_EOL
+												. " table: ". $table . PHP_EOL
 												. " value: ". json_encode( $ar_value ). PHP_EOL
 												. " value type: " . gettype( $ar_value )
 												, logger::WARNING
@@ -207,16 +237,21 @@ class v6_to_v7 {
 											$ar_value = [$ar_value];
 										}
 
-										$new_literal_obj = new stdClass();
+										// safe array keys
+										$ar_value = array_values($ar_value);
+
+										$value_key = 0;
 										foreach ($ar_value as $key => $value) {
 
+											// Ignore empty component values
 											if( !isset($value) ){
 												debug_log(__METHOD__
-													. " <<-------- IGNORED Data with wrong format. -------->> " . PHP_EOL
+													. " <<-------- IGNORED empty value. -------->> " . PHP_EOL
 													. " model: " . $model. PHP_EOL
 													. " component tipo: ". $literal_tipo . PHP_EOL
 													. " section tipo: ". $section_tipo . PHP_EOL
 													. " section id: ". $section_id . PHP_EOL
+													. " table: ". $table . PHP_EOL
 													. " value: ". json_encode( $value ) . PHP_EOL
 													. " value type: " . gettype( $value ) . PHP_EOL
 													. " ar_value: ". json_encode( $ar_value ) . PHP_EOL
@@ -226,16 +261,42 @@ class v6_to_v7 {
 												continue;
 											}
 
-											if (empty($value)) {
+											// empty case. Ignore empty values
+											if (empty($value) && $value!='0') {
 												continue;
 											}
 
-											$new_literal_obj->key	= $key+1; // add 1 to the array key
+											// empty media. Skip save empty media values
+											if (json_encode($value)==='{"files_info":[]}') {
+												continue;
+											}
+
+											// old media v5 value
+											if (is_object($value) &&
+												isset($value->component_tipo) && $value->component_tipo === $literal_tipo &&
+												isset($value->section_tipo) && $value->section_tipo === $section_tipo &&
+												isset($value->section_id) && $value->section_id == $section_id
+												) {
+												continue;
+											}
+
+											$value_key++;
+
+											$new_literal_obj = new stdClass();
+											$new_literal_obj->key	= $value_key; // starts from 1
 											$new_literal_obj->lang	= $lang;
 											$new_literal_obj->value	= $value;
 											$new_literal_obj->type	= $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_JSON;
 
-											// set first time if not already set
+											// temporal add info for easy debug in beta 7
+												// if (isset($new_literal_obj->literal_value->info)) {
+												// 	$new_literal_obj->info = $new_literal_obj->literal_value->info;
+												// }else{
+												// 	$label = RecordObj_dd::get_termino_by_tipo($literal_tipo);
+												// 	$new_literal_obj->info = "$label [$model]";
+												// }
+
+											// set component path if not already set
 											if (!property_exists($new_matrix_data->literals, $literal_tipo)) {
 												$new_matrix_data->literals->{$literal_tipo} = [];
 											}
@@ -255,21 +316,55 @@ class v6_to_v7 {
 
 					$section_data_encoded = json_encode($new_matrix_data);
 
-					$strQuery	= "UPDATE $table SET data = $1 WHERE id = $2 ";
-					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+					$conn = DBi::_getConnection();
+
+					if ($save) {
+
+						$strQuery = "UPDATE {$table} SET data = $1 WHERE id = $2 ";
+						$result	= pg_query_params(
+							$conn,
+							$strQuery,
+							array( $section_data_encoded, $id )
+						);
+
+					}else{
+
+						// 1. Start a transaction
+						pg_query($conn, "BEGIN");
+
+						// 2. Perform the update (in the transaction)
+						$result = pg_query_params(
+							$conn,
+							"UPDATE {$table} SET data = $1 WHERE id = $2 RETURNING id",
+							array($section_data_encoded, $id)
+						);
+
+						// 3. Rollback (undo changes)
+						pg_query($conn, "ROLLBACK");
+					}
+
 					if($result===false) {
 						$msg = "Failed Update section_data ($table) $id";
 						debug_log(__METHOD__
 							." ERROR: $msg "
 							, logger::ERROR
 						);
-						return false;
+						$response->errors[] = "Error on SQL execution. strQuery: '$strQuery'";
+
+						$response->msg = 'Error on SQL execution. Stop function execution';
+						return $response;
 					}
 				}//end if( isset($datos) )
 			}//end anonymous function
 		);
 
-		return true;
+		$response->result	= empty($response->errors);
+		$response->msg		= empty($response->errors)
+			? 'Request done successfully'
+			: 'Request done with errors';
+
+
+		return $response;
 	}//end reformat_matrix_data
 
 

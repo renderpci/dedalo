@@ -157,10 +157,12 @@ const get_content_data_edit = async function(self) {
 
 			// Original lang set label
 				if (transcription_component.lang!==self.lang) {
+					const label					= get_label.original || 'Original'
 					const lang_selector_options	= Array.from(lang_selector.options);
 					const option_to_select		= lang_selector_options.find(item => item.value===transcription_component.lang);
-					const label					= get_label.original || 'Original'
-					option_to_select.text		= option_to_select.text + ' ('+label+')'
+					if (option_to_select) {
+						option_to_select.text = option_to_select.text + ' ('+label+')'
+					}
 				}
 
 		// info container
@@ -585,7 +587,7 @@ const render_related_list = function(self){
 					self.top_locator = current_locator
 				}
 
-			const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
+			const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label || ''
 			const ar_component_data	= data.filter(el =>
 				el.section_tipo === current_locator.section_top_tipo &&
 				el.section_id === current_locator.section_top_id

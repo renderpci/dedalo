@@ -1,100 +1,15 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT TEXT AREA
-*
-*
+* Manage specific component text area logic
+* Common components properties and method are inherited of component_string_common class that are inherited from component_common class
 */
-class component_text_area extends component_common {
+class component_text_area extends component_string_common {
 
 
 
+	// arguments
 	public $arguments;
-
-
-
-	/**
-	* GET DATO
-	* @return array|null $dato
-	*/
-	public function get_dato() {
-
-		$dato = parent::get_dato();
-
-		if (!is_null($dato) && !is_array($dato)) {
-			$dato = [$dato];
-		}
-
-		return $dato;
-	}//end get_dato
-
-
-
-	/**
-	*  SET_DATO
-	* @param array $dato
-	* 	Dato now is multiple. For this, expected type is array
-	*	but in some cases can be an array JSON encoded or some rare times as plain string
-	* @return bool
-	*/
-	public function set_dato($dato) : bool {
-
-		// remove data when data is null
-			if(is_null($dato)) {
-				return parent::set_dato(null);
-			}
-
-		// check string
-			if (is_string($dato)) { // Tool Time machine case, dato is string
-
-				// check the dato for determinate the original format and if the $dato is correct.
-				$dato_trim				= !empty($dato) ? trim($dato) : $dato;
-				$dato_first_character	= substr($dato_trim, 0, 1);
-				$dato_last_character	= substr($dato_trim, -1);
-
-				if ($dato_first_character==='[' && $dato_last_character===']') {
-					// dato is JSON encoded
-					$dato = json_handler::decode($dato_trim);
-				}else{
-					// dato is string plain value
-					$dato = array($dato);
-					debug_log(__METHOD__
-						." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato." .PHP_EOL
-						.'dato: '. to_string($dato)
-						, logger::WARNING
-					);
-				}
-			}
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				if (!is_array($dato)) {
-					debug_log(__METHOD__
-						." Warning. [$this->tipo, $this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato will be converted to array" .PHP_EOL
-						.' dato:' . to_string($dato)
-						, logger::WARNING
-					);
-				}
-			}
-
-		$count = is_array($dato)
-			? count($dato)
-			: 0;
-
-		$safe_dato = array();
-		foreach ((array)$dato as $value) {
-			if($this->is_empty($value) && $count === 1 ){
-				$safe_dato = null;
-			}else{
-				$safe_dato[] = (!is_string($value))
-					? to_string($value)
-					: $value;
-			}
-		}
-		$dato = $safe_dato;
-
-
-		return parent::set_dato( $dato );
-	}//end set_dato
 
 
 
@@ -107,19 +22,19 @@ class component_text_area extends component_common {
 	*/
 	public function is_empty(mixed $value) : bool {
 
-		if(is_null($value)){
+		$is_empty = parent::is_empty($value);
+		if ($is_empty===true) {
 			return true;
 		}
 
-		$value = is_string($value)
-			? trim($value)
-			: $value;
-
-		if (empty($value)) {
-			return true;
-		}
-
-		if ($value==='<p></p>' || $value==='<br data-mce-bogus="1">') {
+		// check for specific non empty values that can be considered empty
+		// in this component because are garbage form the text editor (ckeditor/tinyMCE)
+		$trim_value = is_string($value) ? trim($value) : $value;
+		$garbage_values = [
+			'<p></p>',
+			'<br data-mce-bogus="1">'
+		];
+		if ( in_array($trim_value, $garbage_values) ) {
 			return true;
 		}
 
@@ -138,9 +53,7 @@ class component_text_area extends component_common {
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
 		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
 			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
 			$class_list			= $ddo->class_list ?? null;
 
 		// column_obj
@@ -1830,215 +1743,6 @@ class component_text_area extends component_common {
 
 
 	/**
-	* RESOLVE_QUERY_OBJECT_SQL
-	* @param object $query_object
-	* @return object $query_object
-	*/
-	public static function resolve_query_object_sql(object $query_object) : object {
-
-		// q
-		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-			$q = is_array($query_object->q)
-				? (!empty($query_object->q[0]) ? $query_object->q[0] : '')
-				: ($query_object->q ?? '');
-
-		// split q case
-			$q_split = $query_object->q_split ?? false;
-			if ($q_split===true && !search::is_literal($q)) {
-				$q_items = preg_split('/\s/', $q);
-				if (count($q_items)>1) {
-					return self::handle_query_splitting($query_object, $q_items, '$and');
-				}
-			}
-
-		// escape q string for DB
-			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
-
-		// Always set fixed values
-		$query_object->type = 'string';
-
-		switch (true) {
-			# EMPTY VALUE
-			case ($q==='!*'):
-
-				$operator	= 'IS NULL';
-				$q_clean	= '';
-
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent	= false;
-
-				// Search empty only in current lang
-				// Resolve based on if is translatable
-					$path_end		= end($query_object->path);
-					$component_tipo	= $path_end->component_tipo;
-					$translatable = RecordObj_dd::get_translatable($component_tipo);
-
-					// $lang = (isset($query_object->lang) && $query_object->lang!=='all')
-					// 	? $query_object->lang
-					// 	: 'all';
-					$lang = $translatable===true
-						? DEDALO_DATA_LANG
-						: DEDALO_DATA_NOLAN;
-
-					$lang_query_not_null = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> 'IS NULL',
-						'lang'			=> $lang,
-						'translatable'	=> $translatable
-					]);
-					$lang_query_empty = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> '=',
-						'q_parsed'		=> '\'[]\'',
-						'lang'			=> $lang,
-						'translatable'	=> $translatable
-					]);
-
-					$lang_query_objects = array_merge($lang_query_not_null, $lang_query_empty);
-
-					$logical_operator = '$or';
-					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $lang_query_objects;
-
-				$logical_operator = '$and';
-				$final_query_json = new stdClass;
-					$final_query_json->$logical_operator = [$langs_query_json];
-				$query_object = $final_query_json;
-				break;
-			# NOT EMPTY
-			case ($q==='*'):
-				$operator = 'IS NOT NULL';
-				$q_clean  = '';
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent	= false;
-
-					$lang = (isset($query_object->lang) && $query_object->lang!=='all')
-						? $query_object->lang
-						: 'all';
-
-					$lang_query_objects_null = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> 'IS NOT NULL',
-						'lang'			=> $lang,
-					]);
-					$lang_query_objects_empty = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> '!=',
-						'q_parsed'		=> '\'[]\'',
-						'lang'			=> $lang,
-					]);
-
-					$lang_query_objects = array_merge($lang_query_objects_null, $lang_query_objects_empty);
-
-					$logical_operator = '$or';
-					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $lang_query_objects;
-
-				# override
-				$logical_operator = '$and';
-				$final_query_json = new stdClass;
-					$final_query_json->$logical_operator = [$langs_query_json];
-				$query_object = $final_query_json;
-				break;
-			# IS DIFFERENT
-			case (strpos($q, '!=')===0):
-				$operator = '!=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '!~';
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
-				break;
-			# IS SIMILAR
-			case (strpos($q, '=')===0):
-				$operator = '=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '~';
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
-				break;
-			# NOT CONTAIN
-			case (strpos($q, '-')===0):
-				$operator = '!~*';
-				$q_clean  = str_replace('-', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;
-			# CONTAIN
-			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;
-			# ENDS WITH
-			case (substr($q, 0, 1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*".*'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
-				break;
-			# BEGINS WITH
-			case (substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;
-			# LITERAL
-			case (search::is_literal($q)===true):
-				$operator = '~*';
-				$q_clean  = str_replace("'", '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;
-			# CONTAIN
-			default:
-				$operator = '~*';
-				$q_clean  = $q;
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;
-		}//end switch (true)
-
-
-		return $query_object;
-	}//end resolve_query_object_sql
-
-
-
-	/**
-	* SEARCH_OPERATORS_INFO
-	* Return valid operators for search in current component
-	* @return array $ar_operators
-	*/
-	public function search_operators_info() : array {
-
-		$ar_operators = [
-			'*'			=> 'no_empty', // not null
-			'!*'		=> 'empty', // null
-			'='			=> 'similar_to',
-			'!='		=> 'different_from',
-			'-'			=> 'does_not_contain',
-			'*text*'	=> 'contains',
-			'text*'		=> 'begins_with',
-			'*text'		=> 'end_with',
-			'\'text\''	=> 'literal'
-		];
-
-		return $ar_operators;
-	}//end search_operators_info
-
-
-
-	/**
 	* UPDATE_DATO_VERSION
 	* @param object $options
 	* @return object $response
@@ -2624,7 +2328,6 @@ class component_text_area extends component_common {
 				$response->errors	= [];
 				$response->msg		= 'Error. Request failed';
 
-
 		// $normalize_value function to be used in any case, $import_value is an object, array or string
 		// values need to be HTML compatible with ck-editor
 			$normalize_value = function(array $import_value) : array {
@@ -2656,7 +2359,6 @@ class component_text_area extends component_common {
 
 				return $value;
 			};
-
 
 		// object | array case
 			// Check if is a JSON string. Is yes, decode

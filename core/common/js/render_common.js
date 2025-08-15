@@ -567,17 +567,25 @@ export const render_stream = function(options) {
 
 						// avoid freezing the last message in cases where
 						// the process does not return anything at end
-						const msg_end = (data.errors && data.errors.length)
-							? [(get_label.proceso || 'Process') +' ' + sse_response.total_time]
-							: [(get_label.proceso_completado || 'Process completed') + ' ' + sse_response.total_time]
-						// add errors if any
-						if (data.errors && data.errors.length) {
-							const msg_error = (get_label.error || 'Error') +  ': ' + data.errors.join(', ')
-							msg_end.push(msg_error)
-							info_node.msg_node.classList.add('error')
+
+						const has_errors = Array.isArray(data.errors) && data.errors.length > 0;
+
+						const msg_end = [
+						  has_errors
+							? `${get_label?.proceso || 'Process'} ${sse_response.total_time}`
+							: `${get_label?.proceso_completado || 'Process completed'} ${sse_response.total_time}`
+						];
+
+						if (has_errors) {
+						  const msg_error = data.errors.length === 1
+							? `${get_label?.error || 'Error'}: ${data.errors[0] || ''}`
+							: `${get_label?.errors || 'Errors'}:<br>${data.errors.join('<br>')}`;
+
+						  msg_end.push(msg_error);
+						  info_node.msg_node.classList.add('error');
 						}
 
-						ui.update_node_content(info_node.msg_node, msg_end.join(' | '))
+						ui.update_node_content(info_node.msg_node, msg_end.join('<br>'))
 
 						button_stop_process.classList.add('hide')
 					}
