@@ -117,9 +117,12 @@ class v6_to_v7 {
 					$new_matrix_data = new stdClass();
 
 					$column_data				= new stdClass();
-					$column_literals			= new stdClass();
-					$column_relations			= new stdClass();
 					$column_relations_search	= new stdClass();
+					$column_relations			= new stdClass();
+					$column_strings				= new stdClass();
+					$column_dates				= new stdClass();
+					$column_numbers				= new stdClass();
+					$column_clusters			= new stdClass();
 					$column_counters			= new stdClass();
 
 					$value_type_map = v6_to_v7::get_value_type_map();
@@ -316,26 +319,76 @@ class v6_to_v7 {
 
 											$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_JSON;
 
-											switch ($typology) {
-												case DEDALO_VALUE_TYPE_STRING:
-												case DEDALO_VALUE_TYPE_NUMBER:
-												case DEDALO_VALUE_TYPE_JSON:
-													$new_literal_obj = new stdClass();
+											$new_literal_obj = new stdClass();
 														$new_literal_obj->id	= $value_key; // starts from 1
 														$new_literal_obj->lang	= $lang;
 														$new_literal_obj->type	= $typology;
 														$new_literal_obj->value	= $value;
+
+											switch ($typology) {
+												case DEDALO_VALUE_TYPE_STRING:
+
+													// set component path if not already set
+													if (!property_exists($column_strings, $literal_tipo)) {
+														$column_strings->{$literal_tipo} = [];
+													}
+
+													$column_strings->{$literal_tipo}[] = $new_literal_obj;
+													break;
+
+												case DEDALO_VALUE_TYPE_NUMBER:
+
+													// set component path if not already set
+													if (!property_exists($column_numbers, $literal_tipo)) {
+														$column_numbers->{$literal_tipo} = [];
+													}
+
+													$column_numbers->{$literal_tipo}[] = $new_literal_obj;
+													break;
+
+												case DEDALO_VALUE_TYPE_JSON:
+												
+													// set component path if not already set
+													if (!property_exists($column_clusters, $literal_tipo)) {
+														$column_clusters->{$literal_tipo} = [];
+													}
+
+													$column_clusters->{$literal_tipo}[] = $new_literal_obj;
+
 													break;
 
 												case DEDALO_VALUE_TYPE_DATE:
+
+													$date_literal_obj = $value;
+														$date_literal_obj->id	= $value_key;
+														$date_literal_obj->lang	= $lang;
+														$date_literal_obj->type	= $typology;
+
+												// set component path if not already set
+													if (!property_exists($column_dates, $literal_tipo)) {
+														$column_dates->{$literal_tipo} = [];
+													}
+
+													$column_dates->{$literal_tipo}[] = $date_literal_obj;
+													break;
+
 												case DEDALO_VALUE_TYPE_MEDIA:
 												case DEDALO_VALUE_TYPE_IRI:
 												case DEDALO_VALUE_TYPE_GEO:
 													if(is_object($value)){
-														$new_literal_obj = $value;
-															$new_literal_obj->id	= $value_key;
-															$new_literal_obj->lang	= $lang;
-															$new_literal_obj->type	= $typology;
+														$cluster_literal_obj = $value;
+															$cluster_literal_obj->id	= $value_key;
+															$cluster_literal_obj->lang	= $lang;
+															$cluster_literal_obj->type	= $typology;
+
+														// set component path if not already set
+														if (!property_exists($column_clusters, $literal_tipo)) {
+															$column_clusters->{$literal_tipo} = [];
+														}
+
+														$column_clusters->{$literal_tipo}[] = $cluster_literal_obj;
+
+
 													}else{
 														$value_string = json_encode( $value );
 														debug_log(__METHOD__
@@ -359,13 +412,6 @@ class v6_to_v7 {
 												// 	$label = RecordObj_dd::get_termino_by_tipo($literal_tipo);
 												// 	$new_literal_obj->info = "$label [$model]";
 												// }
-
-											// set component path if not already set
-											if (!property_exists($column_literals, $literal_tipo)) {
-												$column_literals->{$literal_tipo} = [];
-											}
-
-											$column_literals->{$literal_tipo}[] = $new_literal_obj;
 										}
 									}
 								}
@@ -379,16 +425,26 @@ class v6_to_v7 {
 					}//end foreach ($datos as $datos_key => $datos_value)
 
 					$section_data_encoded				= json_encode($column_data);
-					$section_literals_encoded			= json_encode($column_literals);
 					$section_relations_encoded			= json_encode($column_relations);
+					$section_strings_encoded			= json_encode($column_strings);
+					$section_dates_encoded				= json_encode($column_dates);
+					$section_numbers_encoded			= json_encode($column_numbers);
+					$section_clusters_encoded			= json_encode($column_clusters);
 					$section_relations_search_encoded	= json_encode($column_relations_search);
 					$section_counters_encoded			= json_encode($column_counters);
 
 					$conn = DBi::_getConnection();
 					$strQuery = "
 						UPDATE {$table}
-						SET data = $1, literals = $2, relations = $3, relations_search = $4, counters = $5
-						WHERE id = $6
+						SET data = $1,
+							relations = $2,
+							strings = $3,
+							dates = $4,
+							numbers = $5,
+							clusters = $6,
+							relations_search = $7,
+							counters = $8
+						WHERE id = $9
 					";
 
 					if ($save) {
@@ -397,8 +453,11 @@ class v6_to_v7 {
 							$strQuery,
 							array(
 								$section_data_encoded,
-								$section_literals_encoded,
 								$section_relations_encoded,
+								$section_strings_encoded,
+								$section_dates_encoded,
+								$section_numbers_encoded,
+								$section_clusters_encoded,
 								$section_relations_search_encoded,
 								$section_counters_encoded,
 								$id
@@ -416,8 +475,11 @@ class v6_to_v7 {
 							$strQuery,
 							array(
 								$section_data_encoded,
-								$section_literals_encoded,
 								$section_relations_encoded,
+								$section_strings_encoded,
+								$section_dates_encoded,
+								$section_numbers_encoded,
+								$section_clusters_encoded,
 								$section_relations_search_encoded,
 								$section_counters_encoded,
 								$id
