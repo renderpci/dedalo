@@ -560,7 +560,7 @@ final class RecordObj_dd_test extends TestCase {
 			$eq			= $result===$expected;
 			$this->assertTrue(
 				$eq,
-				'expected equal true' . PHP_EOL
+				'expected "dd6" for get_model_terminoID section' . PHP_EOL
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);

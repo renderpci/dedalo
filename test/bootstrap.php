@@ -7,7 +7,7 @@
 	define('SHOW_DEBUG', false);
 
 // TEST_USER_ID: [
-	// 	-1, // root development user
+	// -1, // root development user
 	// 	1, // admin general (no projects)
 	// 	2 // regular user
 	// ]

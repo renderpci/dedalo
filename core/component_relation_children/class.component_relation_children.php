@@ -193,6 +193,9 @@ class component_relation_children extends component_relation_common {
 						$locator->section_id
 					);
 					if (!$result) {
+						$from_component_tipo_model = isset($locator->from_component_tipo)
+							? RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true)
+							: null;
 						debug_log(__METHOD__
 							. " Error on add children" . PHP_EOL
 							. ' result: ' . to_string($result) . PHP_EOL
@@ -201,7 +204,8 @@ class component_relation_children extends component_relation_common {
 							. ' result: ' . to_string($result) . PHP_EOL
 							. ' locator: ' . to_string($locator) . PHP_EOL
 							. ' locator type: ' .  get_relation_name($locator->type) . PHP_EOL
-							. ' from_component_tipo model: ' . RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true) . PHP_EOL
+							. ' locator from_component_tipo: ' . ($locator->from_component_tipo ?? null) . PHP_EOL
+							. ' from_component_tipo model: ' . $from_component_tipo_model
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {

@@ -1586,7 +1586,7 @@ final class core_functions_test extends TestCase {
 	*/
 	public function test_get_current_version_in_db() {
 
-		$result = get_current_version_in_db('test message 1');
+		$result = get_current_version_in_db();
 
 		$eq = gettype($result)==='array';
 		$this->assertTrue(
