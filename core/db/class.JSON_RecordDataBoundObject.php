@@ -156,13 +156,13 @@ abstract class JSON_RecordDataBoundObject {
 
 				// With prepared statement
 				$stmt_name = __METHOD__ . '_' . $this->strTableName;
-				if (!isset(DBi::$preparedStatements[$stmt_name])) {
+				if (!isset(DBi::$prepared_statements[$stmt_name])) {
 					pg_prepare(
 						$conn,
 						$stmt_name,
 						"SELECT $columns FROM $this->strTableName WHERE section_id = $1 AND section_tipo = $2"
 					);
-					DBi::$preparedStatements[$stmt_name] = true;
+					DBi::$prepared_statements[$stmt_name] = true;
 				}
 				$result = pg_execute(
 					$conn,
@@ -316,13 +316,13 @@ abstract class JSON_RecordDataBoundObject {
 
 			// With prepared statement
 			$stmt_name = __METHOD__ . '_' . $this->strTableName;
-			if (!isset(DBi::$preparedStatements[$stmt_name])) {
+			if (!isset(DBi::$prepared_statements[$stmt_name])) {
 				pg_prepare(
 					DBi::_getConnection(),
 					$stmt_name,
 					$strQuery
 				);
-				DBi::$preparedStatements[$stmt_name] = true;
+				DBi::$prepared_statements[$stmt_name] = true;
 			}
 			$result = pg_execute(
 				DBi::_getConnection(),

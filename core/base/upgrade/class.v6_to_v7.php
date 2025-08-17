@@ -138,6 +138,7 @@ class v6_to_v7 {
 						}
 
 						switch ($datos_key) {
+
 							case 'relations_search':
 								// update relations array
 								$relations = $datos_value ?? [];
@@ -194,12 +195,12 @@ class v6_to_v7 {
 								break;
 
 							case 'components':
+
 								// add literals property
 								$new_matrix_data->literals = new stdClass();
 
 								// update components object
 								$literal_components = $datos_value ?? [];
-
 								foreach ($literal_components as $literal_tipo => $literal_value) {
 
 									$model = RecordObj_dd::get_modelo_name_by_tipo($literal_tipo);
@@ -324,10 +325,10 @@ class v6_to_v7 {
 
 											// new literal object with value
 											$new_literal_obj = new stdClass();
-												$new_literal_obj->id	= $value_key; // starts from 1
-												$new_literal_obj->lang	= $lang;
+												$new_literal_obj->id		= $value_key; // starts from 1
+												$new_literal_obj->lang		= $lang;
 												$new_literal_obj->type	= $typology;
-												$new_literal_obj->value	= $value;
+												$new_literal_obj->value		= $value;
 
 											switch ($typology) {
 												case DEDALO_VALUE_TYPE_STRING:
@@ -358,10 +359,10 @@ class v6_to_v7 {
 													}
 
 													$column_misc->{$literal_tipo}[] = $new_literal_obj;
-
 													break;
 
 												case DEDALO_VALUE_TYPE_DATE:
+
 													if(is_object($value)){
 														$date_literal_obj = $value;
 															$date_literal_obj->id	= $value_key;
@@ -377,19 +378,21 @@ class v6_to_v7 {
 													}else{
 														$value_string = json_encode( $value );
 														debug_log(__METHOD__
-															. " **-------- ERROR component value out of format, is not object --------** " . PHP_EOL
+															. " **-------- ERROR component value out of format, is an not object --------** " . PHP_EOL
 															. " section tipo: ". $section_tipo . PHP_EOL
 															. " section id: ". $section_id . PHP_EOL
 															. " table: ". $table . PHP_EOL
+															. " value type: " . gettype( $value ) . PHP_EOL
 															. " value: ". $value_string
 															, logger::ERROR
 														);
-														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' value: '$value_string'";
+														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
 														continue 2;
 													}
 													break;
 
 												case DEDALO_VALUE_TYPE_MEDIA:
+
 													if(is_object($value)){
 														$media_literal_obj = $value;
 															$media_literal_obj->id		= $value_key;
@@ -405,14 +408,15 @@ class v6_to_v7 {
 													}else{
 														$value_string = json_encode( $value );
 														debug_log(__METHOD__
-															. " **-------- ERROR component value out of format, is not object --------** " . PHP_EOL
+															. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
 															. " section tipo: ". $section_tipo . PHP_EOL
 															. " section id: ". $section_id . PHP_EOL
 															. " table: ". $table . PHP_EOL
+															. " value type: " . gettype( $value ) . PHP_EOL
 															. " value: ". $value_string
 															, logger::ERROR
 														);
-														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' value: '$value_string'";
+														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
 														continue 2;
 													}
 													break;
@@ -434,14 +438,15 @@ class v6_to_v7 {
 													}else{
 														$value_string = json_encode( $value );
 														debug_log(__METHOD__
-															. " **-------- ERROR component value out of format, is not object --------** " . PHP_EOL
+															. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
 															. " section tipo: ". $section_tipo . PHP_EOL
 															. " section id: ". $section_id . PHP_EOL
 															. " table: ". $table . PHP_EOL
+															. " value type: " . gettype( $value ) . PHP_EOL
 															. " value: ". $value_string
 															, logger::ERROR
 														);
-														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' value: '$value_string'";
+														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
 														continue 2;
 													}
 													break;
@@ -465,14 +470,15 @@ class v6_to_v7 {
 													}else{
 														$value_string = json_encode( $value );
 														debug_log(__METHOD__
-															. " **-------- ERROR component value out of format, is not object --------** " . PHP_EOL
+															. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
 															. " section tipo: ". $section_tipo . PHP_EOL
 															. " section id: ". $section_id . PHP_EOL
 															. " table: ". $table . PHP_EOL
+															. " value type: " . gettype( $value ) . PHP_EOL
 															. " value: ". $value_string
 															, logger::ERROR
 														);
-														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' value: '$value_string'";
+														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
 														continue 2;
 													}
 													break;
@@ -487,10 +493,11 @@ class v6_to_v7 {
 												// }
 										}
 									}
-								}
+								}//end reach ($literal_components as $literal_tipo => $literal_value)
 								break;
 
 							default:
+
 								// update other properties like section_tipo, section_real_tipo, etc.
 								$column_data->{$datos_key} = $datos_value;
 								break;
@@ -543,7 +550,7 @@ class v6_to_v7 {
 								$section_relation_search_encoded,
 								$section_counters_encoded,
 								$id
-							)
+							]
 						);
 
 					}else{
@@ -552,10 +559,10 @@ class v6_to_v7 {
 						pg_query($conn, "BEGIN");
 
 						// 2. Perform the update (in the transaction)
-						$result = pg_query_params(
+						$result	= pg_query_params(
 							$conn,
 							$strQuery,
-							array(
+							[
 								$section_data_encoded,
 								$section_relation_encoded,
 								$section_string_encoded,
@@ -568,7 +575,7 @@ class v6_to_v7 {
 								$section_relation_search_encoded,
 								$section_counters_encoded,
 								$id
-							)
+							]
 						);
 
 						// 3. Rollback (undo changes)
