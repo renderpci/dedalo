@@ -162,21 +162,19 @@ abstract class RecordDataBoundObject {
 			$ar_query = [];
 
 		// select
-			$ar_query_select = [];
-			foreach($this->arRelationMap as $key => $value) {
-				$ar_query_select[] = '"'.$key.'"';
-			}
-			$select_fields	= implode(',', $ar_query_select);
-			$ar_query[]		= 'SELECT '. $select_fields;
+			$ar_query_select = array_map(function($el){
+				return '"'.$el.'"';
+			}, $this->arRelationMap);
+			// $select_fields	= implode(',', $ar_query_select);
+			$select_fields	= '*';
+			$ar_query[]	= 'SELECT '.$select_fields;
 
 		// from
-			$column_key		= $this->strPrimaryKeyName;
-			$column_value	= is_int($this->ID)
-				? $this->ID
-				: '\''. $this->ID .'\'';
 			$ar_query[] = 'FROM "'.$this->strTableName.'"';
 
 		// where
+			$column_key		= $this->strPrimaryKeyName; // terminoID
+			$column_value	= '\''. $this->ID .'\''; // e.g. 'dd15'
 			$ar_query[] = 'WHERE "'.$column_key.'"='.$column_value;
 
 		// $strQuery
@@ -220,20 +218,20 @@ abstract class RecordDataBoundObject {
 
 				// With prepared statement
 				$stmt_name = __METHOD__ . '_' . $this->strTableName;
-				if (!isset(DBi::$preparedStatements[$stmt_name])) {
+				if (!isset(DBi::$prepared_statements[$stmt_name])) {
 					pg_prepare(
 						$conn,
 						$stmt_name,
 						'SELECT '.$select_fields.' FROM "'.$this->strTableName.'" WHERE "'.$this->strPrimaryKeyName.'" = $1'
 					);
-					DBi::$preparedStatements[$stmt_name] = true;
+					DBi::$prepared_statements[$stmt_name] = true;
 				}
 				$result = pg_execute(
 					$conn,
 					$stmt_name,
 					[$this->ID]
 				);
-
+	
 			// check result
 				if ($result===false) {
 					debug_log(__METHOD__
@@ -291,6 +289,7 @@ abstract class RecordDataBoundObject {
 		// arRelationMap assign values
 			if(isset($row) && is_array($row)) {
 				foreach($row as $key => $value) {
+					if ($key==='id') { continue; } // Ignore column id
 					$strMember = $this->arRelationMap[$key];
 					if(property_exists($this, $strMember)) {
 						$this->{$strMember} = $value;
