@@ -534,10 +534,22 @@ class v6_to_v7 {
 					";
 
 					if ($save) {
-						$result	= pg_query_params(
+
+						// With prepared statement
+						$stmt_name = __METHOD__;
+						if (!isset(DBi::$prepared_statements[$stmt_name])) {
+							pg_prepare(
+								$conn,
+								$stmt_name,
+								$strQuery
+							);
+							// Set the statement as existing.
+							DBi::$prepared_statements[$stmt_name] = true;
+						}
+						$result = pg_execute(
 							$conn,
-							$strQuery,
-							array(
+							$stmt_name,
+							[
 								$section_data_encoded,
 								$section_relation_encoded,
 								$section_string_encoded,
