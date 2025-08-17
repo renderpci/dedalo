@@ -48,216 +48,365 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium	= 7;
 	$updates->$v->update_from_minor		= 2;
 
-	// Re-index and vacuum tables
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-			ALTER TABLE "matrix"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_activities"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_activity"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_dataframe"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_dd"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_hierarchy"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_hierarchy_main"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_indexations"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_langs"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_layout"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_layout_dd"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_list"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_nexus"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_nexus_main"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_notes"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_ontology"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_ontology_main"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_profiles"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_projects"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_stats"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_test"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_tools"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
-			ALTER TABLE "matrix_users"
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "strings" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "dates" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "numbers" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "clusters" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "relations_search" jsonb NULL,
-				ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+			DO $$
+			BEGIN
+				IF EXISTS (
+					SELECT 1
+					FROM information_schema.columns
+					WHERE table_name = \'matrix_activity\'
+					AND column_name = \'date\'
+					AND data_type != \'jsonb\'
+				) THEN
+					EXECUTE \'ALTER TABLE matrix_activity RENAME COLUMN date TO timestamp\';
+				END IF;
+			END;
+			$$;
 		');
+
+	// Re-index and vacuum tables
+		// $updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+		// 	ALTER TABLE "matrix"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_activities"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_activity"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_dataframe"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_dd"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_hierarchy"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_hierarchy_main"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_indexations"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_langs"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_layout"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_layout_dd"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_list"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_nexus"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_nexus_main"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_notes"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_ontology"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_ontology_main"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_profiles"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_projects"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_stats"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_test"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_tools"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// 	ALTER TABLE "matrix_users"
+		// 		ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+		// 		ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+		// ');
+
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			$ar_tables = [
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_ontology',
+				'matrix_ontology_main',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_test',
+				'matrix_tools',
+				'matrix_users'
+			];
+			$columns = [];
+			$comments = [];
+			foreach ($ar_tables as $current_table) {
+				$columns [] = '
+					ALTER TABLE "'.$current_table.'"
+						ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "relation" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "string" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "date" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "iri" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "geo" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "number" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
+						ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+				';
+				$comments[] = "
+					COMMENT ON COLUMN ".$current_table.".id IS 'Unique table identifier';
+					COMMENT ON COLUMN ".$current_table.".section_id IS 'Section unique identifier';
+					COMMENT ON COLUMN ".$current_table.".section_tipo IS 'Ontology section identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)';
+					COMMENT ON COLUMN ".$current_table.".data IS 'Section data';
+					COMMENT ON COLUMN ".$current_table.".relation IS 'Component data with relation values: ".DEDALO_RELATION_TYPE_LINK."|".DEDALO_RELATION_TYPE_CHILDREN_TIPO."|".DEDALO_RELATION_TYPE_PARENT_TIPO."|".DEDALO_RELATION_TYPE_INDEX_TIPO."|".DEDALO_RELATION_TYPE_MODEL_TIPO."|".DEDALO_RELATION_TYPE_FILTER."';
+					COMMENT ON COLUMN ".$current_table.".string IS 'Component data with string values: ". DEDALO_VALUE_TYPE_STRING. "';
+					COMMENT ON COLUMN ".$current_table.".date IS 'Component data with date values: ". DEDALO_VALUE_TYPE_DATE. "';
+					COMMENT ON COLUMN ".$current_table.".iri IS 'Component data with IRI values: ". DEDALO_VALUE_TYPE_IRI. "';
+					COMMENT ON COLUMN ".$current_table.".geo IS 'Component data with geolocation values: ". DEDALO_VALUE_TYPE_GEO. "';
+					COMMENT ON COLUMN ".$current_table.".number IS 'Component data with number values: ". DEDALO_VALUE_TYPE_NUMBER. "';
+					COMMENT ON COLUMN ".$current_table.".media IS 'Component data with media values: ". DEDALO_VALUE_TYPE_MEDIA. "';
+					COMMENT ON COLUMN ".$current_table.".misc IS 'Other component data with miscellaneous values: ". DEDALO_VALUE_TYPE_MISC. "';
+					COMMENT ON COLUMN ".$current_table.".relation_search IS 'Complementary relationships as parents, used to search for all children of the parent being searched for.';
+					COMMENT ON COLUMN ".$current_table.".counters IS 'Component literal counters, used as value identifiers.';
+				";
+			};
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $columns));
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $comments));
 
 // SELECT * FROM matrix WHERE data_relations_flat_st_si(data) @> '["dd64_1"]'::jsonb;
 
@@ -349,33 +498,6 @@ $updates->$v = new stdClass();
 
 
 	// RUN_SCRIPTS
-		// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-			$ar_tables = [
-				'matrix',
-				'matrix_activities',
-				'matrix_activity',
-				'matrix_dataframe',
-				'matrix_dd',
-				'matrix_hierarchy',
-				'matrix_hierarchy_main',
-				'matrix_indexations',
-				'matrix_langs',
-				'matrix_layout',
-				'matrix_layout_dd',
-				'matrix_list',
-				'matrix_nexus',
-				'matrix_nexus_main',
-				'matrix_notes',
-				'matrix_ontology',
-				'matrix_ontology_main',
-				'matrix_profiles',
-				'matrix_projects',
-				'matrix_stats',
-				'matrix_test',
-				'matrix_tools',
-				'matrix_users'
-			];
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.v6_to_v7.php';
 
 			// Only checks data without save
