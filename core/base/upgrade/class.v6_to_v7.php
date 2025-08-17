@@ -327,7 +327,7 @@ class v6_to_v7 {
 											$new_literal_obj = new stdClass();
 												$new_literal_obj->id		= $value_key; // starts from 1
 												$new_literal_obj->lang		= $lang;
-												$new_literal_obj->type	= $typology;
+												// $new_literal_obj->type	= $typology; // Not add (redundant)
 												$new_literal_obj->value		= $value;
 
 											switch ($typology) {
