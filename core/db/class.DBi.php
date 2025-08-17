@@ -13,6 +13,8 @@ abstract class DBi {
 	 */
 	private static ?PgSql\Connection $pg_conn_cache = null;
 
+	public static $preparedStatements = [];
+
 
 
 	/**
