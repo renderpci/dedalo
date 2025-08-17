@@ -115,6 +115,16 @@ class v6_to_v7 {
 				if( isset($datos) ){
 
 					$new_matrix_data = new stdClass();
+
+					$column_data				= new stdClass();
+					$column_relations_search	= new stdClass();
+					$column_relations			= new stdClass();
+					$column_strings				= new stdClass();
+					$column_dates				= new stdClass();
+					$column_numbers				= new stdClass();
+					$column_clusters			= new stdClass();
+					$column_counters			= new stdClass();
+
 					$value_type_map = v6_to_v7::get_value_type_map();
 
 					// datos properties
@@ -126,13 +136,8 @@ class v6_to_v7 {
 
 						switch ($datos_key) {
 							case 'relations_search':
-							case 'relations':
-								// add relations property
-								$new_matrix_data->{$datos_key} = new stdClass();
-
 								// update relations array
 								$relations = $datos_value ?? [];
-
 								foreach ($relations as $locator) {
 
 									// check locator from_component_tipo
@@ -150,10 +155,38 @@ class v6_to_v7 {
 										continue;
 									}
 
-									if(!isset($new_matrix_data->{$datos_key}->{$locator->from_component_tipo})){
-										$new_matrix_data->{$datos_key}->{$locator->from_component_tipo} = [];
+									if(!isset($column_relations_search->{$locator->from_component_tipo})){
+										$column_relations_search->{$locator->from_component_tipo} = [];
 									}
-									$new_matrix_data->{$datos_key}->{$locator->from_component_tipo}[] = $locator;
+									$column_relations_search->{$locator->from_component_tipo}[] = $locator;
+								}
+								break;
+
+							case 'relations':
+
+								// update relations array
+								$relations = $datos_value ?? [];
+								foreach ($relations as $locator) {
+
+									// check locator from_component_tipo
+									if( !isset($locator->from_component_tipo) ){
+										$locator_string = json_encode($locator);
+										debug_log(__METHOD__
+											. " **-------- ERROR locator without from_component_tipo --------** " . PHP_EOL
+											. " section tipo: ". $section_tipo . PHP_EOL
+											. " section id: ". $section_id . PHP_EOL
+											. " table: ". $table . PHP_EOL
+											. " locator: ". $locator_string
+											, logger::ERROR
+										);
+										$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' locator: '$locator_string'";
+										continue;
+									}
+
+									if(!isset($column_relations->{$locator->from_component_tipo})){
+										$column_relations->{$locator->from_component_tipo} = [];
+									}
+									$column_relations->{$locator->from_component_tipo}[] = $locator;
 								}
 								break;
 
@@ -243,7 +276,7 @@ class v6_to_v7 {
 										$value_key = 0;
 										foreach ($ar_value as $key => $value) {
 
-											// Ignore empty component values
+											// Ignore null component values
 											if( !isset($value) ){
 												debug_log(__METHOD__
 													. " <<-------- IGNORED empty value. -------->> " . PHP_EOL
@@ -282,11 +315,95 @@ class v6_to_v7 {
 
 											$value_key++;
 
+											$column_counters->{$literal_tipo} = $value_key;
+
+											$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_JSON;
+
 											$new_literal_obj = new stdClass();
-											$new_literal_obj->key	= $value_key; // starts from 1
-											$new_literal_obj->lang	= $lang;
-											$new_literal_obj->value	= $value;
-											$new_literal_obj->type	= $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_JSON;
+														$new_literal_obj->id	= $value_key; // starts from 1
+														$new_literal_obj->lang	= $lang;
+														$new_literal_obj->type	= $typology;
+														$new_literal_obj->value	= $value;
+
+											switch ($typology) {
+												case DEDALO_VALUE_TYPE_STRING:
+
+													// set component path if not already set
+													if (!property_exists($column_strings, $literal_tipo)) {
+														$column_strings->{$literal_tipo} = [];
+													}
+
+													$column_strings->{$literal_tipo}[] = $new_literal_obj;
+													break;
+
+												case DEDALO_VALUE_TYPE_NUMBER:
+
+													// set component path if not already set
+													if (!property_exists($column_numbers, $literal_tipo)) {
+														$column_numbers->{$literal_tipo} = [];
+													}
+
+													$column_numbers->{$literal_tipo}[] = $new_literal_obj;
+													break;
+
+												case DEDALO_VALUE_TYPE_JSON:
+												
+													// set component path if not already set
+													if (!property_exists($column_clusters, $literal_tipo)) {
+														$column_clusters->{$literal_tipo} = [];
+													}
+
+													$column_clusters->{$literal_tipo}[] = $new_literal_obj;
+
+													break;
+
+												case DEDALO_VALUE_TYPE_DATE:
+
+													$date_literal_obj = $value;
+														$date_literal_obj->id	= $value_key;
+														$date_literal_obj->lang	= $lang;
+														$date_literal_obj->type	= $typology;
+
+												// set component path if not already set
+													if (!property_exists($column_dates, $literal_tipo)) {
+														$column_dates->{$literal_tipo} = [];
+													}
+
+													$column_dates->{$literal_tipo}[] = $date_literal_obj;
+													break;
+
+												case DEDALO_VALUE_TYPE_MEDIA:
+												case DEDALO_VALUE_TYPE_IRI:
+												case DEDALO_VALUE_TYPE_GEO:
+													if(is_object($value)){
+														$cluster_literal_obj = $value;
+															$cluster_literal_obj->id	= $value_key;
+															$cluster_literal_obj->lang	= $lang;
+															$cluster_literal_obj->type	= $typology;
+
+														// set component path if not already set
+														if (!property_exists($column_clusters, $literal_tipo)) {
+															$column_clusters->{$literal_tipo} = [];
+														}
+
+														$column_clusters->{$literal_tipo}[] = $cluster_literal_obj;
+
+
+													}else{
+														$value_string = json_encode( $value );
+														debug_log(__METHOD__
+															. " **-------- ERROR component value out of format, is not object --------** " . PHP_EOL
+															. " section tipo: ". $section_tipo . PHP_EOL
+															. " section id: ". $section_id . PHP_EOL
+															. " table: ". $table . PHP_EOL
+															. " value: ". $value_string
+															, logger::ERROR
+														);
+														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' value: '$value_string'";
+														continue 2;
+													}
+													break;
+											}
 
 											// temporal add info for easy debug in beta 7
 												// if (isset($new_literal_obj->literal_value->info)) {
@@ -295,13 +412,6 @@ class v6_to_v7 {
 												// 	$label = RecordObj_dd::get_termino_by_tipo($literal_tipo);
 												// 	$new_literal_obj->info = "$label [$model]";
 												// }
-
-											// set component path if not already set
-											if (!property_exists($new_matrix_data->literals, $literal_tipo)) {
-												$new_matrix_data->literals->{$literal_tipo} = [];
-											}
-
-											$new_matrix_data->literals->{$literal_tipo}[] = $new_literal_obj;
 										}
 									}
 								}
@@ -309,22 +419,49 @@ class v6_to_v7 {
 
 							default:
 								// update other properties like section_tipo, section_real_tipo, etc.
-								$new_matrix_data->{$datos_key} = $datos_value;
+								$column_data->{$datos_key} = $datos_value;
 								break;
 						}
 					}//end foreach ($datos as $datos_key => $datos_value)
 
-					$section_data_encoded = json_encode($new_matrix_data);
+					$section_data_encoded				= json_encode($column_data);
+					$section_relations_encoded			= json_encode($column_relations);
+					$section_strings_encoded			= json_encode($column_strings);
+					$section_dates_encoded				= json_encode($column_dates);
+					$section_numbers_encoded			= json_encode($column_numbers);
+					$section_clusters_encoded			= json_encode($column_clusters);
+					$section_relations_search_encoded	= json_encode($column_relations_search);
+					$section_counters_encoded			= json_encode($column_counters);
 
 					$conn = DBi::_getConnection();
+					$strQuery = "
+						UPDATE {$table}
+						SET data = $1,
+							relations = $2,
+							strings = $3,
+							dates = $4,
+							numbers = $5,
+							clusters = $6,
+							relations_search = $7,
+							counters = $8
+						WHERE id = $9
+					";
 
 					if ($save) {
-
-						$strQuery = "UPDATE {$table} SET data = $1 WHERE id = $2 ";
 						$result	= pg_query_params(
 							$conn,
 							$strQuery,
-							array( $section_data_encoded, $id )
+							array(
+								$section_data_encoded,
+								$section_relations_encoded,
+								$section_strings_encoded,
+								$section_dates_encoded,
+								$section_numbers_encoded,
+								$section_clusters_encoded,
+								$section_relations_search_encoded,
+								$section_counters_encoded,
+								$id
+							)
 						);
 
 					}else{
@@ -335,8 +472,18 @@ class v6_to_v7 {
 						// 2. Perform the update (in the transaction)
 						$result = pg_query_params(
 							$conn,
-							"UPDATE {$table} SET data = $1 WHERE id = $2 RETURNING id",
-							array($section_data_encoded, $id)
+							$strQuery,
+							array(
+								$section_data_encoded,
+								$section_relations_encoded,
+								$section_strings_encoded,
+								$section_dates_encoded,
+								$section_numbers_encoded,
+								$section_clusters_encoded,
+								$section_relations_search_encoded,
+								$section_counters_encoded,
+								$id
+							)
 						);
 
 						// 3. Rollback (undo changes)
