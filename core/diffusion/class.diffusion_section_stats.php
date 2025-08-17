@@ -146,14 +146,14 @@ class diffusion_section_stats extends diffusion {
 					$begin			= new DateTime($timestamp);
 					$beginning_date	= $begin->modify('+1 day')->format("Y-m-d");
 
-					$filter = 'AND date > \''.$beginning_date.'\'';
+					$filter = 'AND timestamp > \''.$beginning_date.'\'';
 
 					return $filter;
 				  })($ar_records[0])
 				: '';
 
 		// do not include today in any case because it is not yet complete.
-			$activity_filter_beginning .= ' AND date < \''.$today->format("Y-m-d").'\'';
+			$activity_filter_beginning .= ' AND timestamp < \''.$today->format("Y-m-d").'\'';
 
 		// search last activity record of current user
 			$strQuery = '
@@ -162,7 +162,7 @@ class diffusion_section_stats extends diffusion {
 				WHERE
 				datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
 				'.$activity_filter_beginning.'
-				ORDER BY date ASC
+				ORDER BY timestamp ASC
 				LIMIT 1
 			';
 			$result = pg_query(DBi::_getConnection(), $strQuery);
