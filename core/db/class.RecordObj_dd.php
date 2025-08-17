@@ -1197,9 +1197,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 						debug_log(__METHOD__
 							." Error processing relation children. Model is empty. Please define model for $terminoID" . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
+							.' terminoID: ' . $terminoID . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' terminoID: ' . $terminoID . PHP_EOL
-							.' name: ' . RecordObj_dd::get_termino_by_tipo($terminoID)
+							.' name: ' . RecordObj_dd::get_termino_by_tipo($terminoID) . PHP_EOL
+							.' RecordObj_dd: ' . json_encode($RecordObj_dd)
 							, logger::ERROR
 						);
 						return [];
