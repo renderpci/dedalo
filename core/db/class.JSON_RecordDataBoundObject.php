@@ -140,39 +140,47 @@ abstract class JSON_RecordDataBoundObject {
 
 			// DEFAULT. GET DB DATA
 
-			// Synchronous query
-				// $result = pg_query(DBi::_getConnection(), $strQuery);	#or die("Cannot execute query: $strQuery\n". pg_last_error(DBi::_getConnection()));
-				// # $result  = pg_query_params(DBi::_getConnection(), $strQuery, array( $this->section_id, $this->section_tipo ));
-
-			// pg_query
-				$result = pg_query(DBi::_getConnection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
-				if ($result===false) {
-					debug_log(__METHOD__." Error Processing Request Load ".to_string($strQuery).' '.PHP_EOL. pg_last_error(DBi::_getConnection()), logger::ERROR);
-					if(SHOW_DEBUG===true) {
-						// throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
-					}
+			// connection
+				$conn = DBi::_getConnection();
+				if ($conn===false) {
+					debug_log(__METHOD__
+						." Connection error. get_connection return false "
+						, logger::ERROR
+					);
+					return false;
 				}
 
-			// With prepared statement
-				// $stmtname  = ''; //md5($strQuery); //'search_free_stmt';
-				// $statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
-				// if ($statement===false) {
-				// 	trigger_error(__METHOD__.' Error: Error when pg_prepare statemnt for strQuery');
-				// 	if(SHOW_DEBUG===true) {
-				// 		debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
-				// 	}
-				// 	return false;
-				// }
-				// $result = pg_execute(DBi::_getConnection(), $stmtname, array());
-				// if ($result===false) {
-				// 	if(SHOW_DEBUG===true) {
-				// 		// throw new Exception("Error Processing Request Load: ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
-				// 		trigger_error("Error Processing Request Load: ".pg_last_error(DBi::_getConnection())." <hr>$strQuery");
-				// 	}else{
-				// 		trigger_error("Error Processing Request Load");
-				// 	}
-				// 	return false;
-				// }
+			// pg_query
+				// Direct
+				// $result = pg_query(DBi::_getConnection(), $strQuery);
+
+				// With prepared statement
+				$stmt_name = __METHOD__ . '_' . $this->strTableName;
+				if (!isset(DBi::$preparedStatements[$stmt_name])) {
+					pg_prepare(
+						$conn,
+						$stmt_name,
+						"SELECT $columns FROM $this->strTableName WHERE section_id = $1 AND section_tipo = $2"
+					);
+					DBi::$preparedStatements[$stmt_name] = true;
+				}
+				$result = pg_execute(
+					$conn,
+					$stmt_name,
+					[$section_id, $section_tipo]
+				);
+
+			// check result
+				if ($result===false) {
+					debug_log(__METHOD__
+						." Error Processing Request Load ".to_string($strQuery) . PHP_EOL
+						.' error: ' . pg_last_error($conn)
+						, logger::ERROR
+					);
+					if(SHOW_DEBUG===true) {
+						// throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error($conn)." <hr>$strQuery", 1);
+					}
+				}
 
 			// arRow. Note that pg_fetch_assoc could return 'false' when query return empty value. This is not an error.
 				$arRow = pg_fetch_assoc($result);
@@ -302,7 +310,26 @@ abstract class JSON_RecordDataBoundObject {
 
 			$strQuery	= 'UPDATE '.$this->strTableName.' SET datos = $1 WHERE section_id = $2 AND section_tipo = $3 RETURNING id';
 			$params		= [$datos, $section_id, $section_tipo];
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, $params);
+
+			// Direct
+			// $result = pg_query_params(DBi::_getConnection(), $strQuery, $params);
+
+			// With prepared statement
+			$stmt_name = __METHOD__ . '_' . $this->strTableName;
+			if (!isset(DBi::$preparedStatements[$stmt_name])) {
+				pg_prepare(
+					DBi::_getConnection(),
+					$stmt_name,
+					$strQuery
+				);
+				DBi::$preparedStatements[$stmt_name] = true;
+			}
+			$result = pg_execute(
+				DBi::_getConnection(),
+				$stmt_name,
+				$params
+			);
+
 			if($result===false) {
 
 				debug_log(__METHOD__." Error Processing Save Update Request ".pg_last_error(DBi::_getConnection()), logger::ERROR);
@@ -415,7 +442,7 @@ abstract class JSON_RecordDataBoundObject {
 
 					# Insert record datos and receive a new id
 					$strQuery	= 'INSERT INTO "'.$this->strTableName.'" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id';
-					$params		= array( $section_id, $section_tipo, $datos );
+					$params		= [$section_id, $section_tipo, $datos];
 					$result		= pg_query_params(DBi::_getConnection(), $strQuery, $params);
 					if($result===false) {
 						debug_log(__METHOD__

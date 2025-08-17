@@ -1586,7 +1586,7 @@ final class core_functions_test extends TestCase {
 	*/
 	public function test_get_current_version_in_db() {
 
-		$result = get_current_version_in_db('test message 1');
+		$result = get_current_version_in_db();
 
 		$eq = gettype($result)==='array';
 		$this->assertTrue(
@@ -1595,11 +1595,15 @@ final class core_functions_test extends TestCase {
 				. to_string( $eq )
 		);
 
-		$eq = $result[0]===6;
+		$major_version = explode('.', DEDALO_VERSION)[0];
+
+		$eq = $result[0] == $major_version;
 		$this->assertTrue(
 			$eq,
 			'expected true, but received is: '
-				. to_string( $eq )
+				. to_string( $eq ) . PHP_EOL
+				. 'major_version: ' . to_string( $major_version ) . PHP_EOL
+				. 'result: ' . to_string( $result ) . PHP_EOL
 		);
 	}//end test_get_current_version_in_db
 
@@ -1620,7 +1624,9 @@ final class core_functions_test extends TestCase {
 				. to_string( $eq )
 		);
 
-		$eq = $result[0]===6;
+		$major_version = explode('.', DEDALO_VERSION)[0];
+
+		$eq = $result[0] == $major_version;
 		$this->assertTrue(
 			$eq,
 			'expected true, but received is: '
