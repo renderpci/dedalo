@@ -1468,8 +1468,26 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$safe_tipo = safe_tipo($tipo);
 
 		$table		= RecordObj_dd::$table; // jer_dd | jer_dd_backup
-		$strQuery	= "SELECT * FROM \"$table\" WHERE \"terminoID\"='$safe_tipo' LIMIT 1";
-		$result		= pg_query(DBi::_getConnection(), $strQuery);
+		$strQuery	= "SELECT * FROM \"$table\" WHERE \"terminoID\" = $1 LIMIT 1";
+
+		// Direct
+		// $result = pg_query_params(DBi::_getConnection(), $strQuery, [$safe_tipo]);
+
+		// With prepared statement
+		$stmt_name = __CLASS__ .'_load_get_row_data';
+		if (!isset(DBi::$preparedStatements[$stmt_name])) {
+			pg_prepare(
+				DBi::_getConnection(),
+				$stmt_name,
+				$strQuery
+			);
+			DBi::$preparedStatements[$stmt_name] = true;
+		}
+		$result = pg_execute(
+			DBi::_getConnection(),
+			$stmt_name,
+			[$safe_tipo]
+		);
 
 		$row_data = null;
 		while($row = pg_fetch_object($result)) {

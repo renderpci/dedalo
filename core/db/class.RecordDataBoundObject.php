@@ -166,15 +166,18 @@ abstract class RecordDataBoundObject {
 			foreach($this->arRelationMap as $key => $value) {
 				$ar_query_select[] = '"'.$key.'"';
 			}
-			$ar_query[] = 'SELECT '.implode(',', $ar_query_select);
+			$select_fields	= implode(',', $ar_query_select);
+			$ar_query[]		= 'SELECT '. $select_fields;
 
 		// from
-			$table			= $this->strTableName;
 			$column_key		= $this->strPrimaryKeyName;
 			$column_value	= is_int($this->ID)
 				? $this->ID
 				: '\''. $this->ID .'\'';
-			$ar_query[] = 'FROM "'.$table.'" WHERE "'.$column_key.'"='.$column_value;
+			$ar_query[] = 'FROM "'.$this->strTableName.'"';
+
+		// where
+			$ar_query[] = 'WHERE "'.$column_key.'"='.$column_value;
 
 		// $strQuery
 			$strQuery = implode(' ', $ar_query);
@@ -201,16 +204,37 @@ abstract class RecordDataBoundObject {
 
 			// from DB request case
 
-			// exec query
-				$connection = $this->get_connection();
-				if ($connection===false) {
+			// connection
+				$conn = $this->get_connection();
+				if ($conn===false) {
 					debug_log(__METHOD__
 						." Connection error. get_connection return false "
 						, logger::ERROR
 					);
 					return false;
 				}
-				$result = pg_query($connection, $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error(DBi::_getConnection()));
+
+			// exec query
+				// Direct
+				// $result = pg_query($conn, $strQuery);
+
+				// With prepared statement
+				$stmt_name = __METHOD__ . '_' . $this->strTableName;
+				if (!isset(DBi::$preparedStatements[$stmt_name])) {
+					pg_prepare(
+						$conn,
+						$stmt_name,
+						'SELECT '.$select_fields.' FROM "'.$this->strTableName.'" WHERE "'.$this->strPrimaryKeyName.'" = $1'
+					);
+					DBi::$preparedStatements[$stmt_name] = true;
+				}
+				$result = pg_execute(
+					$conn,
+					$stmt_name,
+					[$this->ID]
+				);
+
+			// check result
 				if ($result===false) {
 					debug_log(__METHOD__
 						. " Error: DDBB query error ". PHP_EOL
@@ -220,27 +244,6 @@ abstract class RecordDataBoundObject {
 					);
 					return false;
 				}
-
-			// With prepared statement
-				// $stmtname  = ''; //md5($strQuery); //'search_free_stmt';
-				// $statement = pg_prepare($this->get_connection(), $stmtname, $strQuery);
-				// if ($statement===false) {
-				// 	trigger_error(__METHOD__.' Error: Error when pg_prepare statemnt for strQuery');
-				// 	if(SHOW_DEBUG===true) {
-				// 		debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
-				// 	}
-				// 	return false;
-				// }
-				// $result = pg_execute($this->get_connection(), $stmtname, array());
-				// if ($result===false) {
-				// 	if(SHOW_DEBUG===true) {
-				// 		// throw new Exception("Error Processing Request Load: ".pg_last_error(DBi::_getConnection())." <hr>$strQuery", 1);
-				// 		trigger_error("Error Processing Request Load: ".pg_last_error(DBi::_getConnection())." <hr>$strQuery");
-				// 	}else{
-				// 		trigger_error("Error Processing Request Load");
-				// 	}
-				// 	return false;
-				// }
 
 			// rows. pg_fetch_assoc: false is returned if row exceeds the number of rows in the set, there are no more rows, or on any other error.
 				$row = pg_fetch_assoc($result); // assoc array|false
