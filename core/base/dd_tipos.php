@@ -156,7 +156,7 @@ define('DEDALO_VALUE_TYPE_DATE',						'dd1481');
 define('DEDALO_VALUE_TYPE_MEDIA',						'dd1482');
 define('DEDALO_VALUE_TYPE_IRI',							'dd1562');
 define('DEDALO_VALUE_TYPE_GEO',							'dd1564');
-define('DEDALO_VALUE_TYPE_JSON',						'dd1474');
+define('DEDALO_VALUE_TYPE_MISC',						'dd1474');
 
 // Notes
 define('DEDALO_NOTES_SECTION_TIPO',						'rsc326');
