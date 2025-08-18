@@ -223,6 +223,25 @@ class section extends common {
 
 
 
+	/**
+	* GET_JSON_RECORDOBJ_MATRIX
+	* Gets or creates the JSON_RecordObj_matrix instance and set it as section property.
+	* @return JSON_RecordObj_matrix $this->JSON_RecordObj_matrix
+	*/
+	private function get_JSON_RecordObj_matrix() : JSON_RecordObj_matrix {
+
+		$this->JSON_RecordObj_matrix = $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
+			common::get_matrix_table_from_tipo($this->tipo),
+			(int)$this->section_id, // int section_id
+			$this->tipo, // string section tipo
+			true // bool enable cache
+		);
+
+		return $this->JSON_RecordObj_matrix;
+	}//end get_JSON_RecordObj_matrix
+
+
+
 
 	/**
 	* GET_IDENTIFIER
@@ -263,16 +282,10 @@ class section extends common {
 				return false;
 			}
 
-			$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
-			$JSON_RecordObj_matrix	= $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
-				$matrix_table,
-				(int)$this->section_id, // int section_id
-				$this->tipo, // string section tipo
-				true // bool cache
-			);
-			$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
+			// set $this->JSON_RecordObj_matrix
+			$this->get_JSON_RecordObj_matrix();
 			// force updates value
-			$JSON_RecordObj_matrix->set_bl_loaded_matrix_data(false);
+			$this->JSON_RecordObj_matrix->set_bl_loaded_matrix_data(false);
 		}
 
 		return  true;
@@ -326,18 +339,11 @@ class section extends common {
 			}
 
 		// data is loaded once
-			// JSON_RecordObj_matrix
-				$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
-				$JSON_RecordObj_matrix	= $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
-					$matrix_table,
-					(int)$this->section_id, // int section_id
-					$this->tipo, // string section tipo
-					true // bool cache
-				);
-				$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
+			// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+				$this->get_JSON_RecordObj_matrix();
 
 			// load dato from db
-				$dato = $JSON_RecordObj_matrix->get_dato();
+				$dato = $this->JSON_RecordObj_matrix->get_dato();
 
 		// fix dato (force object)
 			$this->dato = is_object($dato)
@@ -363,19 +369,12 @@ class section extends common {
 
 		// update JSON_RecordObj_matrix cached data
 			if (!empty($this->section_id)) {
-				$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
-				$JSON_RecordObj_matrix	= $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
-					$matrix_table, // string matrix_table
-					(int)$this->section_id, // int section_id
-					$this->tipo, // string tipo
-					true // bool cache
-				);
-				$JSON_RecordObj_matrix->set_dato($dato);
-				$JSON_RecordObj_matrix->set_blIsLoaded(true);
+				// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+				$this->get_JSON_RecordObj_matrix();
+				// Set dato
+				$this->JSON_RecordObj_matrix->set_dato($dato);
+				$this->JSON_RecordObj_matrix->set_blIsLoaded(true);
 			}
-
-		// set as loaded
-			// $this->bl_loaded_matrix_data = true;
 
 
 		return $result;
@@ -963,16 +962,22 @@ class section extends common {
 			}
 
 			// Save section dato
-				$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
-					? $this->JSON_RecordObj_matrix
-					: JSON_RecordObj_matrix::get_instance(
-						$matrix_table,
-						(int)$this->section_id,
-						$tipo,
-						true // bool cache
-					  );
-				$JSON_RecordObj_matrix->set_dato($section_dato);
-				$saved_id_matrix = $JSON_RecordObj_matrix->Save( $options );
+				// $JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
+				// 	? $this->JSON_RecordObj_matrix
+				// 	: JSON_RecordObj_matrix::get_instance(
+				// 		$matrix_table,
+				// 		(int)$this->section_id,
+				// 		$tipo,
+				// 		true // bool cache
+				// 	  );
+				// $JSON_RecordObj_matrix->set_dato($section_dato);
+				// $saved_id_matrix = $JSON_RecordObj_matrix->Save( $options );
+
+				// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+				$this->get_JSON_RecordObj_matrix();
+				$this->JSON_RecordObj_matrix->set_dato($section_dato);
+				$saved_id_matrix = $this->JSON_RecordObj_matrix->Save( $options );
+
 				if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
 					debug_log(__METHOD__
 						. ' Error trying to save->update record. Nothing was saved! ' . PHP_EOL
@@ -1098,14 +1103,20 @@ class section extends common {
 						$save_options->save_tm				= $this->save_tm;
 
 				// Save JSON_RecordObj
-					$JSON_RecordObj_matrix = $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
-						$matrix_table, // string matrix_table
-						(int)$this->section_id, // int section_id
-						$tipo, // string tipo
-						true // bool cache
-					);
-					$JSON_RecordObj_matrix->set_dato($this->dato);
-					$saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
+					// $JSON_RecordObj_matrix = $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
+					// 	$matrix_table, // string matrix_table
+					// 	(int)$this->section_id, // int section_id
+					// 	$tipo, // string tipo
+					// 	true // bool cache
+					// );
+					// $JSON_RecordObj_matrix->set_dato($this->dato);
+					// $saved_id_matrix = $JSON_RecordObj_matrix->Save( $save_options );
+
+					// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+					$this->get_JSON_RecordObj_matrix();
+					$this->JSON_RecordObj_matrix->set_dato($this->dato);
+					$saved_id_matrix = $this->JSON_RecordObj_matrix->Save( $save_options );
+
 					if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
 						debug_log(__METHOD__
 							. ' Error trying to save->insert record. Nothing was saved! ' . PHP_EOL
@@ -1451,18 +1462,29 @@ class section extends common {
 						}
 
 					// section delete. Delete matrix record
-						$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
-							? $this->JSON_RecordObj_matrix
-							: JSON_RecordObj_matrix::get_instance(
-								$matrix_table,
-								(int)$this->section_id,
-								$section_tipo,
-								true // bool cache
-							  );
-						$JSON_RecordObj_matrix->MarkForDeletion();
+						// $JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
+						// 	? $this->JSON_RecordObj_matrix
+						// 	: JSON_RecordObj_matrix::get_instance(
+						// 		$matrix_table,
+						// 		(int)$this->section_id,
+						// 		$section_tipo,
+						// 		true // bool cache
+						// 	  );
+
+						// // mark for deletion
+						// $JSON_RecordObj_matrix->MarkForDeletion();
+
+						// // force JSON_RecordObj_matrix destruct to real deletion exec
+						// $JSON_RecordObj_matrix->__destruct();
+
+						// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+						$this->get_JSON_RecordObj_matrix();
+
+						// mark for deletion
+						$this->JSON_RecordObj_matrix->MarkForDeletion();
 
 						// force JSON_RecordObj_matrix destruct to real deletion exec
-						$JSON_RecordObj_matrix->__destruct();
+						$this->JSON_RecordObj_matrix->__destruct();
 
 					// inverse references. Remove all inverse references to this section
 						$this->remove_all_inverse_references(true);
@@ -4420,33 +4442,14 @@ class section extends common {
 
 
 	/**
-	* GET_JSON_RECORDOBJ_MATRIX
-	* Gets or creates the JSON_RecordObj_matrix instance.
-	* @return JSON_RecordObj_matrix $this->JSON_RecordObj_matrix
-	*/
-	private function get_JSON_RecordObj_matrix() : JSON_RecordObj_matrix {
-
-		$this->JSON_RecordObj_matrix = $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
-			common::get_matrix_table_from_tipo($this->tipo),
-			(int)$this->section_id, // int section_id
-			$this->tipo, // string section tipo
-			true // bool enable cache
-		);
-
-		return $this->JSON_RecordObj_matrix;
-	}//end get_JSON_RecordObj_matrix
-
-
-
-	/**
 	* GET_DATA
 	* Gets database column 'data' value for this record (section_tipo, section_id)
 	* @return object|null $this->data
 	*/
 	public function get_data() : ?object {
 
-		// Retrieve the matrix instance
-		$this->JSON_RecordObj_matrix = $this->get_JSON_RecordObj_matrix();
+		// Retrieve and set the matrix instance
+		$this->get_JSON_RecordObj_matrix();
 
 		// load dato from db
 		// data is loaded once and cached into JSON_RecordObj_matrix 'data' property
