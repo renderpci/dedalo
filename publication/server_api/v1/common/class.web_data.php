@@ -1019,7 +1019,7 @@ class web_data {
 
 			// 	// debug
 			// 		if(SHOW_DEBUG===true) {
-			// 			// error_log("++++++ query: " . implode(' ', $query_parts));;
+			// 			// error_log("++++++ query: " . implode(' ', $query_parts));
 			// 		}
 
 
@@ -1282,7 +1282,7 @@ class web_data {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					// error_log("++++++ query: " . implode(' ', $query_parts));;
+					// error_log("++++++ query: " . implode(' ', $query_parts));
 				}
 
 
@@ -4038,7 +4038,7 @@ class web_data {
 				unset($free_node->{$FIELD_TRANSCRIPTION});
 
 				if(SHOW_DEBUG===true) {
-					#dump($free_node, ' free_node ++ '.to_string());;
+					#dump($free_node, ' free_node ++ '.to_string());
 				}
 
 				$ar_free_nodes[] = $free_node;

@@ -282,7 +282,7 @@ class section extends common {
 				return false;
 			}
 
-			// set $this->JSON_RecordObj_matrix
+			// Get and set $this->JSON_RecordObj_matrix
 			$this->get_JSON_RecordObj_matrix();
 			// force updates value
 			$this->JSON_RecordObj_matrix->set_bl_loaded_matrix_data(false);
@@ -821,7 +821,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			// metrics
-				metrics::$section_save_total_calls++;;
+				metrics::$section_save_total_calls++;
 		}
 
 		// options

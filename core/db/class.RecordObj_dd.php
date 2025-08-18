@@ -1474,7 +1474,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		// $result = pg_query_params(DBi::_getConnection(), $strQuery, [$safe_tipo]);
 
 		// With prepared statement
-		$stmt_name = __CLASS__ .'_load_get_row_data';
+		$stmt_name = __METHOD__;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 			pg_prepare(
 				DBi::_getConnection(),

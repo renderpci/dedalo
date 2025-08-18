@@ -3443,7 +3443,7 @@ class diffusion_sql extends diffusion  {
 		$value = [];
 		foreach ($dato as $current_locator) {
 
-			$value[] = (string)$current_locator->section_id;;
+			$value[] = (string)$current_locator->section_id;
 
 			// parents recursive
 			// add parents option
