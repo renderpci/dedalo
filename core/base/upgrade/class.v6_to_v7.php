@@ -504,17 +504,17 @@ class v6_to_v7 {
 						}
 					}//end foreach ($datos as $datos_key => $datos_value)
 
-					$section_data_encoded				= json_encode($column_data);
-					$section_relation_encoded			= json_encode($column_relation);
-					$section_string_encoded				= json_encode($column_string);
-					$section_date_encoded				= json_encode($column_date);
-					$section_iri_encoded				= json_encode($column_iri);
-					$section_geo_encoded				= json_encode($column_geo);
-					$section_number_encoded				= json_encode($column_number);
-					$section_media_encoded				= json_encode($column_media);
-					$section_misc_encoded				= json_encode($column_misc);
-					$section_relation_search_encoded	= json_encode($column_relation_search);
-					$section_counters_encoded			= json_encode($column_counters);
+					$section_data_encoded				= ( empty(get_object_vars($column_data)) ) ? null : json_encode($column_data);
+					$section_relation_encoded			= ( empty(get_object_vars($column_relation)) ) ? null : json_encode($column_relation);
+					$section_string_encoded				= ( empty(get_object_vars($column_string)) ) ? null : json_encode($column_string);
+					$section_date_encoded				= ( empty(get_object_vars($column_date)) ) ? null : json_encode($column_date);
+					$section_iri_encoded				= ( empty(get_object_vars($column_iri)) ) ? null : json_encode($column_iri);
+					$section_geo_encoded				= ( empty(get_object_vars($column_geo)) ) ? null : json_encode($column_geo);
+					$section_number_encoded				= ( empty(get_object_vars($column_number)) ) ? null : json_encode($column_number);
+					$section_media_encoded				= ( empty(get_object_vars($column_media)) ) ? null : json_encode($column_media);
+					$section_misc_encoded				= ( empty(get_object_vars($column_misc)) ) ? null : json_encode($column_misc);
+					$section_relation_search_encoded	= ( empty(get_object_vars($column_relation_search)) ) ? null : json_encode($column_relation_search);
+					$section_counters_encoded			= ( empty(get_object_vars($column_counters)) ) ? null : json_encode($column_counters);
 
 					$conn = DBi::_getConnection();
 					$strQuery = "
