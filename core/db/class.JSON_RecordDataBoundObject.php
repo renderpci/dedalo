@@ -28,9 +28,17 @@ abstract class JSON_RecordDataBoundObject {
 	protected $force_insert_on_save = false;
 
 	// V7 PROPERTIES //
-
-	// data. Column 'data' in matrix table (replaces old 'datos' v6 column)
 	protected $data;
+	protected $relation;
+	protected $string;
+	protected $date;
+	protected $iri;
+	protected $geo;
+	protected $number;
+	protected $media;
+	protected $misc;
+	protected $relation_search;
+	protected $counters;
 
 	abstract protected function defineTableName();
 	abstract protected function defineRelationMap();
@@ -111,8 +119,11 @@ abstract class JSON_RecordDataBoundObject {
 		// Section_id is always int
 			$section_id = intval($this->section_id);
 
+		// columns
+			$columns = '*';
+
 		// sql query
-			$strQuery = 'SELECT "datos", "data" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $section_id .' AND "section_tipo" = \''. $section_tipo .'\';';
+			$strQuery = 'SELECT '.$columns.' FROM "'. $this->strTableName .'" WHERE "section_id" = '. $section_id .' AND "section_tipo" = \''. $section_tipo .'\';';
 
 		// cache
 		// If a query that has already been received is missed, it does not connect to the database and returns the identical query result
@@ -128,8 +139,7 @@ abstract class JSON_RecordDataBoundObject {
 		// if($use_cache===true && isset($ar_JSON_RecordDataObject_load_query_cache[$strQuery])) {	// USING CACHE RUN-IN
 		if ($use_cache===true && array_key_exists($strQuery, $ar_JSON_RecordDataObject_load_query_cache)) {
 
-			$dato = $ar_JSON_RecordDataObject_load_query_cache[$strQuery];
-			$data = $data_cache[$strQuery] ?? null;
+			$this->dato = $ar_JSON_RecordDataObject_load_query_cache[$strQuery];
 
 		}else{
 
@@ -192,29 +202,42 @@ abstract class JSON_RecordDataBoundObject {
 				// }
 
 			// dato from matrix column 'datos'
-				$dato = isset($arRow['datos'])
+				$this->dato = isset($arRow['datos'])
 					? json_handler::decode($arRow['datos'])
 					: null;
 
-			// data
-				$data = isset($arRow['data'])
-					? json_handler::decode($arRow['data'])
-					: null;
+			// v7 columns
+				$columns = [
+					'data',
+					'relation',
+					'string',
+					'date',
+					'iri',
+					'geo',
+					'number',
+					'media',
+					'misc',
+					'relation_search',
+					'counters'
+				];
+				foreach ($columns as $column_name) {
+					$this->{$column_name} = isset($arRow[$column_name])
+						? json_handler::decode($arRow[$column_name])
+						: null;
+				}
 
 			// cache results. Note: Avoid use cache in long imports (memory overloads)
 				if($use_cache===true) {
 					// store value
-					$ar_JSON_RecordDataObject_load_query_cache[$strQuery] = $dato;
-					$data_cache[$strQuery] = $data;
+					$ar_JSON_RecordDataObject_load_query_cache[$strQuery] = $this->dato;
 				}
 
 			// debug
 				if(SHOW_DEBUG===true) {
 					$total_time_ms = exec_time_unit($start_time, 'ms');
-
 					// slow request notification
 					if($total_time_ms > SLOW_QUERY_MS){
-						$n_records = is_countable($dato) ? sizeof($dato) : 0;
+						$n_records = is_countable($this->data) ? sizeof($this->data) : 0;
 						debug_log(__METHOD__
 							.' LOAD_SLOW_QUERY: ' . PHP_EOL
 							.' time: ' . $total_time_ms . ' ms' . PHP_EOL
@@ -235,11 +258,7 @@ abstract class JSON_RecordDataBoundObject {
 				}
 		}
 
-		# Set returned dato (decoded) to object
-		$this->dato = $dato;
-		$this->data = $data;
-
-		# Fix loaded state
+		// Fix loaded state
 		$this->blIsLoaded = true;
 
 		// debug
