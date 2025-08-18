@@ -27,7 +27,7 @@ class update {
 	*/
 	public static function get_update_version() : ?array {
 
-		$current_version = get_current_version_in_db();
+		$current_version = get_current_data_version();
 		if (empty($current_version)) {
 			#$current_version = array(4,0,9);	// Default minimum version
 			#return $current_version;
@@ -87,7 +87,7 @@ class update {
 
 		// short vars
 			$updates			= update::get_updates();
-			$current_version	= get_current_version_in_db();
+			$current_version	= get_current_data_version();
 			$msg				= array();
 
 		// Disable log and time machine save for all update process (from v4.9.1 24-05-2018)

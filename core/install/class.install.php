@@ -350,7 +350,7 @@ class install extends common {
 	public function get_db_data_version() : ?array {
 
 		try {
-			$current_version_in_db = get_current_version_in_db();
+			$current_version_in_db = get_current_data_version();
 		} catch (Exception $e) {
 			debug_log(__METHOD__." Caught exception: ".$e->getMessage(), logger::WARNING);
 

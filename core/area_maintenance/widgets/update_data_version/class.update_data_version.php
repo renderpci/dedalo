@@ -24,7 +24,7 @@ class update_data_version {
 
 		$result = (object)[
 			'update_version'		=> $update_version,
-			'current_version_in_db'	=> get_current_version_in_db(),
+			'current_version_in_db'	=> get_current_data_version(),
 			'dedalo_version'		=> get_dedalo_version(),
 			'updates'				=> $updates->{$update_version_plain} ?? null
 		];

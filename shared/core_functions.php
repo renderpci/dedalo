@@ -1988,13 +1988,13 @@ function show_msg(string $msg, string $type='ERROR') : string  {
 
 
 /**
-* GET_CURRENT_VERSION_IN_DB
+* GET_CURRENT_DATA_VERSION
 * Get the version of the data into the DB
 * The data version need to be compatible with the program files, but,
 * when Dédalo program change (for update), the data and the program is un-sync before admin run the update
 * @return array $current_version
 */
-function get_current_version_in_db() : array {
+function get_current_data_version() : array {
 
 	// cache
 		static $calculated_current_version;
@@ -2056,7 +2056,7 @@ function get_current_version_in_db() : array {
 
 
 	return $current_version;
-}//end get_current_version_in_db
+}//end get_current_data_version
 
 
 
