@@ -327,7 +327,6 @@ class v6_to_v7 {
 											$new_literal_obj = new stdClass();
 												$new_literal_obj->id		= $value_key; // starts from 1
 												$new_literal_obj->lang		= $lang;
-												// $new_literal_obj->type	= $typology; // Not add (redundant)
 												$new_literal_obj->value		= $value;
 
 											switch ($typology) {
@@ -352,7 +351,7 @@ class v6_to_v7 {
 													break;
 
 												case DEDALO_VALUE_TYPE_MISC:
-
+												
 													// set component path if not already set
 													if (!property_exists($column_misc, $literal_tipo)) {
 														$column_misc->{$literal_tipo} = [];
@@ -367,7 +366,6 @@ class v6_to_v7 {
 														$date_literal_obj = $value;
 															$date_literal_obj->id	= $value_key;
 															$date_literal_obj->lang	= $lang;
-															$date_literal_obj->type	= $typology;
 
 														// set component path if not already set
 														if (!property_exists($column_date, $literal_tipo)) {
@@ -397,7 +395,6 @@ class v6_to_v7 {
 														$media_literal_obj = $value;
 															$media_literal_obj->id		= $value_key;
 															$media_literal_obj->lang	= $lang;
-															$media_literal_obj->type	= $typology;
 
 														// set component path if not already set
 														if (!property_exists($column_media, $literal_tipo)) {
@@ -427,7 +424,6 @@ class v6_to_v7 {
 														$iri_literal_obj = $value;
 															$iri_literal_obj->id	= $value_key;
 															$iri_literal_obj->lang	= $lang;
-															$iri_literal_obj->type	= $typology;
 
 														// set component path if not already set
 														if (!property_exists($column_iri, $literal_tipo)) {
@@ -457,7 +453,6 @@ class v6_to_v7 {
 														$geo_literal_obj = $value;
 															$geo_literal_obj->id	= $value_key;
 															$geo_literal_obj->lang	= $lang;
-															$geo_literal_obj->type	= $typology;
 
 														// set component path if not already set
 														if (!property_exists($column_geo, $literal_tipo)) {
@@ -504,17 +499,17 @@ class v6_to_v7 {
 						}
 					}//end foreach ($datos as $datos_key => $datos_value)
 
-					$section_data_encoded				= json_encode($column_data);
-					$section_relation_encoded			= json_encode($column_relation);
-					$section_string_encoded				= json_encode($column_string);
-					$section_date_encoded				= json_encode($column_date);
-					$section_iri_encoded				= json_encode($column_iri);
-					$section_geo_encoded				= json_encode($column_geo);
-					$section_number_encoded				= json_encode($column_number);
-					$section_media_encoded				= json_encode($column_media);
-					$section_misc_encoded				= json_encode($column_misc);
-					$section_relation_search_encoded	= json_encode($column_relation_search);
-					$section_counters_encoded			= json_encode($column_counters);
+					$section_data_encoded				= ( empty(get_object_vars($column_data)) ) ? null : json_encode($column_data);
+					$section_relation_encoded			= ( empty(get_object_vars($column_relation)) ) ? null : json_encode($column_relation);
+					$section_string_encoded				= ( empty(get_object_vars($column_string)) ) ? null : json_encode($column_string);
+					$section_date_encoded				= ( empty(get_object_vars($column_date)) ) ? null : json_encode($column_date);
+					$section_iri_encoded				= ( empty(get_object_vars($column_iri)) ) ? null : json_encode($column_iri);
+					$section_geo_encoded				= ( empty(get_object_vars($column_geo)) ) ? null : json_encode($column_geo);
+					$section_number_encoded				= ( empty(get_object_vars($column_number)) ) ? null : json_encode($column_number);
+					$section_media_encoded				= ( empty(get_object_vars($column_media)) ) ? null : json_encode($column_media);
+					$section_misc_encoded				= ( empty(get_object_vars($column_misc)) ) ? null : json_encode($column_misc);
+					$section_relation_search_encoded	= ( empty(get_object_vars($column_relation_search)) ) ? null : json_encode($column_relation_search);
+					$section_counters_encoded			= ( empty(get_object_vars($column_counters)) ) ? null : json_encode($column_counters);
 
 					$conn = DBi::_getConnection();
 					$strQuery = "
