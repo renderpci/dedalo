@@ -458,4 +458,48 @@ abstract class DBi {
 
 
 
+	/**
+	* GET_INDEXES
+	* Get all Database indexes as
+	* 	public	matrix	matrix_section_tipo_section_id
+	* 	public	matrix	matrix_relations_gin
+	* @return array $list
+	*/
+	public static function get_indexes() : array {
+
+		$sql = "
+			SELECT
+			    schemaname,
+			    tablename,
+			    indexname
+			FROM
+			    pg_indexes
+			WHERE
+			    schemaname NOT IN ('pg_catalog', 'information_schema')
+			ORDER BY
+			    schemaname,
+			    tablename;
+		";
+
+		$result	= pg_query(DBi::_getConnection(), $sql);
+
+		$list = [];
+		while($row = pg_fetch_assoc($result)) {
+
+			$schemaname	= $row['schemaname'];
+			$tablename	= $row['tablename'];
+			$indexname	= $row['indexname'];
+
+			$list[] = (object)[
+				'schemaname' => $schemaname,
+				'tablename' => $tablename,
+				'indexname' => $indexname
+			];
+		}
+
+		return $list;
+	}//end get_indexes
+
+
+
 }//end class DBi
