@@ -459,7 +459,27 @@ abstract class JSON_RecordDataBoundObject {
 					# Insert record datos and receive a new id
 					$strQuery	= 'INSERT INTO "'.$this->strTableName.'" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id';
 					$params		= [$section_id, $section_tipo, $datos];
-					$result		= pg_query_params(DBi::_getConnection(), $strQuery, $params);
+
+					// Direct
+					// $result = pg_query_params(DBi::_getConnection(), $strQuery, $params);
+
+					// With prepared statement
+					$stmt_name = __METHOD__ . '_insert_matrix_' . $this->strTableName;
+					if (!isset(DBi::$prepared_statements[$stmt_name])) {
+						pg_prepare(
+							DBi::_getConnection(),
+							$stmt_name,
+							$strQuery
+						);
+						// Set the statement as existing.
+						DBi::$prepared_statements[$stmt_name] = true;
+					}
+					$result = pg_execute(
+						DBi::_getConnection(),
+						$stmt_name,
+						$params
+					);
+
 					if($result===false) {
 						debug_log(__METHOD__
 							. ' Error Processing Save Insert Request (2) error: ' . PHP_EOL
