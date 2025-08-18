@@ -216,7 +216,7 @@ class diffusion_section_stats extends diffusion {
 					);
 
 					// if not empty totals_data, add
-					if (count($totals_data)>0) {
+					if ($totals_data && count($totals_data)>0) {
 
 						// save_user_activity
 						$result = diffusion_section_stats::save_user_activity(
