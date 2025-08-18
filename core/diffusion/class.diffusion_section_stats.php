@@ -172,7 +172,7 @@ class diffusion_section_stats extends diffusion {
 				return $response;
 			}
 			$activity_row = pg_fetch_object($result);
-			if (!$activity_row || empty($activity_row->date)) {
+			if (!$activity_row || empty($activity_row->timestamp)) {
 				debug_log(__METHOD__." Skip. Not calculable result found for user $user_id ".to_string(), logger::WARNING);
 				$response->msg .= 'Skip. Not calculable result found for user '.$user_id;
 				$response->errors[] = 'Skip. Not calculable result found for user '.$user_id;
@@ -181,7 +181,7 @@ class diffusion_section_stats extends diffusion {
 			}
 
 			// dd date object
-				$date_value	= dd_date::get_dd_date_from_timestamp( $activity_row->date );
+				$date_value	= dd_date::get_dd_date_from_timestamp( $activity_row->timestamp );
 				if (empty($date_value->year)) {
 					debug_log(__METHOD__
 						." Skip. Not valid date found for user $user_id "
@@ -193,7 +193,7 @@ class diffusion_section_stats extends diffusion {
 				}
 
 		// iterate from the beginning, in steps of a day
-			$begin	= new DateTime($activity_row->date);
+			$begin	= new DateTime($activity_row->timestamp);
 			$end	= $today; // $yesterday; // remember not to include today because it is not finished yet
 
 			// by day
@@ -286,7 +286,7 @@ class diffusion_section_stats extends diffusion {
 				SELECT *
 				FROM "matrix_activity"
 				WHERE
-				"date" between \''.$date_in.'\' and \''.$date_out.'\'
+				"timestamp" between \''.$date_in.'\' and \''.$date_out.'\'
 				AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
 				ORDER BY id ASC
 			';
