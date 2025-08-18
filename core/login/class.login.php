@@ -1380,7 +1380,7 @@ class login extends common {
 			$properties->info[] = [
 				'type'	=> 'data_version',
 				'label'	=> 'Data version',
-				'value'	=> implode('.', get_current_version_in_db())
+				'value'	=> implode('.', get_current_data_version())
 			];
 		// ontology version
 			$RecordObj_dd		= new RecordObj_dd('dd1');

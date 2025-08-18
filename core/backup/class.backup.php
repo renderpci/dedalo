@@ -73,7 +73,7 @@ abstract class backup {
 				}
 
 			// name : file name formatted as date . (one hour resolution)
-				$ar_dd_data_version	= get_current_version_in_db();
+				$ar_dd_data_version	= get_current_data_version();
 				$db_name			= ($skip_backup_time_range===true)
 					? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
 					: date("Y-m-d_H")   .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);

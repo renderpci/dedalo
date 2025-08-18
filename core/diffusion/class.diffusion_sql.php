@@ -4008,7 +4008,7 @@ class diffusion_sql extends diffusion  {
 
 		$ar_section_id = array();
 
-		$current_version = get_current_version_in_db();
+		$current_version = get_current_data_version();
 
 		//prior to 4.8 dato : 49:2
 		if($current_version[0] <= 4 && $current_version[1] <= 8) {

@@ -1581,12 +1581,13 @@ final class core_functions_test extends TestCase {
 
 
 	/**
-	* TEST_get_current_version_in_db
+	* TEST_get_current_data_version
 	* @return void
 	*/
-	public function test_get_current_version_in_db() {
+	public function test_get_current_data_version() {
 
-		$result = get_current_version_in_db();
+		// data version
+		$result = get_current_data_version();
 
 		$eq = gettype($result)==='array';
 		$this->assertTrue(
@@ -1605,7 +1606,7 @@ final class core_functions_test extends TestCase {
 				. 'major_version: ' . to_string( $major_version ) . PHP_EOL
 				. 'result: ' . to_string( $result ) . PHP_EOL
 		);
-	}//end test_get_current_version_in_db
+	}//end test_get_current_data_version
 
 
 
