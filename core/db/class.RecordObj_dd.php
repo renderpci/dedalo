@@ -1481,6 +1481,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				$stmt_name,
 				$strQuery
 			);
+			// Set the statement as existing.
 			DBi::$prepared_statements[$stmt_name] = true;
 		}
 		$result = pg_execute(
