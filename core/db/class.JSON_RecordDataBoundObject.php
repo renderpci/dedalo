@@ -186,6 +186,8 @@ abstract class JSON_RecordDataBoundObject {
 					if(SHOW_DEBUG===true) {
 						// throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error($conn)." <hr>$strQuery", 1);
 					}
+
+					return false;
 				}
 
 			// arRow. Note that pg_fetch_assoc could return 'false' when query return empty value. This is not an error.
