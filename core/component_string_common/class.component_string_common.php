@@ -26,6 +26,8 @@ class component_string_common extends component_common {
 	* CLASS VARS
 	*/
 
+	// data_column. DB column where to get the data.
+	protected $data_column = 'string';
 
 
 	/**

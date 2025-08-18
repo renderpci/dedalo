@@ -8,6 +8,11 @@ class component_geolocation extends component_common {
 
 
 
+	// data_column. DB column where to get the data.
+	protected $data_column = 'geo';
+
+
+
 	/**
 	* __CONSTRUCT
 	*/

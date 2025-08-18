@@ -51,9 +51,8 @@ class component_relation_common extends component_common {
 
 		// V7 PROPERTIES //
 
-		// data_container. JSON object data_container where to get the data: literals|relations
-		// Default value is 'literals'. Overwrite it in component_relation_common.
-		protected $data_container = 'relations';
+		// data_column. DB column where to get the data.
+		protected $data_column = 'relation';
 
 
 

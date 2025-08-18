@@ -8,6 +8,8 @@ class component_password extends component_common {
 
 
 	public $fake_value = '****************';
+	// data_column. DB column where to get the data.
+	protected $data_column = 'string';
 
 
 

@@ -16,6 +16,8 @@ class component_info extends component_common {
 	public $widget_lang;
 	public $widget_mode;
 	public $use_db_data = false;
+	// data_column. DB column where to get the data.
+	protected $data_column = 'mics';
 
 
 
