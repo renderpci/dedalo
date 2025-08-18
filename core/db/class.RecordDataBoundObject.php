@@ -224,6 +224,7 @@ abstract class RecordDataBoundObject {
 						$stmt_name,
 						'SELECT '.$select_fields.' FROM "'.$this->strTableName.'" WHERE "'.$this->strPrimaryKeyName.'" = $1'
 					);
+					// Set the statement as existing.
 					DBi::$prepared_statements[$stmt_name] = true;
 				}
 				$result = pg_execute(
@@ -231,7 +232,7 @@ abstract class RecordDataBoundObject {
 					$stmt_name,
 					[$this->ID]
 				);
-	
+
 			// check result
 				if ($result===false) {
 					debug_log(__METHOD__

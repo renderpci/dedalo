@@ -7,15 +7,15 @@ abstract class JSON_RecordDataBoundObject {
 
 
 
-	protected $ID;		# id matrix of current table
-	protected $datos;	# Field 'datos' in table matrix
+	protected $ID;		// id matrix of current table
+	protected $datos;	// column 'datos' in table matrix
+	protected $dato; 	// This property stores 'datos' column value @see Load method.
 	protected $strTableName;
 	public $arRelationMap;
 	protected $strPrimaryKeyName ;	# usually id
 	protected $blForDeletion;
 	protected $blIsLoaded;
 	public $arModifiedRelations;
-	protected $dato;
 
 	protected $section_tipo;
 	protected $section_id;
@@ -94,21 +94,16 @@ abstract class JSON_RecordDataBoundObject {
 		// verify mandatory vars
 			// section_tipo. Verify section_tipo
 			if( empty($this->section_tipo) ) {
-				// throw new Exception(__METHOD__.' Error: section_tipo is mandatory to load data', 1);
-				// trigger_error(__METHOD__.' Error: section_tipo is mandatory to load data');
 				debug_log(__METHOD__." Error: section_tipo is mandatory to load data ".to_string(), logger::ERROR);
 				return false;
 			}
 			# section_tipo. Safe tipo test. Check valid section_tipo for safety
 			if (!$section_tipo = safe_tipo($this->section_tipo)) {
-				// throw new Exception(__METHOD__.' Error: Bad tipo '.htmlentities($this->section_tipo), 1);
-				// trigger_error(__METHOD__.' Error: Bad section_tipo: '.htmlentities($this->section_tipo));
 				debug_log(__METHOD__." Error: Bad section_tipo: ".to_string($this->section_tipo), logger::ERROR);
 				return false;
 			}
 			// section_id. Not load if $this->section_id is not set
 			if( empty($this->section_id) ) {
-				// trigger_error(__METHOD__." Warning: Trying to load without section_id. section_tipo: ($this->section_tipo)");
 				debug_log(__METHOD__."  Warning: Trying to load without section_id. section_tipo: ($this->section_tipo) ".to_string(), logger::ERROR);
 				return false;
 			}
@@ -120,12 +115,12 @@ abstract class JSON_RecordDataBoundObject {
 			$strQuery = 'SELECT "datos", "data" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $section_id .' AND "section_tipo" = \''. $section_tipo .'\';';
 
 		// cache
-		// Si se le pasa un query que ya ha sido recibido, no se conecta con la db y se le devuelve el resultado del query idéntico ya calculado
-		// que se guarda en un array estático
+		// If a query that has already been received is missed, it does not connect to the database and returns the identical query result
+		// that has already been calculated which is stored in a static array.
 		static $ar_JSON_RecordDataObject_load_query_cache = [];
 		static $data_cache = [];
 
-		# CACHE RUN-IN
+		// CACHE RUN-IN
 		$use_cache = $this->use_cache;
 		if ($use_cache===true) {
 			throw new Exception("Error Processing Request. cache is activated. Don't use cache here!!!!!!!", 1);
@@ -162,6 +157,7 @@ abstract class JSON_RecordDataBoundObject {
 						$stmt_name,
 						"SELECT $columns FROM $this->strTableName WHERE section_id = $1 AND section_tipo = $2"
 					);
+					// Set the statement as existing.
 					DBi::$prepared_statements[$stmt_name] = true;
 				}
 				$result = pg_execute(
@@ -195,7 +191,7 @@ abstract class JSON_RecordDataBoundObject {
 				// 	// return false;
 				// }
 
-			// dato
+			// dato from matrix column 'datos'
 				$dato = isset($arRow['datos'])
 					? json_handler::decode($arRow['datos'])
 					: null;
@@ -315,13 +311,14 @@ abstract class JSON_RecordDataBoundObject {
 			// $result = pg_query_params(DBi::_getConnection(), $strQuery, $params);
 
 			// With prepared statement
-			$stmt_name = __METHOD__ . '_' . $this->strTableName;
+			$stmt_name = __METHOD__ . '_save_' . $this->strTableName;
 			if (!isset(DBi::$prepared_statements[$stmt_name])) {
 				pg_prepare(
 					DBi::_getConnection(),
 					$stmt_name,
 					$strQuery
 				);
+				// Set the statement as existing.
 				DBi::$prepared_statements[$stmt_name] = true;
 			}
 			$result = pg_execute(
