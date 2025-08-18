@@ -7,6 +7,11 @@ class component_section_id extends component_common {
 
 
 
+	// data_column. DB column where to get the data.
+	protected $data_column = 'section_id';
+
+
+
 	/**
 	* GET_DATO
 	* @return int|null $dato

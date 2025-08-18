@@ -17,8 +17,10 @@
 class component_number extends component_common {
 
 
-
+	// decimal separator
 	public $decimal = '.';
+	// data_column. DB column where to get the data.
+	protected $data_column = 'number';
 
 
 

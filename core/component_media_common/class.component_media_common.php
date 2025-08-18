@@ -85,6 +85,9 @@ class component_media_common extends component_common {
 		// external_source
 		public $external_source;
 
+		// data_column. DB column where to get the data.
+		protected $data_column = 'media';
+
 
 
 	// Unified data sample:
