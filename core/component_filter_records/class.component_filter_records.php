@@ -7,6 +7,11 @@ class component_filter_records extends component_common {
 
 
 
+	// data_column. DB column where to get the data.
+	protected $data_column = 'misc';
+
+
+
 	/**
 	* GET DATO
 	* @return array|null $dato

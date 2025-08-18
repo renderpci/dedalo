@@ -8,6 +8,11 @@ class component_inverse extends component_common {
 
 
 
+	// data_column. DB column where to get the data.
+	protected $data_column = 'misc';
+
+
+
 	/**
 	* GET_DATO
 	* This component don't store data, only access to section inverse_locators data
