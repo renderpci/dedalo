@@ -327,7 +327,6 @@ class v6_to_v7 {
 											$new_literal_obj = new stdClass();
 												$new_literal_obj->id		= $value_key; // starts from 1
 												$new_literal_obj->lang		= $lang;
-												// $new_literal_obj->type	= $typology; // Not add (redundant)
 												$new_literal_obj->value		= $value;
 
 											switch ($typology) {
@@ -352,7 +351,7 @@ class v6_to_v7 {
 													break;
 
 												case DEDALO_VALUE_TYPE_MISC:
-
+												
 													// set component path if not already set
 													if (!property_exists($column_misc, $literal_tipo)) {
 														$column_misc->{$literal_tipo} = [];
@@ -367,7 +366,6 @@ class v6_to_v7 {
 														$date_literal_obj = $value;
 															$date_literal_obj->id	= $value_key;
 															$date_literal_obj->lang	= $lang;
-															$date_literal_obj->type	= $typology;
 
 														// set component path if not already set
 														if (!property_exists($column_date, $literal_tipo)) {
@@ -397,7 +395,6 @@ class v6_to_v7 {
 														$media_literal_obj = $value;
 															$media_literal_obj->id		= $value_key;
 															$media_literal_obj->lang	= $lang;
-															$media_literal_obj->type	= $typology;
 
 														// set component path if not already set
 														if (!property_exists($column_media, $literal_tipo)) {
@@ -427,7 +424,6 @@ class v6_to_v7 {
 														$iri_literal_obj = $value;
 															$iri_literal_obj->id	= $value_key;
 															$iri_literal_obj->lang	= $lang;
-															$iri_literal_obj->type	= $typology;
 
 														// set component path if not already set
 														if (!property_exists($column_iri, $literal_tipo)) {
@@ -457,7 +453,6 @@ class v6_to_v7 {
 														$geo_literal_obj = $value;
 															$geo_literal_obj->id	= $value_key;
 															$geo_literal_obj->lang	= $lang;
-															$geo_literal_obj->type	= $typology;
 
 														// set component path if not already set
 														if (!property_exists($column_geo, $literal_tipo)) {
