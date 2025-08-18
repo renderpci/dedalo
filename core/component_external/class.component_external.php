@@ -9,6 +9,11 @@ class component_external extends component_common {
 
 
 
+	// data_column. DB column where to get the data.
+	protected $data_column = 'misc';
+
+
+
 	/**
 	* LOAD_DATA_FROM_REMOTE
 	* @return object|null $row_data

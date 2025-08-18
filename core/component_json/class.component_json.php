@@ -7,6 +7,11 @@ class component_json extends component_common {
 
 
 
+	// data_column. DB column where to get the data.
+	protected $data_column = 'misc';
+
+
+
 	/**
 	* __CONSTRUCT
 	*/

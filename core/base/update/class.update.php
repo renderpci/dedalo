@@ -963,7 +963,27 @@ class update {
 				$section_data_encoded = json_encode($section_data);
 
 				$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
-				$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+
+				// Direct
+				// $result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+
+				// With prepared statement
+				$stmt_name = __METHOD__ . '_' . $table;
+				if (!isset(DBi::$prepared_statements[$stmt_name])) {
+					pg_prepare(
+						DBi::_getConnection(),
+						$stmt_name,
+						$strQuery
+					);
+					// Set the statement as existing.
+					DBi::$prepared_statements[$stmt_name] = true;
+				}
+				$result = pg_execute(
+					DBi::_getConnection(),
+					$stmt_name,
+					[$section_data_encoded, $id]
+				);
+
 				if($result===false) {
 					$msg = "Failed Update section_data $id";
 					debug_log(__METHOD__
@@ -1186,8 +1206,29 @@ class update {
 
 			$section_data_encoded = json_handler::encode($datos);
 
-			$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+			$strQuery = "UPDATE $table SET datos = $1 WHERE id = $2 ";
+
+			// Direct
+			// $result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+
+			// With prepared statement
+			$stmt_name = __METHOD__ . '_' . $table;
+			if (!isset(DBi::$prepared_statements[$stmt_name])) {
+				pg_prepare(
+					DBi::_getConnection(),
+					$stmt_name,
+					$strQuery
+				);
+				// Set the statement as existing.
+				DBi::$prepared_statements[$stmt_name] = true;
+			}
+			$result = pg_execute(
+				DBi::_getConnection(),
+				$stmt_name,
+				[$section_data_encoded, $id]
+			);
+
+
 			if($result===false) {
 				$msg = "Failed Update section_data section_id: $section_id of $section_tipo in table: $table ";
 				debug_log(__METHOD__

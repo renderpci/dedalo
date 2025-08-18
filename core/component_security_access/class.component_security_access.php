@@ -10,7 +10,10 @@ class component_security_access extends component_common {
 	/**
 	* @var
 	*/
+	// datalist array
 	public $datalist;
+	// data_column. DB column where to get the data.
+	protected $data_column = 'misc';
 
 
 
