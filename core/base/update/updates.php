@@ -62,18 +62,18 @@ $updates->$v = new stdClass();
 				ADD COLUMN IF NOT EXISTS "tipo" character varying(32) NULL,
 				ADD COLUMN IF NOT EXISTS "model_tipo" character varying(8) NULL,
 				ADD COLUMN IF NOT EXISTS "is_model" boolean NULL,
-				ADD COLUMN IF NOT EXISTS "translatable" boolean NULL,
+				ADD COLUMN IF NOT EXISTS "is_translatable" boolean NULL,
 				ADD COLUMN IF NOT EXISTS "order_number" numeric(4,0) NULL,
 				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL
 		');
 
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query ('
-			UPDATE jer_dd
+			UPDATE "jer_dd"
 				SET tipo 			= "terminoID",
 					model_tipo 		= modelo,
 					order_number	= norden,
 					is_model 		= CASE WHEN esmodelo = \'si\' THEN true ELSE false END,
-					translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END
+					is_translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END
 					;
 		');
 
