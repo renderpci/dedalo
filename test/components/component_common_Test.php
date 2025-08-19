@@ -1701,6 +1701,7 @@ final class component_common_test extends TestCase {
 
 	/**
 	* TEST_EXTRACT_COMPONENT_DATO_FALLBACK
+	* Only for component_string_common extends
 	* @return void
 	*/
 	public function test_extract_component_dato_fallback() {
@@ -1719,8 +1720,12 @@ final class component_common_test extends TestCase {
 				false
 			);
 
-			$result = $element->model::extract_component_dato_fallback(
-				$component,
+			if (!in_array($element->model, component_string_common::get_string_components())) {
+				// ignore
+				continue;
+			}
+
+			$result = $component->extract_component_dato_fallback(
 				DEDALO_DATA_LANG,
 				DEDALO_DATA_LANG_DEFAULT
 			);

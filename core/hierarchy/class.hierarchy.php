@@ -219,8 +219,7 @@ class hierarchy extends ontology {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato_fallback = component_common::extract_component_dato_fallback(
-				$component,
+			$dato_fallback = $component->extract_component_dato_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);

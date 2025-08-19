@@ -304,8 +304,7 @@ abstract class filter {
 					$current_locator->section_tipo // string section_tipo
 				);
 
-				$label = component_common::extract_component_dato_fallback(
-					$component_term,
+				$label = $component_term->extract_component_dato_fallback(
 					DEDALO_DATA_LANG, // lang
 					DEDALO_DATA_LANG_DEFAULT
 				); // main_lang

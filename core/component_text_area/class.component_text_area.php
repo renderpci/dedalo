@@ -89,8 +89,7 @@ class component_text_area extends component_string_common {
 		// fallback_value
 			if (empty($data)) {
 
-				$data = component_common::extract_component_dato_fallback(
-					$this, // component instance this
+				$data = $this->extract_component_dato_fallback(
 					$this->get_lang(), // string lang
 					DEDALO_DATA_LANG_DEFAULT // string main_lang
 				);
@@ -2223,8 +2222,7 @@ class component_text_area extends component_string_common {
 			$max_chars = $options->max_chars ?? 700;
 
 		// dato_fallback. array of each dato array element using fallback
-			$dato_fallback = component_common::extract_component_dato_fallback(
-				$this,
+			$dato_fallback = $this->extract_component_dato_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
@@ -2277,8 +2275,7 @@ class component_text_area extends component_string_common {
 			$max_chars = $options->max_chars ?? 700;
 
 		// dato_fallback. array of each dato array element using fallback
-			$dato_fallback = component_common::extract_component_dato_fallback(
-				$this,
+			$dato_fallback = $this->extract_component_dato_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);

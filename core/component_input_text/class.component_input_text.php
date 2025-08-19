@@ -34,8 +34,7 @@ class component_input_text extends component_string_common {
 
 		// dato
 			$dato			= $this->get_dato() ?? [];
-			$fallback_value	= component_common::extract_component_dato_fallback(
-				$this, // component instance this
+			$fallback_value	= $this->extract_component_dato_fallback(
 				$this->get_lang(), // string lang
 				DEDALO_DATA_LANG_DEFAULT // string main_lang
 			);

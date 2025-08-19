@@ -7,8 +7,7 @@
 	// component data
 		$full_raw_text	= $data[0] ?? '';
 		if (empty($full_raw_text)) {
-			$dato_fallback = component_common::extract_component_dato_fallback(
-				$this,
+			$dato_fallback = $this->extract_component_dato_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
