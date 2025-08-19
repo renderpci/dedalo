@@ -351,7 +351,7 @@ class v6_to_v7 {
 													break;
 
 												case DEDALO_VALUE_TYPE_MISC:
-												
+
 													// set component path if not already set
 													if (!property_exists($column_misc, $literal_tipo)) {
 														$column_misc->{$literal_tipo} = [];
@@ -614,5 +614,99 @@ class v6_to_v7 {
 	}//end reformat_matrix_data
 
 
+
+	/**
+	* REFACTOR_JER_DD
+	* new map
+	* 'terminoID'		=> 'tipo',
+	* 'modelo'			=> 'model_tipo',
+	* 'esmodelo'		=> 'is_model',
+	* 'esdescriptor'	=> 'is_descriptor',
+	* 'traducible'		=> 'translatable',
+	* 'norden'			=> 'order',
+	* 'relaciones'		=> 'relations'
+	* @return
+	*/
+	public static function refactor_jer_dd() : bool {
+
+		// jer_dd. delete terms (jer_dd)
+			$sql_query = '
+				SELECT * FROM "jer_dd";
+			';
+			$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		// iterate jer_dd_result row
+		while($row = pg_fetch_assoc($jer_dd_result)) {
+
+			$relaciones	= $row['relaciones'];
+			$id			= $row['id'];
+
+			$relations = json_decode($relaciones) ?? [];
+
+			$ar_relations = [];
+			foreach ($relations as $value) {
+				$relation = new stdClass();
+					$relation->tipo = $value;
+				$ar_relations[] = $relation;
+			};
+
+			$new_relation = ( empty($ar_relations) ) ? null : $ar_relations;
+
+
+			$string_relation_object = json_encode($new_relation) ?? '';
+
+			$strQuery	= "UPDATE \"jer_dd\" SET relations = $1 WHERE id = $2 ";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $string_relation_object, $id ));
+			if($result===false) {
+				$msg = "Failed Update section_data (jer_dd) $id";
+				debug_log(__METHOD__
+					." ERROR: $msg "
+					, logger::ERROR
+				);
+				return false;
+			}
+		}
+		return true;
+	}//end refactor_jer_dd
+
+
+	/**
+	* RECREATE_JER_DD
+	* @return
+	*/
+	public function recreate_jer_dd() {
+
+sanitize_query ('
+		CREATE TABLE dd_ontology AS
+			SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, translatable, propiedades
+		FROM jer_dd;
+
+		COMMENT ON TABLE "dd_ontology" IS  \'Active ontology\';
+
+		CREATE SEQUENCE IF NOT EXISTS "dd_ontology_id_seq" OWNED BY "dd_ontology"."id";
+		ALTER TABLE "dd_ontology"
+		ALTER "id" TYPE integer,
+		ALTER "id" SET DEFAULT nextval(\'dd_ontology_id_seq\'),
+		ALTER "id" SET NOT NULL;
+		COMMENT ON COLUMN "dd_ontology"."id" IS \'Unique table identifier\';
+		COMMENT ON COLUMN "tipo"."id" IS \'Ontology identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)\';
+		COMMENT ON COLUMN "parent"."id" IS \'Ontology identifier parent (ontology TLD | ontology instance ID, e.g., tch1 = Tangible Cultural Heritage -> Objects)\';
+		COMMENT ON COLUMN "term"."id" IS \'Ontology node names in multiple languages\';
+		COMMENT ON COLUMN "model"."id" IS \'Ontology model name as section, componnet_portal, etc.\';
+		COMMENT ON COLUMN "order_number"."id" IS \'Ontology node position order\';
+		COMMENT ON COLUMN "relations"."id" IS \'Direct connections between nodes, unidirectional\';
+		COMMENT ON COLUMN "tld"."id" IS \'Ontology name space\';
+		COMMENT ON COLUMN "properties"."id" IS \'Ontology node definition\';
+		COMMENT ON COLUMN "model_tipo"."id" IS \'Ontology identifier for the node type,  e.g., dd6 = section\';
+		COMMENT ON COLUMN "is_model"."id" IS \'Boolean to identify if the node is a type of nodes\';
+		COMMENT ON COLUMN "translatable"."id" IS \'Boolean to identify if the node is a multilingual node\';
+		COMMENT ON COLUMN "propiedades"."id" IS \'V5 properties, DEPRECATED\';
+
+		-- Optionally drop the old one and rename
+		-- DROP TABLE IF EXISTS "jer_dd" CASCADE;
+		-- DROP SEQUENCE IF EXISTS jer_dd_id_seq;
+	');
+
+	}//end recreate_jer_dd
 
 }//end class v6_to_v7
