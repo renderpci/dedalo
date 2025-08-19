@@ -178,7 +178,8 @@ class relation_list extends common {
 		if(!empty($ar_components)){
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
-					$model_name			= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
+					// $model_name		= RecordObj_dd::get_modelo_name_by_tipo($modelo, true);
+					$model_name			= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 					$current_component	= component_common::get_instance(
 						$model_name,
 						$tipo,
