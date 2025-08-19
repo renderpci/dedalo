@@ -268,6 +268,68 @@ class component_string_common extends component_common {
 
 
 
+	/**
+	* EXTRACT_COMPONENT_VALUE_FALLBACK
+	* @todo Note: It is still using 'get_valor()'. Normalize to modern 'get_value()'
+	* reviewing all references
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param bool $mark = true
+	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
+	* @return string $value
+	*/
+	public function extract_component_value_fallback(string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
+
+		// get and store initial lang to restore later
+		$initial_lang = $this->get_lang();
+
+		// Try direct value
+		$value = $this->get_valor($lang);
+
+		if (empty($value)) {
+
+			// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+			if ($lang!==$main_lang) {
+				$this->set_lang($main_lang);
+				$value = $this->get_valor($main_lang);
+			}
+
+			// Try nolan
+			if (empty($value)) {
+				$this->set_lang(DEDALO_DATA_NOLAN);
+				$value = $this->get_valor(DEDALO_DATA_NOLAN);
+			}
+
+			// Try all projects langs sequence
+			if (empty($value)) {
+				$data_langs = common::get_ar_all_langs(); // Langs from config projects
+				foreach ($data_langs as $current_lang) {
+					if ($current_lang===$lang || $current_lang===$main_lang) {
+						continue; // Already checked
+					}
+					$this->set_lang($current_lang);
+					$value = $this->get_valor($current_lang);
+					if (!empty($value)) break; // Stops when first data is found
+				}
+			}
+
+			// Set value as untranslated
+			if ($mark===true) {
+				$value = '<mark>'.$value.'</mark>';
+			}
+		}
+
+		if (!is_string($value)) {
+			$value = to_string($value);
+		}
+
+		// restore initial lang
+		$this->set_lang($initial_lang);
+
+
+		return $value;
+	}//end extract_component_value_fallback
+
+
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL

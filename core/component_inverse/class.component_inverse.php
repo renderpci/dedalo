@@ -286,20 +286,8 @@ class component_inverse extends component_common {
 
 
 	/**
-	* EXTRACT_COMPONENT_VALUE_FALLBACK
-	* Catch common method calls
-	* @return string
-	*/
-	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
-
-		return '';
-	}//end extract_component_value_fallback
-
-
-
-	/**
 	* GET_CALLER_COMPONENT_TIPOS
-	* !NOTE: This funcition is not used right now, but is a resolution of the ontology to get with components and portals call to the section given, the first step to search inverse.
+	* !NOTE: This function is not used right now, but is a resolution of the ontology to get with components and portals call to the section given, the first step to search inverse.
 	* Resolve the ontology connections that are pointing to current section_tipo
 	* And return all component tipos that are linked to current section in an array.
 	*

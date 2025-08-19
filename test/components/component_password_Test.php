@@ -235,31 +235,4 @@ final class component_password_test extends TestCase {
 
 
 
-	/**
-	* TEST_extract_component_value_fallback
-	* @return void
-	*/
-	public function test_extract_component_value_fallback() {
-
-		$component = $this->build_component_instance();
-
-		$result	= component_password::extract_component_value_fallback(
-			$component
-		);
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-		$this->assertTrue(
-			$result==='',
-			'expected "" : ' . PHP_EOL
-				. to_string($result)
-		);
-	}//end test_extract_component_value_fallback
-
-
-
-
 }//end class component_password_test

@@ -377,7 +377,7 @@ class ts_object {
 							case ($element_obj->type==='term'):
 								// term Is translatable and uses lang fallback here
 								$element_value = empty($dato)
-									? component_common::extract_component_value_fallback($component)
+									? $component->extract_component_value_fallback()
 									: $dato;
 
 								$element_obj->value = isset($element_obj->value)
