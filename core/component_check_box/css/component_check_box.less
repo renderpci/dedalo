@@ -114,6 +114,8 @@
 			display: grid;
 			grid-template-columns: 1fr 1fr;
 			overflow: hidden;
+			padding-bottom: 2rem;
+			width: calc(100% - 2.6rem);
 
 			.select_all {
 				position: absolute;
@@ -137,7 +139,8 @@
 				border-bottom: 1px solid @color_grey_13;
 				margin-left: 1.5rem;
 				padding: 0.33rem;
-				align-items: flex-end;
+				align-items: flex-start;
+				line-height: 1.4rem;
 
 				// img
 				>.tool_icon {
