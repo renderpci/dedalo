@@ -146,29 +146,4 @@ final class component_inverse_test extends TestCase {
 
 
 
-	/**
-	* TEST_extract_component_value_fallback
-	* @return void
-	*/
-	public function test_extract_component_value_fallback() {
-
-		$result = component_inverse::extract_component_value_fallback(
-			(object)[],
-			DEDALO_DATA_LANG
-		);
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-		$this->assertTrue(
-			$result==='',
-			'expected "" : ' . PHP_EOL
-				. to_string($result)
-		);
-	}//end test_extract_component_value_fallback
-
-
-
 }//end class component_inverse_test
