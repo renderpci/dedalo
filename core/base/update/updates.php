@@ -48,6 +48,35 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium	= 7;
 	$updates->$v->update_from_minor		= 2;
 
+		// change the jer_dd structure in DDBB
+		// new map
+		// 	'terminoID'			=> 'tipo',
+		// 	'modelo'			=> 'model_tipo',
+		// 	'esmodelo'			=> 'is_model',
+		// 	'esdescriptor'		=> 'is_descriptor',
+		// 	'traducible'		=> 'translatable',
+		// 	'norden'			=> 'order',
+		// 	'relaciones'		=> 'relations'
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query ('
+			ALTER TABLE "jer_dd"
+				ADD COLUMN IF NOT EXISTS "tipo" character varying(32) NULL,
+				ADD COLUMN IF NOT EXISTS "model_tipo" character varying(8) NULL,
+				ADD COLUMN IF NOT EXISTS "is_model" boolean NULL,
+				ADD COLUMN IF NOT EXISTS "translatable" boolean NULL,
+				ADD COLUMN IF NOT EXISTS "order_number" numeric(4,0) NULL,
+				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL
+		');
+
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query ('
+			UPDATE jer_dd
+				SET tipo 			= "terminoID",
+					model_tipo 		= modelo,
+					order_number	= norden,
+					is_model 		= CASE WHEN esmodelo = \'si\' THEN true ELSE false END,
+					translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END
+					;
+		');
+
 		// change the date column in matrix_activity as timestamp.
 		// date column will use to storage component_date data.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
@@ -132,7 +161,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $columns));
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $comments));
 
-// SELECT * FROM matrix WHERE data_relations_flat_st_si(data) @> '["dd64_1"]'::jsonb;
+	// SELECT * FROM matrix WHERE data_relations_flat_st_si(data) @> '["dd64_1"]'::jsonb;
 
 	// $updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
 
@@ -245,6 +274,16 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 					$ar_tables,
 					true // save option. On false, only data review is made. Not save
+				] // Note that only ONE argument encoded is sent
+			];
+
+			// Update jer_dd data in PostgreSQL with new format
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Update jer_dd relations data in PostgreSQL with new v7 format',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'refactor_jer_dd',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
 
