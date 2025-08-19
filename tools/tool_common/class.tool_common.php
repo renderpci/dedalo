@@ -54,7 +54,8 @@ class tool_common {
 		// JSON object
 			$json = new stdClass();
 				if (true===$get_context) {
-					$json->context = [$this->get_structure_context()];
+					$context_object	= $this->get_structure_context();
+					$json->context	= [$context_object];
 				}
 
 		return $json;
@@ -94,7 +95,7 @@ class tool_common {
 				$this->section_tipo
 			);
 			$simple_tool_obj_dato	= $simple_tool_component->get_dato();
-			$tool_object			= reset($simple_tool_obj_dato);
+			$tool_object			= $simple_tool_obj_dato[0] ?? null;
 
 			// sample tool object
 				// {
@@ -286,7 +287,7 @@ class tool_common {
 				'label'				=> $tool_label,
 				'developer'			=> $developer,
 				'tipo'				=> $component_tipo,
-				'section_tipo'		=> $tool_object->section_tipo,
+				'section_tipo'		=> $tool_object->section_tipo ?? 'Unknown',
 				'model'				=> $name,
 				'lang'				=> $lang,
 				'mode'				=> 'edit',
