@@ -157,6 +157,8 @@ class tool_common {
 					. ' component_tipo: '.to_string($component_tipo) .PHP_EOL
 					. ' section_tipo: '.to_string($this->section_tipo) .PHP_EOL
 					. ' section_id: '.to_string($this->section_id) .PHP_EOL
+					. ' tool name: '.to_string($name) .PHP_EOL
+					. ' dato: ' .json_encode($simple_tool_obj_dato)
 					, logger::ERROR
 				);
 			}
@@ -432,6 +434,7 @@ class tool_common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT_SIMPLE
+	* Alias of $this->get_structure_context method fro compatibility.
 	* @param int $permissions = 0
 	* @param bool $add_request_config = false
 	* @return dd_object $full_ddo
@@ -754,7 +757,7 @@ class tool_common {
 				// Skip non valid extensions
 					$file_parts = pathinfo($value);
 					if(!isset($file_parts['extension']) || !in_array(strtolower($file_parts['extension']), $valid_extensions)) {
-						debug_log(__METHOD__." Skipped file: $value", logger::DEBUG);
+						debug_log(__METHOD__." Skipped file: $dir/$value ".json_encode($valid_extensions), logger::DEBUG);
 						continue;
 					}
 
