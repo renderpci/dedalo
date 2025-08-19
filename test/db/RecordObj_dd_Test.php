@@ -345,8 +345,9 @@ final class RecordObj_dd_test extends TestCase {
 		$eq			= gettype($result)===$expected;
 		$this->assertTrue(
 			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . gettype($result) . PHP_EOL
+			'expected result type is string' . PHP_EOL
+				. ' result: ' . json_encode($result) . PHP_EOL
+				. ' type: ' . gettype($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
 
@@ -467,7 +468,8 @@ final class RecordObj_dd_test extends TestCase {
 			$eq,
 			'expected equal true' . PHP_EOL
 				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
+				. ' expected: ' . to_string($expected) . PHP_EOL
+				. ' tipo: ' . to_string($test_term_id)
 		);
 	}//end test_get_legacy_model_name
 
