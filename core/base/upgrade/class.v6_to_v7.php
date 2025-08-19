@@ -615,4 +615,57 @@ class v6_to_v7 {
 
 
 
+	/**
+	* REFACTOR_JER_DD
+	* new map
+	* 'terminoID'		=> 'tipo',
+	* 'modelo'			=> 'model_tipo',
+	* 'esmodelo'		=> 'is_model',
+	* 'esdescriptor'	=> 'is_descriptor',
+	* 'traducible'		=> 'translatable',
+	* 'norden'			=> 'order',
+	* 'relaciones'		=> 'relations'
+	* @return
+	*/
+	public static function refactor_jer_dd() : bool {
+
+		// jer_dd. delete terms (jer_dd)
+			$sql_query = '
+				SELECT * FROM "jer_dd";
+			';
+			$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		// iterate jer_dd_result row
+		while($row = pg_fetch_assoc($jer_dd_result)) {
+
+			$relaciones	= $row['relaciones'];
+			$id			= $row['id'];
+
+			$relations = json_decode($relaciones) ?? [];
+
+			$ar_relations = [];
+			foreach ($relations as $value) {
+				$relation = new stdClass();
+					$relation->tipo = $value;
+				$ar_relations[] = $relation;
+			};
+
+			$new_relation = ( empty($ar_relations) ) ? null : $ar_relations;
+
+
+			$string_relation_object = json_encode($new_relation) ?? '';
+
+			$strQuery	= "UPDATE \"jer_dd\" SET relations = $1 WHERE id = $2 ";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $string_relation_object, $id ));
+			if($result===false) {
+				$msg = "Failed Update section_data (jer_dd) $id";
+				debug_log(__METHOD__
+					." ERROR: $msg "
+					, logger::ERROR
+				);
+				return false;
+			}
+		}
+		return true;
+	}//end refactor_jer_dd
 }//end class v6_to_v7
