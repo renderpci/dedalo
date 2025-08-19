@@ -181,7 +181,7 @@ class area extends area_common  {
 				$children_terminoID = $ar_ts_children[$i];
 
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
-				$model			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
+				$model			= RecordObj_dd::get_model_name_by_tipo($children_terminoID,true);
 
 				// Test if model is accepted or not (more restrictive)
 				if( 	in_array($model, area::$ar_children_include_model_name)

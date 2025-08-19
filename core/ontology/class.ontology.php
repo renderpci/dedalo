@@ -113,7 +113,7 @@ class ontology {
 
 		// tld
 			$tld_tipo		= 'ontology7';
-			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
+			$tld_model		= RecordObj_dd::get_model_name_by_tipo( $tld_tipo  );
 			$tld_component	= component_common::get_instance(
 				$tld_model,
 				$tld_tipo ,
@@ -138,7 +138,7 @@ class ontology {
 					$model_locator->set_section_id( $model_section_id );
 
 				$model_tipo			= 'ontology6';
-				$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
+				$model_model		= RecordObj_dd::get_model_name_by_tipo( $model_tipo );
 				$model_component	= component_common::get_instance(
 					$model_model,
 					$model_tipo,
@@ -155,7 +155,7 @@ class ontology {
 
 		// descriptor
 			$is_descriptor_tipo			= 'ontology4';
-			$is_descriptor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_descriptor_tipo  );
+			$is_descriptor_model		= RecordObj_dd::get_model_name_by_tipo( $is_descriptor_tipo  );
 			$is_descriptor_component	= component_common::get_instance(
 				$is_descriptor_model,
 				$is_descriptor_tipo ,
@@ -175,7 +175,7 @@ class ontology {
 
 		// is model
 			$is_model_tipo		= 'ontology30';
-			$is_model_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_model_tipo  );
+			$is_model_model		= RecordObj_dd::get_model_name_by_tipo( $is_model_tipo  );
 			$is_model_component	= component_common::get_instance(
 				$is_model_model,
 				$is_model_tipo ,
@@ -195,7 +195,7 @@ class ontology {
 
 		// translatable
 			$translatable_tipo		= 'ontology8';
-			$translatable_model		= RecordObj_dd::get_modelo_name_by_tipo( $translatable_tipo  );
+			$translatable_model		= RecordObj_dd::get_model_name_by_tipo( $translatable_tipo  );
 			$translatable_component	= component_common::get_instance(
 				$translatable_model,
 				$translatable_tipo ,
@@ -215,7 +215,7 @@ class ontology {
 
 		// term
 			$term_tipo		= 'ontology5';
-			$term_model		= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo  );
+			$term_model		= RecordObj_dd::get_model_name_by_tipo( $term_tipo  );
 
 			foreach ($term as $current_lang => $term_value) {
 
@@ -234,7 +234,7 @@ class ontology {
 
 		// properties V5
 			$properties_v5_tipo			= 'ontology19';
-			$properties_v5_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_v5_tipo  );
+			$properties_v5_model		= RecordObj_dd::get_model_name_by_tipo( $properties_v5_tipo  );
 			$properties_v5_component	= component_common::get_instance(
 				$properties_v5_model,
 				$properties_v5_tipo ,
@@ -250,7 +250,7 @@ class ontology {
 
 		// properties CSS
 			$properties_css_tipo		= 'ontology16';
-			$properties_css_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_css_tipo  );
+			$properties_css_model		= RecordObj_dd::get_model_name_by_tipo( $properties_css_tipo  );
 			$properties_css_component	= component_common::get_instance(
 				$properties_css_model,
 				$properties_css_tipo ,
@@ -268,7 +268,7 @@ class ontology {
 
 		// properties RQO
 			$properties_rqo_tipo		= 'ontology17';
-			$properties_rqo_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_rqo_tipo  );
+			$properties_rqo_model		= RecordObj_dd::get_model_name_by_tipo( $properties_rqo_tipo  );
 			$properties_rqo_component	= component_common::get_instance(
 				$properties_rqo_model,
 				$properties_rqo_tipo ,
@@ -286,7 +286,7 @@ class ontology {
 
 		// properties
 			$properties_tipo		= 'ontology18';
-			$properties_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_tipo  );
+			$properties_model		= RecordObj_dd::get_model_name_by_tipo( $properties_tipo  );
 			$properties_component	= component_common::get_instance(
 				$properties_model,
 				$properties_tipo ,
@@ -435,7 +435,7 @@ class ontology {
 
 			// Relations
 			$relations_tipo			= 'ontology10';
-			$relations_model		= RecordObj_dd::get_modelo_name_by_tipo( $relations_tipo  );
+			$relations_model		= RecordObj_dd::get_model_name_by_tipo( $relations_tipo  );
 			$relations_component	= component_common::get_instance(
 				$relations_model,
 				$relations_tipo ,
@@ -508,7 +508,7 @@ class ontology {
 			}
 
 			$children_tipo		= ontology::$children_tipo; // 'ontology14';
-			$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo );
+			$children_model		= RecordObj_dd::get_model_name_by_tipo( $children_tipo );
 			$children_component	= component_common::get_instance(
 				$children_model,
 				$children_tipo,
@@ -844,7 +844,7 @@ class ontology {
 
 			// Name
 				// use the typology name. (component_input_text)
-				$model			= 'component_input_text'; // RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
+				$model			= 'component_input_text'; // RecordObj_dd::get_model_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
 				$typology_term	= component_common::get_instance(
 					$model, // string model
 					DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
@@ -1121,7 +1121,7 @@ class ontology {
 
 		// name
 			$tipo		= DEDALO_HIERARCHY_TERM_TIPO; // 'hierarchy5'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1135,7 +1135,7 @@ class ontology {
 
 		// tld
 			$tipo		= DEDALO_HIERARCHY_TLD2_TIPO; // 'hierarchy6'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1148,7 +1148,7 @@ class ontology {
 
 		// target_section_tipo
 			$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO; // 'hierarchy53'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1161,7 +1161,7 @@ class ontology {
 
 		// target_section_model_tipo
 			$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO; // 'hierarchy58'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1174,7 +1174,7 @@ class ontology {
 
 		// main_lang
 			$tipo		= DEDALO_HIERARCHY_LANG_TIPO; // 'hierarchy8'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1186,7 +1186,7 @@ class ontology {
 			$main_lang = $component->get_value_code();
 
 		// Typology
-			$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+			$model = RecordObj_dd::get_model_name_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 			$typology_component = component_common::get_instance(
 				$model, // string model
 				DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
@@ -1201,7 +1201,7 @@ class ontology {
 			$typology_name	= $typology_component->get_value();
 
 		// hierarchy order
-			$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_ORDER_TIPO );
+			$model = RecordObj_dd::get_model_name_by_tipo( DEDALO_HIERARCHY_ORDER_TIPO );
 			$component_order = component_common::get_instance(
 				$model,
 				DEDALO_HIERARCHY_ORDER_TIPO,
@@ -1216,7 +1216,7 @@ class ontology {
 		// active_in_thesaurus get the status of the component active
 		// it will use to discard into tree view the hierarchy in client
 		// in the JSON controller will check to remove his typology if the hierarchy is not active
-			$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO );
+			$model = RecordObj_dd::get_model_name_by_tipo( DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO );
 			$component_active_in_thesaurus = component_common::get_instance(
 				$model,
 				DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO,
@@ -1454,7 +1454,7 @@ class ontology {
 
 		// Order
 			$order_tipo		= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
-			$order_model	= RecordObj_dd::get_modelo_name_by_tipo( $order_tipo  );
+			$order_model	= RecordObj_dd::get_model_name_by_tipo( $order_tipo  );
 			if (empty($order_model)) {
 
 				debug_log(__METHOD__
@@ -1661,7 +1661,7 @@ class ontology {
 	*/
 	private static function get_node_component_data( locator $locator, string $tipo ) : ?array {
 
-		$properties_model	= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+		$properties_model	= RecordObj_dd::get_model_name_by_tipo( $tipo  );
 		$component			= component_common::get_instance(
 			$properties_model,
 			$tipo ,
@@ -1803,7 +1803,7 @@ class ontology {
 	private static function resolve_term( locator $locator ) : ?object {
 
 		$term_tipo		= 'ontology5';
-		$term_model		= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo );
+		$term_model		= RecordObj_dd::get_model_name_by_tipo( $term_tipo );
 		$term_component	= component_common::get_instance(
 			$term_model,
 			$term_tipo ,
@@ -1858,7 +1858,7 @@ class ontology {
 			// get the component data
 			// using the locator
 			$tld_tipo		= 'ontology7';
-			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo );
+			$tld_model		= RecordObj_dd::get_model_name_by_tipo( $tld_tipo );
 			$tld_component	= component_common::get_instance(
 				$tld_model,
 				$tld_tipo ,
@@ -1929,7 +1929,7 @@ class ontology {
 		// get the component data
 		// using the locator
 		$children_tipo		= ontology::$children_tipo; // 'ontology14';
-		$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo  );
+		$children_model		= RecordObj_dd::get_model_name_by_tipo( $children_tipo  );
 		$children_component	= component_common::get_instance(
 			$children_model,
 			$children_tipo ,
@@ -2316,7 +2316,7 @@ class ontology {
 
 		// tld
 			$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO;	// 'hierarchy6';
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tld_tipo, true);
+			$model_name	= RecordObj_dd::get_model_name_by_tipo($tld_tipo, true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$tld_tipo,
@@ -2369,7 +2369,7 @@ class ontology {
 
 		// Typology component
 			$tipo		= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -2421,7 +2421,7 @@ class ontology {
 
 		// Name component
 			$tipo		= DEDALO_HIERARCHY_TERM_TIPO;
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -2615,7 +2615,7 @@ class ontology {
 			? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO // 'hierarchy59'
 			: DEDALO_HIERARCHY_CHILDREN_TIPO; // 'hierarchy45'
 
-		$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 		$componnent	= component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
@@ -2657,7 +2657,7 @@ class ontology {
 
 		// Name component
 			$tipo		= DEDALO_HIERARCHY_ORDER_TIPO;
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,

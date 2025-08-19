@@ -147,7 +147,7 @@ class area_thesaurus extends area_common {
 
 		$tipo			= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // 'hierarchy9' component_select
 		$section_tipo	= $this->get_hierarchy_section_tipo(); // hierarchy1
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 		$component		= component_common::get_instance(
 			$model_name,
 			$tipo,
@@ -181,7 +181,7 @@ class area_thesaurus extends area_common {
 
 		// component
 			$tipo			= DEDALO_HIERARCHY_TYPES_NAME_TIPO;
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$parent			= $typology_section_id;
 			$mode			= 'list';
 			$lang			= DEDALO_DATA_LANG;
@@ -228,7 +228,7 @@ class area_thesaurus extends area_common {
 			}
 
 		$tipo			= DEDALO_HIERARCHY_TYPES_ORDER;
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 		$parent			= $typology_section_id;
 		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
@@ -268,7 +268,7 @@ class area_thesaurus extends area_common {
 
 
 		$tipo 			 = DEDALO_HIERARCHY_TERM_TIPO;
-		$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name 	 = RecordObj_dd::get_model_name_by_tipo($tipo,true);
 		$parent 		 = $hierarchy_section_id;
 		$mode 			 = 'list';
 		$lang 			 = DEDALO_DATA_LANG;
@@ -389,7 +389,7 @@ class area_thesaurus extends area_common {
 						$children_section_tipo	= $current_parent->section_tipo;
 
 						// build the component and get its data
-						$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo );
+						$children_model		= RecordObj_dd::get_model_name_by_tipo( $children_tipo );
 						$component_children	= component_common::get_instance(
 							$children_model, // string model
 							$children_tipo, // string tipo

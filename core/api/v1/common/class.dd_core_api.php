@@ -280,7 +280,7 @@ final class dd_core_api {
 					}
 
 				// section/area/section_tool. Get the page element from get URL vars
-					$model		= $tool_name ?? RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model		= $tool_name ?? RecordObj_dd::get_model_name_by_tipo($tipo, true);
 					$last_error	= $_ENV['DEDALO_LAST_ERROR'] ?? '';
 					switch (true) {
 						// Section_tool is depended of section, the order of the cases are important, section_tool need to be first, before section,
@@ -970,7 +970,7 @@ final class dd_core_api {
 
 		// source vars
 			$tipo	= $ddo_source->tipo;
-			$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			// Ensure model is 'section'
 			if($model!=='section') {
 				$response->errors[] = 'invalid model';
@@ -1069,7 +1069,7 @@ final class dd_core_api {
 
 		// short vars
 			$tipo				= $source->tipo;
-			$model				= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model				= $source->model ?? RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$section_tipo		= $source->section_tipo;
 			$section_id			= $source->section_id;
 			$mode				= $source->mode ?? 'list';
@@ -1318,7 +1318,7 @@ final class dd_core_api {
 
 		// rqo vars
 			$tipo	= $rqo->source->tipo;
-			$model	= $rqo->source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model	= $rqo->source->model ?? RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$sqo	= $rqo->sqo;
 			$mode	= $rqo->source->mode ?? 'list'; //set default for section count
 
@@ -1395,7 +1395,7 @@ final class dd_core_api {
 			$source			= $rqo->source;
 			$tipo			= $source->tipo ?? null;
 			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
-			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model			= $source->model ?? RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
@@ -1647,7 +1647,7 @@ final class dd_core_api {
 			$tipo				= $ddo_source->tipo ?? null;
 			$section_tipo		= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id			= $ddo_source->section_id ?? null;
-			$model				= $ddo_source->model ?? RecordObj_dd::get_modelo_name_by_tipo($ddo_source->tipo,true);
+			$model				= $ddo_source->model ?? RecordObj_dd::get_model_name_by_tipo($ddo_source->tipo,true);
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 			$properties			= $ddo_source->properties ?? null;
 			$session_save		= $ddo_source->session_save ?? true;
@@ -2304,7 +2304,7 @@ final class dd_core_api {
 			$source			= $rqo->source;
 			$tipo			= $source->tipo ?? null;
 			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
-			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model			= $source->model ?? RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
@@ -2827,7 +2827,7 @@ final class dd_core_api {
 
 		// exclude components
 		// only sections and areas generate activity (prevent autocomplete activity footprint)
-			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model = RecordObj_dd::get_model_name_by_tipo($tipo, true);
 			if (strpos($model, 'section')===false && strpos($model, 'area')===false) {
 				return;
 			}

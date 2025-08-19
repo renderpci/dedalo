@@ -328,7 +328,7 @@ class indexation_grid {
 			// component. Create the component to get the value of the column
 				$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
 				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+				$component_model	= RecordObj_dd::get_model_name_by_tipo($ddo->tipo,true);
 				$current_component	= component_common::get_instance(
 					$component_model,
 					$ddo->tipo,
@@ -431,7 +431,7 @@ class indexation_grid {
 					: 'indexation_list';
 
 			// model
-				$current_ddo_map->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo_map->tipo,true);
+				$current_ddo_map->model = RecordObj_dd::get_model_name_by_tipo($current_ddo_map->tipo,true);
 
 
 			$final_ddo_map[] = $current_ddo_map;
@@ -559,7 +559,7 @@ class indexation_grid {
 		$target_section		= $this->target_section;
 		$filter_by_locators	= $sqo->filter_by_locators;
 
-		$model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
+		$model = RecordObj_dd::get_model_name_by_tipo($this->tipo, true);
 
 		// indexations
 		$component = component_common::get_instance(

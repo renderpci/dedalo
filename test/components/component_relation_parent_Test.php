@@ -592,7 +592,7 @@ final class component_relation_parent_test extends TestCase {
 				. gettype($result)
 		);
 
-		$model = RecordObj_dd::get_modelo_name_by_tipo($result, true);
+		$model = RecordObj_dd::get_model_name_by_tipo($result, true);
 		$this->assertTrue(
 			$model==='component_relation_children',
 			'expected component_relation_children : ' . PHP_EOL

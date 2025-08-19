@@ -294,7 +294,7 @@ abstract class filter {
 			foreach ($dato as $current_locator) {
 
 				$parent			= null;
-				$model			= RecordObj_dd::get_modelo_name_by_tipo($projects_name_tipo);
+				$model			= RecordObj_dd::get_model_name_by_tipo($projects_name_tipo);
 				$component_term	= component_common::get_instance(
 					$model, // string model
 					$projects_name_tipo, // string tipo

@@ -203,7 +203,7 @@ class v6_to_v7 {
 								$literal_components = $datos_value ?? [];
 								foreach ($literal_components as $literal_tipo => $literal_value) {
 
-									$model = RecordObj_dd::get_modelo_name_by_tipo($literal_tipo);
+									$model = RecordObj_dd::get_model_name_by_tipo($literal_tipo);
 
 									// skip v5 data
 									if( in_array($model, ['component_filter','component_section_id']) ){

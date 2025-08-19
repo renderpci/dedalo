@@ -241,7 +241,7 @@ class diffusion_xml extends diffusion  {
 			'tipo'		=> $diffusion_object->tipo,
 			'parent'	=> $diffusion_object->parent,
 			'name'		=> $diffusion_object->name,
-			'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo, true),
+			'model'		=> RecordObj_dd::get_model_name_by_tipo($diffusion_object->tipo, true),
 			'process'	=> $diffusion_object->process,
 			'data'		=> []
 		]);
@@ -257,7 +257,7 @@ class diffusion_xml extends diffusion  {
 				'tipo'		=> $key . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> 'row',
-				'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo, true),
+				'model'		=> RecordObj_dd::get_model_name_by_tipo($diffusion_object->tipo, true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $data_group
 			]);
@@ -408,7 +408,7 @@ class diffusion_xml extends diffusion  {
 		foreach ($diffusion_objects as $current_diffusion_object) {
 
 			// check model
-			$model = RecordObj_dd::get_modelo_name_by_tipo($current_diffusion_object->tipo,true);
+			$model = RecordObj_dd::get_model_name_by_tipo($current_diffusion_object->tipo,true);
 			if (in_array($model, ['box elements'])) {
 				// ignore
 				continue;
@@ -519,7 +519,7 @@ class diffusion_xml extends diffusion  {
 
 		// One data item case. Switch by model
 		$tipo	= $data[0]->tipo ?? null;
-		$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 		switch ($model) {
 
 			case 'component_date':
@@ -835,7 +835,7 @@ class diffusion_xml extends diffusion  {
 				'tipo'		=> $lang_tipo . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> $lang_tld2,
-				// 'model'		=> RecordObj_dd::get_modelo_name_by_tipo($diffusion_object->tipo,true),
+				// 'model'		=> RecordObj_dd::get_model_name_by_tipo($diffusion_object->tipo,true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $lang_data
 			]);

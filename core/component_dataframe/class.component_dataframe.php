@@ -280,7 +280,7 @@ class component_dataframe extends component_portal {
 
 		$main_component_tipo = $this->get_main_component_tipo();
 
-		$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
+		$model	= RecordObj_dd::get_model_name_by_tipo( $main_component_tipo );
 		$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 		$main_component = component_common::get_instance(
 			$model, // string model
@@ -370,7 +370,7 @@ class component_dataframe extends component_portal {
 					$main_component_tipo	= $RecordObj_dd->get_parent();
 
 					// create the main component to obtain his data
-						$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
+						$model	= RecordObj_dd::get_model_name_by_tipo( $main_component_tipo );
 						$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$main_component = component_common::get_instance(
 							$model, // string model

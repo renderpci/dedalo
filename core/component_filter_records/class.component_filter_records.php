@@ -118,7 +118,7 @@ class component_filter_records extends component_common {
 				}
 
 			// resolve model
-				$model = RecordObj_dd::get_modelo_name_by_tipo($area_item->tipo,true);
+				$model = RecordObj_dd::get_model_name_by_tipo($area_item->tipo,true);
 
 			// ignore non sections (areas)
 				if($model!=='section') {

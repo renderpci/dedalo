@@ -384,7 +384,7 @@ class diffusion_sql extends diffusion  {
 							}
 
 						// model
-							$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+							$model_name = RecordObj_dd::get_model_name_by_tipo($current_component_tipo, true);
 							if (!in_array($model_name, $ar_components_with_references)) {
 								continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
 							}
@@ -520,7 +520,7 @@ class diffusion_sql extends diffusion  {
 		// 			if(SHOW_DEBUG===true) {
 
 		// 				# Table verify
-		// 				$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+		// 				$model_name = RecordObj_dd::get_model_name_by_tipo($current_table_tipo,true);
 		// 				if ($model_name==='section') {
 
 		// 					$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);
@@ -629,7 +629,7 @@ class diffusion_sql extends diffusion  {
 
 		foreach ($ar_table_children as $curent_children_tipo) {
 
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
+			$model_name = RecordObj_dd::get_model_name_by_tipo($curent_children_tipo,true);
 			if ($model_name==='box elements') {
 				continue;
 			}
@@ -748,7 +748,7 @@ class diffusion_sql extends diffusion  {
 					true // bool simple
 				);
 				foreach ($ar_related as $current_related_tipo) {
-					$model = RecordObj_dd::get_modelo_name_by_tipo($current_related_tipo,true);
+					$model = RecordObj_dd::get_model_name_by_tipo($current_related_tipo,true);
 					if (strpos($model, 'field_')===0) {
 						$related_tipo = $current_related_tipo;
 						break;
@@ -832,7 +832,7 @@ class diffusion_sql extends diffusion  {
 
 			default:
 				$ar_field_data['field_name']	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false);
-				$ar_field_data['field_type']	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$ar_field_data['field_type']	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 
 				$related_component_tipo			= self::get_field_related_component($tipo);
 				$ar_field_data['field_coment']	= !empty($related_component_tipo)
@@ -842,7 +842,7 @@ class diffusion_sql extends diffusion  {
 				$RecordObj_dd	= new RecordObj_dd($tipo);
 				$properties		= $RecordObj_dd->get_propiedades(true);
 
-				$diffusion_model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$diffusion_model_name = RecordObj_dd::get_model_name_by_tipo($tipo,true);
 				switch ($diffusion_model_name) {
 					case 'field_enum':
 						$properties_enum = $properties->enum ?? [];
@@ -896,7 +896,7 @@ class diffusion_sql extends diffusion  {
 				debug_log(__METHOD__
 					. ' WARNING: EMPTY ar_field_data: $ar_field_data[field_type] ' . PHP_EOL
 					. ' tipo: ' . $tipo . PHP_EOL
-					. 'model: ' . RecordObj_dd::get_modelo_name_by_tipo($tipo,true)
+					. 'model: ' . RecordObj_dd::get_model_name_by_tipo($tipo,true)
 					, logger::WARNING
 				);
 			}
@@ -1154,7 +1154,7 @@ class diffusion_sql extends diffusion  {
 							$start_time2=start_time();
 
 							// model check
-								$model_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
+								$model_name = RecordObj_dd::get_model_name_by_tipo($curent_children_tipo,true);
 								if ($model_name==='box elements') {
 									continue;
 								}
@@ -1529,7 +1529,7 @@ class diffusion_sql extends diffusion  {
 			true // simple
 		);
 		foreach ($ar_related as $current_related) {
-			$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_related,true);
+			$current_model = RecordObj_dd::get_model_name_by_tipo($current_related,true);
 			if (strpos($current_model, 'field_')===0) {
 				continue; // skip replace elements
 			}
@@ -1608,7 +1608,7 @@ class diffusion_sql extends diffusion  {
 				#
 				# Component target
 				$related_component_tipo	= self::get_field_related_component($options->tipo);
-				$model_name				= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
+				$model_name				= RecordObj_dd::get_model_name_by_tipo($related_component_tipo,true);
 
 				// related term info
 					$ar_field_data['related_term']  = $related_component_tipo;
@@ -1651,7 +1651,7 @@ class diffusion_sql extends diffusion  {
 				}
 
 				// diffusion_model_name. like 'field_text'
-				$diffusion_model_name = RecordObj_dd::get_modelo_name_by_tipo($options->tipo, true);
+				$diffusion_model_name = RecordObj_dd::get_model_name_by_tipo($options->tipo, true);
 
 				# switch cases
 				switch (true) {
@@ -2792,7 +2792,7 @@ class diffusion_sql extends diffusion  {
 			$table_obj			= new RecordObj_dd($current_table_tipo);
 			$table_properties	= $table_obj->get_propiedades(true);
 
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			$model_name = RecordObj_dd::get_model_name_by_tipo($current_table_tipo,true);
 			switch ($model_name) {
 
 				case 'table':
@@ -2871,7 +2871,7 @@ class diffusion_sql extends diffusion  {
 							debug_log(__METHOD__
 								." ERROR: Bad structure/ontology configuration for current diffusion element. Expected a section related but empty related section" . PHP_EOL
 								.' current_table_tipo: ' . to_string($current_table_tipo) . PHP_EOL
-								.' model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true) . PHP_EOL
+								.' model: ' . RecordObj_dd::get_model_name_by_tipo($current_table_tipo,true) . PHP_EOL
 								.' related_section: ' . to_string($related_section) . PHP_EOL
 								.' real_table tipo: ' . to_string($real_table) . PHP_EOL
 								.' properties: ' . json_encode($properties, JSON_PRETTY_PRINT) . PHP_EOL
@@ -3330,7 +3330,7 @@ class diffusion_sql extends diffusion  {
 			$section_tipo	= $locator->section_tipo;
 
 			foreach ($target_component_tipo as $tipo) {
-				$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$model = RecordObj_dd::get_model_name_by_tipo($tipo,true);
 				$component = component_common::get_instance(
 					$model, // string model
 					$tipo, // string tipo
@@ -3874,7 +3874,7 @@ class diffusion_sql extends diffusion  {
 
 		// component to manage (usually component_autocomplete_hi)
 			$tipo 		= $dato[0]->from_component_tipo;
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name = RecordObj_dd::get_model_name_by_tipo($tipo,true);
 
 		// properties
 			$properties = $options->properties;
@@ -4044,7 +4044,7 @@ class diffusion_sql extends diffusion  {
 			$component_tipo	= reset($data_source);
 
 
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$component_tipo,
@@ -4108,7 +4108,7 @@ class diffusion_sql extends diffusion  {
 		$section_tipo 	= $options->section_tipo;
 		$ar_tipo 		= common::get_ar_related_by_model('component_portal',$diffusion_tipo);
 		$component_tipo = reset($ar_tipo);
-		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name 	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 		if($model_name!=='component_portal') return null;
 
 		$component = component_common::get_instance(
@@ -4136,7 +4136,7 @@ class diffusion_sql extends diffusion  {
 		$fields=array();
 		foreach ($ar_terminos_relacionados as $key => $ar_value) {
 			foreach ($ar_value as $current_tipo) {
-				$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$model_name = RecordObj_dd::get_model_name_by_tipo($current_tipo,true);
 				if (strpos($model_name, 'component_')!==false) {
 					$fields[] = $current_tipo;
 				}
@@ -4153,7 +4153,7 @@ class diffusion_sql extends diffusion  {
 
 			foreach ($fields as $current_tipo) {
 
-				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$model_name	= RecordObj_dd::get_model_name_by_tipo($current_tipo,true);
 				$component	= component_common::get_instance(
 					$model_name,
 					$current_tipo,
@@ -4638,7 +4638,7 @@ class diffusion_sql extends diffusion  {
 
 				$section_id			= $component->get_section_id();
 				$section_tipo		= $component->get_section_tipo();
-				$model				= RecordObj_dd::get_modelo_name_by_tipo($fallback_tipo,true);
+				$model				= RecordObj_dd::get_model_name_by_tipo($fallback_tipo,true);
 				$fallback_component	= component_common::get_instance(
 					$model,
 					$fallback_tipo,
@@ -4850,7 +4850,7 @@ class diffusion_sql extends diffusion  {
 			);
 		}
 		$target_component_tipo	= $process_dato_arguments->target_component_tipo;
-		$model_name				= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+		$model_name				= RecordObj_dd::get_model_name_by_tipo($target_component_tipo,true);
 
 		$ar_value = [];
 		foreach ($ar_locator as $locator) {
@@ -5321,7 +5321,7 @@ class diffusion_sql extends diffusion  {
 			}
 
 		// relation way (default)
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
+			$model_name = RecordObj_dd::get_model_name_by_tipo($table_tipo,true);
 			switch ($model_name) {
 
 				case 'table_alias':

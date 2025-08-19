@@ -97,7 +97,7 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 						continue;
 					}
 
-					$model				= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true);
+					$model				= RecordObj_dd::get_model_name_by_tipo($target_component_tipo,true);
 					$target_component	= component_common::get_instance(
 						$model,
 						$target_component_tipo,

@@ -398,7 +398,7 @@ class component_relation_common extends component_common {
 
 				// model check
 				if (!isset($ddo->model)) {
-					$ddo->model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+					$ddo->model = RecordObj_dd::get_model_name_by_tipo($ddo->tipo,true);
 					debug_log(__METHOD__
 						. " ddo without model ! Added calculated model: $ddo->model" . PHP_EOL
 						. ' ddo: ' . to_string($ddo) . PHP_EOL
@@ -469,7 +469,7 @@ class component_relation_common extends component_common {
 					  ]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+				$component_model		= RecordObj_dd::get_model_name_by_tipo($ddo->tipo,true);
 				// create the component with the ddo definition
 				// dataframe case: the data of the component_dataframe is inside the same section than the caller, so, his section_tipo and section_id need to be the same as the main component
 				$current_component		= component_common::get_instance(
@@ -1202,7 +1202,7 @@ class component_relation_common extends component_common {
 			$value = array();
 			foreach ($ar_components_related as $component_tipo) {
 
-				$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$model_name			= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
 				$current_component	= component_common::get_instance(
 					$model_name,
 					$component_tipo,
@@ -1305,7 +1305,7 @@ class component_relation_common extends component_common {
 
 
 				# Target section data
-				$model_name						= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
+				$model_name						= RecordObj_dd::get_model_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
 				$mode							= 'edit';
 				$lang							= DEDALO_DATA_NOLAN;
 				$component_relation_children	= component_common::get_instance(
@@ -1863,7 +1863,7 @@ class component_relation_common extends component_common {
 				foreach ($set_observed_data as $current_ddo) {
 
 					$current_component_tipo	= $current_ddo->tipo;
-					$model_name				= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$model_name				= RecordObj_dd::get_model_name_by_tipo($current_component_tipo, true);
 					$is_translatable		= RecordObj_dd::get_translatable($current_component_tipo);
 					$observer_component		= component_common::get_instance(
 						$model_name,
@@ -1917,7 +1917,7 @@ class component_relation_common extends component_common {
 
 				// overwrite source locator
 					$component_to_search_tipo	= $component_to_search; // $ar_component_to_search[0] ?? null;
-					$model_name					= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
+					$model_name					= RecordObj_dd::get_model_name_by_tipo($component_to_search_tipo, true);
 					$component_to_search		= component_common::get_instance(
 						$model_name,
 						$component_to_search_tipo,
@@ -1939,7 +1939,7 @@ class component_relation_common extends component_common {
 					if (isset($locator)) {
 
 						$data_from_field_tipo	= $properties->source->source_overwrite->data_from_field;
-						$model_name				= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
+						$model_name				= RecordObj_dd::get_model_name_by_tipo($data_from_field_tipo, true);
 						$component_overwrite	= component_common::get_instance(
 							$model_name,
 							$data_from_field_tipo,
@@ -1979,7 +1979,7 @@ class component_relation_common extends component_common {
 				$data_from_field  = $properties->source->data_from_field;
 
 				foreach ($data_from_field as $current_component_tipo) {
-					$model_name					= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$model_name					= RecordObj_dd::get_model_name_by_tipo($current_component_tipo, true);
 					$component_data_for_search	= component_common::get_instance(
 						$model_name,
 						$current_component_tipo,
@@ -2220,7 +2220,7 @@ class component_relation_common extends component_common {
 			$f_component_tipo 	= $current_obj_value->component_tipo;
 
 			// Calculate list values of each element
-				$c_model_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
+				$c_model_name 		= RecordObj_dd::get_model_name_by_tipo($f_component_tipo,true);
 				$current_component  = component_common::get_instance(
 					$c_model_name,
 					$f_component_tipo,
@@ -2332,7 +2332,7 @@ class component_relation_common extends component_common {
 
 					// Override label with custom component parse
 					if (isset($properties->stats_look_at) && isset($properties->valor_arguments)) {
-						$model_name	= RecordObj_dd::get_modelo_name_by_tipo(reset($properties->stats_look_at), true);
+						$model_name	= RecordObj_dd::get_model_name_by_tipo(reset($properties->stats_look_at), true);
 						$label		= $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
 					}
 
@@ -2452,7 +2452,7 @@ class component_relation_common extends component_common {
 					{
 						"section_tipo": "'.$hierarchy_section_tipo.'",
 						"component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'",
-						"model": "'.RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
+						"model": "'.RecordObj_dd::get_model_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
 						"name": "Active"
 					}
 				]
@@ -2691,7 +2691,7 @@ class component_relation_common extends component_common {
 					foreach ((array)$target_values as $current_component_tipo) {
 
 						// short vars
-							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+							$model_name		= RecordObj_dd::get_model_name_by_tipo($current_component_tipo,true);
 							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
 						// data
@@ -2719,7 +2719,7 @@ class component_relation_common extends component_common {
 									if ( empty($current_section_tipo) ) {
 										continue;
 									}
-									$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+									$section_model_name = RecordObj_dd::get_model_name_by_tipo($current_section_tipo,true);
 									if ( $section_model_name==='section' ) {
 										$ar_section_tipo[] = $current_section_tipo;
 									}else{
@@ -3021,7 +3021,7 @@ class component_relation_common extends component_common {
 		$data_fn		= $dd_object->data_fn ?? null;
 		$section_tipo	= $data->section_tipo;
 		$section_id		= $data->section_id;
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model			= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 		$translatable	= RecordObj_dd::get_translatable($tipo);
 		$component		= component_common::get_instance(
 			$model,

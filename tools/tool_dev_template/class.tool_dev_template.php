@@ -33,7 +33,7 @@ class tool_dev_template extends tool_common {
 				$config		= tool_common::get_config($tool_name);
 
 		// DDB data
-			$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model = RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 			$component = component_common::get_instance(
 				$model, // string model
 				$component_tipo, // string tipo
