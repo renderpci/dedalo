@@ -2263,7 +2263,7 @@ class component_text_area extends component_string_common {
 
 
 	/**
-	* GET_FALLBACK_edit_VALUE
+	* GET_FALLBACK_EDIT_VALUE
 	* Used by component_text_area and component_html_text to
 	* generate fallback versions of current empty values
 	* @param object|null $options = null
