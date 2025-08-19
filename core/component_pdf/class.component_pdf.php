@@ -1305,7 +1305,7 @@ class component_pdf extends component_media_common implements component_media_in
 				$im_options->ar_layers		= [$page];
 				$im_options->density		= ($quality === $original_quality) ? 300 : 150;
 				$im_options->antialias		= true;
-				$im_options->resize			= ($quality === $original_quality) ? '100%' : '75%';;
+				$im_options->resize			= ($quality === $original_quality) ? '100%' : '75%';
 				$im_options->pdf_cropbox	= true;
 
 			ImageMagick::convert($im_options);
