@@ -1307,6 +1307,16 @@ final class ontology_test extends TestCase {
 					. 'result: ' . to_string(!empty($response->result)) .  PHP_EOL
 					. 'response: ' . to_string($response)
 			);
+
+		// create a new one again
+		// matrix_ontology_main
+			$file_item = (object)[
+				'tld'			=> 'tldtest',
+				'section_tipo'	=> $section_tipo,
+				'typology_id'	=> 15,
+				'name_data'		=> (object)['lg-spa' => ['TLD TEST']]
+			];
+			$section_id = ontology::add_main_section($file_item);
 	}//end test_delete_ontology
 
 

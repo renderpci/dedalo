@@ -309,7 +309,11 @@ final class dd_core_api {
 									});
 									if (!is_object($tool_info)) {
 										debug_log(__METHOD__
-											." ERROR. No tool found for tool '$tool_name' in section_tool_tipo: ".to_string($section_tool_tipo)
+											." No tool found for tool_name '$tool_name' in section_tool_tipo: ".to_string($section_tool_tipo) . PHP_EOL
+											." Maybe this user profile does not have access to this tool." . PHP_EOL
+											.' tool_name: ' . to_string($tool_name) . PHP_EOL
+											.' tool_info: ' . json_encode($tool_info, JSON_PRETTY_PRINT) . PHP_EOL
+											.' user_tools: ' . json_encode($user_tools, JSON_PRETTY_PRINT)
 											, logger::ERROR
 										);
 									}else{
@@ -442,7 +446,8 @@ final class dd_core_api {
 								});
 								if (!is_object($tool_found)) {
 									debug_log(__METHOD__
-										." Tool $model not found in tool_common::get_user_tools "
+										." Tool model '$model' not found in tool_common::get_user_tools. ". PHP_EOL
+										." Maybe this user ($user_id) profile does not have access to this tool."
 										, logger::ERROR
 									);
 								}else{

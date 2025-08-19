@@ -27,6 +27,7 @@ class tools_register {
 	static $tipo_active						= 'dd1354'; // component_radio_button
 
 
+
 	/**
 	* IMPORT_TOOLS
 	* Read all dedalo dir 'tools' sub-folders and extract property 'ontology' from all 'register.json' files
@@ -211,7 +212,7 @@ class tools_register {
 
 						// section save raw data
 							try {
-								$tool_name = reset($current_tool_section_data->components->{self::$tipo_tool_name}->dato->{DEDALO_DATA_NOLAN});
+								$tool_name = $current_tool_section_data->components->{self::$tipo_tool_name}->dato->{DEDALO_DATA_NOLAN}[0];
 							} catch (Exception $e) {
 								debug_log(__METHOD__
 									. " ERROR on get tool name " .PHP_EOL

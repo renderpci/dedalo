@@ -208,7 +208,11 @@ final class dd_api_Test extends TestCase {
 
 			$context_element = $response->result->context[0];
 			// model expected is tool_lang
-			$this->assertTrue( $context_element->model==='tool_lang' );
+			$this->assertTrue(
+				$context_element->model==='tool_lang',
+					' expected "tool_lang". model: ' . to_string($context_element->mode) . PHP_EOL
+					.' context_element: ' . json_encode($context_element)
+			);
 			// type expected is area
 			$this->assertTrue( $context_element->type==='tool' );
 			$this->assertTrue( $context_element->typo==='ddo' );

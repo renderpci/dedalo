@@ -124,7 +124,6 @@ abstract class component_common extends common {
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
 
-
 		// V7 PROPERTIES //
 
 		// object|null data. Component data value from DB column 'data->literals|relations->tipo'
