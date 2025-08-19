@@ -331,12 +331,22 @@ abstract class RecordDataBoundObject {
 	*/
 	public function Save() {
 
-		# SAVE UPDATE
 		if(isset($this->ID) && strlen($this->ID)>0 && $this->force_insert_on_save!==true) {
 
-			$strQuery		= ' UPDATE "'.$this->strTableName.'" SET ' ;
-			$strQuery_set	= '';
+			//
+			// SAVE UPDATE. The record already exists and will be modified.
+			//
 
+			// query
+			$ar_query = [];
+
+			// update
+			$ar_query[] = 'UPDATE "'.$this->strTableName.'" SET';
+
+			// values
+			$sentences = [];
+			$values = [];
+			$counter = 1;
 			foreach($this->arRelationMap as $key => $value) {
 
 				$actualVal = & $this->$value;
@@ -349,20 +359,28 @@ abstract class RecordDataBoundObject {
 						$current_val = json_handler::encode($current_val);
 					}
 
-					if(is_null($current_val)) {
-						$strQuery_set .= "\"$key\" = null, ";
-					}else if(is_int($current_val)) { // changed  from is_numeric to is_int (06-06-2016)
-						$strQuery_set .= "\"$key\" = $current_val, ";
-					}else{
-						$strQuery_set .= "\"$key\" = " . pg_escape_literal($this->get_connection(), $current_val) . ", ";
-					}
+					$safe_value = is_string($current_val)
+							? str_replace(['\\u0000','\u0000'], ' ', $current_val) // prevent null encoded errors
+							: $current_val;
+
+					$values[] = $safe_value;
+					// build sentences with placeholders. E.g. "state" = $1
+					$sentences[] = '"' . $key . '" = $' . $counter++;
 				}
 			}
 
-			#
-			# EMPTY SET ELEMENTS CASE
-			if(strlen($strQuery_set)===0) {
-				$msg = "Failed Save query (RDBO). Data is not saved because no vars ar set to save. Elements to save: ".count( (array)$this->arRelationMap ) ;
+			// pair sentences
+			$ar_query[] = implode(',', $sentences);
+
+			// where
+			$ar_query[] = 'WHERE "' . $this->strPrimaryKeyName .'" = $' . $counter++;
+
+			// final strQuery string
+			$strQuery = implode(' ', $ar_query);
+
+			// Empty set elements values case
+			if (empty($values)) {
+				$msg = "Failed Save query (RDBO). Data is not saved because no vars are set to save. Elements to save: ".count( (array)$this->arRelationMap ) ;
 				if(SHOW_DEBUG===true) {
 					dump($strQuery, ' strQuery');
 				}
@@ -372,77 +390,87 @@ abstract class RecordDataBoundObject {
 				return $this->ID;
 			}
 
-			// prevent null encoded errors
-				$strQuery_set = str_replace(['\\u0000','\u0000'], ' ', $strQuery_set);
+			// add $this->ID as last param
+			$values[] = $this->ID;
 
-			// remove last 2 chars
-				$strQuery .= substr($strQuery_set, 0, -2);
-
-			// where sentence
-				$strQuery .= (is_int($this->ID))
-					? ' WHERE "' . $this->strPrimaryKeyName .'" = ' . $this->ID
-					: ' WHERE "' . $this->strPrimaryKeyName .'" = ' . "'$this->ID'";
-
-			$result = pg_query($this->get_connection(), $strQuery);
-			if($result===false) {
-				debug_log(__METHOD__
-					. " Error: sorry an error occurred on UPDATE record ID: '$this->ID'. Data is not saved " .PHP_EOL
-					. ' strQuery: ' . $strQuery . PHP_EOL
-					. ' last_error: ' .pg_last_error(DBi::_getConnection())
-					, logger::ERROR
+			// exec query
+				// $result = pg_query($this->get_connection(), $strQuery);
+				$result = pg_query_params(
+					$this->get_connection(),
+					$strQuery,
+					$values
 				);
-				if(SHOW_DEBUG===true) {
-					dump($strQuery, "strQuery");
-					throw new Exception("Error Processing Request", 1);
+				if($result===false) {
+					debug_log(__METHOD__
+						. " Error: sorry an error occurred on UPDATE record ID: '$this->ID'. Data is not saved " .PHP_EOL
+						. ' strQuery: ' . $strQuery . PHP_EOL
+						. ' last_error: ' .pg_last_error(DBi::_getConnection())
+						, logger::ERROR
+					);
+					if(SHOW_DEBUG===true) {
+						dump($strQuery, "strQuery");
+						throw new Exception("Error Processing Request", 1);
+					}
 				}
-			}
-
-		#
-		# SAVE INSERT . RECORD NOT EXISTS AND CREATE ONE
 		}else{
 
-			$strValueList	= '';
-			$strQuery		= ' INSERT INTO "'.$this->strTableName.'" (';
+			//
+			// SAVE INSERT. The record does not exist and a new one will be created.
+			//
 
+			// query
+			$ar_query = [];
+
+			// insert
+			$ar_query[] = 'INSERT INTO "'.$this->strTableName.'"';
+
+			$columns = [];
+			$values = [];
 			foreach($this->arRelationMap as $key => $value) {
 
-				$actualVal = & $this->$value ;
+				$actualVal = & $this->$value;
 
 				if(isset($actualVal)) {
 					if(array_key_exists($value, $this->arModifiedRelations)) {
 
-						$strQuery .= "\"$key\", ";
+						$columns[] = $key;
 
 						if (is_object($actualVal) || is_array($actualVal)) {
 							$actualVal = json_handler::encode($actualVal);
 						}
 
-						// $strValueList .= (is_int($actualVal) && $this->strTableName!=='matrix_time_machine')
-						// 	? $actualVal . ', '
-						// 	// : "'".pg_escape_string($this->get_connection(), (string)$actualVal)."', "; // Escape the text data
-						// 	: pg_escape_literal($this->get_connection(), $actualVal) . ', '; // Escape the text data
-
 						$safe_value = is_string($actualVal)
-							? pg_escape_literal($this->get_connection(), $actualVal) // Escape the text data
+							? str_replace(['\\u0000','\u0000'], ' ', $actualVal) // prevent null encoded errors
 							: $actualVal;
 
-						$strValueList .= $safe_value . ', ';
+						$values[] = $safe_value;
 					}
 				}
 			}
 
-			// prevent null encoded errors
-				$strValueList = str_replace(['\\u0000','\u0000'], ' ', $strValueList);
+			// columns
+			$ar_query[] = '("' . implode('","', $columns) . '")';
 
-			// strQuery
-				$strQuery		= substr($strQuery, 0, strlen($strQuery)-2);
-				$strValueList	= substr($strValueList, 0, strlen($strValueList)-2);
-				$strQuery		.= ') VALUES (';
-				$strQuery		.= $strValueList;
-				$strQuery		.= ') RETURNING "'.$this->strPrimaryKeyName.'" ';
+			// values
+			// placeholders as $1,$2,$3 to use pg_params
+			$placeholders = array_map(function($key) {
+			    return '$' . ($key + 1);
+			}, array_keys($values));
+			$ar_query[] = 'VALUES (' . implode(',', $placeholders) . ')';
+
+			// returning id
+			$ar_query[] = 'RETURNING "'.$this->strPrimaryKeyName.'"';
+
+			// final strQuery string
+			$strQuery = implode(' ', $ar_query);
 
 			// exec query
-				$result = pg_query($this->get_connection(), $strQuery);
+				// $result = pg_query($this->get_connection(), $strQuery);
+				$result = pg_query_params(
+					$this->get_connection(),
+					$strQuery,
+					$values
+				);
 				if ($result===false) {
 					debug_log(__METHOD__
 						." Error: DDBB query error. INSERT record. Data is not saved ". PHP_EOL
@@ -807,13 +835,14 @@ abstract class RecordDataBoundObject {
 
 			if($this->blForDeletion===true) {
 
-				if (is_int($this->ID)) {
-					$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $this->ID";
-				}else{
-					$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = '$this->ID' ";
-				}
+				$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $1";
 
-				$result = JSON_RecordObj_matrix::search_free($strQuery);
+				// $result = JSON_RecordObj_matrix::search_free($strQuery);
+				$result = pg_query_params(
+					$this->get_connection(),
+					$strQuery,
+					[$this->ID]
+				);
 				if($result===false) {
 					if(SHOW_DEBUG===true) {
 						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID";
