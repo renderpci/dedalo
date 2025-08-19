@@ -124,9 +124,6 @@ abstract class component_common extends common {
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
 
-		// data_container. JSON object data_container where to get the data: literals|relations
-		// Default value is 'literals'. Overwrite it in component_relation_common.
-		protected $data_container = 'literals';
 
 		// V7 PROPERTIES //
 

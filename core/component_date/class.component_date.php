@@ -45,6 +45,8 @@ class component_date extends component_common {
 	public static $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
 	// default date mode
 	public static $default_date_mode = 'date';
+	// data_column. DB column where to get the data.
+	protected $data_column = 'date';
 
 
 

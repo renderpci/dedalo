@@ -289,7 +289,7 @@ class lang {
 			if (!isset($locator->section_id)) {
 				if(SHOW_DEBUG===true) {
 					dump($locator, ' locator ++ (locator_id not found!)'.to_string());
-					dump(debug_backtrace(), ' debug_backtrace() ++ '.to_string());;
+					dump(debug_backtrace(), ' debug_backtrace() ++ '.to_string());
 				}
 				return null;
 			}

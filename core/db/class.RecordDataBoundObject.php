@@ -393,7 +393,7 @@ abstract class RecordDataBoundObject {
 				);
 				if(SHOW_DEBUG===true) {
 					dump($strQuery, "strQuery");
-					throw new Exception("Error Processing Request", 1);;
+					throw new Exception("Error Processing Request", 1);
 				}
 			}
 
