@@ -116,45 +116,45 @@
 	$ar_index = [];
 
 
-// jer_dd and ontology
+// dd_ontology and ontology
 	// is_descriptor
-		$ar_index[] = (object)[
-			'tables' => [
-				'jer_dd'
-			],
-			'sql' => "
-				CREATE INDEX IF NOT EXISTS {$table}_is_descriptor
-				ON {$table}
-				USING btree ( esdescriptor ASC NULLS LAST );
-			",
-			'drop' => "
-				DROP INDEX IF EXISTS {$table}_is_descriptor
-			",
-			'sample' => "
-				SELECT *
-				FROM jer_dd
-				WHERE is_descriptor = 1
-				LIMIT 1;
-			",
-			'info' => 'Used to search if the term is a descriptor or not, possible values: 1|2. 1 = yes, 2 = no'
-		];
+		// $ar_index[] = (object)[
+		// 	'tables' => [
+		// 		'dd_ontology'
+		// 	],
+		// 	'sql' => "
+		// 		CREATE INDEX IF NOT EXISTS {$table}_is_descriptor
+		// 		ON {$table}
+		// 		USING btree ( esdescriptor ASC NULLS LAST );
+		// 	",
+		// 	'drop' => "
+		// 		DROP INDEX IF EXISTS {$table}_is_descriptor
+		// 	",
+		// 	'sample' => "
+		// 		SELECT *
+		// 		FROM dd_ontology
+		// 		WHERE is_descriptor = 1
+		// 		LIMIT 1;
+		// 	",
+		// 	'info' => 'Used to search if the term is a descriptor or not, possible values: 1|2. 1 = yes, 2 = no'
+		// ];
 
 	// is_model
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd'
+				'dd_ontology'
 			],
 			'sql' => "
 				CREATE INDEX IF NOT EXISTS {$table}_is_model
 				ON {$table}
-				USING btree ( esmodelo ASC NULLS LAST );
+				USING btree ( is_model ASC NULLS LAST );
 			",
 			'drop' => "
 				DROP INDEX IF EXISTS {$table}_is_model
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE is_model = 1
 				LIMIT 1;
 			",
@@ -164,7 +164,7 @@
 	// model
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd'
+				'dd_ontology'
 			],
 			'sql' => "
 				CREATE INDEX IF NOT EXISTS {$table}_model
@@ -176,7 +176,7 @@
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE model = 'section'
 				LIMIT 1;
 			",
@@ -186,19 +186,19 @@
 	// model_tipo
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd'
+				'dd_ontology'
 			],
 			'sql' => "
-				CREATE INDEX IF NOT EXISTS {$table}_model
+				CREATE INDEX IF NOT EXISTS {$table}_model_tipo
 				ON {$table}
 				USING btree ( model_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 			",
 			'drop' => "
-				DROP INDEX IF EXISTS {$table}_model
+				DROP INDEX IF EXISTS {$table}_model_tipo
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE model_tipo = 'dd6'
 				LIMIT 1;
 			",
@@ -208,19 +208,19 @@
 	// order
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd'
+				'dd_ontology'
 			],
 			'sql' => "
-				CREATE INDEX IF NOT EXISTS {$table}_order
+				CREATE INDEX IF NOT EXISTS {$table}_order_number
 				ON {$table}
-				USING btree ( norden ASC NULLS LAST );
+				USING btree ( order_number ASC NULLS LAST );
 			",
 			'drop' => "
-				DROP INDEX IF EXISTS {$table}_order
+				DROP INDEX IF EXISTS {$table}_order_number
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE order = 2
 				LIMIT 1;
 			",
@@ -230,7 +230,7 @@
 	// parent
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd'
+				'dd_ontology'
 			],
 			'sql' => "
 				CREATE INDEX IF NOT EXISTS {$table}_parent
@@ -242,7 +242,7 @@
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE parent = 'tch1'
 				LIMIT 1;
 			",
@@ -252,7 +252,7 @@
 	// tld
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd',
+				'dd_ontology',
 				'main_dd'
 			],
 			'sql' => "
@@ -265,7 +265,7 @@
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE tld = 'tch'
 				LIMIT 1;
 			",
@@ -275,7 +275,7 @@
 	// relations
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd'
+				'dd_ontology'
 			],
 			'sql' => "
 				CREATE INDEX IF NOT EXISTS {$table}_relations
@@ -287,7 +287,7 @@
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE relations = 'tch'
 				LIMIT 1;
 			",
@@ -297,7 +297,7 @@
 	// translatable
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd'
+				'dd_ontology'
 			],
 			'sql' => "
 				CREATE INDEX IF NOT EXISTS {$table}_translatable
@@ -309,7 +309,7 @@
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE translatable = 1
 				LIMIT 1;
 			",
@@ -319,25 +319,23 @@
 	// parent is_descriptor and order
 		$ar_index[] = (object)[
 			'tables' => [
-				'jer_dd'
+				'dd_ontology'
 			],
 			'sql' => "
-				CREATE INDEX IF NOT EXISTS {$table}_parent_descriptor_order
+				CREATE INDEX IF NOT EXISTS {$table}_parent_order_number
 				ON {$table}
 				USING btree (
 					parent COLLATE pg_catalog.\"default\" ASC NULLS LAST,
-					is_descriptor ASC NULLS LAST,
-					order ASC NULLS LAST
+					order_number ASC NULLS LAST
 				);
 			",
 			'drop' => "
-				DROP INDEX IF EXISTS {$table}_parent_descriptor_order
+				DROP INDEX IF EXISTS {$table}_parent_order_number
 			",
 			'sample' => "
 				SELECT *
-				FROM jer_dd
+				FROM dd_ontology
 				WHERE parent = 'tch1'
-				AND is_descriptor = 1
 				LIMIT 1;
 			",
 			'info' => 'Used to search descriptors by parent, is_descriptor and order'
