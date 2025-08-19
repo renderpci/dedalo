@@ -62,8 +62,7 @@
 			case 'list':
 			case 'tm':
 				$value			= $this->get_list_value();
-				$fallback_value	= component_common::extract_component_dato_fallback(
-					$this,
+				$fallback_value	= $this->extract_component_dato_fallback(
 					DEDALO_DATA_LANG, // lang
 					DEDALO_DATA_LANG_DEFAULT // main_lang
 				);
@@ -77,8 +76,7 @@
 			case 'edit':
 			default:
 				$value			= $this->get_dato();
-				$fallback_value	= component_common::extract_component_dato_fallback(
-					$this,
+				$fallback_value	= $this->extract_component_dato_fallback(
 					DEDALO_DATA_LANG, // lang
 					DEDALO_DATA_LANG_DEFAULT // main_lang
 				);
