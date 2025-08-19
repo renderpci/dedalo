@@ -63,7 +63,7 @@ class tool_upload extends tool_common {
 						);
 
 					// component media
-						$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 						$component	= component_common::get_instance(
 							$model,
 							$tipo,

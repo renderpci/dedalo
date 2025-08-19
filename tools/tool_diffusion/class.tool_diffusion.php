@@ -97,7 +97,7 @@ class tool_diffusion extends tool_common {
 			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
 
 				// check diffusion_group model
-				$current_model = RecordObj_dd::get_modelo_name_by_tipo($diffusion_group, true);
+				$current_model = RecordObj_dd::get_model_name_by_tipo($diffusion_group, true);
 				if ($current_model!=='diffusion_group') {
 					debug_log(__METHOD__
 						. ' Ignored non diffusion group element' . PHP_EOL
@@ -186,7 +186,7 @@ class tool_diffusion extends tool_common {
 								$info_item->related_model	= RecordObj_dd::get_legacy_model_name_by_tipo($ar_related[0]);
 							}
 							// add model
-							$info_item->model = RecordObj_dd::get_modelo_name_by_tipo($info_item->tipo, true);
+							$info_item->model = RecordObj_dd::get_model_name_by_tipo($info_item->tipo, true);
 						}
 					}
 

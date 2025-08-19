@@ -109,7 +109,7 @@ class time_machine_v5_to_v6 {
 					$dato = json_decode($row['dato']);
 					if (!empty($dato)) {
 
-						$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo);
+						$model_name = RecordObj_dd::get_model_name_by_tipo($tipo);
 						if(!in_array($model_name, $components_to_update)){
 							continue;
 						}

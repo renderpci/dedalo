@@ -343,7 +343,7 @@ class diffusion_socrata extends diffusion  {
 		);
 		foreach ($tables as $current_table_tipo) {
 
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			$model_name = RecordObj_dd::get_model_name_by_tipo($current_table_tipo,true);
 			switch ($model_name) {
 				case 'table_alias':
 					// First try section (thesaurus needed)

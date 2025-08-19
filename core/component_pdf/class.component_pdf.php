@@ -317,7 +317,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 					$current_section_id			= $this->get_section_id();
 					$target_section_tipo		= $this->get_section_tipo();
-					$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
+					$model_name_target_filename	= RecordObj_dd::get_model_name_by_tipo($properties->target_filename,true);
 					$component_target_filename	= component_common::get_instance(
 						$model_name_target_filename,
 						$properties->target_filename,
@@ -980,7 +980,7 @@ class component_pdf extends component_media_common implements component_media_in
 				// same case as '6.0.1'. regenerate_component is enough to create thumb and alternative versions
 			case '6.0.1':
 				// component instance
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model		= RecordObj_dd::get_model_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model,
 						$tipo,
@@ -1012,7 +1012,7 @@ class component_pdf extends component_media_common implements component_media_in
 				if ($is_old_dato===true) {
 
 					// create the component pdf
-						$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 						$component	= component_common::get_instance(
 							$model, // string 'component_pdf'
 							$tipo,
@@ -1199,7 +1199,7 @@ class component_pdf extends component_media_common implements component_media_in
 				if (!empty($ar_related_component_text_area_tipo)) {
 
 					$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
-					$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
+					$related_component_text_area_model	= RecordObj_dd::get_model_name_by_tipo($related_component_text_area_tipo,true);
 
 					$component_text_area = component_common::get_instance(
 						$related_component_text_area_model,

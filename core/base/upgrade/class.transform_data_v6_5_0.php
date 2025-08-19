@@ -52,7 +52,7 @@ class transform_data_v6_5_0 {
 					return $response;
 				}
 
-				$order_model = RecordObj_dd::get_modelo_name_by_tipo($component_order_tipo);
+				$order_model = RecordObj_dd::get_model_name_by_tipo($component_order_tipo);
 
 				if( $order_model !=='component_number' ){
 					$msg = "Failed to set data in the order of section_map of $section,  | Review your ontology definition";
@@ -304,7 +304,7 @@ class transform_data_v6_5_0 {
 			// check if the parent section_tipo exists in jer_dd
 			// if not, create new hierarchy with the section_id and create the ontology and jer_dd node
 			// is necessary that parent section_tipo exists in ontology to save correctly the section with children data
-				$section_model = RecordObj_dd::get_modelo_name_by_tipo($parent_section_tipo);
+				$section_model = RecordObj_dd::get_model_name_by_tipo($parent_section_tipo);
 				if( empty($section_model) ){
 
 					$install_options = new stdClass();
@@ -332,7 +332,7 @@ class transform_data_v6_5_0 {
 
 			// create new component with parent data
 				$component_tipo = $parent_locator_data->from_component_tipo;
-				$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+				$model = RecordObj_dd::get_model_name_by_tipo($component_tipo);
 				$parent_component = component_common::get_instance(
 					$model, // string model
 					$component_tipo, // string tipo
@@ -359,7 +359,7 @@ class transform_data_v6_5_0 {
 				}
 
 				// create new component order with parent data
-				$model_order = RecordObj_dd::get_modelo_name_by_tipo($component_order_tipo);
+				$model_order = RecordObj_dd::get_model_name_by_tipo($component_order_tipo);
 				$order_component = component_common::get_instance(
 					$model_order, // string model
 					$component_order_tipo, // string tipo
@@ -463,7 +463,7 @@ class transform_data_v6_5_0 {
 			$hierarchy_section_tipo	= $row->section_tipo;
 
 			// component children
-			$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_CHILDREN_TIPO);
+			$model = RecordObj_dd::get_model_name_by_tipo(DEDALO_HIERARCHY_CHILDREN_TIPO);
 			$component_children = component_common::get_instance(
 				$model, // string model
 				DEDALO_HIERARCHY_CHILDREN_TIPO, // string tipo
@@ -483,7 +483,7 @@ class transform_data_v6_5_0 {
 			}
 
 			// create the target section component
-				$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO);
+				$model = RecordObj_dd::get_model_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO);
 				$destination_section_component = component_common::get_instance(
 					$model, // string model
 					DEDALO_HIERARCHY_TARGET_SECTION_TIPO, // string tipo
@@ -543,7 +543,7 @@ class transform_data_v6_5_0 {
 					}
 
 					// create new component_relation_parent and add parent data
-					$model = RecordObj_dd::get_modelo_name_by_tipo( $component_parent_tipo );
+					$model = RecordObj_dd::get_model_name_by_tipo( $component_parent_tipo );
 					$parent_component = component_common::get_instance(
 						$model, // string model
 						$component_parent_tipo, // string tipo
@@ -578,7 +578,7 @@ class transform_data_v6_5_0 {
 				if (isset($section_map->thesaurus->term)) {
 
 					// hierarchy component name
-					$hierarchy_term_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO);
+					$hierarchy_term_model = RecordObj_dd::get_model_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO);
 					$hierarchy_term = component_common::get_instance(
 						$hierarchy_term_model, // string model
 						DEDALO_HIERARCHY_TERM_TIPO, // string tipo
@@ -595,7 +595,7 @@ class transform_data_v6_5_0 {
 						: $section_map->thesaurus->term;
 
 					// new node component name
-					$node_term_model = RecordObj_dd::get_modelo_name_by_tipo($term_tipo);
+					$node_term_model = RecordObj_dd::get_model_name_by_tipo($term_tipo);
 					$node_term = component_common::get_instance(
 						$node_term_model, // string model
 						$term_tipo, // string tipo

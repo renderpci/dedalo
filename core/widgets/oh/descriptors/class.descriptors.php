@@ -57,7 +57,7 @@ class descriptors extends widget_common {
 
 							$source_component_tipo = $current_source->component_tipo;
 
-							$source_model_name	= RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true);
+							$source_model_name	= RecordObj_dd::get_model_name_by_tipo($source_component_tipo,true);
 							$source_component	= component_common::get_instance(
 								$source_model_name,
 								$source_component_tipo,
@@ -96,7 +96,7 @@ class descriptors extends widget_common {
 					$ar_component_grid_value	= [];
 					foreach ($ar_locator as $locator) {
 
-						$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 						$component	= component_common::get_instance(
 							$model_name,
 							$component_tipo,

@@ -111,7 +111,7 @@ class get_coins_by_period extends widget_common {
 				$target_sections			= $component_period->target_sections;
 				$target_model_section_id	= $component_period->target_model_section_id;
 				$use_parent					= $component_period->use_parent ?? null;
-				$period_model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_period,true); // Expected portal
+				$period_model_name			= RecordObj_dd::get_model_name_by_tipo($component_tipo_period,true); // Expected portal
 
 
 				// duplicated - to be removed if duplicated coins is set
@@ -130,7 +130,7 @@ class get_coins_by_period extends widget_common {
 					continue;
 				}
 				$component_tipo_duplicated	= $component_duplicated->component_tipo;
-				$duplicated_modelo_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_duplicated,true); // Expected portal
+				$duplicated_modelo_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo_duplicated,true); // Expected portal
 
 
 			// Resolve thesaurus
@@ -215,7 +215,7 @@ class get_coins_by_period extends widget_common {
 				$source_section_tipo 	= $component_source->section_tipo;
 
 				// get the source data
-				$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true); // Expected a portal
+				$model_name 	  = RecordObj_dd::get_model_name_by_tipo($source_component_tipo,true); // Expected a portal
 				$component_portal = component_common::get_instance(
 					$model_name,
 					$source_component_tipo,

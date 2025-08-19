@@ -294,7 +294,7 @@ class ts_object {
 			// iterate every tipo
 				foreach ($ar_element_tipo as $element_tipo) {
 
-					$model_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+					$model_name = RecordObj_dd::get_model_name_by_tipo($element_tipo,true);
 					// remove the box elements
 					// it could be any old component not used as old component_relation_struct
 					if(empty($model_name) || $model_name === 'box elements'){
@@ -542,7 +542,7 @@ class ts_object {
 
 		foreach($ar_children as $current_locator) {
 
-			$model = RecordObj_dd::get_modelo_name_by_tipo($current_locator->section_tipo,true);
+			$model = RecordObj_dd::get_model_name_by_tipo($current_locator->section_tipo,true);
 			if (empty($model)) {
 				debug_log(__METHOD__
 					. " Ignored non resolved model for section: $current_locator->section_tipo" . PHP_EOL
@@ -564,7 +564,7 @@ class ts_object {
 			}
 
 			$component_tipo	= $section_map->thesaurus->is_descriptor;
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model_name,
 				$component_tipo,
@@ -602,7 +602,7 @@ class ts_object {
 			return false;
 		}
 
-		$model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+		$model = RecordObj_dd::get_model_name_by_tipo($section_tipo,true);
 		if (empty($model)) {
 			debug_log(__METHOD__
 				. " Ignored non resolved model for section: $section_tipo" . PHP_EOL
@@ -624,7 +624,7 @@ class ts_object {
 		}
 
 		$component_tipo	= $section_map->thesaurus->is_indexable;
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 		$component		= component_common::get_instance(
 			$model_name,
 			$component_tipo,
@@ -667,7 +667,7 @@ class ts_object {
 
 		// 		$component_tipo = $section_map['thesaurus']->is_descriptor;
 
-		// 		$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		// 		$model_name = RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 		// 		$component 	 = component_common::get_instance($model_name,
 		// 													  $component_tipo,
 		// 													  $current_locator->section_id,
@@ -746,7 +746,7 @@ class ts_object {
 		$ar_value = [];
 		foreach ($ar_tipo as $tipo) {
 
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -822,10 +822,10 @@ class ts_object {
 
 					$parent			= $locator->section_id;
 					$section_tipo	= $locator->section_tipo;
-					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$model_name		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 					// debug
 						// if(SHOW_DEBUG===true) {
-						// 	$real_model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						// 	$real_model_name 	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 						// 	if ($real_model_name!==$model_name) {
 						// 		trigger_error("Error. modelo_name of component $tipo must be $model_name. $#real_model_name is defined");#
 						// 	}

@@ -166,7 +166,7 @@ class dato_v4_to_section_data_v5 {
 		$dataframes	= [];
 		foreach ($dato->components as $key_tipo => $component) {
 
-			$model = RecordObj_dd::get_modelo_name_by_tipo($key_tipo,true);
+			$model = RecordObj_dd::get_model_name_by_tipo($key_tipo,true);
 
 			// dato
 				foreach ($component->dato as $clang => $cdato) {

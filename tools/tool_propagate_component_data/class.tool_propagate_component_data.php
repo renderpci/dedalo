@@ -40,7 +40,7 @@ class tool_propagate_component_data extends tool_common {
 			}
 
 		// short vars
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 			$with_relations	= in_array($model, component_relation_common::get_components_with_relations());
 
 		// components mono-value case. Prevent to propagate 'add'

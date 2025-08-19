@@ -42,7 +42,7 @@ class tool_import_rdf extends tool_common {
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
 		$translatable 	= $RecordObj_dd->get_traducible();
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo);
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;
@@ -442,7 +442,7 @@ class tool_import_rdf extends tool_common {
 				//get the Dédalo component names
 
 				$ar_dd_component_label 	= RecordObj_dd::get_termino_by_tipo($current_tipo);
-				$object_model_name 		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+				$object_model_name 		= RecordObj_dd::get_model_name_by_tipo($current_tipo);
 
 				$ar_current_resource = $rdf_graph->allResources($base_uri, $object_property_name);
 				//literal, if the resource is the end of the path
@@ -632,7 +632,7 @@ class tool_import_rdf extends tool_common {
 	*/
 	public static function get_resource_match( string $section_tipo, string $component_tipo, string $value, ?string $filter=null ) : object {
 
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 		$name			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
@@ -773,7 +773,7 @@ class tool_import_rdf extends tool_common {
 		// sort vars
 			$section_tipo	= $locator->section_tipo;
 			$section_id		= $locator->section_id;
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 
 		// save new value
 			$RecordObj_dd	= new RecordObj_dd($component_tipo);
@@ -927,7 +927,7 @@ class tool_import_rdf extends tool_common {
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
 		$translatable	= $RecordObj_dd->get_traducible();
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo);
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;

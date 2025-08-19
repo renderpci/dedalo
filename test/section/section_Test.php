@@ -595,7 +595,7 @@ final class section_test extends TestCase {
 		);
 
 		$component_tipo	= 'test52'; // component_input_text
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 		$component_obj	= component_common::get_instance(
 			$model, // string model
 			$component_tipo, // string tipo
@@ -652,7 +652,7 @@ final class section_test extends TestCase {
 		);
 
 		$component_tipo	= 'test52'; // component_input_text
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 		$component_obj	= component_common::get_instance(
 			$model, // string model
 			$component_tipo, // string tipo
@@ -711,7 +711,7 @@ final class section_test extends TestCase {
 		);
 
 		$component_tipo	= 'test101'; // component_filter
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 		$component_obj	= component_common::get_instance(
 			$model, // string model
 			$component_tipo, // string tipo

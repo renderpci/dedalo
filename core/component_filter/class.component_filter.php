@@ -793,7 +793,7 @@ class component_filter extends component_relation_common {
 
 		// 				if (isset($properties->stats_look_at)) {
 		// 					$c_tipo 		= reset($properties->stats_look_at);
-		// 					$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
+		// 					$model_name 	= RecordObj_dd::get_model_name_by_tipo($c_tipo,true);
 		// 					$component 		= component_common::get_instance(
 		// 						$model_name,
 		// 						$c_tipo,
@@ -1070,14 +1070,14 @@ class component_filter extends component_relation_common {
 			// self component path
 			(object)[
 				'component_tipo'	=> $component_tipo,
-				'model'				=> RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true),
+				'model'				=> RecordObj_dd::get_model_name_by_tipo($component_tipo,true),
 				'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			],
 			// project name field (component_input_text dd156)
 			(object)[
 				'component_tipo'	=> DEDALO_PROJECTS_NAME_TIPO,
-				'model'				=> RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true),
+				'model'				=> RecordObj_dd::get_model_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true),
 				'name'				=> RecordObj_dd::get_termino_by_tipo(DEDALO_PROJECTS_NAME_TIPO),
 				'section_tipo'		=> DEDALO_SECTION_PROJECTS_TIPO
 			]

@@ -1229,7 +1229,7 @@ final class ontology_test extends TestCase {
 
 				// tld
 					$tipo	= 'ontology7';
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model_name	= RecordObj_dd::get_model_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$tipo,
@@ -1243,7 +1243,7 @@ final class ontology_test extends TestCase {
 
 				// model
 					$tipo	= 'ontology6';
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model_name	= RecordObj_dd::get_model_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$tipo,
@@ -1258,7 +1258,7 @@ final class ontology_test extends TestCase {
 
 				// parent
 					$tipo		= 'ontology15';
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model		= RecordObj_dd::get_model_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model,
 						$tipo,

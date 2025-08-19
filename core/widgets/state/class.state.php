@@ -59,7 +59,7 @@ class state extends widget_common {
 							: $current_source->section_id;
 						$source_component_tipo = $current_source->component_tipo;
 
-						$source_model_name	= RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true);
+						$source_model_name	= RecordObj_dd::get_model_name_by_tipo($source_component_tipo,true);
 						$source_component	= component_common::get_instance(
 							$source_model_name,
 							$source_component_tipo,
@@ -236,7 +236,7 @@ class state extends widget_common {
 	*/
 	public function get_label(object $locator, string $component_tipo) : string {
 
-		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+		$model_name			= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
 		$component_portal	= component_common::get_instance(
 			$model_name,
 			$component_tipo,
@@ -263,7 +263,7 @@ class state extends widget_common {
 	*/
 	public function get_value(object $locator, string $component_tipo) : float {
 
-		$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 		$component_portal	= component_common::get_instance(
 			$model_name,
 			$component_tipo,
@@ -306,7 +306,7 @@ class state extends widget_common {
 				$last_path		= end($path);
 				$section_tipo 	= (isset($last_path->section_tipo)) ? $last_path->section_tipo : $this->section_tipo;
 				$component_tipo = $last_path->component_tipo;
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$model_name 	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 				// create the component without any section_id, we only want the list fo values.
 				$component = component_common::get_instance(
 					$model_name,

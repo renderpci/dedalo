@@ -150,7 +150,7 @@ class calculation extends widget_common {
 						$var_name		= $current_component->var_name;
 						$options		= isset($current_component->options) ? $current_component->options : null;
 						$component		= new RecordObj_dd($component_tipo);
-						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 						$lang			= ($component->get_traducible()==='no')
 							? DEDALO_DATA_NOLAN
 							: DEDALO_DATA_LANG;
@@ -175,7 +175,7 @@ class calculation extends widget_common {
 						$var_name		= $current_component->var_name;
 						$options		=  isset($current_component->options) ? $current_component->options : null;
 						$component		= new RecordObj_dd($component_tipo);
-						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 						$lang			= ($component->get_traducible()==='no')
 							? DEDALO_DATA_NOLAN
 							: DEDALO_DATA_LANG;
@@ -195,7 +195,7 @@ class calculation extends widget_common {
 							$var_name		= $current_component->var_name;
 							$options		=  isset($current_component->options) ? $current_component->options : null;
 							$component		= new RecordObj_dd($component_tipo);
-							$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 							$lang			= ($component->get_traducible()==='no')
 								? DEDALO_DATA_NOLAN
 								: DEDALO_DATA_LANG;
@@ -230,7 +230,7 @@ class calculation extends widget_common {
 
 					// Component (component_json) where is stored source data, a json search_query_object
 						$component			= new RecordObj_dd($component_tipo);
-						$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 						$lang				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 						$current_component	= component_common::get_instance(
 							$model_name,
@@ -390,7 +390,7 @@ class calculation extends widget_common {
 
 		$current_section_tipo	= $search_options->section_tipo;
 		$current_tipo			= $search_options->component_tipo;
-		$model_name				= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+		$model_name				= RecordObj_dd::get_model_name_by_tipo($current_tipo,true);
 
 		$RecordObj_dd			= new RecordObj_dd($current_tipo);
 		$traducible				= $RecordObj_dd->get_traducible();

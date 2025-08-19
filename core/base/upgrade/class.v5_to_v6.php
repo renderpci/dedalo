@@ -535,7 +535,7 @@ class v5_to_v6 {
 				// short vars
 					// $end_path	= end($value->path);
 					// $tipo		= $end_path->component_tipo;
-					// $model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					// $model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			}
 		}
 	}//end parse_filter

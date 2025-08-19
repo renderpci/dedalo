@@ -53,7 +53,7 @@ class reference_dato_v47_to_relation_dato_v48 {
 			$lg_nolan = DEDALO_DATA_NOLAN;
 			foreach ((array)$dato->components as $key_tipo => $component) {
 
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key_tipo, true);
+				$modelo_name = RecordObj_dd::get_model_name_by_tipo($key_tipo, true);
 				if (!in_array($modelo_name, $ar_models_to_change)) {
 					continue;
 				}

@@ -2003,7 +2003,7 @@ class install extends common {
 
 				// tld
 					$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO; // hierarchy6
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tld_tipo, true);
+					$model_name	= RecordObj_dd::get_model_name_by_tipo($tld_tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$tld_tipo,
@@ -2018,7 +2018,7 @@ class install extends common {
 
 				// typology
 					$hierarchy_type_tipo	= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // hierarchy9
-					$model_name				= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type_tipo, true);
+					$model_name				= RecordObj_dd::get_model_name_by_tipo($hierarchy_type_tipo, true);
 					$component				= component_common::get_instance(
 						$model_name,
 						$hierarchy_type_tipo,
@@ -2037,7 +2037,7 @@ class install extends common {
 
 				// name
 					$name_tipo	= DEDALO_HIERARCHY_TERM_TIPO;	// hierarchy5
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
+					$model_name	= RecordObj_dd::get_model_name_by_tipo($name_tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$name_tipo,
@@ -2052,7 +2052,7 @@ class install extends common {
 
 				// lang
 					$name_tipo	= DEDALO_HIERARCHY_LANG_TIPO;	// hierarchy8
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
+					$model_name	= RecordObj_dd::get_model_name_by_tipo($name_tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$name_tipo,
@@ -2069,7 +2069,7 @@ class install extends common {
 
 		// active hierarchy
 			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// hierarchy4
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
+			$model_name		= RecordObj_dd::get_model_name_by_tipo($active_tipo, true);
 			$component		= component_common::get_instance(
 				$model_name,
 				$active_tipo,
@@ -2091,7 +2091,7 @@ class install extends common {
 
 		// active in thesaurus
 			$active_view_ts_tipo	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;	// hierarchy4
-			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($active_view_ts_tipo, true);
+			$model_name				= RecordObj_dd::get_model_name_by_tipo($active_view_ts_tipo, true);
 			$component				= component_common::get_instance(
 				$model_name,
 				$active_view_ts_tipo,
@@ -2113,7 +2113,7 @@ class install extends common {
 
 		// set real section tipo (!) needed to create virtual section
 			// source_real_section_tipo
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, true);
+			$model_name	= RecordObj_dd::get_model_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, true);
 			$component	= component_common::get_instance(
 				$model_name,
 				DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,
@@ -2143,7 +2143,7 @@ class install extends common {
 		// set target section data
 			// target thesaurus
 				$component_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;	// 'hierarchy53';
-				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
 				$component		= component_common::get_instance(
 					$model_name,
 					$component_tipo,
@@ -2158,7 +2158,7 @@ class install extends common {
 
 			// target model
 				$component_tipo	= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	// 'hierarchy58';
-				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
 				$component		= component_common::get_instance(
 					$model_name,
 					$component_tipo,
@@ -2175,7 +2175,7 @@ class install extends common {
 			if ($typology==2) {
 				// general term
 					$component_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;	// 'hierarchy45';
-					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
 					$component		= component_common::get_instance(
 						$model_name,
 						$component_tipo,
@@ -2201,7 +2201,7 @@ class install extends common {
 					if (file_exists($models_file)) {
 
 						$component_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;	// 'hierarchy59';
-						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+						$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
 						$component		= component_common::get_instance(
 							$model_name,
 							$component_tipo,

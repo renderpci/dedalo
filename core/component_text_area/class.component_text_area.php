@@ -893,7 +893,7 @@ class component_text_area extends component_string_common {
 			$component_tipo	= $tags_config->tipo;
 
 		// component portal where the indexations are stored (v6 are direct instead v5 reverse pointers)
-			$model_name         = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model_name         = RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
 			$component_index    = component_common::get_instance(
 				$model_name,
 				$component_tipo,
@@ -1083,7 +1083,7 @@ class component_text_area extends component_string_common {
 				foreach ($ar_notes_section_ddo_map as $current_ddo) {
 
 					$note_component_tipo	= $current_ddo->component_tipo;
-					$note_component_model	= RecordObj_dd::get_modelo_name_by_tipo($note_component_tipo,true);
+					$note_component_model	= RecordObj_dd::get_model_name_by_tipo($note_component_tipo,true);
 
 					$note_section_tipo		= $locator->section_tipo;
 					$note_section_id		= $locator->section_id;
@@ -1184,7 +1184,7 @@ class component_text_area extends component_string_common {
 				$tags_reference_tipo = $this->properties->tags_reference->tipo ?? null;
 				if( !empty($tags_reference_tipo) ){
 
-					$model = RecordObj_dd::get_modelo_name_by_tipo($tags_reference_tipo, true);
+					$model = RecordObj_dd::get_model_name_by_tipo($tags_reference_tipo, true);
 
 					// create the component relation with saved references
 					$reference_tags_component = component_common::get_instance(
@@ -1405,7 +1405,7 @@ class component_text_area extends component_string_common {
 			$current_state			= $obj_value->state;
 			$current_tag_id			= !empty($obj_value->tag_id) ? $obj_value->tag_id : 1;
 
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+			$model_name	= RecordObj_dd::get_model_name_by_tipo($current_component_tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$current_component_tipo,
@@ -1528,7 +1528,7 @@ class component_text_area extends component_string_common {
 
 		foreach ($ar_tipos as $key => $tipo) {
 
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$tipo,
@@ -1829,7 +1829,7 @@ class component_text_area extends component_string_common {
 
 						$tags_reference_tipo = $properties->tags_reference->tipo;
 
-						$model = RecordObj_dd::get_modelo_name_by_tipo($tags_reference_tipo, true);
+						$model = RecordObj_dd::get_model_name_by_tipo($tags_reference_tipo, true);
 
 						// create the component relation for save the layers
 						$reference_tags_component = component_common::get_instance(
@@ -1961,7 +1961,7 @@ class component_text_area extends component_string_common {
 							$ar_related_tipo = RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true);
 							foreach ($ar_related_tipo as $current_tipo) {
 
-								$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+								$model = RecordObj_dd::get_model_name_by_tipo($current_tipo, true);
 								switch (true) {
 
 									case $model==='component_image':
@@ -2449,7 +2449,7 @@ class component_text_area extends component_string_common {
 		if (!empty($ar_related_component_tipo)) {
 
 			$related_component_tipo		= reset($ar_related_component_tipo);
-			$related_component_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo, true);
+			$related_component_model	= RecordObj_dd::get_model_name_by_tipo($related_component_tipo, true);
 			$related_component			= component_common::get_instance(
 				$related_component_model, // string model
 				$related_component_tipo, // string tipo
