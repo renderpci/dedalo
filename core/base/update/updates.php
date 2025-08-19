@@ -117,7 +117,7 @@ $updates->$v = new stdClass();
 					COMMENT ON COLUMN ".$current_table.".section_id IS 'Section unique identifier';
 					COMMENT ON COLUMN ".$current_table.".section_tipo IS 'Ontology section identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)';
 					COMMENT ON COLUMN ".$current_table.".data IS 'Section data';
-					COMMENT ON COLUMN ".$current_table.".relation IS 'Component data with relation values: ".DEDALO_RELATION_TYPE_LINK."|".DEDALO_RELATION_TYPE_CHILDREN_TIPO."|".DEDALO_RELATION_TYPE_PARENT_TIPO."|".DEDALO_RELATION_TYPE_INDEX_TIPO."|".DEDALO_RELATION_TYPE_MODEL_TIPO."|".DEDALO_RELATION_TYPE_FILTER."';
+					COMMENT ON COLUMN ".$current_table.".relation IS 'Component data with relation values: ".DEDALO_RELATION_TYPE_LINK." | ".DEDALO_RELATION_TYPE_CHILDREN_TIPO." | ".DEDALO_RELATION_TYPE_PARENT_TIPO." | ".DEDALO_RELATION_TYPE_INDEX_TIPO." | ".DEDALO_RELATION_TYPE_MODEL_TIPO." | ".DEDALO_RELATION_TYPE_FILTER."';
 					COMMENT ON COLUMN ".$current_table.".string IS 'Component data with string values: ". DEDALO_VALUE_TYPE_STRING. "';
 					COMMENT ON COLUMN ".$current_table.".date IS 'Component data with date values: ". DEDALO_VALUE_TYPE_DATE. "';
 					COMMENT ON COLUMN ".$current_table.".iri IS 'Component data with IRI values: ". DEDALO_VALUE_TYPE_IRI. "';
