@@ -2883,63 +2883,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* EXTRACT_COMPONENT_VALUE_FALLBACK
-	* @todo Note: It is still using 'get_valor()'. Normalize to modern 'get_value()'
-	* reviewing all references
-	* @param object $component
-	* @param string $lang = DEDALO_DATA_LANG
-	* @param bool $mark = true
-	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
-	* @return string $value
-	*/
-	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
-
-		// Try direct value
-		$value = $component->get_valor($lang);
-
-		if (empty($value)) {
-
-			// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
-			if ($lang!==$main_lang) {
-				$component->set_lang($main_lang);
-				$value = $component->get_valor($main_lang);
-			}
-
-			// Try nolan
-			if (empty($value)) {
-				$component->set_lang(DEDALO_DATA_NOLAN);
-				$value = $component->get_valor(DEDALO_DATA_NOLAN);
-			}
-
-			// Try all projects langs sequence
-			if (empty($value)) {
-				$data_langs = common::get_ar_all_langs(); // Langs from config projects
-				foreach ($data_langs as $current_lang) {
-					if ($current_lang===$lang || $current_lang===$main_lang) {
-						continue; // Already checked
-					}
-					$component->set_lang($current_lang);
-					$value = $component->get_valor($current_lang);
-					if (!empty($value)) break; // Stops when first data is found
-				}
-			}
-
-			// Set value as untranslated
-			if ($mark===true) {
-				$value = '<mark>'.$value.'</mark>';
-			}
-		}
-
-		if (!is_string($value)) {
-			$value = to_string($value);
-		}
-
-		return $value;
-	}//end extract_component_value_fallback
-
-
-
-	/**
 	* GET_VALUE_WITH_FALLBACK_FROM_DATO_FULL
 	* Receive a full dato of translatable component and try to find a no empty lang
 	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
