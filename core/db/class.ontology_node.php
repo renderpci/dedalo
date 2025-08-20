@@ -215,10 +215,10 @@ class ontology_node extends ontology_record {
 		}
 		$counter_dato_updated = intval($current_value+1) ;
 
-		$strQuery 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
-		$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $counter_dato_updated, $tld));
+		$sql_query 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
+		$result = pg_query_params(DBi::_getConnection(), $sql_query, array( $counter_dato_updated, $tld));
 		if ($result===false) {
-			debug_log(__METHOD__." Error on update_counter 'ontology_node_edit'. Nothing is saved! ".to_string($strQuery), logger::ERROR);
+			debug_log(__METHOD__." Error on update_counter 'ontology_node_edit'. Nothing is saved! ".to_string($sql_query), logger::ERROR);
 			return false;
 		}
 
@@ -234,12 +234,12 @@ class ontology_node extends ontology_record {
 	*/
 	public static function get_counter_value( string $tld ) : int {
 
-		$strQuery	= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
-		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
-		$value		= pg_fetch_assoc($result);
+		$sql_query	= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
+		$result	= JSON_RecordDataBoundObject::search_free($sql_query);
+		$value	= pg_fetch_assoc($result);
 		if ($value===false) {
 			// false is not only error only. If the counter do not exists, false is returned too
-			debug_log(__METHOD__." Warning on get counter. The counter no is available or does not exists yet. Returning zero as value. ".to_string($strQuery), logger::WARNING);
+			debug_log(__METHOD__." Warning on get counter. The counter no is available or does not exists yet. Returning zero as value. ".to_string($sql_query), logger::WARNING);
 			return 0;
 		}
 
@@ -1313,20 +1313,6 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_ORDER
-	* Alias of get_order_number
-	* @return bool
-	*/
-	public function get_order() : int {
-
-		$order = (int)$this->get_order_number();
-
-		return $order;
-	}//end get_order
-
-
-
-	/**
 	* GET_COLOR
 	* Get the color defined in properties
 	* if it's not defined return default gray
@@ -1337,7 +1323,7 @@ class ontology_node extends ontology_record {
 	*/
 	public static function get_color( string $section_tipo ) : string {
 
-		$ontology_node	= new ontology_node($section_tipo);
+		$ontology_node	= new ontology_node( $section_tipo );
 		$properties		= $ontology_node->get_properties();
 
 		$color = isset($properties->color)
@@ -1365,9 +1351,9 @@ class ontology_node extends ontology_record {
 			return $active_tlds_cache;
 		}
 
-		$table		= ontology_node::$table; // jer_dd | jer_dd_backup
-		$strQuery	= "SELECT tld FROM \"$table\" GROUP BY tld";
-		$result		= pg_query(DBi::_getConnection(), $strQuery);
+		$table	= ontology_node::$table; // jer_dd | jer_dd_backup
+		$sql_query	= "SELECT tld FROM \"$table\" GROUP BY tld";
+		$result	= pg_query(DBi::_getConnection(), $sql_query);
 
 		$active_tlds = [];
 		while($row = pg_fetch_assoc($result)) {
@@ -1394,10 +1380,10 @@ class ontology_node extends ontology_record {
 		$safe_tipo = safe_tipo($tipo);
 
 		$table		= ontology_node::$table; // jer_dd | jer_dd_backup
-		$strQuery	= "SELECT * FROM \"$table\" WHERE \"tipo\" = $1 LIMIT 1";
+		$sql_query	= "SELECT * FROM \"$table\" WHERE \"tipo\" = $1 LIMIT 1";
 
 		// Direct
-		// $result = pg_query_params(DBi::_getConnection(), $strQuery, [$safe_tipo]);
+		// $result = pg_query_params(DBi::_getConnection(), $sql_query, [$safe_tipo]);
 
 		// With prepared statement
 		$stmt_name = __METHOD__;
@@ -1405,7 +1391,7 @@ class ontology_node extends ontology_record {
 			pg_prepare(
 				DBi::_getConnection(),
 				$stmt_name,
-				$strQuery
+				$sql_query
 			);
 			// Set the statement as existing.
 			DBi::$prepared_statements[$stmt_name] = true;
@@ -1547,8 +1533,8 @@ class ontology_node extends ontology_record {
 		if( !empty($row_data) ){
 
 			$table		= ontology_node::$table; // jer_dd | jer_dd_backup
-			$strQuery	= "DELETE FROM \"$table\" WHERE \"tipo\" = '$safe_tipo'";
-			$result		= pg_query(DBi::_getConnection(), $strQuery);
+			$sql_query	= "DELETE FROM \"$table\" WHERE \"tipo\" = '$safe_tipo'";
+			$result		= pg_query(DBi::_getConnection(), $sql_query);
 
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
@@ -1559,7 +1545,7 @@ class ontology_node extends ontology_record {
 				trigger_error($msg);
 				debug_log(__METHOD__
 					. ' ' . $msg .PHP_EOL
-					. 'strQuery: ' . to_string($strQuery)
+					. 'query: ' . to_string($sql_query)
 					, logger::ERROR
 				);
 
@@ -1683,18 +1669,18 @@ class ontology_node extends ontology_record {
 
 		$where = implode('\' OR tld = \'', $tld);
 
-		$strQuery = '
+		$sql_query = '
 			DROP TABLE IF EXISTS "jer_dd_bk" CASCADE;
 			CREATE TABLE IF NOT EXISTS jer_dd_bk AS
 			SELECT * FROM jer_dd WHERE tld = \''.$where.'\';
 		';
 
-		$result = pg_query(DBi::_getConnection(), $strQuery);
+		$result = pg_query(DBi::_getConnection(), $sql_query);
 
 		if($result===false) {
 			debug_log(__METHOD__
 				. ' Failed consolidate_table jer_dd' .PHP_EOL
-				. 'strQuery: ' . to_string($strQuery)
+				. 'query: ' . to_string($sql_query)
 				, logger::ERROR
 			);
 			return false;
@@ -1712,16 +1698,16 @@ class ontology_node extends ontology_record {
 	*/
 	public static function delete_bk_table() : bool {
 
-		$strQuery = '
+		$sql_query = '
 			DROP TABLE IF EXISTS "jer_dd_bk" CASCADE;
 		';
 
-		$result = pg_query(DBi::_getConnection(), $strQuery);
+		$result = pg_query(DBi::_getConnection(), $sql_query);
 
 		if($result===false) {
 			debug_log(__METHOD__
 				. ' Failed delete_bk_table jer_dd_bk' .PHP_EOL
-				. 'strQuery: ' . to_string($strQuery)
+				. 'query: ' . to_string($sql_query)
 				, logger::ERROR
 			);
 			return false;
@@ -1751,17 +1737,17 @@ class ontology_node extends ontology_record {
 		// restore all tld into jer_dd_bk
 		$where = implode('\' OR tld = \'', $tld);
 
-		$strQuery = '
+		$sql_query = '
 			INSERT INTO jer_dd
 			SELECT * FROM "jer_dd_bk" WHERE tld = \''.$where.'\';
 		';
 
-		$result = pg_query(DBi::_getConnection(), $strQuery);
+		$result = pg_query(DBi::_getConnection(), $sql_query);
 
 		if($result===false) {
 			debug_log(__METHOD__
 				. ' Failed restore_from_bk_table jer_dd_bk' .PHP_EOL
-				. 'strQuery: ' . to_string($strQuery)
+				. 'query: ' . to_string($sql_query)
 				, logger::ERROR
 			);
 			return false;
