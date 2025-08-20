@@ -456,7 +456,7 @@ class ontology_node extends ontology_record {
 				return '';
 			}
 
-			$model = ontology_node::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			$model = ontology_node::get_termino_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 			// error log
 			debug_log(__METHOD__
@@ -582,13 +582,13 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_MODEL_tipo
-	* Resolves term id searching jer_dd models
-	* Only one term exist by model (models are unique)
+	* GET_TIPO_FORM_MODEL_NAME
+	* Resolves tipo searching node model names
+	* Only one node exist by model name (models are unique)
 	* @param string $model
 	* @return string|null $tipo
 	*/
-	public static function get_model_tipo( string $model ) : ?string {
+	public static function get_tipo_form_model_name( string $model ) : ?string {
 
 		// `where` clause of SQL query
 		$sql_code = 'is_model = true AND tld = \'dd\' AND term @> \'{"'.DEDALO_STRUCTURE_LANG.'":"'.$model.'"}\'';
@@ -606,7 +606,7 @@ class ontology_node extends ontology_record {
 
 
 		return $tipo;
-	}//end get_model_tipo
+	}//end get_tipo_form_model_name
 
 
 
@@ -669,24 +669,24 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_AR_tipo_BY_MODELO_NAME
+	* GET_AR_TIPO_BY_MODEL_NAME
 	* Resolves all terms matching the given model
-	* @param string $modelo_name
+	* @param string $model_name
 	* @return array $ar_result
 	*/
-	public static function get_ar_tipo_by_modelo_name( string $modelo_name ) : array {
+	public static function get_ar_tipo_by_model_name( string $model_name ) : array {
 
 		// static cache
-			static $ar_tipo_by_modelo_name;
-			$cache_uid = $modelo_name;
-			if(isset($ar_tipo_by_modelo_name[$cache_uid])) {
-				return $ar_tipo_by_modelo_name[$cache_uid];
+			static $ar_tipo_by_model_name;
+			$cache_uid = $model_name;
+			if(isset($ar_tipo_by_model_name[$cache_uid])) {
+				return $ar_tipo_by_model_name[$cache_uid];
 			}
 
 		$ar_result = [];
 
 		// model to tipo resolution
-			$model_tipo = ontology_node::get_model_tipo($modelo_name);
+			$model_tipo = ontology_node::get_tipo_form_model_name($model_name);
 			if (empty($model_tipo)) {
 				return $ar_result;
 			}
@@ -695,22 +695,22 @@ class ontology_node extends ontology_record {
 			$ontology_node	= new ontology_node($model_tipo);
 			$ar_result		= $ontology_node->search([
 				'strPrimaryKeyName'	=> 'tipo',
-				'modelo'			=> $model_tipo
+				'model_tipo'		=> $model_tipo
 			]);
 
 		// static cache
-		$ar_tipo_by_modelo_name[$cache_uid] = $ar_result;
+		$ar_tipo_by_model_name[$cache_uid] = $ar_result;
 
 
 		return $ar_result;
-	}//end get_ar_tipo_by_modelo_name
+	}//end get_ar_tipo_by_model_name
 
 
 
 	/**
 	* GET_AR_ALL_MODELS
 	* It is used in the edit thesaurus selector to assign model
-	* @return array $ar_all_modelos
+	* @return array $all_models
 	* 	Array of all models term_id as ["dd3","dd1226","dd1259",..]
 	*/
 	public function get_ar_all_models() : array {
@@ -720,9 +720,9 @@ class ontology_node extends ontology_record {
 			'is_model' => true
 		];
 		$ontology_node	= new ontology_node(NULL,$this->tld);
-		$ar_all_modelos	= $ontology_node->search($arguments);
+		$all_models	= $ontology_node->search($arguments);
 
-		return $ar_all_modelos;
+		return $all_models;
 	}//end get_ar_all_models
 
 
