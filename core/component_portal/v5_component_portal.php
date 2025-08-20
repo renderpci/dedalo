@@ -69,7 +69,7 @@
 
 					$model		= key($ar_value);
 					$tipo		= $ar_value[$model];
-					$model_name	= ontology_node::get_modelo_name_by_tipo($tipo,true);
+					$model_name	= ontology_node::get_model_name_by_tipo($tipo,true);
 					if ($model_name==='section') {
 						$section_tipo = $tipo;
 						$matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
@@ -104,7 +104,7 @@
 			$strQuery_select='';
 			foreach ($fields as $current_tipo) {
 
-				#$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+				#$model_name = ontology_node::get_model_name_by_tipo($current_tipo,true);
 				#if (strpos($model_name,'component_')===false) {
 				#	debug_log(__METHOD__." Skipped  $current_tipo - $model_name ".to_string(), logger::DEBUG);
 				#	continue;
@@ -217,7 +217,7 @@
 			foreach ($relation_nodes as $key => $ar_value) {
 				foreach ($ar_value as $current_tipo) {
 
-					$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+					$model_name = ontology_node::get_model_name_by_tipo($current_tipo,true);
 					if (strpos($model_name, 'component_')!==false) {
 						$fields[] = $current_tipo;
 					}
@@ -244,7 +244,7 @@
 
 			foreach ($fields as $current_tipo) {
 
-				$model_name 	= ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+				$model_name 	= ontology_node::get_model_name_by_tipo($current_tipo,true);
 				$component 		= component_common::get_instance(
 					$model_name,
 					$current_tipo,
@@ -351,7 +351,7 @@
 						foreach ($relation_nodes as $key => $ar_value) {
 							foreach ($ar_value as $current_tipo) {
 
-								$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+								$model_name = ontology_node::get_model_name_by_tipo($current_tipo,true);
 								if (strpos($model_name, 'component_')!==false) {
 									$fields[] = $current_tipo;
 								}
@@ -373,7 +373,7 @@
 
 						foreach ($fields as $current_tipo) {
 
-							$model_name	= ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+							$model_name	= ontology_node::get_model_name_by_tipo($current_tipo,true);
 							$component	= component_common::get_instance(
 								$model_name,
 								$current_tipo,

@@ -23,7 +23,7 @@ class register_tools {
 		];
 
 		// matrix_tools field 'Developer' check
-		if (empty(ontology_node::get_modelo_name_by_tipo('dd1644',true))) {
+		if (empty(ontology_node::get_model_name_by_tipo('dd1644',true))) {
 			$result->errors = ['Your Ontology is outdated. Term \'dd1644\' (Developer) do not exists'];
 		}
 

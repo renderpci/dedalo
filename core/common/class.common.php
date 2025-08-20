@@ -458,7 +458,7 @@ abstract class common {
 			}
 
 		// model
-			$model_name = ontology_node::get_modelo_name_by_tipo($tipo, true);
+			$model_name = ontology_node::get_model_name_by_tipo($tipo, true);
 			// empty model case
 			if (empty($model_name)) {
 				$msg = "Current tipo ($tipo) model name is empty. Model is mandatory, check your model for tipo: '$tipo'";
@@ -562,7 +562,7 @@ abstract class common {
 			foreach ($ar_children_tables as $table_tipo) {
 
 				// model
-				$model_name = ontology_node::get_modelo_name_by_tipo($table_tipo,true);
+				$model_name = ontology_node::get_model_name_by_tipo($table_tipo,true);
 				if ($model_name!=='matrix_table') {
 					debug_log(__METHOD__
 						. " Ignored non matrix_table Ontology item "
@@ -705,7 +705,7 @@ abstract class common {
 
 			if (!is_null($section_id)) {
 				$section		= section::get_instance($section_id, $section_tipo);
-				$model_name	= ontology_node::get_modelo_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
+				$model_name	= ontology_node::get_model_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
 				$component		= component_common::get_instance(
 					$model_name,
 					DEDALO_HIERARCHY_LANG_TIPO,
@@ -1010,7 +1010,7 @@ abstract class common {
 		$ar_related_by_model=array();
 		foreach ((array)$relations as $relation) foreach ((array)$relation as $current_tipo) {
 
-			$current_model_name = ontology_node::get_modelo_name_by_tipo($current_tipo, true);
+			$current_model_name = ontology_node::get_model_name_by_tipo($current_tipo, true);
 			if ($strict===true) {
 				// Default compare equal
 				if ($current_model_name===$model_name) {
@@ -2114,7 +2114,7 @@ abstract class common {
 						$view			= $dd_object->view ?? null;
 						$model			= ( isset($dd_object->model) )
 							? $dd_object->model
-							: ontology_node::get_modelo_name_by_tipo($current_tipo, true);
+							: ontology_node::get_model_name_by_tipo($current_tipo, true);
 
 					// dataframe case
 						// dataframe ddo need to get section_tipo has it has defined
@@ -2773,7 +2773,7 @@ abstract class common {
 				$dedalo_request_config->type = $dedalo_request_config->type ?? 'main';
 
 				// sqo. Preserves filter across calls using session sqo if exists
-				$model	= ontology_node::get_modelo_name_by_tipo($tipo, true);
+				$model	= ontology_node::get_model_name_by_tipo($tipo, true);
 				$sqo_id	= ($model==='section')
 					? section::build_sqo_id($tipo)
 					: null; // cache key sqo_id
@@ -2878,7 +2878,7 @@ abstract class common {
 
 		// check section tipo model (allow areas)
 			if ($section_tipo!=='self') {
-				$section_model = ontology_node::get_modelo_name_by_tipo($section_tipo,true);
+				$section_model = ontology_node::get_model_name_by_tipo($section_tipo,true);
 				if ($section_model!=='section' && strpos($section_model, 'area')!==0) {
 					debug_log(__METHOD__
 						. " Error. Invalid section/area tipo " . PHP_EOL
@@ -3182,7 +3182,7 @@ abstract class common {
 											.' this->tipo: ' . $this->tipo . PHP_EOL
 											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 											.' this->section_id: ' . $this->section_id . PHP_EOL
-											.' current_model: ' . ontology_node::get_modelo_name_by_tipo($current_ddo->tipo)
+											.' current_model: ' . ontology_node::get_model_name_by_tipo($current_ddo->tipo)
 											, logger::WARNING
 										);
 										continue;
@@ -3200,7 +3200,7 @@ abstract class common {
 									}
 
 								// model. Calculated always to prevent errors
-									$current_ddo->model = ontology_node::get_modelo_name_by_tipo($current_ddo->tipo, true);
+									$current_ddo->model = ontology_node::get_model_name_by_tipo($current_ddo->tipo, true);
 
 								// list mode exclude groupers (see case section test2)
 									if ($this->mode==='list' && strpos($current_ddo->model, 'section_group')!==false) {
@@ -3374,14 +3374,14 @@ abstract class common {
 												.' this->tipo: ' . $this->tipo . PHP_EOL
 												.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 												.' this->section_id: ' . $this->section_id . PHP_EOL
-												.' current_model: ' . ontology_node::get_modelo_name_by_tipo($current_search_ddo_map->tipo)
+												.' current_model: ' . ontology_node::get_model_name_by_tipo($current_search_ddo_map->tipo)
 												, logger::WARNING
 											);
 											continue;
 										}
 
 									// model. Calculated always to prevent errors
-										$current_search_ddo_map->model = ontology_node::get_modelo_name_by_tipo($current_search_ddo_map->tipo, true);
+										$current_search_ddo_map->model = ontology_node::get_model_name_by_tipo($current_search_ddo_map->tipo, true);
 
 									// label. Add to all ddo_map items
 										$current_search_ddo_map->label = ontology_node::get_termino_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
@@ -3478,14 +3478,14 @@ abstract class common {
 											.' this->tipo: ' . $this->tipo . PHP_EOL
 											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 											.' this->section_id: ' . $this->section_id . PHP_EOL
-											.' current_model: ' . ontology_node::get_modelo_name_by_tipo($current_choose_ddo->tipo)
+											.' current_model: ' . ontology_node::get_model_name_by_tipo($current_choose_ddo->tipo)
 											, logger::WARNING
 										);
 										continue;
 									}
 
 								// model. Calculated always to prevent errors
-									$current_choose_ddo->model = ontology_node::get_modelo_name_by_tipo($current_choose_ddo->tipo, true);
+									$current_choose_ddo->model = ontology_node::get_model_name_by_tipo($current_choose_ddo->tipo, true);
 
 								// section_tipo
 									$current_choose_ddo->section_tipo = $current_choose_ddo->section_tipo==='self'
@@ -3544,7 +3544,7 @@ abstract class common {
 											: $mode);
 
 								// model
-									$current_ddo_map->model = ontology_node::get_modelo_name_by_tipo($current_ddo_map->tipo, true);
+									$current_ddo_map->model = ontology_node::get_model_name_by_tipo($current_ddo_map->tipo, true);
 
 								$final_ddo_map[] = $current_ddo_map;
 							}
@@ -3712,7 +3712,7 @@ abstract class common {
 
 									$section_isset = false;
 									foreach ((array)$ar_related as $current_tipo) {
-										$current_model = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+										$current_model = ontology_node::get_model_name_by_tipo($current_tipo,true);
 										if ($current_model==='section') {
 											$section_isset = true;
 										}
@@ -3747,7 +3747,7 @@ abstract class common {
 					$target_section_tipo = $section_tipo;
 					if (!empty($ar_related)) {
 						foreach ((array)$ar_related as $current_tipo) {
-							$current_model = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+							$current_model = ontology_node::get_model_name_by_tipo($current_tipo,true);
 							if ($current_model==='section') {
 								$target_section_tipo = $current_tipo; // Overwrite (!)
 								continue;
@@ -3806,7 +3806,7 @@ abstract class common {
 				// ddo_map
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
-						$model						= ontology_node::get_modelo_name_by_tipo($current_tipo, true);
+						$model						= ontology_node::get_model_name_by_tipo($current_tipo, true);
 						$current_tipo_ontology_node	= new ontology_node($current_tipo);
 						$current_tipo_properties	= $current_tipo_ontology_node->get_properties();
 						$own_view					= isset($current_tipo_properties->view)
@@ -4246,7 +4246,7 @@ abstract class common {
 		// 				foreach ($source_search_item->search as $current_tipo) {
 
 		// 					// check is real component
-		// 						$model = ontology_node::get_modelo_name_by_tipo($current_tipo, true);
+		// 						$model = ontology_node::get_model_name_by_tipo($current_tipo, true);
 		// 						if (strpos($model,'component')!==0) {
 		// 							debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
 		// 							continue;
@@ -4576,7 +4576,7 @@ abstract class common {
 					}
 
 				// model
-					$model = ontology_node::get_modelo_name_by_tipo($element_tipo,true);
+					$model = ontology_node::get_model_name_by_tipo($element_tipo,true);
 					if (in_array($model, $ar_components_exclude) || $model==='component_password') {
 						continue;
 					}
@@ -4861,7 +4861,7 @@ abstract class common {
 					}
 
 				// model
-					$model = ontology_node::get_modelo_name_by_tipo($current_button_tipo, true);
+					$model = ontology_node::get_model_name_by_tipo($current_button_tipo, true);
 					// skip exclude_models
 					if(in_array($model, common::$ar_temp_exclude_models)){
 						continue;

@@ -100,7 +100,7 @@ class component_relation_parent extends component_relation_common {
 				$ar_value = [];
 				foreach ($ar_tipo as $tipo) {
 
-					$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
+					$model		= ontology_node::get_model_name_by_tipo($tipo,true);
 					// $model	= ontology_node::get_legacy_model_name_by_tipo($tipo);
 					$component	= component_common::get_instance(
 						$model,
@@ -410,7 +410,7 @@ class component_relation_parent extends component_relation_common {
 			);
 			return [];
 		}
-		$model				= ontology_node::get_modelo_name_by_tipo($component_tipo);
+		$model				= ontology_node::get_model_name_by_tipo($component_tipo);
 		$parent_component	= component_common::get_instance(
 			$model, // string model
 			$component_tipo, // string tipo

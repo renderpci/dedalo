@@ -55,7 +55,7 @@ final class dd_component_portal_api {
 
 
 		// tags_index. component. Remove locators with the tag_id given
-			$model_name	= ontology_node::get_modelo_name_by_tipo($tipo,true);
+			$model_name	= ontology_node::get_model_name_by_tipo($tipo,true);
 			$lang		= common::get_element_lang($tipo, DEDALO_DATA_LANG);
 			$component	= component_common::get_instance(
 				$model_name,

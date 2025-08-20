@@ -33,7 +33,7 @@ class tool_image_rotation extends tool_common {
 			$crop_area 			= $options->crop_area ?? null;
 
 		// component
-			$model		= ontology_node::get_modelo_name_by_tipo($tipo, true);
+			$model		= ontology_node::get_model_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,

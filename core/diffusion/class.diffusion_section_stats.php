@@ -79,7 +79,7 @@ class diffusion_section_stats extends diffusion {
 					  {
 					    "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
 					    "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
-					    "model": "'.ontology_node::get_modelo_name_by_tipo(USER_ACTIVITY_USER_TIPO,true).'",
+					    "model": "'.ontology_node::get_model_name_by_tipo(USER_ACTIVITY_USER_TIPO,true).'",
 					    "name": "User"
 					  }
 					]
@@ -128,7 +128,7 @@ class diffusion_section_stats extends diffusion {
 					$section_id		= $row->section_id;
 					$section_tipo	= $row->section_tipo;
 
-					$model		= ontology_node::get_modelo_name_by_tipo(USER_ACTIVITY_DATE_TIPO,true);
+					$model		= ontology_node::get_model_name_by_tipo(USER_ACTIVITY_DATE_TIPO,true);
 					$component	= component_common::get_instance(
 						$model,
 						USER_ACTIVITY_DATE_TIPO,
@@ -526,7 +526,7 @@ class diffusion_section_stats extends diffusion {
 
 		// user. component_portal
 			(function($tipo, $value) use($section_tipo, $section_id){
-				$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
+				$model		= ontology_node::get_model_name_by_tipo($tipo,true);
 				$component	= component_common::get_instance(
 					$model,
 					$tipo,
@@ -548,7 +548,7 @@ class diffusion_section_stats extends diffusion {
 
 		// type. component_input_text. String, It can be one of these values: year, month, day
 			(function($tipo, $value) use($section_tipo, $section_id){
-				$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
+				$model		= ontology_node::get_model_name_by_tipo($tipo,true);
 				$component	= component_common::get_instance(
 					$model,
 					$tipo,
@@ -564,7 +564,7 @@ class diffusion_section_stats extends diffusion {
 
 		// date. component_date
 			(function($tipo, $year, $month, $day) use($section_tipo, $section_id){
-				$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
+				$model		= ontology_node::get_model_name_by_tipo($tipo,true);
 				$component	= component_common::get_instance(
 					$model,
 					$tipo,
@@ -589,7 +589,7 @@ class diffusion_section_stats extends diffusion {
 
 		// totals. component_json. Array of objects mandatory like [{"dd696": 24, "dd693": 110}]
 			(function($tipo, $value) use($section_tipo, $section_id){
-				$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
+				$model		= ontology_node::get_model_name_by_tipo($tipo,true);
 				$component	= component_common::get_instance(
 					$model,
 					$tipo,
@@ -652,7 +652,7 @@ class diffusion_section_stats extends diffusion {
 			          {
 			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
 			            "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
-			            "model": "'. ontology_node::get_modelo_name_by_tipo(USER_ACTIVITY_USER_TIPO,true) .'",
+			            "model": "'. ontology_node::get_model_name_by_tipo(USER_ACTIVITY_USER_TIPO,true) .'",
 			            "name": "User"
 			          }
 			        ]
@@ -799,7 +799,7 @@ class diffusion_section_stats extends diffusion {
 								$who_data_obj->{$item_key}->value += $actions_totals;
 							}else{
 
-								$model_name	= ontology_node::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO, true);
+								$model_name	= ontology_node::get_model_name_by_tipo(DEDALO_USER_NAME_TIPO, true);
 								$component	= component_common::get_instance(
 									$model_name,
 									DEDALO_USER_NAME_TIPO,

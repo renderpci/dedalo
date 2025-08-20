@@ -108,7 +108,7 @@ class diffusion_data {
 	public static function get_ddo_value( object $ddo, array $ddo_map, string $section_tipo, string|int $section_id ) : array {
 
 		$current_tipo	= $ddo->tipo;
-		$model_name		= ontology_node::get_modelo_name_by_tipo($current_tipo);
+		$model_name		= ontology_node::get_model_name_by_tipo($current_tipo);
 
 		$element = $model_name === 'relation_list'
 			? new relation_list($current_tipo, $section_id, $section_tipo, 'list')

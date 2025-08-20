@@ -85,7 +85,7 @@ class tool_common {
 
 		// component dato simple_tool_obj (dd1353)
 			$component_tipo			= tools_register::$simple_tool_obj_component_tipo;
-			$model					= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+			$model					= ontology_node::get_model_name_by_tipo($component_tipo,true);
 			$simple_tool_component	= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -411,7 +411,7 @@ class tool_common {
 								$el->section_tipo = $section_tipo;
 							}
 							if (!isset($el->model)) {
-								$el->model = ontology_node::get_modelo_name_by_tipo($el->tipo,true);
+								$el->model = ontology_node::get_model_name_by_tipo($el->tipo,true);
 							}
 							// check if the component is translatable and set to true or false
 							$el->translatable = ontology_node::get_translatable($el->tipo);
@@ -502,7 +502,7 @@ class tool_common {
 
 				// simple tool object 'dd1353'
 				$component_tipo	= 'dd1353';
-				$model			= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+				$model			= ontology_node::get_model_name_by_tipo($component_tipo,true);
 				$component		= component_common::get_instance(
 					$model,
 					$component_tipo,
@@ -636,7 +636,7 @@ class tool_common {
 		// name
 		// create the component to get his value
 			$component_tipo	= tools_register::$tipo_tool_name; // 'dd1326';
-			$model			= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_name_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -901,7 +901,7 @@ class tool_common {
 			$method_arguments	= $options->method_arguments ?? null;
 
 		// component
-			$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -997,7 +997,7 @@ class tool_common {
 							return []; // empty array
 						}
 						$user_profile_id		= (int)$user_profile->section_id;
-						$security_tools_model	= ontology_node::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
+						$security_tools_model	= ontology_node::get_model_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
 						$component				= component_common::get_instance(
 							$security_tools_model,
 							DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,

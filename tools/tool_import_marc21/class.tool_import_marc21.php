@@ -211,7 +211,7 @@ class tool_import_marc21 extends tool_common {
 								# Save on dedalo component
 								$component_tipo		= $element_vars->tipo;
 								$component_label	= ontology_node::get_termino_by_tipo($component_tipo);
-								$model_name			= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+								$model_name			= ontology_node::get_model_name_by_tipo($component_tipo,true);
 								$component			= component_common::get_instance(
 									$model_name,
 									$component_tipo,
@@ -236,7 +236,7 @@ class tool_import_marc21 extends tool_common {
 
 									foreach ($element_vars->dd_action as $component_tipo_action => $component_action_value) {
 
-										$model_name			= ontology_node::get_modelo_name_by_tipo($component_tipo_action,true);
+										$model_name			= ontology_node::get_model_name_by_tipo($component_tipo_action,true);
 										$component_action	= component_common::get_instance(
 											$model_name,
 											$component_tipo_action,
@@ -266,7 +266,7 @@ class tool_import_marc21 extends tool_common {
 							// when the component stored the filename, get the filename and save it
 							foreach ($ar_ddo_map as $ddo) {
 
-								$model			= ontology_node::get_modelo_name_by_tipo($ddo->tipo,true);
+								$model			= ontology_node::get_model_name_by_tipo($ddo->tipo,true);
 								$current_lang	= ontology_node::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 								$component		= component_common::get_instance(
 									$model,
@@ -436,7 +436,7 @@ class tool_import_marc21 extends tool_common {
 		$ddo			= reset($ddo_map);
 		$section_tipo	= $ddo->section_tipo;	// rsc205
 		$tipo			= $ddo->tipo;			// rsc137
-		$model_name		= ontology_node::get_modelo_name_by_tipo($tipo,true);
+		$model_name		= ontology_node::get_model_name_by_tipo($tipo,true);
 		$code			= pg_escape_string(DBi::_getConnection(), $marc21_id);
 
 		// JSON search_query_object to search
@@ -506,7 +506,7 @@ class tool_import_marc21 extends tool_common {
 
 		$section_tipo		= $series_ddo->section_tipo;		// rsc212 	# values list for Series / Collections
 		$tipo				= $series_ddo->tipo;				// rsc214 	# Series / Collections (component_input_text)
-		$model_name			= ontology_node::get_modelo_name_by_tipo($tipo,true);
+		$model_name			= ontology_node::get_model_name_by_tipo($tipo,true);
 		$serie_name			= pg_escape_string(DBi::_getConnection(), $collection_title);
 
 		// JSON search_query_object to search

@@ -563,7 +563,7 @@ class login extends common {
 	public static function get_user_code($section_id) : ?string {
 
 		$tipo = 'dd1053'; // Code input text
-		$model = ontology_node::get_modelo_name_by_tipo($tipo,true);
+		$model = ontology_node::get_model_name_by_tipo($tipo,true);
 		$component = component_common::get_instance(
 			$model,
 			$tipo,
@@ -625,7 +625,7 @@ class login extends common {
 
 		$active_account = false; // Default false
 
-		$model					= ontology_node::get_modelo_name_by_tipo(DEDALO_ACTIVE_ACCOUNT_TIPO,true);
+		$model					= ontology_node::get_model_name_by_tipo(DEDALO_ACTIVE_ACCOUNT_TIPO,true);
 		$component_radio_button	= component_common::get_instance(
 			$model,
 			DEDALO_ACTIVE_ACCOUNT_TIPO,
@@ -1350,7 +1350,7 @@ class login extends common {
 				foreach ($children as $children_tipo) {
 					$item = (object)[
 						'tipo'	=> $children_tipo,
-						'model'	=> ontology_node::get_modelo_name_by_tipo($children_tipo,true),
+						'model'	=> ontology_node::get_model_name_by_tipo($children_tipo,true),
 						'label'	=> ontology_node::get_termino_by_tipo($children_tipo, DEDALO_APPLICATION_LANG, true, true)
 					];
 					$properties->login_items[] = $item;

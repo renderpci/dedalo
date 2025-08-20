@@ -29,7 +29,7 @@ class tool_tc extends tool_common {
 				// $key				= $options->key ?? null; // optional dato key
 
 		// component
-			$model		= ontology_node::get_modelo_name_by_tipo($component_tipo, true);
+			$model		= ontology_node::get_model_name_by_tipo($component_tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$component_tipo,

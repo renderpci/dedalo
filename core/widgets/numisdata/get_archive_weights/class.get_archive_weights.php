@@ -36,7 +36,7 @@ class get_archive_weights extends widget_common {
 
 			#
 			# PORTAL ROWS
-				$model_name 	  = ontology_node::get_modelo_name_by_tipo($current_component_tipo,true); // Expected portal
+				$model_name 	  = ontology_node::get_model_name_by_tipo($current_component_tipo,true); // Expected portal
 				$component_portal = component_common::get_instance(
 					$model_name,
 					$current_component_tipo,
@@ -114,7 +114,7 @@ class get_archive_weights extends widget_common {
 					$section_id 	= $current_locator->section_id;
 					$section_tipo 	= $current_locator->section_tipo;
 
-					$used_model_name	= ontology_node::get_modelo_name_by_tipo($component_tipo_used,true); // Expected portal
+					$used_model_name	= ontology_node::get_model_name_by_tipo($component_tipo_used,true); // Expected portal
 					$used 				= component_common::get_instance(
 						$used_model_name,
 						$component_tipo_used,
@@ -129,7 +129,7 @@ class get_archive_weights extends widget_common {
 					if (empty($used_dato) || $used_dato[0]->section_id==='2') continue;
 
 
-					$duplicated_modelo_name	= ontology_node::get_modelo_name_by_tipo($component_tipo_duplicated,true); // Expected portal
+					$duplicated_modelo_name	= ontology_node::get_model_name_by_tipo($component_tipo_duplicated,true); // Expected portal
 					$duplicated				= component_common::get_instance(
 						$duplicated_modelo_name,
 						$component_tipo_duplicated,
@@ -145,7 +145,7 @@ class get_archive_weights extends widget_common {
 
 
 					//weights
-					$data_weights_model_name	= ontology_node::get_modelo_name_by_tipo($component_tipo_data_weights,true); // Expected portal
+					$data_weights_model_name	= ontology_node::get_model_name_by_tipo($component_tipo_data_weights,true); // Expected portal
 					$data_weights				= component_common::get_instance(
 						$data_weights_model_name,
 						$component_tipo_data_weights,
@@ -162,7 +162,7 @@ class get_archive_weights extends widget_common {
 					}
 
 					//diameter
-					$data_diameter_model_name	= ontology_node::get_modelo_name_by_tipo($component_tipo_data_diameter,true); // Expected portal
+					$data_diameter_model_name	= ontology_node::get_model_name_by_tipo($component_tipo_data_diameter,true); // Expected portal
 					$data_diameter				= component_common::get_instance(
 						$data_diameter_model_name,
 						$component_tipo_data_diameter,

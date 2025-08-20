@@ -149,7 +149,7 @@ class calculation extends widget_common {
 						$component_tipo	= $current_component->tipo;
 						$var_name		= $current_component->var_name;
 						$options		= isset($current_component->options) ? $current_component->options : null;
-						$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name		= ontology_node::get_model_name_by_tipo($component_tipo,true);
 						$lang			= ontology_node::get_translatable( $component_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 						$current_component = component_common::get_instance(
@@ -171,7 +171,7 @@ class calculation extends widget_common {
 						$component_tipo	= $current_component->tipo;
 						$var_name		= $current_component->var_name;
 						$options		=  isset($current_component->options) ? $current_component->options : null;
-						$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name		= ontology_node::get_model_name_by_tipo($component_tipo,true);
 						$lang			= ontology_node::get_translatable( $component_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 						$search_options = new StdClass;
@@ -188,7 +188,7 @@ class calculation extends widget_common {
 							$component_tipo	= $current_component->tipo;
 							$var_name		= $current_component->var_name;
 							$options		=  isset($current_component->options) ? $current_component->options : null;
-							$model_name		= ontology_node::get_modelo_name_by_tipo( $component_tipo,true );
+							$model_name		= ontology_node::get_model_name_by_tipo( $component_tipo,true );
 							$lang			= ontology_node::get_translatable( $component_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 							$search_options = new StdClass;
@@ -220,7 +220,7 @@ class calculation extends widget_common {
 					$options		= isset($current_component->options) ? $current_component->options : null;
 
 					// Component (component_json) where is stored source data, a json search_query_object
-						$model_name			= ontology_node::get_modelo_name_by_tipo( $component_tipo,true );
+						$model_name			= ontology_node::get_model_name_by_tipo( $component_tipo,true );
 						$lang				= ontology_node::get_translatable( $component_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$current_component	= component_common::get_instance(
 							$model_name,
@@ -380,7 +380,7 @@ class calculation extends widget_common {
 
 		$current_section_tipo	= $search_options->section_tipo;
 		$current_tipo			= $search_options->component_tipo;
-		$model_name				= ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+		$model_name				= ontology_node::get_model_name_by_tipo($current_tipo,true);
 		$lang					= ontology_node::get_translatable( $current_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 		# section_id filter

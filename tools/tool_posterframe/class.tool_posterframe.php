@@ -31,7 +31,7 @@ class tool_posterframe extends tool_common {
 			$current_time	= $options->current_time ?? null;
 
 		// component_portal. Create a new section and attach it to the target portal
-			$component_portal_model	= ontology_node::get_modelo_name_by_tipo(
+			$component_portal_model	= ontology_node::get_model_name_by_tipo(
 				$item_value->component_portal,
 				true
 			);
@@ -84,7 +84,7 @@ class tool_posterframe extends tool_common {
 				}
 
 		// component_image. Gets the proper path and filename where to save the posterframe file
-			$component_image_model = ontology_node::get_modelo_name_by_tipo(
+			$component_image_model = ontology_node::get_model_name_by_tipo(
 				$item_value->component_image,
 				true
 			);
@@ -107,7 +107,7 @@ class tool_posterframe extends tool_common {
 				// ];
 
 		// component_av. Needed to get av file paths
-			$component_av_model	= ontology_node::get_modelo_name_by_tipo($tipo,true);
+			$component_av_model	= ontology_node::get_model_name_by_tipo($tipo,true);
 			$component_av		= component_common::get_instance(
 				$component_av_model,
 				$tipo,

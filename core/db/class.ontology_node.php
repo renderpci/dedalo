@@ -500,13 +500,13 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_MODELO_NAME_BY_TIPO
+	* GET_MODEL_NAME_BY_TIPO
 	* Static version
 	* @param string $tipo
 	* @param bool $from_cache = true
 	* @return string $modelo_name
 	*/
-	public static function get_modelo_name_by_tipo( string $tipo, bool $from_cache=true ) : string {
+	public static function get_model_name_by_tipo( string $tipo, bool $from_cache=true ) : string {
 
 		static $modelo_name_by_tipo;
 
@@ -526,7 +526,7 @@ class ontology_node extends ontology_record {
 
 
 		return $modelo_name;
-	}//end get_modelo_name_by_tipo
+	}//end get_model_name_by_tipo
 
 
 
@@ -918,7 +918,7 @@ class ontology_node extends ontology_record {
 
 			// Exclude models optional
 			if (!empty($ar_exclude_models)) {
-				$modelo_name = ontology_node::get_modelo_name_by_tipo($current_tipo, true);
+				$modelo_name = ontology_node::get_model_name_by_tipo($current_tipo, true);
 				if (in_array($modelo_name, $ar_exclude_models)) {
 					continue; // Skip current model and children
 				}
@@ -1480,7 +1480,7 @@ class ontology_node extends ontology_record {
 		}
 
 		// try to resolve model. If empty, the tipo do not exists in jer_dd
-		$model = ontology_node::get_modelo_name_by_tipo($tipo,true);
+		$model = ontology_node::get_model_name_by_tipo($tipo,true);
 		if (empty($model)) {
 			return false;
 		}
@@ -1829,7 +1829,7 @@ class ontology_node extends ontology_record {
 					$item->{$property} = $tipo;
 					break;
 				case 'model':
-					// $item->{$property} = ontology_node::get_modelo_name_by_tipo($tipo,true);
+					// $item->{$property} = ontology_node::get_model_name_by_tipo($tipo,true);
 					$item->{$property} = $ontology_node->get_model();
 					break;
 				case 'model_tipo':

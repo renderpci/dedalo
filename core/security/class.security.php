@@ -148,7 +148,7 @@ class security {
 
 		// access to list of values: public (matrix_list) and private (matrix_dd)
 			if ($permissions===0) {
-				$model_name = ontology_node::get_modelo_name_by_tipo($parent_tipo, true);
+				$model_name = ontology_node::get_model_name_by_tipo($parent_tipo, true);
 				if ($model_name==='section') {
 					$matrix_table = common::get_matrix_table_from_tipo($parent_tipo);
 					if ($matrix_table==='matrix_list' || $matrix_table==='matrix_dd' || $matrix_table==='matrix_notes'){
@@ -337,7 +337,7 @@ class security {
 	public static function get_user_profile(int $user_id) : ?object {
 
 		// user profile
-			$component_profile_model	= ontology_node::get_modelo_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
+			$component_profile_model	= ontology_node::get_model_name_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
 			$component_profile			= component_common::get_instance(
 				$component_profile_model,
 				DEDALO_USER_PROFILE_TIPO,
@@ -460,7 +460,7 @@ class security {
 			}else{
 
 				// Resolve from component
-				$security_administrator_model		= ontology_node::get_modelo_name_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
+				$security_administrator_model		= ontology_node::get_model_name_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
 				$component_security_administrator	= component_common::get_instance(
 					$security_administrator_model,
 					DEDALO_SECURITY_ADMINISTRATOR_TIPO,
@@ -516,7 +516,7 @@ class security {
 			}else{
 
 				// Resolve from component data
-				$model		= ontology_node::get_modelo_name_by_tipo(DEDALO_USER_DEVELOPER_TIPO,true);
+				$model		= ontology_node::get_model_name_by_tipo(DEDALO_USER_DEVELOPER_TIPO,true);
 				$component	= component_common::get_instance(
 					$model,
 					DEDALO_USER_DEVELOPER_TIPO,
