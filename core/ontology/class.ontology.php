@@ -68,7 +68,7 @@ class ontology {
 		*	"esmodelo": "no",
 		*	"esdescriptor": "si",
 		*	"visible": "si",
-		*	"norden": "28",
+		*	"order_number": "28",
 		*	"tld": "test",
 		*	"traducible": "no",
 		*	"relaciones": "null",
@@ -1491,7 +1491,7 @@ class ontology {
 				}else{
 
 					$order_value = reset($order_data);
-					$jer_dd_record->set_norden( (int)$order_value );
+					$jer_dd_record->set_order_number( (int)$order_value );
 				}
 			}
 
