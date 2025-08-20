@@ -305,30 +305,6 @@ class component_section_id extends component_common {
 
 
 	/**
-	* EXTRACT_COMPONENT_DATO_FALLBACK
-	* Catch extract_component_dato_fallback common method calls
-	* @return array []
-	*/
-	public static function extract_component_dato_fallback(object $component, string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : array {
-
-		return [];
-	}//end extract_component_dato_fallback
-
-
-
-	/**
-	* EXTRACT_COMPONENT_VALUE_FALLBACK
-	* Catch common method calls
-	* @return string ''
-	*/
-	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
-
-		return '';
-	}//end extract_component_value_fallback
-
-
-
-	/**
 	* GET_DIFFUSION_DATA
 	* Resolve the default diffusion data
 	* is used by the `diffusion_data`
@@ -354,7 +330,6 @@ class component_section_id extends component_common {
 
 		return $diffusion_data;
 	}//end get_diffusion_data
-
 
 
 
