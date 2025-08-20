@@ -158,7 +158,7 @@ abstract class component_common extends common {
 			}
 
 		// model check. Verify 'component_name' and 'tipo' are correct
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name = ontology_node::get_modelo_name_by_tipo($tipo,true);
 			if (empty($component_name)) {
 
 				// calculate component name (is ontology element model)
@@ -275,7 +275,7 @@ abstract class component_common extends common {
 				// section_tipo format check
 					if (!empty($section_tipo)) {
 						# Verify model_name is section
-						$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+						$section_model_name = ontology_node::get_modelo_name_by_tipo($section_tipo,true);
 						if ($section_model_name!=='section') {
 							dump($section_tipo," Verify model_name is section: section_model_name: $section_model_name");
 							if (empty($section_model_name)) {
@@ -1445,8 +1445,8 @@ abstract class component_common extends common {
 	public static function update_observer_dato(object $observer, object $locator, ?array $observable_dato, string $observable_tipo) : array {
 
 		// ar_observe. Create the observer component
-			$RecordObj_dd	= new RecordObj_dd($observer->component_tipo);
-			$properties		= $RecordObj_dd->get_properties();
+			$ontology_node	= new ontology_node($observer->component_tipo);
+			$properties		= $ontology_node->get_properties();
 			$ar_observe		= $properties->observe ?? [];
 
 		// current_observer. Get the current observe preference in ontology to be processed
@@ -1558,7 +1558,7 @@ abstract class component_common extends common {
 			$ar_data = [];
 			if(!empty($ar_section)) {
 
-				$component_name = RecordObj_dd::get_modelo_name_by_tipo($observer->component_tipo,true);
+				$component_name = ontology_node::get_modelo_name_by_tipo($observer->component_tipo,true);
 
 				foreach ($ar_section as $current_section) {
 					// create the observer component that will be update
@@ -1799,7 +1799,7 @@ abstract class component_common extends common {
 				$section_id		= $custom_resolve_section_id($source->section_id);
 				$section_tipo	= $custom_resolve_section_tipo($source->section_tipo);
 
-				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 				$component		= component_common::get_instance(
 					$model_name,
 					$component_tipo,
@@ -1914,7 +1914,7 @@ abstract class component_common extends common {
 			}
 
 		// check target_section_tipo
-			$target_section_model = RecordObj_dd::get_modelo_name_by_tipo($target_section_tipo,true);
+			$target_section_model = ontology_node::get_modelo_name_by_tipo($target_section_tipo,true);
 			if ($target_section_model!=='section') {
 
 				// response error
@@ -2001,7 +2001,7 @@ abstract class component_common extends common {
 				$ar_label = [];
 				foreach ($ar_components_related as $related_tipo) {
 
-					$model_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
+					$model_name = ontology_node::get_modelo_name_by_tipo($related_tipo,true);
 					// if ($model_name==='component_autocomplete_hi') {
 					if (in_array($model_name, $components_with_relations)) {
 
@@ -2051,7 +2051,7 @@ abstract class component_common extends common {
 
 					// create the component of tool_simple_object_tipo and get his data
 					$component_tool_simple_object_tipo	= tools_register::$simple_tool_obj_component_tipo; // 'dd1353'
-					$model_name							= RecordObj_dd::get_modelo_name_by_tipo($component_tool_simple_object_tipo, true);
+					$model_name							= ontology_node::get_modelo_name_by_tipo($component_tool_simple_object_tipo, true);
 					$component_tool_name				= component_common::get_instance(
 						$model_name, // string model
 						$component_tool_simple_object_tipo, // string tipo
@@ -2174,7 +2174,7 @@ abstract class component_common extends common {
 				// if the section doesn't' exist, it is not included in the resolution.
 				foreach ($ar_target_section as $current_section) {
 					$current_sections_tipo = $current_section->tipo ?? $current_section;
-					$model = RecordObj_dd::get_modelo_name_by_tipo($current_sections_tipo);
+					$model = ontology_node::get_modelo_name_by_tipo($current_sections_tipo);
 					if( empty($model) ){
 						debug_log(__METHOD__
 							. " Skipped section it doesn't exists: " . to_string( $current_sections_tipo )
@@ -2487,7 +2487,7 @@ abstract class component_common extends common {
 
 		// empty case
 			if (empty($ar_target_section_ddo)) {
-				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
+				$component_name = ontology_node::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
 				debug_log(__METHOD__
 					. " Error Processing Request. Please, define target section structure for component: $component_name".PHP_EOL
 					. ' tipo: '. $this->tipo .PHP_EOL
@@ -2533,7 +2533,7 @@ abstract class component_common extends common {
 			foreach ($ar_request_config as $config_context_item) {
 				$ddo_map = $config_context_item->show->ddo_map;
 				foreach ($ddo_map as $ddo) {
-					$model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo);
+					$model = ontology_node::get_modelo_name_by_tipo($ddo->tipo);
 					if($model === 'component_dataframe'){
 						$ar_dataframe_ddo[] = $ddo;
 					}
@@ -2578,7 +2578,7 @@ abstract class component_common extends common {
 		// config_context. Get_config_context normalized
 			foreach ($dataframe_ddo as $ddo) {
 
-				$model = RecordObj_dd::get_modelo_name_by_tipo( $ddo->tipo );
+				$model = ontology_node::get_modelo_name_by_tipo( $ddo->tipo );
 				$dataframe_component = component_common::get_instance(
 					$model, // string model
 					$ddo->tipo, // string tipo
@@ -3419,7 +3419,7 @@ abstract class component_common extends common {
 
 						$lang = isset($end_path->lang)
 							? $end_path->lang
-							: (RecordObj_dd::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
+							: (ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
 
 						// Set default
 						$select_object->component_path = ['components',$component_tipo,$selector,$lang];
@@ -4033,8 +4033,8 @@ abstract class component_common extends common {
 				// array_unshift($path, ...$pre_path);
 				array_unshift($path, (object)[
 					'component_tipo'	=> $this->from_component_tipo,
-					'model'				=> RecordObj_dd::get_modelo_name_by_tipo($this->from_component_tipo,true),
-					'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
+					'model'				=> ontology_node::get_modelo_name_by_tipo($this->from_component_tipo,true),
+					'name'				=> ontology_node::get_termino_by_tipo($this->from_component_tipo),
 					'section_tipo'		=> $this->from_section_tipo
 				]);
 			}

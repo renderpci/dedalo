@@ -219,7 +219,7 @@ class component_string_common extends component_common {
 			}
 			$path_end = end($query_object->path);
 			$component_tipo = $path_end->component_tipo;
-			$translatable = RecordObj_dd::get_translatable($component_tipo);
+			$translatable = ontology_node::get_translatable($component_tipo);
 
 		// escape q string for DB
 			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));

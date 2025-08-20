@@ -56,7 +56,7 @@ final class dd_component_3d_api {
 				$response->errors   = [];
 
 		// component
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -160,7 +160,7 @@ final class dd_component_3d_api {
 				$response->errors   = [];
 
 		// component
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo

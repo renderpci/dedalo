@@ -346,7 +346,7 @@ class request_config_object extends stdClass {
 						}
 
 					// check valid tipo (The model is unsolvable)
-						$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_ddo->tipo );
+						$tipo_is_valid = ontology_node::check_tipo_is_valid( $current_ddo->tipo );
 						if ( $tipo_is_valid === false ) {
 							debug_log(__METHOD__
 								.' WARNING. Ignored current_ddo: is invalid '
@@ -355,14 +355,14 @@ class request_config_object extends stdClass {
 								.' ddo_map type: ' . gettype($ddo_map) . PHP_EOL
 								.' ddo_map: ' . json_encode($ddo_map, JSON_PRETTY_PRINT) . PHP_EOL
 								.' section_tipo: ' . $section_tipo . PHP_EOL
-								.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo)
+								.' current_model: ' . ontology_node::get_modelo_name_by_tipo($current_ddo->tipo)
 								, logger::WARNING
 							);
 							continue;
 						}
 
 					// check if the ddo is active into the ontology
-						$is_active = RecordObj_dd::check_active_tld($current_ddo->tipo);
+						$is_active = ontology_node::check_active_tld($current_ddo->tipo);
 						if( $is_active === false ){
 							debug_log(__METHOD__
 								. " Removed ddo from ddo_map->show definition because the tld is not installed " . PHP_EOL
@@ -373,11 +373,11 @@ class request_config_object extends stdClass {
 						}
 
 					// model. Calculated always to prevent errors
-						$current_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo, true);
+						$current_ddo->model = ontology_node::get_modelo_name_by_tipo($current_ddo->tipo, true);
 
 					// label. Add to all ddo_map items
 						if (!isset($current_ddo->label)) {
-							$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+							$current_ddo->label = ontology_node::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 						}
 
 					// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)

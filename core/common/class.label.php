@@ -150,8 +150,8 @@ abstract class label {
 		$ar_term = RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
 		foreach ($ar_term as $current_terminoID) {
 
-			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
-			$properties		= $RecordObj_dd->get_properties();
+			$ontology_node	= new ontology_node($current_terminoID);
+			$properties		= $ontology_node->get_properties();
 
 			// No data in field 'properties'
 				if(empty($properties) || empty($properties->name)) {
@@ -164,7 +164,7 @@ abstract class label {
 				}
 
 			// get label value
-				$label = RecordObj_dd::get_termino_by_tipo(
+				$label = ontology_node::get_termino_by_tipo(
 					$current_terminoID,
 					$lang,
 					$cached,
@@ -210,8 +210,8 @@ abstract class label {
 		$ar_term_id_by_model_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
 		foreach ($ar_term_id_by_model_name as $current_terminoID) {
 
-			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
-			$properties		= $RecordObj_dd->get_properties();
+			$ontology_node	= new ontology_node($current_terminoID);
+			$properties		= $ontology_node->get_properties();
 
 			// No data in field 'properties'
 			if(empty($properties) || empty($properties->name)) {

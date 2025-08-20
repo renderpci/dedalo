@@ -68,7 +68,7 @@ class component_relation_common extends component_common {
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
 
 		// lang. translatable conditioned
-			$translatable = RecordObj_dd::get_translatable($tipo);
+			$translatable = ontology_node::get_translatable($tipo);
 			if ($translatable===true) {
 				if (empty($lang)) {
 					$lang = DEDALO_DATA_LANG;
@@ -94,8 +94,8 @@ class component_relation_common extends component_common {
 			}
 
 		// relation config . Set current component relation_type and relation_type_rel based on properties config
-			$RecordObj_dd	= new RecordObj_dd($tipo);
-			$properties		= $RecordObj_dd->get_properties();
+			$ontology_node	= new ontology_node($tipo);
+			$properties		= $ontology_node->get_properties();
 
 			// relation_type
 				$this->relation_type = isset($properties->config_relation->relation_type)
@@ -228,7 +228,7 @@ class component_relation_common extends component_common {
 			if (!empty($this->dato_full)) {
 
 				$this->dato = [];
-				$translatable = $this->RecordObj_dd->get_traducible();
+				$translatable = $this->ontology_node->get_traducible();
 				foreach ($this->dato_full as $locator) {
 					if ($translatable!=='si') {
 						$this->dato[] = $locator;
@@ -338,7 +338,7 @@ class component_relation_common extends component_common {
 
 			// check locator target section is valid
 			// Validates old data without active TLD
-				$tipo_is_valid = RecordObj_dd::check_tipo_is_valid($locator->section_tipo);
+				$tipo_is_valid = ontology_node::check_tipo_is_valid($locator->section_tipo);
 				if (!$tipo_is_valid) {
 					debug_log(__METHOD__
 						. " Ignored locator with invalid target section. Install the missing TLD (".get_tld_from_tipo($locator->section_tipo).") or remove this locator from dato " . PHP_EOL
@@ -398,7 +398,7 @@ class component_relation_common extends component_common {
 
 				// model check
 				if (!isset($ddo->model)) {
-					$ddo->model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+					$ddo->model = ontology_node::get_modelo_name_by_tipo($ddo->tipo,true);
 					debug_log(__METHOD__
 						. " ddo without model ! Added calculated model: $ddo->model" . PHP_EOL
 						. ' ddo: ' . to_string($ddo) . PHP_EOL
@@ -459,7 +459,7 @@ class component_relation_common extends component_common {
 				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
 				// set the path that will be used to create the column_obj id
 				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;
-				$translatable			= RecordObj_dd::get_translatable($ddo->tipo);
+				$translatable			= ontology_node::get_translatable($ddo->tipo);
 				// if the component has a dataframe component, create his caller_dataframe to related with the locator
 				$caller_dataframe 		= ($ddo->model === 'component_dataframe')
 					? (object)[
@@ -469,7 +469,7 @@ class component_relation_common extends component_common {
 					  ]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+				$component_model		= ontology_node::get_modelo_name_by_tipo($ddo->tipo,true);
 				// create the component with the ddo definition
 				// dataframe case: the data of the component_dataframe is inside the same section than the caller, so, his section_tipo and section_id need to be the same as the main component
 				$current_component		= component_common::get_instance(
@@ -887,7 +887,7 @@ class component_relation_common extends component_common {
 	*/
 	public function get_locator_properties_to_check() {
 
-		return (RecordObj_dd::get_translatable($this->tipo))
+		return (ontology_node::get_translatable($this->tipo))
 			? ['section_id','section_tipo','type','tag_id','lang']
 			: ['section_id','section_tipo','type','tag_id'];
 
@@ -1202,7 +1202,7 @@ class component_relation_common extends component_common {
 			$value = array();
 			foreach ($ar_components_related as $component_tipo) {
 
-				$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$model_name			= ontology_node::get_modelo_name_by_tipo($component_tipo, true);
 				$current_component	= component_common::get_instance(
 					$model_name,
 					$component_tipo,
@@ -1306,7 +1306,7 @@ class component_relation_common extends component_common {
 
 
 				# Target section data
-				$model_name						= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
+				$model_name						= ontology_node::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
 				$mode							= 'edit';
 				$lang							= DEDALO_DATA_NOLAN;
 				$component_relation_children	= component_common::get_instance(
@@ -1545,7 +1545,7 @@ class component_relation_common extends component_common {
 
 
 		// relations_search. only for component_autocomplete_hi
-			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($component_tipo);
+			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($component_tipo);
 			if ($legacy_model==='component_autocomplete_hi'){
 				$query_object = component_relation_common::add_relations_search($query_object);
 			}
@@ -1864,8 +1864,8 @@ class component_relation_common extends component_common {
 				foreach ($set_observed_data as $current_ddo) {
 
 					$current_component_tipo	= $current_ddo->tipo;
-					$model_name				= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
-					$is_translatable		= RecordObj_dd::get_translatable($current_component_tipo);
+					$model_name				= ontology_node::get_modelo_name_by_tipo($current_component_tipo, true);
+					$is_translatable		= ontology_node::get_translatable($current_component_tipo);
 					$observer_component		= component_common::get_instance(
 						$model_name,
 						$current_component_tipo,
@@ -1918,7 +1918,7 @@ class component_relation_common extends component_common {
 
 				// overwrite source locator
 					$component_to_search_tipo	= $component_to_search; // $ar_component_to_search[0] ?? null;
-					$model_name					= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
+					$model_name					= ontology_node::get_modelo_name_by_tipo($component_to_search_tipo, true);
 					$component_to_search		= component_common::get_instance(
 						$model_name,
 						$component_to_search_tipo,
@@ -1940,7 +1940,7 @@ class component_relation_common extends component_common {
 					if (isset($locator)) {
 
 						$data_from_field_tipo	= $properties->source->source_overwrite->data_from_field;
-						$model_name				= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
+						$model_name				= ontology_node::get_modelo_name_by_tipo($data_from_field_tipo, true);
 						$component_overwrite	= component_common::get_instance(
 							$model_name,
 							$data_from_field_tipo,
@@ -1980,7 +1980,7 @@ class component_relation_common extends component_common {
 				$data_from_field  = $properties->source->data_from_field;
 
 				foreach ($data_from_field as $current_component_tipo) {
-					$model_name					= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$model_name					= ontology_node::get_modelo_name_by_tipo($current_component_tipo, true);
 					$component_data_for_search	= component_common::get_instance(
 						$model_name,
 						$current_component_tipo,
@@ -2124,7 +2124,7 @@ class component_relation_common extends component_common {
 							. ' section_tipo: ' . $this->section_tipo . PHP_EOL
 							. ' section_id: ' . $this->section_id . PHP_EOL
 							. ' model: ' .get_class($this) . PHP_EOL
-							. ' label: ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL
+							. ' label: ' . ontology_node::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL
 							. ' dato: ' . to_string($dato)
 							, logger::WARNING
 						);
@@ -2142,7 +2142,7 @@ class component_relation_common extends component_common {
 			if(SHOW_DEBUG===true) {
 				$total = exec_time_unit($start_time,'ms')." ms";
 				debug_log(__METHOD__
-					." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true)
+					." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. ontology_node::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true)
 					, logger::DEBUG
 				);
 			}
@@ -2163,7 +2163,7 @@ class component_relation_common extends component_common {
 	public function get_relations_search_value() : ?array {
 
 		// only for component_autocomplete_hi
-			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->tipo);
 			if ($legacy_model!=='component_autocomplete_hi') {
 				return null;
 			}
@@ -2221,7 +2221,7 @@ class component_relation_common extends component_common {
 			$f_component_tipo 	= $current_obj_value->component_tipo;
 
 			// Calculate list values of each element
-				$c_model_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
+				$c_model_name 		= ontology_node::get_modelo_name_by_tipo($f_component_tipo,true);
 				$current_component  = component_common::get_instance(
 					$c_model_name,
 					$f_component_tipo,
@@ -2333,7 +2333,7 @@ class component_relation_common extends component_common {
 
 					// Override label with custom component parse
 					if (isset($properties->stats_look_at) && isset($properties->valor_arguments)) {
-						$model_name	= RecordObj_dd::get_modelo_name_by_tipo(reset($properties->stats_look_at), true);
+						$model_name	= ontology_node::get_modelo_name_by_tipo(reset($properties->stats_look_at), true);
 						$label		= $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
 					}
 
@@ -2453,7 +2453,7 @@ class component_relation_common extends component_common {
 					{
 						"section_tipo": "'.$hierarchy_section_tipo.'",
 						"component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'",
-						"model": "'.RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
+						"model": "'.ontology_node::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
 						"name": "Active"
 					}
 				]
@@ -2692,7 +2692,7 @@ class component_relation_common extends component_common {
 					foreach ((array)$target_values as $current_component_tipo) {
 
 						// short vars
-							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+							$model_name		= ontology_node::get_modelo_name_by_tipo($current_component_tipo,true);
 							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
 						// data
@@ -2720,7 +2720,7 @@ class component_relation_common extends component_common {
 									if ( empty($current_section_tipo) ) {
 										continue;
 									}
-									$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+									$section_model_name = ontology_node::get_modelo_name_by_tipo($current_section_tipo,true);
 									if ( $section_model_name==='section' ) {
 										$ar_section_tipo[] = $current_section_tipo;
 									}else{
@@ -2763,7 +2763,7 @@ class component_relation_common extends component_common {
 						$valid_sections_tipo = [];
 						foreach ($current_item_values as $current_section_tipo) {
 							// get the tld from the current tipo to be checked with the active tlds
-							$is_active= RecordObj_dd::check_active_tld($current_section_tipo);
+							$is_active= ontology_node::check_active_tld($current_section_tipo);
 							if($is_active === true){
 								$valid_sections_tipo[] = $current_section_tipo;
 							}else{
@@ -2845,7 +2845,7 @@ class component_relation_common extends component_common {
 						$last_path = end($object->path);
 
 						// check if the ddo is active into the ontology
-							$is_active = RecordObj_dd::check_active_tld($last_path->component_tipo);
+							$is_active = ontology_node::check_active_tld($last_path->component_tipo);
 							if( $is_active === false ){
 								debug_log(__METHOD__
 									. " Removed fixed filter value from sqo definition because the tld is not installed " . PHP_EOL
@@ -3022,8 +3022,8 @@ class component_relation_common extends component_common {
 		$data_fn		= $dd_object->data_fn ?? null;
 		$section_tipo	= $data->section_tipo;
 		$section_id		= $data->section_id;
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$translatable	= RecordObj_dd::get_translatable($tipo);
+		$model			= ontology_node::get_modelo_name_by_tipo($tipo,true);
+		$translatable	= ontology_node::get_translatable($tipo);
 		$component		= component_common::get_instance(
 			$model,
 			$tipo,

@@ -69,7 +69,7 @@ class area_graph extends area_common {
 				}
 
 			// hierarchy target section tipo
-				$model			= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_target_section_tipo,true);
+				$model			= ontology_node::get_modelo_name_by_tipo($hierarchy_target_section_tipo,true);
 				$target_section	= component_common::get_instance(
 					$model,
 					$hierarchy_target_section_tipo,
@@ -94,7 +94,7 @@ class area_graph extends area_common {
 				}
 
 			// hierarchy target section name
-				$model					= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO,true);
+				$model					= ontology_node::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO,true);
 				$hierarchy_section_name	= component_common::get_instance(
 					$model,
 					DEDALO_HIERARCHY_TERM_TIPO,
@@ -109,7 +109,7 @@ class area_graph extends area_common {
 				}
 
 			// hierarchy order
-				$model						= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ORDER_TIPO,true);
+				$model						= ontology_node::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ORDER_TIPO,true);
 				$hierarchy_section_order	= component_common::get_instance(
 					$model,
 					DEDALO_HIERARCHY_ORDER_TIPO,
@@ -204,7 +204,7 @@ class area_graph extends area_common {
 
 		$tipo			= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // 'hierarchy9' component_select
 		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO; // hierarchy1
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 		$component		= component_common::get_instance(
 			$model_name,
 			$tipo,
@@ -238,7 +238,7 @@ class area_graph extends area_common {
 
 		// component
 			$tipo			= DEDALO_HIERARCHY_TYPES_NAME_TIPO;
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$parent			= $typology_section_id;
 			$mode			= 'list';
 			$lang			= DEDALO_DATA_LANG;
@@ -285,7 +285,7 @@ class area_graph extends area_common {
 			}
 
 		$tipo			= DEDALO_HIERARCHY_TYPES_ORDER;
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model_name		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 		$section_id		= $typology_section_id;
 		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
@@ -325,7 +325,7 @@ class area_graph extends area_common {
 
 		// short vars
 			$tipo			= DEDALO_HIERARCHY_TERM_TIPO;
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$section_id		= $hierarchy_section_id;
 			$mode			= 'list';
 			$lang			= DEDALO_DATA_LANG;
@@ -619,7 +619,7 @@ class area_graph extends area_common {
 		$section_id 	= $ar_parts[1];
 
 		$tipo 			= DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
-		$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); // 'component_relation_children';
+		$model_name 	= ontology_node::get_modelo_name_by_tipo($tipo,true); // 'component_relation_children';
 		$mode 			= 'list';
 		$component_relation_children = component_common::get_instance(
 			$model_name,

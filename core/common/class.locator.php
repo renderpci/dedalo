@@ -518,7 +518,7 @@ class locator extends stdClass {
 			}
 
 		// check valid section_tipo
-			$tipo_is_valid = RecordObj_dd::check_tipo_is_valid($this->section_tipo);
+			$tipo_is_valid = ontology_node::check_tipo_is_valid($this->section_tipo);
 			if ($tipo_is_valid===false) {
 				$response->result	= false;
 				$response->errors[] = 'Invalid locator target section_tipo.';

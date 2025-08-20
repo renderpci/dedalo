@@ -70,7 +70,7 @@ class tool_lang extends tool_common {
 			$key	= $translator_config->key;
 
 		// Source text . Get source text from component (source_lang)
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$component_tipo,

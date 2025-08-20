@@ -34,11 +34,11 @@ abstract class common {
 		public $dato; // object dato (JSON encoded in db)
 		public $section_id;
 
-		// object RecordObj_dd. Ontology definition object
-		public $RecordObj_dd;
+		// object ontology_node. Ontology definition object
+		public $ontology_node;
 
-		// norden
-		public $norden;
+		// order_number
+		public $order_number;
 
 		// string traducible (si|no)
 		public $traducible;
@@ -354,7 +354,7 @@ abstract class common {
 
 	/**
 	* LOAD STRUCTURE DATA
-	* Get data once from Ontology (tipo, model, norden, estraducible, etc.)
+	* Get data once from Ontology (tipo, model, order_number, estraducible, etc.)
 	* @return bool
 	*/
 	protected function load_structure_data() : bool {
@@ -369,10 +369,10 @@ abstract class common {
 
 		if( !$this->bl_loaded_structure_data) {
 
-			$this->RecordObj_dd	= new RecordObj_dd($this->tipo);
+			$this->ontology_node	= new ontology_node($this->tipo);
 
 			// fix vars
-				$this->model	= $this->RecordObj_dd->get_modelo();
+				$this->model	= $this->ontology_node->get_model();
 				$this->norden	= $this->RecordObj_dd->get_norden();
 				$this->label	= RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
@@ -385,7 +385,7 @@ abstract class common {
 				}
 
 			// properties : Always JSON decoded
-				$properties = $this->RecordObj_dd->get_properties();
+				$properties = $this->ontology_node->get_properties();
 				$this->properties = !empty($properties) ? $properties : false;
 
 			// matrix_table
@@ -461,7 +461,7 @@ abstract class common {
 			}
 
 		// model
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model_name = ontology_node::get_modelo_name_by_tipo($tipo, true);
 			// empty model case
 			if (empty($model_name)) {
 				$msg = "Current tipo ($tipo) model name is empty. Model is mandatory, check your model for tipo: '$tipo'";
@@ -510,7 +510,7 @@ abstract class common {
 						$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
 						if ( isset($ar_related[0]) ) {
 							// real or virtual section
-							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
+							$matrix_table = ontology_node::get_termino_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
 						}
 
 					// try resolve virtual section fallback
@@ -521,7 +521,7 @@ abstract class common {
 								$ar_related	= common::get_ar_related_by_model('matrix_table', $real_tipo);
 								if ( isset($ar_related[0]) ) {
 									// real section
-									$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
+									$matrix_table = ontology_node::get_termino_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
 								}
 							}
 						}
@@ -565,7 +565,7 @@ abstract class common {
 			foreach ($ar_children_tables as $table_tipo) {
 
 				// model
-				$model_name = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
+				$model_name = ontology_node::get_modelo_name_by_tipo($table_tipo,true);
 				if ($model_name!=='matrix_table') {
 					debug_log(__METHOD__
 						. " Ignored non matrix_table Ontology item "
@@ -576,12 +576,12 @@ abstract class common {
 				}
 
 				// properties
-				$RecordObj_dd	= new RecordObj_dd( $table_tipo );
-				$properties		= $RecordObj_dd->get_properties();
+				$ontology_node	= new ontology_node( $table_tipo );
+				$properties		= $ontology_node->get_properties();
 				if (isset($properties) && property_exists($properties,'inverse_relations')) {
 
 					// table_name, such 'matrix_hierarchy'
-					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+					$table_name = ontology_node::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 					if ($properties->inverse_relations===true) {
 
@@ -708,7 +708,7 @@ abstract class common {
 
 			if (!is_null($section_id)) {
 				$section		= section::get_instance($section_id, $section_tipo);
-				$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
+				$model_name	= ontology_node::get_modelo_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
 				$component		= component_common::get_instance(
 					$model_name,
 					DEDALO_HIERARCHY_LANG_TIPO,
@@ -913,14 +913,14 @@ abstract class common {
 
 	/**
 	* GET_PROPERTIES
-	* Alias of $this->RecordObj_dd->get_properties() but json decoded
+	* Alias of $this->ontology_node->get_properties() but json decoded
 	* @return object|array|null $properties
 	*/
 	public function get_properties() : ?object {
 
 		$properties = isset($this->properties)
 			? $this->properties // already fixed
-			: $this->RecordObj_dd->get_properties(); // already parsed
+			: $this->ontology_node->get_properties(); // already parsed
 
 		if ($properties===false) {
 			$properties = null;
@@ -957,7 +957,7 @@ abstract class common {
 	public function get_propiedades() {
 
 		# Read string from database str
-		$propiedades = $this->RecordObj_dd->get_propiedades();
+		$propiedades = $this->ontology_node->get_propiedades();
 
 		$propiedades_obj = !empty($propiedades)
 			? json_decode($propiedades)
@@ -1517,8 +1517,8 @@ abstract class common {
 					true
 				);
 				if(isset($ar_terms[0])) {
-					$RecordObj_dd	= new RecordObj_dd($ar_terms[0]);
-					$properties		= $RecordObj_dd->get_properties();
+					$ontology_node	= new ontology_node($ar_terms[0]);
+					$properties		= $ontology_node->get_properties();
 				}else{
 					// in cases that section_list is not present (usually component_portal)
 					// remove the edit css, it happens because the main term, by default, defines the edit behavior in ontology
@@ -1542,8 +1542,8 @@ abstract class common {
 			// (!) new. Section overwrite css (virtual sections case)
 			// see sample at section 'rsc170'
 			if (strpos($model, 'component_')===0) {
-				$RecordObj_dd		= new RecordObj_dd($section_tipo);
-				$section_properties	= $RecordObj_dd->get_properties();
+				$ontology_node		= new ontology_node($section_tipo);
+				$section_properties	= $ontology_node->get_properties();
 				if (isset($section_properties->css) && isset($section_properties->css->{$tipo})) {
 					$css = $section_properties->css->{$tipo};
 				}
@@ -1633,13 +1633,13 @@ abstract class common {
 				if (empty($parent)) {
 
 					// use structure term tipo as parent
-					$parent = $this->RecordObj_dd->get_parent();
+					$parent = $this->ontology_node->get_parent();
 				}
 
 		// parent_grouper (structure parent)
 			$parent_grouper = !empty($this->parent_grouper)
 				? $this->parent_grouper
-				: $this->RecordObj_dd->get_parent();
+				: $this->ontology_node->get_parent();
 
 		// tools
 			$tools = [];
@@ -1733,7 +1733,7 @@ abstract class common {
 				: null;
 
 		// legacy_model
-			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->tipo);
 
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -1782,7 +1782,7 @@ abstract class common {
 							if (isset($soc_value->target_component) && isset($soc_value->msg)) {
 								// resolve label
 								$base_label		= label::get_label( $soc_value->msg );
-								$component_name	= RecordObj_dd::get_termino_by_tipo($soc_value->target_component, DEDALO_APPLICATION_LANG, true);
+								$component_name	= ontology_node::get_termino_by_tipo($soc_value->target_component, DEDALO_APPLICATION_LANG, true);
 								$msg			= sprintf($base_label, $component_name);
 								// replace label by just resolved version
 								$soc_value->msg = $msg;
@@ -1902,7 +1902,7 @@ abstract class common {
 						if (!isset($dd_object->config)) {
 							$dd_object->config = new stdClass();
 						}
-						$dd_object->config->parent_grouper_label = RecordObj_dd::get_termino_by_tipo($parent_grouper);
+						$dd_object->config->parent_grouper_label = ontology_node::get_termino_by_tipo($parent_grouper);
 					}
 				}
 
@@ -2048,7 +2048,7 @@ abstract class common {
 				if(empty($request_config_object->show->ddo_map)) {
 					debug_log(__METHOD__
 						. " Ignored empty show ddo_map " . PHP_EOL
-						. ' (tipo: '.$this->tipo.' - '. RecordObj_dd::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
+						. ' (tipo: '.$this->tipo.' - '. ontology_node::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
 						. ' in request_config_object (It may be due to a lack of permissions in their children).' . PHP_EOL
 						. ' request_config_object: ' . to_string($request_config_object),
 						logger::WARNING
@@ -2120,7 +2120,7 @@ abstract class common {
 						$view			= $dd_object->view ?? null;
 						$model			= ( isset($dd_object->model) )
 							? $dd_object->model
-							: RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+							: ontology_node::get_modelo_name_by_tipo($current_tipo, true);
 
 					// dataframe case
 						// dataframe ddo need to get section_tipo has it has defined
@@ -2388,7 +2388,7 @@ abstract class common {
 							default:
 								debug_log(__METHOD__
 									. " Ignored model '$model' - current_tipo: '$current_tipo'  - ". PHP_EOL
-									. RecordObj_dd::get_termino_by_tipo($current_tipo)
+									. ontology_node::get_termino_by_tipo($current_tipo)
 									, logger::WARNING
 								);
 								break;
@@ -2420,7 +2420,7 @@ abstract class common {
 								$bool_get_data = true;
 								// (!) Commented because currently all portals are direct (included set dato external cases). To be considered for future use
 								// if (isset($subdatum_options->skip_subdatum) && $mode === 'edit') {
-								// 	$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($current_tipo);
+								// 	$legacy_model = ontology_node::get_legacy_model_name_by_tipo($current_tipo);
 								// 	if(in_array($legacy_model, $subdatum_options->skip_subdatum)) {
 								// 		$bool_get_data = false;
 								// 		dump($bool_get_data, ' bool_get_data ++ '.$current_tipo.' -  '.to_string($model));
@@ -2648,7 +2648,7 @@ abstract class common {
 
 							// added label & mode if not are already defined
 							if(!isset($new_ddo->label)) {
-								$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+								$new_ddo->label = ontology_node::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 							}
 							if(!isset($new_ddo->mode)) {
 								$new_ddo->mode = $this->mode;
@@ -2685,7 +2685,7 @@ abstract class common {
 
 									// label add if not are already defined
 										if(!isset($new_ddo->label)) {
-											$new_ddo->label = RecordObj_dd::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+											$new_ddo->label = ontology_node::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 										}
 
 									// mode add if not are already defined
@@ -2779,7 +2779,7 @@ abstract class common {
 				$dedalo_request_config->type = $dedalo_request_config->type ?? 'main';
 
 				// sqo. Preserves filter across calls using session sqo if exists
-				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+				$model	= ontology_node::get_modelo_name_by_tipo($tipo, true);
 				$sqo_id	= ($model==='section')
 					? section::build_sqo_id($tipo)
 					: null; // cache key sqo_id
@@ -2884,7 +2884,7 @@ abstract class common {
 
 		// check section tipo model (allow areas)
 			if ($section_tipo!=='self') {
-				$section_model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+				$section_model = ontology_node::get_modelo_name_by_tipo($section_tipo,true);
 				if ($section_model!=='section' && strpos($section_model, 'area')!==0) {
 					debug_log(__METHOD__
 						. " Error. Invalid section/area tipo " . PHP_EOL
@@ -2949,8 +2949,8 @@ abstract class common {
 						// section_list. Use properties from section list instead self properties
 
 						// override properties var
-						$RecordObj_dd		= new RecordObj_dd($ar_terms[0]);
-						$source_properties	= $RecordObj_dd->get_properties();
+						$ontology_node		= new ontology_node($ar_terms[0]);
+						$source_properties	= $ontology_node->get_properties();
 					}
 					break;
 
@@ -3037,7 +3037,7 @@ abstract class common {
 							$safe_ar_section_tipo = [];
 							foreach ((array)$ar_section_tipo as $current_section_tipo) {
 								// check_tipo_is_valid
-								$tipo_is_valid = RecordObj_dd::check_tipo_is_valid($current_section_tipo);
+								$tipo_is_valid = ontology_node::check_tipo_is_valid($current_section_tipo);
 								if ($tipo_is_valid===false) {
 									debug_log(__METHOD__
 										. " WARNING. Ignored non valid section_tipo. Maybe the TLD is not installed. " . PHP_EOL
@@ -3054,8 +3054,8 @@ abstract class common {
 							$parsed_item->sqo->section_tipo = array_map(function($current_section_tipo){
 								$ddo = new dd_object();
 									$ddo->set_tipo($current_section_tipo);
-									$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
-									$ddo->set_color(RecordObj_dd::get_color($current_section_tipo));
+									$ddo->set_label(ontology_node::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
+									$ddo->set_color(ontology_node::get_color($current_section_tipo));
 									$ddo->set_permissions(common::get_permissions($current_section_tipo, $current_section_tipo));
 
 								// buttons. Add button_new and button_delete to determine new and delete permissions on client
@@ -3177,7 +3177,7 @@ abstract class common {
 									}
 
 								// check valid tipo (The model is unsolvable)
-									$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_ddo->tipo );
+									$tipo_is_valid = ontology_node::check_tipo_is_valid( $current_ddo->tipo );
 									if ( $tipo_is_valid === false ) {
 										debug_log(__METHOD__
 											.' WARNING. Ignored current_ddo: is invalid '
@@ -3188,14 +3188,14 @@ abstract class common {
 											.' this->tipo: ' . $this->tipo . PHP_EOL
 											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 											.' this->section_id: ' . $this->section_id . PHP_EOL
-											.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo)
+											.' current_model: ' . ontology_node::get_modelo_name_by_tipo($current_ddo->tipo)
 											, logger::WARNING
 										);
 										continue;
 									}
 
 								// check if the ddo is active into the ontology
-									$is_active = RecordObj_dd::check_active_tld($current_ddo->tipo);
+									$is_active = ontology_node::check_active_tld($current_ddo->tipo);
 									if( $is_active === false ){
 										debug_log(__METHOD__
 											. " Removed ddo from ddo_map->show definition because the tld is not installed " . PHP_EOL
@@ -3206,7 +3206,7 @@ abstract class common {
 									}
 
 								// model. Calculated always to prevent errors
-									$current_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo, true);
+									$current_ddo->model = ontology_node::get_modelo_name_by_tipo($current_ddo->tipo, true);
 
 								// list mode exclude groupers (see case section test2)
 									if ($this->mode==='list' && strpos($current_ddo->model, 'section_group')!==false) {
@@ -3215,7 +3215,7 @@ abstract class common {
 
 								// label. Add to all ddo_map items
 									if (!isset($current_ddo->label)) {
-										$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+										$current_ddo->label = ontology_node::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 									}
 
 								// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
@@ -3249,14 +3249,14 @@ abstract class common {
 								// when this property is present and true, get the component fields_map
 								// see 'zenon5' or 'isad30'
 									if(isset($current_ddo->fields_map) && $current_ddo->fields_map===true){
-										$RecordObj_dd				= new RecordObj_dd($current_ddo->tipo);
-										$current_ddo_properties		= $RecordObj_dd->get_properties();
+										$ontology_node				= new ontology_node($current_ddo->tipo);
+										$current_ddo_properties		= $ontology_node->get_properties();
 										$current_ddo->properties	= $current_ddo_properties;
 										$current_ddo->fields_map	= isset($current_ddo_properties->fields_map)
 											? $current_ddo_properties->fields_map
 											: [];
 										$current_ddo->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-										$current_ddo->model			= $RecordObj_dd->get_modelo_name();
+										$current_ddo->model			= $ontology_node->get_modelo_name();
 										// $current_ddo->parent		= $current_ddo->section_tipo;
 										$current_ddo->permissions	= common::get_permissions($current_ddo->section_tipo, $current_ddo->tipo);
 									}
@@ -3358,7 +3358,7 @@ abstract class common {
 									}
 
 									// check if the ddo is active into the ontology
-										$is_active = RecordObj_dd::check_active_tld($current_search_ddo_map->tipo);
+										$is_active = ontology_node::check_active_tld($current_search_ddo_map->tipo);
 										if( $is_active === false ){
 											debug_log(__METHOD__
 												. " Removed ddo from ddo_map->search definition because the tld is not installed " . PHP_EOL
@@ -3369,7 +3369,7 @@ abstract class common {
 										}
 
 									// check valid tipo (The model is unsolvable)
-										$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_search_ddo_map->tipo );
+										$tipo_is_valid = ontology_node::check_tipo_is_valid( $current_search_ddo_map->tipo );
 										if ( $tipo_is_valid === false ) {
 											debug_log(__METHOD__
 												.' WARNING. Ignored current_search_ddo_map: don\'t have model: '
@@ -3380,17 +3380,17 @@ abstract class common {
 												.' this->tipo: ' . $this->tipo . PHP_EOL
 												.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 												.' this->section_id: ' . $this->section_id . PHP_EOL
-												.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_search_ddo_map->tipo)
+												.' current_model: ' . ontology_node::get_modelo_name_by_tipo($current_search_ddo_map->tipo)
 												, logger::WARNING
 											);
 											continue;
 										}
 
 									// model. Calculated always to prevent errors
-										$current_search_ddo_map->model = RecordObj_dd::get_modelo_name_by_tipo($current_search_ddo_map->tipo, true);
+										$current_search_ddo_map->model = ontology_node::get_modelo_name_by_tipo($current_search_ddo_map->tipo, true);
 
 									// label. Add to all ddo_map items
-										$current_search_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+										$current_search_ddo_map->label = ontology_node::get_termino_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 									// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
 										$current_search_ddo_map->section_tipo = $current_search_ddo_map->section_tipo==='self'
@@ -3462,7 +3462,7 @@ abstract class common {
 							foreach ($choose_ddo_map as $current_choose_ddo) {
 
 								// check if the ddo is active into the ontology
-									$is_active = RecordObj_dd::check_active_tld($current_choose_ddo->tipo);
+									$is_active = ontology_node::check_active_tld($current_choose_ddo->tipo);
 									if( $is_active === false ){
 										debug_log(__METHOD__
 											. " Removed ddo from ddo_map->choose definition because the tld is not installed " . PHP_EOL
@@ -3473,7 +3473,7 @@ abstract class common {
 									}
 
 								// check valid tipo (The model is unsolvable)
-									$tipo_is_valid = RecordObj_dd::check_tipo_is_valid( $current_choose_ddo->tipo );
+									$tipo_is_valid = ontology_node::check_tipo_is_valid( $current_choose_ddo->tipo );
 									if ( $tipo_is_valid === false ) {
 										debug_log(__METHOD__
 											.' WARNING. Ignored current_choose_ddo: tipo is invalid (maybe TLD is not installed): '
@@ -3484,14 +3484,14 @@ abstract class common {
 											.' this->tipo: ' . $this->tipo . PHP_EOL
 											.' this->section_tipo: ' . $this->section_tipo . PHP_EOL
 											.' this->section_id: ' . $this->section_id . PHP_EOL
-											.' current_model: ' . RecordObj_dd::get_modelo_name_by_tipo($current_choose_ddo->tipo)
+											.' current_model: ' . ontology_node::get_modelo_name_by_tipo($current_choose_ddo->tipo)
 											, logger::WARNING
 										);
 										continue;
 									}
 
 								// model. Calculated always to prevent errors
-									$current_choose_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_choose_ddo->tipo, true);
+									$current_choose_ddo->model = ontology_node::get_modelo_name_by_tipo($current_choose_ddo->tipo, true);
 
 								// section_tipo
 									$current_choose_ddo->section_tipo = $current_choose_ddo->section_tipo==='self'
@@ -3504,7 +3504,7 @@ abstract class common {
 										: $current_choose_ddo->parent;
 
 								// label. Add to all ddo_map items
-									$current_choose_ddo->label = RecordObj_dd::get_termino_by_tipo($current_choose_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+									$current_choose_ddo->label = ontology_node::get_termino_by_tipo($current_choose_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 								// mode
 									$current_choose_ddo->mode = isset($current_choose_ddo->mode)
@@ -3540,7 +3540,7 @@ abstract class common {
 										: $current_ddo_map->parent;
 
 								// label. Add to all ddo_map items
-									$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+									$current_ddo_map->label = ontology_node::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 								// mode
 									$current_ddo_map->mode = isset($current_ddo_map->mode)
@@ -3550,7 +3550,7 @@ abstract class common {
 											: $mode);
 
 								// model
-									$current_ddo_map->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo_map->tipo, true);
+									$current_ddo_map->model = ontology_node::get_modelo_name_by_tipo($current_ddo_map->tipo, true);
 
 								$final_ddo_map[] = $current_ddo_map;
 							}
@@ -3568,8 +3568,8 @@ abstract class common {
 								? $parsed_item->show->ddo_map[0]->section_tipo
 								: null;
 							if (!empty($engine_section_tipo)) {
-								$RecordObj_dd				= new RecordObj_dd($engine_section_tipo);
-								$engine_section_properties	= $RecordObj_dd->get_properties();
+								$ontology_node				= new ontology_node($engine_section_tipo);
+								$engine_section_properties	= $ontology_node->get_properties();
 								if (is_object($engine_section_properties) && property_exists($engine_section_properties, 'api_config')) {
 									$parsed_item->set_api_config($engine_section_properties->api_config);
 								}
@@ -3619,10 +3619,10 @@ abstract class common {
 								);
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
-								$ar_related = (array)RecordObj_dd::get_ar_children($tipo);
+								$ar_related = (array)ontology_node::get_ar_children($tipo);
 							}else{
 								// components
-								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados(
+								$ar_related = (array)ontology_node::get_ar_terminos_relacionados(
 									$tipo,
 									true, // bool cache
 									true // bool simple
@@ -3656,7 +3656,7 @@ abstract class common {
 								if(isset($ar_terms[0])) {
 									# Use found related terms as new list
 									$current_term = $ar_terms[0];
-									$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
+									$ar_related   = ontology_node::get_ar_terminos_relacionados(
 										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
@@ -3674,7 +3674,7 @@ abstract class common {
 								if(isset($ar_terms[0])) {
 									// Use found related terms as new list
 									$current_term = $ar_terms[0];
-									$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
+									$ar_related   = ontology_node::get_ar_terminos_relacionados(
 										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
@@ -3687,7 +3687,7 @@ abstract class common {
 										if(isset($ar_terms[0])) {
 											// Use found related terms as new list
 											$current_term = $ar_terms[0];
-											$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
+											$ar_related   = ontology_node::get_ar_terminos_relacionados(
 												$current_term, // string tipo
 												true, // bool cache
 												true // bool simple
@@ -3697,7 +3697,7 @@ abstract class common {
 								}
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
-								$ar_related = (array)RecordObj_dd::get_ar_children($tipo);
+								$ar_related = (array)ontology_node::get_ar_children($tipo);
 							}else{
 								// portal cases
 								// case section list is defined
@@ -3710,7 +3710,7 @@ abstract class common {
 								if(isset($ar_terms[0])) {
 									// Use found section_list related terms as new list
 									$current_term	= $ar_terms[0];
-									$ar_related		= RecordObj_dd::get_ar_terminos_relacionados(
+									$ar_related		= ontology_node::get_ar_terminos_relacionados(
 										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
@@ -3718,7 +3718,7 @@ abstract class common {
 
 									$section_isset = false;
 									foreach ((array)$ar_related as $current_tipo) {
-										$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+										$current_model = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 										if ($current_model==='section') {
 											$section_isset = true;
 										}
@@ -3738,7 +3738,7 @@ abstract class common {
 									}
 								}else{
 									// Fallback related when section list is not defined; portal case.
-									$ar_related = RecordObj_dd::get_ar_terminos_relacionados(
+									$ar_related = ontology_node::get_ar_terminos_relacionados(
 										$tipo, // string tipo
 										true, // bool cache
 										true // bool simple
@@ -3753,7 +3753,7 @@ abstract class common {
 					$target_section_tipo = $section_tipo;
 					if (!empty($ar_related)) {
 						foreach ((array)$ar_related as $current_tipo) {
-							$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							$current_model = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 							if ($current_model==='section') {
 								$target_section_tipo = $current_tipo; // Overwrite (!)
 								continue;
@@ -3812,9 +3812,9 @@ abstract class common {
 				// ddo_map
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
-						$model						= RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-						$current_tipo_RecordObj_dd	= new RecordObj_dd($current_tipo);
-						$current_tipo_properties	= $current_tipo_RecordObj_dd->get_properties();
+						$model						= ontology_node::get_modelo_name_by_tipo($current_tipo, true);
+						$current_tipo_ontology_node	= new ontology_node($current_tipo);
+						$current_tipo_properties	= $current_tipo_ontology_node->get_properties();
 						$own_view					= isset($current_tipo_properties->view)
 							? $current_tipo_properties->view
 							: common::resolve_view((object)[
@@ -3833,7 +3833,7 @@ abstract class common {
 							$ddo->set_parent($tipo);
 							$ddo->set_mode($current_mode);
 							$ddo->set_view($view);
-							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
+							$ddo->set_label(ontology_node::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
 
 						return $ddo;
 					}, $ar_related_clean_auth);
@@ -3857,8 +3857,8 @@ abstract class common {
 					$ddo_section_tipo	= array_map(function($current_section_tipo){
 						$ddo = new dd_object();
 							$ddo->set_tipo($current_section_tipo);
-							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
-							$ddo->set_color(RecordObj_dd::get_color($current_section_tipo));
+							$ddo->set_label(ontology_node::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
+							$ddo->set_color(ontology_node::get_color($current_section_tipo));
 							$ddo->set_permissions(common::get_permissions($current_section_tipo, $current_section_tipo));
 
 						// buttons. Add button_new and button_delete to determine new and delete permissions on client
@@ -4237,8 +4237,8 @@ abstract class common {
 
 		// 	}else{
 
-		// 		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
-		// 		$component_tipo_properties 	 = $RecordObj_dd_component_tipo->get_properties(true);
+		// 		$ontology_node_component_tipo = new ontology_node($tipo);
+		// 		$component_tipo_properties 	 = $ontology_node_component_tipo->get_properties(true);
 
 		// 		// source search. If not defined, use fallback to legacy related terms and build one
 		// 			$request_config = common::get_request_config($tipo, $external=false, $section_tipo, $mode);
@@ -4252,7 +4252,7 @@ abstract class common {
 		// 				foreach ($source_search_item->search as $current_tipo) {
 
 		// 					// check is real component
-		// 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+		// 						$model = ontology_node::get_modelo_name_by_tipo($current_tipo, true);
 		// 						if (strpos($model,'component')!==0) {
 		// 							debug_log(__METHOD__." IGNORED. Expected model is component, but '$model' is received for current_tipo: $current_tipo ".to_string(), logger::ERROR);
 		// 							continue;
@@ -4409,7 +4409,7 @@ abstract class common {
 			$data_lang = DEDALO_DATA_LANG;
 		}
 
-		$translatable	= RecordObj_dd::get_translatable($tipo);
+		$translatable	= ontology_node::get_translatable($tipo);
 		$lang			= ($translatable===true) ? $data_lang : DEDALO_DATA_NOLAN;
 
 		return $lang;
@@ -4582,12 +4582,12 @@ abstract class common {
 					}
 
 				// model
-					$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+					$model = ontology_node::get_modelo_name_by_tipo($element_tipo,true);
 					if (in_array($model, $ar_components_exclude) || $model==='component_password') {
 						continue;
 					}
 					if ($model==='section_group') {
-						$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($element_tipo);
+						$legacy_model = ontology_node::get_legacy_model_name_by_tipo($element_tipo);
 						if ($legacy_model==='section_group_div') {
 							continue;
 						}
@@ -4609,7 +4609,7 @@ abstract class common {
 
 					// component case
 					case (strpos($model, 'component_')===0):
-						$translatable	= RecordObj_dd::get_translatable($element_tipo);
+						$translatable	= ontology_node::get_translatable($element_tipo);
 						$current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$element		= component_common::get_instance(
 							$model,
@@ -4868,18 +4868,18 @@ abstract class common {
 					}
 
 				// model
-					$model = RecordObj_dd::get_modelo_name_by_tipo($current_button_tipo, true);
+					$model = ontology_node::get_modelo_name_by_tipo($current_button_tipo, true);
 					// skip exclude_models
 					if(in_array($model, common::$ar_temp_exclude_models)){
 						continue;
 					}
 
 				// label $terminoID, $lang=NULL, $from_cache=false, $fallback=true
-					$button_label = RecordObj_dd::get_termino_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
+					$button_label = ontology_node::get_termino_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 				// properties
-					$RecordObj_dd		= new RecordObj_dd($current_button_tipo);
-					$button_properties	= $RecordObj_dd->get_properties();
+					$ontology_node		= new ontology_node($current_button_tipo);
+					$button_properties	= $ontology_node->get_properties();
 					if(isset($button_properties->disable) && $button_properties->disable === true ){
 						continue;
 					}
@@ -4992,8 +4992,8 @@ abstract class common {
 					if(isset($ar_terms[0])) {
 						# Use found related terms as new list
 						$current_term	= $ar_terms[0];
-						$RecordObj_dd	= new RecordObj_dd($current_term);
-						$properties		= $RecordObj_dd->get_properties();
+						$ontology_node	= new ontology_node($current_term);
+						$properties		= $ontology_node->get_properties();
 					}
 					else{
 						// sometime the portals don't has section_list defined, in these cases get the properties of the current tipo
@@ -5110,8 +5110,8 @@ abstract class common {
 				);
 				if(isset($ar_terms[0])) {
 					$current_term	= $ar_terms[0];
-					$RecordObj_dd	= new RecordObj_dd($current_term);
-					$properties		= $RecordObj_dd->get_properties();
+					$ontology_node	= new ontology_node($current_term);
+					$properties		= $ontology_node->get_properties();
 					if( isset($properties->view) ) {
 						return $properties->view;
 					}
@@ -5156,7 +5156,7 @@ abstract class common {
 
 		// relation components like 'component_portal'
 			$legacy_model = (in_array($model, $components_to_change))
-				? RecordObj_dd::get_legacy_model_name_by_tipo($tipo)
+				? ontology_node::get_legacy_model_name_by_tipo($tipo)
 				: $model;
 
 		// view
@@ -5203,7 +5203,7 @@ abstract class common {
 			}
 
 		// based on legacy_model
-			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->get_tipo());
+			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->get_tipo());
 			switch ($legacy_model) {
 				case 'component_relation_children':
 				case 'component_relation_parent':

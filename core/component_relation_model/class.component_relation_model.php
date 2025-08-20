@@ -135,7 +135,7 @@ class component_relation_model extends component_relation_common {
 
 					if (!empty($section_id)) {
 						// get target section model component value
-							$model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,true);
+							$model		= ontology_node::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,true);
 							$component	= component_common::get_instance(
 								$model,
 								DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,

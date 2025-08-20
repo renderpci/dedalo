@@ -113,7 +113,7 @@ class ontology {
 
 		// tld
 			$tld_tipo		= 'ontology7';
-			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
+			$tld_model		= ontology_node::get_modelo_name_by_tipo( $tld_tipo  );
 			$tld_component	= component_common::get_instance(
 				$tld_model,
 				$tld_tipo ,
@@ -138,7 +138,7 @@ class ontology {
 					$model_locator->set_section_id( $model_section_id );
 
 				$model_tipo			= 'ontology6';
-				$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
+				$model_model		= ontology_node::get_modelo_name_by_tipo( $model_tipo );
 				$model_component	= component_common::get_instance(
 					$model_model,
 					$model_tipo,
@@ -155,7 +155,7 @@ class ontology {
 
 		// descriptor
 			$is_descriptor_tipo			= 'ontology4';
-			$is_descriptor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_descriptor_tipo  );
+			$is_descriptor_model		= ontology_node::get_modelo_name_by_tipo( $is_descriptor_tipo  );
 			$is_descriptor_component	= component_common::get_instance(
 				$is_descriptor_model,
 				$is_descriptor_tipo ,
@@ -175,7 +175,7 @@ class ontology {
 
 		// is model
 			$is_model_tipo		= 'ontology30';
-			$is_model_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_model_tipo  );
+			$is_model_model		= ontology_node::get_modelo_name_by_tipo( $is_model_tipo  );
 			$is_model_component	= component_common::get_instance(
 				$is_model_model,
 				$is_model_tipo ,
@@ -195,7 +195,7 @@ class ontology {
 
 		// translatable
 			$translatable_tipo		= 'ontology8';
-			$translatable_model		= RecordObj_dd::get_modelo_name_by_tipo( $translatable_tipo  );
+			$translatable_model		= ontology_node::get_modelo_name_by_tipo( $translatable_tipo  );
 			$translatable_component	= component_common::get_instance(
 				$translatable_model,
 				$translatable_tipo ,
@@ -215,7 +215,7 @@ class ontology {
 
 		// term
 			$term_tipo		= 'ontology5';
-			$term_model		= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo  );
+			$term_model		= ontology_node::get_modelo_name_by_tipo( $term_tipo  );
 
 			foreach ($term as $current_lang => $term_value) {
 
@@ -234,7 +234,7 @@ class ontology {
 
 		// properties V5
 			$properties_v5_tipo			= 'ontology19';
-			$properties_v5_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_v5_tipo  );
+			$properties_v5_model		= ontology_node::get_modelo_name_by_tipo( $properties_v5_tipo  );
 			$properties_v5_component	= component_common::get_instance(
 				$properties_v5_model,
 				$properties_v5_tipo ,
@@ -250,7 +250,7 @@ class ontology {
 
 		// properties CSS
 			$properties_css_tipo		= 'ontology16';
-			$properties_css_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_css_tipo  );
+			$properties_css_model		= ontology_node::get_modelo_name_by_tipo( $properties_css_tipo  );
 			$properties_css_component	= component_common::get_instance(
 				$properties_css_model,
 				$properties_css_tipo ,
@@ -268,7 +268,7 @@ class ontology {
 
 		// properties RQO
 			$properties_rqo_tipo		= 'ontology17';
-			$properties_rqo_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_rqo_tipo  );
+			$properties_rqo_model		= ontology_node::get_modelo_name_by_tipo( $properties_rqo_tipo  );
 			$properties_rqo_component	= component_common::get_instance(
 				$properties_rqo_model,
 				$properties_rqo_tipo ,
@@ -286,7 +286,7 @@ class ontology {
 
 		// properties
 			$properties_tipo		= 'ontology18';
-			$properties_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_tipo  );
+			$properties_model		= ontology_node::get_modelo_name_by_tipo( $properties_tipo  );
 			$properties_component	= component_common::get_instance(
 				$properties_model,
 				$properties_tipo ,
@@ -309,10 +309,10 @@ class ontology {
 				$properties = $new_properties;
 
 				// update jer_dd record with the new properties
-				$RecordObj_dd = new RecordObj_dd($jer_dd_row->terminoID);
-				$RecordObj_dd->get_properties(); // force load data
-				$RecordObj_dd->set_properties($new_properties);
-				$RecordObj_dd->update();
+				$ontology_node = new ontology_node($jer_dd_row->terminoID);
+				$ontology_node->get_properties(); // force load data
+				$ontology_node->set_properties($new_properties);
+				$ontology_node->update();
 			}
 
 			if(!empty($properties)) {
@@ -431,11 +431,11 @@ class ontology {
 			$section_id = $row['section_id'];
 
 			$node_tipo = $tld.$section_id;
-			$relations = RecordObj_dd::get_ar_terminos_relacionados( $node_tipo, true, true );
+			$relations = ontology_node::get_ar_terminos_relacionados( $node_tipo, true, true );
 
 			// Relations
 			$relations_tipo			= 'ontology10';
-			$relations_model		= RecordObj_dd::get_modelo_name_by_tipo( $relations_tipo  );
+			$relations_model		= ontology_node::get_modelo_name_by_tipo( $relations_tipo  );
 			$relations_component	= component_common::get_instance(
 				$relations_model,
 				$relations_tipo ,
@@ -491,7 +491,7 @@ class ontology {
 
 			$section_id	= $row['section_id'];
 			$node_tipo	= $tld.$section_id;
-			$children	= RecordObj_dd::get_ar_children($node_tipo);
+			$children	= ontology_node::get_ar_children($node_tipo);
 
 			$children_data = [];
 			foreach ($children as $child_tipo) {
@@ -508,7 +508,7 @@ class ontology {
 			}
 
 			$children_tipo		= ontology::$children_tipo; // 'ontology14';
-			$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo );
+			$children_model		= ontology_node::get_modelo_name_by_tipo( $children_tipo );
 			$children_component	= component_common::get_instance(
 				$children_model,
 				$children_tipo,
@@ -658,7 +658,7 @@ class ontology {
 	* Creates new jer_dd row with ontologytype tld for the local tlds
 	* Used for the creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc.
 	* A jer_dd row is needed to represent it.
-	* Note that action 'RecordObj_dd->insert()' delete the existing record in jer_dd, and creates a new one
+	* Note that action 'ontology_node->insert()' delete the existing record in jer_dd, and creates a new one
 	* @param object $file_item
 	* {
 	* 	tld: string
@@ -690,23 +690,23 @@ class ontology {
 		// it is defined as tld+0, because the nodes start with 1 as dd1, rsc1, etc.
 			$terminoID = $tld.'0'; // as mdcat0, mupreva0, etc.
 
-			$RecordObj_dd = new RecordObj_dd($terminoID);
-				$RecordObj_dd->set_parent($parent_grouper_tipo);
-				$RecordObj_dd->set_modelo('dd6');
-				$RecordObj_dd->set_model('section');
-				$RecordObj_dd->set_esmodelo('no');
-				$RecordObj_dd->set_esdescriptor('si');
-				$RecordObj_dd->set_visible('si');
-				$RecordObj_dd->set_tld($tld);
-				$RecordObj_dd->set_traducible('no');
-				$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+			$ontology_node = new ontology_node($terminoID);
+				$ontology_node->set_parent($parent_grouper_tipo);
+				$ontology_node->set_modelo('dd6');
+				$ontology_node->set_model('section');
+				$ontology_node->set_esmodelo('no');
+				$ontology_node->set_esdescriptor('si');
+				$ontology_node->set_visible('si');
+				$ontology_node->set_tld($tld);
+				$ontology_node->set_traducible('no');
+				$ontology_node->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 				// Properties, add main_tld as official tld definitions
 				// and local section color
 				$properties = new stdClass();
 					$properties->main_tld	= $tld;
 					$properties->color		= '#2d8894';
-				$RecordObj_dd->set_properties($properties);
+				$ontology_node->set_properties($properties);
 
 				// term
 				if (!empty($name_data)) {
@@ -714,10 +714,10 @@ class ontology {
 					foreach ($name_data as $current_lang => $value) {
 						$term->$current_lang = $value[0] ?? $tld;
 					}
-					$RecordObj_dd->set_term( $term );
+					$ontology_node->set_term( $term );
 				}
 
-			$term_id = $RecordObj_dd->insert();
+			$term_id = $ontology_node->insert();
 
 
 		return $term_id;
@@ -782,29 +782,29 @@ class ontology {
 			$parent_node_tipo	= $parent_tld.'0';
 
 			// jer_dd. Check if the parent already exists in jer_dd
-				$parent_ontology_row_data = RecordObj_dd::get_row_data( $parent_node_tipo );
+				$parent_ontology_row_data = ontology_node::get_row_data( $parent_node_tipo );
 				if( empty($parent_ontology_row_data) ){
 
-					$RecordObj_dd = new RecordObj_dd($parent_node_tipo);
-						$RecordObj_dd->set_parent($parent_group);
-						$RecordObj_dd->set_modelo('dd6');
-						$RecordObj_dd->set_model('section');
-						$RecordObj_dd->set_esmodelo('no');
-						$RecordObj_dd->set_esdescriptor('si');
-						$RecordObj_dd->set_visible('si');
-						$RecordObj_dd->set_tld($parent_tld);
-						$RecordObj_dd->set_traducible('no');
-						$RecordObj_dd->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+					$ontology_node = new ontology_node($parent_node_tipo);
+						$ontology_node->set_parent($parent_group);
+						$ontology_node->set_modelo('dd6');
+						$ontology_node->set_model('section');
+						$ontology_node->set_esmodelo('no');
+						$ontology_node->set_esdescriptor('si');
+						$ontology_node->set_visible('si');
+						$ontology_node->set_tld($parent_tld);
+						$ontology_node->set_traducible('no');
+						$ontology_node->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 					// Properties, add main_tld as official tld definitions
 					// and local section color
 						$properties = new stdClass();
 							$properties->main_tld	= $parent_tld;
 							$properties->color		= '#2d8894';
-						$RecordObj_dd->set_properties($properties);
+						$ontology_node->set_properties($properties);
 
 					// insert jer_dd record
-					$RecordObj_dd->insert();
+					$ontology_node->insert();
 				}
 
 			// matrix. Check if the parent already exists in matrix
@@ -844,7 +844,7 @@ class ontology {
 
 			// Name
 				// use the typology name. (component_input_text)
-				$model			= 'component_input_text'; // RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
+				$model			= 'component_input_text'; // ontology_node::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPES_NAME_TIPO, true );
 				$typology_term	= component_common::get_instance(
 					$model, // string model
 					DEDALO_HIERARCHY_TYPES_NAME_TIPO, // string tipo
@@ -1121,7 +1121,7 @@ class ontology {
 
 		// name
 			$tipo		= DEDALO_HIERARCHY_TERM_TIPO; // 'hierarchy5'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1135,7 +1135,7 @@ class ontology {
 
 		// tld
 			$tipo		= DEDALO_HIERARCHY_TLD2_TIPO; // 'hierarchy6'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1148,7 +1148,7 @@ class ontology {
 
 		// target_section_tipo
 			$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO; // 'hierarchy53'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1161,7 +1161,7 @@ class ontology {
 
 		// target_section_model_tipo
 			$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO; // 'hierarchy58'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1174,7 +1174,7 @@ class ontology {
 
 		// main_lang
 			$tipo		= DEDALO_HIERARCHY_LANG_TIPO; // 'hierarchy8'
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1186,7 +1186,7 @@ class ontology {
 			$main_lang = $component->get_value_code();
 
 		// Typology
-			$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+			$model = ontology_node::get_modelo_name_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 			$typology_component = component_common::get_instance(
 				$model, // string model
 				DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
@@ -1201,7 +1201,7 @@ class ontology {
 			$typology_name	= $typology_component->get_value();
 
 		// hierarchy order
-			$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_ORDER_TIPO );
+			$model = ontology_node::get_modelo_name_by_tipo( DEDALO_HIERARCHY_ORDER_TIPO );
 			$component_order = component_common::get_instance(
 				$model,
 				DEDALO_HIERARCHY_ORDER_TIPO,
@@ -1216,7 +1216,7 @@ class ontology {
 		// active_in_thesaurus get the status of the component active
 		// it will use to discard into tree view the hierarchy in client
 		// in the JSON controller will check to remove his typology if the hierarchy is not active
-			$model = RecordObj_dd::get_modelo_name_by_tipo( DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO );
+			$model = ontology_node::get_modelo_name_by_tipo( DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO );
 			$component_active_in_thesaurus = component_common::get_instance(
 				$model,
 				DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO,
@@ -1255,11 +1255,11 @@ class ontology {
 	* Get the component_data and parse as column of jer_dd format.
 	* @param string $section_tipo
 	* @param string|int $section_id
-	* @return RecordObj_dd|null $jer_dd_record
+	* @return ontology_node|null $jer_dd_record
 	* 	returns null if section tld value is empty
 	* @test true
 	*/
-	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?RecordObj_dd {
+	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?ontology_node {
 		$start_time=start_time();
 
 		// overwrite locator
@@ -1276,7 +1276,7 @@ class ontology {
 			$locator->set_section_id($section_id);
 
 		// tld
-			// get the tld component first, is necessary to create the recordObj_dd (use term_id as tld +  section_id)
+			// get the tld component first, is necessary to create the ontology_node (use term_id as tld +  section_id)
 			$tld_tipo = 'ontology7';
 			$tld_data = null;
 
@@ -1303,8 +1303,8 @@ class ontology {
 			$tld		= $tld_data[0];
 			$terminoID	= $tld . $section_id;
 
-			// create the RecordObj_dd with the term_id and set the tld
-			$jer_dd_record = new RecordObj_dd( $terminoID );
+			// create the ontology_node with the term_id and set the tld
+			$jer_dd_record = new ontology_node( $terminoID );
 			$jer_dd_record->set_tld( $tld );
 
 		// parent
@@ -1421,7 +1421,7 @@ class ontology {
 				$model_tipo_resolution = ontology::get_term_id_from_locator($model_locator);
 
 				// set the model resolution (section, component_input_text, etc)
-				$model_resolution = RecordObj_dd::get_termino_by_tipo(
+				$model_resolution = ontology_node::get_termino_by_tipo(
 					$model_tipo_resolution,
 					DEDALO_STRUCTURE_LANG,
 					true,
@@ -1454,7 +1454,7 @@ class ontology {
 
 		// Order
 			$order_tipo		= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
-			$order_model	= RecordObj_dd::get_modelo_name_by_tipo( $order_tipo  );
+			$order_model	= ontology_node::get_modelo_name_by_tipo( $order_tipo  );
 			if (empty($order_model)) {
 
 				debug_log(__METHOD__
@@ -1661,7 +1661,7 @@ class ontology {
 	*/
 	private static function get_node_component_data( locator $locator, string $tipo ) : ?array {
 
-		$properties_model	= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+		$properties_model	= ontology_node::get_modelo_name_by_tipo( $tipo  );
 		$component			= component_common::get_instance(
 			$properties_model,
 			$tipo ,
@@ -1803,7 +1803,7 @@ class ontology {
 	private static function resolve_term( locator $locator ) : ?object {
 
 		$term_tipo		= 'ontology5';
-		$term_model		= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo );
+		$term_model		= ontology_node::get_modelo_name_by_tipo( $term_tipo );
 		$term_component	= component_common::get_instance(
 			$term_model,
 			$term_tipo ,
@@ -1858,7 +1858,7 @@ class ontology {
 			// get the component data
 			// using the locator
 			$tld_tipo		= 'ontology7';
-			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo );
+			$tld_model		= ontology_node::get_modelo_name_by_tipo( $tld_tipo );
 			$tld_component	= component_common::get_instance(
 				$tld_model,
 				$tld_tipo ,
@@ -1929,7 +1929,7 @@ class ontology {
 		// get the component data
 		// using the locator
 		$children_tipo		= ontology::$children_tipo; // 'ontology14';
-		$children_model		= RecordObj_dd::get_modelo_name_by_tipo( $children_tipo  );
+		$children_model		= ontology_node::get_modelo_name_by_tipo( $children_tipo  );
 		$children_component	= component_common::get_instance(
 			$children_model,
 			$children_tipo ,
@@ -1964,7 +1964,7 @@ class ontology {
 		$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $section_tipo, $section_id );
 		if (empty($jer_dd_record)) {
 			debug_log(__METHOD__
-				. " Error on get RecordObj_dd  " . PHP_EOL
+				. " Error on get ontology_node  " . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
 				. ' section_id: ' . to_string($section_id) . PHP_EOL
 				, logger::ERROR
@@ -2060,7 +2060,7 @@ class ontology {
 						$safe_tld = safe_tld( $tld );
 
 					// Delete the jer_dd nodes
-						$deleted_jer_dd_nodes = RecordObj_dd::delete_tld_nodes( $safe_tld );
+						$deleted_jer_dd_nodes = ontology_node::delete_tld_nodes( $safe_tld );
 
 						if ( $deleted_jer_dd_nodes===false ) {
 							$response->errors[] = 'unable to delete tld';
@@ -2138,7 +2138,7 @@ class ontology {
 			$response->errors	= [];
 
 		// create a copy of the $tld
-			$backup = RecordObj_dd::create_bk_table( $tld );
+			$backup = ontology_node::create_bk_table( $tld );
 
 			if($backup===false){
 				$response->errors[] ='Impossible to create the jer_dd backup previous to regenerate the tlds: '.to_string( $tld );
@@ -2168,11 +2168,11 @@ class ontology {
 				$current_section_tipo	= $current_record->section_tipo;
 				$current_section_id		= $current_record->section_id;
 
-				// RecordObj_dd item
+				// ontology_node item
 				$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $current_section_tipo, $current_section_id );
 
 				if( empty($jer_dd_record ) ){
-					RecordObj_dd::delete_bk_table();
+					ontology_node::delete_bk_table();
 					$response->errors[] = 'Failed regenerate jer_dd with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
 					debug_log(__METHOD__
 						. " Error generating jer_dd with section_tipo " . PHP_EOL
@@ -2188,7 +2188,7 @@ class ontology {
 
 		// 3 delete all tld records
 			foreach ($tld as $current_tld) {
-				RecordObj_dd::delete_tld_nodes( $current_tld );
+				ontology_node::delete_tld_nodes( $current_tld );
 			}
 
 		// 4 insert the new nodes of the given tld
@@ -2203,9 +2203,9 @@ class ontology {
 				// recovery al tld from bk table.
 				if( empty($insert_result) ){
 					// restore the backup table
-					RecordObj_dd::restore_from_bk_table($tld);
+					ontology_node::restore_from_bk_table($tld);
 					// delete bk table
-					RecordObj_dd::delete_bk_table();
+					ontology_node::delete_bk_table();
 					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
 					return $response;
 				}
@@ -2229,9 +2229,9 @@ class ontology {
 				$add_result = ontology::add_main_section( $file_item );
 				if (empty($add_result)) {
 					// restore the backup table
-					RecordObj_dd::restore_from_bk_table($tld);
+					ontology_node::restore_from_bk_table($tld);
 					// delete bk table
-					RecordObj_dd::delete_bk_table();
+					ontology_node::delete_bk_table();
 					$response->errors[] = 'Failed add_main_section file_item: ' . to_string($file_item);
 					debug_log(__METHOD__
 						. " Error creating ontology main section " . PHP_EOL
@@ -2316,7 +2316,7 @@ class ontology {
 
 		// tld
 			$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO;	// 'hierarchy6';
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tld_tipo, true);
+			$model_name	= ontology_node::get_modelo_name_by_tipo($tld_tipo, true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$tld_tipo,
@@ -2369,7 +2369,7 @@ class ontology {
 
 		// Typology component
 			$tipo		= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -2421,7 +2421,7 @@ class ontology {
 
 		// Name component
 			$tipo		= DEDALO_HIERARCHY_TERM_TIPO;
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -2462,7 +2462,7 @@ class ontology {
 			$safe_tld = safe_tld( $tld );
 
 		// 1 Delete the jer_dd nodes
-			$deleted_jer_dd = RecordObj_dd::delete_tld_nodes( $safe_tld );
+			$deleted_jer_dd = ontology_node::delete_tld_nodes( $safe_tld );
 
 			if ( $deleted_jer_dd===false ) {
 				$response->errors[] = 'unable to delete tld';
@@ -2551,8 +2551,8 @@ class ontology {
 	public static function jer_dd_version_is_valid( string $min_date ) : bool {
 
 		// Ontology version. Check if is valid version
-		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
-		$term			= $RecordObj_dd->get_term();
+		$ontology_node	= new ontology_node('dd1', 'dd');
+		$term			= $ontology_node->get_term();
 		$term_value		= $term->{DEDALO_STRUCTURE_LANG} ?? null;
 		if (empty($term_value)) {
 			debug_log(__METHOD__
@@ -2564,7 +2564,7 @@ class ontology {
 		}
 
 		// check properties (new way to declare date)
-		$properties = $RecordObj_dd->get_properties() ?? new stdClass();
+		$properties = $ontology_node->get_properties() ?? new stdClass();
 		if (isset($properties->date)) {
 
 			// >=6.4 model
@@ -2615,7 +2615,7 @@ class ontology {
 			? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO // 'hierarchy59'
 			: DEDALO_HIERARCHY_CHILDREN_TIPO; // 'hierarchy45'
 
-		$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 		$componnent	= component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
@@ -2657,7 +2657,7 @@ class ontology {
 
 		// Name component
 			$tipo		= DEDALO_HIERARCHY_ORDER_TIPO;
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model		= ontology_node::get_modelo_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,

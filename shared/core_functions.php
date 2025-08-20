@@ -2626,8 +2626,8 @@ function is_ontology_available() {
 
 	try {
 
-		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
-		$term			= $RecordObj_dd->get_term();
+		$ontology_node	= new ontology_node('dd1', 'dd');
+		$term			= $ontology_node->get_term();
 
 		return is_object($term);
 

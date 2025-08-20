@@ -602,8 +602,8 @@ class component_json extends component_common {
 				// Resolve lang based on if is translatable
 					$path_end		= end($query_object->path);
 					$component_tipo	= $path_end->component_tipo;
-					$RecordObj_dd	= new RecordObj_dd($component_tipo);
-					$lang			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+					$ontology_node	= new ontology_node($component_tipo);
+					$lang			= $ontology_node->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
 					$clone = clone($query_object);
 						$clone->operator	= '=';
@@ -747,7 +747,7 @@ class component_json extends component_common {
 				// Resolve lang based on if is translatable
 					$path_end			= end($query_object->path);
 					$component_tipo		= $path_end->component_tipo;
-					$query_object->lang	= RecordObj_dd::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$query_object->lang	= ontology_node::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				break;
 			# DEFAULT CONTAIN
 			default:

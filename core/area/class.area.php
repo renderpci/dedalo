@@ -109,7 +109,7 @@ class area extends area_common  {
 
 				// areas. Get the JSON format of the ontology
 
-					$areas[] = RecordObj_dd::tipo_to_json_item($area_tipo, [
+					$areas[] = ontology_node::tipo_to_json_item($area_tipo, [
 						'tipo',
 						'model',
 						'parent',
@@ -126,7 +126,7 @@ class area extends area_common  {
 						// skip the areas_deny
 						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
 
-						$areas[] = RecordObj_dd::tipo_to_json_item($child_area_tipo, [
+						$areas[] = ontology_node::tipo_to_json_item($child_area_tipo, [
 							'tipo',
 							'model',
 							'parent',
@@ -169,8 +169,8 @@ class area extends area_common  {
 		$ar_children_areas_recursive = [];
 
 		// short vars
-		$RecordObj_dd			= new RecordObj_dd($terminoID);
-		$ar_ts_children			= $RecordObj_dd->get_ar_children_of_this();
+		$ontology_node			= new ontology_node($terminoID);
+		$ar_ts_children			= $ontology_node->get_ar_children_of_this();
 		$ar_ts_children_size	= sizeof($ar_ts_children);
 
 		if ($ar_ts_children_size>0) {
@@ -180,8 +180,8 @@ class area extends area_common  {
 
 				$children_terminoID = $ar_ts_children[$i];
 
-				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
-				$model			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
+				$ontology_node	= new ontology_node($children_terminoID);
+				$model			= ontology_node::get_modelo_name_by_tipo($children_terminoID,true);
 
 				// Test if model is accepted or not (more restrictive)
 				if( 	in_array($model, area::$ar_children_include_model_name)

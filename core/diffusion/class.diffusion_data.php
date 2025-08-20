@@ -18,8 +18,8 @@ class diffusion_data {
 		// ddo_map create or get from properties
 		$ddo_map = [];
 
-		$RecordObj_dd	= new RecordObj_dd($diffusion_node_tipo);
-		$properties		= $RecordObj_dd->get_properties();
+		$ontology_node	= new ontology_node($diffusion_node_tipo);
+		$properties		= $ontology_node->get_properties();
 
 		// check if the ontology has his own ddo_map defined, if not, it will create a ddo_map with related components.
 		if(isset($properties->process, $properties->process->ddo_map)){
@@ -108,7 +108,7 @@ class diffusion_data {
 	public static function get_ddo_value( object $ddo, array $ddo_map, string $section_tipo, string|int $section_id ) : array {
 
 		$current_tipo	= $ddo->tipo;
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+		$model_name		= ontology_node::get_modelo_name_by_tipo($current_tipo);
 
 		$element = $model_name === 'relation_list'
 			? new relation_list($current_tipo, $section_id, $section_tipo, 'list')

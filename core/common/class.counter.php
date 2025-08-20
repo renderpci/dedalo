@@ -77,7 +77,7 @@ abstract class counter {
 
 			// new counter case
 
-			$ref		= RecordObj_dd::get_termino_by_tipo($tipo)." [".RecordObj_dd::get_modelo_name_by_tipo($tipo,true)."]";
+			$ref		= ontology_node::get_termino_by_tipo($tipo)." [".ontology_node::get_modelo_name_by_tipo($tipo,true)."]";
 			$strQuery	= "INSERT INTO \"$matrix_table\" (parent, dato, tipo, lang, ref) VALUES ($1, $2, $3, $4, $5)";
 			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($parent, $dato, $tipo, $lang, $ref));
 			if ($result===false) {
@@ -300,7 +300,7 @@ abstract class counter {
 			$counter_value	= (int)$rows['dato'];
 
 			// model check
-				$model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+				$model_name = ontology_node::get_modelo_name_by_tipo($section_tipo,true);
 				if ($model_name!=='section') {
 					$msg = " Counter row with tipo: '$section_tipo' is a '$model_name' . Only sections can use counters. Fix ASAP ";
 					debug_log(__METHOD__
@@ -325,7 +325,7 @@ abstract class counter {
 			// item_info
 				$item_info = (object)[
 					'section_tipo'		=> $section_tipo,
-					'label'				=> RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true),
+					'label'				=> ontology_node::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true),
 					'counter_value'		=> $counter_value,
 					'last_section_id'	=> $last_section_id
 				];
