@@ -228,9 +228,9 @@ class component_relation_common extends component_common {
 			if (!empty($this->dato_full)) {
 
 				$this->dato = [];
-				$translatable = $this->ontology_node->get_traducible();
+				$translatable = $this->ontology_node->get_is_translatable();
 				foreach ($this->dato_full as $locator) {
-					if ($translatable!=='si') {
+					if ($translatable!==true) {
 						$this->dato[] = $locator;
 					}else if(isset($locator->lang) && $locator->lang===$this->lang){
 						$this->dato[] = $locator;

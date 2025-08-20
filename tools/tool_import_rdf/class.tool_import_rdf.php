@@ -40,12 +40,8 @@ class tool_import_rdf extends tool_common {
 	*/
 	public function get_component_dato(int|string $section_id,	string $component_tipo) : mixed {
 
-		$ontology_node	= new ontology_node($component_tipo);
-		$translatable 	= $ontology_node->get_traducible();
-		$model			= ontology_node::get_modelo_name_by_tipo($component_tipo);
-		$lang			=  ($translatable==='no')
-			? DEDALO_DATA_NOLAN
-			: DEDALO_DATA_LANG;
+		$lang	= ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		$model	= ontology_node::get_modelo_name_by_tipo($component_tipo);
 
 		// component
 		$component = component_common::get_instance(
@@ -632,11 +628,9 @@ class tool_import_rdf extends tool_common {
 	*/
 	public static function get_resource_match( string $section_tipo, string $component_tipo, string $value, ?string $filter=null ) : object {
 
-		$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
-		$name			= ontology_node::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
-
-		$ontology_node	= new ontology_node($component_tipo);
-		$lang			= ($ontology_node->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
+		$model_name		= ontology_node::get_modelo_name_by_tipo( $component_tipo,true );
+		$name			= ontology_node::get_termino_by_tipo( $component_tipo, DEDALO_DATA_LANG, true, true );
+		$lang 			= ontology_node::get_translatable( $component_tipo ) ? 'all' : DEDALO_DATA_NOLAN;
 
 		// filter
 			$filter_string = !empty($filter)
@@ -717,9 +711,8 @@ class tool_import_rdf extends tool_common {
 					: $value;
 
 			// save new value
-				$component_tipo_ontology_node	= new ontology_node($component_tipo);
-				$lang							= ($component_tipo_ontology_node->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-				$code_component					= component_common::get_instance(
+				$lang			= ontology_node::get_translatable( $component_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$code_component	= component_common::get_instance(
 					$model_name,
 					$component_tipo,
 					$section_id,
@@ -776,8 +769,7 @@ class tool_import_rdf extends tool_common {
 			$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 
 		// save new value
-			$ontology_node	= new ontology_node($component_tipo);
-			$lang			= ($ontology_node->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
+			$lang = ontology_node::get_translatable($component_tipo) ? $lang : DEDALO_DATA_NOLAN;
 
 			$code_component	= component_common::get_instance(
 				$model_name,
@@ -885,9 +877,7 @@ class tool_import_rdf extends tool_common {
 			$path			= $properties->path;
 			$value			= $properties->value;
 
-		$ontology_node	= new ontology_node($component_tipo);
-		$lang			= ($ontology_node->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
-
+			$lang = ontology_node::get_translatable( $component_tipo ) ? 'all' : DEDALO_DATA_NOLAN;
 		// filter
 			$filter = '{
 				"$and": [
@@ -925,12 +915,8 @@ class tool_import_rdf extends tool_common {
 			return null;
 		}
 
-		$ontology_node	= new ontology_node($component_tipo);
-		$translatable	= $ontology_node->get_traducible();
 		$model			= ontology_node::get_modelo_name_by_tipo($component_tipo);
-		$lang			=  ($translatable==='no')
-			? DEDALO_DATA_NOLAN
-			: DEDALO_DATA_LANG;
+		$lang			= ontology_node::get_translatable( $component_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 		// component
 		$component = component_common::get_instance(

@@ -111,8 +111,7 @@
 				#}
 
 				# SELECCIÓN EN EL LENGUAJE ACTUAL
-				$ontology_node 	= new ontology_node($current_tipo);
-				$current_lang 	= $ontology_node->get_traducible() ==='no' ? DEDALO_DATA_NOLAN : $options->lang;
+				$current_lang 	= ontology_node::get_translatable($current_tipo) ? $options->lang : DEDALO_DATA_NOLAN;
 				$strQuery_select .= "\n datos #>>'{components,$current_tipo,$options->data_to_be_used,$current_lang}' AS $current_tipo";
 				if($current_tipo !== end($fields)) $strQuery_select .= ',';
 			}

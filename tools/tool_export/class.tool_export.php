@@ -365,8 +365,7 @@ class tool_export extends tool_common {
 				// $class_list			= $ddo->class_list ?? null;
 
 			// component. Create the component to get the value of the column
-				$ontology_node		= new ontology_node($ddo->component_tipo);
-				$current_lang		= $ontology_node->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$current_lang		= ontology_node::get_translatable($ddo->component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model	= ontology_node::get_modelo_name_by_tipo($ddo->component_tipo, true);
 
 				$current_component	= component_common::get_instance(
