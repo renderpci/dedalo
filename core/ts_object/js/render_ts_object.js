@@ -788,7 +788,7 @@ const render_id_column = function(options) {
 			// related icon
 				ui.create_dom_element({
 					element_type	: 'span',
-					class_name		: 'button arrow_link', // ts_object_add_icon
+					class_name		: 'button arrow_link',
 					parent			: link_related
 				})
 			break;
