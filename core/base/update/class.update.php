@@ -655,9 +655,9 @@ class update {
 
 					foreach($ar_component_tipo as $current_component_tipo) {
 
-						$ontology_node	= new ontology_node($current_component_tipo);
-						$translatable	= $ontology_node->get_traducible();
-						$ar_langs		= ($translatable==='no') ? [DEDALO_DATA_NOLAN] : DEDALO_PROJECTS_DEFAULT_LANGS;
+						$ar_langs = ontology_node::get_translatable( $current_component_tipo )
+							? [DEDALO_DATA_NOLAN]
+							: DEDALO_PROJECTS_DEFAULT_LANGS;
 
 						foreach($ar_langs as $current_lang) {
 

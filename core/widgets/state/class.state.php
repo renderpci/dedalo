@@ -109,8 +109,7 @@ class state extends widget_common {
 					$section		= reset($ar_section);
 					// check if the component (select, radio_button, etc) is translatable
 					// if yes, the locator will has lang associate to it, else the locator don't has lang and it will identificate as 'lg-nolan'
-					$ontology_node = new ontology_node($component_tipo);
-					$translatable = $ontology_node->get_traducible();
+					$translatable = ontology_node::get_translatable($component_tipo);
 
 					// get the value of the component, it can be empty and in these case will create a empty item.
 					$ar_value	= $path_result->value;
@@ -121,11 +120,11 @@ class state extends widget_common {
 							$current_result->label		= $this->get_label($locator, $label_component);
 							$current_result->value		= 0;
 							$current_result->locator	= null;
-							$current_result->lang		= $translatable === 'si' ? null : 'lg-nolan';
+							$current_result->lang		= $translatable === true ? null : 'lg-nolan';
 							$current_result->id			= $last_path->var_name;
 							$current_result->column		= ($section==='dd501') ? 'state' :'situation';
 							$current_result->type		= 'detail';
-							$current_result->n			= $translatable==='si' ? count($project_langs) : 1;
+							$current_result->n			= $translatable===true ? count($project_langs) : 1;
 						$result[] = $current_result;
 					}
 
@@ -145,7 +144,7 @@ class state extends widget_common {
 								$current_result->column		= 'situation';
 								$current_result->type		= 'detail';
 								// $current_result->label	= $this->get_label($locator,'dd185');
-								$current_result->n			= $translatable==='si' ? count($project_langs) : 1;
+								$current_result->n			= $translatable===true ? count($project_langs) : 1;
 								break;
 
 							// Status, the list controled by admins
@@ -159,7 +158,7 @@ class state extends widget_common {
 								$current_result->column		= 'state';
 								$current_result->type		= 'detail';
 								// $current_result->label	= $this->get_label($locator,'dd503');
-								$current_result->n			= $translatable==='si' ? count($project_langs) : 1;
+								$current_result->n			= $translatable===true ? count($project_langs) : 1;
 								break;
 						}
 						// add all item to $result

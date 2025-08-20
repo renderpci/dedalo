@@ -62,7 +62,7 @@ class component_date extends component_common {
 		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 
 		if(SHOW_DEBUG===true) {
-			if ($this->ontology_node->get_traducible()==='si') {
+			if ($this->ontology_node->get_is_translatable()===true) {
 				debug_log(__METHOD__
 					." Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is NOT 'traducible'. Please fix this ASAP"
 					, logger::ERROR);

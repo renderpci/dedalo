@@ -4627,8 +4627,7 @@ class diffusion_sql extends diffusion  {
 				$fallback_tipo		= $process_dato_arguments->fallback->tipo;
 				$fallback_method	= $process_dato_arguments->fallback->method;
 				// lang
-				$ontology_node		= new ontology_node($fallback_tipo);
-				$lang				= $ontology_node->get_traducible()==='si'
+				$lang = ontology_node::get_translatable( $fallback_tipo )
 					? $options->lang ?? DEDALO_DATA_LANG
 					: DEDALO_DATA_NOLAN;
 

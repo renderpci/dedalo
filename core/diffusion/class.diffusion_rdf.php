@@ -1100,8 +1100,8 @@ class diffusion_rdf extends diffusion {
 				}
 
 				// ontology_node::get_modelo_name_by_tipo($component_tipo);
-				$component_lang	= $ontology_node->get_traducible();
-				$lang			= $component_lang==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$translatable	= $ontology_node->get_is_translatable();
+				$lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component		= component_common::get_instance(
 					$model,
 					$component_tipo,
@@ -1279,8 +1279,8 @@ class diffusion_rdf extends diffusion {
 				$model			= $ontology_node->get_modelo_name();
 
 				// ontology_node::get_modelo_name_by_tipo($component_tipo);
-				$component_lang	= $ontology_node->get_traducible();
-				$lang			= $component_lang==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$translatable	= $ontology_node->get_is_translatable();
+				$lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component		= component_common::get_instance(
 					$model,
 					$component_tipo,
