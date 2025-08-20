@@ -4334,12 +4334,12 @@ class diffusion_sql extends diffusion  {
 
 			case 'modelo' : // object_model, object_model_label
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$tipo			= $RecordObj_dd->get_modelo();
+				$ontology_node	= new ontology_node($term_id);
+				$model_tipo			= $ontology_node->get_model_tipo();
 
-				$value = ($resolve_label===true && !empty($tipo))
-					? RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, $from_cache=true, $fallback=false)
-					: (!empty($tipo) ? $tipo : null);
+				$value = ($resolve_label===true && !empty($model_tipo))
+					? ontology_node::get_termino_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, $from_cache=true, $fallback=false)
+					: (!empty($model_tipo) ? $model_tipo : null);
 
 				return $value;
 				break;

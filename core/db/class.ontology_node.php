@@ -435,8 +435,8 @@ class ontology_node extends ontology_record {
 		if (empty($model)) {
 
 			// fallback to old resolution
-			$modelo_tipo = $this->get_modelo();
-			if (empty($modelo_tipo)) {
+			$model_tipo = $this->get_model_tipo();
+			if (empty($model_tipo)) {
 
 				// new model area_maintenance (term dd88, model dd72) not updated Ontology cases
 				if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
@@ -736,11 +736,11 @@ class ontology_node extends ontology_record {
 	* @return array $ar_all_tipo
 	* 	Array of all term_id as ["oh1","dd917",..]
 	*/
-	public static function get_ar_all_tipo_of_modelo_tipo( string $modelo_tipo, bool $use_cache=true ) : array {
+	public static function get_ar_all_tipo_of_modelo_tipo( string $model_tipo, bool $use_cache=true ) : array {
 
 		// search
 		$arguments = [
-			'modelo' => $modelo_tipo
+			'model_tipo' => $model_tipo
 		];
 		$ontology_node				= new ontology_node(NULL,'dd');
 		$ontology_node->use_cache	= $use_cache;
@@ -748,7 +748,7 @@ class ontology_node extends ontology_record {
 
 
 		return $ar_all_tipo;
-	}//end get_ar_all_tipo_of_modelo_tipo
+	}//end model_tipo
 
 
 
@@ -1830,10 +1830,10 @@ class ontology_node extends ontology_record {
 					break;
 				case 'model':
 					// $item->{$property} = ontology_node::get_modelo_name_by_tipo($tipo,true);
-					$item->{$property} = $ontology_node->get_modelo_name();
+					$item->{$property} = $ontology_node->get_model();
 					break;
 				case 'model_tipo':
-					$item->{$property} = $ontology_node->get_modelo();
+					$item->{$property} = $ontology_node->get_model_tipo();
 					break;
 				case 'is_translatable':
 					$item->{$property} = $ontology_node->get_is_translatable();
