@@ -1576,7 +1576,7 @@ class transform_data {
 
 			// ontology_records. Collects all jer_dd records for the current tld and
 			// creates a matrix record for each one
-			$jer_dd_rows = ontology_node::get_all_tld_records( [$tld] );
+			$jer_dd_rows = ontology_node::get_all_records_by_tld( [$tld] );
 			ontology::create_ontology_records( $jer_dd_rows );
 		}
 
