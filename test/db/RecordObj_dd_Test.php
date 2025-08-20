@@ -1166,11 +1166,11 @@ final class ontology_node_test extends TestCase {
 					. ' expected: ' . to_string($expected)
 			);
 
-		// termino_relacionado
+		// related
 		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
 			'rsc88', // Image
 			'component_input_text',
-			'termino_relacionado'
+			'related'
 		);
 
 		// rsc23

@@ -3724,7 +3724,7 @@ abstract class common {
 										$ar_main_section = ontology_node::get_ar_tipo_by_model_name_and_relation(
 											$tipo, // string tipo
 											'section', // string model
-											'termino_relacionado', // string relation_type
+											'related', // string relation_type
 											true // bool search_exact
 										);
 

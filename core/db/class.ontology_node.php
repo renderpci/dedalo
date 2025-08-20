@@ -1034,13 +1034,13 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* get_relation_nodes
+	* GET_RELATION_NODES
 	* @param string $tipo
 	* @param bool $cache = false
 	* @param bool $simple = false
 	* @return array $ar_relations
 	* JSON_VERSION
-	* In 'simple' mode it returns only an array of 'tipo'.
+	* In 'simple' mode it returns only an array with 'tipo'.
 	*/
 	public static function get_relation_nodes( string $tipo, bool $cache=false, bool $simple=false ) : array {
 
@@ -1075,7 +1075,7 @@ class ontology_node extends ontology_record {
 	* e.g. to know the related terms of model 'filter'.
 	* @param string $tipo like 'dd20'
 	* @param string $model_name like 'component_input_text'
-	* @param string $relation_type like 'termino_relacionado'
+	* @param string $relation_type like 'related'
 	* @param bool $search_exact = false
 	* @return array $result
 	*/
@@ -1173,24 +1173,24 @@ class ontology_node extends ontology_record {
 				}
 				break;
 
-			case 'termino_relacionado' :
+			case 'related' :
 
 				// We get the related terms
-				$ontology_node				= new ontology_node($tipo);
-				$ar_terminos_relacionados	= $ontology_node->get_relation_nodes(
+				$ontology_node	= new ontology_node($tipo);
+				$relation_nodes	= $ontology_node->get_relation_nodes(
 					$tipo,
 					true, // bool cache
 					true // bool simple
 				);
 
 				// we go through them to filter by model
-				if(is_array($ar_terminos_relacionados)) foreach($ar_terminos_relacionados as $tipo) {
+				if(is_array($relation_nodes)) foreach($relation_nodes as $tipo) {
 
 					$ontology_node	= new ontology_node($tipo);
 					$model_tipo		= $ontology_node->get_model_tipo();
 					if(empty($model_tipo)) {
 						debug_log(__METHOD__
-							." Error processing relation termino_relacionado. Model is empty. Please define model for $tipo" . PHP_EOL
+							." Error processing relation related. Model is empty. Please define model for $tipo" . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL

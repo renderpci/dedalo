@@ -39,7 +39,7 @@ class diffusion_data {
 			$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation(
 				$diffusion_node_tipo,
 				'component_',
-				'termino_relacionado',
+				'related',
 				false
 			);
 			// create new ddo_map when the ontology doesn't has one ddo_map
