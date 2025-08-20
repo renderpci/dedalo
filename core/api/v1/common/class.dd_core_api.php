@@ -72,23 +72,23 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
-		// test jer_dd without term data catch 22 situation
+		// test dd_ontology without term data catch 22 situation
 			// if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 			// 	try {
 			// 		$ontology_node = new ontology_node('dd1', 'dd');
 			// 		$term = $ontology_node->get_term();
 			// 		if (empty($term)) {
-			// 			$result = area_maintenance::recover_jer_dd_column();
+			// 			$result = area_maintenance::recover_dd_ontology_column();
 			// 			if ($result===false) {
 			// 				debug_log(__METHOD__
-			// 					. " Error recovering term column from jer_dd table" . PHP_EOL
+			// 					. " Error recovering term column from dd_ontology table" . PHP_EOL
 			// 					, logger::ERROR
 			// 				);
 			// 			}
 			// 		}
 			// 	} catch (Exception $e) {
 			// 		debug_log(__METHOD__
-			// 			. " Error (exception) on check term jer_dd_column" . PHP_EOL
+			// 			. " Error (exception) on check term dd_ontology_column" . PHP_EOL
 			// 			. ' Caught exception: ' . $e->getMessage()
 			// 			, logger::ERROR
 			// 		);

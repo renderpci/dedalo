@@ -113,7 +113,7 @@ build_database_version.prototype.build_install_version = async function () {
 
 /**
 * BUILD_RECOVERY_VERSION_FILE
-* Creates the recovery file 'jer_dd_recovery.sql' from current 'jer_dd' table in server
+* Creates the recovery file 'dd_ontology_recovery.sql' from current 'dd_ontology' table in server
 * @return object api_response
 */
 build_database_version.prototype.build_recovery_version_file = async function () {
@@ -141,12 +141,12 @@ build_database_version.prototype.build_recovery_version_file = async function ()
 
 
 /**
-* RESTORE_JER_DD_RECOVERY_FROM_FILE
-* Imports the SQL file '/install/db/jer_dd_recovery.sql'
-* creating the table 'jer_dd_recovery'
+* RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
+* Imports the SQL file '/install/db/dd_ontology_recovery.sql'
+* creating the table 'dd_ontology_recovery'
 * @return object api_response
 */
-build_database_version.prototype.restore_jer_dd_recovery_from_file = async function () {
+build_database_version.prototype.restore_dd_ontology_recovery_from_file = async function () {
 
 	const api_response  = await data_manager.request({
 		body : {
@@ -154,7 +154,7 @@ build_database_version.prototype.restore_jer_dd_recovery_from_file = async funct
 			action			: 'class_request',
 			prevent_lock	: true,
 			source			: {
-				action : 'restore_jer_dd_recovery_from_file',
+				action : 'restore_dd_ontology_recovery_from_file',
 			},
 			options : {
 				background_running	: false // set run in background CLI
@@ -166,7 +166,7 @@ build_database_version.prototype.restore_jer_dd_recovery_from_file = async funct
 
 
 	return api_response
-}//end restore_jer_dd_recovery_from_file
+}//end restore_dd_ontology_recovery_from_file
 
 
 

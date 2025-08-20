@@ -966,18 +966,18 @@ class install extends common {
 			$db_install_conn	= install::get_db_install_conn();
 			$exec				= true;
 
-		// clean jer_dd
+		// clean dd_ontology
 			$items	= array_map(function($el){
 				return '\''.$el.'\'';
 			}, $config->to_preserve_tld);
 			$line	= implode(',', $items);
 			$sql	='
 				DELETE
-				FROM "jer_dd"
+				FROM "dd_ontology"
 				WHERE
 				tld NOT IN('.$line.');
 			';
-			// dump(null, ' clean jer_dd ++ '.to_string($sql));
+			// dump(null, ' clean dd_ontology ++ '.to_string($sql));
 			debug_log(__METHOD__
 				. " Executing DB query " .PHP_EOL
 				. $sql
@@ -986,7 +986,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (jer_dd): ".pg_last_error(DBi::_getConnection());
+					$msg = " Error on db execution (dd_ontology): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
@@ -1019,7 +1019,7 @@ class install extends common {
 
 		// re-index ontology tables
 			$sql = '
-					REINDEX TABLE "jer_dd";
+					REINDEX TABLE "dd_ontology";
 			';
 			if (DBi::check_table_exists('matrix_descriptors_dd')) {
 				$sql .= '
@@ -2649,7 +2649,7 @@ class install extends common {
 
 	/**
 	* BUILD_RECOVERY_VERSION_FILE
-	* Creates the recovery file 'jer_dd_recovery.sql' from current 'jer_dd' table
+	* Creates the recovery file 'dd_ontology_recovery.sql' from current 'dd_ontology' table
 	* @return object $response
 	*/
 	public static function build_recovery_version_file() : object {
@@ -2670,22 +2670,22 @@ class install extends common {
 			];
 			$preserve_tld_string = "'".implode("','", $preserve_tld)."'";
 
-		// clone jer_dd table to jer_dd_recovery
+		// clone dd_ontology table to dd_ontology_recovery
 			$sql = '
-				DROP TABLE IF EXISTS "jer_dd_recovery" CASCADE;
-				CREATE TABLE "jer_dd_recovery" ( LIKE "jer_dd" INCLUDING ALL );
-				INSERT INTO "jer_dd_recovery" SELECT * FROM "jer_dd" WHERE tld IN ('.$preserve_tld_string.');
+				DROP TABLE IF EXISTS "dd_ontology_recovery" CASCADE;
+				CREATE TABLE "dd_ontology_recovery" ( LIKE "dd_ontology" INCLUDING ALL );
+				INSERT INTO "dd_ontology_recovery" SELECT * FROM "dd_ontology" WHERE tld IN ('.$preserve_tld_string.');
 			';
 			$result	= pg_query(DBi::_getConnection(), $sql);
 			if (!$result) {
-				$msg = " Error on db execution (clone table jer_dd): ".pg_last_error(DBi::_getConnection());
+				$msg = " Error on db execution (clone table dd_ontology): ".pg_last_error(DBi::_getConnection());
 				debug_log(__METHOD__
 					. $msg . PHP_EOL
 					. $sql
 					, logger::ERROR
 				);
 				$response->msg = $msg;
-				$response->errors[] = 'failed creating jer_dd_recovery table';
+				$response->errors[] = 'failed creating dd_ontology_recovery table';
 
 				return $response; // return error here !
 			}
@@ -2693,9 +2693,9 @@ class install extends common {
 		// export to file
 			// terminal command pg_dump
 			$config		= self::get_config();
-			$sql_file	= DEDALO_ROOT_PATH . '/install/db/jer_dd_recovery.sql.gz';
+			$sql_file	= DEDALO_ROOT_PATH . '/install/db/dd_ontology_recovery.sql.gz';
 			$command	= DB_BIN_PATH . 'pg_dump -d '.DEDALO_DATABASE_CONN.' '.$config->host_line.' '.$config->port_line
-						  .' -U '.DEDALO_USERNAME_CONN.' -t jer_dd_recovery | gzip > '.$sql_file;
+						  .' -U '.DEDALO_USERNAME_CONN.' -t dd_ontology_recovery | gzip > '.$sql_file;
 
 			debug_log(__METHOD__
 				." Executing terminal DB command " . PHP_EOL
@@ -2708,18 +2708,18 @@ class install extends common {
 
 		// delete temp table
 			$sql = '
-				DROP TABLE IF EXISTS "jer_dd_recovery" CASCADE;
+				DROP TABLE IF EXISTS "dd_ontology_recovery" CASCADE;
 			';
 			$result	= pg_query(DBi::_getConnection(), $sql);
 			if (!$result) {
-				$msg = " Error on db execution (delete table jer_dd_recovery): ".pg_last_error(DBi::_getConnection());
+				$msg = " Error on db execution (delete table dd_ontology_recovery): ".pg_last_error(DBi::_getConnection());
 				debug_log(__METHOD__
 					. $msg . PHP_EOL
 					. $sql
 					, logger::ERROR
 				);
 				$response->msg = $msg;
-				$response->errors[] = 'failed deleting jer_dd_recovery table';
+				$response->errors[] = 'failed deleting dd_ontology_recovery table';
 
 				return $response; // return error here !
 			}
@@ -2736,12 +2736,12 @@ class install extends common {
 
 
 	/**
-	* RESTORE_JER_DD_RECOVERY_FROM_FILE
-	* Import the SQL file creating table 'jer_dd_recovery'
-	* Source file is a SQL string file located at /dedalo/install/db/jer_dd_recovery.sql
+	* RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
+	* Import the SQL file creating table 'dd_ontology_recovery'
+	* Source file is a SQL string file located at /dedalo/install/db/dd_ontology_recovery.sql
 	* @return object $response
 	*/
-	public static function restore_jer_dd_recovery_from_file() : object {
+	public static function restore_dd_ontology_recovery_from_file() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -2751,8 +2751,8 @@ class install extends common {
 		// config
 			$config = self::get_config();
 
-		// sql_file: jer_dd_recovery.sql
-			$sql_file = DEDALO_ROOT_PATH . '/install/db/jer_dd_recovery.sql.gz';
+		// sql_file: dd_ontology_recovery.sql
+			$sql_file = DEDALO_ROOT_PATH . '/install/db/dd_ontology_recovery.sql.gz';
 			if (!file_exists($sql_file)) {
 				$msg = " Error on table restore. File do not exists: ".pg_last_error(DBi::_getConnection());
 				debug_log(__METHOD__
@@ -2790,7 +2790,7 @@ class install extends common {
 
 
 		return $response;
-	}//end restore_jer_dd_recovery_from_file
+	}//end restore_dd_ontology_recovery_from_file
 
 
 

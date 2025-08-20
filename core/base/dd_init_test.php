@@ -831,10 +831,10 @@
 
 
 
-// jer_dd_recovery. Create it if not already exists
-	$jer_dd_recovery_exists	= DBi::check_table_exists('jer_dd_recovery');
-	if (!$jer_dd_recovery_exists) {
-		install::restore_jer_dd_recovery_from_file();
+// dd_ontology_recovery. Create it if not already exists
+	$dd_ontology_recovery_exists	= DBi::check_table_exists('dd_ontology_recovery');
+	if (!$dd_ontology_recovery_exists) {
+		install::restore_dd_ontology_recovery_from_file();
 	}
 
 

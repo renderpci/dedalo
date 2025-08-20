@@ -24,7 +24,7 @@
 /**
 * TOOL_ONTOLOGY_PARSER
 * Ontology processor, the tool export matrix data into COPY files to server to others Dédalo servers
-* and regenerate jer_dd with the matrix ontology data
+* and regenerate dd_ontology with the matrix ontology data
 * Tool use the ontology typologies to group tld
 */
 export const tool_ontology_parser = function () {

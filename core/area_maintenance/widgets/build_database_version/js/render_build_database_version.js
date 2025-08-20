@@ -95,14 +95,14 @@ const get_content_data = async function(self) {
 			render_build_recovery_version_file(self, value)
 		)
 
-	// restore_jer_dd_recovery_from_file
-		const restore_jer_dd_recovery_from_file_container = ui.create_dom_element({
+	// restore_dd_ontology_recovery_from_file
+		const restore_dd_ontology_recovery_from_file_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'group_container restore_jer_dd_recovery_from_file_container',
+			class_name		: 'group_container restore_dd_ontology_recovery_from_file_container',
 			parent			: content_data
 		})
-		restore_jer_dd_recovery_from_file_container.appendChild(
-			render_restore_jer_dd_recovery_from_file(self, value)
+		restore_dd_ontology_recovery_from_file_container.appendChild(
+			render_restore_dd_ontology_recovery_from_file(self, value)
 		)
 
 
@@ -212,7 +212,7 @@ const render_build_recovery_version_file = function (self, value) {
 	const fragment = new DocumentFragment()
 
 	// info
-		const text = `Creates 'jer_dd_recovery.sql' file with basic Ontology data`
+		const text = `Creates 'dd_ontology_recovery.sql' file with basic Ontology data`
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: text,
@@ -224,7 +224,7 @@ const render_build_recovery_version_file = function (self, value) {
 		const button_process = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light button_process',
-			inner_html		: 'Create \'jer_dd_recovery.sql\' file',
+			inner_html		: 'Create \'dd_ontology_recovery.sql\' file',
 			parent			: fragment
 		})
 		// event click
@@ -278,18 +278,18 @@ const render_build_recovery_version_file = function (self, value) {
 
 
 /**
-* RENDER_RESTORE_JER_DD_RECOVERY_FROM_FILE
+* RENDER_RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
 * Creates the build install DOM nodes
 * @param object self
 * @param object value
 * @return DocumentFragment
 */
-const render_restore_jer_dd_recovery_from_file = function (self, value) {
+const render_restore_dd_ontology_recovery_from_file = function (self, value) {
 
 	const fragment = new DocumentFragment()
 
 	// info
-		const text = `Restores table 'jer_dd_recovery' from file`
+		const text = `Restores table 'dd_ontology_recovery' from file`
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: text,
@@ -297,11 +297,11 @@ const render_restore_jer_dd_recovery_from_file = function (self, value) {
 			parent			: fragment
 		})
 
-	// button_process restore_jer_dd_recovery_from_file
+	// button_process restore_dd_ontology_recovery_from_file
 		const button_process = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light button_process',
-			inner_html		: 'Restore \'jer_dd_recovery\' table from file',
+			inner_html		: 'Restore \'dd_ontology_recovery\' table from file',
 			parent			: fragment
 		})
 		// event click
@@ -318,10 +318,10 @@ const render_restore_jer_dd_recovery_from_file = function (self, value) {
 			// locks the button submit
 			button_process.classList.add('loading')
 
-			// restore_jer_dd_recovery_from_file
-			const api_response = await self.restore_jer_dd_recovery_from_file()
+			// restore_dd_ontology_recovery_from_file
+			const api_response = await self.restore_dd_ontology_recovery_from_file()
 
-			console.log('**** render_restore_jer_dd_recovery_from_file api_response:', api_response);
+			console.log('**** render_restore_dd_ontology_recovery_from_file api_response:', api_response);
 
 			// locks the button submit
 			button_process.classList.remove('loading')
@@ -348,7 +348,7 @@ const render_restore_jer_dd_recovery_from_file = function (self, value) {
 
 
 	return fragment
-}//end render_restore_jer_dd_recovery_from_file
+}//end render_restore_dd_ontology_recovery_from_file
 
 
 

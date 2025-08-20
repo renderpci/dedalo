@@ -156,7 +156,7 @@ class tools_register {
 				// Clean. remove structure records in the database
 					ontology_node::delete_tld_nodes( 'tool' );
 
-				// import ontology (structure) in jer_dd
+				// import ontology (structure) in dd_ontology
 					foreach ($ar_ontologies as $current_ontology) {
 						// @TODO generate the ontology node or modify exiting one!! 10-01-2024
 					}

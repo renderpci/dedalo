@@ -336,7 +336,7 @@ class db_tasks {
 
 		// Set a logical order of the data
 		// It depends on the table.
-		$order = ($table === 'jer_dd')
+		$order = ($table === 'dd_ontology')
 			? 'tld, id'
 			: 'section_tipo, section_id';
 

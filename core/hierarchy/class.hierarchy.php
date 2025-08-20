@@ -244,7 +244,7 @@ class hierarchy extends ontology {
 		// 2. main section for the thesaurus models/typologies. ts2, es2, etc
 
 			// virtual section
-			// create the ontology node, save it, and process the `jer_dd`
+			// create the ontology node, save it, and process the `dd_ontology`
 			// It uses a template to build the ontology node data
 
 				// ontology table record template data
@@ -324,7 +324,7 @@ class hierarchy extends ontology {
 					$component_parent->set_dato( $parent_locator );
 					$component_parent->Save();
 
-				// insert the node in jer_dd
+				// insert the node in dd_ontology
 					ontology::insert_dd_ontology_record($tld2.'0', 1);
 
 			// virtual model section
@@ -371,7 +371,7 @@ class hierarchy extends ontology {
 						$component_model_parent->set_dato( $parent_model_locator );
 						$component_model_parent->Save();
 
-					// insert the model node in jer_dd
+					// insert the model node in dd_ontology
 						ontology::insert_dd_ontology_record($tld2.'0', 2);
 
 			// set permissions. Allow current user access to created default sections

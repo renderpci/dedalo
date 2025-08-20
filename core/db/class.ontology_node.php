@@ -258,7 +258,7 @@ class ontology_node extends ontology_record {
 
 	/**
 	* GET_TERM
-	* Get jer_dd column 'term' and try to parse as JSON abject
+	* Get dd_ontology column 'term' and try to parse as JSON abject
 	* @return object|null
 	*/
 	public function get_term() : ?object  {
@@ -600,7 +600,7 @@ class ontology_node extends ontology_record {
 				'sql_code'			=> $sql_code,
 				'sql_limit'			=> 1
 			],
-			ontology_node::$table // jer_dd | jer_dd_recovery
+			ontology_node::$table // dd_ontology | dd_ontology_recovery
 		);
 		$tipo = $ar_result[0] ?? null;
 
@@ -612,7 +612,7 @@ class ontology_node extends ontology_record {
 
 	/**
 	* GET_ALL_records_by_TLD
-	* Get all jer_dd rows of specified tlds
+	* Get all dd_ontology rows of specified tlds
 	* @param  array $ar_tl
 	* @return array $result
 	* [
@@ -655,11 +655,11 @@ class ontology_node extends ontology_record {
 
 		// `where` clause of SQL query
 		$sql_query		= 'SELECT * FROM "'.ontology_node::$table.'" WHERE '. $filter ;
-		$jer_dd_result	= pg_query(DBi::_getConnection(), $sql_query);
+		$dd_ontology_result	= pg_query(DBi::_getConnection(), $sql_query);
 
-		// iterate jer_dd_result row
+		// iterate dd_ontology_result row
 		$ontology_records = [];
-		while($row = pg_fetch_object($jer_dd_result)) {
+		while($row = pg_fetch_object($dd_ontology_result)) {
 			$ontology_records[] = $row;
 		}
 
@@ -1335,7 +1335,7 @@ class ontology_node extends ontology_record {
 
 	/**
 	* GET_ACTIVE_TLDS
-	* Get from jer_dd table all active/installed tlds.
+	* Get from dd_ontology table all active/installed tlds.
 	* Used to check if the tipo has a valid definition in the ontology.
 	* If the tipo is not installed is not possible to resolve it
 	* The callers will decide if is necessary remove the tipo from definition, as remove from sqo, show error, or ...
@@ -1349,7 +1349,7 @@ class ontology_node extends ontology_record {
 			return $active_tlds_cache;
 		}
 
-		$table	= ontology_node::$table; // jer_dd | jer_dd_backup
+		$table	= ontology_node::$table; // dd_ontology | dd_ontology_backup
 		$sql_query	= "SELECT tld FROM \"$table\" GROUP BY tld";
 		$result	= pg_query(DBi::_getConnection(), $sql_query);
 
@@ -1368,7 +1368,7 @@ class ontology_node extends ontology_record {
 
 	/**
 	* GET_ROW_DATA
-	* Find the given tipo in jer_dd and return the row if exists.
+	* Find the given tipo in dd_ontology and return the row if exists.
 	* @param string $tipo (tipo)
 	* @return object|null $row
 	*/
@@ -1377,7 +1377,7 @@ class ontology_node extends ontology_record {
 		//remove any other things than tld and section_id in the tipo string
 		$safe_tipo = safe_tipo($tipo);
 
-		$table		= ontology_node::$table; // jer_dd | jer_dd_backup
+		$table		= ontology_node::$table; // dd_ontology | dd_ontology_backup
 		$sql_query	= "SELECT * FROM \"$table\" WHERE \"tipo\" = $1 LIMIT 1";
 
 		// Direct
@@ -1412,7 +1412,7 @@ class ontology_node extends ontology_record {
 
 	/**
 	* CHECK_ACTIVE_TLD
-	* Checks if the tipo tld is available and installed in the Ontology looking for the jer_dd
+	* Checks if the tipo tld is available and installed in the Ontology looking for the dd_ontology
 	* @param string $tipo
 	* @return bool
 	*/
@@ -1434,7 +1434,7 @@ class ontology_node extends ontology_record {
 	/**
 	* CHECK_TIPO_IS_VALID
 	* Checks if given tipo is usable trying to resolve model from tipo
-	* If model is empty, the tipo is not available because jer_dd is
+	* If model is empty, the tipo is not available because dd_ontology is
 	* damaged or the TLD is not installed.
 	* It is also used to validate old data pointing to a non active TLD.
 	* @param string $tipo
@@ -1448,7 +1448,7 @@ class ontology_node extends ontology_record {
 			return false;
 		}
 
-		// try to resolve model. If empty, the tipo do not exists in jer_dd
+		// try to resolve model. If empty, the tipo do not exists in dd_ontology
 		$model = ontology_node::get_model_name_by_tipo($tipo,true);
 		if (empty($model)) {
 			return false;
@@ -1515,7 +1515,7 @@ class ontology_node extends ontology_record {
 
 	/**
 	* INSERT
-	* Create a row into jer_dd with ontology data
+	* Create a row into dd_ontology with ontology data
 	* The insert will search if tipo exists previously,
 	* if the tipo was found, delete it and insert as new one
 	* else insert new one
@@ -1530,7 +1530,7 @@ class ontology_node extends ontology_record {
 
 		if( !empty($row_data) ){
 
-			$table		= ontology_node::$table; // jer_dd | jer_dd_backup
+			$table		= ontology_node::$table; // dd_ontology | dd_ontology_backup
 			$sql_query	= "DELETE FROM \"$table\" WHERE \"tipo\" = '$safe_tipo'";
 			$result		= pg_query(DBi::_getConnection(), $sql_query);
 
@@ -1577,7 +1577,7 @@ class ontology_node extends ontology_record {
 
 	/**
 	* GET_LAST_SECTION_ID_FROM_TLD
-	* Find the tipo(terminioID) in jer_dd and choose the last id
+	* Find the tipo(terminioID) in dd_ontology and choose the last id
 	* @return
 	*/
 	public function get_last_section_id_from_tld() : int {
@@ -1586,7 +1586,7 @@ class ontology_node extends ontology_record {
 		$safe_tld	= safe_tld($this->tld);
 
 		// Find last id of current section
-			$table		= ontology_node::$table; // jer_dd | jer_dd_backup
+			$table		= ontology_node::$table; // dd_ontology | dd_ontology_backup
 			$sql_query	= 'SELECT "tipo" FROM "'.$table.'" WHERE tld = \''.$safe_tld.'\'';
 			$result		= JSON_RecordObj_matrix::search_free($sql_query);
 			$value		= ($result === false)
@@ -1617,19 +1617,19 @@ class ontology_node extends ontology_record {
 
 	/**
 	* DELETE_TLD_NODES
-	* Removes all tld nodes (records) in jer_dd
+	* Removes all tld nodes (records) in dd_ontology
 	* @param string $tld
 	* @return bool
 	*/
 	public static function delete_tld_nodes( string $tld ) : bool {
 
-		$table = ontology_node::$table; // jer_dd | jer_dd_backup
+		$table = ontology_node::$table; // dd_ontology | dd_ontology_backup
 
 		// remove any other things than tld in the tld string
 		$safe_tld = safe_tld($tld);
 		if ($safe_tld!==$tld) {
 			debug_log(__METHOD__
-				. " Error deleting tld from table jer_dd. tld is not safe" . PHP_EOL
+				. " Error deleting tld from table dd_ontology. tld is not safe" . PHP_EOL
 				. ' tld: ' . to_string($tld) . PHP_EOL
 				. ' safe_tld: ' . to_string($safe_tld)
 				, logger::ERROR
@@ -1637,14 +1637,14 @@ class ontology_node extends ontology_record {
 			return false;
 		}
 
-		// jer_dd. delete terms (records)
+		// dd_ontology. delete terms (records)
 		$sql_query = '
 			DELETE FROM "'.$table.'" WHERE "tld" = \''.$safe_tld.'\';
 		';
 		$delete_result = pg_query(DBi::_getConnection(), $sql_query);
 		if (!$delete_result) {
 			debug_log(__METHOD__
-				. " Error deleting tld from table jer_dd" . PHP_EOL
+				. " Error deleting tld from table dd_ontology" . PHP_EOL
 				. ' tld: ' . to_string($tld)
 				, logger::ERROR
 			);
@@ -1659,7 +1659,7 @@ class ontology_node extends ontology_record {
 	/**
 	* CREATE_BK_TABLE
 	* Backup table is a copy of the given tlds
-	* Used to ensure that the jer_dd can be restore in process as regenerate it.
+	* Used to ensure that the dd_ontology can be restore in process as regenerate it.
 	* @param array $tl
 	* @return bool
 	*/
@@ -1668,16 +1668,16 @@ class ontology_node extends ontology_record {
 		$where = implode('\' OR tld = \'', $tld);
 
 		$sql_query = '
-			DROP TABLE IF EXISTS "jer_dd_bk" CASCADE;
-			CREATE TABLE IF NOT EXISTS jer_dd_bk AS
-			SELECT * FROM jer_dd WHERE tld = \''.$where.'\';
+			DROP TABLE IF EXISTS "dd_ontology_bk" CASCADE;
+			CREATE TABLE IF NOT EXISTS dd_ontology_bk AS
+			SELECT * FROM dd_ontology WHERE tld = \''.$where.'\';
 		';
 
 		$result = pg_query(DBi::_getConnection(), $sql_query);
 
 		if($result===false) {
 			debug_log(__METHOD__
-				. ' Failed consolidate_table jer_dd' .PHP_EOL
+				. ' Failed consolidate_table dd_ontology' .PHP_EOL
 				. 'query: ' . to_string($sql_query)
 				, logger::ERROR
 			);
@@ -1691,20 +1691,20 @@ class ontology_node extends ontology_record {
 
 	/**
 	* DELETE_BK_TABLE
-	* Remove the backup table of jer_dd with clone rows
+	* Remove the backup table of dd_ontology with clone rows
 	* @return bool
 	*/
 	public static function delete_bk_table() : bool {
 
 		$sql_query = '
-			DROP TABLE IF EXISTS "jer_dd_bk" CASCADE;
+			DROP TABLE IF EXISTS "dd_ontology_bk" CASCADE;
 		';
 
 		$result = pg_query(DBi::_getConnection(), $sql_query);
 
 		if($result===false) {
 			debug_log(__METHOD__
-				. ' Failed delete_bk_table jer_dd_bk' .PHP_EOL
+				. ' Failed delete_bk_table dd_ontology_bk' .PHP_EOL
 				. 'query: ' . to_string($sql_query)
 				, logger::ERROR
 			);
@@ -1718,33 +1718,33 @@ class ontology_node extends ontology_record {
 
 	/**
 	* RESTORE_FROM_BK_TABLE
-	* Delete the given tlds from `jer_dd` table
-	* Use `jer_dd_bk` table to insert his rows into `jer_dd`
-	* Note: `jer_dd_bk` is not a full backup of `jer_dd`, it's a selection tlds
+	* Delete the given tlds from `dd_ontology` table
+	* Use `dd_ontology_bk` table to insert his rows into `dd_ontology`
+	* Note: `dd_ontology_bk` is not a full backup of `dd_ontology`, it's a selection tlds
 	* Do not use as full backup!
 	* @param array $tl
 	* @return bool
 	*/
 	public static function restore_from_bk_table( array $tld ) : bool {
 
-		// delete the original nodes in jer_dd
+		// delete the original nodes in dd_ontology
 		foreach ($tld as $current_tld) {
 			ontology_node::delete_tld_nodes( $current_tld );
 		}
 
-		// restore all tld into jer_dd_bk
+		// restore all tld into dd_ontology_bk
 		$where = implode('\' OR tld = \'', $tld);
 
 		$sql_query = '
-			INSERT INTO jer_dd
-			SELECT * FROM "jer_dd_bk" WHERE tld = \''.$where.'\';
+			INSERT INTO dd_ontology
+			SELECT * FROM "dd_ontology_bk" WHERE tld = \''.$where.'\';
 		';
 
 		$result = pg_query(DBi::_getConnection(), $sql_query);
 
 		if($result===false) {
 			debug_log(__METHOD__
-				. ' Failed restore_from_bk_table jer_dd_bk' .PHP_EOL
+				. ' Failed restore_from_bk_table dd_ontology_bk' .PHP_EOL
 				. 'query: ' . to_string($sql_query)
 				, logger::ERROR
 			);

@@ -37,7 +37,7 @@ class ontology_record extends RecordDataBoundObject {
 	# define current table (tr for this obj)
 	protected function defineTableName() : string {
 
-		// if in recovery mode, changes table name to jer_dd_recovery
+		// if in recovery mode, changes table name to dd_ontology_recovery
 		$DEDALO_RECOVERY_MODE = $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
 		if ($DEDALO_RECOVERY_MODE===true) {
 			self::$table = 'dd_ontology_recovery';
@@ -55,7 +55,7 @@ class ontology_record extends RecordDataBoundObject {
 	protected function defineRelationMap() : array {
 		return [
 			# db field name		# property name
-			//'id'				=> 'ID',
+			'id'				=> 'id',
 			'tipo'				=> 'tipo',
 			'parent'			=> 'parent',
 			'term'				=> 'term',
@@ -67,8 +67,7 @@ class ontology_record extends RecordDataBoundObject {
 			'model_tipo'		=> 'model_tipo',
 			'is_model'			=> 'is_model',
 			'is_translatable'	=> 'is_translatable',
-			'propiedades'		=> 'propiedades',
-			'relaciones'		=> 'relaciones'
+			'propiedades'		=> 'propiedades'
 		];
 	}//end defineRelationMap
 
