@@ -4324,10 +4324,10 @@ class diffusion_sql extends diffusion  {
 		switch ($column) {
 			case 'esmodelo': // typology
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$db_value		= $RecordObj_dd->get_esmodelo();
+				$ontology_node	= new ontology_node($term_id);
+				$model			= $ontology_node->get_is_model();
 
-				$value = (bool)($db_value==='si');
+				$value = (bool)($model);
 
 				return $value;
 				break;

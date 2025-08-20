@@ -41,7 +41,7 @@ final class ontology_test extends TestCase {
 				"terminoID": "test102",
 				"parent": "test45",
 				"modelo": "dd1747",
-				"esmodelo": "no",
+				"is_model": false,
 				"order_number": "28",
 				"visible": "si",
 				"norden": "28",
@@ -711,12 +711,12 @@ final class ontology_test extends TestCase {
 					. 'result->get_modelo(): ' . to_string($result->get_modelo())
 			);
 
-		// esmodelo
-			$expected = 'no';
+		// is_model
+			$expected = false;
 			$this->assertTrue(
-				$result->get_esmodelo()===$expected,
+				$result->get_is_model()===$expected,
 				'expected: ' . to_string($expected) .  PHP_EOL
-					. 'result->get_esmodelo(): ' . to_string($result->get_esmodelo())
+					. 'result->get_is_model(): ' . to_string($result->get_is_model())
 			);
 
 		// order_number
