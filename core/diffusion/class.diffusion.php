@@ -1717,7 +1717,7 @@ abstract class diffusion  {
 				if (isset($databases[0])) {
 					// Loads parent class diffusion
 					// include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
-					// get_term_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true)
+					// get_term_by_tipo($tipo, $lang=NULL, $from_cache=false, $fallback=true)
 					$database_name	= ontology_node::get_term_by_tipo($databases[0]);
 
 					// save_table_schema. Use save_table_schema response as this method response

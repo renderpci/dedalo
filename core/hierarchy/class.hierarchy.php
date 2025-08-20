@@ -904,7 +904,7 @@ class hierarchy extends ontology {
 	*/
 	public static function get_simple_schema_of_sections() : array {
 
-		$all_sections = ontology_node::get_ar_all_terminoID_of_modelo_tipo('dd6', false);
+		$all_sections = ontology_node::get_ar_all_tipo_of_model_tipo('dd6', false);
 
 		$simple_schema_of_sections = [];
 		foreach ($all_sections as $current_section) {
@@ -1151,7 +1151,7 @@ class hierarchy extends ontology {
 			return null;
 		}
 
-		$model = ontology_node::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+		$model = ontology_node::get_model_name_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 		$typology_component = component_common::get_instance(
 			$model, // string model
 			DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo

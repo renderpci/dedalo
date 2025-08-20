@@ -148,15 +148,15 @@ abstract class label {
 		$fallback	= true;
 
 		$ar_term = ontology_node::get_ar_tipo_by_model_name('label');
-		foreach ($ar_term as $current_terminoID) {
+		foreach ($ar_term as $current_tipo) {
 
-			$ontology_node	= new ontology_node($current_terminoID);
+			$ontology_node	= new ontology_node($current_tipo);
 			$properties		= $ontology_node->get_properties();
 
 			// No data in field 'properties'
 				if(empty($properties) || empty($properties->name)) {
 					debug_log(__METHOD__
-						." Ignored Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP" . PHP_EOL
+						." Ignored Term $current_tipo with model 'label' don't have properly configured 'properties'. Please solve this ASAP" . PHP_EOL
 						.' properties: '. to_string($properties)
 						, logger::ERROR
 					);
@@ -165,7 +165,7 @@ abstract class label {
 
 			// get label value
 				$label = ontology_node::get_term_by_tipo(
-					$current_terminoID,
+					$current_tipo,
 					$lang,
 					$cached,
 					$fallback
@@ -173,7 +173,7 @@ abstract class label {
 				if (empty($label)) {
 					debug_log(__METHOD__
 						. " Unable to resolve label for term: " . PHP_EOL
-						. ' current_terminoID: ' . to_string($current_terminoID)
+						. ' current_tipo: ' . to_string($current_tipo)
 						, logger::ERROR
 					);
 					continue;
@@ -194,33 +194,33 @@ abstract class label {
 
 
 	/**
-	* GET_TERMINOID_FROM_LABEL
-	* Resolve terminoID from label properties property 'label'
+	* GET_TIPO_FROM_LABEL
+	* Resolve tipo from label properties property 'label'
 	* @param string $label
-	* @return ?string $terminoID
+	* @return ?string $tipo
 	*/
-	public static function get_terminoID_from_label( string $label ) : ?string {
+	public static function get_tipo_from_label( string $label ) : ?string {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 		}
 
-		$terminoID = null;
+		$tipo = null;
 
 		$ar_term_id_by_model_name = (array)ontology_node::get_ar_tipo_by_model_name('label');
-		foreach ($ar_term_id_by_model_name as $current_terminoID) {
+		foreach ($ar_term_id_by_model_name as $current_tipo) {
 
-			$ontology_node	= new ontology_node($current_terminoID);
+			$ontology_node	= new ontology_node($current_tipo);
 			$properties		= $ontology_node->get_properties();
 
 			// No data in field 'properties'
 			if(empty($properties) || empty($properties->name)) {
-				trigger_error("Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP");
+				trigger_error("Term $current_tipo with model 'label' don't have properly configured 'properties'. Please solve this ASAP");
 				continue;
 			}
 
 			if ($properties->name===$label) {
-				$terminoID = $current_terminoID;
+				$tipo = $current_tipo;
 				break;
 			}
 		}
@@ -230,8 +230,8 @@ abstract class label {
 		}
 
 
-		return $terminoID;
-	}//end get_terminoID_from_label
+		return $tipo;
+	}//end get_tipo_from_label
 
 
 

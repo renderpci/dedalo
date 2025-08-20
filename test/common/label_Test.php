@@ -126,12 +126,12 @@ final class label_test extends TestCase {
 
 
 	/**
-	* TEST_get_terminoID_from_label
+	* TEST_GET_TIPO_FROM_LABEL
 	* @return void
 	*/
-	public function test_get_terminoID_from_label() {
+	public function test_get_tipo_from_label() {
 
-		$result = label::get_terminoID_from_label(
+		$result = label::get_tipo_from_label(
 			'salir'
 		);
 
@@ -148,7 +148,7 @@ final class label_test extends TestCase {
 				. to_string($result) . PHP_EOL
 				. to_string($eq)
 		);
-	}//end test_get_terminoID_from_label
+	}//end test_get_tipo_from_label
 
 
 

@@ -28,7 +28,7 @@ class ontology {
 
 		foreach ($jer_dd_rows as $jer_dd_row) {
 
-			$id = get_section_id_from_tipo( $jer_dd_row->terminoID );
+			$id = get_section_id_from_tipo( $jer_dd_row->tipo );
 			// Skip main section of the tld.
 			// main section is defined with the tld  + 0 as dd0,rsc0, etc.
 			// this definition will be stored in ontology main
@@ -62,7 +62,7 @@ class ontology {
 	* Sample:
 		* {
 		*	"id": "16028305",
-		*	"terminoID": "test102",
+		*	"tipo": "test102",
 		*	"parent": "test45",
 		*	"modelo": "dd1747",
 		*	"is_model": false,
@@ -86,7 +86,7 @@ class ontology {
 		// vars
 		$tld					= $jer_dd_row->tld;
 		$target_section_tipo	= self::map_tld_to_target_section_tipo( $tld );
-		$node_tipo				= $jer_dd_row->terminoID;
+		$node_tipo				= $jer_dd_row->tipo;
 		$parent					= $jer_dd_row->parent;
 		$model					= $jer_dd_row->modelo;
 		$is_model				= $jer_dd_row->is_model;
@@ -309,7 +309,7 @@ class ontology {
 				$properties = $new_properties;
 
 				// update jer_dd record with the new properties
-				$ontology_node = new ontology_node($jer_dd_row->terminoID);
+				$ontology_node = new ontology_node($jer_dd_row->tipo);
 				$ontology_node->get_properties(); // force load data
 				$ontology_node->set_properties($new_properties);
 				$ontology_node->update();
@@ -688,9 +688,9 @@ class ontology {
 		// Ontology section for the given tld
 		// ontology section is the main or root node used to create the ontology nodes.
 		// it is defined as tld+0, because the nodes start with 1 as dd1, rsc1, etc.
-			$terminoID = $tld.'0'; // as mdcat0, mupreva0, etc.
+			$tipo = $tld.'0'; // as mdcat0, mupreva0, etc.
 
-			$ontology_node = new ontology_node($terminoID);
+			$ontology_node = new ontology_node($tipo);
 				$ontology_node->set_parent($parent_grouper_tipo);
 				$ontology_node->set_modelo('dd6');
 				$ontology_node->set_model('section');
@@ -1301,10 +1301,10 @@ class ontology {
 			}
 			// create the term_id
 			$tld		= $tld_data[0];
-			$terminoID	= $tld . $section_id;
+			$tipo	= $tld . $section_id;
 
 			// create the ontology_node with the term_id and set the tld
-			$jer_dd_record = new ontology_node( $terminoID );
+			$jer_dd_record = new ontology_node( $tipo );
 			$jer_dd_record->set_tld( $tld );
 
 		// parent
@@ -1323,7 +1323,7 @@ class ontology {
 
 			if( empty($parent_data) || empty($parent_data[0]) ){
 				// main dd nodes exception
-				if( $terminoID==='dd1' || $terminoID==='dd2' || get_section_id_from_tipo($section_tipo)==='0' ){
+				if( $tipo==='dd1' || $tipo==='dd2' || get_section_id_from_tipo($section_tipo)==='0' ){
 					debug_log(__METHOD__
 						. " Record without parent data [1] " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL

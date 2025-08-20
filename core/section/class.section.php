@@ -1813,17 +1813,17 @@ class section extends common {
 		}
 
 		// Loop through the child elements of the current section in the thesaurus
-		foreach($ar_recursive_children as $current_terminoID) {
+		foreach($ar_recursive_children as $current_tipo) {
 
-			$model_name = ontology_node::get_model_name_by_tipo($current_terminoID, true);
+			$model_name = ontology_node::get_model_name_by_tipo($current_tipo, true);
 			foreach((array)$ar_model_name_required as $model_name_required) {
 
-				if (strpos($model_name, $model_name_required)!==false && !in_array($current_terminoID, $section_ar_children_tipo) ) {
+				if (strpos($model_name, $model_name_required)!==false && !in_array($current_tipo, $section_ar_children_tipo) ) {
 
 					if($search_exact===true && $model_name!==$model_name_required) {
 						// Is not accepted model
 					}else{
-						$section_ar_children_tipo[] = $current_terminoID;
+						$section_ar_children_tipo[] = $current_tipo;
 					}
 				}
 
@@ -1836,7 +1836,7 @@ class section extends common {
 					continue;
 				}
 			}
-		}//end foreach($ar_recursive_children as $current_terminoID)
+		}//end foreach($ar_recursive_children as $current_tipo)
 
 		// Cache session store
 		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
@@ -3783,7 +3783,7 @@ class section extends common {
 							case ($current_ddo_tipo==='dd546'): // Where (model: component_input_text)
 								// component_label
 									$component_label = ontology_node::get_term_by_tipo(
-										$tipo, // string terminoID
+										$tipo, // string tipo
 										DEDALO_APPLICATION_LANG, // string lang
 										true, // bool from_cache
 										true // bool fallback
@@ -3793,7 +3793,7 @@ class section extends common {
 									if ( $rqo && $rqo->source->tipo!==$rqo->source->section_tipo ) {
 										// section_label
 											$section_label = ontology_node::get_term_by_tipo(
-												$section_tipo, // string terminoID
+												$section_tipo, // string tipo
 												DEDALO_APPLICATION_LANG, // string lang
 												true, // bool from_cache
 												true // bool fallback
