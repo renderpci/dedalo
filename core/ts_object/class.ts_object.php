@@ -422,7 +422,7 @@ class ts_object {
 
 									// flat key and set label
 									array_map(function($item){
-										$item->label	= ontology_node::get_termino_by_tipo($item->key[0]);
+										$item->label	= ontology_node::get_term_by_tipo($item->key[0]);
 										$item->key		= $item->key[0]; // flat the key to be more useful in JavaScript, only 1 section is received
 									}, $count_data_group_by->totals_group);
 

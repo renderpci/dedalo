@@ -210,7 +210,7 @@ class tool_import_marc21 extends tool_common {
 
 								# Save on dedalo component
 								$component_tipo		= $element_vars->tipo;
-								$component_label	= ontology_node::get_termino_by_tipo($component_tipo);
+								$component_label	= ontology_node::get_term_by_tipo($component_tipo);
 								$model_name			= ontology_node::get_model_name_by_tipo($component_tipo,true);
 								$component			= component_common::get_instance(
 									$model_name,

@@ -211,7 +211,7 @@ class ontology_node extends ontology_record {
 	public static function update_counter( string $tld, ?int $current_value=null ) : int|false {
 
 		if ($current_value===null) {
-			$current_value = self::get_counter_value($tld);
+			$current_value = self::get_counter_value( $tld );
 		}
 		$counter_dato_updated = intval($current_value+1) ;
 
@@ -301,15 +301,15 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_DESCRIPTOR_DATO_BY_TIPO
+	* GET_DESCRIPTOR_DATA_BY_TIPO
 	* Get 'term' value in given lang
-	* Do not call this method directly, use 'get_termino_by_tipo' instead
+	* Do not call this method directly, use 'get_term_by_tipo' instead
 	* @param string $tipo
 	* @param string $lang = null
 	* @param bool $fallback = false
 	* @return string|null $dato
 	*/
-	private static function get_descriptor_dato_by_tipo( string $tipo, ?string $lang=null, bool $fallback=false ) : ?string {
+	private static function get_descriptor_data_by_tipo( string $tipo, ?string $lang=null, bool $fallback=false ) : ?string {
 
 		// Verify : In cases such as, for example, when solving the model of a related term that has no model assigned to it, the tipo will be empty.
 		// This is not a mistake but we must avoid resolving it.
@@ -354,12 +354,12 @@ class ontology_node extends ontology_record {
 
 
 		return null;
-	}//end get_descriptor_dato_by_tipo
+	}//end get_descriptor_data_by_tipo
 
 
 
 	/**
-	* GET_TERMINO_BY_TIPO
+	* get_term_by_tipo
 	* Static version
 	* @param string $tipo
 	* @param string $lang = null
@@ -367,7 +367,7 @@ class ontology_node extends ontology_record {
 	* @param bool $fallback = true
 	* @return string|null $result
 	*/
-	public static function get_termino_by_tipo( string $tipo, ?string $lang=null, bool $from_cache=true, bool $fallback=true ) : ?string {
+	public static function get_term_by_tipo( string $tipo, ?string $lang=null, bool $from_cache=true, bool $fallback=true ) : ?string {
 
 		// cache
 			static $termino_by_tipo_cache = [];
@@ -377,7 +377,7 @@ class ontology_node extends ontology_record {
 			}
 
 		// descriptor search
-			$result	= self::get_descriptor_dato_by_tipo(
+			$result	= self::get_descriptor_data_by_tipo(
 				$tipo,
 				$lang,
 				$fallback
@@ -388,7 +388,7 @@ class ontology_node extends ontology_record {
 
 
 		return $result;
-	}//end get_termino_by_tipo
+	}//end get_term_by_tipo
 
 
 
@@ -456,7 +456,7 @@ class ontology_node extends ontology_record {
 				return '';
 			}
 
-			$model = ontology_node::get_termino_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			$model = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 			// error log
 			debug_log(__METHOD__
@@ -553,7 +553,7 @@ class ontology_node extends ontology_record {
 	*/
 	public function get_legacy_model_name() : ?string {
 
-		$model_name = ontology_node::get_termino_by_tipo(
+		$model_name = ontology_node::get_term_by_tipo(
 			$this->get_model_tipo() ?? '',
 			DEDALO_STRUCTURE_LANG,
 			true,
@@ -1141,14 +1141,14 @@ class ontology_node extends ontology_record {
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_termino_by_tipo($tipo) . PHP_EOL
+							.' name: ' . ontology_node::get_term_by_tipo($tipo) . PHP_EOL
 							.' ontology_node: ' . json_encode($ontology_node)
 							, logger::ERROR
 						);
 						return [];
 					}
 
-					$current_model_name = ontology_node::get_termino_by_tipo($model);
+					$current_model_name = ontology_node::get_term_by_tipo($model);
 
 					if($search_exact===true) {
 						if ($current_model_name===$model_name) {
@@ -1179,13 +1179,13 @@ class ontology_node extends ontology_record {
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_termino_by_tipo($tipo)
+							.' name: ' . ontology_node::get_term_by_tipo($tipo)
 							, logger::ERROR
 						);
 						return [];
 					}
 
-					$current_model_name = ontology_node::get_termino_by_tipo($model_tipo);
+					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);
 
 					if($search_exact===true) {
 						if ($current_model_name===$model_name) {
@@ -1220,13 +1220,13 @@ class ontology_node extends ontology_record {
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_termino_by_tipo($tipo)
+							.' name: ' . ontology_node::get_term_by_tipo($tipo)
 							, logger::ERROR
 						);
 						return [];
 					}
 
-					$current_model_name = ontology_node::get_termino_by_tipo($model_tipo);
+					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);
 
 					if($search_exact===true) {
 						if ($current_model_name===$model_name) {
@@ -1257,13 +1257,13 @@ class ontology_node extends ontology_record {
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_termino_by_tipo($tipo)
+							.' name: ' . ontology_node::get_term_by_tipo($tipo)
 							, logger::ERROR
 						);
 						return [];
 					}
 
-					$current_model_name = ontology_node::get_termino_by_tipo($model_tipo);		#dump($model_name);
+					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);		#dump($model_name);
 
 					if($search_exact===true) {
 						if ($current_model_name===$model_name) {

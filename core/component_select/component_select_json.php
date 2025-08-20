@@ -35,7 +35,7 @@
 						if ($current_section_tipo_permissions>0) {
 							$target_sections[] = [
 								'tipo'				=> $current_section_tipo,
-								'label'				=> ontology_node::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true),
+								'label'				=> ontology_node::get_term_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true),
 								// section permissions, general access to the target section, it will be able to edit or not the section
 								'permissions'		=> $current_section_tipo_permissions,
 								// get permissions of the button new of the target section, it will be able to add or not new item in the target section.

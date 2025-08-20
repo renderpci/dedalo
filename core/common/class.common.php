@@ -372,7 +372,7 @@ abstract class common {
 			// fix vars
 				$this->model	= $this->ontology_node->get_model();
 				$this->order_number	= $this->ontology_node->get_order_number();
-				$this->label	= ontology_node::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
+				$this->label	= ontology_node::get_term_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
 			// translatable
 				$this->translatable	= $this->ontology_node->get_is_translatable();
@@ -507,7 +507,7 @@ abstract class common {
 						$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
 						if ( isset($ar_related[0]) ) {
 							// real or virtual section
-							$matrix_table = ontology_node::get_termino_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
+							$matrix_table = ontology_node::get_term_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
 						}
 
 					// try resolve virtual section fallback
@@ -518,7 +518,7 @@ abstract class common {
 								$ar_related	= common::get_ar_related_by_model('matrix_table', $real_tipo);
 								if ( isset($ar_related[0]) ) {
 									// real section
-									$matrix_table = ontology_node::get_termino_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
+									$matrix_table = ontology_node::get_term_by_tipo($ar_related[0], DEDALO_STRUCTURE_LANG, true);
 								}
 							}
 						}
@@ -578,7 +578,7 @@ abstract class common {
 				if (isset($properties) && property_exists($properties,'inverse_relations')) {
 
 					// table_name, such 'matrix_hierarchy'
-					$table_name = ontology_node::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+					$table_name = ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 					if ($properties->inverse_relations===true) {
 
@@ -1776,7 +1776,7 @@ abstract class common {
 							if (isset($soc_value->target_component) && isset($soc_value->msg)) {
 								// resolve label
 								$base_label		= label::get_label( $soc_value->msg );
-								$component_name	= ontology_node::get_termino_by_tipo($soc_value->target_component, DEDALO_APPLICATION_LANG, true);
+								$component_name	= ontology_node::get_term_by_tipo($soc_value->target_component, DEDALO_APPLICATION_LANG, true);
 								$msg			= sprintf($base_label, $component_name);
 								// replace label by just resolved version
 								$soc_value->msg = $msg;
@@ -1896,7 +1896,7 @@ abstract class common {
 						if (!isset($dd_object->config)) {
 							$dd_object->config = new stdClass();
 						}
-						$dd_object->config->parent_grouper_label = ontology_node::get_termino_by_tipo($parent_grouper);
+						$dd_object->config->parent_grouper_label = ontology_node::get_term_by_tipo($parent_grouper);
 					}
 				}
 
@@ -2042,7 +2042,7 @@ abstract class common {
 				if(empty($request_config_object->show->ddo_map)) {
 					debug_log(__METHOD__
 						. " Ignored empty show ddo_map " . PHP_EOL
-						. ' (tipo: '.$this->tipo.' - '. ontology_node::get_termino_by_tipo($this->tipo) .')' . PHP_EOL
+						. ' (tipo: '.$this->tipo.' - '. ontology_node::get_term_by_tipo($this->tipo) .')' . PHP_EOL
 						. ' in request_config_object (It may be due to a lack of permissions in their children).' . PHP_EOL
 						. ' request_config_object: ' . to_string($request_config_object),
 						logger::WARNING
@@ -2382,7 +2382,7 @@ abstract class common {
 							default:
 								debug_log(__METHOD__
 									. " Ignored model '$model' - current_tipo: '$current_tipo'  - ". PHP_EOL
-									. ontology_node::get_termino_by_tipo($current_tipo)
+									. ontology_node::get_term_by_tipo($current_tipo)
 									, logger::WARNING
 								);
 								break;
@@ -2642,7 +2642,7 @@ abstract class common {
 
 							// added label & mode if not are already defined
 							if(!isset($new_ddo->label)) {
-								$new_ddo->label = ontology_node::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+								$new_ddo->label = ontology_node::get_term_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 							}
 							if(!isset($new_ddo->mode)) {
 								$new_ddo->mode = $this->mode;
@@ -2679,7 +2679,7 @@ abstract class common {
 
 									// label add if not are already defined
 										if(!isset($new_ddo->label)) {
-											$new_ddo->label = ontology_node::get_termino_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+											$new_ddo->label = ontology_node::get_term_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 										}
 
 									// mode add if not are already defined
@@ -3048,7 +3048,7 @@ abstract class common {
 							$parsed_item->sqo->section_tipo = array_map(function($current_section_tipo){
 								$ddo = new dd_object();
 									$ddo->set_tipo($current_section_tipo);
-									$ddo->set_label(ontology_node::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
+									$ddo->set_label(ontology_node::get_term_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
 									$ddo->set_color(ontology_node::get_color($current_section_tipo));
 									$ddo->set_permissions(common::get_permissions($current_section_tipo, $current_section_tipo));
 
@@ -3209,7 +3209,7 @@ abstract class common {
 
 								// label. Add to all ddo_map items
 									if (!isset($current_ddo->label)) {
-										$current_ddo->label = ontology_node::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+										$current_ddo->label = ontology_node::get_term_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 									}
 
 								// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
@@ -3384,7 +3384,7 @@ abstract class common {
 										$current_search_ddo_map->model = ontology_node::get_model_name_by_tipo($current_search_ddo_map->tipo, true);
 
 									// label. Add to all ddo_map items
-										$current_search_ddo_map->label = ontology_node::get_termino_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+										$current_search_ddo_map->label = ontology_node::get_term_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 									// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
 										$current_search_ddo_map->section_tipo = $current_search_ddo_map->section_tipo==='self'
@@ -3498,7 +3498,7 @@ abstract class common {
 										: $current_choose_ddo->parent;
 
 								// label. Add to all ddo_map items
-									$current_choose_ddo->label = ontology_node::get_termino_by_tipo($current_choose_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+									$current_choose_ddo->label = ontology_node::get_term_by_tipo($current_choose_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 								// mode
 									$current_choose_ddo->mode = isset($current_choose_ddo->mode)
@@ -3534,7 +3534,7 @@ abstract class common {
 										: $current_ddo_map->parent;
 
 								// label. Add to all ddo_map items
-									$current_ddo_map->label = ontology_node::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+									$current_ddo_map->label = ontology_node::get_term_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 								// mode
 									$current_ddo_map->mode = isset($current_ddo_map->mode)
@@ -3827,7 +3827,7 @@ abstract class common {
 							$ddo->set_parent($tipo);
 							$ddo->set_mode($current_mode);
 							$ddo->set_view($view);
-							$ddo->set_label(ontology_node::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
+							$ddo->set_label(ontology_node::get_term_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true, true));
 
 						return $ddo;
 					}, $ar_related_clean_auth);
@@ -3851,7 +3851,7 @@ abstract class common {
 					$ddo_section_tipo	= array_map(function($current_section_tipo){
 						$ddo = new dd_object();
 							$ddo->set_tipo($current_section_tipo);
-							$ddo->set_label(ontology_node::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
+							$ddo->set_label(ontology_node::get_term_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
 							$ddo->set_color(ontology_node::get_color($current_section_tipo));
 							$ddo->set_permissions(common::get_permissions($current_section_tipo, $current_section_tipo));
 
@@ -4868,7 +4868,7 @@ abstract class common {
 					}
 
 				// label $terminoID, $lang=NULL, $from_cache=false, $fallback=true
-					$button_label = ontology_node::get_termino_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
+					$button_label = ontology_node::get_term_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 				// properties
 					$ontology_node		= new ontology_node($current_button_tipo);

@@ -483,7 +483,7 @@ class v6_to_v7 {
 												// if (isset($new_literal_obj->literal_value->info)) {
 												// 	$new_literal_obj->info = $new_literal_obj->literal_value->info;
 												// }else{
-												// 	$label = ontology_node::get_termino_by_tipo($literal_tipo);
+												// 	$label = ontology_node::get_term_by_tipo($literal_tipo);
 												// 	$new_literal_obj->info = "$label [$model]";
 												// }
 										}

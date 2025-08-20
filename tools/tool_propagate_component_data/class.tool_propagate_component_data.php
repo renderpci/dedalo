@@ -62,8 +62,8 @@ class tool_propagate_component_data extends tool_common {
 		// short vars
 			$counter			= 0;
 			$total_records		= count($rows_data->ar_records);
-			$section_label		= ontology_node::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
-			$component_label	= ontology_node::get_termino_by_tipo($component_tipo, DEDALO_APPLICATION_LANG, true);
+			$section_label		= ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+			$component_label	= ontology_node::get_term_by_tipo($component_tipo, DEDALO_APPLICATION_LANG, true);
 
 		// check match totals. If totals do not match, something wrong happens. Stop execution in that case.
 		// Note that client total value is calculated from the section instance currently viewed and the sqo

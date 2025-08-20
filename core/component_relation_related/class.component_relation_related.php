@@ -532,14 +532,14 @@ class component_relation_related extends component_relation_common {
 			(object)[
 				'component_tipo'	=> $component_tipo,
 				'model'				=> ontology_node::get_model_name_by_tipo($component_tipo,true),
-				'name'				=> ontology_node::get_termino_by_tipo($component_tipo),
+				'name'				=> ontology_node::get_term_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			],
 			// thesaurus langs (component_input_text hierarchy25, section_tipo lg-1)
 			(object)[
 				'component_tipo'	=> DEDALO_THESAURUS_TERM_TIPO,
 				'model'				=> ontology_node::get_model_name_by_tipo(DEDALO_THESAURUS_TERM_TIPO,true),
-				'name'				=> ontology_node::get_termino_by_tipo(DEDALO_THESAURUS_TERM_TIPO),
+				'name'				=> ontology_node::get_term_by_tipo(DEDALO_THESAURUS_TERM_TIPO),
 				'section_tipo'		=> $section_tipo
 			]
 		];

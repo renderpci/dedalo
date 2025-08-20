@@ -81,10 +81,10 @@ class tool_update_cache extends tool_common {
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$section_name = ontology_node::get_termino_by_tipo( $section_tipo );
+				$section_name = ontology_node::get_term_by_tipo( $section_tipo );
 				$ar_component_names = [];
 				foreach ($components_selection as $current_item) {
-					$ar_component_names[] = ontology_node::get_termino_by_tipo($current_item->tipo) . '['.$current_item->tipo .']';
+					$ar_component_names[] = ontology_node::get_term_by_tipo($current_item->tipo) . '['.$current_item->tipo .']';
 				}
 				$component_names = implode(', ', $ar_component_names);
 				$bulk_process_label = 'Update cache | ' . $section_name.'['.$section_tipo .'] | ' . $component_names;
@@ -114,7 +114,7 @@ class tool_update_cache extends tool_common {
 			logger_backend_activity::$enable_log				= true;
 			RecordObj_time_machine::$save_time_machine_version	= true;
 
-		$section_label = ontology_node::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+		$section_label = ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 
 		// response
 			$response->result		= true;

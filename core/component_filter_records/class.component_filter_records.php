@@ -128,7 +128,7 @@ class component_filter_records extends component_common {
 			// add object item
 				$sections[] = (object)[
 					'tipo'			=> $area_item->tipo,
-					'label'			=> ontology_node::get_termino_by_tipo($area_item->tipo, DEDALO_DATA_LANG, true, true),
+					'label'			=> ontology_node::get_term_by_tipo($area_item->tipo, DEDALO_DATA_LANG, true, true),
 					'permissions'	=> $area_item->value
 				];
 		}

@@ -712,7 +712,7 @@ class component_filter extends component_relation_common {
 		// 		}
 		// 	}
 
-		// 	$label		= ontology_node::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
+		// 	$label		= ontology_node::get_term_by_tipo($tipo, DEDALO_DATA_LANG, true, true).':'.$stats_model;
 		// 	$ar_final	= array($label => $ar_values);
 
 
@@ -1071,14 +1071,14 @@ class component_filter extends component_relation_common {
 			(object)[
 				'component_tipo'	=> $component_tipo,
 				'model'				=> ontology_node::get_model_name_by_tipo($component_tipo,true),
-				'name'				=> ontology_node::get_termino_by_tipo($component_tipo),
+				'name'				=> ontology_node::get_term_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			],
 			// project name field (component_input_text dd156)
 			(object)[
 				'component_tipo'	=> DEDALO_PROJECTS_NAME_TIPO,
 				'model'				=> ontology_node::get_model_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true),
-				'name'				=> ontology_node::get_termino_by_tipo(DEDALO_PROJECTS_NAME_TIPO),
+				'name'				=> ontology_node::get_term_by_tipo(DEDALO_PROJECTS_NAME_TIPO),
 				'section_tipo'		=> DEDALO_SECTION_PROJECTS_TIPO
 			]
 		];

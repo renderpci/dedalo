@@ -302,13 +302,13 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_termino_by_tipo
+	* TEST_get_term_by_tipo
 	* @return void
 	*/
-	public function test_get_termino_by_tipo(): void {
+	public function test_get_term_by_tipo(): void {
 
 		$test_term_id	= 'dd1';
-		$result			= ontology_node::get_termino_by_tipo($test_term_id, DEDALO_STRUCTURE_LANG);
+		$result			= ontology_node::get_term_by_tipo($test_term_id, DEDALO_STRUCTURE_LANG);
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;
@@ -327,7 +327,7 @@ final class ontology_node_test extends TestCase {
 				. ' result: ' . to_string($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_termino_by_tipo
+	}//end test_get_term_by_tipo
 
 
 
