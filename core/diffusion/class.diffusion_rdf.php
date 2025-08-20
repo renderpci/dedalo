@@ -1082,7 +1082,7 @@ class diffusion_rdf extends diffusion {
 				$service_name = $this->service_name;
 
 				$ontology_node	= new ontology_node($component_tipo);
-				$model			= $ontology_node->get_modelo_name();
+				$model			= $ontology_node->get_model_name();
 
 				// NO CONFIG FILE CHANGED CASE
 				// Note that config file default is 0 (Zero) and if you do not modify this
@@ -1276,7 +1276,7 @@ class diffusion_rdf extends diffusion {
 				$service_name = $this->service_name;
 
 				$ontology_node	= new ontology_node($component_tipo);
-				$model			= $ontology_node->get_modelo_name();
+				$model			= $ontology_node->get_model_name();
 
 				// ontology_node::get_model_name_by_tipo($component_tipo);
 				$translatable	= $ontology_node->get_is_translatable();

@@ -393,11 +393,11 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_MODELO_NAME
+	* GET_MODEL_NAME
 	* Calculates the current term model name
 	* @return string $model
 	*/
-	public function get_modelo_name() : string {
+	public function get_model_name() : string {
 
 		if (empty($this->tipo)) {
 			return '';
@@ -495,7 +495,7 @@ class ontology_node extends ontology_record {
 
 
 		return $model_map[$model] ?? $model;
-	}//end get_modelo_name
+	}//end get_model_name
 
 
 
@@ -517,7 +517,7 @@ class ontology_node extends ontology_record {
 		}
 
 		$ontology_node	= new ontology_node($tipo);
-		$modelo_name	= $ontology_node->get_modelo_name();
+		$modelo_name	= $ontology_node->get_model_name();
 
 		// cache
 		if( !empty($modelo_name) ){

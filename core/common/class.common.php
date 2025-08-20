@@ -3250,7 +3250,7 @@ abstract class common {
 											? $current_ddo_properties->fields_map
 											: [];
 										$current_ddo->lang			= $ontology_node->get_is_translatable() ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-										$current_ddo->model			= $ontology_node->get_modelo_name();
+										$current_ddo->model			= $ontology_node->get_model_name();
 										// $current_ddo->parent		= $current_ddo->section_tipo;
 										$current_ddo->permissions	= common::get_permissions($current_ddo->section_tipo, $current_ddo->tipo);
 									}

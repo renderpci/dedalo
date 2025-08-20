@@ -332,14 +332,14 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_modelo_name
+	* TEST_GET_MODEL_NAME
 	* @return void
 	*/
-	public function test_get_modelo_name(): void {
+	public function test_get_model_name(): void {
 
 		$test_term_id	= 'dd1';
 		$ontology_node	= new ontology_node($test_term_id);
-		$result			= $ontology_node->get_modelo_name();
+		$result			= $ontology_node->get_model_name();
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;
@@ -358,7 +358,7 @@ final class ontology_node_test extends TestCase {
 				. ' result: ' . to_string($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_modelo_name
+	}//end test_get_model_name
 
 
 
@@ -460,7 +460,7 @@ final class ontology_node_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$result		= $ontology_node->get_modelo_name();
+		$result		= $ontology_node->get_model_name();
 		$expected	= 'component_portal';
 		$eq			= $result===$expected;
 		$this->assertTrue(
