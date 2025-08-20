@@ -1287,7 +1287,6 @@ class ontology_node extends ontology_record {
 
 
 
-
 	/**
 	* GET_IS_MODEL
 	* Retrieve from DDBB the column is_model
@@ -1310,18 +1309,6 @@ class ontology_node extends ontology_record {
 
 
 	}//end get_is_model
-
-	/**
-	* IS_MODEL
-	* Alias of get_is_model but responses boolean for convenience
-	* @return bool
-	*/
-	public function is_model() : bool {
-
-		$is_model = $this->get_is_model();
-
-		return $is_model;
-	}//end is_model
 
 
 
