@@ -145,34 +145,6 @@ class component_filter_records extends component_common {
 		// regenerate array keys
 			$sections = array_values($sections);
 
-		// get all structure sections
-			// $ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
-			// $ar_sections = array();
-			// $permissions_user = security::get_permissions_table_of_specific_user($parent);
-			// foreach ($ar_section_tipo as $current_section_tipo) {
-			// 	$section_permissions = isset($permissions_user->$current_section_tipo->$current_section_tipo) ? (int)$permissions_user->$current_section_tipo->$current_section_tipo : 0;
-			// 	if ($section_permissions>0) {
-
-			// 		$plain_value = '';
-			// 		if (isset($dato[$current_section_tipo])) {
-			// 			$plain_value = implode(',', (array)$dato[$current_section_tipo]);
-			// 		}
-
-			// 		$current_label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true); //, $terminoID, $lang=NULL, $from_cache=false, $fallback=true
-
-			// 		$data = array(
-			// 			'label' 	  => $current_label,
-			// 			'permissions' => $section_permissions,
-			// 			'plain_value' => $plain_value,
-			// 			);
-			// 		$ar_sections[$current_section_tipo] = $data;
-			// 	}
-			// }
-			// # sort by label
-			// uasort($ar_sections, function($a, $b) {
-			//     return $a['label'] > $b['label'];
-			// });
-
 
 		return $sections;
 	}//end get_datalist
