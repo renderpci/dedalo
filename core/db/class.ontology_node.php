@@ -611,7 +611,7 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_ALL_TLD_RECORDS
+	* GET_ALL_records_by_TLD
 	* Get all jer_dd rows of specified tlds
 	* @param  array $ar_tl
 	* @return array $result
@@ -629,7 +629,7 @@ class ontology_node extends ontology_record {
 	* 	{}, ..
 	* ]
 	*/
-	public static function get_all_tld_records( array $ar_tld ) : array {
+	public static function get_all_records_by_tld( array $ar_tld ) : array {
 
 		$sentences = [];
 		foreach ($ar_tld as $current_tld) {
@@ -654,7 +654,7 @@ class ontology_node extends ontology_record {
 		$filter = implode(' OR ', $sentences );
 
 		// `where` clause of SQL query
-		$sql_query		= 'SELECT * FROM "jer_dd" WHERE '. $filter ;
+		$sql_query		= 'SELECT * FROM "dd_ontology" WHERE '. $filter ;
 		$jer_dd_result	= pg_query(DBi::_getConnection(), $sql_query);
 
 		// iterate jer_dd_result row
@@ -664,7 +664,7 @@ class ontology_node extends ontology_record {
 		}
 
 		return $ontology_records;
-	}//end get_all_tld_records
+	}//end get_all_records_by_tld
 
 
 

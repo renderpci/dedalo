@@ -569,13 +569,13 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_all_tld_records
+	* TEST_get_all_records_by_tld
 	* @return void
 	*/
-	public function test_get_all_tld_records(): void {
+	public function test_get_all_records_by_tld(): void {
 
 		// root
-			$result = ontology_node::get_all_tld_records(['dd','rsc']);
+			$result = ontology_node::get_all_records_by_tld(['dd','rsc']);
 
 			$expected	= 'array';
 			$eq			= gettype($result)===$expected;
@@ -613,7 +613,7 @@ final class ontology_node_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_all_tld_records
+	}//end test_get_all_records_by_tld
 
 
 
