@@ -728,7 +728,7 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_AR_ALL_tipo_OF_MODELO_TIPO
+	* GET_AR_ALL_TIPO_OF_MODEL_TIPO
 	* Resolves all term id of given model tipo, like
 	* dd6 => ["oh1","dd917",..]
 	* @param string $modelo_tipo
@@ -736,7 +736,7 @@ class ontology_node extends ontology_record {
 	* @return array $ar_all_tipo
 	* 	Array of all term_id as ["oh1","dd917",..]
 	*/
-	public static function get_ar_all_tipo_of_modelo_tipo( string $model_tipo, bool $use_cache=true ) : array {
+	public static function get_ar_all_tipo_of_model_tipo( string $model_tipo, bool $use_cache=true ) : array {
 
 		// search
 		$arguments = [
