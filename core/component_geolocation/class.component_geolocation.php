@@ -61,8 +61,8 @@ class component_geolocation extends component_common {
 			// if(SHOW_DEBUG) {
 			// 	$translatable = $this->ontology_node->get_is_translatable();
 			// 	if ($translatable===true) {
-			// 		#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
+			// 		#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'translatable'. Please fix this ASAP", 1);
+			// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'translatable'. Please fix this ASAP");
 			// 	}
 			// }
 	}//end __construct

@@ -70,7 +70,7 @@ class ontology {
 		*	"visible": "si",
 		*	"order_number": "28",
 		*	"tld": "test",
-		*	"traducible": "no",
+		*	"is_translatable": false,
 		*	"relaciones": "null",
 		*	"propiedades": null,
 		*	"properties": null,
@@ -91,7 +91,7 @@ class ontology {
 		$model					= $jer_dd_row->modelo;
 		$is_model				= $jer_dd_row->esmodelo;
 		$is_descriptor			= $jer_dd_row->esdescriptor;
-		$translatable			= $jer_dd_row->traducible;
+		$translatable			= $jer_dd_row->is_translatable;
 		$relations				= !empty ( $jer_dd_row->relaciones )
 			? (json_handler::decode( $jer_dd_row->relaciones ) ?? [])
 			: [];
@@ -207,7 +207,7 @@ class ontology {
 
 			$translatable_locator = new locator();
 				$translatable_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$translatable_locator->set_section_id($translatable === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+				$translatable_locator->set_section_id($translatable ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
 			$dato = [$translatable_locator];
 			$translatable_component->set_dato( $dato );
@@ -698,7 +698,7 @@ class ontology {
 				$ontology_node->set_esdescriptor('si');
 				$ontology_node->set_visible('si');
 				$ontology_node->set_tld($tld);
-				$ontology_node->set_traducible('no');
+				$ontology_node->set_is_translatable(false);
 				$ontology_node->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 				// Properties, add main_tld as official tld definitions
@@ -793,7 +793,7 @@ class ontology {
 						$ontology_node->set_esdescriptor('si');
 						$ontology_node->set_visible('si');
 						$ontology_node->set_tld($parent_tld);
-						$ontology_node->set_traducible('no');
+						$ontology_node->set_is_translatable(false);
 						$ontology_node->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 					// Properties, add main_tld as official tld definitions
@@ -1507,7 +1507,7 @@ class ontology {
 			// get the translatable value with the main node definition.
 			$translatable = $translatable ?? self::resolve_translatable( $locator );
 
-			$jer_dd_record->set_traducible( $translatable );
+			$jer_dd_record->set_is_translatable( $translatable );
 
 		// relations
 			$relations = null;
@@ -1727,14 +1727,14 @@ class ontology {
 	* @param locator $locator
 	* @return string $translatable
 	*/
-	private static function resolve_translatable( locator $locator ) : string {
+	private static function resolve_translatable( locator $locator ) : bool {
 
 		$translatable_tipo = 'ontology8';
 
 		// get the translatable data of the node.
 		$translatable_data =  self::get_node_component_data( $locator, $translatable_tipo );
 
-		$translatable = 'si'; // default value when is not set.
+		$translatable = true; // default value when is not set.
 
 		if(empty($translatable_data)){
 
@@ -1748,7 +1748,7 @@ class ontology {
 
 		}else{
 			$translatable_data_locator = reset($translatable_data);
-			$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
+			$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? true : false;
 		}
 
 		return $translatable;

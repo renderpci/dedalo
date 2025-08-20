@@ -13,7 +13,7 @@
 *		visible	sino NULL
 *		norden	numeric(4,0) NULL
 *		tld	character varying(32) NULL
-*		traducible	sino NULL
+*		is_translatable	true|false NULL
 *		relaciones	text NULL
 *		propiedades	text NULL
 *		properties	jsonb NULL
@@ -256,7 +256,7 @@ abstract class RecordDataBoundObject {
 					//     "visible": "si",
 					//     "norden": "18",
 					//     "tld": "test",
-					//     "traducible": "no",
+					//     "is_translatable": false,
 					//     "relaciones": null,
 					//     "propiedades": "{\r\n  \"inverse_relations\": false\r\n}",
 					//     "properties": "{\"inverse_relations\": false}"

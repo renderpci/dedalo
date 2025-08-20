@@ -46,7 +46,7 @@ final class ontology_data_io_test extends TestCase {
 	// 			"visible": "si",
 	// 			"order_number": "28",
 	// 			"tld": "test",
-	// 			"traducible": "no",
+	// 			"translatable": false,
 	// 			"relaciones": "null",
 	// 			"propiedades": null,
 	// 			"properties": null,

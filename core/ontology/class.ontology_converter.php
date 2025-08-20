@@ -41,7 +41,7 @@ class ontology_converter {
 			// visible	sino NULL
 			// order_number	numeric(4,0) NULL
 			// tld	character varying(32) NULL
-			// traducible	sino NULL
+			// is_translatable	true|false NULL
 			// relaciones	text NULL
 			// propiedades	text NULL
 			// properties	jsonb NULL
@@ -177,7 +177,7 @@ class ontology_converter {
 		// tld (already calculated for terminoID -ontology7-)
 			$jer_dd_row->tld = $tld;
 
-		// traducible (ontology8)
+		// is_translatable (ontology8)
 			$tipo		= 'ontology8';
 			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
@@ -189,9 +189,9 @@ class ontology_converter {
 				$section_tipo
 			);
 			$value = $component->get_dato()[0] ?? null;
-			$jer_dd_row->traducible = (!empty($value) && (int)$value->section_id===NUMERICAL_MATRIX_VALUE_YES)
-				? 'si'
-				: 'no';
+			$jer_dd_row->is_translatable = (!empty($value) && (int)$value->section_id===NUMERICAL_MATRIX_VALUE_YES)
+				? true
+				: false;
 
 		// relaciones (ontology10)
 			$tipo		= 'ontology10';
@@ -356,7 +356,7 @@ class ontology_converter {
 			// visible	sino NULL
 			// order_number	numeric(4,0) NULL
 			// tld	character varying(32) NULL
-			// traducible	sino NULL
+			// is_translatable	true|false NULL
 			// relaciones	text NULL
 			// propiedades	text NULL
 			// properties	jsonb NULL
@@ -371,7 +371,7 @@ class ontology_converter {
 			$is_model				= $jer_dd_row->esmodelo;
 			$is_descriptor			= $jer_dd_row->esdescriptor;
 			$visible				= $jer_dd_row->visible;
-			$translatable			= $jer_dd_row->traducible;
+			$translatable			= $jer_dd_row->is_translatable;
 			$relations				= !empty($jer_dd_row->relaciones)
 				? ((is_string($jer_dd_row->relaciones) ? json_handler::decode($jer_dd_row->relaciones) : $jer_dd_row->relaciones) ?? null)
 				: null;
@@ -492,7 +492,7 @@ class ontology_converter {
 
 			$translatable_locator = new locator();
 				$translatable_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$translatable_locator->set_section_id($translatable==='si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+				$translatable_locator->set_section_id($translatable ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
 			$translatable_component->set_dato( [$translatable_locator] );
 			$translatable_component->save_to_database = false;

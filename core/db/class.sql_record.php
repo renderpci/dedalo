@@ -234,7 +234,7 @@ abstract class sql_record {
 					//     "visible": "si",
 					//     "norden": "18",
 					//     "tld": "test",
-					//     "traducible": "no",
+					//     "translatable": false,
 					//     "relaciones": null,
 					//     "propiedades": "{\r\n  \"inverse_relations\": false\r\n}",
 					//     "properties": "{\"inverse_relations\": false}"

@@ -300,20 +300,20 @@
 				'dd_ontology'
 			],
 			'sql' => "
-				CREATE INDEX IF NOT EXISTS {$table}_translatable
+				CREATE INDEX IF NOT EXISTS {$table}_is_translatable
 				ON {$table}
-				USING btree ( translatable ASC NULLS LAST );
+				USING btree ( is_translatable ASC NULLS LAST );
 			",
 			'drop' => "
-				DROP INDEX IF EXISTS {$table}_translatable
+				DROP INDEX IF EXISTS {$table}_is_translatable
 			",
 			'sample' => "
 				SELECT *
 				FROM dd_ontology
-				WHERE translatable = 1
+				WHERE is_translatable = true
 				LIMIT 1;
 			",
-			'info' => 'Used to search if the term is translatable or not, possible values: 1|2. 1 = yes, 2 = no'
+			'info' => 'Used to search if the term is translatable or not, boolean values: true | false';
 		];
 
 	// parent is_descriptor and order
