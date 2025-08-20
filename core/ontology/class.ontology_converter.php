@@ -33,7 +33,7 @@ class ontology_converter {
 
 		// table jer_dd columns:
 			// id	integer Auto Increment [nextval('jer_dd_id_seq')]
-			// terminoID	character varying(32) NULL
+			// tipo	character varying(32) NULL
 			// parent	character varying(32) NULL
 			// modelo	character varying(8) NULL
 			// is_model	true|false NULL
@@ -52,7 +52,7 @@ class ontology_converter {
 				$locator->set_section_tipo($section_tipo);
 				$locator->set_section_id($section_id);
 
-		// terminoID
+		// tipo
 			$tipo		= 'ontology7';
 			$model		= ontology_node::get_model_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
@@ -68,7 +68,7 @@ class ontology_converter {
 				$response->errors[]	= 'Empty tld value (ontology7)';
 				return $response;
 			}
-			$jer_dd_row->terminoID = $tld . $section_id;
+			$jer_dd_row->tipo = $tld . $section_id;
 
 		// parent (ontology15)
 			$tipo		= 'ontology15';
@@ -174,7 +174,7 @@ class ontology_converter {
 				$jer_dd_row->order_number = $order;
 			}
 
-		// tld (already calculated for terminoID -ontology7-)
+		// tld (already calculated for tipo -ontology7-)
 			$jer_dd_row->tld = $tld;
 
 		// is_translatable (ontology8)
@@ -348,7 +348,7 @@ class ontology_converter {
 
 		// table jer_dd columns:
 			// id	integer Auto Increment [nextval('jer_dd_id_seq')]
-			// terminoID	character varying(32) NULL
+			// tipo	character varying(32) NULL
 			// parent	character varying(32) NULL
 			// modelo	character varying(8) NULL
 			// is_model	true|false NULL
@@ -365,7 +365,7 @@ class ontology_converter {
 		// short vars
 			$tld					= $jer_dd_row->tld;
 			$target_section_tipo	= ontology::map_tld_to_target_section_tipo( $tld );
-			$node_tipo				= $jer_dd_row->terminoID;
+			$node_tipo				= $jer_dd_row->tipo;
 			$parent					= $jer_dd_row->parent;
 			$model					= $jer_dd_row->modelo;
 			$is_model				= $jer_dd_row->is_model;

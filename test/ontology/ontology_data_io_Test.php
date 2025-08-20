@@ -38,7 +38,7 @@ final class ontology_data_io_test extends TestCase {
 	// 	return json_decode('
 	// 		{
 	// 			"id": "16028305",
-	// 			"terminoID": "test102",
+	// 			"tipo": "test102",
 	// 			"parent": "test45",
 	// 			"modelo": "dd1747",
 	// 			"is_model": false,

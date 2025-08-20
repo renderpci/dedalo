@@ -158,30 +158,30 @@ class area extends area_common  {
 	* Look structure thesaurus for find children with valid model name
 	* @see get_ar_ts_children_areas
 	*
-	* @param $terminoID
+	* @param $tipo
 	*	tipo (First tipo is null in recursion)
 	* @return array $ar_ts_children_areas
 	*	array recursive of thesaurus structure children filtered by accepted model name
 	*/
-	protected static function get_ar_children_areas_recursive( string $terminoID ) : array {
+	protected static function get_ar_children_areas_recursive( string $tipo ) : array {
 
 		// default value
 		$ar_children_areas_recursive = [];
 
 		// short vars
-		$ontology_node			= new ontology_node($terminoID);
+		$ontology_node			= new ontology_node($tipo);
 		$ar_ts_children			= $ontology_node->get_ar_children_of_this();
 		$ar_ts_children_size	= sizeof($ar_ts_children);
 
 		if ($ar_ts_children_size>0) {
 
-			// foreach ($ar_ts_children as $children_terminoID) {
+			// foreach ($ar_ts_children as $children_tipo) {
 			for ($i=0; $i < $ar_ts_children_size; $i++) {
 
-				$children_terminoID = $ar_ts_children[$i];
+				$children_tipo = $ar_ts_children[$i];
 
-				$ontology_node	= new ontology_node($children_terminoID);
-				$model			= ontology_node::get_model_name_by_tipo($children_terminoID,true);
+				$ontology_node	= new ontology_node($children_tipo);
+				$model			= ontology_node::get_model_name_by_tipo($children_tipo,true);
 
 				// Test if model is accepted or not (more restrictive)
 				if( 	in_array($model, area::$ar_children_include_model_name)
@@ -189,10 +189,10 @@ class area extends area_common  {
 				) {
 
 					// add current
-					$ar_children_areas_recursive[] = $children_terminoID;
+					$ar_children_areas_recursive[] = $children_tipo;
 
 					// calculate recursive
-					$ar_temp = self::get_ar_children_areas_recursive($children_terminoID);
+					$ar_temp = self::get_ar_children_areas_recursive($children_tipo);
 					$ar_children_areas_recursive = array_merge($ar_children_areas_recursive, $ar_temp);
 				}
 			}//end for ($i=0; $i < $ar_ts_children_size; $i++)

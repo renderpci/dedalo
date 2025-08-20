@@ -2650,15 +2650,15 @@ class diffusion_sql extends diffusion  {
 
 		$model_name 	= 'database';
 		$relation_type 	= 'parent';
-		$ar_terminoID 	= ontology_node::get_ar_tipo_by_model_name_and_relation($diffusion_table_tipo, $model_name, $relation_type, true);
-			#dump($ar_terminoID, ' ar_terminoID ++ '.to_string($diffusion_table_tipo));
+		$ar_parent_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($diffusion_table_tipo, $model_name, $relation_type, true);
+			#dump($ar_parent_tipo, ' ar_parent_tipo ++ '.to_string($diffusion_table_tipo));
 
-		$count = count($ar_terminoID);
+		$count = count($ar_parent_tipo);
 
 		switch (true) {
 			case $count===1:
-				$diffusion_database_tipo = reset($ar_terminoID);
-				$diffusion_database_name = ontology_node::get_term_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+				$diffusion_database_tipo = reset($ar_parent_tipo);
+				$diffusion_database_name = ontology_node::get_term_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false); // $parent_tipo, $lang=NULL, $from_cache=false, $fallback=true
 				break;
 			case $count>1:
 				debug_log(__METHOD__

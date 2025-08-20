@@ -304,15 +304,15 @@ abstract class component_common extends common {
 								# skip verification
 							}else{
 								# Verify this section is from current component tipo
-								$ar_terminoID_by_model_name = ontology_node::get_ar_tipo_by_model_name_and_relation($tipo, 'section', 'parent');
-								if (!isset($ar_terminoID_by_model_name[0])) {
+								$ar_section_parent_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($tipo, 'section', 'parent');
+								if (!isset($ar_section_parent_tipo[0])) {
 									debug_log(__METHOD__
-										." ar_terminoID_by_model_name is empty for tipo: ($tipo), ar_terminoID_by_modelo_name: ".to_string($ar_terminoID_by_model_name)
+										." ar_tipo_by_model_name is empty for tipo: ($tipo), ar_tipo_by_modelo_name: ".to_string($ar_section_parent_tipo)
 										, logger::ERROR
 									);
 									throw new Exception("Error Processing Request", 1);
 								}
-								$calculated_section_tipo	= $ar_terminoID_by_model_name[0];
+								$calculated_section_tipo	= $ar_section_parent_tipo[0];
 								$real_section				= section::get_section_real_tipo_static($section_tipo);
 								$is_real					= $real_section===$section_tipo ? true : false;
 								if ( $is_real && $section_tipo!==$calculated_section_tipo && $mode!=='search' && SHOW_DEBUG===true) {

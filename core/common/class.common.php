@@ -4867,7 +4867,7 @@ abstract class common {
 						continue;
 					}
 
-				// label $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+				// label $term, $lang=NULL, $from_cache=false, $fallback=true
 					$button_label = ontology_node::get_term_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 				// properties

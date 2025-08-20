@@ -19,32 +19,32 @@ final class ontology_node_test extends TestCase {
 		$test_term_id = 'dd1';
 
 		$ontology_node	= new ontology_node( $test_term_id );
-		$terminoID		= $ontology_node->get_terminoID();
+		$tipo		= $ontology_node->get_tipo();
 
-		$type = gettype($terminoID);
+		$type = gettype($tipo);
 		$eq = $type==='string';
 		$this->assertTrue(
 			$eq,
 			'expected true (class===string) and received type: ' .$type
 		);
 
-		$eq = $terminoID===$test_term_id;
+		$eq = $tipo===$test_term_id;
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
 				.'test_term_id: ' . $test_term_id . PHP_EOL
-				.'terminoID: ' . $terminoID
+				.'tipo: ' . $tipo
 		);
 
 		$ontology_node	= new ontology_node( null, 'dd' );
-		$terminoID		= $ontology_node->get_terminoID();
+		$tipo		= $ontology_node->get_tipo();
 
-		$eq = $terminoID===null;
+		$eq = $tipo===null;
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
 				.'test_term_id: null'  . PHP_EOL
-				.'terminoID: ' . $terminoID
+				.'tipo: ' . $tipo
 		);
 
 		$prefix = $ontology_node->get_prefijo();
@@ -103,10 +103,10 @@ final class ontology_node_test extends TestCase {
 		$ontology_node	= new ontology_node( $test_term_id );
 
 		$result = $ontology_node->get_strPrimaryKeyName();
-		$eq = $result==='terminoID';
+		$eq = $result==='tipo';
 		$this->assertTrue(
 			$eq,
-			'expected true from terminoID' . PHP_EOL
+			'expected true from tipo' . PHP_EOL
 				. ' strPrimaryKeyName: ' . to_string($result)
 		);
 	}//end test_definePrimaryKeyName
@@ -124,7 +124,7 @@ final class ontology_node_test extends TestCase {
 
 		$result = $ontology_node->get_arRelationMap();
 		$eq = $result===[
-			'terminoID'			=> 'terminoID',
+			'tipo'				=> 'tipo',
 			'parent'			=> 'parent',
 			'modelo'			=> 'modelo',
 			'model'				=> 'model',
@@ -515,13 +515,13 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_model_terminoID
+	* TEST_get_model_tipo
 	* @return void
 	*/
-	public function test_get_model_terminoID(): void {
+	public function test_get_model_tipo(): void {
 
 		// root
-			$result = ontology_node::get_model_terminoID('root');
+			$result = ontology_node::get_model_tipo('root');
 
 			$expected	= 'string';
 			$eq			= gettype($result)===$expected;
@@ -542,7 +542,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// component_portal
-			$result = ontology_node::get_model_terminoID('component_portal');
+			$result = ontology_node::get_model_tipo('component_portal');
 
 			$expected	= 'dd592';
 			$eq			= $result===$expected;
@@ -554,17 +554,17 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// section
-			$result = ontology_node::get_model_terminoID('section');
+			$result = ontology_node::get_model_tipo('section');
 
 			$expected	= 'dd6';
 			$eq			= $result===$expected;
 			$this->assertTrue(
 				$eq,
-				'expected "dd6" for get_model_terminoID section' . PHP_EOL
+				'expected "dd6" for get_model_tipo section' . PHP_EOL
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_model_terminoID
+	}//end test_get_model_tipo
 
 
 
@@ -588,7 +588,7 @@ final class ontology_node_test extends TestCase {
 
 		// dd1
 			$found = array_find($result, function($el) {
-				return $el->terminoID==='dd1';
+				return $el->tipo==='dd1';
 			});
 
 			$expected	= true;
@@ -602,7 +602,7 @@ final class ontology_node_test extends TestCase {
 
 		// rsc15
 			$found = array_find($result, function($el) {
-				return $el->terminoID==='rsc15';
+				return $el->tipo==='rsc15';
 			});
 
 			$expected	= true;
@@ -710,13 +710,13 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_ar_all_terminoID_of_modelo_tipo
+	* TEST_get_ar_all_tipo_of_modelo_tipo
 	* @return void
 	*/
-	public function test_get_ar_all_terminoID_of_modelo_tipo(): void {
+	public function test_get_ar_all_tipo_of_modelo_tipo(): void {
 
 		// section
-			$result = ontology_node::get_ar_all_terminoID_of_modelo_tipo(
+			$result = ontology_node::get_ar_all_tipo_of_modelo_tipo(
 				'dd6'
 			);
 
@@ -742,7 +742,7 @@ final class ontology_node_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_all_terminoID_of_modelo_tipo
+	}//end test_get_ar_all_tipo_of_modelo_tipo
 
 
 
