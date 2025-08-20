@@ -255,7 +255,7 @@ class area_graph extends area_common {
 			$value = $component->get_valor($lang);
 
 		$typology_name = empty($value)
-			? component_common::extract_component_value_fallback($component)
+			? $component->extract_component_value_fallback()
 			: $value;
 
 		if (empty($typology_name)) {
@@ -344,7 +344,7 @@ class area_graph extends area_common {
 
 		// hierarchy name
 			$hierarchy_name = empty($value)
-				? component_common::extract_component_value_fallback($component)
+				? $component->extract_component_value_fallback()
 				: $value;
 
 			if (empty($hierarchy_name)) {
