@@ -1287,6 +1287,30 @@ class ontology_node extends ontology_record {
 
 
 
+
+	/**
+	* GET_IS_MODEL
+	* Retrieve from DDBB the column is_model
+	* Parse the column as boolean
+	* @return
+	*/
+	public function get_is_model() : bool {
+
+		$is_model = parent::get_is_model();
+		if (is_null($is_model) || $is_model===false) {
+			return false;
+		}
+
+		$is_model_parsed = is_string($is_model)
+			? ($is_model === 't' || $is_model === '1')
+			: $is_model;
+
+
+		return $is_model_parsed;
+
+
+	}//end get_is_model
+
 	/**
 	* IS_MODEL
 	* Alias of get_is_model but responses boolean for convenience

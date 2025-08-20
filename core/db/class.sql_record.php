@@ -229,7 +229,7 @@ abstract class sql_record {
 					//     "terminoID": "test24",
 					//     "parent": "dd627",
 					//     "modelo": "dd626",
-					//     "esmodelo": "no",
+					//     "is_model": false,
 					//     "esdescriptor": "si",
 					//     "visible": "si",
 					//     "norden": "18",

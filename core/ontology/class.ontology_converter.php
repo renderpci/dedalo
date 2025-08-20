@@ -36,7 +36,7 @@ class ontology_converter {
 			// terminoID	character varying(32) NULL
 			// parent	character varying(32) NULL
 			// modelo	character varying(8) NULL
-			// esmodelo	sino NULL
+			// is_model	true|false NULL
 			// esdescriptor	sino NULL
 			// visible	sino NULL
 			// order_number	numeric(4,0) NULL
@@ -129,7 +129,7 @@ class ontology_converter {
 				$jer_dd_row->modelo = null;
 			}
 
-		// esmodelo ontology30
+		// is_model ontology30
 			$tipo		= 'ontology30';
 			$model		= ontology_node::get_model_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
@@ -141,9 +141,9 @@ class ontology_converter {
 				$section_tipo
 			);
 			$value = $component->get_dato()[0] ?? null;
-			$jer_dd_row->esmodelo = (!empty($value) && (int)$value->section_id===NUMERICAL_MATRIX_VALUE_YES)
-				? 'si'
-				: 'no';
+			$jer_dd_row->is_model = (!empty($value) && (int)$value->section_id===NUMERICAL_MATRIX_VALUE_YES)
+				? true
+				: false;
 
 		// esdescriptor (ontology4)
 			$tipo		= 'ontology4';
@@ -351,7 +351,7 @@ class ontology_converter {
 			// terminoID	character varying(32) NULL
 			// parent	character varying(32) NULL
 			// modelo	character varying(8) NULL
-			// esmodelo	sino NULL
+			// is_model	true|false NULL
 			// esdescriptor	sino NULL
 			// visible	sino NULL
 			// order_number	numeric(4,0) NULL
@@ -368,7 +368,7 @@ class ontology_converter {
 			$node_tipo				= $jer_dd_row->terminoID;
 			$parent					= $jer_dd_row->parent;
 			$model					= $jer_dd_row->modelo;
-			$is_model				= $jer_dd_row->esmodelo;
+			$is_model				= $jer_dd_row->is_model;
 			$is_descriptor			= $jer_dd_row->esdescriptor;
 			$visible				= $jer_dd_row->visible;
 			$translatable			= $jer_dd_row->is_translatable;
@@ -472,7 +472,7 @@ class ontology_converter {
 
 			$is_model_locator = new locator();
 				$is_model_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$is_model_locator->set_section_id($is_model==='si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+				$is_model_locator->set_section_id($is_model ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
 			$is_model_component->set_dato( [$is_model_locator] );
 			$is_model_component->save_to_database = false;
