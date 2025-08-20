@@ -65,7 +65,7 @@ class ontology {
 		*	"terminoID": "test102",
 		*	"parent": "test45",
 		*	"modelo": "dd1747",
-		*	"esmodelo": "no",
+		*	"is_model": false,
 		*	"esdescriptor": "si",
 		*	"visible": "si",
 		*	"order_number": "28",
@@ -89,7 +89,7 @@ class ontology {
 		$node_tipo				= $jer_dd_row->terminoID;
 		$parent					= $jer_dd_row->parent;
 		$model					= $jer_dd_row->modelo;
-		$is_model				= $jer_dd_row->esmodelo;
+		$is_model				= $jer_dd_row->is_model;
 		$is_descriptor			= $jer_dd_row->esdescriptor;
 		$translatable			= $jer_dd_row->is_translatable;
 		$relations				= !empty ( $jer_dd_row->relaciones )
@@ -187,7 +187,7 @@ class ontology {
 
 			$is_model_locator = new locator();
 				$is_model_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$is_model_locator->set_section_id($is_model === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+				$is_model_locator->set_section_id($is_model ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
 			$dato = [$is_model_locator];
 			$is_model_component->set_dato( $dato );
@@ -694,7 +694,7 @@ class ontology {
 				$ontology_node->set_parent($parent_grouper_tipo);
 				$ontology_node->set_modelo('dd6');
 				$ontology_node->set_model('section');
-				$ontology_node->set_esmodelo('no');
+				$ontology_node->set_is_model(false);
 				$ontology_node->set_esdescriptor('si');
 				$ontology_node->set_visible('si');
 				$ontology_node->set_tld($tld);
@@ -789,7 +789,7 @@ class ontology {
 						$ontology_node->set_parent($parent_group);
 						$ontology_node->set_modelo('dd6');
 						$ontology_node->set_model('section');
-						$ontology_node->set_esmodelo('no');
+						$ontology_node->set_is_model(false);
 						$ontology_node->set_esdescriptor('si');
 						$ontology_node->set_visible('si');
 						$ontology_node->set_tld($parent_tld);
@@ -1381,8 +1381,8 @@ class ontology {
 				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
 			}
 
-			$is_model = $is_model ?? 'no'; // default value
-			$jer_dd_record->set_esmodelo( $is_model );
+			$is_model = $is_model ?? false; // default value
+			$jer_dd_record->set_is_model( $is_model );
 
 		// model. Get the model tld and id
 			$model_tipo	= 'ontology6';
@@ -1402,7 +1402,7 @@ class ontology {
 
 			if( empty($model_data) ){
 
-				if ( $is_model === 'no' ) {
+				if ( $is_model === false ) {
 					debug_log(__METHOD__
 						. " Record without model " . PHP_EOL
 						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL

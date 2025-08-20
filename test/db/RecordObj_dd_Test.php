@@ -128,7 +128,7 @@ final class ontology_node_test extends TestCase {
 			'parent'			=> 'parent',
 			'modelo'			=> 'modelo',
 			'model'				=> 'model',
-			'esmodelo'			=> 'esmodelo',
+			'is_model'			=> 'is_model',
 			'esdescriptor'		=> 'esdescriptor',
 			'visible'			=> 'visible',
 			'order_number'		=> 'order_number',

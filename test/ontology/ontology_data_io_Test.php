@@ -41,7 +41,7 @@ final class ontology_data_io_test extends TestCase {
 	// 			"terminoID": "test102",
 	// 			"parent": "test45",
 	// 			"modelo": "dd1747",
-	// 			"esmodelo": "no",
+	// 			"is_model": false,
 	// 			"esdescriptor": "si",
 	// 			"visible": "si",
 	// 			"order_number": "28",
