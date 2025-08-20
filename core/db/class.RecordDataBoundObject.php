@@ -291,7 +291,14 @@ abstract class RecordDataBoundObject {
 			if(isset($row) && is_array($row)) {
 				foreach($row as $key => $value) {
 					if ($key==='id') { continue; } // Ignore column id
-					$strMember = $this->arRelationMap[$key];
+					$strMember = $this->arRelationMap[$key] ?? null;
+					if (!$strMember) {
+						debug_log(__METHOD__
+							. " WARNING: Ignored column. Property '$key' do not exists in " . get_called_class()
+							, logger::WARNING
+						);
+						continue;
+					}
 					if(property_exists($this, $strMember)) {
 						$this->{$strMember} = $value;
 					}
