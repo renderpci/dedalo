@@ -183,11 +183,11 @@ class ontology_node extends ontology_record {
 	* Values expected in 'properties' are always JSON.
 	* @return mixed $properties_parsed
 	*/
-	public function get_is_translatable() : mixed {
+	public function get_is_translatable() : bool {
 
 		$is_translatable = parent::get_is_translatable();
 		if (is_null($is_translatable) || $is_translatable===false) {
-			return null;
+			return false;
 		}
 
 		$is_translatable_parsed = is_string($is_translatable)
