@@ -977,9 +977,9 @@ abstract class common {
 
 		$ar_related_component_tipo=array();
 
-		$relaciones = $this->RecordObj_dd->get_relaciones();
-		if(is_array($relaciones)) {
-			foreach ($relaciones as $value) {
+		$relations = $this->ontology_node->get_relations();
+		if(is_array($relations)) {
+			foreach ($relations as $value) {
 				$tipo = reset($value);
 				$ar_related_component_tipo[] = $tipo;
 			}
@@ -1007,8 +1007,8 @@ abstract class common {
 				return $ar_related_by_model_data[$uid];
 			}
 
-		$RecordObj_dd	= new RecordObj_dd($tipo);
-		$relaciones		= $RecordObj_dd->get_relaciones();
+		$ontology_node	= new ontology_node($tipo);
+		$relations		= $ontology_node->get_relations();
 
 		$ar_related_by_model=array();
 		foreach ((array)$relaciones as $relation) foreach ((array)$relation as $model_tipo => $current_tipo) {

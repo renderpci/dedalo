@@ -155,6 +155,26 @@ class ontology_node extends ontology_record {
 
 
 	/**
+	* GET_RELATIONS
+	* Return the value of property 'relations', stored as JSONB in table column 'relations'
+	* Values expected in 'relations' are always JSON.
+	* @return mixed $properties_parsed
+	*/
+	public function get_relations() : mixed {
+
+		$relations = parent::get_relations();
+		if (is_null($relations) || $relations===false) {
+			return null;
+		}
+
+		$relations_parsed = is_string($relations)
+			? json_decode($relations)
+			: $relations;
+
+
+		return $relations_parsed;
+	}//end get_propiedades
+
 	* UPDATE_COUNTER
 	* Updates the counter for the given tld (ej. 'dd').
 	* @param string $tld

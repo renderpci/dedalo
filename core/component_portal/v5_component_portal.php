@@ -60,16 +60,16 @@
 
 				#
 				# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
-				$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+				$relation_nodes = (array)$this->ontology_node->get_relations();
 
 				#
 				# FIELDS AND MATRIX_TABLE
 				$fields=array();
-				foreach ($ar_terminos_relacionados as $key => $ar_value) {
+				foreach ($relation_nodes as $key => $ar_value) {
 
 					$model		= key($ar_value);
 					$tipo		= $ar_value[$model];
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$model_name	= ontology_node::get_modelo_name_by_tipo($tipo,true);
 					if ($model_name==='section') {
 						$section_tipo = $tipo;
 						$matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
@@ -211,14 +211,14 @@
 		// inject in tool export: Note that user can override 'relaciones' data selecting in checkbox of tool export (!)
 
 		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual
-			$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+			$relation_nodes = (array)$this->ontology_node->get_relations();
 
 		// FIELDS
 			$fields=array();
-			foreach ($ar_terminos_relacionados as $key => $ar_value) {
+			foreach ($relation_nodes as $key => $ar_value) {
 				foreach ($ar_value as $current_tipo) {
 
-					$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 					if (strpos($model_name, 'component_')!==false) {
 						$fields[] = $current_tipo;
 					}
@@ -345,14 +345,14 @@
 				if (!empty($dato)) {
 					// inject in tool export: Note that user can override 'relaciones' data selecting in checkbox of tool export (!)
 					// terminos_relacionados . Obtenemos los terminos relacionados del componente actual
-						$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+						$relation_nodes = (array)$this->ontology_node->get_relations();
 
 					// fields
 						$fields=array();
-						foreach ($ar_terminos_relacionados as $key => $ar_value) {
+						foreach ($relation_nodes as $key => $ar_value) {
 							foreach ($ar_value as $current_tipo) {
 
-								$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+								$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 								if (strpos($model_name, 'component_')!==false) {
 									$fields[] = $current_tipo;
 								}

@@ -4128,13 +4128,13 @@ class diffusion_sql extends diffusion  {
 
 		#
 		# TERMINOS_RELACIONADOS . We get the related terms of the current component
-		$RecordObj_dd				= new RecordObj_dd($component_tipo);
-		$ar_terminos_relacionados	= (array)$RecordObj_dd->get_relaciones();
+		$ontology_node	= new ontology_node($component_tipo);
+		$relation_nodes	= (array)$ontology_node->get_relations();
 
 
 		# FIELDS
 		$fields=array();
-		foreach ($ar_terminos_relacionados as $key => $ar_value) {
+		foreach ($relation_nodes as $key => $ar_value) {
 			foreach ($ar_value as $current_tipo) {
 				$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 				if (strpos($model_name, 'component_')!==false) {
@@ -4346,11 +4346,11 @@ class diffusion_sql extends diffusion  {
 
 			case 'relaciones': // relations, relations_labels
 
-				$tipos = RecordObj_dd::get_ar_terminos_relacionados($term_id, $cache=true, $simple=true);
+				$tipos = ontology_node::get_ar_terminos_relacionados($term_id, $cache=true, $simple=true);
 
 				$value = ($resolve_label===true && !empty($tipos))
 					? array_map(function($item) use($lang){
-						return RecordObj_dd::get_termino_by_tipo($item, $lang, $from_cache=true, $fallback=true);
+						return ontology_node::get_termino_by_tipo($item, $lang, $from_cache=true, $fallback=true);
 					  }, $tipos)
 					: (!empty($tipos) ? $tipos : null);
 
