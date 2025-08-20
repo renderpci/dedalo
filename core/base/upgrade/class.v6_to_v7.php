@@ -678,7 +678,7 @@ class v6_to_v7 {
 
 		sanitize_query ('
 			CREATE TABLE dd_ontology AS
-				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades
+				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades, relaciones
 			FROM jer_dd;
 
 			COMMENT ON TABLE "dd_ontology" IS  \'Active ontology\';

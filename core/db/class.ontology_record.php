@@ -67,7 +67,8 @@ class ontology_record extends RecordDataBoundObject {
 			'model_tipo'		=> 'model_tipo',
 			'is_model'			=> 'is_model',
 			'is_translatable'	=> 'is_translatable',
-			'propiedades'		=> 'propiedades'
+			'propiedades'		=> 'propiedades',
+			'relaciones'		=> 'relaciones'
 		];
 	}//end defineRelationMap
 
