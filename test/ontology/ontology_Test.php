@@ -47,7 +47,7 @@ final class ontology_test extends TestCase {
 				"norden": "28",
 				"tld": "test",
 				"traducible": "no",
-				"relaciones": "null",
+				"relations": "null",
 				"propiedades": null,
 				"properties": null,
 				"term2": null,
@@ -751,12 +751,12 @@ final class ontology_test extends TestCase {
 					. 'result->get_traducible(): ' . to_string($result->get_traducible())
 			);
 
-		// relaciones
+		// relations
 			$expected = '[{"tipo":"dd423"}]';
 			$this->assertTrue(
-				json_encode($result->get_relaciones())==$expected,
+				json_encode($result->get_relations())==$expected,
 				'expected: ' . $expected .  PHP_EOL
-					. 'result->get_relaciones(): ' . json_encode($result->get_relaciones())
+					. 'result->get_relations(): ' . json_encode($result->get_relations())
 			);
 
 		// propiedades

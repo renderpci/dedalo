@@ -964,11 +964,11 @@ final class ontology_node_test extends TestCase {
 	* TEST_get_relaciones
 	* @return void
 	*/
-	public function test_get_relaciones(): void {
+	public function test_get_relations(): void {
 
 		// image rsc88
-		$RecordObj_dd	= new RecordObj_dd('rsc88');
-		$result			= $RecordObj_dd->get_relaciones();
+		$ontology_node	= new ontology_node('rsc88');
+		$result			= $ontology_node->get_relations();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;

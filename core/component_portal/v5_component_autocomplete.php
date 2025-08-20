@@ -47,10 +47,10 @@
 
 				$ar_componets_related = array();
 
-				$ar_related_terms = $this->RecordObj_dd->get_relaciones();
+				$ar_related_terms = $this->ontology_node->get_relations();
 
 				foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $model => $component_tipo) {
-					$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$model_name = ontology_node::get_modelo_name_by_tipo($component_tipo, true);
 					if ($model_name!=='section'){
 						$ar_componets_related[] = $component_tipo;
 					}
