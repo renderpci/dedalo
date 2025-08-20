@@ -1755,7 +1755,7 @@ class section extends common {
 			}else{
 
 				$tipo_exclude_elements		= $ar_tipo_exclude_elements[0];
-				$ar_elements_to_be_exclude	= ontology_node::get_ar_terminos_relacionados(
+				$ar_elements_to_be_exclude	= ontology_node::get_relation_nodes(
 					$tipo_exclude_elements,
 					false, // bool cache
 					true // bool simple
@@ -1910,7 +1910,7 @@ class section extends common {
 					);
 				}else{
 					// locate excluded tipos (related terms) in this virtual section
-					$ar_excluded_tipo = ontology_node::get_ar_terminos_relacionados(
+					$ar_excluded_tipo = ontology_node::get_relation_nodes(
 						$ar_exclude_elements_tipo[0],
 						false, // bool cache
 						true // bool simple

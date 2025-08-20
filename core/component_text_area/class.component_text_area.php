@@ -1958,7 +1958,7 @@ class component_text_area extends component_string_common {
 
 					// related tipo process (component_image, component_geolocation)
 						if (!empty($trim_dato)) {
-							$ar_related_tipo = ontology_node::get_ar_terminos_relacionados($tipo, false, true);
+							$ar_related_tipo = ontology_node::get_relation_nodes($tipo, false, true);
 							foreach ($ar_related_tipo as $current_tipo) {
 
 								$model = ontology_node::get_model_name_by_tipo($current_tipo, true);

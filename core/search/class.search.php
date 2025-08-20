@@ -2828,7 +2828,7 @@ class search {
 			$ar_related_components 	= component_relation_common::get_components_with_relations();
 			if(in_array($term_model, $ar_related_components)===true) {
 
-				$ar_terminos_relacionados	= ontology_node::get_ar_terminos_relacionados($tipo,true,true);
+				$ar_terminos_relacionados	= ontology_node::get_relation_nodes($tipo,true,true);
 				$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
 
 				if (!empty($ar_related_section)) {

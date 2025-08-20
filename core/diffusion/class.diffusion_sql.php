@@ -742,7 +742,7 @@ class diffusion_sql extends diffusion  {
 
 				$related_tipo = false;
 
-				$ar_related = ontology_node::get_ar_terminos_relacionados(
+				$ar_related = ontology_node::get_relation_nodes(
 					$child_tipo,
 					true, // bool cache
 					true // bool simple
@@ -825,7 +825,7 @@ class diffusion_sql extends diffusion  {
 			// case 'relation': (NOT USED ANYMORE. OLD TABLE COLUMN LINKS BETWEEN TABLES)
 				// 	$ar_field_data['field_name'] 	= ontology_node::get_term_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
 				// 	$ar_field_data['field_type'] 	= 'field_text';
-				// 	$termino_relacionado 			= ontology_node::get_ar_terminos_relacionados($options->tipo, $cache=true, $simple=true)[0];
+				// 	$termino_relacionado 			= ontology_node::get_relation_nodes($options->tipo, $cache=true, $simple=true)[0];
 				// 	$ar_field_data['field_coment'] 	= ontology_node::get_term_by_tipo($termino_relacionado)." - $termino_relacionado";
 				// 	$ar_field_data['field_options'] = null;
 				// 	break;
@@ -1523,7 +1523,7 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function get_field_related_component(string $tipo) {
 
-		$ar_related = ontology_node::get_ar_terminos_relacionados(
+		$ar_related = ontology_node::get_relation_nodes(
 			$tipo,
 			true, // cache
 			true // simple
@@ -4346,7 +4346,7 @@ class diffusion_sql extends diffusion  {
 
 			case 'relaciones': // relations, relations_labels
 
-				$tipos = ontology_node::get_ar_terminos_relacionados($term_id, $cache=true, $simple=true);
+				$tipos = ontology_node::get_relation_nodes($term_id, $cache=true, $simple=true);
 
 				$value = ($resolve_label===true && !empty($tipos))
 					? array_map(function($item) use($lang){

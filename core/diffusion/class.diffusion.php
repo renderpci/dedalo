@@ -682,7 +682,7 @@ abstract class diffusion  {
 
 		// Component
 			$ar_related			= common::get_ar_related_by_model('component_', $tipo, false);
-			$component_tipo		= reset($ar_related); //ontology_node::get_ar_terminos_relacionados($tipo, false, true)[0];
+			$component_tipo		= reset($ar_related); //ontology_node::get_relation_nodes($tipo, false, true)[0];
 			$model_name			= ontology_node::get_model_name_by_tipo($component_tipo,true);
 			#$real_section_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($component_tipo, 'section', 'parent')[0];
 			$current_component	= component_common::get_instance(

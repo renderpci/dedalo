@@ -248,7 +248,7 @@ class component_security_access extends component_common {
 		);
 		if (isset($ar_exclude_elements[0])) {
 			$exclude_elements_tipo = $ar_exclude_elements[0];
-			$ar_tipo_to_be_exclude = ontology_node::get_ar_terminos_relacionados(
+			$ar_tipo_to_be_exclude = ontology_node::get_relation_nodes(
 				$exclude_elements_tipo,
 				false,
 				true
