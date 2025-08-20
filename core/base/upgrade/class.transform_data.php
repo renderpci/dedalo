@@ -1495,7 +1495,7 @@ class transform_data {
 		// collect all children sections of 'ontology40' ('Instances')
 		// like 'dd', 'ontology', 'rsc', 'nexus', etc.
 
-		// $ontology_children = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation( 'ontology40','section','children_recursive' );
+		// $ontology_children = ontology_node::get_ar_tipo_by_model_name_and_relation( 'ontology40','section','children_recursive' );
 		$ontology_tlds = array_map(function( $el ){
 			return $el->tld;
 		}, $ontology_info->active_ontologies);

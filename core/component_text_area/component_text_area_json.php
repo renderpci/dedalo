@@ -69,7 +69,7 @@
 					}
 
 				// geo
-					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$related_component_geolocation = ontology_node::get_ar_tipo_by_model_name_and_relation(
 						$this->tipo, // tipo
 						'component_geolocation', // model name
 						'termino_relacionado', // relation_type

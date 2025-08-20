@@ -304,7 +304,7 @@ abstract class component_common extends common {
 								# skip verification
 							}else{
 								# Verify this section is from current component tipo
-								$ar_terminoID_by_model_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
+								$ar_terminoID_by_model_name = ontology_node::get_ar_tipo_by_model_name_and_relation($tipo, 'section', 'parent');
 								if (!isset($ar_terminoID_by_model_name[0])) {
 									debug_log(__METHOD__
 										." ar_terminoID_by_model_name is empty for tipo: ($tipo), ar_terminoID_by_modelo_name: ".to_string($ar_terminoID_by_model_name)

@@ -147,7 +147,7 @@ abstract class label {
 		$cached		= false;
 		$fallback	= true;
 
-		$ar_term = RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
+		$ar_term = ontology_node::get_ar_tipo_by_model_name('label');
 		foreach ($ar_term as $current_terminoID) {
 
 			$ontology_node	= new ontology_node($current_terminoID);
@@ -207,7 +207,7 @@ abstract class label {
 
 		$terminoID = null;
 
-		$ar_term_id_by_model_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
+		$ar_term_id_by_model_name = (array)ontology_node::get_ar_tipo_by_model_name('label');
 		foreach ($ar_term_id_by_model_name as $current_terminoID) {
 
 			$ontology_node	= new ontology_node($current_terminoID);

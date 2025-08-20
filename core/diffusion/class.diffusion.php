@@ -65,7 +65,7 @@ abstract class diffusion  {
 	*/
 	public static function get_diffusion_domains() : array {
 
-		$diffusion_domains = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$diffusion_domains = ontology_node::get_ar_tipo_by_model_name_and_relation(
 			DEDALO_DIFFUSION_TIPO,
 			'diffusion_domain', // string model_name=
 			'children' // string relation_type=
@@ -165,7 +165,7 @@ abstract class diffusion  {
 		#
 		# DIFFUSION_GROUP
 		# Search inside current diffusion_domain and iterate all diffusion_group
-		$ar_diffusion_group = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$ar_diffusion_group = ontology_node::get_ar_tipo_by_model_name_and_relation(
 			$diffusion_domain_tipo,
 			'diffusion_group', // model_name
 			'children', // relation_type
@@ -180,7 +180,7 @@ abstract class diffusion  {
 			$ar_diffusion_elements = [];
 
 			// 1 get the diffusion element alias
-			$ar_diffusion_element_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$ar_diffusion_element_alias_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 				$diffusion_group_tipo,
 				'diffusion_element_alias', // model_name
 				'children', // relation_type
@@ -189,7 +189,7 @@ abstract class diffusion  {
 			// Add the resolved real diffusion_element tipos
 			if(!empty($ar_diffusion_element_alias_tipo)){
 				foreach ($ar_diffusion_element_alias_tipo as $diffusion_element_alias_tipo) {
-					$ar_real_diffusion_element = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$ar_real_diffusion_element = ontology_node::get_ar_tipo_by_model_name_and_relation(
 						$diffusion_element_alias_tipo,
 						'diffusion_element', // model_name
 						'termino_relacionado', // relation_type
@@ -203,7 +203,7 @@ abstract class diffusion  {
 			}
 
 			// 2 get direct diffusion element
-			$direct_diffusion_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$direct_diffusion_elements = ontology_node::get_ar_tipo_by_model_name_and_relation(
 				$diffusion_group_tipo,
 				'diffusion_element', // model_name
 				'children', // relation_type
@@ -230,7 +230,7 @@ abstract class diffusion  {
 				if (in_array($diffusion_class_name, $with_database_classes)) {
 
 					// tipo of the real database from current diffusion element (e.g. 'web_numisdata')
-					$diffusion_database_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$diffusion_database_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 						$diffusion_element_tipo,
 						'database', // model_name
 						'children', // relation_type
@@ -240,7 +240,7 @@ abstract class diffusion  {
 					// database_alias case try
 					if (empty($diffusion_database_tipo)) {
 						// Get database alias
-						$database_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$database_alias_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 							$diffusion_element_tipo,
 							'database_alias',
 							'children',
@@ -255,7 +255,7 @@ abstract class diffusion  {
 							continue;
 						}
 						// Try to resolve real database to ensure if properly configured
-						$diffusion_database_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$diffusion_database_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 							$database_alias_tipo,
 							'database',
 							'termino_relacionado',
@@ -684,7 +684,7 @@ abstract class diffusion  {
 			$ar_related			= common::get_ar_related_by_model('component_', $tipo, false);
 			$component_tipo		= reset($ar_related); //ontology_node::get_ar_terminos_relacionados($tipo, false, true)[0];
 			$model_name			= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
-			#$real_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($component_tipo, 'section', 'parent')[0];
+			#$real_section_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($component_tipo, 'section', 'parent')[0];
 			$current_component	= component_common::get_instance(
 				$model_name,
 				$component_tipo,
@@ -1273,14 +1273,14 @@ abstract class diffusion  {
 					$table_name = false;
 
 					// table real
-						$ar_tables_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$ar_tables_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 							$diffusion_element_tipo,
 							'table',
 							'children_recursive',
 							true
 						);
 						foreach ($ar_tables_tipo as $table_tipo) {
-							$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$ar_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 								$table_tipo,
 								'section',
 								'termino_relacionado',
@@ -1302,7 +1302,7 @@ abstract class diffusion  {
 					// table alias
 						if ($table_name===false) {
 
-							$ar_tables_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$ar_tables_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 								$diffusion_element_tipo,
 								'table_alias',
 								'children_recursive',
@@ -1311,7 +1311,7 @@ abstract class diffusion  {
 							foreach ($ar_tables_tipo as $table_tipo) {
 
 								// direct relation case (used mainly in thesaurus tables)
-									$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+									$ar_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 										$table_tipo,
 										'section',
 										'termino_relacionado',
@@ -1319,7 +1319,7 @@ abstract class diffusion  {
 									);
 									if (empty($ar_section_tipo)) {
 										// try to search section in target table
-											$real_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+											$real_table_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 												$table_tipo,
 												'table',
 												'termino_relacionado',
@@ -1327,7 +1327,7 @@ abstract class diffusion  {
 											);
 											if (!empty($real_table_tipo)) {
 												$real_table_tipo = reset($real_table_tipo);
-												$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+												$ar_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 													$real_table_tipo,
 													'section',
 													'termino_relacionado',
@@ -1586,7 +1586,7 @@ abstract class diffusion  {
 			}
 
 		// original_ar_table_tipo. Source possible additional tables
-			$original_ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$original_ar_table_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 				$database_alias_tipo, // Original database_alias element
 				'table', // modelo_name
 				'children_recursive', // relation_type
@@ -1648,7 +1648,7 @@ abstract class diffusion  {
 				// Working here to solve some casuistic not taken into account.
 				// case 'table_alias':
 				// 	// resolve real table
-				// 	$real_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				// 	$real_table_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 				// 		$current_table_tipo, // Original database
 				// 		'table', // modelo_name
 				// 		'termino_relacionado', // relation_type
@@ -1708,7 +1708,7 @@ abstract class diffusion  {
 		switch ($class_name) {
 			case 'diffusion_mysql':
 				// databases
-				$databases = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$databases = ontology_node::get_ar_tipo_by_model_name_and_relation(
 					$diffusion_element_tipo, // string tipo
 					'database', // string modelo_name
 					'children', // string relation_type

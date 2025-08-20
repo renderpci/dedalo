@@ -240,7 +240,7 @@ class component_security_access extends component_common {
 
 		// get the exclude elements defined into ontology to be remove of the datalist
 		$ar_tipo_to_be_exclude	= null;
-		$ar_exclude_elements	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$ar_exclude_elements	= ontology_node::get_ar_tipo_by_model_name_and_relation(
 			$section_tipo,
 			'exclude_elements',
 			'children',
@@ -462,12 +462,12 @@ class component_security_access extends component_common {
 				return $ar_tipo_admin;
 			}
 
-		$ar_result 	= RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='area_admin', $prefijo='dd');
+		$ar_result 	= ontology_node::get_ar_tipo_by_model_name($modelo_name='area_admin', $prefijo='dd');
 		$ar_tesauro = array();
 
 		if(!empty($ar_result[0])) {
 			$tipo					= $ar_result[0];
-			$obj					= new RecordObj_dd($tipo);
+			$obj					= new ontology_node($tipo);
 			$ar_children_of_this	= $obj->get_ar_children_of_this();
 			$ar_tesauro				= $ar_children_of_this;
 		}

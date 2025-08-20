@@ -869,7 +869,7 @@ class diffusion_xml extends diffusion  {
 		$ar_diffusion_sections = array();
 
 		// XML elements
-		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'xml', 'children', true);
+		$elements = ontology_node::get_ar_tipo_by_model_name_and_relation($diffusion_element_tipo, 'xml', 'children', true);
 		foreach ($elements as $current_element_tipo) {
 
 			// Pointer to section

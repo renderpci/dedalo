@@ -1050,16 +1050,16 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* GET_AR_tipo_BY_MODELO_NAME_AND_RELATION
+	* GET_AR_TIPO_BY_MODEL_NAME_AND_RELATION
 	* Returns the termID of the related term (specify relation) of given model name
 	* e.g. to know the related terms of model 'filter'.
 	* @param string $tipo like 'dd20'
-	* @param string $modelo_name like 'component_input_text'
+	* @param string $model_name like 'component_input_text'
 	* @param string $relation_type like 'termino_relacionado'
 	* @param bool $search_exact = false
 	* @return array $result
 	*/
-	public static function get_ar_tipo_by_modelo_name_and_relation( string $tipo, string $modelo_name, string $relation_type, bool $search_exact=false ) : array {
+	public static function get_ar_tipo_by_model_name_and_relation( string $tipo, string $model_name, string $relation_type, bool $search_exact=false ) : array {
 
 		$result	= array();
 
@@ -1069,10 +1069,10 @@ class ontology_node extends ontology_record {
 			}
 
 		// static cache
-			static $ar_tipo_by_modelo_name_and_relation_data;
-			$uid = $tipo.'_'.$modelo_name.'_'.$relation_type.'_'.(int)$search_exact;
-			if(isset($ar_tipo_by_modelo_name_and_relation_data[$uid])) {
-				return $ar_tipo_by_modelo_name_and_relation_data[$uid];
+			static $ar_tipo_by_model_name_and_relation_data;
+			$uid = $tipo.'_'.$model_name.'_'.$relation_type.'_'.(int)$search_exact;
+			if(isset($ar_tipo_by_model_name_and_relation_data[$uid])) {
+				return $ar_tipo_by_model_name_and_relation_data[$uid];
 			}
 
 		switch($relation_type) {
@@ -1087,8 +1087,8 @@ class ontology_node extends ontology_record {
 				if(is_array($ar_children)) foreach($ar_children as $tipo) {
 
 					$ontology_node	= new ontology_node($tipo);
-					$modelo			= $ontology_node->get_modelo();
-					if(empty($modelo)) {
+					$model			= $ontology_node->get_model_tipo();
+					if(empty($model)) {
 						debug_log(__METHOD__
 							." Error processing relation children. Model is empty. Please define model for $tipo" . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
@@ -1102,14 +1102,14 @@ class ontology_node extends ontology_record {
 						return [];
 					}
 
-					$current_modelo_name = ontology_node::get_termino_by_tipo($modelo);
+					$current_model_name = ontology_node::get_termino_by_tipo($model);
 
 					if($search_exact===true) {
-						if ($current_modelo_name===$modelo_name) {
+						if ($current_model_name===$model_name) {
 							$result[] = $tipo;
 						}
 					}else{
-						if(strpos($current_modelo_name, $modelo_name)!==false) {
+						if(strpos($current_model_name, $model_name)!==false) {
 							$result[] = $tipo;
 						}
 					}
@@ -1126,8 +1126,8 @@ class ontology_node extends ontology_record {
 				if(is_array($ar_children)) foreach($ar_children as $tipo) {
 
 					$ontology_node	= new ontology_node($tipo);
-					$modelo			= $ontology_node->get_modelo();
-					if(empty($modelo)) {
+					$model_tipo		= $ontology_node->get_model_tipo();
+					if(empty($model_tipo)) {
 						debug_log(__METHOD__
 							." Error processing relation children_recursive. Model is empty. Please define model for $tipo" . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
@@ -1139,14 +1139,14 @@ class ontology_node extends ontology_record {
 						return [];
 					}
 
-					$current_modelo_name = ontology_node::get_termino_by_tipo($modelo);
+					$current_model_name = ontology_node::get_termino_by_tipo($model_tipo);
 
 					if($search_exact===true) {
-						if ($current_modelo_name===$modelo_name) {
+						if ($current_model_name===$model_name) {
 							$result[] = $tipo;
 						}
 					}else{
-						if(strpos($current_modelo_name, $modelo_name)!==false) {
+						if(strpos($current_model_name, $model_name)!==false) {
 							 $result[] = $tipo;
 						}
 					}
@@ -1167,8 +1167,8 @@ class ontology_node extends ontology_record {
 				if(is_array($ar_terminos_relacionados)) foreach($ar_terminos_relacionados as $tipo) {
 
 					$ontology_node	= new ontology_node($tipo);
-					$modelo			= $ontology_node->get_modelo();
-					if(empty($modelo)) {
+					$model_tipo		= $ontology_node->get_model_tipo();
+					if(empty($model_tipo)) {
 						debug_log(__METHOD__
 							." Error processing relation termino_relacionado. Model is empty. Please define model for $tipo" . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
@@ -1180,14 +1180,14 @@ class ontology_node extends ontology_record {
 						return [];
 					}
 
-					$current_modelo_name = ontology_node::get_termino_by_tipo($modelo);
+					$current_model_name = ontology_node::get_termino_by_tipo($model_tipo);
 
 					if($search_exact===true) {
-						if ($current_modelo_name===$modelo_name) {
+						if ($current_model_name===$model_name) {
 							$result[] = $tipo;
 						}
 					}else{
-						if(strpos($current_modelo_name, $modelo_name)!==false) {
+						if(strpos($current_model_name, $model_name)!==false) {
 							 $result[] = $tipo;
 						}
 					}
@@ -1204,8 +1204,8 @@ class ontology_node extends ontology_record {
 				if(is_array($ar_parents)) foreach($ar_parents as $tipo) {
 
 					$ontology_node	= new ontology_node($tipo);
-					$modelo			= $ontology_node->get_modelo();
-					if(empty($modelo)) {
+					$model_tipo		= $ontology_node->get_model_tipo();
+					if(empty($model_tipo)) {
 						debug_log(__METHOD__
 							." Error processing relation parent. Model is empty. Please define model for $tipo" . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
@@ -1217,14 +1217,14 @@ class ontology_node extends ontology_record {
 						return [];
 					}
 
-					$current_modelo_name = ontology_node::get_termino_by_tipo($modelo);		#dump($modelo_name);
+					$current_model_name = ontology_node::get_termino_by_tipo($model_tipo);		#dump($model_name);
 
 					if($search_exact===true) {
-						if ($current_modelo_name===$modelo_name) {
+						if ($current_model_name===$model_name) {
 							$result[] = $tipo;
 						}
 					}else{
-						if($current_modelo_name===$modelo_name) {
+						if($current_model_name===$model_name) {
 							 $result[] = $tipo;
 						}
 					}
@@ -1246,7 +1246,7 @@ class ontology_node extends ontology_record {
 
 
 		return $result;
-	}//end get_ar_tipo_by_modelo_name_and_relation
+	}//end get_ar_tipo_by_model_name_and_relation
 
 
 
