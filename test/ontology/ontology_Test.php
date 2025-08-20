@@ -121,17 +121,17 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_add_section_record_from_jer_dd
+	* TEST_ADD_SECTION_RECORD_FROM_DD_ONTOLOGY
 	* @return void
 	*/
-	public function test_add_section_record_from_jer_dd() {
+	public function test_add_section_record_from_dd_ontology() {
 
 		$sample_dd_row = self::get_sample_dd_row();
 
 		// force user id needed for search (filter by projects)
 		$_SESSION['dedalo']['auth']['user_id'] = 1;
 
-		$result = ontology::add_section_record_from_jer_dd( $sample_dd_row );
+		$result = ontology::add_section_record_from_dd_ontology( $sample_dd_row );
 
 		$expected = true;
 		$this->assertTrue(
@@ -139,7 +139,7 @@ final class ontology_test extends TestCase {
 			'expected:' . to_string($expected) . PHP_EOL
 			.'result: ' . to_string($result) . PHP_EOL
 		);
-	}//end test_add_section_record_from_jer_dd
+	}//end test_add_section_record_from_dd_ontology
 
 
 
@@ -231,15 +231,15 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_assign_relations_from_jer_dd
+	* TEST_ASSIGN_RELATIONS_FROM_DD_ONTOLOGY
 	* @return void
 	*/
-	public function test_assign_relations_from_jer_dd() {
+	public function test_assign_relations_from_dd_ontology() {
 
 		// tld
 			$tld = 'test';
 
-			$result = ontology::assign_relations_from_jer_dd( $tld );
+			$result = ontology::assign_relations_from_dd_ontology( $tld );
 
 			$expected = 'boolean';
 			$this->assertTrue(
@@ -247,20 +247,20 @@ final class ontology_test extends TestCase {
 				'expected:' . to_string($expected) . PHP_EOL
 				.'result type: ' . gettype($result) . PHP_EOL
 			);
-	}//end test_assign_relations_from_jer_dd
+	}//end test_assign_relations_from_dd_ontology
 
 
 
 	/**
-	* TEST_reorder_nodes_from_jer_dd
+	* TEST_REORDER_NODES_FROM_DD_ONTOLOGY
 	* @return void
 	*/
-	public function test_reorder_nodes_from_jer_dd() {
+	public function test_reorder_nodes_from_dd_ontology() {
 
 		// tld
 			$tld = 'test';
 
-			$result = ontology::reorder_nodes_from_jer_dd( $tld );
+			$result = ontology::reorder_nodes_from_dd_ontology( $tld );
 
 			$expected = 'boolean';
 			$this->assertTrue(
@@ -268,7 +268,7 @@ final class ontology_test extends TestCase {
 				'expected:' . to_string($expected) . PHP_EOL
 				.'result type: ' . gettype($result) . PHP_EOL
 			);
-	}//end test_reorder_nodes_from_jer_dd
+	}//end test_reorder_nodes_from_dd_ontology
 
 
 
@@ -304,10 +304,10 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_create_jer_dd_local_ontology_section_node
+	* TEST_create_dd_ontology_ontology_section_node
 	* @return void
 	*/
-	public function test_create_jer_dd_local_ontology_section_node() {
+	public function test_create_dd_ontology_ontology_section_node() {
 
 		// tld
 			$file_item = (object)[
@@ -321,7 +321,7 @@ final class ontology_test extends TestCase {
 			];
 
 			// Call the method under test
-			$result = ontology::create_jer_dd_ontology_section_node($file_item);
+			$result = ontology::create_dd_ontology_ontology_section_node($file_item);
 
 			$expected = 'string';
 			$this->assertTrue(
@@ -357,7 +357,7 @@ final class ontology_test extends TestCase {
 			// edit term value
 			$file_item2 = clone $file_item;
 			$file_item2->name_data->$lang = [$expected2];
-			$result = ontology::create_jer_dd_ontology_section_node($file_item2);
+			$result = ontology::create_dd_ontology_ontology_section_node($file_item2);
 
 		// check jer_dd created record
 			$ontology_node2 = new ontology_node($result);
@@ -370,7 +370,7 @@ final class ontology_test extends TestCase {
 					.'term: ' . to_string($term2) . PHP_EOL
 					.'file_item: ' . to_string($file_item)
 				);
-	}//end test_create_jer_dd_local_ontology_section_node
+	}//end test_create_dd_ontology_ontology_section_node
 
 
 
@@ -666,15 +666,15 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_parse_section_record_to_jer_dd_record
+	* TEST_parse_section_record_to_dd_ontology_record
 	* @return void
 	*/
-	public function test_parse_section_record_to_jer_dd_record() {
+	public function test_parse_section_record_to_dd_ontology_record() {
 
 		$section_tipo	= 'hierarchy0'; //'hierarchymtype0';
 		$section_id		= '1';
 
-		$result = ontology::parse_section_record_to_jer_dd_record(
+		$result = ontology::parse_section_record_to_dd_ontology_record(
 			$section_tipo,
 			$section_id
 		);
@@ -773,7 +773,7 @@ final class ontology_test extends TestCase {
 				'expected: ' . to_string($expected) .  PHP_EOL
 					. 'result->get_model(): ' . to_string($result->get_model())
 			);
-	}//end test_parse_section_record_to_jer_dd_record
+	}//end test_parse_section_record_to_dd_ontology_record
 
 
 
@@ -918,15 +918,15 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_insert_jer_dd_record
+	* TEST_insert_dd_ontology_record
 	* @return void
 	*/
-	public function test_insert_jer_dd_record() {
+	public function test_insert_dd_ontology_record() {
 
 		$section_tipo	= 'oh0';
 		$section_id		= 1;
 
-		$result = ontology::insert_jer_dd_record(
+		$result = ontology::insert_dd_ontology_record(
 			$section_tipo,
 			$section_id
 		);
@@ -943,22 +943,22 @@ final class ontology_test extends TestCase {
 			'expected: ' . to_string($expected) .  PHP_EOL
 				. 'term_id: ' . to_string($result)
 		);
-	}//end test_insert_jer_dd_record
+	}//end test_insert_dd_ontology_record
 
 
 
 	/**
-	* TEST_set_records_in_jer_dd
+	* TEST_SET_RECORDS_IN_DD_ONTOLOGY
 	* @return void
 	*/
-	public function test_set_records_in_jer_dd() {
+	public function test_set_records_in_dd_ontology() {
 
 		$sqo = (object)[
 			'section_tipo'	=> ['oh0'],
 			'limit'			=> 3
 		];
 
-		$result = ontology::set_records_in_jer_dd(
+		$result = ontology::set_records_in_dd_ontology(
 			$sqo
 		);
 
@@ -974,19 +974,19 @@ final class ontology_test extends TestCase {
 			'expected: ' . to_string($expected) .  PHP_EOL
 				. 'term_id: ' . to_string($result->total)
 		);
-	}//end test_set_records_in_jer_dd
+	}//end test_set_records_in_dd_ontology
 
 
 
 	/**
-	* TEST_regenerate_records_in_jer_dd
+	* TEST_REGENERATE_RECORDS_IN_DD_ONTOLOGY
 	* @return void
 	*/
-	public function test_regenerate_records_in_jer_dd() {
+	public function test_regenerate_records_in_dd_ontology() {
 
 		$tld = ['oh'];
 
-		$result = ontology::regenerate_records_in_jer_dd(
+		$result = ontology::regenerate_records_in_dd_ontology(
 			$tld
 		);
 
@@ -1002,7 +1002,7 @@ final class ontology_test extends TestCase {
 			'expected: ' . to_string($expected) .  PHP_EOL
 				. 'term_id: ' . to_string($result->total_insert)
 		);
-	}//end test_regenerate_records_in_jer_dd
+	}//end test_regenerate_records_in_dd_ontology
 
 
 
@@ -1272,7 +1272,7 @@ final class ontology_test extends TestCase {
 
 		// jer_dd
 			foreach ($ar_id as $currrent_section_id) {
-				ontology::insert_jer_dd_record($section_tipo, $currrent_section_id);
+				ontology::insert_dd_ontology_record($section_tipo, $currrent_section_id);
 			}
 
 		// delete
@@ -1312,14 +1312,14 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_jer_dd_version_is_valid
+	* TEST_DD_ONTOLOGY_VERSION_IS_VALID
 	* @return void
 	*/
-	public function test_jer_dd_version_is_valid() {
+	public function test_dd_ontology_version_is_valid() {
 
 		$min_date = '2025-11-01';
 
-		$result = ontology::jer_dd_version_is_valid(
+		$result = ontology::dd_ontology_version_is_valid(
 			$min_date
 		);
 
@@ -1340,7 +1340,7 @@ final class ontology_test extends TestCase {
 
 		$min_date = '2024-12-15';
 
-		$result = ontology::jer_dd_version_is_valid(
+		$result = ontology::dd_ontology_version_is_valid(
 			$min_date
 		);
 
@@ -1352,7 +1352,7 @@ final class ontology_test extends TestCase {
 				. 'min_date: ' . to_string($min_date)
 		);
 
-	}//end test_jer_dd_version_is_valid
+	}//end test_dd_ontology_version_is_valid
 
 
 

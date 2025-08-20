@@ -191,7 +191,7 @@ class tool_ontology_parser extends tool_common {
 			$selected_ontologies = $options->selected_ontologies ?? [];
 
 		// response
-			$response = ontology::regenerate_records_in_jer_dd( $selected_ontologies );
+			$response = ontology::regenerate_records_in_dd_ontology( $selected_ontologies );
 
 
 		return $response;

@@ -184,7 +184,7 @@ const get_content_data = async function(self) {
 		})
 
 		// call API
-		const api_response = await self.set_records_in_jer_dd()
+		const api_response = await self.set_records_in_dd_ontology()
 
 		// user messages
 		const msg = api_response.msg

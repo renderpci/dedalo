@@ -1801,7 +1801,7 @@ class area_maintenance extends area_common {
 					$sqo->set_section_tipo( [$section_tipo] );
 					$sqo->limit = 0;
 
-				$set_jer_dd_response = ontology::set_records_in_jer_dd( $sqo );
+				$set_jer_dd_response = ontology::set_records_in_dd_ontology( $sqo );
 				// add messages and errors
 				if (!empty($set_jer_dd_response->msg)) {
 					$ar_msg[] = $set_jer_dd_response->msg;

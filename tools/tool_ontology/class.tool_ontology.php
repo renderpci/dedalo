@@ -9,13 +9,13 @@ class tool_ontology extends tool_common {
 
 
 	/**
-	* SET_RECORDS_IN_JER_DD
+	* SET_RECORDS_IN_DD_ONTOLOGY
 	* Exec a custom action called from client
 	* Note that tool config is stored in the tool section data (tools_register)
 	* @param object $options
 	* @return object $response
 	*/
-	public static function set_records_in_jer_dd(object $options) : object {
+	public static function set_records_in_dd_ontology(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -64,7 +64,7 @@ class tool_ontology extends tool_common {
 				}
 
 		// Process ontology node/s and change jer_dd rows
-			$ontology_response = ontology::set_records_in_jer_dd( $sqo );
+			$ontology_response = ontology::set_records_in_dd_ontology( $sqo );
 
 		// reset active elements session. It is used in dd_ts_api::get_children_data()
 			if (isset($_SESSION['dedalo']['config']['active_elements'])) {
@@ -78,7 +78,7 @@ class tool_ontology extends tool_common {
 
 
 		return $response;
-	}//end set_records_in_jer_dd
+	}//end set_records_in_dd_ontology
 
 
 

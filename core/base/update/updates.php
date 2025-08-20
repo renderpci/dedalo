@@ -973,7 +973,7 @@ $updates->$v = new stdClass();
 		// Ontology version. Check if is valid version
 		$min_date				= '2024-12-31';
 		$min_date_time			= new DateTime($min_date);
-		$ontology_is_updated	= ontology::jer_dd_version_is_valid( $min_date );
+		$ontology_is_updated	= ontology::dd_ontology_version_is_valid( $min_date );
 		if ( !$ontology_is_updated ) {
 			$alert->command .= "
 				The Ontology is outdated. Minimum date: ".$min_date_time->format('d-m-Y')."
