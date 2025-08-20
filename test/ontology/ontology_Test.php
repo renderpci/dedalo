@@ -46,7 +46,7 @@ final class ontology_test extends TestCase {
 				"visible": "si",
 				"norden": "28",
 				"tld": "test",
-				"traducible": "no",
+				"is_translatable": false,
 				"relations": "null",
 				"propiedades": null,
 				"properties": null,
@@ -743,12 +743,12 @@ final class ontology_test extends TestCase {
 					. 'result->get_tld(): ' . to_string($result->get_tld())
 			);
 
-		// traducible
-			$expected = 'no';
+		// is_translatable
+			$expected = false;
 			$this->assertTrue(
-				$result->get_traducible()===$expected,
+				$result->get_is_translatable()===$expected,
 				'expected: ' . to_string($expected) .  PHP_EOL
-					. 'result->get_traducible(): ' . to_string($result->get_traducible())
+					. 'result->get_is_translatable(): ' . to_string($result->get_is_translatable())
 			);
 
 		// relations

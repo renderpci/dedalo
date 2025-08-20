@@ -377,10 +377,9 @@ abstract class common {
 				$this->label	= ontology_node::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
 			// translatable
-				$this->traducible	= $this->RecordObj_dd->get_traducible();
-				$this->translatable	= $this->traducible==='si';
+				$this->translatable	= $this->ontology_node->get_is_translatable();
 				// If the element is not translatable, we set its 'lang' to 'lg-nolan' (DEDALO_DATA_NOLAN)
-				if ($this->traducible==='no') {
+				if ($this->translatable===false) {
 					$this->fix_language_nolan();
 				}
 
@@ -1469,7 +1468,7 @@ abstract class common {
 			$model			= get_class($this);
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
-			$translatable	= $this->RecordObj_dd->get_traducible()==='si';
+			$translatable	= $this->ontology_node->get_is_translatable();
 			$mode			= $this->get_mode();
 			$label			= $this->get_label();
 			$lang			= $this->get_lang();
@@ -3255,7 +3254,7 @@ abstract class common {
 										$current_ddo->fields_map	= isset($current_ddo_properties->fields_map)
 											? $current_ddo_properties->fields_map
 											: [];
-										$current_ddo->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+										$current_ddo->lang			= $ontology_node->get_is_translatable() ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 										$current_ddo->model			= $ontology_node->get_modelo_name();
 										// $current_ddo->parent		= $current_ddo->section_tipo;
 										$current_ddo->permissions	= common::get_permissions($current_ddo->section_tipo, $current_ddo->tipo);

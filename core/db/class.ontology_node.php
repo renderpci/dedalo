@@ -175,6 +175,32 @@ class ontology_node extends ontology_record {
 		return $relations_parsed;
 	}//end get_propiedades
 
+
+
+	/**
+	* GET_PROPERTIES
+	* Return the value of property 'properties', stored as JSONB in table column 'properties'
+	* Values expected in 'properties' are always JSON.
+	* @return mixed $properties_parsed
+	*/
+	public function get_is_translatable() : mixed {
+
+		$is_translatable = parent::get_is_translatable();
+		if (is_null($is_translatable) || $is_translatable===false) {
+			return null;
+		}
+
+		$is_translatable_parsed = is_string($is_translatable)
+			? ($is_translatable === 't' || $is_translatable === '1')
+			: $is_translatable;
+
+
+		return $is_translatable_parsed;
+	}//end get_propiedades
+
+
+
+	/**
 	* UPDATE_COUNTER
 	* Updates the counter for the given tld (ej. 'dd').
 	* @param string $tld
@@ -1810,7 +1836,7 @@ class ontology_node extends ontology_record {
 					$item->{$property} = $ontology_node->get_modelo();
 					break;
 				case 'is_translatable':
-					$item->{$property} = $ontology_node->get_is_translatable()===true;
+					$item->{$property} = $ontology_node->get_is_translatable();
 					break;
 				case 'propiedades':
 					$item->{$property} = $ontology_node->get_propiedades(true);

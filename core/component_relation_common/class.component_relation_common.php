@@ -719,7 +719,7 @@ class component_relation_common extends component_common {
 		$safe_dato = [];
 
 		// translatable
-			$translatable	= $this->RecordObj_dd->get_traducible();
+			$translatable	= $this->ontology_node->get_is_translatable();
 			$lang			= $this->get_lang();
 
 		// non empty dato case
@@ -860,7 +860,7 @@ class component_relation_common extends component_common {
 			parent::set_dato( (array)$safe_dato );
 
 		// translatable cases
-			if ($translatable==='si') {
+			if ($translatable===true) {
 				$new_dato_full = [];
 				// remove old locators of current lang
 				foreach ((array)$this->dato_full as $locator) {
