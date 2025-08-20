@@ -51,7 +51,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected function defineRelationMap() : array {
 		return [
 			# db field name		# property name
-			'id'				=> 'ID',				// integer
+			// 'id'				=> 'ID',				// integer
 			'bulk_process_id'	=> 'bulk_process_id',	// integer
 			'section_id'		=> 'section_id',		// integer
 			'section_tipo'		=> 'section_tipo',		// string varchar 32

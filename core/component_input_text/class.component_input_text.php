@@ -34,8 +34,7 @@ class component_input_text extends component_string_common {
 
 		// dato
 			$dato			= $this->get_dato() ?? [];
-			$fallback_value	= component_common::extract_component_dato_fallback(
-				$this, // component instance this
+			$fallback_value	= $this->extract_component_dato_fallback(
 				$this->get_lang(), // string lang
 				DEDALO_DATA_LANG_DEFAULT // string main_lang
 			);
@@ -142,7 +141,11 @@ class component_input_text extends component_string_common {
 		}
 
 		if (empty($valor)) {
-			$valor = component_common::extract_component_value_fallback($this, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+			$valor = $this->extract_component_value_fallback(
+				DEDALO_DATA_LANG, // lang
+				true, // mark
+				DEDALO_DATA_LANG_DEFAULT // main_lang
+			);
 		}
 
 		return to_string($valor);
