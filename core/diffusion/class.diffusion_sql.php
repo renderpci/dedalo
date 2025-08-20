@@ -4408,8 +4408,8 @@ class diffusion_sql extends diffusion  {
 
 			case 'norden': // norder
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$db_value		= $RecordObj_dd->get_norden();
+				$ontology_node	= new ontology_node($term_id);
+				$db_value		= $ontology_node->get_order_number();
 
 				$value = intval($db_value)>0
 					? intval($db_value)

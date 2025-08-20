@@ -42,7 +42,7 @@ final class ontology_test extends TestCase {
 				"parent": "test45",
 				"modelo": "dd1747",
 				"esmodelo": "no",
-				"esdescriptor": "si",
+				"order_number": "28",
 				"visible": "si",
 				"norden": "28",
 				"tld": "test",
@@ -719,7 +719,7 @@ final class ontology_test extends TestCase {
 					. 'result->get_esmodelo(): ' . to_string($result->get_esmodelo())
 			);
 
-		// esdescriptor
+		// order_number
 			$expected = 'si';
 			$this->assertTrue(
 				$result->get_esdescriptor()===$expected,
@@ -730,9 +730,9 @@ final class ontology_test extends TestCase {
 		// norden
 			$expected = 3;
 			$this->assertTrue(
-				$result->get_norden()==$expected,
+				$result->get_order_number()==$expected,
 				'expected: ' . to_string($expected) .  PHP_EOL
-					. 'result->get_norden(): ' . to_string($result->get_norden())
+					. 'result->get_order_number(): ' . to_string($result->get_order_number())
 			);
 
 		// tld

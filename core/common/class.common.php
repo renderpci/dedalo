@@ -373,8 +373,8 @@ abstract class common {
 
 			// fix vars
 				$this->model	= $this->ontology_node->get_model();
-				$this->norden	= $this->RecordObj_dd->get_norden();
-				$this->label	= RecordObj_dd::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
+				$this->order_number	= $this->ontology_node->get_order_number();
+				$this->label	= ontology_node::get_termino_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
 			// translatable
 				$this->traducible	= $this->RecordObj_dd->get_traducible();
@@ -561,7 +561,7 @@ abstract class common {
 
 		// tables
 			$ar_tables_with_relations = [];
-			$ar_children_tables = RecordObj_dd::get_ar_children('dd627', 'norden');
+			$ar_children_tables = ontology_node::get_ar_children('dd627', 'order_number');
 			foreach ($ar_children_tables as $table_tipo) {
 
 				// model

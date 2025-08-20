@@ -131,7 +131,7 @@ final class ontology_node_test extends TestCase {
 			'esmodelo'		=> 'esmodelo',
 			'esdescriptor'	=> 'esdescriptor',
 			'visible'		=> 'visible',
-			'norden'		=> 'norden',
+			'order_number'	=> 'order_number',
 			'tld'			=> 'tld',
 			'traducible'	=> 'traducible',
 			'relaciones'	=> 'relaciones',

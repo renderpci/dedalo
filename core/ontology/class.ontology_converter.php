@@ -39,7 +39,7 @@ class ontology_converter {
 			// esmodelo	sino NULL
 			// esdescriptor	sino NULL
 			// visible	sino NULL
-			// norden	numeric(4,0) NULL
+			// order_number	numeric(4,0) NULL
 			// tld	character varying(32) NULL
 			// traducible	sino NULL
 			// relaciones	text NULL
@@ -164,14 +164,14 @@ class ontology_converter {
 		// visible
 			$jer_dd_row->visible = 'si';
 
-		// norden
-			$jer_dd_row->norden = null;
+		// order_number
+			$jer_dd_row->order_number = null;
 			if (!empty($parent_locator)) {
 				// use the parent data to get the children data and calculate the order.
 				$siblings	= ontology::get_siblings( $parent_locator );
 				$order		= ontology::get_order_from_locator( $locator, $siblings );
 
-				$jer_dd_row->norden = $order;
+				$jer_dd_row->order_number = $order;
 			}
 
 		// tld (already calculated for terminoID -ontology7-)
@@ -354,7 +354,7 @@ class ontology_converter {
 			// esmodelo	sino NULL
 			// esdescriptor	sino NULL
 			// visible	sino NULL
-			// norden	numeric(4,0) NULL
+			// order_number	numeric(4,0) NULL
 			// tld	character varying(32) NULL
 			// traducible	sino NULL
 			// relaciones	text NULL

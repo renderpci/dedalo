@@ -44,7 +44,7 @@ final class ontology_data_io_test extends TestCase {
 	// 			"esmodelo": "no",
 	// 			"esdescriptor": "si",
 	// 			"visible": "si",
-	// 			"norden": "28",
+	// 			"order_number": "28",
 	// 			"tld": "test",
 	// 			"traducible": "no",
 	// 			"relaciones": "null",
