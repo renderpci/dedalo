@@ -66,10 +66,10 @@ final class ontology_node_test extends TestCase {
 	public function test_defineTableName(): void {
 
 		$table = ontology_node::$table;
-		$eq = $table==='jer_dd';
+		$eq = $table==='dd_ontology';
 		$this->assertTrue(
 			$eq,
-			'expected true for jer_dd' . PHP_EOL
+			'expected true for dd_ontology' . PHP_EOL
 				. ' table: ' . to_string($table)
 		);
 
@@ -80,10 +80,10 @@ final class ontology_node_test extends TestCase {
 		$ontology_node	= new ontology_node( $test_term_id );
 
 		$table = ontology_node::$table;
-		$eq = $table==='jer_dd_recovery';
+		$eq = $table==='dd_ontology_recovery';
 		$this->assertTrue(
 			$eq,
-			'expected true fro jer_dd_recovery' . PHP_EOL
+			'expected true fro dd_ontology_recovery' . PHP_EOL
 				. ' table: ' . to_string($table)
 		);
 

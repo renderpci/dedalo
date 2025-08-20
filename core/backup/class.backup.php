@@ -9,8 +9,7 @@ abstract class backup {
 
 	// Columns to save (used by copy command, etc.)
 	// Do not use id column NEVER here
-	public static $jer_dd_columns			= '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades, properties, term';
-	public static $descriptors_dd_columns	= 'parent, dato, tipo, lang';
+	public static $dd_ontology_columns		= 'tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_tanslatable, propiedades';
 	public static $checked_download_str_dir	= false;
 
 
@@ -243,7 +242,7 @@ abstract class backup {
 			}
 
 		// tld mandatory for some tables check
-			if ($table==='jer_dd') {
+			if ($table==='dd_ontology') {
 				if (empty($tld)) {
 					debug_log(__METHOD__
 						. " Error Processing Request. tld is mandatory " . PHP_EOL
@@ -262,16 +261,16 @@ abstract class backup {
 
 		switch ($table) {
 
-			case 'jer_dd':
+			case 'dd_ontology':
 				# DELETE . Remove previous records
-				// $command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
-				$command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE tld = '{$tld}' \" ";
+				// $command = $command_base . " -c \"DELETE FROM \"dd_ontology\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"dd_ontology\" WHERE \"terminoID\" LIKE 'dd%'"
+				$command = $command_base . " -c \"DELETE FROM \"dd_ontology\" WHERE tld = '{$tld}' \" ";
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;
 
 				# COPY . Load data from file
-				$command = $command_base . " -c \"\copy jer_dd(".addslashes(backup::$jer_dd_columns).") from {$path_file}\" ";
+				$command = $command_base . " -c \"\copy dd_ontology(".addslashes(backup::$dd_ontology_columns).") from {$path_file}\" ";
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;
@@ -279,7 +278,7 @@ abstract class backup {
 
 			case 'matrix_dd':
 				# DELETE . Remove previous records
-				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
+				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"dd_ontology\" WHERE \"terminoID\" LIKE 'dd%'"
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;

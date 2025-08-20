@@ -314,8 +314,8 @@ final class ontology_test extends TestCase {
 				'tld'			=> 'test',
 				'typology_id'	=> 15,
 				'name_data'		=> (object)[
-					'lg-eng' => ['Test jer_dd_ontology_section_node EN'],
-					'lg-spa' => ['Test jer_dd_ontology_section_node ES']
+					'lg-eng' => ['Test dd_ontology_ontology_section_node EN'],
+					'lg-spa' => ['Test dd_ontology_ontology_section_node ES']
 				],
 				'parent_grouper_tipo' => null
 			];
@@ -338,12 +338,12 @@ final class ontology_test extends TestCase {
 				.'result: ' . to_string($result)
 			);
 
-		// check jer_dd created record
+		// check dd_ontology created record
 			$ontology_node = new ontology_node($result);
 				$ontology_node->use_cache = false;
 				$term = $ontology_node->get_term();
 
-				$expected = 'Test jer_dd_ontology_section_node ES';
+				$expected = 'Test dd_ontology_ontology_section_node ES';
 				$lang = 'lg-spa';
 				$this->assertTrue(
 					$term->{$lang}==$expected,
@@ -353,13 +353,13 @@ final class ontology_test extends TestCase {
 				);
 
 		// Call the method under test 2
-			$expected2 = 'Test jer_dd_ontology_section_node ES 2';
+			$expected2 = 'Test dd_ontology_ontology_section_node ES 2';
 			// edit term value
 			$file_item2 = clone $file_item;
 			$file_item2->name_data->$lang = [$expected2];
 			$result = ontology::create_dd_ontology_ontology_section_node($file_item2);
 
-		// check jer_dd created record
+		// check dd_ontology created record
 			$ontology_node2 = new ontology_node($result);
 			$ontology_node2->use_cache = false;
 				$term2 = $ontology_node2->get_term();
@@ -385,8 +385,8 @@ final class ontology_test extends TestCase {
 				'tld'			=> 'test',
 				'typology_id'	=> 15,
 				'name_data'		=> (object)[
-					'lg-eng' => ['Test jer_dd_ontology_section_node EN'],
-					'lg-spa' => ['Test jer_dd_ontology_section_node ES']
+					'lg-eng' => ['Test dd_ontology_ontology_section_node EN'],
+					'lg-spa' => ['Test dd_ontology_ontology_section_node ES']
 				],
 				'parent_grouper_tipo' => null
 			];
@@ -409,7 +409,7 @@ final class ontology_test extends TestCase {
 				.'result: ' . to_string($result)
 			);
 
-		// check jer_dd created record
+		// check dd_ontology created record
 			$ontology_node = new ontology_node($result);
 				$ontology_node->use_cache = false;
 
@@ -448,7 +448,7 @@ final class ontology_test extends TestCase {
 				);
 
 				// model
-				// $column_exists = DBi::check_column_exists('jer_dd', 'model');
+				// $column_exists = DBi::check_column_exists('dd_ontology', 'model');
 				if (ontology_node::has_column('model')) {
 
 					$model = $ontology_node->get_model();
@@ -1270,7 +1270,7 @@ final class ontology_test extends TestCase {
 				$ar_id[] = $section_id;
 			}
 
-		// jer_dd
+		// dd_ontology
 			foreach ($ar_id as $currrent_section_id) {
 				ontology::insert_dd_ontology_record($section_tipo, $currrent_section_id);
 			}
@@ -1357,21 +1357,21 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_compare_jer_dd_to_matrix
-	* This test compares jer_dd data to equivalent in Ontology matrix
+	* TEST_compare_dd_ontology_to_matrix
+	* This test compares dd_ontology data to equivalent in Ontology matrix
 	* to check the integrity of the Ontology data across all pipe line
 	* @return void
 	* @todo WORKING PROGRESS !
 	*/
-		// public function DES_test_compare_jer_dd_to_matrix() {
+		// public function DES_test_compare_dd_ontology_to_matrix() {
 
 		// 	$section_tipo	= 'ontology40';
 		// 	$section_id		= 78;
 
-		// 	$response		= ontology_converter::matrix_to_jer_dd($section_tipo, $section_id);
-		// 	$jer_dd_row		= $response->result;
-		// 	$ontology_node	= new ontology_node($jer_dd_row->tipo);
-		// 	foreach ($jer_dd_row as $key => $value) {
+		// 	$response		= ontology_converter::matrix_to_dd_ontology($section_tipo, $section_id);
+		// 	$dd_ontology_row		= $response->result;
+		// 	$ontology_node	= new ontology_node($dd_ontology_row->tipo);
+		// 	foreach ($dd_ontology_row as $key => $value) {
 		// 		if ($key==='tipo') {
 		// 			continue;
 		// 		}
@@ -1379,11 +1379,11 @@ final class ontology_test extends TestCase {
 		// 		$ontology_node->{$method}($value);
 		// 	}
 
-		// 	$response = ontology_converter::jer_dd_to_matrix($jer_dd_row, DEDALO_SECTION_ID_TEMP.'1');
+		// 	$response = ontology_converter::dd_ontology_to_matrix($dd_ontology_row, DEDALO_SECTION_ID_TEMP.'1');
 		// 	$section = $response->result;
 
 		// 		// dump($section->dato, ' section->dato ++ '.to_string());
-		// 		// dump($response, ' --------------- /// jer_dd_to_matrix response ++ '.to_string());
+		// 		// dump($response, ' --------------- /// dd_ontology_to_matrix response ++ '.to_string());
 
 		// 	// $sql = 'SELECT * FROM "matrix_ontology" WHERE section_id = '.$section_id.' AND section_tipo = \''.$section_tipo.'\'';
 		// 	// $matrix_result = pg_query(DBi::_getConnection(), $sql);
@@ -1392,13 +1392,13 @@ final class ontology_test extends TestCase {
 
 
 		// 	/*
-		// 	$sql_query		= 'SELECT * FROM "jer_dd" ORDER BY tld, "tipo" ';
-		// 	$jer_dd_result	= pg_query(DBi::_getConnection(), $sql_query);
+		// 	$sql_query		= 'SELECT * FROM "dd_ontology" ORDER BY tld, "tipo" ';
+		// 	$dd_ontology_result	= pg_query(DBi::_getConnection(), $sql_query);
 
-		// 	while($jer_dd_row = pg_fetch_object($jer_dd_result)) {
+		// 	while($dd_ontology_row = pg_fetch_object($dd_ontology_result)) {
 
-		// 		$tld		= get_tld_from_tipo($jer_dd_row->tipo);
-		// 		$section_id	= get_section_id_from_tipo($jer_dd_row->tipo);
+		// 		$tld		= get_tld_from_tipo($dd_ontology_row->tipo);
+		// 		$section_id	= get_section_id_from_tipo($dd_ontology_row->tipo);
 
 		// 		$sql = 'SELECT * FROM "matrix_ontology" WHERE section_id = '.$section_id.' AND datos#>>\'{components,ontology7,dato,lg-nolan}\' = \'["'.$tld.'"]\' LIMIT 1';
 		// 		$term_result = pg_query(DBi::_getConnection(), $sql);
@@ -1406,7 +1406,7 @@ final class ontology_test extends TestCase {
 		// 		if (!isset($matrix_row)) {
 		// 			debug_log(__METHOD__
 		// 				. " Error. term $tld - $section_id not found in matrix_ontology" . PHP_EOL
-		// 				. ' tipo: ' . to_string($jer_dd_row->tipo) . PHP_EOL
+		// 				. ' tipo: ' . to_string($dd_ontology_row->tipo) . PHP_EOL
 		// 				. ' tld: ' . to_string($tld) . PHP_EOL
 		// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
 		// 				, logger::DEBUG
@@ -1418,7 +1418,7 @@ final class ontology_test extends TestCase {
 		// 				dump($datos, ' datos ++ '.to_string());
 
 		// 		// parent
-		// 			$jer_dd_parent = $jer_dd_row->parent;
+		// 			$dd_ontology_parent = $dd_ontology_row->parent;
 		// 			$matrix_parent = array_find($matrix_row->relations ?? [], function($el){
 		// 				return $el->from_component_tipo==='ontology15';
 		// 			});
@@ -1428,7 +1428,7 @@ final class ontology_test extends TestCase {
 
 		// 	}//end while
 		// 	*/
-		// }//end test_compare_jer_dd_to_matrix
+		// }//end test_compare_dd_ontology_to_matrix
 
 
 

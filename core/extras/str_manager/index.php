@@ -90,10 +90,10 @@ function get_ontology_file_list( ?array $ar_tld=null ) : array {
 		$ar_files[] = $obj;
 
 		// core str file
-		// jer_dd_dd
+		// dd_ontology_dd
 		$obj = new stdClass();
 			$obj->type = 'jer_file';
-			$obj->name = 'jer_dd_dd.copy';
+			$obj->name = 'dd_ontology_dd.copy';
 			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 		$ar_files[] = $obj;
 		// matrix_descriptors_dd_dd
@@ -104,10 +104,10 @@ function get_ontology_file_list( ?array $ar_tld=null ) : array {
 		$ar_files[] = $obj;
 
 		// resources str file
-		// jer_dd_rsc
+		// dd_ontology_rsc
 		$obj = new stdClass();
 			$obj->type = 'jer_file';
-			$obj->name = 'jer_dd_rsc.copy';
+			$obj->name = 'dd_ontology_rsc.copy';
 			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
 		$ar_files[] = $obj;
 		// matrix_descriptors_dd_rsc
@@ -150,14 +150,14 @@ function get_ontology_file_list( ?array $ar_tld=null ) : array {
 			$extras_folders[] = $base_dir;
 		}
 
-	// add every TLD to ar_files list (jer_dd and matrix_descriptors_dd parts)
+	// add every TLD to ar_files list (dd_ontology and matrix_descriptors_dd parts)
 		foreach ($extras_folders as $folder_name) {
-			// jer_dd
+			// dd_ontology
 			$obj = new stdClass();
 				$obj->type  = 'extras_jer_file';
-				$obj->table = 'jer_dd';
+				$obj->table = 'dd_ontology';
 				$obj->tld 	= $folder_name;
-				$obj->name  = 'jer_dd_' . $folder_name . '.copy';
+				$obj->name  = 'dd_ontology_' . $folder_name . '.copy';
 				$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
 			$ar_files[] = $obj;
 			// matrix_descriptors_dd
@@ -223,7 +223,7 @@ function get_ontology_file_list( ?array $ar_tld=null ) : array {
 	}
 
 	// point of no return: 6.2.9
-	// versions bellow 6.2.9 must be blocked to update ontology because the new jer_dd column 'term' is added
+	// versions bellow 6.2.9 must be blocked to update ontology because the new dd_ontology column 'term' is added
 	if ( $major_version===6 && ($minor_version<2 || ($minor_version===2 && $patch_version<9)) ) {
 		debug_log(__METHOD__
 			. " INVALID DEDALO VERSION ! Only >=6.2.9 are supported" . PHP_EOL

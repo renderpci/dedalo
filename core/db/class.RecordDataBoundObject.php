@@ -3,8 +3,8 @@
 * RecordDataBoundObject
 * Connect with Ontology tables in PostgreSQL:
 * Note that, for speed, all DB
-* 	jer_dd
-* 		id	integer Auto Increment [nextval('jer_dd_id_seq')]
+* 	dd_ontology
+* 		id	integer Auto Increment [nextval('dd_ontology_id_seq')]
 *		terminoID	character varying(32) NULL
 *		parent	character varying(32) NULL
 *		modelo	character varying(8) NULL

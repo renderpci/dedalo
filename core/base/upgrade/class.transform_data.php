@@ -1315,10 +1315,10 @@ class transform_data {
 
 	/**
 	* GENERATE_ALL_MAIN_ONTOLOGY_SECTIONS
-	* Creates the matrix ontology records (main and regular) from 'jer_dd'
-	* It is such as 'jer_dd' -> 'matrix' transformation building the next
+	* Creates the matrix ontology records (main and regular) from 'dd_ontology'
+	* It is such as 'dd_ontology' -> 'matrix' transformation building the next
 	* Ontology edit ecosystem based in regular sections and records instead a
-	* monolithic jer_dd table that will be used as read only parsed ontology
+	* monolithic dd_ontology table that will be used as read only parsed ontology
 	* @return bool
 	*/
 	public static function generate_all_main_ontology_sections() : bool {
@@ -1331,7 +1331,7 @@ class transform_data {
 		$ontology_file_content = file_get_contents( dirname(dirname(__FILE__)) .'/include/6-4-0_ontology.json' );
 		$ontology_info = json_decode( $ontology_file_content );
 
-		// collect all existing tld in 'jer_dd' table
+		// collect all existing tld in 'dd_ontology' table
 		$all_active_tld = ontology_node::get_active_tlds();
 
 		// CLI process data
@@ -1431,10 +1431,10 @@ class transform_data {
 					print_cli(common::$pdata);
 				}
 
-			// ontology_records. Collects all jer_dd records for the current tld and
+			// ontology_records. Collects all dd_ontology records for the current tld and
 			// creates a matrix record for each one
-			$jer_dd_rows = ontology_node::get_all_records_by_tld( [$tld] );
-			ontology::create_ontology_records( $jer_dd_rows );
+			$dd_ontology_rows = ontology_node::get_all_records_by_tld( [$tld] );
+			ontology::create_ontology_records( $dd_ontology_rows );
 		}
 
 		// reset counter
@@ -1455,7 +1455,7 @@ class transform_data {
 					print_cli(common::$pdata);
 				}
 
-			// assign relationships between records (from jer_dd column 'relaciones')
+			// assign relationships between records (from dd_ontology column 'relaciones')
 			ontology::assign_relations_from_dd_ontology( $tld );
 
 			// CLI process data
@@ -1467,7 +1467,7 @@ class transform_data {
 					print_cli(common::$pdata);
 				}
 
-			// set child order (from jer_dd column 'norden')
+			// set child order (from dd_ontology column 'norden')
 			ontology::reorder_nodes_from_dd_ontology( $tld );
 		}
 
