@@ -192,7 +192,7 @@ abstract class diffusion  {
 					$ar_real_diffusion_element = ontology_node::get_ar_tipo_by_model_name_and_relation(
 						$diffusion_element_alias_tipo,
 						'diffusion_element', // model_name
-						'termino_relacionado', // relation_type
+						'related', // relation_type
 						false // search_exact
 					);
 					$real_diffusion_element_tipo = $ar_real_diffusion_element[0] ?? null;
@@ -258,7 +258,7 @@ abstract class diffusion  {
 						$diffusion_database_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 							$database_alias_tipo,
 							'database',
-							'termino_relacionado',
+							'related',
 							false
 						)[0] ?? null;
 						if (empty($diffusion_database_tipo)) {
@@ -1283,7 +1283,7 @@ abstract class diffusion  {
 							$ar_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 								$table_tipo,
 								'section',
-								'termino_relacionado',
+								'related',
 								true
 							);
 							if (!isset($ar_section_tipo[0])) {
@@ -1314,7 +1314,7 @@ abstract class diffusion  {
 									$ar_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 										$table_tipo,
 										'section',
-										'termino_relacionado',
+										'related',
 										true
 									);
 									if (empty($ar_section_tipo)) {
@@ -1322,7 +1322,7 @@ abstract class diffusion  {
 											$real_table_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 												$table_tipo,
 												'table',
-												'termino_relacionado',
+												'related',
 												true
 											);
 											if (!empty($real_table_tipo)) {
@@ -1330,7 +1330,7 @@ abstract class diffusion  {
 												$ar_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 													$real_table_tipo,
 													'section',
-													'termino_relacionado',
+													'related',
 													true
 												);
 											}
@@ -1651,7 +1651,7 @@ abstract class diffusion  {
 				// 	$real_table_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 				// 		$current_table_tipo, // Original database
 				// 		'table', // modelo_name
-				// 		'termino_relacionado', // relation_type
+				// 		'related', // relation_type
 				// 		true // search_exact (allow only 'table')
 				// 	)[0] ?? null;
 				// 	// search for replacements based on the same name of the tables

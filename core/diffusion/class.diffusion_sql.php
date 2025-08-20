@@ -523,7 +523,7 @@ class diffusion_sql extends diffusion  {
 		// 				$model_name = ontology_node::get_model_name_by_tipo($current_table_tipo,true);
 		// 				if ($model_name==='section') {
 
-		// 					$ar_section = ontology_node::get_ar_tipo_by_model_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);
+		// 					$ar_section = ontology_node::get_ar_tipo_by_model_name_and_relation($current_table_tipo, 'section', 'related', true);
 		// 					#dump($ar_section,'ar_section : '.$database_tipo);
 
 		// 					if(empty($ar_section)) {
@@ -825,8 +825,8 @@ class diffusion_sql extends diffusion  {
 			// case 'relation': (NOT USED ANYMORE. OLD TABLE COLUMN LINKS BETWEEN TABLES)
 				// 	$ar_field_data['field_name'] 	= ontology_node::get_term_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
 				// 	$ar_field_data['field_type'] 	= 'field_text';
-				// 	$termino_relacionado 			= ontology_node::get_relation_nodes($options->tipo, $cache=true, $simple=true)[0];
-				// 	$ar_field_data['field_coment'] 	= ontology_node::get_term_by_tipo($termino_relacionado)." - $termino_relacionado";
+				// 	$related 			= ontology_node::get_relation_nodes($options->tipo, $cache=true, $simple=true)[0];
+				// 	$ar_field_data['field_coment'] 	= ontology_node::get_term_by_tipo($related)." - $related";
 				// 	$ar_field_data['field_options'] = null;
 				// 	break;
 
@@ -959,7 +959,7 @@ class diffusion_sql extends diffusion  {
 					$ar_section_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation(
 						$table_tipo,
 						'section',
-						'termino_relacionado'
+						'related'
 					);
 					if (!isset($ar_section_tipo[0])) {
 						# PORTAL try
@@ -967,7 +967,7 @@ class diffusion_sql extends diffusion  {
 						$ar_section_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation(
 							$table_tipo,
 							'component_portal',
-							'termino_relacionado'
+							'related'
 						);
 					}
 					if(!isset($ar_section_tipo[0])) {
@@ -1043,7 +1043,7 @@ class diffusion_sql extends diffusion  {
 					$ar_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 						$table_tipo,
 						'section',
-						'termino_relacionado',
+						'related',
 						true
 					);
 					debug_log(__METHOD__
@@ -2736,7 +2736,7 @@ class diffusion_sql extends diffusion  {
 		// database_alias check
 			$database_alias_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true)[0] ?? null;
 			if (!empty($database_alias_tipo)) {
-				$real_database_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true)[0] ?? null;
+				$real_database_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($database_alias_tipo, 'database', 'related', true)[0] ?? null;
 				if (!empty($real_database_tipo)) {
 					// overwrite
 					$diffusion_element_tipo_tables = $real_database_tipo;
@@ -5260,7 +5260,7 @@ class diffusion_sql extends diffusion  {
 				$real_database_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 					$database_alias_tipo,
 					'database',
-					'termino_relacionado',
+					'related',
 					true
 				)[0] ?? null;
 				if (!empty($real_database_tipo)) {

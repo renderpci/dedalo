@@ -129,7 +129,7 @@ class diffusion_rdf extends diffusion {
 				$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
 					$current_class_tipo,
 					'section',
-					'termino_relacionado',
+					'related',
 					true // bool search_exact
 				);
 				$current_section_tipo = reset($ar_current_section_tipo);
@@ -292,7 +292,7 @@ class diffusion_rdf extends diffusion {
 			// $owl_class_tipo = null;
 			// $ar_owl_ObjectProperty = [];
 			// foreach ($ontology_chidren as $current_owl_class_tipo) {
-			// 	$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($current_owl_class_tipo, 'section', 'termino_relacionado', true);
+			// 	$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($current_owl_class_tipo, 'section', 'related', true);
 			// 	$current_section_tipo = reset($ar_current_section_tipo);
 			// 	if($current_section_tipo === $section_tipo){
 			// 		$owl_class_tipo 			= $current_owl_class_tipo;
@@ -401,7 +401,7 @@ class diffusion_rdf extends diffusion {
 				break;
 
 			case 'rdf':
-				$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
+				$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
 				$current_tipo		= reset($ar_related_dd_tipo);
 				$model_name			= ontology_node::get_model_name_by_tipo($current_tipo);
 				$component			= component_common::get_instance(
@@ -415,7 +415,7 @@ class diffusion_rdf extends diffusion {
 
 				$data = (array)$component->get_dato();
 
-				$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'owl:Class', 'termino_relacionado', true);
+				$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'owl:Class', 'related', true);
 				$owl_class_tipo		= reset($ar_owl_class_tipo);
 
 				// max_items. (!) Notice that here we use the user configurable DEDALO_DIFFUSION_RESOLVE_LEVELS value as n items resolve (Example: 1 coins for current type)
@@ -452,7 +452,7 @@ class diffusion_rdf extends diffusion {
 			default:
 				// ddo_map create or get from properties
 					$ddo_map			= [];
-					$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
+					$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
 					// check if the ontology has his owm ddo_map defined, if not, it will create a ddo_map with related components.
 					if(isset($properties->process) && isset($properties->process->ddo_map)){
 

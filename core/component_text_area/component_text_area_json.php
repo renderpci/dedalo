@@ -72,7 +72,7 @@
 					$related_component_geolocation = ontology_node::get_ar_tipo_by_model_name_and_relation(
 						$this->tipo, // tipo
 						'component_geolocation', // model name
-						'termino_relacionado', // relation_type
+						'related', // relation_type
 						true // search_exact
 					);
 					if(!empty($related_component_geolocation)){
