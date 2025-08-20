@@ -1034,39 +1034,7 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* REMOVE_ELEMENT_FROM_AR_TERMINOS_RELACIONADOS
-	* @param string $tipo_to_unlink
-	* @return bool
-	*/
-	public function remove_element_from_ar_terminos_relacionados( string $tipo_to_unlink ) : bool {
-
-		// We go through the elements in terms related to this object
-		$ar_relations = $this->get_relations();
-
-		// remove the received value from the array
-		$ar_final = null;
-		if(is_array($ar_relations)) foreach($ar_relations as $ar_values) {
-
-			$ar_final = [];
-			foreach($ar_values as $modeloID => $tipo) {
-
-				if($tipo != $tipo_to_unlink) {
-					$ar_final[] = array($modeloID => $tipo);
-				}
-			}
-		}
-
-		// we save the result
-		$this->set_relations($ar_final);
-
-
-		return true;
-	}//end remove_element_from_ar_terminos_relacionados
-
-
-
-	/**
-	* GET_AR_TERMINOS_RELACIONADOS
+	* get_relation_nodes
 	* @param string $tipo
 	* @param bool $cache = false
 	* @param bool $simple = false
