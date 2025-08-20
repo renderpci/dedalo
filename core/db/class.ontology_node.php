@@ -29,7 +29,7 @@ class ontology_node extends ontology_record {
 	protected $ar_recursive_children_of_this = [];
 
 	// default table. Can be changed on the fly base on DEDALO_RECOVERY_MODE
-	public static $table = 'jer_dd';
+	public static $table = 'dd_ontology';
 
 
 
@@ -359,7 +359,7 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* get_term_by_tipo
+	* GET_TERM_BY_TIPO
 	* Static version
 	* @param string $tipo
 	* @param string $lang = null
@@ -654,7 +654,7 @@ class ontology_node extends ontology_record {
 		$filter = implode(' OR ', $sentences );
 
 		// `where` clause of SQL query
-		$sql_query		= 'SELECT * FROM "dd_ontology" WHERE '. $filter ;
+		$sql_query		= 'SELECT * FROM "'.ontology_node::$table.'" WHERE '. $filter ;
 		$jer_dd_result	= pg_query(DBi::_getConnection(), $sql_query);
 
 		// iterate jer_dd_result row
@@ -719,8 +719,8 @@ class ontology_node extends ontology_record {
 		$arguments = [
 			'is_model' => true
 		];
-		$ontology_node	= new ontology_node(NULL,$this->tld);
-		$all_models	= $ontology_node->search($arguments);
+		$ontology_node	= new ontology_node( NULL, $this->tld );
+		$all_models	= $ontology_node->search( $arguments );
 
 		return $all_models;
 	}//end get_ar_all_models
@@ -742,9 +742,9 @@ class ontology_node extends ontology_record {
 		$arguments = [
 			'model_tipo' => $model_tipo
 		];
-		$ontology_node				= new ontology_node(NULL,'dd');
+		$ontology_node				= new ontology_node( NULL, 'dd' );
 		$ontology_node->use_cache	= $use_cache;
-		$ar_all_tipo			= $ontology_node->search($arguments);
+		$ar_all_tipo				= $ontology_node->search($arguments);
 
 
 		return $ar_all_tipo;
@@ -783,7 +783,7 @@ class ontology_node extends ontology_record {
 			$arguments['strPrimaryKeyName']	= 'tipo';
 			$arguments['parent']			= $this->tipo;
 
-			$valid_values = [true,false];
+			$valid_values = [true, false];
 
 			if ( !empty($is_model) && in_array($is_model, $valid_values) ) {
 				$arguments['is_model'] = $is_model;
@@ -832,8 +832,8 @@ class ontology_node extends ontology_record {
 			$arguments['order_by_asc'] = $order_by;
 		}
 
-		$ontology_node	= new ontology_node($tipo);
-		$ar_children	= $ontology_node->search($arguments);
+		$ontology_node	= new ontology_node( $tipo );
+		$ar_children	= $ontology_node->search( $arguments );
 
 		// store cache data
 		$get_ar_children_data[$key] = $ar_children;
@@ -853,15 +853,15 @@ class ontology_node extends ontology_record {
 	*/
 	public function get_ar_recursive_children_of_this( string $tipo, int $is_recursion=0 ) : array {
 
-		# IMPORTANTE: NO HACER CACHE DE ESTE MÉTODO (AFECTA A COMPONENT_FILTER_MASTER)
+		// IMPORTANT: DO NOT CACHE THIS METHOD (AFFECTS COMPONENT_FILTER_MASTER)
 
-		# Creamos una instancia independiente de ontology_node y resolvemos los hijos directos
-		$ontology_node			= new ontology_node($tipo);
+		// We create an independent instance of ontology_node and resolve the direct children.
+		$ontology_node			= new ontology_node( $tipo );
 		$ar_children_of_this	= $ontology_node->get_ar_children_of_this(
 			null, // is_model
 			null // order_by
 		);
-		$ar_children_of_this_size = sizeof($ar_children_of_this);
+		$ar_children_of_this_size = sizeof( $ar_children_of_this );
 
 		// iterate children
 		for ($i=0; $i < $ar_children_of_this_size; $i++) {
@@ -885,9 +885,9 @@ class ontology_node extends ontology_record {
 
 
 	/**
-	* get_ar_recursive_children
-	*  	Static version of get_ar_recursive_children_of_this
-	* 	No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
+	* GET_AR_RECURSIVE_CHILDREN
+	* Static version of get_ar_recursive_children_of_this
+	* note: There is no noticeable increase in speed between the static and dynamic versions. Only a reduction of about 140 KB in memory consumption.
 	* @param string $tipo
 	* @param bool $is_recursion = false
 	* @param array|null $ar_exclude_models = null
@@ -899,17 +899,17 @@ class ontology_node extends ontology_record {
 
 		$ar_resolved=array();
 
-		if($is_recursion===true) {
+		if( $is_recursion===true ) {
 			$ar_resolved[] = $tipo;
 		}
 
-		$ontology_node	= new ontology_node($tipo);
+		$ontology_node	= new ontology_node( $tipo );
 		$ar_children	= $ontology_node->get_ar_children_of_this(
 			null, // bool is_model
 			$order_by, // string order_by
 			$use_cache
 		);
-		$ar_children_size = sizeof($ar_children);
+		$ar_children_size = sizeof( $ar_children );
 
 		// foreach($ar_children as $current_tipo) {
 		for ($i=0; $i < $ar_children_size; $i++) {
@@ -918,7 +918,7 @@ class ontology_node extends ontology_record {
 
 			// Exclude models optional
 			if (!empty($ar_exclude_models)) {
-				$modelo_name = ontology_node::get_model_name_by_tipo($current_tipo, true);
+				$modelo_name = ontology_node::get_model_name_by_tipo( $current_tipo, true );
 				if (in_array($modelo_name, $ar_exclude_models)) {
 					continue; // Skip current model and children
 				}
@@ -927,7 +927,13 @@ class ontology_node extends ontology_record {
 			// Recursion
 			$ar_resolved = array_merge(
 				$ar_resolved,
-				ontology_node::get_ar_recursive_children($current_tipo, true, $ar_exclude_models, $order_by, $use_cache)
+				ontology_node::get_ar_recursive_children(
+					$current_tipo,
+					true,
+					$ar_exclude_models,
+					$order_by,
+					$use_cache
+				)
 			);
 		}
 
@@ -942,7 +948,7 @@ class ontology_node extends ontology_record {
 	* Resolves the current term's parents recursively
 	* @param bool $ksort = true
 	* @return array $ar_parents_of_this
-	* 	Assoc array sample: ["4": "dd1", "3": "dd14", "2": "rsc1", "1": "rsc75", "0": "rsc76"]
+	* Assoc array sample: ["4": "dd1", "3": "dd14", "2": "rsc1", "1": "rsc75", "0": "rsc76"]
 	*/
 	public function get_ar_parents_of_this( bool $ksort=true ) : array {
 
@@ -995,7 +1001,7 @@ class ontology_node extends ontology_record {
 
 		// static cache
 		static $ar_siblings_of_this_data;
-		if(isset($this->tipo) && isset($ar_siblings_of_this_data[$this->tipo])) {
+		if( isset($this->tipo) && isset($ar_siblings_of_this_data[$this->tipo]) ) {
 			return $ar_siblings_of_this_data[$this->tipo];
 		}
 
