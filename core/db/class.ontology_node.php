@@ -538,7 +538,7 @@ class ontology_node extends ontology_record {
 	*/
 	public static function get_legacy_model_name_by_tipo( string $tipo ) : ?string {
 
-		$ontology_node	= new ontology_node($tipo);
+		$ontology_node	= new ontology_node( $tipo );
 		$model_name		= $ontology_node->get_legacy_model_name();
 
 		return $model_name;
@@ -554,7 +554,7 @@ class ontology_node extends ontology_record {
 	public function get_legacy_model_name() : ?string {
 
 		$model_name = ontology_node::get_termino_by_tipo(
-			$this->get_modelo() ?? '',
+			$this->get_model_tipo() ?? '',
 			DEDALO_STRUCTURE_LANG,
 			true,
 			false
