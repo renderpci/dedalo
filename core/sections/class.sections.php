@@ -94,7 +94,7 @@ class sections extends common {
 
 				}else{
 
-					$caller_model = ontology_node::get_modelo_name_by_tipo($this->caller_tipo,true);
+					$caller_model = ontology_node::get_model_name_by_tipo($this->caller_tipo,true);
 					if ($caller_model==='section') {
 
 						// section case

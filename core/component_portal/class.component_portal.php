@@ -178,7 +178,7 @@ class component_portal extends component_relation_common {
 			}else {
 
 				$component_filter_tipo	= $ar_children_tipo[0];
-				$model					= ontology_node::get_modelo_name_by_tipo($component_filter_tipo, true);
+				$model					= ontology_node::get_model_name_by_tipo($component_filter_tipo, true);
 				$component_filter		= component_common::get_instance(
 					$model,
 					$component_filter_tipo,
@@ -554,7 +554,7 @@ class component_portal extends component_relation_common {
 					$compare_model = function($section_tipo, $section_id, $component_model_tipo, $current_map) {
 
 						// get model value
-							$component_model = ontology_node::get_modelo_name_by_tipo($component_model_tipo,true);
+							$component_model = ontology_node::get_model_name_by_tipo($component_model_tipo,true);
 							$component_model = component_common::get_instance(
 								$component_model, // component_relation_model
 								$component_model_tipo,
@@ -697,7 +697,7 @@ class component_portal extends component_relation_common {
 			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
 				$path[] = (object)[
 					'component_tipo'	=> $this->from_component_tipo,
-					'model'				=> ontology_node::get_modelo_name_by_tipo($this->from_component_tipo,true),
+					'model'				=> ontology_node::get_model_name_by_tipo($this->from_component_tipo,true),
 					'name'				=> ontology_node::get_termino_by_tipo($this->from_component_tipo),
 					'section_tipo'		=> $this->from_section_tipo
 				];
@@ -706,7 +706,7 @@ class component_portal extends component_relation_common {
 		// self component path
 			$path[] = (object)[
 				'component_tipo'	=> $component_tipo,
-				'model'				=> ontology_node::get_modelo_name_by_tipo($component_tipo,true),
+				'model'				=> ontology_node::get_model_name_by_tipo($component_tipo,true),
 				'name'				=> ontology_node::get_termino_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			];
@@ -755,7 +755,7 @@ class component_portal extends component_relation_common {
 					// target component
 					$path[] = (object)[
 						'component_tipo'	=> $first_item->tipo,
-						'model'				=> ontology_node::get_modelo_name_by_tipo($first_item->tipo,true),
+						'model'				=> ontology_node::get_model_name_by_tipo($first_item->tipo,true),
 						'name'				=> ontology_node::get_termino_by_tipo($first_item->tipo),
 						// note that section_tipo is used only to give a name to the join item.
 						// results are not really filtered by this section_tipo

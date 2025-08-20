@@ -7,8 +7,7 @@
 	// component data
 		$full_raw_text	= $data[0] ?? '';
 		if (empty($full_raw_text)) {
-			$dato_fallback = component_common::extract_component_dato_fallback(
-				$this,
+			$dato_fallback = $this->extract_component_dato_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
@@ -230,7 +229,7 @@
 
 						// tool_transcription_context. Using related component av context (17-01-2024)
 							$component_av_tipo	= $this->get_related_component_av_tipo(); // 'rsc35';
-							$component_av_model	= ontology_node::get_modelo_name_by_tipo($component_av_tipo,true);
+							$component_av_model	= ontology_node::get_model_name_by_tipo($component_av_tipo,true);
 							$component_av		= component_common::get_instance(
 								$component_av_model, // string model
 								$component_av_tipo, // string tipo

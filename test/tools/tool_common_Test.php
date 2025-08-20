@@ -125,7 +125,7 @@ final class tool_common_test extends TestCase {
 		$section_tipo	= 'dd1324';
 
 		$component_tipo			= tools_register::$simple_tool_obj_component_tipo;
-		$model					= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+		$model					= ontology_node::get_model_name_by_tipo($component_tipo,true);
 		$simple_tool_component	= component_common::get_instance(
 			$model,
 			$component_tipo,

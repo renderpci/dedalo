@@ -294,7 +294,7 @@ abstract class filter {
 			foreach ($dato as $current_locator) {
 
 				$parent			= null;
-				$model			= ontology_node::get_modelo_name_by_tipo($projects_name_tipo);
+				$model			= ontology_node::get_model_name_by_tipo($projects_name_tipo);
 				$component_term	= component_common::get_instance(
 					$model, // string model
 					$projects_name_tipo, // string tipo
@@ -304,8 +304,7 @@ abstract class filter {
 					$current_locator->section_tipo // string section_tipo
 				);
 
-				$label = component_common::extract_component_dato_fallback(
-					$component_term,
+				$label = $component_term->extract_component_dato_fallback(
 					DEDALO_DATA_LANG, // lang
 					DEDALO_DATA_LANG_DEFAULT
 				); // main_lang

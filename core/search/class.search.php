@@ -180,7 +180,7 @@ class search {
 			// in current installation (for example 'dc1' in monedaiberica)
 			foreach ($this->ar_section_tipo as $current_tipo) {
 
-				$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo, true);
+				$model_name = ontology_node::get_model_name_by_tipo($current_tipo, true);
 
 				// check model (some RQO config tipos could be not installed)
 				if (empty($model_name)) {
@@ -779,7 +779,7 @@ class search {
 			}
 
 		// call to component to resolve each select sentence (are different results depends of the component)
-		$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name		= ontology_node::get_model_name_by_tipo($component_tipo,true);
 		$select_object	= $model_name::get_select_query($select_object);
 
 
@@ -874,7 +874,7 @@ class search {
 					$search_component	= end($path);
 					// model (with fallback if do not exists)
 					if (!isset($search_component->model)) {
-						$search_component->model = ontology_node::get_modelo_name_by_tipo($search_component->component_tipo, true);
+						$search_component->model = ontology_node::get_model_name_by_tipo($search_component->component_tipo, true);
 					}
 					// check for empty models like elements that this installation don't have (e.g. 'numisdata303' from request config fixed filter in Objects -tch1-)
 					if (empty($search_component->model)) {
@@ -1302,7 +1302,7 @@ class search {
 		$this->ar_matrix_tables = [];
 		foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
 
-			$model_name = ontology_node::get_modelo_name_by_tipo($current_section_tipo, true);
+			$model_name = ontology_node::get_model_name_by_tipo($current_section_tipo, true);
 
 			// check model (some RQO config tipos could be not installed)
 			if (empty($model_name)) {
@@ -1627,7 +1627,7 @@ class search {
 							$sql_filter .= ')';
 
 						# PROJECTS FILTER
-							$component_filter_master_model	= ontology_node::get_modelo_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
+							$component_filter_master_model	= ontology_node::get_model_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
 							$component_filter_master		= component_common::get_instance(
 								$component_filter_master_model, // 'component_filter_master',
 								DEDALO_FILTER_MASTER_TIPO,
@@ -2606,7 +2606,7 @@ class search {
 						$component_path_data	= end($path);
 						$component_tipo			= $component_path_data->component_tipo;
 						$component_name			= $component_path_data->name ?? '';	//ontology_node::get_termino_by_tipo($component_tipo, null, true, false);
-						$model_name				= $component_path_data->model; //ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name				= $component_path_data->model; //ontology_node::get_model_name_by_tipo($component_tipo,true);
 						$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
 					$safe_operator = $search_object->operator;
@@ -2814,7 +2814,7 @@ class search {
 
 		$path = [];
 
-		$term_model = ontology_node::get_modelo_name_by_tipo($tipo,true);
+		$term_model = ontology_node::get_model_name_by_tipo($tipo,true);
 
 		// Add first level always
 			$current_path = new stdClass();
@@ -2838,7 +2838,7 @@ class search {
 					if ($related_tipo!==false) {
 
 						$current_tipo	= $related_tipo;
-						$model_name		= ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+						$model_name		= ontology_node::get_model_name_by_tipo($current_tipo,true);
 						if (strpos($model_name,'component')===0) {
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
@@ -2852,7 +2852,7 @@ class search {
 						foreach ($ar_terminos_relacionados as $current_tipo) {
 
 							// Use only first related tipo
-							$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
+							$model_name = ontology_node::get_model_name_by_tipo($current_tipo,true);
 							if (strpos($model_name,'component')!==0) continue;
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
@@ -3203,7 +3203,7 @@ class search {
 		$result = [];
 		foreach ($ar_locator as $locator) {
 
-			$model_name	= ontology_node::get_modelo_name_by_tipo($path_item->component_tipo,true);
+			$model_name	= ontology_node::get_model_name_by_tipo($path_item->component_tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$path_item->component_tipo,

@@ -355,7 +355,7 @@ class request_config_object extends stdClass {
 								.' ddo_map type: ' . gettype($ddo_map) . PHP_EOL
 								.' ddo_map: ' . json_encode($ddo_map, JSON_PRETTY_PRINT) . PHP_EOL
 								.' section_tipo: ' . $section_tipo . PHP_EOL
-								.' current_model: ' . ontology_node::get_modelo_name_by_tipo($current_ddo->tipo)
+								.' current_model: ' . ontology_node::get_model_name_by_tipo($current_ddo->tipo)
 								, logger::WARNING
 							);
 							continue;
@@ -373,7 +373,7 @@ class request_config_object extends stdClass {
 						}
 
 					// model. Calculated always to prevent errors
-						$current_ddo->model = ontology_node::get_modelo_name_by_tipo($current_ddo->tipo, true);
+						$current_ddo->model = ontology_node::get_model_name_by_tipo($current_ddo->tipo, true);
 
 					// label. Add to all ddo_map items
 						if (!isset($current_ddo->label)) {

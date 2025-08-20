@@ -87,7 +87,7 @@ class tool_import_dedalo_csv extends tool_common {
 							return (object)[
 								'tipo'	=> $el,
 								'label'	=> ontology_node::get_termino_by_tipo($el, DEDALO_APPLICATION_LANG, true),
-								'model'	=> $el!=='section_id' && !empty($el) ? ontology_node::get_modelo_name_by_tipo($el, true) : $el
+								'model'	=> $el!=='section_id' && !empty($el) ? ontology_node::get_model_name_by_tipo($el, true) : $el
 							];
 						}, $file_info);
 
@@ -579,7 +579,7 @@ class tool_import_dedalo_csv extends tool_common {
 						}
 
 					// component base
-						$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo, true);
+						$model_name		= ontology_node::get_model_name_by_tipo($component_tipo, true);
 						$translate		= ontology_node::get_translatable($component_tipo); //==='si' ? true : false;
 						$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 						$component		= component_common::get_instance(
@@ -888,7 +888,7 @@ class tool_import_dedalo_csv extends tool_common {
 				// error case (ar_possible_component_tipo)
 					if (!in_array($component_tipo, $ar_possible_component_tipo)) {
 
-						$model_name = ontology_node::get_modelo_name_by_tipo($component_tipo, true);
+						$model_name = ontology_node::get_model_name_by_tipo($component_tipo, true);
 
 						$response->result	= false;
 						$response->msg		= "Sorry, component tipo: $component_tipo (model: $model_name) not found in section: $section_tipo";
@@ -1011,7 +1011,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// 		// $target_section_tipo
 		// 			if( empty($target_section_tipo)) {
-		// 				$model_name	= ontology_node::get_modelo_name_by_tipo($from_component_tipo);
+		// 				$model_name	= ontology_node::get_model_name_by_tipo($from_component_tipo);
 		// 				$component	= component_common::get_instance(
 		// 					$model_name, // string model
 		// 					$from_component_tipo, // string tipo
@@ -1193,7 +1193,7 @@ class tool_import_dedalo_csv extends tool_common {
 		try {
 
 			// model safe
-				$model = ontology_node::get_modelo_name_by_tipo($section_tipo, true);
+				$model = ontology_node::get_model_name_by_tipo($section_tipo, true);
 				if ($model!=='section') {
 					$response->msg .= ' Invalid model (expected section): '.$model;
 					return $response;
@@ -1223,7 +1223,7 @@ class tool_import_dedalo_csv extends tool_common {
 					$result[] = (object)[
 						'label'	=> ontology_node::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true),
 						'value'	=> $tipo,
-						'model'	=> ontology_node::get_modelo_name_by_tipo($tipo, true)
+						'model'	=> ontology_node::get_model_name_by_tipo($tipo, true)
 					];
 				}
 

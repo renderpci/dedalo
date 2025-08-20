@@ -194,7 +194,7 @@ class component_relation_children extends component_relation_common {
 					);
 					if (!$result) {
 						$from_component_tipo_model = isset($locator->from_component_tipo)
-							? ontology_node::get_modelo_name_by_tipo($locator->from_component_tipo,true)
+							? ontology_node::get_model_name_by_tipo($locator->from_component_tipo,true)
 							: null;
 						debug_log(__METHOD__
 							. " Error on add children" . PHP_EOL
@@ -301,7 +301,7 @@ class component_relation_children extends component_relation_common {
 			}
 
 		// model. Expected 'component_relation_parent'
-			$model = ontology_node::get_modelo_name_by_tipo($parent_tipo, true);
+			$model = ontology_node::get_model_name_by_tipo($parent_tipo, true);
 			if ($model!=='component_relation_parent') {
 				// wrong model case
 				debug_log(__METHOD__
@@ -424,7 +424,7 @@ class component_relation_children extends component_relation_common {
 					$path = [
 						(object)[
 							'component_tipo'	=> $order_component_tipo,
-							'model'				=> SHOW_DEBUG===true ? ontology_node::get_modelo_name_by_tipo($order_component_tipo,true) : $order_component_tipo,
+							'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_name_by_tipo($order_component_tipo,true) : $order_component_tipo,
 							'name'				=> SHOW_DEBUG===true ? ontology_node::get_termino_by_tipo($order_component_tipo) : $order_component_tipo,
 							'section_tipo'		=> $section_tipo,
 							'column'			=> "jsonb_path_query_first(datos, 'strict $.components.{$order_component_tipo}.dato.\"lg-nolan\"[0]', silent => true)"
@@ -499,7 +499,7 @@ class component_relation_children extends component_relation_common {
 		}
 
 		// debug
-		$model = ontology_node::get_modelo_name_by_tipo($tipo,true);
+		$model = ontology_node::get_model_name_by_tipo($tipo,true);
 		if ($model!==get_called_class()) {
 			debug_log(__METHOD__
 				. " Error! Calling get_ar_related_by_model expected 'component_relation_children' but resolved: " .$model . PHP_EOL
@@ -628,7 +628,7 @@ class component_relation_children extends component_relation_common {
 				if (!empty($ar_target_parent_tipo)) {
 					foreach ($ar_target_parent_tipo as $children_component_tipo) {
 
-						$model_name	= ontology_node::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
+						$model_name	= ontology_node::get_model_name_by_tipo($children_component_tipo, true); // component_relation_children
 						$component	= component_common::get_instance(
 							$model_name,
 							$children_component_tipo,
@@ -693,7 +693,7 @@ class component_relation_children extends component_relation_common {
 
 		// component commons
 		$component_tipo	= $section_map->thesaurus->order;
-		$model			= ontology_node::get_modelo_name_by_tipo($component_tipo,true); // component_number expected
+		$model			= ontology_node::get_model_name_by_tipo($component_tipo,true); // component_number expected
 
 		$order = 0;
 		foreach ($locators as $locator) {

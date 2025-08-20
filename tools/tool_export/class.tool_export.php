@@ -242,7 +242,7 @@ class tool_export extends tool_common {
 					// set the column name, if the format is Dédalo use the $tipo and section_id
 					// for standard format use the name
 					if($this->data_format==='dedalo_raw'){
-						$model_name = ontology_node::get_modelo_name_by_tipo($column_tipo);
+						$model_name = ontology_node::get_model_name_by_tipo($column_tipo);
 						$column_labels[] = ($model_name === 'component_section_id')
 							? 'section_id'
 							: $column_tipo;
@@ -366,7 +366,7 @@ class tool_export extends tool_common {
 
 			// component. Create the component to get the value of the column
 				$current_lang		= ontology_node::get_translatable($ddo->component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component_model	= ontology_node::get_modelo_name_by_tipo($ddo->component_tipo, true);
+				$component_model	= ontology_node::get_model_name_by_tipo($ddo->component_tipo, true);
 
 				$current_component	= component_common::get_instance(
 					$component_model, // string model

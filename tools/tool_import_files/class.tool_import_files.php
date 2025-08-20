@@ -135,7 +135,7 @@ class tool_import_files extends tool_common {
 		string $target_component_tipo
 		) : bool {
 
-		$model = ontology_node::get_modelo_name_by_tipo($target_component_tipo, true);
+		$model = ontology_node::get_model_name_by_tipo($target_component_tipo, true);
 
 
 		// logger activity. Note that this log is here because generic service_upload
@@ -470,7 +470,7 @@ class tool_import_files extends tool_common {
 				return $response;
 			}
 			$target_component_tipo	= $target_ddo_component->tipo;
-			$target_component_model	= ontology_node::get_modelo_name_by_tipo($target_component_tipo, true);
+			$target_component_model	= ontology_node::get_model_name_by_tipo($target_component_tipo, true);
 
 		// file_processor_properties
 			$file_processor_properties = $tool_config->file_processor ?? null;
@@ -727,7 +727,7 @@ class tool_import_files extends tool_common {
 						$target_ddo = new dd_object();
 							$target_ddo->set_tipo($tipo);
 							$target_ddo->set_section_tipo($section_tipo);
-							$target_ddo->set_model(ontology_node::get_modelo_name_by_tipo($tipo, true));
+							$target_ddo->set_model(ontology_node::get_model_name_by_tipo($tipo, true));
 					}//end if($import_mode==='section')
 
 				// target_ddo check
@@ -960,7 +960,7 @@ class tool_import_files extends tool_common {
 
 			$tipo	= $target_filename->tipo;
 
-			$model	= ontology_node::get_modelo_name_by_tipo($tipo,true);
+			$model	= ontology_node::get_model_name_by_tipo($tipo,true);
 			$lang	= ontology_node::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 			// component with the previous filename saved
@@ -1083,7 +1083,7 @@ class tool_import_files extends tool_common {
 				continue;
 			}
 
-			$model					= ontology_node::get_modelo_name_by_tipo($ddo->tipo,true);
+			$model					= ontology_node::get_model_name_by_tipo($ddo->tipo,true);
 			$current_lang			= ontology_node::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$destination_section_id	= ($ddo->section_tipo===$section_tipo)
 				? $section_id

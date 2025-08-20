@@ -181,7 +181,7 @@ class tool_update_cache extends tool_common {
 					$current_regenerate_options	= $components_selection_item->regenerate_options;
 
 					// model
-						$model = ontology_node::get_modelo_name_by_tipo($current_component_tipo,true);
+						$model = ontology_node::get_model_name_by_tipo($current_component_tipo,true);
 						if (strpos($model, 'component_')===false) {
 							debug_log(__METHOD__
 								." Skipped element '$model' tipo: $current_component_tipo (is not a component) "
