@@ -127,7 +127,7 @@ final class component_common_test extends TestCase {
 					$element->section_tipo, // string section_tipo
 					false // bool cache
 				);
-				$expected_component_lang = (RecordObj_dd::get_translatable($element->tipo)===true)
+				$expected_component_lang = (ontology_node::get_translatable($element->tipo)===true)
 					? DEDALO_DATA_LANG
 					: DEDALO_DATA_NOLAN;
 				if ($component3->with_lang_versions===true) {

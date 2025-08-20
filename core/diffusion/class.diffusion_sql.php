@@ -4396,12 +4396,8 @@ class diffusion_sql extends diffusion  {
 
 			case 'traducible': // translatable
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$db_value		= $RecordObj_dd->get_traducible();
-
-				$value = $db_value==='si'
-					? true
-					: false;
+				$ontology_node	= new ontology_node($term_id);
+				$value		= $ontology_node->get_is_translatable();
 
 				return $value;
 				break;
