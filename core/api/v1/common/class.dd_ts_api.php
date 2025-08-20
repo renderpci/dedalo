@@ -300,6 +300,36 @@ final class dd_ts_api {
 				}
 			}
 
+		// ontology TLD. It must inherit the TLD
+			$is_ontology = get_section_id_from_tipo( $section_tipo ) === '0';
+			if( $is_ontology ){
+				$component_tipo	= 'ontology7'; // component_input_text TLD
+				$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
+
+				$tld_source_component = component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo,
+					false
+				);
+				$source_data = $tld_source_component->get_dato();
+
+				$tld_target_component = component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$new_section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo,
+					false
+				);
+				$tld_target_component->set_dato( $source_data );
+				$tld_target_component->Save();
+			}
+
 		// component_relation_parent
 		// Is created in the new created record and the current section_id is added as parent
 			$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true);
@@ -327,7 +357,7 @@ final class dd_ts_api {
 				false
 			);
 
-		// add
+			// add
 			$locator = new locator();
 				$locator->set_section_tipo($section_tipo);
 				$locator->set_section_id($section_id);
