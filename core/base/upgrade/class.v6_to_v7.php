@@ -646,7 +646,7 @@ class v6_to_v7 {
 			$ar_relations = [];
 			foreach ($relations as $value) {
 				$relation = new stdClass();
-					$relation->tipo = $value;
+					$relation->tipo = $value[0];
 				$ar_relations[] = $relation;
 			};
 
