@@ -324,8 +324,8 @@ class ontology_node extends ontology_record {
 		$lang = lang::get_label_lang( $lang );
 
 		// term object
-		$RecordObject_dd	= new ontology_node($tipo);
-		$term				= $RecordObject_dd->get_term();
+		$ontology_node	= new ontology_node($tipo);
+		$term			= $ontology_node->get_term();
 
 		// empty term case
 		if (!is_object($term)) {
