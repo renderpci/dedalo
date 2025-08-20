@@ -79,7 +79,7 @@ class relation_list extends common {
 				//get the id
 				$current_id = new stdClass;
 					$current_id->section_tipo		= $current_section_tipo;
-					$current_id->section_label		= ontology_node::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+					$current_id->section_label		= ontology_node::get_term_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
 					$current_id->component_tipo		= 'id';
 					$current_id->component_label	= 'id';
 
@@ -109,9 +109,9 @@ class relation_list extends common {
 
 								$current_relation_list = new stdClass;
 									$current_relation_list->section_tipo	= $current_section_tipo;
-									$current_relation_list->section_label	= ontology_node::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+									$current_relation_list->section_label	= ontology_node::get_term_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
 									$current_relation_list->component_tipo	= $tipo;
-									$current_relation_list->component_label	= ontology_node::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
+									$current_relation_list->component_label	= ontology_node::get_term_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
 
 								$ar_context[] = $current_relation_list;
 							}

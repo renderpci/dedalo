@@ -488,7 +488,7 @@ class search {
 				$ar_sections = array_map(function($section_tipo){
 					return $section_tipo==='all'
 						? $section_tipo
-						: $section_tipo .' - '. ontology_node::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
+						: $section_tipo .' - '. ontology_node::get_term_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 				}, $ar_sections);
 
 				// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
@@ -1678,7 +1678,7 @@ class search {
 							true // bool search_exact
 						);
 						if (!isset($ar_component_filter[0])) {
-							$section_name = ontology_node::get_termino_by_tipo($section_tipo);
+							$section_name = ontology_node::get_term_by_tipo($section_tipo);
 							debug_log(__METHOD__
 								." Error Processing Request. Filter not found is this section ($section_tipo) $section_name "
 								, logger::ERROR
@@ -2305,7 +2305,7 @@ class search {
 
 				$sql_join  = "\n";
 				if(SHOW_DEBUG===true) {
-					$section_name = ontology_node::get_termino_by_tipo($step_object->section_tipo, null, true, false);
+					$section_name = ontology_node::get_term_by_tipo($step_object->section_tipo, null, true, false);
 					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name\n";
 				}
 				# Join relation table
@@ -2474,7 +2474,7 @@ class search {
 					if(SHOW_DEBUG===true) {
 						$component_path_data	= end($path);
 						$component_tipo			= $component_path_data->component_tipo;
-						$component_name			= $component_path_data->name ?? '';	//ontology_node::get_termino_by_tipo($component_tipo, null, true, false);
+						$component_name			= $component_path_data->name ?? '';	//ontology_node::get_term_by_tipo($component_tipo, null, true, false);
 						$model_name				= $component_path_data->model; //ontology_node::get_model_name_by_tipo($component_tipo,true);
 						$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
@@ -2605,7 +2605,7 @@ class search {
 					if(SHOW_DEBUG===true) {
 						$component_path_data	= end($path);
 						$component_tipo			= $component_path_data->component_tipo;
-						$component_name			= $component_path_data->name ?? '';	//ontology_node::get_termino_by_tipo($component_tipo, null, true, false);
+						$component_name			= $component_path_data->name ?? '';	//ontology_node::get_term_by_tipo($component_tipo, null, true, false);
 						$model_name				= $component_path_data->model; //ontology_node::get_model_name_by_tipo($component_tipo,true);
 						$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
@@ -2818,7 +2818,7 @@ class search {
 
 		// Add first level always
 			$current_path = new stdClass();
-				$current_path->name				= strip_tags(ontology_node::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
+				$current_path->name				= strip_tags(ontology_node::get_term_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
 				$current_path->model			= $term_model;
 				$current_path->section_tipo		= $section_tipo;
 				$current_path->component_tipo	= $tipo;
@@ -3022,7 +3022,7 @@ class search {
 					$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
 					if(SHOW_DEBUG===true) {
 						if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-							$msg .= ' ('.ontology_node::get_termino_by_tipo($section_tipo).' - '.ontology_node::get_termino_by_tipo($from_component_tipo).')';
+							$msg .= ' ('.ontology_node::get_term_by_tipo($section_tipo).' - '.ontology_node::get_term_by_tipo($from_component_tipo).')';
 							$msg .= ' in '. exec_time_unit($start_time).' ms';
 							debug_log(__METHOD__
 								." OK: ".$msg

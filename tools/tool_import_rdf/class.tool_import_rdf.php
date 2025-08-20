@@ -153,7 +153,7 @@ class tool_import_rdf extends tool_common {
 
 		$ar_owl_ObjectProperty = [];
 		foreach ($ar_class_children as $owl_class_tipo) {
-			$class_name = ontology_node::get_termino_by_tipo($owl_class_tipo);
+			$class_name = ontology_node::get_term_by_tipo($owl_class_tipo);
 
 			if ($class_name === $rdf_type) {
 				$ar_owl_ObjectProperty = ontology_node::get_ar_children($owl_class_tipo);
@@ -177,7 +177,7 @@ class tool_import_rdf extends tool_common {
 		}
 
 		$section_tipo		= reset($current_section_tipo);
-		$section_tipo_label	= ontology_node::get_termino_by_tipo($section_tipo);
+		$section_tipo_label	= ontology_node::get_term_by_tipo($section_tipo);
 
 		// main section
 			$field = new stdClass();
@@ -232,8 +232,8 @@ class tool_import_rdf extends tool_common {
 
 		foreach ($ar_owl_ObjectProperty as $ObjectProperty_tipo) {
 
-			$section_tipo_label		= ontology_node::get_termino_by_tipo($section_tipo);
-			$object_property_name	= ontology_node::get_termino_by_tipo($ObjectProperty_tipo);
+			$section_tipo_label		= ontology_node::get_term_by_tipo($section_tipo);
+			$object_property_name	= ontology_node::get_term_by_tipo($ObjectProperty_tipo);
 			$related_dd_tipo		= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
 			$children_dd_tipo		= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'owl:ObjectProperty', 'children', false);
 			$current_tipo			= reset($related_dd_tipo);
@@ -437,7 +437,7 @@ class tool_import_rdf extends tool_common {
 
 				//get the Dédalo component names
 
-				$ar_dd_component_label 	= ontology_node::get_termino_by_tipo($current_tipo);
+				$ar_dd_component_label 	= ontology_node::get_term_by_tipo($current_tipo);
 				$object_model_name 		= ontology_node::get_model_name_by_tipo($current_tipo);
 
 				$ar_current_resource = $rdf_graph->allResources($base_uri, $object_property_name);
@@ -629,7 +629,7 @@ class tool_import_rdf extends tool_common {
 	public static function get_resource_match( string $section_tipo, string $component_tipo, string $value, ?string $filter=null ) : object {
 
 		$model_name		= ontology_node::get_model_name_by_tipo( $component_tipo,true );
-		$name			= ontology_node::get_termino_by_tipo( $component_tipo, DEDALO_DATA_LANG, true, true );
+		$name			= ontology_node::get_term_by_tipo( $component_tipo, DEDALO_DATA_LANG, true, true );
 		$lang 			= ontology_node::get_translatable( $component_tipo ) ? 'all' : DEDALO_DATA_NOLAN;
 
 		// filter

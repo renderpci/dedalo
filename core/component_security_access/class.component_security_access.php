@@ -284,7 +284,7 @@ class component_security_access extends component_common {
 						'tipo'			=> $ddo->tipo,
 						'section_tipo'	=> $section_tipo,
 						'model'			=> ontology_node::get_model_name_by_tipo($ddo->tipo, true),
-						'label'			=> ontology_node::get_termino_by_tipo($ddo->tipo, DEDALO_APPLICATION_LANG, true, true),
+						'label'			=> ontology_node::get_term_by_tipo($ddo->tipo, DEDALO_APPLICATION_LANG, true, true),
 						'parent'		=> $ddo->parent_grouper ?? $section_tipo
 					];
 					$children_list[] = $item;
@@ -432,7 +432,7 @@ class component_security_access extends component_common {
 					'tipo'			=> $element_tipo,
 					'section_tipo'	=> $tipo,
 					'model'			=> ontology_node::get_model_name_by_tipo($element_tipo, true),
-					'label'			=> ontology_node::get_termino_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
+					'label'			=> ontology_node::get_term_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
 					'parent'		=> $tipo
 				];
 				$ar_elements[] = $item;

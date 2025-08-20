@@ -174,7 +174,7 @@ class diffusion_rdf extends diffusion {
 		// save file
 			if ($save_file===true) {
 
-				$rdf_name = ontology_node::get_termino_by_tipo($owl_class_tipo) ?? '';
+				$rdf_name = ontology_node::get_term_by_tipo($owl_class_tipo) ?? '';
 
 				$name_parts = [
 					$rdf_name,
@@ -355,7 +355,7 @@ class diffusion_rdf extends diffusion {
 	public function build_rdf_node($rdf_graph, $node_graph, $ObjectProperty_tipo, $section_tipo, $section_id) : bool {
 
 		// get the name of the property, it is defined in the ontology term, and will use as rdf property
-		$object_name		= ontology_node::get_termino_by_tipo($ObjectProperty_tipo);
+		$object_name		= ontology_node::get_term_by_tipo($ObjectProperty_tipo);
 		$object_model_name	= ontology_node::get_model_name_by_tipo($ObjectProperty_tipo);
 		$ontology_node		= new ontology_node($ObjectProperty_tipo);
 		$properties			= $ontology_node->get_propiedades(true);
