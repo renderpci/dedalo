@@ -230,7 +230,7 @@ abstract class filter {
 			$projects_section_tipo = DEDALO_FILTER_SECTION_TIPO_DEFAULT; // Default is Projects but it can be another
 
 		// section map
-			$ar_section_map = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$ar_section_map = ontology_node::get_ar_tipo_by_model_name_and_relation(
 				$projects_section_tipo, // tipo
 				'section_map', // model name
 				'children', // relation_type

@@ -142,7 +142,7 @@ class indexation_grid {
 					// try from real version indexation_list
 					$real_tipo = section::get_section_real_tipo_static($current_section_tipo);
 					if ($real_tipo!==$current_section_tipo) {
-						$ar_found = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$ar_found = ontology_node::get_ar_tipo_by_model_name_and_relation(
 							$real_tipo,
 							'indexation_list', // string model
 							'children' // string relation_type

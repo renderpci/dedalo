@@ -618,13 +618,13 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_ar_terminoID_by_modelo_name
+	* TEST_GET_AR_TIPO_BY_MODEL_NAME
 	* @return void
 	*/
-	public function test_get_ar_terminoID_by_modelo_name(): void {
+	public function test_get_ar_tipo_by_model_name(): void {
 
 		// component_portal
-			$result = RecordObj_dd::get_ar_terminoID_by_modelo_name(
+			$result = ontology_node::get_ar_tipo_by_model_name(
 				'component_portal'
 			);
 
@@ -652,7 +652,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// component_input_text
-			$result = RecordObj_dd::get_ar_terminoID_by_modelo_name(
+			$result = ontology_node::get_ar_tipo_by_model_name(
 				'component_input_text'
 			);
 
@@ -669,7 +669,7 @@ final class ontology_node_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_terminoID_by_modelo_name
+	}//end test_get_ar_tipo_by_model_name
 
 
 
@@ -1110,13 +1110,13 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_ar_terminoID_by_modelo_name_and_relation
+	* TEST_GET_AR_TIPO_BY_MODEL_NAME_AND_RELATION
 	* @return void
 	*/
-	public function test_get_ar_terminoID_by_modelo_name_and_relation(): void {
+	public function test_get_ar_tipo_by_model_name_and_relation(): void {
 
 		// children
-		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
 			'rsc88',
 			'section_list',
 			'children'
@@ -1146,7 +1146,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// children_recursive
-		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
 			'rsc75', // People
 			'component_input_text',
 			'children_recursive'
@@ -1167,7 +1167,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// termino_relacionado
-		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
 			'rsc88', // Image
 			'component_input_text',
 			'termino_relacionado'
@@ -1188,7 +1188,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// parent
-		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
 			'rsc88', // Image
 			'section_group',
 			'parent'
@@ -1207,7 +1207,7 @@ final class ontology_node_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_terminoID_by_modelo_name_and_relation
+	}//end test_get_ar_tipo_by_model_name_and_relation
 
 
 

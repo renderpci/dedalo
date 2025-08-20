@@ -335,7 +335,7 @@ class diffusion_socrata extends diffusion  {
 		$ar_diffusion_sections = [];
 
 		// tables
-		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$tables = ontology_node::get_ar_tipo_by_model_name_and_relation(
 			$diffusion_element_tipo,
 			'table',
 			'children_recursive',

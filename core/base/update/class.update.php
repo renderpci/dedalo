@@ -462,7 +462,7 @@ class update {
 		// Gets array of all db tables
 		$tables = (array)backup::get_tables();
 
-		$ar_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+		$ar_section_tipo	= ontology_node::get_ar_tipo_by_model_name('section');
 		$n_sections			= count($ar_section_tipo);
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
