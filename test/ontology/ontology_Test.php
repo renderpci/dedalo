@@ -38,13 +38,11 @@ final class ontology_test extends TestCase {
 		return json_decode('
 			{
 				"id": "16028305",
-				"terminoID": "test102",
+				"tipo": "test102",
 				"parent": "test45",
 				"modelo": "dd1747",
 				"is_model": false,
 				"order_number": "28",
-				"visible": "si",
-				"norden": "28",
 				"tld": "test",
 				"is_translatable": false,
 				"relations": "null",
@@ -687,12 +685,12 @@ final class ontology_test extends TestCase {
 				. gettype($result)
 		);
 
-		// terminoID
+		// tipo
 			$expected = 'hierarchy1';
 			$this->assertTrue(
-				$result->get_terminoID()===$expected,
+				$result->get_tipo()===$expected,
 				'expected: ' . to_string($expected) .  PHP_EOL
-					. 'result->get_terminoID(): ' . to_string($result->get_terminoID())
+					. 'result->get_tipo(): ' . to_string($result->get_tipo())
 			);
 
 		// parent
@@ -720,14 +718,6 @@ final class ontology_test extends TestCase {
 			);
 
 		// order_number
-			$expected = 'si';
-			$this->assertTrue(
-				$result->get_esdescriptor()===$expected,
-				'expected: ' . to_string($expected) .  PHP_EOL
-					. 'result->get_esdescriptor(): ' . to_string($result->get_esdescriptor())
-			);
-
-		// norden
 			$expected = 3;
 			$this->assertTrue(
 				$result->get_order_number()==$expected,
@@ -1380,13 +1370,13 @@ final class ontology_test extends TestCase {
 
 		// 	$response		= ontology_converter::matrix_to_jer_dd($section_tipo, $section_id);
 		// 	$jer_dd_row		= $response->result;
-		// 	$RecordObj_dd	= new RecordObj_dd($jer_dd_row->terminoID);
+		// 	$ontology_node	= new ontology_node($jer_dd_row->tipo);
 		// 	foreach ($jer_dd_row as $key => $value) {
-		// 		if ($key==='terminoID') {
+		// 		if ($key==='tipo') {
 		// 			continue;
 		// 		}
 		// 		$method = 'set_' . $key;
-		// 		$RecordObj_dd->{$method}($value);
+		// 		$ontology_node->{$method}($value);
 		// 	}
 
 		// 	$response = ontology_converter::jer_dd_to_matrix($jer_dd_row, DEDALO_SECTION_ID_TEMP.'1');
@@ -1402,13 +1392,13 @@ final class ontology_test extends TestCase {
 
 
 		// 	/*
-		// 	$sql_query		= 'SELECT * FROM "jer_dd" ORDER BY tld, "terminoID" ';
+		// 	$sql_query		= 'SELECT * FROM "jer_dd" ORDER BY tld, "tipo" ';
 		// 	$jer_dd_result	= pg_query(DBi::_getConnection(), $sql_query);
 
 		// 	while($jer_dd_row = pg_fetch_object($jer_dd_result)) {
 
-		// 		$tld		= get_tld_from_tipo($jer_dd_row->terminoID);
-		// 		$section_id	= get_section_id_from_tipo($jer_dd_row->terminoID);
+		// 		$tld		= get_tld_from_tipo($jer_dd_row->tipo);
+		// 		$section_id	= get_section_id_from_tipo($jer_dd_row->tipo);
 
 		// 		$sql = 'SELECT * FROM "matrix_ontology" WHERE section_id = '.$section_id.' AND datos#>>\'{components,ontology7,dato,lg-nolan}\' = \'["'.$tld.'"]\' LIMIT 1';
 		// 		$term_result = pg_query(DBi::_getConnection(), $sql);
@@ -1416,7 +1406,7 @@ final class ontology_test extends TestCase {
 		// 		if (!isset($matrix_row)) {
 		// 			debug_log(__METHOD__
 		// 				. " Error. term $tld - $section_id not found in matrix_ontology" . PHP_EOL
-		// 				. ' terminoID: ' . to_string($jer_dd_row->terminoID) . PHP_EOL
+		// 				. ' tipo: ' . to_string($jer_dd_row->tipo) . PHP_EOL
 		// 				. ' tld: ' . to_string($tld) . PHP_EOL
 		// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
 		// 				, logger::DEBUG
