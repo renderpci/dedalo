@@ -124,20 +124,20 @@ final class ontology_node_test extends TestCase {
 
 		$result = $ontology_node->get_arRelationMap();
 		$eq = $result===[
-			'terminoID'		=> 'terminoID',
-			'parent'		=> 'parent',
-			'modelo'		=> 'modelo',
-			'model'			=> 'model',
-			'esmodelo'		=> 'esmodelo',
-			'esdescriptor'	=> 'esdescriptor',
-			'visible'		=> 'visible',
-			'order_number'	=> 'order_number',
-			'tld'			=> 'tld',
-			'traducible'	=> 'traducible',
-			'relaciones'	=> 'relaciones',
-			'propiedades'	=> 'propiedades',
-			'properties'	=> 'properties',
-			'term'			=> 'term'
+			'terminoID'			=> 'terminoID',
+			'parent'			=> 'parent',
+			'modelo'			=> 'modelo',
+			'model'				=> 'model',
+			'esmodelo'			=> 'esmodelo',
+			'esdescriptor'		=> 'esdescriptor',
+			'visible'			=> 'visible',
+			'order_number'		=> 'order_number',
+			'tld'				=> 'tld',
+			'is_translatable'	=> 'is_translatable',
+			'relaciones'		=> 'relaciones',
+			'propiedades'		=> 'propiedades',
+			'properties'		=> 'properties',
+			'term'				=> 'term'
 		];
 		$this->assertTrue(
 			$eq,

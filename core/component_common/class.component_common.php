@@ -483,7 +483,7 @@ abstract class component_common extends common {
 				$this->with_lang_versions = (isset($properties->with_lang_versions) && $properties->with_lang_versions===true);
 			}
 			// set default lang for non translatable and not with_lang_versions
-			if ($this->traducible==='no') {
+			if ($this->translatable===false) {
 				if ($this->with_lang_versions===true) {
 					// Allow tool lang on non translatable components
 					// like component_iri, component_input_text
@@ -1171,12 +1171,6 @@ abstract class component_common extends common {
 			$tipo			= $this->get_tipo();
 			$lang			= $this->get_lang() ?? DEDALO_DATA_LANG;
 			$mode			= $this->get_mode();
-
-			// Innecesario ???
-				// Si sabemos que el elemento no es traducible, fijamos su 'lang' en 'lg-nolan' (DEDALO_DATA_NOLAN)
-				// if ($this->traducible=='no') {
-				// 	$lang = DEDALO_DATA_NOLAN;
-				// }
 
 		// check component minimum vars before save
 			if( empty($section_id) || empty($tipo) || empty($lang) ) {

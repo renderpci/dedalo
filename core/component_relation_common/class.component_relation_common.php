@@ -816,7 +816,7 @@ class component_relation_common extends component_common {
 						}
 
 					// lang
-						if ($translatable==='si') {
+						if ($translatable===true) {
 							if (!isset($locator_copy->lang)) {
 								$locator_copy->lang = $lang;
 							}else if ($locator_copy->lang!==$lang) {
@@ -829,7 +829,7 @@ class component_relation_common extends component_common {
 									, logger::WARNING
 								);
 							}// end if (!isset($locator_copy->lang))
-						}// end if ($translatable==='si')
+						}// end if ($translatable===true)
 
 					// paginated_key
 						if (isset($locator_copy->paginated_key)) {

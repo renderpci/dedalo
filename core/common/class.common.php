@@ -40,8 +40,6 @@ abstract class common {
 		// order_number
 		public $order_number;
 
-		// string traducible (si|no)
-		public $traducible;
 		// bool translatable
 		public $translatable;
 
@@ -354,7 +352,7 @@ abstract class common {
 
 	/**
 	* LOAD STRUCTURE DATA
-	* Get data once from Ontology (tipo, model, order_number, estraducible, etc.)
+	* Get data once from Ontology (tipo, model, order_number, is_translatable, etc.)
 	* @return bool
 	*/
 	protected function load_structure_data() : bool {
@@ -4750,7 +4748,6 @@ abstract class common {
 			$model				= get_class($this);
 			$tipo				= $this->tipo;
 			$is_component		= strpos($model, 'component_')===0;
-			$tranducible		= $this->traducible; // string si|no fixed on construct element
 			$properties			= $this->get_properties();
 			$with_lang_versions	= $this->with_lang_versions;
 
@@ -4792,7 +4789,7 @@ abstract class common {
 					if ($requirement_translatable===true) {
 
 						$translatable = ($is_component===true)
-							? (($tranducible==='no' && $with_lang_versions!==true) ? false : true)
+							? (($this->translatable===false && $with_lang_versions!==true) ? false : true)
 							: false;
 
 						if ($requirement_translatable===$translatable) {
