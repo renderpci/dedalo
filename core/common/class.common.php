@@ -3616,7 +3616,7 @@ abstract class common {
 								$ar_related = (array)ontology_node::get_ar_children($tipo);
 							}else{
 								// components
-								$ar_related = (array)ontology_node::get_ar_terminos_relacionados(
+								$ar_related = (array)ontology_node::get_relation_nodes(
 									$tipo,
 									true, // bool cache
 									true // bool simple
@@ -3650,7 +3650,7 @@ abstract class common {
 								if(isset($ar_terms[0])) {
 									# Use found related terms as new list
 									$current_term = $ar_terms[0];
-									$ar_related   = ontology_node::get_ar_terminos_relacionados(
+									$ar_related   = ontology_node::get_relation_nodes(
 										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
@@ -3668,7 +3668,7 @@ abstract class common {
 								if(isset($ar_terms[0])) {
 									// Use found related terms as new list
 									$current_term = $ar_terms[0];
-									$ar_related   = ontology_node::get_ar_terminos_relacionados(
+									$ar_related   = ontology_node::get_relation_nodes(
 										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
@@ -3681,7 +3681,7 @@ abstract class common {
 										if(isset($ar_terms[0])) {
 											// Use found related terms as new list
 											$current_term = $ar_terms[0];
-											$ar_related   = ontology_node::get_ar_terminos_relacionados(
+											$ar_related   = ontology_node::get_relation_nodes(
 												$current_term, // string tipo
 												true, // bool cache
 												true // bool simple
@@ -3704,7 +3704,7 @@ abstract class common {
 								if(isset($ar_terms[0])) {
 									// Use found section_list related terms as new list
 									$current_term	= $ar_terms[0];
-									$ar_related		= ontology_node::get_ar_terminos_relacionados(
+									$ar_related		= ontology_node::get_relation_nodes(
 										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
@@ -3732,7 +3732,7 @@ abstract class common {
 									}
 								}else{
 									// Fallback related when section list is not defined; portal case.
-									$ar_related = ontology_node::get_ar_terminos_relacionados(
+									$ar_related = ontology_node::get_relation_nodes(
 										$tipo, // string tipo
 										true, // bool cache
 										true // bool simple

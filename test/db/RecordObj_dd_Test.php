@@ -1072,12 +1072,12 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_ar_terminos_relacionados
+	* TEST_GET_RELATION_NODES
 	* @return void
 	*/
-	public function test_get_ar_terminos_relacionados(): void {
+	public function test_get_relation_nodes(): void {
 
-		$result = ontology_node::get_ar_terminos_relacionados(
+		$result = ontology_node::get_relation_nodes(
 			'rsc88',
 			true,
 			true // simple
@@ -1105,7 +1105,7 @@ final class ontology_node_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_terminos_relacionados
+	}//end test_get_relation_nodes
 
 
 

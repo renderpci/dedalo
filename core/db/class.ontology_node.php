@@ -1074,7 +1074,7 @@ class ontology_node extends ontology_record {
 	* JSON_VERSION
 	* In 'simple' mode it returns only an array of 'tipo'.
 	*/
-	public static function get_ar_terminos_relacionados( string $tipo, bool $cache=false, bool $simple=false ) : array {
+	public static function get_relation_nodes( string $tipo, bool $cache=false, bool $simple=false ) : array {
 
 		// do not cache in this method !
 
@@ -1097,7 +1097,7 @@ class ontology_node extends ontology_record {
 
 
 		return $ar_relations;
-	}//end get_ar_terminos_relacionados
+	}//end get_relation_nodes
 
 
 
@@ -1209,7 +1209,7 @@ class ontology_node extends ontology_record {
 
 				// We get the related terms
 				$ontology_node				= new ontology_node($tipo);
-				$ar_terminos_relacionados	= $ontology_node->get_ar_terminos_relacionados(
+				$ar_terminos_relacionados	= $ontology_node->get_relation_nodes(
 					$tipo,
 					true, // bool cache
 					true // bool simple

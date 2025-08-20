@@ -431,7 +431,7 @@ class ontology {
 			$section_id = $row['section_id'];
 
 			$node_tipo = $tld.$section_id;
-			$relations = ontology_node::get_ar_terminos_relacionados( $node_tipo, true, true );
+			$relations = ontology_node::get_relation_nodes( $node_tipo, true, true );
 
 			// Relations
 			$relations_tipo			= 'ontology10';

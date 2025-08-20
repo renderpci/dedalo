@@ -178,7 +178,7 @@ class tool_diffusion extends tool_common {
 						// add related terms
 						foreach ($table_fields_info as $info_item) {
 							// $ar_related = common::get_ar_related_by_model('component', $info_item->tipo, false);
-							$ar_related = ontology_node::get_ar_terminos_relacionados($info_item->tipo, true, true);
+							$ar_related = ontology_node::get_relation_nodes($info_item->tipo, true, true);
 							if (isset($ar_related[0])) {
 								$current_name				= ontology_node::get_term_by_tipo($ar_related[0], null, true, true);
 								$info_item->related_tipo	= $ar_related[0];
