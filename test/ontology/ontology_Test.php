@@ -341,9 +341,9 @@ final class ontology_test extends TestCase {
 			);
 
 		// check jer_dd created record
-			$RecordObj_dd = new RecordObj_dd($result);
-				$RecordObj_dd->use_cache = false;
-				$term = $RecordObj_dd->get_term();
+			$ontology_node = new ontology_node($result);
+				$ontology_node->use_cache = false;
+				$term = $ontology_node->get_term();
 
 				$expected = 'Test jer_dd_ontology_section_node ES';
 				$lang = 'lg-spa';
@@ -362,9 +362,9 @@ final class ontology_test extends TestCase {
 			$result = ontology::create_jer_dd_ontology_section_node($file_item2);
 
 		// check jer_dd created record
-			$RecordObj_dd2 = new RecordObj_dd($result);
-			$RecordObj_dd2->use_cache = false;
-				$term2 = $RecordObj_dd2->get_term();
+			$ontology_node2 = new ontology_node($result);
+			$ontology_node2->use_cache = false;
+				$term2 = $ontology_node2->get_term();
 				$this->assertTrue(
 					$term2->{$lang}===$expected2,
 					'expected [2]: ' . to_string($expected2) . PHP_EOL
@@ -412,11 +412,11 @@ final class ontology_test extends TestCase {
 			);
 
 		// check jer_dd created record
-			$RecordObj_dd = new RecordObj_dd($result);
-				$RecordObj_dd->use_cache = false;
+			$ontology_node = new ontology_node($result);
+				$ontology_node->use_cache = false;
 
 				// term
-				$term = $RecordObj_dd->get_term();
+				$term = $ontology_node->get_term();
 
 				$expected = 'Others';
 				$lang = 'lg-eng';
@@ -428,7 +428,7 @@ final class ontology_test extends TestCase {
 				);
 
 				// parent
-				$parent = $RecordObj_dd->get_parent();
+				$parent = $ontology_node->get_parent();
 
 				$expected = 'ontology40';
 				$this->assertTrue(
@@ -439,7 +439,7 @@ final class ontology_test extends TestCase {
 				);
 
 				// tld
-				$tld = $RecordObj_dd->get_tld();
+				$tld = $ontology_node->get_tld();
 
 				$expected = 'ontologytype';
 				$this->assertTrue(
@@ -451,9 +451,9 @@ final class ontology_test extends TestCase {
 
 				// model
 				// $column_exists = DBi::check_column_exists('jer_dd', 'model');
-				if (RecordObj_dd::has_column('model')) {
+				if (ontology_node::has_column('model')) {
 
-					$model = $RecordObj_dd->get_model();
+					$model = $ontology_node->get_model();
 
 					$expected = 'area';
 					$this->assertTrue(
@@ -1229,7 +1229,7 @@ final class ontology_test extends TestCase {
 
 				// tld
 					$tipo	= 'ontology7';
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model_name	= ontology_node::get_modelo_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$tipo,
@@ -1243,7 +1243,7 @@ final class ontology_test extends TestCase {
 
 				// model
 					$tipo	= 'ontology6';
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model_name	= ontology_node::get_modelo_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$tipo,
@@ -1258,7 +1258,7 @@ final class ontology_test extends TestCase {
 
 				// parent
 					$tipo		= 'ontology15';
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model		= ontology_node::get_modelo_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model,
 						$tipo,

@@ -54,7 +54,7 @@ class ontology_converter {
 
 		// terminoID
 			$tipo		= 'ontology7';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -72,7 +72,7 @@ class ontology_converter {
 
 		// parent (ontology15)
 			$tipo		= 'ontology15';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -86,7 +86,7 @@ class ontology_converter {
 			if(!empty($parent_locator)){
 				// parent tld (ontology7)
 				$tipo		= 'ontology7';
-				$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+				$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 				$component	= component_common::get_instance(
 					$model,
 					$tipo ,
@@ -101,7 +101,7 @@ class ontology_converter {
 
 		// modelo (ontology6)
 			$tipo		= 'ontology6';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -114,7 +114,7 @@ class ontology_converter {
 			if(!empty($value)){
 				// target tld (ontology7)
 				$tipo		= 'ontology7';
-				$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+				$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 				$component	= component_common::get_instance(
 					$model,
 					$tipo ,
@@ -131,7 +131,7 @@ class ontology_converter {
 
 		// esmodelo ontology30
 			$tipo		= 'ontology30';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -147,7 +147,7 @@ class ontology_converter {
 
 		// esdescriptor (ontology4)
 			$tipo		= 'ontology4';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -179,7 +179,7 @@ class ontology_converter {
 
 		// traducible (ontology8)
 			$tipo		= 'ontology8';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -195,7 +195,7 @@ class ontology_converter {
 
 		// relaciones (ontology10)
 			$tipo		= 'ontology10';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -224,7 +224,7 @@ class ontology_converter {
 
 		// propiedades (v5) ontology19
 			$tipo		= 'ontology19';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -241,7 +241,7 @@ class ontology_converter {
 		// properties (ontology16,ontology17,ontology18)
 			// properties general
 			$tipo		= 'ontology18';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -257,7 +257,7 @@ class ontology_converter {
 
 			// properties CSS
 			$tipo		= 'ontology16';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -273,7 +273,7 @@ class ontology_converter {
 
 			// properties RQO
 			$tipo		= 'ontology17';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -292,7 +292,7 @@ class ontology_converter {
 
 		// term (ontology5)
 			$tipo		= 'ontology5';
-			$model		= RecordObj_dd::get_modelo_name_by_tipo( $tipo  );
+			$model		= ontology_node::get_modelo_name_by_tipo( $tipo  );
 			$component	= component_common::get_instance(
 				$model,
 				$tipo ,
@@ -398,7 +398,7 @@ class ontology_converter {
 
 		// tld
 			$tld_tipo		= 'ontology7';
-			$tld_model		= RecordObj_dd::get_modelo_name_by_tipo( $tld_tipo  );
+			$tld_model		= ontology_node::get_modelo_name_by_tipo( $tld_tipo  );
 			$tld_component	= component_common::get_instance(
 				$tld_model,
 				$tld_tipo ,
@@ -423,7 +423,7 @@ class ontology_converter {
 					$model_locator->set_section_id( $model_section_id );
 
 				$model_tipo			= 'ontology6';
-				$model_model		= RecordObj_dd::get_modelo_name_by_tipo( $model_tipo );
+				$model_model		= ontology_node::get_modelo_name_by_tipo( $model_tipo );
 				$model_component	= component_common::get_instance(
 					$model_model,
 					$model_tipo,
@@ -440,7 +440,7 @@ class ontology_converter {
 
 		// descriptor
 			$is_descriptor_tipo			= 'ontology4';
-			$is_descriptor_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_descriptor_tipo  );
+			$is_descriptor_model		= ontology_node::get_modelo_name_by_tipo( $is_descriptor_tipo  );
 			$is_descriptor_component	= component_common::get_instance(
 				$is_descriptor_model,
 				$is_descriptor_tipo ,
@@ -460,7 +460,7 @@ class ontology_converter {
 
 		// is model
 			$is_model_tipo		= 'ontology30';
-			$is_model_model		= RecordObj_dd::get_modelo_name_by_tipo( $is_model_tipo  );
+			$is_model_model		= ontology_node::get_modelo_name_by_tipo( $is_model_tipo  );
 			$is_model_component	= component_common::get_instance(
 				$is_model_model,
 				$is_model_tipo ,
@@ -480,7 +480,7 @@ class ontology_converter {
 
 		// translatable
 			$translatable_tipo		= 'ontology8';
-			$translatable_model		= RecordObj_dd::get_modelo_name_by_tipo( $translatable_tipo  );
+			$translatable_model		= ontology_node::get_modelo_name_by_tipo( $translatable_tipo  );
 			$translatable_component	= component_common::get_instance(
 				$translatable_model,
 				$translatable_tipo ,
@@ -500,7 +500,7 @@ class ontology_converter {
 
 		// term
 			$term_tipo	= 'ontology5';
-			$term_model	= RecordObj_dd::get_modelo_name_by_tipo( $term_tipo );
+			$term_model	= ontology_node::get_modelo_name_by_tipo( $term_tipo );
 			foreach ($term as $current_lang => $term_value) {
 
 				$term_component	= component_common::get_instance(
@@ -519,7 +519,7 @@ class ontology_converter {
 
 		// properties V5
 			$properties_v5_tipo			= 'ontology19';
-			$properties_v5_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_v5_tipo  );
+			$properties_v5_model		= ontology_node::get_modelo_name_by_tipo( $properties_v5_tipo  );
 			$properties_v5_component	= component_common::get_instance(
 				$properties_v5_model,
 				$properties_v5_tipo ,
@@ -535,7 +535,7 @@ class ontology_converter {
 
 		// properties CSS
 			$properties_css_tipo		= 'ontology16';
-			$properties_css_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_css_tipo  );
+			$properties_css_model		= ontology_node::get_modelo_name_by_tipo( $properties_css_tipo  );
 			$properties_css_component	= component_common::get_instance(
 				$properties_css_model,
 				$properties_css_tipo ,
@@ -553,7 +553,7 @@ class ontology_converter {
 
 		// properties RQO
 			$properties_rqo_tipo		= 'ontology17';
-			$properties_rqo_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_rqo_tipo  );
+			$properties_rqo_model		= ontology_node::get_modelo_name_by_tipo( $properties_rqo_tipo  );
 			$properties_rqo_component	= component_common::get_instance(
 				$properties_rqo_model,
 				$properties_rqo_tipo ,
@@ -571,7 +571,7 @@ class ontology_converter {
 
 		// properties
 			$properties_tipo		= 'ontology18';
-			$properties_model		= RecordObj_dd::get_modelo_name_by_tipo( $properties_tipo  );
+			$properties_model		= ontology_node::get_modelo_name_by_tipo( $properties_tipo  );
 			$properties_component	= component_common::get_instance(
 				$properties_model,
 				$properties_tipo ,

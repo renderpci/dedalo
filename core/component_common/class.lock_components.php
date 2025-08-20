@@ -393,9 +393,9 @@ class lock_components {
 				$item = clone $current_event_element;
 
 				// add some useful information
-					$item->component_model	= RecordObj_dd::get_modelo_name_by_tipo($current_event_element->component_tipo, true);
-					$item->component_label	= RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_DATA_LANG, true);
-					$item->section_label	= RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_DATA_LANG, true);
+					$item->component_model	= ontology_node::get_modelo_name_by_tipo($current_event_element->component_tipo, true);
+					$item->component_label	= ontology_node::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_DATA_LANG, true);
+					$item->section_label	= ontology_node::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_DATA_LANG, true);
 
 				$ar_user_actions[] = $item;
 			}

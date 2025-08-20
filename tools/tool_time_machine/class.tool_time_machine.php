@@ -37,7 +37,7 @@ class tool_time_machine extends tool_common {
 			$tipo				= $options->tipo;
 			$lang				= $options->lang;
 			$matrix_id			= $options->matrix_id;
-			$model				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model				= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$caller_dataframe	= $options->caller_dataframe;
 
 		// data. extract data from matrix_time_machine table
@@ -144,7 +144,7 @@ class tool_time_machine extends tool_common {
 								// delete all data of the dataframe
 								// it will delete all section_id_key
 								// create the dataframe component
-									$dataframe_model = RecordObj_dd::get_modelo_name_by_tipo($dataframe_tipo);
+									$dataframe_model = ontology_node::get_modelo_name_by_tipo($dataframe_tipo);
 									$dataframe_component = component_common::get_instance(
 										$dataframe_model,
 										$dataframe_tipo,
@@ -274,7 +274,7 @@ class tool_time_machine extends tool_common {
 			$lang						= $options->lang;
 			$bulk_process_id			= $options->bulk_process_id;
 			$bulk_revert_process_label	= $options->bulk_revert_process_label;
-			$model						= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model						= ontology_node::get_modelo_name_by_tipo($tipo,true);
 
 		// get all changes saved in time_machine with the same bulk_process_id
 			$strQuery	= "SELECT * FROM \"matrix_time_machine\" WHERE bulk_process_id = $bulk_process_id ORDER BY id DESC";

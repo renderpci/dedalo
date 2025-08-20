@@ -54,7 +54,7 @@ class tool_ontology_parser extends tool_common {
 
 
 			// typology
-				$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+				$model = ontology_node::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 
 				$typology_component = component_common::get_instance(
 					$model, // string model

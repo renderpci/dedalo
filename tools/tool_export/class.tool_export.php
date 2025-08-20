@@ -242,12 +242,12 @@ class tool_export extends tool_common {
 					// set the column name, if the format is Dédalo use the $tipo and section_id
 					// for standard format use the name
 					if($this->data_format==='dedalo_raw'){
-						$model_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo);
+						$model_name = ontology_node::get_modelo_name_by_tipo($column_tipo);
 						$column_labels[] = ($model_name === 'component_section_id')
 							? 'section_id'
 							: $column_tipo;
 					}else{
-						$column_label = RecordObj_dd::get_termino_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
+						$column_label = ontology_node::get_termino_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
 						if (empty($column_label)) {
 							$column_label = $column_tipo;
 						}
@@ -365,9 +365,9 @@ class tool_export extends tool_common {
 				// $class_list			= $ddo->class_list ?? null;
 
 			// component. Create the component to get the value of the column
-				$RecordObj_dd		= new RecordObj_dd($ddo->component_tipo);
-				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component_model	= RecordObj_dd::get_modelo_name_by_tipo($ddo->component_tipo, true);
+				$ontology_node		= new ontology_node($ddo->component_tipo);
+				$current_lang		= $ontology_node->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component_model	= ontology_node::get_modelo_name_by_tipo($ddo->component_tipo, true);
 
 				$current_component	= component_common::get_instance(
 					$component_model, // string model

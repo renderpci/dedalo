@@ -132,7 +132,7 @@ class component_inverse extends component_common {
 			$from_section_tipo		= $current_locator->from_section_tipo;
 			$from_component_tipo	= $current_locator->from_component_tipo;
 
-			$section_label 	= RecordObj_dd::get_termino_by_tipo($from_section_tipo,DEDALO_APPLICATION_LANG, true);
+			$section_label 	= ontology_node::get_termino_by_tipo($from_section_tipo,DEDALO_APPLICATION_LANG, true);
 
 			$column_obj_id = $this->section_tipo.'_'.$from_section_tipo.'_'.$this->tipo.'_'.$from_component_tipo;
 
@@ -254,7 +254,7 @@ class component_inverse extends component_common {
 				# section_label
 				if ($ikey === 'section_label') {
 					if(strlen($line)>0) $line .= ' ';
-					$label = RecordObj_dd::get_termino_by_tipo($section_tipo, $lang);
+					$label = ontology_node::get_termino_by_tipo($section_tipo, $lang);
 					$line .= $label;
 				}
 
@@ -267,7 +267,7 @@ class component_inverse extends component_common {
 				# component_label
 				if ($ikey === 'component_label') {
 					if(strlen($line)>0) $line .= ' ';
-					$label = RecordObj_dd::get_termino_by_tipo($component_tipo, $lang);
+					$label = ontology_node::get_termino_by_tipo($component_tipo, $lang);
 					$line .= $label;
 				}
 			}

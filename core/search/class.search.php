@@ -180,7 +180,7 @@ class search {
 			// in current installation (for example 'dc1' in monedaiberica)
 			foreach ($this->ar_section_tipo as $current_tipo) {
 
-				$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+				$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo, true);
 
 				// check model (some RQO config tipos could be not installed)
 				if (empty($model_name)) {
@@ -488,7 +488,7 @@ class search {
 				$ar_sections = array_map(function($section_tipo){
 					return $section_tipo==='all'
 						? $section_tipo
-						: $section_tipo .' - '. RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
+						: $section_tipo .' - '. ontology_node::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 				}, $ar_sections);
 
 				// debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
@@ -779,7 +779,7 @@ class search {
 			}
 
 		// call to component to resolve each select sentence (are different results depends of the component)
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 		$select_object	= $model_name::get_select_query($select_object);
 
 
@@ -874,7 +874,7 @@ class search {
 					$search_component	= end($path);
 					// model (with fallback if do not exists)
 					if (!isset($search_component->model)) {
-						$search_component->model = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo, true);
+						$search_component->model = ontology_node::get_modelo_name_by_tipo($search_component->component_tipo, true);
 					}
 					// check for empty models like elements that this installation don't have (e.g. 'numisdata303' from request config fixed filter in Objects -tch1-)
 					if (empty($search_component->model)) {
@@ -1302,7 +1302,7 @@ class search {
 		$this->ar_matrix_tables = [];
 		foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
 
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo, true);
+			$model_name = ontology_node::get_modelo_name_by_tipo($current_section_tipo, true);
 
 			// check model (some RQO config tipos could be not installed)
 			if (empty($model_name)) {
@@ -1627,7 +1627,7 @@ class search {
 							$sql_filter .= ')';
 
 						# PROJECTS FILTER
-							$component_filter_master_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
+							$component_filter_master_model	= ontology_node::get_modelo_name_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
 							$component_filter_master		= component_common::get_instance(
 								$component_filter_master_model, // 'component_filter_master',
 								DEDALO_FILTER_MASTER_TIPO,
@@ -1678,7 +1678,7 @@ class search {
 							true // bool search_exact
 						);
 						if (!isset($ar_component_filter[0])) {
-							$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
+							$section_name = ontology_node::get_termino_by_tipo($section_tipo);
 							debug_log(__METHOD__
 								." Error Processing Request. Filter not found is this section ($section_tipo) $section_name "
 								, logger::ERROR
@@ -2305,7 +2305,7 @@ class search {
 
 				$sql_join  = "\n";
 				if(SHOW_DEBUG===true) {
-					$section_name = RecordObj_dd::get_termino_by_tipo($step_object->section_tipo, null, true, false);
+					$section_name = ontology_node::get_termino_by_tipo($step_object->section_tipo, null, true, false);
 					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name\n";
 				}
 				# Join relation table
@@ -2474,8 +2474,8 @@ class search {
 					if(SHOW_DEBUG===true) {
 						$component_path_data	= end($path);
 						$component_tipo			= $component_path_data->component_tipo;
-						$component_name			= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
-						$model_name				= $component_path_data->model; //RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+						$component_name			= $component_path_data->name ?? '';	//ontology_node::get_termino_by_tipo($component_tipo, null, true, false);
+						$model_name				= $component_path_data->model; //ontology_node::get_model_name_by_tipo($component_tipo,true);
 						$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
 
@@ -2605,8 +2605,8 @@ class search {
 					if(SHOW_DEBUG===true) {
 						$component_path_data	= end($path);
 						$component_tipo			= $component_path_data->component_tipo;
-						$component_name			= $component_path_data->name ?? '';	//RecordObj_dd::get_termino_by_tipo($component_tipo, null, true, false);
-						$model_name				= $component_path_data->model; //RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component_name			= $component_path_data->name ?? '';	//ontology_node::get_termino_by_tipo($component_tipo, null, true, false);
+						$model_name				= $component_path_data->model; //ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 						$sql_where .= "-- TYPEOF FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
 					$safe_operator = $search_object->operator;
@@ -2814,11 +2814,11 @@ class search {
 
 		$path = [];
 
-		$term_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$term_model = ontology_node::get_modelo_name_by_tipo($tipo,true);
 
 		// Add first level always
 			$current_path = new stdClass();
-				$current_path->name				= strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
+				$current_path->name				= strip_tags(ontology_node::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
 				$current_path->model			= $term_model;
 				$current_path->section_tipo		= $section_tipo;
 				$current_path->component_tipo	= $tipo;
@@ -2828,7 +2828,7 @@ class search {
 			$ar_related_components 	= component_relation_common::get_components_with_relations();
 			if(in_array($term_model, $ar_related_components)===true) {
 
-				$ar_terminos_relacionados	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);
+				$ar_terminos_relacionados	= ontology_node::get_ar_terminos_relacionados($tipo,true,true);
 				$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
 
 				if (!empty($ar_related_section)) {
@@ -2838,7 +2838,7 @@ class search {
 					if ($related_tipo!==false) {
 
 						$current_tipo	= $related_tipo;
-						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$model_name		= ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 						if (strpos($model_name,'component')===0) {
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
@@ -2852,7 +2852,7 @@ class search {
 						foreach ($ar_terminos_relacionados as $current_tipo) {
 
 							// Use only first related tipo
-							$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 							if (strpos($model_name,'component')!==0) continue;
 							# Recursion
 							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
@@ -3022,7 +3022,7 @@ class search {
 					$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
 					if(SHOW_DEBUG===true) {
 						if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-							$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
+							$msg .= ' ('.ontology_node::get_termino_by_tipo($section_tipo).' - '.ontology_node::get_termino_by_tipo($from_component_tipo).')';
 							$msg .= ' in '. exec_time_unit($start_time).' ms';
 							debug_log(__METHOD__
 								." OK: ".$msg
@@ -3203,7 +3203,7 @@ class search {
 		$result = [];
 		foreach ($ar_locator as $locator) {
 
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($path_item->component_tipo,true);
+			$model_name	= ontology_node::get_modelo_name_by_tipo($path_item->component_tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$path_item->component_tipo,

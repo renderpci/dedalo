@@ -119,7 +119,7 @@ class component_image extends component_media_common implements component_media_
 			$properties = $this->get_properties();
 			if(isset($properties->image_id)){
 				$component_tipo	= $properties->image_id;
-				$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$model			= ontology_node::get_modelo_name_by_tipo($component_tipo, true);
 				$component		= component_common::get_instance(
 					$model,
 					$component_tipo,
@@ -289,7 +289,7 @@ class component_image extends component_media_common implements component_media_
 		if (isset($properties->external_source) && !empty($this->section_id)) {
 
 			$component_tipo		= $properties->external_source;
-			$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component_model	= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 			$component			= component_common::get_instance(
 				$component_model,
 				$component_tipo,
@@ -656,7 +656,7 @@ class component_image extends component_media_common implements component_media_
 				if (isset($properties->target_filename)) {
 					$current_section_id			= $this->get_section_id();
 					$target_section_tipo		= $this->get_section_tipo();
-					$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename,true);
+					$model_name_target_filename	= ontology_node::get_modelo_name_by_tipo($properties->target_filename,true);
 					$component_target_filename	= component_common::get_instance(
 						$model_name_target_filename,
 						$properties->target_filename,
@@ -937,7 +937,7 @@ class component_image extends component_media_common implements component_media_
 				// same case as '6.0.1'. regenerate_component is enough to create thumb
 			case '6.0.1':
 				// component instance
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo, true);
+					$model		= ontology_node::get_modelo_name_by_tipo($options->tipo, true);
 					$component	= component_common::get_instance(
 						$model,
 						$options->tipo,
@@ -968,7 +968,7 @@ class component_image extends component_media_common implements component_media_
 				if ($is_old_dato===true) {
 
 					// create the component image
-						$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+						$model		= ontology_node::get_modelo_name_by_tipo($options->tipo,true);
 						$component	= component_common::get_instance(
 							$model, // string 'component_image'
 							$tipo,
@@ -1040,7 +1040,7 @@ class component_image extends component_media_common implements component_media_
 						if(isset($properties->target_filename)) {
 
 							$original_name_tipo		= $properties->target_filename;
-							$original_name_model	= RecordObj_dd::get_modelo_name_by_tipo($original_name_tipo,true);
+							$original_name_model	= ontology_node::get_modelo_name_by_tipo($original_name_tipo,true);
 
 							// create the component with the name of the original file
 							$original_name_component = component_common::get_instance(
@@ -1058,7 +1058,7 @@ class component_image extends component_media_common implements component_media_
 						// if the original name is empty we can try to get the original name from Previous Code
 						if(empty($source_file_name)) {
 							$previous_code_tipo			= 'rsc22';
-							$previous_code_model		=  RecordObj_dd::get_modelo_name_by_tipo($previous_code_tipo,true);
+							$previous_code_model		=  ontology_node::get_modelo_name_by_tipo($previous_code_tipo,true);
 							// create the component_input_text where name was saved
 							$previous_code_component	= component_common::get_instance(
 								$previous_code_model, // expected 'component_input_text'

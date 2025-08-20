@@ -203,7 +203,7 @@ class v6_to_v7 {
 								$literal_components = $datos_value ?? [];
 								foreach ($literal_components as $literal_tipo => $literal_value) {
 
-									$model = RecordObj_dd::get_modelo_name_by_tipo($literal_tipo);
+									$model = ontology_node::get_modelo_name_by_tipo($literal_tipo);
 
 									// skip v5 data
 									if( in_array($model, ['component_filter','component_section_id']) ){
@@ -483,7 +483,7 @@ class v6_to_v7 {
 												// if (isset($new_literal_obj->literal_value->info)) {
 												// 	$new_literal_obj->info = $new_literal_obj->literal_value->info;
 												// }else{
-												// 	$label = RecordObj_dd::get_termino_by_tipo($literal_tipo);
+												// 	$label = ontology_node::get_termino_by_tipo($literal_tipo);
 												// 	$new_literal_obj->info = "$label [$model]";
 												// }
 										}

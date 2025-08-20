@@ -563,7 +563,7 @@ class login extends common {
 	public static function get_user_code($section_id) : ?string {
 
 		$tipo = 'dd1053'; // Code input text
-		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$model = ontology_node::get_modelo_name_by_tipo($tipo,true);
 		$component = component_common::get_instance(
 			$model,
 			$tipo,
@@ -625,7 +625,7 @@ class login extends common {
 
 		$active_account = false; // Default false
 
-		$model					= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_ACTIVE_ACCOUNT_TIPO,true);
+		$model					= ontology_node::get_modelo_name_by_tipo(DEDALO_ACTIVE_ACCOUNT_TIPO,true);
 		$component_radio_button	= component_common::get_instance(
 			$model,
 			DEDALO_ACTIVE_ACCOUNT_TIPO,
@@ -1346,12 +1346,12 @@ class login extends common {
 			$properties->login_items = [];
 
 			// login_items
-				$children = RecordObj_dd::get_ar_children($tipo);
+				$children = ontology_node::get_ar_children($tipo);
 				foreach ($children as $children_tipo) {
 					$item = (object)[
 						'tipo'	=> $children_tipo,
-						'model'	=> RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true),
-						'label'	=> RecordObj_dd::get_termino_by_tipo($children_tipo, DEDALO_APPLICATION_LANG, true, true)
+						'model'	=> ontology_node::get_modelo_name_by_tipo($children_tipo,true),
+						'label'	=> ontology_node::get_termino_by_tipo($children_tipo, DEDALO_APPLICATION_LANG, true, true)
 					];
 					$properties->login_items[] = $item;
 				}
@@ -1383,8 +1383,8 @@ class login extends common {
 				'value'	=> implode('.', get_current_data_version())
 			];
 		// ontology version
-			$RecordObj_dd		= new RecordObj_dd('dd1');
-			$dd1_properties		= $RecordObj_dd->get_properties();
+			$ontology_node		= new ontology_node('dd1');
+			$dd1_properties		= $ontology_node->get_properties();
 			$properties->info[] = [
 				'type'	=> 'version',
 				'label'	=> 'Ontology version',

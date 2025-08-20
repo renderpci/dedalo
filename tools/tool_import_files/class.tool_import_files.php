@@ -135,7 +135,7 @@ class tool_import_files extends tool_common {
 		string $target_component_tipo
 		) : bool {
 
-		$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
+		$model = ontology_node::get_modelo_name_by_tipo($target_component_tipo, true);
 
 
 		// logger activity. Note that this log is here because generic service_upload
@@ -470,7 +470,7 @@ class tool_import_files extends tool_common {
 				return $response;
 			}
 			$target_component_tipo	= $target_ddo_component->tipo;
-			$target_component_model	= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
+			$target_component_model	= ontology_node::get_modelo_name_by_tipo($target_component_tipo, true);
 
 		// file_processor_properties
 			$file_processor_properties = $tool_config->file_processor ?? null;
@@ -727,7 +727,7 @@ class tool_import_files extends tool_common {
 						$target_ddo = new dd_object();
 							$target_ddo->set_tipo($tipo);
 							$target_ddo->set_section_tipo($section_tipo);
-							$target_ddo->set_model(RecordObj_dd::get_modelo_name_by_tipo($tipo, true));
+							$target_ddo->set_model(ontology_node::get_modelo_name_by_tipo($tipo, true));
 					}//end if($import_mode==='section')
 
 				// target_ddo check
@@ -960,8 +960,8 @@ class tool_import_files extends tool_common {
 
 			$tipo	= $target_filename->tipo;
 
-			$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$lang	= RecordObj_dd::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$model	= ontology_node::get_modelo_name_by_tipo($tipo,true);
+			$lang	= ontology_node::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 			// component with the previous filename saved
 			$target_name_component = component_common::get_instance(
@@ -1083,8 +1083,8 @@ class tool_import_files extends tool_common {
 				continue;
 			}
 
-			$model					= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-			$current_lang			= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$model					= ontology_node::get_modelo_name_by_tipo($ddo->tipo,true);
+			$current_lang			= ontology_node::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$destination_section_id	= ($ddo->section_tipo===$section_tipo)
 				? $section_id
 				: $target_section_id;
@@ -1131,7 +1131,7 @@ class tool_import_files extends tool_common {
 				case 'input_component':
 
 					// component_data save
-						$is_translatable = RecordObj_dd::get_translatable($ddo->tipo);
+						$is_translatable = ontology_node::get_translatable($ddo->tipo);
 						if ($is_translatable===false) {
 
 							// use value from request

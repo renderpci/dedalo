@@ -923,7 +923,7 @@ class component_av extends component_media_common implements component_media_int
 			// target_filename. Save original file name in a component_input_text
 				if (isset($properties->target_filename)) {
 
-					$model_name_target_filename	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_filename, true);
+					$model_name_target_filename	= ontology_node::get_modelo_name_by_tipo($properties->target_filename, true);
 					$component_target_filename	= component_common::get_instance(
 						$model_name_target_filename, // model
 						$properties->target_filename, // tipo
@@ -944,7 +944,7 @@ class component_av extends component_media_common implements component_media_int
 			// target_duration. Save duration (time-code) in a component_input_text, usually to 'rsc54'
 				if (isset($properties->target_duration)) {
 
-					$model_name_target_duration	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_duration, true);
+					$model_name_target_duration	= ontology_node::get_modelo_name_by_tipo($properties->target_duration, true);
 					$component_target_duration	= component_common::get_instance(
 						$model_name_target_duration, // model
 						$properties->target_duration, // tipo
@@ -1353,7 +1353,7 @@ class component_av extends component_media_common implements component_media_int
 				// same case as '6.0.1'. regenerate_component is enough to create thumb
 			case '6.0.1':
 				// component instance
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model		= ontology_node::get_modelo_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model,
 						$tipo,
@@ -1391,7 +1391,7 @@ class component_av extends component_media_common implements component_media_int
 						// }
 
 					// create the component av
-						$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						$model		= ontology_node::get_modelo_name_by_tipo($tipo,true);
 						$component	= component_common::get_instance(
 							$model, // string 'component_av'
 							$tipo,
@@ -1489,7 +1489,7 @@ class component_av extends component_media_common implements component_media_int
 
 							if (!empty($secs)) {
 
-								$model_name_target_duration	= RecordObj_dd::get_modelo_name_by_tipo($properties->target_duration, true);
+								$model_name_target_duration	= ontology_node::get_modelo_name_by_tipo($properties->target_duration, true);
 								$component_target_duration	= component_common::get_instance(
 									$model_name_target_duration, // model
 									$properties->target_duration, // tipo

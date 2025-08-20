@@ -61,8 +61,8 @@ final class dd_ts_api {
 					: false; // get from URL as thesaurus_view_mode=model
 
 		// section_properties check
-			$RecordObj_dd		= new RecordObj_dd($section_tipo);
-			$section_properties	= $RecordObj_dd->get_properties(true);
+			$ontology_node		= new ontology_node($section_tipo);
+			$section_properties	= $ontology_node->get_properties(true);
 
 		// limit
 			$default_limit = 300;
@@ -117,7 +117,7 @@ final class dd_ts_api {
 
 				default:
 					// Calculate children from parent
-						$model = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
+						$model = ontology_node::get_modelo_name_by_tipo($children_tipo,true);
 						if ($model!=='component_relation_children') {
 							$response->errors[] = 'Wrong model';
 							$response->msg .= ' Expected model (component_relation_children) but calculated: ' . $model;
@@ -248,7 +248,7 @@ final class dd_ts_api {
 			}else{
 				if ($section_map->thesaurus->is_descriptor!==false) {
 					$component_tipo	= $section_map->thesaurus->is_descriptor;
-					$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$model			= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 					$component		= component_common::get_instance(
 						$model,
 						$component_tipo,
@@ -280,7 +280,7 @@ final class dd_ts_api {
 			}else{
 				if ($section_map->thesaurus->is_indexable!==false) {
 					$component_tipo	= $section_map->thesaurus->is_indexable;
-					$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$model			= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 					$component		= component_common::get_instance(
 						$model,
 						$component_tipo,
@@ -316,7 +316,7 @@ final class dd_ts_api {
 				$response->errors[] = 'Invalid component_relation_parent from section: '.$section_tipo;
 				return $response;
 			}
-			$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_relation_parent_tipo, true);
+			$model_name = ontology_node::get_modelo_name_by_tipo($component_relation_parent_tipo, true);
 			$component_relation_parent = component_common::get_instance(
 				$model_name,
 				$component_relation_parent_tipo,
@@ -401,7 +401,7 @@ final class dd_ts_api {
 
 		// component_relation_parent
 			$parent_tipo	= section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true)[0];
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($parent_tipo,true);
+			$model_name		= ontology_node::get_modelo_name_by_tipo($parent_tipo,true);
 			$lang			= DEDALO_DATA_NOLAN;
 			$component_relation_parent = component_common::get_instance(
 				$model_name,

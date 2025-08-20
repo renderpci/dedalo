@@ -230,7 +230,7 @@
 
 						// tool_transcription_context. Using related component av context (17-01-2024)
 							$component_av_tipo	= $this->get_related_component_av_tipo(); // 'rsc35';
-							$component_av_model	= RecordObj_dd::get_modelo_name_by_tipo($component_av_tipo,true);
+							$component_av_model	= ontology_node::get_modelo_name_by_tipo($component_av_tipo,true);
 							$component_av		= component_common::get_instance(
 								$component_av_model, // string model
 								$component_av_tipo, // string tipo

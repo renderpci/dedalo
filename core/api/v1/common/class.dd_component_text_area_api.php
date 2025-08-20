@@ -54,7 +54,7 @@ final class dd_component_text_area_api {
 			$type		= $options->type; // string e.g. 'index'
 
 		// component_text_area. Remove tag in all langs
-			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model_name				= ontology_node::get_modelo_name_by_tipo($tipo,true);
 			$component_text_area	= component_common::get_instance(
 				$model_name,
 				$tipo,
@@ -83,7 +83,7 @@ final class dd_component_text_area_api {
 			// $indexing_component_tipo		= $tags_index->tipo;
 			// $indexing_section_tipo		= $tags_index->section_tipo==='self' ? $section_tipo : $tags_index->section_tipo;
 			// $indexing_section_id			= $tags_index->section_id==='self' ? $section_id : $tags_index->section_id;
-			// $indexing_model_name			= RecordObj_dd::get_modelo_name_by_tipo($indexing_component_tipo,true);
+			// $indexing_model_name			= ontology_node::get_modelo_name_by_tipo($indexing_component_tipo,true);
 			// $indexing_lang				= common::get_element_lang($indexing_component_tipo, DEDALO_DATA_LANG);
 			// $indexing_component			= component_common::get_instance(
 			// 	$indexing_model_name,
@@ -174,7 +174,7 @@ final class dd_component_text_area_api {
 			$ar_types	= $options->ar_type; // string e.g. 'index'
 
 		// component_text_area. Remove tag in all langs
-			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$model_name				= ontology_node::get_modelo_name_by_tipo($tipo, true);
 			$component_text_area	= component_common::get_instance(
 				$model_name,
 				$tipo,

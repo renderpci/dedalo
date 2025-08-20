@@ -84,7 +84,7 @@ class ddo_map_object extends stdClass {
 	*/
 	public function set_section_tipo(string $value) : void {
 		if (!isset($this->model)) {
-			$this->model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
+			$this->model = ontology_node::get_modelo_name_by_tipo($this->tipo,true);
 		}
 		if(strpos($this->model, 'area')!==0 && !get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);

@@ -31,7 +31,7 @@
 					$target_sections = array_map(function($tipo) {
 						return [
 							'tipo'	=> $tipo,
-							'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
+							'label'	=> ontology_node::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
 						];
 					}, $this->get_ar_target_section_tipo());
 					$item_context->set_target_sections($target_sections);

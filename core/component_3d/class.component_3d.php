@@ -735,7 +735,7 @@ class component_3d extends component_media_common implements component_media_int
 				// same case as '6.0.1'. regenerate_component is enough to create thumb
 			case '6.0.1':
 				// component instance
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model		= ontology_node::get_modelo_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model, // string 'component_3d'
 						$tipo,

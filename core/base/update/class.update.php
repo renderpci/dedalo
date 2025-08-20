@@ -480,7 +480,7 @@ class update {
 			$start_time = start_time();
 			$before = memory_get_usage();
 
-			$current_section_label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true);
+			$current_section_label = ontology_node::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true);
 
 
 			// Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
@@ -655,8 +655,8 @@ class update {
 
 					foreach($ar_component_tipo as $current_component_tipo) {
 
-						$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
-						$translatable	= $RecordObj_dd->get_traducible();
+						$ontology_node	= new ontology_node($current_component_tipo);
+						$translatable	= $ontology_node->get_traducible();
 						$ar_langs		= ($translatable==='no') ? [DEDALO_DATA_NOLAN] : DEDALO_PROJECTS_DEFAULT_LANGS;
 
 						foreach($ar_langs as $current_lang) {

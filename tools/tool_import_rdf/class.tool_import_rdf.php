@@ -21,8 +21,8 @@ class tool_import_rdf extends tool_common {
 	*/
 	public function get_ontology_tipo(string $component_tipo) : string {
 
-		$RecordObj_dd	= new RecordObj_dd($component_tipo);
-		$properties		= $RecordObj_dd->get_properties(true);
+		$ontology_node	= new ontology_node($component_tipo);
+		$properties		= $ontology_node->get_properties(true);
 
 		// Retrieve the ontology tipo from the 'tool_import_rdf' property
 		$ontology_tipo	= $properties->ar_tools_name->tool_import_rdf->external_ontology;
@@ -40,9 +40,9 @@ class tool_import_rdf extends tool_common {
 	*/
 	public function get_component_dato(int|string $section_id,	string $component_tipo) : mixed {
 
-		$RecordObj_dd	= new RecordObj_dd($component_tipo);
-		$translatable 	= $RecordObj_dd->get_traducible();
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$ontology_node	= new ontology_node($component_tipo);
+		$translatable 	= $ontology_node->get_traducible();
+		$model			= ontology_node::get_modelo_name_by_tipo($component_tipo);
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;
@@ -83,8 +83,8 @@ class tool_import_rdf extends tool_common {
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// properties
-			$RecordObj_dd = new RecordObj_dd($ontology_tipo);
-			$properties = $RecordObj_dd->get_properties();
+			$ontology_node = new ontology_node($ontology_tipo);
+			$properties = $ontology_node->get_properties();
 
 		// namespace
 			$name_space = $properties->xmlns;
@@ -120,7 +120,7 @@ class tool_import_rdf extends tool_common {
 				// $rdf_types = $rdf_graph->toRdfPhp();
 				$rdf_type = $rdf_graph->type($base_uri);
 
-				$ontology_children = RecordObj_dd::get_ar_children($ontology_tipo);
+				$ontology_children = ontology_node::get_ar_children($ontology_tipo);
 
 				$dd_obj = tool_import_rdf::get_class_map_to_dd($ontology_children, $rdf_type, $rdf_graph, $base_uri, $locator);
 
@@ -157,10 +157,10 @@ class tool_import_rdf extends tool_common {
 
 		$ar_owl_ObjectProperty = [];
 		foreach ($ar_class_children as $owl_class_tipo) {
-			$class_name = RecordObj_dd::get_termino_by_tipo($owl_class_tipo);
+			$class_name = ontology_node::get_termino_by_tipo($owl_class_tipo);
 
 			if ($class_name === $rdf_type) {
-				$ar_owl_ObjectProperty = RecordObj_dd::get_ar_children($owl_class_tipo);
+				$ar_owl_ObjectProperty = ontology_node::get_ar_children($owl_class_tipo);
 				$current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($owl_class_tipo, 'section', 'termino_relacionado', false);
 			}
 		}
@@ -181,7 +181,7 @@ class tool_import_rdf extends tool_common {
 		}
 
 		$section_tipo		= reset($current_section_tipo);
-		$section_tipo_label	= RecordObj_dd::get_termino_by_tipo($section_tipo);
+		$section_tipo_label	= ontology_node::get_termino_by_tipo($section_tipo);
 
 		// main section
 			$field = new stdClass();
@@ -236,15 +236,15 @@ class tool_import_rdf extends tool_common {
 
 		foreach ($ar_owl_ObjectProperty as $ObjectProperty_tipo) {
 
-			$section_tipo_label		= RecordObj_dd::get_termino_by_tipo($section_tipo);
-			$object_property_name	= RecordObj_dd::get_termino_by_tipo($ObjectProperty_tipo);
+			$section_tipo_label		= ontology_node::get_termino_by_tipo($section_tipo);
+			$object_property_name	= ontology_node::get_termino_by_tipo($ObjectProperty_tipo);
 			$related_dd_tipo		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
 			$children_dd_tipo		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'owl:ObjectProperty', 'children', false);
 			$current_tipo			= reset($related_dd_tipo);
 
 			// properties
-				$RecordObj_dd = new RecordObj_dd($ObjectProperty_tipo);
-				$properties = $RecordObj_dd->get_properties(true);
+				$ontology_node = new ontology_node($ObjectProperty_tipo);
+				$properties = $ontology_node->get_properties(true);
 			// When the data to import has a section between the source and resource (as ref biblio or ref person)
 			// it will have a ddo_map to indicate the path to the resource.
 				if(isset($properties->ddo_map)){
@@ -441,8 +441,8 @@ class tool_import_rdf extends tool_common {
 
 				//get the Dédalo component names
 
-				$ar_dd_component_label 	= RecordObj_dd::get_termino_by_tipo($current_tipo);
-				$object_model_name 		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+				$ar_dd_component_label 	= ontology_node::get_termino_by_tipo($current_tipo);
+				$object_model_name 		= ontology_node::get_modelo_name_by_tipo($current_tipo);
 
 				$ar_current_resource = $rdf_graph->allResources($base_uri, $object_property_name);
 				//literal, if the resource is the end of the path
@@ -478,8 +478,8 @@ class tool_import_rdf extends tool_common {
 								$ar_literal_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($class_dd_tipo[0], 'section', 'termino_relacionado', false);
 
 								// check if the current literal has a record inside Dédalo.
-									$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-									$class_properties = $class_dd_tipo_RecordObj_dd->get_properties();
+									$class_dd_tipo_ontology_node = new ontology_node($class_dd_tipo[0]);
+									$class_properties = $class_dd_tipo_ontology_node->get_properties();
 
 									if(isset($class_properties->match)){
 										$literal_section_tipo_to_check = reset($ar_literal_section_tipo);
@@ -555,8 +555,8 @@ class tool_import_rdf extends tool_common {
 									continue;
 								}
 							// check if the current resource has a record inside Dédalo.
-								$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-								$class_properties = $class_dd_tipo_RecordObj_dd->get_properties();
+								$class_dd_tipo_ontology_node = new ontology_node($class_dd_tipo[0]);
+								$class_properties = $class_dd_tipo_ontology_node->get_properties();
 
 								if(isset($class_properties->match)){
 									$section_tipo_to_check = reset($current_section_tipo);
@@ -632,11 +632,11 @@ class tool_import_rdf extends tool_common {
 	*/
 	public static function get_resource_match( string $section_tipo, string $component_tipo, string $value, ?string $filter=null ) : object {
 
-		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$name			= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
+		$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
+		$name			= ontology_node::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
 
-		$RecordObj_dd	= new RecordObj_dd($component_tipo);
-		$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
+		$ontology_node	= new ontology_node($component_tipo);
+		$lang			= ($ontology_node->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
 
 		// filter
 			$filter_string = !empty($filter)
@@ -717,8 +717,8 @@ class tool_import_rdf extends tool_common {
 					: $value;
 
 			// save new value
-				$component_tipo_RecordObj_dd	= new RecordObj_dd($component_tipo);
-				$lang							= ($component_tipo_RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+				$component_tipo_ontology_node	= new ontology_node($component_tipo);
+				$lang							= ($component_tipo_ontology_node->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 				$code_component					= component_common::get_instance(
 					$model_name,
 					$component_tipo,
@@ -773,11 +773,11 @@ class tool_import_rdf extends tool_common {
 		// sort vars
 			$section_tipo	= $locator->section_tipo;
 			$section_id		= $locator->section_id;
-			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 
 		// save new value
-			$RecordObj_dd	= new RecordObj_dd($component_tipo);
-			$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
+			$ontology_node	= new ontology_node($component_tipo);
+			$lang			= ($ontology_node->get_traducible()==='no') ? DEDALO_DATA_NOLAN : $lang;
 
 			$code_component	= component_common::get_instance(
 				$model_name,
@@ -885,8 +885,8 @@ class tool_import_rdf extends tool_common {
 			$path			= $properties->path;
 			$value			= $properties->value;
 
-		$RecordObj_dd	= new RecordObj_dd($component_tipo);
-		$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
+		$ontology_node	= new ontology_node($component_tipo);
+		$lang			= ($ontology_node->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
 
 		// filter
 			$filter = '{
@@ -925,9 +925,9 @@ class tool_import_rdf extends tool_common {
 			return null;
 		}
 
-		$RecordObj_dd	= new RecordObj_dd($component_tipo);
-		$translatable	= $RecordObj_dd->get_traducible();
-		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$ontology_node	= new ontology_node($component_tipo);
+		$translatable	= $ontology_node->get_traducible();
+		$model			= ontology_node::get_modelo_name_by_tipo($component_tipo);
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;

@@ -262,8 +262,8 @@ class component_dataframe extends component_portal {
 	*/
 	public function get_main_component_tipo() : string {
 
-		$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
-		$main_component_tipo	= $RecordObj_dd->get_parent();
+		$ontology_node			= new ontology_node( $this->get_tipo() );
+		$main_component_tipo	= $ontology_node->get_parent();
 
 
 		return $main_component_tipo;
@@ -280,8 +280,8 @@ class component_dataframe extends component_portal {
 
 		$main_component_tipo = $this->get_main_component_tipo();
 
-		$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
-		$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		$model	= ontology_node::get_modelo_name_by_tipo( $main_component_tipo );
+		$lang	= ontology_node::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 		$main_component = component_common::get_instance(
 			$model, // string model
 			$main_component_tipo, // string tipo
@@ -366,12 +366,12 @@ class component_dataframe extends component_portal {
 				// it able to create components dataframe for components with multiple target section_tipo
 				// this update get the target_section of the main component to assign it to the dataframe data.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
-					$RecordObj_dd			= new RecordObj_dd($tipo);
-					$main_component_tipo	= $RecordObj_dd->get_parent();
+					$ontology_node			= new ontology_node($tipo);
+					$main_component_tipo	= $ontology_node->get_parent();
 
 					// create the main component to obtain his data
-						$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
-						$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$model	= ontology_node::get_modelo_name_by_tipo( $main_component_tipo );
+						$lang	= ontology_node::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$main_component = component_common::get_instance(
 							$model, // string model
 							$main_component_tipo, // string tipo

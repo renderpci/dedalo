@@ -49,7 +49,7 @@ abstract class notes extends stdClass {
 
 		return $ar_notes;
 
-		// En curso (Necesita RecordObj_dd de momento)..........................
+		// En curso (Necesita ontology_node de momento)..........................
 
 
 		preg_match_all($pattern, $raw_text, $matches);
@@ -57,7 +57,7 @@ abstract class notes extends stdClass {
 		$key_locator = 7;
 		$key_id 	 = 4;
 		$component_tipo = DEDALO_NOTES_TEXT_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$modelo_name 	= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 		foreach ($matches[$key_locator] as $key => $locator) {
 			$locator = str_replace('\'', '"', $locator);
 			$locator = json_decode($locator);

@@ -45,8 +45,8 @@ class component_external extends component_common {
 			}
 
 		// section_properties
-			$RecordObj_dd		= new RecordObj_dd($section_tipo);
-			$section_properties	= $RecordObj_dd->get_properties();
+			$ontology_node		= new ontology_node($section_tipo);
+			$section_properties	= $ontology_node->get_properties();
 
 		// format reference
 			# {
@@ -103,8 +103,8 @@ class component_external extends component_common {
 				);
 				foreach ($children_tipo as $component_tipo) {
 
-					$RecordObj_dd			= new RecordObj_dd($component_tipo);
-					$component_properties	= $RecordObj_dd->get_properties();
+					$ontology_node			= new ontology_node($component_tipo);
+					$component_properties	= $ontology_node->get_properties();
 
 					// check component_properties
 					if(empty($component_properties) || !isset($component_properties->fields_map)){

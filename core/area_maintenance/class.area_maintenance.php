@@ -1855,7 +1855,7 @@ class area_maintenance extends area_common {
 				NULL,
 				[
 					'msg'		=> 'Updated Ontology',
-					'version'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
+					'version'	=> ontology_node::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
 				],
 				logged_user_id() // int
 			);
@@ -1879,10 +1879,10 @@ class area_maintenance extends area_common {
 			dd_cache::delete_cache_files();
 
 		// get new Ontology info
-			$RecordObj_dd = new RecordObj_dd(DEDALO_ROOT_TIPO);
+			$ontology_node = new ontology_node(DEDALO_ROOT_TIPO);
 			$root_info = (object)[
-				'term' => RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
-				'properties' => $RecordObj_dd->get_properties()
+				'term' => ontology_node::get_termino_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
+				'properties' => $ontology_node->get_properties()
 			];
 
 		// response

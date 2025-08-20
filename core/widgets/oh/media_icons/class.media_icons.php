@@ -48,7 +48,7 @@ class media_icons extends widget_common {
 
 						$source_component_tipo = $current_source->component_tipo;
 
-						$source_model_name	= RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo,true);
+						$source_model_name	= ontology_node::get_modelo_name_by_tipo($source_component_tipo,true);
 						$source_component	= component_common::get_instance(
 							$source_model_name,
 							$source_component_tipo,
@@ -92,7 +92,7 @@ class media_icons extends widget_common {
 				// create items with the every locator
 				foreach ($ar_locator as $locator) {
 
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$model_name	= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$component_tipo,
@@ -120,7 +120,7 @@ class media_icons extends widget_common {
 								case 'tc':
 									// component that store duration (rsc54). Updated on file upload post-processing
 										$duration_tipo			= 'rsc54';
-										$duration_model_name	= RecordObj_dd::get_modelo_name_by_tipo($duration_tipo,true);
+										$duration_model_name	= ontology_node::get_modelo_name_by_tipo($duration_tipo,true);
 										$duration_component		= component_common::get_instance(
 											$duration_model_name,
 											$duration_tipo,
@@ -163,7 +163,7 @@ class media_icons extends widget_common {
 									$value = null;
 									//get the section_tool of the $data_map
 									$section_tool_tipo	= $data_map->process_section_tipo;
-									$section_tool		= new RecordObj_dd($section_tool_tipo);
+									$section_tool		= new ontology_node($section_tool_tipo);
 									// and get the tool_name, it need to be the same that the tool_name in the section_tool (see ontology)
 									$tool_name			= $data_map->label ?? false;
 									// get the config for this tool, and get the ddo_map

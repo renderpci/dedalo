@@ -235,7 +235,7 @@ $text = strip_tags($text, '');
 			$section_tipo	= $locator->section_tipo;
 			$section_id		= $locator->section_id;
 			$component_tipo	= $locator->component_tipo;
-			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,

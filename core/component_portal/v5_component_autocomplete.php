@@ -87,7 +87,7 @@
 			$ar_current_value=array();
 			foreach ($ar_componets_related as $component_tipo) {
 
-				$model_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				$model_name 	   = ontology_node::get_modelo_name_by_tipo($component_tipo, true);
 				$current_component = component_common::get_instance(
 					$model_name,
 					$component_tipo,
@@ -123,7 +123,7 @@
 				if ($search_list_add!==false) {
 					$ar_dd_value = [];
 					foreach ($search_list_add as $add_tipo) {
-						$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
+						$model_name 	= ontology_node::get_modelo_name_by_tipo($add_tipo,true);
 						$component 		= component_common::get_instance(
 							$model_name,
 							$add_tipo,

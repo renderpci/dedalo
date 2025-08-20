@@ -104,15 +104,15 @@
 			$strQuery_select='';
 			foreach ($fields as $current_tipo) {
 
-				#$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				#$model_name = ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 				#if (strpos($model_name,'component_')===false) {
 				#	debug_log(__METHOD__." Skipped  $current_tipo - $model_name ".to_string(), logger::DEBUG);
 				#	continue;
 				#}
 
 				# SELECCIÓN EN EL LENGUAJE ACTUAL
-				$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-				$current_lang 	= $RecordObj_dd->get_traducible() ==='no' ? DEDALO_DATA_NOLAN : $options->lang;
+				$ontology_node 	= new ontology_node($current_tipo);
+				$current_lang 	= $ontology_node->get_traducible() ==='no' ? DEDALO_DATA_NOLAN : $options->lang;
 				$strQuery_select .= "\n datos #>>'{components,$current_tipo,$options->data_to_be_used,$current_lang}' AS $current_tipo";
 				if($current_tipo !== end($fields)) $strQuery_select .= ',';
 			}
@@ -245,7 +245,7 @@
 
 			foreach ($fields as $current_tipo) {
 
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$model_name 	= ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 				$component 		= component_common::get_instance(
 					$model_name,
 					$current_tipo,
@@ -374,7 +374,7 @@
 
 						foreach ($fields as $current_tipo) {
 
-							$model_name	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							$model_name	= ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 							$component	= component_common::get_instance(
 								$model_name,
 								$current_tipo,

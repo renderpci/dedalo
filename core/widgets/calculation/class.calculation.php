@@ -149,8 +149,8 @@ class calculation extends widget_common {
 						$component_tipo	= $current_component->tipo;
 						$var_name		= $current_component->var_name;
 						$options		= isset($current_component->options) ? $current_component->options : null;
-						$component		= new RecordObj_dd($component_tipo);
-						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component		= new ontology_node($component_tipo);
+						$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 						$lang			= ($component->get_traducible()==='no')
 							? DEDALO_DATA_NOLAN
 							: DEDALO_DATA_LANG;
@@ -174,8 +174,8 @@ class calculation extends widget_common {
 						$component_tipo	= $current_component->tipo;
 						$var_name		= $current_component->var_name;
 						$options		=  isset($current_component->options) ? $current_component->options : null;
-						$component		= new RecordObj_dd($component_tipo);
-						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component		= new ontology_node($component_tipo);
+						$model_name		= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 						$lang			= ($component->get_traducible()==='no')
 							? DEDALO_DATA_NOLAN
 							: DEDALO_DATA_LANG;
@@ -194,8 +194,8 @@ class calculation extends widget_common {
 							$component_tipo	= $current_component->tipo;
 							$var_name		= $current_component->var_name;
 							$options		=  isset($current_component->options) ? $current_component->options : null;
-							$component		= new RecordObj_dd($component_tipo);
-							$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+							$component		= new ontology_node($component_tipo);
+							$model_name	= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 							$lang			= ($component->get_traducible()==='no')
 								? DEDALO_DATA_NOLAN
 								: DEDALO_DATA_LANG;
@@ -229,8 +229,8 @@ class calculation extends widget_common {
 					$options		= isset($current_component->options) ? $current_component->options : null;
 
 					// Component (component_json) where is stored source data, a json search_query_object
-						$component			= new RecordObj_dd($component_tipo);
-						$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component			= new ontology_node($component_tipo);
+						$model_name			= ontology_node::get_modelo_name_by_tipo($component_tipo,true);
 						$lang				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 						$current_component	= component_common::get_instance(
 							$model_name,
@@ -390,10 +390,10 @@ class calculation extends widget_common {
 
 		$current_section_tipo	= $search_options->section_tipo;
 		$current_tipo			= $search_options->component_tipo;
-		$model_name				= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+		$model_name				= ontology_node::get_modelo_name_by_tipo($current_tipo,true);
 
-		$RecordObj_dd			= new RecordObj_dd($current_tipo);
-		$traducible				= $RecordObj_dd->get_traducible();
+		$ontology_node			= new ontology_node($current_tipo);
+		$traducible				= $ontology_node->get_traducible();
 		$lang					= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 		# section_id filter
@@ -484,8 +484,8 @@ class calculation extends widget_common {
 		$current_section_tipo = $search_options->section_tipo;
 		$current_tipo 		  = $search_options->component_tipo;
 
-		$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-		$traducible 	= $RecordObj_dd->get_traducible();
+		$ontology_node 	= new ontology_node($current_tipo);
+		$traducible 	= $ontology_node->get_traducible();
 		$lang 			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 		if(!isset($_SESSION['dedalo']['config']['search_options'][$current_section_tipo])) {
