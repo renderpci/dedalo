@@ -500,13 +500,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 	/**
-	* GET_MODEL_NAME_BY_TIPO
+	* GET_MODELO_NAME_BY_TIPO
 	* Static version
 	* @param string $tipo
 	* @param bool $from_cache = true
 	* @return string $modelo_name
 	*/
-	public static function get_model_name_by_tipo( string $tipo, bool $from_cache=true ) : string {
+	public static function get_modelo_name_by_tipo( string $tipo, bool $from_cache=true ) : string {
 
 		static $model_name_by_tipo;
 
@@ -526,7 +526,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 		return $modelo_name;
-	}//end get_model_name_by_tipo
+	}//end get_modelo_name_by_tipo
 
 
 
@@ -927,7 +927,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 			// Exclude models optional
 			if (!empty($ar_exclude_models)) {
-				$modelo_name = RecordObj_dd::get_model_name_by_tipo($current_terminoID, true);
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID, true);
 				if (in_array($modelo_name, $ar_exclude_models)) {
 					continue; // Skip current model and children
 				}
@@ -1539,7 +1539,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		// try to resolve model. If empty, the tipo do not exists in jer_dd
-		$model = RecordObj_dd::get_model_name_by_tipo($tipo,true);
+		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		if (empty($model)) {
 			return false;
 		}
@@ -1888,7 +1888,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 					$item->{$property} = $tipo;
 					break;
 				case 'model':
-					// $item->{$property} = RecordObj_dd::get_model_name_by_tipo($tipo,true);
+					// $item->{$property} = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 					$item->{$property} = $RecordObj_dd->get_modelo_name();
 					break;
 				case 'model_tipo':
