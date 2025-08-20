@@ -1306,8 +1306,6 @@ class ontology_node extends ontology_record {
 
 
 		return $is_model_parsed;
-
-
 	}//end get_is_model
 
 
@@ -1588,10 +1586,10 @@ class ontology_node extends ontology_record {
 		$safe_tld	= safe_tld($this->tld);
 
 		// Find last id of current section
-			$table	= ontology_node::$table; // jer_dd | jer_dd_backup
-			$sql	= 'SELECT "tipo" FROM "'.$table.'" WHERE tld = \''.$safe_tld.'\'';
-			$result	= JSON_RecordObj_matrix::search_free($sql);
-			$value	= ($result === false)
+			$table		= ontology_node::$table; // jer_dd | jer_dd_backup
+			$sql_query	= 'SELECT "tipo" FROM "'.$table.'" WHERE tld = \''.$safe_tld.'\'';
+			$result		= JSON_RecordObj_matrix::search_free($sql_query);
+			$value		= ($result === false)
 				? null // Skip empty tables
 				: ((pg_num_rows($result)===0)
 					? null // Skip empty tables
