@@ -110,11 +110,11 @@ tool_ontology.prototype.build = async function(autoload=false) {
 
 
 /**
-* SET_RECORDS_IN_JER_DD
-* Call the API to process the ontology node into the jer_dd rows
+* set_records_in_dd_ontology
+* Call the API to process the ontology node into the dd_ontology rows
 * @return promise response
 */
-tool_ontology.prototype.set_records_in_jer_dd = async function() {
+tool_ontology.prototype.set_records_in_dd_ontology = async function() {
 
 	const self = this
 
@@ -125,7 +125,7 @@ tool_ontology.prototype.set_records_in_jer_dd = async function() {
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'set_records_in_jer_dd')
+		const source = create_source(self, 'set_records_in_dd_ontology')
 
 	// rqo
 		const rqo = {
@@ -149,13 +149,13 @@ tool_ontology.prototype.set_records_in_jer_dd = async function() {
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
-					dd_console("-> set_records_in_jer_dd API response:",'DEBUG',response);
+					dd_console("-> set_records_in_dd_ontology API response:",'DEBUG',response);
 				}
 
 				resolve(response)
 			})
 		})
-}//end set_records_in_jer_dd
+}//end set_records_in_dd_ontology
 
 
 

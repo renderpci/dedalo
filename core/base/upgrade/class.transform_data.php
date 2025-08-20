@@ -1446,7 +1446,7 @@ class transform_data {
 
 			// CLI process data
 				if ( running_in_cli()===true ) {
-					common::$pdata->action = 'assign_relations_from_jer_dd';
+					common::$pdata->action = 'assign_relations_from_dd_ontology';
 					common::$pdata->tld = $tld;
 					common::$pdata->memory = dd_memory_usage();
 					common::$pdata->counter++;
@@ -1456,11 +1456,11 @@ class transform_data {
 				}
 
 			// assign relationships between records (from jer_dd column 'relaciones')
-			ontology::assign_relations_from_jer_dd( $tld );
+			ontology::assign_relations_from_dd_ontology( $tld );
 
 			// CLI process data
 				if ( running_in_cli()===true ) {
-					common::$pdata->action = 'reorder_nodes_from_jer_dd';
+					common::$pdata->action = 'reorder_nodes_from_dd_ontology';
 					common::$pdata->memory = dd_memory_usage();
 					common::$pdata->msg = $base_msg . ' ['.common::$pdata->action .' '. $tld . ']';
 					// send to output
@@ -1468,7 +1468,7 @@ class transform_data {
 				}
 
 			// set child order (from jer_dd column 'norden')
-			ontology::reorder_nodes_from_jer_dd( $tld );
+			ontology::reorder_nodes_from_dd_ontology( $tld );
 		}
 
 		// CLI process data

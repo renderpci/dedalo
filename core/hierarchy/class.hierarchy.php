@@ -325,7 +325,7 @@ class hierarchy extends ontology {
 					$component_parent->Save();
 
 				// insert the node in jer_dd
-					ontology::insert_jer_dd_record($tld2.'0', 1);
+					ontology::insert_dd_ontology_record($tld2.'0', 1);
 
 			// virtual model section
 				// modify the section data to use it as model.
@@ -372,7 +372,7 @@ class hierarchy extends ontology {
 						$component_model_parent->Save();
 
 					// insert the model node in jer_dd
-						ontology::insert_jer_dd_record($tld2.'0', 2);
+						ontology::insert_dd_ontology_record($tld2.'0', 2);
 
 			// set permissions. Allow current user access to created default sections
 			// as es1, es2

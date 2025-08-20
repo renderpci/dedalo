@@ -18,17 +18,17 @@ class ontology {
 
 	/**
 	* CREATE_ONTOLOGY_RECORDS
-	* Iterate all given $jer_dd_rows and creates a section row for each one
+	* Iterate all given $dd_ontology_rows and creates a section row for each one
 	* @see transform_data::generate_all_main_ontology_sections
-	* @param array $jer_dd_rows
+	* @param array $dd_ontology_rows
 	* @return bool
 	* @test true
 	*/
-	public static function create_ontology_records( array $jer_dd_rows ) : bool {
+	public static function create_ontology_records( array $dd_ontology_rows ) : bool {
 
-		foreach ($jer_dd_rows as $jer_dd_row) {
+		foreach ($dd_ontology_rows as $dd_ontology_row) {
 
-			$id = get_section_id_from_tipo( $jer_dd_row->tipo );
+			$id = get_section_id_from_tipo( $dd_ontology_row->tipo );
 			// Skip main section of the tld.
 			// main section is defined with the tld  + 0 as dd0,rsc0, etc.
 			// this definition will be stored in ontology main
@@ -39,11 +39,11 @@ class ontology {
 				continue;
 			}
 
-			$result = self::add_section_record_from_jer_dd( $jer_dd_row );
+			$result = self::add_section_record_from_dd_ontology( $dd_ontology_row );
 			if (!$result) {
 				debug_log(__METHOD__
 					. " Error adding section " . PHP_EOL
-					. ' jer_dd_row: ' . to_string($jer_dd_row)
+					. ' dd_ontology_row: ' . to_string($dd_ontology_row)
 					, logger::ERROR
 				);
 			}
@@ -56,48 +56,45 @@ class ontology {
 
 
 	/**
-	* ADD_SECTION_RECORD_FROM_JER_DD
-	* Transforms jer_dd row (from DDBB) into matrix ontology row (section record).
-	* @param object $jer_dd_row
+	* ADD_SECTION_RECORD_FROM_DD_ONTOLOGY
+	* Transforms dd_ontology row (from DDBB) into matrix ontology row (section record).
+	* @param object $dd_ontology_row
 	* Sample:
 		* {
 		*	"id": "16028305",
 		*	"tipo": "test102",
 		*	"parent": "test45",
-		*	"modelo": "dd1747",
+		* 	"term": "{\"lg-spa\": \"section_id\"}"
+		*	"model_tipo": "dd1747",
 		*	"is_model": false,
-		*	"esdescriptor": "si",
-		*	"visible": "si",
 		*	"order_number": "28",
 		*	"tld": "test",
 		*	"is_translatable": false,
-		*	"relaciones": "null",
+		*	"relations": "null",
 		*	"propiedades": null,
 		*	"properties": null,
-		*	"term2": null,
-		*	"term": "{\"lg-spa\": \"section_id\"}"
+		*
 		* }
 	* @param string $target_section_tipo
 	* @return bool
 	* @test true
 	*/
-	public static function add_section_record_from_jer_dd( object $jer_dd_row ) : bool {
+	public static function add_section_record_from_dd_ontology( object $dd_ontology_row ) : bool {
 
 		// vars
-		$tld					= $jer_dd_row->tld;
+		$tld					= $dd_ontology_row->tld;
 		$target_section_tipo	= self::map_tld_to_target_section_tipo( $tld );
-		$node_tipo				= $jer_dd_row->tipo;
-		$parent					= $jer_dd_row->parent;
-		$model					= $jer_dd_row->modelo;
-		$is_model				= $jer_dd_row->is_model;
-		$is_descriptor			= $jer_dd_row->esdescriptor;
-		$translatable			= $jer_dd_row->is_translatable;
-		$relations				= !empty ( $jer_dd_row->relaciones )
-			? (json_handler::decode( $jer_dd_row->relaciones ) ?? [])
+		$node_tipo				= $dd_ontology_row->tipo;
+		$parent					= $dd_ontology_row->parent;
+		$model					= $dd_ontology_row->model_tipo;
+		$is_model				= $dd_ontology_row->is_model;
+		$translatable			= $dd_ontology_row->is_translatable;
+		$relations				= !empty ( $dd_ontology_row->relations )
+			? (json_handler::decode( $dd_ontology_row->relations ) ?? [])
 			: [];
-		$properties_v5			= !empty ( $jer_dd_row->propiedades ) ? json_decode( $jer_dd_row->propiedades ) : null;
-		$properties				= !empty ( $jer_dd_row->properties ) ? json_decode( $jer_dd_row->properties ) : new stdClass();
-		$term					= !empty ( $jer_dd_row->term ) ? json_decode( $jer_dd_row->term ) : new stdClass();
+		$properties_v5			= !empty ( $dd_ontology_row->propiedades ) ? json_decode( $dd_ontology_row->propiedades ) : null;
+		$properties				= !empty ( $dd_ontology_row->properties ) ? json_decode( $dd_ontology_row->properties ) : new stdClass();
+		$term					= !empty ( $dd_ontology_row->term ) ? json_decode( $dd_ontology_row->term ) : new stdClass();
 
 
 		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc.
@@ -154,6 +151,7 @@ class ontology {
 			}
 
 		// descriptor
+			//always with fixed data as yes, all ontology nodes are descriptors.
 			$is_descriptor_tipo			= 'ontology4';
 			$is_descriptor_model		= ontology_node::get_model_name_by_tipo( $is_descriptor_tipo  );
 			$is_descriptor_component	= component_common::get_instance(
@@ -166,8 +164,8 @@ class ontology {
 			);
 
 			$descriptor_locator = new locator();
-				$descriptor_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$descriptor_locator->set_section_id($is_descriptor === 'si' ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
+				$descriptor_locator->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
+				$descriptor_locator->set_section_id( NUMERICAL_MATRIX_VALUE_YES );
 
 			$dato = [$descriptor_locator];
 			$is_descriptor_component->set_dato( $dato );
@@ -308,8 +306,8 @@ class ontology {
 
 				$properties = $new_properties;
 
-				// update jer_dd record with the new properties
-				$ontology_node = new ontology_node($jer_dd_row->tipo);
+				// update dd_ontology record with the new properties
+				$ontology_node = new ontology_node($dd_ontology_row->tipo);
 				$ontology_node->get_properties(); // force load data
 				$ontology_node->set_properties($new_properties);
 				$ontology_node->update();
@@ -331,7 +329,7 @@ class ontology {
 
 
 		return true;
-	}//end add_section_record_from_jer_dd
+	}//end add_section_record_from_dd_ontology
 
 
 
@@ -410,15 +408,15 @@ class ontology {
 
 
 	/**
-	* ASSIGN_RELATIONS_FROM_JER_DD
-	* Once the matrix records of jer_dd parse is set,
+	* ASSIGN_RELATIONS_FROM_DD_ONTOLOGY
+	* Once the matrix records of dd_ontology parse is set,
 	* it is possible to assign the relations between nodes.
-	* Get the relations column in jer_dd and set it as component_portal locator pointed to other matrix ontology record.
+	* Get the relations column in dd_ontology and set it as component_portal locator pointed to other matrix ontology record.
 	* @param string $tld
 	* @return bool
 	* @test true
 	*/
-	public static function assign_relations_from_jer_dd( string $tld) : bool {
+	public static function assign_relations_from_dd_ontology( string $tld) : bool {
 
 		// target_section_tipo
 		$target_section_tipo = self::map_tld_to_target_section_tipo( $tld );
@@ -466,20 +464,20 @@ class ontology {
 
 
 		return true;
-	}//end assign_relations_from_jer_dd
+	}//end assign_relations_from_dd_ontology
 
 
 
 	/**
-	* REORDER_NODES_FROM_JER_DD
-	* Once the matrix records of jer_dd parse is set
+	* REORDER_NODES_FROM_DD_ONTOLOGY
+	* Once the matrix records of dd_ontology parse is set
 	* is possible assign the order between nodes.
-	* Find the ontology nodes as matrix rows and order by the jer_dd definition.
+	* Find the ontology nodes as matrix rows and order by the dd_ontology definition.
 	* @param string $tld
 	* @return bool
 	* @test true
 	*/
-	public static function reorder_nodes_from_jer_dd( string $tld ) : bool {
+	public static function reorder_nodes_from_dd_ontology( string $tld ) : bool {
 
 		// vars
 		$target_section_tipo = self::map_tld_to_target_section_tipo( $tld );
@@ -524,7 +522,7 @@ class ontology {
 
 
 		return true;
-	}//end reorder_nodes_from_jer_dd
+	}//end reorder_nodes_from_dd_ontology
 
 
 
@@ -636,8 +634,8 @@ class ontology {
 				? $ontology_main->section_id
 				: null ;
 
-		// create jer_dd node for section
-			ontology::create_jer_dd_ontology_section_node( $file_item );
+		// create dd_ontology node for section
+			ontology::create_dd_ontology_ontology_section_node( $file_item );
 
 		// matrix section
 			$main_section = section::get_instance(
@@ -654,11 +652,11 @@ class ontology {
 
 
 	/**
-	* CREATE_JER_DD_ONTOLOGY_SECTION_NODE
-	* Creates new jer_dd row with ontologytype tld for the local tlds
+	* CREATE_DD_ONTOLOGY_ONTOLOGY_SECTION_NODE
+	* Creates new dd_ontology row with ontologytype tld for the local tlds
 	* Used for the creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc.
-	* A jer_dd row is needed to represent it.
-	* Note that action 'ontology_node->insert()' delete the existing record in jer_dd, and creates a new one
+	* A dd_ontology row is needed to represent it.
+	* Note that action 'ontology_node->insert()' delete the existing record in dd_ontology, and creates a new one
 	* @param object $file_item
 	* {
 	* 	tld: string
@@ -669,7 +667,7 @@ class ontology {
 	* @return string|false|null $term_id
 	* @test true
 	*/
-	public static function create_jer_dd_ontology_section_node( object $file_item ) : string|false|null {
+	public static function create_dd_ontology_ontology_section_node( object $file_item ) : string|false|null {
 
 		// file item properties
 			$tld					= $file_item->tld;
@@ -692,14 +690,12 @@ class ontology {
 
 			$ontology_node = new ontology_node($tipo);
 				$ontology_node->set_parent($parent_grouper_tipo);
-				$ontology_node->set_modelo('dd6');
+				$ontology_node->set_model_tipo('dd6');
 				$ontology_node->set_model('section');
 				$ontology_node->set_is_model(false);
-				$ontology_node->set_esdescriptor('si');
-				$ontology_node->set_visible('si');
 				$ontology_node->set_tld($tld);
 				$ontology_node->set_is_translatable(false);
-				$ontology_node->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+				$ontology_node->set_relations( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 				// Properties, add main_tld as official tld definitions
 				// and local section color
@@ -721,7 +717,7 @@ class ontology {
 
 
 		return $term_id;
-	}//end create_jer_dd_ontology_section_node
+	}//end create_dd_ontology_ontology_section_node
 
 
 
@@ -781,20 +777,18 @@ class ontology {
 			$parent_section_id	= get_section_id_from_tipo( $parent_group );
 			$parent_node_tipo	= $parent_tld.'0';
 
-			// jer_dd. Check if the parent already exists in jer_dd
+			// dd_ontology. Check if the parent already exists in dd_ontology
 				$parent_ontology_row_data = ontology_node::get_row_data( $parent_node_tipo );
 				if( empty($parent_ontology_row_data) ){
 
 					$ontology_node = new ontology_node($parent_node_tipo);
 						$ontology_node->set_parent($parent_group);
-						$ontology_node->set_modelo('dd6');
+						$ontology_node->set_model_tipo('dd6');
 						$ontology_node->set_model('section');
 						$ontology_node->set_is_model(false);
-						$ontology_node->set_esdescriptor('si');
-						$ontology_node->set_visible('si');
 						$ontology_node->set_tld($parent_tld);
 						$ontology_node->set_is_translatable(false);
-						$ontology_node->set_relaciones( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+						$ontology_node->set_relations( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 					// Properties, add main_tld as official tld definitions
 					// and local section color
@@ -803,7 +797,7 @@ class ontology {
 							$properties->color		= '#2d8894';
 						$ontology_node->set_properties($properties);
 
-					// insert jer_dd record
+					// insert dd_ontology record
 					$ontology_node->insert();
 				}
 
@@ -865,7 +859,7 @@ class ontology {
 			// parent
 			// new way v6.5. Save parent directly
 				$parent_tipo		= 'ontology15';
-				$parent_model		= 'component_relation_parent'; // don't use the jer_dd resolution here, may not exist yet.
+				$parent_model		= 'component_relation_parent'; // don't use the dd_ontology resolution here, may not exist yet.
 				$component_parent	= component_common::get_instance(
 					$parent_model, // string model
 					$parent_tipo, // string tipo
@@ -887,8 +881,8 @@ class ontology {
 					$component_parent->Save();
 				}
 
-		// create the jer_dd node
-			ontology::insert_jer_dd_record( $section_tipo, $typology_id );
+		// create the dd_ontology node
+			ontology::insert_dd_ontology_record( $section_tipo, $typology_id );
 
 		// return the parent grouper as `ontologytype14
 			$parent_grouper_tipo = $tld.$typology_id;
@@ -1250,30 +1244,30 @@ class ontology {
 
 
 	/**
-	* PARSE_SECTION_RECORD_TO_JER_DD_RECORD
+	* PARSE_SECTION_RECORD_TO_DD_ONTOLOGY_RECORD
 	* Build every component in the section given ($section_tipo, $section_id).
-	* Get the component_data and parse as column of jer_dd format.
+	* Get the component_data and parse as column of dd_ontology format.
 	* @param string $section_tipo
 	* @param string|int $section_id
-	* @return ontology_node|null $jer_dd_record
+	* @return ontology_node|null $dd_ontology_record
 	* 	returns null if section tld value is empty
 	* @test true
 	*/
-	public static function parse_section_record_to_jer_dd_record( string $section_tipo, string|int $section_id ) : ?ontology_node {
+	public static function parse_section_record_to_dd_ontology_record( string $section_tipo, string|int $section_id ) : ?ontology_node {
 		$start_time=start_time();
 
 		// overwrite locator
 		// It check if exist any definition in local installation that overwrite the main node.
 		// Local ontology nodes can overwrite the main definitions with specific properties, names, etc.
 		// Local ontology nodes are defined into the `localontology0` section and are not part of the shared ontology.
-		// $overwrite_locator point to the local definition and is used to create the jer_dd node with the overwrite data.
+		// $overwrite_locator point to the local definition and is used to create the dd_ontology node with the overwrite data.
 		// if the main node has not any overwrite node the $overwrite_locator is null and the main node is used (default behavior)
 			$overwrite_locator = self::get_overwrite( $section_tipo, $section_id );
 
 		// node locator (main node)
-		$locator = new locator();
-			$locator->set_section_tipo($section_tipo);
-			$locator->set_section_id($section_id);
+			$locator = new locator();
+				$locator->set_section_tipo($section_tipo);
+				$locator->set_section_id($section_id);
 
 		// tld
 			// get the tld component first, is necessary to create the ontology_node (use term_id as tld +  section_id)
@@ -1304,8 +1298,8 @@ class ontology {
 			$tipo	= $tld . $section_id;
 
 			// create the ontology_node with the term_id and set the tld
-			$jer_dd_record = new ontology_node( $tipo );
-			$jer_dd_record->set_tld( $tld );
+			$dd_ontology_record = new ontology_node( $tipo );
+			$dd_ontology_record->set_tld( $tld );
 
 		// parent
 		// parent needs to know the parent tld of the locator to build the term_id
@@ -1351,7 +1345,7 @@ class ontology {
 				$parent = ( $parent_locator->section_tipo !== DEDALO_ONTOLOGY_SECTION_TIPO )
 					? ontology::get_term_id_from_locator($parent_locator)
 					: null; // main root nodes of the ontology dd1 and dd2
-				$jer_dd_record->set_parent( $parent );
+				$dd_ontology_record->set_parent( $parent );
 			}
 
 		// is model
@@ -1378,11 +1372,11 @@ class ontology {
 			}else{
 
 				$is_model_locator = reset($is_model_data);
-				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
+				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? true : false;
 			}
 
 			$is_model = $is_model ?? false; // default value
-			$jer_dd_record->set_is_model( $is_model );
+			$dd_ontology_record->set_is_model( $is_model );
 
 		// model. Get the model tld and id
 			$model_tipo	= 'ontology6';
@@ -1432,25 +1426,8 @@ class ontology {
 			// set the model columns with the data resolution
 			// it could be the model of node when the node is not a model with its resolution
 			// or null when the node is a model (as `component_imput_text`)
-			$jer_dd_record->set_modelo( $model_tipo_resolution );
-			$jer_dd_record->set_model( $model_resolution );
-
-		// Descriptor
-			$descriptor = null;
-
-			// 1 get the descriptor value data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$descriptor = self::resolve_descriptor( $overwrite_locator );
-			}
-			// 2 if the descriptor value has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the descriptor value with the main node definition.
-			$descriptor = $descriptor ?? self::resolve_descriptor( $locator );
-
-			$jer_dd_record->set_esdescriptor( $descriptor );
-
-		// Visibility
-			$jer_dd_record->set_visible( 'si' );
+			$dd_ontology_record->set_model_tipo( $model_tipo_resolution );
+			$dd_ontology_record->set_model( $model_resolution );
 
 		// Order
 			$order_tipo		= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
@@ -1491,11 +1468,11 @@ class ontology {
 				}else{
 
 					$order_value = reset($order_data);
-					$jer_dd_record->set_order_number( (int)$order_value );
+					$dd_ontology_record->set_order_number( (int)$order_value );
 				}
 			}
 
-		// translatable
+		// is_translatable
 			$translatable = null;
 
 			// 1 get the translatable value data from local overwrite node if exist overwrite node as local definition.
@@ -1507,7 +1484,7 @@ class ontology {
 			// get the translatable value with the main node definition.
 			$translatable = $translatable ?? self::resolve_translatable( $locator );
 
-			$jer_dd_record->set_is_translatable( $translatable );
+			$dd_ontology_record->set_is_translatable( $translatable );
 
 		// relations
 			$relations = null;
@@ -1521,7 +1498,7 @@ class ontology {
 			// get the relations with the main node definition.
 			$relations = $relations ?? self::resolve_relations( $locator );
 
-			$jer_dd_record->set_relaciones( $relations );
+			$dd_ontology_record->set_relations( $relations );
 
 		// Properties V5
 			$properties_v5_tipo	= 'ontology19';
@@ -1543,7 +1520,7 @@ class ontology {
 				$properties_v5 = null;
 			}
 
-			$jer_dd_record->set_propiedades( $properties_v5 );
+			$dd_ontology_record->set_propiedades( $properties_v5 );
 
 		// Properties
 			$properties_tipo = 'ontology18';
@@ -1618,7 +1595,7 @@ class ontology {
 			}
 
 			// set the term into jet_dd_record
-			$jer_dd_record->set_properties( $properties );
+			$dd_ontology_record->set_properties( $properties );
 
 		// term
 			$term = null;
@@ -1633,22 +1610,22 @@ class ontology {
 			$term = $term ?? self::resolve_term( $locator );
 
 			// set the term into jet_dd_record
-			$jer_dd_record->set_term( $term );
+			$dd_ontology_record->set_term( $term );
 
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				$total =  exec_time_unit($start_time).' ms';
 				debug_log(__METHOD__
-					.' jer_dd_record exec_time_unit: ' . $total . " [$section_tipo-$section_id]" . PHP_EOL
+					.' dd_ontology_record exec_time_unit: ' . $total . " [$section_tipo-$section_id]" . PHP_EOL
 					.' overwrite_locator: ' . json_encode($overwrite_locator)
 					, logger::DEBUG
 				);
 			}
 
 
-		return $jer_dd_record;
-	}//end parse_section_record_to_jer_dd_record
+		return $dd_ontology_record;
+	}//end parse_section_record_to_dd_ontology_record
 
 
 
@@ -1680,50 +1657,13 @@ class ontology {
 	}//end get_node_component_data
 
 
-	/**
-	* RESOLVE_DESCRIPTOR
-	* Get the descriptor value of the node.
-	* the descriptor value is defined as 'si' or 'not' based with the section_id of the locator:
-	* section_id = 1 -> si
-	* section_id = 2 -> no
-	* @param locator $locator
-	* @return string $descriptor
-	*/
-	private static function resolve_descriptor( locator $locator ) : string {
-
-		$is_descriptor_tipo = 'ontology4';
-
-		// get the descriptor data of the node.
-		$is_descriptor_data =  self::get_node_component_data( $locator, $is_descriptor_tipo );
-
-		$descriptor = 'si'; // default value
-
-		if(empty($is_descriptor_data)){
-
-			debug_log(__METHOD__
-				. " Record without is_descriptor_data " . PHP_EOL
-				. ' section_tipo       : ' . to_string($locator->section_tipo). PHP_EOL
-				. ' section_id         : ' . to_string($locator->section_id). PHP_EOL
-				. ' is_descriptor_tipo : ' . to_string($is_descriptor_tipo)
-				, logger::DEBUG
-			);
-
-		}else{
-			$is_descriptor_data_locator	= reset($is_descriptor_data);
-			$descriptor = (int)$is_descriptor_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? 'si' : 'no';
-		}
-
-		return $descriptor;
-	}//end resolve_descriptor
-
-
 
 	/**
 	* RESOLVE_TRANSLATABLE
 	* Get the translatable value of the node.
-	* the translatable value is defined as 'si' or 'not' based with the section_id of the locator:
-	* section_id = 1 -> si
-	* section_id = 2 -> no
+	* the translatable value is defined as true or false based with the section_id of the locator:
+	* section_id = 1 -> true
+	* section_id = 2 -> false
 	* @param locator $locator
 	* @return string $translatable
 	*/
@@ -1949,8 +1889,8 @@ class ontology {
 
 
 	/**
-	* INSERT_JER_DD_RECORD
-	* Parses the section record and inserts it into jer_dd
+	* INSERT_DD_ONTOLOGY_RECORD
+	* Parses the section record and inserts it into dd_ontology
 	* If the target registry already exists, it is deleted and a new one is created.
 	* @param string $section_tipo
 	* @param string|int $section_id
@@ -1958,11 +1898,11 @@ class ontology {
 	* 	returns null if section tld value is empty
 	* @test true
 	*/
-	public static function insert_jer_dd_record( string $section_tipo, string|int $section_id ) : ?string {
+	public static function insert_dd_ontology_record( string $section_tipo, string|int $section_id ) : ?string {
 		$start_time=start_time();
 
-		$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $section_tipo, $section_id );
-		if (empty($jer_dd_record)) {
+		$dd_ontology_record = ontology::parse_section_record_to_dd_ontology_record( $section_tipo, $section_id );
+		if (empty($dd_ontology_record)) {
 			debug_log(__METHOD__
 				. " Error on get ontology_node  " . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
@@ -1972,24 +1912,24 @@ class ontology {
 			return null;
 		}
 
-		$term_id = $jer_dd_record->insert();
+		$term_id = $dd_ontology_record->insert();
 
 		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__
-				. " Total time insert_jer_dd_record: " . exec_time_unit($start_time,'ms').' ms'
+				. " Total time insert_dd_ontology_record: " . exec_time_unit($start_time,'ms').' ms'
 				, logger::DEBUG
 			);
 		}
 
 
 		return $term_id;
-	}//end insert_jer_dd_record
+	}//end insert_dd_ontology_record
 
 
 
 	/**
-	* SET_RECORDS_IN_JER_DD
-	* Insert a group of `matrix_ontology` records into `jer_dd`
+	* SET_RECORDS_IN_DD_ONTOLOGY
+	* Insert a group of `matrix_ontology` records into `dd_ontology`
 	* use a SQO given to search the group and process it.
 	* @param object $sqo
 	* @return object $response
@@ -2000,7 +1940,7 @@ class ontology {
 	* }
 	* @test true
 	*/
-	public static function set_records_in_jer_dd( object $sqo ) : object {
+	public static function set_records_in_dd_ontology( object $sqo ) : object {
 		$start_time=start_time();
 
 		$response = new stdClass();
@@ -2023,7 +1963,7 @@ class ontology {
 		// Check if we have records to process
 		if (empty($ar_records) || !is_array($ar_records)) {
 			$response->result	= true;
-			$response->msg		= 'OK. No records found to process [set_records_in_jer_dd] ' .$sqo->section_tipo;
+			$response->msg		= 'OK. No records found to process [set_records_in_dd_ontology] ' .$sqo->section_tipo;
 			$response->msg		.= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
 			$response->total	= 0;
 			return $response;
@@ -2048,10 +1988,10 @@ class ontology {
 				$tld = ontology::get_main_tld($section_id, $section_tipo);
 
 				// if current ontology is not active (is not in the active tld list)
-				// all tld records must be deleted from 'jer_dd' table
+				// all tld records must be deleted from 'dd_ontology' table
 				if (!in_array($tld, $active_tld)) {
 
-					// remove. To delete all jer_ddd records for this tld
+					// remove. To delete all dd_ontologyd records for this tld
 
 					// Inactive main ontology TLD nodes must be deleted to prevent inconsistent resolutions
 					// in request config, SQO etc.
@@ -2059,12 +1999,12 @@ class ontology {
 					// remove any other things than tld.
 						$safe_tld = safe_tld( $tld );
 
-					// Delete the jer_dd nodes
-						$deleted_jer_dd_nodes = ontology_node::delete_tld_nodes( $safe_tld );
+					// Delete the dd_ontology nodes
+						$deleted_dd_ontology_nodes = ontology_node::delete_tld_nodes( $safe_tld );
 
-						if ( $deleted_jer_dd_nodes===false ) {
+						if ( $deleted_dd_ontology_nodes===false ) {
 							$response->errors[] = 'unable to delete tld';
-							$response->msg .= 'Error deleting jer_dd [1] for the tld: '.$tld;
+							$response->msg .= 'Error deleting dd_ontology [1] for the tld: '.$tld;
 							return $response;
 						}
 
@@ -2076,7 +2016,7 @@ class ontology {
 
 					$typology_id	= ontology::get_main_typology_id($tld);
 					$name_data		= ontology::get_main_name_data($tld);
-					$term_id		= ontology::create_jer_dd_ontology_section_node((object)[
+					$term_id		= ontology::create_dd_ontology_ontology_section_node((object)[
 						'tld'					=> $tld,
 						'typology_id'			=> $typology_id,
 						'name_data'				=> $name_data,
@@ -2088,11 +2028,11 @@ class ontology {
 
 				// regular matrix_ontology_records
 
-				$term_id = ontology::insert_jer_dd_record( $section_tipo, $section_id );
+				$term_id = ontology::insert_dd_ontology_record( $section_tipo, $section_id );
 			}
 
 			if( empty($term_id ) ){
-				$response->errors[] = 'Failed insert into jer_dd with section_tipo: ' . $section_tipo .' section_id: '. $section_id;
+				$response->errors[] = 'Failed insert into dd_ontology with section_tipo: ' . $section_tipo .' section_id: '. $section_id;
 			}else{
 				$processed_count++;
 			}
@@ -2100,7 +2040,7 @@ class ontology {
 
 		if( empty($response->errors) ){
 			$response->result			= true;
-			$response->msg				= 'OK. Request done successfully [set_records_in_jer_dd] ' .to_string($sqo->section_tipo);
+			$response->msg				= 'OK. Request done successfully [set_records_in_dd_ontology] ' .to_string($sqo->section_tipo);
 			$response->msg				.= ' | '. exec_time_unit($start_time,'ms').' ms';
 			$response->total			= count($ar_records);
 			$response->processed_count	= $processed_count;
@@ -2108,7 +2048,7 @@ class ontology {
 			// Partial success case
 			if($processed_count > 0){
 				$response->result	= true; // Consider partial success as success
-				$response->msg		= 'Partial success. Some records processed [set_records_in_jer_dd] ' .$sqo->section_tipo;
+				$response->msg		= 'Partial success. Some records processed [set_records_in_dd_ontology] ' .$sqo->section_tipo;
 				$response->msg	   .= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
 				$response->total	= $processed_count;
 			}else{
@@ -2118,19 +2058,19 @@ class ontology {
 
 
 		return $response;
-	}//end set_records_in_jer_dd
+	}//end set_records_in_dd_ontology
 
 
 
 	/**
-	* REGENERATE_RECORDS_IN_JER_DD
-	* Insert a group of `matrix_ontology` records into `jer_dd`
+	* REGENERATE_RECORDS_IN_DD_ONTOLOGY
+	* Insert a group of `matrix_ontology` records into `dd_ontology`
 	* use a given SQO to search the group and process it.
 	* @param array $tld
 	* @return object $response
 	* @test true
 	*/
-	public static function regenerate_records_in_jer_dd( array $tld ) : object {
+	public static function regenerate_records_in_dd_ontology( array $tld ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -2141,7 +2081,7 @@ class ontology {
 			$backup = ontology_node::create_bk_table( $tld );
 
 			if($backup===false){
-				$response->errors[] ='Impossible to create the jer_dd backup previous to regenerate the tlds: '.to_string( $tld );
+				$response->errors[] ='Impossible to create the dd_ontology backup previous to regenerate the tlds: '.to_string( $tld );
 				return $response;
 			}
 
@@ -2161,21 +2101,21 @@ class ontology {
 			$search_response	= $search->search();
 			$ar_records			= $search_response->ar_records;
 
-		// 2 create the jer_dd nodes of all matrix records
-			$jer_dd_records = [];
+		// 2 create the dd_ontology nodes of all matrix records
+			$dd_ontology_records = [];
 			foreach ($ar_records as $current_record) {
 
 				$current_section_tipo	= $current_record->section_tipo;
 				$current_section_id		= $current_record->section_id;
 
 				// ontology_node item
-				$jer_dd_record = ontology::parse_section_record_to_jer_dd_record( $current_section_tipo, $current_section_id );
+				$dd_ontology_record = ontology::parse_section_record_to_dd_ontology_record( $current_section_tipo, $current_section_id );
 
-				if( empty($jer_dd_record ) ){
+				if( empty($dd_ontology_record ) ){
 					ontology_node::delete_bk_table();
-					$response->errors[] = 'Failed regenerate jer_dd with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
+					$response->errors[] = 'Failed regenerate dd_ontology with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
 					debug_log(__METHOD__
-						. " Error generating jer_dd with section_tipo " . PHP_EOL
+						. " Error generating dd_ontology with section_tipo " . PHP_EOL
 						. ' current_section_tipo: ' . to_string($current_section_tipo) . PHP_EOL
 						. ' current_section_id: ' . to_string($current_section_id)
 						, logger::ERROR
@@ -2183,7 +2123,7 @@ class ontology {
 					return $response;
 				}
 
-				$jer_dd_records[] = $jer_dd_record;
+				$dd_ontology_records[] = $dd_ontology_record;
 			}
 
 		// 3 delete all tld records
@@ -2193,11 +2133,11 @@ class ontology {
 
 		// 4 insert the new nodes of the given tld
 			$total_insert = 0;
-			foreach ($jer_dd_records as $jer_dd_record) {
+			foreach ($dd_ontology_records as $dd_ontology_record) {
 
-				$insert_result = $jer_dd_record->insert();
-				// $jer_dd_record->get_tld(); // force to load
-				// $insert_result = $jer_dd_record->update();
+				$insert_result = $dd_ontology_record->insert();
+				// $dd_ontology_record->get_tld(); // force to load
+				// $insert_result = $dd_ontology_record->update();
 
 				// error inserting
 				// recovery al tld from bk table.
@@ -2206,7 +2146,7 @@ class ontology {
 					ontology_node::restore_from_bk_table($tld);
 					// delete bk table
 					ontology_node::delete_bk_table();
-					$response->errors[] = 'Failed inserting jer_dd restoring previous data in jer_dd';
+					$response->errors[] = 'Failed inserting dd_ontology restoring previous data in dd_ontology';
 					return $response;
 				}
 
@@ -2248,12 +2188,12 @@ class ontology {
 				$response->result	= true;
 				$response->msg		= 'OK. Request done successfully';
 			}
-			// total_insert jer_dd records
+			// total_insert dd_ontology records
 			$response->total_insert = $total_insert;
 
 
 		return $response;
-	}//end regenerate_records_in_jer_dd
+	}//end regenerate_records_in_dd_ontology
 
 
 
@@ -2262,7 +2202,7 @@ class ontology {
 	* Resolves ontology TLD from main record value and
 	* deletes all ontology records.
 	* It deletes given main section and deletes all ontology records in
-	* `matrix_ontology` and `jer_dd` with the main `tld`.
+	* `matrix_ontology` and `dd_ontology` with the main `tld`.
 	* Therefore, removes all references to the tld of the main ontology or hierarchy.
 	* It is used to update the ontology.
 	* @param object $options
@@ -2441,7 +2381,7 @@ class ontology {
 	/**
 	* DELETE_ONTOLOGY
 	* Delete all ontology references with `tld` given.
-	* Remove the `matrix_ontology` and `jer_dd` nodes of given `tld`
+	* Remove the `matrix_ontology` and `dd_ontology` nodes of given `tld`
 	* It also delete the main ontology section.
 	* @param string $tld
 	* @return object $response
@@ -2461,12 +2401,12 @@ class ontology {
 		// remove any other things than tld.
 			$safe_tld = safe_tld( $tld );
 
-		// 1 Delete the jer_dd nodes
-			$deleted_jer_dd = ontology_node::delete_tld_nodes( $safe_tld );
+		// 1 Delete the dd_ontology nodes
+			$deleted_dd_ontology = ontology_node::delete_tld_nodes( $safe_tld );
 
-			if ( $deleted_jer_dd===false ) {
+			if ( $deleted_dd_ontology===false ) {
 				$response->errors[] = 'unable to delete tld';
-				$response->msg .= 'Error deleting jer_dd [1] for the tld: '.$tld;
+				$response->msg .= 'Error deleting dd_ontology [1] for the tld: '.$tld;
 				return $response;
 			}
 
@@ -2476,7 +2416,7 @@ class ontology {
 
 			if ( empty($main_section) ) {
 				$response->errors[] = 'unable to get main_section from tld';
-				$response->msg .= 'Error deleting jer_dd [2] for the tld: '.$tld;
+				$response->msg .= 'Error deleting dd_ontology [2] for the tld: '.$tld;
 				return $response;
 			}
 
@@ -2539,7 +2479,7 @@ class ontology {
 
 
 	/**
-	* JER_DD_VERSION_IS_VALID
+	* DD_ONTOLOGY_VERSION_IS_VALID
 	* This method is a temporal check for legacy ontologies.
 	* It is used by updates.php to discriminate when display
 	* update Ontology warning.
@@ -2548,7 +2488,7 @@ class ontology {
 	* 	sample: '2025-12-31'
 	* @return bool
 	*/
-	public static function jer_dd_version_is_valid( string $min_date ) : bool {
+	public static function dd_ontology_version_is_valid( string $min_date ) : bool {
 
 		// Ontology version. Check if is valid version
 		$ontology_node	= new ontology_node('dd1', 'dd');
@@ -2596,7 +2536,7 @@ class ontology {
 
 
 		return true;
-	}//end jer_dd_version_is_valid
+	}//end dd_ontology_version_is_valid
 
 
 
