@@ -1010,12 +1010,9 @@ abstract class common {
 		$relations		= $ontology_node->get_relations();
 
 		$ar_related_by_model=array();
-		foreach ((array)$relaciones as $relation) foreach ((array)$relation as $model_tipo => $current_tipo) {
+		foreach ((array)$relations as $relation) foreach ((array)$relation as $current_tipo) {
 
-			# Calcularlo desde el model_tipo no es seguro, ya que el modelo de un componente pude cambiar y esto no actualiza el model_tipo de la relación
-			#$related_terms[$tipo] = RecordObj_dd::get_termino_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);	//$terminoID, $lang=NULL, $from_cache=false, $fallback=true
-			# Calcular siempre el modelo por seguridad
-			$current_model_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+			$current_model_name = ontology_node::get_modelo_name_by_tipo($current_tipo, true);
 			if ($strict===true) {
 				// Default compare equal
 				if ($current_model_name===$model_name) {
