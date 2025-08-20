@@ -97,7 +97,7 @@
 					$current_locator->section_tipo
 				);
 
-				$current_value = component_common::extract_component_value_fallback($current_component,$lang,true);
+				$current_value = $current_component->extract_component_value_fallback($lang, true);
 
 				#$ar_current_value[$current_locator->section_tipo.'_'.$current_locator->section_id] = $current_value;
 				$value_obj = new stdClass();
