@@ -165,8 +165,8 @@ abstract class RecordDataBoundObject {
 			$ar_query_select = array_map(function($el){
 				return '"'.$el.'"';
 			}, $this->arRelationMap);
-			// $select_fields	= implode(',', $ar_query_select);
-			$select_fields	= '*';
+			$select_fields	= implode(',', $ar_query_select);
+			// $select_fields	= '*';
 			$ar_query[]	= 'SELECT '.$select_fields;
 
 		// from
