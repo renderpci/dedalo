@@ -269,6 +269,9 @@
 			// span term_text
 			>.term_text {
 				cursor: pointer;
+				display: inline-block;
+				min-width: 1.5rem;
+				min-height: 1rem;
 
 				&:hover {
 					color: @color_orange_dedalo !important;
@@ -313,7 +316,7 @@
 			pointer-events: none;
 		}
 
-		.element_hilite > span {
+		.element_hilite > .term_text {
 			background-color: @color_hilite_yellow;
 			color: @color_black;
 			padding-left: 7px;

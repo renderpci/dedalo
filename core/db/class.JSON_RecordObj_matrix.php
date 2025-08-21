@@ -1,7 +1,30 @@
 <?php declare(strict_types=1);
 /**
 * JSON_RECORDOBJ_MATRIX
-*
+* Handles matrix table compatible records:
+* 	matrix
+* 	matrix_activities
+* 	matrix_activity
+* 	matrix_dataframe
+* 	matrix_dd
+* 	matrix_hierarchy
+* 	matrix_hierarchy_main
+* 	matrix_indexations
+* 	matrix_langs
+* 	matrix_layout
+* 	matrix_layout_dd
+* 	matrix_list
+* 	matrix_nexus
+* 	matrix_nexus_main
+* 	matrix_notes
+* 	matrix_ontology
+* 	matrix_ontology_main
+* 	matrix_profiles
+* 	matrix_projects
+* 	matrix_stats
+* 	matrix_test
+* 	matrix_tools
+* 	matrix_users
 */
 class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
