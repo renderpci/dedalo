@@ -38,44 +38,32 @@ $updates = new stdClass();
 $v=700; #####################################################################################
 $updates->$v = new stdClass();
 
-	# UPDATE TO
+	// UPDATE TO
 	$updates->$v->version_major			= 7;
 	$updates->$v->version_medium		= 0;
 	$updates->$v->version_minor			= 0;
 
-	# MINIMUM UPDATE FROM
+	// MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 7;
 	$updates->$v->update_from_minor		= 2;
 
-		// change the jer_dd structure in DDBB
-		// new map
-		// 	'terminoID'			=> 'tipo',
-		// 	'modelo'			=> 'model_tipo',
-		// 	'esmodelo'			=> 'is_model',
-		// 	'esdescriptor'		=> 'is_descriptor',
-		// 	'traducible'		=> 'translatable',
-		// 	'norden'			=> 'order',
-		// 	'relaciones'		=> 'relations'
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query ('
-			ALTER TABLE "jer_dd"
-				ADD COLUMN IF NOT EXISTS "tipo" character varying(32) NULL,
-				ADD COLUMN IF NOT EXISTS "model_tipo" character varying(8) NULL,
-				ADD COLUMN IF NOT EXISTS "is_model" boolean NULL,
-				ADD COLUMN IF NOT EXISTS "is_translatable" boolean NULL,
-				ADD COLUMN IF NOT EXISTS "order_number" numeric(4,0) NULL,
-				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL
-		');
+	// require a clean installation
+	 // it only could be 'clean' | null. Incremental option has not sense to be forced.
+		$updates->$v->force_update_mode = 'clean';
 
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query ('
-			UPDATE "jer_dd"
-				SET tipo 			= "terminoID",
-					model_tipo 		= modelo,
-					order_number	= norden,
-					is_model 		= CASE WHEN esmodelo = \'si\' THEN true ELSE false END,
-					is_translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END
-					;
-		');
+	// RUN_SCRIPTS
+		require_once dirname(dirname(__FILE__)) .'/upgrade/class.v6_to_v7.php';
+
+	// Pre update, changing jer_dd data in PostgreSQL with new format and set `dd_ontology` table.
+		$updates->$v->run_pre_scripts[] = (object)[
+			'info'			=> 'Set a new table `dd_ontology` with old `jer_dd` in PostgreSQL with new v7 schema',
+			'script_class'	=> 'v6_to_v7',
+			'script_method'	=> 'pre_update',
+			'stop_on_error'	=> true,
+			'script_vars'	=> [
+			] // Note that only ONE argument encoded is sent
+		];
 
 		// change the date column in matrix_activity as timestamp.
 		// date column will use to storage component_date data.
@@ -161,11 +149,7 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $columns));
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $comments));
 
-
-	// RUN_SCRIPTS
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.v6_to_v7.php';
-
-			// Only checks data without save
+		// Only checks data without save
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Check all data in PostgreSQL to use v7 new format (ONLY CHECKS DATA WITHOUT SAVE. STOPS THE UPDATE IF FOUND ERRORS)',
 				'script_class'	=> 'v6_to_v7',
@@ -177,7 +161,7 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-			// Update all data in PostgreSQL with new format
+		// Update all data in PostgreSQL with new format
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Update all data in PostgreSQL with new v7 format (SAVE DATA IGNORING FOUND ERRORS)',
 				'script_class'	=> 'v6_to_v7',
@@ -186,16 +170,6 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 					$ar_tables,
 					true // save option. On false, only data review is made. Not save
-				] // Note that only ONE argument encoded is sent
-			];
-
-			// Update jer_dd data in PostgreSQL with new format
-			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'Update jer_dd relations data in PostgreSQL with new v7 format',
-				'script_class'	=> 'v6_to_v7',
-				'script_method'	=> 'refactor_jer_dd',
-				'stop_on_error'	=> false,
-				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
 
