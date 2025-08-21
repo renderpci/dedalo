@@ -1,12 +1,16 @@
 <?php declare(strict_types=1);
 /**
-* ONTOLOGY_DATA
-* Handle ontology data basic actions:
-* 	Load record data
-* 	Update record data
-* 	Insert record with optional data
-* The definitions of tables and columns are used to
-* guarantee the consistency of the ontology table model.
+* Class ONTOLOGY_DATA
+*
+* Provides core operations for managing ontology records.
+* This class ensures data consistency by enforcing predefined
+* table and column definitions within the ontology model.
+*
+* Supported actions include:
+* - Loading record data
+* - Updating existing records
+* - Inserting new records with optional initial data
+*
 */
 abstract class ontology_data {
 
@@ -18,40 +22,35 @@ abstract class ontology_data {
 	public static $ontology_columns = [
 		'id'				=> true,
 		'tipo'				=> true,
-		'datos'				=> true,
-		'data'				=> true,
-		'relation'			=> true,
-		'string'			=> true,
-		'date'				=> true,
-		'iri'				=> true,
-		'geo'				=> true,
-		'number'			=> true,
-		'media'				=> true,
-		'misc'				=> true,
-		'relation_search'	=> true,
-		'counters'			=> true
+		'parent'			=> true,
+		'term'				=> true,
+		'model'				=> true,
+		'relations'			=> true,
+		'tld'				=> true,
+		'properties'		=> true,
+		'model_tipo'		=> true,
+		'is_model'			=> true,
+		'is_translatable'	=> true,
+		'propiedades'		=> true
 	];
 
 	// JSON columns to decode
 	public static $ontology_json_columns = [
-		'datos'				=> true,
-		'data'				=> true,
-		'relation'			=> true,
-		'string'			=> true,
-		'date'				=> true,
-		'iri'				=> true,
-		'geo'				=> true,
-		'number'			=> true,
-		'media'				=> true,
-		'misc'				=> true,
-		'relation_search'	=> true,
-		'counters'			=> true
+		'term'				=> true,
+		'relations'			=> true,
+		'properties'		=> true
 	];
 
 	// int columns to parse
 	public static $ontology_int_columns = [
 		'id'				=> true,
-		'section_id'		=> true
+		'order_number'		=> true
+	];
+
+	// bool columns to parse
+	public static $ontolgy_boolean = [
+		'is_model'			=> true,
+		'is_translatable'	=> true
 	];
 
 
@@ -118,11 +117,23 @@ abstract class ontology_data {
 
 		// Overwrite JSON parsed values and integers to return optimal data
 		foreach ($row as $key => $value) {
-			// parse JOSN values
-			if($value !== null && isset(self::$ontology_json_columns[$key])) {
-				$row[$key] = json_decode($value);
-			}elseif (isset(self::$ontology_int_columns[$key])) {
-				$row[$key] = (int)$value;
+			if ($value === null) {
+				continue;
+			}
+			// parse values
+			switch (true) {
+
+				case isset(self::$ontology_json_columns[$key]):
+					$row[$key] = json_decode($value);
+					break;
+
+				case isset(self::$ontology_int_columns[$key]):
+					$row[$key] = (int)$value;
+					break;
+
+				case isset(self::$ontolgy_boolean[$key]):
+					$row[$key] = ($value==='t');
+					break;
 			}
 		}
 
