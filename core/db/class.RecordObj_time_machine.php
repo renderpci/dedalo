@@ -1,14 +1,15 @@
 <?php declare(strict_types=1);
 /**
 * RECORDOBJ_TIME_MACHINE
-* Handles matrix_time_machine table records
+* Handles matrix_time_machine table compatible records:
+* 	matrix_time_machine
 */
 class RecordObj_time_machine extends RecordDataBoundObject {
 
 
 
-	// matrix vars
-	// protected $id_matrix;
+	// matrix columns
+	protected $bulk_process_id; // used for bulk processes as common id (section_id of the bulk process section)
 	protected $section_id;
 	protected $section_tipo;
 	protected $tipo;
@@ -16,17 +17,11 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected $timestamp;
 	protected $userID;
 	protected $state;
-	protected $section_id_key; // used by component_dataframe
-	protected $bulk_process_id; // used for bulk processes as common id (section_id of the bulk process section)
-
-
 	public $dato;
+	protected $section_id_key; // used by component_dataframe
 
-	// specific vars
-	protected $ar_time_machine_of_this;
-
-	// table  matrix_table
-	protected static $time_machine_matrix_table = 'matrix_time_machine';
+	// table matrix_table
+	protected static $matrix_table = 'matrix_time_machine';
 
 	static $save_time_machine_version = true;
 
@@ -41,7 +36,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 	# define current table (tr for this obj)
 	protected function defineTableName() : string {
-		return self::$time_machine_matrix_table;
+		return self::$matrix_table;
 	}
 	# define PrimaryKeyName (id)
 	protected function definePrimaryKeyName() : string {

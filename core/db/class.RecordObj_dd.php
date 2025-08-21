@@ -22,10 +22,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	protected $propiedades;
 	protected $properties;
 	protected $term;
-	protected $prefijo ;
+	protected $prefijo;
 
 	// fields external
-	protected $filtroTerminos ;
+	protected $filtroTerminos;
 
 	// optional specific loads
 	protected $ar_recursive_children_of_this = [];
