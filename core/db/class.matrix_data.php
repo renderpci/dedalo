@@ -1,12 +1,15 @@
 <?php declare(strict_types=1);
 /**
-* MATRIX_DATA
-* Handle matrix data basic actions:
-* 	Load record data
-* 	Update record data
-* 	Insert record with optional data
-* The definitions of tables and columns are used to
-* guarantee the consistency of the matrix table model.
+* Class MATRIX_DATA
+*
+* Provides core operations for managing matrix records.
+* This class ensures data consistency by enforcing predefined
+* table and column definitions within the matrix model.
+*
+* Supported actions include:
+* - Loading record data
+* - Updating existing records
+* - Inserting new records with optional initial data
 */
 abstract class matrix_data {
 
