@@ -4788,8 +4788,8 @@ abstract class common {
 						}
 
 					// time machine case
-						if ($tool->name==='tool_time_machine' && get_called_class()==='component_relation_parent') {
-							// skip tool for component_relation_parent because it has no data
+						if ($tool->name==='tool_time_machine' && get_called_class()==='component_relation_children') {
+							// skip tool for component_relation_children because it has no data
 							continue;
 						}
 
