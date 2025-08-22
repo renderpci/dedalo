@@ -590,20 +590,24 @@ class ontology_node extends ontology_record {
 	*/
 	public static function get_tipo_form_model_name( string $model ) : ?string {
 
-		// `where` clause of SQL query
-		$sql_code = 'is_model = true AND tld = \'dd\' AND term @> \'{"'.DEDALO_STRUCTURE_LANG.'":"'.$model.'"}\'';
+		$json_search = (object)[
+			'operator' => '@>',
+			'value' => '{"'.DEDALO_STRUCTURE_LANG.'":"'.$model.'"}'
+		];
 
-		$ontology_node	= new ontology_node(null, 'dd');
-		$ar_result		= $ontology_node->search(
-			[
-				'strPrimaryKeyName'	=> 'tipo',
-				'sql_code'			=> $sql_code,
-				'sql_limit'			=> 1
+		// search terms with given model
+		$result = ontology_data::search_ontology_data(
+			[	'is_model'	=> true,
+				'tld'		=> 'dd',
+				'term'		=> $json_search
 			],
-			ontology_node::$table // dd_ontology | dd_ontology_recovery
+			false, // order
+			1 // limit
 		);
-		$tipo = $ar_result[0] ?? null;
 
+		$tipo = ( $result===false )
+			? null
+			: ( $result[0] ?? null );
 
 		return $tipo;
 	}//end get_tipo_form_model_name
@@ -677,30 +681,21 @@ class ontology_node extends ontology_record {
 	public static function get_ar_tipo_by_model_name( string $model_name ) : array {
 
 		// static cache
-			static $ar_tipo_by_model_name;
-			$cache_uid = $model_name;
-			if(isset($ar_tipo_by_model_name[$cache_uid])) {
-				return $ar_tipo_by_model_name[$cache_uid];
-			}
-
-		$ar_result = [];
-
-		// model to tipo resolution
-			$model_tipo = ontology_node::get_tipo_form_model_name($model_name);
-			if (empty($model_tipo)) {
-				return $ar_result;
-			}
+		static $ar_tipo_by_model_name;
+		$cache_uid = $model_name;
+		if(isset($ar_tipo_by_model_name[$cache_uid])) {
+			return $ar_tipo_by_model_name[$cache_uid];
+		}
 
 		// search terms with given model
-			$ontology_node	= new ontology_node($model_tipo);
-			$ar_result		= $ontology_node->search([
-				'strPrimaryKeyName'	=> 'tipo',
-				'model_tipo'		=> $model_tipo
-			]);
+		$result = ontology_data::search_ontology_data([
+			'model' => $model_name
+		]);
+
+		$ar_result = ( $result===false ) ? [] : $result;
 
 		// static cache
 		$ar_tipo_by_model_name[$cache_uid] = $ar_result;
-
 
 		return $ar_result;
 	}//end get_ar_tipo_by_model_name
@@ -711,16 +706,16 @@ class ontology_node extends ontology_record {
 	* GET_AR_ALL_MODELS
 	* It is used in the edit thesaurus selector to assign model
 	* @return array $all_models
-	* 	Array of all models term_id as ["dd3","dd1226","dd1259",..]
+	* 	Array of all models tipo as ["dd3","dd1226","dd1259",..]
 	*/
 	public function get_ar_all_models() : array {
 
 		// search
-		$arguments = [
+		$result = ontology_data::search_ontology_data([
 			'is_model' => true
-		];
-		$ontology_node	= new ontology_node( NULL, $this->tld );
-		$all_models	= $ontology_node->search( $arguments );
+		]);
+
+		$all_models = ( $result===false ) ? [] : $result;
 
 		return $all_models;
 	}//end get_ar_all_models
@@ -732,20 +727,17 @@ class ontology_node extends ontology_record {
 	* Resolves all term id of given model tipo, like
 	* dd6 => ["oh1","dd917",..]
 	* @param string $modelo_tipo
-	* @param bool $use_cache = true
 	* @return array $ar_all_tipo
 	* 	Array of all term_id as ["oh1","dd917",..]
 	*/
-	public static function get_ar_all_tipo_of_model_tipo( string $model_tipo, bool $use_cache=true ) : array {
+	public static function get_ar_all_tipo_of_model_tipo( string $model_tipo ) : array {
 
 		// search
-		$arguments = [
+		$result = ontology_data::search_ontology_data([
 			'model_tipo' => $model_tipo
-		];
-		$ontology_node				= new ontology_node( NULL, 'dd' );
-		$ontology_node->use_cache	= $use_cache;
-		$ar_all_tipo				= $ontology_node->search($arguments);
+		]);
 
+		$ar_all_tipo = ( $result===false ) ? [] : $result;
 
 		return $ar_all_tipo;
 	}//end model_tipo
@@ -767,38 +759,24 @@ class ontology_node extends ontology_record {
 
 		// static cache
 		static $ar_children_of_this_stat_data;
-		$key = $this->tipo.'_'.$is_model.'_'.$order_by;
-		if($use_cache===true && isset($ar_children_of_this_stat_data[$key])) {
+		$key = $this->tipo;
+		if( isset($ar_children_of_this_stat_data[$key]) ) {
 			return $ar_children_of_this_stat_data[$key];
 		}
 
 		// search
+		$result = ontology_data::search_ontology_data(
+			[ 'parent' => $this->tipo ],
+			true // order by order_number asc
+		);
 
-		// arguments
-			$arguments = [];
-
-			$arguments['strPrimaryKeyName']	= 'tipo';
-			$arguments['parent']			= $this->tipo;
-
-			$valid_values = [true, false];
-
-			if ( !empty($is_model) && in_array($is_model, $valid_values) ) {
-				$arguments['is_model'] = $is_model;
-			}
-
-			if ( !empty($order_by) ) {
-				$arguments['order_by_asc'] = $order_by;
-			}
-
-		$this->use_cache = $use_cache;
-
-		$ar_children_of_this = $this->search($arguments);
+		$ar_children = ( $result===false ) ? [] : $result;
 
 		// store cache data
-		$ar_children_of_this_stat_data[$key] = $ar_children_of_this;
+		$ar_children_of_this_stat_data[$key] = $ar_children;
 
 
-		return $ar_children_of_this;
+		return $ar_children;
 	}//end get_ar_children_of_this
 
 
@@ -1002,15 +980,18 @@ class ontology_node extends ontology_record {
 			return $ar_siblings_of_this_data[$this->tipo];
 		}
 
-		$arguments['strPrimaryKeyName']	= 'tipo';
-		$arguments['parent']			= $this->get_parent();
-		$ar_siblings_of_this			= $this->search($arguments);
+		// search
+		$result = ontology_data::search_ontology_data([
+			'parent' => $this->get_parent()
+		]);
+
+		$siblings = ( $result===false ) ? [] : $result;
 
 		// store cache data
-		$ar_siblings_of_this_data[$this->tipo] = $ar_siblings_of_this;
+		$ar_siblings_of_this_data[$this->tipo] = $siblings;
 
 
-		return $ar_siblings_of_this;
+		return $siblings;
 	}//end get_ar_siblings_of_this
 
 
