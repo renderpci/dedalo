@@ -1874,7 +1874,6 @@ class section extends common {
 			$tipo, // string tipo
 			false, // bool is recursion
 			$exclude_models, // array ar_exclude_models
-			'order_number' // string order
 		);
 
 		return $ar_recursive_children;

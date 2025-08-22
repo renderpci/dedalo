@@ -558,7 +558,7 @@ abstract class common {
 
 		// tables
 			$ar_tables_with_relations = [];
-			$ar_children_tables = ontology_node::get_ar_children('dd627', 'order_number');
+			$ar_children_tables = ontology_node::get_ar_children('dd627');
 			foreach ($ar_children_tables as $table_tipo) {
 
 				// model
