@@ -108,14 +108,14 @@ class area extends area_common  {
 					if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 
 				// areas. Get the JSON format of the ontology
-
-					$areas[] = ontology_node::tipo_to_json_item($area_tipo, [
-						'tipo',
-						'model',
-						'parent',
-						'properties',
-						'label'
-					]);
+					$ontology_node = new ontology_node( $area_tipo );
+					$areas[] = (object)[
+						'tipo'			=> $ontology_node->get_tipo(),
+						'model'			=> $ontology_node->get_model(),
+						'parent'		=> $ontology_node->get_parent(),
+						'properties'	=> $ontology_node->get_properties(),
+						'label'			=> $ontology_node->get_label( DEDALO_APPLICATION_LANG )
+					];
 
 				// group_areas. get the all children areas and sections of current
 					$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
@@ -126,13 +126,14 @@ class area extends area_common  {
 						// skip the areas_deny
 						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
 
-						$areas[] = ontology_node::tipo_to_json_item($child_area_tipo, [
-							'tipo',
-							'model',
-							'parent',
-							'properties',
-							'label'
-						]);
+						$ontology_node = new ontology_node( $child_area_tipo );
+						$areas[] = (object)[
+							'tipo'			=> $ontology_node->get_tipo(),
+							'model'			=> $ontology_node->get_model(),
+							'parent'		=> $ontology_node->get_parent(),
+							'properties'	=> $ontology_node->get_properties(),
+							'label'			=> $ontology_node->get_label( DEDALO_APPLICATION_LANG )
+						];
 					}
 			}//end foreach ($ar_root_areas as $area_tipo)
 
