@@ -38,7 +38,8 @@ abstract class ontology_data {
 	public static $ontology_json_columns = [
 		'term'				=> true,
 		'relations'			=> true,
-		'properties'		=> true
+		'properties'		=> true,
+		'propiedades'		=> true
 	];
 
 	// int columns to parse
