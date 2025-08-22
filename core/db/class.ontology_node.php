@@ -552,20 +552,20 @@ class ontology_node {
 	* Values expected in 'relations' are always JSON.
 	* @return mixed $properties_parsed
 	*/
-	public function get_relations() : mixed {
+	// public function get_relations() : mixed {
 
-		$relations = parent::get_relations();
-		if (is_null($relations) || $relations===false) {
-			return null;
-		}
+	// 	$relations = parent::get_relations();
+	// 	if (is_null($relations) || $relations===false) {
+	// 		return null;
+	// 	}
 
-		$relations_parsed = is_string($relations)
-			? json_decode($relations)
-			: $relations;
+	// 	$relations_parsed = is_string($relations)
+	// 		? json_decode($relations)
+	// 		: $relations;
 
 
-		return $relations_parsed;
-	}//end get_propiedades
+	// 	return $relations_parsed;
+	// }//end get_propiedades
 
 
 
@@ -575,20 +575,20 @@ class ontology_node {
 	* Values expected in 'properties' are always JSON.
 	* @return mixed $properties_parsed
 	*/
-	public function get_is_translatable() : bool {
+	// public function get_is_translatable() : bool {
 
-		$is_translatable = parent::get_is_translatable();
-		if (is_null($is_translatable) || $is_translatable===false) {
-			return false;
-		}
+	// 	$is_translatable = parent::get_is_translatable();
+	// 	if (is_null($is_translatable) || $is_translatable===false) {
+	// 		return false;
+	// 	}
 
-		$is_translatable_parsed = is_string($is_translatable)
-			? ($is_translatable === 't' || $is_translatable === '1')
-			: $is_translatable;
+	// 	$is_translatable_parsed = is_string($is_translatable)
+	// 		? ($is_translatable === 't' || $is_translatable === '1')
+	// 		: $is_translatable;
 
 
-		return $is_translatable_parsed;
-	}//end get_propiedades
+	// 	return $is_translatable_parsed;
+	// }//end get_propiedades
 
 
 
@@ -600,22 +600,22 @@ class ontology_node {
 	* 	Optional. If not received, it is calculated
 	* @return int|false $counter_dato_updated
 	*/
-	public static function update_counter( string $tld, ?int $current_value=null ) : int|false {
+	// public static function update_counter( string $tld, ?int $current_value=null ) : int|false {
 
-		if ($current_value===null) {
-			$current_value = self::get_counter_value( $tld );
-		}
-		$counter_dato_updated = intval($current_value+1) ;
+	// 	if ($current_value===null) {
+	// 		$current_value = self::get_counter_value( $tld );
+	// 	}
+	// 	$counter_dato_updated = intval($current_value+1) ;
 
-		$sql_query 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
-		$result = pg_query_params(DBi::_getConnection(), $sql_query, array( $counter_dato_updated, $tld));
-		if ($result===false) {
-			debug_log(__METHOD__." Error on update_counter 'ontology_node_edit'. Nothing is saved! ".to_string($sql_query), logger::ERROR);
-			return false;
-		}
+	// 	$sql_query 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
+	// 	$result = pg_query_params(DBi::_getConnection(), $sql_query, array( $counter_dato_updated, $tld));
+	// 	if ($result===false) {
+	// 		debug_log(__METHOD__." Error on update_counter 'ontology_node_edit'. Nothing is saved! ".to_string($sql_query), logger::ERROR);
+	// 		return false;
+	// 	}
 
-		return $counter_dato_updated;
-	}//end update_counter
+	// 	return $counter_dato_updated;
+	// }//end update_counter
 
 
 
@@ -624,27 +624,27 @@ class ontology_node {
 	* @param string $tld
 	* @return int $counter_value
 	*/
-	public static function get_counter_value( string $tld ) : int {
+	// public static function get_counter_value( string $tld ) : int {
 
-		$sql_query	= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
-		$result	= JSON_RecordDataBoundObject::search_free($sql_query);
-		$value	= pg_fetch_assoc($result);
-		if ($value===false) {
-			// false is not only error only. If the counter do not exists, false is returned too
-			debug_log(__METHOD__." Warning on get counter. The counter no is available or does not exists yet. Returning zero as value. ".to_string($sql_query), logger::WARNING);
-			return 0;
-		}
+	// 	$sql_query	= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
+	// 	$result	= JSON_RecordDataBoundObject::search_free($sql_query);
+	// 	$value	= pg_fetch_assoc($result);
+	// 	if ($value===false) {
+	// 		// false is not only error only. If the counter do not exists, false is returned too
+	// 		debug_log(__METHOD__." Warning on get counter. The counter no is available or does not exists yet. Returning zero as value. ".to_string($sql_query), logger::WARNING);
+	// 		return 0;
+	// 	}
 
-		$counter_value = $value['counter'] ?? null;
-		if (empty($counter_value)) {
-			if(SHOW_DEBUG===true) {
-				//debug_log(__METHOD__." Error on get_counter_value 'ontology_node_edit'. counter for tld not found. ".to_string(), logger::WARNING);
-			}
-			return 0;
-		}
+	// 	$counter_value = $value['counter'] ?? null;
+	// 	if (empty($counter_value)) {
+	// 		if(SHOW_DEBUG===true) {
+	// 			//debug_log(__METHOD__." Error on get_counter_value 'ontology_node_edit'. counter for tld not found. ".to_string(), logger::WARNING);
+	// 		}
+	// 		return 0;
+	// 	}
 
-		return (int)$counter_value;
-	}//end get_counter_value
+	// 	return (int)$counter_value;
+	// }//end get_counter_value
 
 
 
@@ -653,42 +653,22 @@ class ontology_node {
 	* Get dd_ontology column 'term' and try to parse as JSON abject
 	* @return object|null
 	*/
-	public function get_term() : ?object  {
+	// public function get_term() : ?object  {
 
-		// JSON stringified object from column 'term'
-		$term = parent::get_term();
-		if (empty($term)) {
-			return null;
-		}
+	// 	// JSON stringified object from column 'term'
+	// 	$term = parent::get_term();
+	// 	if (empty($term)) {
+	// 		return null;
+	// 	}
 
-		$term_object = json_handler::decode($term);
-		if (!$term_object) {
-			return null;
-		}
+	// 	$term_object = json_handler::decode($term);
+	// 	if (!$term_object) {
+	// 		return null;
+	// 	}
 
-		return $term_object;
-	}//end get_term
+	// 	return $term_object;
+	// }//end get_term
 
-
-
-	/**
-	* SET_TERM
-	* Encodes given $term value as JSON stringified value and set to
-	* parent term value as string
-	* @param object|null $term
-	* @return object|null
-	*/
-	public function set_term( ?object $term ) : bool  {
-
-		$term_value = is_object($term)
-			? json_encode($term)
-			: null;
-
-		// JSON stringified object from column 'term'
-		parent::set_term($term_value);
-
-		return true;
-	}//end set_term
 
 
 
@@ -1360,21 +1340,6 @@ class ontology_node {
 
 
 	/**
-	* SET_RELAtions
-	* Set 'relations' as JSON (MODELO: $ar_relations[$tipo_source][] = array($modelo => $tipo_rel))
-	* Set value s string JSON encoded array or null
-	* @param array|null $ar_relations
-	* 	Could be array, string, null
-	* @return bool
-	*/
-	public function set_relations( ?array $ar_relations) : bool {
-
-		return parent::set_relations( json_encode($ar_relations) );
-	}//end set_relations
-
-
-
-	/**
 	* GET_RELATION_NODES
 	* @param string $tipo
 	* @param bool $cache = false
@@ -1612,42 +1577,25 @@ class ontology_node {
 
 
 	/**
-	* GET_TRANSLATABLE
-	* Get current term translatable as boolean value
-	* based on column 'translatable' value
-	* @param string $tipo
-	* @return bool
-	*/
-	public static function get_translatable( string $tipo ) : bool {
-
-		$ontology_node	= new ontology_node($tipo);
-		$translatable	= $ontology_node->get_is_translatable();
-
-		return $translatable;
-	}//end get_translatable
-
-
-
-	/**
 	* GET_IS_MODEL
 	* Retrieve from DDBB the column is_model
 	* Parse the column as boolean
 	* @return
 	*/
-	public function get_is_model() : bool {
+	// public function get_is_model() : bool {
 
-		$is_model = parent::get_is_model();
-		if (is_null($is_model) || $is_model===false) {
-			return false;
-		}
+	// 	$is_model = parent::get_is_model();
+	// 	if (is_null($is_model) || $is_model===false) {
+	// 		return false;
+	// 	}
 
-		$is_model_parsed = is_string($is_model)
-			? ($is_model === 't' || $is_model === '1')
-			: $is_model;
+	// 	$is_model_parsed = is_string($is_model)
+	// 		? ($is_model === 't' || $is_model === '1')
+	// 		: $is_model;
 
 
-		return $is_model_parsed;
-	}//end get_is_model
+	// 	return $is_model_parsed;
+	// }//end get_is_model
 
 
 
@@ -1713,41 +1661,41 @@ class ontology_node {
 	* @param string $tipo (tipo)
 	* @return object|null $row
 	*/
-	public static function get_row_data( string $tipo ) : ?object {
+	// public static function get_row_data( string $tipo ) : ?object {
 
-		//remove any other things than tld and section_id in the tipo string
-		$safe_tipo = safe_tipo($tipo);
+	// 	//remove any other things than tld and section_id in the tipo string
+	// 	$safe_tipo = safe_tipo($tipo);
 
-		$table		= ontology_node::$table; // dd_ontology | dd_ontology_backup
-		$sql_query	= "SELECT * FROM \"$table\" WHERE \"tipo\" = $1 LIMIT 1";
+	// 	$table		= ontology_node::$table; // dd_ontology | dd_ontology_backup
+	// 	$sql_query	= "SELECT * FROM \"$table\" WHERE \"tipo\" = $1 LIMIT 1";
 
-		// Direct
-		// $result = pg_query_params(DBi::_getConnection(), $sql_query, [$safe_tipo]);
+	// 	// Direct
+	// 	// $result = pg_query_params(DBi::_getConnection(), $sql_query, [$safe_tipo]);
 
-		// With prepared statement
-		$stmt_name = __METHOD__;
-		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			pg_prepare(
-				DBi::_getConnection(),
-				$stmt_name,
-				$sql_query
-			);
-			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
-		}
-		$result = pg_execute(
-			DBi::_getConnection(),
-			$stmt_name,
-			[$safe_tipo]
-		);
+	// 	// With prepared statement
+	// 	$stmt_name = __METHOD__;
+	// 	if (!isset(DBi::$prepared_statements[$stmt_name])) {
+	// 		pg_prepare(
+	// 			DBi::_getConnection(),
+	// 			$stmt_name,
+	// 			$sql_query
+	// 		);
+	// 		// Set the statement as existing.
+	// 		DBi::$prepared_statements[$stmt_name] = true;
+	// 	}
+	// 	$result = pg_execute(
+	// 		DBi::_getConnection(),
+	// 		$stmt_name,
+	// 		[$safe_tipo]
+	// 	);
 
-		$row_data = null;
-		while($row = pg_fetch_object($result)) {
-			$row_data = $row;
-		}
+	// 	$row_data = null;
+	// 	while($row = pg_fetch_object($result)) {
+	// 		$row_data = $row;
+	// 	}
 
-		return $row_data;
-	}//end get_row_data
+	// 	return $row_data;
+	// }//end get_row_data
 
 
 
@@ -1800,108 +1748,8 @@ class ontology_node {
 
 
 
-	/**
-	* SAVE
-	* PASADA A ontology_node (Pública. Esta carpeta es privada de momento 28-08-2016)
-	* @return string|false $tipo
-	*/
-	public function Save() : string|false {
-
-		if(!verify_dedalo_prefix_tipos($this->tld)) {
-			if(SHOW_DEBUG===true) {
-				trigger_error("Error on save 'ontology_node'. tld is empty or wrong. Nothing is saved!");
-			}
-			return false;
-		}
-
-		#
-		# EDIT
-		# TERMINO ID EXISTS : UPDATE RECORD
-		if (!empty($this->tipo) && verify_dedalo_prefix_tipos($this->tld)) {
-			if(SHOW_DEBUG===true) {
-				// debug_log(__METHOD__." Saving with parent save ".$this->tipo, logger::DEBUG);
-			}
-			return parent::Save();
-		}
-
-		#
-		# INSERT
-		# TERMINO ID NOT CREATED : BUILD NEW AND INSERT
-		# Creamos el tipo a partir del tld y el contador contador para el tld actual
-		$counter_dato   = self::get_counter_value($this->tld);
-		$tipo		= (string)$this->tld . (int)($counter_dato+1);
-			#dump($tipo," tipo - tld:$this->tld");die();
-
-		# Fix tipo : Important!
-		$this->set_tipo($tipo);
-
-		# Set defaults
-		$this->set_tld( (string)$this->tld );
-		if(empty($this->order_number)) $this->set_order_number( (int)1 );
 
 
-		if (!empty($this->tipo)) {
-
-			$result = parent::Save();
-
-			if ($result) {
-				$counter_dato_updated  = self::update_counter($this->tld, $counter_dato);
-			}
-		}
-
-		return (string)$tipo;
-	}//end Save
-
-
-
-	/**
-	* INSERT
-	* Create a row into dd_ontology with ontology data
-	* The insert will search if tipo exists previously,
-	* if the tipo was found, delete it and insert as new one
-	* else insert new one
-	* @return string|false|null $tipo(tipo)
-	*/
-	public function insert() : string|false|null {
-
-		$row_data = self::get_row_data($this->tipo);
-
-		//remove any other things than tld and section_id in the tipo string
-		$safe_tipo = safe_tipo($this->tipo);
-
-		if( !empty($row_data) ){
-
-			$table		= ontology_node::$table; // dd_ontology | dd_ontology_backup
-			$sql_query	= "DELETE FROM \"$table\" WHERE \"tipo\" = '$safe_tipo'";
-			$result		= pg_query(DBi::_getConnection(), $sql_query);
-
-			if($result===false) {
-				if(SHOW_DEBUG===true) {
-					$msg = __METHOD__." Failed Delete record (RDBO) from tipo: $safe_tipo";
-				}else{
-					$msg = "Failed Delete record (RDBO). Record $safe_tipo is not deleted. Please contact with your admin" ;
-				}
-				trigger_error($msg);
-				debug_log(__METHOD__
-					. ' ' . $msg .PHP_EOL
-					. 'query: ' . to_string($sql_query)
-					, logger::ERROR
-				);
-
-				return false;
-			}
-		}
-
-		// force to insert in the Save process of his parent.
-		$this->force_insert_on_save = true;
-
-		$this->set_tipo( $this->tipo );
-
-		// insert, the Save return the tipo (tipo)
-		$new_tipo = parent::Save();
-
-		return $new_tipo;
-	}//end insert
 
 
 
@@ -1909,10 +1757,10 @@ class ontology_node {
 	* UPDATE
 	* @return string|false
 	*/
-	public function update() : string|false {
+	// public function update() : string|false {
 
-		return parent::Save();
-	}//end update
+	// 	return parent::Save();
+	// }//end update
 
 
 
@@ -1921,38 +1769,36 @@ class ontology_node {
 	* Find the tipo(terminioID) in dd_ontology and choose the last id
 	* @return
 	*/
-	public function get_last_section_id_from_tld() : int {
+	// public function get_last_section_id_from_tld() : int {
 
-		//remove any other things than tld in the tld string
-		$safe_tld	= safe_tld($this->tld);
+	// 	//remove any other things than tld in the tld string
+	// 	$safe_tld	= safe_tld( $this->get_tld() );
+	// 		$table		= ontology_node::$table; // dd_ontology | dd_ontology_backup
+	// 		$sql_query	= 'SELECT "tipo" FROM "'.$table.'" WHERE tld = \''.$safe_tld.'\'';
+	// 		$result		= JSON_RecordObj_matrix::search_free($sql_query);
+	// 		$value		= ($result === false)
+	// 			? null // Skip empty tables
+	// 			: ((pg_num_rows($result)===0)
+	// 				? null // Skip empty tables
+	// 				: true );
 
-		// Find last id of current section
-			$table		= ontology_node::$table; // dd_ontology | dd_ontology_backup
-			$sql_query	= 'SELECT "tipo" FROM "'.$table.'" WHERE tld = \''.$safe_tld.'\'';
-			$result		= JSON_RecordObj_matrix::search_free($sql_query);
-			$value		= ($result === false)
-				? null // Skip empty tables
-				: ((pg_num_rows($result)===0)
-					? null // Skip empty tables
-					: true );
+	// 		// pg_fetch_result($result, 0, 'tipo'))
+	// 		$max_section_id = 0;
+	// 		if( $value === true ){
 
-			// pg_fetch_result($result, 0, 'tipo'))
-			$max_section_id = 0;
-			if( $value === true ){
+	// 			$ar_section_id = [];
+	// 			while($row = pg_fetch_assoc($result)) {
+	// 				$string_id = get_section_id_from_tipo( $row['tipo'] );
 
-				$ar_section_id = [];
-				while($row = pg_fetch_assoc($result)) {
-					$string_id = get_section_id_from_tipo( $row['tipo'] );
+	// 				$ar_section_id[] = $string_id === false
+	// 					? 0
+	// 					: (int)$string_id;
+	// 			}
+	// 			$max_section_id = max( $ar_section_id );
+	// 		}
 
-					$ar_section_id[] = $string_id === false
-						? 0
-						: (int)$string_id;
-				}
-				$max_section_id = max( $ar_section_id );
-			}
-
-		return $max_section_id;
-	}//end get_last_section_id_from_tld
+	// 	return $max_section_id;
+	// }//end get_last_section_id_from_tld
 
 
 
