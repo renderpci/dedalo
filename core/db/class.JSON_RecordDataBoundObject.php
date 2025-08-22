@@ -692,174 +692,174 @@ abstract class JSON_RecordDataBoundObject {
 	* @param string|null $matrix_table
 	* @return array $ar_records
 	*/
-	public function search( ?array $ar_arguments=null, ?string $matrix_table=null ) : array {
+	// public function search( ?array $ar_arguments=null, ?string $matrix_table=null ) : array {
 
-		# DEBUG INFO SHOWED IN FOOTER
-		if(SHOW_DEBUG===true) $start_time = start_time();
+	// 	# DEBUG INFO SHOWED IN FOOTER
+	// 	if(SHOW_DEBUG===true) $start_time = start_time();
 
-		$ar_records = array();
+	// 	$ar_records = array();
 
-		# TABLE . Optionally change table temporally for search
-		if (!empty($matrix_table)) {
-			$this->strTableName = $matrix_table;
-		}
+	// 	# TABLE . Optionally change table temporally for search
+	// 	if (!empty($matrix_table)) {
+	// 		$this->strTableName = $matrix_table;
+	// 	}
 
-		$strPrimaryKeyName	= $this->strPrimaryKeyName;
-		$strQuery			= '';
-		$strQuery_limit		= '';
+	// 	$strPrimaryKeyName	= $this->strPrimaryKeyName;
+	// 	$strQuery			= '';
+	// 	$strQuery_limit		= '';
 
-		if(is_array($ar_arguments)) foreach($ar_arguments as $key => $value) {
+	// 	if(is_array($ar_arguments)) foreach($ar_arguments as $key => $value) {
 
-			switch(true) {	#"AND dato LIKE  '%\"{$area_tipo}\"%' ";
+	// 		switch(true) {	#"AND dato LIKE  '%\"{$area_tipo}\"%' ";
 
-				# SI $key ES 'strPrimaryKeyName', LO USAREMOS COMO strPrimaryKeyName A BUSCAR
-				case ($key==='strPrimaryKeyName'):
-					// # If is json selection, strPrimaryKeyName is literal as 'selection'
-					// if ( strpos($value, '->') ) {
-					// 	$strPrimaryKeyName = $value;
-					// }
-					// # Else (default) is a column key and we use '"column_name"'
-					// else{
-					// 	$strPrimaryKeyName = '"'.$value.'"';
-					// }
-					$strPrimaryKeyName = (strpos($value, '->')!==false)
-						? $value // If is json selection, strPrimaryKeyName is literal as 'selection'
-						: '"'.$value.'"'; // Else (default) is a column key and we use '"column_name"'
-					break;
+	// 			# SI $key ES 'strPrimaryKeyName', LO USAREMOS COMO strPrimaryKeyName A BUSCAR
+	// 			case ($key==='strPrimaryKeyName'):
+	// 				// # If is json selection, strPrimaryKeyName is literal as 'selection'
+	// 				// if ( strpos($value, '->') ) {
+	// 				// 	$strPrimaryKeyName = $value;
+	// 				// }
+	// 				// # Else (default) is a column key and we use '"column_name"'
+	// 				// else{
+	// 				// 	$strPrimaryKeyName = '"'.$value.'"';
+	// 				// }
+	// 				$strPrimaryKeyName = (strpos($value, '->')!==false)
+	// 					? $value // If is json selection, strPrimaryKeyName is literal as 'selection'
+	// 					: '"'.$value.'"'; // Else (default) is a column key and we use '"column_name"'
+	// 				break;
 
-				# LIMIT
-				case ($key==='sql_limit'):
-					$strQuery_limit = 'LIMIT '.(int)$value.''; // (!) no space at end
-					break;
+	// 			# LIMIT
+	// 			case ($key==='sql_limit'):
+	// 				$strQuery_limit = 'LIMIT '.(int)$value.''; // (!) no space at end
+	// 				break;
 
-				# NOT
-				case (strpos($key,':!=')!==false):
-					$campo = substr($key, 0, strpos($key,':!='));
-					$strQuery .= 'AND "'.$campo.'" != \''.$value.'\' ';
-					break;
+	// 			# NOT
+	// 			case (strpos($key,':!=')!==false):
+	// 				$campo = substr($key, 0, strpos($key,':!='));
+	// 				$strQuery .= 'AND "'.$campo.'" != \''.$value.'\' ';
+	// 				break;
 
-				# SI $key ES 'sql_code', INTERPRETAMOS $value LITERALMENTE, COMO SQL
-				case ($key==='sql_code'):
-					$strQuery .= $value.' ';
-					break;
+	// 			# SI $key ES 'sql_code', INTERPRETAMOS $value LITERALMENTE, COMO SQL
+	// 			case ($key==='sql_code'):
+	// 				$strQuery .= $value.' ';
+	// 				break;
 
-				# OR (format lang:or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
-				case (strpos($key,':or')!==false):
-					$campo = substr($key, 0, strpos($key,':or'));
-					$strQuery_temp ='';
-					foreach ($value as $value_string) {
-						// $strQuery_temp .= "$campo = '$value_string' OR ";
-						$strQuery_temp .= '"'.$campo.'" = \''.$value_string.'\' OR ';
-					}
-					$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
-					break;
+	// 			# OR (format lang:or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
+	// 			case (strpos($key,':or')!==false):
+	// 				$campo = substr($key, 0, strpos($key,':or'));
+	// 				$strQuery_temp ='';
+	// 				foreach ($value as $value_string) {
+	// 					// $strQuery_temp .= "$campo = '$value_string' OR ";
+	// 					$strQuery_temp .= '"'.$campo.'" = \''.$value_string.'\' OR ';
+	// 				}
+	// 				$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
+	// 				break;
 
-				# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
-				default :
-					if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)
-						// $strQuery .= 'AND "'.$key.'"='.$value.' ';
-						$strQuery .= 'AND '.$key.'='.$value.' ';
-					}else{
-						if(SHOW_DEBUG===true) {
-							if( !is_string($value) ) {
-								dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());
-								dump($value, ' value ++ '.to_string());
-							}
-						}
-						$value = pg_escape_string(DBi::_getConnection(), $value);
-						// $strQuery .= 'AND "'.$key.'"=\''.$value.'\' ';
-						$strQuery .= 'AND '.$key.'=\''.$value.'\' ';
-					}
-					break;
-			}#end switch(true)
-		}//end foreach($ar_arguments as $key => $value)
+	// 			# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
+	// 			default :
+	// 				if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)
+	// 					// $strQuery .= 'AND "'.$key.'"='.$value.' ';
+	// 					$strQuery .= 'AND '.$key.'='.$value.' ';
+	// 				}else{
+	// 					if(SHOW_DEBUG===true) {
+	// 						if( !is_string($value) ) {
+	// 							dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());
+	// 							dump($value, ' value ++ '.to_string());
+	// 						}
+	// 					}
+	// 					$value = pg_escape_string(DBi::_getConnection(), $value);
+	// 					// $strQuery .= 'AND "'.$key.'"=\''.$value.'\' ';
+	// 					$strQuery .= 'AND '.$key.'=\''.$value.'\' ';
+	// 				}
+	// 				break;
+	// 		}#end switch(true)
+	// 	}//end foreach($ar_arguments as $key => $value)
 
-		# Seguridad
-		#if(strpos(strtolower($strQuery), 'update')!=='false' || strpos(strtolower($strQuery), 'delete')!=='false') die("SQL Security Error ". strtolower($strQuery) );
+	// 	# Seguridad
+	// 	#if(strpos(strtolower($strQuery), 'update')!=='false' || strpos(strtolower($strQuery), 'delete')!=='false') die("SQL Security Error ". strtolower($strQuery) );
 
-		// Verify query format
-			if(strpos($strQuery, 'AND')===0) {
-				$strQuery = substr($strQuery, 4);
-			}else if( strpos($strQuery, ' AND')===0 ) {
-				$strQuery = substr($strQuery, 5);
-			}
+	// 	// Verify query format
+	// 		if(strpos($strQuery, 'AND')===0) {
+	// 			$strQuery = substr($strQuery, 4);
+	// 		}else if( strpos($strQuery, ' AND')===0 ) {
+	// 			$strQuery = substr($strQuery, 5);
+	// 		}
 
-		if(SHOW_DEBUG===true) {
-			$strQuery = "\n-- search : ".debug_backtrace()[1]['function']."\n".$strQuery;
-		}
+	// 	if(SHOW_DEBUG===true) {
+	// 		$strQuery = "\n-- search : ".debug_backtrace()[1]['function']."\n".$strQuery;
+	// 	}
 
-		$strQuery = 'SELECT '.$strPrimaryKeyName.' AS key FROM "'.$this->strTableName.'" WHERE '. $strQuery .' '. $strQuery_limit;
-			// error_log('---- $strQuery:'.$strQuery);
-			#debug_log(__METHOD__." $strQuery ".to_string($strQuery), logger::DEBUG);
+	// 	$strQuery = 'SELECT '.$strPrimaryKeyName.' AS key FROM "'.$this->strTableName.'" WHERE '. $strQuery .' '. $strQuery_limit;
+	// 		// error_log('---- $strQuery:'.$strQuery);
+	// 		#debug_log(__METHOD__." $strQuery ".to_string($strQuery), logger::DEBUG);
 
-		# CACHE : Static var
-		# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTARÁ CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
-		# QUE SE GUARDA EN UN ARRAY ESTÁTICO
-		static $ar_RecordDataObject_query_search_cache = [];
+	// 	# CACHE : Static var
+	// 	# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTARÁ CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
+	// 	# QUE SE GUARDA EN UN ARRAY ESTÁTICO
+	// 	static $ar_RecordDataObject_query_search_cache = [];
 
-		# CACHE_MANAGER : Using external cache manager (like redis)
-		// $use_cache = false; # Experimental (cache true for search)
-		$use_cache = $this->use_cache; # Default use class value
-		// if ($use_cache===true && isset($ar_RecordDataObject_query_search_cache[$strQuery])) {
-		if ($use_cache===true && array_key_exists($strQuery, $ar_RecordDataObject_query_search_cache)) {
+	// 	# CACHE_MANAGER : Using external cache manager (like redis)
+	// 	// $use_cache = false; # Experimental (cache true for search)
+	// 	$use_cache = $this->use_cache; # Default use class value
+	// 	// if ($use_cache===true && isset($ar_RecordDataObject_query_search_cache[$strQuery])) {
+	// 	if ($use_cache===true && array_key_exists($strQuery, $ar_RecordDataObject_query_search_cache)) {
 
-			# DATA IS IN CACHE . Return value form memory
+	// 		# DATA IS IN CACHE . Return value form memory
 
-			$ar_records	= $ar_RecordDataObject_query_search_cache[$strQuery];
+	// 		$ar_records	= $ar_RecordDataObject_query_search_cache[$strQuery];
 
-			# DEBUG
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__
-					." --> Used cache run-in for query: "
-					.to_string($strQuery)
-					, logger::DEBUG
-				);
-			}
+	// 		# DEBUG
+	// 		if(SHOW_DEBUG===true) {
+	// 			debug_log(__METHOD__
+	// 				." --> Used cache run-in for query: "
+	// 				.to_string($strQuery)
+	// 				, logger::DEBUG
+	// 			);
+	// 		}
 
-		}else{
+	// 	}else{
 
-			# DATA IS NOT IN CACHE . Searching real data in DB
+	// 		# DATA IS NOT IN CACHE . Searching real data in DB
 
-			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error(DBi::_getConnection()));
-			if ($result===false) {
-				debug_log(__METHOD__
-					." Error Processing pg_query request " .PHP_EOL
-					. pg_last_error(DBi::_getConnection())
-					, logger::ERROR
-				);
-				if(SHOW_DEBUG===true) {
-					dump(pg_last_error(DBi::_getConnection()), ' pg_last_error(DBi::_getConnection()) ++ '.to_string($strQuery));
-					// throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
-				}
-				return [];
-			}
-			while ($rows = pg_fetch_assoc($result)) {
-				$ar_records[] = $rows['key'];
-			}
+	// 		$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error(DBi::_getConnection()));
+	// 		if ($result===false) {
+	// 			debug_log(__METHOD__
+	// 				." Error Processing pg_query request " .PHP_EOL
+	// 				. pg_last_error(DBi::_getConnection())
+	// 				, logger::ERROR
+	// 			);
+	// 			if(SHOW_DEBUG===true) {
+	// 				dump(pg_last_error(DBi::_getConnection()), ' pg_last_error(DBi::_getConnection()) ++ '.to_string($strQuery));
+	// 				// throw new Exception("Error Processing Request . ".pg_last_error(DBi::_getConnection()), 1);
+	// 			}
+	// 			return [];
+	// 		}
+	// 		while ($rows = pg_fetch_assoc($result)) {
+	// 			$ar_records[] = $rows['key'];
+	// 		}
 
-			# CACHE
-			# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
-			# QUE SE GUARDA EN UN ARRAY ESTÁTICO
-			# IMPORTANT Only store in cache positive results, NOT EMPTY RESULTS
-			# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
-			# the next results are 0 and duplicate records are built in matrix)
-			$n_records = is_countable($ar_records) ? sizeof($ar_records) : 0;
-			if($use_cache===true && $n_records>0) {
-				# CACHE RUN-IN
-				$ar_RecordDataObject_query_search_cache[$strQuery] = $ar_records;
-			}
+	// 		# CACHE
+	// 		# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
+	// 		# QUE SE GUARDA EN UN ARRAY ESTÁTICO
+	// 		# IMPORTANT Only store in cache positive results, NOT EMPTY RESULTS
+	// 		# (Store empty results is problematic for example with component_common::get_id_by_tipo_parent($tipo, $parent, $lang) when matrix relation record is created and more than 1 call is made,
+	// 		# the next results are 0 and duplicate records are built in matrix)
+	// 		$n_records = is_countable($ar_records) ? sizeof($ar_records) : 0;
+	// 		if($use_cache===true && $n_records>0) {
+	// 			# CACHE RUN-IN
+	// 			$ar_RecordDataObject_query_search_cache[$strQuery] = $ar_records;
+	// 		}
 
-			// debug
-				if(SHOW_DEBUG===true) {
-					$total_time_ms = exec_time_unit($start_time,'ms');
-					if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".$n_records);
-					#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.start_time()]=start_time();
-				}
-		}
+	// 		// debug
+	// 			if(SHOW_DEBUG===true) {
+	// 				$total_time_ms = exec_time_unit($start_time,'ms');
+	// 				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".$n_records);
+	// 				#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.start_time()]=start_time();
+	// 			}
+	// 	}
 
 
-		return $ar_records;
-	}//end search
+	// 	return $ar_records;
+	// }//end search
 
 
 
