@@ -780,7 +780,6 @@ class ontology {
 			// dd_ontology. Check if the parent already exists in dd_ontology
 				$parent_node = new ontology_node( $parent_node_tipo );
 				$parent_ontology_row_data = $parent_node->get_data();
-				// $parent_ontology_row_data = ontology_node::get_row_data( $parent_node_tipo );
 				if( empty($parent_ontology_row_data) ){
 
 					// set parent nodes
