@@ -296,22 +296,22 @@ class ontology {
 
 			// list thesaurus exception `dd144`
 			// until 6.4 list thesaurus is an array of objects without any kind of definition
-			// in 6.4 his defintion change to be a `show` object with a `ddo_map` as others
-			if($model === 'dd144' && !empty($properties) && is_array($properties) ){
+			// in 6.4 his definition change to be a `show` object with a `ddo_map` as others
+			// if($model === 'dd144' && !empty($properties) && is_array($properties) ){
 
-				// generate the new objects and assign the old properties
-				$new_properties = new stdClass();
-					$new_properties->show = new stdClass();
-					$new_properties->show->ddo_map = $properties;
+			// 	// generate the new objects and assign the old properties
+			// 	$new_properties = new stdClass();
+			// 		$new_properties->show = new stdClass();
+			// 		$new_properties->show->ddo_map = $properties;
 
-				$properties = $new_properties;
+			// 	$properties = $new_properties;
 
-				// update dd_ontology record with the new properties
-				$ontology_node = new ontology_node($dd_ontology_row->tipo);
-				$ontology_node->get_properties(); // force load data
-				$ontology_node->set_properties($new_properties);
-				$ontology_node->update();
-			}
+			// 	// update dd_ontology record with the new properties
+			// 	$ontology_node = new ontology_node($dd_ontology_row->tipo);
+			// 	$ontology_node->get_properties(); // force load data
+			// 	$ontology_node->set_properties($new_properties);
+			// 	$ontology_node->update();
+			// }
 
 			if(!empty($properties)) {
 				$properties_general = new stdClass();
@@ -713,10 +713,10 @@ class ontology {
 					$ontology_node->set_term( $term );
 				}
 
-			$term_id = $ontology_node->insert();
+			$ontology_node->insert();
 
 
-		return $term_id;
+		return $tipo;
 	}//end create_dd_ontology_ontology_section_node
 
 
@@ -778,27 +778,30 @@ class ontology {
 			$parent_node_tipo	= $parent_tld.'0';
 
 			// dd_ontology. Check if the parent already exists in dd_ontology
-				$parent_ontology_row_data = ontology_node::get_row_data( $parent_node_tipo );
+				$parent_node = new ontology_node( $parent_node_tipo );
+				$parent_ontology_row_data = $parent_node->get_data();
+				// $parent_ontology_row_data = ontology_node::get_row_data( $parent_node_tipo );
 				if( empty($parent_ontology_row_data) ){
 
-					$ontology_node = new ontology_node($parent_node_tipo);
-						$ontology_node->set_parent($parent_group);
-						$ontology_node->set_model_tipo('dd6');
-						$ontology_node->set_model('section');
-						$ontology_node->set_is_model(false);
-						$ontology_node->set_tld($parent_tld);
-						$ontology_node->set_is_translatable(false);
-						$ontology_node->set_relations( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+					// set parent nodes
+					// $ontology_node = new ontology_node($parent_node_tipo);
+					$parent_node->set_parent($parent_group);
+					$parent_node->set_model_tipo('dd6');
+					$parent_node->set_model('section');
+					$parent_node->set_is_model(false);
+					$parent_node->set_tld($parent_tld);
+					$parent_node->set_is_translatable(false);
+					$parent_node->set_relations( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
 
 					// Properties, add main_tld as official tld definitions
 					// and local section color
 						$properties = new stdClass();
 							$properties->main_tld	= $parent_tld;
 							$properties->color		= '#2d8894';
-						$ontology_node->set_properties($properties);
+						$parent_node->set_properties($properties);
 
 					// insert dd_ontology record
-					$ontology_node->insert();
+					$parent_node->insert();
 				}
 
 			// matrix. Check if the parent already exists in matrix
@@ -1244,16 +1247,16 @@ class ontology {
 
 
 	/**
-	* PARSE_SECTION_RECORD_TO_DD_ONTOLOGY_RECORD
+	* PARSE_SECTION_RECORD_TO_ontology_node
 	* Build every component in the section given ($section_tipo, $section_id).
 	* Get the component_data and parse as column of dd_ontology format.
 	* @param string $section_tipo
 	* @param string|int $section_id
-	* @return ontology_node|null $dd_ontology_record
+	* @return ontology_node|null $ontology_node
 	* 	returns null if section tld value is empty
 	* @test true
 	*/
-	public static function parse_section_record_to_dd_ontology_record( string $section_tipo, string|int $section_id ) : ?ontology_node {
+	public static function parse_section_record_to_ontology_node( string $section_tipo, string|int $section_id ) : ?ontology_node {
 		$start_time=start_time();
 
 		// overwrite locator
@@ -1294,12 +1297,13 @@ class ontology {
 				return null;
 			}
 			// create the term_id
-			$tld		= $tld_data[0];
+			$tld	= $tld_data[0];
 			$tipo	= $tld . $section_id;
 
+		// tipo
 			// create the ontology_node with the term_id and set the tld
-			$dd_ontology_record = new ontology_node( $tipo );
-			$dd_ontology_record->set_tld( $tld );
+			$ontology_node = new ontology_node( $tipo );
+			$ontology_node->set_tld( $tld );
 
 		// parent
 		// parent needs to know the parent tld of the locator to build the term_id
@@ -1345,7 +1349,7 @@ class ontology {
 				$parent = ( $parent_locator->section_tipo !== DEDALO_ONTOLOGY_SECTION_TIPO )
 					? ontology::get_term_id_from_locator($parent_locator)
 					: null; // main root nodes of the ontology dd1 and dd2
-				$dd_ontology_record->set_parent( $parent );
+				$ontology_node->set_parent( $parent );
 			}
 
 		// is model
@@ -1376,7 +1380,7 @@ class ontology {
 			}
 
 			$is_model = $is_model ?? false; // default value
-			$dd_ontology_record->set_is_model( $is_model );
+			$ontology_node->set_is_model( $is_model );
 
 		// model. Get the model tld and id
 			$model_tipo	= 'ontology6';
@@ -1426,8 +1430,8 @@ class ontology {
 			// set the model columns with the data resolution
 			// it could be the model of node when the node is not a model with its resolution
 			// or null when the node is a model (as `component_imput_text`)
-			$dd_ontology_record->set_model_tipo( $model_tipo_resolution );
-			$dd_ontology_record->set_model( $model_resolution );
+			$ontology_node->set_model_tipo( $model_tipo_resolution );
+			$ontology_node->set_model( $model_resolution );
 
 		// Order
 			$order_tipo		= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
@@ -1468,7 +1472,7 @@ class ontology {
 				}else{
 
 					$order_value = reset($order_data);
-					$dd_ontology_record->set_order_number( (int)$order_value );
+					$ontology_node->set_order_number( (int)$order_value );
 				}
 			}
 
@@ -1484,7 +1488,7 @@ class ontology {
 			// get the translatable value with the main node definition.
 			$translatable = $translatable ?? self::resolve_translatable( $locator );
 
-			$dd_ontology_record->set_is_translatable( $translatable );
+			$ontology_node->set_is_translatable( $translatable );
 
 		// relations
 			$relations = null;
@@ -1498,7 +1502,7 @@ class ontology {
 			// get the relations with the main node definition.
 			$relations = $relations ?? self::resolve_relations( $locator );
 
-			$dd_ontology_record->set_relations( $relations );
+			$ontology_node->set_relations( $relations );
 
 		// Properties V5
 			$properties_v5_tipo	= 'ontology19';
@@ -1520,7 +1524,7 @@ class ontology {
 				$properties_v5 = null;
 			}
 
-			$dd_ontology_record->set_propiedades( $properties_v5 );
+			$ontology_node->set_propiedades( $properties_v5 );
 
 		// Properties
 			$properties_tipo = 'ontology18';
@@ -1595,7 +1599,7 @@ class ontology {
 			}
 
 			// set the term into jet_dd_record
-			$dd_ontology_record->set_properties( $properties );
+			$ontology_node->set_properties( $properties );
 
 		// term
 			$term = null;
@@ -1610,7 +1614,7 @@ class ontology {
 			$term = $term ?? self::resolve_term( $locator );
 
 			// set the term into jet_dd_record
-			$dd_ontology_record->set_term( $term );
+			$ontology_node->set_term( $term );
 
 
 		// debug
@@ -1624,8 +1628,8 @@ class ontology {
 			}
 
 
-		return $dd_ontology_record;
-	}//end parse_section_record_to_dd_ontology_record
+		return $ontology_node;
+	}//end parse_section_record_to_ontology_node
 
 
 
@@ -1901,8 +1905,8 @@ class ontology {
 	public static function insert_dd_ontology_record( string $section_tipo, string|int $section_id ) : ?string {
 		$start_time=start_time();
 
-		$dd_ontology_record = ontology::parse_section_record_to_dd_ontology_record( $section_tipo, $section_id );
-		if (empty($dd_ontology_record)) {
+		$ontology_node = ontology::parse_section_record_to_ontology_node( $section_tipo, $section_id );
+		if (empty($ontology_node)) {
 			debug_log(__METHOD__
 				. " Error on get ontology_node  " . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
@@ -1912,7 +1916,7 @@ class ontology {
 			return null;
 		}
 
-		$term_id = $dd_ontology_record->insert();
+		$ontology_node->insert();
 
 		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__
@@ -1922,7 +1926,7 @@ class ontology {
 		}
 
 
-		return $term_id;
+		return $ontology_node->get_tipo();
 	}//end insert_dd_ontology_record
 
 
@@ -2102,16 +2106,16 @@ class ontology {
 			$ar_records			= $search_response->ar_records;
 
 		// 2 create the dd_ontology nodes of all matrix records
-			$dd_ontology_records = [];
+			$ontology_nodes = [];
 			foreach ($ar_records as $current_record) {
 
 				$current_section_tipo	= $current_record->section_tipo;
 				$current_section_id		= $current_record->section_id;
 
 				// ontology_node item
-				$dd_ontology_record = ontology::parse_section_record_to_dd_ontology_record( $current_section_tipo, $current_section_id );
+				$ontology_node = ontology::parse_section_record_to_ontology_node( $current_section_tipo, $current_section_id );
 
-				if( empty($dd_ontology_record ) ){
+				if( empty($ontology_node ) ){
 					ontology_node::delete_bk_table();
 					$response->errors[] = 'Failed regenerate dd_ontology with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
 					debug_log(__METHOD__
@@ -2123,7 +2127,7 @@ class ontology {
 					return $response;
 				}
 
-				$dd_ontology_records[] = $dd_ontology_record;
+				$ontology_nodes[] = $ontology_node;
 			}
 
 		// 3 delete all tld records
@@ -2133,11 +2137,11 @@ class ontology {
 
 		// 4 insert the new nodes of the given tld
 			$total_insert = 0;
-			foreach ($dd_ontology_records as $dd_ontology_record) {
+			foreach ($ontology_nodes as $ontology_node) {
 
-				$insert_result = $dd_ontology_record->insert();
-				// $dd_ontology_record->get_tld(); // force to load
-				// $insert_result = $dd_ontology_record->update();
+				$insert_result = $ontology_node->insert();
+				// $ontology_node->get_tld(); // force to load
+				// $insert_result = $ontology_node->update();
 
 				// error inserting
 				// recovery al tld from bk table.

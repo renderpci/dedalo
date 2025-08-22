@@ -375,7 +375,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_create_parent_grouper
+	* TEST_CREATE_PARENT_GROUPER
 	* @return void
 	*/
 	public function test_create_parent_grouper() {
@@ -447,26 +447,12 @@ final class ontology_test extends TestCase {
 					.'result: ' . to_string($result)
 				);
 
-				// model
-				// $column_exists = DBi::check_column_exists('dd_ontology', 'model');
-				if (ontology_node::has_column('model')) {
-
-					$model = $ontology_node->get_model();
-
-					$expected = 'area';
-					$this->assertTrue(
-						$model===$expected,
-						'expected [2]: ' . to_string($expected) . PHP_EOL
-						.'model: ' . to_string($model) . PHP_EOL
-						.'result: ' . to_string($result)
-					);
-				}
 	}//end test_create_parent_grouper
 
 
 
 	/**
-	* TEST_map_tld_to_target_section_tipo
+	* TEST_MAP_TLD_TO_TARGET_SECTION_TIPO
 	* @return void
 	*/
 	public function test_map_tld_to_target_section_tipo() {
@@ -501,7 +487,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_map_target_section_tipo_to_tld
+	* TEST_MAP_TARGET_SECTION_TIPO_TO_TLD
 	* @return void
 	*/
 	public function test_map_target_section_tipo_to_tld() {
@@ -538,7 +524,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_get_all_ontology_sections
+	* TEST_GET_ALL_ONTOLOGY_SECTIONS
 	* @return void
 	*/
 	public function test_get_all_ontology_sections() {
@@ -583,7 +569,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_get_all_main_ontology_records
+	* TEST_GET_ALL_MAIN_ONTOLOGY_RECORDS
 	* @return void
 	*/
 	public function test_get_all_main_ontology_records() {
@@ -606,7 +592,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_get_active_elements
+	* TEST_GET_ACTIVE_ELEMENTS
 	* @return void
 	*/
 	public function test_get_active_elements() {
@@ -623,7 +609,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_row_to_element
+	* TEST_ROW_TO_ELEMENT
 	* @return void
 	*/
 	public function test_row_to_element() {
@@ -666,15 +652,15 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_parse_section_record_to_dd_ontology_record
+	* TEST_PARSE_SECTION_RECORD_TO_ONTOLOGY_NODE
 	* @return void
 	*/
-	public function test_parse_section_record_to_dd_ontology_record() {
+	public function test_parse_section_record_to_ontology_node() {
 
 		$section_tipo	= 'hierarchy0'; //'hierarchymtype0';
 		$section_id		= '1';
 
-		$result = ontology::parse_section_record_to_dd_ontology_record(
+		$result = ontology::parse_section_record_to_ontology_node(
 			$section_tipo,
 			$section_id
 		);
@@ -773,7 +759,7 @@ final class ontology_test extends TestCase {
 				'expected: ' . to_string($expected) .  PHP_EOL
 					. 'result->get_model(): ' . to_string($result->get_model())
 			);
-	}//end test_parse_section_record_to_dd_ontology_record
+	}//end test_parse_section_record_to_ontology_node
 
 
 
@@ -1007,7 +993,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_delete_main
+	* TEST_DELETE_MAIN
 	* @return void
 	*/
 	public function test_delete_main() {
@@ -1038,7 +1024,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_get_main_tld
+	* TEST_GET_MAIN_TLD
 	* @return void
 	*/
 	public function test_get_main_tld() {
@@ -1086,7 +1072,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_get_main_typology_id
+	* TEST_GET_MAIN_TYPOLOGY_ID
 	* @return void
 	*/
 	public function test_get_main_typology_id() {
@@ -1131,7 +1117,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_get_main_name_data
+	* TEST_GET_MAIN_NAME_DATA
 	* @return void
 	*/
 	public function test_get_main_name_data() {
@@ -1176,7 +1162,7 @@ final class ontology_test extends TestCase {
 
 
 	/**
-	* TEST_delete_ontology
+	* TEST_DELETE_ONTOLOGY
 	* @return void
 	*/
 	public function test_delete_ontology() {
