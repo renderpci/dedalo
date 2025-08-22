@@ -756,12 +756,9 @@ class ontology_node extends ontology_record {
 	* GET_AR_CHILDREN_OF_THIS
 	* Get array of terms (tipo) with parent = $this->tipo
 	* Its mean that only direct children (first level) will be returned
-	* @param string|null $is_model = null
-	* @param string|null $order_by = 'order_number'
-	* @param bool $use_cache = true
 	* @return array $ar_children_of_this
 	*/
-	public function get_ar_children_of_this( ?string $is_model=null, $order_by='order_number', bool $use_cache=true ) : array {
+	public function get_ar_children_of_this() : array {
 
 		// check self tipo
 		if(empty($this->tipo))	{
@@ -814,7 +811,7 @@ class ontology_node extends ontology_record {
 	* @param string $order_by = 'order_number'
 	* @return array $ar_children
 	*/
-	public static function get_ar_children( string $tipo, string $order_by='order_number' ) : array {
+	public static function get_ar_children( string $tipo ) : array {
 
 		// static cache
 		static $get_ar_children_data;
@@ -833,7 +830,7 @@ class ontology_node extends ontology_record {
 		}
 
 		$ontology_node	= new ontology_node( $tipo );
-		$ar_children	= $ontology_node->search( $arguments );
+		$ar_children	= $ontology_node->get_ar_children_of_this();
 
 		// store cache data
 		$get_ar_children_data[$key] = $ar_children;
