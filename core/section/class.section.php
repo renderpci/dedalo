@@ -212,7 +212,7 @@ class section extends common {
 				&&	!isset(section::$active_section_id) ) {
 
 					// fix active_section_id
-						section::$active_section_id = $this->get_section_id();
+					section::$active_section_id = $this->get_section_id();
 			}
 
 		// pagination. Set defaults
@@ -239,7 +239,6 @@ class section extends common {
 
 		return $this->JSON_RecordObj_matrix;
 	}//end get_JSON_RecordObj_matrix
-
 
 
 
@@ -295,6 +294,8 @@ class section extends common {
 
 	/**
 	* GET DATO
+	* Loads the section data from database if is not already loaded
+	* and returns the assigned value.
 	* @return object $dato
 	*/
 	public function get_dato() : object {
@@ -1959,21 +1960,6 @@ class section extends common {
 
 		return $ar_buttons_tipo;
 	}//end get_section_buttons_tipo
-
-
-
-	/**
-	* GET_AR_ALL_PROJECT_LANGS
-	* Alias of static method common::get_ar_all_project_langs
-	* @return array $ar_all_project_langs
-	*	(like lg-spa, lg-eng)
-	*/
-		// public function get_ar_all_project_langs() : array {
-
-		// 	$ar_all_project_langs = common::get_ar_all_langs();
-
-		// 	return (array)$ar_all_project_langs;
-		// }//end get_ar_all_project_langs
 
 
 
