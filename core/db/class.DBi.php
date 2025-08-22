@@ -153,12 +153,12 @@ abstract class DBi {
 		}
 
 		// no cache case return fresh connection
-			if ($cache!==true) {
-				return $pg_conn_real;
-			}
+		if ($cache!==true) {
+			return $pg_conn_real;
+		}
 
 		// set as static
-			$pg_conn = $pg_conn_real;
+		$pg_conn = $pg_conn_real;
 
 
 		return $pg_conn;
