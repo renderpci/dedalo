@@ -100,14 +100,9 @@ class login extends common {
 			}
 
 		// search username
-			$arguments = [];
-			$arguments['strPrimaryKeyName']	= 'section_id';
-			$arguments['section_tipo']		= DEDALO_SECTION_USERS_TIPO;
-			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode([$username],JSON_UNESCAPED_UNICODE);
-			// search
-			$matrix_table			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
-			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, null, DEDALO_SECTION_USERS_TIPO);
-			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+			$ar_section_id	= login::get_users_with_name( $username );
+			$ar_result		= $ar_section_id;
+			$user_count		= count($ar_result);
 			$user_count				= count($ar_result);
 
 		// user found in db check
@@ -353,20 +348,14 @@ class login extends common {
 				}
 			}
 
-		# Search code
-			$arguments=array();
-			$arguments["strPrimaryKeyName"] = 'section_id';
-			$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
-			$arguments["datos#>>'{components,dd1053,dato,lg-nolan}'"] = json_encode([$code], JSON_UNESCAPED_UNICODE);
-
-			$matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
-			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
-			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+		# Search code (DNI, etc.)
+			$ar_section_id	= login::get_users_with_code( $code );
+			$ar_result		= $ar_section_id;
 
 			$section_id = !empty($ar_result[0]) ? $ar_result[0] : false;
 			if($section_id!==false) {
 
-				// Ok
+				// OK
 
 					$section_id = (int)$ar_result[0];
 					$username 	= 'saml_user';
@@ -1450,6 +1439,167 @@ class login extends common {
 
 		return $dd_object;
 	}//end get_structure_context
+
+
+
+	/**
+	* GET_USERS_WITH_NAME
+	* Search into `matrix_users` table the records matching the given name
+	* in the component DEDALO_USER_NAME_TIPO and with section tipo DEDALO_SECTION_USERS_TIPO.
+	* @param string $username
+	* User name introduced into the login form by the user as 'Pepe'
+	* @return array $ar_section_id
+	* List of `section_id` from the found users.
+	* Here we expect only one user, but could exists more than one with the the same name potentially.
+	*/
+	public static function get_users_with_name( string $username ) : array {
+
+		// old search
+			// $arguments = [];
+			// $arguments['strPrimaryKeyName']	= 'section_id';
+			// $arguments['section_tipo']		= DEDALO_SECTION_USERS_TIPO;
+			// $arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode([$username],JSON_UNESCAPED_UNICODE);
+			// // search
+			// $matrix_table			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
+			// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, null, DEDALO_SECTION_USERS_TIPO);
+			// $ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+			// $user_count				= count($ar_result);
+
+		// search direct
+			// $conn = DBi::_getConnection();
+			// $sql  = "
+			// 	SELECT section_id FROM \"matrix_users\" WHERE
+			// 	datos#>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}' @> $1
+			// ";
+			// $result = pg_query_params(
+			// 	$conn,
+			// 	$sql,
+			// 	[json_encode([$username],JSON_UNESCAPED_UNICODE)]
+			// );
+			// if (!$result) {
+			// 	debug_log(__METHOD__ . " Unable to get results from database" . PHP_EOL
+			// 		.' error: ' . pg_last_error($conn)
+			// 		, logger::ERROR
+			// 	);
+			// 	$response->msg = "Unable to get results from database. See your server log for details.";
+			// 	return $response;
+			// }
+			// // Number of rows returned
+			// $ar_result	= pg_fetch_all($result);
+			// $user_count	= count($ar_result);
+
+		// SQO way
+			// $sqo = json_decode('
+			// 	{
+			// 	  "section_tipo": [
+			// 	    "'.DEDALO_SECTION_USERS_TIPO.'"
+			// 	  ],
+			// 	  "filter": {
+			// 	    "$and": [
+			// 	      {
+			// 	        "q": [
+			// 	          "'.$username.'"
+			// 	        ],
+			// 	        "q_operator": "==",
+			// 	        "path": [
+			// 	          {
+			// 	            "section_tipo": "'.DEDALO_SECTION_USERS_TIPO.'",
+			// 	            "component_tipo": "'.DEDALO_USER_NAME_TIPO.'",
+			// 	            "model": "component_input_text",
+			// 	            "name": "User"
+			// 	          }
+			// 	        ],
+			// 	        "type": "jsonb",
+			// 	        "lang": "lg-nolan"
+			// 	      }
+			// 	    ]
+			// 	  },
+			// 	  "limit": 1
+			// 	}
+			// ');
+			// $search = search::get_instance($sqo);
+			// $search_result = $search->search();
+
+		// matrix_data way
+			$ar_section_id = matrix_data::search_matrix_data(
+				'matrix_users',
+				[
+					[
+						'column'	=> 'section_tipo',
+						'operator'	=> '=',
+						'value'		=> DEDALO_SECTION_USERS_TIPO
+					],
+					[
+						'column'	=> 'datos',
+						'operator'	=> '@>',
+						'value'		=> '{"components":{"'.DEDALO_USER_NAME_TIPO.'":{"dato":{"lg-nolan": ["'.$username.'"]}}}}' // v6
+					],
+					// [
+					// 	'column'	=> 'string',
+					// 	'operator'	=> '@>',
+					// 	'value'		=> '{"'.DEDALO_USER_NAME_TIPO.'": [{"lang": "lg-nolan", "value": "'.$username.'"}]}' // v7
+					// ]
+				],
+				null, // order
+				null // limit
+			);
+
+
+		return $ar_section_id ?: [];
+	}//end get_users_with_name
+
+
+
+	/**
+	* GET_USERS_WITH_CODE
+	* Search into `matrix_users` table the records matching the given code
+	* in the component 'dd1053' and with section tipo DEDALO_SECTION_USERS_TIPO.
+	* @param string $code
+	* Code received by the the login form the SAML login as '25748925G'
+	* @return array $ar_section_id
+	* List of `section_id` from the found users.
+	* Here we expect only one user, but could exists more than one with the the same code potentially.
+	*/
+	public static function get_users_with_code( string $code ) : array|false {
+
+		$code_component_tipo = 'dd1053';
+
+		// old search
+			// $arguments=array();
+			// $arguments["strPrimaryKeyName"] = 'section_id';
+			// $arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
+			// $arguments["datos#>>'{components,{$code_component_tipo},dato,lg-nolan}'"] = json_encode([$code], JSON_UNESCAPED_UNICODE);
+			// $matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
+			// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
+			// $ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+
+		// matrix data way
+			$ar_section_id = matrix_data::search_matrix_data(
+				'matrix_users',
+				[
+					[
+						'column'	=> 'section_tipo',
+						'operator'	=> '=',
+						'value'		=> DEDALO_SECTION_USERS_TIPO
+					],
+					[
+						'column'	=> 'datos',
+						'operator'	=> '@>',
+						'value'		=> '{"components":{"'.$code_component_tipo.'":{"dato":{"lg-nolan": ["'.$code.'"]}}}}' // v6
+					],
+					// [
+					// 	'column'	=> 'string',
+					// 	'operator'	=> '@>',
+					// 	'value'		=> '{"'.$code_component_tipo.'": [{"lang": "lg-nolan", "value": "'.$code.'"}]}'
+					// ]
+				],
+				null, // order
+				1 // limit
+			);
+
+
+		return $ar_section_id ?: [];
+	}//end get_users_with_code
 
 
 
