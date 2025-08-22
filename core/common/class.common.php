@@ -66,8 +66,8 @@ abstract class common {
 
 		// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 		public $bl_loaded_structure_data;
-		//bl_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
-		public $bl_loaded_matrix_data = false;
+		//is_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
+		public $is_loaded_matrix_data = false;
 
 		// TABLE  matrix_table
 		// public $matrix_table;
@@ -326,27 +326,27 @@ abstract class common {
 
 
 	/**
-	* SET_BL_LOADED_MATRIX_DATA
+	* SET_IS_LOADED_MATRIX_DATA
 	* @param bool $value
 	* @return bool
 	*/
-	public function set_bl_loaded_matrix_data( bool $value ) : bool {
+	public function set_is_loaded_matrix_data( bool $value ) : bool {
 
-		$this->bl_loaded_matrix_data = $value;
+		$this->is_loaded_matrix_data = $value;
 
 		return true;
-	}//end set_bl_loaded_matrix_data
+	}//end set_is_loaded_matrix_data
 
 
 
 	/**
-	* GET_BL_LOADED_MATRIX_DATA
+	* GET_IS_LOADED_MATRIX_DATA
 	* @return bool $value
 	*/
-	public function get_bl_loaded_matrix_data() : bool {
+	public function get_is_loaded_matrix_data() : bool {
 
-		return $this->bl_loaded_matrix_data;
-	}//end get_bl_loaded_matrix_data
+		return $this->is_loaded_matrix_data;
+	}//end get_is_loaded_matrix_data
 
 
 
@@ -632,7 +632,7 @@ abstract class common {
 		$this->dato = $dato;
 
 		// loaded. Fix this element as data loaded to prevent overwrite current fixed dato, with database dato
-		$this->set_bl_loaded_matrix_data(true);
+		$this->set_is_loaded_matrix_data(true);
 
 		return true;
 	}//end set_dato
@@ -642,7 +642,7 @@ abstract class common {
 	/**
 	* SET_LANG
 	* When isset lang, valor and dato are cleaned
-	* and $this->bl_loaded_matrix_data is reset to force load from database again
+	* and $this->is_loaded_matrix_data is reset to force load from database again
 	* @param string $lang
 	* @return bool
 	*/
@@ -672,7 +672,7 @@ abstract class common {
 			}
 
 		// force reload dato from database when dato is requested again
-			$this->set_bl_loaded_matrix_data(false);
+			$this->set_is_loaded_matrix_data(false);
 	}//end set_to_force_reload_dato
 
 

@@ -219,7 +219,7 @@ class component_relation_common extends component_common {
 			return false;
 		}
 
-		if( $this->bl_loaded_matrix_data!==true ) {
+		if( $this->is_loaded_matrix_data!==true ) {
 
 			// dato full
 			$this->dato_full = $this->get_all_data();
@@ -241,7 +241,7 @@ class component_relation_common extends component_common {
 			}
 
 			# Set as loaded
-			$this->bl_loaded_matrix_data = true;
+			$this->is_loaded_matrix_data = true;
 		}
 
 		return true;
@@ -1127,13 +1127,13 @@ class component_relation_common extends component_common {
 				// Dataframe
 				// When the component is a dataframe it get only the section_id_key and section_tipo_key
 				// but to save in relations will need the full data (all locators of the component) to replace relations rows
-				// so remove the caller_dataframe for the component and all caches (dato_resolved and bl_loaded_matrix_data)
+				// so remove the caller_dataframe for the component and all caches (dato_resolved and is_loaded_matrix_data)
 				// to get the full data of the component.
 				if(get_called_class() === 'component_dataframe'){
 					$current_caller_dataframe		= $this->get_caller_dataframe();
 					$this->caller_dataframe			= null;
 					$this->dato_resolved			= null;
-					$this->bl_loaded_matrix_data	= false;
+					$this->is_loaded_matrix_data	= false;
 				}
 
 				$current_dato = $this->get_dato_full();
@@ -1152,7 +1152,7 @@ class component_relation_common extends component_common {
 				if(get_called_class() === 'component_dataframe'){
 					$this->caller_dataframe			= $current_caller_dataframe;
 					$this->dato_resolved			= null;
-					$this->bl_loaded_matrix_data	= false;
+					$this->is_loaded_matrix_data	= false;
 				}
 			}
 

@@ -721,7 +721,7 @@ abstract class component_common extends common {
 				$dato = null;
 			}
 
-		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
+		// call common->set_dato (!) fix var 'is_loaded_matrix_data' as true
 			parent::set_dato($dato);
 
 		// resolved set
@@ -805,7 +805,7 @@ abstract class component_common extends common {
 					$this->dato = $dato_tm;
 
 					// set as already loaded to prevent load again
-					$this->bl_loaded_matrix_data = true;
+					$this->is_loaded_matrix_data = true;
 
 					// inject dato to component
 					$this->dato_resolved = $dato_tm;
@@ -954,7 +954,7 @@ abstract class component_common extends common {
 				return false;
 			}
 
-		if($this->bl_loaded_matrix_data!==true) {
+		if($this->is_loaded_matrix_data!==true) {
 
 			// section create
 				$section = $this->get_my_section();
@@ -967,7 +967,7 @@ abstract class component_common extends common {
 				);
 
 			// Set as loaded
-				$this->bl_loaded_matrix_data = true;
+				$this->is_loaded_matrix_data = true;
 		}
 
 		return true;

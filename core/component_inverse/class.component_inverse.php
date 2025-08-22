@@ -34,7 +34,7 @@ class component_inverse extends component_common {
 			$this->dato_resolved	= $dato;
 
 		// Set as loaded
-			$this->bl_loaded_matrix_data = true;
+			$this->is_loaded_matrix_data = true;
 
 
 		return $dato;
