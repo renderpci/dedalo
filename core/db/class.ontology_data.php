@@ -416,4 +416,129 @@ abstract class ontology_data {
 
 		return true;
 	}//end delete_ontolgy_data
+
+
+
+	/**
+	* SEARCH_ONTOLOGY_DATA
+	* Search in one or more columns in the "ontology" table ,
+	* return an array with the found `tipos`..
+	* @param array $values
+	* Assoc array with [column name => value] structure
+	* Keys are column names, values are their new values.
+	* @return array|false
+	* Returns and array with found tipos on success, or `false` if validation fails,
+	* query preparation fails, or execution fails.
+	*/
+	public static function search_ontology_data( array $values, bool $order=false, ?int $limit=null ) : array|false {
+
+		// check values
+		if (empty($values)) {
+			debug_log(__METHOD__
+				." Empty values array " . PHP_EOL
+				.' values: ' . json_encode($values)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$table = self::$ontology_table;
+
+		$conn = DBi::_getConnection();
+
+		$params			= []; // param values (first one for tipo)
+		$param_index	= 1; // next param index ($2, $3, ...)
+
+		$where_clauses = [];
+
+		// Add dynamic columns
+		foreach ($values as $col => $value) {
+
+			// Columns. Only accepts normalized columns
+			if (!isset(self::$ontology_columns[$col])) {
+				throw new Exception("Invalid column name: $col");
+			}
+
+			if (is_object($value)) {
+
+				// search with operator
+				$params[] = $value->value;
+				$where_clauses[] = pg_escape_identifier($conn, $col) . ' '.$value->operator.' $'.$param_index;
+
+			}else{
+
+				$params[] = $value;
+				$where_clauses[] = pg_escape_identifier($conn, $col) . ' = $'.$param_index;
+			}
+
+			// Increase param index value
+			$param_index++;
+		}
+
+		// With prepared statement
+			// $stmt_name = md5(__METHOD__ . '_' . $table .'_'. implode('', $columns));
+			// if (!isset(DBi::$prepared_statements[$stmt_name])) {
+
+			// 	// set_clauses
+			// 	$counter = 2; // 1 is reserved to tipo
+			// 	$set_clauses = [];
+			// 	foreach ($values as $key => $value) {
+			// 		if (!isset(self::$ontology_columns[$key])) {
+			// 			throw new Exception("Invalid column name: $key");
+			// 		}
+			// 		$set_clauses[] = '"'.$key.'" = $' . $counter++;
+			// 	}
+
+			// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
+			// 		 .' WHERE tipo = $1';
+
+			// 	if (!pg_prepare(
+			// 		$conn,
+			// 		$stmt_name,
+			// 		$sql)
+			// 	) {
+			//         debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+			//         return false;
+			//     }
+			// 	// Set the statement as existing.
+			// 	DBi::$prepared_statements[$stmt_name] = true;
+			// }
+			// $result = pg_execute(
+			// 	$conn,
+			// 	$stmt_name,
+			// 	[$tipo, ...$safe_values] // spread values
+			// );
+
+		// Without prepared statement (more dynamic and appropriate for changing columns scenarios)
+			$sql = 'SELECT tipo FROM '.$table
+				 .' WHERE '. implode(' AND ', $where_clauses)
+				 . (($order===true) ? ' ORDER BY order_number ASC' : '')
+				 . (!empty($limit)  ? " LIMIT $limit" : '');
+
+			$result = pg_query_params($conn, $sql, $params);
+
+		if (!$result) {
+			debug_log(__METHOD__
+				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				.' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// result
+		$rows = pg_fetch_all($result);
+
+		$tipos = [];
+		foreach ($rows as $row) {
+			$tipos[] = $row['tipo'];
+		}
+
+
+
+		return $tipos;
+	}//end search_ontology_data
+
+
+
 }//end class ontology_data
