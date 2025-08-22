@@ -3,24 +3,28 @@
 * ontology_node
 *
 */
-class ontology_node extends ontology_record {
+class ontology_node {
 
 
+	// data
+	protected $data;
 
 	// fields
-	public $tipo;
-	protected $parent;
-	protected $term;
-	protected $modelo;
-	protected $model;
-	protected $is_model;
-	protected $order_number;
-	protected $tld;
-	protected $is_translatable;
-	protected $relations;
-	protected $propiedades;
-	protected $properties; // Deprecated used only for compatibility of v5 and v6
+	public $tipo; // string
+	// protected $parent; // string | null
+	// protected $term; // object | null
+	// protected $model; // string | null
+	// protected $order_number; // int | null
+	// protected $relations; // array | null
+	// protected $tld; // string
+	// protected $properties; // object | null
+	// protected $model_tipo; // string | null
+	// protected $is_model; // boolean
+	// protected $is_translatable;	// boolean
+	// protected $propiedades;	// string, data is a object as json stringify // Deprecated used only for compatibility of v5 and v6
 
+	// bl_loaded_data
+	protected $bl_loaded_data = false;
 
 	// fields external
 	protected $filtroTerminos ;
@@ -37,22 +41,19 @@ class ontology_node extends ontology_record {
 	private static $instances = [];
 
 
-
 	/**
 	* GET_INSTANCE
 	* @param ?string $tipo = null
 	* @param ?string $tld = null
 	* @return self
 	*/
-	public static function get_instance( ?string $tipo = null, ?string $tld = null ): self {
+	public static function get_instance( ?string $tipo = null ): self {
 
-		$key = md5(serialize([$tipo, $tld]));
-
-		if (!isset(self::$instances[$key])) {
-			self::$instances[$key] = new self($tipo, $tld);
+		if (!isset(self::$instances[$tipo])) {
+			self::$instances[$tipo] = new self($tipo);
 		}
 
-		return self::$instances[$key];
+		return self::$instances[$tipo];
 	}//end get_instance
 
 
@@ -60,50 +61,171 @@ class ontology_node extends ontology_record {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct( ?string $tipo=null, ?string $tld=null ) {
+	function __construct( ?string $tipo=null ) {
 
 		if( !empty($tipo) ) {
 
-			// with tipo
+			//remove any other things than tld and section_id in the tipo string
+			$safe_tipo = safe_tipo($tipo);
 
-			$this->set_tipo($tipo);
-			$this->set_tld( get_tld_from_tipo($tipo) );
+			if( $safe_tipo !== $tipo ){
+				debug_log(__METHOD__
+					." Error creating a new ontology node, tipo is not a valid tipo: ". PHP_EOL
+					.' tipo: ' . $tipo .PHP_EOL
+					.' safe_tipo: ' . $safe_tipo .PHP_EOL
+					, logger::ERROR
+				);
+				return;
+			}
 
-		}else if(!empty($tld) && strlen($tld)>=2) {
-
-			$tipo = null;
-			$this->set_tld($tld);
-
-		}else{
-
-			debug_log(__METHOD__
-				." 'This record dd do not exists!  " . PHP_EOL
-				.' tipo: ' . to_string($tipo) . PHP_EOL
-				.' tld: ' . to_string($tld) . PHP_EOL
-				.' backtrace: ' . to_string(debug_backtrace())
-				, logger::ERROR
-			);
+			// Set tipo
+			$this->tipo = $safe_tipo;
 		}
-
-		// new ontology_record
-		parent::__construct($tipo);
 	}//end __construct
 
 
 
 	/**
-	* HAS_COLUMN
-	* Check if ontology_node has column X
-	* Useful in transitional updates like
-	* on add column 'model'
+	* LOAD_DATA
 	* @return bool
 	*/
-	public static function has_column( string $column ) : bool {
-		$ontology_node = new ontology_node(null, 'dd');
-		$relation_map = $ontology_node->defineRelationMap();
+	public function load_data() : bool {
 
-		return in_array($column, $relation_map);
-	}//end has_column
+		if ($this->bl_loaded_data) {
+			return true;
+		}
+
+		$tipo = $this->tipo;
+		$data = ontology_data::load_ontology_data($tipo);
+
+		// Set as loaded
+		$this->bl_loaded_data = true;
+
+		$this->data = !empty($data) ? (object)$data : new stdClass();
+	// dump($this->data, ' this->data ++ '.to_string());
+		return true;
+	}//end load_data
+
+
+	public function get_data(){
+		$this->load_data();
+		return $this->data;
+	}//end get_tipo
+
+	public function get_tipo() : ?string{
+		return $this->tipo;
+	}//end get_tipo
+
+
+	public function get_parent() : ?string {
+		$this->load_data();
+		return $this->data->parent ?? null;
+	}//end get_parent
+
+
+	/**
+	* GET_TERM
+	* Get dd_ontology column 'term' and try to parse as JSON abject
+	* @return object|null
+	*/
+	public function get_term() : ?object {
+		$this->load_data();
+		return $this->data->term ?? null;
+	}//end get_term
+
+
+
+	public function get_model() : ?string {
+		$this->load_data();
+		return $this->data->model ?? null;
+	}//end get_model
+
+
+
+	public function get_order_number() : ?int {
+		$this->load_data();
+		return $this->data->order_number ?? null;
+	}//end get_order_number
+
+
+	/**
+	* GET_RELATIONS
+	* Return the value of property 'relations', stored as JSONB in table column 'relations'
+	* Values expected in 'relations' are always JSON.
+	* @return mixed $properties_parsed
+	*/
+	public function get_relations() : ?array {
+		$this->load_data();
+		return $this->data->relations ?? null;
+	}//end get_relations
+
+
+
+
+	public function get_tld() : ?string {
+		$this->load_data();
+		return $this->data->relations ?? null;
+	}//end get_tld
+
+
+	/**
+	* GET_PROPERTIES
+	* Return the value of property 'properties', stored as JSONB in table column 'properties'
+	* Values expected in 'properties' are always JSON.
+	* @return mixed $properties_parsed
+	*/
+	public function get_properties() : ?object {
+		$this->load_data();
+		return $this->data->properties ?? null;
+	}//end get_properties
+
+
+
+	public function get_model_tipo() : ?string {
+		$this->load_data();
+		return $this->data->model_tipo ?? null;
+	}//end get_model_tipo
+
+
+
+	/**
+	* GET_IS_MODEL
+	* Retrieve from DDBB the column is_model
+	* Parse the column as boolean
+	* @return bool
+	*/
+	public function get_is_model() : bool {
+		$this->load_data();
+		return $this->data->is_model;
+	}//end get_is_model
+
+
+
+	/**
+	* GET_IS_TRANSLATABLE
+	* Retrieve from DDBB the column is_translatable
+	* @return bool
+	*/
+	public function get_is_translatable() : bool {
+		$this->load_data();
+		return $this->data->is_translatable;
+	}//end get_is_translatable
+
+
+	/**
+	* GET_TRANSLATABLE
+	* Get current term translatable as boolean value
+	* based on column 'translatable' value
+	* @param string $tipo
+	* @return bool
+	*/
+	public static function get_translatable( string $tipo ) : bool {
+
+		$ontology_node	= new ontology_node($tipo);
+		$translatable	= $ontology_node->get_is_translatable();
+
+		return $translatable;
+	}//end get_translatable
 
 
 
@@ -115,42 +237,312 @@ class ontology_node extends ontology_record {
 	* @return mixed $propiedades
 	* 	object / string parent::$properties
 	*/
-	public function get_propiedades( bool $json_decode=false ) : mixed {
+	public function get_propiedades() : array|object|null {
+		$this->load_data();
+		return $this->data->propiedades;
+	}//end get_propiedades
 
-		$propiedades = parent::get_propiedades();
-		if (is_null($propiedades)) {
-			return null;
-		}
 
-		if ($json_decode===true) {
-			return json_decode($propiedades);
-		}
 
-		return $propiedades;
-	}//end get_properties
+
+
+
+
+	private function set_tipo( string $tipo ){
+
+		$this->data->tipo = $tipo;
+	}//end set_tipo
+
+
+
+	public function set_parent( ?string $parent ) {
+
+		$safe_parent = safe_tipo($parent);
+		$this->data->parent = $safe_parent;
+	}//end set_parent
 
 
 
 	/**
-	* GET_PROPERTIES
-	* Return the value of property 'properties', stored as JSONB in table column 'properties'
-	* Values expected in 'properties' are always JSON.
-	* @return mixed $properties_parsed
+	* SET_TERM
+	* Set given $term value. e.g. {"lg-eng": "Activity"}
+	* @param object|null $term
+	* @return bool
 	*/
-	public function get_properties() : mixed {
+	public function set_term( ?object $term ) {
 
-		$properties = parent::get_properties();
-		if (is_null($properties) || $properties===false) {
-			return null;
+		$this->data->term = $term;
+	}//end set_term
+
+
+
+	public function set_model( ?string $model ) {
+
+		$this->data->model = $model;
+	}//end set_model
+
+
+
+	public function set_order_number( ?int $order_number ) {
+
+		$this->data->order_number = $order_number;
+	}//end set_order_number
+
+
+	/**
+	* SET_RELATIONS
+	* Set 'relations' e.g. [{"tipo": "actv1"}]
+	* @param array|null $ar_relations
+	*/
+	public function set_relations( ?array $relations) {
+
+		$this->data->relations = $relations;
+	}//end set_relations
+
+
+
+	public function set_tld( ?string $tld ) {
+
+		$this->data->tld = $tld;
+	}//end set_tld
+
+
+	/**
+	* SET_PROPERTIES
+	* Set the value of property 'properties'
+	* Values expected in 'properties' are always JSON.
+	* @param object|null $properties
+	*/
+	public function set_properties( ?object $properties) {
+
+		$this->data->properties = $properties;
+	}//end set_properties
+
+
+
+	public function set_model_tipo( ?string $model_tipo ) {
+
+		$this->data->model_tipo = $model_tipo;
+	}//end set_model_tipo
+
+
+
+	/**
+	* set_IS_MODEL
+	* Retrieve from DDBB the column is_model
+	* Parse the column as boolean
+	* @return bool
+	*/
+	public function set_is_model( bool $is_model) {
+
+		$this->data->is_model = $is_model;
+	}//end set_is_model
+
+
+
+	/**
+	* set_IS_TRANSLATABLE
+	* Retrieve from DDBB the column is_translatable
+	* @return bool
+	*/
+	public function set_is_translatable( bool $is_translatable ) {
+
+		$this->data->is_translatable = $is_translatable;
+	}//end set_is_translatable
+
+
+
+	/**
+	* set_PROPIEDADES
+	* Return the value of property 'properties', stored as plain text in table column 'properties'
+	* Values expected in 'propiedades' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
+	* @param bool $json_decode = false
+	* @return mixed $propiedades
+	* 	object / string parent::$properties
+	*/
+	public function set_propiedades( array|object|null $propiedades ) {
+
+		$this->data->propiedades = $propiedades;
+	}//end set_propiedades
+
+
+
+
+
+
+
+
+
+	/**
+	* SAVE
+	* PASADA A ontology_node (Pública. Esta carpeta es privada de momento 28-08-2016)
+	* @return string|false $tipo
+	*/
+	// public function Save() : string|false {
+
+	// 	if(!verify_dedalo_prefix_tipos($this->tld)) {
+	// 		if(SHOW_DEBUG===true) {
+	// 			trigger_error("Error on save 'ontology_node'. tld is empty or wrong. Nothing is saved!");
+	// 		}
+	// 		return false;
+	// 	}
+
+	// 	#
+	// 	# EDIT
+	// 	# TERMINO ID EXISTS : UPDATE RECORD
+	// 	if (!empty($this->tipo) && verify_dedalo_prefix_tipos($this->tld)) {
+	// 		if(SHOW_DEBUG===true) {
+	// 			// debug_log(__METHOD__." Saving with parent save ".$this->tipo, logger::DEBUG);
+	// 		}
+	// 		return parent::Save();
+
+	// 	}
+
+	// 	#
+	// 	# INSERT
+	// 	# TERMINO ID NOT CREATED : BUILD NEW AND INSERT
+	// 	# Creamos el tipo a partir del tld y el contador contador para el tld actual
+	// 	$counter_dato   = self::get_counter_value($this->tld);
+	// 	$tipo		= (string)$this->tld . (int)($counter_dato+1);
+	// 		#dump($tipo," tipo - tld:$this->tld");die();
+
+	// 	# Fix tipo : Important!
+	// 	$this->set_tipo($tipo);
+
+	// 	# Set defaults
+	// 	$this->set_tld( (string)$this->tld );
+	// 	if(empty($this->order_number)) $this->set_order_number( (int)1 );
+
+
+	// 	if (!empty($this->tipo)) {
+
+	// 		$result = parent::Save();
+
+	// 		if ($result) {
+	// 			$counter_dato_updated  = self::update_counter($this->tld, $counter_dato);
+	// 		}
+	// 	}
+
+	// 	return (string)$tipo;
+	// }//end Save
+
+
+
+	/**
+	* INSERT
+	* Create a row into dd_ontology with ontology data
+	* The insert will search if tipo exists previously,
+	* if the tipo was found, delete it and insert as new one
+	* else insert new one
+	* @return string|false|null $tipo(tipo)
+	*/
+	public function insert() : bool {
+
+		$tipo = $this->get_tipo();
+
+		$result = ontology_data::delete_ontolgy_data($tipo);
+
+		if($result===false) {
+			return false;
 		}
 
-		$properties_parsed = is_string($properties)
-			? json_decode($properties)
-			: $properties;
+		$values = (array) $this->get_data();
+
+		$result = ontology_data::insert_ontolgy_data( $tipo, $values );
+
+		if($result===false) {
+			return false;
+		}
 
 
-		return $properties_parsed;
-	}//end get_propiedades
+		return true;
+	}//end insert
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
+	* GET_PROPIEDADES
+	* Return the value of property 'properties', stored as plain text in table column 'properties'
+	* Values expected in 'propiedades' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
+	* @param bool $json_decode = false
+	* @return mixed $propiedades
+	* 	object / string parent::$properties
+	*/
+	// public function get_propiedades( bool $json_decode=false ) : mixed {
+
+	// 	$propiedades = parent::get_propiedades();
+	// 	if (is_null($propiedades)) {
+	// 		return null;
+	// 	}
+
+	// 	if ($json_decode===true) {
+	// 		return json_decode($propiedades);
+	// 	}
+
+	// 	return $propiedades;
+	// }//end get_properties
+
+
+
+	// /**
+	// * GET_PROPERTIES
+	// * Return the value of property 'properties', stored as JSONB in table column 'properties'
+	// * Values expected in 'properties' are always JSON.
+	// * @return mixed $properties_parsed
+	// */
+	// public function get_properties() : mixed {
+
+	// 	$properties = parent::get_properties();
+	// 	if (is_null($properties) || $properties===false) {
+	// 		return null;
+	// 	}
+
+	// 	$properties_parsed = is_string($properties)
+	// 		? json_decode($properties)
+	// 		: $properties;
+
+
+	// 	return $properties_parsed;
+	// }//end get_propiedades
 
 
 
