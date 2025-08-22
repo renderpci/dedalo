@@ -791,28 +791,8 @@ class ontology_node extends ontology_record {
 	*/
 	public static function get_ar_children( string $tipo ) : array {
 
-		// static cache
-		static $get_ar_children_data;
-		$key = $tipo.'_'.$order_by;
-		if(isset($get_ar_children_data[$key])) {
-			return $get_ar_children_data[$key];
-		}
-
-		// search
-		$arguments=array();
-		$arguments['strPrimaryKeyName']	= 'tipo';
-		$arguments['parent']			= $tipo;
-
-		if (!empty($order_by)) {
-			$arguments['order_by_asc'] = $order_by;
-		}
-
 		$ontology_node	= new ontology_node( $tipo );
 		$ar_children	= $ontology_node->get_ar_children_of_this();
-
-		// store cache data
-		$get_ar_children_data[$key] = $ar_children;
-
 
 		return $ar_children;
 	}//end get_ar_children
@@ -832,10 +812,7 @@ class ontology_node extends ontology_record {
 
 		// We create an independent instance of ontology_node and resolve the direct children.
 		$ontology_node			= new ontology_node( $tipo );
-		$ar_children_of_this	= $ontology_node->get_ar_children_of_this(
-			null, // is_model
-			null // order_by
-		);
+		$ar_children_of_this	= $ontology_node->get_ar_children_of_this();
 		$ar_children_of_this_size = sizeof( $ar_children_of_this );
 
 		// iterate children
@@ -870,7 +847,7 @@ class ontology_node extends ontology_record {
 	* @param bool $use_cache = true
 	* @return array $ar_resolved
 	*/
-	public static function get_ar_recursive_children( string $tipo, bool $is_recursion=false, ?array $ar_exclude_models=null, ?string $order_by=null, bool $use_cache=true ) : array {
+	public static function get_ar_recursive_children( string $tipo, bool $is_recursion=false, ?array $ar_exclude_models=null ) : array {
 
 		$ar_resolved=array();
 
@@ -879,11 +856,7 @@ class ontology_node extends ontology_record {
 		}
 
 		$ontology_node	= new ontology_node( $tipo );
-		$ar_children	= $ontology_node->get_ar_children_of_this(
-			null, // bool is_model
-			$order_by, // string order_by
-			$use_cache
-		);
+		$ar_children	= $ontology_node->get_ar_children_of_this();
 		$ar_children_size = sizeof( $ar_children );
 
 		// foreach($ar_children as $current_tipo) {
@@ -905,9 +878,7 @@ class ontology_node extends ontology_record {
 				ontology_node::get_ar_recursive_children(
 					$current_tipo,
 					true,
-					$ar_exclude_models,
-					$order_by,
-					$use_cache
+					$ar_exclude_models
 				)
 			);
 		}
