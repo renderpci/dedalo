@@ -367,4 +367,53 @@ abstract class ontology_data {
 
 
 
+	/**
+	* DELETE_ONTOLGY_DATA
+	* Deletes a single row into a "ontology" table
+	* @param string $tipo
+	* A string identifier representing the unique type of ontology node.
+	* Used as part of the WHERE clause in the SQL query.
+	* @return bool
+	* On success true, or `false` if validation fails,
+	* query preparation fails, or execution fails.
+	*/
+	public static function delete_ontolgy_data( string $tipo ) : bool {
+
+		$conn = DBi::_getConnection();
+
+		$table = self::$ontology_table;
+
+		// With prepared statement
+		$stmt_name = __METHOD__ . '_' . $table;
+		if (!isset(DBi::$prepared_statements[$stmt_name])) {
+
+			$sql = 'DELETE FROM "'.$table.'" WHERE tipo = $1 LIMIT 1';
+			if (!pg_prepare(
+				$conn,
+				$stmt_name,
+				$sql)
+			) {
+				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+				return false;
+			}
+			// Set the statement as existing.
+			DBi::$prepared_statements[$stmt_name] = true;
+		}
+		$result = pg_execute(
+			$conn,
+			$stmt_name,
+			[$tipo]
+		);
+
+		if (!$result) {
+			debug_log(__METHOD__
+				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				.' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end delete_ontolgy_data
 }//end class ontology_data
