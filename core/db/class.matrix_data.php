@@ -553,9 +553,6 @@ abstract class matrix_data {
 			 . $order_clause
 			 . $limit_clause;
 
-			 dump(null, 'sql ***************************************************************************************  ++ '.to_string($sql));
-			 dump(null, 'params ***************************************************************************************  ++ '.to_string($params));
-
 		$result = pg_query_params($conn, $sql, $params);
 		if (!$result) {
 			debug_log(__METHOD__
