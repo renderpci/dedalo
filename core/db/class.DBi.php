@@ -469,16 +469,16 @@ abstract class DBi {
 
 		$sql = "
 			SELECT
-			    schemaname,
-			    tablename,
-			    indexname
+				schemaname,
+				tablename,
+				indexname
 			FROM
-			    pg_indexes
+				pg_indexes
 			WHERE
-			    schemaname NOT IN ('pg_catalog', 'information_schema')
+				schemaname NOT IN ('pg_catalog', 'information_schema')
 			ORDER BY
-			    schemaname,
-			    tablename;
+				schemaname,
+				tablename;
 		";
 
 		$result	= pg_query(DBi::_getConnection(), $sql);
