@@ -381,8 +381,8 @@ final class component_common_test extends TestCase {
 			);
 
 			$this->assertTrue(
-				$component->get_bl_loaded_matrix_data()===false,
-				'expected false for bl_loaded_matrix_data'
+				$component->get_is_loaded_matrix_data()===false,
+				'expected false for is_loaded_matrix_data'
 			);
 
 			// dato
@@ -390,8 +390,8 @@ final class component_common_test extends TestCase {
 
 			if (!empty($dato)) {
 				$this->assertTrue(
-					$component->get_bl_loaded_matrix_data()===true,
-					'expected true for bl_loaded_matrix_data '.$element->model
+					$component->get_is_loaded_matrix_data()===true,
+					'expected true for is_loaded_matrix_data '.$element->model
 				);
 			}
 
@@ -436,8 +436,8 @@ final class component_common_test extends TestCase {
 			$component->set_matrix_id('1');
 
 			$this->assertTrue(
-				$component->get_bl_loaded_matrix_data()===false,
-				'expected false for bl_loaded_matrix_data'
+				$component->get_is_loaded_matrix_data()===false,
+				'expected false for is_loaded_matrix_data'
 			);
 
 			// dato
@@ -445,8 +445,8 @@ final class component_common_test extends TestCase {
 
 			if (!empty($dato)) {
 				$this->assertTrue(
-					$component->get_bl_loaded_matrix_data()===true,
-					'expected true for bl_loaded_matrix_data '.$element->model
+					$component->get_is_loaded_matrix_data()===true,
+					'expected true for is_loaded_matrix_data '.$element->model
 				);
 			}
 
@@ -605,11 +605,11 @@ final class component_common_test extends TestCase {
 				'expected running without errors'
 			);
 
-			$loaded_matrix_data = $component->get_bl_loaded_matrix_data();
+			$loaded_matrix_data = $component->get_is_loaded_matrix_data();
 
 			$this->assertTrue(
 				$loaded_matrix_data===true,
-				'expected true from bl_loaded_matrix_data '.$element->model .PHP_EOL
+				'expected true from is_loaded_matrix_data '.$element->model .PHP_EOL
 				. json_encode($loaded_matrix_data)
 			);
 

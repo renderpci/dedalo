@@ -265,8 +265,8 @@ class section extends common {
 
 
 	/**
-	* SET_BL_LOADED_MATRIX_DATA
-	* Pass bl_loaded_matrix_data to own $JSON_RecordObj_matrix instance
+	* SET_IS_LOADED_MATRIX_DATA
+	* Pass is_loaded_matrix_data to own $JSON_RecordObj_matrix instance
 	* only when value is 'false' to force reload data from DDBB
 	* When value is 'true' is ignored because the section manages this value
 	* on set_dato
@@ -274,7 +274,7 @@ class section extends common {
 	* @param bool $value
 	* @return bool
 	*/
-	public function set_bl_loaded_matrix_data(bool $value) : bool {
+	public function set_is_loaded_matrix_data(bool $value) : bool {
 
 		if ($value===false) {
 
@@ -285,11 +285,11 @@ class section extends common {
 			// Get and set $this->JSON_RecordObj_matrix
 			$this->get_JSON_RecordObj_matrix();
 			// force updates value
-			$this->JSON_RecordObj_matrix->set_bl_loaded_matrix_data(false);
+			$this->JSON_RecordObj_matrix->set_is_loaded_matrix_data(false);
 		}
 
 		return  true;
-	}//end set_bl_loaded_matrix_data
+	}//end set_is_loaded_matrix_data
 
 
 
@@ -364,7 +364,7 @@ class section extends common {
 	*/
 	public function set_dato($dato) : bool {
 
-		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
+		// call common->set_dato (!) fix var 'is_loaded_matrix_data' as true
 			$result = parent::set_dato($dato);
 
 		// update JSON_RecordObj_matrix cached data

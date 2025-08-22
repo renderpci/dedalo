@@ -114,7 +114,7 @@ class component_relation_children extends component_relation_common {
 			$this->dato_resolved = $this->dato;
 
 		// Set as loaded.
-			$this->bl_loaded_matrix_data = true;
+			$this->is_loaded_matrix_data = true;
 
 
 		return $dato;

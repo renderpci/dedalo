@@ -394,10 +394,10 @@ final class section_test extends TestCase {
 
 
 	/**
-	* TEST_set_bl_loaded_matrix_data
+	* TEST_SET_IS_LOADED_MATRIX_DATA
 	* @return void
 	*/
-	public function test_set_bl_loaded_matrix_data() : void {
+	public function test_set_is_loaded_matrix_data() : void {
 
 		$section_id		= self::$section_id;
 		$section_tipo	= self::$section_tipo;
@@ -409,18 +409,18 @@ final class section_test extends TestCase {
 			$mode
 		);
 
-		$result = $section->set_bl_loaded_matrix_data(false);
+		$result = $section->set_is_loaded_matrix_data(false);
 
 		$this->assertTrue(
 			gettype($result)==='boolean' ,
 			'expected type boolean. Current type: ' .gettype($result)
 		);
-	}//end test_set_bl_loaded_matrix_data
+	}//end test_set_is_loaded_matrix_data
 
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATO
 	* @return void
 	*/
 	public function test_get_dato() : void {

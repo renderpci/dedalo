@@ -455,14 +455,14 @@ final class component_input_text_test extends TestCase {
 
 
 	/**
-	* TEST_set_bl_loaded_matrix_data
+	* TEST_SET_IS_LOADED_MATRIX_DATA
 	* @return void
 	*/
-	public function test_set_bl_loaded_matrix_data() {
+	public function test_set_is_loaded_matrix_data() {
 
 		$component = $this->build_component_instance();
 
-		$value = $component->set_bl_loaded_matrix_data(
+		$value = $component->set_is_loaded_matrix_data(
 			true
 		);
 
@@ -474,35 +474,35 @@ final class component_input_text_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$component->bl_loaded_matrix_data===true,
-				'expected bl_loaded_matrix_data do not match:' . PHP_EOL
+			$component->is_loaded_matrix_data===true,
+				'expected is_loaded_matrix_data do not match:' . PHP_EOL
 				.' expected: component_input_text' . PHP_EOL
-				.' bl_loaded_matrix_data: '.to_string($component->bl_loaded_matrix_data)
+				.' is_loaded_matrix_data: '.to_string($component->is_loaded_matrix_data)
 		);
 
-		$value = $component->set_bl_loaded_matrix_data(
+		$value = $component->set_is_loaded_matrix_data(
 			false
 		);
 
 		$this->assertTrue(
-			$component->bl_loaded_matrix_data===false,
-				'expected bl_loaded_matrix_data do not match:' . PHP_EOL
+			$component->is_loaded_matrix_data===false,
+				'expected is_loaded_matrix_data do not match:' . PHP_EOL
 				.' expected: component_input_text' . PHP_EOL
-				.' bl_loaded_matrix_data: '.to_string($component->bl_loaded_matrix_data)
+				.' is_loaded_matrix_data: '.to_string($component->is_loaded_matrix_data)
 		);
-	}//end test_set_bl_loaded_matrix_data
+	}//end test_set_is_loaded_matrix_data
 
 
 
 	/**
-	* TEST_get_bl_loaded_matrix_data
+	* TEST_get_is_loaded_matrix_data
 	* @return void
 	*/
-	public function test_get_bl_loaded_matrix_data() {
+	public function test_get_is_loaded_matrix_data() {
 
 		$component = $this->build_component_instance();
 
-		$value = $component->get_bl_loaded_matrix_data();
+		$value = $component->get_is_loaded_matrix_data();
 
 		$this->assertTrue(
 			gettype($value)==='boolean',
@@ -510,12 +510,12 @@ final class component_input_text_test extends TestCase {
 				.' expected type: boolean' . PHP_EOL
 				.' type: '.gettype($value)
 		);
-	}//end test_get_bl_loaded_matrix_data
+	}//end test_get_is_loaded_matrix_data
 
 
 
 	/**
-	* TEST_load_structure_data
+	* TEST_LOAD_STRUCTURE_DATA
 	* @return void
 	*/
 	public function test_load_structure_data() {
