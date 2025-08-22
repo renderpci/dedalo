@@ -244,6 +244,34 @@ class ontology_node {
 
 
 
+	/**
+	* GET_LABEL
+	* Get specific term in one language given
+	* If the calls
+	* @return
+	*/
+	public function get_label( string $lang ) : string {
+
+		$term = $this->get_term();
+
+		// get the lang to be used to get the labels
+		// it call to get_label_lang() to process exceptions as català to valencià, that are the same language.
+		$lang = lang::get_label_lang( $lang );
+
+		$label = $term->{$lang} ?? $term->{DEDALO_STRUCTURE_LANG} ?? null;
+		if (is_null($label)) {
+			// fallback to anything
+			foreach ($term as $value) {
+				$label = $value;
+				break;
+			}
+		}
+
+		return $label;
+	}//end get_label
+
+
+
 
 
 
