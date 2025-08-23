@@ -851,7 +851,7 @@ class ontology_node {
 	* @param string $model_name
 	* @return array $ar_result
 	*/
-	public static function get_ar_tipo_by_model_name( string $model_name ) : array {
+	public static function get_ar_tipo_by_model( string $model_name ) : array {
 
 		// static cache
 		static $ar_tipo_by_model_name;
@@ -871,7 +871,7 @@ class ontology_node {
 		$ar_tipo_by_model_name[$cache_uid] = $ar_result;
 
 		return $ar_result;
-	}//end get_ar_tipo_by_model_name
+	}//end get_ar_tipo_by_model
 
 
 
