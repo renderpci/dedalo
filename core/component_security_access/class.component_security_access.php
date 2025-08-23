@@ -283,7 +283,7 @@ class component_security_access extends component_common {
 					$item = (object)[
 						'tipo'			=> $ddo->tipo,
 						'section_tipo'	=> $section_tipo,
-						'model'			=> ontology_node::get_model_name_by_tipo($ddo->tipo, true),
+						'model'			=> ontology_node::get_model_by_tipo($ddo->tipo, true),
 						'label'			=> ontology_node::get_term_by_tipo($ddo->tipo, DEDALO_APPLICATION_LANG, true, true),
 						'parent'		=> $ddo->parent_grouper ?? $section_tipo
 					];
@@ -352,7 +352,7 @@ class component_security_access extends component_common {
 
 		$ar_elements = [];
 
-		$source_model = ontology_node::get_model_name_by_tipo($tipo,true);
+		$source_model = ontology_node::get_model_by_tipo($tipo,true);
 		switch ($source_model) {
 
 			case 'section':
@@ -417,7 +417,7 @@ class component_security_access extends component_common {
 				}
 
 			// remove_exclude_models
-				$component_model = ontology_node::get_model_name_by_tipo($element_tipo, true);
+				$component_model = ontology_node::get_model_by_tipo($element_tipo, true);
 				if( in_array($component_model, $ar_exclude_model)) {
 					continue ;
 				}
@@ -431,7 +431,7 @@ class component_security_access extends component_common {
 				$item = (object)[
 					'tipo'			=> $element_tipo,
 					'section_tipo'	=> $tipo,
-					'model'			=> ontology_node::get_model_name_by_tipo($element_tipo, true),
+					'model'			=> ontology_node::get_model_by_tipo($element_tipo, true),
 					'label'			=> ontology_node::get_term_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
 					'parent'		=> $tipo
 				];
@@ -601,7 +601,7 @@ class component_security_access extends component_common {
 
 			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
 			$tipo						= DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
-			$model						= ontology_node::get_model_name_by_tipo($tipo,true);
+			$model						= ontology_node::get_model_by_tipo($tipo,true);
 			$component_security_access	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo

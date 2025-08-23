@@ -234,12 +234,108 @@ class ontology_node {
 	* Therefore, models are unique name that point to specific code scripts in Dédalo.
 	* section 			---> class.section.php / section.js / section.css
 	* component_portal 	---> class.componnet_portal.php / componnet_portal.js / componnet_portal.css
-	* @return string|null
+	* @return string
 	*/
-	public function get_model() : ?string {
+	public function get_model() : string {
+
 		$this->load_data();
-		return $this->data->model ?? null;
-	}//end get_model
+
+		if (empty($this->tipo)) {
+			return '';
+		}
+
+		// forced models in v6 (while we are using structure v5)
+			switch ($this->tipo) {
+				case DEDALO_SECURITY_ADMINISTRATOR_TIPO:
+					return 'component_radio_button';
+				case DEDALO_USER_PROFILE_TIPO:
+					return 'component_select';
+				case 'dd546': // activity where
+					return 'component_input_text';
+				case 'dd545': // activity what
+					return 'component_select';
+				case 'dd544': // activity ip
+					return 'component_input_text';
+				case 'dd551': // activity 'dato'
+					return 'component_json';
+				case 'hierarchy48': // hierarchy 'order'
+					return 'component_number';
+				case 'dd1067': // tools component_security_tools
+					return 'component_check_box';
+				// temporal 6.4.5
+					case 'hierarchy45': // hierarchy main: General term
+					case 'hierarchy59': // hierarchy main: General term model
+					// case 'hierarchy49':
+					// case 'ontology14';
+						return 'component_portal';
+			}
+
+		// new model resolution with fallback
+		$model = $this->data->model ?? null;
+		if (empty($model)) {
+
+			// fallback to old resolution
+			$model_tipo = $this->get_model_tipo();
+			if (empty($model_tipo)) {
+
+				// new model area_maintenance (term dd88, model dd72) not updated Ontology cases
+				if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
+					define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
+				}
+				if ($this->tipo===DEDALO_AREA_MAINTENANCE_TIPO) {
+					debug_log(__METHOD__
+						. " WARNING. Model dd72 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL
+						. ' Fixed resolution is returned to allow all works temporally' . PHP_EOL
+						.' tipo: ' . $this->tipo . PHP_EOL
+						.' model expected: (dd72) area_maintenance'
+						, logger::ERROR
+					);
+					return 'area_maintenance'; // temporal !
+				}
+
+				return '';
+			}
+
+			$model = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);
+
+			// error log
+			debug_log(__METHOD__
+				. " Falling to fallback model resolution for the term" . PHP_EOL
+				. ' tipo: ' . to_string($this->tipo) . PHP_EOL
+				. ' model: ' . to_string($model)
+				, logger::ERROR
+			);
+
+			// empty case check
+			if (empty($model)) {
+
+				debug_log(__METHOD__
+					. " Empty model name !" . PHP_EOL
+					. ' tipo: ' . to_string($this->tipo)
+					, logger::ERROR
+				);
+				return '';
+			}
+		}//end if (empty($model))
+
+		// Model replacements (obsolete models)
+			$model_map = [
+				'component_input_text_large'	=> 'component_text_area',
+				'component_html_text'			=> 'component_text_area',
+				'component_autocomplete'		=> 'component_portal',
+				'component_autocomplete_hi'		=> 'component_portal',
+				'component_state'				=> 'component_info',
+				'component_calculation'			=> 'component_info',
+				'section_group_div'				=> 'section_group',
+				'tab'							=> 'section_tab',
+				'component_relation_struct'		=> 'box elements',
+				'component_security_tools'		=> 'component_check_box',
+				'dataframe'						=> 'box elements',
+			];
+
+
+		return $model_map[$model] ?? $model;
+	}//end get_model_name
 
 
 
@@ -591,140 +687,33 @@ class ontology_node {
 
 
 	/**
-	* GET_MODEL_NAME
-	* Calculates the current term model name
-	* @return string $model
-	*/
-	public function get_model_name() : string {
-
-		if (empty($this->tipo)) {
-			return '';
-		}
-
-		// forced models in v6 (while we are using structure v5)
-			switch ($this->tipo) {
-				case DEDALO_SECURITY_ADMINISTRATOR_TIPO:
-					return 'component_radio_button';
-				case DEDALO_USER_PROFILE_TIPO:
-					return 'component_select';
-				case 'dd546': // activity where
-					return 'component_input_text';
-				case 'dd545': // activity what
-					return 'component_select';
-				case 'dd544': // activity ip
-					return 'component_input_text';
-				case 'dd551': // activity 'dato'
-					return 'component_json';
-				case 'hierarchy48': // hierarchy 'order'
-					return 'component_number';
-				case 'dd1067': // tools component_security_tools
-					return 'component_check_box';
-				// temporal 6.4.5
-					case 'hierarchy45': // hierarchy main: General term
-					case 'hierarchy59': // hierarchy main: General term model
-					// case 'hierarchy49':
-					// case 'ontology14';
-						return 'component_portal';
-
-			}
-
-		// new model resolution with fallback
-		$model = $this->get_model();
-		if (empty($model)) {
-
-			// fallback to old resolution
-			$model_tipo = $this->get_model_tipo();
-			if (empty($model_tipo)) {
-
-				// new model area_maintenance (term dd88, model dd72) not updated Ontology cases
-				if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
-					define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
-				}
-				if ($this->tipo===DEDALO_AREA_MAINTENANCE_TIPO) {
-					debug_log(__METHOD__
-						. " WARNING. Model dd72 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL
-						. ' Fixed resolution is returned to allow all works temporally' . PHP_EOL
-						.' tipo: ' . $this->tipo . PHP_EOL
-						.' model expected: (dd72) area_maintenance'
-						, logger::ERROR
-					);
-					return 'area_maintenance'; // temporal !
-				}
-
-				return '';
-			}
-
-			$model = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);
-
-			// error log
-			debug_log(__METHOD__
-				. " Falling to fallback model resolution for the term" . PHP_EOL
-				. ' tipo: ' . to_string($this->tipo) . PHP_EOL
-				. ' model: ' . to_string($model)
-				, logger::ERROR
-			);
-
-			// empty case check
-			if (empty($model)) {
-
-				debug_log(__METHOD__
-					. " Empty model name !" . PHP_EOL
-					. ' tipo: ' . to_string($this->tipo)
-					, logger::ERROR
-				);
-				return '';
-			}
-		}//end if (empty($model))
-
-		// Model replacements (obsolete models)
-			$model_map = [
-				'component_input_text_large'	=> 'component_text_area',
-				'component_html_text'			=> 'component_text_area',
-				'component_autocomplete'		=> 'component_portal',
-				'component_autocomplete_hi'		=> 'component_portal',
-				'component_state'				=> 'component_info',
-				'component_calculation'			=> 'component_info',
-				'section_group_div'				=> 'section_group',
-				'tab'							=> 'section_tab',
-				'component_relation_struct'		=> 'box elements',
-				'component_security_tools'		=> 'component_check_box',
-				'dataframe'						=> 'box elements',
-			];
-
-
-		return $model_map[$model] ?? $model;
-	}//end get_model_name
-
-
-
-	/**
-	* GET_MODEL_NAME_BY_TIPO
+	* GET_MODEL_BY_TIPO
 	* Static version
 	* @param string $tipo
 	* @param bool $from_cache = true
 	* @return string $modelo_name
 	*/
-	public static function get_model_name_by_tipo( string $tipo, bool $from_cache=true ) : string {
+	public static function get_model_by_tipo( string $tipo, bool $from_cache=true ) : string {
 
-		static $modelo_name_by_tipo;
+		static $model_by_tipo;
 
 		// cache
 		$cache_uid = $tipo;
-		if ($from_cache===true && isset($modelo_name_by_tipo[$cache_uid])) {
-			return $modelo_name_by_tipo[$cache_uid];
+		if ($from_cache===true && isset($model_by_tipo[$cache_uid])) {
+			return $model_by_tipo[$cache_uid];
 		}
 
 		$ontology_node	= new ontology_node($tipo);
-		$modelo_name	= $ontology_node->get_model_name();
+		$modelo_name	= $ontology_node->get_model();
 
 		// cache
 		if( !empty($modelo_name) ){
-			$modelo_name_by_tipo[$cache_uid] = $modelo_name;
+			$model_by_tipo[$cache_uid] = $modelo_name;
 		}
 
 
 		return $modelo_name;
-	}//end get_model_name_by_tipo
+	}//end get_model_by_tipo
 
 
 
@@ -1064,7 +1053,7 @@ class ontology_node {
 
 			// Exclude models optional
 			if (!empty($ar_exclude_models)) {
-				$modelo_name = ontology_node::get_model_name_by_tipo( $current_tipo, true );
+				$modelo_name = ontology_node::get_model_by_tipo( $current_tipo, true );
 				if (in_array($modelo_name, $ar_exclude_models)) {
 					continue; // Skip current model and children
 				}
@@ -1497,7 +1486,7 @@ class ontology_node {
 		}
 
 		// try to resolve model. If empty, the tipo do not exists in dd_ontology
-		$model = ontology_node::get_model_name_by_tipo($tipo,true);
+		$model = ontology_node::get_model_by_tipo($tipo,true);
 		if (empty($model)) {
 			return false;
 		}

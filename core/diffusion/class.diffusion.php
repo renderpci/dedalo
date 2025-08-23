@@ -283,7 +283,7 @@ abstract class diffusion  {
 				// Create the diffusion map element
 				$item = new stdClass();
 					$item->element_tipo		= $diffusion_element_tipo;
-					$item->model			= ontology_node::get_model_name_by_tipo($diffusion_element_tipo,true);
+					$item->model			= ontology_node::get_model_by_tipo($diffusion_element_tipo,true);
 					$item->name				= $name;
 					$item->class_name		= $diffusion_class_name;
 					$item->database_name	= $diffusion_database_name ?? null;
@@ -639,7 +639,7 @@ abstract class diffusion  {
 					#if (is_array($value) || is_object($value)) {
 					#	$value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 					#}
-					$diffusion_model = ontology_node::get_model_name_by_tipo($field->tipo,true);
+					$diffusion_model = ontology_node::get_model_by_tipo($field->tipo,true);
 
 					$item = new stdClass();
 						$item->value = $value;
@@ -678,12 +678,12 @@ abstract class diffusion  {
 		// Diffusion element (current column/field)
 			$diffusion_term		= new ontology_node($tipo);
 			$properties			= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
-			// $diffusion_model	= ontology_node::get_model_name_by_tipo($tipo,true);
+			// $diffusion_model	= ontology_node::get_model_by_tipo($tipo,true);
 
 		// Component
 			$ar_related			= common::get_ar_related_by_model('component_', $tipo, false);
 			$component_tipo		= reset($ar_related); //ontology_node::get_relation_nodes($tipo, false, true)[0];
-			$model_name			= ontology_node::get_model_name_by_tipo($component_tipo,true);
+			$model_name			= ontology_node::get_model_by_tipo($component_tipo,true);
 			#$real_section_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($component_tipo, 'section', 'parent')[0];
 			$current_component	= component_common::get_instance(
 				$model_name,
@@ -818,7 +818,7 @@ abstract class diffusion  {
 
 
 		$component_tipo = isset($options->component_tipo) ? $options->component_tipo : common::get_ar_related_by_model('component_', $options->tipo, $strict=false)[0];
-		$model_name 	= ontology_node::get_model_name_by_tipo($component_tipo,true);
+		$model_name 	= ontology_node::get_model_by_tipo($component_tipo,true);
 
 		$section_id = !empty($options->section_id)
 			? $options->section_id
@@ -1442,7 +1442,7 @@ abstract class diffusion  {
 
 		// first publication. component publication first. save if it does not exist
 			// date
-				$model_name	= ontology_node::get_model_name_by_tipo($publication_first_tipo,true);
+				$model_name	= ontology_node::get_model_by_tipo($publication_first_tipo,true);
 				$component	= component_common::get_instance(
 					$model_name,
 					$publication_first_tipo,
@@ -1464,7 +1464,7 @@ abstract class diffusion  {
 			// user
 				if (isset($save_first)) {
 
-					$model_name	= ontology_node::get_model_name_by_tipo($publication_first_user_tipo,true);
+					$model_name	= ontology_node::get_model_by_tipo($publication_first_user_tipo,true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$publication_first_user_tipo,
@@ -1489,7 +1489,7 @@ abstract class diffusion  {
 
 		// last publication. save updated date always
 			// date
-				$model_name	= ontology_node::get_model_name_by_tipo($publication_last_tipo,true);
+				$model_name	= ontology_node::get_model_by_tipo($publication_last_tipo,true);
 				$component	= component_common::get_instance(
 					$model_name,
 					$publication_last_tipo,
@@ -1507,7 +1507,7 @@ abstract class diffusion  {
 				$component->Save();
 
 			// user
-				$model_name	= ontology_node::get_model_name_by_tipo($publication_last_user_tipo,true);
+				$model_name	= ontology_node::get_model_by_tipo($publication_last_user_tipo,true);
 				$component	= component_common::get_instance(
 					$model_name,
 					$publication_last_user_tipo,
@@ -1574,7 +1574,7 @@ abstract class diffusion  {
 	public static function parse_database_alias_tables( array $ar_table_tipo, string $database_alias_tipo ) : array {
 
 		// check database_alias_tipo
-			$model = ontology_node::get_model_name_by_tipo($database_alias_tipo,true);
+			$model = ontology_node::get_model_by_tipo($database_alias_tipo,true);
 			if ($model!=='database_alias') {
 				debug_log(__METHOD__ . PHP_EOL
 					. " Invalid database_alias_tipo. Expected model: database_alias" . PHP_EOL
@@ -1603,7 +1603,7 @@ abstract class diffusion  {
 			return (object)[
 				'tipo' => $tipo,
 				'name' => ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false),
-				'model' => ontology_node::get_model_name_by_tipo($tipo, true)
+				'model' => ontology_node::get_model_by_tipo($tipo, true)
 			];
 		}, $ar_table_tipo);
 
@@ -1613,7 +1613,7 @@ abstract class diffusion  {
 			return (object)[
 				'tipo' => $tipo,
 				'name' => ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false),
-				'model' => ontology_node::get_model_name_by_tipo($tipo, true)
+				'model' => ontology_node::get_model_by_tipo($tipo, true)
 			];
 		}, $original_ar_table_tipo);
 
@@ -1788,7 +1788,7 @@ abstract class diffusion  {
 				'tipo'		=> $child_tipo,
 				'parent'	=> $parent,
 				'name'		=> $name,
-				'model'		=> ontology_node::get_model_name_by_tipo($child_tipo,true),
+				'model'		=> ontology_node::get_model_by_tipo($child_tipo,true),
 				'process'	=> $process
 			]);
 

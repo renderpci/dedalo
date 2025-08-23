@@ -182,7 +182,7 @@ class area extends area_common  {
 				$children_tipo = $ar_ts_children[$i];
 
 				$ontology_node	= new ontology_node($children_tipo);
-				$model			= ontology_node::get_model_name_by_tipo($children_tipo,true);
+				$model			= ontology_node::get_model_by_tipo($children_tipo,true);
 
 				// Test if model is accepted or not (more restrictive)
 				if( 	in_array($model, area::$ar_children_include_model_name)

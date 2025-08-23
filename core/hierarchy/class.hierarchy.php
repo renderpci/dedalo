@@ -79,7 +79,7 @@ class hierarchy extends ontology {
 
 		// check active
 			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// 'hierarchy4';
-			$model_name		= ontology_node::get_model_name_by_tipo($active_tipo, true);
+			$model_name		= ontology_node::get_model_by_tipo($active_tipo, true);
 			$component		= component_common::get_instance(
 				$model_name,
 				$active_tipo,
@@ -108,7 +108,7 @@ class hierarchy extends ontology {
 
 		// check tld
 			$tld2_tipo	= DEDALO_HIERARCHY_TLD2_TIPO;	// 'hierarchy6';
-			$model_name	= ontology_node::get_model_name_by_tipo($tld2_tipo, true);
+			$model_name	= ontology_node::get_model_by_tipo($tld2_tipo, true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$tld2_tipo,
@@ -137,7 +137,7 @@ class hierarchy extends ontology {
 			}
 
 		// source_real_section_tipo
-			$model_name	= ontology_node::get_model_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,true);
+			$model_name	= ontology_node::get_model_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO,
@@ -161,7 +161,7 @@ class hierarchy extends ontology {
 				);
 				return $response;
 			}
-			$real_section_model_name = ontology_node::get_model_name_by_tipo($real_section_tipo, true);
+			$real_section_model_name = ontology_node::get_model_by_tipo($real_section_tipo, true);
 			if ($real_section_model_name!=='section') {
 
 				// Error: source_real_section_tipo is not a section !
@@ -178,7 +178,7 @@ class hierarchy extends ontology {
 
 		// typology (of hierarchy)
 			$hierarchy_type	= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
-			$model_name		= ontology_node::get_model_name_by_tipo($hierarchy_type, true);
+			$model_name		= ontology_node::get_model_by_tipo($hierarchy_type, true);
 			$component		= component_common::get_instance(
 				$model_name,
 				$hierarchy_type,
@@ -210,7 +210,7 @@ class hierarchy extends ontology {
 
 		// name
 			$name_tipo	= DEDALO_HIERARCHY_TERM_TIPO;	//'hierarchy5';
-			$model_name	= ontology_node::get_model_name_by_tipo($name_tipo, true);
+			$model_name	= ontology_node::get_model_by_tipo($name_tipo, true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$name_tipo,
@@ -307,7 +307,7 @@ class hierarchy extends ontology {
 					$parent_node_tipo 	= $parent_tld.'0';
 
 					$parent_tipo		= 'ontology15';
-					$parent_model		= ontology_node::get_model_name_by_tipo( $parent_tipo );
+					$parent_model		= ontology_node::get_model_by_tipo( $parent_tipo );
 					$component_parent	= component_common::get_instance(
 						$parent_model, // string model
 						$parent_tipo, // string tipo
@@ -354,7 +354,7 @@ class hierarchy extends ontology {
 						$parent_node_tipo	= $parent_model_tld.'0';
 
 						$parent_tipo		= 'ontology15';
-						$parent_model		= ontology_node::get_model_name_by_tipo( $parent_tipo );
+						$parent_model		= ontology_node::get_model_by_tipo( $parent_tipo );
 						$component_model_parent	= component_common::get_instance(
 							$parent_model, // string model
 							$parent_tipo, // string tipo
@@ -396,7 +396,7 @@ class hierarchy extends ontology {
 			// target section with the created sections
 			// when the process was finished insert the target section into the components
 				$target_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;	//'hierarchy53';
-				$model_name					= ontology_node::get_model_name_by_tipo($target_tipo, true);
+				$model_name					= ontology_node::get_model_by_tipo($target_tipo, true);
 				$component_target_section	= component_common::get_instance(
 					$model_name,
 					$target_tipo,
@@ -409,7 +409,7 @@ class hierarchy extends ontology {
 				$component_target_section->Save();
 
 				$target_model_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	//'hierarchy53';
-				$model_name						= ontology_node::get_model_name_by_tipo($target_model_tipo, true);
+				$model_name						= ontology_node::get_model_by_tipo($target_model_tipo, true);
 				$component_target_model_section	= component_common::get_instance(
 					$model_name,
 					$target_model_tipo,
@@ -677,7 +677,7 @@ class hierarchy extends ontology {
 	*/
 	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) : ?int {
 
-		$model = ontology_node::get_model_name_by_tipo($hierarchy_component_tipo,true);
+		$model = ontology_node::get_model_by_tipo($hierarchy_component_tipo,true);
 
 		// search query object
 			$search_query_object = json_decode('{
@@ -1151,7 +1151,7 @@ class hierarchy extends ontology {
 			return null;
 		}
 
-		$model = ontology_node::get_model_name_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+		$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 		$typology_component = component_common::get_instance(
 			$model, // string model
 			DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
@@ -1299,7 +1299,7 @@ class hierarchy extends ontology {
 			return false;
 		}
 
-		$model		= ontology_node::get_model_name_by_tipo($general_term_tipo,true);
+		$model		= ontology_node::get_model_by_tipo($general_term_tipo,true);
 		$component	= component_common::get_instance(
 			$model, // string model
 			$general_term_tipo, // string tipo
@@ -1320,7 +1320,7 @@ class hierarchy extends ontology {
 			? DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO // hierarchy58 Model case
 			: DEDALO_HIERARCHY_TARGET_SECTION_TIPO; // hierarchy58 Term case
 
-		$target_model_name			= ontology_node::get_model_name_by_tipo($target_tipo, true);
+		$target_model_name			= ontology_node::get_model_by_tipo($target_tipo, true);
 		$component_target_section	= component_common::get_instance(
 			$target_model_name,
 			$target_tipo,
@@ -1380,7 +1380,7 @@ class hierarchy extends ontology {
 		// Term name tipo (componentinput_text)
 		$term_tipo = DEDALO_HIERARCHY_TERM_TIPO; // 'hierarchy5'
 
-		$model = ontology_node::get_model_name_by_tipo($term_tipo,true);
+		$model = ontology_node::get_model_by_tipo($term_tipo,true);
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1420,7 +1420,7 @@ class hierarchy extends ontology {
 			return false;
 		}
 
-		$model = ontology_node::get_model_name_by_tipo($term_tipo,true);
+		$model = ontology_node::get_model_by_tipo($term_tipo,true);
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1480,7 +1480,7 @@ class hierarchy extends ontology {
 
 			// No active in thesaurus cases. Set as inactive
 			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
-			$active_model	= ontology_node::get_model_name_by_tipo( $active_tipo );
+			$active_model	= ontology_node::get_model_by_tipo( $active_tipo );
 			$component		= component_common::get_instance(
 				$active_model,
 				$active_tipo ,

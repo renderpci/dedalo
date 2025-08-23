@@ -57,7 +57,7 @@ final class dd_component_av_api {
 				$response->errors	= [];
 
 		// component
-			$model = ontology_node::get_model_name_by_tipo($tipo,true);
+			$model = ontology_node::get_model_by_tipo($tipo,true);
 			$component = component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -140,7 +140,7 @@ final class dd_component_av_api {
 			$options = $rqo->options;
 
 		// component
-			$model		= ontology_node::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -274,7 +274,7 @@ final class dd_component_av_api {
 				$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// component
-			$model		= ontology_node::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -328,7 +328,7 @@ final class dd_component_av_api {
 				$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// component
-			$model		= ontology_node::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo

@@ -57,7 +57,7 @@ abstract class notes extends stdClass {
 		$key_locator = 7;
 		$key_id 	 = 4;
 		$component_tipo = DEDALO_NOTES_TEXT_TIPO;
-		$modelo_name 	= ontology_node::get_model_name_by_tipo($component_tipo,true);
+		$modelo_name 	= ontology_node::get_model_by_tipo($component_tipo,true);
 		foreach ($matches[$key_locator] as $key => $locator) {
 			$locator = str_replace('\'', '"', $locator);
 			$locator = json_decode($locator);

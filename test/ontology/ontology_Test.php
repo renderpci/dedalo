@@ -1203,7 +1203,7 @@ final class ontology_test extends TestCase {
 
 				// tld
 					$tipo	= 'ontology7';
-					$model_name	= ontology_node::get_model_name_by_tipo($tipo, true);
+					$model_name	= ontology_node::get_model_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$tipo,
@@ -1217,7 +1217,7 @@ final class ontology_test extends TestCase {
 
 				// model
 					$tipo	= 'ontology6';
-					$model_name	= ontology_node::get_model_name_by_tipo($tipo, true);
+					$model_name	= ontology_node::get_model_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$tipo,
@@ -1232,7 +1232,7 @@ final class ontology_test extends TestCase {
 
 				// parent
 					$tipo		= 'ontology15';
-					$model		= ontology_node::get_model_name_by_tipo($tipo, true);
+					$model		= ontology_node::get_model_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model,
 						$tipo,

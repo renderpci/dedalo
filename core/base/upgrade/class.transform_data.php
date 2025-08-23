@@ -89,7 +89,7 @@ class transform_data {
 
 		// check Ontology tipos before do anything
 			foreach ([...$original, ...$new] as $item) {
-				$current_model = ontology_node::get_model_name_by_tipo($item->tipo, true);
+				$current_model = ontology_node::get_model_by_tipo($item->tipo, true);
 				if ($current_model!==$item->model) {
 					$response->msg = 'Invalid current_model from tipo: '.$item->tipo.' Check your Ontology for configuration errors';
 					debug_log(__METHOD__
@@ -186,7 +186,7 @@ class transform_data {
 
 						// append new locator to new portal. sample: add created locator to portal 'Creators'
 							$original_component_portal_target = component_common::get_instance(
-								ontology_node::get_model_name_by_tipo($original_component_portal_target_tipo,true), // string model
+								ontology_node::get_model_by_tipo($original_component_portal_target_tipo,true), // string model
 								$original_component_portal_target_tipo, // string tipo
 								$section_id, // string section_id
 								'list', // string mode
@@ -205,7 +205,7 @@ class transform_data {
 
 						// target section : add elements. sample: add current emperor to portal 'People' in the new section
 							$new_component_portal = component_common::get_instance(
-								ontology_node::get_model_name_by_tipo($new_component_portal_tipo,true), // string model
+								ontology_node::get_model_by_tipo($new_component_portal_tipo,true), // string model
 								$new_component_portal_tipo, // string tipo
 								$new_section_id, // string section_id
 								'list', // string mode
@@ -234,7 +234,7 @@ class transform_data {
 
 								// new_component_portal_ds. sample: add role 'Series arrangement' to portal 'Role' in the new section
 								$new_component_portal_ds = component_common::get_instance(
-									ontology_node::get_model_name_by_tipo($new_component_portal_ds_tipo,true), // string model
+									ontology_node::get_model_by_tipo($new_component_portal_ds_tipo,true), // string model
 									$new_component_portal_ds_tipo, // string tipo
 									$new_section_id, // string section_id
 									'list', // string mode
@@ -709,7 +709,7 @@ class transform_data {
 		// fixed tipos
 			$active		= DEDALO_HIERARCHY_ACTIVE_TIPO;
 			$view_in_ts	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;
-			$model		= ontology_node::get_model_name_by_tipo($view_in_ts,true);
+			$model		= ontology_node::get_model_by_tipo($view_in_ts,true);
 
 		// relations container iteration
 			$relations = $datos->relations ?? [];
@@ -1670,7 +1670,7 @@ class transform_data {
 						}
 					}else{
 						// if data is literal, it could be a component_text_area data and need to be processed as string
-						$component_tm_model = ontology_node::get_model_name_by_tipo( $tipo );
+						$component_tm_model = ontology_node::get_model_by_tipo( $tipo );
 						if( $component_tm_model==='component_text_area' ){
 
 							$options = new stdClass();
@@ -1765,7 +1765,7 @@ class transform_data {
 					}
 
 					foreach ($literal_components as $literal_tipo => $literal_value) {
-						$model = ontology_node::get_model_name_by_tipo( $literal_tipo );
+						$model = ontology_node::get_model_by_tipo( $literal_tipo );
 						if($model === 'component_text_area'){
 
 							$options = new stdClass();
@@ -2024,7 +2024,7 @@ class transform_data {
 						$new_section_id = $new_section->Save();
 
 						// create new component with the specification
-						$component_model		= ontology_node::get_model_name_by_tipo( $component_tipo );
+						$component_model		= ontology_node::get_model_by_tipo( $component_tipo );
 						// check if the component is a related to be save as block, else create component for every lang.
 						$relation_components	= component_relation_common::get_components_with_relations();
 						$is_related				= in_array( $component_model, $relation_components );
@@ -2162,7 +2162,7 @@ class transform_data {
 
 					// source component
 					// created to get his full data
-					$model	= ontology_node::get_model_name_by_tipo($source_tipo);
+					$model	= ontology_node::get_model_by_tipo($source_tipo);
 					$lang	= ontology_node::get_translatable( $source_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 					$source_component = component_common::get_instance(
 						$model, // string model
@@ -2228,7 +2228,7 @@ class transform_data {
 					}
 
 				// create the component_portal to give the locator created
-					$portal_model = ontology_node::get_model_name_by_tipo( $portal_tipo );
+					$portal_model = ontology_node::get_model_by_tipo( $portal_tipo );
 
 					$portal_component = component_common::get_instance(
 						$portal_model, // string model
@@ -2292,7 +2292,7 @@ class transform_data {
 						// remove the old component data in source section
 							// source component
 							// created to get his full data
-							$model	= ontology_node::get_model_name_by_tipo($source_tipo);
+							$model	= ontology_node::get_model_by_tipo($source_tipo);
 							$lang	= ontology_node::get_translatable( $source_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 							$source_component = component_common::get_instance(
 								$model, // string model
@@ -2519,7 +2519,7 @@ class transform_data {
 		$main_component_tipo	= $ontology_node->get_parent();
 
 		// create the main component to obtain his data
-			$model	= ontology_node::get_model_name_by_tipo( $main_component_tipo );
+			$model	= ontology_node::get_model_by_tipo( $main_component_tipo );
 			$lang	= ontology_node::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$main_component = component_common::get_instance(
 				$model, // string model

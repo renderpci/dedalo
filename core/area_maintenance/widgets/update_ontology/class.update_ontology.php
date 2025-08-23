@@ -256,7 +256,7 @@ class update_ontology {
 
 		// model
 		$tipo = 'ontology6';
-		$model = ontology_node::get_model_name_by_tipo($tipo ,true);
+		$model = ontology_node::get_model_by_tipo($tipo ,true);
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo , // string tipo
@@ -269,7 +269,7 @@ class update_ontology {
 
 		// term
 		$tipo = 'ontology5';
-		$model = ontology_node::get_model_name_by_tipo($tipo ,true);
+		$model = ontology_node::get_model_by_tipo($tipo ,true);
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo , // string tipo
