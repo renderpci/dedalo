@@ -343,7 +343,7 @@ class component_portal extends component_relation_common {
 							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 					}else{
 
-						$legacy_model_name = ontology_node::get_legacy_model_name_by_tipo($tipo);
+						$legacy_model_name = ontology_node::get_legacy_model_by_tipo($tipo);
 						if ($legacy_model_name==='component_autocomplete_hi') {
 							// force save to regenerate search relations
 							$response = new stdClass();
@@ -392,7 +392,7 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_valor( ?string $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
 
-		$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->tipo);
+		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		if( !include $path ) {
@@ -427,7 +427,7 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
-		$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->tipo);
+		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		// portal valor_export is no longer available
 		if ($legacy_model==='component_portal') {
@@ -454,7 +454,7 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
 
-		$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->tipo);
+		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		include $path;

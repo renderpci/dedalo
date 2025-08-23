@@ -19,7 +19,7 @@
 			// tab / section_tab specific
 			// Note that 'tab' ontology items are mapped as 'section_tab' to reduce pollution
 			// Now, set context specific params to each one
-			$legacy_model	= ontology_node::get_legacy_model_name_by_tipo($tipo);
+			$legacy_model	= ontology_node::get_legacy_model_by_tipo($tipo);
 			if ($legacy_model==='tab') {
 
 				// view (tab)

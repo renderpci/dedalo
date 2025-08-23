@@ -363,10 +363,10 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_model_name_by_tipo
+	* TEST_GET_MODEL_BY_TIPO
 	* @return void
 	*/
-	public function test_get_model_name_by_tipo(): void {
+	public function test_get_model_by_tipo(): void {
 
 		$test_term_id	= 'dd1';
 		$result			= ontology_node::get_model_by_tipo($test_term_id);
@@ -388,18 +388,18 @@ final class ontology_node_test extends TestCase {
 				. ' result: ' . to_string($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_model_name_by_tipo
+	}//end test_get_model_by_tipo
 
 
 
 	/**
-	* TEST_get_legacy_model_name_by_tipo
+	* TEST_GET_LEGACY_MODEL_BY_TIPO
 	* @return void
 	*/
-	public function test_get_legacy_model_name_by_tipo(): void {
+	public function test_get_legacy_model_by_tipo(): void {
 
 		$test_term_id	= 'hierarchy92';
-		$result			= ontology_node::get_legacy_model_name_by_tipo($test_term_id);
+		$result			= ontology_node::get_legacy_model_by_tipo($test_term_id);
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;
@@ -428,19 +428,19 @@ final class ontology_node_test extends TestCase {
 				. ' result: ' . to_string($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_legacy_model_name_by_tipo
+	}//end test_get_legacy_model_by_tipo
 
 
 
 	/**
-	* TEST_get_legacy_model_name
+	* TEST_GET_LEGACY_MODEL
 	* @return void
 	*/
-	public function test_get_legacy_model_name(): void {
+	public function test_get_legacy_model(): void {
 
 		$test_term_id	= 'hierarchy92';
 		$ontology_node	= new ontology_node($test_term_id);
-		$result			= $ontology_node->get_legacy_model_name();
+		$result			= $ontology_node->get_legacy_model();
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;
@@ -469,7 +469,7 @@ final class ontology_node_test extends TestCase {
 				. ' result: ' . to_string($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_legacy_model_name
+	}//end test_get_legacy_model
 
 
 

@@ -101,7 +101,7 @@ class component_relation_parent extends component_relation_common {
 				foreach ($ar_tipo as $tipo) {
 
 					$model		= ontology_node::get_model_by_tipo($tipo,true);
-					// $model	= ontology_node::get_legacy_model_name_by_tipo($tipo);
+					// $model	= ontology_node::get_legacy_model_by_tipo($tipo);
 					$component	= component_common::get_instance(
 						$model,
 						$tipo,

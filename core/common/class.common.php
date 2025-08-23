@@ -1727,7 +1727,7 @@ abstract class common {
 				: null;
 
 		// legacy_model
-			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->tipo);
+			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		// dd_object
 			$dd_object = new dd_object((object)[
@@ -2414,7 +2414,7 @@ abstract class common {
 								$bool_get_data = true;
 								// (!) Commented because currently all portals are direct (included set dato external cases). To be considered for future use
 								// if (isset($subdatum_options->skip_subdatum) && $mode === 'edit') {
-								// 	$legacy_model = ontology_node::get_legacy_model_name_by_tipo($current_tipo);
+								// 	$legacy_model = ontology_node::get_legacy_model_by_tipo($current_tipo);
 								// 	if(in_array($legacy_model, $subdatum_options->skip_subdatum)) {
 								// 		$bool_get_data = false;
 								// 		dump($bool_get_data, ' bool_get_data ++ '.$current_tipo.' -  '.to_string($model));
@@ -4581,7 +4581,7 @@ abstract class common {
 						continue;
 					}
 					if ($model==='section_group') {
-						$legacy_model = ontology_node::get_legacy_model_name_by_tipo($element_tipo);
+						$legacy_model = ontology_node::get_legacy_model_by_tipo($element_tipo);
 						if ($legacy_model==='section_group_div') {
 							continue;
 						}
@@ -5149,7 +5149,7 @@ abstract class common {
 
 		// relation components like 'component_portal'
 			$legacy_model = (in_array($model, $components_to_change))
-				? ontology_node::get_legacy_model_name_by_tipo($tipo)
+				? ontology_node::get_legacy_model_by_tipo($tipo)
 				: $model;
 
 		// view
@@ -5196,7 +5196,7 @@ abstract class common {
 			}
 
 		// based on legacy_model
-			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->get_tipo());
+			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->get_tipo());
 			switch ($legacy_model) {
 				case 'component_relation_children':
 				case 'component_relation_parent':
