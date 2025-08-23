@@ -94,7 +94,6 @@ class request_config_presets {
 				null, // order
 				null // limit
 			);
-				dump($ar_section_id, ' ar_section_id ******************************************************************************++ '.to_string());
 
 		// Helper function to extract a component value
 		$get_component_value = function($tipo, $section_id) {

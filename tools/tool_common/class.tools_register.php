@@ -1351,15 +1351,17 @@ class tools_register {
 	* @param string $tool_name | the name of the tool configuration to be delete as 'tool_transcription'
 	* @return bool
 	*/
-	public static function remove_tool_configuration( string $tool_name ) :bool {
+	public static function remove_tool_configuration( string $tool_name ) : bool {
 
 		if( empty($tool_name) ){
 			return false;
 		}
 
 		// get the tool_transctiprion register
-		$tool_transcription_register = tools_register::get_tool_data_by_name($tool_name , tools_register::$section_tools_config_tipo);
-
+		$tool_transcription_register = tools_register::get_tool_data_by_name(
+			$tool_name ,
+			tools_register::$section_tools_config_tipo
+		);
 
 		if( !empty($tool_transcription_register) ){
 
