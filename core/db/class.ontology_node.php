@@ -688,7 +688,7 @@ class ontology_node {
 
 	/**
 	* GET_MODEL_BY_TIPO
-	* Static version
+	* Get model of the given tipo (ontology node)
 	* @param string $tipo
 	* @param bool $from_cache = true
 	* @return string $modelo_name
@@ -720,6 +720,7 @@ class ontology_node {
 	/**
 	* GET_LEGACY_MODEL_BY_TIPO
 	* Temporal function to manage transitional models
+	* Get the model for given tipo (ontology node) without match/change it to v6 valid models.
 	* @param string $tipo
 	* @return string|null $model_name
 	*/
@@ -736,6 +737,7 @@ class ontology_node {
 	/**
 	* GET_LEGACY_MODEL
 	* Temporal function to manage transitional models
+	* Get the model without match/change it to v6 valid models.
 	* @return string|null $model_name
 	*/
 	public function get_legacy_model() : ?string {
