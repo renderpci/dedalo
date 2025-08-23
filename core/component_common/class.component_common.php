@@ -1,10 +1,16 @@
 <?php declare(strict_types=1);
+require_once 'trait.component_common_v7.php';
 /**
 * COMPONENT_COMMON
 * Common methods of all components
 *
 */
 abstract class component_common extends common {
+
+
+
+	// traits. Files added to current class file to split the large code.
+	use component_common_v7;
 
 
 
@@ -123,11 +129,6 @@ abstract class component_common extends common {
 		// dataframe ddo
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
-
-		// V7 PROPERTIES //
-
-		// object|null data. Component data value from DB column 'data->literals|relations->tipo'
-		protected $data;
 
 
 
@@ -727,6 +728,11 @@ abstract class component_common extends common {
 		// resolved set
 			$this->dato_resolved = $dato;
 
+		// @v7 way
+			// if ($this->data_column==='string') {
+			// 	$this->set_component_data( $this->lang, $dato );
+			// }
+
 
 		return true;
 	}//end set_dato
@@ -965,6 +971,12 @@ abstract class component_common extends common {
 					$this->lang, // lang
 					false // lang_fallback
 				);
+
+			// @v7 way, from component full_data
+				// $this->dato = $section->get_component_full_data(
+				// 	$this->tipo,
+				// 	$this->data_column
+				// );
 
 			// Set as loaded
 				$this->is_loaded_matrix_data = true;
@@ -4027,26 +4039,6 @@ abstract class component_common extends common {
 
 		return null;
 	}//end get_regenerate_options
-
-
-
-	// V7 METHODS //
-
-
-
-	/**
-	* GET_DATA
-	* It gets all the data from the component as the database is stored,
-	* with all languages, using the whole section data object.
-	* @return array|null $this->data
-	*/
-	public function get_data() : ?array {
-
-		$section = $this->get_my_section();
-		$this->data = $section->get_component_data( $this->tipo, $this->data_container );
-
-		return $this->data;
-	}//end get_data
 
 
 

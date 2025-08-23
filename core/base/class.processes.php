@@ -40,7 +40,7 @@ class processes {
 			// create first row if empty record
 			if ($num_rows<1) {
 				$dato		= '[]';
-				$strQuery	= 'INSERT INTO "'.$table."\" (id, datos) VALUES ($1, $2)";
+				$strQuery	= "INSERT INTO \"$table\" (id, datos) VALUES ($1, $2)";
 				$result		= pg_query_params(DBi::_getConnection(), $strQuery, [$id, $dato]);
 				if ($result===false) {
 					$response->msg		= 'Error creating new record';

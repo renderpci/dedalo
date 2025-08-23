@@ -80,6 +80,39 @@
 					DEDALO_DATA_LANG, // lang
 					DEDALO_DATA_LANG_DEFAULT // main_lang
 				);
+
+				// @v7 test
+				// $value = json_decode('
+				// 	[
+				// 		{
+				// 	      "id": 1,
+				// 	      "lang": "lg-eng",
+				// 	      "value": "The one id: 1"
+				// 	    },
+				// 	    {
+				// 	      "id": 2,
+				// 	      "lang": "lg-eng",
+				// 	      "value": "The one id: 2"
+				// 	    }
+				//     ]
+				// ');
+				// $fallback_value	= json_decode('
+				// 	[
+				// 		{
+				// 	      "id": 1,
+				// 	      "lang": "lg-spa",
+				// 	      "value": "El uno id: 1"
+				// 	    },
+				// 	    {
+				// 	      "id": 2,
+				// 	      "lang": "lg-spa",
+				// 	      "value": "El uno id: 2"
+				// 	    }
+				//     ]
+				// ');
+
+				// 	dump($value, ' value ++ '.to_string($this->lang));
+				// 	dump($fallback_value, ' fallback_value ++ '.to_string($this->lang));
 				break;
 		}
 
@@ -169,6 +202,77 @@
 			if(SHOW_DEBUG===true) {
 				metrics::add_metric('data_total_time', $start_time);
 				metrics::add_metric('data_total_calls');
+
+				/*
+				@v7 test
+				if ($this->tipo==='rsc21') {
+					$section = $this->get_my_section();
+
+					// $section->load_data_columns();
+					// 	dump($section->data_columns, ' section->data_columns ++ '.to_string());
+
+					$component_full_data = $section->get_component_full_data($this->tipo, $this->data_column);
+						dump($component_full_data, ' component_full_data ++ '.to_string("$this->data_column - $this->tipo"));
+
+					$tipo_key	= 'rsc21xxx';
+					$iterations	= 300;
+					for ($i=0; $i < $iterations; $i++) {
+
+						$current_key = $tipo_key . $i;
+						$component_full_data[0]->value = ' Code one - ' . $i;
+
+						$section->save_partial($this->data_column, $current_key, $component_full_data);
+						// usleep( 1 * 1000 ); // 12 ms
+						// usleep( 10 ); // 12 ms
+						if ($i>0) {
+							$section->delete_partial($this->data_column, $current_key);
+						}
+					}
+				}
+				*/
+
+				// load_matrix_data @v7
+					// $section_data = matrix_data::load_matrix_data('matrix', $this->section_tipo, (int)$this->section_id);
+					// 	dump($section_data, ' section_data ++ '.to_string());
+					// 	dump($section_data['number'], ' section_data[number] ++ '.to_string());
+					// 	// die();
+
+				// update_matrix_data @v7
+					// matrix_data::update_matrix_data(
+					// 	'matrix',
+					// 	$this->section_tipo,
+					// 	(int)$this->section_id,
+					// 	[
+					// 		'iri' => [
+					// 			'test3333' => [
+					// 				[
+					// 					'id' => 4,
+					// 					'value' => 'Test for write column iri ++'
+					// 				]
+					// 			]
+					// 		],
+					// 		'geo' => null
+					// 	]
+					// 	// [
+					// 	// 	'iri' => null
+					// 	// ]
+					// );
+
+				// insert_matrix_data @v7
+					// matrix_data::insert_matrix_data(
+					// 	'matrix',
+					// 	$this->section_tipo,
+					// 	[
+					// 		'data' => [
+					// 			'test3333' => [
+					// 				[
+					// 					'id' => 4,
+					// 					'value' => 'Test for write column iri +'
+					// 				]
+					// 			]
+					// 		]
+					// 	]
+					// );
 			}
 
 		$data[] = $item;

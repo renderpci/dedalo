@@ -1,9 +1,15 @@
 <?php declare(strict_types=1);
+require_once 'trait.section_v7.php';
 /**
 * CLASS SECTION
 *
 */
 class section extends common {
+
+
+
+	// traits. Files added to current class file to split the large code.
+	use section_v7;
 
 
 
@@ -51,11 +57,6 @@ class section extends common {
 		// time machine save control
 		public $save_tm = true;
 
-		// V7 PROPERTIES //
-
-		// object|null data. Section data value from V7 DB column 'data'
-		protected $data;
-
 		/**
 		* SECTIONS FOR DATAFRAME
 		*________________________
@@ -67,9 +68,9 @@ class section extends common {
 			*/
 			public $caller_dataframe;
 
-		/**
-		* @param object $JSON_RecordObj_matrix
-		*/
+
+		// object $JSON_RecordObj_matrix. Instance from JSON_RecordObj_matrix class
+		// It contains the section data source directly from DB.
 		protected $JSON_RecordObj_matrix;
 
 
@@ -212,7 +213,7 @@ class section extends common {
 				&&	!isset(section::$active_section_id) ) {
 
 					// fix active_section_id
-						section::$active_section_id = $this->get_section_id();
+					section::$active_section_id = $this->get_section_id();
 			}
 
 		// pagination. Set defaults
@@ -239,7 +240,6 @@ class section extends common {
 
 		return $this->JSON_RecordObj_matrix;
 	}//end get_JSON_RecordObj_matrix
-
 
 
 
@@ -295,6 +295,8 @@ class section extends common {
 
 	/**
 	* GET DATO
+	* Loads the section data from database if is not already loaded
+	* and returns the assigned value.
 	* @return object $dato
 	*/
 	public function get_dato() : object {
@@ -349,6 +351,9 @@ class section extends common {
 			$this->dato = is_object($dato)
 				? $dato
 				: (empty($dato) ? new stdClass() : (object)$dato);
+
+		// @v7 loading new columns hack with v6 column datos compatibility
+			// $this->load_section_data();
 
 
 		return $this->dato;
@@ -554,6 +559,16 @@ class section extends common {
 
 		// save section result
 			$result = $this->Save( $save_options );
+
+		// @v7 partial save temporal
+			// if ($component_obj->get_data_column()==='string') {
+			// 	dump($component_obj->get_full_data(), ' $component_obj->get_full_data() ++ '.to_string($component_obj->get_tipo()));
+			// 	$this->save_partial(
+			// 		$component_obj->get_data_column(),
+			// 		$component_obj->get_tipo(),
+			// 		$component_obj->get_full_data()
+			// 	);
+			// }
 
 			// DIFFUSION_INFO
 			// Note that this process can be very long if there are many inverse locators in this section
@@ -1958,21 +1973,6 @@ class section extends common {
 
 		return $ar_buttons_tipo;
 	}//end get_section_buttons_tipo
-
-
-
-	/**
-	* GET_AR_ALL_PROJECT_LANGS
-	* Alias of static method common::get_ar_all_project_langs
-	* @return array $ar_all_project_langs
-	*	(like lg-spa, lg-eng)
-	*/
-		// public function get_ar_all_project_langs() : array {
-
-		// 	$ar_all_project_langs = common::get_ar_all_langs();
-
-		// 	return (array)$ar_all_project_langs;
-		// }//end get_ar_all_project_langs
 
 
 
@@ -4433,76 +4433,6 @@ class section extends common {
 
 		return $sqo_id;
 	}//end build_sqo_id
-
-
-
-	// V7 METHODS //
-
-
-
-	/**
-	* GET_DATA
-	* Gets database column 'data' value for this record (section_tipo, section_id)
-	* @return object|null $this->data
-	*/
-	public function get_data() : ?object {
-
-		// Retrieve and set the matrix instance
-		$this->get_JSON_RecordObj_matrix();
-
-		// load dato from db
-		// data is loaded once and cached into JSON_RecordObj_matrix 'data' property
-		$this->data = $this->JSON_RecordObj_matrix->get_data();
-
-
-		return $this->data;
-	}//end get_data
-
-
-
-	/**
-	* GET_COMPONENT_DATA
-	* It gets all the data from the component as the database is stored,
-	* with all languages, using the whole section data object.
-	* @param string $tipo
-	* 	Component tipo
-	* @param string data_container
-	* 	JSON object data_container where to get the data: literals|relations
-	* @return array|null $component_data
-	*/
-	public function get_component_data( string $tipo, string $data_container ) : ?array {
-
-		$section_data = $this->data ?? $this->get_data();
-
-		// check section_data
-		if (!is_object($section_data)) {
-			debug_log(__METHOD__
-				. " Section without JSON data object " . PHP_EOL
-				. ' tipo: ' . to_string($this->tipo) . PHP_EOL
-				. ' section_id: ' . to_string($this->section_id) . PHP_EOL
-				. ' section_data: ' . to_string($section_data)
-				, logger::ERROR
-			);
-			return null;
-		}
-
-		// check data_container
-		if (!is_object($section_data->{$data_container})) {
-			debug_log(__METHOD__
-				. " Section without JSON data_container object " . PHP_EOL
-				. ' tipo: ' . to_string($this->tipo) . PHP_EOL
-				. ' section_id: ' . to_string($this->section_id) . PHP_EOL
-				. ' data_container: ' . to_string($data_container)
-				, logger::ERROR
-			);
-			return null;
-		}
-
-		$component_data = $section_data->{$data_container}->{$tipo} ?? null;
-
-
-		return $component_data;
-	}//end get_component_data
 
 
 

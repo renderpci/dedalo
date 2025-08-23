@@ -59,6 +59,7 @@ class login extends common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed [Login]';
+			$response->errors	= [];
 
 		// options
 			$username = $options->username;
@@ -70,6 +71,7 @@ class login extends common {
 			}
 			if (!is_string($username) || empty($username)) {
 				$response->msg = "Error Processing Request: username is invalid!";
+				$response->errors[] = 'Invalid user name';
 				return $response;
 			}
 
@@ -77,7 +79,8 @@ class login extends common {
 				? DEDALO_MAINTENANCE_MODE_CUSTOM
 				: DEDALO_MAINTENANCE_MODE;
 			if($maintenance_mode===true && $username!=='root'){
-				$response->msg = label::get_label('site_under_maintenance') ?? "System under maintenance";
+				$response->msg = label::get_label('site_under_maintenance') ?? 'System under maintenance';
+				$response->errors[] = 'System under maintenance';
 				return $response;
 			}
 			// safe username
@@ -86,19 +89,14 @@ class login extends common {
 		// password
 			if (!is_string($password) || empty($password) || strlen($password)<8) {
 				$response->msg = "Error Processing Request: password is empty or the length is invalid !";
+				$response->errors[] = 'Invalid password length';
 				return $response;
 			}
 
 		// search username
-			$arguments = [];
-			$arguments['strPrimaryKeyName']	= 'section_id';
-			$arguments['section_tipo']		= DEDALO_SECTION_USERS_TIPO;
-			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode([$username],JSON_UNESCAPED_UNICODE);
-			// search
-			$matrix_table			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
-			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, null, DEDALO_SECTION_USERS_TIPO);
-			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
-			$user_count				= count($ar_result);
+			$ar_section_id	= login::get_users_with_name( $username );
+			$ar_result		= $ar_section_id;
+			$user_count		= count($ar_result);
 
 		// user found in db check
 			if( !is_array($ar_result) || empty($ar_result[0]) ) {
@@ -122,6 +120,7 @@ class login extends common {
 				}
 				// response
 				$response->msg = "Error: User does not exists or password is invalid!";
+				$response->errors[] = 'User does not exists or password is invalid';
 				// error_log("DEDALO LOGIN ERROR : Invalid user or password");
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
@@ -148,11 +147,12 @@ class login extends common {
 					$activity_datos
 				);
 				# delay failed output after 2 seconds to prevent brute force attacks
-		        if (DEVELOPMENT_SERVER!==true) {
+				if (DEVELOPMENT_SERVER!==true) {
 					sleep(2);
 				}
 				#exit("Error: User $username not exists !");
 				$response->msg = 'Error: User ambiguous';
+				$response->errors[] = 'More than one user withe same name already exists';
 				// error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
@@ -202,6 +202,7 @@ class login extends common {
 						sleep(2);
 					}
 					$response->msg = 'Error: Wrong password [1]';
+					$response->errors[] = 'Wrong password [1]';
 					// error_log("DEDALO LOGIN ERROR : Wrong password [1] (".DEDALO_ENTITY.")");
 					debug_log(__METHOD__
 						. " $response->msg " . PHP_EOL
@@ -215,6 +216,7 @@ class login extends common {
 			// password length check
 				if( empty($password_dato) || strlen($password_dato)<8 ) {
 					$response->msg = 'Error: Wrong password [2]';
+					$response->errors[] = 'Wrong password [2]';
 					// error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
 					debug_log(__METHOD__
 						. " $response->msg " . PHP_EOL
@@ -250,6 +252,7 @@ class login extends common {
 					sleep(2);
 				}
 				$response->msg = 'Error: Account inactive or not defined [1]';
+				$response->errors[] = 'Account inactive or not defined';
 				// error_log("DEDALO LOGIN ERROR : Account inactive");
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
@@ -268,6 +271,7 @@ class login extends common {
 					$user_have_profile = login::user_have_profile_check($user_id);
 					if ($user_have_profile!==true) {
 						$response->msg = label::get_label('user_without_profile_error');
+						$response->errors[] = 'User without profile';
 						return $response;
 					}
 
@@ -276,6 +280,7 @@ class login extends common {
 					$user_have_projects = login::user_have_projects_check($user_id);
 					if ($user_have_projects!==true) {
 						$response->msg = label::get_label('user_without_projects_error');
+						$response->errors[] = 'User without projects';
 						return $response;
 					}
 
@@ -343,20 +348,14 @@ class login extends common {
 				}
 			}
 
-		# Search code
-			$arguments=array();
-			$arguments["strPrimaryKeyName"] = 'section_id';
-			$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
-			$arguments["datos#>>'{components,dd1053,dato,lg-nolan}'"] = json_encode([$code], JSON_UNESCAPED_UNICODE);
-
-			$matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
-			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
-			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+		# Search code (DNI, etc.)
+			$ar_section_id	= login::get_users_with_code( $code );
+			$ar_result		= $ar_section_id;
 
 			$section_id = !empty($ar_result[0]) ? $ar_result[0] : false;
 			if($section_id!==false) {
 
-				// Ok
+				// OK
 
 					$section_id = (int)$ar_result[0];
 					$username 	= 'saml_user';
@@ -478,7 +477,7 @@ class login extends common {
 						);
 
 					# delay failed output after 2 seconds to prevent brute force attacks
-			        if (DEVELOPMENT_SERVER!==true) {
+					if (DEVELOPMENT_SERVER!==true) {
 						sleep(2);
 					}
 					$response->msg = label::get_label('user_code_does_not_exist_error'); # "Error: User Code not exists! Please try again";
@@ -497,7 +496,7 @@ class login extends common {
 	* @param string|int $section_id (is user section id)
 	* @return string $username
 	*/
-	public static function logged_user_username(string|int $section_id) : string {
+	public static function logged_user_username( string|int $section_id ) : string {
 
 		$component = component_common::get_instance(
 			'component_input_text',
@@ -523,7 +522,7 @@ class login extends common {
 	* @param string|int $section_id (is user section id)
 	* @return string $full_username
 	*/
-	public static function get_full_username($section_id) : string {
+	public static function get_full_username( string|int$section_id ) : string {
 
 		$component = component_common::get_instance(
 			'component_input_text',
@@ -550,7 +549,7 @@ class login extends common {
 	* @param string|int $section_id (is user section id)
 	* @return string $code
 	*/
-	public static function get_user_code($section_id) : ?string {
+	public static function get_user_code( string|int $section_id ) : ?string {
 
 		$tipo = 'dd1053'; // Code input text
 		$model = ontology_node::get_model_name_by_tipo($tipo,true);
@@ -579,7 +578,7 @@ class login extends common {
 	* @return string|null $user_image
 	* 	Local url of user image path as /v6/media/media_development/image/1.5MB/dd522_dd128_1.jpg
 	*/
-	public static function get_user_image($section_id) : ?string {
+	public static function get_user_image( string|int$section_id ) : ?string {
 
 		$component = component_common::get_instance(
 			'component_image',
@@ -611,7 +610,7 @@ class login extends common {
 	* @param string|int $section_id
 	* @return bool
 	*/
-	public static function active_account_check($section_id) : bool {
+	public static function active_account_check( string|int $section_id ) : bool {
 
 		$active_account = false; // Default false
 
@@ -642,7 +641,7 @@ class login extends common {
 	* @param string|int $section_id
 	* @return bool $have_profile
 	*/
-	public static function user_have_profile_check($section_id) : bool {
+	public static function user_have_profile_check( string|int $section_id ) : bool {
 
 		$locator		= security::get_user_profile($section_id);
 		$have_profile	= !empty($locator)
@@ -659,7 +658,7 @@ class login extends common {
 	* @param string|int $section_id
 	* @return bool
 	*/
-	public static function user_have_projects_check($section_id) : bool {
+	public static function user_have_projects_check( string|int $section_id ) : bool {
 
 		$user_have_projects = false; // Default false
 
@@ -686,7 +685,7 @@ class login extends common {
 	* @param string|int $section_id (is user section id)
 	* @return string $full_username
 	*/
-	private static function get_default_section($section_id) : ?string {
+	private static function get_default_section( string|int $section_id ) : ?string {
 
 		// root user case
 			if ($section_id==-1) {
@@ -938,7 +937,7 @@ class login extends common {
 
 				$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
 				$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
-	  			$htaccess_text .= 'Require all granted'.PHP_EOL;
+				$htaccess_text .= 'Require all granted'.PHP_EOL;
 				$htaccess_text .= '</FilesMatch>'.PHP_EOL;
 
 				$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
@@ -1014,7 +1013,7 @@ class login extends common {
 		#$cookie_name = md5( 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. mt_rand() );
 		$cookie_name = hash('sha512', 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. random_bytes(8));
 
-	    return $cookie_name;
+		return $cookie_name;
 	}//end get_auth_cookie_name
 
 
@@ -1035,7 +1034,7 @@ class login extends common {
 		#$cookie_value = md5( 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. mt_rand() );
 		$cookie_value = hash('sha512', 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. random_bytes(8) );
 
-	    return $cookie_value;
+		return $cookie_value;
 	}//end get_auth_cookie_value
 
 
@@ -1443,45 +1442,206 @@ class login extends common {
 
 
 
+	/**
+	* GET_USERS_WITH_NAME
+	* Search into `matrix_users` table the records matching the given name
+	* in the component DEDALO_USER_NAME_TIPO and with section tipo DEDALO_SECTION_USERS_TIPO.
+	* @param string $username
+	* User name introduced into the login form by the user as 'Pepe'
+	* @return array $ar_section_id
+	* List of `section_id` from the found users.
+	* Here we expect only one user, but could exists more than one with the the same name potentially.
+	*/
+	public static function get_users_with_name( string $username ) : array {
+
+		// old search
+			// $arguments = [];
+			// $arguments['strPrimaryKeyName']	= 'section_id';
+			// $arguments['section_tipo']		= DEDALO_SECTION_USERS_TIPO;
+			// $arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode([$username],JSON_UNESCAPED_UNICODE);
+			// // search
+			// $matrix_table			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
+			// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, null, DEDALO_SECTION_USERS_TIPO);
+			// $ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+			// $user_count				= count($ar_result);
+
+		// search direct
+			// $conn = DBi::_getConnection();
+			// $sql  = "
+			// 	SELECT section_id FROM \"matrix_users\" WHERE
+			// 	datos#>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}' @> $1
+			// ";
+			// $result = pg_query_params(
+			// 	$conn,
+			// 	$sql,
+			// 	[json_encode([$username],JSON_UNESCAPED_UNICODE)]
+			// );
+			// if (!$result) {
+			// 	debug_log(__METHOD__ . " Unable to get results from database" . PHP_EOL
+			// 		.' error: ' . pg_last_error($conn)
+			// 		, logger::ERROR
+			// 	);
+			// 	$response->msg = "Unable to get results from database. See your server log for details.";
+			// 	return $response;
+			// }
+			// // Number of rows returned
+			// $ar_result	= pg_fetch_all($result);
+			// $user_count	= count($ar_result);
+
+		// SQO way
+			// $sqo = json_decode('
+			// 	{
+			// 	  "section_tipo": [
+			// 	    "'.DEDALO_SECTION_USERS_TIPO.'"
+			// 	  ],
+			// 	  "filter": {
+			// 	    "$and": [
+			// 	      {
+			// 	        "q": [
+			// 	          "'.$username.'"
+			// 	        ],
+			// 	        "q_operator": "==",
+			// 	        "path": [
+			// 	          {
+			// 	            "section_tipo": "'.DEDALO_SECTION_USERS_TIPO.'",
+			// 	            "component_tipo": "'.DEDALO_USER_NAME_TIPO.'",
+			// 	            "model": "component_input_text",
+			// 	            "name": "User"
+			// 	          }
+			// 	        ],
+			// 	        "type": "jsonb",
+			// 	        "lang": "lg-nolan"
+			// 	      }
+			// 	    ]
+			// 	  },
+			// 	  "limit": 1
+			// 	}
+			// ');
+			// $search = search::get_instance($sqo);
+			// $search_result = $search->search();
+
+		// matrix_data way
+			$ar_section_id = matrix_data::search_matrix_data(
+				'matrix_users',
+				[
+					[
+						'column'	=> 'section_tipo',
+						'operator'	=> '=',
+						'value'		=> DEDALO_SECTION_USERS_TIPO
+					],
+					[
+						'column'	=> 'datos',
+						'operator'	=> '@>',
+						'value'		=> '{"components":{"'.DEDALO_USER_NAME_TIPO.'":{"dato":{"lg-nolan": ["'.$username.'"]}}}}' // v6
+					],
+					// [
+					// 	'column'	=> 'string',
+					// 	'operator'	=> '@>',
+					// 	'value'		=> '{"'.DEDALO_USER_NAME_TIPO.'": [{"lang": "lg-nolan", "value": "'.$username.'"}]}' // v7
+					// ]
+				],
+				null, // order
+				null // limit
+			);
+
+
+		return $ar_section_id ?: [];
+	}//end get_users_with_name
+
+
+
+	/**
+	* GET_USERS_WITH_CODE
+	* Search into `matrix_users` table the records matching the given code
+	* in the component 'dd1053' and with section tipo DEDALO_SECTION_USERS_TIPO.
+	* @param string $code
+	* Code received by the the login form the SAML login as '25748925G'
+	* @return array $ar_section_id
+	* List of `section_id` from the found users.
+	* Here we expect only one user, but could exists more than one with the the same code potentially.
+	*/
+	public static function get_users_with_code( string $code ) : array|false {
+
+		$code_component_tipo = 'dd1053';
+
+		// old search
+			// $arguments=array();
+			// $arguments["strPrimaryKeyName"] = 'section_id';
+			// $arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
+			// $arguments["datos#>>'{components,{$code_component_tipo},dato,lg-nolan}'"] = json_encode([$code], JSON_UNESCAPED_UNICODE);
+			// $matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
+			// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
+			// $ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+
+		// matrix data way
+			$ar_section_id = matrix_data::search_matrix_data(
+				'matrix_users',
+				[
+					[
+						'column'	=> 'section_tipo',
+						'operator'	=> '=',
+						'value'		=> DEDALO_SECTION_USERS_TIPO
+					],
+					[
+						'column'	=> 'datos',
+						'operator'	=> '@>',
+						'value'		=> '{"components":{"'.$code_component_tipo.'":{"dato":{"lg-nolan": ["'.$code.'"]}}}}' // v6
+					],
+					// [
+					// 	'column'	=> 'string',
+					// 	'operator'	=> '@>',
+					// 	'value'		=> '{"'.$code_component_tipo.'": [{"lang": "lg-nolan", "value": "'.$code.'"}]}'
+					// ]
+				],
+				null, // order
+				1 // limit
+			);
+
+
+		return $ar_section_id ?: [];
+	}//end get_users_with_code
+
+
+
 }//end login class
 
 
 
 class exec {
-    /**
-     * Run Application in background
-     *
-     * @param     unknown_type $Command
-     * @param     unknown_type $Priority
-     * @return     PID
-     */
-    function background($Command, $Priority = 0){
-       if($Priority)
-           $PID = shell_exec("nohup nice -n $Priority $Command > /dev/null & echo $!");
-       else
-           $PID = shell_exec("nohup $Command > /dev/null & echo $!");
-       return($PID);
+	/**
+	 * Run Application in background
+	 *
+	 * @param     unknown_type $Command
+	 * @param     unknown_type $Priority
+	 * @return     PID
+	 */
+	function background($Command, $Priority = 0){
+	   if($Priority)
+		   $PID = shell_exec("nohup nice -n $Priority $Command > /dev/null & echo $!");
+	   else
+		   $PID = shell_exec("nohup $Command > /dev/null & echo $!");
+	   return($PID);
    }
    /**
-    * Check if the Application running !
-    *
-    * @param     unknown_type $PID
-    * @return     boolen
-    */
+	* Check if the Application running !
+	*
+	* @param     unknown_type $PID
+	* @return     boolen
+	*/
    function is_running($PID){
-       exec("ps $PID", $ProcessState);
-       return(count($ProcessState) >= 2);
+	   exec("ps $PID", $ProcessState);
+	   return(count($ProcessState) >= 2);
    }
    /**
-    * Kill Application PID
-    *
-    * @param  unknown_type $PID
-    * @return boolen
-    */
+	* Kill Application PID
+	*
+	* @param  unknown_type $PID
+	* @return boolen
+	*/
    function kill($PID){
-       if(exec::is_running($PID)){
-           exec("kill -KILL $PID");
-           return true;
-       }else return false;
+	   if(exec::is_running($PID)){
+		   exec("kill -KILL $PID");
+		   return true;
+	   }else return false;
    }
 }//end exec
