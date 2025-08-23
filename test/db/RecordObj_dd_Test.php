@@ -480,7 +480,7 @@ final class ontology_node_test extends TestCase {
 	public function test_get_model_tipo(): void {
 
 		// root
-			$result = ontology_node::get_model_tipo('root');
+			$result = ontology_node::get_tipo_from_model('root');
 
 			$expected	= 'string';
 			$eq			= gettype($result)===$expected;
@@ -501,7 +501,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// component_portal
-			$result = ontology_node::get_model_tipo('component_portal');
+			$result = ontology_node::get_tipo_from_model('component_portal');
 
 			$expected	= 'dd592';
 			$eq			= $result===$expected;
@@ -513,7 +513,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// section
-			$result = ontology_node::get_model_tipo('section');
+			$result = ontology_node::get_tipo_from_model('section');
 
 			$expected	= 'dd6';
 			$eq			= $result===$expected;
