@@ -402,8 +402,7 @@ class diffusion_sql extends diffusion  {
 							}
 
 						// component's lang
-							$current_lang = ontology_node::get_lang_by_tipo($current_component_tipo, true);
-
+							$current_lang = $ontology_node->get_is_translatable()===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						// iterate array of section_id (from options) and group_by_section_tipo
 							foreach ((array)$section_id as $current_section_id) {
 
