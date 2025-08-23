@@ -27,7 +27,7 @@
 		}
 
 		// set add_label value based on former model (false for section_group_div)
-		$legacy_model	= ontology_node::get_legacy_model_name_by_tipo($tipo);
+		$legacy_model	= ontology_node::get_legacy_model_by_tipo($tipo);
 		$no_label	= [
 			'section_group_div'
 		];

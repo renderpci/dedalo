@@ -183,7 +183,7 @@ class tool_diffusion extends tool_common {
 								$current_name				= ontology_node::get_term_by_tipo($ar_related[0], null, true, true);
 								$info_item->related_tipo	= $ar_related[0];
 								$info_item->related_label	= $current_name;
-								$info_item->related_model	= ontology_node::get_legacy_model_name_by_tipo($ar_related[0]);
+								$info_item->related_model	= ontology_node::get_legacy_model_by_tipo($ar_related[0]);
 							}
 							// add model
 							$info_item->model = ontology_node::get_model_by_tipo($info_item->tipo, true);

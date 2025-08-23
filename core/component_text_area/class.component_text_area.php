@@ -1176,7 +1176,7 @@ class component_text_area extends component_string_common {
 
 		// Compatibility of the reference tag
 		// set the references as v5, with tag locator as text
-			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->tipo);
+			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 			if( $legacy_model === 'component_html_text' ){
 
 				// check if the component has a tags_reference component associated

@@ -1544,7 +1544,7 @@ class component_relation_common extends component_common {
 
 
 		// relations_search. only for component_autocomplete_hi
-			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($component_tipo);
+			$legacy_model = ontology_node::get_legacy_model_by_tipo($component_tipo);
 			if ($legacy_model==='component_autocomplete_hi'){
 				$query_object = component_relation_common::add_relations_search($query_object);
 			}
@@ -2162,7 +2162,7 @@ class component_relation_common extends component_common {
 	public function get_relations_search_value() : ?array {
 
 		// only for component_autocomplete_hi
-			$legacy_model = ontology_node::get_legacy_model_name_by_tipo($this->tipo);
+			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 			if ($legacy_model!=='component_autocomplete_hi') {
 				return null;
 			}

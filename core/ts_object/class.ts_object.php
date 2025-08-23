@@ -302,7 +302,7 @@ class ts_object {
 					}
 					// ignore v5 component_relation_struct
 						if ($model_name==='component_relation_index') {
-							$legacy_model = ontology_node::get_legacy_model_name_by_tipo($element_tipo);
+							$legacy_model = ontology_node::get_legacy_model_by_tipo($element_tipo);
 							if ($legacy_model==='component_relation_struct') {
 								continue 2;
 							}

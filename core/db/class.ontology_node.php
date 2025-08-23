@@ -718,27 +718,27 @@ class ontology_node {
 
 
 	/**
-	* GET_LEGACY_MODEL_NAME_BY_TIPO
+	* GET_LEGACY_MODEL_BY_TIPO
 	* Temporal function to manage transitional models
 	* @param string $tipo
 	* @return string|null $model_name
 	*/
-	public static function get_legacy_model_name_by_tipo( string $tipo ) : ?string {
+	public static function get_legacy_model_by_tipo( string $tipo ) : ?string {
 
 		$ontology_node	= new ontology_node( $tipo );
-		$model_name		= $ontology_node->get_legacy_model_name();
+		$model_name		= $ontology_node->get_legacy_model();
 
 		return $model_name;
-	}//end get_legacy_model_name_by_tipo
+	}//end get_legacy_model_by_tipo
 
 
 
 	/**
-	* GET_LEGACY_MODEL_NAME
+	* GET_LEGACY_MODEL
 	* Temporal function to manage transitional models
 	* @return string|null $model_name
 	*/
-	public function get_legacy_model_name() : ?string {
+	public function get_legacy_model() : ?string {
 
 		$model_name = ontology_node::get_term_by_tipo(
 			$this->get_model_tipo() ?? '',
@@ -748,7 +748,7 @@ class ontology_node {
 		);
 
 		return $model_name;
-	}//end get_legacy_model_name
+	}//end get_legacy_model
 
 
 
