@@ -528,7 +528,7 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_all_records_by_tld
+	* TEST_GET_AR_TIPO_BY_MODEL
 	* @return void
 	*/
 	public function test_get_all_records_by_tld(): void {
@@ -574,16 +574,8 @@ final class ontology_node_test extends TestCase {
 			);
 	}//end test_get_all_records_by_tld
 
-
-
-	/**
-	* TEST_GET_AR_TIPO_BY_MODEL_NAME
-	* @return void
-	*/
-	public function test_get_ar_tipo_by_model_name(): void {
-
 		// component_portal
-			$result = ontology_node::get_ar_tipo_by_model_name(
+			$result = ontology_node::get_ar_tipo_by_model(
 				'component_portal'
 			);
 
@@ -611,7 +603,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// component_input_text
-			$result = ontology_node::get_ar_tipo_by_model_name(
+			$result = ontology_node::get_ar_tipo_by_model(
 				'component_input_text'
 			);
 
@@ -628,7 +620,7 @@ final class ontology_node_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_tipo_by_model_name
+	}//end test_get_ar_tipo_by_model
 
 
 

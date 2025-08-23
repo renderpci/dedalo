@@ -53,14 +53,14 @@ class area extends area_common  {
 
 		// root_areas
 			$ar_root_areas		= [];
-			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model_name('area_root')[0];
-			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model_name('area_activity')[0];
-			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model_name('area_resource')[0];
-			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model_name('area_tool')[0];
-			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model_name('area_thesaurus')[0];
+			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model('area_root')[0];
+			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model('area_activity')[0];
+			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model('area_resource')[0];
+			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model('area_tool')[0];
+			$ar_root_areas[]	= ontology_node::get_ar_tipo_by_model('area_thesaurus')[0];
 
 			// area_graph. check (if user do not have the Ontology updated)
-			$area_graph = ontology_node::get_ar_tipo_by_model_name('area_graph');
+			$area_graph = ontology_node::get_ar_tipo_by_model('area_graph');
 			if (isset($area_graph[0])) {
 				$ar_root_areas[] = $area_graph[0];
 			}else{
@@ -69,10 +69,10 @@ class area extends area_common  {
 					, logger::WARNING
 				);
 			}
-			$ar_root_areas[] = ontology_node::get_ar_tipo_by_model_name('area_admin')[0];
+			$ar_root_areas[] = ontology_node::get_ar_tipo_by_model('area_admin')[0];
 
 			// area_maintenance. Temporal check (if user do not have the Ontology updated, error is given here)
-			$area_maintenance = ontology_node::get_ar_tipo_by_model_name('area_maintenance');
+			$area_maintenance = ontology_node::get_ar_tipo_by_model('area_maintenance');
 			if (isset($area_maintenance[0])) {
 				$ar_root_areas[] = $area_maintenance[0]; // dd88
 			}else{
@@ -88,10 +88,10 @@ class area extends area_common  {
 			}
 
 			// area_development
-			$ar_root_areas[] = ontology_node::get_ar_tipo_by_model_name('area_development')[0];
+			$ar_root_areas[] = ontology_node::get_ar_tipo_by_model('area_development')[0];
 
 			// area_ontology. check (if user do not have the Ontology updated)
-			$area_ontology = ontology_node::get_ar_tipo_by_model_name('area_ontology');
+			$area_ontology = ontology_node::get_ar_tipo_by_model('area_ontology');
 			if (isset($area_ontology[0])) {
 				$ar_root_areas[] = $area_ontology[0];
 			}else{
