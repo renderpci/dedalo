@@ -308,7 +308,7 @@ final class ontology_node_test extends TestCase {
 	public function test_get_term_by_tipo(): void {
 
 		$test_term_id	= 'dd1';
-		$result			= ontology_node::get_term_by_tipo($test_term_id, DEDALO_STRUCTURE_LANG);
+		$result			= ontology_node::get_label_by_tipo($test_term_id, DEDALO_STRUCTURE_LANG);
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;

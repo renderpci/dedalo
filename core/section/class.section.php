@@ -630,9 +630,9 @@ class section extends common {
 
 						// INFO : We create the info of the current component
 							// $component_global_dato->info 		= new stdClass();
-							// 	$component_global_dato->info->label = ontology_node::get_term_by_tipo($component_tipo,null,true);
+							// 	$component_global_dato->info->label = ontology_node::get_label_by_tipo($component_tipo,null,true);
 							// 	$component_global_dato->info->model= $component_model_name;
-							$inf = ontology_node::get_term_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
+							$inf = ontology_node::get_label_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
 							$component_global_dato->inf = $inf;
 
 						$component_global_dato->dato = new stdClass();
@@ -1052,7 +1052,7 @@ class section extends common {
 						$section_dato->section_real_tipo	= (string)$section_real_tipo;
 
 					// Section label
-						$section_dato->label				= (string)ontology_node::get_term_by_tipo($tipo,null,true);
+						$section_dato->label				= (string)ontology_node::get_label_by_tipo($tipo,null,true);
 
 					// Section created by userID
 						$section_dato->created_by_userID	= (int)$user_id;
@@ -1237,7 +1237,7 @@ class section extends common {
 						debug_log(__METHOD__
 							." Ignored set filter default in section without filter: $this->tipo" . PHP_EOL
 							.' section_tipo: ' . $this->tipo . PHP_EOL
-							.' section label ' . ontology_node::get_term_by_tipo($this->tipo, DEDALO_APPLICATION_LANG)
+							.' section label ' . ontology_node::get_label_by_tipo($this->tipo, DEDALO_APPLICATION_LANG)
 							, logger::WARNING
 						);
 
@@ -3781,7 +3781,7 @@ class section extends common {
 
 							case ($current_ddo_tipo==='dd546'): // Where (model: component_input_text)
 								// component_label
-									$component_label = ontology_node::get_term_by_tipo(
+									$component_label = ontology_node::get_label_by_tipo(
 										$tipo, // string tipo
 										DEDALO_APPLICATION_LANG, // string lang
 										true, // bool from_cache
@@ -3791,7 +3791,7 @@ class section extends common {
 									$rqo = dd_core_api::$rqo ?? null;
 									if ( $rqo && $rqo->source->tipo!==$rqo->source->section_tipo ) {
 										// section_label
-											$section_label = ontology_node::get_term_by_tipo(
+											$section_label = ontology_node::get_label_by_tipo(
 												$section_tipo, // string tipo
 												DEDALO_APPLICATION_LANG, // string lang
 												true, // bool from_cache

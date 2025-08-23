@@ -1418,7 +1418,7 @@ class ontology {
 				$model_tipo_resolution = ontology::get_term_id_from_locator($model_locator);
 
 				// set the model resolution (section, component_input_text, etc)
-				$model_resolution = ontology_node::get_term_by_tipo(
+				$model_resolution = ontology_node::get_label_by_tipo(
 					$model_tipo_resolution,
 					DEDALO_STRUCTURE_LANG,
 					true,
