@@ -46,42 +46,10 @@ trait section_v7 {
 	// protected $counters;
 
 	// @v7 array data_columns. Assoc array with all v7 DB columns
-	public $data_columns = [
-		// object|null data. Section data value from V7 DB column 'data'
-		// Section specific data like label, diffusion info, etc.
-		'data' => null,
-		// object|null relation. Section data value from V7 DB column 'relation'.
-		// Stores the list of locators grouped by component tipo as {"dd20":[locators],"dd35":[locators]}
-		'relation' => null,
-		// object|null string. Section data value from V7 DB column 'string'
-		// Stores string literals values used from component_input_text, component_text_area and others.
-		'string' => null,
-		// object|null date. Section data value from V7 DB column 'date'
-		// Stores date values handled by component_date
-		'date' => null,
-		// object|null iri. Section data value from V7 DB column 'iri'
-		// Stores IRI object values handled by component_iri as {"dd85":{"title":"My site URI","uri":"https://mysite.org"}}
-		'iri' => null,
-		// object|null geo. Section data value from V7 DB column 'geo'
-		// Stores geo data handled by component_geolocation.
-		'geo' => null,
-		// object|null number. Section data value from V7 DB column 'number'
-		// Stores numeric values handled by component_number.
-		'number' => null,
-		// object|null media. Section data value from V7 DB column 'media'
-		// Stores media values handled by media components (3d,av,image,pdf,svg)
-		'media' => null,
-		// object|null misc. Section data value from V7 DB column 'misc'
-		// Stores other components values like component_security_access, component_json, etc.
-		'misc' => null,
-		// object|null relation_search. Section data value from V7 DB column 'relation_search'
-		// Stores relation optional data useful for search across parents like toponymy.
-		'relation_search' => null,
-		// object|null counters. Section data value from V7 DB column 'counters'
-		// Stores string components counters used to get unique identifiers for the values as {"id":1,"lang":"lg-nolan","type":"dd750","value":"Hello"}
-		// The format of the counter data is {"dd750":1,"dd201":1,..}
-		'counters' => null
-	];
+
+
+	// matrix_data class instance
+	protected $matrix_data;
 
 
 
@@ -91,41 +59,27 @@ trait section_v7 {
 	* The data fill the '$this->data_columns' values
 	* with parsed integer and JSON values.
 	* To force to reload the data form DB, set the property
-	* 'this->bl_loaded_matrix_data' to false.
+	* 'this->is_loaded_data_columns' to false.
 	* @return bool
 	*/
 	private function load_section_data() : bool {
 
-		// Already loaded data case
-		if ($this->bl_loaded_matrix_data) {
-			return true;
+		// init matrix_data instance.
+		// It's instanced once and handles all the section data database tasks.
+		if (!isset($this->matrix_data)) {
+			$section_id = $this->section_id ? (int)$this->section_id : null;
+			$this->matrix_data = matrix_data::get_instance(
+				$this->tipo,
+				$section_id
+			);
 		}
 
-		$table = common::get_matrix_table_from_tipo($this->tipo);
+		// If the matrix_data instance has already been loaded,
+		// it returns the cached data without reconnecting to the database.
+		// All section instances with the same section_tipo and section_id values
+		// share the same cached instance of 'matrix_data', independent of the mode.
+		$this->matrix_data->load_matrix_data();
 
-		$all_data = matrix_data::load_matrix_data(
-			$table,
-			$this->tipo,
-			(int)$this->section_id
-		);
-
-		// Ensure $all_data is an array
-		if (!is_array($all_data)) {
-			return false;
-		}
-
-		foreach ($this->data_columns as $column => $value) {
-			if (isset($all_data[$column])) {
-				$this->data_columns[$column] = $all_data[$column];
-			}
-		}
-			dump($this->data_columns, ' this->data_columns ++ '.to_string());
-
-		// v6 compatibility temporal use column 'datos'
-		// $this->dato = $all_data['datos'] ?? new stdClass();
-
-		// Set as loaded
-		$this->bl_loaded_matrix_data = true;
 
 		return true;
 	}//end load_section_data
