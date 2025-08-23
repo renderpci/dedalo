@@ -36,7 +36,7 @@ class diffusion_data {
 
 		}else{
 
-			$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation(
+			$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_and_relation(
 				$diffusion_node_tipo,
 				'component_',
 				'related',

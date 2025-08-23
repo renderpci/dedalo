@@ -157,7 +157,7 @@ class tool_import_rdf extends tool_common {
 
 			if ($class_name === $rdf_type) {
 				$ar_owl_ObjectProperty = ontology_node::get_ar_children($owl_class_tipo);
-				$current_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($owl_class_tipo, 'section', 'related', false);
+				$current_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation($owl_class_tipo, 'section', 'related', false);
 			}
 		}
 
@@ -234,8 +234,8 @@ class tool_import_rdf extends tool_common {
 
 			$section_tipo_label		= ontology_node::get_term_by_tipo($section_tipo);
 			$object_property_name	= ontology_node::get_term_by_tipo($ObjectProperty_tipo);
-			$related_dd_tipo		= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
-			$children_dd_tipo		= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'owl:ObjectProperty', 'children', false);
+			$related_dd_tipo		= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
+			$children_dd_tipo		= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'owl:ObjectProperty', 'children', false);
 			$current_tipo			= reset($related_dd_tipo);
 
 			// properties
@@ -468,10 +468,10 @@ class tool_import_rdf extends tool_common {
 							: $literal->getValue();
 
 						// get the literal in the deep link
-							$class_dd_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'owl:Class', 'related', false);
+							$class_dd_tipo = ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'owl:Class', 'related', false);
 							if(isset($class_dd_tipo[0])){
 
-								$ar_literal_section_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation($class_dd_tipo[0], 'section', 'related', false);
+								$ar_literal_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation($class_dd_tipo[0], 'section', 'related', false);
 
 								// check if the current literal has a record inside Dédalo.
 									$class_dd_tipo_ontology_node = new ontology_node($class_dd_tipo[0]);
@@ -538,10 +538,10 @@ class tool_import_rdf extends tool_common {
 								: $resource->getUri();
 
 							// get the literal in the deep link
-								$class_dd_tipo			= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'owl:Class', 'related', false);
-								$object_dd_tipo			= ontology_node::get_ar_tipo_by_model_name_and_relation($class_dd_tipo[0], 'owl:ObjectProperty', 'children', false);
-								$current_section_tipo	= ontology_node::get_ar_tipo_by_model_name_and_relation($class_dd_tipo[0], 'section', 'related', false);
-								$parent_dd_tipo			= ontology_node::get_ar_tipo_by_model_name_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
+								$class_dd_tipo			= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'owl:Class', 'related', false);
+								$object_dd_tipo			= ontology_node::get_ar_tipo_by_model_and_relation($class_dd_tipo[0], 'owl:ObjectProperty', 'children', false);
+								$current_section_tipo	= ontology_node::get_ar_tipo_by_model_and_relation($class_dd_tipo[0], 'section', 'related', false);
+								$parent_dd_tipo			= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
 								$resource_uri			= $resource->getUri();
 								try {
 									$resource->load('rdfxml');

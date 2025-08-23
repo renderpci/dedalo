@@ -240,7 +240,7 @@ class component_security_access extends component_common {
 
 		// get the exclude elements defined into ontology to be remove of the datalist
 		$ar_tipo_to_be_exclude	= null;
-		$ar_exclude_elements	= ontology_node::get_ar_tipo_by_model_name_and_relation(
+		$ar_exclude_elements	= ontology_node::get_ar_tipo_by_model_and_relation(
 			$section_tipo,
 			'exclude_elements',
 			'children',

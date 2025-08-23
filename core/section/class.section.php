@@ -1755,7 +1755,7 @@ class section extends common {
 
 			# EXCLUDE ELEMENTS
 			if ($ar_tipo_exclude_elements===false) {
-				$ar_tipo_exclude_elements = ontology_node::get_ar_tipo_by_model_name_and_relation(
+				$ar_tipo_exclude_elements = ontology_node::get_ar_tipo_by_model_and_relation(
 					$original_tipo, // string tipo
 					'exclude_elements', // string model_name
 					'children', // string relation_type
