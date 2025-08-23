@@ -788,65 +788,7 @@ class ontology_node {
 
 
 	/**
-	* GET_ALL_RECORDS_BY_TLD
-	* Get all dd_ontology rows of specified tlds
-	* @param  array $ar_tl
-	* @return array $result
-	* [
-	* 	{
-	* 	 "id": "15461858",
-	*    "tipo": "rsc1355",
-	*    "parent": "rsc1341",
-	*    "modelo": "dd592",
-	*    "is_model": false,
-	*    "order_number": "10",
-	*    "tld": "rsc",
-	* 	 ..
-	* 	},
-	* 	{}, ..
-	* ]
-	*/
-	public static function get_all_records_by_tld( array $ar_tld ) : array {
-
-		$sentences = [];
-		foreach ($ar_tld as $current_tld) {
-
-			$safe_tld = safe_tld($current_tld);
-			if ( $safe_tld !== false ) {
-				$sentences[] = '"tld"= \''. $safe_tld. '\'';
-			}else{
-				debug_log(__METHOD__
-					. " Invalid tld, ignored:" . PHP_EOL
-					. ' tld: ' . to_string( $current_tld )
-					, logger::ERROR
-				);
-			}
-		}
-
-		// no tld valid items found
-		if (empty($sentences)) {
-			return [];
-		}
-
-		$filter = implode(' OR ', $sentences );
-
-		// `where` clause of SQL query
-		$sql_query		= 'SELECT * FROM "'.ontology_node::$table.'" WHERE '. $filter ;
-		$dd_ontology_result	= pg_query(DBi::_getConnection(), $sql_query);
-
-		// iterate dd_ontology_result row
-		$ontology_records = [];
-		while($row = pg_fetch_object($dd_ontology_result)) {
-			$ontology_records[] = $row;
-		}
-
-		return $ontology_records;
-	}//end get_all_records_by_tld
-
-
-
-	/**
-	* GET_AR_TIPO_BY_MODEL_NAME
+	* get_ar_tipo_by_model
 	* Resolves all terms matching the given model
 	* @param string $model_name
 	* @return array $ar_result

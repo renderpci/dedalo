@@ -531,48 +531,7 @@ final class ontology_node_test extends TestCase {
 	* TEST_GET_AR_TIPO_BY_MODEL
 	* @return void
 	*/
-	public function test_get_all_records_by_tld(): void {
-
-		// root
-			$result = ontology_node::get_all_records_by_tld(['dd','rsc']);
-
-			$expected	= 'array';
-			$eq			= gettype($result)===$expected;
-			$this->assertTrue(
-				$eq,
-				'expected equal true' . PHP_EOL
-					. ' result: ' . gettype($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
-			);
-
-		// dd1
-			$found = array_find($result, function($el) {
-				return $el->tipo==='dd1';
-			});
-
-			$expected	= true;
-			$eq			= is_object($found);
-			$this->assertTrue(
-				$eq,
-				'expected equal true' . PHP_EOL
-					. ' result: ' . to_string($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
-			);
-
-		// rsc15
-			$found = array_find($result, function($el) {
-				return $el->tipo==='rsc15';
-			});
-
-			$expected	= true;
-			$eq			= is_object($found);
-			$this->assertTrue(
-				$eq,
-				'expected equal true' . PHP_EOL
-					. ' result: ' . to_string($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
-			);
-	}//end test_get_all_records_by_tld
+	public function test_get_ar_tipo_by_model(): void {
 
 		// component_portal
 			$result = ontology_node::get_ar_tipo_by_model(
