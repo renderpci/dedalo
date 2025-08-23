@@ -755,22 +755,6 @@ class ontology_node {
 
 
 	/**
-	* GET LANG BY TIPO (STATIC)
-	* Get given term lang based on if is translatable or not
-	* @param string $tipo
-	* @return string $lang
-	*/
-	public static function get_lang_by_tipo( string $tipo ) : string {
-
-		$ontology_node	= new ontology_node($tipo);
-		$lang			= $ontology_node->get_is_translatable()===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-
-		return $lang;
-	}//end get_lang_by_tipo
-
-
-
-	/**
 	* GET_TIPO_FORM_MODEL_NAME
 	* Resolves tipo searching node model names
 	* Only one node exist by model name (models are unique)

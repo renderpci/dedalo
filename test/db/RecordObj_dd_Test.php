@@ -474,47 +474,6 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_lang_by_tipo
-	* @return void
-	*/
-	public function test_get_lang_by_tipo(): void {
-
-		$test_term_id	= 'hierarchy92';
-		$result			= ontology_node::get_lang_by_tipo($test_term_id);
-
-		$expected	= 'string';
-		$eq			= gettype($result)===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . gettype($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-
-		$expected	= DEDALO_DATA_NOLAN;
-		$eq			= $result===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-
-		$result = ontology_node::get_lang_by_tipo('rsc36');
-
-		$expected	= DEDALO_DATA_LANG;
-		$eq			= $result===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-	}//end test_get_lang_by_tipo
-
-
-
-	/**
 	* TEST_get_model_tipo
 	* @return void
 	*/
