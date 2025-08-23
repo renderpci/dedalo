@@ -1365,11 +1365,20 @@ class tools_register {
 
 		if( !empty($tool_transcription_register) ){
 
-			$sql = 'DELETE FROM "matrix_tools"
-					WHERE section_tipo = \''.tools_register::$section_tools_config_tipo.'\'
-					AND section_id = \''.$tool_transcription_register->section_id.'\';';
+			$sql = '
+				DELETE FROM "matrix_tools"
+				WHERE section_tipo = $1
+				  AND section_id = $2
+			';
 
-			$result	= pg_query(DBi::_getConnection(), $sql);
+			$result	= pg_query_params(
+				DBi::_getConnection(),
+				$sql,
+				[
+					tools_register::$section_tools_config_tipo,
+					$tool_transcription_register->section_id
+				]
+			);
 
 			if($result===false){
 				return false;
