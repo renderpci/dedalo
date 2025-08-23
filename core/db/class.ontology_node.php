@@ -691,7 +691,7 @@ class ontology_node {
 	* Get model of the given tipo (ontology node)
 	* @param string $tipo
 	* @param bool $from_cache = true
-	* @return string $modelo_name
+	* @return string $modelo
 	*/
 	public static function get_model_by_tipo( string $tipo, bool $from_cache=true ) : string {
 
@@ -704,15 +704,15 @@ class ontology_node {
 		}
 
 		$ontology_node	= new ontology_node($tipo);
-		$modelo_name	= $ontology_node->get_model();
+		$modelo	= $ontology_node->get_model();
 
 		// cache
-		if( !empty($modelo_name) ){
-			$model_by_tipo[$cache_uid] = $modelo_name;
+		if( !empty($modelo) ){
+			$model_by_tipo[$cache_uid] = $modelo;
 		}
 
 
-		return $modelo_name;
+		return $modelo;
 	}//end get_model_by_tipo
 
 
@@ -755,13 +755,13 @@ class ontology_node {
 
 
 	/**
-	* GET_TIPO_FORM_MODEL_NAME
+	* GET_TIPO_FROM_MODEL
 	* Resolves tipo searching node model names
 	* Only one node exist by model name (models are unique)
 	* @param string $model
 	* @return string|null $tipo
 	*/
-	public static function get_tipo_form_model_name( string $model ) : ?string {
+	public static function get_tipo_from_model( string $model ) : ?string {
 
 		$json_search = (object)[
 			'operator' => '@>',
@@ -770,7 +770,8 @@ class ontology_node {
 
 		// search terms with given model
 		$result = ontology_data::search_ontology_data(
-			[	'is_model'	=> true,
+			[
+				'is_model'	=> true,
 				'tld'		=> 'dd',
 				'term'		=> $json_search
 			],
@@ -783,7 +784,7 @@ class ontology_node {
 			: ( $result[0] ?? null );
 
 		return $tipo;
-	}//end get_tipo_form_model_name
+	}//end get_tipo_from_model
 
 
 
