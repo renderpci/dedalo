@@ -1,50 +1,69 @@
 <?php declare(strict_types=1);
 /**
 * ontology_node
+* manage the active and functional ontology node,
+* ontology node is using to interpreted data, schemas, behaviors, etc. in execution time.
+* It manages every node of active ontologies.
+* It uses `dd_ontology` table in DDBB.
+* It's a read only object.
 *
+* Note: ontology nodes are not editable nodes.
+* For doing changes into ontology use ../core/ontology/class.ontology.php
 */
 class ontology_node {
 
+	// tipo
+	// Ontology identification of the node
+	// tipo : Typology of Indirect Programing Objects
+	// every node in the ontology has a unique identification.
+	// It allows to define the node properties
+	// tipo use the TLD and one unique id for this TLD as oh1
+	// oh = TLD, top level domain, to identify the name space of the ontology, oh = Oral History
+	// 1 = unique and sequential id.
+	public $tipo; // string
 
 	// data
+	// An object with the all properties of the ontology node
+	//	{
+	//		parent			: "tch188"				string | null
+	//		term			: {"lg-eng": "Object"}	object | null
+	//		model			: "section"				string | null
+	//		order_number	: 5						int | null
+	//		relations		: [{"tipo":"tch7"}]		array | null
+	//		tld				: "tch"					string
+	//		properties		: {"color": "#2d8894"}	object | null
+	//		model_tipo		: "dd6"					string | null
+	//		is_model		: false					boolean
+	//		is_translatable	: false					boolean
+	//		propiedades		: "{}"					string, data is a object as json stringify // Deprecated used only for compatibility of v5 and v6
+	//	}
+	// every property has its own column in the `dd_ontology` table
 	protected $data;
 
-	// fields
-	public $tipo; // string
-	// protected $parent; // string | null
-	// protected $term; // object | null
-	// protected $model; // string | null
-	// protected $order_number; // int | null
-	// protected $relations; // array | null
-	// protected $tld; // string
-	// protected $properties; // object | null
-	// protected $model_tipo; // string | null
-	// protected $is_model; // boolean
-	// protected $is_translatable;	// boolean
-	// protected $propiedades;	// string, data is a object as json stringify // Deprecated used only for compatibility of v5 and v6
+	// is_loaded_data
+	// A boolean property to identify if the node was loaded from database
+	protected $is_loaded_data = false;
 
-	// bl_loaded_data
-	protected $bl_loaded_data = false;
-
-	// fields external
-	protected $filtroTerminos ;
-
-	// optional specific loads
+	// ar_recursive_children_of_this
+	// cache for expensive calculation of recursive children.
 	protected $ar_recursive_children_of_this = [];
 
-	// default table. Can be changed on the fly base on DEDALO_RECOVERY_MODE
+	// default table
+	// Table used for storage the ontology nodes
+	// This table is used as read only table.
+	// It can be changed on the fly base when DEDALO_RECOVERY_MODE is active
+	// in those cases, the table will be `dd_ontology_recovery` for safe running.
 	public static $table = 'dd_ontology';
-
-
 
 	// array of ontology_node instances
 	private static $instances = [];
 
 
+
 	/**
 	* GET_INSTANCE
+	* Create the ontology node instance with the ontology identification; tipo
 	* @param ?string $tipo = null
-	* @param ?string $tld = null
 	* @return self
 	*/
 	public static function get_instance( ?string $tipo = null ): self {
@@ -60,6 +79,8 @@ class ontology_node {
 
 	/**
 	* __CONSTRUCT
+	* Check the ontology identification; tipo
+	* to ensure that it is a valid and safe before construct the ontology node object
 	*/
 	function __construct( ?string $tipo=null ) {
 
@@ -87,36 +108,59 @@ class ontology_node {
 
 	/**
 	* LOAD_DATA
+	* Get the row data of the node from table
 	* @return bool
 	*/
 	public function load_data() : bool {
 
-		if ($this->bl_loaded_data) {
+		//check if data was loaded
+		if ($this->is_loaded_data) {
 			return true;
 		}
-
+		// load ontology node from DDBB
 		$tipo = $this->tipo;
 		$data = ontology_data::load_ontology_data($tipo);
 
 		// Set as loaded
-		$this->bl_loaded_data = true;
+		$this->is_loaded_data = true;
 
+		// set it
 		$this->data = !empty($data) ? (object)$data : new stdClass();
-	// dump($this->data, ' this->data ++ '.to_string());
+
 		return true;
 	}//end load_data
 
 
-	public function get_data(){
+
+	/**
+	* GET_DATA
+	* Get all node data
+	* @return object|null
+	*/
+	public function get_data() : ?object {
 		$this->load_data();
+
 		return $this->data;
 	}//end get_tipo
 
+
+
+	/**
+	* GET_TIPO
+	* Get the ontology identification; tipo of the instance
+	* @return string|null
+	*/
 	public function get_tipo() : ?string{
 		return $this->tipo;
 	}//end get_tipo
 
 
+
+	/**
+	* GET_PARENT
+	* Get the ontology identification for parent (as parent tipo) of the instance
+	* @return string|null
+	*/
 	public function get_parent() : ?string {
 		$this->load_data();
 		return $this->data->parent ?? null;
@@ -144,7 +188,7 @@ class ontology_node {
 	*/
 	public function get_term( string $lang, $fallback=true ) : ?string {
 
-		$term = $this->get_term_data();
+		$term_data = $this->get_term_data();
 
 		// get the lang to be used to get the labels
 		// it call to get_label_lang() to process exceptions as català to valencià, that are the same language.
@@ -152,13 +196,13 @@ class ontology_node {
 		$lang = lang::get_label_lang( $lang );
 
 		// empty term case
-		if (!is_object($term)) {
+		if (!is_object($term_data)) {
 			return null;
 		}
 
 		// lang already exists case
-		if (isset($term->{$lang})) {
-			return $term->{$lang};
+		if (isset($term_data->{$lang})) {
+			return $term_data->{$lang};
 		}
 
 		// fallback lang
@@ -166,12 +210,12 @@ class ontology_node {
 
 			// main lang
 			$ontology_lang = DEDALO_STRUCTURE_LANG;
-			if (isset($term->{$ontology_lang})) {
-				return $term->{$ontology_lang};
+			if (isset($term_data->{$ontology_lang})) {
+				return $term_data->{$ontology_lang};
 			}
 
 			// fallback to anything
-			foreach ($term as $lang => $value) {
+			foreach ($term_data as $lang => $value) {
 				if (!empty($value)) {
 					return $value;
 				}
@@ -183,6 +227,15 @@ class ontology_node {
 
 
 
+	/**
+	* GET_MODEL
+	* Model is an ontology node typology term, it uses an unique term in ontology lang.
+	* Model are not translatable, is used to create instances of sections, components, etc.
+	* Therefore, models are unique name that point to specific code scripts in Dédalo.
+	* section 			---> class.section.php / section.js / section.css
+	* component_portal 	---> class.componnet_portal.php / componnet_portal.js / componnet_portal.css
+	* @return string|null
+	*/
 	public function get_model() : ?string {
 		$this->load_data();
 		return $this->data->model ?? null;
@@ -190,17 +243,25 @@ class ontology_node {
 
 
 
+	/**
+	* GET_ORDER_NUMBER
+	* The position of the ontology node with respect to its siblings.
+	* @return int|null
+	*/
 	public function get_order_number() : ?int {
 		$this->load_data();
 		return $this->data->order_number ?? null;
 	}//end get_order_number
 
 
+
 	/**
 	* GET_RELATIONS
-	* Return the value of property 'relations', stored as JSONB in table column 'relations'
-	* Values expected in 'relations' are always JSON.
-	* @return mixed $properties_parsed
+	* Ontology node relations are the connection between nodes in unidirectional way.
+	* node1 point to node4 and node5;
+	* "oh1" -> [{"tipo": "tch7"},{"tipo": "numisdata8"}]
+	* relations are stored as JSONB in table column 'relations'
+	* @return array|null
 	*/
 	public function get_relations() : ?array {
 		$this->load_data();
@@ -209,18 +270,34 @@ class ontology_node {
 
 
 
-
+	/**
+	* GET_TLD
+	* TLD, Top Level Domain. Ontology name space.
+	* It defines a field of heritage or common parts of the ontology.
+	* oh = Oral History
+	* tch = Tangible Cultural Heritage
+	* ich = Intangible Cultural Heritage
+	* dd = Dédalo core, defines users, profiles, menu, login, etc.
+	* rsc = Resources as People, Media (av, image, pdf), etc.
+	* @return string|null
+	*/
 	public function get_tld() : ?string {
 		$this->load_data();
 		return $this->data->relations ?? null;
 	}//end get_tld
 
 
+
 	/**
 	* GET_PROPERTIES
+	* Properties are the configuration of the ontology node
+	* Properties defines:
+	* 	Behavior : how the node will process its data, how resolve relations (how is connected to other nodes) and represent itself
+	* 	Options  : properties that can be specifically set in the instances of the nodes.
+	* 	Layout 	 : How the node will be render
 	* Return the value of property 'properties', stored as JSONB in table column 'properties'
-	* Values expected in 'properties' are always JSON.
-	* @return mixed $properties_parsed
+	* Properties value is an object.
+	* @return object|null
 	*/
 	public function get_properties() : ?object {
 		$this->load_data();
@@ -229,6 +306,15 @@ class ontology_node {
 
 
 
+	/**
+	* GET_MODEL_TIPO
+	* Model tipo is the ontology node identification for the model (the node typology).
+	* dd6 	---> section
+	* dd592 ---> component_portal
+	* The ontology node has a model to identify its own typology, and the model is defined as an ontology node by itself
+	* Model nodes are identify in ontology with the property: is_model as true
+	* @return string|null
+	*/
 	public function get_model_tipo() : ?string {
 		$this->load_data();
 		return $this->data->model_tipo ?? null;
@@ -238,8 +324,13 @@ class ontology_node {
 
 	/**
 	* GET_IS_MODEL
+	* Identify if the ontology node is a model or not
+	* The ontology has to main types of nodes, descriptors and models
+	* both are defined in the same way. Both has an ontology node identification; tipo
+	* both has relations, parent, properties, etc.
+	* and models are identify with the property is_model with true
+	* the other ones are identify with the property is_mode as false.
 	* Retrieve from DDBB the column is_model
-	* Parse the column as boolean
 	* @return bool
 	*/
 	public function get_is_model() : bool {
@@ -251,6 +342,8 @@ class ontology_node {
 
 	/**
 	* GET_IS_TRANSLATABLE
+	* Identify in the ontology node data is translatable
+	* Used by strings components to store its data with specific language.
 	* Retrieve from DDBB the column is_translatable
 	* @return bool
 	*/
@@ -260,9 +353,10 @@ class ontology_node {
 	}//end get_is_translatable
 
 
+
 	/**
 	* GET_TRANSLATABLE
-	* Get current term translatable as boolean value
+	* Get current if given tipo is translatable as boolean value
 	* based on column 'translatable' value
 	* @param string $tipo
 	* @return bool
@@ -282,7 +376,7 @@ class ontology_node {
 	* Return the value of property 'properties', stored as plain text in table column 'properties'
 	* Values expected in 'propiedades' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
 	* @param bool $json_decode = false
-	* @return mixed $propiedades
+	* @return mixed|null $propiedades
 	* 	object / string parent::$properties
 	*/
 	public function get_propiedades() : array|object|null {
@@ -291,12 +385,10 @@ class ontology_node {
 	}//end get_propiedades
 
 
-
 	/**
-	* GET_LABEL
-	* Get specific term in one language given
-	* If the calls specify a land that not exist, the resolution fallback to DEDALO_STRUCTURE_LANG
-	* @return string
+	* set_parent
+	* Set given $parent value. e.g. 'oh1'
+	* @param string|null $parent
 	*/
 	public function set_parent( ?string $parent ) {
 
@@ -354,16 +446,21 @@ class ontology_node {
 
 
 
+	/**
+	* SET_TLD
+	* Set given $tld value. e.g. 'tch'
+	* @param string|null $tld
+	*/
 	public function set_tld( ?string $tld ) {
 
 		$this->data->tld = $tld;
 	}//end set_tld
 
 
+
 	/**
 	* SET_PROPERTIES
-	* Set the value of property 'properties'
-	* Values expected in 'properties' are always JSON.
+	* Set the value of property 'properties' e.g. {"css": {".wrapper_component": {"grid-column": "span 2"}}}
 	* @param object|null $properties
 	*/
 	public function set_properties( ?object $properties) {
@@ -373,6 +470,11 @@ class ontology_node {
 
 
 
+	/**
+	* SET_MODEL_TIPO
+	* Set given $model_tipo value. e.g. 'dd6'
+	* @param string|null $tld
+	*/
 	public function set_model_tipo( ?string $model_tipo ) {
 
 		$this->data->model_tipo = $model_tipo;
@@ -381,10 +483,9 @@ class ontology_node {
 
 
 	/**
-	* set_IS_MODEL
-	* Retrieve from DDBB the column is_model
-	* Parse the column as boolean
-	* @return bool
+	* SET_IS_MODEL
+	* Set given $is_model value e.g. true
+	* @param bool $is_model
 	*/
 	public function set_is_model( bool $is_model) {
 
@@ -394,9 +495,9 @@ class ontology_node {
 
 
 	/**
-	* set_IS_TRANSLATABLE
-	* Retrieve from DDBB the column is_translatable
-	* @return bool
+	* SET_IS_TRANSLATABLE
+	* Set given $is_translatable value e.g. true
+	* @param bool $is_model
 	*/
 	public function set_is_translatable( bool $is_translatable ) {
 
@@ -406,12 +507,9 @@ class ontology_node {
 
 
 	/**
-	* set_PROPIEDADES
-	* Return the value of property 'properties', stored as plain text in table column 'properties'
-	* Values expected in 'propiedades' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
-	* @param bool $json_decode = false
-	* @return mixed $propiedades
-	* 	object / string parent::$properties
+	* SET_PROPIEDADES
+	* Set given $is_translatable value e.g. {"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"25%"}}}}
+	* @param ?array|object $propiedades
 	*/
 	public function set_propiedades( array|object|null $propiedades ) {
 
@@ -422,7 +520,7 @@ class ontology_node {
 
 	/**
 	* INSERT
-	* Create a row into dd_ontology with ontology data
+	* Create a row into dd_ontology table with ontology data
 	* The insert will search if tipo exists previously,
 	* if the tipo was found, delete it and insert as new one
 	* else insert new one
