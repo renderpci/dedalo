@@ -307,18 +307,22 @@ class ontology_node {
 
 
 	/**
-	* SET_TERM
+	* SET_TERM_DATA
 	* Set given $term value. e.g. {"lg-eng": "Activity"}
 	* @param object|null $term
-	* @return bool
 	*/
-	public function set_term( ?object $term ) {
+	public function set_term_data( ?object $term ) {
 
 		$this->data->term = $term;
-	}//end set_term
+	}//end set_term_data
 
 
 
+	/**
+	* SET_MODEL
+	* Set given $model value. e.g. "component_input_text"
+	* @param string|null $model
+	*/
 	public function set_model( ?string $model ) {
 
 		$this->data->model = $model;
@@ -326,10 +330,16 @@ class ontology_node {
 
 
 
+	/**
+	* SET_ORDER_NUMBER
+	* Set given $order_number value. e.g. 5
+	* @param int|null $order_number
+	*/
 	public function set_order_number( ?int $order_number ) {
 
 		$this->data->order_number = $order_number;
 	}//end set_order_number
+
 
 
 	/**
@@ -436,20 +446,13 @@ class ontology_node {
 			return false;
 		}
 
-
 		return true;
 	}//end insert
 
 
 
-
-
-
-
-
-
 	/**
-	* GET_LABEL_BY_TIPO
+	* GET_TERM_BY_TIPO
 	* Get label value from 'term' in given lang
 	* It use a fallback to: DEDALO_APPLICATION_LANG, DEDALO_DATA_LANG, DEDALO_STRUCTURE_LANG
 	* @param string $tipo
@@ -458,7 +461,7 @@ class ontology_node {
 	* @param bool $fallback = true
 	* @return string|null $result
 	*/
-	public static function get_label_by_tipo( string $tipo, ?string $lang=null, bool $from_cache=true, bool $fallback=true ) : ?string {
+	public static function get_term_by_tipo( string $tipo, ?string $lang=null, bool $from_cache=true, bool $fallback=true ) : ?string {
 
 		// cache
 		static $label_by_tipo_cache = [];
@@ -485,7 +488,7 @@ class ontology_node {
 
 
 		return $label;
-	}//end get_label_by_tipo
+	}//end get_term_by_tipo
 
 
 

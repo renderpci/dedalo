@@ -75,8 +75,8 @@ final class dd_core_api {
 		// test dd_ontology without term data catch 22 situation
 			// if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 			// 	try {
-			// 		$ontology_node = new ontology_node('dd1', 'dd');
-			// 		$term = $ontology_node->get_term();
+			// 		$ontology_node = new ontology_node('dd1');
+			// 		$term = $ontology_node->get_term_data();
 			// 		if (empty($term)) {
 			// 			$result = area_maintenance::recover_dd_ontology_column();
 			// 			if ($result===false) {

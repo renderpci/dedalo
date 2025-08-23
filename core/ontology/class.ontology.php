@@ -710,7 +710,7 @@ class ontology {
 					foreach ($name_data as $current_lang => $value) {
 						$term->$current_lang = $value[0] ?? $tld;
 					}
-					$ontology_node->set_term( $term );
+					$ontology_node->set_term_data( $term );
 				}
 
 			$ontology_node->insert();
@@ -1613,7 +1613,7 @@ class ontology {
 			$term = $term ?? self::resolve_term( $locator );
 
 			// set the term into jet_dd_record
-			$ontology_node->set_term( $term );
+			$ontology_node->set_term_data( $term );
 
 
 		// debug

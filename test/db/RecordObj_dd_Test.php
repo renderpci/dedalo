@@ -275,7 +275,7 @@ final class ontology_node_test extends TestCase {
 
 		$ontology_node	= new ontology_node($test_term_id);
 		$ontology_node->Load(); // force load
-		$result			= $ontology_node->set_term($sample_value);
+		$result			= $ontology_node->set_term_data($sample_value);
 
 		$expected	= 'boolean';
 		$eq			= gettype($result)===$expected;
