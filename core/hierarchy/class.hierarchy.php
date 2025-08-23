@@ -1026,7 +1026,7 @@ class hierarchy extends ontology {
 			// section
 				$section_item = new stdClass();
 					$section_item->tipo		= $current_section->tipo;
-					$section_item->label	= ontology_node::get_term_by_tipo($current_section->tipo, DEDALO_APPLICATION_LANG);
+					$section_item->label	= ontology_node::get_label_by_tipo($current_section->tipo, DEDALO_APPLICATION_LANG);
 
 			// parents
 				$parents		= [];
@@ -1036,7 +1036,7 @@ class hierarchy extends ontology {
 
 					$parent_item = new stdClass();
 						$parent_item->tipo = $parent_tipo;
-						$parent_item->label = ontology_node::get_term_by_tipo($parent_tipo, DEDALO_APPLICATION_LANG);
+						$parent_item->label = ontology_node::get_label_by_tipo($parent_tipo, DEDALO_APPLICATION_LANG);
 
 						$parents[] = $parent_item;
 				}
@@ -1048,7 +1048,7 @@ class hierarchy extends ontology {
 
 					$child_item = new stdClass();
 						$child_item->tipo = $child_tipo;
-						$child_item->label = ontology_node::get_term_by_tipo($child_tipo, DEDALO_APPLICATION_LANG);
+						$child_item->label = ontology_node::get_label_by_tipo($child_tipo, DEDALO_APPLICATION_LANG);
 
 						$children[] = $child_item;
 				}

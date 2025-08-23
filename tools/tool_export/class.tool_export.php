@@ -247,7 +247,7 @@ class tool_export extends tool_common {
 							? 'section_id'
 							: $column_tipo;
 					}else{
-						$column_label = ontology_node::get_term_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
+						$column_label = ontology_node::get_label_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
 						if (empty($column_label)) {
 							$column_label = $column_tipo;
 						}

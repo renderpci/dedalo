@@ -1447,7 +1447,7 @@ class component_text_area extends component_string_common {
 					$element->section_id	= $obj_value->section_id;
 					$element->tag			= $tag_person;
 					#$element->tag_image	= TR::add_tag_img_on_the_fly($element->tag);
-					$element->role			= $label->role;  // ontology_node::get_term_by_tipo($current_component_tipo,DEDALO_APPLICATION_LANG,true);
+					$element->role			= $label->role;  // ontology_node::get_label_by_tipo($current_component_tipo,DEDALO_APPLICATION_LANG,true);
 					$element->full_name		= $label->full_name;
 
 					$element->state			= $current_state;
@@ -1523,7 +1523,7 @@ class component_text_area extends component_string_common {
 			$label->role		= '';
 
 		if (isset($locator->component_tipo)) {
-			$label->role = ontology_node::get_term_by_tipo($locator->component_tipo,DEDALO_APPLICATION_LANG,true);
+			$label->role = ontology_node::get_label_by_tipo($locator->component_tipo,DEDALO_APPLICATION_LANG,true);
 		}
 
 		foreach ($ar_tipos as $key => $tipo) {

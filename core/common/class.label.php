@@ -164,7 +164,7 @@ abstract class label {
 				}
 
 			// get label value
-				$label = ontology_node::get_term_by_tipo(
+				$label = ontology_node::get_label_by_tipo(
 					$current_tipo,
 					$lang,
 					$cached,

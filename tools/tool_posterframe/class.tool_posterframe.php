@@ -244,7 +244,7 @@ class tool_posterframe extends tool_common {
 			);
 
 		// section label
-			$label = ontology_node::get_term_by_tipo(
+			$label = ontology_node::get_label_by_tipo(
 				$section_tipo,
 				DEDALO_APPLICATION_LANG, // string lang
 				true, // bool from_cache

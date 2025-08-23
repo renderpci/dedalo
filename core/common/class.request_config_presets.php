@@ -367,7 +367,7 @@ class request_config_presets {
 						//
 						// 	// label
 						// 		if (!property_exists($item, 'label')) {
-						// 			$item->label = ontology_node::get_term_by_tipo($item->tipo, DEDALO_DATA_LANG, true, true);
+						// 			$item->label = ontology_node::get_label_by_tipo($item->tipo, DEDALO_DATA_LANG, true, true);
 						// 		}
 						//
 						// 	$valid_items[] = $item;
