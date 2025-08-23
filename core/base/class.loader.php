@@ -10,7 +10,7 @@ include DEDALO_CORE_PATH . '/logger/class.logger.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend_activity.php';
 include DEDALO_CORE_PATH . '/db/class.DBi.php';
-include DEDALO_CORE_PATH . '/db/class.matrix_data.php';
+include DEDALO_CORE_PATH . '/db/class.matrix_manager.php';
 include DEDALO_CORE_PATH . '/db/class.ontology_data.php';
 include DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php';
 include DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php';

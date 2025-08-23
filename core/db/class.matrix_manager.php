@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 /**
-* Class MATRIX_DATA
+* Class MATRIX_MANAGER
 *
 * Provides core operations for managing matrix records.
 * This class ensures data consistency by enforcing predefined
@@ -11,7 +11,8 @@
 * - Updating existing records
 * - Inserting new records with optional initial data
 */
-class matrix_data {
+class matrix_manager {
+
 
 
 	// Allowed matrix tables
@@ -141,19 +142,19 @@ class matrix_data {
 
 	/**
 	* GET_INSTANCE
-	* Singleton instance constructor for the class matrix_data
+	* Singleton instance constructor for the class matrix_manager
 	* Stores cache instances based on the contraction of section_tipo and $section_id
 	* as 'oh1_1'. If the section id is null, no cache is used.
 	* @param string $section_tipo
 	* 	Ontology identifier of the section. E.g. 'oh1'
 	* @param ?int $section_id=null
 	* 	Unique id of the section. E.g. 1
-	* @return class matrix_data instance
+	* @return class matrix_manager instance
 	*/
 	public static function get_instance( string $section_tipo, ?int $section_id=null ) : self {
 
 		if ($section_id===null) {
-			return new matrix_data( $section_tipo, null );
+			return new matrix_manager( $section_tipo, null );
 		}
 
 		// cache
@@ -163,7 +164,7 @@ class matrix_data {
 		}
 
 		return self::$instances[$cache_key] = new self($section_tipo, $section_id);
-	}//end get_matrix_data_instance
+	}//end get_matrix_manager_instance
 
 
 
@@ -180,9 +181,8 @@ class matrix_data {
 
 
 
-
 	/**
-	* LOAD_MATRIX_DATA
+	* LOAD
 	* Retrieves a single row of data from a specified PostgreSQL table
 	* based on section_id and section_tipo.
 	* It's designed to provide a unified way of accessing data from
@@ -196,7 +196,7 @@ class matrix_data {
 	* Returns the processed data as an associative array with parsed JSON values.
 	* If no row is found, it returns an empty array []. If a critical error occurs, it returns false.
 	*/
-	public function load_matrix_data( bool $cache=true ) : array|false {
+	public function load( bool $cache=true ) : array|false {
 
 		if ($cache && $this->is_loaded_data) {
 			return $this->data_columns;
@@ -283,14 +283,16 @@ class matrix_data {
 		// Updates is_loaded_data
 		$this->is_loaded_data = true;
 
+			dump($this->data_columns, ' this->data_columns ++ '.to_string());
+
 
 		return $this->data_columns;
-	}//end load_matrix_data
+	}//end load
 
 
 
 	/**
-	* UPDATE_MATRIX_DATA
+	* UPDATE
 	* Safely updates one or more columns in a "matrix" table row,
 	* identified by a composite key of `section_id` and `section_tipo`.
 	* @param array $values
@@ -300,7 +302,7 @@ class matrix_data {
 	* Returns `true` on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public function update_matrix_data( array $values ) : bool {
+	public function update( array $values ) : bool {
 
 		$table			= $this->table;
 		$section_tipo	= $this->section_tipo;
@@ -402,12 +404,12 @@ class matrix_data {
 		}
 
 		return true;
-	}//end update_matrix_data
+	}//end update
 
 
 
 	/**
-	* INSERT_MATRIX_DATA
+	* INSERT
 	* Inserts a single row into a "matrix" table with automatic handling for JSON columns
 	* and guaranteed inclusion of the `section_tipo` and `section_id` columns.
 	* Before insert, creates/updates the proper counter value and uses the result as `section_id` value.
@@ -421,7 +423,7 @@ class matrix_data {
 	* Returns the new $section_id on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public function insert_matrix_data( array $values=[] ) : int|false {
+	public function insert( array $values=[] ) : int|false {
 
 		$table			= $this->table;
 		$section_tipo	= $this->section_tipo;
@@ -544,12 +546,12 @@ class matrix_data {
 
 		// Cast to INT always (received is string by default)
 		return (int)$section_id;
-	}//end insert_matrix_data
+	}//end insert
 
 
 
 	/**
-	* SEARCH_MATRIX_DATA
+	* SEARCH
 	*
 	* Performs a filtered search on a specified PostgreSQL table and returns
 	* a list of matching `section_id` records.
@@ -568,7 +570,7 @@ class matrix_data {
 	* @return array|false Returns an array of matching `section_id` values on success,
 	*                     or `false` if validation, query preparation, or execution fails.
 	*/
-	public static function search_matrix_data( string $table, array $filter, ?string $order=null, ?int $limit=null ) : array|false {
+	public static function search( string $table, array $filter, ?string $order=null, ?int $limit=null ) : array|false {
 
 		// Validate table
 		if (!isset(self::$matrix_tables[$table])) {
@@ -685,8 +687,8 @@ class matrix_data {
 
 
 		return $ar_section_id ? array_map('intval', $ar_section_id) : [];
-	}//end search_matrix_data
+	}//end search
 
 
 
-}//end class matrix_data
+}//end class matrix_manager

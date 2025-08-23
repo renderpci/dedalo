@@ -72,7 +72,7 @@ class request_config_presets {
 		// matrix_data way
 			$table = common::get_matrix_table_from_tipo(DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO);
 			$component_tipo = 'dd1566';
-			$ar_section_id = matrix_data::search_matrix_data(
+			$ar_section_id = matrix_manager::search(
 				$table,
 				[
 					[
