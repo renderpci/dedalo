@@ -51,7 +51,7 @@
 						}
 						$current_context->children[] = (object)[
 							'tipo'	=> $child_tipo,
-							'label'	=> ontology_node::get_label_by_tipo($child_tipo, DEDALO_APPLICATION_LANG)
+							'label'	=> ontology_node::get_term_by_tipo($child_tipo, DEDALO_APPLICATION_LANG)
 						];
 					}
 			}

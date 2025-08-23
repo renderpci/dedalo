@@ -1340,7 +1340,7 @@ class login extends common {
 					$item = (object)[
 						'tipo'	=> $children_tipo,
 						'model'	=> ontology_node::get_model_name_by_tipo($children_tipo,true),
-						'label'	=> ontology_node::get_label_by_tipo($children_tipo, DEDALO_APPLICATION_LANG, true, true)
+						'label'	=> ontology_node::get_term_by_tipo($children_tipo, DEDALO_APPLICATION_LANG, true, true)
 					];
 					$properties->login_items[] = $item;
 				}

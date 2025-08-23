@@ -416,7 +416,7 @@ class tool_common {
 							// check if the component is translatable and set to true or false
 							$el->translatable = ontology_node::get_translatable($el->tipo);
 
-							$el->label = ontology_node::get_label_by_tipo($el->tipo, DEDALO_APPLICATION_LANG, true, true);
+							$el->label = ontology_node::get_term_by_tipo($el->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 							return $el;
 						}, $tool_config->ddo_map);

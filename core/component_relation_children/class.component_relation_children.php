@@ -425,7 +425,7 @@ class component_relation_children extends component_relation_common {
 						(object)[
 							'component_tipo'	=> $order_component_tipo,
 							'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_name_by_tipo($order_component_tipo,true) : $order_component_tipo,
-							'name'				=> SHOW_DEBUG===true ? ontology_node::get_label_by_tipo($order_component_tipo) : $order_component_tipo,
+							'name'				=> SHOW_DEBUG===true ? ontology_node::get_term_by_tipo($order_component_tipo) : $order_component_tipo,
 							'section_tipo'		=> $section_tipo,
 							'column'			=> "jsonb_path_query_first(datos, 'strict $.components.{$order_component_tipo}.dato.\"lg-nolan\"[0]', silent => true)"
 						]

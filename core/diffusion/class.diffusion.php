@@ -93,7 +93,7 @@ abstract class diffusion  {
 		$diffusion_domains = (array)diffusion::get_diffusion_domains();
 		foreach ($diffusion_domains as $current_tipo) {
 
-			$current_name = ontology_node::get_label_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
+			$current_name = ontology_node::get_term_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
 
 			if($current_name===$diffusion_domain_name) {
 
@@ -151,7 +151,7 @@ abstract class diffusion  {
 		# Find all diffusion domains and select the domain name equal to $diffusion_domain_name
 		$ar_all_diffusion_domains = diffusion::get_diffusion_domains();
 		foreach ($ar_all_diffusion_domains as $current_diffusion_domain_tipo) {
-			$name = ontology_node::get_label_by_tipo($current_diffusion_domain_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			$name = ontology_node::get_term_by_tipo($current_diffusion_domain_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			if ($name===$diffusion_domain_name) {
 				$diffusion_domain_tipo = $current_diffusion_domain_tipo;
 				break;
@@ -222,8 +222,8 @@ abstract class diffusion  {
 				$diffusion_class_name = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
 
 				// name (e.g. 'Web numisdata'). Try to resolve it with DEDALO_STRUCTURE_LANG
-				$name = ontology_node::get_label_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, false)
-					?? '<em>'.ontology_node::get_label_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, true).'</em>'; // empty case
+				$name = ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, false)
+					?? '<em>'.ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, true).'</em>'; // empty case
 
 				// database name
 				$with_database_classes = ['diffusion_mysql','diffusion_socrata'];
@@ -271,12 +271,12 @@ abstract class diffusion  {
 						}
 
 						// Get db name from the alias
-						$diffusion_database_name = ontology_node::get_label_by_tipo($database_alias_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						$diffusion_database_name = ontology_node::get_term_by_tipo($database_alias_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 					}else{
 
 						// Get db name from real database item
-						$diffusion_database_name = ontology_node::get_label_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						$diffusion_database_name = ontology_node::get_term_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					}
 				}//end if (in_array($diffusion_class_name, $with_database_classes))
 
@@ -906,7 +906,7 @@ abstract class diffusion  {
 
 			$item = new stdClass();
 				$item->tipo 	= $tipo;
-				$item->label 	= ontology_node::get_label_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true);
+				$item->label 	= ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true);
 
 			$ar_table_fields[] = $item;
 		}
@@ -947,7 +947,7 @@ abstract class diffusion  {
 		$table_tipo = diffusion_sql::get_table_tipo( $diffusion_element_tipo, $section_tipo );
 
 		$table_name = !empty($table_tipo)
-			? ontology_node::get_label_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true)
+			? ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true)
 			: null;
 
 		return $table_name;
@@ -1287,14 +1287,14 @@ abstract class diffusion  {
 								true
 							);
 							if (!isset($ar_section_tipo[0])) {
-								debug_log(__METHOD__." Error. Diffusion section without section relation (1). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".ontology_node::get_label_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
+								debug_log(__METHOD__." Error. Diffusion section without section relation (1). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
 								continue;
 							}
 
 							$current_section_tipo = $ar_section_tipo[0];
 							if ($current_section_tipo===$section_tipo) {
 								// matched . delete record in current table
-								$table_name = ontology_node::get_label_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true);
+								$table_name = ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true);
 								break; // stop loop
 							}
 						}
@@ -1336,14 +1336,14 @@ abstract class diffusion  {
 											}
 									}
 									if (!isset($ar_section_tipo[0])) {
-										debug_log(__METHOD__." Error. Diffusion section without section relation (2). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".ontology_node::get_label_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
+										debug_log(__METHOD__." Error. Diffusion section without section relation (2). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
 										continue;
 									}
 
 									$current_section_tipo = $ar_section_tipo[0];
 									if ($current_section_tipo===$section_tipo) {
 										// matched . delete record in current table
-										$table_name = ontology_node::get_label_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true);
+										$table_name = ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true);
 										break; // stop loop
 									}
 							}
@@ -1602,7 +1602,7 @@ abstract class diffusion  {
 		$given_tables_list = array_map(function($tipo){
 			return (object)[
 				'tipo' => $tipo,
-				'name' => ontology_node::get_label_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false),
+				'name' => ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false),
 				'model' => ontology_node::get_model_name_by_tipo($tipo, true)
 			];
 		}, $ar_table_tipo);
@@ -1612,7 +1612,7 @@ abstract class diffusion  {
 		$original_tables_list = array_map(function($tipo){
 			return (object)[
 				'tipo' => $tipo,
-				'name' => ontology_node::get_label_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false),
+				'name' => ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false),
 				'model' => ontology_node::get_model_name_by_tipo($tipo, true)
 			];
 		}, $original_ar_table_tipo);
@@ -1718,7 +1718,7 @@ abstract class diffusion  {
 					// Loads parent class diffusion
 					// include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
 					// get_term_by_tipo($tipo, $lang=NULL, $from_cache=false, $fallback=true)
-					$database_name	= ontology_node::get_label_by_tipo($databases[0]);
+					$database_name	= ontology_node::get_term_by_tipo($databases[0]);
 
 					// save_table_schema. Use save_table_schema response as this method response
 					$response = (object)diffusion_sql::save_table_schema( $database_name, $schema_obj );
@@ -1781,7 +1781,7 @@ abstract class diffusion  {
 			$process = $request_config_object->process ?? null;
 
 			// column / node name (from the Ontology term value)
-			$name = ontology_node::get_label_by_tipo($child_tipo, $lang);
+			$name = ontology_node::get_term_by_tipo($child_tipo, $lang);
 
 			// create a new diffusion_object
 			$diffusion_object = new diffusion_object((object)[

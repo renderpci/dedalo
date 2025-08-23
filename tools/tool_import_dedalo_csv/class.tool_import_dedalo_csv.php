@@ -86,7 +86,7 @@ class tool_import_dedalo_csv extends tool_common {
 						$ar_columns_map = array_map(function($el){
 							return (object)[
 								'tipo'	=> $el,
-								'label'	=> ontology_node::get_label_by_tipo($el, DEDALO_APPLICATION_LANG, true),
+								'label'	=> ontology_node::get_term_by_tipo($el, DEDALO_APPLICATION_LANG, true),
 								'model'	=> $el!=='section_id' && !empty($el) ? ontology_node::get_model_name_by_tipo($el, true) : $el
 							];
 						}, $file_info);
@@ -767,7 +767,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 					// set the information about the process
 					$process_info->component_tipo = $component_tipo;
-					$process_info->compomnent_label = ontology_node::get_label_by_tipo($component_tipo,DEDALO_APPLICATION_LANG, true);
+					$process_info->compomnent_label = ontology_node::get_term_by_tipo($component_tipo,DEDALO_APPLICATION_LANG, true);
 
 					// print the process_info
 					if ( running_in_cli()===true ) {
@@ -1221,14 +1221,14 @@ class tool_import_dedalo_csv extends tool_common {
 				$result = [];
 				foreach ($components_list as $tipo) {
 					$result[] = (object)[
-						'label'	=> ontology_node::get_label_by_tipo($tipo, DEDALO_APPLICATION_LANG, true),
+						'label'	=> ontology_node::get_term_by_tipo($tipo, DEDALO_APPLICATION_LANG, true),
 						'value'	=> $tipo,
 						'model'	=> ontology_node::get_model_name_by_tipo($tipo, true)
 					];
 				}
 
 				$response->result	= $result;
-				$response->label	= ontology_node::get_label_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+				$response->label	= ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 				$response->msg		= 'OK. Request done';
 			}
 

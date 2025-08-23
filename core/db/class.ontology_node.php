@@ -123,14 +123,62 @@ class ontology_node {
 	}//end get_parent
 
 
+
 	/**
-	* GET_TERM
-	* Get dd_ontology column 'term' and try to parse as JSON abject
+	* GET_TERM_DATA
+	* Get ontology node terms (concept names) in all languages
 	* @return object|null
 	*/
-	public function get_term() : ?object {
+	public function get_term_data() : ?object {
 		$this->load_data();
 		return $this->data->term ?? null;
+	}//end get_term_data
+
+
+
+	/**
+	* GET_term
+	* Get specific term in one language given
+	* If the calls specify a land that not exist, the resolution fallback to DEDALO_STRUCTURE_LANG
+	* @return string
+	*/
+	public function get_term( string $lang, $fallback=true ) : ?string {
+
+		$term = $this->get_term_data();
+
+		// get the lang to be used to get the labels
+		// it call to get_label_lang() to process exceptions as català to valencià, that are the same language.
+		// if it not set, it will return DEDALO_APPLICATION_LANG
+		$lang = lang::get_label_lang( $lang );
+
+		// empty term case
+		if (!is_object($term)) {
+			return null;
+		}
+
+		// lang already exists case
+		if (isset($term->{$lang})) {
+			return $term->{$lang};
+		}
+
+		// fallback lang
+		if ($fallback===true) {
+
+			// main lang
+			$ontology_lang = DEDALO_STRUCTURE_LANG;
+			if (isset($term->{$ontology_lang})) {
+				return $term->{$ontology_lang};
+			}
+
+			// fallback to anything
+			foreach ($term as $lang => $value) {
+				if (!empty($value)) {
+					return $value;
+				}
+			}
+		}
+
+		return null;
 	}//end get_term
 
 
@@ -250,47 +298,6 @@ class ontology_node {
 	* If the calls specify a land that not exist, the resolution fallback to DEDALO_STRUCTURE_LANG
 	* @return string
 	*/
-	public function get_label( string $lang, $fallback=true ) : ?string {
-
-		$term = $this->get_term();
-
-		// get the lang to be used to get the labels
-		// it call to get_label_lang() to process exceptions as català to valencià, that are the same language.
-		// if it not set, it will return DEDALO_APPLICATION_LANG
-		$lang = lang::get_label_lang( $lang );
-
-		// empty term case
-		if (!is_object($term)) {
-			return null;
-		}
-
-		// lang already exists case
-		if (isset($term->{$lang})) {
-			return $term->{$lang};
-		}
-
-		// fallback lang
-		if ($fallback===true) {
-
-			// main lang
-			$ontology_lang = DEDALO_STRUCTURE_LANG;
-			if (isset($term->{$ontology_lang})) {
-				return $term->{$ontology_lang};
-			}
-
-			// fallback to anything
-			foreach ($term as $lang => $value) {
-				if (!empty($value)) {
-					return $value;
-				}
-			}
-		}
-
-		return null;
-	}//end get_label
-
-
-
 	public function set_parent( ?string $parent ) {
 
 		$safe_parent = safe_tipo($parent);
@@ -471,7 +478,7 @@ class ontology_node {
 
 		// term object
 		$ontology_node	= new ontology_node($tipo);
-		$label			= $ontology_node->get_label($lang, $fallback);
+		$label			= $ontology_node->get_term($lang, $fallback);
 
 		// cache
 		$label_by_tipo_cache[$cache_uid] = $label;
@@ -546,7 +553,7 @@ class ontology_node {
 				return '';
 			}
 
-			$model = ontology_node::get_label_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			$model = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 			// error log
 			debug_log(__METHOD__
@@ -643,7 +650,7 @@ class ontology_node {
 	*/
 	public function get_legacy_model_name() : ?string {
 
-		$model_name = ontology_node::get_label_by_tipo(
+		$model_name = ontology_node::get_term_by_tipo(
 			$this->get_model_tipo() ?? '',
 			DEDALO_STRUCTURE_LANG,
 			true,
@@ -1139,14 +1146,14 @@ class ontology_node {
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_label_by_tipo($tipo) . PHP_EOL
+							.' name: ' . ontology_node::get_term_by_tipo($tipo) . PHP_EOL
 							.' ontology_node: ' . json_encode($ontology_node)
 							, logger::ERROR
 						);
 						return [];
 					}
 
-					$current_model_name = ontology_node::get_label_by_tipo($model);
+					$current_model_name = ontology_node::get_term_by_tipo($model);
 
 					if($search_exact===true) {
 						if ($current_model_name===$model_name) {
@@ -1177,13 +1184,13 @@ class ontology_node {
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_label_by_tipo($tipo)
+							.' name: ' . ontology_node::get_term_by_tipo($tipo)
 							, logger::ERROR
 						);
 						return [];
 					}
 
-					$current_model_name = ontology_node::get_label_by_tipo($model_tipo);
+					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);
 
 					if($search_exact===true) {
 						if ($current_model_name===$model_name) {
@@ -1218,13 +1225,13 @@ class ontology_node {
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_label_by_tipo($tipo)
+							.' name: ' . ontology_node::get_term_by_tipo($tipo)
 							, logger::ERROR
 						);
 						return [];
 					}
 
-					$current_model_name = ontology_node::get_label_by_tipo($model_tipo);
+					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);
 
 					if($search_exact===true) {
 						if ($current_model_name===$model_name) {
@@ -1255,13 +1262,13 @@ class ontology_node {
 							.' tipo: ' . $tipo . PHP_EOL
 							.' relation_type: ' . $relation_type . PHP_EOL
 							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_label_by_tipo($tipo)
+							.' name: ' . ontology_node::get_term_by_tipo($tipo)
 							, logger::ERROR
 						);
 						return [];
 					}
 
-					$current_model_name = ontology_node::get_label_by_tipo($model_tipo);		#dump($model_name);
+					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);		#dump($model_name);
 
 					if($search_exact===true) {
 						if ($current_model_name===$model_name) {

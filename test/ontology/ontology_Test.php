@@ -340,8 +340,7 @@ final class ontology_test extends TestCase {
 
 		// check dd_ontology created record
 			$ontology_node = new ontology_node($result);
-				$ontology_node->use_cache = false;
-				$term = $ontology_node->get_term();
+				$term = $ontology_node->get_term_data();
 
 				$expected = 'Test dd_ontology_ontology_section_node ES';
 				$lang = 'lg-spa';
@@ -361,8 +360,7 @@ final class ontology_test extends TestCase {
 
 		// check dd_ontology created record
 			$ontology_node2 = new ontology_node($result);
-			$ontology_node2->use_cache = false;
-				$term2 = $ontology_node2->get_term();
+				$term2 = $ontology_node2->get_term_data();
 				$this->assertTrue(
 					$term2->{$lang}===$expected2,
 					'expected [2]: ' . to_string($expected2) . PHP_EOL
@@ -414,7 +412,7 @@ final class ontology_test extends TestCase {
 				$ontology_node->use_cache = false;
 
 				// term
-				$term = $ontology_node->get_term();
+				$term = $ontology_node->get_term_data();
 
 				$expected = 'Others';
 				$lang = 'lg-eng';

@@ -2123,7 +2123,7 @@ class component_relation_common extends component_common {
 							. ' section_tipo: ' . $this->section_tipo . PHP_EOL
 							. ' section_id: ' . $this->section_id . PHP_EOL
 							. ' model: ' .get_class($this) . PHP_EOL
-							. ' label: ' . ontology_node::get_label_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL
+							. ' label: ' . ontology_node::get_term_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL
 							. ' dato: ' . to_string($dato)
 							, logger::WARNING
 						);
@@ -2141,7 +2141,7 @@ class component_relation_common extends component_common {
 			if(SHOW_DEBUG===true) {
 				$total = exec_time_unit($start_time,'ms')." ms";
 				debug_log(__METHOD__
-					." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. ontology_node::get_label_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true)
+					." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. ontology_node::get_term_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true)
 					, logger::DEBUG
 				);
 			}

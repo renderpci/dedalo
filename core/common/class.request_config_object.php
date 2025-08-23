@@ -377,7 +377,7 @@ class request_config_object extends stdClass {
 
 					// label. Add to all ddo_map items
 						if (!isset($current_ddo->label)) {
-							$current_ddo->label = ontology_node::get_label_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+							$current_ddo->label = ontology_node::get_term_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 						}
 
 					// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)

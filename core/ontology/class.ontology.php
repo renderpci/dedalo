@@ -1418,7 +1418,7 @@ class ontology {
 				$model_tipo_resolution = ontology::get_term_id_from_locator($model_locator);
 
 				// set the model resolution (section, component_input_text, etc)
-				$model_resolution = ontology_node::get_label_by_tipo(
+				$model_resolution = ontology_node::get_term_by_tipo(
 					$model_tipo_resolution,
 					DEDALO_STRUCTURE_LANG,
 					true,
@@ -2494,8 +2494,8 @@ class ontology {
 	public static function dd_ontology_version_is_valid( string $min_date ) : bool {
 
 		// Ontology version. Check if is valid version
-		$ontology_node	= new ontology_node('dd1', 'dd');
-		$term			= $ontology_node->get_term();
+		$ontology_node	= new ontology_node('dd1');
+		$term			= $ontology_node->get_term_data();
 		$term_value		= $term->{DEDALO_STRUCTURE_LANG} ?? null;
 		if (empty($term_value)) {
 			debug_log(__METHOD__
