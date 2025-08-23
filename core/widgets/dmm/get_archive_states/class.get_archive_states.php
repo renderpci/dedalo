@@ -38,7 +38,7 @@ class get_archive_states extends widget_common {
 
 			#
 			# PORTAL ROWS
-				$model_name 	  = ontology_node::get_model_name_by_tipo($current_component_tipo,true); // Expected portal
+				$model_name 	  = ontology_node::get_model_by_tipo($current_component_tipo,true); // Expected portal
 				$component_portal = component_common::get_instance(
 					$model_name,
 					$current_component_tipo,
@@ -87,7 +87,7 @@ class get_archive_states extends widget_common {
 					$section_id 	= $current_locator->section_id;
 					$section_tipo 	= $current_locator->section_tipo;
 
-					$answer_modelo_name	= ontology_node::get_model_name_by_tipo($component_tipo_answer,true); // Expected component_radio_button
+					$answer_modelo_name	= ontology_node::get_model_by_tipo($component_tipo_answer,true); // Expected component_radio_button
 					$answer_component	= component_common::get_instance(
 						$answer_modelo_name,
 						$component_tipo_answer,
@@ -104,7 +104,7 @@ class get_archive_states extends widget_common {
 					}
 
 					//closed
-					$closed_modelo_name	= ontology_node::get_model_name_by_tipo($component_tipo_closed,true); // Expected component_radio_button
+					$closed_modelo_name	= ontology_node::get_model_by_tipo($component_tipo_closed,true); // Expected component_radio_button
 					$closed_component	= component_common::get_instance(
 						$closed_modelo_name,
 						$component_tipo_closed,

@@ -41,7 +41,7 @@ class tool_pdf_extractor extends tool_common {
 			}
 
 		// component_pdf. Create the component to get the file path
-			$model		= ontology_node::get_model_name_by_tipo($component_tipo,true);
+			$model		= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$component_tipo,

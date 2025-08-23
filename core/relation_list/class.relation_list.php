@@ -178,8 +178,8 @@ class relation_list extends common {
 		if(!empty($ar_components)){
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
-					// $model_name		= ontology_node::get_model_name_by_tipo($modelo, true);
-					$model_name			= ontology_node::get_model_name_by_tipo($tipo, true);
+					// $model_name		= ontology_node::get_model_by_tipo($modelo, true);
+					$model_name			= ontology_node::get_model_by_tipo($tipo, true);
 					$current_component	= component_common::get_instance(
 						$model_name,
 						$tipo,
@@ -772,7 +772,7 @@ class relation_list extends common {
 					$ar_value = [];
 					foreach ($diffusion_value as $current_locator) {
 
-						$model = ontology_node::get_model_name_by_tipo($target_component_tipo,true);
+						$model = ontology_node::get_model_by_tipo($target_component_tipo,true);
 
 						if ($direct_value===true) {
 

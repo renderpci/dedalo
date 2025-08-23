@@ -168,7 +168,7 @@ class tool_import_zotero extends tool_common {
 
 								switch ($name) {
 									case 'id':
-										$current_model	= ontology_node::get_model_name_by_tipo($ddo->tipo,true); // component_input_text
+										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true); // component_input_text
 										$component		= component_common::get_instance(
 											$current_model,
 											$ddo->tipo,
@@ -200,7 +200,7 @@ class tool_import_zotero extends tool_common {
 												, logger::ERROR
 											);
 										}else{
-											$current_model_name = ontology_node::get_model_name_by_tipo($ddo->tipo,true);
+											$current_model_name = ontology_node::get_model_by_tipo($ddo->tipo,true);
 											$component = component_common::get_instance(
 												$current_model_name,
 												$ddo->tipo,
@@ -225,7 +225,7 @@ class tool_import_zotero extends tool_common {
 											// create a new record in list
 											$section_container_list		= section::get_instance(null,$section_tipo_series);
 											$section_id_list			= (int)$section_container_list->Save();
-											$current_model 				= ontology_node::get_model_name_by_tipo($series_ddo->tipo,true);
+											$current_model 				= ontology_node::get_model_by_tipo($series_ddo->tipo,true);
 											$component_series_name		= component_common::get_instance(
 												$current_model ,
 												$series_ddo->tipo,
@@ -251,7 +251,7 @@ class tool_import_zotero extends tool_common {
 											}
 
 										// add locator
-											$current_model	= ontology_node::get_model_name_by_tipo($ddo->tipo,true);
+											$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 											$component		= component_common::get_instance(
 												$current_model,
 												$ddo->tipo,
@@ -344,7 +344,7 @@ class tool_import_zotero extends tool_common {
 
 									case 'ISSN':
 									case 'ISBN':
-										$current_model	= ontology_node::get_model_name_by_tipo($ddo->tipo,true);
+										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 										$component		= component_common::get_instance(
 											$current_model,
 											$ddo->tipo,
@@ -371,7 +371,7 @@ class tool_import_zotero extends tool_common {
 										});
 
 										$component_tipo	= $field_standard_number->tipo;
-										$current_model	= ontology_node::get_model_name_by_tipo($component_tipo,true); // component_relation_select
+										$current_model	= ontology_node::get_model_by_tipo($component_tipo,true); // component_relation_select
 										$component		= component_common::get_instance(
 											$current_model,
 											$component_tipo,
@@ -389,7 +389,7 @@ class tool_import_zotero extends tool_common {
 
 									case 'URL':
 									case 'DOI':
-										$current_model	= ontology_node::get_model_name_by_tipo($ddo->tipo,true);
+										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 										$component		= component_common::get_instance(
 											$current_model,
 											$ddo->tipo,
@@ -409,7 +409,7 @@ class tool_import_zotero extends tool_common {
 										break;
 
 									default:
-										$current_model	= ontology_node::get_model_name_by_tipo($ddo->tipo,true);
+										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 										$component		= component_common::get_instance(
 											$current_model,
 											$ddo->tipo,
@@ -438,7 +438,7 @@ class tool_import_zotero extends tool_common {
 							// when the component stored the filename, get the filename and save it
 							foreach ($ar_ddo_map as $ddo) {
 
-								$model			= ontology_node::get_model_name_by_tipo($ddo->tipo,true);
+								$model			= ontology_node::get_model_by_tipo($ddo->tipo,true);
 								$current_lang	= ontology_node::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 								$component		= component_common::get_instance(
 									$model,
@@ -791,7 +791,7 @@ class tool_import_zotero extends tool_common {
 
 		$section_tipo   = $ddo->section_tipo;	 # rsc205
 		$tipo 			= $ddo->tipo; 			# rsc137
-		$model_name 	= ontology_node::get_model_name_by_tipo($tipo,true);
+		$model_name 	= ontology_node::get_model_by_tipo($tipo,true);
 		$code 			= pg_escape_string(DBi::_getConnection(), $zotero_id);
 
 		// JSON seach_query_object to search
@@ -857,7 +857,7 @@ class tool_import_zotero extends tool_common {
 
 		$section_tipo		= $series_ddo->section_tipo;		# rsc212 	# values list for Series / Collections
 		$tipo				= $series_ddo->tipo;				# rsc214 	# Series / Collections (component_input_text)
-		$model_name			= ontology_node::get_model_name_by_tipo($tipo,true);
+		$model_name			= ontology_node::get_model_by_tipo($tipo,true);
 		$serie_name			= pg_escape_string(DBi::_getConnection(), $zotero_container_title);
 
 		// JSON seach_query_object to search

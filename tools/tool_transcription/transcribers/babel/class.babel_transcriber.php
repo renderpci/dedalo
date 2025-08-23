@@ -343,7 +343,7 @@ class babel_transcriber {
 		$data = implode('<p>', $ar_data);
 
 		// create the text_area component
-		$model = ontology_node::get_model_name_by_tipo($transcription_ddo->component_tipo);
+		$model = ontology_node::get_model_by_tipo($transcription_ddo->component_tipo);
 		$component_transcription = component_common::get_instance(
 			$model, // string model
 			$transcription_ddo->component_tipo, // string tipo

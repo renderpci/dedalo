@@ -51,7 +51,7 @@ final class dd_component_info {
 				$response->errors	= [];
 
 		// component
-			$model = ontology_node::get_model_name_by_tipo($tipo,true);
+			$model = ontology_node::get_model_by_tipo($tipo,true);
 			$component = component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo

@@ -63,7 +63,7 @@ class logger_backend_activity extends logger_backend {
 		static $_COMPONENT_DATOS = [
 			'tipo'			=>'dd551',
 			'model_name'	=>'component_json' // (v5 former component_input_text)
-			// in Ontology appears as component_input_text fro v5 compatibility, but mapped to component_json in 'get_model_name()'
+			// in Ontology appears as component_input_text fro v5 compatibility, but mapped to component_json in 'get_model()'
 		];
 
 		// ar_elements_activity_tipo

@@ -67,7 +67,7 @@ class request_config_presets {
 
 		// Helper function to extract a component value
 		$get_component_value = function($tipo, $section_id) {
-			$model = ontology_node::get_model_name_by_tipo($tipo, true);
+			$model = ontology_node::get_model_by_tipo($tipo, true);
 			$component = component_common::get_instance(
 				$model,
 				$tipo,
@@ -81,7 +81,7 @@ class request_config_presets {
 
 		// Helper function to extract a component data
 		$get_component_data = function($tipo, $section_id) {
-			$model = ontology_node::get_model_name_by_tipo($tipo, true);
+			$model = ontology_node::get_model_by_tipo($tipo, true);
 			$component = component_common::get_instance(
 				$model,
 				$tipo,
@@ -327,7 +327,7 @@ class request_config_presets {
 
 				// // create a new component_json component
 				// 	$component_json_tipo	= 'dd625';
-				// 	$component_json_model	= ontology_node::get_model_name_by_tipo($component_json_tipo, true);
+				// 	$component_json_model	= ontology_node::get_model_by_tipo($component_json_tipo, true);
 				// 	$component_json			= component_common::get_instance(
 				// 		$component_json_model, // string model
 				// 		$component_json_tipo, // string tipo

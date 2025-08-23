@@ -393,7 +393,7 @@ class lock_components {
 				$item = clone $current_event_element;
 
 				// add some useful information
-					$item->component_model	= ontology_node::get_model_name_by_tipo($current_event_element->component_tipo, true);
+					$item->component_model	= ontology_node::get_model_by_tipo($current_event_element->component_tipo, true);
 					$item->component_label	= ontology_node::get_term_by_tipo($current_event_element->component_tipo, DEDALO_DATA_LANG, true);
 					$item->section_label	= ontology_node::get_term_by_tipo($current_event_element->section_tipo, DEDALO_DATA_LANG, true);
 
