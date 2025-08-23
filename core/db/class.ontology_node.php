@@ -1177,7 +1177,7 @@ class ontology_node {
 
 
 	/**
-	* GET_AR_TIPO_BY_MODEL_NAME_AND_RELATION
+	* GET_AR_TIPO_BY_MODEL_AND_RELATION
 	* Returns the termID of the related term (specify relation) of given model name
 	* e.g. to know the related terms of model 'filter'.
 	* @param string $tipo like 'dd20'
@@ -1186,7 +1186,7 @@ class ontology_node {
 	* @param bool $search_exact = false
 	* @return array $result
 	*/
-	public static function get_ar_tipo_by_model_name_and_relation( string $tipo, string $model_name, string $relation_type, bool $search_exact=false ) : array {
+	public static function get_ar_tipo_by_model_and_relation( string $tipo, string $model_name, string $relation_type, bool $search_exact=false ) : array {
 
 		$result	= array();
 
@@ -1373,7 +1373,7 @@ class ontology_node {
 
 
 		return $result;
-	}//end get_ar_tipo_by_model_name_and_relation
+	}//end get_ar_tipo_by_model_and_relation
 
 
 

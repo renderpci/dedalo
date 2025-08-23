@@ -828,7 +828,7 @@ class component_text_area extends component_string_common {
 	*/
 	public function get_related_component_av_tipo() : ?string {
 
-		$related_component_av = ontology_node::get_ar_tipo_by_model_name_and_relation(
+		$related_component_av = ontology_node::get_ar_tipo_by_model_and_relation(
 			$this->tipo,  // string tipo
 			'component_av', // string model
 			'related' // string relation_type
@@ -847,7 +847,7 @@ class component_text_area extends component_string_common {
 	*/
 	public function get_related_component_select_lang() : ?string {
 
-		$related_component_select_lang = ontology_node::get_ar_tipo_by_model_name_and_relation(
+		$related_component_select_lang = ontology_node::get_ar_tipo_by_model_and_relation(
 			$this->tipo,  // string tipo
 			'component_select_lang', // string model
 			'related' // string relation_type
@@ -2440,7 +2440,7 @@ class component_text_area extends component_string_common {
 	*/
 	public function get_original_lang() : ?string {
 
-		$ar_related_component_tipo = ontology_node::get_ar_tipo_by_model_name_and_relation(
+		$ar_related_component_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 			$this->tipo, // tipo
 			'component_select_lang', // model name
 			'related', // relation_type

@@ -1504,7 +1504,7 @@ abstract class common {
 			// in this cases the properties will be get from the section_list instead the main node
 			if(($model==='section' || $model==='component_portal') && $this->mode==='list'){
 				// section list, get the section_list node as child of the main component.
-				$ar_terms = (array)ontology_node::get_ar_tipo_by_model_name_and_relation(
+				$ar_terms = (array)ontology_node::get_ar_tipo_by_model_and_relation(
 					$this->tipo,
 					'section_list',
 					'children',
@@ -1799,7 +1799,7 @@ abstract class common {
 						$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
 					}else{
 
-						$new_dataframe = ontology_node::get_ar_tipo_by_model_name_and_relation(
+						$new_dataframe = ontology_node::get_ar_tipo_by_model_and_relation(
 							$this->tipo,
 							'component_dataframe',
 							'children',
@@ -2932,7 +2932,7 @@ abstract class common {
 						: 'section_list';
 
 					// in the case that section_list is defined
-					$ar_terms = (array)ontology_node::get_ar_tipo_by_model_name_and_relation(
+					$ar_terms = (array)ontology_node::get_ar_tipo_by_model_and_relation(
 						$tipo,
 						$list_model,
 						'children',
@@ -3664,7 +3664,7 @@ abstract class common {
 						default:
 							if ($model==='section') {
 								// case section list is defined
-								$ar_terms = (array)ontology_node::get_ar_tipo_by_model_name_and_relation($tipo, 'section_list', 'children', true);
+								$ar_terms = (array)ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section_list', 'children', true);
 								if(isset($ar_terms[0])) {
 									// Use found related terms as new list
 									$current_term = $ar_terms[0];
@@ -3677,7 +3677,7 @@ abstract class common {
 									// try with real section
 									$real_section_tipo = section::get_section_real_tipo_static($tipo);
 									if ($real_section_tipo!==$tipo) {
-										$ar_terms = (array)ontology_node::get_ar_tipo_by_model_name_and_relation($real_section_tipo, 'section_list', 'children', true);
+										$ar_terms = (array)ontology_node::get_ar_tipo_by_model_and_relation($real_section_tipo, 'section_list', 'children', true);
 										if(isset($ar_terms[0])) {
 											// Use found related terms as new list
 											$current_term = $ar_terms[0];
@@ -3695,7 +3695,7 @@ abstract class common {
 							}else{
 								// portal cases
 								// case section list is defined
-								$ar_terms = ontology_node::get_ar_tipo_by_model_name_and_relation(
+								$ar_terms = ontology_node::get_ar_tipo_by_model_and_relation(
 									$tipo, // string tipo
 									'section_list', // string model
 									'children', // string relation_type
@@ -3721,7 +3721,7 @@ abstract class common {
 									// fallback when the related term has not section defined
 									// it will use of the main component related
 									if($section_isset === false){
-										$ar_main_section = ontology_node::get_ar_tipo_by_model_name_and_relation(
+										$ar_main_section = ontology_node::get_ar_tipo_by_model_and_relation(
 											$tipo, // string tipo
 											'section', // string model
 											'related', // string relation_type
@@ -4461,7 +4461,7 @@ abstract class common {
 			];
 
 		// common section info
-			$ar_elements = ontology_node::get_ar_tipo_by_model_name_and_relation(
+			$ar_elements = ontology_node::get_ar_tipo_by_model_and_relation(
 				DEDALO_SECTION_INFO_SECTION_GROUP,
 				'component',
 				'children',
@@ -4849,7 +4849,7 @@ abstract class common {
 		// ar_buttons_tipo
 			$ar_buttons_tipo = (get_called_class()==='section')
 				? $this->get_section_buttons_tipo()
-				: ontology_node::get_ar_tipo_by_model_name_and_relation($tipo, 'button_', 'children', false);
+				: ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'button_', 'children', false);
 
 		// ar_button_objects create
 			foreach ($ar_buttons_tipo as $current_button_tipo) {
@@ -4981,7 +4981,7 @@ abstract class common {
 				case 'tm':
 				// case 'portal_list':
 					// in the case that section_list is defined
-					$ar_terms = (array)ontology_node::get_ar_tipo_by_model_name_and_relation($tipo, 'section_list', 'children', true);
+					$ar_terms = (array)ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section_list', 'children', true);
 					if(isset($ar_terms[0])) {
 						# Use found related terms as new list
 						$current_term	= $ar_terms[0];
@@ -5095,7 +5095,7 @@ abstract class common {
 			if ($this->mode==='list' &&
 				(strpos(get_called_class(), 'component_')===0 || get_called_class()==='section')){
 				// section list
-				$ar_terms = (array)ontology_node::get_ar_tipo_by_model_name_and_relation(
+				$ar_terms = (array)ontology_node::get_ar_tipo_by_model_and_relation(
 					$this->tipo,
 					'section_list',
 					'children',

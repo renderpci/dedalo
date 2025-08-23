@@ -1061,13 +1061,13 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_GET_AR_TIPO_BY_MODEL_NAME_AND_RELATION
+	* TEST_get_ar_tipo_by_model_AND_RELATION
 	* @return void
 	*/
-	public function test_get_ar_tipo_by_model_name_and_relation(): void {
+	public function test_get_ar_tipo_by_model_and_relation(): void {
 
 		// children
-		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_and_relation(
 			'rsc88',
 			'section_list',
 			'children'
@@ -1097,7 +1097,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// children_recursive
-		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_and_relation(
 			'rsc75', // People
 			'component_input_text',
 			'children_recursive'
@@ -1118,7 +1118,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// related
-		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_and_relation(
 			'rsc88', // Image
 			'component_input_text',
 			'related'
@@ -1139,7 +1139,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// parent
-		$result = ontology_node::get_ar_tipo_by_model_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_and_relation(
 			'rsc88', // Image
 			'section_group',
 			'parent'
@@ -1158,7 +1158,7 @@ final class ontology_node_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_tipo_by_model_name_and_relation
+	}//end test_get_ar_tipo_by_model_and_relation
 
 
 
