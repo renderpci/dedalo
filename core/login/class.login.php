@@ -1531,7 +1531,7 @@ class login extends common {
 			// $search_result = $search->search();
 
 		// matrix_data way
-			$ar_section_id = matrix_data::search_matrix_data(
+			$ar_section_id = matrix_manager::search(
 				'matrix_users',
 				[
 					[
@@ -1584,7 +1584,7 @@ class login extends common {
 			// $ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
 
 		// matrix data way
-			$ar_section_id = matrix_data::search_matrix_data(
+			$ar_section_id = matrix_manager::search(
 				'matrix_users',
 				[
 					[
