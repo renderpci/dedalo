@@ -153,12 +153,12 @@ abstract class DBi {
 		}
 
 		// no cache case return fresh connection
-			if ($cache!==true) {
-				return $pg_conn_real;
-			}
+		if ($cache!==true) {
+			return $pg_conn_real;
+		}
 
 		// set as static
-			$pg_conn = $pg_conn_real;
+		$pg_conn = $pg_conn_real;
 
 
 		return $pg_conn;
@@ -469,16 +469,16 @@ abstract class DBi {
 
 		$sql = "
 			SELECT
-			    schemaname,
-			    tablename,
-			    indexname
+				schemaname,
+				tablename,
+				indexname
 			FROM
-			    pg_indexes
+				pg_indexes
 			WHERE
-			    schemaname NOT IN ('pg_catalog', 'information_schema')
+				schemaname NOT IN ('pg_catalog', 'information_schema')
 			ORDER BY
-			    schemaname,
-			    tablename;
+				schemaname,
+				tablename;
 		";
 
 		$result	= pg_query(DBi::_getConnection(), $sql);

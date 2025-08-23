@@ -435,4 +435,145 @@ abstract class matrix_data {
 
 
 
+	/**
+	* SEARCH_MATRIX_DATA
+	*
+	* Performs a filtered search on a specified PostgreSQL table and returns
+	* a list of matching `section_id` records.
+	*
+	* This function provides a simple, safe way to query access matrix data.
+	* The table name is validated against a predefined whitelist to prevent
+	* SQL injection vulnerabilities.
+	*
+	* @param string     $table  The name of the table to query. Must be in the
+	*                           predefined list of allowed tables.
+	* @param array      $filter Associative array of filter conditions in the
+	*                           form [column => value].
+	* @param string|null $order Optional ORDER BY clause (e.g., "section_id DESC").
+	* @param int|null    $limit Optional LIMIT value for the query.
+	*
+	* @return array|false Returns an array of matching `section_id` values on success,
+	*                     or `false` if validation, query preparation, or execution fails.
+	*/
+	public static function search_matrix_data( string $table, array $filter, ?string $order=null, ?int $limit=null ) : array|false {
+
+		// Validate table
+		if (!isset(self::$matrix_tables[$table])) {
+			debug_log(__METHOD__
+				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
+				. ' table: ' . $table . PHP_EOL
+				. ' allowed_tables: ' . json_encode(self::$matrix_tables)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// check values
+		if (empty($filter)) {
+			debug_log(__METHOD__
+				." Empty filter array " . PHP_EOL
+				.' filter: ' . json_encode($filter)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$conn = DBi::_getConnection();
+
+		// sample
+			// $table,
+			// DEDALO_SECTION_USERS_TIPO,
+			// [
+			// 	'column'	=> 'section_tipo',
+			// 	'value'		=> DEDALO_SECTION_USERS_TIPO
+			// ],
+			// [
+			// 	'column'	=> 'string',
+			// 	'operator'	=> '@>',
+			// 	'value'		=> '{"dd132": [{"lang": "lg-nolan", "value": "pepe"}]}'
+			// ]
+			// 1,
+			// null
+
+		// Add dynamic clauses
+		$where_clauses	= [];
+		$params			= []; // param values
+		$param_index	= 1; // next param index ($2, $3, ...)
+		static $allowed_ops = ['=', '!=', '<', '>', '<=', '>=', 'LIKE', 'ILIKE', '@>'];
+		foreach ($filter as $item) {
+
+			$column = $item['column'];
+			if (!isset(self::$matrix_columns[$column])) {
+				debug_log(__METHOD__
+					. " Invalid column. This column is not allowed to load matrix data." . PHP_EOL
+					. ' column: ' . $column . PHP_EOL
+					. ' allowed_columns: ' . json_encode(self::$matrix_columns)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+			$operator = $item['operator'] ?? '=';
+			if (!in_array($operator, $allowed_ops, true)) {
+				debug_log(__METHOD__ . " Invalid operator: $operator", logger::ERROR);
+				return false;
+			}
+
+			$value = $item['value'];
+
+			// search with operator
+			$params[] = $value;
+
+			$where_clauses[] = pg_escape_identifier($conn, $column) .' '. $operator .' $'. $param_index;
+
+			// Increase param index value
+			$param_index++;
+		}
+
+		// ORDER BY clause
+		$order_clause = '';
+		if ($order !== null) {
+			[$col, $dir] = explode(' ', $order, 2) + [null, null];
+			$col = trim($col);
+			$dir = strtoupper(trim($dir ?? 'ASC'));
+			if (isset(self::$matrix_columns[$col]) && in_array($dir, ['ASC','DESC'], true)) {
+				$order_clause = ' ORDER BY ' . pg_escape_identifier($conn, $col) . ' ' . $dir;
+			}
+		}
+
+		// LIMIT clause
+		$limit_clause = '';
+		if ($limit !== null) {
+			$limit_clause = ' LIMIT ' . (int)$limit;
+		}
+
+		// Without prepared statement (more dynamic and appropriate for changing columns scenarios)
+		$sql = 'SELECT section_id FROM ' . pg_escape_identifier($conn, $table)
+			 .' WHERE '. implode(' AND ', $where_clauses)
+			 . $order_clause
+			 . $limit_clause;
+
+		$result = pg_query_params($conn, $sql, $params);
+		if (!$result) {
+			debug_log(__METHOD__
+				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				.' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// Build and array of section_id values
+		// $ar_section_id = [];
+		// while ($row = pg_fetch_assoc($result)) {
+		// 	$ar_section_id[] = (int)$row['section_id'];
+		// }
+		$ar_section_id = pg_fetch_all_columns($result, 0);
+
+
+		return $ar_section_id ? array_map('intval', $ar_section_id) : [];
+	}//end search_matrix_data
+
+
+
 }//end class matrix_data
