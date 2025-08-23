@@ -583,7 +583,7 @@ class update {
 			$start_time = start_time();
 			$before = memory_get_usage();
 
-			$current_section_label = ontology_node::get_label_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true);
+			$current_section_label = ontology_node::get_term_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true);
 
 
 			// Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]

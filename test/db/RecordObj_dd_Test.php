@@ -230,15 +230,15 @@ final class ontology_node_test extends TestCase {
 
 
 	/**
-	* TEST_get_term
+	* TEST_GET_TERM_DATA
 	* @return void
 	*/
-	public function test_get_term(): void {
+	public function test_get_term_data(): void {
 
 		$test_term_id	= 'dd1';
 
 		$ontology_node	= new ontology_node($test_term_id);
-		$result			= $ontology_node->get_term();
+		$result			= $ontology_node->get_term_data();
 
 		$expected	= 'object';
 		$eq			= gettype($result)===$expected;
@@ -286,7 +286,7 @@ final class ontology_node_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$result		= $ontology_node->get_term();
+		$result		= $ontology_node->get_term_data();
 		$expected	= $sample_value;
 		$eq			= $result==$expected;
 		$this->assertTrue(
@@ -308,7 +308,7 @@ final class ontology_node_test extends TestCase {
 	public function test_get_term_by_tipo(): void {
 
 		$test_term_id	= 'dd1';
-		$result			= ontology_node::get_label_by_tipo($test_term_id, DEDALO_STRUCTURE_LANG);
+		$result			= ontology_node::get_term_by_tipo($test_term_id, DEDALO_STRUCTURE_LANG);
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;

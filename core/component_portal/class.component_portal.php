@@ -698,7 +698,7 @@ class component_portal extends component_relation_common {
 				$path[] = (object)[
 					'component_tipo'	=> $this->from_component_tipo,
 					'model'				=> ontology_node::get_model_name_by_tipo($this->from_component_tipo,true),
-					'name'				=> ontology_node::get_label_by_tipo($this->from_component_tipo),
+					'name'				=> ontology_node::get_term_by_tipo($this->from_component_tipo),
 					'section_tipo'		=> $this->from_section_tipo
 				];
 			}
@@ -707,7 +707,7 @@ class component_portal extends component_relation_common {
 			$path[] = (object)[
 				'component_tipo'	=> $component_tipo,
 				'model'				=> ontology_node::get_model_name_by_tipo($component_tipo,true),
-				'name'				=> ontology_node::get_label_by_tipo($component_tipo),
+				'name'				=> ontology_node::get_term_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			];
 
@@ -733,7 +733,7 @@ class component_portal extends component_relation_common {
 
 				debug_log(__METHOD__.
 					" Ignored empty request_config_item->show (mode:$this->mode) [$this->section_tipo - $this->tipo - "
-					. ontology_node::get_label_by_tipo($this->tipo) ."]". PHP_EOL
+					. ontology_node::get_term_by_tipo($this->tipo) ."]". PHP_EOL
 					. 'request_config: ' . PHP_EOL
 					. json_handler::encode($request_config)
 					, logger::ERROR
@@ -746,7 +746,7 @@ class component_portal extends component_relation_common {
 				if (empty($first_item)) {
 					debug_log(__METHOD__.
 						" Ignored show empty first_item (mode:$this->mode) [$this->section_tipo - $this->tipo - ".
-						ontology_node::get_label_by_tipo($this->tipo).
+						ontology_node::get_term_by_tipo($this->tipo).
 						"]. It may be due to a lack of permissions.",
 						logger::WARNING
 					);
@@ -756,7 +756,7 @@ class component_portal extends component_relation_common {
 					$path[] = (object)[
 						'component_tipo'	=> $first_item->tipo,
 						'model'				=> ontology_node::get_model_name_by_tipo($first_item->tipo,true),
-						'name'				=> ontology_node::get_label_by_tipo($first_item->tipo),
+						'name'				=> ontology_node::get_term_by_tipo($first_item->tipo),
 						// note that section_tipo is used only to give a name to the join item.
 						// results are not really filtered by this section_tipo
 						'section_tipo'		=> is_array($first_item->section_tipo)

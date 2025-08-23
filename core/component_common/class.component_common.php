@@ -2493,7 +2493,7 @@ abstract class component_common extends common {
 
 		// empty case
 			if (empty($ar_target_section_ddo)) {
-				$component_name = ontology_node::get_label_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
+				$component_name = ontology_node::get_term_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
 				debug_log(__METHOD__
 					. " Error Processing Request. Please, define target section structure for component: $component_name".PHP_EOL
 					. ' tipo: '. $this->tipo .PHP_EOL
@@ -3898,7 +3898,7 @@ abstract class component_common extends common {
 				array_unshift($path, (object)[
 					'component_tipo'	=> $this->from_component_tipo,
 					'model'				=> ontology_node::get_model_name_by_tipo($this->from_component_tipo,true),
-					'name'				=> ontology_node::get_label_by_tipo($this->from_component_tipo),
+					'name'				=> ontology_node::get_term_by_tipo($this->from_component_tipo),
 					'section_tipo'		=> $this->from_section_tipo
 				]);
 			}

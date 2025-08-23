@@ -180,7 +180,7 @@ class tool_diffusion extends tool_common {
 							// $ar_related = common::get_ar_related_by_model('component', $info_item->tipo, false);
 							$ar_related = ontology_node::get_relation_nodes($info_item->tipo, true, true);
 							if (isset($ar_related[0])) {
-								$current_name				= ontology_node::get_label_by_tipo($ar_related[0], null, true, true);
+								$current_name				= ontology_node::get_term_by_tipo($ar_related[0], null, true, true);
 								$info_item->related_tipo	= $ar_related[0];
 								$info_item->related_label	= $current_name;
 								$info_item->related_model	= ontology_node::get_legacy_model_name_by_tipo($ar_related[0]);

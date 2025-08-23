@@ -108,7 +108,7 @@ class indexation_grid {
 					$section_grid_row->set_type('row');
 
 			// label. Get the label of the current section
-				$label = ontology_node::get_label_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
+				$label = ontology_node::get_term_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 			// section_grid. Create the grid cell of the section
 				$section_grid = new dd_grid_cell_object();
@@ -412,7 +412,7 @@ class indexation_grid {
 				}
 
 			// label. Add to all ddo_map items
-				$current_ddo_map->label = ontology_node::get_label_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+				$current_ddo_map->label = ontology_node::get_term_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 			// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
 				$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'

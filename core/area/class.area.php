@@ -114,7 +114,7 @@ class area extends area_common  {
 						'model'			=> $ontology_node->get_model(),
 						'parent'		=> $ontology_node->get_parent(),
 						'properties'	=> $ontology_node->get_properties(),
-						'label'			=> $ontology_node->get_label( DEDALO_APPLICATION_LANG )
+						'label'			=> $ontology_node->get_term( DEDALO_APPLICATION_LANG )
 					];
 
 				// group_areas. get the all children areas and sections of current
@@ -132,7 +132,7 @@ class area extends area_common  {
 							'model'			=> $ontology_node->get_model(),
 							'parent'		=> $ontology_node->get_parent(),
 							'properties'	=> $ontology_node->get_properties(),
-							'label'			=> $ontology_node->get_label( DEDALO_APPLICATION_LANG )
+							'label'			=> $ontology_node->get_term( DEDALO_APPLICATION_LANG )
 						];
 					}
 			}//end foreach ($ar_root_areas as $area_tipo)

@@ -79,8 +79,8 @@ class get_archive_states extends widget_common {
 
 			$ar_answer		= [];
 			$ar_closed		= [];
-			$answer_label	= ontology_node::get_label_by_tipo($component_tipo_answer, DEDALO_DATA_LANG);
-			$closed_label	= ontology_node::get_label_by_tipo($component_tipo_closed, DEDALO_DATA_LANG);
+			$answer_label	= ontology_node::get_term_by_tipo($component_tipo_answer, DEDALO_DATA_LANG);
+			$closed_label	= ontology_node::get_term_by_tipo($component_tipo_closed, DEDALO_DATA_LANG);
 			#get the value of the component using portal dato
 				foreach ($component_dato as $current_locator) {
 
