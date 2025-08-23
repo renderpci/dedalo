@@ -531,7 +531,8 @@ class v6_to_v7 {
 					if ($save) {
 
 						// With prepared statement
-						$stmt_name = __METHOD__;
+						// Prepared statement name is unique per table
+						$stmt_name = __METHOD__ . $table;
 						if (!isset(DBi::$prepared_statements[$stmt_name])) {
 							pg_prepare(
 								$conn,
