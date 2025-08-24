@@ -205,74 +205,44 @@
 
 				/*
 				@v7 test
-				if ($this->tipo==='rsc21') {
-					$section = $this->get_my_section();
-
-					// $section->load_data_columns();
-					// 	dump($section->data_columns, ' section->data_columns ++ '.to_string());
-
-					$component_full_data = $section->get_component_full_data($this->tipo, $this->data_column);
-						dump($component_full_data, ' component_full_data ++ '.to_string("$this->data_column - $this->tipo"));
-
-					$tipo_key	= 'rsc21xxx';
-					$iterations	= 300;
-					for ($i=0; $i < $iterations; $i++) {
-
-						$current_key = $tipo_key . $i;
-						$component_full_data[0]->value = ' Code one - ' . $i;
-
-						$section->save_partial($this->data_column, $current_key, $component_full_data);
-						// usleep( 1 * 1000 ); // 12 ms
-						// usleep( 10 ); // 12 ms
-						if ($i>0) {
-							$section->delete_partial($this->data_column, $current_key);
-						}
-					}
-				}
 				*/
+				// load_matrix_manager @v7
+					$matrix_manager = matrix_manager::get_instance($this->section_tipo, $this->section_id);
+					$section_data = $matrix_manager->load();
+					// // dump($section_data, ' section_data //////////////////////////////////////////////////////////// ++ '.to_string());
 
-				// load_matrix_data @v7
-					// $section_data = matrix_data::load_matrix_data('matrix', $this->section_tipo, (int)$this->section_id);
-					// 	dump($section_data, ' section_data ++ '.to_string());
-					// 	dump($section_data['number'], ' section_data[number] ++ '.to_string());
-					// 	// die();
-
-				// update_matrix_data @v7
-					// matrix_data::update_matrix_data(
-					// 	'matrix',
-					// 	$this->section_tipo,
-					// 	(int)$this->section_id,
+				// update_matrix_manager @v7
+					// $matrix_manager = matrix_manager::get_instance($this->section_tipo, $this->section_id);
+					// $res = $matrix_manager->update(
 					// 	[
 					// 		'iri' => [
 					// 			'test3333' => [
 					// 				[
 					// 					'id' => 4,
-					// 					'value' => 'Test for write column iri ++'
+					// 					'value' => 'Test for write column iri ++ 5'
 					// 				]
 					// 			]
 					// 		],
 					// 		'geo' => null
 					// 	]
-					// 	// [
-					// 	// 	'iri' => null
-					// 	// ]
 					// );
+					// // dump($res, ' res ++ '.to_string("$this->section_tipo, $this->section_id"));
 
-				// insert_matrix_data @v7
-					// matrix_data::insert_matrix_data(
-					// 	'matrix',
-					// 	$this->section_tipo,
+				// insert_matrix_manager @v7
+					// $matrix_manager = matrix_manager::get_instance($this->section_tipo, $this->section_id);
+					// $res = $matrix_manager->insert(
 					// 	[
 					// 		'data' => [
 					// 			'test3333' => [
 					// 				[
 					// 					'id' => 4,
-					// 					'value' => 'Test for write column iri +'
+					// 					'value' => 'Test for write column iri + INSERT'
 					// 				]
 					// 			]
 					// 		]
 					// 	]
 					// );
+					// dump($res, ' res insert_matrix_manager ++ '.to_string("$this->section_tipo, $this->section_id"));
 			}
 
 		$data[] = $item;
