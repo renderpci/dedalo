@@ -1142,7 +1142,7 @@ function is_associative(array $inpt_arr) : bool {
 */
 function sanitize_query(string $strQuery) : string {
 
-	return trim(str_replace("\t", '', $strQuery));
+	return trim(str_replace(["\t"], [''], $strQuery));
 }//end sanitize_query
 
 
