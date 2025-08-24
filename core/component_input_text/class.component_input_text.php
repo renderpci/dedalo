@@ -174,7 +174,7 @@ class component_input_text extends component_string_common {
 
 		// fallback
 			if (empty($diffusion_value)) {
-				if ($this->traducible==='no') {
+				if ($this->translatable===false) {
 					$this->set_lang(DEDALO_DATA_NOLAN);
 					$diffusion_value = $this->get_valor(DEDALO_DATA_NOLAN);
 				}else{

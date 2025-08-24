@@ -263,7 +263,7 @@ class component_relation_related extends component_relation_common {
 
 		// References to me
 		if (isset($locator->section_id) && isset($locator->section_tipo)) {
-			// $model_name 	= RecordObj_dd::get_model_name_by_tipo($locator->from_component_tipo,true); // get_class();
+			// $model_name 	= ontology_node::get_model_by_tipo($locator->from_component_tipo,true); // get_class();
 			$ref_component 	= component_common::get_instance(
 				'component_relation_related',
 				$locator->from_component_tipo,
@@ -531,15 +531,15 @@ class component_relation_related extends component_relation_common {
 			// self component path
 			(object)[
 				'component_tipo'	=> $component_tipo,
-				'model'				=> RecordObj_dd::get_model_name_by_tipo($component_tipo,true),
-				'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
+				'model'				=> ontology_node::get_model_by_tipo($component_tipo,true),
+				'name'				=> ontology_node::get_term_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			],
 			// thesaurus langs (component_input_text hierarchy25, section_tipo lg-1)
 			(object)[
 				'component_tipo'	=> DEDALO_THESAURUS_TERM_TIPO,
-				'model'				=> RecordObj_dd::get_model_name_by_tipo(DEDALO_THESAURUS_TERM_TIPO,true),
-				'name'				=> RecordObj_dd::get_termino_by_tipo(DEDALO_THESAURUS_TERM_TIPO),
+				'model'				=> ontology_node::get_model_by_tipo(DEDALO_THESAURUS_TERM_TIPO,true),
+				'name'				=> ontology_node::get_term_by_tipo(DEDALO_THESAURUS_TERM_TIPO),
 				'section_tipo'		=> $section_tipo
 			]
 		];

@@ -84,8 +84,8 @@ class diffusion_socrata extends diffusion  {
 
 		// table
 			$table_tipo			= diffusion::get_table_tipo($diffusion_element_tipo, $section_tipo);
-			$RecorObj_dd		= new RecordObj_dd($table_tipo);
-			$table_properties	= $RecorObj_dd->get_propiedades(true) ?? new stdClass();
+			$ontology_node		= new ontology_node($table_tipo);
+			$table_properties	= $ontology_node->get_propiedades(true) ?? new stdClass();
 
 		// ar_rows. Build data (array of json_row objects) for each lang
 			$ar_rows = [];
@@ -335,7 +335,7 @@ class diffusion_socrata extends diffusion  {
 		$ar_diffusion_sections = [];
 
 		// tables
-		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$tables = ontology_node::get_ar_tipo_by_model_and_relation(
 			$diffusion_element_tipo,
 			'table',
 			'children_recursive',
@@ -343,7 +343,7 @@ class diffusion_socrata extends diffusion  {
 		);
 		foreach ($tables as $current_table_tipo) {
 
-			$model_name = RecordObj_dd::get_model_name_by_tipo($current_table_tipo,true);
+			$model_name = ontology_node::get_model_by_tipo($current_table_tipo,true);
 			switch ($model_name) {
 				case 'table_alias':
 					// First try section (thesaurus needed)

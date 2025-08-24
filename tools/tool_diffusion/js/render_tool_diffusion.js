@@ -499,13 +499,10 @@ export const render_publication_items = function(self) {
 						ar_fields_nodes.push(related_item)
 						related_item.addEventListener('click', function(e) {
 							e.stopPropagation()
-							const url = DEDALO_CORE_URL + '/ontology/dd_list.php?' + object_to_url_vars({
-								modo			: 'tesauro_edit',
-								terminoID		: item.tipo,
-								terminoIDlist	: item.tipo,
-								n				: 1,
-								total			: 'form',
-								max				: 1
+							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+								tipo			: 'dd5',
+								search_tipos	: item.tipo,
+								menu			: false
 							})
 							const window_width	= 1001
 							const screen_width	= window.screen.width

@@ -72,23 +72,23 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
-		// test jer_dd without term data catch 22 situation
+		// test dd_ontology without term data catch 22 situation
 			// if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 			// 	try {
-			// 		$RecordObj_dd = new RecordObj_dd('dd1', 'dd');
-			// 		$term = $RecordObj_dd->get_term();
+			// 		$ontology_node = new ontology_node('dd1');
+			// 		$term = $ontology_node->get_term_data();
 			// 		if (empty($term)) {
-			// 			$result = area_maintenance::recover_jer_dd_column();
+			// 			$result = area_maintenance::recover_dd_ontology_column();
 			// 			if ($result===false) {
 			// 				debug_log(__METHOD__
-			// 					. " Error recovering term column from jer_dd table" . PHP_EOL
+			// 					. " Error recovering term column from dd_ontology table" . PHP_EOL
 			// 					, logger::ERROR
 			// 				);
 			// 			}
 			// 		}
 			// 	} catch (Exception $e) {
 			// 		debug_log(__METHOD__
-			// 			. " Error (exception) on check term jer_dd_column" . PHP_EOL
+			// 			. " Error (exception) on check term dd_ontology_column" . PHP_EOL
 			// 			. ' Caught exception: ' . $e->getMessage()
 			// 			, logger::ERROR
 			// 		);
@@ -280,7 +280,7 @@ final class dd_core_api {
 					}
 
 				// section/area/section_tool. Get the page element from get URL vars
-					$model		= $tool_name ?? RecordObj_dd::get_model_name_by_tipo($tipo, true);
+					$model		= $tool_name ?? ontology_node::get_model_by_tipo($tipo, true);
 					$last_error	= $_ENV['DEDALO_LAST_ERROR'] ?? '';
 					switch (true) {
 						// Section_tool is depended of section, the order of the cases are important, section_tool need to be first, before section,
@@ -289,8 +289,8 @@ final class dd_core_api {
 
 							$section_tool_tipo = $tipo;
 
-							$RecordObj_dd	= new RecordObj_dd($section_tool_tipo);
-							$properties		= $RecordObj_dd->get_properties();
+							$ontology_node	= new ontology_node($section_tool_tipo);
+							$properties		= $ontology_node->get_properties();
 
 							// overwrite (!)
 								$model	= 'section';
@@ -492,7 +492,7 @@ final class dd_core_api {
 
 						case (strpos($model, 'component_')===0):
 
-							$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+							$component_lang	= (ontology_node::get_translatable($tipo)===true)
 								? $lang
 								: DEDALO_DATA_NOLAN;
 
@@ -970,7 +970,7 @@ final class dd_core_api {
 
 		// source vars
 			$tipo	= $ddo_source->tipo;
-			$model	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model	= ontology_node::get_model_by_tipo($tipo,true);
 			// Ensure model is 'section'
 			if($model!=='section') {
 				$response->errors[] = 'invalid model';
@@ -1069,7 +1069,7 @@ final class dd_core_api {
 
 		// short vars
 			$tipo				= $source->tipo;
-			$model				= $source->model ?? RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model				= $source->model ?? ontology_node::get_model_by_tipo($tipo,true);
 			$section_tipo		= $source->section_tipo;
 			$section_id			= $source->section_id;
 			$mode				= $source->mode ?? 'list';
@@ -1318,7 +1318,7 @@ final class dd_core_api {
 
 		// rqo vars
 			$tipo	= $rqo->source->tipo;
-			$model	= $rqo->source->model ?? RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model	= $rqo->source->model ?? ontology_node::get_model_by_tipo($tipo,true);
 			$sqo	= $rqo->sqo;
 			$mode	= $rqo->source->mode ?? 'list'; //set default for section count
 
@@ -1395,7 +1395,7 @@ final class dd_core_api {
 			$source			= $rqo->source;
 			$tipo			= $source->tipo ?? null;
 			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
-			$model			= $source->model ?? RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model			= $source->model ?? ontology_node::get_model_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
@@ -1420,7 +1420,7 @@ final class dd_core_api {
 
 				case strpos($model, 'component_')===0:
 
-					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+					$component_lang	= (ontology_node::get_translatable($tipo)===true)
 						? $lang
 						: DEDALO_DATA_NOLAN;
 
@@ -1647,7 +1647,7 @@ final class dd_core_api {
 			$tipo				= $ddo_source->tipo ?? null;
 			$section_tipo		= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id			= $ddo_source->section_id ?? null;
-			$model				= $ddo_source->model ?? RecordObj_dd::get_model_name_by_tipo($ddo_source->tipo,true);
+			$model				= $ddo_source->model ?? ontology_node::get_model_by_tipo($ddo_source->tipo,true);
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 			$properties			= $ddo_source->properties ?? null;
 			$session_save		= $ddo_source->session_save ?? true;
@@ -2076,7 +2076,7 @@ final class dd_core_api {
 					if (strpos($model, 'component')===0) {
 
 						// component
-							$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+							$component_lang	= (ontology_node::get_translatable($tipo)===true)
 								? $lang
 								: DEDALO_DATA_NOLAN;
 							$element = component_common::get_instance(
@@ -2304,7 +2304,7 @@ final class dd_core_api {
 			$source			= $rqo->source;
 			$tipo			= $source->tipo ?? null;
 			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
-			$model			= $source->model ?? RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model			= $source->model ?? ontology_node::get_model_by_tipo($tipo,true);
 			$lang			= $source->lang ?? DEDALO_DATA_LANG;
 			$mode			= $source->mode ?? 'list';
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
@@ -2314,7 +2314,7 @@ final class dd_core_api {
 
 				case strpos($model, 'component_')===0:
 
-					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+					$component_lang	= (ontology_node::get_translatable($tipo)===true)
 						? $lang
 						: DEDALO_DATA_NOLAN;
 
@@ -2827,7 +2827,7 @@ final class dd_core_api {
 
 		// exclude components
 		// only sections and areas generate activity (prevent autocomplete activity footprint)
-			$model = RecordObj_dd::get_model_name_by_tipo($tipo, true);
+			$model = ontology_node::get_model_by_tipo($tipo, true);
 			if (strpos($model, 'section')===false && strpos($model, 'area')===false) {
 				return;
 			}

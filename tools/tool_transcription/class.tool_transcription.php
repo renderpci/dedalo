@@ -191,7 +191,7 @@ class tool_transcription extends tool_common {
 			$key	= $transcriber_config->key;
 
 		// Source text . Get source text from component (source_lang)
-			$model		= RecordObj_dd::get_model_name_by_tipo($media_ddo->component_tipo,true);
+			$model		= ontology_node::get_model_by_tipo($media_ddo->component_tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$media_ddo->component_tipo,
@@ -299,7 +299,7 @@ class tool_transcription extends tool_common {
 			$media_ddo = $options->media_ddo;
 
 		// Source text . Get source text from component (source_lang)
-			$model		= RecordObj_dd::get_model_name_by_tipo($media_ddo->component_tipo, true);
+			$model		= ontology_node::get_model_by_tipo($media_ddo->component_tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$media_ddo->component_tipo,
@@ -368,7 +368,7 @@ class tool_transcription extends tool_common {
 			$media_ddo = $options->media_ddo;
 
 		// Source text . Get source text from component (source_lang)
-			$model		= RecordObj_dd::get_model_name_by_tipo($media_ddo->component_tipo, true);
+			$model		= ontology_node::get_model_by_tipo($media_ddo->component_tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$media_ddo->component_tipo,
@@ -453,7 +453,7 @@ class tool_transcription extends tool_common {
 			$key	= $transcriber_config->key;
 
 		// Source text . Get source text from component (source_lang)
-			$model		= RecordObj_dd::get_model_name_by_tipo($media_ddo->component_tipo,true);
+			$model		= ontology_node::get_model_by_tipo($media_ddo->component_tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$media_ddo->component_tipo,
@@ -526,7 +526,7 @@ class tool_transcription extends tool_common {
 
 		// component_text_area
 		// Source text . Get source text from component (source_lang)
-			$model					= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
+			$model					= ontology_node::get_model_by_tipo($component_tipo, true);
 			$component_text_area	= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -546,7 +546,7 @@ class tool_transcription extends tool_common {
 
 		// component_av
 			$component_av_tipo	= $component_text_area->get_related_component_av_tipo();
-			$model				= RecordObj_dd::get_model_name_by_tipo($component_av_tipo, true);
+			$model				= ontology_node::get_model_by_tipo($component_av_tipo, true);
 			$component_av		= component_common::get_instance(
 				$model,
 				$component_av_tipo,

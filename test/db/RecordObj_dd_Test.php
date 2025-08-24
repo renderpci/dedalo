@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class RecordObj_dd_test extends TestCase {
+final class ontology_node_test extends TestCase {
 
 
 
@@ -18,36 +18,36 @@ final class RecordObj_dd_test extends TestCase {
 
 		$test_term_id = 'dd1';
 
-		$RecordObj_dd	= new RecordObj_dd( $test_term_id );
-		$terminoID		= $RecordObj_dd->get_terminoID();
+		$ontology_node	= new ontology_node( $test_term_id );
+		$tipo		= $ontology_node->get_tipo();
 
-		$type = gettype($terminoID);
+		$type = gettype($tipo);
 		$eq = $type==='string';
 		$this->assertTrue(
 			$eq,
 			'expected true (class===string) and received type: ' .$type
 		);
 
-		$eq = $terminoID===$test_term_id;
+		$eq = $tipo===$test_term_id;
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
 				.'test_term_id: ' . $test_term_id . PHP_EOL
-				.'terminoID: ' . $terminoID
+				.'tipo: ' . $tipo
 		);
 
-		$RecordObj_dd	= new RecordObj_dd( null, 'dd' );
-		$terminoID		= $RecordObj_dd->get_terminoID();
+		$ontology_node	= new ontology_node( null, 'dd' );
+		$tipo		= $ontology_node->get_tipo();
 
-		$eq = $terminoID===null;
+		$eq = $tipo===null;
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
 				.'test_term_id: null'  . PHP_EOL
-				.'terminoID: ' . $terminoID
+				.'tipo: ' . $tipo
 		);
 
-		$prefix = $RecordObj_dd->get_prefijo();
+		$prefix = $ontology_node->get_prefijo();
 		$eq = $prefix==='dd';
 		$this->assertTrue(
 			$eq,
@@ -65,11 +65,11 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_defineTableName(): void {
 
-		$table = RecordObj_dd::$table;
-		$eq = $table==='jer_dd';
+		$table = ontology_node::$table;
+		$eq = $table==='dd_ontology';
 		$this->assertTrue(
 			$eq,
-			'expected true for jer_dd' . PHP_EOL
+			'expected true for dd_ontology' . PHP_EOL
 				. ' table: ' . to_string($table)
 		);
 
@@ -77,13 +77,13 @@ final class RecordObj_dd_test extends TestCase {
 		$_ENV['DEDALO_RECOVERY_MODE'] = true;
 
 		$test_term_id	= 'dd1';
-		$RecordObj_dd	= new RecordObj_dd( $test_term_id );
+		$ontology_node	= new ontology_node( $test_term_id );
 
-		$table = RecordObj_dd::$table;
-		$eq = $table==='jer_dd_recovery';
+		$table = ontology_node::$table;
+		$eq = $table==='dd_ontology_recovery';
 		$this->assertTrue(
 			$eq,
-			'expected true fro jer_dd_recovery' . PHP_EOL
+			'expected true fro dd_ontology_recovery' . PHP_EOL
 				. ' table: ' . to_string($table)
 		);
 
@@ -100,13 +100,13 @@ final class RecordObj_dd_test extends TestCase {
 	public function test_definePrimaryKeyName(): void {
 
 		$test_term_id	= 'dd1';
-		$RecordObj_dd	= new RecordObj_dd( $test_term_id );
+		$ontology_node	= new ontology_node( $test_term_id );
 
-		$result = $RecordObj_dd->get_strPrimaryKeyName();
-		$eq = $result==='terminoID';
+		$result = $ontology_node->get_strPrimaryKeyName();
+		$eq = $result==='tipo';
 		$this->assertTrue(
 			$eq,
-			'expected true from terminoID' . PHP_EOL
+			'expected true from tipo' . PHP_EOL
 				. ' strPrimaryKeyName: ' . to_string($result)
 		);
 	}//end test_definePrimaryKeyName
@@ -120,24 +120,24 @@ final class RecordObj_dd_test extends TestCase {
 	public function test_defineRelationMap(): void {
 
 		$test_term_id	= 'dd1';
-		$RecordObj_dd	= new RecordObj_dd( $test_term_id );
+		$ontology_node	= new ontology_node( $test_term_id );
 
-		$result = $RecordObj_dd->get_arRelationMap();
+		$result = $ontology_node->get_arRelationMap();
 		$eq = $result===[
-			'terminoID'		=> 'terminoID',
-			'parent'		=> 'parent',
-			'modelo'		=> 'modelo',
-			'model'			=> 'model',
-			'esmodelo'		=> 'esmodelo',
-			'esdescriptor'	=> 'esdescriptor',
-			'visible'		=> 'visible',
-			'norden'		=> 'norden',
-			'tld'			=> 'tld',
-			'traducible'	=> 'traducible',
-			'relaciones'	=> 'relaciones',
-			'propiedades'	=> 'propiedades',
-			'properties'	=> 'properties',
-			'term'			=> 'term'
+			'tipo'				=> 'tipo',
+			'parent'			=> 'parent',
+			'modelo'			=> 'modelo',
+			'model'				=> 'model',
+			'is_model'			=> 'is_model',
+			'esdescriptor'		=> 'esdescriptor',
+			'visible'			=> 'visible',
+			'order_number'		=> 'order_number',
+			'tld'				=> 'tld',
+			'is_translatable'	=> 'is_translatable',
+			'relaciones'		=> 'relaciones',
+			'propiedades'		=> 'propiedades',
+			'properties'		=> 'properties',
+			'term'				=> 'term'
 		];
 		$this->assertTrue(
 			$eq,
@@ -156,8 +156,8 @@ final class RecordObj_dd_test extends TestCase {
 
 		$test_term_id	= 'dd1';
 
-		$RecordObj_dd	= new RecordObj_dd($test_term_id);
-		$result			= $RecordObj_dd->get_propiedades();
+		$ontology_node	= new ontology_node($test_term_id);
+		$result			= $ontology_node->get_propiedades();
 
 		$expected	= 'NULL';
 		$eq = gettype($result)===$expected;
@@ -168,10 +168,10 @@ final class RecordObj_dd_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$RecordObj_dd->set_propiedades((object)[
+		$ontology_node->set_propiedades((object)[
 			'test' => true
 		]);
-		$result		= $RecordObj_dd->get_propiedades();
+		$result		= $ontology_node->get_propiedades();
 		$expected	= 'object';
 		$eq = gettype($result)===$expected;
 		$this->assertTrue(
@@ -192,8 +192,8 @@ final class RecordObj_dd_test extends TestCase {
 
 		$test_term_id	= 'dd1';
 
-		$RecordObj_dd	= new RecordObj_dd($test_term_id);
-		$result			= $RecordObj_dd->get_properties();
+		$ontology_node	= new ontology_node($test_term_id);
+		$result			= $ontology_node->get_properties();
 
 		$expected	= 'object';
 		$eq = gettype($result)===$expected;
@@ -204,8 +204,8 @@ final class RecordObj_dd_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$RecordObj_dd->set_properties(null);
-		$result		= $RecordObj_dd->get_properties();
+		$ontology_node->set_properties(null);
+		$result		= $ontology_node->get_properties();
 		$expected	= 'NULL';
 		$eq = gettype($result)===$expected;
 		$this->assertTrue(
@@ -215,8 +215,8 @@ final class RecordObj_dd_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$RecordObj_dd->set_properties([1,2]);
-		$result		= $RecordObj_dd->get_properties();
+		$ontology_node->set_properties([1,2]);
+		$result		= $ontology_node->get_properties();
 		$expected	= 'array';
 		$eq = gettype($result)===$expected;
 		$this->assertTrue(
@@ -230,15 +230,15 @@ final class RecordObj_dd_test extends TestCase {
 
 
 	/**
-	* TEST_get_term
+	* TEST_GET_TERM_DATA
 	* @return void
 	*/
-	public function test_get_term(): void {
+	public function test_get_term_data(): void {
 
 		$test_term_id	= 'dd1';
 
-		$RecordObj_dd	= new RecordObj_dd($test_term_id);
-		$result			= $RecordObj_dd->get_term();
+		$ontology_node	= new ontology_node($test_term_id);
+		$result			= $ontology_node->get_term_data();
 
 		$expected	= 'object';
 		$eq			= gettype($result)===$expected;
@@ -273,9 +273,9 @@ final class RecordObj_dd_test extends TestCase {
 			DEDALO_STRUCTURE_LANG => 'Test'
 		];
 
-		$RecordObj_dd	= new RecordObj_dd($test_term_id);
-		$RecordObj_dd->Load(); // force load
-		$result			= $RecordObj_dd->set_term($sample_value);
+		$ontology_node	= new ontology_node($test_term_id);
+		$ontology_node->Load(); // force load
+		$result			= $ontology_node->set_term_data($sample_value);
 
 		$expected	= 'boolean';
 		$eq			= gettype($result)===$expected;
@@ -286,7 +286,7 @@ final class RecordObj_dd_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$result		= $RecordObj_dd->get_term();
+		$result		= $ontology_node->get_term_data();
 		$expected	= $sample_value;
 		$eq			= $result==$expected;
 		$this->assertTrue(
@@ -296,19 +296,19 @@ final class RecordObj_dd_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$RecordObj_dd->__destruct();
+		$ontology_node->__destruct();
 	}//end test_set_term
 
 
 
 	/**
-	* TEST_get_termino_by_tipo
+	* TEST_get_term_by_tipo
 	* @return void
 	*/
-	public function test_get_termino_by_tipo(): void {
+	public function test_get_term_by_tipo(): void {
 
 		$test_term_id	= 'dd1';
-		$result			= RecordObj_dd::get_termino_by_tipo($test_term_id, DEDALO_STRUCTURE_LANG);
+		$result			= ontology_node::get_term_by_tipo($test_term_id, DEDALO_STRUCTURE_LANG);
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;
@@ -327,50 +327,19 @@ final class RecordObj_dd_test extends TestCase {
 				. ' result: ' . to_string($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_termino_by_tipo
+	}//end test_get_term_by_tipo
 
 
 
 	/**
-	* TEST_get_modelo_name
+	* TEST_GET_MODEL
 	* @return void
 	*/
-	public function test_get_modelo_name(): void {
+	public function test_get_model(): void {
 
 		$test_term_id	= 'dd1';
-		$RecordObj_dd	= new RecordObj_dd($test_term_id);
-		$result			= $RecordObj_dd->get_modelo_name();
-
-		$expected	= 'string';
-		$eq			= gettype($result)===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected result type is string' . PHP_EOL
-				. ' result: ' . json_encode($result) . PHP_EOL
-				. ' type: ' . gettype($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-
-		$expected	= 'root';
-		$eq			= $result===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-	}//end test_get_modelo_name
-
-
-
-	/**
-	* TEST_get_model_name_by_tipo
-	* @return void
-	*/
-	public function test_get_model_name_by_tipo(): void {
-
-		$test_term_id	= 'dd1';
-		$result			= RecordObj_dd::get_model_name_by_tipo($test_term_id);
+		$ontology_node	= new ontology_node($test_term_id);
+		$result			= $ontology_node->get_model();
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;
@@ -389,18 +358,48 @@ final class RecordObj_dd_test extends TestCase {
 				. ' result: ' . to_string($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_model_name_by_tipo
+	}//end test_get_model
 
 
 
 	/**
-	* TEST_get_legacy_model_name_by_tipo
+	* TEST_GET_MODEL_BY_TIPO
 	* @return void
 	*/
-	public function test_get_legacy_model_name_by_tipo(): void {
+	public function test_get_model_by_tipo(): void {
+
+		$test_term_id	= 'dd1';
+		$result			= ontology_node::get_model_by_tipo($test_term_id);
+
+		$expected	= 'string';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . gettype($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+
+		$expected	= 'root';
+		$eq			= $result===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result: ' . to_string($result) . PHP_EOL
+				. ' expected: ' . to_string($expected)
+		);
+	}//end test_get_model_by_tipo
+
+
+
+	/**
+	* TEST_GET_LEGACY_MODEL_BY_TIPO
+	* @return void
+	*/
+	public function test_get_legacy_model_by_tipo(): void {
 
 		$test_term_id	= 'hierarchy92';
-		$result			= RecordObj_dd::get_legacy_model_name_by_tipo($test_term_id);
+		$result			= ontology_node::get_legacy_model_by_tipo($test_term_id);
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;
@@ -420,7 +419,7 @@ final class RecordObj_dd_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$result		= RecordObj_dd::get_model_name_by_tipo($test_term_id);
+		$result		= ontology_node::get_model_by_tipo($test_term_id);
 		$expected	= 'component_portal';
 		$eq			= $result===$expected;
 		$this->assertTrue(
@@ -429,19 +428,19 @@ final class RecordObj_dd_test extends TestCase {
 				. ' result: ' . to_string($result) . PHP_EOL
 				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_legacy_model_name_by_tipo
+	}//end test_get_legacy_model_by_tipo
 
 
 
 	/**
-	* TEST_get_legacy_model_name
+	* TEST_GET_LEGACY_MODEL
 	* @return void
 	*/
-	public function test_get_legacy_model_name(): void {
+	public function test_get_legacy_model(): void {
 
 		$test_term_id	= 'hierarchy92';
-		$RecordObj_dd	= new RecordObj_dd($test_term_id);
-		$result			= $RecordObj_dd->get_legacy_model_name();
+		$ontology_node	= new ontology_node($test_term_id);
+		$result			= $ontology_node->get_legacy_model();
 
 		$expected	= 'string';
 		$eq			= gettype($result)===$expected;
@@ -461,69 +460,27 @@ final class RecordObj_dd_test extends TestCase {
 				. ' expected: ' . to_string($expected)
 		);
 
-		$result		= $RecordObj_dd->get_modelo_name();
+		$result		= $ontology_node->get_model();
 		$expected	= 'component_portal';
 		$eq			= $result===$expected;
 		$this->assertTrue(
 			$eq,
 			'expected equal true' . PHP_EOL
 				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected) . PHP_EOL
-				. ' tipo: ' . to_string($test_term_id)
+				. ' expected: ' . to_string($expected)
 		);
-	}//end test_get_legacy_model_name
+	}//end test_get_legacy_model
 
 
 
 	/**
-	* TEST_get_lang_by_tipo
+	* TEST_get_model_tipo
 	* @return void
 	*/
-	public function test_get_lang_by_tipo(): void {
-
-		$test_term_id	= 'hierarchy92';
-		$result			= RecordObj_dd::get_lang_by_tipo($test_term_id);
-
-		$expected	= 'string';
-		$eq			= gettype($result)===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . gettype($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-
-		$expected	= DEDALO_DATA_NOLAN;
-		$eq			= $result===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-
-		$result = RecordObj_dd::get_lang_by_tipo('rsc36');
-
-		$expected	= DEDALO_DATA_LANG;
-		$eq			= $result===$expected;
-		$this->assertTrue(
-			$eq,
-			'expected equal true' . PHP_EOL
-				. ' result: ' . to_string($result) . PHP_EOL
-				. ' expected: ' . to_string($expected)
-		);
-	}//end test_get_lang_by_tipo
-
-
-
-	/**
-	* TEST_get_model_terminoID
-	* @return void
-	*/
-	public function test_get_model_terminoID(): void {
+	public function test_get_model_tipo(): void {
 
 		// root
-			$result = RecordObj_dd::get_model_terminoID('root');
+			$result = ontology_node::get_tipo_from_model('root');
 
 			$expected	= 'string';
 			$eq			= gettype($result)===$expected;
@@ -544,7 +501,7 @@ final class RecordObj_dd_test extends TestCase {
 			);
 
 		// component_portal
-			$result = RecordObj_dd::get_model_terminoID('component_portal');
+			$result = ontology_node::get_tipo_from_model('component_portal');
 
 			$expected	= 'dd592';
 			$eq			= $result===$expected;
@@ -556,77 +513,28 @@ final class RecordObj_dd_test extends TestCase {
 			);
 
 		// section
-			$result = RecordObj_dd::get_model_terminoID('section');
+			$result = ontology_node::get_tipo_from_model('section');
 
 			$expected	= 'dd6';
 			$eq			= $result===$expected;
 			$this->assertTrue(
 				$eq,
-				'expected "dd6" for get_model_terminoID section' . PHP_EOL
+				'expected "dd6" for get_model_tipo section' . PHP_EOL
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_model_terminoID
+	}//end test_get_model_tipo
 
 
 
 	/**
-	* TEST_get_all_tld_records
+	* TEST_GET_AR_TIPO_BY_MODEL
 	* @return void
 	*/
-	public function test_get_all_tld_records(): void {
-
-		// root
-			$result = RecordObj_dd::get_all_tld_records(['dd','rsc']);
-
-			$expected	= 'array';
-			$eq			= gettype($result)===$expected;
-			$this->assertTrue(
-				$eq,
-				'expected equal true' . PHP_EOL
-					. ' result: ' . gettype($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
-			);
-
-		// dd1
-			$found = array_find($result, function($el) {
-				return $el->terminoID==='dd1';
-			});
-
-			$expected	= true;
-			$eq			= is_object($found);
-			$this->assertTrue(
-				$eq,
-				'expected equal true' . PHP_EOL
-					. ' result: ' . to_string($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
-			);
-
-		// rsc15
-			$found = array_find($result, function($el) {
-				return $el->terminoID==='rsc15';
-			});
-
-			$expected	= true;
-			$eq			= is_object($found);
-			$this->assertTrue(
-				$eq,
-				'expected equal true' . PHP_EOL
-					. ' result: ' . to_string($result) . PHP_EOL
-					. ' expected: ' . to_string($expected)
-			);
-	}//end test_get_all_tld_records
-
-
-
-	/**
-	* TEST_get_ar_terminoID_by_modelo_name
-	* @return void
-	*/
-	public function test_get_ar_terminoID_by_modelo_name(): void {
+	public function test_get_ar_tipo_by_model(): void {
 
 		// component_portal
-			$result = RecordObj_dd::get_ar_terminoID_by_modelo_name(
+			$result = ontology_utils::get_ar_tipo_by_model(
 				'component_portal'
 			);
 
@@ -654,7 +562,7 @@ final class RecordObj_dd_test extends TestCase {
 			);
 
 		// component_input_text
-			$result = RecordObj_dd::get_ar_terminoID_by_modelo_name(
+			$result = ontology_utils::get_ar_tipo_by_model(
 				'component_input_text'
 			);
 
@@ -671,7 +579,7 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_terminoID_by_modelo_name
+	}//end test_get_ar_tipo_by_model
 
 
 
@@ -681,9 +589,7 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_get_ar_all_models(): void {
 
-		$RecordObj_dd	= new RecordObj_dd(NULL, 'dd');
-
-		$result = $RecordObj_dd->get_ar_all_models();
+		$result = ontology_utils::get_ar_all_models();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -712,13 +618,13 @@ final class RecordObj_dd_test extends TestCase {
 
 
 	/**
-	* TEST_get_ar_all_terminoID_of_modelo_tipo
+	* TEST_get_ar_all_tipo_of_modelo_tipo
 	* @return void
 	*/
-	public function test_get_ar_all_terminoID_of_modelo_tipo(): void {
+	public function test_get_ar_all_tipo_of_modelo_tipo(): void {
 
 		// section
-			$result = RecordObj_dd::get_ar_all_terminoID_of_modelo_tipo(
+			$result = ontology_node::get_ar_all_tipo_of_modelo_tipo(
 				'dd6'
 			);
 
@@ -744,7 +650,7 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_all_terminoID_of_modelo_tipo
+	}//end test_get_ar_all_tipo_of_modelo_tipo
 
 
 
@@ -754,9 +660,9 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_get_ar_children_of_this(): void {
 
-		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
+		$ontology_node	= new ontology_node('dd1', 'dd');
 
-		$result = $RecordObj_dd->get_ar_children_of_this();
+		$result = $ontology_node->get_ar_children_of_this();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -790,7 +696,7 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_get_ar_children(): void {
 
-		$result = RecordObj_dd::get_ar_children('dd1');
+		$result = ontology_node::get_ar_children('dd1');
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -824,8 +730,8 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_get_ar_recursive_children_of_this(): void {
 
-		$RecordObj_dd	= new RecordObj_dd('dd242');
-		$result			= $RecordObj_dd->get_ar_recursive_children_of_this('dd242');
+		$ontology_node	= new ontology_node('dd242');
+		$result			= $ontology_node->get_ar_recursive_children_of_this('dd242');
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -855,7 +761,7 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_get_ar_recursive_children(): void {
 
-		$result = RecordObj_dd::get_ar_recursive_children('dd242');
+		$result = ontology_node::get_ar_recursive_children('dd242');
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -886,8 +792,8 @@ final class RecordObj_dd_test extends TestCase {
 	public function test_get_ar_parents_of_this(): void {
 		// $start_time=start_time();
 
-		$RecordObj_dd	= new RecordObj_dd('rsc85');
-		$result			= $RecordObj_dd->get_ar_parents_of_this();
+		$ontology_node	= new ontology_node('rsc85');
+		$result			= $ontology_node->get_ar_parents_of_this();
 
 		// $total = exec_time_unit($start_time,'ms').' ms';
 		// dump($total, ' total time ++ '.to_string());
@@ -922,8 +828,8 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_get_ar_siblings_of_this(): void {
 
-		$RecordObj_dd	= new RecordObj_dd('rsc85');
-		$result			= $RecordObj_dd->get_ar_siblings_of_this();
+		$ontology_node	= new ontology_node('rsc85');
+		$result			= $ontology_node->get_ar_siblings_of_this();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -966,11 +872,11 @@ final class RecordObj_dd_test extends TestCase {
 	* TEST_get_relaciones
 	* @return void
 	*/
-	public function test_get_relaciones(): void {
+	public function test_get_relations(): void {
 
 		// image rsc88
-		$RecordObj_dd	= new RecordObj_dd('rsc88');
-		$result			= $RecordObj_dd->get_relaciones();
+		$ontology_node	= new ontology_node('rsc88');
+		$result			= $ontology_node->get_relations();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -1021,10 +927,10 @@ final class RecordObj_dd_test extends TestCase {
 	public function test_set_relaciones(): void {
 
 		// image rsc88
-		$RecordObj_dd = new RecordObj_dd('rsc88');
+		$ontology_node = new ontology_node('rsc88');
 		// force load DB value
-		$RecordObj_dd->Load();
-		$result			= $RecordObj_dd->set_relaciones(['tipo'=>'rsc91']);
+		$ontology_node->Load();
+		$result			= $ontology_node->set_relaciones(['tipo'=>'rsc91']);
 
 		$expected	= 'boolean';
 		$eq			= gettype($result)===$expected;
@@ -1036,7 +942,7 @@ final class RecordObj_dd_test extends TestCase {
 		);
 
 		// check set value
-			$relaciones = $RecordObj_dd->get_relaciones();
+			$relaciones = $ontology_node->get_relaciones();
 
 			$expected	= 'array';
 			$eq			= gettype($relaciones)===$expected;
@@ -1057,7 +963,7 @@ final class RecordObj_dd_test extends TestCase {
 			);
 
 		// null case
-			$result = $RecordObj_dd->set_relaciones(null);
+			$result = $ontology_node->set_relaciones(null);
 
 			$expected	= 'boolean';
 			$eq			= gettype($result)===$expected;
@@ -1068,18 +974,18 @@ final class RecordObj_dd_test extends TestCase {
 					. ' expected: ' . to_string($expected)
 			);
 
-		$RecordObj_dd->__destuct();
+		$ontology_node->__destuct();
 	}//end test_set_relaciones
 
 
 
 	/**
-	* TEST_get_ar_terminos_relacionados
+	* TEST_GET_RELATION_NODES
 	* @return void
 	*/
-	public function test_get_ar_terminos_relacionados(): void {
+	public function test_get_relation_nodes(): void {
 
-		$result = RecordObj_dd::get_ar_terminos_relacionados(
+		$result = ontology_node::get_relation_nodes(
 			'rsc88',
 			true,
 			true // simple
@@ -1107,18 +1013,18 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_terminos_relacionados
+	}//end test_get_relation_nodes
 
 
 
 	/**
-	* TEST_get_ar_terminoID_by_modelo_name_and_relation
+	* TEST_get_ar_tipo_by_model_AND_RELATION
 	* @return void
 	*/
-	public function test_get_ar_terminoID_by_modelo_name_and_relation(): void {
+	public function test_get_ar_tipo_by_model_and_relation(): void {
 
 		// children
-		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_and_relation(
 			'rsc88',
 			'section_list',
 			'children'
@@ -1148,7 +1054,7 @@ final class RecordObj_dd_test extends TestCase {
 			);
 
 		// children_recursive
-		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_and_relation(
 			'rsc75', // People
 			'component_input_text',
 			'children_recursive'
@@ -1168,11 +1074,11 @@ final class RecordObj_dd_test extends TestCase {
 					. ' expected: ' . to_string($expected)
 			);
 
-		// termino_relacionado
-		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		// related
+		$result = ontology_node::get_ar_tipo_by_model_and_relation(
 			'rsc88', // Image
 			'component_input_text',
-			'termino_relacionado'
+			'related'
 		);
 
 		// rsc23
@@ -1190,7 +1096,7 @@ final class RecordObj_dd_test extends TestCase {
 			);
 
 		// parent
-		$result = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$result = ontology_node::get_ar_tipo_by_model_and_relation(
 			'rsc88', // Image
 			'section_group',
 			'parent'
@@ -1209,7 +1115,7 @@ final class RecordObj_dd_test extends TestCase {
 					. ' result: ' . to_string($result) . PHP_EOL
 					. ' expected: ' . to_string($expected)
 			);
-	}//end test_get_ar_terminoID_by_modelo_name_and_relation
+	}//end test_get_ar_tipo_by_model_and_relation
 
 
 
@@ -1220,7 +1126,7 @@ final class RecordObj_dd_test extends TestCase {
 	public function test_get_translatable(): void {
 
 		// false
-		$result = RecordObj_dd::get_translatable(
+		$result = ontology_node::get_translatable(
 			'rsc88', // component_image
 		);
 
@@ -1243,7 +1149,7 @@ final class RecordObj_dd_test extends TestCase {
 		);
 
 		// true
-		$result = RecordObj_dd::get_translatable(
+		$result = ontology_node::get_translatable(
 			'rsc99', // component_text_area
 		);
 
@@ -1274,7 +1180,7 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_get_color(): void {
 
-		$result = RecordObj_dd::get_color(
+		$result = ontology_node::get_color(
 			'rsc167', // Audiovisual
 		);
 
@@ -1305,7 +1211,7 @@ final class RecordObj_dd_test extends TestCase {
 	*/
 	public function test_get_active_tlds(): void {
 
-		$result = RecordObj_dd::get_active_tlds();
+		$result = ontology_utils::get_active_tlds();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -1340,7 +1246,7 @@ final class RecordObj_dd_test extends TestCase {
 	public function test_check_active_tld(): void {
 
 		// true active
-		$result = RecordObj_dd::check_active_tld('rsc25');
+		$result = ontology_utils::check_active_tld('rsc25');
 
 		$expected	= 'boolean';
 		$eq			= gettype($result)===$expected;
@@ -1362,7 +1268,7 @@ final class RecordObj_dd_test extends TestCase {
 			);
 
 		// false active
-		$result = RecordObj_dd::check_active_tld('elraspatld92');
+		$result = ontology_utils::check_active_tld('elraspatld92');
 
 		$expected	= 'boolean';
 		$eq			= gettype($result)===$expected;

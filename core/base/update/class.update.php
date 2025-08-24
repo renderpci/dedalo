@@ -63,6 +63,109 @@ class update {
 
 
 	/**
+	* PRE_UPDATE_VERSION
+	* @return object $updates_checked
+	*/
+	public static function pre_update_version() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= '';
+			$response->errors	= [];
+
+		// short vars
+			$updates			= update::get_updates();
+			$current_version	= get_current_data_version();
+			$msg				= array();
+
+		// Disable log and time machine save for all update process (from v4.9.1 24-05-2018)
+			logger_backend_activity::$enable_log = false;
+			#RecordObj_time_machine::$save_time_machine_version  = false;
+
+		// update. Select the correct update object from the file 'updates.php'
+			$update = null;
+			foreach ($updates as $version_to_update) {
+				if($current_version[0] == $version_to_update->update_from_major){
+					if($current_version[1] == $version_to_update->update_from_medium){
+						if($current_version[2] == $version_to_update->update_from_minor){
+
+							$update_version[0] = $version_to_update->version_major;
+							$update_version[1] = $version_to_update->version_medium;
+							$update_version[2] = $version_to_update->version_minor;
+
+							$update = $version_to_update;
+						}
+					}
+				}
+			}
+			if (empty($update)) {
+				$response->msg		= 'Unable to get proper update. Check current version: '.to_string($current_version);
+				$response->errors[]	= 'Update item not found for version '.to_string($current_version);
+				return $response;
+			}
+
+			// 1 run_pre_scripts
+			if(isset($update->run_pre_scripts)){
+				foreach ((array)$update->run_pre_scripts as $key => $current_script) {
+
+					debug_log(__METHOD__ . PHP_EOL
+						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+						. " EXECUTING RUN_PRE_SCRIPTS ... " . PHP_EOL
+						. " current_script: " . to_string($current_script) . PHP_EOL
+						. " memory usage: " . dd_memory_usage() . PHP_EOL
+						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+						, logger::WARNING
+					);
+
+					$run_scripts_response	= update::run_scripts($current_script);
+					$cmsg					= $run_scripts_response->msg;
+					$msg[]					= "Updated run scripts: ".to_string($cmsg);
+
+					if ($run_scripts_response->result===false) {
+
+						array_push($msg, 'Error on run_pre_scripts: '.to_string($current_script));
+
+						debug_log(__METHOD__." Error on run_pre_scripts ".PHP_EOL
+							. 'The result is false. Check your script: ' .PHP_EOL
+							. to_string($current_script) .PHP_EOL
+							. 'Note that the run_pre_scripts loop to be continue with the next one'
+							, logger::ERROR
+						);
+
+						// msg update
+							$msg[] = 'Error updating Dédalo data';
+							if (isset($run_scripts_response->msg)) {
+								$msg[] = $run_scripts_response->msg;
+							}
+
+						// errors
+							if (isset($run_scripts_response->errors)) {
+								$response->errors = array_merge($response->errors, $run_scripts_response->errors);
+							}
+
+						// stop_on_error
+							if (isset($current_script->stop_on_error) && $current_script->stop_on_error===true) {
+
+								$response->result	= false ;
+								$response->msg		= $msg;
+								$response->errors[] = 'unable to run update script';
+								return $response;
+							}
+					}
+				}//end foreach ((array)$update->run_pre_scripts as $current_script)
+			}
+
+		// response
+			array_push($msg, 'Updated version successfully');
+			$response->result	= true ;
+			$response->msg		= $msg;
+
+		return (object)$response;
+	}//end pre_update_version
+
+
+
+	/**
 	* UPDATE_VERSION
 	* Updates Dédalo data version.
 	* Allow change components data format or add new tables or index
@@ -462,7 +565,7 @@ class update {
 		// Gets array of all db tables
 		$tables = (array)backup::get_tables();
 
-		$ar_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+		$ar_section_tipo	= ontology_utils::get_ar_tipo_by_model('section');
 		$n_sections			= count($ar_section_tipo);
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
@@ -480,7 +583,7 @@ class update {
 			$start_time = start_time();
 			$before = memory_get_usage();
 
-			$current_section_label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true);
+			$current_section_label = ontology_node::get_term_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true);
 
 
 			// Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
@@ -655,9 +758,9 @@ class update {
 
 					foreach($ar_component_tipo as $current_component_tipo) {
 
-						$RecordObj_dd	= new RecordObj_dd($current_component_tipo);
-						$translatable	= $RecordObj_dd->get_traducible();
-						$ar_langs		= ($translatable==='no') ? [DEDALO_DATA_NOLAN] : DEDALO_PROJECTS_DEFAULT_LANGS;
+						$ar_langs = ontology_node::get_translatable( $current_component_tipo )
+							? [DEDALO_DATA_NOLAN]
+							: DEDALO_PROJECTS_DEFAULT_LANGS;
 
 						foreach($ar_langs as $current_lang) {
 

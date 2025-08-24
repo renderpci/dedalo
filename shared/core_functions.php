@@ -2619,21 +2619,21 @@ function check_url( string $url ) : bool {
 
 /**
 * IS_ONTOLOGY_AVAILABLE
-* Check if Ontology (jer_dd) is reachable
+* Check if Ontology (dd_ontology) is reachable
 * @return bool
 */
 function is_ontology_available() {
 
 	try {
 
-		$RecordObj_dd	= new RecordObj_dd('dd1', 'dd');
-		$term			= $RecordObj_dd->get_term();
+		$ontology_node	= new ontology_node('dd1');
+		$term			= $ontology_node->get_term_data();
 
 		return is_object($term);
 
 	} catch (Exception $e) {
 		debug_log(__METHOD__
-			. " Error (exception) on check term jer_dd_column" . PHP_EOL
+			. " Error (exception) on check term dd_ontology column" . PHP_EOL
 			. ' Caught exception: ' . $e->getMessage()
 			, logger::ERROR
 		);

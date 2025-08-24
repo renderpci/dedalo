@@ -286,7 +286,7 @@ const render_optimize_tables = (self) => {
 		inputs			: [{
 			type		: 'text',
 			name		: 'tables',
-			label		: 'Tables list as jer_dd,matrix_ontology,matrix',
+			label		: 'Tables list as dd_ontology, matrix_ontology, matrix',
 			value		: source_tables.join(','),
 			mandatory	: true
 		}],
@@ -406,7 +406,7 @@ const render_consolidate_table_sequences = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Remunerates table id column to consolidate id sequence from 1,2,... <br>[jer_dd, matrix_ontology, matrix_ontology_main, matrix_dd]',
+		inner_html		: 'Remunerates table id column to consolidate id sequence from 1,2,... <br>[dd_ontology, matrix_ontology, matrix_ontology_main, matrix_dd]',
 		parent			: consolidate_table_sequences_container
 	})
 

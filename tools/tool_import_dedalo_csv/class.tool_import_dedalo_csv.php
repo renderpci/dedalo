@@ -86,8 +86,8 @@ class tool_import_dedalo_csv extends tool_common {
 						$ar_columns_map = array_map(function($el){
 							return (object)[
 								'tipo'	=> $el,
-								'label'	=> RecordObj_dd::get_termino_by_tipo($el, DEDALO_APPLICATION_LANG, true),
-								'model'	=> $el!=='section_id' && !empty($el) ? RecordObj_dd::get_model_name_by_tipo($el, true) : $el
+								'label'	=> ontology_node::get_term_by_tipo($el, DEDALO_APPLICATION_LANG, true),
+								'model'	=> $el!=='section_id' && !empty($el) ? ontology_node::get_model_by_tipo($el, true) : $el
 							];
 						}, $file_info);
 
@@ -579,8 +579,8 @@ class tool_import_dedalo_csv extends tool_common {
 						}
 
 					// component base
-						$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
-						$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
+						$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
+						$translate		= ontology_node::get_translatable($component_tipo); //==='si' ? true : false;
 						$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 						$component		= component_common::get_instance(
 							$model_name,
@@ -767,7 +767,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 					// set the information about the process
 					$process_info->component_tipo = $component_tipo;
-					$process_info->compomnent_label = RecordObj_dd::get_termino_by_tipo($component_tipo,DEDALO_APPLICATION_LANG, true);
+					$process_info->compomnent_label = ontology_node::get_term_by_tipo($component_tipo,DEDALO_APPLICATION_LANG, true);
 
 					// print the process_info
 					if ( running_in_cli()===true ) {
@@ -837,7 +837,7 @@ class tool_import_dedalo_csv extends tool_common {
 			// 	'dd1224',
 			// 	'dd1225'
 			// ];
-			$ar_section_info = RecordObj_dd::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
+			$ar_section_info = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
 		// ar_component_tipo
 			$ar_possible_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
@@ -888,7 +888,7 @@ class tool_import_dedalo_csv extends tool_common {
 				// error case (ar_possible_component_tipo)
 					if (!in_array($component_tipo, $ar_possible_component_tipo)) {
 
-						$model_name = RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
+						$model_name = ontology_node::get_model_by_tipo($component_tipo, true);
 
 						$response->result	= false;
 						$response->msg		= "Sorry, component tipo: $component_tipo (model: $model_name) not found in section: $section_tipo";
@@ -1011,7 +1011,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// 		// $target_section_tipo
 		// 			if( empty($target_section_tipo)) {
-		// 				$model_name	= RecordObj_dd::get_model_name_by_tipo($from_component_tipo);
+		// 				$model_name	= ontology_node::get_model_by_tipo($from_component_tipo);
 		// 				$component	= component_common::get_instance(
 		// 					$model_name, // string model
 		// 					$from_component_tipo, // string tipo
@@ -1193,7 +1193,7 @@ class tool_import_dedalo_csv extends tool_common {
 		try {
 
 			// model safe
-				$model = RecordObj_dd::get_model_name_by_tipo($section_tipo, true);
+				$model = ontology_node::get_model_by_tipo($section_tipo, true);
 				if ($model!=='section') {
 					$response->msg .= ' Invalid model (expected section): '.$model;
 					return $response;
@@ -1213,7 +1213,7 @@ class tool_import_dedalo_csv extends tool_common {
 			if (!empty($components_list)) {
 
 				// section info components
-				$section_info_components = RecordObj_dd::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
+				$section_info_components = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 				foreach ($section_info_components as $tipo) {
 					$components_list[] = $tipo;
 				}
@@ -1221,14 +1221,14 @@ class tool_import_dedalo_csv extends tool_common {
 				$result = [];
 				foreach ($components_list as $tipo) {
 					$result[] = (object)[
-						'label'	=> RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true),
+						'label'	=> ontology_node::get_term_by_tipo($tipo, DEDALO_APPLICATION_LANG, true),
 						'value'	=> $tipo,
-						'model'	=> RecordObj_dd::get_model_name_by_tipo($tipo, true)
+						'model'	=> ontology_node::get_model_by_tipo($tipo, true)
 					];
 				}
 
 				$response->result	= $result;
-				$response->label	= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+				$response->label	= ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 				$response->msg		= 'OK. Request done';
 			}
 

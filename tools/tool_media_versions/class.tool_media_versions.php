@@ -32,7 +32,7 @@ class tool_media_versions extends tool_common {
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// component
-			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -69,7 +69,7 @@ class tool_media_versions extends tool_common {
 			$quality		= $options->quality ?? null;
 
 		// component
-			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -103,7 +103,7 @@ class tool_media_versions extends tool_common {
 			$async			= $options->async ?? true;
 
 		// component
-			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -136,7 +136,7 @@ class tool_media_versions extends tool_common {
 			$quality		= $options->quality;
 
 		// component
-			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -175,7 +175,7 @@ class tool_media_versions extends tool_common {
 			$degrees		= $options->degrees;
 
 		// component
-			$model		= RecordObj_dd::get_model_name_by_tipo($tipo, true);
+			$model		= ontology_node::get_model_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -239,7 +239,7 @@ class tool_media_versions extends tool_common {
 			$regenerate_options	= $options->regenerate_options;
 
 		// component
-			$model		= RecordObj_dd::get_model_name_by_tipo($tipo, true);
+			$model		= ontology_node::get_model_by_tipo($tipo, true);
 			$lang		= DEDALO_DATA_LANG;
 			$component	= component_common::get_instance(
 				$model,
@@ -308,7 +308,7 @@ class tool_media_versions extends tool_common {
 				$response->errors	= [];
 
 		// component
-			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,

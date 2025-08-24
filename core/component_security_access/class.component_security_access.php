@@ -240,7 +240,7 @@ class component_security_access extends component_common {
 
 		// get the exclude elements defined into ontology to be remove of the datalist
 		$ar_tipo_to_be_exclude	= null;
-		$ar_exclude_elements	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$ar_exclude_elements	= ontology_node::get_ar_tipo_by_model_and_relation(
 			$section_tipo,
 			'exclude_elements',
 			'children',
@@ -248,7 +248,7 @@ class component_security_access extends component_common {
 		);
 		if (isset($ar_exclude_elements[0])) {
 			$exclude_elements_tipo = $ar_exclude_elements[0];
-			$ar_tipo_to_be_exclude = RecordObj_dd::get_ar_terminos_relacionados(
+			$ar_tipo_to_be_exclude = ontology_node::get_relation_nodes(
 				$exclude_elements_tipo,
 				false,
 				true
@@ -260,7 +260,7 @@ class component_security_access extends component_common {
 
 		// v6
 		// see if the section has a ddo_map defined
-			$ontology_node		= new RecordObj_dd($section_tipo);
+			$ontology_node		= new ontology_node($section_tipo);
 			$section_properties	= $ontology_node->get_properties();
 			// check section properties request_config
 			if(isset($section_properties->source) && isset($section_properties->source->request_config)){
@@ -283,8 +283,8 @@ class component_security_access extends component_common {
 					$item = (object)[
 						'tipo'			=> $ddo->tipo,
 						'section_tipo'	=> $section_tipo,
-						'model'			=> RecordObj_dd::get_model_name_by_tipo($ddo->tipo, true),
-						'label'			=> RecordObj_dd::get_termino_by_tipo($ddo->tipo, DEDALO_APPLICATION_LANG, true, true),
+						'model'			=> ontology_node::get_model_by_tipo($ddo->tipo, true),
+						'label'			=> ontology_node::get_term_by_tipo($ddo->tipo, DEDALO_APPLICATION_LANG, true, true),
 						'parent'		=> $ddo->parent_grouper ?? $section_tipo
 					];
 					$children_list[] = $item;
@@ -352,7 +352,7 @@ class component_security_access extends component_common {
 
 		$ar_elements = [];
 
-		$source_model = RecordObj_dd::get_model_name_by_tipo($tipo,true);
+		$source_model = ontology_node::get_model_by_tipo($tipo,true);
 		switch ($source_model) {
 
 			case 'section':
@@ -386,8 +386,8 @@ class component_security_access extends component_common {
 
 			default:
 				# Areas or section groups ...
-				$RecordObj_dd	= new RecordObj_dd($tipo);
-				$ar_ts_children	= $RecordObj_dd->get_ar_children_of_this();
+				$ontology_node	= new ontology_node($tipo);
+				$ar_ts_children	= $ontology_node->get_ar_children_of_this();
 				break;
 		}
 
@@ -417,7 +417,7 @@ class component_security_access extends component_common {
 				}
 
 			// remove_exclude_models
-				$component_model = RecordObj_dd::get_model_name_by_tipo($element_tipo, true);
+				$component_model = ontology_node::get_model_by_tipo($element_tipo, true);
 				if( in_array($component_model, $ar_exclude_model)) {
 					continue ;
 				}
@@ -431,8 +431,8 @@ class component_security_access extends component_common {
 				$item = (object)[
 					'tipo'			=> $element_tipo,
 					'section_tipo'	=> $tipo,
-					'model'			=> RecordObj_dd::get_model_name_by_tipo($element_tipo, true),
-					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
+					'model'			=> ontology_node::get_model_by_tipo($element_tipo, true),
+					'label'			=> ontology_node::get_term_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
 					'parent'		=> $tipo
 				];
 				$ar_elements[] = $item;
@@ -462,12 +462,12 @@ class component_security_access extends component_common {
 				return $ar_tipo_admin;
 			}
 
-		$ar_result 	= RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='area_admin', $prefijo='dd');
+		$ar_result 	= ontology_utils::get_ar_tipo_by_model($modelo_name='area_admin', $prefijo='dd');
 		$ar_tesauro = array();
 
 		if(!empty($ar_result[0])) {
 			$tipo					= $ar_result[0];
-			$obj					= new RecordObj_dd($tipo);
+			$obj					= new ontology_node($tipo);
 			$ar_children_of_this	= $obj->get_ar_children_of_this();
 			$ar_tesauro				= $ar_children_of_this;
 		}
@@ -601,7 +601,7 @@ class component_security_access extends component_common {
 
 			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
 			$tipo						= DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
-			$model						= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model						= ontology_node::get_model_by_tipo($tipo,true);
 			$component_security_access	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo

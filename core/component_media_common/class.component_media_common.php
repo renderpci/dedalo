@@ -130,7 +130,7 @@ class component_media_common extends component_common {
 
 		// lang. Force always DEDALO_DATA_NOLAN when is not translatable
 		// (note that PDF can be translatable)
-			$translatable = RecordObj_dd::get_translatable($tipo);
+			$translatable = ontology_node::get_translatable($tipo);
 			if ($translatable!==true) {
 				$lang = DEDALO_DATA_NOLAN;
 			}
@@ -520,7 +520,7 @@ class component_media_common extends component_common {
 			$id	= $this->get_identifier();
 
 		// add lang when translatable
-			if (RecordObj_dd::get_translatable($this->tipo)===true){
+			if (ontology_node::get_translatable($this->tipo)){
 				$id .= '_'.DEDALO_DATA_LANG;
 			}
 
@@ -604,7 +604,7 @@ class component_media_common extends component_common {
 		if ( !is_null($additional_path_tipo) ) {
 
 			$component_tipo	= $additional_path_tipo;
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -2679,7 +2679,7 @@ class component_media_common extends component_common {
 
 					// get the target filename defined in properties as `Original file name` rsc398
 					$tipo  = $properties->target_filename;
-					$model = RecordObj_dd::get_model_name_by_tipo($tipo,true);
+					$model = ontology_node::get_model_by_tipo($tipo,true);
 					$component = component_common::get_instance(
 						$model, // string model
 						$tipo, // string tipo

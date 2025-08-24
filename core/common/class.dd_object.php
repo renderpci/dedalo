@@ -274,7 +274,7 @@ class dd_object extends stdClass {
 
 		// auto-resolve model if is not defined
 			if (!isset($this->model) && isset($this->tipo)) {
-				$this->model = RecordObj_dd::get_model_name_by_tipo($this->tipo,true);
+				$this->model = ontology_node::get_model_by_tipo($this->tipo,true);
 			}
 
 		return true;

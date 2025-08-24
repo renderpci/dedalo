@@ -9,6 +9,246 @@ class v6_to_v7 {
 
 
 	/**
+	* PRE_UPDATE
+	* This is a pre-update, running after install new code but before Dédalo log_out of the session to go data, ontology and tools updates.
+	* Update process flow:
+	* 	Update code --> pre update --> log out --> log in --> update ontology --> update data --> update tools --> log out
+	* The change move data from current jer_dd to new dd_ontology table.
+	* Is not possible to run this update as normal data update because it change the active ontology
+	* The new code only call to `dd_ontology` table, therefore is necessary to run it before the update log-out
+	* The login process needs a valid ontology nodes in `dd_ontology` at least with the `dd` tld
+	* If this process fails, Dédalo will not work!
+	* @return bool
+	*/
+	public static function pre_update() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Pre update has failed';
+			$response->errors	= [];
+
+		// 1.  add new columns to jer_dd
+		$result = v6_to_v7::expand_jer_dd_with_new_schema();
+
+		if($result== false){
+			return $response;
+		}
+
+		// 2. fill the new columns with the compatible data
+		$result = v6_to_v7::fill_new_columns_in_jer_dd();
+
+		if($result== false){
+			return $response;
+		}
+
+		// 3. Change the relations data of jer_dd, to be coherent
+		$result = v6_to_v7::refactor_jer_dd_relations();
+
+		if($result== false){
+			return $response;
+		}
+
+		// 4. Create the new `dd_ontology` table and set the columns with correct data
+		$result = v6_to_v7::create_dd_ontology_table();
+
+		if($result== false){
+			return $response;
+		}
+
+		$response->result = true;
+		$response->msg = 'Pre update was done';
+
+
+		return $response;
+	}//end pre_update
+
+
+
+	/**
+	* EXPAND_JER_DD_WITH_NEW_SCHEMA
+	* Change the jer_dd structure in DDBB adding new columns with different names and data type
+	* new map:
+	* 	'terminoID'			=> 'tipo',
+	* 	'modelo'			=> 'model_tipo',
+	* 	'esmodelo'			=> 'is_model',
+	* 	'esdescriptor'		=> 'is_descriptor',
+	* 	'traducible'		=> 'translatable',
+	* 	'norden'			=> 'order',
+	* 	'relaciones'		=> 'relations'
+	* @return bool
+	*/
+	public static function expand_jer_dd_with_new_schema() : bool {
+
+		$sql_query = sanitize_query ('
+			ALTER TABLE "jer_dd"
+				ADD COLUMN IF NOT EXISTS "tipo" character varying(32) NULL,
+				ADD COLUMN IF NOT EXISTS "model_tipo" character varying(8) NULL,
+				ADD COLUMN IF NOT EXISTS "is_model" boolean NULL,
+				ADD COLUMN IF NOT EXISTS "is_translatable" boolean NULL,
+				ADD COLUMN IF NOT EXISTS "order_number" numeric(4,0) NULL,
+				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL;
+		');
+
+		$result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed Update jer_dd with a new schema ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end expand_jer_dd_with_new_schema
+
+
+
+	/**
+	* FILL_NEW_COLUMNS_IN_JER_DD
+	* Collect data and transform from existing columns and fill the new schema with new data.
+	* 'si' -> true
+	* 'no' -> false
+	* @return bool
+	*/
+	public static function fill_new_columns_in_jer_dd() {
+
+		$sql_query = sanitize_query ('
+			UPDATE "jer_dd"
+				SET tipo 			= "terminoID",
+					model_tipo 		= modelo,
+					order_number	= norden,
+					is_model 		= CASE WHEN esmodelo = \'si\' THEN true ELSE false END,
+					is_translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END;
+		');
+
+		$result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed add new data into the new schema of jer_dd ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end fill_new_columns_in_jer_dd
+
+
+
+	/**
+	* REFACTOR_JER_DD_relations
+	* 'relaciones' => 'relations'
+	* Unification of relations data. In some rows, relations is an object with the model as key, in other the key is the string 'tipo'
+	* As model will not use anymore, all data will change to a object with 'tipo' string as key.
+	* [{
+	* 	"tipo": "dd64"
+	* }]
+	* @return bool
+	*/
+	public static function refactor_jer_dd_relations() : bool {
+
+		// jer_dd. delete terms (jer_dd)
+			$sql_query = '
+				SELECT * FROM "jer_dd";
+			';
+			$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		// iterate jer_dd_result row
+		while($row = pg_fetch_assoc($jer_dd_result)) {
+
+			$relaciones	= $row['relaciones'];
+			$id			= $row['id'];
+
+			$relations = json_decode($relaciones) ?? [];
+
+			$ar_relations = [];
+			foreach ($relations as $item) {
+				foreach ($item as $value) {
+					$relation = new stdClass();
+						$relation->tipo = $value;
+					$ar_relations[] = $relation;
+				}
+			};
+
+			$new_relation = ( empty($ar_relations) ) ? null : $ar_relations;
+
+			$string_relation_object = json_encode($new_relation) ?? '';
+
+			$strQuery	= "UPDATE \"jer_dd\" SET relations = $1 WHERE id = $2 ";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $string_relation_object, $id ));
+			if($result===false) {
+				$msg = "Failed Update section_data (jer_dd) $id";
+				debug_log(__METHOD__
+					." ERROR: $msg "
+					, logger::ERROR
+				);
+				return false;
+			}
+		}
+		return true;
+	}//end refactor_jer_dd_relations
+
+
+
+	/**
+	* CREATE_DD_ONTOLOGY_TABLE
+	* @return bool
+	*/
+	public static function create_dd_ontology_table() : bool {
+
+		$sql_query = sanitize_query ('
+			CREATE TABLE dd_ontology AS
+				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades
+			FROM jer_dd;
+
+			COMMENT ON TABLE "dd_ontology" IS  \'Active ontology\';
+
+			CREATE SEQUENCE IF NOT EXISTS "dd_ontology_id_seq" OWNED BY "dd_ontology"."id";
+
+			ALTER TABLE "dd_ontology"
+			ALTER "id" TYPE integer,
+			ALTER "id" SET DEFAULT nextval(\'dd_ontology_id_seq\'),
+			ALTER "id" SET NOT NULL;
+			COMMENT ON COLUMN dd_ontology.id IS \'Unique table identifier\';
+			COMMENT ON COLUMN dd_ontology.tipo IS \'Ontology identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)\';
+			COMMENT ON COLUMN dd_ontology.parent IS \'Ontology identifier parent (ontology TLD | ontology instance ID, e.g., tch1 = Tangible Cultural Heritage -> Objects)\';
+			COMMENT ON COLUMN dd_ontology.term IS \'Ontology node names in multiple languages\';
+			COMMENT ON COLUMN dd_ontology.model IS \'Ontology model name as section, componnet_portal, etc.\';
+			COMMENT ON COLUMN dd_ontology.order_number IS \'Ontology node position order\';
+			COMMENT ON COLUMN dd_ontology.relations IS \'Direct connections between nodes, unidirectional\';
+			COMMENT ON COLUMN dd_ontology.tld IS \'Ontology name space\';
+			COMMENT ON COLUMN dd_ontology.properties IS \'Ontology node definition\';
+			COMMENT ON COLUMN dd_ontology.model_tipo IS \'Ontology identifier for the node type,  e.g., dd6 = section\';
+			COMMENT ON COLUMN dd_ontology.is_model IS \'Boolean to identify if the node is a type of nodes\';
+			COMMENT ON COLUMN dd_ontology.is_translatable IS \'Boolean to identify if the node is a multilingual node\';
+			COMMENT ON COLUMN dd_ontology.propiedades IS \'V5 properties, DEPRECATED\';
+
+			-- Optionally drop the old one and rename
+			-- DROP TABLE IF EXISTS "jer_dd" CASCADE;
+			-- DROP SEQUENCE IF EXISTS jer_dd_id_seq;
+		');
+
+		$result 	= pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed add new data into the new schema of jer_dd ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end create_dd_ontology_table
+
+
+
+	/**
 	* GET_VALUE_TYPE_MAP
 	* @return object
 	*/
@@ -180,7 +420,7 @@ class v6_to_v7 {
 								$literal_components = $datos_value ?? [];
 								foreach ($literal_components as $literal_tipo => $literal_value) {
 
-									$model = RecordObj_dd::get_model_name_by_tipo($literal_tipo);
+									$model = ontology_node::get_model_by_tipo($literal_tipo);
 
 									// skip v5 data
 									if( in_array($model, ['component_filter','component_section_id']) ){
@@ -460,7 +700,7 @@ class v6_to_v7 {
 												// if (isset($new_literal_obj->literal_value->info)) {
 												// 	$new_literal_obj->info = $new_literal_obj->literal_value->info;
 												// }else{
-												// 	$label = RecordObj_dd::get_termino_by_tipo($literal_tipo);
+												// 	$label = ontology_node::get_term_by_tipo($literal_tipo);
 												// 	$new_literal_obj->info = "$label [$model]";
 												// }
 										}
@@ -594,99 +834,5 @@ class v6_to_v7 {
 
 
 
-	/**
-	* REFACTOR_JER_DD
-	* new map
-	* 'terminoID'		=> 'tipo',
-	* 'modelo'			=> 'model_tipo',
-	* 'esmodelo'		=> 'is_model',
-	* 'esdescriptor'	=> 'is_descriptor',
-	* 'traducible'		=> 'translatable',
-	* 'norden'			=> 'order',
-	* 'relaciones'		=> 'relations'
-	* @return
-	*/
-	public static function refactor_jer_dd() : bool {
-
-		// jer_dd. delete terms (jer_dd)
-			$sql_query = '
-				SELECT * FROM "jer_dd";
-			';
-			$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
-
-		// iterate jer_dd_result row
-		while($row = pg_fetch_assoc($jer_dd_result)) {
-
-			$relaciones	= $row['relaciones'];
-			$id			= $row['id'];
-
-			$relations = json_decode($relaciones) ?? [];
-
-			$ar_relations = [];
-			foreach ($relations as $value) {
-				$relation = new stdClass();
-					$relation->tipo = $value;
-				$ar_relations[] = $relation;
-			};
-
-			$new_relation = ( empty($ar_relations) ) ? null : $ar_relations;
-
-
-			$string_relation_object = json_encode($new_relation) ?? '';
-
-			$strQuery	= "UPDATE \"jer_dd\" SET relations = $1 WHERE id = $2 ";
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $string_relation_object, $id ));
-			if($result===false) {
-				$msg = "Failed Update section_data (jer_dd) $id";
-				debug_log(__METHOD__
-					." ERROR: $msg "
-					, logger::ERROR
-				);
-				return false;
-			}
-		}
-		return true;
-	}//end refactor_jer_dd
-
-
-	/**
-	* RECREATE_JER_DD
-	* @return
-	*/
-	public function recreate_jer_dd() {
-
-		sanitize_query ('
-			CREATE TABLE dd_ontology AS
-				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades
-			FROM jer_dd;
-
-			COMMENT ON TABLE "dd_ontology" IS  \'Active ontology\';
-
-			CREATE SEQUENCE IF NOT EXISTS "dd_ontology_id_seq" OWNED BY "dd_ontology"."id";
-
-			ALTER TABLE "dd_ontology"
-			ALTER "id" TYPE integer,
-			ALTER "id" SET DEFAULT nextval(\'dd_ontology_id_seq\'),
-			ALTER "id" SET NOT NULL;
-			COMMENT ON COLUMN dd_ontology.id IS \'Unique table identifier\';
-			COMMENT ON COLUMN dd_ontology.tipo IS \'Ontology identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)\';
-			COMMENT ON COLUMN dd_ontology.parent IS \'Ontology identifier parent (ontology TLD | ontology instance ID, e.g., tch1 = Tangible Cultural Heritage -> Objects)\';
-			COMMENT ON COLUMN dd_ontology.term IS \'Ontology node names in multiple languages\';
-			COMMENT ON COLUMN dd_ontology.model IS \'Ontology model name as section, componnet_portal, etc.\';
-			COMMENT ON COLUMN dd_ontology.order_number IS \'Ontology node position order\';
-			COMMENT ON COLUMN dd_ontology.relations IS \'Direct connections between nodes, unidirectional\';
-			COMMENT ON COLUMN dd_ontology.tld IS \'Ontology name space\';
-			COMMENT ON COLUMN dd_ontology.properties IS \'Ontology node definition\';
-			COMMENT ON COLUMN dd_ontology.model_tipo IS \'Ontology identifier for the node type,  e.g., dd6 = section\';
-			COMMENT ON COLUMN dd_ontology.is_model IS \'Boolean to identify if the node is a type of nodes\';
-			COMMENT ON COLUMN dd_ontology.is_translatable IS \'Boolean to identify if the node is a multilingual node\';
-			COMMENT ON COLUMN dd_ontology.propiedades IS \'V5 properties, DEPRECATED\';
-
-			-- Optionally drop the old one and rename
-			-- DROP TABLE IF EXISTS "jer_dd" CASCADE;
-			-- DROP SEQUENCE IF EXISTS jer_dd_id_seq;
-		');
-
-	}//end recreate_jer_dd
 
 }//end class v6_to_v7

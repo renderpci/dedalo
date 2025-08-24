@@ -53,14 +53,14 @@ class area extends area_common  {
 
 		// root_areas
 			$ar_root_areas		= [];
-			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
-			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity')[0];
-			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
-			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
-			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
+			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_root')[0];
+			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_activity')[0];
+			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_resource')[0];
+			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_tool')[0];
+			$ar_root_areas[]	= ontology_utils::get_ar_tipo_by_model('area_thesaurus')[0];
 
 			// area_graph. check (if user do not have the Ontology updated)
-			$area_graph = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_graph');
+			$area_graph = ontology_utils::get_ar_tipo_by_model('area_graph');
 			if (isset($area_graph[0])) {
 				$ar_root_areas[] = $area_graph[0];
 			}else{
@@ -69,10 +69,10 @@ class area extends area_common  {
 					, logger::WARNING
 				);
 			}
-			$ar_root_areas[] = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
+			$ar_root_areas[] = ontology_utils::get_ar_tipo_by_model('area_admin')[0];
 
 			// area_maintenance. Temporal check (if user do not have the Ontology updated, error is given here)
-			$area_maintenance = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_maintenance');
+			$area_maintenance = ontology_utils::get_ar_tipo_by_model('area_maintenance');
 			if (isset($area_maintenance[0])) {
 				$ar_root_areas[] = $area_maintenance[0]; // dd88
 			}else{
@@ -88,10 +88,10 @@ class area extends area_common  {
 			}
 
 			// area_development
-			$ar_root_areas[] = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development')[0];
+			$ar_root_areas[] = ontology_utils::get_ar_tipo_by_model('area_development')[0];
 
 			// area_ontology. check (if user do not have the Ontology updated)
-			$area_ontology = RecordObj_dd::get_ar_terminoID_by_modelo_name('area_ontology');
+			$area_ontology = ontology_utils::get_ar_tipo_by_model('area_ontology');
 			if (isset($area_ontology[0])) {
 				$ar_root_areas[] = $area_ontology[0];
 			}else{
@@ -108,14 +108,14 @@ class area extends area_common  {
 					if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 
 				// areas. Get the JSON format of the ontology
-
-					$areas[] = RecordObj_dd::tipo_to_json_item($area_tipo, [
-						'tipo',
-						'model',
-						'parent',
-						'properties',
-						'label'
-					]);
+					$ontology_node = new ontology_node( $area_tipo );
+					$areas[] = (object)[
+						'tipo'			=> $ontology_node->get_tipo(),
+						'model'			=> $ontology_node->get_model(),
+						'parent'		=> $ontology_node->get_parent(),
+						'properties'	=> $ontology_node->get_properties(),
+						'label'			=> $ontology_node->get_term( DEDALO_APPLICATION_LANG )
+					];
 
 				// group_areas. get the all children areas and sections of current
 					$ar_group_areas	= self::get_ar_children_areas_recursive($area_tipo);
@@ -126,13 +126,14 @@ class area extends area_common  {
 						// skip the areas_deny
 						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
 
-						$areas[] = RecordObj_dd::tipo_to_json_item($child_area_tipo, [
-							'tipo',
-							'model',
-							'parent',
-							'properties',
-							'label'
-						]);
+						$ontology_node = new ontology_node( $child_area_tipo );
+						$areas[] = (object)[
+							'tipo'			=> $ontology_node->get_tipo(),
+							'model'			=> $ontology_node->get_model(),
+							'parent'		=> $ontology_node->get_parent(),
+							'properties'	=> $ontology_node->get_properties(),
+							'label'			=> $ontology_node->get_term( DEDALO_APPLICATION_LANG )
+						];
 					}
 			}//end foreach ($ar_root_areas as $area_tipo)
 
@@ -158,30 +159,30 @@ class area extends area_common  {
 	* Look structure thesaurus for find children with valid model name
 	* @see get_ar_ts_children_areas
 	*
-	* @param $terminoID
+	* @param $tipo
 	*	tipo (First tipo is null in recursion)
 	* @return array $ar_ts_children_areas
 	*	array recursive of thesaurus structure children filtered by accepted model name
 	*/
-	protected static function get_ar_children_areas_recursive( string $terminoID ) : array {
+	protected static function get_ar_children_areas_recursive( string $tipo ) : array {
 
 		// default value
 		$ar_children_areas_recursive = [];
 
 		// short vars
-		$RecordObj_dd			= new RecordObj_dd($terminoID);
-		$ar_ts_children			= $RecordObj_dd->get_ar_children_of_this();
+		$ontology_node			= new ontology_node($tipo);
+		$ar_ts_children			= $ontology_node->get_ar_children_of_this();
 		$ar_ts_children_size	= sizeof($ar_ts_children);
 
 		if ($ar_ts_children_size>0) {
 
-			// foreach ($ar_ts_children as $children_terminoID) {
+			// foreach ($ar_ts_children as $children_tipo) {
 			for ($i=0; $i < $ar_ts_children_size; $i++) {
 
-				$children_terminoID = $ar_ts_children[$i];
+				$children_tipo = $ar_ts_children[$i];
 
-				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
-				$model			= RecordObj_dd::get_model_name_by_tipo($children_terminoID,true);
+				$ontology_node	= new ontology_node($children_tipo);
+				$model			= ontology_node::get_model_by_tipo($children_tipo,true);
 
 				// Test if model is accepted or not (more restrictive)
 				if( 	in_array($model, area::$ar_children_include_model_name)
@@ -189,10 +190,10 @@ class area extends area_common  {
 				) {
 
 					// add current
-					$ar_children_areas_recursive[] = $children_terminoID;
+					$ar_children_areas_recursive[] = $children_tipo;
 
 					// calculate recursive
-					$ar_temp = self::get_ar_children_areas_recursive($children_terminoID);
+					$ar_temp = self::get_ar_children_areas_recursive($children_tipo);
 					$ar_children_areas_recursive = array_merge($ar_children_areas_recursive, $ar_temp);
 				}
 			}//end for ($i=0; $i < $ar_ts_children_size; $i++)

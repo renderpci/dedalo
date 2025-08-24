@@ -79,7 +79,7 @@ class relation_list extends common {
 				//get the id
 				$current_id = new stdClass;
 					$current_id->section_tipo		= $current_section_tipo;
-					$current_id->section_label		= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+					$current_id->section_label		= ontology_node::get_term_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
 					$current_id->component_tipo		= 'id';
 					$current_id->component_label	= 'id';
 
@@ -101,17 +101,17 @@ class relation_list extends common {
 
 				if( isset($ar_children[0]) ) {
 					$current_children	= reset($ar_children);
-					$recordObjdd		= new RecordObj_dd($current_children);
-					$ar_relation_components[$current_section_tipo] = $recordObjdd->get_relaciones();
+					$ontology_node		= new ontology_node($current_children);
+					$ar_relation_components[$current_section_tipo] = $ontology_node->get_relations();
 					if(isset($ar_relation_components[$current_section_tipo])){
 						foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
 							foreach ($current_relation_component as $tipo) {
 
 								$current_relation_list = new stdClass;
 									$current_relation_list->section_tipo	= $current_section_tipo;
-									$current_relation_list->section_label	= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+									$current_relation_list->section_label	= ontology_node::get_term_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
 									$current_relation_list->component_tipo	= $tipo;
-									$current_relation_list->component_label	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
+									$current_relation_list->component_label	= ontology_node::get_term_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
 
 								$ar_context[] = $current_relation_list;
 							}
@@ -178,8 +178,8 @@ class relation_list extends common {
 		if(!empty($ar_components)){
 			foreach ($ar_components as $current_relation_component) {
 				foreach ($current_relation_component as $modelo => $tipo) {
-					// $model_name		= RecordObj_dd::get_model_name_by_tipo($modelo, true);
-					$model_name			= RecordObj_dd::get_model_name_by_tipo($tipo, true);
+					// $model_name		= ontology_node::get_model_by_tipo($modelo, true);
+					$model_name			= ontology_node::get_model_by_tipo($tipo, true);
 					$current_component	= component_common::get_instance(
 						$model_name,
 						$tipo,
@@ -772,13 +772,13 @@ class relation_list extends common {
 					$ar_value = [];
 					foreach ($diffusion_value as $current_locator) {
 
-						$model = RecordObj_dd::get_model_name_by_tipo($target_component_tipo,true);
+						$model = ontology_node::get_model_by_tipo($target_component_tipo,true);
 
 						if ($direct_value===true) {
 
 							// direct component value case (@see 'dmmgobes29')
 
-							$translatable = RecordObj_dd::get_translatable( $target_component_tipo );
+							$translatable = ontology_node::get_translatable( $target_component_tipo );
 							$lang = ( $translatable===true) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 							$current_component = component_common::get_instance(
 								$model,

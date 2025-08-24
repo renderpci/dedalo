@@ -79,7 +79,7 @@ class diffusion_section_stats extends diffusion {
 					  {
 					    "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
 					    "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
-					    "model": "'.RecordObj_dd::get_model_name_by_tipo(USER_ACTIVITY_USER_TIPO,true).'",
+					    "model": "'.ontology_node::get_model_by_tipo(USER_ACTIVITY_USER_TIPO,true).'",
 					    "name": "User"
 					  }
 					]
@@ -128,7 +128,7 @@ class diffusion_section_stats extends diffusion {
 					$section_id		= $row->section_id;
 					$section_tipo	= $row->section_tipo;
 
-					$model		= RecordObj_dd::get_model_name_by_tipo(USER_ACTIVITY_DATE_TIPO,true);
+					$model		= ontology_node::get_model_by_tipo(USER_ACTIVITY_DATE_TIPO,true);
 					$component	= component_common::get_instance(
 						$model,
 						USER_ACTIVITY_DATE_TIPO,
@@ -364,7 +364,7 @@ class diffusion_section_stats extends diffusion {
 					$item->type		= 'what';
 					$item->tipo		= $key;
 					$item->value	= $value;
-					$item->label	= RecordObj_dd::get_termino_by_tipo($key); // add label for easy human read
+					$item->label	= ontology_node::get_term_by_tipo($key); // add label for easy human read
 				$totals_data[] = $item;
 			}
 			// where
@@ -526,7 +526,7 @@ class diffusion_section_stats extends diffusion {
 
 		// user. component_portal
 			(function($tipo, $value) use($section_tipo, $section_id){
-				$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+				$model		= ontology_node::get_model_by_tipo($tipo,true);
 				$component	= component_common::get_instance(
 					$model,
 					$tipo,
@@ -548,7 +548,7 @@ class diffusion_section_stats extends diffusion {
 
 		// type. component_input_text. String, It can be one of these values: year, month, day
 			(function($tipo, $value) use($section_tipo, $section_id){
-				$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+				$model		= ontology_node::get_model_by_tipo($tipo,true);
 				$component	= component_common::get_instance(
 					$model,
 					$tipo,
@@ -564,7 +564,7 @@ class diffusion_section_stats extends diffusion {
 
 		// date. component_date
 			(function($tipo, $year, $month, $day) use($section_tipo, $section_id){
-				$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+				$model		= ontology_node::get_model_by_tipo($tipo,true);
 				$component	= component_common::get_instance(
 					$model,
 					$tipo,
@@ -589,7 +589,7 @@ class diffusion_section_stats extends diffusion {
 
 		// totals. component_json. Array of objects mandatory like [{"dd696": 24, "dd693": 110}]
 			(function($tipo, $value) use($section_tipo, $section_id){
-				$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+				$model		= ontology_node::get_model_by_tipo($tipo,true);
 				$component	= component_common::get_instance(
 					$model,
 					$tipo,
@@ -652,7 +652,7 @@ class diffusion_section_stats extends diffusion {
 			          {
 			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
 			            "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
-			            "model": "'. RecordObj_dd::get_model_name_by_tipo(USER_ACTIVITY_USER_TIPO,true) .'",
+			            "model": "'. ontology_node::get_model_by_tipo(USER_ACTIVITY_USER_TIPO,true) .'",
 			            "name": "User"
 			          }
 			        ]
@@ -799,7 +799,7 @@ class diffusion_section_stats extends diffusion {
 								$who_data_obj->{$item_key}->value += $actions_totals;
 							}else{
 
-								$model_name	= RecordObj_dd::get_model_name_by_tipo(DEDALO_USER_NAME_TIPO, true);
+								$model_name	= ontology_node::get_model_by_tipo(DEDALO_USER_NAME_TIPO, true);
 								$component	= component_common::get_instance(
 									$model_name,
 									DEDALO_USER_NAME_TIPO,
@@ -833,7 +833,7 @@ class diffusion_section_stats extends diffusion {
 							}else{
 								$what_data_obj->{$item_key} = new stdClass();
 									$what_data_obj->{$item_key}->key	= $item->tipo;
-									$what_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$what_data_obj->{$item_key}->label	= ontology_node::get_term_by_tipo($item->tipo, $lang, true, true);
 									$what_data_obj->{$item_key}->value	= $item->value;
 							}
 						}
@@ -854,7 +854,7 @@ class diffusion_section_stats extends diffusion {
 							}else{
 								$where_data_obj->{$item_key} = new stdClass();
 									$where_data_obj->{$item_key}->key	= $item->tipo;
-									$where_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$where_data_obj->{$item_key}->label	= ontology_node::get_term_by_tipo($item->tipo, $lang, true, true);
 									$where_data_obj->{$item_key}->value	= $item->value;
 							}
 						}
@@ -895,7 +895,7 @@ class diffusion_section_stats extends diffusion {
 							}else{
 								$publish_data_obj->{$item_key} = new stdClass();
 									$publish_data_obj->{$item_key}->key		= $item->tipo;
-									$publish_data_obj->{$item_key}->label	= RecordObj_dd::get_termino_by_tipo($item->tipo, $lang, true, true);
+									$publish_data_obj->{$item_key}->label	= ontology_node::get_term_by_tipo($item->tipo, $lang, true, true);
 									$publish_data_obj->{$item_key}->value	= $item->value;
 							}
 						}
@@ -963,7 +963,7 @@ class diffusion_section_stats extends diffusion {
 			return [];
 
 		// who
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_WHO['tipo'], DEDALO_DATA_LANG, true, true);
+			$title = ontology_node::get_term_by_tipo(logger_backend_activity::$_COMPONENT_WHO['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -984,7 +984,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// what
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_WHAT['tipo'], DEDALO_DATA_LANG, true, true);
+			$title = ontology_node::get_term_by_tipo(logger_backend_activity::$_COMPONENT_WHAT['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -1005,7 +1005,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// where
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_WHERE['tipo'], DEDALO_DATA_LANG, true, true);
+			$title = ontology_node::get_term_by_tipo(logger_backend_activity::$_COMPONENT_WHERE['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -1029,7 +1029,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// publish
-			$title = RecordObj_dd::get_termino_by_tipo('dd222', DEDALO_DATA_LANG, true, true);
+			$title = ontology_node::get_term_by_tipo('dd222', DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -1053,7 +1053,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// when
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_WHEN['tipo'], DEDALO_DATA_LANG, true, true);
+			$title = ontology_node::get_term_by_tipo(logger_backend_activity::$_COMPONENT_WHEN['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;

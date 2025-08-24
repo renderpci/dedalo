@@ -10,13 +10,12 @@ include DEDALO_CORE_PATH . '/logger/class.logger.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend_activity.php';
 include DEDALO_CORE_PATH . '/db/class.DBi.php';
+include DEDALO_CORE_PATH . '/db/class.dd_ontology_manager.php';
 include DEDALO_CORE_PATH . '/db/class.matrix_manager.php';
-include DEDALO_CORE_PATH . '/db/class.ontology_data.php';
 include DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php';
 include DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php';
 include DEDALO_CORE_PATH . '/db/class.JSON_RecordObj_matrix.php';
 include DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php';
-include DEDALO_CORE_PATH . '/db/class.RecordObj_dd.php';
 include DEDALO_CORE_PATH . '/db/class.json_handler.php';
 include DEDALO_CORE_PATH . '/db/class.db_tasks.php';
 include DEDALO_CORE_PATH . '/backup/class.backup.php';
@@ -38,6 +37,8 @@ include DEDALO_CORE_PATH . '/common/class.metrics.php'; // new 20-03-2024
 include DEDALO_CORE_PATH . '/section/class.section.php';
 // Ontology
 include DEDALO_CORE_PATH . '/ontology/class.ontology_data_io.php';
+include DEDALO_CORE_PATH . '/ontology_engine/class.ontology_node.php';
+include DEDALO_CORE_PATH . '/ontology_engine/class.ontology_utils.php';
 // media_engine. media auxiliary classes
 include DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php';
 include DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php';

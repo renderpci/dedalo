@@ -61,8 +61,8 @@ class update_ontology {
 			));
 
 		// current_ontology: dd1 properties
-			$RecordObj_dd		= new RecordObj_dd('dd1');
-			$dd1_properties		= $RecordObj_dd->get_properties();
+			$ontology_node		= new ontology_node('dd1');
+			$dd1_properties		= $ontology_node->get_properties();
 			$current_ontology	= (object)[
 				'date'			=> $dd1_properties->date,
 				'host'			=> $dd1_properties->host,
@@ -256,7 +256,7 @@ class update_ontology {
 
 		// model
 		$tipo = 'ontology6';
-		$model = RecordObj_dd::get_model_name_by_tipo($tipo ,true);
+		$model = ontology_node::get_model_by_tipo($tipo ,true);
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo , // string tipo
@@ -269,7 +269,7 @@ class update_ontology {
 
 		// term
 		$tipo = 'ontology5';
-		$model = RecordObj_dd::get_model_name_by_tipo($tipo ,true);
+		$model = ontology_node::get_model_by_tipo($tipo ,true);
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo , // string tipo

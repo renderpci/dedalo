@@ -23,7 +23,7 @@ class component_section_id extends component_common {
 			: null;
 
 		// Set as loaded
-			$this->bl_loaded_matrix_data = true;
+			$this->is_loaded_matrix_data = true;
 
 		return $dato;
 	}//end get_dato

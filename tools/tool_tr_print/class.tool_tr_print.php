@@ -168,7 +168,7 @@ class tool_tr_print extends tool_common {
 		# Actually rsc35
 		$related_component_av_tipo = $this->component_obj->get_related_component_av_tipo();
 
-		$model_name		= RecordObj_dd::get_model_name_by_tipo($related_component_av_tipo,true);
+		$model_name		= ontology_node::get_model_by_tipo($related_component_av_tipo,true);
 		$parent			= $this->component_obj->get_parent();
 		$section_tipo	= $this->component_obj->get_section_tipo();
 		$component_av	= component_common::get_instance(
@@ -337,7 +337,7 @@ class tool_tr_print extends tool_common {
 
 		# date
 			$current_tipo	= 'rsc44';
-			$model_name		= RecordObj_dd::get_model_name_by_tipo($current_tipo, true); // 'component_date';
+			$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // 'component_date';
 			$component		= component_common::get_instance($model_name,
 														  $current_tipo,
 														  $parent,
@@ -354,7 +354,7 @@ class tool_tr_print extends tool_common {
 
 		# municipality
 			$current_tipo	= 'rsc46';
-			$model_name		= RecordObj_dd::get_model_name_by_tipo($current_tipo, true); // component_autocomplete_ts
+			$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_autocomplete_ts
 			$component		= component_common::get_instance($model_name,
 														  $current_tipo,
 														  $parent,
@@ -366,7 +366,7 @@ class tool_tr_print extends tool_common {
 
 		# code
 			$current_tipo	= 'rsc21';
-			$model_name		= RecordObj_dd::get_model_name_by_tipo($current_tipo, true); // component_autocomplete_ts
+			$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_autocomplete_ts
 			$component		= component_common::get_instance($model_name,
 														  $current_tipo,
 														  $parent,
@@ -378,7 +378,7 @@ class tool_tr_print extends tool_common {
 
 		# posterframe
 			$current_tipo	= 'rsc35';
-			$model_name		= RecordObj_dd::get_model_name_by_tipo($current_tipo, true); // component_autocomplete_ts
+			$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_autocomplete_ts
 			$component		= component_common::get_instance($model_name,
 														  $current_tipo,
 														  $parent,
@@ -424,7 +424,7 @@ class tool_tr_print extends tool_common {
 
 				# Informants
 					$current_tipo	= 'oh24';
-					$model_name		= RecordObj_dd::get_model_name_by_tipo($current_tipo, true); // component_portal
+					$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_portal
 					$component		= component_common::get_instance($model_name,
 																  $current_tipo,
 																  $current_section_id,
@@ -460,7 +460,7 @@ class tool_tr_print extends tool_common {
 
 			# name
 				$current_tipo	= 'rsc85';
-				$model_name		= RecordObj_dd::get_model_name_by_tipo($current_tipo, true); // component_input_text
+				$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_input_text
 				$component		= component_common::get_instance($model_name,
 															  $current_tipo,
 															  $current_locator->section_id,
@@ -471,7 +471,7 @@ class tool_tr_print extends tool_common {
 
 			# surname
 				$current_tipo	= 'rsc86';
-				$model_name		= RecordObj_dd::get_model_name_by_tipo($current_tipo, true); // component_input_text
+				$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_input_text
 				$component		= component_common::get_instance($model_name,
 															  $current_tipo,
 															  $current_locator->section_id,

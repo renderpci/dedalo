@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 /**
-* Class ONTOLOGY_DATA
+* Class DD_ONTOLOGY_MANAGER
 *
 * Provides core operations for managing ontology records.
 * This class ensures data consistency by enforcing predefined
@@ -12,7 +12,7 @@
 * - Inserting new records with optional initial data
 *
 */
-abstract class ontology_data {
+abstract class dd_ontology_manager {
 
 
 	// Ontology table
@@ -38,7 +38,8 @@ abstract class ontology_data {
 	public static $ontology_json_columns = [
 		'term'				=> true,
 		'relations'			=> true,
-		'properties'		=> true
+		'properties'		=> true,
+		'propiedades'		=> true
 	];
 
 	// int columns to parse
@@ -48,7 +49,7 @@ abstract class ontology_data {
 	];
 
 	// bool columns to parse
-	public static $ontolgy_boolean = [
+	public static $ontology_boolean = [
 		'is_model'			=> true,
 		'is_translatable'	=> true
 	];
@@ -57,7 +58,7 @@ abstract class ontology_data {
 
 
 	/**
-	* LOAD_ONTOLOGY_DATA
+	* LOAD
 	* Retrieves a single row of data from the ontology table
 	* based on `tipo`.
 	* It's designed to provide a unified way of accessing data from
@@ -69,7 +70,7 @@ abstract class ontology_data {
 	* Returns the processed data as an associative array with parsed int and JSON values.
 	* If no row is found, it returns an empty array []. If a critical error occurs, it returns false.
 	*/
-	public static function load_ontology_data( string $tipo ) : array|false {
+	public static function load( string $tipo ) : array|false {
 
 		$conn = DBi::_getConnection();
 
@@ -131,7 +132,7 @@ abstract class ontology_data {
 					$row[$key] = (int)$value;
 					break;
 
-				case isset(self::$ontolgy_boolean[$key]):
+				case isset(self::$ontology_boolean[$key]):
 					$row[$key] = ($value==='t');
 					break;
 			}
@@ -139,12 +140,12 @@ abstract class ontology_data {
 
 
 		return $row;
-	}//end load_ontology_data
+	}//end load
 
 
 
 	/**
-	* UPDATE_ONTOLOGY_DATA
+	* UPDATE
 	* Safely updates one or more columns in the "ontology" table row,
 	* identified by a `tipo`.
 	* @param string $tipo
@@ -157,7 +158,7 @@ abstract class ontology_data {
 	* Returns `true` on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function update_ontology_data( string $tipo, array $values ) : bool {
+	public static function update( string $tipo, array $values ) : bool {
 
 		// check values
 		if (empty($values)) {
@@ -246,12 +247,12 @@ abstract class ontology_data {
 		}
 
 		return true;
-	}//end update_ontology_data
+	}//end update
 
 
 
 	/**
-	* INSERT_ONTOLGY_DATA
+	* INSERT
 	* Inserts a single row into a "ontology" table with automatic handling for JSON columns
 	* and guaranteed inclusion of the `tipo` column.
 	* It is executed using prepared statement when the values are empty (default creation of empty record
@@ -266,7 +267,7 @@ abstract class ontology_data {
 	* Returns the new `id` on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function insert_ontolgy_data( string $tipo, array $values=[] ) : int|false {
+	public static function insert( string $tipo, array $values=[] ) : int|false {
 
 		$table = self::$ontology_table;
 
@@ -363,8 +364,182 @@ abstract class ontology_data {
 
 		// Cast to INT always (received is string by default)
 		return (int)$id;
-	}//end insert_ontolgy_data
+	}//end insert
 
 
 
-}//end class ontology_data
+	/**
+	* DELETE
+	* Deletes a single row into a "ontology" table
+	* @param string $tipo
+	* A string identifier representing the unique type of ontology node.
+	* Used as part of the WHERE clause in the SQL query.
+	* @return bool
+	* On success true, or `false` if validation fails,
+	* query preparation fails, or execution fails.
+	*/
+	public static function delete( string $tipo ) : bool {
+
+		$conn = DBi::_getConnection();
+
+		$table = self::$ontology_table;
+
+		// With prepared statement
+		$stmt_name = __METHOD__ . '_' . $table;
+		if (!isset(DBi::$prepared_statements[$stmt_name])) {
+
+			$sql = 'DELETE FROM "'.$table.'" WHERE tipo = $1 LIMIT 1';
+			if (!pg_prepare(
+				$conn,
+				$stmt_name,
+				$sql)
+			) {
+				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+				return false;
+			}
+			// Set the statement as existing.
+			DBi::$prepared_statements[$stmt_name] = true;
+		}
+		$result = pg_execute(
+			$conn,
+			$stmt_name,
+			[$tipo]
+		);
+
+		if (!$result) {
+			debug_log(__METHOD__
+				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				.' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end delete
+
+
+
+	/**
+	* SEARCH
+	* Search in one or more columns in the "ontology" table ,
+	* return an array with the found `tipos`..
+	* @param array $values
+	* Assoc array with [column name => value] structure
+	* Keys are column names, values are their new values.
+	* @return array|false
+	* Returns and array with found tipos on success, or `false` if validation fails,
+	* query preparation fails, or execution fails.
+	*/
+	public static function search( array $values, bool $order=false, ?int $limit=null ) : array|false {
+
+		// check values
+		if (empty($values)) {
+			debug_log(__METHOD__
+				." Empty values array " . PHP_EOL
+				.' values: ' . json_encode($values)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$table = self::$ontology_table;
+
+		$conn = DBi::_getConnection();
+
+		$params			= []; // param values (first one for tipo)
+		$param_index	= 1; // next param index ($2, $3, ...)
+
+		$where_clauses = [];
+
+		// Add dynamic columns
+		foreach ($values as $col => $value) {
+
+			// Columns. Only accepts normalized columns
+			if (!isset(self::$ontology_columns[$col])) {
+				throw new Exception("Invalid column name: $col");
+			}
+
+			if (is_object($value)) {
+
+				// search with operator
+				$params[] = $value->value;
+				$where_clauses[] = pg_escape_identifier($conn, $col) . ' '.$value->operator.' $'.$param_index;
+
+			}else{
+
+				$params[] = $value;
+				$where_clauses[] = pg_escape_identifier($conn, $col) . ' = $'.$param_index;
+			}
+
+			// Increase param index value
+			$param_index++;
+		}
+
+		// With prepared statement
+			// $stmt_name = md5(__METHOD__ . '_' . $table .'_'. implode('', $columns));
+			// if (!isset(DBi::$prepared_statements[$stmt_name])) {
+
+			// 	// set_clauses
+			// 	$counter = 2; // 1 is reserved to tipo
+			// 	$set_clauses = [];
+			// 	foreach ($values as $key => $value) {
+			// 		if (!isset(self::$ontology_columns[$key])) {
+			// 			throw new Exception("Invalid column name: $key");
+			// 		}
+			// 		$set_clauses[] = '"'.$key.'" = $' . $counter++;
+			// 	}
+
+			// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
+			// 		 .' WHERE tipo = $1';
+
+			// 	if (!pg_prepare(
+			// 		$conn,
+			// 		$stmt_name,
+			// 		$sql)
+			// 	) {
+			//         debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+			//         return false;
+			//     }
+			// 	// Set the statement as existing.
+			// 	DBi::$prepared_statements[$stmt_name] = true;
+			// }
+			// $result = pg_execute(
+			// 	$conn,
+			// 	$stmt_name,
+			// 	[$tipo, ...$safe_values] // spread values
+			// );
+
+		// Without prepared statement (more dynamic and appropriate for changing columns scenarios)
+			$sql = 'SELECT tipo FROM '.$table
+				 .' WHERE '. implode(' AND ', $where_clauses)
+				 . (($order===true) ? ' ORDER BY order_number ASC' : '')
+				 . (!empty($limit)  ? " LIMIT $limit" : '');
+
+			$result = pg_query_params($conn, $sql, $params);
+
+		if (!$result) {
+			debug_log(__METHOD__
+				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				.' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// result
+		$rows = pg_fetch_all($result);
+
+		$tipos = [];
+		foreach ($rows as $row) {
+			$tipos[] = $row['tipo'];
+		}
+
+
+
+		return $tipos;
+	}//end search
+
+
+
+}//end class dd_ontology_manager

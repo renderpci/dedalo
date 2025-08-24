@@ -230,7 +230,7 @@ abstract class filter {
 			$projects_section_tipo = DEDALO_FILTER_SECTION_TIPO_DEFAULT; // Default is Projects but it can be another
 
 		// section map
-			$ar_section_map = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$ar_section_map = ontology_node::get_ar_tipo_by_model_and_relation(
 				$projects_section_tipo, // tipo
 				'section_map', // model name
 				'children', // relation_type
@@ -242,8 +242,8 @@ abstract class filter {
 			}
 
 		// projects_name_tipo. Get ts_map for locate name component (for future )
-			$RecordObj_dd	= new RecordObj_dd($section_map);
-			$properties		= $RecordObj_dd->get_properties();
+			$ontology_node	= new ontology_node($section_map);
+			$properties		= $ontology_node->get_properties();
 			if (empty($properties)) {
 				dump($properties, ' properties ++ '.to_string($section_map));
 				// throw new Exception("Error Processing Request. properties for section_map: $section_map is empty !", 1);
@@ -294,7 +294,7 @@ abstract class filter {
 			foreach ($dato as $current_locator) {
 
 				$parent			= null;
-				$model			= RecordObj_dd::get_model_name_by_tipo($projects_name_tipo);
+				$model			= ontology_node::get_model_by_tipo($projects_name_tipo);
 				$component_term	= component_common::get_instance(
 					$model, // string model
 					$projects_name_tipo, // string tipo

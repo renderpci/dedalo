@@ -699,7 +699,7 @@ class area_maintenance extends area_common {
 
 		$ar_sql_query = [];
 
-		$ar_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
+		$ar_tables = ['dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd'];
 
 		// exec
 		foreach ($ar_tables as $table) {
@@ -1779,7 +1779,7 @@ class area_maintenance extends area_common {
 					}
 			}
 
-		// update jer_dd with the imported records
+		// update dd_ontology with the imported records
 			foreach ($files_to_import as $current_file_item) {
 
 				if (!is_object($current_file_item) || !isset($current_file_item->tld, $current_file_item->section_tipo)) {
@@ -1791,7 +1791,7 @@ class area_maintenance extends area_common {
 					continue;
 				}
 
-				// private list, matrix_dd, doesn't process it as jer_dd nodes
+				// private list, matrix_dd, doesn't process it as dd_ontology nodes
 				if($current_file_item->tld === 'matrix_dd'){
 					continue;
 				}
@@ -1801,13 +1801,13 @@ class area_maintenance extends area_common {
 					$sqo->set_section_tipo( [$section_tipo] );
 					$sqo->limit = 0;
 
-				$set_jer_dd_response = ontology::set_records_in_jer_dd( $sqo );
+				$set_dd_ontology_response = ontology::set_records_in_dd_ontology( $sqo );
 				// add messages and errors
-				if (!empty($set_jer_dd_response->msg)) {
-					$ar_msg[] = $set_jer_dd_response->msg;
+				if (!empty($set_dd_ontology_response->msg)) {
+					$ar_msg[] = $set_dd_ontology_response->msg;
 				}
-				if(!empty($set_jer_dd_response->errors)){
-					$response->errors = array_merge($response->errors, $set_jer_dd_response->errors);
+				if(!empty($set_dd_ontology_response->errors)){
+					$response->errors = array_merge($response->errors, $set_dd_ontology_response->errors);
 				}
 			}
 
@@ -1816,7 +1816,7 @@ class area_maintenance extends area_common {
 			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
 		// post processing tables
-			$ar_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
+			$ar_tables = ['dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd'];
 			// optimize tables
 			db_tasks::optimize_tables($ar_tables);
 
@@ -1855,7 +1855,7 @@ class area_maintenance extends area_common {
 				NULL,
 				[
 					'msg'		=> 'Updated Ontology',
-					'version'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
+					'version'	=> ontology_node::get_term_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
 				],
 				logged_user_id() // int
 			);
@@ -1879,10 +1879,10 @@ class area_maintenance extends area_common {
 			dd_cache::delete_cache_files();
 
 		// get new Ontology info
-			$RecordObj_dd = new RecordObj_dd(DEDALO_ROOT_TIPO);
+			$ontology_node = new ontology_node(DEDALO_ROOT_TIPO);
 			$root_info = (object)[
-				'term' => RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
-				'properties' => $RecordObj_dd->get_properties()
+				'term' => ontology_node::get_term_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
+				'properties' => $ontology_node->get_properties()
 			];
 
 		// response
@@ -1939,7 +1939,7 @@ class area_maintenance extends area_common {
 	/**
 	* BUILD_RECOVERY_VERSION_FILE
 	* Alias of install::build_recovery_version_file
-	* Creates the recovery file 'jer_dd_recovery.sql' from current 'jer_dd' table
+	* Creates the recovery file 'dd_ontology_recovery.sql' from current 'dd_ontology' table
 	* @return object $response
 	*/
 	public static function build_recovery_version_file() {
@@ -1950,15 +1950,15 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* RESTORE_JER_DD_RECOVERY_FROM_FILE
-	* Alias of install::restore_jer_dd_recovery_from_file
-	* Source file is a SQL string file located at /dedalo/install/db/jer_dd_recovery.sql
+	* RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
+	* Alias of install::restore_dd_ontology_recovery_from_file
+	* Source file is a SQL string file located at /dedalo/install/db/dd_ontology_recovery.sql
 	* @return object $response
 	*/
-	public static function restore_jer_dd_recovery_from_file() {
+	public static function restore_dd_ontology_recovery_from_file() {
 
-		return install::restore_jer_dd_recovery_from_file();
-	}//end restore_jer_dd_recovery_from_file
+		return install::restore_dd_ontology_recovery_from_file();
+	}//end restore_dd_ontology_recovery_from_file
 
 
 

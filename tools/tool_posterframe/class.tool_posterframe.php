@@ -31,7 +31,7 @@ class tool_posterframe extends tool_common {
 			$current_time	= $options->current_time ?? null;
 
 		// component_portal. Create a new section and attach it to the target portal
-			$component_portal_model	= RecordObj_dd::get_model_name_by_tipo(
+			$component_portal_model	= ontology_node::get_model_by_tipo(
 				$item_value->component_portal,
 				true
 			);
@@ -84,7 +84,7 @@ class tool_posterframe extends tool_common {
 				}
 
 		// component_image. Gets the proper path and filename where to save the posterframe file
-			$component_image_model = RecordObj_dd::get_model_name_by_tipo(
+			$component_image_model = ontology_node::get_model_by_tipo(
 				$item_value->component_image,
 				true
 			);
@@ -107,7 +107,7 @@ class tool_posterframe extends tool_common {
 				// ];
 
 		// component_av. Needed to get av file paths
-			$component_av_model	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$component_av_model	= ontology_node::get_model_by_tipo($tipo,true);
 			$component_av		= component_common::get_instance(
 				$component_av_model,
 				$tipo,
@@ -244,7 +244,7 @@ class tool_posterframe extends tool_common {
 			);
 
 		// section label
-			$label = RecordObj_dd::get_termino_by_tipo(
+			$label = ontology_node::get_term_by_tipo(
 				$section_tipo,
 				DEDALO_APPLICATION_LANG, // string lang
 				true, // bool from_cache
@@ -254,8 +254,8 @@ class tool_posterframe extends tool_common {
 		// match properties->identifying_image with portal_tipo
 			foreach ($ar_portals_tipo as $portal_tipo) {
 
-				$RecordObj_dd	= new RecordObj_dd($portal_tipo);
-				$properties		= $RecordObj_dd->get_properties();
+				$ontology_node	= new ontology_node($portal_tipo);
+				$properties		= $ontology_node->get_properties();
 				if ($properties && isset($properties->identifying_image)) {
 
 					$result = (object)[

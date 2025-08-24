@@ -37,7 +37,7 @@ If the URL code matches the config DEDALO_RECOVERY_KEY, or you press the button 
 
 ## Using recovery mode
 
-In this mode, a special table `jer_dd_recovery` is used instead default table (`jer_dd`) to define the Ontology with a basic configuration for administration tasks.
+In this mode, a special table `dd_ontology_recovery` is used instead default table (`dd_ontology`) to define the Ontology with a basic configuration for administration tasks.
 Use it only to access the area maintenance and not to access working areas or to make changes in sections.
 In this area, you can view the current status of the Ontology and code and fix the problems, probably by updating the damaged Ontology from a master server such as:
 

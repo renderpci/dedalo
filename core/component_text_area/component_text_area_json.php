@@ -69,10 +69,10 @@
 					}
 
 				// geo
-					$related_component_geolocation = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$related_component_geolocation = ontology_node::get_ar_tipo_by_model_and_relation(
 						$this->tipo, // tipo
 						'component_geolocation', // model name
-						'termino_relacionado', // relation_type
+						'related', // relation_type
 						true // search_exact
 					);
 					if(!empty($related_component_geolocation)){
@@ -88,7 +88,7 @@
 						// References. Add the section_tipo for the virtual references
 						'references_section_tipo'		=> DEDALO_TS_REFERENCES_SECTION_TIPO,
 						'references_component_tipo'		=> DEDALO_TS_REFERENCES_COMPONENT_TIPO,
-						'references_component_model'	=> RecordObj_dd::get_model_name_by_tipo(DEDALO_TS_REFERENCES_COMPONENT_TIPO,true),
+						'references_component_model'	=> ontology_node::get_model_by_tipo(DEDALO_TS_REFERENCES_COMPONENT_TIPO,true),
 						// av_player
 						'av_player'						=> (object)[
 							'av_play_pause_code'	=> 'Escape', // ESC

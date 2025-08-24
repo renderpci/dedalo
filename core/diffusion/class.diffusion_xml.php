@@ -241,7 +241,7 @@ class diffusion_xml extends diffusion  {
 			'tipo'		=> $diffusion_object->tipo,
 			'parent'	=> $diffusion_object->parent,
 			'name'		=> $diffusion_object->name,
-			'model'		=> RecordObj_dd::get_model_name_by_tipo($diffusion_object->tipo, true),
+			'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo, true),
 			'process'	=> $diffusion_object->process,
 			'data'		=> []
 		]);
@@ -257,7 +257,7 @@ class diffusion_xml extends diffusion  {
 				'tipo'		=> $key . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> 'row',
-				'model'		=> RecordObj_dd::get_model_name_by_tipo($diffusion_object->tipo, true),
+				'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo, true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $data_group
 			]);
@@ -408,7 +408,7 @@ class diffusion_xml extends diffusion  {
 		foreach ($diffusion_objects as $current_diffusion_object) {
 
 			// check model
-			$model = RecordObj_dd::get_model_name_by_tipo($current_diffusion_object->tipo,true);
+			$model = ontology_node::get_model_by_tipo($current_diffusion_object->tipo,true);
 			if (in_array($model, ['box elements'])) {
 				// ignore
 				continue;
@@ -519,7 +519,7 @@ class diffusion_xml extends diffusion  {
 
 		// One data item case. Switch by model
 		$tipo	= $data[0]->tipo ?? null;
-		$model	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+		$model	= ontology_node::get_model_by_tipo($tipo,true);
 		switch ($model) {
 
 			case 'component_date':
@@ -678,7 +678,7 @@ class diffusion_xml extends diffusion  {
 
 		$section_tipo = $this->section_tipo;
 
-		$children = RecordObj_dd::get_ar_children($diffusion_element_tipo);
+		$children = ontology_node::get_ar_children($diffusion_element_tipo);
 		$root_tipo = array_find($children, function($el) use($section_tipo){
 			$ar_found = common::get_ar_related_by_model('section', $el);
 			$section = $ar_found[0] ?? false;
@@ -835,7 +835,7 @@ class diffusion_xml extends diffusion  {
 				'tipo'		=> $lang_tipo . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> $lang_tld2,
-				// 'model'		=> RecordObj_dd::get_model_name_by_tipo($diffusion_object->tipo,true),
+				// 'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo,true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $lang_data
 			]);
@@ -869,7 +869,7 @@ class diffusion_xml extends diffusion  {
 		$ar_diffusion_sections = array();
 
 		// XML elements
-		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'xml', 'children', true);
+		$elements = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_element_tipo, 'xml', 'children', true);
 		foreach ($elements as $current_element_tipo) {
 
 			// Pointer to section

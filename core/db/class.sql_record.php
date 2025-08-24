@@ -151,7 +151,7 @@ abstract class sql_record {
 			$ar_query[] = 'FROM "'.$this->strTableName.'"';
 
 		// where
-			$column_key		= $this->strPrimaryKeyName; // terminoID
+			$column_key		= $this->strPrimaryKeyName; // tipo
 			$column_value	= '\''. $this->ID .'\''; // e.g. 'dd15'
 			$ar_query[] = 'WHERE "'.$column_key.'"='.$column_value;
 
@@ -226,15 +226,15 @@ abstract class sql_record {
 				$row = pg_fetch_assoc($result); // assoc array|false
 					// sample row assoc array:
 					// {
-					//     "terminoID": "test24",
+					//     "tipo": "test24",
 					//     "parent": "dd627",
 					//     "modelo": "dd626",
-					//     "esmodelo": "no",
+					//     "is_model": false,
 					//     "esdescriptor": "si",
 					//     "visible": "si",
 					//     "norden": "18",
 					//     "tld": "test",
-					//     "traducible": "no",
+					//     "translatable": false,
 					//     "relaciones": null,
 					//     "propiedades": "{\r\n  \"inverse_relations\": false\r\n}",
 					//     "properties": "{\"inverse_relations\": false}"

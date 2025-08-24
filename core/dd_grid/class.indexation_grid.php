@@ -108,7 +108,7 @@ class indexation_grid {
 					$section_grid_row->set_type('row');
 
 			// label. Get the label of the current section
-				$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
+				$label = ontology_node::get_term_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 			// section_grid. Create the grid cell of the section
 				$section_grid = new dd_grid_cell_object();
@@ -123,8 +123,8 @@ class indexation_grid {
 
 			// grid features. Used to pass the section color when is defined
 				// section
-				$RecordObj_dd		= new RecordObj_dd($current_section_tipo);
-				$section_properties	= $RecordObj_dd->get_properties();
+				$ontology_node		= new ontology_node($current_section_tipo);
+				$section_properties	= $ontology_node->get_properties();
 				if (isset($section_properties->color)) {
 					$section_grid->set_features((object)[
 						'color' => $section_properties->color
@@ -132,7 +132,7 @@ class indexation_grid {
 				}
 
 			// indexation_list. Get the term in the section that has the indexation_list information
-				$ar_found = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$ar_found = ontology_node::get_ar_tipo_by_model_and_relation(
 					$current_section_tipo,
 					'indexation_list', // string model
 					'children' // string relation_type
@@ -142,7 +142,7 @@ class indexation_grid {
 					// try from real version indexation_list
 					$real_tipo = section::get_section_real_tipo_static($current_section_tipo);
 					if ($real_tipo!==$current_section_tipo) {
-						$ar_found = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$ar_found = ontology_node::get_ar_tipo_by_model_and_relation(
 							$real_tipo,
 							'indexation_list', // string model
 							'children' // string relation_type
@@ -169,8 +169,8 @@ class indexation_grid {
 
 			// get the properties of the indexation_list with all ddo_map
 			// the ddo_map need to be processed to get a full ddo_map with all section_tipo resolved.
-				$RecordObj_dd	= new RecordObj_dd($indexation_list);
-				$properties		= $RecordObj_dd->get_properties();
+				$ontology_node	= new ontology_node($indexation_list);
+				$properties		= $ontology_node->get_properties();
 
 				// css selector add to section_grid if exists (like 'audiovisual')
 				// normally is a CSS grouper selector with correspondence with a LESS file like view_indexation_audiovisual.less
@@ -326,9 +326,8 @@ class indexation_grid {
 					: $locator->section_top_id;
 
 			// component. Create the component to get the value of the column
-				$RecordObj_dd		= new RecordObj_dd($ddo->tipo);
-				$current_lang		= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component_model	= RecordObj_dd::get_model_name_by_tipo($ddo->tipo,true);
+				$current_lang 		= ontology_node::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				$component_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 				$current_component	= component_common::get_instance(
 					$component_model,
 					$ddo->tipo,
@@ -413,7 +412,7 @@ class indexation_grid {
 				}
 
 			// label. Add to all ddo_map items
-				$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+				$current_ddo_map->label = ontology_node::get_term_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 			// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
 				$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
@@ -431,7 +430,7 @@ class indexation_grid {
 					: 'indexation_list';
 
 			// model
-				$current_ddo_map->model = RecordObj_dd::get_model_name_by_tipo($current_ddo_map->tipo,true);
+				$current_ddo_map->model = ontology_node::get_model_by_tipo($current_ddo_map->tipo,true);
 
 
 			$final_ddo_map[] = $current_ddo_map;
@@ -559,7 +558,7 @@ class indexation_grid {
 		$target_section		= $this->target_section;
 		$filter_by_locators	= $sqo->filter_by_locators;
 
-		$model = RecordObj_dd::get_model_name_by_tipo($this->tipo, true);
+		$model = ontology_node::get_model_by_tipo($this->tipo, true);
 
 		// indexations
 		$component = component_common::get_instance(

@@ -298,7 +298,7 @@ class lang {
 			$section_tipo = DEDALO_LANGS_SECTION_TIPO;
 
 			// Test section tipo and model_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
-			$section_model_name = RecordObj_dd::get_model_name_by_tipo($section_tipo, true);
+			$section_model_name = ontology_node::get_model_by_tipo($section_tipo, true);
 			if ($section_model_name!=='section') {
 
 				$section_id = (int)$locator->section_id;
@@ -342,7 +342,7 @@ class lang {
 
 		// component value (code)
 			$tipo		= DEDALO_THESAURUS_CODE_TIPO;
-			$model_name	= RecordObj_dd::get_model_name_by_tipo($tipo, true);
+			$model_name	= ontology_node::get_model_by_tipo($tipo, true);
 			$parent		= $locator->section_id;
 			$component	= component_common::get_instance(
 				$model_name,

@@ -76,8 +76,8 @@ class diffusion_rdf extends diffusion {
 			$save_file				= $options->save_file ?? true;
 
 		// target_section_tipo
-			$RecordObj_dd			= new RecordObj_dd($diffusion_element_tipo);
-			$propiedades			= $RecordObj_dd->get_propiedades(true);
+			$ontology_node			= new ontology_node($diffusion_element_tipo);
+			$propiedades			= $ontology_node->get_propiedades(true);
 			// $target_section_tipo	= $propiedades->diffusion->target_section_tipo;
 
 		// Fix vars
@@ -119,17 +119,17 @@ class diffusion_rdf extends diffusion {
 			$current_date	= new DateTime();
 			$date			= $current_date->format('Y-m-d H_i_s');
 
-			$ar_owl_class_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_and_relation(
 				$diffusion_element_tipo,
 				'owl:Class',
 				'children',
 				true // bool search_exact
 			);
 			foreach ($ar_owl_class_tipo as $current_class_tipo) {
-				$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 					$current_class_tipo,
 					'section',
-					'termino_relacionado',
+					'related',
 					true // bool search_exact
 				);
 				$current_section_tipo = reset($ar_current_section_tipo);
@@ -174,7 +174,7 @@ class diffusion_rdf extends diffusion {
 		// save file
 			if ($save_file===true) {
 
-				$rdf_name = RecordObj_dd::get_termino_by_tipo($owl_class_tipo) ?? '';
+				$rdf_name = ontology_node::get_term_by_tipo($owl_class_tipo) ?? '';
 
 				$name_parts = [
 					$rdf_name,
@@ -233,7 +233,7 @@ class diffusion_rdf extends diffusion {
 		$ar_diffusion_sections = array();
 
 		// XML elements
-		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'owl:Class', 'children', true);
+		$elements = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_element_tipo, 'owl:Class', 'children', true);
 		foreach ($elements as $current_element_tipo) {
 
 			# Pointer to section
@@ -287,12 +287,12 @@ class diffusion_rdf extends diffusion {
 			}
 
 		// DES
-			// $ontology_chidren = RecordObj_dd::get_ar_children($ontology_tipo);
+			// $ontology_chidren = ontology_node::get_ar_children($ontology_tipo);
 
 			// $owl_class_tipo = null;
 			// $ar_owl_ObjectProperty = [];
 			// foreach ($ontology_chidren as $current_owl_class_tipo) {
-			// 	$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_owl_class_tipo, 'section', 'termino_relacionado', true);
+			// 	$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation($current_owl_class_tipo, 'section', 'related', true);
 			// 	$current_section_tipo = reset($ar_current_section_tipo);
 			// 	if($current_section_tipo === $section_tipo){
 			// 		$owl_class_tipo 			= $current_owl_class_tipo;
@@ -355,10 +355,10 @@ class diffusion_rdf extends diffusion {
 	public function build_rdf_node($rdf_graph, $node_graph, $ObjectProperty_tipo, $section_tipo, $section_id) : bool {
 
 		// get the name of the property, it is defined in the ontology term, and will use as rdf property
-		$object_name		= RecordObj_dd::get_termino_by_tipo($ObjectProperty_tipo);
-		$object_model_name	= RecordObj_dd::get_model_name_by_tipo($ObjectProperty_tipo);
-		$RecordObj_dd		= new RecordObj_dd($ObjectProperty_tipo);
-		$properties			= $RecordObj_dd->get_propiedades(true);
+		$object_name		= ontology_node::get_term_by_tipo($ObjectProperty_tipo);
+		$object_model_name	= ontology_node::get_model_by_tipo($ObjectProperty_tipo);
+		$ontology_node		= new ontology_node($ObjectProperty_tipo);
+		$properties			= $ontology_node->get_propiedades(true);
 		// result of the recursion, to be used in the component_portals to check if the resource linked has data
 		// if yes, it will create the resource link in the graph, else, it will doesn't create the link
 		$result = false;
@@ -384,7 +384,7 @@ class diffusion_rdf extends diffusion {
 							$node_graph = $rdf_graph->resource($uri, $object_name);
 
 							// recursion: all children need to be processed
-								$ar_owl_ObjectProperty	= RecordObj_dd::get_ar_children($ObjectProperty_tipo);
+								$ar_owl_ObjectProperty	= ontology_node::get_ar_children($ObjectProperty_tipo);
 								if(!empty($ar_owl_ObjectProperty)){
 									foreach ($ar_owl_ObjectProperty as $current_ObjectProperty_tipo) {
 										$sub_node_graph = $this->build_rdf_node($rdf_graph, $node_graph, $current_ObjectProperty_tipo, $section_tipo, $section_id);
@@ -401,9 +401,9 @@ class diffusion_rdf extends diffusion {
 				break;
 
 			case 'rdf':
-				$ar_related_dd_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
+				$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
 				$current_tipo		= reset($ar_related_dd_tipo);
-				$model_name			= RecordObj_dd::get_model_name_by_tipo($current_tipo);
+				$model_name			= ontology_node::get_model_by_tipo($current_tipo);
 				$component			= component_common::get_instance(
 					$model_name,
 					$current_tipo,
@@ -415,7 +415,7 @@ class diffusion_rdf extends diffusion {
 
 				$data = (array)$component->get_dato();
 
-				$ar_owl_class_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'owl:Class', 'termino_relacionado', true);
+				$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'owl:Class', 'related', true);
 				$owl_class_tipo		= reset($ar_owl_class_tipo);
 
 				// max_items. (!) Notice that here we use the user configurable DEDALO_DIFFUSION_RESOLVE_LEVELS value as n items resolve (Example: 1 coins for current type)
@@ -452,7 +452,7 @@ class diffusion_rdf extends diffusion {
 			default:
 				// ddo_map create or get from properties
 					$ddo_map			= [];
-					$ar_related_dd_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
+					$ar_related_dd_tipo	= ontology_node::get_ar_tipo_by_model_and_relation($ObjectProperty_tipo, 'component_', 'related', false);
 					// check if the ontology has his owm ddo_map defined, if not, it will create a ddo_map with related components.
 					if(isset($properties->process) && isset($properties->process->ddo_map)){
 
@@ -584,7 +584,7 @@ class diffusion_rdf extends diffusion {
 							// create the new resource (the $new_node_graph is the new graph used for recursive)
 							$new_node_graph = $rdf_graph->resource($uri);
 							// recursion, with the components children of the current term.
-								$ar_owl_ObjectProperty	= RecordObj_dd::get_ar_children($ObjectProperty_tipo);
+								$ar_owl_ObjectProperty	= ontology_node::get_ar_children($ObjectProperty_tipo);
 								$sub_node_graph = false;
 								if(!empty($ar_owl_ObjectProperty)){
 									foreach ($ar_owl_ObjectProperty as $current_ObjectProperty_tipo) {
@@ -831,7 +831,7 @@ class diffusion_rdf extends diffusion {
 
 		$ar_values		= [];
 		$current_tipo	= $ddo->tipo;
-		$model_name		= RecordObj_dd::get_model_name_by_tipo($current_tipo);
+		$model_name		= ontology_node::get_model_by_tipo($current_tipo);
 
 		if($model_name==='relation_list') {
 
@@ -1081,8 +1081,8 @@ class diffusion_rdf extends diffusion {
 
 				$service_name = $this->service_name;
 
-				$RecordObj_dd	= new RecordObj_dd($component_tipo);
-				$model			= $RecordObj_dd->get_modelo_name();
+				$ontology_node	= new ontology_node($component_tipo);
+				$model			= $ontology_node->get_model();
 
 				// NO CONFIG FILE CHANGED CASE
 				// Note that config file default is 0 (Zero) and if you do not modify this
@@ -1099,9 +1099,9 @@ class diffusion_rdf extends diffusion {
 					return null;
 				}
 
-				// RecordObj_dd::get_model_name_by_tipo($component_tipo);
-				$component_lang	= $RecordObj_dd->get_traducible();
-				$lang			= $component_lang==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				// ontology_node::get_model_by_tipo($component_tipo);
+				$translatable	= $ontology_node->get_is_translatable();
+				$lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component		= component_common::get_instance(
 					$model,
 					$component_tipo,
@@ -1142,7 +1142,7 @@ class diffusion_rdf extends diffusion {
 				}
 
 				// Collection (Entity)
-					$model_name	= RecordObj_dd::get_model_name_by_tipo($base_uri_entity->from_component_tipo,true);
+					$model_name	= ontology_node::get_model_by_tipo($base_uri_entity->from_component_tipo,true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$base_uri_entity->from_component_tipo,
@@ -1155,7 +1155,7 @@ class diffusion_rdf extends diffusion {
 
 					if (!empty($dato_entity)) {
 						// component load
-						$model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+						$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 						$component	= component_common::get_instance(
 							$model_name,
 							$component_tipo,
@@ -1214,11 +1214,11 @@ class diffusion_rdf extends diffusion {
 			}else{
 
 				# Resolve value
-				$ct_model_name = RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+				$ct_model_name = ontology_node::get_model_by_tipo($component_tipo,true);
 				if ($ct_model_name==='component_section_id') {
 					$value = $section_id;
 				}else{
-					$ct_model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+					$ct_model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 					$component_obj	= component_common::get_instance(
 						$ct_model_name,
 						$component_tipo,
@@ -1275,12 +1275,12 @@ class diffusion_rdf extends diffusion {
 
 				$service_name = $this->service_name;
 
-				$RecordObj_dd	= new RecordObj_dd($component_tipo);
-				$model			= $RecordObj_dd->get_modelo_name();
+				$ontology_node	= new ontology_node($component_tipo);
+				$model			= $ontology_node->get_model();
 
-				// RecordObj_dd::get_model_name_by_tipo($component_tipo);
-				$component_lang	= $RecordObj_dd->get_traducible();
-				$lang			= $component_lang==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				// ontology_node::get_model_by_tipo($component_tipo);
+				$translatable	= $ontology_node->get_is_translatable();
+				$lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component		= component_common::get_instance(
 					$model,
 					$component_tipo,
@@ -1315,7 +1315,7 @@ class diffusion_rdf extends diffusion {
 
 				// Collection (Entity)
 
-					$model_name	= RecordObj_dd::get_model_name_by_tipo($configuration_entity->from_component_tipo,true);
+					$model_name	= ontology_node::get_model_by_tipo($configuration_entity->from_component_tipo,true);
 					$component	= component_common::get_instance(
 						$model_name,
 						$configuration_entity->from_component_tipo,
@@ -1328,7 +1328,7 @@ class diffusion_rdf extends diffusion {
 
 					if (!empty($dato_entity)) {
 						// component load
-						$model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+						$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 						$component	= component_common::get_instance(
 							$model_name,
 							$component_tipo,

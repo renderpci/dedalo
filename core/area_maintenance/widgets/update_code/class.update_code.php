@@ -141,6 +141,11 @@ class update_code {
 
 		try {
 
+			// Provisional position, @TODO: move at the end of the update process
+			$update_response = update::pre_update_version();
+			return $update_response;
+			die();
+
 			$file_uri = $file->url ?? null;
 			if( empty($file_uri) ){
 				debug_log(__METHOD__
@@ -991,7 +996,6 @@ class update_code {
 			$next_version_update_from	= null;
 			$upper_versions				= [];
 			foreach ( $updates_object as $update ) {
-
 				// check the next valid major version
 				// only next major version is take in consideration
 				// as 7.0.0 but any other minor or path versions as 7.0.1 or 7.2.0
@@ -1071,8 +1075,11 @@ class update_code {
 						$update->version_medium,
 						$update->version_minor,
 					];
+					$update_versions = new stdClass();
+						$update_versions->valid_version		= $valid_version;
+						$update_versions->force_update_mode	= $update->force_update_mode ?? null;
 
-					$upper_versions[] = $valid_version;
+					$upper_versions[] = $update_versions;
 				}
 			}
 
@@ -1088,16 +1095,19 @@ class update_code {
 		// client in 6.9.9
 		// can update to 7.0.0
 		$versions = [];
-		foreach ($upper_versions as $version) {
+		foreach ($upper_versions as $version_obj) {
+
+			$version			= $version_obj->valid_version;
+			$force_update_mode	= $version_obj->force_update_mode;
 
 			// remove the next minor versions that are greatest than next minor version.
-			if( $version[0] === $next_version[0] &&
+			if( isset($next_version) && $version[0] === $next_version[0] &&
 				$version[1] > $next_version[1]
 			){
 				continue;
 			}
 			// remove the next patch versions that are greatest than next patch version.
-			if( $version[0] === $next_version[0] &&
+			if( isset($next_version) && $version[0] === $next_version[0] &&
 				$version[1] === $next_version[1] &&
 				$version[2] > 0
 			){
@@ -1105,7 +1115,7 @@ class update_code {
 			}
 			// check if the current version is the next version
 			// if client has 6.2.9 the next version will be 6.3.0
-			if( $version[0] === $next_version[0] &&
+			if( isset($next_version) && $version[0] === $next_version[0] &&
 				$version[1] === $next_version[1] &&
 				$version[2] === $next_version[2]
 			){
@@ -1121,7 +1131,11 @@ class update_code {
 					continue;
 				}
 			}
-			$versions[] = $version;
+			$valid_version = new stdClass();
+				$valid_version->version				= $version;
+				$valid_version->force_update_mode	= $force_update_mode;
+
+			$versions[] = $valid_version;
 		}
 
 		// result
@@ -1152,7 +1166,10 @@ class update_code {
 		// files
 			// build the file_path with the valid versions
 			// client will can select what is the update that it want use.
-			foreach ($versions as $valid_version) {
+			foreach ($versions as $valid_version_obj) {
+
+				$valid_version		= $valid_version_obj->version;
+				$force_update_mode	= $valid_version_obj->force_update_mode;
 
 				$code_url = update_code::get_code_url( $valid_version );
 
@@ -1171,6 +1188,10 @@ class update_code {
 						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $file_name );
 						$file_item->date	= $file_date;
 
+					if( !empty($force_update_mode) ){
+						$file_item->force_update_mode	= $force_update_mode;
+					}
+
 					$result->files[] = $file_item;
 				}
 			}
@@ -1187,6 +1208,10 @@ class update_code {
 						$file_item->version	= 'development';
 						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $development_file );
 						$file_item->date	= $file_date;
+
+					if( !empty($force_update_mode) ){
+						$file_item->force_update_mode	= $force_update_mode;
+					}
 
 					$result->files[] = $file_item;
 				}
