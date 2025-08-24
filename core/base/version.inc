@@ -1,7 +1,7 @@
 <?php
 
 	// Version
-	$DEDALO_VERSION = '6.7.2';
+	$DEDALO_VERSION = '7.0.0';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.dev';
 	}
