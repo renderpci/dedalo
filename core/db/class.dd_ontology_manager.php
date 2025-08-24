@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 /**
-* Class ONTOLOGY_DATA
+* Class DD_ONTOLOGY_MANAGER
 *
 * Provides core operations for managing ontology records.
 * This class ensures data consistency by enforcing predefined
@@ -12,7 +12,7 @@
 * - Inserting new records with optional initial data
 *
 */
-abstract class ontology_data {
+abstract class dd_ontology_manager {
 
 
 	// Ontology table
@@ -49,7 +49,7 @@ abstract class ontology_data {
 	];
 
 	// bool columns to parse
-	public static $ontolgy_boolean = [
+	public static $ontology_boolean = [
 		'is_model'			=> true,
 		'is_translatable'	=> true
 	];
@@ -58,7 +58,7 @@ abstract class ontology_data {
 
 
 	/**
-	* LOAD_ONTOLOGY_DATA
+	* LOAD
 	* Retrieves a single row of data from the ontology table
 	* based on `tipo`.
 	* It's designed to provide a unified way of accessing data from
@@ -70,7 +70,7 @@ abstract class ontology_data {
 	* Returns the processed data as an associative array with parsed int and JSON values.
 	* If no row is found, it returns an empty array []. If a critical error occurs, it returns false.
 	*/
-	public static function load_ontology_data( string $tipo ) : array|false {
+	public static function load( string $tipo ) : array|false {
 
 		$conn = DBi::_getConnection();
 
@@ -132,7 +132,7 @@ abstract class ontology_data {
 					$row[$key] = (int)$value;
 					break;
 
-				case isset(self::$ontolgy_boolean[$key]):
+				case isset(self::$ontology_boolean[$key]):
 					$row[$key] = ($value==='t');
 					break;
 			}
@@ -140,12 +140,12 @@ abstract class ontology_data {
 
 
 		return $row;
-	}//end load_ontology_data
+	}//end load
 
 
 
 	/**
-	* UPDATE_ONTOLOGY_DATA
+	* UPDATE
 	* Safely updates one or more columns in the "ontology" table row,
 	* identified by a `tipo`.
 	* @param string $tipo
@@ -158,7 +158,7 @@ abstract class ontology_data {
 	* Returns `true` on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function update_ontology_data( string $tipo, array $values ) : bool {
+	public static function update( string $tipo, array $values ) : bool {
 
 		// check values
 		if (empty($values)) {
@@ -247,12 +247,12 @@ abstract class ontology_data {
 		}
 
 		return true;
-	}//end update_ontology_data
+	}//end update
 
 
 
 	/**
-	* INSERT_ONTOLGY_DATA
+	* INSERT
 	* Inserts a single row into a "ontology" table with automatic handling for JSON columns
 	* and guaranteed inclusion of the `tipo` column.
 	* It is executed using prepared statement when the values are empty (default creation of empty record
@@ -267,7 +267,7 @@ abstract class ontology_data {
 	* Returns the new `id` on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function insert_ontolgy_data( string $tipo, array $values=[] ) : int|false {
+	public static function insert( string $tipo, array $values=[] ) : int|false {
 
 		$table = self::$ontology_table;
 
@@ -364,12 +364,12 @@ abstract class ontology_data {
 
 		// Cast to INT always (received is string by default)
 		return (int)$id;
-	}//end insert_ontolgy_data
+	}//end insert
 
 
 
 	/**
-	* DELETE_ONTOLGY_DATA
+	* DELETE
 	* Deletes a single row into a "ontology" table
 	* @param string $tipo
 	* A string identifier representing the unique type of ontology node.
@@ -378,7 +378,7 @@ abstract class ontology_data {
 	* On success true, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function delete_ontolgy_data( string $tipo ) : bool {
+	public static function delete( string $tipo ) : bool {
 
 		$conn = DBi::_getConnection();
 
@@ -416,12 +416,12 @@ abstract class ontology_data {
 		}
 
 		return true;
-	}//end delete_ontolgy_data
+	}//end delete
 
 
 
 	/**
-	* SEARCH_ONTOLOGY_DATA
+	* SEARCH
 	* Search in one or more columns in the "ontology" table ,
 	* return an array with the found `tipos`..
 	* @param array $values
@@ -431,7 +431,7 @@ abstract class ontology_data {
 	* Returns and array with found tipos on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function search_ontology_data( array $values, bool $order=false, ?int $limit=null ) : array|false {
+	public static function search( array $values, bool $order=false, ?int $limit=null ) : array|false {
 
 		// check values
 		if (empty($values)) {
@@ -538,8 +538,8 @@ abstract class ontology_data {
 
 
 		return $tipos;
-	}//end search_ontology_data
+	}//end search
 
 
 
-}//end class ontology_data
+}//end class dd_ontology_manager

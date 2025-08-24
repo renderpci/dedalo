@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * ontology_node
-* manage the active and functional ontology node,
+* Manages the active and functional ontology node,
 * ontology node is using to interpreted data, schemas, behaviors, etc. in execution time.
 * It manages every node of active ontologies.
 * It uses `dd_ontology` table in DDBB.
@@ -119,7 +119,7 @@ class ontology_node {
 		}
 		// load ontology node from DDBB
 		$tipo = $this->tipo;
-		$data = ontology_data::load_ontology_data($tipo);
+		$data = dd_ontology_manager::load($tipo);
 
 		// Set as loaded
 		$this->is_loaded_data = true;
@@ -626,7 +626,7 @@ class ontology_node {
 
 		$tipo = $this->get_tipo();
 
-		$result = ontology_data::delete_ontolgy_data($tipo);
+		$result = dd_ontology_manager::delete($tipo);
 
 		if($result===false) {
 			return false;
@@ -634,7 +634,7 @@ class ontology_node {
 
 		$values = (array) $this->get_data();
 
-		$result = ontology_data::insert_ontolgy_data( $tipo, $values );
+		$result = dd_ontology_manager::insert( $tipo, $values );
 
 		if($result===false) {
 			return false;
@@ -769,7 +769,7 @@ class ontology_node {
 		];
 
 		// search terms with given model
-		$result = ontology_data::search_ontology_data(
+		$result = dd_ontology_manager::search(
 			[
 				'is_model'	=> true,
 				'tld'		=> 'dd',
@@ -809,7 +809,7 @@ class ontology_node {
 		}
 
 		// search
-		$result = ontology_data::search_ontology_data(
+		$result = dd_ontology_manager::search(
 			[ 'parent' => $this->tipo ],
 			true // order by order_number asc
 		);
@@ -996,7 +996,7 @@ class ontology_node {
 		}
 
 		// search
-		$result = ontology_data::search_ontology_data([
+		$result = dd_ontology_manager::search([
 			'parent' => $this->get_parent()
 		]);
 
@@ -1030,15 +1030,15 @@ class ontology_node {
 		// simple. Only returns the clean array with the 'tipo' listing
 		if($simple===true) {
 
-			$ar_terminos_relacionados = [];
+			$ar_relation_tipos = [];
 			if(is_array($ar_relations)) foreach($ar_relations as $ar_value) {
 				foreach($ar_value as $tipo) {
-					$ar_terminos_relacionados[]	= $tipo;
+					$ar_relation_tipos[]	= $tipo;
 				}
 			}
 
 			// overwrite
-			$ar_relations = $ar_terminos_relacionados;
+			$ar_relations = $ar_relation_tipos;
 		}
 
 

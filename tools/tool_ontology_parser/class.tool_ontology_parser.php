@@ -81,14 +81,14 @@ class tool_ontology_parser extends tool_common {
 
 
 			// store ontology resolution
-				$current_ontolgy = new stdClass();
-					$current_ontolgy->target_section_tipo	= $target_section_tipo;
-					$current_ontolgy->tld					= $tld;
-					$current_ontolgy->name					= $name;
-					$current_ontolgy->typology_id			= $typology_id;
-					$current_ontolgy->typology_name			= $typology_name;
+				$current_ontology = new stdClass();
+					$current_ontology->target_section_tipo	= $target_section_tipo;
+					$current_ontology->tld					= $tld;
+					$current_ontology->name					= $name;
+					$current_ontology->typology_id			= $typology_id;
+					$current_ontology->typology_name		= $typology_name;
 
-				$ontologies[] = $current_ontolgy;
+				$ontologies[] = $current_ontology;
 		}//end foreach ($result->ar_records as $row)
 
 		// response
