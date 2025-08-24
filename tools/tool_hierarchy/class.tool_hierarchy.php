@@ -43,7 +43,7 @@ class tool_hierarchy extends tool_common {
 				}
 			}
 
-		// create a new virtual section from real. This build the new hierarchy elements needed to run (ontology, jer_dd, etc.)
+		// create a new virtual section from real. This build the new hierarchy elements needed to run (ontology, dd_ontology, etc.)
 			$hierarchy_response = hierarchy::generate_virtual_section((object)[
 				'section_id'	=> $section_id,
 				'section_tipo'	=> $section_tipo

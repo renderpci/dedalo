@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * CLASS TOOL_ONTOLOGY_PARSER
-*  Parse and insert section records into jer_dd table
+*  Parse and insert section records into dd_ontology table
 *
 */
 class tool_ontology_parser extends tool_common {
@@ -54,7 +54,7 @@ class tool_ontology_parser extends tool_common {
 
 
 			// typology
-				$model = RecordObj_dd::get_model_terminoID( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
+				$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 
 				$typology_component = component_common::get_instance(
 					$model, // string model
@@ -81,14 +81,14 @@ class tool_ontology_parser extends tool_common {
 
 
 			// store ontology resolution
-				$current_ontolgy = new stdClass();
-					$current_ontolgy->target_section_tipo	= $target_section_tipo;
-					$current_ontolgy->tld					= $tld;
-					$current_ontolgy->name					= $name;
-					$current_ontolgy->typology_id			= $typology_id;
-					$current_ontolgy->typology_name			= $typology_name;
+				$current_ontology = new stdClass();
+					$current_ontology->target_section_tipo	= $target_section_tipo;
+					$current_ontology->tld					= $tld;
+					$current_ontology->name					= $name;
+					$current_ontology->typology_id			= $typology_id;
+					$current_ontology->typology_name		= $typology_name;
 
-				$ontologies[] = $current_ontolgy;
+				$ontologies[] = $current_ontology;
 		}//end foreach ($result->ar_records as $row)
 
 		// response
@@ -139,7 +139,7 @@ class tool_ontology_parser extends tool_common {
 		$ar_msg = [];
 		foreach ($selected_ontologies as $tld) {
 
-			// Process ontology node/s and change jer_dd rows
+			// Process ontology node/s and change dd_ontology rows
 			$ontology_response = ontology_data_io::export_to_file( $tld );
 
 			// save all export messages
@@ -154,7 +154,7 @@ class tool_ontology_parser extends tool_common {
 			$done++;
 		}
 
-		// Process private list of matrix_dd node/s and change jer_dd rows
+		// Process private list of matrix_dd node/s and change dd_ontology rows
 			$private_list_response = ontology_data_io::export_private_lists_to_file();
 
 			// save all export messages
@@ -191,7 +191,7 @@ class tool_ontology_parser extends tool_common {
 			$selected_ontologies = $options->selected_ontologies ?? [];
 
 		// response
-			$response = ontology::regenerate_records_in_jer_dd( $selected_ontologies );
+			$response = ontology::regenerate_records_in_dd_ontology( $selected_ontologies );
 
 
 		return $response;

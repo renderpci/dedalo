@@ -38,7 +38,7 @@ function crop_50( object $request_options ) : object {
 			return $item->role === 'target_component';
 		});
 		$target_component_tipo	= $target_ddo->tipo;
-		$target_component_model	= RecordObj_dd::get_model_name_by_tipo($target_component_tipo, true);
+		$target_component_model	= ontology_node::get_model_by_tipo($target_component_tipo, true);
 
 	$file_data 		= tool_import_files::get_file_data($file_path, $file_name);
 	$source_image 	= $file_data['file_path'];
@@ -111,7 +111,7 @@ function crop_50( object $request_options ) : object {
 	$crop_number = 0;
 	foreach ($custom_arguments as $destination => $component_tipo) {
 
-		$model_name 		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+		$model_name 		= ontology_node::get_model_by_tipo($component_tipo,true);
 		$component_portal 	= component_common::get_instance(
 			$model_name,
 			$component_tipo,

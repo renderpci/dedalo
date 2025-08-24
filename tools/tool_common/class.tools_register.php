@@ -154,15 +154,15 @@ class tools_register {
 			if (!empty($ar_ontologies)) {
 
 				// Clean. remove structure records in the database
-					RecordObj_dd::delete_tld_nodes( 'tool' );
+					ontology_utils::delete_tld_nodes( 'tool' );
 
-				// import ontology (structure) in jer_dd
+				// import ontology (structure) in dd_ontology
 					foreach ($ar_ontologies as $current_ontology) {
 						// @TODO generate the ontology node or modify exiting one!! 10-01-2024
 					}
 
 				// update counter at end to consolidate
-					RecordObj_dd::update_counter('tool', $counter-1);
+					ontology_node::update_counter('tool', $counter-1);
 			}
 
 			// section
@@ -274,7 +274,7 @@ class tools_register {
 
 						// tool_obj . Set and save updated section
 							$component_tipo	= self::$simple_tool_obj_component_tipo; // 'dd1353'; // component_json (Simple tool object)
-							$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+							$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 							$component		= component_common::get_instance(
 								$model,
 								$component_tipo,
@@ -308,7 +308,7 @@ class tools_register {
 
 						// tool name
 							$component_tipo	= self::$tipo_tool_name;
-							$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+							$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 							$component		= component_common::get_instance(
 								$model,
 								$component_tipo,
@@ -539,7 +539,7 @@ class tools_register {
 
 		// name
 			$component_tipo	= self::$tipo_tool_name; // 'dd1326';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -556,7 +556,7 @@ class tools_register {
 
 		// label
 			$component_tipo	= self::$tipo_tool_label; // 'dd799';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -579,7 +579,7 @@ class tools_register {
 
 		// version
 			$component_tipo	= self::$tipo_version; //  'dd1327';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -596,7 +596,7 @@ class tools_register {
 
 		// dedalo version (minimal requirement)
 			$component_tipo	= self::$tipo_dedalo_version_minimal; // 'dd1328';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -613,7 +613,7 @@ class tools_register {
 
 		// description
 			$component_tipo	= 'dd612';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -636,7 +636,7 @@ class tools_register {
 
 		// developer
 			$component_tipo	= 'dd1644';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -659,8 +659,8 @@ class tools_register {
 
 		// affected components (models)
 			$component_tipo	= self::$tipo_affected_models; // 'dd1330';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
-			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
+			$component_lang	= ontology_node::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -679,7 +679,7 @@ class tools_register {
 
 		// affected tipos (components)
 			$component_tipo	= 'dd1350';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -700,8 +700,8 @@ class tools_register {
 
 		// show in inspector
 			$component_tipo	= 'dd1331';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
-			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
+			$component_lang	= ontology_node::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -719,8 +719,8 @@ class tools_register {
 
 		// show in component
 			$component_tipo	= 'dd1332';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
-			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
+			$component_lang	= ontology_node::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -738,7 +738,7 @@ class tools_register {
 
 		// always active
 			$component_tipo	= 'dd1601';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -756,8 +756,8 @@ class tools_register {
 
 		// requirement translatable
 			$component_tipo	= 'dd1333';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
-			$component_lang	= RecordObj_dd::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
+			$component_lang	= ontology_node::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -773,7 +773,7 @@ class tools_register {
 
 		// ontology -component_json-
 			$component_tipo	= self::$tipo_ontology; // 'dd1334';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -794,7 +794,7 @@ class tools_register {
 
 		// properties
 			$component_tipo	= self::$tipo_properties; // 'dd1335';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -815,7 +815,7 @@ class tools_register {
 
 		// labels
 			$component_tipo	= 'dd1372';
-			$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
@@ -949,7 +949,7 @@ class tools_register {
 
 					// reg_component. get the default config of the register
 						$component_tipo		= $tools_configuration; // 'dd999';
-						$component_model	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+						$component_model	= ontology_node::get_model_by_tipo($component_tipo,true);
 						$reg_component		= component_common::get_instance(
 							$component_model,
 							$component_tipo,
@@ -977,7 +977,7 @@ class tools_register {
 						$config_component->Save();
 
 					// config_name_component. create the name component in the config section
-						$config_name_component_model	= RecordObj_dd::get_model_name_by_tipo($component_tipo_tool_name,true);
+						$config_name_component_model	= ontology_node::get_model_by_tipo($component_tipo_tool_name,true);
 						$config_name_component			= component_common::get_instance(
 							$config_name_component_model,
 							$component_tipo_tool_name,
@@ -1036,7 +1036,7 @@ class tools_register {
 				$section->set_dato($record->datos);
 
 				// name
-					$model		= RecordObj_dd::get_model_name_by_tipo($name_tipo,true);
+					$model		= ontology_node::get_model_by_tipo($name_tipo,true);
 					$component	= component_common::get_instance(
 						$model,
 						$name_tipo,
@@ -1051,7 +1051,7 @@ class tools_register {
 						: null;
 
 				// config
-					$model		= RecordObj_dd::get_model_name_by_tipo($config_tipo,true);
+					$model		= ontology_node::get_model_by_tipo($config_tipo,true);
 					$component	= component_common::get_instance(
 						$model,
 						$config_tipo,
@@ -1119,7 +1119,7 @@ class tools_register {
 				$section->set_dato($record->datos);
 
 				// name
-					$model = RecordObj_dd::get_model_name_by_tipo($name_tipo,true);
+					$model = ontology_node::get_model_by_tipo($name_tipo,true);
 					if (empty($model)) {
 						$name	= null;
 						debug_log(__METHOD__
@@ -1143,7 +1143,7 @@ class tools_register {
 					}
 
 				// config
-					$model = RecordObj_dd::get_model_name_by_tipo($config_tipo,true);
+					$model = ontology_node::get_model_by_tipo($config_tipo,true);
 					if (empty($model)) {
 						$config	= null;
 						debug_log(__METHOD__

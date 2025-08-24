@@ -178,7 +178,7 @@ class component_portal extends component_relation_common {
 			}else {
 
 				$component_filter_tipo	= $ar_children_tipo[0];
-				$model					= RecordObj_dd::get_model_name_by_tipo($component_filter_tipo, true);
+				$model					= ontology_node::get_model_by_tipo($component_filter_tipo, true);
 				$component_filter		= component_common::get_instance(
 					$model,
 					$component_filter_tipo,
@@ -235,8 +235,8 @@ class component_portal extends component_relation_common {
 			case '6.0.0':
 				// Update the locator to move old ds and dataframe to v6 dataframe model.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
-					$RecordObj_dd			= new RecordObj_dd($tipo);
-					$properties				= $RecordObj_dd->get_properties();
+					$ontology_node			= new ontology_node($tipo);
+					$properties				= $ontology_node->get_properties();
 					$v6_update_dataframe	= $properties->v6_update_dataframe ?? null;
 
 					$clean_locators		= [];
@@ -343,7 +343,7 @@ class component_portal extends component_relation_common {
 							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 					}else{
 
-						$legacy_model_name = RecordObj_dd::get_legacy_model_name_by_tipo($tipo);
+						$legacy_model_name = ontology_node::get_legacy_model_by_tipo($tipo);
 						if ($legacy_model_name==='component_autocomplete_hi') {
 							// force save to regenerate search relations
 							$response = new stdClass();
@@ -392,7 +392,7 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_valor( ?string $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
 
-		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		if( !include $path ) {
@@ -427,7 +427,7 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 
-		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		// portal valor_export is no longer available
 		if ($legacy_model==='component_portal') {
@@ -454,7 +454,7 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
 
-		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
+		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		include $path;
@@ -554,7 +554,7 @@ class component_portal extends component_relation_common {
 					$compare_model = function($section_tipo, $section_id, $component_model_tipo, $current_map) {
 
 						// get model value
-							$component_model = RecordObj_dd::get_model_name_by_tipo($component_model_tipo,true);
+							$component_model = ontology_node::get_model_by_tipo($component_model_tipo,true);
 							$component_model = component_common::get_instance(
 								$component_model, // component_relation_model
 								$component_model_tipo,
@@ -697,8 +697,8 @@ class component_portal extends component_relation_common {
 			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
 				$path[] = (object)[
 					'component_tipo'	=> $this->from_component_tipo,
-					'model'				=> RecordObj_dd::get_model_name_by_tipo($this->from_component_tipo,true),
-					'name'				=> RecordObj_dd::get_termino_by_tipo($this->from_component_tipo),
+					'model'				=> ontology_node::get_model_by_tipo($this->from_component_tipo,true),
+					'name'				=> ontology_node::get_term_by_tipo($this->from_component_tipo),
 					'section_tipo'		=> $this->from_section_tipo
 				];
 			}
@@ -706,8 +706,8 @@ class component_portal extends component_relation_common {
 		// self component path
 			$path[] = (object)[
 				'component_tipo'	=> $component_tipo,
-				'model'				=> RecordObj_dd::get_model_name_by_tipo($component_tipo,true),
-				'name'				=> RecordObj_dd::get_termino_by_tipo($component_tipo),
+				'model'				=> ontology_node::get_model_by_tipo($component_tipo,true),
+				'name'				=> ontology_node::get_term_by_tipo($component_tipo),
 				'section_tipo'		=> $section_tipo
 			];
 
@@ -733,7 +733,7 @@ class component_portal extends component_relation_common {
 
 				debug_log(__METHOD__.
 					" Ignored empty request_config_item->show (mode:$this->mode) [$this->section_tipo - $this->tipo - "
-					. RecordObj_dd::get_termino_by_tipo($this->tipo) ."]". PHP_EOL
+					. ontology_node::get_term_by_tipo($this->tipo) ."]". PHP_EOL
 					. 'request_config: ' . PHP_EOL
 					. json_handler::encode($request_config)
 					, logger::ERROR
@@ -746,7 +746,7 @@ class component_portal extends component_relation_common {
 				if (empty($first_item)) {
 					debug_log(__METHOD__.
 						" Ignored show empty first_item (mode:$this->mode) [$this->section_tipo - $this->tipo - ".
-						RecordObj_dd::get_termino_by_tipo($this->tipo).
+						ontology_node::get_term_by_tipo($this->tipo).
 						"]. It may be due to a lack of permissions.",
 						logger::WARNING
 					);
@@ -755,8 +755,8 @@ class component_portal extends component_relation_common {
 					// target component
 					$path[] = (object)[
 						'component_tipo'	=> $first_item->tipo,
-						'model'				=> RecordObj_dd::get_model_name_by_tipo($first_item->tipo,true),
-						'name'				=> RecordObj_dd::get_termino_by_tipo($first_item->tipo),
+						'model'				=> ontology_node::get_model_by_tipo($first_item->tipo,true),
+						'name'				=> ontology_node::get_term_by_tipo($first_item->tipo),
 						// note that section_tipo is used only to give a name to the join item.
 						// results are not really filtered by this section_tipo
 						'section_tipo'		=> is_array($first_item->section_tipo)

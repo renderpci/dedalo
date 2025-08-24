@@ -394,10 +394,10 @@ final class section_test extends TestCase {
 
 
 	/**
-	* TEST_set_bl_loaded_matrix_data
+	* TEST_SET_IS_LOADED_MATRIX_DATA
 	* @return void
 	*/
-	public function test_set_bl_loaded_matrix_data() : void {
+	public function test_set_is_loaded_matrix_data() : void {
 
 		$section_id		= self::$section_id;
 		$section_tipo	= self::$section_tipo;
@@ -409,18 +409,18 @@ final class section_test extends TestCase {
 			$mode
 		);
 
-		$result = $section->set_bl_loaded_matrix_data(false);
+		$result = $section->set_is_loaded_matrix_data(false);
 
 		$this->assertTrue(
 			gettype($result)==='boolean' ,
 			'expected type boolean. Current type: ' .gettype($result)
 		);
-	}//end test_set_bl_loaded_matrix_data
+	}//end test_set_is_loaded_matrix_data
 
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATO
 	* @return void
 	*/
 	public function test_get_dato() : void {
@@ -595,7 +595,7 @@ final class section_test extends TestCase {
 		);
 
 		$component_tipo	= 'test52'; // component_input_text
-		$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+		$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 		$component_obj	= component_common::get_instance(
 			$model, // string model
 			$component_tipo, // string tipo
@@ -652,7 +652,7 @@ final class section_test extends TestCase {
 		);
 
 		$component_tipo	= 'test52'; // component_input_text
-		$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+		$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 		$component_obj	= component_common::get_instance(
 			$model, // string model
 			$component_tipo, // string tipo
@@ -711,7 +711,7 @@ final class section_test extends TestCase {
 		);
 
 		$component_tipo	= 'test101'; // component_filter
-		$model			= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+		$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 		$component_obj	= component_common::get_instance(
 			$model, // string model
 			$component_tipo, // string tipo

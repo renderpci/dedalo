@@ -97,7 +97,7 @@ class tool_diffusion extends tool_common {
 			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
 
 				// check diffusion_group model
-				$current_model = RecordObj_dd::get_model_name_by_tipo($diffusion_group, true);
+				$current_model = ontology_node::get_model_by_tipo($diffusion_group, true);
 				if ($current_model!=='diffusion_group') {
 					debug_log(__METHOD__
 						. ' Ignored non diffusion group element' . PHP_EOL
@@ -178,15 +178,15 @@ class tool_diffusion extends tool_common {
 						// add related terms
 						foreach ($table_fields_info as $info_item) {
 							// $ar_related = common::get_ar_related_by_model('component', $info_item->tipo, false);
-							$ar_related = RecordObj_dd::get_ar_terminos_relacionados($info_item->tipo, true, true);
+							$ar_related = ontology_node::get_relation_nodes($info_item->tipo, true, true);
 							if (isset($ar_related[0])) {
-								$current_name				= RecordObj_dd::get_termino_by_tipo($ar_related[0], null, true, true);
+								$current_name				= ontology_node::get_term_by_tipo($ar_related[0], null, true, true);
 								$info_item->related_tipo	= $ar_related[0];
 								$info_item->related_label	= $current_name;
-								$info_item->related_model	= RecordObj_dd::get_legacy_model_name_by_tipo($ar_related[0]);
+								$info_item->related_model	= ontology_node::get_legacy_model_by_tipo($ar_related[0]);
 							}
 							// add model
-							$info_item->model = RecordObj_dd::get_model_name_by_tipo($info_item->tipo, true);
+							$info_item->model = ontology_node::get_model_by_tipo($info_item->tipo, true);
 						}
 					}
 

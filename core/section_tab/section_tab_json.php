@@ -19,7 +19,7 @@
 			// tab / section_tab specific
 			// Note that 'tab' ontology items are mapped as 'section_tab' to reduce pollution
 			// Now, set context specific params to each one
-			$legacy_model	= RecordObj_dd::get_legacy_model_name_by_tipo($tipo);
+			$legacy_model	= ontology_node::get_legacy_model_by_tipo($tipo);
 			if ($legacy_model==='tab') {
 
 				// view (tab)
@@ -32,8 +32,8 @@
 
 				// children
 					$current_context->children = [];
-					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$children_tipo	= $RecordObj_dd->get_ar_children_of_this();
+					$ontology_node	= new ontology_node($tipo);
+					$children_tipo	= $ontology_node->get_ar_children_of_this();
 
 					// get the valid tabs of the section
 					$valid_tabs = section::get_ar_children_tipo_by_model_name_in_section(
@@ -51,7 +51,7 @@
 						}
 						$current_context->children[] = (object)[
 							'tipo'	=> $child_tipo,
-							'label'	=> RecordObj_dd::get_termino_by_tipo($child_tipo, DEDALO_APPLICATION_LANG)
+							'label'	=> ontology_node::get_term_by_tipo($child_tipo, DEDALO_APPLICATION_LANG)
 						];
 					}
 			}

@@ -112,7 +112,7 @@ class section extends common {
 			}
 
 		// tipo check model (only section is expected)
-			$model = RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model = ontology_node::get_model_by_tipo($tipo,true);
 			if ($model!=='section') {
 				debug_log(__METHOD__
 					. ' Expected model of tipo '.$tipo.' is section, but received is ' . PHP_EOL
@@ -265,8 +265,8 @@ class section extends common {
 
 
 	/**
-	* SET_BL_LOADED_MATRIX_DATA
-	* Pass bl_loaded_matrix_data to own $JSON_RecordObj_matrix instance
+	* SET_IS_LOADED_MATRIX_DATA
+	* Pass is_loaded_matrix_data to own $JSON_RecordObj_matrix instance
 	* only when value is 'false' to force reload data from DDBB
 	* When value is 'true' is ignored because the section manages this value
 	* on set_dato
@@ -274,7 +274,7 @@ class section extends common {
 	* @param bool $value
 	* @return bool
 	*/
-	public function set_bl_loaded_matrix_data(bool $value) : bool {
+	public function set_is_loaded_matrix_data(bool $value) : bool {
 
 		if ($value===false) {
 
@@ -285,11 +285,11 @@ class section extends common {
 			// Get and set $this->JSON_RecordObj_matrix
 			$this->get_JSON_RecordObj_matrix();
 			// force updates value
-			$this->JSON_RecordObj_matrix->set_bl_loaded_matrix_data(false);
+			$this->JSON_RecordObj_matrix->set_is_loaded_matrix_data(false);
 		}
 
 		return  true;
-	}//end set_bl_loaded_matrix_data
+	}//end set_is_loaded_matrix_data
 
 
 
@@ -369,7 +369,7 @@ class section extends common {
 	*/
 	public function set_dato($dato) : bool {
 
-		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
+		// call common->set_dato (!) fix var 'is_loaded_matrix_data' as true
 			$result = parent::set_dato($dato);
 
 		// update JSON_RecordObj_matrix cached data
@@ -645,9 +645,9 @@ class section extends common {
 
 						// INFO : We create the info of the current component
 							// $component_global_dato->info 		= new stdClass();
-							// 	$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
+							// 	$component_global_dato->info->label = ontology_node::get_term_by_tipo($component_tipo,null,true);
 							// 	$component_global_dato->info->model= $component_model_name;
-							$inf = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
+							$inf = ontology_node::get_term_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
 							$component_global_dato->inf = $inf;
 
 						$component_global_dato->dato = new stdClass();
@@ -1067,7 +1067,7 @@ class section extends common {
 						$section_dato->section_real_tipo	= (string)$section_real_tipo;
 
 					// Section label
-						$section_dato->label				= (string)RecordObj_dd::get_termino_by_tipo($tipo,null,true);
+						$section_dato->label				= (string)ontology_node::get_term_by_tipo($tipo,null,true);
 
 					// Section created by userID
 						$section_dato->created_by_userID	= (int)$user_id;
@@ -1252,7 +1252,7 @@ class section extends common {
 						debug_log(__METHOD__
 							." Ignored set filter default in section without filter: $this->tipo" . PHP_EOL
 							.' section_tipo: ' . $this->tipo . PHP_EOL
-							.' section label ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_APPLICATION_LANG)
+							.' section label ' . ontology_node::get_term_by_tipo($this->tipo, DEDALO_APPLICATION_LANG)
 							, logger::WARNING
 						);
 
@@ -1537,14 +1537,14 @@ class section extends common {
 					$ar_deleted_tipos = [];
 					foreach ($ar_component_tipo as $current_component_tipo) {
 
-						$current_model_name = RecordObj_dd::get_model_name_by_tipo($current_component_tipo, true);
+						$current_model_name = ontology_node::get_model_by_tipo($current_component_tipo, true);
 
 						// don't delete some components check
 							if (in_array($current_model_name, $ar_components_model_no_delete_dato)){
 								continue;
 							}
 
-						$translatable	= RecordObj_dd::get_translatable($current_component_tipo);
+						$translatable	= ontology_node::get_translatable($current_component_tipo);
 						$ar_lang		= ($translatable === false)
 							? [DEDALO_DATA_NOLAN]
 							: DEDALO_PROJECTS_DEFAULT_LANGS;
@@ -1755,7 +1755,7 @@ class section extends common {
 
 			# EXCLUDE ELEMENTS
 			if ($ar_tipo_exclude_elements===false) {
-				$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$ar_tipo_exclude_elements = ontology_node::get_ar_tipo_by_model_and_relation(
 					$original_tipo, // string tipo
 					'exclude_elements', // string model_name
 					'children', // string relation_type
@@ -1770,7 +1770,7 @@ class section extends common {
 			}else{
 
 				$tipo_exclude_elements		= $ar_tipo_exclude_elements[0];
-				$ar_elements_to_be_exclude	= RecordObj_dd::get_ar_terminos_relacionados(
+				$ar_elements_to_be_exclude	= ontology_node::get_relation_nodes(
 					$tipo_exclude_elements,
 					false, // bool cache
 					true // bool simple
@@ -1778,7 +1778,7 @@ class section extends common {
 
 				foreach ($ar_elements_to_be_exclude as $element_tipo) {
 
-					$model_name = RecordObj_dd::get_model_name_by_tipo($element_tipo, true);
+					$model_name = ontology_node::get_model_by_tipo($element_tipo, true);
 					if($model_name==='section_group' || $model_name === 'section_tab' || $model_name === 'tab') {
 						$ar_recursive_children		= (array)section::get_ar_recursive_children($element_tipo, $ar_exclude_models);
 						$ar_elements_to_be_exclude	= array_merge($ar_elements_to_be_exclude, $ar_recursive_children);
@@ -1797,8 +1797,8 @@ class section extends common {
 			if (true===$recursive) { // Default is recursive
 				$ar_recursive_children = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
 			}else{
-				$RecordObj_dd			= new RecordObj_dd($tipo);
-				$ar_recursive_children	= $RecordObj_dd->get_ar_children_of_this();
+				$ontology_node			= new ontology_node($tipo);
+				$ar_recursive_children	= $ontology_node->get_ar_children_of_this();
 			}
 
 		}else{
@@ -1810,8 +1810,8 @@ class section extends common {
 					break;
 				// Others (section_xx, buttons, etc.) are in the first level
 				default:
-					$RecordObj_dd			= new RecordObj_dd($tipo);
-					$ar_recursive_children	= $RecordObj_dd->get_ar_children_of_this();
+					$ontology_node			= new ontology_node($tipo);
+					$ar_recursive_children	= $ontology_node->get_ar_children_of_this();
 					break;
 			}
 		}
@@ -1828,17 +1828,17 @@ class section extends common {
 		}
 
 		// Loop through the child elements of the current section in the thesaurus
-		foreach($ar_recursive_children as $current_terminoID) {
+		foreach($ar_recursive_children as $current_tipo) {
 
-			$model_name = RecordObj_dd::get_model_name_by_tipo($current_terminoID, true);
+			$model_name = ontology_node::get_model_by_tipo($current_tipo, true);
 			foreach((array)$ar_model_name_required as $model_name_required) {
 
-				if (strpos($model_name, $model_name_required)!==false && !in_array($current_terminoID, $section_ar_children_tipo) ) {
+				if (strpos($model_name, $model_name_required)!==false && !in_array($current_tipo, $section_ar_children_tipo) ) {
 
 					if($search_exact===true && $model_name!==$model_name_required) {
 						// Is not accepted model
 					}else{
-						$section_ar_children_tipo[] = $current_terminoID;
+						$section_ar_children_tipo[] = $current_tipo;
 					}
 				}
 
@@ -1851,7 +1851,7 @@ class section extends common {
 					continue;
 				}
 			}
-		}//end foreach($ar_recursive_children as $current_terminoID)
+		}//end foreach($ar_recursive_children as $current_tipo)
 
 		// Cache session store
 		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
@@ -1864,7 +1864,7 @@ class section extends common {
 
 
 	/**
-	* GET_AR_RECURSIVE_CHILDREN : private alias of RecordObj_dd::get_ar_recursive_children
+	* GET_AR_RECURSIVE_CHILDREN : private alias of ontology_node::get_ar_recursive_children
 	* Note the use of $ar_exclude_models to exclude not desired section elements, like auxiliary sections in ich
 	* @param string $tipo
 	* @param array|null $ar_exclude_models = null
@@ -1885,11 +1885,10 @@ class section extends common {
 			: $default_ar_exclude_models;
 
 
-		$ar_recursive_children = RecordObj_dd::get_ar_recursive_children(
+		$ar_recursive_children = ontology_node::get_ar_recursive_children(
 			$tipo, // string tipo
 			false, // bool is recursion
 			$exclude_models, // array ar_exclude_models
-			'norden' // string order
 		);
 
 		return $ar_recursive_children;
@@ -1925,7 +1924,7 @@ class section extends common {
 					);
 				}else{
 					// locate excluded tipos (related terms) in this virtual section
-					$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados(
+					$ar_excluded_tipo = ontology_node::get_relation_nodes(
 						$ar_exclude_elements_tipo[0],
 						false, // bool cache
 						true // bool simple
@@ -2199,7 +2198,7 @@ class section extends common {
 				? DEDALO_USER_NAME_TIPO
 				: DEDALO_FULL_USER_NAME_TIPO;
 
-			$full_username_model	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$full_username_model	= ontology_node::get_model_by_tipo($tipo,true);
 			$component				= component_common::get_instance(
 				$full_username_model, // 'component_input_text',
 				$tipo,
@@ -2258,7 +2257,7 @@ class section extends common {
 			$section_tipo	= $this->tipo;
 
 		// component
-			$model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$component_tipo,
@@ -2295,7 +2294,7 @@ class section extends common {
 			$section_tipo	= $this->tipo;
 
 		// component
-			$model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$component_tipo,
@@ -2434,7 +2433,7 @@ class section extends common {
 		// components into section dato
 			foreach ($section_dato->components as $component_tipo => $component_value) {
 
-				$model = RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+				$model = ontology_node::get_model_by_tipo($component_tipo,true);
 				if (!in_array($model, $ar_media_elements)) continue; # Skip
 
 				$lang		= common::get_element_lang($component_tipo, DEDALO_DATA_LANG);
@@ -2499,7 +2498,7 @@ class section extends common {
 		// components into section dato
 			foreach ($section_dato->components as $component_tipo => $component_value) {
 
-				$model = RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+				$model = ontology_node::get_model_by_tipo($component_tipo,true);
 				if (!in_array($model, $ar_media_elements)) continue; # Skip
 
 				$lang		= common::get_element_lang($component_tipo, DEDALO_DATA_LANG);
@@ -2797,7 +2796,7 @@ class section extends common {
 			$section_tipo	= $current_locator->from_section_tipo;
 			$section_id		= $current_locator->from_section_id;
 
-			$model_name = RecordObj_dd::get_model_name_by_tipo( $component_tipo, true );
+			$model_name = ontology_node::get_model_by_tipo( $component_tipo, true );
 			#if ($model_name!=='component_portal' && $model_name!=='component_autocomplete' && $model_name!=='component_relation_children') {
 			if ('component_relation_common' !== get_parent_class($model_name) && $model_name !== 'component_dataframe') {
 				debug_log(__METHOD__
@@ -3210,8 +3209,8 @@ class section extends common {
 			if( isset($ar_children[0]) ) {
 
 				$tipo			= $ar_children[0];
-				$RecordObj_dd	= new RecordObj_dd($tipo);
-				$section_map	= $RecordObj_dd->get_properties() ?? null;
+				$ontology_node	= new ontology_node($tipo);
+				$section_map	= $ontology_node->get_properties() ?? null;
 			}
 
 		// cache. Store in cache for speed
@@ -3574,7 +3573,7 @@ class section extends common {
 					}
 
 				// short vars
-					$source_model				= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+					$source_model				= ontology_node::get_model_by_tipo($tipo,true);
 					$components_with_relations	= component_relation_common::get_components_with_relations();
 					$mode						= 'tm';
 
@@ -3596,13 +3595,13 @@ class section extends common {
 						$current_ddo_tipo = $ddo->tipo;
 
 					// ddo item model
-						$ddo->model = $ddo->model ?? RecordObj_dd::get_model_name_by_tipo($ddo->tipo, true);
+						$ddo->model = $ddo->model ?? ontology_node::get_model_by_tipo($ddo->tipo, true);
 
 					// permissions
 						$ddo->permissions = 1;
 
 					// model of dato tipo
-						$model = RecordObj_dd::get_model_name_by_tipo($tipo, true); // model of dato tipo
+						$model = ontology_node::get_model_by_tipo($tipo, true); // model of dato tipo
 
 					// switch cases
 						switch (true) {
@@ -3670,7 +3669,7 @@ class section extends common {
 									$note_section_id = $result->ar_records[0]->section_id ?? null;
 
 								// component
-									$note_model			= RecordObj_dd::get_model_name_by_tipo($current_ddo_tipo,true);
+									$note_model			= ontology_node::get_model_by_tipo($current_ddo_tipo,true);
 									$current_component	= component_common::get_instance(
 										$note_model,
 										$current_ddo_tipo,
@@ -3718,7 +3717,7 @@ class section extends common {
 							case ($current_ddo_tipo==='dd547'): // When (model: component_date) from activity section
 
 								$timestamp_tipo	= $current_ddo_tipo;
-								$model_name		= RecordObj_dd::get_model_name_by_tipo($timestamp_tipo,true);
+								$model_name		= ontology_node::get_model_by_tipo($timestamp_tipo,true);
 								$component		= component_common::get_instance(
 									$model_name,
 									$timestamp_tipo,
@@ -3782,8 +3781,8 @@ class section extends common {
 
 							case ($current_ddo_tipo==='dd546'): // Where (model: component_input_text)
 								// component_label
-									$component_label = RecordObj_dd::get_termino_by_tipo(
-										$tipo, // string terminoID
+									$component_label = ontology_node::get_term_by_tipo(
+										$tipo, // string tipo
 										DEDALO_APPLICATION_LANG, // string lang
 										true, // bool from_cache
 										true // bool fallback
@@ -3792,8 +3791,8 @@ class section extends common {
 									$rqo = dd_core_api::$rqo ?? null;
 									if ( $rqo && $rqo->source->tipo!==$rqo->source->section_tipo ) {
 										// section_label
-											$section_label = RecordObj_dd::get_termino_by_tipo(
-												$section_tipo, // string terminoID
+											$section_label = ontology_node::get_term_by_tipo(
+												$section_tipo, // string tipo
 												DEDALO_APPLICATION_LANG, // string lang
 												true, // bool from_cache
 												true // bool fallback
@@ -3853,11 +3852,11 @@ class section extends common {
 									$component_tipo	= ($source_model==='section')
 										? $ddo->tipo // get from ddo
 										: $tipo;	 // get from db record dato ($db_record->tipo)
-									$component_model	= RecordObj_dd::get_model_name_by_tipo($component_tipo, true); // $ddo->model;
+									$component_model	= ontology_node::get_model_by_tipo($component_tipo, true); // $ddo->model;
 									$is_relation		= in_array($component_model, $components_with_relations);
 									$lang				= $is_relation===true
 										? DEDALO_DATA_NOLAN
-										: ((bool)RecordObj_dd::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
+										: ((bool)ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
 
 									$caller_dataframe = $ddo->caller_dataframe ?? null;
 
@@ -4033,7 +4032,7 @@ class section extends common {
 
 
 													// 3 get the component dataframe data with time machine data
-													$dataframe_model = RecordObj_dd::get_model_name_by_tipo($dataframe_tipo);
+													$dataframe_model = ontology_node::get_model_by_tipo($dataframe_tipo);
 													foreach ($dataframe_data as $key => $current_dataframe_data) {
 														// create the caller_dataframe with the current data information
 														$new_caller_dataframe = new stdClass();
@@ -4198,7 +4197,7 @@ class section extends common {
 			$new_section->get_dato();
 
 			// ar_section_info_tipos. Ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
-				$ar_section_info_tipos = RecordObj_dd::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
+				$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
 			// tipos to skip on copy
 				$skip_tipos = $ar_section_info_tipos;
@@ -4225,7 +4224,7 @@ class section extends common {
 				}
 				foreach ($group_locators as $current_tipo => $ar_locators) {
 					// model filter
-					$current_model = RecordObj_dd::get_model_name_by_tipo($current_tipo,true);
+					$current_model = ontology_node::get_model_by_tipo($current_tipo,true);
 					// model safe
 					if (strpos($current_model, 'component_')!==0) {
 						debug_log(__METHOD__
@@ -4266,7 +4265,7 @@ class section extends common {
 					if (!empty($parents_data)) {
 
 						$current_tipo	= $ar_parent_tipo[0];
-						$current_model	= RecordObj_dd::get_model_name_by_tipo($current_tipo,true);
+						$current_model	= ontology_node::get_model_by_tipo($current_tipo,true);
 
 						$save_current = true;
 						// model safe
@@ -4308,7 +4307,7 @@ class section extends common {
 						continue;
 					}
 					// model filter
-					$current_model = RecordObj_dd::get_model_name_by_tipo($current_tipo,true);
+					$current_model = ontology_node::get_model_by_tipo($current_tipo,true);
 					// model safe
 					if (strpos($current_model, 'component_')!==0) {
 						debug_log(__METHOD__

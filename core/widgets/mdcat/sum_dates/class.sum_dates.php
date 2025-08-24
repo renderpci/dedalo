@@ -134,7 +134,7 @@ class sum_dates extends widget_common {
 
 
 			// PORTAL ROWS
-				$model_name 	  = RecordObj_dd::get_model_name_by_tipo($current_component_tipo,true); // Expected portal
+				$model_name 	  = ontology_node::get_model_by_tipo($current_component_tipo,true); // Expected portal
 				$component_portal = component_common::get_instance(
 					$model_name,
 					$current_component_tipo,
@@ -158,7 +158,7 @@ class sum_dates extends widget_common {
 				$locator_section_tipo = $first_locator->section_tipo;
 				$locator_section_id   = $first_locator->section_id;
 
-				$model_name 	  = RecordObj_dd::get_model_name_by_tipo($date_in_component_tipo,true); // Expected component date
+				$model_name 	  = ontology_node::get_model_by_tipo($date_in_component_tipo,true); // Expected component date
 
 				$component_date_in= component_common::get_instance(
 					$model_name,
@@ -187,7 +187,7 @@ class sum_dates extends widget_common {
 				$locator_section_tipo = $last_locator->section_tipo;
 				$locator_section_id   = $last_locator->section_id;
 
-				$model_name 	    = RecordObj_dd::get_model_name_by_tipo($date_out_component_tipo,true); // Expected component date
+				$model_name 	    = ontology_node::get_model_by_tipo($date_out_component_tipo,true); // Expected component date
 				$component_date_out = component_common::get_instance(
 					$model_name,
 					$date_out_component_tipo,
@@ -227,7 +227,7 @@ class sum_dates extends widget_common {
 				$locator_section_id   = $current_locator->section_id;
 
 				// Date in
-				$model_name 	  = RecordObj_dd::get_model_name_by_tipo($date_in_component_tipo,true); // Expected component date
+				$model_name 	  = ontology_node::get_model_by_tipo($date_in_component_tipo,true); // Expected component date
 				$component_date_in= component_common::get_instance(
 					$model_name,
 					$date_in_component_tipo,
@@ -247,7 +247,7 @@ class sum_dates extends widget_common {
 				$ar_dates_all[]= $date_in;
 
 				// Date out
-				$model_name 	   = RecordObj_dd::get_model_name_by_tipo($date_out_component_tipo,true); // Expected component date
+				$model_name 	   = ontology_node::get_model_by_tipo($date_out_component_tipo,true); // Expected component date
 				$component_date_out= component_common::get_instance(
 					$model_name,
 					$date_out_component_tipo,

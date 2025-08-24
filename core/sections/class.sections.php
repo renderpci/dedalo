@@ -94,7 +94,7 @@ class sections extends common {
 
 				}else{
 
-					$caller_model = RecordObj_dd::get_model_name_by_tipo($this->caller_tipo,true);
+					$caller_model = ontology_node::get_model_by_tipo($this->caller_tipo,true);
 					if ($caller_model==='section') {
 
 						// section case
@@ -364,7 +364,7 @@ class sections extends common {
 				$current_section_id		= $record->section_id;
 
 				// Delete main section from ontology or hierarchy
-				// it will remove all nodes in jer_dd and all matrix nodes.
+				// it will remove all nodes in dd_ontology and all matrix nodes.
 					if(	$prevent_delete_main===false &&
 						in_array($current_section_tipo, [DEDALO_HIERARCHY_SECTION_TIPO, DEDALO_ONTOLOGY_SECTION_TIPO])
 						){

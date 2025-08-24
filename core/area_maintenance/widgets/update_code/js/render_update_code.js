@@ -347,6 +347,9 @@ const render_build_version = function(self, content_data, body_response) {
 */
 const render_info_modal = function( self, versions_info ) {
 
+	// store nodes pointers
+		const nodes = {}
+
 	// blur any selection
 		document.activeElement.blur();
 
@@ -406,6 +409,23 @@ const render_info_modal = function( self, versions_info ) {
 		})
 
 	// files
+
+		const set_update_mode = function ( current_version ){
+			// check if current version is active (if the update has not new updates it will be undefined)
+			if(!current_version){
+				return false
+			}
+			// check if the file force to use clean.
+			if( current_version.force_update_mode && current_version.force_update_mode ==='clean'){
+				nodes.update_mode_container.classList.add('lock');
+				// nodes.incremental_radio.classList.add('hide');
+				nodes.clean_radio.checked = true;
+				self.update_mode = 'clean';
+			}else{
+				nodes.update_mode_container.classList.remove('lock');
+			}
+		}
+
 		const files = versions_info.files
 		const files_length = files.length
 		const valid_files = []
@@ -439,13 +459,9 @@ const render_info_modal = function( self, versions_info ) {
 				value			: current_version.url
 			})
 
-			// by default, the newer version is selected
-			if(i===0 && current_version.version!=='development'){
-				input_radio.checked = true
-				current_version.active = true
-			}
 			// change event handler
 			const change_handler = (e) => {
+				set_update_mode( current_version )
 				files.forEach( el => delete el.active )
 				current_version.active = input_radio.checked
 				body.querySelectorAll('.label, .value').forEach( el => el.classList.remove('active') )
@@ -475,6 +491,14 @@ const render_info_modal = function( self, versions_info ) {
 			})
 
 			version_label.prepend(input_radio)
+
+			// by default, the newer version is selected
+			if(i===0 && current_version.version!=='development'){
+				input_radio.checked = true
+				current_version.active = true
+				// save the pointer to be called
+				nodes.current_version_active = current_version
+			}
 
 			// add to valid_files
 			valid_files.push(current_version)
@@ -521,6 +545,8 @@ const render_info_modal = function( self, versions_info ) {
 				const change_mode_handler = (e)=> {
 					self.update_mode = e.target.value;
 				}
+				// save the pointer to be called
+				nodes.update_mode_container = update_mode_container
 				// option incremental
 				const incremental_label = ui.create_dom_element({
 					element_type	: 'label',
@@ -536,6 +562,10 @@ const render_info_modal = function( self, versions_info ) {
 				})
 				incremental_radio.addEventListener('change', change_mode_handler)
 				incremental_label.prepend(incremental_radio)
+
+				// save the pointer to be called
+				nodes.incremental_radio = incremental_radio
+
 				// option clean
 				const clean_label = ui.create_dom_element({
 					element_type	: 'label',
@@ -551,6 +581,9 @@ const render_info_modal = function( self, versions_info ) {
 				})
 				clean_radio.addEventListener('change', change_mode_handler)
 				clean_label.prepend(clean_radio)
+
+				// save the pointer to be called
+				nodes.clean_radio = clean_radio
 
 			// button_update
 				const button_update = ui.create_dom_element({
@@ -634,6 +667,9 @@ const render_info_modal = function( self, versions_info ) {
 						button_update.focus()
 					}
 				)
+
+				// fire the check if the active has a forced update mode
+				set_update_mode( nodes.current_version_active  )
 		}
 
 	// response add at end (after buttons)

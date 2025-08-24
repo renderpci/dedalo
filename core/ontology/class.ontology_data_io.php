@@ -31,7 +31,7 @@ class ontology_data_io {
 			$section_tipo			= 'dd0';
 			$section_id				= '1';
 			$tipo					= 'ontology18';
-			$model					= RecordObj_dd::get_model_name_by_tipo( $tipo );
+			$model					= ontology_node::get_model_by_tipo( $tipo );
 			$properties_component	= component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -156,7 +156,7 @@ class ontology_data_io {
 		$section_id		= '1';
 		$tipo 			= 'ontology18';
 
-		$model = RecordObj_dd::get_model_name_by_tipo( $tipo );
+		$model = ontology_node::get_model_by_tipo( $tipo );
 		$properties_component = component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo

@@ -92,8 +92,8 @@ class ts_object {
 			$children_tipo	= $ar_children[0] ?? null;
 			$properties		= null;
 			if ($children_tipo) {
-				$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
-				$properties		= $RecordObj_dd->get_properties();
+				$ontology_node	= new ontology_node($ar_children[0]);
+				$properties		= $ontology_node->get_properties();
 			}
 
 			// Fallback to real section when in virtual
@@ -110,8 +110,8 @@ class ts_object {
 					);
 					// relation map defined in properties
 					if (isset($ar_children[0])) {
-						$RecordObj_dd	= new RecordObj_dd($ar_children[0]);
-						$properties		= $RecordObj_dd->get_properties();
+						$ontology_node	= new ontology_node($ar_children[0]);
+						$properties		= $ontology_node->get_properties();
 					}
 				}
 			}//end if (empty($properties))
@@ -294,7 +294,7 @@ class ts_object {
 			// iterate every tipo
 				foreach ($ar_element_tipo as $element_tipo) {
 
-					$model_name = RecordObj_dd::get_model_name_by_tipo($element_tipo,true);
+					$model_name = ontology_node::get_model_by_tipo($element_tipo,true);
 					// remove the box elements
 					// it could be any old component not used as old component_relation_struct
 					if(empty($model_name) || $model_name === 'box elements'){
@@ -302,7 +302,7 @@ class ts_object {
 					}
 					// ignore v5 component_relation_struct
 						if ($model_name==='component_relation_index') {
-							$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($element_tipo);
+							$legacy_model = ontology_node::get_legacy_model_by_tipo($element_tipo);
 							if ($legacy_model==='component_relation_struct') {
 								continue 2;
 							}
@@ -422,7 +422,7 @@ class ts_object {
 
 									// flat key and set label
 									array_map(function($item){
-										$item->label	= RecordObj_dd::get_termino_by_tipo($item->key[0]);
+										$item->label	= ontology_node::get_term_by_tipo($item->key[0]);
 										$item->key		= $item->key[0]; // flat the key to be more useful in JavaScript, only 1 section is received
 									}, $count_data_group_by->totals_group);
 
@@ -542,7 +542,7 @@ class ts_object {
 
 		foreach($ar_children as $current_locator) {
 
-			$model = RecordObj_dd::get_model_name_by_tipo($current_locator->section_tipo,true);
+			$model = ontology_node::get_model_by_tipo($current_locator->section_tipo,true);
 			if (empty($model)) {
 				debug_log(__METHOD__
 					. " Ignored non resolved model for section: $current_locator->section_tipo" . PHP_EOL
@@ -564,7 +564,7 @@ class ts_object {
 			}
 
 			$component_tipo	= $section_map->thesaurus->is_descriptor;
-			$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model_name		= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model_name,
 				$component_tipo,
@@ -602,7 +602,7 @@ class ts_object {
 			return false;
 		}
 
-		$model = RecordObj_dd::get_model_name_by_tipo($section_tipo,true);
+		$model = ontology_node::get_model_by_tipo($section_tipo,true);
 		if (empty($model)) {
 			debug_log(__METHOD__
 				. " Ignored non resolved model for section: $section_tipo" . PHP_EOL
@@ -624,7 +624,7 @@ class ts_object {
 		}
 
 		$component_tipo	= $section_map->thesaurus->is_indexable;
-		$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+		$model_name		= ontology_node::get_model_by_tipo($component_tipo,true);
 		$component		= component_common::get_instance(
 			$model_name,
 			$component_tipo,
@@ -667,7 +667,7 @@ class ts_object {
 
 		// 		$component_tipo = $section_map['thesaurus']->is_descriptor;
 
-		// 		$model_name = RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+		// 		$model_name = ontology_node::get_model_by_tipo($component_tipo,true);
 		// 		$component 	 = component_common::get_instance($model_name,
 		// 													  $component_tipo,
 		// 													  $current_locator->section_id,
@@ -746,7 +746,7 @@ class ts_object {
 		$ar_value = [];
 		foreach ($ar_tipo as $tipo) {
 
-			$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -822,10 +822,10 @@ class ts_object {
 
 					$parent			= $locator->section_id;
 					$section_tipo	= $locator->section_tipo;
-					$model_name		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+					$model_name		= ontology_node::get_model_by_tipo($tipo,true);
 					// debug
 						// if(SHOW_DEBUG===true) {
-						// 	$real_model_name 	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+						// 	$real_model_name 	= ontology_node::get_model_by_tipo($tipo,true);
 						// 	if ($real_model_name!==$model_name) {
 						// 		trigger_error("Error. modelo_name of component $tipo must be $model_name. $#real_model_name is defined");#
 						// 	}

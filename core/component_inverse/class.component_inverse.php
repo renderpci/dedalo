@@ -34,7 +34,7 @@ class component_inverse extends component_common {
 			$this->dato_resolved	= $dato;
 
 		// Set as loaded
-			$this->bl_loaded_matrix_data = true;
+			$this->is_loaded_matrix_data = true;
 
 
 		return $dato;
@@ -132,7 +132,7 @@ class component_inverse extends component_common {
 			$from_section_tipo		= $current_locator->from_section_tipo;
 			$from_component_tipo	= $current_locator->from_component_tipo;
 
-			$section_label 	= RecordObj_dd::get_termino_by_tipo($from_section_tipo,DEDALO_APPLICATION_LANG, true);
+			$section_label 	= ontology_node::get_term_by_tipo($from_section_tipo,DEDALO_APPLICATION_LANG, true);
 
 			$column_obj_id = $this->section_tipo.'_'.$from_section_tipo.'_'.$this->tipo.'_'.$from_component_tipo;
 
@@ -254,7 +254,7 @@ class component_inverse extends component_common {
 				# section_label
 				if ($ikey === 'section_label') {
 					if(strlen($line)>0) $line .= ' ';
-					$label = RecordObj_dd::get_termino_by_tipo($section_tipo, $lang);
+					$label = ontology_node::get_term_by_tipo($section_tipo, $lang);
 					$line .= $label;
 				}
 
@@ -267,7 +267,7 @@ class component_inverse extends component_common {
 				# component_label
 				if ($ikey === 'component_label') {
 					if(strlen($line)>0) $line .= ' ';
-					$label = RecordObj_dd::get_termino_by_tipo($component_tipo, $lang);
+					$label = ontology_node::get_term_by_tipo($component_tipo, $lang);
 					$line .= $label;
 				}
 			}
@@ -282,56 +282,6 @@ class component_inverse extends component_common {
 
 		return $valor_export;
 	}//end get_valor_export
-
-
-
-	/**
-	* GET_CALLER_COMPONENT_TIPOS
-	* !NOTE: This function is not used right now, but is a resolution of the ontology to get with components and portals call to the section given, the first step to search inverse.
-	* Resolve the ontology connections that are pointing to current section_tipo
-	* And return all component tipos that are linked to current section in an array.
-	*
-	* @return array $caller_component_tipos
-	*/
-	public static function get_caller_component_tipos( string $section_tipo ) : array {
-
-		$caller_component_tipos = [];
-
-		$sql_query	= "
-			SELECT \"terminoID\"
-			FROM \"jer_dd\"
-			WHERE
-			(
-				\"relaciones\" LIKE '%\"$section_tipo\"%'
-				OR properties @@ '$.request_config[*].sqo.section_tipo[*].value[*] == \"$section_tipo\"'
-			)
-			AND \"model\" LIKE '%component_%'
-		";
-
-		$result = JSON_RecordDataBoundObject::search_free($sql_query);
-
-		$user_id = logged_user_id();
-
-		$datalist = component_security_access::calculate_tree($user_id, DEDALO_DATA_LANG);
-
-		while($row = pg_fetch_assoc($result)) {
-			$current_component_tipo = $row["terminoID"];
-
-			$all_sections = [];
-			foreach ($datalist as $item) {
-
-				if ( $item->tipo ===  $current_component_tipo ) {
-					$all_sections[] = $item;
-				}
-			}
-
-			$caller_component_tipos = array_merge($caller_component_tipos, $all_sections);
-		}
-
-
-		return $caller_component_tipos;
-	}//end get_caller_component_tipos
-
 
 
 

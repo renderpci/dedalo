@@ -268,7 +268,7 @@ class component_svg extends component_media_common implements component_media_in
 	*/
 	public static function get_url_from_locator(object $locator) : ?string {
 
-		$model		= RecordObj_dd::get_model_name_by_tipo($locator->component_tipo,true);
+		$model		= ontology_node::get_model_by_tipo($locator->component_tipo,true);
 		$component	= component_common::get_instance(
 			$model,
 			$locator->component_tipo,
@@ -412,7 +412,7 @@ class component_svg extends component_media_common implements component_media_in
 				// same case as '6.0.1'. regenerate_component is enough to create thumb
 			case '6.0.1':
 				// component instance
-					$model		= RecordObj_dd::get_model_name_by_tipo($tipo, true);
+					$model		= ontology_node::get_model_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model,
 						$tipo,
@@ -443,7 +443,7 @@ class component_svg extends component_media_common implements component_media_in
 				if ($is_old_dato===true) {
 
 					// create the component svg
-						$model		= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+						$model		= ontology_node::get_model_by_tipo($tipo,true);
 						$component	= component_common::get_instance(
 							$model, // string 'component_svg'
 							$tipo,

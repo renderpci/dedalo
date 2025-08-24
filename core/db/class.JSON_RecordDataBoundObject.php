@@ -947,7 +947,7 @@ abstract class JSON_RecordDataBoundObject {
 		// 			throw new Exception("Error Processing Request. Sorry not implemented...", 1);
 		// 			break;
 		// 		case 'btree':
-		// 			# ref: datos#>>'{components, $terminoID_valor, dato, $lang}' as $terminoID_valor
+		// 			# ref: datos#>>'{components, $tipo_valor, dato, $lang}' as $tipo_valor
 		// 			return "$datos #>>'{components,$tipo,$key,$lang}' AS $tipo";
 		// 			break;
 		// 	}

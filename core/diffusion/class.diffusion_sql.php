@@ -114,7 +114,7 @@ class diffusion_sql extends diffusion  {
 		// table info
 			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			if (!property_exists($diffusion_element_tables_map, $section_tipo)) {
-				$label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG);
+				$label = ontology_node::get_term_by_tipo($section_tipo, DEDALO_DATA_LANG);
 
 				$response->code		= 2;
 				$response->result	= false;
@@ -190,7 +190,7 @@ class diffusion_sql extends diffusion  {
 				$diffusion_section = $table_tipo;
 				if(empty($diffusion_section)) {
 					if(SHOW_DEBUG===true) {
-						$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						$section_name = ontology_node::get_term_by_tipo($section_tipo, DEDALO_STRUCTURE_LANG, true, false);
 						// throw new Exception("Error Processing Request. diffusion_section not found in correspondence with section_tipo: $section_tipo . Nothing is updated", 1);
 						// echo "<hr> DEBUG update_record: Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id]<br>";
 						$msg = " Omitted update section '$section_name'. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id] ";
@@ -243,8 +243,8 @@ class diffusion_sql extends diffusion  {
 						$save_options->section_tipo						= $section_tipo;
 
 						// engine switch
-						$RecordObj_dd			= new RecordObj_dd($database_tipo);
-						$database_properties	= $RecordObj_dd->get_propiedades(true);
+						$ontology_node			= new ontology_node($database_tipo);
+						$database_properties	= $ontology_node->get_propiedades(true);
 						if (isset($database_properties->engine)) {
 							$save_options->record_data['engine'] = $database_properties->engine; // If defined in database properties
 						}
@@ -278,8 +278,8 @@ class diffusion_sql extends diffusion  {
 						if (!isset($table_properties->global_table_maps)) {
 
 							// try from real
-							$RecordObj_dd		= new RecordObj_dd($table_tipo);
-							$target_properties	= $RecordObj_dd->get_propiedades(true);
+							$ontology_node		= new ontology_node($table_tipo);
+							$target_properties	= $ontology_node->get_propiedades(true);
 							if (is_object($target_properties) && isset($target_properties->global_table_maps)) {
 								// overwrite global_table_maps
 								$table_properties->global_table_maps = $target_properties->global_table_maps;
@@ -384,14 +384,14 @@ class diffusion_sql extends diffusion  {
 							}
 
 						// model
-							$model_name = RecordObj_dd::get_model_name_by_tipo($current_component_tipo, true);
+							$model_name = ontology_node::get_model_by_tipo($current_component_tipo, true);
 							if (!in_array($model_name, $ar_components_with_references)) {
 								continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
 							}
 
 						// skip resolve components with dato external (portals)
-							$RecordObj_dd					= new RecordObj_dd($current_component_tipo);
-							$current_component_properties	= $RecordObj_dd->get_propiedades(true);
+							$ontology_node					= new ontology_node($current_component_tipo);
+							$current_component_properties	= $ontology_node->get_propiedades(true);
 							if (isset($current_component_properties->source->mode) && $current_component_properties->source->mode==='external') {
 								debug_log(__METHOD__
 									." Skipped component with external source mode" . PHP_EOL
@@ -402,8 +402,7 @@ class diffusion_sql extends diffusion  {
 							}
 
 						// component's lang
-							$current_lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);
-
+							$current_lang = $ontology_node->get_is_translatable()===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						// iterate array of section_id (from options) and group_by_section_tipo
 							foreach ((array)$section_id as $current_section_id) {
 
@@ -456,7 +455,7 @@ class diffusion_sql extends diffusion  {
 							// recursion level reset
 								// $current_recursion_level = 1;
 								if(SHOW_DEBUG===true) {
-									$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo);
+									$label = ontology_node::get_term_by_tipo($current_section_tipo);
 									debug_log(__METHOD__
 										. " current recursion_level: '$recursion_level' of $max_recursions [$current_section_tipo] "
 										. " label: '$label' - current_ar_section_id: ".to_string($current_ar_section_id)
@@ -512,7 +511,7 @@ class diffusion_sql extends diffusion  {
 
 		// 	# DEFAULT CASE
 		// 	# table in first level
-		// 	$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $model_name=array('table'), $relation_type='children', $search_exact=true);
+		// 	$ar_diffusion_table = ontology_node::get_ar_tipo_by_model_and_relation($database_tipo, $model_name=array('table'), $relation_type='children', $search_exact=true);
 
 		// 		# Recorremos hijos de la primera/as tabla/s
 		// 		foreach ($ar_diffusion_table as $key => $current_table_tipo) {
@@ -520,10 +519,10 @@ class diffusion_sql extends diffusion  {
 		// 			if(SHOW_DEBUG===true) {
 
 		// 				# Table verify
-		// 				$model_name = RecordObj_dd::get_model_name_by_tipo($current_table_tipo,true);
+		// 				$model_name = ontology_node::get_model_by_tipo($current_table_tipo,true);
 		// 				if ($model_name==='section') {
 
-		// 					$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);
+		// 					$ar_section = ontology_node::get_ar_tipo_by_model_and_relation($current_table_tipo, 'section', 'related', true);
 		// 					#dump($ar_section,'ar_section : '.$database_tipo);
 
 		// 					if(empty($ar_section)) {
@@ -539,19 +538,19 @@ class diffusion_sql extends diffusion  {
 
 		// 	# THESAURUS CASE
 		// 	# table_thesaurus in first level
-		// 	$ar_diffusion_table_thesaurus = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $model_name='table_thesaurus', $relation_type='children', true);
+		// 	$ar_diffusion_table_thesaurus = ontology_node::get_ar_tipo_by_model_and_relation($database_tipo, $model_name='table_thesaurus', $relation_type='children', true);
 
 		// 		# Recorremos hijos de la primera/as tabla/s
 		// 		foreach ($ar_diffusion_table_thesaurus as $current_table_tipo) {
 
-		// 			$RecordObj_dd = new RecordObj_dd($current_table_tipo);
-		// 			$properties  = json_decode( $RecordObj_dd->get_properties() );
+		// 			$ontology_node = new ontology_node($current_table_tipo);
+		// 			$properties  = json_decode( $ontology_node->get_properties() );
 		// 				#dump($properties, ' properties ++ '.to_string());
 		// 			if (isset($properties->ar_tables)) {
 		// 				$options = new stdClass();
 		// 					$options->ar_tables  	= $properties->ar_tables;
-		// 					$options->table_name 	= RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-		// 					$options->database_name = RecordObj_dd::get_termino_by_tipo($database_tipo, DEDALO_STRUCTURE_LANG, true, false);
+		// 					$options->table_name 	= ontology_node::get_term_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+		// 					$options->database_name = ontology_node::get_term_by_tipo($database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 		// 				$thesaurus_columns  = self::build_thesaurus_columns( $options );
 		// 				self::$ar_table[$options->database_name][$current_table_tipo] = $thesaurus_columns;
@@ -582,12 +581,12 @@ class diffusion_sql extends diffusion  {
 			$ar_table_data = array();
 			// add
 			$ar_table_data['database_name']	= $database_name;	//self::$database_name;
-			$ar_table_data['table_name']	= $table_name;		//RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			$ar_table_data['table_name']	= $table_name;		//ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			$ar_table_data['ar_fields']		= array();
 
 		// Table properties SCHEMA optional
-			// $RecordObj_dd 	  = new RecordObj_dd($table_tipo);
-			// $str_properties  = $RecordObj_dd->get_properties();
+			// $ontology_node 	  = new ontology_node($table_tipo);
+			// $str_properties  = $ontology_node->get_properties();
 			// if($properties = json_decode($str_properties)) {
 			// 	if (isset($properties->schema)) {
 			// 		self::save_table_schema(  $database_name, $table_name, $properties->schema );
@@ -609,14 +608,14 @@ class diffusion_sql extends diffusion  {
 		// other fields . Normal columns
 			$ar_table_children = $ar_children_tipo;
 			if (empty($ar_table_children)) {
-				$RecordObj_dd		= new RecordObj_dd($table_tipo);
-				$ar_table_children	= $RecordObj_dd->get_ar_children_of_this();
+				$ontology_node		= new ontology_node($table_tipo);
+				$ar_table_children	= $ontology_node->get_ar_children_of_this();
 
 				// Add from table alias too
 				if (!empty($table_from_alias)) {
 
-					$RecordObj_dd_alias			= new RecordObj_dd($table_from_alias);
-					$ar_table_alias_children	= $RecordObj_dd_alias->get_ar_children_of_this();
+					$ontology_node_alias			= new ontology_node($table_from_alias);
+					$ar_table_alias_children	= $ontology_node_alias->get_ar_children_of_this();
 
 					// merge all
 					$ar_table_children = self::replace_fields(
@@ -629,7 +628,7 @@ class diffusion_sql extends diffusion  {
 
 		foreach ($ar_table_children as $curent_children_tipo) {
 
-			$model_name = RecordObj_dd::get_model_name_by_tipo($curent_children_tipo,true);
+			$model_name = ontology_node::get_model_by_tipo($curent_children_tipo,true);
 			if ($model_name==='box elements') {
 				continue;
 			}
@@ -654,8 +653,8 @@ class diffusion_sql extends diffusion  {
 
 				default:
 					// field
-					$RecordObj_dd	= new RecordObj_dd($curent_children_tipo);
-					$properties		= $RecordObj_dd->get_propiedades(true);
+					$ontology_node	= new ontology_node($curent_children_tipo);
+					$properties		= $ontology_node->get_propiedades(true);
 
 					switch (true) {
 
@@ -694,7 +693,7 @@ class diffusion_sql extends diffusion  {
 								$options->tipo 		= $curent_children_tipo;
 							$element = self::create_field( $options );
 
-							$name = RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
+							$name = ontology_node::get_term_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
 							if ($name==='section_id') {
 								// overwrite default auto-created int column section_id
 								$found = array_find($ar_table_data['ar_fields'], function($item){
@@ -742,13 +741,13 @@ class diffusion_sql extends diffusion  {
 
 				$related_tipo = false;
 
-				$ar_related = RecordObj_dd::get_ar_terminos_relacionados(
+				$ar_related = ontology_node::get_relation_nodes(
 					$child_tipo,
 					true, // bool cache
 					true // bool simple
 				);
 				foreach ($ar_related as $current_related_tipo) {
-					$model = RecordObj_dd::get_model_name_by_tipo($current_related_tipo,true);
+					$model = ontology_node::get_model_by_tipo($current_related_tipo,true);
 					if (strpos($model, 'field_')===0) {
 						$related_tipo = $current_related_tipo;
 						break;
@@ -823,26 +822,26 @@ class diffusion_sql extends diffusion  {
 				break;
 
 			// case 'relation': (NOT USED ANYMORE. OLD TABLE COLUMN LINKS BETWEEN TABLES)
-				// 	$ar_field_data['field_name'] 	= RecordObj_dd::get_termino_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
+				// 	$ar_field_data['field_name'] 	= ontology_node::get_term_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
 				// 	$ar_field_data['field_type'] 	= 'field_text';
-				// 	$termino_relacionado 			= RecordObj_dd::get_ar_terminos_relacionados($options->tipo, $cache=true, $simple=true)[0];
-				// 	$ar_field_data['field_coment'] 	= RecordObj_dd::get_termino_by_tipo($termino_relacionado)." - $termino_relacionado";
+				// 	$related 			= ontology_node::get_relation_nodes($options->tipo, $cache=true, $simple=true)[0];
+				// 	$ar_field_data['field_coment'] 	= ontology_node::get_term_by_tipo($related)." - $related";
 				// 	$ar_field_data['field_options'] = null;
 				// 	break;
 
 			default:
-				$ar_field_data['field_name']	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false);
-				$ar_field_data['field_type']	= RecordObj_dd::get_model_name_by_tipo($tipo,true);
+				$ar_field_data['field_name']	= ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false);
+				$ar_field_data['field_type']	= ontology_node::get_model_by_tipo($tipo,true);
 
 				$related_component_tipo			= self::get_field_related_component($tipo);
 				$ar_field_data['field_coment']	= !empty($related_component_tipo)
-					? RecordObj_dd::get_termino_by_tipo($related_component_tipo)." - $related_component_tipo"
+					? ontology_node::get_term_by_tipo($related_component_tipo)." - $related_component_tipo"
 					: $ar_field_data['field_name'];
 
-				$RecordObj_dd	= new RecordObj_dd($tipo);
-				$properties		= $RecordObj_dd->get_propiedades(true);
+				$ontology_node	= new ontology_node($tipo);
+				$properties		= $ontology_node->get_propiedades(true);
 
-				$diffusion_model_name = RecordObj_dd::get_model_name_by_tipo($tipo,true);
+				$diffusion_model_name = ontology_node::get_model_by_tipo($tipo,true);
 				switch ($diffusion_model_name) {
 					case 'field_enum':
 						$properties_enum = $properties->enum ?? [];
@@ -896,7 +895,7 @@ class diffusion_sql extends diffusion  {
 				debug_log(__METHOD__
 					. ' WARNING: EMPTY ar_field_data: $ar_field_data[field_type] ' . PHP_EOL
 					. ' tipo: ' . $tipo . PHP_EOL
-					. 'model: ' . RecordObj_dd::get_model_name_by_tipo($tipo,true)
+					. 'model: ' . ontology_node::get_model_by_tipo($tipo,true)
 					, logger::WARNING
 				);
 			}
@@ -943,8 +942,8 @@ class diffusion_sql extends diffusion  {
 				#dump($ar_section_id_portal, ' ar_section_id_portal ++ ');
 				#dump($database_name, ' database_name ++ ');
 				#dump($ar_result, ' ar_result ++ ');
-				#dump($diffusion_element_tipo, " diffusion_element_tipo ++ (".RecordObj_dd::get_termino_by_tipo($table_tipo).")");
-				  #dump($ar_section_id_portal,"ar_section_id_portal - table_tipo: $table_tipo (".RecordObj_dd::get_termino_by_tipo($table_tipo).") - database_name: $database_name (".RecordObj_dd::get_termino_by_tipo($database_name).") "); #die();
+				#dump($diffusion_element_tipo, " diffusion_element_tipo ++ (".ontology_node::get_term_by_tipo($table_tipo).")");
+				  #dump($ar_section_id_portal,"ar_section_id_portal - table_tipo: $table_tipo (".ontology_node::get_term_by_tipo($table_tipo).") - database_name: $database_name (".ontology_node::get_term_by_tipo($database_name).") "); #die();
 				#exit();
 			}
 
@@ -956,18 +955,18 @@ class diffusion_sql extends diffusion  {
 
 				// SECTION try . Target section is a related term of current diffusion pointer. Normally is section, but can be a portal
 					$pointer_type		='section';
-					$ar_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$ar_section_tipo	= ontology_node::get_ar_tipo_by_model_and_relation(
 						$table_tipo,
 						'section',
-						'termino_relacionado'
+						'related'
 					);
 					if (!isset($ar_section_tipo[0])) {
 						# PORTAL try
 						$pointer_type		= 'portal';
-						$ar_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						$ar_section_tipo	= ontology_node::get_ar_tipo_by_model_and_relation(
 							$table_tipo,
 							'component_portal',
-							'termino_relacionado'
+							'related'
 						);
 					}
 					if(!isset($ar_section_tipo[0])) {
@@ -1018,13 +1017,13 @@ class diffusion_sql extends diffusion  {
 		# TABLE CHILDREN (FIELDS)
 			$ar_table_children = $ar_children_tipo;
 			if (empty($ar_table_children)) {
-				$RecordObj_dd 	   = new RecordObj_dd($table_tipo);
-				$ar_table_children = $RecordObj_dd->get_ar_children_of_this();
+				$ontology_node 	   = new ontology_node($table_tipo);
+				$ar_table_children = $ontology_node->get_ar_children_of_this();
 
 				# Add from table alias too
 				if (!empty($table_from_alias)) {
-					$RecordObj_dd_alias			= new RecordObj_dd($table_from_alias);
-					$ar_table_alias_children	= (array)$RecordObj_dd_alias->get_ar_children_of_this();
+					$ontology_node_alias			= new ontology_node($table_from_alias);
+					$ar_table_alias_children	= (array)$ontology_node_alias->get_ar_children_of_this();
 
 					# Merge all
 					$ar_table_children = self::replace_fields(
@@ -1040,10 +1039,10 @@ class diffusion_sql extends diffusion  {
 				$component_publication_tipo = diffusion::get_component_publication_tipo($ar_table_children);
 				if (empty($component_publication_tipo)) {
 
-					$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$ar_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 						$table_tipo,
 						'section',
-						'termino_relacionado',
+						'related',
 						true
 					);
 					debug_log(__METHOD__
@@ -1154,14 +1153,14 @@ class diffusion_sql extends diffusion  {
 							$start_time2=start_time();
 
 							// model check
-								$model_name = RecordObj_dd::get_model_name_by_tipo($curent_children_tipo,true);
+								$model_name = ontology_node::get_model_by_tipo($curent_children_tipo,true);
 								if ($model_name==='box elements') {
 									continue;
 								}
 
 							// properties
-								$RecordObj_dd	= new RecordObj_dd($curent_children_tipo);
-								$properties		= $RecordObj_dd->get_propiedades(true);
+								$ontology_node	= new ontology_node($curent_children_tipo);
+								$properties		= $ontology_node->get_propiedades(true);
 
 							// switch discriminate by propiedades
 								switch (true) {
@@ -1186,7 +1185,7 @@ class diffusion_sql extends diffusion  {
 										// table name column
 										// Usada para alojar el nombre de la tabla al que apunta el id del del dato del autocomplete actual (se guardan 3 columnas: name_id,name_table,name_label)
 										$current_ar_field_data = array();
-										$current_ar_field_data['field_name']	= RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
+										$current_ar_field_data['field_name']	= ontology_node::get_term_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
 										$current_ar_field_data['field_value']	= $properties->table;
 
 										# COLUMN ADD ###################################################
@@ -1215,7 +1214,7 @@ class diffusion_sql extends diffusion  {
 										$value = strip_tags($value);
 
 										$column = [];
-										$column['field_name']		= RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
+										$column['field_name']		= ontology_node::get_term_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
 										$column['field_value']		= $value;
 										$column['tipo']				= $curent_children_tipo;
 										$column['related_model']	= null;
@@ -1278,7 +1277,7 @@ class diffusion_sql extends diffusion  {
 			// $diffusion_info = $section->get_diffusion_info(); dump($diffusion_info, ' diffusion_info ++ '.to_string());
 				if ($build_mode==='default') {
 
-					$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
+					$section->set_is_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 					$section->add_diffusion_info_default($diffusion_element_tipo);
 					$section->save_modified = false;
 					$section->save_tm = false; // prevent to save time machine record
@@ -1426,8 +1425,8 @@ class diffusion_sql extends diffusion  {
 
 						$table_tipo = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
 						// try from real
-						$RecordObj_dd		= new RecordObj_dd($table_tipo);
-						$target_properties	= $RecordObj_dd->get_propiedades(true);
+						$ontology_node		= new ontology_node($table_tipo);
+						$target_properties	= $ontology_node->get_propiedades(true);
 						if (is_object($target_properties) && isset($target_properties->global_table_maps)) {
 							// overwrite global_table_maps
 							$table_properties->global_table_maps = $target_properties->global_table_maps;
@@ -1437,7 +1436,7 @@ class diffusion_sql extends diffusion  {
 						foreach ($table_properties->global_table_maps as $current_global_table_map) {
 
 							// resolve table name by table tipo
-							$current_table_name = RecordObj_dd::get_termino_by_tipo(
+							$current_table_name = ontology_node::get_term_by_tipo(
 								$current_global_table_map->table_tipo,
 								DEDALO_STRUCTURE_LANG,
 								true,
@@ -1475,7 +1474,7 @@ class diffusion_sql extends diffusion  {
 				'list', // string mode
 				false // bool cache
 			);
-			$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
+			$section->set_is_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 			$section->add_diffusion_info_default($diffusion_element_tipo);
 			$section->save_modified = false;
 			$section->Save();
@@ -1523,13 +1522,13 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function get_field_related_component(string $tipo) {
 
-		$ar_related = RecordObj_dd::get_ar_terminos_relacionados(
+		$ar_related = ontology_node::get_relation_nodes(
 			$tipo,
 			true, // cache
 			true // simple
 		);
 		foreach ($ar_related as $current_related) {
-			$current_model = RecordObj_dd::get_model_name_by_tipo($current_related,true);
+			$current_model = ontology_node::get_model_by_tipo($current_related,true);
 			if (strpos($current_model, 'field_')===0) {
 				continue; // skip replace elements
 			}
@@ -1596,19 +1595,19 @@ class diffusion_sql extends diffusion  {
 				break;
 
 			default:
-				$ar_field_data['field_name']	= RecordObj_dd::get_termino_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
+				$ar_field_data['field_name']	= ontology_node::get_term_by_tipo($options->tipo, DEDALO_STRUCTURE_LANG, true, false);
 				$ar_field_data['field_value']	= (string)'';
 				$ar_field_data['tipo']			= $options->tipo;
 
 				#
 				# Diffusion element
-				$diffusion_term					= new RecordObj_dd($options->tipo);
+				$diffusion_term					= new ontology_node($options->tipo);
 				$properties						= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 
 				#
 				# Component target
 				$related_component_tipo	= self::get_field_related_component($options->tipo);
-				$model_name				= RecordObj_dd::get_model_name_by_tipo($related_component_tipo,true);
+				$model_name				= ontology_node::get_model_by_tipo($related_component_tipo,true);
 
 				// related term info
 					$ar_field_data['related_term']  = $related_component_tipo;
@@ -1651,7 +1650,7 @@ class diffusion_sql extends diffusion  {
 				}
 
 				// diffusion_model_name. like 'field_text'
-				$diffusion_model_name = RecordObj_dd::get_model_name_by_tipo($options->tipo, true);
+				$diffusion_model_name = ontology_node::get_model_by_tipo($options->tipo, true);
 
 				# switch cases
 				switch (true) {
@@ -1845,7 +1844,7 @@ class diffusion_sql extends diffusion  {
 				#dump($diffusion_domain,'$diffusion_domain '.$this->domain." ".get_called_class());
 
 			# DATABASE :
-			$ar_diffusion_database = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain, $model_name='database', $relation_type='children');
+			$ar_diffusion_database = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_domain, $model_name='database', $relation_type='children');
 				#dump($ar_diffusion_database,'$ar_diffusion_database');
 
 			# DIFFUSION_SECTIONS : Recorremos las secciones de difusión para localizar las coincidencias con los tipos de sección de las indexaciones
@@ -2338,7 +2337,7 @@ class diffusion_sql extends diffusion  {
 					# FIELDS
 						$ar_objects = [];
 						foreach ($fields_array as $current_tipo => $current_value) {
-							$current_column_name = RecordObj_dd::get_termino_by_tipo($current_tipo, 'lg-spa', true);
+							$current_column_name = ontology_node::get_term_by_tipo($current_tipo, 'lg-spa', true);
 							$fields_obj = new stdClass();
 								$fields_obj->name  = $current_column_name;
 								$fields_obj->value = is_string($current_value) ? trim( strip_tags($current_value) ) : $current_value;
@@ -2470,7 +2469,7 @@ class diffusion_sql extends diffusion  {
 			$ar_fields			= $ar_field_data['ar_fields'];
 			$columns_map		= $global_table_map->columns_map;
 			$table_tipo			= $global_table_map->table_tipo;
-			$table_name			= RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+			$table_name			= ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 			$source_table_name	= $ar_field_data['table_name'];
 
 		// iterate already calculated fields and extract mapped values
@@ -2650,15 +2649,15 @@ class diffusion_sql extends diffusion  {
 
 		$model_name 	= 'database';
 		$relation_type 	= 'parent';
-		$ar_terminoID 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_table_tipo, $model_name, $relation_type, true);
-			#dump($ar_terminoID, ' ar_terminoID ++ '.to_string($diffusion_table_tipo));
+		$ar_parent_tipo = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_table_tipo, $model_name, $relation_type, true);
+			#dump($ar_parent_tipo, ' ar_parent_tipo ++ '.to_string($diffusion_table_tipo));
 
-		$count = count($ar_terminoID);
+		$count = count($ar_parent_tipo);
 
 		switch (true) {
 			case $count===1:
-				$diffusion_database_tipo = reset($ar_terminoID);
-				$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+				$diffusion_database_tipo = reset($ar_parent_tipo);
+				$diffusion_database_name = ontology_node::get_term_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false); // $parent_tipo, $lang=NULL, $from_cache=false, $fallback=true
 				break;
 			case $count>1:
 				debug_log(__METHOD__
@@ -2722,7 +2721,7 @@ class diffusion_sql extends diffusion  {
 
 		# CEDIS ONLY. Override in 'properties' the base point for calculate diffusion tables
 		# This is useful for development purposes, and allow publish in different database without duplicate all tables structure for each difusion_element
-			$diffusion_element_tipo_obj = new RecordObj_dd($diffusion_element_tipo);
+			$diffusion_element_tipo_obj = new ontology_node($diffusion_element_tipo);
 			$properties = $diffusion_element_tipo_obj->get_propiedades(true);
 			if (isset($properties->force_source_tables_tipo)) {
 				# Override
@@ -2734,9 +2733,9 @@ class diffusion_sql extends diffusion  {
 			}
 
 		// database_alias check
-			$database_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database_alias', 'children', true)[0] ?? null;
+			$database_alias_tipo = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_element_tipo, 'database_alias', 'children', true)[0] ?? null;
 			if (!empty($database_alias_tipo)) {
-				$real_database_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_alias_tipo, 'database', 'termino_relacionado', true)[0] ?? null;
+				$real_database_tipo = ontology_node::get_ar_tipo_by_model_and_relation($database_alias_tipo, 'database', 'related', true)[0] ?? null;
 				if (!empty($real_database_tipo)) {
 					// overwrite
 					$diffusion_element_tipo_tables = $real_database_tipo;
@@ -2746,7 +2745,7 @@ class diffusion_sql extends diffusion  {
 		#
 		# TABLES
 		# Search inside current entity_domain and iterate all tables resolving alias and store target sections of every table
-			$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$ar_table_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 				$diffusion_element_tipo_tables, // database tipo. Note that can be different to diffusion_element_tipo
 				'table', // modelo_name
 				'children_recursive', // relation_type
@@ -2789,10 +2788,10 @@ class diffusion_sql extends diffusion  {
 			#}
 
 			# Propiedades
-			$table_obj			= new RecordObj_dd($current_table_tipo);
+			$table_obj			= new ontology_node($current_table_tipo);
 			$table_properties	= $table_obj->get_propiedades(true);
 
-			$model_name = RecordObj_dd::get_model_name_by_tipo($current_table_tipo,true);
+			$model_name = ontology_node::get_model_by_tipo($current_table_tipo,true);
 			switch ($model_name) {
 
 				case 'table':
@@ -2801,7 +2800,7 @@ class diffusion_sql extends diffusion  {
 
 					if (!empty($related_section)) {
 						$section_tipo	= $related_section;
-						$name			= RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						$name			= ontology_node::get_term_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 						$data = new stdClass();
 							$data->table			= $current_table_tipo;
@@ -2828,7 +2827,7 @@ class diffusion_sql extends diffusion  {
 							. ' current_table_tipo: ' . to_string($current_table_tipo) . PHP_EOL
 							. ' current_table model: ' . to_string($model_name) . PHP_EOL
 							. ' ar_related_tables: ' . to_string($ar_related_tables) . PHP_EOL
-							. ' current_table label: ' . RecordObj_dd::get_termino_by_tipo($current_table_tipo, true)
+							. ' current_table label: ' . ontology_node::get_term_by_tipo($current_table_tipo, true)
 							, logger::ERROR
 						);
 						continue 2;
@@ -2846,13 +2845,13 @@ class diffusion_sql extends diffusion  {
 						// $section_tipo	= reset($ar_related_sections);
 						$section_tipo = $related_section;
 						# Table name is taken from real_table tipo (only one mysql table for all table alias)
-						#$name = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
+						#$name = ontology_node::get_term_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
 						# Table name is taken from current_table_tipo tipo (one mysql table for each table alias)
-						$name = RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						$name = ontology_node::get_term_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 						if (empty($table_properties)) {
 							# Try with real table when alias is empty
-							$table_obj			= new RecordObj_dd($real_table);
+							$table_obj			= new ontology_node($real_table);
 							$table_properties	= $table_obj->get_propiedades(true);
 						}
 						$data = new stdClass();
@@ -2866,12 +2865,12 @@ class diffusion_sql extends diffusion  {
 						$diffusion_element_tables_map->$section_tipo = $data;
 					}else{
 						// bad structure configuration for current diffusion element
-							$RecordObj_dd	= new RecordObj_dd($real_table);
-							$properties		= $RecordObj_dd->get_propiedades(true);
+							$ontology_node	= new ontology_node($real_table);
+							$properties		= $ontology_node->get_propiedades(true);
 							debug_log(__METHOD__
 								." ERROR: Bad structure/ontology configuration for current diffusion element. Expected a section related but empty related section" . PHP_EOL
 								.' current_table_tipo: ' . to_string($current_table_tipo) . PHP_EOL
-								.' model: ' . RecordObj_dd::get_model_name_by_tipo($current_table_tipo,true) . PHP_EOL
+								.' model: ' . ontology_node::get_model_by_tipo($current_table_tipo,true) . PHP_EOL
 								.' related_section: ' . to_string($related_section) . PHP_EOL
 								.' real_table tipo: ' . to_string($real_table) . PHP_EOL
 								.' properties: ' . json_encode($properties, JSON_PRETTY_PRINT) . PHP_EOL
@@ -2882,10 +2881,10 @@ class diffusion_sql extends diffusion  {
 				/*
 				case 'table_thesaurus':
 					$real_table 		 = $current_table_tipo;
-					$name 				 = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
+					$name 				 = ontology_node::get_term_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
 
-					$RecordObj_dd = new RecordObj_dd($current_table_tipo);
-					$properties  = json_decode($RecordObj_dd->get_properties());
+					$ontology_node = new ontology_node($current_table_tipo);
+					$properties  = json_decode($ontology_node->get_properties());
 					$thesaurus_ar_prefix = isset($properties->diffusion->thesaurus_ar_prefix) ? $properties->diffusion->thesaurus_ar_prefix : array();
 
 					$section_tipo = 'thesaurus';
@@ -3150,14 +3149,14 @@ class diffusion_sql extends diffusion  {
 			: null;
 		if (!empty($target_section_tipo)) {
 
-			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$database_element_tipo  = ontology_node::get_ar_tipo_by_model_and_relation(
 				$element_tipo,
 				$model_name='database',
 				$relation_type='parent',
 				$search_exact=true
 			);
 
-			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$database_element_tables = ontology_node::get_ar_tipo_by_model_and_relation(
 				$database_element_tipo[0],
 				$model_name='table',
 				$relation_type='children',
@@ -3169,7 +3168,7 @@ class diffusion_sql extends diffusion  {
 				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
 				if (isset($ar_section_tipo[0]) && $ar_section_tipo[0]===$target_section_tipo ) {
 
-					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+					$table_name = ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					break;
 				}
 			}
@@ -3191,14 +3190,14 @@ class diffusion_sql extends diffusion  {
 		$element_tipo	= $options->tipo;
 		$locator		= reset($dato);
 		if (isset($locator->section_tipo)) {
-			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$database_element_tipo  = ontology_node::get_ar_tipo_by_model_and_relation(
 				$element_tipo,
 				$model_name='database',
 				$relation_type='parent',
 				$search_exact=true
 			);
 
-			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$database_element_tables = ontology_node::get_ar_tipo_by_model_and_relation(
 				$database_element_tipo[0],
 				$model_name='table',
 				$relation_type='children',
@@ -3210,7 +3209,7 @@ class diffusion_sql extends diffusion  {
 				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
 				if (isset($ar_section_tipo[0]) && $ar_section_tipo[0]===$locator->section_tipo ) {
 
-					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+					$table_name = ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					break;
 				}
 			}
@@ -3230,7 +3229,7 @@ class diffusion_sql extends diffusion  {
 
 		/*
 		$element_tipo 		= $options->tipo;
-		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='table', $relation_type='parent', $search_exact=true);
+		$table_element_tipo = ontology_node::get_ar_tipo_by_model_and_relation($element_tipo, $model_name='table', $relation_type='parent', $search_exact=true);
 		$ar_section_tipo 	= common::get_ar_related_by_model('section', reset($table_element_tipo));
 		$section_tipo 	 	= reset($ar_section_tipo);
 		*/
@@ -3330,7 +3329,7 @@ class diffusion_sql extends diffusion  {
 			$section_tipo	= $locator->section_tipo;
 
 			foreach ($target_component_tipo as $tipo) {
-				$model = RecordObj_dd::get_model_name_by_tipo($tipo,true);
+				$model = ontology_node::get_model_by_tipo($tipo,true);
 				$component = component_common::get_instance(
 					$model, // string model
 					$tipo, // string tipo
@@ -3804,7 +3803,7 @@ class diffusion_sql extends diffusion  {
 		$section_tipo = json_decode($section_tipo_encoded);
 
 		$section_label = array_map(function($item) use($lang){
-			$label = RecordObj_dd::get_termino_by_tipo($item, $lang, true, true);
+			$label = ontology_node::get_term_by_tipo($item, $lang, true, true);
 			return strip_tags($label);
 		}, $section_tipo);
 
@@ -3874,7 +3873,7 @@ class diffusion_sql extends diffusion  {
 
 		// component to manage (usually component_autocomplete_hi)
 			$tipo 		= $dato[0]->from_component_tipo;
-			$model_name = RecordObj_dd::get_model_name_by_tipo($tipo,true);
+			$model_name = ontology_node::get_model_by_tipo($tipo,true);
 
 		// properties
 			$properties = $options->properties;
@@ -4044,7 +4043,7 @@ class diffusion_sql extends diffusion  {
 			$component_tipo	= reset($data_source);
 
 
-			$model_name	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+			$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
 				$component_tipo,
@@ -4108,7 +4107,7 @@ class diffusion_sql extends diffusion  {
 		$section_tipo 	= $options->section_tipo;
 		$ar_tipo 		= common::get_ar_related_by_model('component_portal',$diffusion_tipo);
 		$component_tipo = reset($ar_tipo);
-		$model_name 	= RecordObj_dd::get_model_name_by_tipo($component_tipo,true);
+		$model_name 	= ontology_node::get_model_by_tipo($component_tipo,true);
 		if($model_name!=='component_portal') return null;
 
 		$component = component_common::get_instance(
@@ -4128,15 +4127,15 @@ class diffusion_sql extends diffusion  {
 
 		#
 		# TERMINOS_RELACIONADOS . We get the related terms of the current component
-		$RecordObj_dd				= new RecordObj_dd($component_tipo);
-		$ar_terminos_relacionados	= (array)$RecordObj_dd->get_relaciones();
+		$ontology_node	= new ontology_node($component_tipo);
+		$relation_nodes	= (array)$ontology_node->get_relations();
 
 
 		# FIELDS
 		$fields=array();
-		foreach ($ar_terminos_relacionados as $key => $ar_value) {
+		foreach ($relation_nodes as $key => $ar_value) {
 			foreach ($ar_value as $current_tipo) {
-				$model_name = RecordObj_dd::get_model_name_by_tipo($current_tipo,true);
+				$model_name = ontology_node::get_model_by_tipo($current_tipo,true);
 				if (strpos($model_name, 'component_')!==false) {
 					$fields[] = $current_tipo;
 				}
@@ -4153,7 +4152,7 @@ class diffusion_sql extends diffusion  {
 
 			foreach ($fields as $current_tipo) {
 
-				$model_name	= RecordObj_dd::get_model_name_by_tipo($current_tipo,true);
+				$model_name	= ontology_node::get_model_by_tipo($current_tipo,true);
 				$component	= component_common::get_instance(
 					$model_name,
 					$current_tipo,
@@ -4324,33 +4323,33 @@ class diffusion_sql extends diffusion  {
 		switch ($column) {
 			case 'esmodelo': // typology
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$db_value		= $RecordObj_dd->get_esmodelo();
+				$ontology_node	= new ontology_node($term_id);
+				$model			= $ontology_node->get_is_model();
 
-				$value = (bool)($db_value==='si');
+				$value = (bool)($model);
 
 				return $value;
 				break;
 
 			case 'modelo' : // object_model, object_model_label
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$tipo			= $RecordObj_dd->get_modelo();
+				$ontology_node	= new ontology_node($term_id);
+				$model_tipo			= $ontology_node->get_model_tipo();
 
-				$value = ($resolve_label===true && !empty($tipo))
-					? RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_STRUCTURE_LANG, $from_cache=true, $fallback=false)
-					: (!empty($tipo) ? $tipo : null);
+				$value = ($resolve_label===true && !empty($model_tipo))
+					? ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, $from_cache=true, $fallback=false)
+					: (!empty($model_tipo) ? $model_tipo : null);
 
 				return $value;
 				break;
 
 			case 'relaciones': // relations, relations_labels
 
-				$tipos = RecordObj_dd::get_ar_terminos_relacionados($term_id, $cache=true, $simple=true);
+				$tipos = ontology_node::get_relation_nodes($term_id, $cache=true, $simple=true);
 
 				$value = ($resolve_label===true && !empty($tipos))
 					? array_map(function($item) use($lang){
-						return RecordObj_dd::get_termino_by_tipo($item, $lang, $from_cache=true, $fallback=true);
+						return ontology_node::get_term_by_tipo($item, $lang, $from_cache=true, $fallback=true);
 					  }, $tipos)
 					: (!empty($tipos) ? $tipos : null);
 
@@ -4361,33 +4360,33 @@ class diffusion_sql extends diffusion  {
 
 				if ($mode==='get_children') {
 
-					$RecordObj_dd	= new RecordObj_dd($term_id);
-					$tipos			= $RecordObj_dd->get_ar_children($term_id);
+					$ontology_node	= new ontology_node($term_id);
+					$tipos			= $ontology_node->get_ar_children($term_id);
 
 					$value = ($resolve_label===true && !empty($tipos))
 						? array_map(function($item) use($lang){
-							return RecordObj_dd::get_termino_by_tipo($item, $lang, $from_cache=true, $fallback=true);
+							return ontology_node::get_term_by_tipo($item, $lang, $from_cache=true, $fallback=true);
 						  }, $tipos)
 						: (!empty($tipos) ? $tipos : null);
 
 				}else if ($mode==='get_parents') {
 
-					$RecordObj_dd	= new RecordObj_dd($term_id);
-					$tipos			= array_values( $RecordObj_dd->get_ar_parents_of_this($ksort=true) );
+					$ontology_node	= new ontology_node($term_id);
+					$tipos			= array_values( $ontology_node->get_ar_parents_of_this($ksort=true) );
 
 					$value = ($resolve_label===true && !empty($tipos))
 						? array_map(function($item) use($lang){
-							return RecordObj_dd::get_termino_by_tipo($item, $lang, $from_cache=true, $fallback=true);
+							return ontology_node::get_term_by_tipo($item, $lang, $from_cache=true, $fallback=true);
 						  }, $tipos)
 						: (!empty($tipos) ? $tipos : null);
 
 				}else{
 
-					$RecordObj_dd	= new RecordObj_dd($term_id);
-					$tipo			= $RecordObj_dd->get_parent();
+					$ontology_node	= new ontology_node($term_id);
+					$tipo			= $ontology_node->get_parent();
 
 					$value = ($resolve_label===true && !empty($tipo))
-						? RecordObj_dd::get_termino_by_tipo($tipo, $lang, $from_cache=true, $fallback=true)
+						? ontology_node::get_term_by_tipo($tipo, $lang, $from_cache=true, $fallback=true)
 						: (!empty($tipo) ? $tipo : null);
 				}
 
@@ -4396,20 +4395,16 @@ class diffusion_sql extends diffusion  {
 
 			case 'traducible': // translatable
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$db_value		= $RecordObj_dd->get_traducible();
-
-				$value = $db_value==='si'
-					? true
-					: false;
+				$ontology_node	= new ontology_node($term_id);
+				$value		= $ontology_node->get_is_translatable();
 
 				return $value;
 				break;
 
 			case 'norden': // norder
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$db_value		= $RecordObj_dd->get_norden();
+				$ontology_node	= new ontology_node($term_id);
+				$db_value		= $ontology_node->get_order_number();
 
 				$value = intval($db_value)>0
 					? intval($db_value)
@@ -4420,8 +4415,8 @@ class diffusion_sql extends diffusion  {
 
 			case 'propiedades': // properties
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$db_value		= $RecordObj_dd->get_propiedades();
+				$ontology_node	= new ontology_node($term_id);
+				$db_value		= $ontology_node->get_propiedades();
 
 				$value = !empty($db_value) ? $db_value : null;
 
@@ -4430,8 +4425,8 @@ class diffusion_sql extends diffusion  {
 
 			case 'properties': // properties
 
-				$RecordObj_dd	= new RecordObj_dd($term_id);
-				$db_value		= $RecordObj_dd->get_properties();
+				$ontology_node	= new ontology_node($term_id);
+				$db_value		= $ontology_node->get_properties();
 
 				$value = !empty($db_value) ? $db_value : null;
 
@@ -4631,14 +4626,13 @@ class diffusion_sql extends diffusion  {
 				$fallback_tipo		= $process_dato_arguments->fallback->tipo;
 				$fallback_method	= $process_dato_arguments->fallback->method;
 				// lang
-				$RecordObj_dd		= new RecordObj_dd($fallback_tipo);
-				$lang				= $RecordObj_dd->get_traducible()==='si'
+				$lang = ontology_node::get_translatable( $fallback_tipo )
 					? $options->lang ?? DEDALO_DATA_LANG
 					: DEDALO_DATA_NOLAN;
 
 				$section_id			= $component->get_section_id();
 				$section_tipo		= $component->get_section_tipo();
-				$model				= RecordObj_dd::get_model_name_by_tipo($fallback_tipo,true);
+				$model				= ontology_node::get_model_by_tipo($fallback_tipo,true);
 				$fallback_component	= component_common::get_instance(
 					$model,
 					$fallback_tipo,
@@ -4850,7 +4844,7 @@ class diffusion_sql extends diffusion  {
 			);
 		}
 		$target_component_tipo	= $process_dato_arguments->target_component_tipo;
-		$model_name				= RecordObj_dd::get_model_name_by_tipo($target_component_tipo,true);
+		$model_name				= ontology_node::get_model_by_tipo($target_component_tipo,true);
 
 		$ar_value = [];
 		foreach ($ar_locator as $locator) {
@@ -5255,17 +5249,17 @@ class diffusion_sql extends diffusion  {
 		$reference_root_element = $diffusion_element_tipo;
 
 		// database_alias check . $tipo, $model_name, $relation_type, $search_exact=false
-			$database_alias_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$database_alias_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 				$diffusion_element_tipo,
 				'database_alias',
 				'children',
 				true
 			)[0] ?? null;
 			if ($database_alias_tipo) {
-				$real_database_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+				$real_database_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 					$database_alias_tipo,
 					'database',
-					'termino_relacionado',
+					'related',
 					true
 				)[0] ?? null;
 				if (!empty($real_database_tipo)) {
@@ -5274,8 +5268,8 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 
-		// tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $model_name='table', $relation_type='children_recursive', $search_exact=false);
-			$ar_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		// tables. ontology_node::get_ar_tipo_by_model_and_relation($diffusion_element_tipo, $model_name='table', $relation_type='children_recursive', $search_exact=false);
+			$ar_table_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 				$reference_root_element, // database tipo
 				'table', // modelo_name
 				'children_recursive', // relation_type
@@ -5312,8 +5306,8 @@ class diffusion_sql extends diffusion  {
 	public static function get_related_section(string $table_tipo) : ?string {
 
 		// properties way (implemented to allow Ontology sections like 'dd0')
-			$RecordObj_dd	= new RecordObj_dd($table_tipo);
-			$properties		= $RecordObj_dd->get_propiedades(true);
+			$ontology_node	= new ontology_node($table_tipo);
+			$properties		= $ontology_node->get_propiedades(true);
 			$target_section = $properties->target_section ?? null;
 			if (!empty($target_section)) {
 				// resolved section tipo
@@ -5321,7 +5315,7 @@ class diffusion_sql extends diffusion  {
 			}
 
 		// relation way (default)
-			$model_name = RecordObj_dd::get_model_name_by_tipo($table_tipo,true);
+			$model_name = ontology_node::get_model_by_tipo($table_tipo,true);
 			switch ($model_name) {
 
 				case 'table_alias':
