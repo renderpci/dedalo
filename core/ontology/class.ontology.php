@@ -2003,7 +2003,7 @@ class ontology {
 						$safe_tld = safe_tld( $tld );
 
 					// Delete the dd_ontology nodes
-						$deleted_dd_ontology_nodes = ontology_node::delete_tld_nodes( $safe_tld );
+						$deleted_dd_ontology_nodes = ontology_utils::delete_tld_nodes( $safe_tld );
 
 						if ( $deleted_dd_ontology_nodes===false ) {
 							$response->errors[] = 'unable to delete tld';
@@ -2081,7 +2081,7 @@ class ontology {
 			$response->errors	= [];
 
 		// create a copy of the $tld
-			$backup = ontology_node::create_bk_table( $tld );
+			$backup = ontology_utils::create_bk_table( $tld );
 
 			if($backup===false){
 				$response->errors[] ='Impossible to create the dd_ontology backup previous to regenerate the tlds: '.to_string( $tld );
@@ -2115,7 +2115,7 @@ class ontology {
 				$ontology_node = ontology::parse_section_record_to_ontology_node( $current_section_tipo, $current_section_id );
 
 				if( empty($ontology_node ) ){
-					ontology_node::delete_bk_table();
+					ontology_utils::delete_bk_table();
 					$response->errors[] = 'Failed regenerate dd_ontology with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
 					debug_log(__METHOD__
 						. " Error generating dd_ontology with section_tipo " . PHP_EOL
@@ -2131,7 +2131,7 @@ class ontology {
 
 		// 3 delete all tld records
 			foreach ($tld as $current_tld) {
-				ontology_node::delete_tld_nodes( $current_tld );
+				ontology_utils::delete_tld_nodes( $current_tld );
 			}
 
 		// 4 insert the new nodes of the given tld
@@ -2146,9 +2146,9 @@ class ontology {
 				// recovery al tld from bk table.
 				if( empty($insert_result) ){
 					// restore the backup table
-					ontology_node::restore_from_bk_table($tld);
+					ontology_utils::restore_from_bk_table($tld);
 					// delete bk table
-					ontology_node::delete_bk_table();
+					ontology_utils::delete_bk_table();
 					$response->errors[] = 'Failed inserting dd_ontology restoring previous data in dd_ontology';
 					return $response;
 				}
@@ -2172,9 +2172,9 @@ class ontology {
 				$add_result = ontology::add_main_section( $file_item );
 				if (empty($add_result)) {
 					// restore the backup table
-					ontology_node::restore_from_bk_table($tld);
+					ontology_utils::restore_from_bk_table($tld);
 					// delete bk table
-					ontology_node::delete_bk_table();
+					ontology_utils::delete_bk_table();
 					$response->errors[] = 'Failed add_main_section file_item: ' . to_string($file_item);
 					debug_log(__METHOD__
 						. " Error creating ontology main section " . PHP_EOL
@@ -2405,7 +2405,7 @@ class ontology {
 			$safe_tld = safe_tld( $tld );
 
 		// 1 Delete the dd_ontology nodes
-			$deleted_dd_ontology = ontology_node::delete_tld_nodes( $safe_tld );
+			$deleted_dd_ontology = ontology_utils::delete_tld_nodes( $safe_tld );
 
 			if ( $deleted_dd_ontology===false ) {
 				$response->errors[] = 'unable to delete tld';

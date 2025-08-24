@@ -338,7 +338,7 @@ class component_relation_common extends component_common {
 
 			// check locator target section is valid
 			// Validates old data without active TLD
-				$tipo_is_valid = ontology_node::check_tipo_is_valid($locator->section_tipo);
+				$tipo_is_valid = ontology_utils::check_tipo_is_valid($locator->section_tipo);
 				if (!$tipo_is_valid) {
 					debug_log(__METHOD__
 						. " Ignored locator with invalid target section. Install the missing TLD (".get_tld_from_tipo($locator->section_tipo).") or remove this locator from dato " . PHP_EOL
@@ -2762,7 +2762,7 @@ class component_relation_common extends component_common {
 						$valid_sections_tipo = [];
 						foreach ($current_item_values as $current_section_tipo) {
 							// get the tld from the current tipo to be checked with the active tlds
-							$is_active= ontology_node::check_active_tld($current_section_tipo);
+							$is_active= ontology_utils::check_active_tld($current_section_tipo);
 							if($is_active === true){
 								$valid_sections_tipo[] = $current_section_tipo;
 							}else{
@@ -2844,7 +2844,7 @@ class component_relation_common extends component_common {
 						$last_path = end($object->path);
 
 						// check if the ddo is active into the ontology
-							$is_active = ontology_node::check_active_tld($last_path->component_tipo);
+							$is_active = ontology_utils::check_active_tld($last_path->component_tipo);
 							if( $is_active === false ){
 								debug_log(__METHOD__
 									. " Removed fixed filter value from sqo definition because the tld is not installed " . PHP_EOL

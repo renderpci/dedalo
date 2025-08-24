@@ -904,7 +904,7 @@ class hierarchy extends ontology {
 	*/
 	public static function get_simple_schema_of_sections() : array {
 
-		$all_sections = ontology_node::get_ar_all_tipo_of_model_tipo('dd6');
+		$all_sections = ontology_utils::get_ar_all_tipo_of_model_tipo('dd6');
 
 		$simple_schema_of_sections = [];
 		foreach ($all_sections as $current_section) {

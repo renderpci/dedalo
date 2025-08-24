@@ -462,7 +462,7 @@ class component_security_access extends component_common {
 				return $ar_tipo_admin;
 			}
 
-		$ar_result 	= ontology_node::get_ar_tipo_by_model($modelo_name='area_admin', $prefijo='dd');
+		$ar_result 	= ontology_utils::get_ar_tipo_by_model($modelo_name='area_admin', $prefijo='dd');
 		$ar_tesauro = array();
 
 		if(!empty($ar_result[0])) {

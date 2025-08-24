@@ -154,7 +154,7 @@ class tools_register {
 			if (!empty($ar_ontologies)) {
 
 				// Clean. remove structure records in the database
-					ontology_node::delete_tld_nodes( 'tool' );
+					ontology_utils::delete_tld_nodes( 'tool' );
 
 				// import ontology (structure) in dd_ontology
 					foreach ($ar_ontologies as $current_ontology) {

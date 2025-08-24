@@ -534,7 +534,7 @@ final class ontology_node_test extends TestCase {
 	public function test_get_ar_tipo_by_model(): void {
 
 		// component_portal
-			$result = ontology_node::get_ar_tipo_by_model(
+			$result = ontology_utils::get_ar_tipo_by_model(
 				'component_portal'
 			);
 
@@ -562,7 +562,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// component_input_text
-			$result = ontology_node::get_ar_tipo_by_model(
+			$result = ontology_utils::get_ar_tipo_by_model(
 				'component_input_text'
 			);
 
@@ -589,9 +589,7 @@ final class ontology_node_test extends TestCase {
 	*/
 	public function test_get_ar_all_models(): void {
 
-		$ontology_node	= new ontology_node(NULL, 'dd');
-
-		$result = $ontology_node->get_ar_all_models();
+		$result = ontology_utils::get_ar_all_models();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -1213,7 +1211,7 @@ final class ontology_node_test extends TestCase {
 	*/
 	public function test_get_active_tlds(): void {
 
-		$result = ontology_node::get_active_tlds();
+		$result = ontology_utils::get_active_tlds();
 
 		$expected	= 'array';
 		$eq			= gettype($result)===$expected;
@@ -1248,7 +1246,7 @@ final class ontology_node_test extends TestCase {
 	public function test_check_active_tld(): void {
 
 		// true active
-		$result = ontology_node::check_active_tld('rsc25');
+		$result = ontology_utils::check_active_tld('rsc25');
 
 		$expected	= 'boolean';
 		$eq			= gettype($result)===$expected;
@@ -1270,7 +1268,7 @@ final class ontology_node_test extends TestCase {
 			);
 
 		// false active
-		$result = ontology_node::check_active_tld('elraspatld92');
+		$result = ontology_utils::check_active_tld('elraspatld92');
 
 		$expected	= 'boolean';
 		$eq			= gettype($result)===$expected;
