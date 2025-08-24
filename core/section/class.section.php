@@ -353,7 +353,7 @@ class section extends common {
 				: (empty($dato) ? new stdClass() : (object)$dato);
 
 		// @v7 loading new columns hack with v6 column datos compatibility
-			// $this->load_section_data();
+			$this->load_section_data();
 
 
 		return $this->dato;
