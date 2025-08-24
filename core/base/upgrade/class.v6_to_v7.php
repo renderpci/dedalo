@@ -324,15 +324,17 @@ class v6_to_v7 {
 				common::$pdata->counter = 0;
 			}
 
+		$conn = DBi::_getConnection();
+
 		// iterate tables
 		update::tables_rows_iterator(
 			$ar_tables, // array of tables to iterate
-			function($row, $table, $max) use ($response, $save) { // callback function
+			function($row, $table, $max) use ($response, $save, $conn) { // callback function
 
 				$id				= $row['id'];
 				$section_tipo	= $row['section_tipo'] ?? null;
 				$datos			= (isset($row['datos'])) ? json_handler::decode($row['datos']) : null;
-				$section_id 	=  $row['section_id'] ?? '';
+				$section_id		=  $row['section_id'] ?? '';
 
 				// CLI process data
 					if ( running_in_cli()===true ) {
@@ -380,32 +382,6 @@ class v6_to_v7 {
 						switch ($datos_key) {
 
 							case 'relations_search':
-								// update relations array
-								$relations = $datos_value ?? [];
-								foreach ($relations as $locator) {
-
-									// check locator from_component_tipo
-									if( !isset($locator->from_component_tipo) ){
-										$locator_string = json_encode($locator);
-										debug_log(__METHOD__
-											. " **-------- ERROR locator without from_component_tipo --------** " . PHP_EOL
-											. " section tipo: ". $section_tipo . PHP_EOL
-											. " section id: ". $section_id . PHP_EOL
-											. " table: ". $table . PHP_EOL
-											. " locator: ". $locator_string
-											, logger::ERROR
-										);
-										$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' locator: '$locator_string'";
-										continue;
-									}
-
-									if(!isset($column_relation_search->{$locator->from_component_tipo})){
-										$column_relation_search->{$locator->from_component_tipo} = [];
-									}
-									$column_relation_search->{$locator->from_component_tipo}[] = $locator;
-								}
-								break;
-
 							case 'relations':
 
 								// update relations array
@@ -427,10 +403,11 @@ class v6_to_v7 {
 										continue;
 									}
 
-									if(!isset($column_relation->{$locator->from_component_tipo})){
-										$column_relation->{$locator->from_component_tipo} = [];
+									$target = ($datos_key === 'relations_search') ? $column_relation_search : $column_relation;
+									if (!isset($target->{$locator->from_component_tipo})) {
+										$target->{$locator->from_component_tipo} = [];
 									}
-									$column_relation->{$locator->from_component_tipo}[] = $locator;
+									$target->{$locator->from_component_tipo}[] = $locator;
 								}
 								break;
 
@@ -751,9 +728,10 @@ class v6_to_v7 {
 					$section_relation_search_encoded	= ( empty(get_object_vars($column_relation_search)) ) ? null : json_encode($column_relation_search);
 					$section_counters_encoded			= ( empty(get_object_vars($column_counters)) ) ? null : json_encode($column_counters);
 
-					$conn = DBi::_getConnection();
+					$escaped_table = pg_escape_identifier($conn, $table);
+
 					$strQuery = "
-						UPDATE {$table}
+						UPDATE {$escaped_table}
 						SET data = $1,
 							relation = $2,
 							string = $3,
@@ -771,7 +749,8 @@ class v6_to_v7 {
 					if ($save) {
 
 						// With prepared statement
-						$stmt_name = __METHOD__;
+						// Prepared statement name is unique per table
+						$stmt_name = __METHOD__ . $table;
 						if (!isset(DBi::$prepared_statements[$stmt_name])) {
 							pg_prepare(
 								$conn,
@@ -842,7 +821,7 @@ class v6_to_v7 {
 					}
 				}//end if( isset($datos) )
 			}//end anonymous function
-		);
+		);//end update::tables_rows_iterator
 
 		$response->result	= empty($response->errors);
 		$response->msg		= empty($response->errors)

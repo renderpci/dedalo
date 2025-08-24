@@ -92,14 +92,14 @@ class section extends common {
 	/**
 	* GET_INSTANCE
 	* Cache section instances (singleton pattern)
-	* @param mixed $section_id = null
+	* @param string|int|null $section_id = null
 	* @param string|null $tipo = null
 	* @param string|null $mode = 'list'
 	* @param bool $cache = true
 	* @param object|null $caller_dataframe = null
 	* @return object $section
 	*/
-	public static function get_instance( mixed $section_id=null, ?string $tipo=null, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section {
+	public static function get_instance( string|int|null $section_id=null, ?string $tipo=null, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section {
 
 		// tipo check. Is mandatory
 			if (empty($tipo)) {
@@ -184,11 +184,11 @@ class section extends common {
 	/**
 	* CONSTRUCT
 	* Extends parent abstract class common
-	* @param mixed $section_id = null
-	* @param string|null$tipo = null
+	* @param string|int|null $section_id = null
+	* @param string|null $tipo = null
 	* @param string|null $mode = 'edit'
 	*/
-	private function __construct( mixed $section_id=null, ?string $tipo=null, string $mode='list' ) {
+	private function __construct( string|int|null $section_id=null, ?string $tipo=null, string $mode='list' ) {
 
 		// check tipo
 			if (empty($tipo)) {

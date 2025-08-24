@@ -24,46 +24,76 @@ class request_config_presets {
 
 		$active_request_config = [];
 
-		// filter for active only
-		$filter = json_decode('
-			{
-				"$and": [
-					{
-						"q": {
-							"section_tipo": "dd64",
-							"section_id": "1",
-							"from_component_tipo": "dd1566"
-						}
-						,
-						"q_operator": null,
-						"path": [
-							{
-								"section_tipo": "dd1244",
-								"component_tipo": "dd1566",
-								"model": "component_radio_button",
-								"name": "Active"
-							}
-						],
-						"q_split": false,
-						"type": "jsonb"
-					}
-				]
-			}
-		');
+		// OLD way
+			// // filter for active only
+			// $filter = json_decode('
+			// 	{
+			// 		"$and": [
+			// 			{
+			// 				"q": {
+			// 					"section_tipo": "dd64",
+			// 					"section_id": "1",
+			// 					"from_component_tipo": "dd1566"
+			// 				}
+			// 				,
+			// 				"q_operator": null,
+			// 				"path": [
+			// 					{
+			// 						"section_tipo": "dd1244",
+			// 						"component_tipo": "dd1566",
+			// 						"model": "component_radio_button",
+			// 						"name": "Active"
+			// 					}
+			// 				],
+			// 				"q_split": false,
+			// 				"type": "jsonb"
+			// 			}
+			// 		]
+			// 	}
+			// ');
 
-		// Search all records of request config section dd1244
-		$search_query_object = (object)[
-			'id'			=> 'search_active_request_config',
-			'mode'			=> 'list',
-			'section_tipo'	=> DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO, //'dd1244'
-			'filter'		=> $filter,
-			'limit'			=> 0,
-			'full_count'	=> false
-		];
+			// // Search all records of request config section dd1244
+			// $search_query_object = (object)[
+			// 	'id'			=> 'search_active_request_config',
+			// 	'mode'			=> 'list',
+			// 	'section_tipo'	=> DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO, //'dd1244'
+			// 	'filter'		=> $filter,
+			// 	'limit'			=> 0,
+			// 	'full_count'	=> false
+			// ];
 
-		$search		= search::get_instance($search_query_object);
-		$rows_data	= $search->search();
-		$ar_records = $rows_data->ar_records ?? [];
+			// $search		= search::get_instance($search_query_object);
+			// $rows_data	= $search->search();
+			// $ar_records = $rows_data->ar_records ?? [];
+			// $ar_section_id = array_map(function($el){
+			// 	return $el->section_id;
+			// }, $ar_records);
+
+		// matrix_data way
+			$table = common::get_matrix_table_from_tipo(DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO);
+			$component_tipo = 'dd1566';
+			$ar_section_id = matrix_manager::search(
+				$table,
+				[
+					[
+						'column'	=> 'section_tipo',
+						'operator'	=> '=',
+						'value'		=> DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
+					],
+					[
+						'column'	=> 'datos',
+						'operator'	=> '@>',
+						'value'		=> '{"relations":[{"from_component_tipo":"'.$component_tipo.'","section_tipo":"dd64","section_id":"1"}]}' // v6
+					],
+					// [
+					// 	'column'	=> 'relation',
+					// 	'operator'	=> '@>',
+					// 	'value'		=> '{"'.$component_tipo.'": [{"section_tipo":"dd64","section_id":"1"}]}' // v7
+					// ]
+				],
+				null, // order
+				null // limit
+			);
 
 		// Helper function to extract a component value
 		$get_component_value = function($tipo, $section_id) {
@@ -93,9 +123,7 @@ class request_config_presets {
 			return $component->get_dato() ?? [];
 		};
 
-		foreach ($ar_records as $record) {
-
-			$section_id = $record->section_id;
+		foreach ($ar_section_id as $section_id) {
 
 			// Generate values
 			$tipo			= $get_component_value('dd1242', $section_id); // tipo
