@@ -346,7 +346,7 @@ class request_config_object extends stdClass {
 						}
 
 					// check valid tipo (The model is unsolvable)
-						$tipo_is_valid = ontology_node::check_tipo_is_valid( $current_ddo->tipo );
+						$tipo_is_valid = ontology_utils::check_tipo_is_valid( $current_ddo->tipo );
 						if ( $tipo_is_valid === false ) {
 							debug_log(__METHOD__
 								.' WARNING. Ignored current_ddo: is invalid '
@@ -362,7 +362,7 @@ class request_config_object extends stdClass {
 						}
 
 					// check if the ddo is active into the ontology
-						$is_active = ontology_node::check_active_tld($current_ddo->tipo);
+						$is_active = ontology_utils::check_active_tld($current_ddo->tipo);
 						if( $is_active === false ){
 							debug_log(__METHOD__
 								. " Removed ddo from ddo_map->show definition because the tld is not installed " . PHP_EOL

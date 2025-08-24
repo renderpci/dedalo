@@ -3031,7 +3031,7 @@ abstract class common {
 							$safe_ar_section_tipo = [];
 							foreach ((array)$ar_section_tipo as $current_section_tipo) {
 								// check_tipo_is_valid
-								$tipo_is_valid = ontology_node::check_tipo_is_valid($current_section_tipo);
+								$tipo_is_valid = ontology_utils::check_tipo_is_valid($current_section_tipo);
 								if ($tipo_is_valid===false) {
 									debug_log(__METHOD__
 										. " WARNING. Ignored non valid section_tipo. Maybe the TLD is not installed. " . PHP_EOL
@@ -3171,7 +3171,7 @@ abstract class common {
 									}
 
 								// check valid tipo (The model is unsolvable)
-									$tipo_is_valid = ontology_node::check_tipo_is_valid( $current_ddo->tipo );
+									$tipo_is_valid = ontology_utils::check_tipo_is_valid( $current_ddo->tipo );
 									if ( $tipo_is_valid === false ) {
 										debug_log(__METHOD__
 											.' WARNING. Ignored current_ddo: is invalid '
@@ -3189,7 +3189,7 @@ abstract class common {
 									}
 
 								// check if the ddo is active into the ontology
-									$is_active = ontology_node::check_active_tld($current_ddo->tipo);
+									$is_active = ontology_utils::check_active_tld($current_ddo->tipo);
 									if( $is_active === false ){
 										debug_log(__METHOD__
 											. " Removed ddo from ddo_map->show definition because the tld is not installed " . PHP_EOL
@@ -3352,7 +3352,7 @@ abstract class common {
 									}
 
 									// check if the ddo is active into the ontology
-										$is_active = ontology_node::check_active_tld($current_search_ddo_map->tipo);
+										$is_active = ontology_utils::check_active_tld($current_search_ddo_map->tipo);
 										if( $is_active === false ){
 											debug_log(__METHOD__
 												. " Removed ddo from ddo_map->search definition because the tld is not installed " . PHP_EOL
@@ -3363,7 +3363,7 @@ abstract class common {
 										}
 
 									// check valid tipo (The model is unsolvable)
-										$tipo_is_valid = ontology_node::check_tipo_is_valid( $current_search_ddo_map->tipo );
+										$tipo_is_valid = ontology_utils::check_tipo_is_valid( $current_search_ddo_map->tipo );
 										if ( $tipo_is_valid === false ) {
 											debug_log(__METHOD__
 												.' WARNING. Ignored current_search_ddo_map: don\'t have model: '
@@ -3456,7 +3456,7 @@ abstract class common {
 							foreach ($choose_ddo_map as $current_choose_ddo) {
 
 								// check if the ddo is active into the ontology
-									$is_active = ontology_node::check_active_tld($current_choose_ddo->tipo);
+									$is_active = ontology_utils::check_active_tld($current_choose_ddo->tipo);
 									if( $is_active === false ){
 										debug_log(__METHOD__
 											. " Removed ddo from ddo_map->choose definition because the tld is not installed " . PHP_EOL
@@ -3467,7 +3467,7 @@ abstract class common {
 									}
 
 								// check valid tipo (The model is unsolvable)
-									$tipo_is_valid = ontology_node::check_tipo_is_valid( $current_choose_ddo->tipo );
+									$tipo_is_valid = ontology_utils::check_tipo_is_valid( $current_choose_ddo->tipo );
 									if ( $tipo_is_valid === false ) {
 										debug_log(__METHOD__
 											.' WARNING. Ignored current_choose_ddo: tipo is invalid (maybe TLD is not installed): '
