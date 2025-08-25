@@ -66,7 +66,7 @@ class ontology_node {
 	* @param ?string $tipo = null
 	* @return self
 	*/
-	public static function get_instance( ?string $tipo = null ): self {
+	public static function get_instance( ?string $tipo = null ) : self {
 
 		if (!isset(self::$instances[$tipo])) {
 			self::$instances[$tipo] = new self($tipo);
