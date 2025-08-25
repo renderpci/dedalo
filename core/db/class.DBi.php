@@ -505,4 +505,50 @@ abstract class DBi {
 
 
 
+
+	/**
+	* GET_functions
+	* Get all Database user functions as:
+	* 	public	check_array_component
+	* 	public	f_unaccent
+	* @return array $list
+	*/
+	public static function get_functions() : array {
+
+		$sql = "
+			SELECT
+				n.nspname as schemaname,
+				p.proname as functionname
+			FROM
+				pg_proc p
+				LEFT JOIN pg_namespace n ON p.pronamespace = n.oid
+				LEFT JOIN pg_depend d ON p.oid = d.objid AND d.deptype = 'e'
+				LEFT JOIN pg_extension e ON d.refobjid = e.oid
+			WHERE
+				n.nspname NOT IN ('pg_catalog', 'information_schema')
+				AND e.oid IS NULL  -- This excludes functions that belong to extensions
+			ORDER BY
+				n.nspname,
+				p.proname;
+		";
+
+		$result	= pg_query(DBi::_getConnection(), $sql);
+
+		$list = [];
+		while($row = pg_fetch_assoc($result)) {
+
+			$schemaname		= $row['schemaname'];
+			$functionname	= $row['functionname'];
+
+			$list[] = (object)[
+				'schemaname'	=> $schemaname,
+				'functionname'	=> $functionname
+			];
+		}
+
+		return $list;
+	}//end get_functions
+
+
+
 }//end class DBi
