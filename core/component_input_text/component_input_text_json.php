@@ -207,8 +207,8 @@
 				@v7 test
 				*/
 				// load_matrix_manager @v7
-					$matrix_manager = matrix_manager::get_instance($this->section_tipo, $this->section_id);
-					$section_data = $matrix_manager->load();
+					// $matrix_manager = matrix_manager::get_instance($this->section_tipo, $this->section_id);
+					// $section_data = $matrix_manager->load();
 					// // dump($section_data, ' section_data //////////////////////////////////////////////////////////// ++ '.to_string());
 
 				// update_matrix_manager @v7
