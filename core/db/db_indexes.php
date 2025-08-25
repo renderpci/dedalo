@@ -35,8 +35,6 @@
 		'info' => 'Used to process the relation column and get the string value of section_tipo ans section_id as oh1_3'
 	];
 
-
-
 	//  Create function with base flat locators st=section_tipo si=section_id (dd64_1)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_st_si(data) @> \'["dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
@@ -278,12 +276,12 @@
 					'dd_ontology'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_is_model
+					CREATE INDEX IF NOT EXISTS {$table}_is_model_idx
 					ON {$table}
 					USING btree ( is_model ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_is_model
+					DROP INDEX IF EXISTS {$table}_is_model_idx
 				',
 				'sample' => '
 					SELECT *
@@ -300,12 +298,12 @@
 					'dd_ontology'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_model
+					CREATE INDEX IF NOT EXISTS {$table}_model_idx
 					ON {$table}
 					USING btree ( model COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_model
+					DROP INDEX IF EXISTS {$table}_model_idx
 				',
 				'sample' => '
 					SELECT *
@@ -322,12 +320,12 @@
 					'dd_ontology'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_model_tipo
+					CREATE INDEX IF NOT EXISTS {$table}_model_tipo_idx
 					ON {$table}
 					USING btree ( model_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_model_tipo
+					DROP INDEX IF EXISTS {$table}_model_tipo_idx
 				',
 				'sample' => '
 					SELECT *
@@ -344,12 +342,12 @@
 					'dd_ontology'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_order_number
+					CREATE INDEX IF NOT EXISTS {$table}_order_number_idx
 					ON {$table}
 					USING btree ( order_number ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_order_number
+					DROP INDEX IF EXISTS {$table}_order_number_idx
 				',
 				'sample' => '
 					SELECT *
@@ -366,12 +364,12 @@
 					'dd_ontology'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_parent
+					CREATE INDEX IF NOT EXISTS {$table}_parent_idx
 					ON {$table}
 					USING btree ( parent ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_parent
+					DROP INDEX IF EXISTS {$table}_parent_idx
 				',
 				'sample' => '
 					SELECT *
@@ -389,12 +387,12 @@
 					'main_dd'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_tld
+					CREATE INDEX IF NOT EXISTS {$table}_tld_idx
 					ON {$table}
 					USING btree ( tld COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_tld
+					DROP INDEX IF EXISTS {$table}_tld_idx
 				',
 				'sample' => '
 					SELECT *
@@ -411,12 +409,12 @@
 					'dd_ontology'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_relations
+					CREATE INDEX IF NOT EXISTS {$table}_relations_idx
 					ON {$table}
 					USING btree ( relations COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_relations
+					DROP INDEX IF EXISTS {$table}_relations_idx
 				',
 				'sample' => '
 					SELECT *
@@ -433,12 +431,12 @@
 					'dd_ontology'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_is_translatable
+					CREATE INDEX IF NOT EXISTS {$table}_is_translatable_idx
 					ON {$table}
 					USING btree ( is_translatable ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_is_translatable
+					DROP INDEX IF EXISTS {$table}_is_translatable_idx
 				',
 				'sample' => '
 					SELECT *
@@ -455,7 +453,7 @@
 					'dd_ontology'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_parent_order_number
+					CREATE INDEX IF NOT EXISTS {$table}_parent_order_number_idx
 					ON {$table}
 					USING btree (
 						parent COLLATE pg_catalog.\"default\" ASC NULLS LAST,
@@ -463,7 +461,7 @@
 					);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_parent_order_number
+					DROP INDEX IF EXISTS {$table}_parent_order_number_idx
 				',
 				'sample' => '
 					SELECT *
@@ -506,12 +504,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_section_id
+					CREATE INDEX IF NOT EXISTS {$table}_section_id_idx
 					ON {$table}
 					USING btree (section_id ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_id
+					DROP INDEX IF EXISTS {$table}_section_id_idx
 				',
 				'sample' => '
 					SELECT *
@@ -551,12 +549,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_section_id_desc
+					CREATE INDEX IF NOT EXISTS {$table}_section_id_desc_idx
 					ON {$table}
 					USING btree (section_id DESC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_id_desc
+					DROP INDEX IF EXISTS {$table}_section_id_desc_idx
 				',
 				'sample' => '
 					SELECT *
@@ -596,12 +594,12 @@
 				],
 				'sql' => '
 
-					CREATE INDEX IF NOT EXISTS {$table}_section_tipo
+					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_idx
 					ON {$table}
 					USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo
+					DROP INDEX IF EXISTS {$table}_section_tipo_idx
 				',
 				'sample' => '
 					SELECT *
@@ -642,12 +640,12 @@
 				],
 				'sql' => '
 
-					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id
+					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_idx
 					ON {$table}
 					USING btree (section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo_section_id
+					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_idx
 				',
 				'sample' => '
 					SELECT *
@@ -687,12 +685,12 @@
 				],
 				'sql' => '
 
-				CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_desc
+				CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_desc_idx
 					ON {$table}
 					USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST, section_id DESC NULLS FIRST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_desc
+					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_desc_idx
 				',
 				'sample' => '
 					SELECT *
@@ -733,7 +731,7 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_string_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_string_gin_idx
 				ON {$table}
 				USING gin (
 					string
@@ -741,7 +739,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_string_gin
+				DROP INDEX IF EXISTS {$table}_string_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -784,14 +782,14 @@
 					 COALESCE( get_searchable_string(string), \'\' )
 				) STORED;
 
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_strings_value_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_strings_value_gin_idx
 				ON {$table}
 				USING gin (
 					search_string gin_trgm_ops
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_strings_value_gin;
+				DROP INDEX IF EXISTS {$table}_strings_value_gin_idx;
 				ALTER TABLE {$table} DROP COLUMN search_string;
 			',
 			'sample' => '
@@ -835,7 +833,7 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_gin
+				CREATE INDEX IF NOT EXISTS {$table}_relation_gin_idx
 				ON {$table}
 				USING gin (
 					relation
@@ -843,7 +841,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_gin
+				DROP INDEX IF EXISTS {$table}_relation_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -882,7 +880,7 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_locators
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_locators_gin_idx
 				ON {$table}
 				USING gin (
 					jsonb_path_query_array(relation, \'$.*[*]\')
@@ -890,7 +888,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_locators
+				DROP INDEX IF EXISTS {$table}_relation_locators_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -931,12 +929,12 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_st_si
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_st_si_gin_idx
 				ON matrix
 				USING gin (data_relations_flat_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_st_si
+				DROP INDEX IF EXISTS {$table}_relation_flat_st_si_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -978,12 +976,12 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_fct_st_si
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_fct_st_si_gin_idx
 				ON matrix
 				USING gin (data_relations_flat_fct_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_fct_st_si
+				DROP INDEX IF EXISTS {$table}_relation_flat_fct_st_si_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1025,12 +1023,12 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
 				ON matrix
 				USING gin (data_relations_flat_ty_st(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st
+				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1073,12 +1071,12 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
 				ON matrix
 				USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st
+				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1118,14 +1116,14 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_date_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_date_gin_idx
 				ON {$table}
 				USING gin (
 					date jsonb_path_ops
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_date_gin
+				DROP INDEX IF EXISTS {$table}_date_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1165,14 +1163,14 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_iri_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_iri_gin_idx
 				ON {$table}
 				USING gin (
 					iri jsonb_path_ops
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_iri_gin
+				DROP INDEX IF EXISTS {$table}_iri_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1212,14 +1210,14 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_geo_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_geo_gin_idx
 				ON {$table}
 				USING gin (
 					geo jsonb_path_ops
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_geo_gin
+				DROP INDEX IF EXISTS {$table}_geo_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1259,14 +1257,14 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_number_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_number_gin_idx
 				ON {$table}
 				USING gin (
 					number jsonb_path_ops
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_number_gin
+				DROP INDEX IF EXISTS {$table}_number_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1306,14 +1304,14 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_media_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_media_gin_idx
 				ON {$table}
 				USING gin (
 					media jsonb_path_ops
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_media_gin
+				DROP INDEX IF EXISTS {$table}_media_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1353,14 +1351,14 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_misc_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_misc_gin_idx
 				ON {$table}
 				USING gin (
 					misc jsonb_path_ops
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_misc_gin
+				DROP INDEX IF EXISTS {$table}_misc_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1400,14 +1398,14 @@
 				'matrix_users'
 			],
 			'sql' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_search_gin
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_search_gin_idx
 				ON {$table}
 				USING gin (
 					relations_search jsonb_path_ops
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_search_gin
+				DROP INDEX IF EXISTS {$table}_relation_search_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1428,12 +1426,12 @@
 					'matrix_activity'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_id_desc
+					CREATE INDEX IF NOT EXISTS {$table}_id_desc_idx
 					ON {$table}
 					USING btree (id DESC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_id_desc
+					DROP INDEX IF EXISTS {$table}_id_desc_idx
 				',
 				'sample' => '
 					SELECT *
@@ -1452,12 +1450,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_tipo
+					CREATE INDEX IF NOT EXISTS {$table}_tipo_idx
 					ON {$table}
 					USING btree (tipo ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_tipo
+					DROP INDEX IF EXISTS {$table}_tipo_idx
 				',
 				'sample' => '
 					SELECT *
@@ -1474,12 +1472,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_lang
+					CREATE INDEX IF NOT EXISTS {$table}_lang_idx
 					ON {$table}
 					USING btree (lang COLLATE pg_catalog.\"default\" ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_lang
+					DROP INDEX IF EXISTS {$table}_lang_idx
 				',
 				'sample' => '
 					SELECT *
@@ -1496,12 +1494,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id
+					CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id_idx
 					ON {$table}
 					USING btree ( bulk_process_id ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_bulk_process_id
+					DROP INDEX IF EXISTS {$table}_bulk_process_id_idx
 				',
 				'sample' => '
 					SELECT *
@@ -1518,12 +1516,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_state
+					CREATE INDEX IF NOT EXISTS {$table}_state_idx
 					ON {$table}
 					USING btree ( state COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_state
+					DROP INDEX IF EXISTS {$table}_state_idx
 				',
 				'sample' => '
 					SELECT *
@@ -1540,12 +1538,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_timestamp
+					CREATE INDEX IF NOT EXISTS {$table}_timestamp_idx
 					ON {$table}
 					USING btree ( "timestamp" DESC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_timestamp
+					DROP INDEX IF EXISTS {$table}_timestamp_idx
 				',
 				'sample' => '
 					SELECT *
@@ -1562,12 +1560,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-					CREATE INDEX IF NOT EXISTS {$table}_user_id
+					CREATE INDEX IF NOT EXISTS {$table}_user_id_idx
 					ON {$table}
 					USING btree ( "userID" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_user_id
+					DROP INDEX IF EXISTS {$table}_user_id_idx
 				',
 				'sample' => '
 					SELECT *
