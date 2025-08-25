@@ -208,6 +208,56 @@
 		'info' => 'Used to process the string column and get the string value without accents in lowercase and without HTML. Is used to create a `string_seach` column'
 	];
 
+	// check_array_component
+	// Used by component date to search inside its data
+		$ar_function[] = (object)[
+		'sql' => '
+			CREATE OR REPLACE FUNCTION check_array_component(condition bool, component_path jsonb)
+			RETURNS SETOF jsonb
+			LANGUAGE plpgsql
+			AS $$
+			BEGIN
+				IF condition THEN
+					RETURN QUERY SELECT jsonb_array_elements(component_path);
+				ELSE
+					RETURN QUERY SELECT component_path;
+				END IF;
+			END
+			$$;
+		',
+		'drop' => '
+			DROP FUNCTION IF EXISTS check_array_component;
+		',
+		'sample' => '
+				id IN (
+					SELECT
+						id
+					FROM
+						check_array_component(
+							( jsonb_typeof(	datos#>\'{components, numisdata35, dato, lg-nolan}\') = \'array\' AND
+											datos#>\'{components, numisdata35, dato, lg-nolan}\' != \'[]\' ),
+							( datos#>\'{components, numisdata35, dato, lg-nolan}\' )
+						) as numisdata35_array_elements
+					WHERE
+						-- TIME
+						numisdata35_array_elements#>\'{time}\' = \'32269363200\'
+						-- RANGE
+						OR (
+						numisdata35_array_elements#>\'{start, time}\' <= \'32269363200\' AND
+						numisdata35_array_elements#>\'{end, time}\' >= \'32269363200\')
+						OR (
+						numisdata35_array_elements#>\'{start, time}\' = \'32269363200\')
+						-- PERIOD
+						OR (
+						numisdata35_array_elements#>\'{period, time}\' = \'32269363200\')
+				)
+		',
+		'info' => 'Used to process the string column and get the string value without accents in lowercase and without HTML. Is used to create a `string_seach` column'
+	];
+
+
+
+
 	foreach ($ar_function as $function_object) {
 
 		$current_sql_query	= sanitize_query($function_object->sql);
