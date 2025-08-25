@@ -83,7 +83,16 @@ class tool_import_dedalo_csv extends tool_common {
 					$n_columns	= count($file_info);
 
 					// ar_columns_map
-						$ar_columns_map = array_map(function($el){
+						$ar_columns_map = array_map(function($el) use($file_info){
+							if (empty($el)) {
+								debug_log(__METHOD__
+									. " Invalid tipo found in file_info " . PHP_EOL
+									. " tipo: " . to_string($el). PHP_EOL
+									. ' file_info: ' . json_encode($file_info, JSON_PRETTY_PRINT)
+									, logger::ERROR
+								);
+								return null;
+							}
 							return (object)[
 								'tipo'	=> $el,
 								'label'	=> ontology_node::get_term_by_tipo($el, DEDALO_APPLICATION_LANG, true),
