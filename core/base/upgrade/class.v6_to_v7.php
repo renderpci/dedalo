@@ -834,5 +834,59 @@ class v6_to_v7 {
 
 
 
+	/**
+	* DELETE_V6_DB_INDEXES
+	* Remove database indexes to create new ones.
+	* @return
+	*/
+	public static function delete_v6_db_indexes() : bool {
+
+		$all_indexes = DBi::get_indexes();
+
+		// $sql_code = [];
+		foreach ($all_indexes as $index_object) {
+
+			$to_search = "create unique index";
+			$found = stripos( $index_object->indexdef, $to_search);
+
+			if( $found === false){
+				$sql_query	= "DROP INDEX IF EXISTS {$index_object->schemaname}.\"{$index_object->indexname}\";";
+				$result		= pg_query(DBi::_getConnection(), $sql_query);
+
+				if($result===false) {
+					die();
+					$msg = "Failed to delete indexes in PostgreSQL!";
+					debug_log(__METHOD__
+						." ERROR: $msg ". PHP_EOL
+						." Index failed: $sql_query "
+						, logger::ERROR
+					);
+					return false;
+				}
+			}
+		}
+
+		$all_functions = DBi::get_functions();
+
+		foreach ($all_functions as $function_object) {
+			$sql_query 	= "DROP FUNCTION IF EXISTS {$function_object->schemaname}.\"{$function_object->functionname}\" CASCADE;";
+			$result		= pg_query(DBi::_getConnection(), $sql_query);
+
+			if($result===false) {
+				$msg = "Failed to delete functions in PostgreSQL!";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					." Function failed: $sql_query "
+					, logger::ERROR
+				);
+				return false;
+			}
+		}
+
+		return true;
+	}//end delete_v6_db_indexes
+
+
+
 
 }//end class v6_to_v7
