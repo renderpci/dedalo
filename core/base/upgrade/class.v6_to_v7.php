@@ -843,28 +843,74 @@ class v6_to_v7 {
 
 		$all_indexes = DBi::get_indexes();
 
-		// $sql_code = [];
+		$unique_indexes_to_delete = [
+			// 'terminoID_unique',
+			'tld',
+			'matrix_section_id_section_tipo',
+			'matrix_activities_section_id_section_tipo',
+			'matrix_activity_section_id_section_tipo',
+			'matrix_counter_tipo_unique',
+			'matrix_counter_dd_tipo_unique',
+			'matrix_dataframe_section_id_section_tipo_key',
+			'matrix_dd_section_id_section_tipo',
+			'matrix_hierarchy_section_id_section_tipo_key',
+			'matrix_hierarchy_main_section_id_section_tipo_key',
+			'matrix_indexations_section_id_section_tipo_key',
+			'matrix_langs_section_id_section_tipo_key',
+			'matrix_layout_section_id_section_tipo',
+			'matrix_layout_dd_section_id_section_tipo',
+			'matrix_list_section_id_section_tipo',
+			'matrix_nexus_section_id_section_tipo_key',
+			'matrix_nexus_main_section_id_section_tipo_key',
+			'matrix_notes_section_id_section_tipo_key',
+			'matrix_ontology_section_id_section_tipo_key',
+			'matrix_ontology_main_section_id_section_tipo_key',
+			'matrix_profiles_section_id_section_tipo',
+			'matrix_projects_section_id_section_tipo',
+			'matrix_stats_section_id_section_tipo_key',
+			'matrix_structurations_section_id_section_tipo_key',
+			'matrix_test_section_id_section_tipo_key',
+			'matrix_tools_section_id_section_tipo_key',
+			'matrix_users_section_id_section_tipo'
+		];
 		foreach ($all_indexes as $index_object) {
 
 			$to_search = "create unique index";
-			$found = stripos( $index_object->indexdef, $to_search);
+			$found_unique = stripos( $index_object->indexdef, $to_search);
+			$found_fixed = in_array($index_object->indexname, $unique_indexes_to_delete);
 
-			if( $found === false){
-				$sql_query	= "DROP INDEX IF EXISTS {$index_object->schemaname}.\"{$index_object->indexname}\";";
-				$result		= pg_query(DBi::_getConnection(), $sql_query);
+			if( $found_unique !== false && $found_fixed === false ){
+				continue;
+			}
 
-				if($result===false) {
-					die();
-					$msg = "Failed to delete indexes in PostgreSQL!";
-					debug_log(__METHOD__
-						." ERROR: $msg ". PHP_EOL
-						." Index failed: $sql_query "
-						, logger::ERROR
-					);
-					return false;
+			if( $found_fixed === true ){
+				$constraints = DBi::get_constraint_name_from_index( $index_object->indexname );
+
+				if( !empty($constraints) ){
+
+					foreach ($constraints as $constraint_item) {
+
+						$sql_query	= "ALTER TABLE {$constraint_item->table_name} DROP CONSTRAINT {$constraint_item->constraint_name};";
+						$result		= pg_query(DBi::_getConnection(), $sql_query);
+					}
 				}
 			}
+
+			$sql_query	= "DROP INDEX IF EXISTS {$index_object->schemaname}.\"{$index_object->indexname}\" CASCADE;";
+			$result		= pg_query(DBi::_getConnection(), $sql_query);
+
+			if($result===false) {
+				die();
+				$msg = "Failed to delete indexes in PostgreSQL!";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					." Index failed: $sql_query "
+					, logger::ERROR
+				);
+				return false;
+			}
 		}
+
 
 		$all_functions = DBi::get_functions();
 
