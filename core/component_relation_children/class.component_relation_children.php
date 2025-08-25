@@ -406,7 +406,7 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_mode( 'related' );
 				$sqo->set_full_count( false );
 				$sqo->set_filter_by_locators( [$filter_locator] );
-				$sqo->set_limit( 1000 ); // set limit for security. Overwrite when needed.
+				$sqo->set_limit( 100000 ); // set limit for security. Overwrite when needed.
 
 			// order. It is defined in section 'section_map' item as {"order":"ontology41"}
 			// This tipo is used to build the JSON path for the search
