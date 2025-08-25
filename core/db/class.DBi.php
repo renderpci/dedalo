@@ -460,9 +460,9 @@ abstract class DBi {
 
 	/**
 	* GET_INDEXES
-	* Get all Database indexes as
-	* 	public	matrix	matrix_section_tipo_section_id
-	* 	public	matrix	matrix_relations_gin
+	* Get all Database indexes as:
+	* 	public	| matrix |	matrix_section_tipo_section_id
+	* 	public	| matrix |	matrix_relations_gin
 	* @return array $list
 	*/
 	public static function get_indexes() : array {
@@ -471,7 +471,8 @@ abstract class DBi {
 			SELECT
 				schemaname,
 				tablename,
-				indexname
+				indexname,
+				indexdef
 			FROM
 				pg_indexes
 			WHERE
@@ -489,11 +490,13 @@ abstract class DBi {
 			$schemaname	= $row['schemaname'];
 			$tablename	= $row['tablename'];
 			$indexname	= $row['indexname'];
+			$indexdef	= $row['indexdef'];
 
 			$list[] = (object)[
-				'schemaname' => $schemaname,
-				'tablename' => $tablename,
-				'indexname' => $indexname
+				'schemaname'	=> $schemaname,
+				'tablename'		=> $tablename,
+				'indexname'		=> $indexname,
+				'indexdef'		=> $indexdef
 			];
 		}
 
