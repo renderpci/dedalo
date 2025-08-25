@@ -49,7 +49,7 @@ trait section_v7 {
 
 
 	// matrix_manager class instance
-	protected $matrix_manager;
+	protected object $matrix_manager;
 
 
 
