@@ -551,4 +551,51 @@ abstract class DBi {
 
 
 
+	/**
+	* GET_CONSTRAINT_FROM_INDEX
+	* Get the constraint for one given index
+	* @param string $index_name
+	* @return array $constraint_name
+	*/
+	public static function get_constraint_name_from_index( string $index_name ) : array {
+
+		$sql = "
+			SELECT
+				tc.constraint_name,
+				tc.constraint_type,
+				tc.table_name
+			FROM
+				information_schema.table_constraints tc
+				JOIN pg_constraint pc ON tc.constraint_name = pc.conname
+			WHERE
+				pc.conindid = (
+					SELECT
+						oid
+					FROM
+						pg_class
+					WHERE
+						relname = '{$index_name}'
+					);
+
+		";
+
+		$result	= pg_query(DBi::_getConnection(), $sql);
+
+		$list = [];
+		while($row = pg_fetch_assoc($result)) {
+
+			$constraint_name	= $row['constraint_name'];
+			$table_name			= $row['table_name'];
+
+			$list[] = (object)[
+				'constraint_name'	=> $constraint_name,
+				'table_name'		=> $table_name
+			];
+		}
+
+		return $list;
+	}//end get_constraint_from_index
+
+
+
 }//end class DBi
