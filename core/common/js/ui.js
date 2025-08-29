@@ -710,7 +710,7 @@ export const ui = {
 						// auto-focus first input
 							if (!already_focus) {
 								// generic try of first input node
-								const first_input = component.node.content_data && component.node.content_data[0]
+								const first_input = component.node?.content_data && component.node.content_data[0]
 										? component.node.content_data[0].querySelector('input, select')
 										: null;
 								if (first_input) {
