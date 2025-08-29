@@ -74,12 +74,6 @@ view_default_autocomplete.render = async function (self, options) {
 	// position calculate based on caller node (usually a component_portal wrapper)
 		if (self.caller.node) {
 
-			// when service wrapper is rendered, move to
-			// inside caller wrapper and activate it by style with opacity fade
-				self.caller.node.appendChild(wrapper)
-				setTimeout(function(){
-					wrapper.classList.add('active')
-				}, 1)
 
 			/*
 				const reference_node = self.caller.node
