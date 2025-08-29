@@ -528,9 +528,10 @@ class diffusion_rdf extends diffusion {
 									$current_uri_data = is_string($uri_data)
 										? $uri_data
 										: '';
-									$find = strripos($uri->iri, $current_uri_data);
+									$iri_string = $uri->iri ?? '';
+									$find = strripos($iri_string, $current_uri_data);
 									if($find !== false){
-										$uri_finded = $uri->iri;
+										$uri_finded = $iri_string;
 										break 2;
 									}
 								}
