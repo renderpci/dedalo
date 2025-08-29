@@ -859,12 +859,22 @@ export const activate_autocomplete = async function(self, wrapper) {
 			})
 			await self.autocomplete.build()
 			// render. Build_autocomplete_input nodes
-			await self.autocomplete.render()
+			const service_node = await self.autocomplete.render()
+
+			// when service wrapper is rendered, move inside the wrapper
+			// and activate it by style with opacity fade
+			requestAnimationFrame(()=>{
+				self.node.appendChild(service_node)
+				setTimeout(function(){
+					service_node.classList.add('active')
+					// focus
+					if (self.autocomplete.search_input) {
+						self.autocomplete.search_input.focus({preventScroll:true});
+					}
+				}, 1)
+			})
+
 			self.autocomplete_active = true
-			// focus
-			if (self.autocomplete.search_input) {
-				self.autocomplete.search_input.focus({preventScroll:true});
-			}
 		}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
 
 
