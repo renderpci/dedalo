@@ -1453,7 +1453,7 @@ class component_relation_common extends component_common {
 
 		// q . Expected:
 		// - Object locator as {"section_id":"4","section_tipo":"hierarchy13","type":"dd151","from_component_tipo":"hierarchy9"}
-		// - String as "numisdata309_numisdata300_1" for function format
+		// - String as "numisdata309_numisdata300_1" for used in database function as `relations_flat_fct_st_si` format
 		$q = $query_object->q;
 
 		if ($format!=='function') {
@@ -1482,6 +1482,19 @@ class component_relation_common extends component_common {
 		}
 
 		// safe q
+		// it could be an object as locator or a string with a flat version of the locator to be used in database function as `relations_flat_fct_st_si`
+		// e.g of call with a flat locator.
+		// {
+		// 	"q": "numisdata309_numisdata300_55",
+		// 	"path": [
+		// 		{
+		// 			"section_tipo": "numisdata3",
+		// 			"component_tipo": "numisdata309"
+		// 		}
+		// 	],
+		// 	"format": "function",
+		// 	"use_function": "relations_flat_fct_st_si"
+		// }
 		if (strpos($q, '{')===false && $format!=='function') {
 			debug_log(__METHOD__
 				. ' Ignored invalid unsafe q ' . PHP_EOL

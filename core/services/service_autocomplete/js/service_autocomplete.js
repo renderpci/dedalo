@@ -85,7 +85,6 @@ service_autocomplete.prototype.init = async function(options) {
 
 	// set properties
 		self.model			= 'service_autocomplete'
-		self.id				= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
 		self.mode			= 'search'
 		self.context		= {
 			tipo			: self.tipo,
