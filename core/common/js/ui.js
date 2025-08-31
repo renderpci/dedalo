@@ -622,7 +622,26 @@ export const ui = {
 				// event click . Activate component on event
 					wrapper.addEventListener('click', e => {
 						e.stopPropagation()
-						ui.component.activate(instance)
+						if (!instance.active) {
+							ui.component.activate(instance)
+						}
+
+						if(SHOW_DEBUG===true) {
+							if (e.metaKey && e.altKey) {
+								e.preventDefault()
+								console.log('/// refreshing instance (build_autoload=true, render_level=content):', instance);
+								instance.refresh({
+									build_autoload	: true,
+									render_level	: 'content'
+								})
+								return
+							}
+							if (e.altKey) {
+								e.preventDefault()
+								console.log(`/// selected instance ${instance.model}:`, instance);
+								return
+							}
+						}
 					})
 
 				wrapper.appendChild(fragment)
