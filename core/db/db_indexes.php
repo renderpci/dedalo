@@ -264,6 +264,77 @@
 	}
 
 
+// Constraints
+	$ar_constraint = [];
+
+	// section_id & section_tipo
+			$ar_constraint[] = (object)[
+				'tables' => [
+					'matrix',
+					'matrix_activities',
+					'matrix_activity',
+					'matrix_dataframe',
+					'matrix_dd',
+					'matrix_hierarchy',
+					'matrix_hierarchy_main',
+					'matrix_indexations',
+					'matrix_langs',
+					'matrix_layout',
+					'matrix_layout_dd',
+					'matrix_list',
+					'matrix_nexus',
+					'matrix_nexus_main',
+					'matrix_notes',
+					'matrix_ontology',
+					'matrix_ontology_main',
+					'matrix_profiles',
+					'matrix_projects',
+					'matrix_stats',
+					'matrix_test',
+					'matrix_tools',
+					'matrix_users'
+				],
+				'sql' => '
+					ALTER TABLE IF EXISTS {$table}
+					ADD CONSTRAINT {$table}_section_id_section_tipo_key
+					UNIQUE ( section_id, section_tipo );
+				',
+				'drop' => '
+					ALTER TABLE {$table} DROP CONSTRAINT {$table}_section_id_section_tipo_key
+				',
+				'sample' => '
+					INSERT INTO "matrix_projects"
+						(section_id, section_tipo)
+					VALUES
+						(1, \'dd153\');
+				',
+				'info' => 'Used to avoid duplicated records, is not possible to storage the same section_id with the same section_tipo'
+			];
+
+	// tipotipo
+			$ar_constraint[] = (object)[
+				'tables' => [
+					'dd_ontology'
+				],
+				'sql' => '
+					ALTER TABLE IF EXISTS {$table}
+					ADD CONSTRAINT {$table}_tipo_key
+					UNIQUE ( section_id, section_tipo );
+				',
+				'drop' => '
+					ALTER TABLE {$table} DROP CONSTRAINT {$table}_tipo_key
+				',
+				'sample' => '
+					INSERT INTO "dd_ontology"
+						(tipo)
+					VALUES
+						(\'dd1\');
+				',
+				'info' => 'Used to avoid duplicated records, is not possible to storage the same tipo'
+			];
+
+
+
 // Indexes
 	$ar_index = [];
 
