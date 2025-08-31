@@ -664,44 +664,6 @@ page.prototype.add_events = function() {
 						document.activeElement.blur()
 					break;
 
-				case evt.key==='Enter': {
-					// parent recursive check on document.activeElement
-						if (document.activeElement) {
-							// find_up_node returns node|null
-							const top_node = find_up_node(
-								document.activeElement, // DOM node selected
-								'DD-MODAL' // only capital letters
-							)
-							// we are inside modal. Stop actions
-							if (top_node) {
-								return
-							}
-							// when the event is fired by paginator stop it
-							if(document.activeElement.classList.contains('input_go_to_page')){
-								return
-							}
-						}
-					// active component case
-						if (page_globals.component_active && page_globals.component_active.mode!=='search') {
-							// stop here if a component is active
-							return
-						}
-					// search with current section/area_thesaurus/area_graph/area_ontology filter
-						const with_filter_models	= ['section','area_thesaurus','area_graph','area_ontology']
-						const with_filter_instance	= self.ar_instances.find(el => with_filter_models.includes(el.model))
-						if (with_filter_instance && with_filter_instance.filter && with_filter_instance.mode==='list') {
-							if (with_filter_instance.filter.search_panel_is_open===true) {
-								// always blur active component to force set dato (!)
-								document.activeElement.blur()
-								// exec search
-								with_filter_instance.filter.exec_search()
-							}
-							// toggle filter container
-								event_manager.publish('toggle_search_panel_'+with_filter_instance.id)
-						}
-					break;
-				}
-
 				case (evt.key==='ArrowLeft' && evt.shiftKey===true): {
 					// paginator left arrow <
 						// paginator right arrow >
@@ -732,6 +694,53 @@ page.prototype.add_events = function() {
 			}//end switch
 		}
 		document.addEventListener('keydown', keydown_handler)
+
+	// page keyup
+		const keyup_handler = (evt) => {
+
+			if (evt.key==='Enter') {
+				// parent recursive check on document.activeElement
+					if (document.activeElement) {
+						// find_up_node returns node|null
+						const top_node = find_up_node(
+							document.activeElement, // DOM node selected
+							'DD-MODAL' // only capital letters
+						)
+						// we are inside modal. Stop actions
+						if (top_node) {
+							return
+						}
+						// when the event is fired by paginator stop it
+						if(document.activeElement.classList.contains('input_go_to_page')){
+							return
+						}
+					}
+				// active component case
+					if (page_globals.component_active && page_globals.component_active.mode!=='search') {
+						// stop here if a component is active
+						return
+					}
+				// search with current section/area_thesaurus/area_graph/area_ontology filter
+					const with_filter_models	= ['section','area_thesaurus','area_graph','area_ontology']
+					const with_filter_instance	= self.ar_instances.find(el => with_filter_models.includes(el.model))
+					if (with_filter_instance && with_filter_instance.filter && with_filter_instance.mode==='list') {
+						if (with_filter_instance.filter.search_panel_is_open===true) {
+							// always blur active component to force set dato (!)
+							document.activeElement.blur()
+
+							dd_request_idle_callback(
+								() => {
+									// exec search
+									with_filter_instance.filter.exec_search()
+								}
+							)
+						}
+						// toggle filter container
+							event_manager.publish('toggle_search_panel_'+with_filter_instance.id)
+					}
+			}
+		}
+		document.addEventListener('keyup', keyup_handler)
 
 	// page click/mousedown
 		document.addEventListener('mousedown', deactivate_components)
