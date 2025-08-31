@@ -76,7 +76,8 @@ component_common.prototype.init = async function(options) {
 
 	// var containers
 		self.events_tokens	= [] // array of events of current component
-		self.ar_instances	= [] // array of children instances of current instance (used for autocomplete, etc.)
+		self.ar_instances	= [] // array of children instances of current instance (used for components, etc.)
+		self.services		= [] // array of services instances of current instance (used for autocomplete, etc.)
 
 	// view
 		self.view = options.view

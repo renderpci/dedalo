@@ -875,6 +875,9 @@ export const activate_autocomplete = async function(self, wrapper) {
 			})
 
 			self.autocomplete_active = true
+
+			// set the instance as component service
+			self.services.push( self.autocomplete )
 		}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
 
 
