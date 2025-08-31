@@ -201,7 +201,7 @@ class v6_to_v7 {
 	public static function create_dd_ontology_table() : bool {
 
 		$sql_query = sanitize_query ('
-			CREATE TABLE dd_ontology AS
+			CREATE TABLE IF NOT EXIST dd_ontology AS
 				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades
 			FROM jer_dd;
 
@@ -213,6 +213,11 @@ class v6_to_v7 {
 			ALTER "id" TYPE integer,
 			ALTER "id" SET DEFAULT nextval(\'dd_ontology_id_seq\'),
 			ALTER "id" SET NOT NULL;
+
+			ALTER TABLE "dd_ontology"
+			ADD CONSTRAINT dd_ontology_id_pkey
+			PRIMARY KEY ( id );
+
 			COMMENT ON COLUMN dd_ontology.id IS \'Unique table identifier\';
 			COMMENT ON COLUMN dd_ontology.tipo IS \'Ontology identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)\';
 			COMMENT ON COLUMN dd_ontology.parent IS \'Ontology identifier parent (ontology TLD | ontology instance ID, e.g., tch1 = Tangible Cultural Heritage -> Objects)\';
@@ -844,7 +849,7 @@ class v6_to_v7 {
 		$all_indexes = DBi::get_indexes();
 
 		$unique_indexes_to_delete = [
-			// 'terminoID_unique',
+			'terminoID_unique',
 			'tld',
 			'matrix_section_id_section_tipo',
 			'matrix_activities_section_id_section_tipo',
@@ -931,6 +936,24 @@ class v6_to_v7 {
 
 		return true;
 	}//end delete_v6_db_indexes
+
+
+	/**
+	* RENAME_CONSTRAINT
+	* @return
+	*/
+	public function rename_constraint() {
+
+		$ar_constraint = [
+			'matrix' => ['matrix_id', 'matrix_id_pkey'],
+			'matrix_activities' => ['matrix_activities_pkey', 'matrix_activities_id_pkey'],
+			'matrix_activity' => ['matrix_activity_id_primary', 'matrix_activity_id_pkey'],
+			'matrix_counter' => ['matrix_counter_id', 'counter_id_pkey'],
+
+
+		];
+
+	}//end rename_constraint
 
 
 
