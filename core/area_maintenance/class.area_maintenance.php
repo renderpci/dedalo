@@ -1267,7 +1267,7 @@ class area_maintenance extends area_common {
 				return $response;
 			}
 
-		$response = area_maintenance:: set_congif_core((object)[
+		$response = area_maintenance::set_congif_core((object)[
 			'name'	=> 'DEDALO_MAINTENANCE_MODE_CUSTOM',
 			'value'	=> $value
 		]);
