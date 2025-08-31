@@ -65,7 +65,7 @@ final class dd_ts_api {
 			$section_properties	= $ontology_node->get_properties(true);
 
 		// limit
-			$default_limit = 300;
+			$default_limit = 5000;
 
 		// children. Calculated from given locator
 			switch (true) {

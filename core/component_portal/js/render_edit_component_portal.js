@@ -847,6 +847,10 @@ export const activate_autocomplete = async function(self, wrapper) {
 			&& self.autocomplete_active!==undefined
 			&& self.autocomplete_active===false ){
 
+			// id_variant. Don't allow cache instances here because interact with page instances.
+			// Use always a custom id_variant to prevent it
+			const id_variant = (self.id_variant || '') + '_' + new Date().getTime()
+
 			// get instance and init for service_autocomplete
 			self.autocomplete = await get_instance({
 				model			: 'service_autocomplete',
@@ -855,16 +859,29 @@ export const activate_autocomplete = async function(self, wrapper) {
 				section_tipo	: self.section_tipo,
 				request_config	: self.context.request_config,
 				properties		: self.context.properties.service_autocomplete || null,
-				id_variant		: self.id_variant
+				id_variant		: id_variant //self.id_variant
 			})
 			await self.autocomplete.build()
 			// render. Build_autocomplete_input nodes
-			await self.autocomplete.render()
+			const service_node = await self.autocomplete.render()
+
+			// when service wrapper is rendered, move inside the wrapper
+			// and activate it by style with opacity fade
+			requestAnimationFrame(()=>{
+				self.node.appendChild(service_node)
+				setTimeout(function(){
+					service_node.classList.add('active')
+					// focus
+					if (self.autocomplete.search_input) {
+						self.autocomplete.search_input.focus({preventScroll:true});
+					}
+				}, 1)
+			})
+
 			self.autocomplete_active = true
-			// focus
-			if (self.autocomplete.search_input) {
-				self.autocomplete.search_input.focus({preventScroll:true});
-			}
+
+			// set the instance as component service
+			self.services.push( self.autocomplete )
 		}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
 
 
