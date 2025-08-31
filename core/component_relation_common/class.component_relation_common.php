@@ -1448,20 +1448,28 @@ class component_relation_common extends component_common {
 		// component path
 		$query_object->component_path = ['relations'];
 
-		// q . Object locator is expected
+		// format. Used for example to to set 'function' (see numisdata161 sqo->filter_by_list)
+		$format = $query_object->format ?? null;
+
+		// q . Expected:
+		// - Object locator as {"section_id":"4","section_tipo":"hierarchy13","type":"dd151","from_component_tipo":"hierarchy9"}
+		// - String as "numisdata309_numisdata300_1" for function format
 		$q = $query_object->q;
-		if (!is_object($q) && $q!=='only_operator') {
-			debug_log(__METHOD__
-				. " Expected q type is object " . PHP_EOL
-				. ' type: ' . gettype($q) . PHP_EOL
-				. ' q: ' . json_encode($q) . PHP_EOL
-				. ' query_object: ' . to_string($query_object)
-				, logger::WARNING
-			);
+
+		if ($format!=='function') {
+			if (!is_object($q) && $q!=='only_operator') {
+				debug_log(__METHOD__
+					. " Expected q type is object " . PHP_EOL
+					. ' type: ' . gettype($q) . PHP_EOL
+					. ' q: ' . json_encode($q) . PHP_EOL
+					. ' query_object: ' . to_string($query_object)
+					, logger::WARNING
+				);
+			}
 		}
 
 		// For unification, all non string are JSON encoded
-		// This allow accept mixed values (encoded and no encoded)
+		// This allows accept mixed values (encoded and no encoded)
 		if (!is_string($q)) {
 			$q = json_encode($q);
 		}
@@ -1474,7 +1482,7 @@ class component_relation_common extends component_common {
 		}
 
 		// safe q
-		if (strpos($q, '{')===false) {
+		if (strpos($q, '{')===false && $format!=='function') {
 			debug_log(__METHOD__
 				. ' Ignored invalid unsafe q ' . PHP_EOL
 				. ' q: ' . to_string($q) . PHP_EOL
@@ -1544,6 +1552,7 @@ class component_relation_common extends component_common {
 			if ($legacy_model==='component_autocomplete_hi'){
 				$query_object = component_relation_common::add_relations_search($query_object);
 			}
+
 
 		return $query_object;
 	}//end resolve_query_object_sql
