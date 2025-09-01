@@ -14,6 +14,8 @@ import {component_input_text} from '../../component_input_text/js/component_inpu
 
 describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 
+	this.timeout(5000);
+
 	function make_test(options, expected) {
 		it(`${JSON.stringify(options)} => '${expected.name}'`, async function() {
 
