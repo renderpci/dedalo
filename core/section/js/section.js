@@ -1303,55 +1303,6 @@ section.prototype.navigate_to_new_section = async function(section_id) {
 		// Clone current sqo to preserve filters.
 		const sqo = clone(self.rqo.sqo)
 
-		// Add existing filter items if they exists as $or / $and
-		const current_filter_items = sqo.filter?.$and
-			? sqo.filter.$and.length
-			: sqo.filter?.$or
-				? sqo.filter.$or.length
-				: 0;
-		if (current_filter_items>0) {
-
-			// new_filter. Create a new filter
-			const new_filter = {
-				'$or' : []
-			}
-
-			// Handle case where filter already has $or at root
-			if (sqo.filter.$or) {
-				new_filter.$or.push(...sqo.filter.$or);
-			} else {
-				// Add non-$or filters
-				for (let [key, value] of Object.entries(sqo.filter)) {
-					const new_object = {
-						[key] : value
-					};
-					new_filter.$or.push(new_object);
-				}
-			}
-
-			// Add new created section_id to the filter to allow see this new record.
-			// Note that component tipo (rsc175) is not relevant to search component_section_id.
-			new_filter.$or.push({
-			    q           : section_id,
-			    q_operator  : null,
-			    path		: [{
-					section_tipo	: self.tipo,
-					component_tipo	: 'rsc175',
-					model			: 'component_section_id',
-					name			: 'Id'
-				}],
-				q_split		: false,
-				type		: 'jsonb'
-			});
-
-			// Replace old filter by the new one
-			sqo.filter = new_filter
-		}
-
-		// offset.
-		// Set offset to current total to force navigate to the last record (the new created one)
-		sqo.offset = self.total || 0;
-
 		// limit
 		// New record creation navigates to edit mode. So, set always limit to 1
 		sqo.limit = 1
@@ -1359,6 +1310,86 @@ section.prototype.navigate_to_new_section = async function(section_id) {
 		// filter_by_locators.
 		// (!) Its important to pass an empty array [] to prevent auto-generated value in common.build_rqo_show
 		sqo.filter_by_locators = []
+
+		// filter_mode. Allowed modes : reset_filter | preserve_filter | legacy
+		const filter_mode = 'reset_filter'
+		if (filter_mode==='preserve_filter') {
+
+			// Add existing filter items if they exists as $or / $and
+			const current_filter_items = sqo.filter?.$and
+				? sqo.filter.$and.length
+				: sqo.filter?.$or
+					? sqo.filter.$or.length
+					: 0;
+			if (current_filter_items>0) {
+
+				// new_filter. Create a new filter
+				const new_filter = {
+					'$or' : []
+				}
+
+				// Handle case where filter already has $or at root
+				if (sqo.filter.$or) {
+					new_filter.$or.push(...sqo.filter.$or);
+				} else {
+					// Add non-$or filters
+					for (let [key, value] of Object.entries(sqo.filter)) {
+						const new_object = {
+							[key] : value
+						};
+						new_filter.$or.push(new_object);
+					}
+				}
+
+				// Add new created section_id to the filter to allow see this new record.
+				// Note that component tipo (rsc175) is not relevant to search component_section_id.
+				new_filter.$or.push({
+				    q           : section_id,
+				    q_operator  : null,
+				    path		: [{
+						section_tipo	: self.tipo,
+						component_tipo	: 'rsc175',
+						model			: 'component_section_id',
+						name			: 'Id'
+					}],
+					q_split		: false,
+					type		: 'jsonb'
+				});
+
+				// Replace old filter by the new one
+				sqo.filter = new_filter
+			}
+
+			// offset.
+			// Set offset to current total to force navigate to the last record (the new created one)
+			sqo.offset = self.total || 0;
+
+		}else if(filter_mode==='reset_filter'){
+
+			// reset current filter and show all records, included the new one.
+
+			sqo.filter = null
+
+			// reset total and force to re-calculate it
+			self.total = null;
+			const total = await self.get_total(sqo);
+
+			// offset
+			// Set the new offset based on the real unfiltered records count.
+			sqo.offset = total - 1;
+
+		}else{
+
+			// legacy. using filter_by_locators to select only the new record.
+
+			// filter_by_locators
+			// Forces the auto-generated value in common.build_rqo_show based on current section_id
+			sqo.filter_by_locators = null;
+
+			// offset.
+			// Set offset to zero because only one record is expected
+			sqo.offset = 0;
+		}
 
 		// save pagination
 		// Updates local DB pagination values to preserve consistence
