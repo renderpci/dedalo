@@ -1274,7 +1274,7 @@ section.prototype.navigate = async function(options) {
 
 /**
 * NAVIGATE_TO_NEW_SECTION
-* After a create or duplicate action, go to the new created record
+* After a create or duplicate action, goes to the new created record
 * @param int|string section_id
 * @return bool
 */
@@ -1282,74 +1282,126 @@ section.prototype.navigate_to_new_section = async function(section_id) {
 
 	const self = this
 
-	const source = create_source(self, 'search')
+	// Validate input section_id
+	if (!section_id) {
+		throw new Error('section_id is required');
+	}
+
+	try {
+
+		// Create the search source
+		const source = create_source(self, 'search');
 		source.section_id	= section_id
 		source.mode			= 'edit'
 
-	// get sqo after modification for proper navigation
-	const sqo = {
-		mode				: self.mode,
-		section_tipo		: [{tipo:self.section_tipo}],
-		filter_by_locators	: [],
-		filter 				: null,
-		limit				: 1,
-		offset				: 0
-	}
+		// sqo
+		// Check current sqo from rqo
+		if (!self.rqo?.sqo) {
+		    console.error('Cannot navigate: Search Query Object (sqo) is missing.');
+		    return false;
+		}
+		// Clone current sqo to preserve filters.
+		const sqo = clone(self.rqo.sqo)
 
-	// rebuild sqo when is a separated window
-	// and session is not the main session
-	// in those cases, the section has a filter_by_locators
-	// and is necessary add the new locator.
-	if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
-		const old_locators = self.rqo.sqo.filter_by_locators
-		sqo.filter_by_locators.push(...old_locators)
-	}
+		// Add existing filter items if they exists as $or / $and
+		const current_filter_items = sqo.filter?.$and
+			? sqo.filter.$and.length
+			: sqo.filter?.$or
+				? sqo.filter.$or.length
+				: 0;
+		if (current_filter_items>0) {
 
-	// new section generated
-	sqo.filter_by_locators.push({
-		section_tipo	: self.section_tipo,
-		section_id		: section_id
-	})
+			// new_filter. Create a new filter
+			const new_filter = {
+				'$or' : []
+			}
 
-	sqo.offset = sqo.filter_by_locators.length - 1
-
-	// save pagination
-	// Updates local DB pagination values to preserve consistence
-	if (self.session_save===true) {
-		// list pagination
-		await data_manager.set_local_db_data(
-			{
-				id		: `${self.tipo}_list`,
-				value	: {
-					limit : (self.mode==='list' && self.rqo.sqo?.limit)
-						? self.rqo.sqo.limit
-						: 10,
-					offset : 0
+			// Handle case where filter already has $or at root
+			if (sqo.filter.$or) {
+				new_filter.$or.push(...sqo.filter.$or);
+			} else {
+				// Add non-$or filters
+				for (let [key, value] of Object.entries(sqo.filter)) {
+					const new_object = {
+						[key] : value
+					};
+					new_filter.$or.push(new_object);
 				}
-			},
-			'pagination'
-		)
-		// edit pagination
-		await data_manager.set_local_db_data(
-			{
-				id		: `${self.tipo}_edit`,
-				value	: {
-					limit	: 1,
-					offset	: sqo.offset
-				}
-			},
-			'pagination'
-		)
+			}
+
+			// Add new created section_id to the filter to allow see this new record.
+			// Note that component tipo (rsc175) is not relevant to search component_section_id.
+			new_filter.$or.push({
+			    q           : section_id,
+			    q_operator  : null,
+			    path		: [{
+					section_tipo	: self.tipo,
+					component_tipo	: 'rsc175',
+					model			: 'component_section_id',
+					name			: 'Id'
+				}],
+				q_split		: false,
+				type		: 'jsonb'
+			});
+
+			// Replace old filter by the new one
+			sqo.filter = new_filter
+		}
+
+		// offset.
+		// Set offset to current total to force navigate to the last record (the new created one)
+		sqo.offset = self.total || 0;
+
+		// limit
+		// New record creation navigates to edit mode. So, set always limit to 1
+		sqo.limit = 1
+
+		// filter_by_locators.
+		// (!) Its important to pass an empty array [] to prevent auto-generated value in common.build_rqo_show
+		sqo.filter_by_locators = []
+
+		// save pagination
+		// Updates local DB pagination values to preserve consistence
+		if (self.session_save===true) {
+			// list pagination
+			await data_manager.set_local_db_data(
+				{
+					id		: `${self.tipo}_list`,
+					value	: {
+						limit : (self.mode==='list' && self.rqo.sqo?.limit)
+							? self.rqo.sqo.limit
+							: 10,
+						offset : 0
+					}
+				},
+				'pagination'
+			);
+			// edit pagination
+			await data_manager.set_local_db_data(
+				{
+					id		: `${self.tipo}_edit`,
+					value	: {
+						limit	: 1,
+						offset	: sqo.offset
+					}
+				},
+				'pagination'
+			);
+		}
+
+		// launch event 'user_navigation' that page.js is watching in init events subscriptions
+		event_manager.publish('user_navigation', {
+			source	: source,
+			sqo		: sqo
+		});
+
+
+		return true
+
+	} catch (error) {
+		console.error('Error navigating to new section:', error);
+		throw error;
 	}
-
-	// launch event 'user_navigation' that page is watching
-	event_manager.publish('user_navigation', {
-		source	: source,
-		sqo		: sqo
-	})
-
-
-	return true
 }//end navigate_to_new_section
 
 
