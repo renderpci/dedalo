@@ -1504,10 +1504,15 @@ section.prototype._total_promise = null; // Initialize this property once, likel
 
 /**
 * GET_TOTAL
-* Exec a async API call to count the current sqo records
-* @return int total
+* Asynchronously fetches the total count of records from an API
+* The function is designed to handle concurrent calls safely through promise-based request deduplication,
+* ensuring only one API request is made at a time for the same section instance.
+* @param object sqo (Optional)
+* 	Search Query Object. If provided, uses this custom query; otherwise defaults to self.rqo.sqo
+* @return promise
+* 	Resolves to the total count as an integer
 */
-section.prototype.get_total = async function() {
+section.prototype.get_total = async function(sqo) {
 
 	const self = this
 
@@ -1529,7 +1534,9 @@ section.prototype.get_total = async function() {
 				// API request
 
 					// count sqo. Simplified version from current self.rqo.sqo
-					const count_sqo = clone(self.rqo.sqo)
+					const count_sqo = sqo
+						? clone(sqo) // custom sqo from params
+						: clone(self.rqo.sqo) // section rqo.sqo (default)
 					// remove unused properties
 					delete count_sqo.limit
 					delete count_sqo.offset
