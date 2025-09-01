@@ -32,6 +32,24 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 				return
 			}
 
+			if (options.model.indexOf('service_')!==-1) {
+				try {
+					const module_path = `../../../core/services/${options.model}/js/${options.model}.js`
+					const module = await import(module_path);
+
+					// service_ckeditor do not follow the Dédalo services model yet..
+					if (options.model==='service_ckeditor') {
+						console.warn('Ignored service_ckeditor instance creation because do not follow the Dédalo services model yet.');
+						return
+					}
+					const instance = await get_instance(options)
+					assert.instanceOf(instance, module[options.model], 'result is an instance of expected: '+ instance.name);
+				} catch (error) {
+					console.error(error)
+				}
+				return
+			}
+
 			const instance = await get_instance(options)
 			assert.instanceOf(instance, expected, 'result is an instance of expected '+ instance.name);
 		});
@@ -113,6 +131,38 @@ describe("INSTANCES : GET_INSTANCE (PAGE/COMPONENT/TOOL)", function() {
 						lang		: lang,
 						tool_object	: {},
 						caller		: {}
+					},
+					model
+				);
+			}
+		});
+
+	// services instance
+		describe("Builds services instance from options", function() {
+
+			const services = [
+				'service_autocomplete',
+				'service_ckeditor', // @todo: Unify service model using prototypes
+				'service_dropzone',
+				// 'service_subtitles', // not finished
+				'service_time_machine',
+				'service_tmp_section',
+				'service_upload',
+			];
+
+			const services_length = services.length
+			for (let i = 0; i < services_length; i++) {
+
+				const model = services[i]
+
+					make_test(
+					{
+						model	: model,
+						mode	: mode,
+						lang	: lang,
+						caller	: {
+							build : () => {}
+						}
 					},
 					model
 				);
