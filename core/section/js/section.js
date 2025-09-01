@@ -666,7 +666,7 @@ section.prototype.build = async function(autoload=false) {
 
 					// render_handler
 					const render_handler = () => {
-						
+
 						// remove event subscription
 						event_manager.unsubscribe(debug_token)
 
@@ -1264,7 +1264,7 @@ section.prototype.navigate = async function(options) {
 					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 				})
 			}
-		)
+		);
 
 
 	return true
