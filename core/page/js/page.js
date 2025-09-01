@@ -743,7 +743,11 @@ page.prototype.add_events = function() {
 		document.addEventListener('keyup', keyup_handler)
 
 	// page click/mousedown
-		document.addEventListener('mousedown', deactivate_components)
+		const mousedown_handler = (e) => {
+
+			deactivate_components(e)
+		}
+		document.addEventListener('mousedown', mousedown_handler)
 }//end add_events
 
 
