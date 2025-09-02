@@ -59,7 +59,15 @@ render_edit_component_filter.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* Builds and returns the main content data container for the component,
+* including a hierarchical tree of its datalist entries rendered as nested DOM nodes.
+* This function:
+* - Uses the component's `data.datalist` to build a tree structure.
+* - Creates a root `<ul>` element inside the component's content data container.
+* - Recursively processes each data entry and its children.
+* - Appends the resulting DOM nodes to the appropriate branches.
 * @param object self
+* 	Component instance
 * @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
@@ -71,47 +79,62 @@ export const get_content_data = function(self) {
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
-		// ul
-			const ul_branch = ui.create_dom_element({
-				element_type	: 'ul',
-				class_name		: 'content_value branch',
-				parent			: content_data
-			})
+	// parent ul
+	const ul_branch = ui.create_dom_element({
+		element_type	: 'ul',
+		class_name		: 'content_value branch',
+		parent			: content_data
+	})
 
-		// get tree nodes with children recursively
-		const get_children_node = function(element) {
+	// get tree nodes with children recursively
+	const get_children_node = function(element) {
 
-			const children_elements = datalist.filter(
-				el => el.parent && el.parent.section_tipo === element.section_tipo
-				&& el.parent.section_id === element.section_id
+		const children_elements = datalist
+			.filter(
+				el => el.parent &&
+				el.parent.section_tipo === element.section_tipo &&
+				el.parent.section_id === element.section_id
 			)
-			const children_elements_len = children_elements.length
-			element.has_children = (children_elements_len > 0)
+			.sort((a, b) =>
+				(a.order - b.order) || ((a.label || '').localeCompare(b.label || ''))
+			);
 
-			// element_node
-			const element_node = (self.permissions===1)
-				? get_input_element_read(element, self)
-				: get_input_element(element, self)
+		const children_elements_len = children_elements.length
+		// modify has_children property
+		element.has_children = (children_elements_len > 0)
 
-			if(children_elements_len > 0) {
-				for (let i = 0; i < children_elements_len; i++) {
-					const current_child	= children_elements[i]
-					const child_node	= get_children_node(current_child)
-					element_node.branch.appendChild(child_node)
-				}
+		// element_node
+		const element_node = (self.permissions===1)
+			? get_input_element_read(element, self)
+			: get_input_element(element, self)
+
+		if(children_elements_len > 0) {
+			for (let i = 0; i < children_elements_len; i++) {
+				const current_child	= children_elements[i]
+				const child_node	= get_children_node(current_child)
+				element_node.branch.appendChild(child_node)
 			}
-
-			return element_node;
 		}
+
+		return element_node;
+	}
 
 	// root nodes
-		const root_elements		= datalist.filter(el => el.parent === null)
-		const root_elements_len	= root_elements.length
-		for (let i = 0; i < root_elements_len; i++) {
-			const current_element	= root_elements[i]
-			const element_node		= get_children_node(current_element)
-			ul_branch.appendChild(element_node)
-		}
+	// Filter projects without parent (root nodes) and sort by order if defined.
+	// If not, sort by label alphabetically.
+	const root_elements	= datalist
+		.filter(el => el.parent === null)
+		.sort((a, b) =>
+			(a.order - b.order) || ((a.label || '').localeCompare(b.label || ''))
+		);
+
+	// Iterate root nodes and get children adding everyone to the parent ul branch.
+	const root_elements_len	= root_elements.length
+	for (let i = 0; i < root_elements_len; i++) {
+		const current_element	= root_elements[i]
+		const element_node		= get_children_node(current_element)
+		ul_branch.appendChild(element_node)
+	}
 
 
 	return content_data
