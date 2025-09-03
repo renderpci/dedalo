@@ -1656,7 +1656,6 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 				section_tipo	:self.section_tipo,
 				section_id		: self.section_id
 			}]
-
 		}
 
 	// sqo clean
