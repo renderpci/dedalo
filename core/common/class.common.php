@@ -1417,7 +1417,7 @@ abstract class common {
 		// Debug
 			if(SHOW_DEBUG===true) {
 
-				$exec_time = exec_time_unit($get_json_start_time).' ms';
+				$exec_time = exec_time_unit($get_json_start_time);
 
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
@@ -1433,7 +1433,7 @@ abstract class common {
 					: 0;
 				$tipo_line = $called_tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					'------- get_json --------------------- '. $tipo_line .' '. $exec_time .' ---- '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
+					'--- get_json --------------------- '. $tipo_line .' '. number_format($exec_time,3) .' ms - '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
 					logger::DEBUG
 				);
 			}
@@ -1493,7 +1493,7 @@ abstract class common {
 								: 0;
 							$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 							debug_log(
-								'------- get_structure_context CACHED - ' . $tipo_line .' '. exec_time_unit($start_time,'ms').' ms' . " ---- $model ". json_encode($add_request_config),
+								'--- get_structure_context CACHED - ' . $tipo_line .' '. number_format(exec_time_unit($start_time,'ms'),3).' ms' . " - $model ". json_encode($add_request_config),
 								logger::DEBUG
 							);
 						}
@@ -1925,8 +1925,8 @@ abstract class common {
 
 				if ($time>15) {
 					$time_string = $time>15
-						? sprintf("\033[31m%s\033[0m", $time)
-						: $time;
+						? sprintf("\033[31m%s\033[0m", number_format($time,3))
+						: number_format($time,3);
 					$len = !empty($this->tipo)
 						? strlen($this->tipo)
 						: 0;
@@ -1934,7 +1934,7 @@ abstract class common {
 						? (14 - $len)
 						: 0;
 					$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-					error_log('------- SLOW get_structure_context --- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+					error_log('--- SLOW get_structure_context --- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
 				}
 			}
 
@@ -1993,12 +1993,12 @@ abstract class common {
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
-				$repeat = ($len < 35)
-					? (35 - $len)
+				$repeat = ($len < 32)
+					? (32 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					'------- get_subdatum start ----------- '. $tipo_line.' '. get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
+					'--- get_subdatum start ----------- '. $tipo_line.' '. get_class($this) .' - '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
 					logger::DEBUG
 				);
 			}
@@ -2469,9 +2469,8 @@ abstract class common {
 								? (21 - $len)
 								: 0;
 							$tipo_line = $dd_object->tipo .' '. str_repeat('-', $repeat);
-
 							debug_log(
-								'------- resolve ddo ------------------ '.$tipo_line.' '.exec_time_unit($ddo_start_time,'ms').' ms' . ' ---- ' . $related_element->get_model(),
+								'--- resolve ddo ------------------ '.$tipo_line.' '. number_format(exec_time_unit($ddo_start_time,'ms'), 3).' ms' . ' - ' . $related_element->get_model(),
 								logger::DEBUG
 							);
 						}
@@ -2489,8 +2488,8 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				$time = exec_time_unit($start_time,'ms');
 				$time_string = $time>50
-					? sprintf("\033[31m%s\033[0m", $time)
-					: $time;
+					? sprintf("\033[31m%s\033[0m", number_format($time,3))
+					: number_format($time,3);
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
@@ -2499,7 +2498,7 @@ abstract class common {
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					'------- get_subdatum ----------------- '."$tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
+					'--- get_subdatum ----------------- '."$tipo_line $time_string ms - ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
 					logger::DEBUG
 				);
 			}
@@ -2852,10 +2851,19 @@ abstract class common {
 			}
 
 		// debug
-			debug_log(
-				'------- build_request_config --------- '.$this->tipo.' ---------------- '.exec_time_unit($start_time,'ms').' ms' . ' --- ' . get_called_class() . ' -- ' . $resolved_key,
-				logger::DEBUG
-			);
+			if(SHOW_DEBUG===true) {
+				$len = !empty($this->tipo)
+					? strlen($this->tipo)
+					: 0;
+				$repeat = ($len < 21)
+					? (21 - $len)
+					: 0;
+				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
+				debug_log(
+					'--- build_request_config --------- '. $tipo_line .' '. number_format(exec_time_unit($start_time,'ms'),3).' ms' . ' - ' . get_called_class() . ' - ' . $resolved_key,
+					logger::DEBUG
+				);
+			}
 
 
 		return $this->request_config;
