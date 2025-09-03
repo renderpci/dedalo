@@ -304,7 +304,7 @@ final class dd_ts_api {
 			$is_ontology = get_section_id_from_tipo( $section_tipo ) === '0';
 			if( $is_ontology ){
 				$component_tipo	= 'ontology7'; // component_input_text TLD
-				$model_name		= RecordObj_dd::get_model_name_by_tipo($component_tipo, true);
+				$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
 
 				$tld_source_component = component_common::get_instance(
 					$model_name,

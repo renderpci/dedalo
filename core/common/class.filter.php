@@ -311,7 +311,7 @@ abstract class filter {
 
 				// order
 				$order_model_tipo	= 'dd1631';
-				$order_model		= RecordObj_dd::get_modelo_name_by_tipo($order_model_tipo,true);
+				$order_model		= ontology_node::get_model_by_tipo($order_model_tipo,true);
 				$order_component	= component_common::get_instance(
 					$order_model, // string model
 					$order_model_tipo, // string tipo
