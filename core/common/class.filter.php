@@ -310,6 +310,22 @@ abstract class filter {
 					DEDALO_DATA_LANG_DEFAULT
 				); // main_lang
 
+				// order
+				$order_model_tipo	= 'dd1631';
+				$order_model		= RecordObj_dd::get_modelo_name_by_tipo($order_model_tipo,true);
+				$order_component	= component_common::get_instance(
+					$order_model, // string model
+					$order_model_tipo, // string tipo
+					$current_locator->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$current_locator->section_tipo // string section_tipo
+				);
+				$order_dato		= $order_component->get_dato();
+				$order_value	= isset($order_dato[0])
+					? (int)$order_dato[0]
+					: 0;
+
 				$ar_all_parents = component_relation_parent::get_parents_recursive(
 					$current_locator->section_id,
 					$current_locator->section_tipo
@@ -335,6 +351,7 @@ abstract class filter {
 					$element->label		= reset($label);
 					$element->locator	= json_decode( json_encode($current_locator) ); // converted to std class to allow session cache
 					$element->parent	= $parent;
+					$element->order		= $order_value;
 
 				$ar_projects[] = $element;
 			}//end foreach ($dato as $current_locator)

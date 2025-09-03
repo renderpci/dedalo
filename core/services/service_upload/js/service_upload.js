@@ -118,6 +118,9 @@ service_upload.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// status update
+		self.status = 'building'
+
 	// fetch system info
 		const system_info = await get_system_info(self)
 		// set as tool properties
@@ -128,6 +131,9 @@ service_upload.prototype.build = async function(autoload=false) {
 			self.session_cache_expire		= system_info.session_cache_expire
 			self.upload_service_chunk_files	= system_info.upload_service_chunk_files
 			self.pdf_ocr_engine				= system_info.pdf_ocr_engine
+
+	// status update
+		self.status = 'built'
 
 
 	return true
