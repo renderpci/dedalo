@@ -405,7 +405,6 @@ view_line_edit_portal.render_column_remove = function(options) {
 						: 0
 				}
 
-
 			// fire the unlink_record method
 			// Note that this function refresh current instance
 				await self.unlink_record({
@@ -413,6 +412,16 @@ view_line_edit_portal.render_column_remove = function(options) {
 					row_key			: row_key,
 					section_id		: section_id
 				})
+
+			// remove the tooltip
+				dd_request_idle_callback(
+					() => {
+						const tooltip = document.querySelector('.ct.ct--shown')
+						if (tooltip) {
+							tooltip.classList.remove('ct--shown')
+						}
+					}
+				);
 		}
 		button_remove.addEventListener('click', click_handler)
 		// focus event

@@ -114,7 +114,7 @@ class component_relation_children extends component_relation_common {
 			$this->dato_resolved = $this->dato;
 
 		// Set as loaded.
-			$this->is_loaded_matrix_data = true;
+			$this->bl_loaded_matrix_data = true;
 
 
 		return $dato;
@@ -193,9 +193,9 @@ class component_relation_children extends component_relation_common {
 						$locator->section_id
 					);
 					if (!$result) {
-						$from_component_tipo_model = isset($locator->from_component_tipo)
-							? ontology_node::get_model_by_tipo($locator->from_component_tipo,true)
-							: null;
+						$model = isset($locator->from_component_tipo)
+							? RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true)
+							: 'Unknown';
 						debug_log(__METHOD__
 							. " Error on add children" . PHP_EOL
 							. ' result: ' . to_string($result) . PHP_EOL
@@ -204,8 +204,7 @@ class component_relation_children extends component_relation_common {
 							. ' result: ' . to_string($result) . PHP_EOL
 							. ' locator: ' . to_string($locator) . PHP_EOL
 							. ' locator type: ' .  get_relation_name($locator->type) . PHP_EOL
-							. ' locator from_component_tipo: ' . ($locator->from_component_tipo ?? null) . PHP_EOL
-							. ' from_component_tipo model: ' . $from_component_tipo_model
+							. ' from_component_tipo model: ' . $model . PHP_EOL
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
@@ -301,7 +300,7 @@ class component_relation_children extends component_relation_common {
 			}
 
 		// model. Expected 'component_relation_parent'
-			$model = ontology_node::get_model_by_tipo($parent_tipo, true);
+			$model = RecordObj_dd::get_modelo_name_by_tipo($parent_tipo, true);
 			if ($model!=='component_relation_parent') {
 				// wrong model case
 				debug_log(__METHOD__
@@ -410,7 +409,7 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_mode( 'related' );
 				$sqo->set_full_count( false );
 				$sqo->set_filter_by_locators( [$filter_locator] );
-				$sqo->set_limit( 1000 ); // set limit for security. Overwrite when needed.
+				$sqo->set_limit( 100000 ); // set limit for security. Overwrite when needed.
 
 			// order. It is defined in section 'section_map' item as {"order":"ontology41"}
 			// This tipo is used to build the JSON path for the search
@@ -424,8 +423,8 @@ class component_relation_children extends component_relation_common {
 					$path = [
 						(object)[
 							'component_tipo'	=> $order_component_tipo,
-							'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_by_tipo($order_component_tipo,true) : $order_component_tipo,
-							'name'				=> SHOW_DEBUG===true ? ontology_node::get_term_by_tipo($order_component_tipo) : $order_component_tipo,
+							'model'				=> SHOW_DEBUG===true ? RecordObj_dd::get_modelo_name_by_tipo($order_component_tipo,true) : $order_component_tipo,
+							'name'				=> SHOW_DEBUG===true ? RecordObj_dd::get_termino_by_tipo($order_component_tipo) : $order_component_tipo,
 							'section_tipo'		=> $section_tipo,
 							'column'			=> "jsonb_path_query_first(datos, 'strict $.components.{$order_component_tipo}.dato.\"lg-nolan\"[0]', silent => true)"
 						]
@@ -499,7 +498,7 @@ class component_relation_children extends component_relation_common {
 		}
 
 		// debug
-		$model = ontology_node::get_model_by_tipo($tipo,true);
+		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		if ($model!==get_called_class()) {
 			debug_log(__METHOD__
 				. " Error! Calling get_ar_related_by_model expected 'component_relation_children' but resolved: " .$model . PHP_EOL
@@ -628,7 +627,7 @@ class component_relation_children extends component_relation_common {
 				if (!empty($ar_target_parent_tipo)) {
 					foreach ($ar_target_parent_tipo as $children_component_tipo) {
 
-						$model_name	= ontology_node::get_model_by_tipo($children_component_tipo, true); // component_relation_children
+						$model_name	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
 						$component	= component_common::get_instance(
 							$model_name,
 							$children_component_tipo,
@@ -693,7 +692,7 @@ class component_relation_children extends component_relation_common {
 
 		// component commons
 		$component_tipo	= $section_map->thesaurus->order;
-		$model			= ontology_node::get_model_by_tipo($component_tipo,true); // component_number expected
+		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // component_number expected
 
 		$order = 0;
 		foreach ($locators as $locator) {
