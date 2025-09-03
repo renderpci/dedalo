@@ -85,7 +85,6 @@ service_autocomplete.prototype.init = async function(options) {
 
 	// set properties
 		self.model			= 'service_autocomplete'
-		self.id				= 'service_autocomplete' +'_'+ self.tipo +'_'+ self.section_tipo
 		self.mode			= 'search'
 		self.context		= {
 			tipo			: self.tipo,
@@ -336,8 +335,8 @@ service_autocomplete.prototype.autocomplete_search = async function() {
 
 	// check valid filters_selector
 		if (self.ar_search_section_tipo.length<1) {
-			// const label = get_label.select_search_section || 'Select a search section'
-			// alert(label);
+			const label = get_label.select_search_section || 'Select a search section'
+			alert(label);
 			return {
 				result: false
 			}

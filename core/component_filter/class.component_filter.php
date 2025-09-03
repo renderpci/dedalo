@@ -634,6 +634,7 @@ class component_filter extends component_relation_common {
 					$project->section_id	= $project_item->locator->section_id;
 					$project->value			= $project_item->locator;
 					$project->parent		= $project_item->parent;
+					$project->order			= $project_item->order;
 
 				$datalist[] = $project;
 			}//end foreach ($ar_projects as $project_item)

@@ -709,6 +709,10 @@ component_portal.prototype.add_value = async function(value) {
 		const exists = current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
 		if (typeof exists!=='undefined') {
 			console.log('[add_value] Value already exists (1) !');
+			if(SHOW_DEBUG===true) {
+				console.log('add_value current_value:', current_value);
+				console.log('add_value value:', value);
+			}
 			return false
 		}
 
