@@ -77,6 +77,9 @@ service_tmp_section.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// status update
+		self.status = 'building'
+
 	const ddo_map			= self.ddo_map
 	const ddo_map_length	= ddo_map.length
 	const ar_promises		= []
@@ -113,6 +116,9 @@ service_tmp_section.prototype.build = async function(autoload=false) {
 		await Promise.all(ar_promises).then((ar_instances) => {
 			self.ar_instances = ar_instances
 		})
+
+	// status update
+		self.status = 'built'
 
 
 	return true

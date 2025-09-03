@@ -316,12 +316,19 @@ const get_buttons = function(self) {
 			parent			: fragment
 		})
 
+	// search buttons container
+		const search_buttons_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'search_buttons_container',
+			parent			: buttons_container
+		})
+
 	// filter button (search) . Show and hide all search elements
 		const filter_button	= ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning search',
 			inner_html		: get_label.find || 'Search',
-			parent			: buttons_container
+			parent			: search_buttons_container
 		})
 		// mousedown event
 		const mousedown_handler = (e) => {
@@ -330,6 +337,21 @@ const get_buttons = function(self) {
 			event_manager.publish('toggle_search_panel_'+self.id)
 		}
 		filter_button.addEventListener('mousedown', mousedown_handler)
+
+	// show_all_button. Show all records button
+		const show_all_button	= ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning show_all',
+			inner_html		: get_label.show_all || 'Show all',
+			parent			: search_buttons_container
+		})
+		// mousedown event
+		const show_all_mousedown_handler = (e) => {
+			e.stopPropagation()
+			// Trigger section filter (search.js instance) method 'show_all' like search form do.
+			self.filter.show_all(show_all_button)
+		}
+		show_all_button.addEventListener('mousedown', show_all_mousedown_handler)
 
 	// non_editable_sections. Activity section 'dd542'
 		const non_editable_sections = [

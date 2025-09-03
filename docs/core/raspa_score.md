@@ -53,7 +53,7 @@ Sustainable data ensures that cultural heritage remains accessible, intelligible
 | 0 | Unstructured Data | Human-readable only (books, PDFs) | No computational structure | |
 | 1 | Basic Structured Data | Machine-readable tables (CSV, Excel, SQL) | Relational schemas | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 2 | Ontologically Modeled | Formal semantic relationships | Domain ontologies | ![raspa](assets/20250715_175300_paw.svg){width="30"}  ![raspa](assets/20250715_175300_paw.svg){width="30"}  |
-| 3 | Computable Data | Native machine processing ([ECMA TC39 temporal dates]([TC39 temporal](https://tc39.es/proposal-temporal/docs/cookbook.html)), [geocoordinates as geojson](https://datatracker.ietf.org/doc/html/rfc7946)) | Data type standardization | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
+| 3 | Computable Data | Native machine processing ([ECMA TC39 temporal dates](https://tc39.es/proposal-temporal/docs/cookbook.html), [geocoordinates as geojson](https://datatracker.ietf.org/doc/html/rfc7946)) | Data type standardization | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 5 | Traceable Data | Full provenance tracking | Immutable logs, version control (W3C PROV) | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 6 | Reinterpretable Data | Epistemic flexibility for future revisions | Non-destructive schema evolution | ![raspa](assets/20250715_175300_paw.svg){width="30"} ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 7 | Contextualized Data | Embedded certainty levels and source attribution | Data-frame metadata structures | ![raspa](assets/20250715_175300_paw.svg){width="30"} |

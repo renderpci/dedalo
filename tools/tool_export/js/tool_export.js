@@ -220,8 +220,8 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const api_response = await data_manager.request({
 			use_worker	: true,
 			body		: rqo,
-			retries : 1, // one try only
-			timeout : 120 * 1000 // 120 secs waiting response
+			retries		: 1, // one try only
+			timeout		: 36000 * 1000 // 10 hours waiting response
 		})
 		if (!api_response.result) {
 			console.error('Error:', api_response.msg || 'Unknown error on API tool_request');

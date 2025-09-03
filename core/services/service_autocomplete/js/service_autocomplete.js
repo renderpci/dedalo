@@ -335,8 +335,8 @@ service_autocomplete.prototype.autocomplete_search = async function() {
 
 	// check valid filters_selector
 		if (self.ar_search_section_tipo.length<1) {
-			// const label = get_label.select_search_section || 'Select a search section'
-			// alert(label);
+			const label = get_label.select_search_section || 'Select a search section'
+			alert(label);
 			return {
 				result: false
 			}

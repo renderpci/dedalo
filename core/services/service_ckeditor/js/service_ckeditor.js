@@ -14,6 +14,7 @@
 
 /**
 * SERVICE_CKEDITOR
+* @todo: Unify service model using prototypes
 * Used as service by component_text_area
 */
 export const service_ckeditor = function() {

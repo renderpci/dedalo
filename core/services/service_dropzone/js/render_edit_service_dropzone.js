@@ -115,7 +115,7 @@ export const render_info_container = function(self) {
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html		: self.caller.model,
+			inner_html		: self.caller?.model || 'Unknown',
 			parent			: info_container
 		})
 
