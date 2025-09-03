@@ -30,7 +30,7 @@ class ontology_utils {
 		}
 
 		// search terms with given model
-		$result = dd_ontology_manager::search([
+		$result = dd_ontology_db_manager::search([
 			'model' => $model_name
 		]);
 
@@ -53,7 +53,7 @@ class ontology_utils {
 	public static function get_ar_all_models() : array {
 
 		// search
-		$result = dd_ontology_manager::search([
+		$result = dd_ontology_db_manager::search([
 			'is_model' => true
 		]);
 
@@ -75,7 +75,7 @@ class ontology_utils {
 	public static function get_ar_all_tipo_of_model_tipo( string $model_tipo ) : array {
 
 		// search
-		$result = dd_ontology_manager::search([
+		$result = dd_ontology_db_manager::search([
 			'model_tipo' => $model_tipo
 		]);
 
