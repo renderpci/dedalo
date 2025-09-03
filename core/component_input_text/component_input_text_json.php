@@ -206,14 +206,14 @@
 				/*
 				@v7 test
 				*/
-				// load_matrix_manager @v7
-					// $matrix_manager = matrix_manager::get_instance($this->section_tipo, $this->section_id);
-					// $section_data = $matrix_manager->load();
+				// load_matrix_db_manager @v7
+					// $matrix_db_manager = matrix_db_manager::get_instance($this->section_tipo, $this->section_id);
+					// $section_data = $matrix_db_manager->load();
 					// // dump($section_data, ' section_data //////////////////////////////////////////////////////////// ++ '.to_string());
 
-				// update_matrix_manager @v7
-					// $matrix_manager = matrix_manager::get_instance($this->section_tipo, $this->section_id);
-					// $res = $matrix_manager->update(
+				// update_matrix_db_manager @v7
+					// $matrix_db_manager = matrix_db_manager::get_instance($this->section_tipo, $this->section_id);
+					// $res = $matrix_db_manager->update(
 					// 	[
 					// 		'iri' => [
 					// 			'test3333' => [
@@ -228,9 +228,9 @@
 					// );
 					// // dump($res, ' res ++ '.to_string("$this->section_tipo, $this->section_id"));
 
-				// insert_matrix_manager @v7
-					// $matrix_manager = matrix_manager::get_instance($this->section_tipo, $this->section_id);
-					// $res = $matrix_manager->insert(
+				// insert_matrix_db_manager @v7
+					// $matrix_db_manager = matrix_db_manager::get_instance($this->section_tipo, $this->section_id);
+					// $res = $matrix_db_manager->insert(
 					// 	[
 					// 		'data' => [
 					// 			'test3333' => [
@@ -242,7 +242,7 @@
 					// 		]
 					// 	]
 					// );
-					// dump($res, ' res insert_matrix_manager ++ '.to_string("$this->section_tipo, $this->section_id"));
+					// dump($res, ' res insert_matrix_db_manager ++ '.to_string("$this->section_tipo, $this->section_id"));
 			}
 
 		$data[] = $item;

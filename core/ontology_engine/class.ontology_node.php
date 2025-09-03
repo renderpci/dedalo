@@ -119,7 +119,7 @@ class ontology_node {
 		}
 		// load ontology node from DDBB
 		$tipo = $this->tipo;
-		$data = dd_ontology_manager::load($tipo);
+		$data = dd_ontology_db_manager::load($tipo);
 
 		// Set as loaded
 		$this->is_loaded_data = true;
@@ -626,7 +626,7 @@ class ontology_node {
 
 		$tipo = $this->get_tipo();
 
-		$result = dd_ontology_manager::delete($tipo);
+		$result = dd_ontology_db_manager::delete($tipo);
 
 		if($result===false) {
 			return false;
@@ -634,7 +634,7 @@ class ontology_node {
 
 		$values = (array) $this->get_data();
 
-		$result = dd_ontology_manager::insert( $tipo, $values );
+		$result = dd_ontology_db_manager::insert( $tipo, $values );
 
 		if($result===false) {
 			return false;
@@ -769,7 +769,7 @@ class ontology_node {
 		];
 
 		// search terms with given model
-		$result = dd_ontology_manager::search(
+		$result = dd_ontology_db_manager::search(
 			[
 				'is_model'	=> true,
 				'tld'		=> 'dd',
@@ -809,7 +809,7 @@ class ontology_node {
 		}
 
 		// search
-		$result = dd_ontology_manager::search(
+		$result = dd_ontology_db_manager::search(
 			[ 'parent' => $this->tipo ],
 			true // order by order_number asc
 		);
@@ -996,7 +996,7 @@ class ontology_node {
 		}
 
 		// search
-		$result = dd_ontology_manager::search([
+		$result = dd_ontology_db_manager::search([
 			'parent' => $this->get_parent()
 		]);
 
