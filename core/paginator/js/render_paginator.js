@@ -250,7 +250,7 @@ const get_content_data = async function(self) {
 				const input_handler = (e) => {
 					e.preventDefault()
 					if (e.key!=='Enter' ) {
-						fit_input_go_to_page_to_value(input_go_to_page, this.value)
+						fit_input_go_to_page_to_value(input_go_to_page, input_go_to_page.value)
 					}
 				}
 				input_go_to_page.addEventListener('input', input_handler)

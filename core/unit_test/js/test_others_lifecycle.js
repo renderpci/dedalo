@@ -125,9 +125,40 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 		return elements
 	}//end get_widgets
 
+// get_services
+	function get_services(){
+
+		const elements = [];
+
+		const add = (name) => {
+			elements.push({
+				name	: name,
+				path	: `../../services/${name}/js/${name}.js`,
+				mode	: mode,
+				lang	: lang,
+				value	: null
+			})
+		}
+
+		// area maintenance widgets
+		[
+			// 'service_autocomplete',
+			// 'service_ckeditor',
+			'service_dropzone',
+			// 'service_subtitles', // not finished
+			// 'service_time_machine',
+			// 'service_tinymce',
+			'service_tmp_section',
+			'service_upload'
+		].map(add)
 
 
-describe("OTHERS LIFE-CYCLE", async function() {
+		return elements
+	}//end get_services
+
+
+
+describe("OTHERS LIFE-CYCLE", function() {
 
 	describe('Regular elements', function() {
 
@@ -217,9 +248,7 @@ describe("OTHERS LIFE-CYCLE", async function() {
 				});
 			});//end describe(element.model, function()
 		}//end for (let i = 0; i < elements.length; i++)
-
 	});
-
 
 	describe('Widgets', function() {
 
@@ -246,7 +275,7 @@ describe("OTHERS LIFE-CYCLE", async function() {
 
 					// init widget
 					await new_instance.init({
-						id			:element.name,
+						id			: element.name,
 						id_variant	: Math.random() + '-' + Math.random(),
 						lang		: element.lang,
 						mode		: element.mode, // list
@@ -255,6 +284,124 @@ describe("OTHERS LIFE-CYCLE", async function() {
 						value		: element.value,
 						caller		: null
 					})
+
+					// const init_options = {
+					// 	id			: element.name,
+					// 	id_variant	: Math.random() + '-' + Math.random(),
+					// 	lang		: element.lang,
+					// 	mode		: element.mode, // list
+					// 	model		: element.name,
+					// 	name		: element.name,
+					// 	value		: element.value,
+					// 	context		: {},
+					// 	caller		: {
+					// 		context : {}
+					// 	}
+					// }
+					// new_instance = await get_instance(init_options)
+
+					assert.equal(new_instance.status, expected);
+				});
+
+				it(`${element.name} BUILD (autoload=true)`, async function() {
+
+					const expected = 'built'
+
+					// build instance
+					await new_instance.build(true)
+
+					assert.equal(new_instance.status, expected);
+				});
+
+				it(`${element.name} RENDER`, async function() {
+
+					if (element.name==='unit_test') {
+						// No render unit_test because cause an internal loop
+					}else{
+						const expected = 'rendered'
+
+						// render instance
+						await new_instance.render()
+						// console.log('render new_instance:', new_instance);
+
+						assert.equal(new_instance.status, expected);
+					}
+				});
+
+				it(`${element.name} DESTROY`, async function() {
+
+					const expected = 'destroyed'
+
+					// destroy instance
+						await new_instance.destroy(
+							true,  // delete_self . default true
+							true, // delete_dependencies . default false
+							true // remove_dom . default false
+						)
+
+					assert.equal(new_instance.status, expected)
+					assert.deepEqual(new_instance.ar_instances, [])
+					assert.deepEqual(new_instance.node, null)
+					assert.deepEqual(new_instance.events_tokens, [])
+					// assert.deepEqual(all_instances, [])
+				});
+			});//end describe(element.name, function()
+
+		}//end for (let i = 0; i < widgets_length; i++)
+	});
+
+	describe('Services', function() {
+
+		// services
+		const services = get_services()
+		const services_length = services.length
+		for (let i = 0; i < services_length; i++) {
+
+			const element = services[i]
+
+			describe(element.name, async function() {
+
+				let new_instance = null
+
+				it(`${element.name} INIT`, async function() {
+
+					const expected = 'initialized'
+
+					// load element
+					const module = await import(element.path)
+
+					// // instance service
+					// new_instance = await new module[element.name]()
+
+					// // init service
+					// await new_instance.init({
+					// 	id			: element.name,
+					// 	id_variant	: Math.random() + '-' + Math.random(),
+					// 	lang		: element.lang,
+					// 	mode		: element.mode, // list
+					// 	model		: 'service',
+					// 	name		: element.name,
+					// 	value		: element.value,
+					// 	context : {},
+					// 	caller		: {
+					// 		context : {}
+					// 	}
+					// })
+
+					const init_options = {
+						id			: element.name,
+						id_variant	: Math.random() + '-' + Math.random(),
+						lang		: element.lang,
+						mode		: element.mode, // list
+						model		: element.name,
+						name		: element.name,
+						value		: element.value,
+						context		: {},
+						caller		: {
+							context : {}
+						}
+					}
+					new_instance = await get_instance(init_options)
 
 					assert.equal(new_instance.status, expected);
 				});
@@ -299,10 +446,8 @@ describe("OTHERS LIFE-CYCLE", async function() {
 				});
 			});//end describe(element.name, function()
 
-		}//end for (let i = 0; i < widgets_length; i++)
-
+		}//end for (let i = 0; i < services_length; i++)
 	});
-
 });
 
 

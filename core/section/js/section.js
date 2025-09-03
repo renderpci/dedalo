@@ -666,7 +666,7 @@ section.prototype.build = async function(autoload=false) {
 
 					// render_handler
 					const render_handler = () => {
-						
+
 						// remove event subscription
 						event_manager.unsubscribe(debug_token)
 
@@ -1264,7 +1264,7 @@ section.prototype.navigate = async function(options) {
 					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 				})
 			}
-		)
+		);
 
 
 	return true
@@ -1274,7 +1274,7 @@ section.prototype.navigate = async function(options) {
 
 /**
 * NAVIGATE_TO_NEW_SECTION
-* After a create or duplicate action, go to the new created record
+* After a create or duplicate action, goes to the new created record
 * @param int|string section_id
 * @return bool
 */
@@ -1282,74 +1282,157 @@ section.prototype.navigate_to_new_section = async function(section_id) {
 
 	const self = this
 
-	const source = create_source(self, 'search')
+	// Validate input section_id
+	if (!section_id) {
+		throw new Error('section_id is required');
+	}
+
+	try {
+
+		// Create the search source
+		const source = create_source(self, 'search');
 		source.section_id	= section_id
 		source.mode			= 'edit'
 
-	// get sqo after modification for proper navigation
-	const sqo = {
-		mode				: self.mode,
-		section_tipo		: [{tipo:self.section_tipo}],
-		filter_by_locators	: [],
-		filter 				: null,
-		limit				: 1,
-		offset				: 0
-	}
+		// sqo
+		// Check current sqo from rqo
+		if (!self.rqo?.sqo) {
+		    console.error('Cannot navigate: Search Query Object (sqo) is missing.');
+		    return false;
+		}
+		// Clone current sqo to preserve filters.
+		const sqo = clone(self.rqo.sqo)
 
-	// rebuild sqo when is a separated window
-	// and session is not the main session
-	// in those cases, the section has a filter_by_locators
-	// and is necessary add the new locator.
-	if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
-		const old_locators = self.rqo.sqo.filter_by_locators
-		sqo.filter_by_locators.push(...old_locators)
-	}
+		// limit
+		// New record creation navigates to edit mode. So, set always limit to 1
+		sqo.limit = 1
 
-	// new section generated
-	sqo.filter_by_locators.push({
-		section_tipo	: self.section_tipo,
-		section_id		: section_id
-	})
+		// filter_by_locators.
+		// (!) Its important to pass an empty array [] to prevent auto-generated value in common.build_rqo_show
+		sqo.filter_by_locators = []
 
-	sqo.offset = sqo.filter_by_locators.length - 1
+		// filter_mode. Allowed modes : reset_filter | preserve_filter | legacy
+		const filter_mode = 'reset_filter'
+		if (filter_mode==='preserve_filter') {
 
-	// save pagination
-	// Updates local DB pagination values to preserve consistence
-	if (self.session_save===true) {
-		// list pagination
-		await data_manager.set_local_db_data(
-			{
-				id		: `${self.tipo}_list`,
-				value	: {
-					limit : (self.mode==='list' && self.rqo.sqo?.limit)
-						? self.rqo.sqo.limit
-						: 10,
-					offset : 0
+			// Add existing filter items if they exists as $or / $and
+			const current_filter_items = sqo.filter?.$and
+				? sqo.filter.$and.length
+				: sqo.filter?.$or
+					? sqo.filter.$or.length
+					: 0;
+			if (current_filter_items>0) {
+
+				// new_filter. Create a new filter
+				const new_filter = {
+					'$or' : []
 				}
-			},
-			'pagination'
-		)
-		// edit pagination
-		await data_manager.set_local_db_data(
-			{
-				id		: `${self.tipo}_edit`,
-				value	: {
-					limit	: 1,
-					offset	: sqo.offset
+
+				// Handle case where filter already has $or at root
+				if (sqo.filter.$or) {
+					new_filter.$or.push(...sqo.filter.$or);
+				} else {
+					// Add non-$or filters
+					for (let [key, value] of Object.entries(sqo.filter)) {
+						const new_object = {
+							[key] : value
+						};
+						new_filter.$or.push(new_object);
+					}
 				}
-			},
-			'pagination'
-		)
+
+				// Add new created section_id to the filter to allow see this new record.
+				// Note that component tipo (rsc175) is not relevant to search component_section_id.
+				new_filter.$or.push({
+				    q           : section_id,
+				    q_operator  : null,
+				    path		: [{
+						section_tipo	: self.tipo,
+						component_tipo	: 'rsc175',
+						model			: 'component_section_id',
+						name			: 'Id'
+					}],
+					q_split		: false,
+					type		: 'jsonb'
+				});
+
+				// Replace old filter by the new one
+				sqo.filter = new_filter
+			}
+
+			// offset.
+			// Set offset to current total to force navigate to the last record (the new created one)
+			sqo.offset = self.total || 0;
+
+		}else if(filter_mode==='reset_filter'){
+
+			// reset current filter and show all records, included the new one.
+
+			sqo.filter = null
+
+			// reset total and force to re-calculate it
+			self.total = null;
+			const total = await self.get_total(sqo);
+
+			// offset
+			// Set the new offset based on the real unfiltered records count.
+			sqo.offset = total - 1;
+
+		}else{
+
+			// legacy. using filter_by_locators to select only the new record.
+
+			// filter_by_locators
+			// Forces the auto-generated value in common.build_rqo_show based on current section_id
+			sqo.filter_by_locators = null;
+
+			// offset.
+			// Set offset to zero because only one record is expected
+			sqo.offset = 0;
+		}
+
+		// save pagination
+		// Updates local DB pagination values to preserve consistence
+		if (self.session_save===true) {
+			// list pagination
+			await data_manager.set_local_db_data(
+				{
+					id		: `${self.tipo}_list`,
+					value	: {
+						limit : (self.mode==='list' && self.rqo.sqo?.limit)
+							? self.rqo.sqo.limit
+							: 10,
+						offset : 0
+					}
+				},
+				'pagination'
+			);
+			// edit pagination
+			await data_manager.set_local_db_data(
+				{
+					id		: `${self.tipo}_edit`,
+					value	: {
+						limit	: 1,
+						offset	: sqo.offset
+					}
+				},
+				'pagination'
+			);
+		}
+
+		// launch event 'user_navigation' that page.js is watching in init events subscriptions
+		event_manager.publish('user_navigation', {
+			source	: source,
+			sqo		: sqo
+		});
+
+
+		return true
+
+	} catch (error) {
+		console.error('Error navigating to new section:', error);
+		throw error;
 	}
-
-	// launch event 'user_navigation' that page is watching
-	event_manager.publish('user_navigation', {
-		source	: source,
-		sqo		: sqo
-	})
-
-
-	return true
 }//end navigate_to_new_section
 
 
@@ -1452,10 +1535,15 @@ section.prototype._total_promise = null; // Initialize this property once, likel
 
 /**
 * GET_TOTAL
-* Exec a async API call to count the current sqo records
-* @return int total
+* Asynchronously fetches the total count of records from an API
+* The function is designed to handle concurrent calls safely through promise-based request deduplication,
+* ensuring only one API request is made at a time for the same section instance.
+* @param object sqo (Optional)
+* 	Search Query Object. If provided, uses this custom query; otherwise defaults to self.rqo.sqo
+* @return promise
+* 	Resolves to the total count as an integer
 */
-section.prototype.get_total = async function() {
+section.prototype.get_total = async function(sqo) {
 
 	const self = this
 
@@ -1477,7 +1565,9 @@ section.prototype.get_total = async function() {
 				// API request
 
 					// count sqo. Simplified version from current self.rqo.sqo
-					const count_sqo = clone(self.rqo.sqo)
+					const count_sqo = sqo
+						? clone(sqo) // custom sqo from params
+						: clone(self.rqo.sqo) // section rqo.sqo (default)
 					// remove unused properties
 					delete count_sqo.limit
 					delete count_sqo.offset

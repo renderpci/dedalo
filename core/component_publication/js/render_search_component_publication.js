@@ -161,6 +161,7 @@ const get_content_value = (i, datalist_item, self) => {
 				event_manager.publish('change_search_element', self)
 		})//end change
 		content_value.addEventListener('click', function(e) {
+			e.stopPropagation();
 			// de-select option
 			if (e.altKey===true) {
 
