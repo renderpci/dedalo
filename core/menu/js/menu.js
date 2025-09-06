@@ -8,7 +8,6 @@
 	import {common,create_source} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {open_window} from '../../common/js/utils/index.js'
-	import {quit} from '../../login/js/login.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {render_menu, render_section_label} from './render_menu.js'
 
@@ -89,6 +88,15 @@ menu.prototype.init = function(options) {
 	self.events_tokens				= []
 	self.caller						= options.caller || null
 	self.update_section_label_n_try	= 0
+
+	// event quit
+		const quit_handler = () => {
+			// local_db_data remove in all langs
+			self.delete_menu_local_db_data()
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('quit', quit_handler)
+		)
 
 	// status update
 		self.status = 'initialized'
@@ -233,28 +241,6 @@ menu.prototype.open_ontology = function(e) {
 		features	: 'new_tab'
 	})
 }//end open_ontology
-
-
-
-/**
-* QUIT_HANDLER
-* Shared function to manage quit sequence
-* @param object event e
-* @return void
-*/
-menu.prototype.quit_handler = async function(e) {
-	e.stopPropagation()
-
-	const self = this
-
-	// local_db_data remove in all langs
-		self.delete_menu_local_db_data()
-
-	// exec login quit sequence
-		quit({
-			caller : self
-		})
-}//end quit_handler
 
 
 

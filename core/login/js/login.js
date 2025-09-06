@@ -228,7 +228,7 @@ login.prototype.login = async function(options) {
 * QUIT
 * Close current user session
 * (!) Note that quit menu event removes local indexedDB menu data before quit
-* @see menu.quit_handler()
+* @see menu.delete_menu_local_db_data()
 * If the service worker is registered (this happens when logging in), his registration
 * shall be de-registered and the cache deleted.
 * At the end, a page reload/redirection is made
@@ -239,90 +239,88 @@ login.prototype.login = async function(options) {
 * }
 * @return void
 */
-export const quit = async function(options={}) {
+login.quit = async function(options={}) {
+
+	const self = this
 
 	// set page style as loading
-		document.body.classList.add('loading')
+	document.body.classList.add('loading')
+
+	// Fire quit event
+	event_manager.publish('quit', self)
 
 	// is_developer. Determine if the user is a developer
-		const is_developer = page_globals.is_developer ?? false;
+	const is_developer = page_globals.is_developer ?? false;
 
 	try {
 
 		// data_manager. Make API call to quit
-			const api_response = await data_manager.request({
-				body : {
-					action	: 'quit',
-					dd_api	: 'dd_utils_api',
-					options	: {}
-				}
-			})
+		const api_response = await data_manager.request({
+			body : {
+				action	: 'quit',
+				dd_api	: 'dd_utils_api',
+				options	: {}
+			}
+		})
 
 		// manage result
-			if (api_response.result===true) {
+		if (api_response.result===true) {
 
-				// reset some user preferences status from local database
-				[
-					'inspector_time_machine_list',
-					'inspector_component_history_block',
-					'inspector_relation_list',
-					'open_search_panel'
-				]
-				.map(el => {
-					data_manager.delete_local_db_data(el, 'status')
-				})
+			// reset some user preferences status from local database
+			[
+				'inspector_time_machine_list',
+				'inspector_component_history_block',
+				'inspector_relation_list',
+				'open_search_panel'
+			]
+			.forEach(el => {
+				data_manager.delete_local_db_data(el, 'status')
+			})
 
-				// unregister serviceWorker
+			// Check for SAML redirection first
+			if (api_response.saml_redirect && api_response.saml_redirect.length > 2) {
+				window.location.href = api_response.saml_redirect;
+			}else{
+				// Handle service worker unregistration and cache cleanup
 				// Handle service worker unregistration if supported
 				// to allow update sw.js file and clean the cache
 				if ('serviceWorker' in navigator) {
 					try {
-
-						const registration = await navigator.serviceWorker.register(
-							DEDALO_ROOT_WEB + '/core/sw.js'
-						);
-
-						if (registration) {
-
-							const unregistered = await registration.unregister()
+						// Get all existing service worker registrations
+						const registrations = await navigator.serviceWorker.getRegistrations();
+						console.log('registrations:', registrations);
+						for (const registration of registrations) {
+							const unregistered = await registration.unregister();
 							console.log('Unregistered serviceWorker:', unregistered);
-
-							// delete dedalo_files caches
+							// Delete the cache associated with the service worker
 							await caches.delete('dedalo_files');
 						}
+
 					} catch (error) {
 						console.error('ServiceWorker unregistration failed:', error);
 					}
 				}
-
-				// SAML redirection check
-				if (api_response.saml_redirect && api_response.saml_redirect.length>2) {
-
-					window.location.href = api_response.saml_redirect
-
-				}else{
-
-					dd_request_idle_callback(
-						() => {
-							if (is_developer) {
-								// reload window to show the login form without loosing the current URL
-								window.location.replace(window.location.href);
-							}else{
-								// redirect to Dédalo base URL to force access to default user section
-								window.location.href = DEDALO_ROOT_WEB
-							}
-						}
-					)
-				}
-
-			}else{
-				console.error('API call failed:', api_response);
-				// Remove loading style from body
-				document.body.classList.remove('loading');
 			}
+
+			dd_request_idle_callback(
+				() => {
+					if (is_developer) {
+						// reload window to show the login form without loosing the current URL
+						window.location.replace(window.location.href);
+					}else{
+						// redirect to Dédalo base URL to force access to default user section
+						window.location.href = DEDALO_ROOT_WEB
+					}
+				}
+			);
+
+		}else{
+			console.error('API call failed:', api_response);
+		}
 	} catch (error) {
 		console.error('Error in quit function:', error);
-		// Remove loading style from body
+	} finally {
+		// Ensure loading class is always removed
 		document.body.classList.remove('loading');
 	}
 }//end quit

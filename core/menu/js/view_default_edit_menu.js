@@ -7,9 +7,8 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {data_manager} from '../../common/js/data_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {login} from '../../login/js/login.js'
 	import {render_section_label} from './render_menu.js'
 	import * as menu_tree from './render_menu_tree.js'
 	import * as menu_mobile from './render_menu_mobile.js'
@@ -162,7 +161,14 @@ const get_content_data_edit = function(self) {
 			class_name		: 'quit top_item',
 			parent			: fragment
 		})
-		quit_button.addEventListener('click', self.quit_handler.bind(self))
+		const click_handler = (e) => {
+			e.stopPropagation()
+			// login quit
+			login.quit({
+				caller : self
+			})
+		}
+		quit_button.addEventListener('click', click_handler)
 
 	// dedalo_icon
 		const dedalo_icon = ui.create_dom_element({
