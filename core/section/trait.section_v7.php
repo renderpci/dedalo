@@ -48,8 +48,8 @@ trait section_v7 {
 	// @v7 array data_columns. Assoc array with all v7 DB columns
 
 
-	// matrix_manager class instance
-	protected object $matrix_manager;
+	// matrix_data class instance
+	protected object $matrix_data;
 
 
 
@@ -64,21 +64,21 @@ trait section_v7 {
 	*/
 	private function load_section_data() : bool {
 
-		// init matrix_manager instance.
+		// init matrix_data instance.
 		// It's instanced once and handles all the section data database tasks.
-		if (!isset($this->matrix_manager)) {
+		if (!isset($this->matrix_data)) {
 			$section_id = $this->section_id ? (int)$this->section_id : null;
-			$this->matrix_manager = matrix_manager::get_instance(
+			$this->matrix_data = matrix_data::get_instance(
 				$this->tipo,
 				$section_id
 			);
 		}
 
-		// If the matrix_manager instance has already been loaded,
+		// If the matrix_data instance has already been loaded,
 		// it returns the cached data without reconnecting to the database.
 		// All section instances with the same section_tipo and section_id values
-		// share the same cached instance of 'matrix_manager', independent of the mode.
-		$this->matrix_manager->load();
+		// share the same cached instance of 'matrix_data', independent of the mode.
+		$this->matrix_data->read();
 
 
 		return true;

@@ -198,7 +198,9 @@ class ts_object {
 	* @return object $child_data
 	*/
 	public function get_data() : object {
-		$start_time=start_time();
+		// $start_time=start_time();
+
+		$is_indexable = (bool)self::is_indexable($this->section_tipo, $this->section_id);
 
 		// Global object
 		$data = new stdClass();
@@ -210,7 +212,7 @@ class ts_object {
 			$data->mode							= 'list';	//'list_thesaurus';
 			$data->lang							= DEDALO_DATA_LANG;
 			$data->is_descriptor				= true;
-			$data->is_indexable					= (bool)self::is_indexable($this->section_tipo, $this->section_id);
+			$data->is_indexable					= $is_indexable;
 			$data->permissions_button_new		= $this->get_permissions_element('button_new');
 			$data->permissions_button_delete	= $this->get_permissions_element('button_delete');
 			$data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
