@@ -170,6 +170,7 @@ class ts_object {
 				: $ts_object_options;
 
 			$ts_options->order = $key+1;
+			$ts_options->area_model = $area_model;
 
 			$ts_object		= new ts_object( $section_id, $section_tipo, $ts_options );
 			$child_object	= $ts_object->get_data();
@@ -1055,6 +1056,20 @@ class ts_object {
 
 		return $count_data_group_by;
 	}//end get_count_data_group_by
+
+
+
+	/**
+	* IS_ONTOLOGY
+	* Checks if current context is in ontology or in thesaurus
+	* as boolean based on $this->options->area_model set on construct.
+	* @return bool
+	*/
+	public function is_ontology() : bool {
+		$area_model = $this->options->area_model ?? null;
+
+		return $area_model==='area_ontology';
+	}//end is_ontology
 
 
 
