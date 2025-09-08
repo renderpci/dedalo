@@ -398,6 +398,10 @@ menu.prototype.change_lang = async function(options) {
 			}
 		})
 
+	// change_lang
+	// section is looking for this event to delete cache
+	event_manager.publish('change_lang', lang_value)
+
 
 	return api_response
 }//end change_lang

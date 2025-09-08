@@ -235,6 +235,13 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('notification', notifications_handler)
 			)
 
+		// change_lang event
+			const change_lang_handler = () => {
+				self.delete_cache()
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('change_lang', change_lang_handler)
+			)
 	// events listeners. Add window/document general events
 		self.add_events()
 

@@ -405,6 +405,13 @@ section.prototype.init = async function(options) {
 				event_manager.subscribe('render_'+self.id, render_handler)
 			)
 
+		// change_lang event
+			const change_lang_handler = () => {
+				self.delete_cache()
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('change_lang', change_lang_handler)
+			)
 	// load additional files as css used by section_tool in self.config
 		if(self.config && self.config.source_model==='section_tool') {
 			self.load_section_tool_files()
