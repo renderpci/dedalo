@@ -283,15 +283,15 @@ data_manager.request = async function(options) {
 
 	// recovery mode. Auto add if environment recovery_mode is true
 	// On set to true, it is passed across all API request calls preserving the mode
-	if (page_globals.recovery_mode && body) {
+	if (window.page_globals.recovery_mode && body) {
 		if (typeof body === 'object') {
 			body.recovery_mode = true;
 		}
 	}
 
 	// Reset page_globals.api_errors at the beginning of each request
-	page_globals.api_errors = [];
-	page_globals.request_message = null; // Reset request message
+	window.page_globals.api_errors = [];
+	window.page_globals.request_message = null; // Reset request message
 
 	// Check URL
 	if (!url || !url.length) {
@@ -384,7 +384,7 @@ data_manager.request = async function(options) {
 
 		const data_start_time = performance.now();
 
-		// Parse API JAON response handling errors
+		// Parse API JSON response handling errors
 		const json_response = await (await handle_errors(fetch_response)).json();
 
 		if(SHOW_DEBUG) {
@@ -403,7 +403,7 @@ data_manager.request = async function(options) {
 			if (action !== 'update_lock_components_state') {
 				// alert msg to user
 				const msg = json_response.msg || json_response.error;
-				if (!page_globals.request_message || page_globals.request_message !== msg) {
+				if (!window.page_globals.request_message || window.page_globals.request_message !== msg) {
 					render_msg_to_inspector(
 						`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`,
 						'error',
@@ -411,9 +411,9 @@ data_manager.request = async function(options) {
 					);
 				}
 				// request_message. Store request message temporally
-				page_globals.request_message = msg;
+				window.page_globals.request_message = msg;
 				setTimeout(() => {
-					page_globals.request_message = null;
+					window.page_globals.request_message = null;
 				}, 3000);
 			}
 
