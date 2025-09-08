@@ -420,6 +420,7 @@ section.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('change_lang', change_lang_handler)
 			)
+
 	// load additional files as css used by section_tool in self.config
 		if(self.config && self.config.source_model==='section_tool') {
 			self.load_section_tool_files()

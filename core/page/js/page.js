@@ -242,6 +242,7 @@ page.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('quit', quit_handler)
 			)
+
 		// change_lang event
 			const change_lang_handler = () => {
 				self.delete_cache()
@@ -249,6 +250,8 @@ page.prototype.init = async function(options) {
 			self.events_tokens.push(
 				event_manager.subscribe('change_lang', change_lang_handler)
 			)
+
+
 	// events listeners. Add window/document general events
 		self.add_events()
 
@@ -346,36 +349,46 @@ page.prototype.build = async function(autoload=false) {
 								}
 							)
 
-							return false
+				// environment API data check
+				if (!api_response.environment || !api_response.environment.result) {
+					// API environment data is not available
+					page_globals.api_errors.push(
+						{
+							error	: 'start_error', // error type
+							msg		: api_response.msg || 'Error: Unable to start page: environment is unavailable. Check that PHP server is running and configuration files are correct [2]',
+							trace	: 'page build'
 						}
+					)
 
-					// fix API environment vars to window (page_globals, plain_vars, get_label)
-						set_environment(api_response.environment.result)
+					return false
+				}
+				// fix API environment vars to window (page_globals, plain_vars, get_label)
+				set_environment(api_response.environment.result)
 
-					// check environment (var DEDALO_ENVIRONMENT is set from API environment result plain_vars. Expected bool true)
-						if (typeof DEDALO_ENVIRONMENT==='undefined') {
-							// environment vars are not set correctly
-							console.error('!!! STOP build: environment unavailable. DEDALO_ENVIRONMENT var is not defined');
+				// check environment (var DEDALO_ENVIRONMENT is set from API environment result plain_vars. Expected bool true)
+				if (typeof DEDALO_ENVIRONMENT==='undefined') {
+					// environment vars are not set correctly
+					console.error('!!! STOP build: environment unavailable. DEDALO_ENVIRONMENT var is not defined');
 
-							page_globals.api_errors.push(
-								{
-									error	: 'start_error', // error type
-									msg		: 'Error: The environment is not available. Check that PHP server is running and configuration files are correct [3]',
-									trace	: 'page build'
-								}
-							)
-
-							return false
+					page_globals.api_errors.push(
+						{
+							error	: 'start_error', // error type
+							msg		: 'Error: The environment is not available. Check that PHP server is running and configuration files are correct [3]',
+							trace	: 'page build'
 						}
+					)
 
-					// server_errors check (minor page and environment errors)
-						if (api_response.dedalo_last_error) {
-							console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
-						}
+					return false
+				}
+
+				// server_errors check (minor page and environment errors)
+				if (api_response.dedalo_last_error) {
+					console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
+				}
 
 				// set context and data to current instance
-					self.context	= api_response.result.context
-					self.data		= {}
+				self.context	= api_response.result.context
+				self.data		= {}
 			}
 		}//end if (autoload===true)
 
