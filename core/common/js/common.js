@@ -2656,8 +2656,18 @@ common.prototype.get_section_elements_context = async function(options) {
 							skip_permissions		: skip_permissions
 						}
 					}
+
+					// cache_handler. Cache section elements API response for speed.
+					const cache_handler = (section_tipo)
+						? {
+							handler	: 'localdb',
+							id		: 'section_cache_elements_context_' + section_tipo + '_' + window.page_globals?.dedalo_application_lang
+						  }
+						  : null;
+
 					const api_response = await data_manager.request({
-						body : rqo
+						body			: rqo,
+						cache_handler	: cache_handler
 					})
 
 				// fix
