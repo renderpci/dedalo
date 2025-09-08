@@ -6,6 +6,7 @@
 // imports
 	import {common,create_source} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {open_window} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {render_menu, render_section_label} from './render_menu.js'
@@ -88,10 +89,10 @@ menu.prototype.init = function(options) {
 		self.events_tokens				= []
 		self.caller						= options.caller || null
 		self.update_section_label_n_try	= 0
-	// event quit
+
+	// quit event
 		const quit_handler = () => {
-			// local_db_data remove in all langs
-			self.delete_menu_local_db_data()
+			self.delete_cache()
 		}
 		self.events_tokens.push(
 			event_manager.subscribe('quit', quit_handler)
@@ -122,60 +123,44 @@ menu.prototype.build = async function(autoload=true) {
 	// autoload
 		if (autoload===true) {
 
-			const local_db_id = self.build_local_db_id()
-			// try to get existing local DB data
-			const menu_cache_data = await data_manager.get_local_db_data(
-				local_db_id,
-				'data'
-			)
+			// rqo build
+				// const rqo = {
+				// 	action			: 'get_menu',
+				// 	dd_api			: 'dd_utils_api',
+				// 	source			: create_source(self, null),
+				// 	prevent_lock	: true
+				// }
+				const rqo = {
+					action	: 'read',
+					source	: create_source(self, 'get_data')
+				}
 
-			if(menu_cache_data){
+			// cache_handler. Cache API menu data by lang
+				const cache_handler = (self)
+					? {
+						handler	: 'localdb',
+						id		: self.build_cache_id()
+					  }
+					  : null;
 
-				// set the result to the datum
-					self.datum = menu_cache_data.value
+			// load data. get context and data
+				const api_response = await data_manager.request({
+					body			: rqo,
+					cache_handler	: cache_handler
+				})
 
-			}else{
+				// server: wrong response
+				if (!api_response) {
+					return false
+				}
+				// server: bad build context
+				if(!api_response.result.context?.length){
+					console.error("Error!!!!, menu without context:", api_response);
+					return false
+				}
 
-				// rqo build
-					// const rqo = {
-					// 	action			: 'get_menu',
-					// 	dd_api			: 'dd_utils_api',
-					// 	source			: create_source(self, null),
-					// 	prevent_lock	: true
-					// }
-					const rqo = {
-						action	: 'read',
-						source	: create_source(self, 'get_data')
-					}
-
-				// load data. get context and data
-					const api_response = await data_manager.request({
-						body : rqo
-					})
-
-					// server: wrong response
-					if (!api_response) {
-						return false
-					}
-					// server: bad build context
-					if(!api_response.result.context?.length){
-						console.error("Error!!!!, menu without context:", api_response);
-						return false
-					}
-
-				// set the result to the datum
-					self.datum = api_response.result
-
-				// cache
-					const menu_cache_data = {
-						id		: local_db_id, // id
-						value	: self.datum // value
-					}
-					data_manager.set_local_db_data(
-						menu_cache_data,
-						'data'
-					)
-			}
+			// set the result to the datum
+				self.datum = api_response.result
 		}
 
 	// set context and data to current instance
@@ -212,7 +197,7 @@ menu.prototype.refresh = async function(options={}) {
 
 	// delete local DB data to force re-create the menu
 		if (build_autoload===true) {
-			await self.delete_menu_local_db_data()
+			await self.delete_cache()
 		}
 
 	// call the generic common refresh
@@ -244,27 +229,15 @@ menu.prototype.open_ontology = function(e) {
 
 
 /**
-* DELETE_MENU_LOCAL_DB_DATA
-* Shared function to manage quit sequence
-* @param object event e
+* DELETE_CACHE
+* Removes all menu local cache data.
+* It is fired when login 'quit' event is published (subscription in menu init).
 * @return void
 */
-menu.prototype.delete_menu_local_db_data = async function() {
-
-	const self = this
-
-	// local_db_data remove in all langs
-		const langs			= page_globals.dedalo_application_langs
-		const langs_length	= langs.length
-		for (let i = 0; i < langs_length; i++) {
-			const lang			= langs[i].value
-			const local_db_id	= self.build_local_db_id(lang)
-			await data_manager.delete_local_db_data(
-				local_db_id,
-				'data'
-			)
-		}
-}//end delete_menu_local_db_data
+menu.prototype.delete_cache = async function() {
+	// Delete menus in all langs
+	await data_manager.delete_local_db_data_by_prefix('data', 'menu_cache_')
+}//end delete_cache
 
 
 
@@ -294,31 +267,29 @@ menu.prototype.open_tool_user_admin_handler = function() {
 
 
 /**
-* BUILD_LOCAL_DB_ID
+* BUILD_CACHE_ID
 * Unifies function to build the id of the stored local DB value
 * It used one for each language as menu_dd85_lg-nep
 * @param string lang
 * 	Optional. Default page_globals.dedalo_application_lang fallback
 * @return void
 */
-menu.prototype.build_local_db_id = function(lang) {
-
-	const self = this
+menu.prototype.build_cache_id = function(lang) {
 
 	// user id. Logged user id
-	const user_id = page_globals?.user_id || ''
+	const user_id = window.page_globals?.user_id || ''
 
 	// lang cascade fallback
-	lang = lang || page_globals?.dedalo_application_lang || ''
+	lang = lang || window.page_globals?.dedalo_application_lang || ''
 
-	const version = page_globals.dedalo_version || 'unknown'
+	const version = window.page_globals.dedalo_version || 'unknown'
 
 	// id composition
-	const id = `${self.model}_${self.tipo}_${lang}_${version}_${user_id}`
+	const id = `menu_cache_${lang}_${version}_${user_id}`
 
 
 	return id
-}//end build_local_db_id
+}//end build_cache_id
 
 
 
