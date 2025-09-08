@@ -961,4 +961,19 @@ const dd_garbage_collector = function () {
 
 
 
+/**
+* DELETE_CACHE
+* Removes all page local cache data.
+* It is fired when login 'quit' event is published (subscription in page init),
+* or menu changes lang: 'change_lang' event.
+* @return void
+*/
+page.prototype.delete_cache = async function () {
+
+	// Get all local DB data
+	await data_manager.delete_local_db_data_by_prefix('data', 'page_cache_')
+}//end delete_cache
+
+
+
 // @license-end

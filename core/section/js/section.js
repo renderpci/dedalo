@@ -1855,4 +1855,20 @@ section.prototype.get_all_target_sections = function() {
 	return target_sections
 }//end get_all_target_sections
 
+
+
+/**
+* DELETE_CACHE
+* Removes all section local cache data.
+* It is fired when login 'quit' event is published (subscription in page init),
+* or menu changes lang: 'change_lang' event.
+*/
+section.prototype.delete_cache = async function () {
+
+	// Get all local DB data
+	await data_manager.delete_local_db_data_by_prefix('data', 'section_cache_')
+}//end delete_cache
+
+
+
 // @license-end
