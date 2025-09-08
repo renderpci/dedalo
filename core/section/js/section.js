@@ -405,6 +405,14 @@ section.prototype.init = async function(options) {
 				event_manager.subscribe('render_'+self.id, render_handler)
 			)
 
+		// quit event
+			const quit_handler = () => {
+				self.delete_cache()
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('quit', quit_handler)
+			)
+
 		// change_lang event
 			const change_lang_handler = () => {
 				self.delete_cache()
