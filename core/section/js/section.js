@@ -1312,7 +1312,7 @@ section.prototype.navigate_to_new_section = async function(section_id) {
 		sqo.filter_by_locators = []
 
 		// filter_mode. Allowed modes : reset_filter | preserve_filter | legacy
-		const filter_mode = 'reset_filter'
+		const filter_mode = 'legacy'
 		if (filter_mode==='preserve_filter') {
 
 			// Add existing filter items if they exists as $or / $and
