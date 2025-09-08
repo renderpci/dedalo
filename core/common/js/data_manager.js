@@ -7,6 +7,7 @@
 // imports
 	import {JSON_parse_safely} from '../../../core/common/js/utils/util.js'
 	import {event_manager} from './event_manager.js'
+	import {dd_request_idle_callback} from './events.js';
 
 
 
@@ -273,6 +274,18 @@ data_manager.request = async function(options) {
 	// vars from options applying defaults
 	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker, retries, base_delay, timeout } = merged_options;
 
+	// cache_handler
+	const cache_handler = options.cache_handler || null
+	if (cache_handler?.handler==='localdb') {
+		const cached_data = await self.get_local_db_data(
+			cache_handler.id,
+			'data' // string table
+		);
+		if (cached_data) {
+			return cached_data.value
+		}
+	}
+
 	// Debug request
 	if(SHOW_DEBUG) {
 		const action		= body?.action || 'load';
@@ -427,6 +440,21 @@ data_manager.request = async function(options) {
 			)
 
 			return json_response;
+		}
+
+		// cache_handler
+		if (cache_handler?.handler==='localdb') {
+			dd_request_idle_callback(
+				() => {
+					self.set_local_db_data(
+						{
+							id		: cache_handler.id,
+							value	: json_response
+						},
+						'data' // string table
+					);
+				}
+			);
 		}
 
 		return json_response;
