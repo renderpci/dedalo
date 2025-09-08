@@ -1406,6 +1406,48 @@ data_manager.delete_local_db_data = async function(id, table) {
 
 
 /**
+* DELETE_LOCAL_DB_DATA_BY_PREFIX
+* Delete specified element form DB table by prefix.
+* Used to delete prefix grouped caches like 'menu_'.
+* @param string prefix
+* @param string table
+* @return promise
+*/
+data_manager.delete_local_db_data_by_prefix = async function(table, prefix) {
+
+	const self = this
+
+	try {
+		// get local db
+		const db = await self.get_local_db()
+
+		// check if is possible create and use IndexDB, if not, the promise will return undefined and we use false
+		if(!db){
+			return false
+		}
+
+		const transaction = db.transaction(table, 'readwrite');
+		const store = transaction.objectStore(table);
+
+		// Create a key range for the prefix
+		const range = IDBKeyRange.bound(prefix, prefix + '\uffff');
+
+		// Delete all records in the range
+		const request = store.delete(range);
+
+		return new Promise((resolve, reject) => {
+			request.onsuccess = () => resolve();
+			request.onerror = () => reject(request.error);
+		});
+	} catch (error) {
+		console.error('Error deleting data:', error);
+		throw error;
+	}
+}//end delete_local_db_data_by_prefix
+
+
+
+/**
 * DELETE_WHOLE_LOCAL_DB
 * Clean whole local indexed DB.
 * Useful when important changes were made because an update
