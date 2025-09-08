@@ -1,5 +1,4 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -75,20 +74,20 @@ menu.prototype.init = function(options) {
 	// status update
 		self.status = 'initializing'
 
-	self.tipo						= options.tipo || 'dd85'
-	self.model						= options.model
-	self.node						= null
-	self.li_nodes					= []
-	self.ul_nodes					= []
-	self.ar_instances				= []
-	self.mode						= 'edit'
-	self.datum						= options.datum
-	self.context					= options.context
-	self.data						= options.data
-	self.events_tokens				= []
-	self.caller						= options.caller || null
-	self.update_section_label_n_try	= 0
-
+	// set vars
+		self.tipo						= options.tipo || 'dd85'
+		self.model						= options.model
+		self.node						= null
+		self.li_nodes					= []
+		self.ul_nodes					= []
+		self.ar_instances				= []
+		self.mode						= 'edit'
+		self.datum						= options.datum
+		self.context					= options.context
+		self.data						= options.data
+		self.events_tokens				= []
+		self.caller						= options.caller || null
+		self.update_section_label_n_try	= 0
 	// event quit
 		const quit_handler = () => {
 			// local_db_data remove in all langs

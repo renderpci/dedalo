@@ -2810,7 +2810,7 @@ class component_relation_common extends component_common {
 			if(SHOW_DEBUG===true) {
 				// dump($ar_section_tipo, ' ar_section_tipo ++ '.exec_time_unit($start_time,'ms').' ms');
 				debug_log(
-					'------- resolve request_config_section_tipo ------- '. to_string($ar_section_tipo) .' -- ' .exec_time_unit($start_time,'ms').' ms',
+					'--- resolve request_config_section_tipo ------- '. to_string($ar_section_tipo) .' -- ' .exec_time_unit($start_time,'ms').' ms',
 					logger::DEBUG
 				);
 			}
