@@ -890,4 +890,54 @@ export const get_section_id_from_tipo = function (tipo) {
 
 
 
+/**
+ * Generates a 32-bit integer hash from a string using a simple rolling hash algorithm.
+ *
+ * This is a non-cryptographic hash function suitable for hash tables, checksums,
+ * and other general-purpose hashing needs where security is not a concern.
+ *
+ * @param {string} input_string - The string to be hashed
+ * @returns {number} A 32-bit integer hash value
+ * @throws {TypeError} If the input is not a string
+ *
+ * @example
+ * // Basic usage
+ * generate_hash('hello world'); // Returns: -1058936117
+ *
+ * @example
+ * // Consistent output for same input
+ * generate_hash('test') === generate_hash('test'); // true
+ */
+export const generate_hash = (input_string) => {
+  // Input validation
+  if (typeof input_string !== 'string') {
+    throw new TypeError('Input must be a string');
+  }
+
+  // Handle empty string case
+  if (input_string.length === 0) {
+    return 0;
+  }
+
+  let hash = 0;
+
+  for (let i = 0; i < input_string.length; i++) {
+    const char_code = input_string.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char_code;
+    hash = hash | 0; // Convert to 32-bit integer
+  }
+
+  return hash;
+};//end generate_hash
+/**
+ * Get the same hash, but encoded in HEX mode
+ */
+generate_hash.toHex = (input_string) => {
+  const hash = generate_hash(input_string);
+  // Convert to unsigned 32-bit integer and format as hex
+  return (hash >>> 0).toString(16).padStart(8, '0');
+};
+
+
+
 // @license-end
