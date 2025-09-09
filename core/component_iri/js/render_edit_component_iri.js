@@ -433,8 +433,7 @@ export const get_buttons = (self) => {
 					refresh			: true
 				})
 				.then(()=>{
-					// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
-					const input_node = self.node.content_data[changed_data.key].querySelector('input')
+					const input_node = self.node.content_data[changed_data[0].key].querySelector('input')
 					if (input_node) {
 						input_node.focus()
 					}
