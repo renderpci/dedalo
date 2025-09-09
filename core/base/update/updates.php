@@ -33,6 +33,39 @@
 global $updates;
 $updates = new stdClass();
 
+
+$v=680; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 8;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 7;
+	$updates->$v->update_from_minor		= 4;
+
+	// Information
+		$alert = new stdClass();
+		$alert->notification = 'V '.$v;
+
+		$alert->command = '';
+		$alert->command .= "
+			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<p>
+			<strong>This update will get the title values of your component_iri and create new unification list with this values.</strong>
+			</p>
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_iri'
+		];	// Force convert from string to array
+
+
 $v=674; #####################################################################################
 $updates->$v = new stdClass();
 
