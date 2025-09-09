@@ -180,7 +180,7 @@ class component_iri extends component_common {
 						, logger::ERROR
 					);
 				}
-				return false;
+				return null;
 			}
 
 		// Save in standard format
