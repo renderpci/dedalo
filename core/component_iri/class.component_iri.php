@@ -23,10 +23,11 @@ class component_iri extends component_common {
 	* "iri" mandatory with string value and "title" optional with string value
 	* Sample:
 		* [
-		*	{
-		*    "iri": "http://www.render.es/dedalo",
-		*    "title": "dedalo"
-		* 	}
+		*		{
+		*			"id": 1,
+		*			"iri": "https://dedalo.dev",
+		*			"title": "Dédalo web site",
+		*		}
 		* ]
 	* @return array|null $dato
 	*/
@@ -34,16 +35,25 @@ class component_iri extends component_common {
 
 		$dato = parent::get_dato();
 
-		// input_text. To accept values from component_input_text, we need
-		// to change the string value of the input_text to IRI object value
+		// check if the data becomes from input_text.
+		// To accept values from component_input_text,
+		// needs to change the string value of the input_text to IRI object value
+		// setting the `iri` property with the previous input_text value.
 			$input_text = false;
 			if(!empty($dato)) {
 				foreach ((array)$dato as $key => $value) {
-					if(!is_object($value)){
+					if(!is_object($value) ){
 						$input_text = true;
+						// get the component counter
+						// it's the last counter used
+						$counter = $this->get_counter();
+						$id = $counter++;
 						$object = new stdClass();
 							$object->iri = $value;
+							$object->id = $id;
 						$dato[$key] = $object;
+						// set the new counter as the id (previous counter + 1)
+						$this->set_counter( $id );
 					}
 				}
 				if($input_text===true) {
@@ -102,6 +112,30 @@ class component_iri extends component_common {
 				. ' type: ' . gettype($dato)
 				, logger::DEBUG
 			);
+		}
+
+		// check the data values to fit the IRI data
+		$input_text = false;
+		if(!empty($dato)) {
+			foreach ((array)$dato as $key => $value) {
+				if(!is_object($value) ){
+					$input_text = true;
+					// get the component counter
+					// it's the last counter used
+					$counter = $this->get_counter();
+					$counter++;
+					$id = $counter;
+					$object = new stdClass();
+						$object->iri = $value;
+						$object->id = $id;
+					$dato[$key] = $object;
+					// set the new counter as the id (previous counter + 1)
+					$this->set_counter( $id );
+				}
+			}
+			if($input_text===true) {
+				$this->dato = $dato;
+			}
 		}
 
 
@@ -1017,6 +1051,39 @@ class component_iri extends component_common {
 
 		return $response;
 	}//end conform_import_data
+
+
+
+	/**
+	* SET_COUNTER
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* Set the component counter with the given value in the section's data
+	* @param int $value
+	* @return int $counter
+	*/
+	public function set_counter( int $value ) : int {
+
+		$section	= $this->get_my_section();
+		$counter	= $section->set_component_counter( $this->tipo, $value );
+
+		return $counter;
+	}//end set_counter
+
+
+
+	/**
+	* GET_COUNTER
+	* Get last counter used by the component
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* @return int $counter
+	*/
+	public function get_counter() : int {
+
+		$section	= $this->get_my_section();
+		$counter	= $section->get_component_counter( $this->tipo );
+
+		return $counter;
+	}//end get_counter
 
 
 
