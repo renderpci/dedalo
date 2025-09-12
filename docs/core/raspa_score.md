@@ -54,9 +54,9 @@ Sustainable data ensures that cultural heritage remains accessible, intelligible
 | 1 | Basic Structured Data | Machine-readable tables (CSV, Excel, SQL) | Relational schemas | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 2 | Ontologically Modeled | Formal semantic relationships | Domain ontologies | ![raspa](assets/20250715_175300_paw.svg){width="30"}  ![raspa](assets/20250715_175300_paw.svg){width="30"}  |
 | 3 | Computable Data | Native machine processing ([ECMA TC39 temporal dates](https://tc39.es/proposal-temporal/docs/cookbook.html), [geocoordinates as geojson](https://datatracker.ietf.org/doc/html/rfc7946)) | Data type standardization | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
-| 5 | Traceable Data | Full provenance tracking | Immutable logs, version control (W3C PROV) | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
-| 6 | Reinterpretable Data | Epistemic flexibility for future revisions | Non-destructive schema evolution | ![raspa](assets/20250715_175300_paw.svg){width="30"} ![raspa](assets/20250715_175300_paw.svg){width="30"} |
-| 7 | Contextualized Data | Embedded certainty levels and source attribution | Data-frame metadata structures | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
+| 4 | Traceable Data | Full provenance tracking | Immutable logs, version control (W3C PROV) | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
+| 5 | Reinterpretable Data | Epistemic flexibility for future revisions | Non-destructive schema evolution | ![raspa](assets/20250715_175300_paw.svg){width="30"} ![raspa](assets/20250715_175300_paw.svg){width="30"} |
+| 6 | Contextualized Data | Embedded certainty levels and source attribution | Data-frame metadata structures | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 
 ### Community and social dimension
 
@@ -66,7 +66,7 @@ Sustainable data ensures that cultural heritage remains accessible, intelligible
 | 8 | Open Data | Standards-compliant public access | Open APIs (REST, GraphQL, etc.), CC licensing | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 9 | Multi-Standard Interoperable | Crosswalk capability across schemas | CIDOC CRM, Dublin Core, schema.org,, etc. mappings | ![raspa](assets/20250715_175300_paw.svg){width="30"} ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 | 10 | Free Software Processed | End-to-end open toolchain | FOSS stack verification | ![raspa](assets/20250715_175300_paw.svg){width="30"} ![raspa](assets/20250715_175300_paw.svg){width="30"} |
-| +1 | Sustainable data | Log-term preservation and community evolve | Standardized formats, checksums and backups, network working data | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
+| +1 | Sustainable data | Log-term preservation and community involvement | Standardized formats, checksums and backups, network working data | ![raspa](assets/20250715_175300_paw.svg){width="30"} |
 
 You can earn different Raspa points if the quality of your data meets the level, with a maximum of 15.
 
