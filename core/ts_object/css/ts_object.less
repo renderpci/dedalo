@@ -71,6 +71,7 @@
 		.ts_object_add_icon {
 		.ts_icons_all;
 			background-image: url('../../themes/default/icons/add_light.svg');
+
 			&:hover {
 				background-color: @color_blue_3;
 				border-radius: 3px;
@@ -265,6 +266,7 @@
 			inline-size: auto;
 			overflow-wrap: break-word;
 			hyphens: auto;
+			font-weight: 300;
 
 			// span term_text
 			>.term_text {
@@ -272,6 +274,12 @@
 				display: inline-block;
 				min-width: 1.5rem;
 				min-height: 1rem;
+
+				@size : 0.25rem;
+				padding: @size;
+				margin: -@size;
+
+				// background-color: #cae3ba;
 
 				&:hover {
 					color: @color_orange_dedalo !important;
@@ -319,9 +327,6 @@
 		.element_hilite > .term_text {
 			background-color: @color_hilite_yellow;
 			color: @color_black;
-			padding-left: 7px;
-			padding-right: 7px;
-			margin-left: -7px;
 		}
 
 		.id_info {
@@ -360,6 +365,10 @@
 			cursor: pointer;
 
 			&.default {
+
+			}
+
+			&.link_children_nd {
 
 			}
 
@@ -600,8 +609,8 @@
 	// nd_container ------------------------------------------------
 	>.nd_container {
 		.inline_common;
-		display: none;
-		margin-left: 50px;
+		display: block;
+		margin-left: 5.2rem;
 		width: 100%;
 
 		>.wrap_ts_object {
@@ -614,10 +623,10 @@
 
 		.wrap_ts_object_nd {
 			color: @color_grey_7;
-			padding: 2px;
-			padding-left: 0px;
-			padding-right: 0px;
-			width: auto;
+			// padding: 2px;
+			// padding-left: 0px;
+			// padding-right: 0px;
+			// width: auto;
 
 			> .id_column_content > .ts_object_edit {
 				margin-left: 17px;
@@ -644,6 +653,11 @@
 
 		>.children_container {
 			padding-left: 0px;
+
+			>.wrap_ts_object >.elements_container >.term >.term_text {
+				// font-weight: normal;
+				color: @color_black;
+			}
 		}
 	}
 
@@ -700,18 +714,25 @@
 	// button show_more (thesaurus pagination)
 	.show_more {
 		width: auto;
-		background-color: @color_white;
+		background-color: transparent;
+		color: @color_grey_9;
 		line-height: 1rem;
 		margin: 0.5rem;
-		margin-left: 9.25rem;
+		margin-left: 8.5rem;
 		margin-top: 0.25rem;
 		margin-bottom: 0.6rem;
 		padding-right: 1.5rem;
+		position: relative;
+
+		&:active {
+			opacity: 0.5;
+		}
 
 		&.arrow_spinner {
 			&:after {
 				left: unset;
 				right: 0px;
+				top: 0px;
 			}
 		}
 

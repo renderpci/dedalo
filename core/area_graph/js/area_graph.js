@@ -169,7 +169,7 @@ area_graph.prototype.build = async function(autoload=true) {
 		self.status = 'building'
 
 	// ts_object. Set from global var
-		self.ts_object = ts_object
+		self.ts_object = new ts_object()
 		self.ts_object.mode = self.mode
 
 	// self.datum. On building, if datum is not created, creation is needed

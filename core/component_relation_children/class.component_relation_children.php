@@ -123,6 +123,37 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
+	* GET_DATO_PAGINATED
+	* Gets paginated the inverse locators from component parent result.
+	* @param int|null $custom_limit = null
+	* @return array $dato_paginated
+	*/
+	public function get_dato_paginated( ?int $custom_limit=null ) : array {
+
+		// limit
+			$limit = isset($custom_limit)
+				? $custom_limit
+				: $this->pagination->limit;
+
+		// offset
+			$offset = $this->pagination->offset ?? 0;
+
+		// always get dato calculated from my parents that call the current section
+			$dato_paginated = component_relation_children::get_children(
+				$this->section_id,
+				$this->section_tipo,
+				$this->tipo,
+				$limit,
+				$offset
+			);
+
+
+		return $dato_paginated;
+	}//end get_dato_paginated
+
+
+
+	/**
 	* GET_DATO_FULL
 	* @return array|null $dato
 	*/
@@ -376,10 +407,12 @@ class component_relation_children extends component_relation_common {
 	* @param string $section_tipo
 	* @param string|null $component_tipo = null
 	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
-	* @return array $parents
-	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
+	* @param int|null $limit = 0
+	* @param int|null $offset = 0
+	* @return array $children
+	*	Array of locators
 	*/
-	public static function get_children( int|string $section_id, string $section_tipo, ?string $component_tipo=null ) : array {
+	public static function get_children( int|string $section_id, string $section_tipo, ?string $component_tipo=null, ?int $limit=0, ?int $offset=0 ) : array {
 
 		$children = [];
 
@@ -391,7 +424,7 @@ class component_relation_children extends component_relation_common {
 
 		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
 			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo );
-			if( empty($ar_parent_tipo) ){
+			if( empty($ar_parent_tipo) || !isset($ar_parent_tipo[0])){
 				return $children;
 			}
 			$parent_tipo = $ar_parent_tipo[0];
@@ -409,7 +442,8 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_mode( 'related' );
 				$sqo->set_full_count( false );
 				$sqo->set_filter_by_locators( [$filter_locator] );
-				$sqo->set_limit( 100000 ); // set limit for security. Overwrite when needed.
+				$sqo->set_limit( $limit ); // set limit for security. Overwrite when needed.
+				$sqo->set_offset( $offset );
 
 			// order. It is defined in section 'section_map' item as {"order":"ontology41"}
 			// This tipo is used to build the JSON path for the search
@@ -451,7 +485,6 @@ class component_relation_children extends component_relation_common {
 					$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
 
 				return $locator;
-
 			}, $result);
 
 

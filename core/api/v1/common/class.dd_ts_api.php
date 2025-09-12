@@ -9,6 +9,71 @@ final class dd_ts_api {
 
 
 	/**
+	* GET_NODE_DATA
+	* Get JSON data of of current element
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function get_node_data(object $rqo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// Input validation
+			if (!isset($rqo->source)) {
+				$response->errors[] = 'Missing source property in the request object.';
+				$response->msg = 'Invalid request. Source data is missing.';
+				return $response;
+			}
+
+		// short vars
+			$source					= $rqo->source;
+			$section_tipo			= $source->section_tipo ?? null;
+			$section_id				= $source->section_id ?? null;
+			$children_tipo			= $source->children_tipo ?? null;
+			$area_model				= $source->model ?? 'area_thesaurus';
+			$options				= $rqo->options ?? new stdClass();
+			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
+
+		// ts_object_options. thesaurus_view_mode
+			$ts_object_options = new stdClass();
+				$ts_object_options->model = $thesaurus_view_mode==='model'
+					? true
+					: false; // get from URL as thesaurus_view_mode=model
+
+		// children. Calculated from given locator
+			$locator = new locator();
+				$locator->set_section_tipo($section_tipo);
+				$locator->set_section_id($section_id);
+				$locator->set_from_component_tipo($children_tipo);
+
+			$children = [$locator];
+
+		// parse_child_data
+			$ar_children_data = ts_object::parse_child_data(
+				$children,
+				$area_model,
+				$ts_object_options
+			);
+
+		// build children_data result object
+			$children_data = $ar_children_data[0] ?? null;
+
+		// response
+			$response->result	= $children_data;
+			$response->msg		= empty($response->errors)
+				? 'OK. Request done successfully'
+				: 'Warning! Request done with errors';
+
+
+		return $response;
+	}//end get_node_data
+
+
+
+	/**
 	* GET_CHILDREN_DATA
 	* Get JSON data of all children of current element
 	* @param object $rqo
@@ -22,7 +87,12 @@ final class dd_ts_api {
 	* 		section_id : string|int,
 	* 		children_tipo : string,
 	* 		model : string|null,
-	* 		children : array|null
+	* 		children : array|null [{
+    *            "type": "dd151",
+    *            "section_id": "1",
+    *            "section_tipo": "rt1",
+    *            "from_component_tipo": "hierarchy45"
+    *        }]
 	* 	},
 	* 	options : {
 	* 		pagination: {
@@ -43,14 +113,21 @@ final class dd_ts_api {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
+		// Input validation
+			if (!isset($rqo->source)) {
+				$response->errors[] = 'Missing source property in the request object.';
+				$response->msg = 'Invalid request. Source data is missing.';
+				return $response;
+			}
+
 		// short vars
 			$source					= $rqo->source;
-			$section_tipo			= $source->section_tipo;
-			$section_id				= $source->section_id;
-			$children_tipo			= $source->children_tipo;
+			$section_tipo			= $source->section_tipo ?? null;
+			$section_id				= $source->section_id ?? null;
+			$children_tipo			= $source->children_tipo ?? null;
 			$area_model				= $source->model ?? 'area_thesaurus';
 			$children				= $source->children ?? null;
-			$options				= $rqo->options;
+			$options				= $rqo->options ?? new stdClass();
 			$pagination				= $options->pagination ?? null;
 			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
 
@@ -60,97 +137,53 @@ final class dd_ts_api {
 					? true
 					: false; // get from URL as thesaurus_view_mode=model
 
-		// section_properties check
-			$ontology_node		= new ontology_node($section_tipo);
-			$section_properties	= $ontology_node->get_properties(true);
-
-		// limit
-			$default_limit = 5000;
+		// limit. Default limit before pagination 'show_more' button is displayed
+			$default_limit = 300;
+			$current_pagination = $pagination;
 
 		// children. Calculated from given locator
-			switch (true) {
-				case !empty($children):
-					// root nodes are passed as resolved $children array case
-					break;
+			if (empty($children) && $section_id && $children_tipo) {
 
-				// case !empty($section_properties) && isset($section_properties->children_search):
-				// 	// thesaurus_node: section case (from current term children, usually 'hierarchy45')
-				// 	// pagination. Set default if is not defined
-				// 		$current_pagination = !empty($pagination)
-				// 			? $pagination
-				// 			: (object)[
-				// 				'limit'		=> $default_limit,
-				// 				'offset'	=> 0,
-				// 				'total'		=> null
-				// 			];
+				// Calculate children from parent
+					$model = ontology_node::get_model_by_tipo($children_tipo,true);
+					if ($model!=='component_relation_children') {
+						$response->errors[] = 'Wrong model';
+						$response->msg .= ' Expected model (component_relation_children) but calculated: ' . $model;
+						return $response;
+					}
 
-				// 	// sqo. children_search
-				// 		$sqo = $section_properties->children_search->sqo;
-				// 		// add pagination
-				// 		$sqo->limit		= $current_pagination->limit;
-				// 		$sqo->offset	= $current_pagination->offset;
+				// component_relation_children
+					$component_relation_children = component_common::get_instance(
+						$model,
+						$children_tipo,
+						$section_id,
+						'list_thesaurus',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 
-				// 		$section_search	= search::get_instance(
-				// 			$sqo // object sqo
-				// 		);
-				// 		$rows_data = $section_search->search();
+					// Set default pagination if not defined
+					if (empty($current_pagination)) {
+						$current_pagination = (object)[
+							'limit' => $default_limit,
+							'offset' => 0,
+						];
+					}
 
-				// 	// children
-				// 		$children = array_map(function($item){
-
-				// 			$locator = new stdClass();
-				// 				$locator->section_tipo	= $item->section_tipo;
-				// 				$locator->section_id	= $item->section_id;
-
-				// 			return $locator;
-				// 		}, $rows_data->ar_records);
-
-				// 	// count
-				// 		if (!isset($current_pagination->total)) {
-				// 			$section_search	= search::get_instance(
-				// 				$section_properties->children_search->sqo, // basic SQO as {section_tipo:["rsc97"]}
-				// 			);
-				// 			$result = $section_search->count();
-				// 			$current_pagination->total = $result->total;
-				// 		}
-				// 	break;
-
-				default:
-					// Calculate children from parent
-						$model = ontology_node::get_model_by_tipo($children_tipo,true);
-						if ($model!=='component_relation_children') {
-							$response->errors[] = 'Wrong model';
-							$response->msg .= ' Expected model (component_relation_children) but calculated: ' . $model;
-							return $response;
-						}
-
-					// component_relation_children
-						$component_relation_children = component_common::get_instance(
-							$model,
-							$children_tipo,
-							$section_id,
-							'list_thesaurus',
-							DEDALO_DATA_NOLAN,
-							$section_tipo
-						);
-
+					// Calculate total if not set
+					if (!isset($current_pagination->total)) {
 						$dato = $component_relation_children->get_dato();
+						$current_pagination->total = (is_countable($dato) ? count($dato) : 0);
+					}
+					// Fix pagination to the component (used when get_dato_paginated is called from the class)
+					$component_relation_children->pagination = $current_pagination;
 
-					// pagination. Set default if is not defined
-						$current_pagination = !empty($pagination)
-							? $pagination
-							: (object)[
-								'limit'		=> $default_limit,
-								'offset'	=> 0,
-								'total'		=> (is_array($dato) ? count($dato) : 0)
-							];
-						$component_relation_children->pagination = $current_pagination;
-
-					// dato_paginated
-						$dato_paginated	= $component_relation_children->get_dato_paginated();
-						$children		= $dato_paginated;
-					break;
-			}
+				// Get data (paginated or full based on actual need, not just total count)
+					$use_pagination = $current_pagination->limit > 0 && $current_pagination->total > $current_pagination->limit;
+					$children = $use_pagination
+						? $component_relation_children->get_dato_paginated()
+						: $component_relation_children->get_dato();
+			}//end if (empty($children))
 
 		// parse_child_data
 			$ar_children_data = ts_object::parse_child_data(
@@ -162,13 +195,12 @@ final class dd_ts_api {
 		// build children_data result object
 			$children_data = (object)[
 				'ar_children_data'	=> $ar_children_data,
-				'pagination'		=> $pagination
+				'pagination'		=> $current_pagination ?? $pagination
 			];
 
 		// response
-			$response->result		= $children_data;
-			$response->pagination	= $current_pagination ?? null;
-			$response->msg			= empty($response->errors)
+			$response->result	= $children_data;
+			$response->msg		= empty($response->errors)
 				? 'OK. Request done successfully'
 				: 'Warning! Request done with errors';
 

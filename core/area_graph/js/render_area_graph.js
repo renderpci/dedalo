@@ -254,10 +254,10 @@ const render_content_data = function(self) {
 						})
 
 					// ts_object Get from API and render element
-						self.ts_object.get_children(link_children)
-						.then(function(response){
-							hierarchy_elements_container.remove()
-						})
+						// self.ts_object.get_children(link_children)
+						// .then(function(response){
+						// 	hierarchy_elements_container.remove()
+						// })
 				}
 		}//end for (let i = 0; i < typology_length; i++)
 

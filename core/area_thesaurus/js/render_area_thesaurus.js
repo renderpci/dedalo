@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {ts_object} from '../../ts_object/js/ts_object.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -37,14 +38,6 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	// options
 		const render_level = options.render_level || 'full'
-
-	// ts_object. Is a global page var
-		// set thesaurus_mode. Note that ts_object is NOT an instance
-		// values: relation|default
-		self.ts_object.thesaurus_mode = self.context?.thesaurus_mode || null
-		// caller set
-		self.ts_object.caller = self
-		self.ts_object.linker = self.linker // usually a portal component instance
 
 		// parse data
 		// sample data:
@@ -78,7 +71,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 				// render. parse_search_result with ts_object
 					dd_request_idle_callback(
 						() => {
-							self.ts_object.parse_search_result(
+							ts_object.parse_search_result(
 								data.ts_search.result, // object data
 								data.ts_search.found, // to hilite
 								null, // HTMLElement main_div
@@ -132,7 +125,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 			const render_handler = () => {
 				dd_request_idle_callback(
 					() => {
-						self.ts_object.parse_search_result(
+						ts_object.parse_search_result(
 							data.ts_search.result,
 							data.ts_search.found, // to hilite
 							null,
@@ -296,39 +289,48 @@ const render_content_data = function(self) {
 						continue;
 					}
 
-					// hierarchy_wrapper node
-						const hierarchy_wrapper = self.ts_object.render_root_wrapper({
-							section_tipo		: section_tipo,
-							section_id			: section_id,
-							children_tipo		: children_tipo,
-							target_section_tipo	: target_section_tipo
+					const ts_object_instance = new ts_object()
+					ts_object_instance.init({
+						thesaurus_mode		: self.context?.thesaurus_mode || null,
+						caller				: self,
+						linker				: self.linker, // usually a portal component instance
+						section_tipo		: section_tipo,
+						section_id			: section_id,
+						children_tipo		: children_tipo,
+						target_section_tipo	: target_section_tipo,
+						is_root_node		: true,
+						is_descriptor		: true
+					})
+					.then(function(){
 
-						})
-						typology_container.appendChild(hierarchy_wrapper)
+						// hierarchy_wrapper node
+							const hierarchy_wrapper = ts_object_instance.render()
+							typology_container.appendChild(hierarchy_wrapper)
 
-					// loading
-						const loading_node = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'elements_container loading',
-							inner_html		: `Loading ${root_terms[0].section_tipo}`,
-							parent			: hierarchy_wrapper
-						})
+						// loading
+							const loading_node = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'elements_container loading',
+								inner_html		: `Loading ${root_terms[0].section_tipo}`,
+								parent			: hierarchy_wrapper
+							})
 
-					// ts_object: render element
-						self.ts_object.render_children({
-							link_children_element		: hierarchy_wrapper.link_children,
-							section_tipo				: section_tipo,
-							section_id					: section_id,
-							pagination					: null,
-							clean_children_container	: null,
-							// children_data			: children_data,
-							children_tipo				: children_tipo,
-							children_list				: root_terms
-						})
-						.then(()=>{
-							// remove loading
-							loading_node.remove()
-						})
+						// children_data - render_children_data from API
+							ts_object_instance.get_children_data({
+								pagination		: null,
+								children		: root_terms
+							})
+							.then(function(){
+								// ts_object: render element children
+								ts_object_instance.render_children({
+									clean_children_container : false
+								})
+								.then(()=>{
+									// remove loading
+									loading_node.remove()
+								})
+							})
+					})
 				}//end iterate hierarchy_sections
 		}//end for (let i = 0; i < typology_length; i++) typology_nodes
 
