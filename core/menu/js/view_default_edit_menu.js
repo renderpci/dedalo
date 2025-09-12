@@ -384,9 +384,12 @@ const render_debug_info_bar = (self) => {
 		})
 
 	// dedalo_version
+		const version_style = dedalo_version.indexOf('7.0')!==-1
+			? ' beta'
+			: ''
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'dedalo_version',
+			class_name		: 'dedalo_version' + version_style,
 			text_content	: 'Code v. ' + dedalo_version + ' ' + dedalo_build,
 			parent			: debug_info_bar
 		})
