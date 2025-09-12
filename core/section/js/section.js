@@ -1596,17 +1596,28 @@ section.prototype.get_total = async function(sqo) {
 					// remove unused properties
 					delete source.properties
 
+					// @work in progress
+					// // cache_handler. Only cache non filtered section counts
+					// const cache_handler = (!count_sqo.filter || count_sqo.filter.$and?.length<1)
+					// 	? {
+					// 		handler	: 'localdb',
+					// 		id		: 'section_cache_count_' + self.tipo
+					// 	  }
+					// 	  : null;
+
 					const rqo_count	= {
 						action			: 'count',
 						prevent_lock	: true,
 						sqo				: count_sqo,
 						source			: source
 					}
+
 					const api_count_response = await data_manager.request({
-						body		: rqo_count,
-						use_worker	: true,
-						retries : 5, // try
-						timeout : 10 * 1000 // 10 secs waiting response (could be long in activity)
+						body			: rqo_count,
+						use_worker		: true,
+						retries			: 5, // try
+						timeout			: 10 * 1000, // 10 secs waiting response (could be long in activity)
+						// cache_handler	: cache_handler
 					})
 
 				// API error case
