@@ -12,7 +12,6 @@
 	import {
 		clone,
 		url_vars_to_object,
-		JSON_parse_safely,
 		get_tld_from_tipo,
 		get_section_id_from_tipo
 	} from '../../common/js/utils/index.js'
@@ -20,9 +19,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {area_common} from '../../area_common/js/area_common.js'
-	import {ts_object} from '../../ts_object/js/ts_object.js'
 	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_thesaurus} from './render_area_thesaurus.js'
@@ -69,10 +66,10 @@ export const area_thesaurus = function() {
 	// thesaurus_view_mode: string 'default|model'. Used to allow manage models
 	this.thesaurus_view_mode
 
-	// model_value_is_hide : bool default false. Used to store the Ontology model_value hidden status
-	// An event to keydown Ctr + m fires the changes in this property and is read by ts_object when render
-	// the ts_line (list_thesaurus_element model_value div node)
-	self.model_value_is_hide = false
+	// // model_value_is_hide : bool default false. Used to store the Ontology model_value hidden status
+	// // An event to keydown Ctr + m fires the changes in this property and is read by ts_object when render
+	// // the ts_line (list_thesaurus_element model_value div node)
+	// self.model_value_is_hide = false
 
 	// search_tipos. Array of tipos to search in the request from URL
 	// Usually is added to the URL by Ontology node open in tree button
@@ -160,26 +157,27 @@ area_thesaurus.prototype.init = async function(options) {
 		// key commands
 			dd_request_idle_callback(
 				() => {
-					self.model_value_is_hide = localStorage.getItem('model_value_is_hide') || false
+					window.page_globals.show_models = localStorage.getItem('show_models') || false
 					const keydown_handler = (e) => {
+
 						// control + m keys
 						if (e.key==='m' && e.ctrlKey===true) {
 							const model_value_list = document.querySelectorAll('.model_value')
-							if (self.model_value_is_hide) {
-								// already hidden case. Change to display
-								[...model_value_list].map((el)=>{
-									el.classList.remove('hide')
-								})
-								localStorage.removeItem("model_value_is_hide");
-								self.model_value_is_hide = false
-							}else{
+							if (window.page_globals.show_models) {
 								// display case. Change to hide
 								[...model_value_list].map((el)=>{
 									el.classList.add('hide')
 								})
 								// save status for persistence
-								localStorage.setItem('model_value_is_hide', true);
-								self.model_value_is_hide = true
+								localStorage.removeItem("show_models");
+								window.page_globals.show_models = false
+							}else{
+								// hidden case. Change to display
+								[...model_value_list].map((el)=>{
+									el.classList.remove('hide')
+								})
+								localStorage.setItem('show_models', true);
+								window.page_globals.show_models = true
 							}
 						}
 					}
@@ -319,8 +317,8 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		self.status = 'building'
 
 	// ts_object. Set from global var
-		self.ts_object = ts_object
-		self.ts_object.mode = self.mode
+		// self.ts_object = new ts_object()
+		// self.ts_object.mode = self.mode
 
 	// self.datum. On building, if datum is not created, creation is needed
 		self.datum = self.datum || {
@@ -458,10 +456,10 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			})
 		}
 
-	// model_value_is_hide. Thesaurus default is false, but Ontology default is true.
-		self.model_value_is_hide = (self.model==='area_ontology')
-			? false
-			: true;
+	// show_models. Thesaurus default is false, but Ontology default is true.
+		window.page_globals.show_models = (self.model==='area_ontology' || localStorage.getItem('show_models'))
+			? true
+			: false;
 
 	// debug
 		if(SHOW_DEBUG===true) {

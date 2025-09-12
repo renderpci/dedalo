@@ -231,6 +231,34 @@ export const get_all_instances = function() {
 
 
 /**
+* ADD_INSTANCE
+* Add to the instances cache map
+* @return void
+*/
+export const add_instance = function(key, instance_element) {
+
+	instances_map.set(key, instance_element)
+}//end add_instance
+
+
+/**
+* GET_INSTANCE_BY_KEY
+* Select a instance form the cache map by key (instance id)
+* @param string key - Id of the instance
+* @return object|null
+*/
+export const get_instance_by_id = function (key) {
+	const found_instance = instances_map.get(key)
+	if (found_instance) {
+		return found_instance;
+	}
+
+	return null
+}//end get_instance_by_key
+
+
+
+/**
 * FIND_INSTANCES
 * Get all created instances from global instances_map
 * that matches the given options

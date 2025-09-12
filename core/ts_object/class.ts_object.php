@@ -159,18 +159,18 @@ class ts_object {
 
 		$children_data = [];
 
-		foreach ($locators as $key => $locator) {
+		foreach ($locators as $locator) {
 
 			$section_id		= $locator->section_id;
 			$section_tipo	= $locator->section_tipo;
 
-			// set order of locator in the ts_options
 			$ts_options = empty($ts_object_options)
 				? new stdClass()
 				: $ts_object_options;
 
-			$ts_options->order = $key+1;
-			$ts_options->area_model = $area_model;
+			// Do not set order here because could overwrite the custom order !
+			// set order of locator in the ts_options
+			// $ts_options->order = $key+1;
 
 			$ts_object		= new ts_object( $section_id, $section_tipo, $ts_options );
 			$child_object	= $ts_object->get_data();
@@ -281,6 +281,8 @@ class ts_object {
 
 			// No descriptors do not have children. Avoid calculate children
 				if ($data->is_descriptor===false && $current_object->type==='link_children') {
+					// fix children_tipo
+					$data->children_tipo = null;
 					continue;
 				}
 

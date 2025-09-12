@@ -2,6 +2,7 @@
 
 
 // imports
+	import {get_instance_by_id} from '../../common/js/instances.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {render_children} from './render_ts_object.js'
 
@@ -34,7 +35,24 @@ export const on_dragstart = function(self, event) {
 	// if event_handle
 		self.source = wrap_ts_object;
 		event.dataTransfer.effectAllowed = 'move';
-		event.dataTransfer.setData('text/html', wrap_ts_object.innerHTML);
+
+		// event.dataTransfer.setData('text/html', wrap_ts_object.innerHTML);
+
+		const parent_section_tipo	= self.caller.section_tipo
+		const parent_section_id		= self.caller.section_id
+		const parent_instance_id	= self.caller.id
+
+		// Store JSON string in dataTransfer
+		const data = {
+			id					: self.id,
+			source_type			: 'default',
+			moving_section_tipo	: self.section_tipo,
+			moving_section_id	: self.section_id,
+			parent_section_tipo	: parent_section_tipo,
+			parent_section_id	: parent_section_id,
+			parent_instance_id	: parent_instance_id
+		}
+		event.dataTransfer.setData('text/plain', JSON.stringify(data));
 
 	// Fix class var 'old_parent_wrap'
 		self.old_parent_wrap = wrap_ts_object.parentNode.parentNode;
@@ -86,39 +104,98 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 	event.stopPropagation();
 
 	// Remove 'drag_over' class from the target element.
-		wrap_ts_object.classList.remove('drag_over')
+	wrap_ts_object.classList.remove('drag_over');
 
-	// Wrappers. Source and target wrappers.  wrap_source is set during 'dragstart'.
-		const wrap_source	= self.source || null // element that's move (global var defined at 'on_drag_mousedown')
-		const wrap_target	= wrap_ts_object // element on user leaves source wrap
+	try {
 
-		// Validate source and target.  Don't proceed if source is missing or the same as target.
-		if (wrap_source === wrap_target) {
-			console.warn('[ts_object.on_drop] Invalid drop: source and target are the same.');
-			return false;
-		}
+		const data_transfer_string	= event.dataTransfer.getData('text/plain');
+		const data_transfer_json	= JSON.parse(data_transfer_string);
 
-	// div_children. Find the container for children within the target.
-		const div_children = Array.from(wrap_target.children).find(
-			node => node.dataset?.role === 'children_container'
-		);
-		// If no children container, log an error and stop.
-		if (!div_children) {
-			console.warn('[ts_object.on_drop] No children_container found in target:', wrap_target.children);
-			return false;
-		}
+		if (data_transfer_json.source_type === 'default') {
 
-	// Handle external data transfer (e.g., from tool_cataloging).
-	// (!) Used by tool_cataloging to add data to the ts
-	const data_transfer_json = event.dataTransfer.getData('text/plain')
-	if (data_transfer_json && data_transfer_json.length>0) {
+			// default scenario, dragging from self thesaurus / ontology
 
-		// tool_cataloging and similar using event dataTransfer case
+			// data_transfer vars
+			const moving_instance_id		= data_transfer_json.id
+			const moving_section_tipo		= data_transfer_json.moving_section_tipo
+			const moving_section_id			= data_transfer_json.moving_section_id
+			const old_parent_section_tipo	= data_transfer_json.parent_section_tipo
+			const old_parent_section_id		= data_transfer_json.parent_section_id
+			const old_parent_id				= data_transfer_json.parent_instance_id
 
-		try {
+			// target instance vars
+			const target_instance			= self
+			const new_parent_section_tipo	= target_instance.section_tipo
+			const new_parent_section_id		= target_instance.section_id
 
-			// parse from event.dataTransfer
-			const data_obj = JSON.parse(data_transfer_json)
+			// Validate source.  Don't proceed if source is the same as target.
+			if (target_instance.section_tipo === moving_section_tipo && target_instance.section_id == moving_section_id) {
+				console.warn('[ts_object.on_drop] Invalid drop: source and target are the same.');
+				return false;
+			}
+
+			// children_container. Find the container for children within the target.
+			const children_container = target_instance.children_container
+			// If no children container, log an error and stop.
+			if (!children_container) {
+				console.warn('[ts_object.on_drop] No children_container found in target instance:', target_instance);
+				return false;
+			}
+
+			// update_parent_data. Call API to update parent data
+			const update_parent_data_options = {
+				section_id				: moving_section_id,
+				section_tipo			: moving_section_tipo,
+				old_parent_section_id	: old_parent_section_id,
+				old_parent_section_tipo	: old_parent_section_tipo,
+				new_parent_section_id	: new_parent_section_id,
+				new_parent_section_tipo	: new_parent_section_tipo
+			}
+			const response = await self.update_parent_data(update_parent_data_options)
+			if (!response.result) {
+				console.error('[ts_object.on_drop] Error on update_parent_data response:', response);
+				return false;
+			}
+
+			// Get moving_instance
+			const moving_instance = get_instance_by_id(moving_instance_id)
+			if (!moving_instance) {
+				console.error('[ts_object.on_drop] No moving_instance found in instances map cache.', moving_instance_id);
+				return false;
+			}
+
+			// update moving instance caller.
+			// It is important to allow the term to be moved again without causing any inconsistencies.
+			moving_instance.caller = self
+
+			// Move moving node from old parent to the new parent (current dropped)
+			self.children_container.appendChild(moving_instance.node);
+
+			// hilite moved term. Allows arrow state update
+			dd_request_idle_callback(
+				() => {
+					// hilite term node
+					const element = moving_instance.term_node
+					if (element) {
+						self.hilite_element(element)
+					}
+				}
+			)
+
+			// Get old_parent_instance
+			const old_parent_instance = get_instance_by_id(old_parent_id)
+			if (!old_parent_instance) {
+				console.error('[ts_object.on_drop] No old_parent_instance found in instances map cache.', old_parent_id);
+				return false;
+			}
+			// update_arrow_state. If the instance has no children, then the arrow icon should be hidden.
+			old_parent_instance.update_arrow_state(false)
+
+		}else{
+
+			// tool_cataloging and similar using event dataTransfer case
+
+			const wrap_target = self.node
 
 			// short vars
 			const section_id	= wrap_target.dataset.section_id
@@ -146,7 +223,7 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 			});
 
 			 // Handle the response from add_child. Caller e.g. 'tool_cataloging'
-			if (data_obj.caller) {
+			if (data_transfer_json.caller) {
 
 				// new_section_id . Generated as response by the trigger add_child
 				const new_section_id = response?.result
@@ -156,8 +233,8 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 				}
 
 				// Publish an event to update the component used as term in the new section
-				event_manager.publish(`ts_add_child_${data_obj.caller}`, {
-					locator			: data_obj.locator,
+				event_manager.publish(`ts_add_child_${data_transfer_json.caller}`, {
+					locator			: data_transfer_json.locator,
 					new_ts_section	: {
 						section_id : new_section_id,
 						section_tipo : section_tipo
@@ -171,15 +248,26 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 							return false
 						}
 
+						// children_data - render_children_data from API
+						const children_data = await self.get_children_data({
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							children_tipo	: children_tipo,
+							pagination		: null,
+							children		: link_children_element.children_list
+						})
+						if (!children_data) {
+							// error case
+							console.warn("Error, children_data is null");
+							return false
+						}
+
 						// Refresh children elements by API call
 						await render_children({
+							self						: self,
 							link_children_element		: link_children_element,
-							section_tipo				: section_tipo,
-							section_id					: section_id,
-							pagination					: null,
 							clean_children_container	: true,
-							children_tipo				: children_tipo,
-							children_list				: link_children_element.children_list
+							children_data				: children_data
 						})
 
 						// save_opened_elements
@@ -209,10 +297,55 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 					}
 				});
 			}
-		} catch (error) {
-			console.error('[ts_object.onDrop] Error processing external data transfer:', error);
-			return false; // Ensure we return false on error.
 		}
+
+
+	} catch (e) {
+		console.error('Failed to parse JSON data:', e);
+	}
+
+
+	if (typeof calasparra==="undefined") {
+		return
+	}
+
+
+	// Wrappers. Source and target wrappers.  wrap_source is set during 'dragstart'.
+		const wrap_source	= self.source || null // element that's move (global var defined at 'on_drag_mousedown')
+		const wrap_target	= wrap_ts_object // element on user leaves source wrap
+
+
+		console.log('++ self:', self);
+		console.log('++ event:', event);
+		console.log('++ wrap_ts_object:', wrap_ts_object);
+
+		// console.log('wrap_source:', wrap_source);
+		// console.log('wrap_source2 node:', self.node);
+		// console.log('wrap_source3 source:', self.source);
+		// console.log('wrap_target:', wrap_target);
+
+		// Validate source and target.  Don't proceed if source is missing or the same as target.
+		if (wrap_source === wrap_target) {
+			console.warn('[ts_object.on_drop] Invalid drop: source and target are the same.');
+			return false;
+		}
+
+	// div_children. Find the container for children within the target.
+		const div_children = Array.from(wrap_target.children).find(
+			node => node.dataset?.role === 'children_container'
+		);
+		// If no children container, log an error and stop.
+		if (!div_children) {
+			console.warn('[ts_object.on_drop] No children_container found in target:', wrap_target.children);
+			return false;
+		}
+
+	// Handle external data transfer (e.g., from tool_cataloging).
+	// (!) Used by tool_cataloging to add data to the ts
+	const data_transfer_json = event.dataTransfer.getData('text/plain')
+	if (data_transfer_json && data_transfer_json.length>0) {
+
+
 	}else{
 
 		// Internal drag and drop (within the thesaurus) default case.
@@ -224,7 +357,13 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 			}
 
 		// add node. Move the dragged element to the new parent's children container.
-			div_children.appendChild(wrap_source)
+		// If pagination button 'show_more' already exists, add it before it.
+			const button_show_more = div_children.querySelector('.button.show_more')
+			if (button_show_more) {
+				div_children.insertBefore(wrap_source, button_show_more);
+			}else{
+				div_children.appendChild(wrap_source)
+			}
 
 		// Update parent data (returns a promise after HTTP request finish)
 
@@ -234,6 +373,11 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 					console.error("[ts_object.on_drop] Error finding old_parent_wrap");
 					return false
 				}
+				// Prevent move hierarchy root nodes
+				if (old_parent_wrap.classList.contains('hierarchy_root_node')) {
+					return false
+				}
+				console.log('+++ old_parent_wrap:', old_parent_wrap);
 
 			// parent wrap (current drooped new parent)
 				const parent_wrap = wrap_source.parentNode.parentNode;
@@ -241,6 +385,7 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 					console.error("[ts_object.on_drop] Error finding parent_wrap");
 					return false
 				}
+				console.log('+++ parent_wrap:', parent_wrap);
 
 			// If old and new wrappers are the same, no is necessary update data
 				if (old_parent_wrap === parent_wrap) {
@@ -257,6 +402,15 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 			// new parent
 			const new_parent_section_id		= parent_wrap.dataset.section_id
 			const new_parent_section_tipo	= parent_wrap.dataset.section_tipo
+
+			console.log('+++ update_parent_data options:', {
+				section_id				: section_id,
+				section_tipo			: section_tipo,
+				old_parent_section_id	: old_parent_section_id,
+				old_parent_section_tipo	: old_parent_section_tipo,
+				new_parent_section_id	: new_parent_section_id,
+				new_parent_section_tipo	: new_parent_section_tipo
+			});
 
 		// update_parent_data. Call API to update parent data
 			const response = await self.update_parent_data({
@@ -285,15 +439,26 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 				children_container.classList.remove('js_first_load');
 				link_children_element.firstChild.classList.add('ts_object_children_arrow_icon_open', 'arrow_spinner');
 
+				// children_data - render_children_data from API
+				const children_data = await self.get_children_data({
+					section_tipo	: wrapper.dataset.section_tipo,
+					section_id		: wrapper.dataset.section_id,
+					children_tipo	: wrapper.dataset.children_tipo,
+					pagination		: null,
+					children		: link_children_element.children_list
+				})
+				if (!children_data) {
+					// error case
+					console.warn("[ts_object.render_children] Error, children_data is null");
+					return false
+				}
+
 				// Refresh children elements by API call
-				await self.render_children({
+				await render_children({
+					self						: self,
 					link_children_element		: link_children_element,
-					section_tipo				: wrapper.dataset.section_tipo,
-					section_id					: wrapper.dataset.section_id,
-					pagination					: null,
 					clean_children_container	: true, // bool clean_children_container
-					children_tipo				: wrapper.dataset.children_tipo,
-					children_list				: link_children_element.children_list
+					children_data				: children_data
 				});
 
 				// save_opened_elements
