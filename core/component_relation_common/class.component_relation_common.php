@@ -2808,9 +2808,9 @@ class component_relation_common extends component_common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// dump($ar_section_tipo, ' ar_section_tipo ++ '.exec_time_unit($start_time,'ms').' ms');
+				$ar_section_tipo_string = to_string($ar_section_tipo);
 				debug_log(
-					'--- resolve request_config_section_tipo ------- '. to_string($ar_section_tipo) .' -- ' .exec_time_unit($start_time,'ms').' ms',
+					'--- resolve request_config_section_tipo ----------------- ' . number_format(exec_time_unit($start_time,'ms'),3).' ms - '. $ar_section_tipo_string,
 					logger::DEBUG
 				);
 			}
