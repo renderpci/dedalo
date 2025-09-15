@@ -292,15 +292,15 @@ page.prototype.build = async function(autoload=false) {
 			}else{
 
 				// searchParams
-					const searchParams = new URLSearchParams(window.location.href);
+				const searchParams = new URLSearchParams(window.location.href);
 
-				// menu
-					const menu = searchParams.has('menu')
-						? JSON_parse_safely(
-							searchParams.get('menu'), // string from url
-							true // fallback on exception parsing string
-						  )
-						: true
+				// with_menu. Boolean value about if URL contains menu param. If not, the menu is added by default.
+				const with_menu = searchParams.has('menu')
+					? JSON_parse_safely(
+						searchParams.get('menu'), // string from url
+						true // fallback on exception parsing string
+					  )
+					: true
 
 				// start bootstrap
 					const rqo = { // rqo (request query object)
@@ -308,7 +308,7 @@ page.prototype.build = async function(autoload=false) {
 						prevent_lock	: true,
 						options : {
 							search_obj	: url_vars_to_object(location.search),
-							menu		: menu //  bool
+							menu		: with_menu //  bool
 						}
 					}
 
@@ -321,33 +321,21 @@ page.prototype.build = async function(autoload=false) {
 					}
 
 				// errors check
-
-					// error generic case starting the page
-						if (!api_response || !api_response.result) {
-							// api_response do not exists or result is false
-							console.error('!!! STOP build: page build api_response:', api_response);
-							// API start_error
-							page_globals.api_errors.push(
-								{
-									error	: 'start_error', // error type
-									msg		: api_response.msg || 'Error: Unable to start page. Check that PHP server is running and configuration files are correct [1]',
-									trace	: 'page build'
-								}
-							)
-
-							return false
+				// error generic case starting the page
+				if (!api_response || !api_response.result) {
+					// api_response do not exists or result is false
+					console.error('!!! STOP build: page build api_response:', api_response);
+					// API start_error
+					page_globals.api_errors.push(
+						{
+							error	: 'start_error', // error type
+							msg		: api_response.msg || 'Error: Unable to start page. Check that PHP server is running and configuration files are correct [1]',
+							trace	: 'page build'
 						}
+					)
 
-					// environment API data check
-						if (!api_response.environment || !api_response.environment.result) {
-							// API environment data is not available
-							page_globals.api_errors.push(
-								{
-									error	: 'start_error', // error type
-									msg		: api_response.msg || 'Error: Unable to start page: environment is unavailable. Check that PHP server is running and configuration files are correct [2]',
-									trace	: 'page build'
-								}
-							)
+					return false
+				}
 
 				// environment API data check
 				if (!api_response.environment || !api_response.environment.result) {
