@@ -242,7 +242,7 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 					callback : async () => {
 
 						// link_children_element. list_thesaurus_element of current wrapper
-						const link_children_element = self.get_link_children_from_wrap(wrap_target)
+						const link_children_element = link_children_element
 						if(!link_children_element) {
 							console.warn('[ts_object.on_drop] Error finding link_children_element');
 							return false

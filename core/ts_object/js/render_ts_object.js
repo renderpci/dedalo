@@ -717,6 +717,7 @@ const render_id_column = function(options) {
 	// short vars
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
+		const children_tipo		= self.children_tipo
 		const is_descriptor		= self.is_descriptor
 		const is_indexable		= self.is_indexable
 		const children_data		= self.children_data
@@ -808,25 +809,6 @@ const render_id_column = function(options) {
 
 						// mode set in dataset
 							link_add.dataset.mode = 'add_child'
-
-						// wrap
-							const wrap = id_column_content.parentNode
-							if(!wrap) {
-								console.error("Error on find wrap as parentNode of id_column_content");
-								return
-							}
-
-						// link_children_element
-							const link_children_element = self.get_link_children_from_wrap(wrap)
-							if(!link_children_element) {
-								console.error("Error on find link_children_element from wrap");
-								return
-							}
-
-						// short vars
-							const section_id	= wrap.dataset.section_id
-							const section_tipo	= wrap.dataset.section_tipo
-							const children_tipo	= wrap.dataset.children_tipo
 
 						// add_child
 							const response = await self.add_child({

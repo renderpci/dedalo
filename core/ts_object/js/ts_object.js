@@ -1697,13 +1697,6 @@ ts_object.prototype.save_order = async function(button_obj, new_value) {
 		const children				= [...element_wrap.parentNode.childNodes].filter(el => el.classList.contains('wrap_ts_object'))
 		const children_len			= children.length
 
-	// link_children . Search component_relation_children tipo from wrap
-		const link_children = this.get_link_children_from_wrap(wrap)
-		if (link_children===null) {
-			alert("[ts_object.save_order] Error on get list_thesaurus_element. save_order is skipped");
-			return Promise.resolve(false);
-		}
-
 	// new_value. Prevent set invalid values
 		if (new_value>children_len){
 			new_value = children_len // max value is array length
@@ -1849,7 +1842,7 @@ ts_object.prototype.toggle_nd = async function(button_obj) {
 
 		// nodes
 		const wrapper				= button_obj.parentNode.parentNode
-		const link_children_element	= self.get_link_children_from_wrap(wrapper)
+		const link_children_element	= self.link_children_element
 		const section_tipo			= wrapper.dataset.section_tipo
 		const section_id			= wrapper.dataset.section_id
 		const children_tipo			= wrapper.dataset.children_tipo
@@ -1927,20 +1920,6 @@ ts_object.prototype.get_my_parent_container = function(button_obj, role) {
 	console.warn(`GET_MY_PARENT_CONTAINER: No child element with data-role='${role}' found inside the wrapper.`);
 	return null;
 }//end get_my_parent_container
-
-
-
-/**
-* GET_LINK_CHILDREN_FROM_WRAP
-* Find link_children node from current given wrapper
-* Note that link_children is set as wrap pointer as 'wrapper.link_children = link_children'
-* @param HTMLElement wrap
-* @return HTMLElement|null link_children
-*/
-ts_object.prototype.get_link_children_from_wrap = function(wrap) {
-
-	return wrap.link_children ?? null;
-}//end get_link_children_from_wrap
 
 
 
