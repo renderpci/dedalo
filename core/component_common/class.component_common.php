@@ -777,11 +777,22 @@ abstract class component_common extends common {
 
 				// Main components with dataframe and other relation components.
 					$relation_components = component_relation_common::get_components_with_relations();
+					$relation_components[] = 'component_iri';// add the component_iri
 					if ( is_array($dato_tm) && in_array( $this->get_model(), $relation_components) ){
+
 						// Get only the component data. Remove possible dataframe data
-						$dato_tm = array_values( array_filter( $dato_tm, function($el) use($component_tipo) {
-							return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
-						}));
+						// component_iri exception, it doesn't has from_componnet_tipo to select its own tm data
+						if($this->get_model()==='component_iri'){
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) {
+								// return only the objects with iri property
+								return property_exists($el, 'iri');;
+							}));
+						}else{
+							// any other relation component
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($component_tipo) {
+								return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+							}));
+						}
 
 						// If the component is a dataframe filter the tm data with the section_id_key also.
 						if($this->get_model()==='component_dataframe'){

@@ -2,7 +2,17 @@
 include dirname(__FILE__) . '/class.dd_iri.php';
 /**
 * CLASS COMPONENT_IRI
-* Manages Internationalized Resource Identifiers (URI allowing Unicode). E.g. https://valència.dev
+* Manages Internationalized Resource Identifiers (URI allowing Unicode). E.g. https://dedalo.dev
+*
+*[
+*	{
+*		"id": 1,
+*		"iri": "https://dedalo.dev",
+*		"title": "Dédalo web site",
+*		"id": 1
+*	}
+*]
+*
 */
 class component_iri extends component_common {
 
@@ -23,10 +33,11 @@ class component_iri extends component_common {
 	* "iri" mandatory with string value and "title" optional with string value
 	* Sample:
 		* [
-		*	{
-		*    "iri": "http://www.render.es/dedalo",
-		*    "title": "dedalo"
-		* 	}
+		*		{
+		*			"id": 1,
+		*			"iri": "https://dedalo.dev",
+		*			"title": "Dédalo web site",
+		*		}
 		* ]
 	* @return array|null $dato
 	*/
@@ -34,16 +45,25 @@ class component_iri extends component_common {
 
 		$dato = parent::get_dato();
 
-		// input_text. To accept values from component_input_text, we need
-		// to change the string value of the input_text to IRI object value
+		// check if the data becomes from input_text.
+		// To accept values from component_input_text,
+		// needs to change the string value of the input_text to IRI object value
+		// setting the `iri` property with the previous input_text value.
 			$input_text = false;
 			if(!empty($dato)) {
 				foreach ((array)$dato as $key => $value) {
-					if(!is_object($value)){
+					if(!is_object($value) ){
 						$input_text = true;
+						// get the component counter
+						// it's the last counter used
+						$counter = $this->get_counter();
+						$id = $counter++;
 						$object = new stdClass();
 							$object->iri = $value;
+							$object->id = $id;
 						$dato[$key] = $object;
+						// set the new counter as the id (previous counter + 1)
+						$this->set_counter( $id );
 					}
 				}
 				if($input_text===true) {
@@ -104,6 +124,30 @@ class component_iri extends component_common {
 			);
 		}
 
+		// check the data values to fit the IRI data
+		$input_text = false;
+		if(!empty($dato)) {
+			foreach ((array)$dato as $key => $value) {
+				if(!is_object($value) ){
+					$input_text = true;
+					// get the component counter
+					// it's the last counter used
+					$counter = $this->get_counter();
+					$counter++;
+					$id = $counter;
+					$object = new stdClass();
+						$object->iri = $value;
+						$object->id = $id;
+					$dato[$key] = $object;
+					// set the new counter as the id (previous counter + 1)
+					$this->set_counter( $id );
+				}
+			}
+			if($input_text===true) {
+				$this->dato = $dato;
+			}
+		}
+
 
 		return parent::set_dato( $dato );
 	}//end set_dato
@@ -136,7 +180,7 @@ class component_iri extends component_common {
 						, logger::ERROR
 					);
 				}
-				return false;
+				return null;
 			}
 
 		// Save in standard format
@@ -374,31 +418,70 @@ class component_iri extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_dato_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_dato_version(object $options) : object {
 
-		$options = new stdClass();
-			$options->update_version	= null;
-			$options->dato_unchanged	= null;
-			$options->reference_id		= null;
-			$options->tipo				= null;
-			$options->section_id		= null;
-			$options->section_tipo		= null;
-			$options->context			= 'update_component_dato';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
-			$reference_id	= $options->reference_id;
+		// options
+			$update_version	= $options->update_version ?? null;
+			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$reference_id	= $options->reference_id ?? null;
+			$tipo			= $options->tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$context		= $options->context ?? 'update_component_dato';
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
+			case '6.8.0':
+
+			// Update the locator to move old ds and dataframe to v6 dataframe model.
+				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+
+					$model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+					$component = component_common::get_instance(
+						$model, // string model
+						$tipo, // string tipo
+						$section_id, // string section_id
+						'edit', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$section_tipo // string section_tipo
+					);
+
+					$new_data = [];
+					foreach ( (array)$dato_unchanged as $current_data) {
+						// Clone the current data so as not to touch the originals.
+						$iri_data = json_decode(json_encode( $current_data ));
+
+						// set the id to the data
+						if(!isset($iri_data->id)){
+							$counter = $component->get_counter();
+							$counter++;
+							$id = $counter;
+							$iri_data->id = $id;
+							$component->set_counter( $id );
+						}
+						$new_data[] = $iri_data;
+
+					}//end foreach
+
+					$response = new stdClass();
+						$response->result	= 1;
+						$response->new_dato	= $new_data;
+						$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_data).".<br />";
+
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+				break;
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
@@ -1017,6 +1100,39 @@ class component_iri extends component_common {
 
 		return $response;
 	}//end conform_import_data
+
+
+
+	/**
+	* SET_COUNTER
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* Set the component counter with the given value in the section's data
+	* @param int $value
+	* @return int $counter
+	*/
+	public function set_counter( int $value ) : int {
+
+		$section	= $this->get_my_section();
+		$counter	= $section->set_component_counter( $this->tipo, $value );
+
+		return $counter;
+	}//end set_counter
+
+
+
+	/**
+	* GET_COUNTER
+	* Get last counter used by the component
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* @return int $counter
+	*/
+	public function get_counter() : int {
+
+		$section	= $this->get_my_section();
+		$counter	= $section->get_component_counter( $this->tipo );
+
+		return $counter;
+	}//end get_counter
 
 
 
