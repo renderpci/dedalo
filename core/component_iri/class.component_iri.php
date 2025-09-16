@@ -85,9 +85,9 @@ class component_iri extends component_common {
 					);
 				}
 				if (is_string($dato)) {
-					$object = new stdClass();
-						$object->iri = $dato;
-					$dato = [$object];
+					$dd_iri = new dd_iri();
+						$dd_iri->set_iri($dato);
+					$dato = [$dd_iri];
 					$this->set_dato($dato);
 					$this->Save();
 				}
