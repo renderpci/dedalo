@@ -291,10 +291,15 @@ class component_dataframe extends component_portal {
 			$this->get_section_tipo() // string section_tipo
 		);
 
-		$main_componenet_data = $main_component->get_dato_full();
+		$relation_component = component_relation_common::get_components_with_relations();
 
+		// if the main component is a relation component get the full data
+		// if the main component is a literal component get its data (don't use the full data because is an object with lang that as key instead an array)
+		$main_component_data = in_array($model, $relation_component)
+			? $main_component->get_dato_full()
+			: $main_component->get_dato();
 
-		return $main_componenet_data;
+		return $main_component_data;
 	}//end get_main_component_data
 
 
