@@ -169,12 +169,23 @@ class tool_time_machine extends tool_common {
 							}
 						}// end if($has_dataframe === true)
 
+					$relation_components = component_relation_common::get_components_with_relations();
+					$relation_components[] = 'component_iri';// add the component_iri, it can handle dataframes
+					if ( is_array($dato_time_machine) && in_array( $model, $relation_components) ){
 
-					if ( is_array($dato_time_machine) && in_array( $model, component_relation_common::get_components_with_relations()) ){
-						// Main component and other components without dataframe
-						$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) use($tipo) {
-							return isset($el->from_component_tipo) && $el->from_component_tipo===$tipo;
-						}));
+						// Get only the component data. Remove possible dataframe data
+						// component_iri exception, it doesn't has from_componnet_tipo to select its own tm data
+						if($model==='component_iri'){
+							$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) {
+								// return only the objects with iri property
+								return property_exists($el, 'iri');;
+							}));
+						}else{
+							// Main component and other components without dataframe
+							$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) use($tipo) {
+								return isset($el->from_component_tipo) && $el->from_component_tipo===$tipo;
+							}));
+						}
 					}
 
 					// dataframe caller
