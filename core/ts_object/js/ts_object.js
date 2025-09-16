@@ -216,8 +216,8 @@ ts_object.prototype.get_children_data = async function(options) {
 
 
 /**
-* GET_node_DATA
-* Get the JSON data from the server across the API request.
+* GET_NODE_DATA
+* Get the instance JSON data from the server across the API request.
 * Data is built from parent node info (current object section_tipo and section_id)
 * @param object options
 * @return promise
@@ -326,10 +326,10 @@ ts_object.prototype.get_children_recursive = function( options ) {
 				mode			: 'list',
 				lang			: page_globals.dedalo_data_nolan,
 			},
-			show 			: {
-				ddo_map			: []
+			show : {
+				ddo_map : []
 			},
-			sqo: {
+			sqo : {
 				section_tipo	: [section_tipo],
 				limit			: 0,
 				offset			: 0,
@@ -516,8 +516,6 @@ ts_object.prototype.toggle_view_children = async function(event) {
 
 		const children_list	= link_children_element.children_list
 
-
-
 	// If is the first time that the children are loaded, remove the first class selector and send the query for get the children
 	if (children_container.classList.contains('js_first_load') && !children_container.hasChildNodes()) {
 
@@ -555,7 +553,7 @@ ts_object.prototype.toggle_view_children = async function(event) {
 		}
 
 		// save_opened_elements
-		self.save_opened_elements(link_children_element,'add')
+		self.save_opened_elements('add')
 
 	}else{ // Toggle view state
 
@@ -597,7 +595,7 @@ ts_object.prototype.toggle_view_children = async function(event) {
 			}
 
 			// save_opened_elements
-			self.save_opened_elements(link_children_element,'add')
+			self.save_opened_elements('add')
 
 		}else{
 
@@ -605,7 +603,7 @@ ts_object.prototype.toggle_view_children = async function(event) {
 			arrow_icon.classList.remove('ts_object_children_arrow_icon_open');
 
 			// save_opened_elements
-			self.save_opened_elements(link_children_element,'remove')
+			self.save_opened_elements('remove')
 
 		}
 	}
@@ -623,16 +621,24 @@ ts_object.prototype.toggle_view_children = async function(event) {
 * @param string action
 * @return bool
 */
-ts_object.prototype.save_opened_elements = function(link_children_element, action) {
+ts_object.prototype.save_opened_elements = function(action) {
+
+	const self = this
 
 	// const current_key = link_children_element.child_data.ts_id
-	const current_key = self.ts_id
+	const current_key = self.id
+	if (!current_key) {
+		console.error('Error.invalid ts_id from current ts_object instance:', self);
+		return false
+	}
 
 	if (action==='add') {
 		this.opened_elements[current_key] = true
 	}else{
 		delete this.opened_elements[current_key]
 	}
+
+	return true
 }//end save_opened_elements
 
 
@@ -780,9 +786,9 @@ ts_object.prototype.refresh_element = async function(section_tipo, section_id, h
 		}
 
 		// short vars
-		const section_tipo			= ts_object_instance.section_tipo
-		const section_id			= ts_object_instance.section_id
-		const children_tipo			= ts_object_instance.children_tipo
+		const section_tipo	= ts_object_instance.section_tipo
+		const section_id	= ts_object_instance.section_id
+		const children_tipo	= ts_object_instance.children_tipo
 
 		// get_node_data
 		await self.get_node_data(section_tipo, section_id, children_tipo);
@@ -1384,54 +1390,24 @@ ts_object.prototype.show_indexations = async function(options) {
 	* 				"value": "button show children",
 	* 				"model": "component_relation_children"
 	* 			}
-	* 		],
-	* 		"heritage": {
-	* 			"es1_1": {
-	* 				"section_tipo": "es1",
-	* 				"section_id": "1",
-	* 				"mode": "edit",
-	* 				"lang": "lg-eng",
-	* 				"is_descriptor": true,
-	* 				"is_indexable": true,
-	* 				"permissions_button_new": 3,
-	* 				"permissions_button_delete": 3,
-	* 				"permissions_indexation": 3,
-	* 				"permissions_structuration": 0,
-	* 				"ar_elements": [
-	* 					{
-	* 						"type": "term",
-	* 						"tipo": "hierarchy25",
-	* 						"value": "Spain",
-	* 						"model": "component_input_text"
-	* 					},
-	* 					{
-	* 						"type": "icon",
-	* 						"tipo": "hierarchy28",
-	* 						"value": "NA",
-	* 						"model": "component_text_area"
-	* 					}, ...
-	* 				],
-	* 				"heritage": { ... }
-	* 			}
-	* 		}
+	* 		]
 	* 	}
 	* }]
 * @param array to_hilite
-* 	array of locators found in search
-* @param HTMLElement|null main_div
-* @param bool is_recursion
+* 	array of locators found in search as
+* [{
+*    "section_tipo": "flora1",
+*    "section_id": "1"
+* }]
 * @return bool
 */
 ts_object.prototype.current_main_div = null;
-ts_object.prototype.parse_search_result = function( data, to_hilite, main_div, is_recursion ) {
+ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 	const self = this
 
-	// get the root nodes, top nodes
-	// const root_nodes = data.filter(el => el.ts_parent === 'root')
-
 	// reset previous hilites
-		self.reset_hilites()
+	self.reset_hilites()
 
 	// render all nodes and store it
 	const data_length = data.length
@@ -1440,24 +1416,52 @@ ts_object.prototype.parse_search_result = function( data, to_hilite, main_div, i
 	let node_to_scroll = null
 
 	for (let i = 0; i < data_length; i++) {
+
 		const item = data[i]
-		// render the ts_record
-		const node = render_ts_record(self, item, i)
-		// set pointer
-		node.ts_id			= item.ts_id
-		node.ts_parent		= item.ts_parent
-		node.section_tipo	= item.section_tipo
+
+		// Render using instances
+		const current_instance = new ts_object()
+		await current_instance.init({
+			thesaurus_mode				: self.thesaurus_mode,
+			caller						: self,
+			linker						: self.linker, // usually a portal component instance
+			section_tipo				: item.section_tipo,
+			section_id					: item.section_id,
+			children_tipo				: item.children_tipo,
+			target_section_tipo			: self.target_section_tipo,
+			is_indexable				: item.is_indexable,
+			is_descriptor				: item.is_descriptor,
+			ar_elements					: item.ar_elements,
+			ts_id						: item.ts_id,
+			ts_parent					: item.ts_parent,
+			order						: item.order,
+			permissions_button_delete	: item.permissions_button_delete,
+			permissions_button_new		: item.permissions_button_new,
+			permissions_indexation		: item.permissions_indexation
+		})
+		const node = await current_instance.render()
+
+		// set pointers
+		node.ts_id					= current_instance.ts_id
+		node.ts_parent				= current_instance.ts_parent
+		node.section_tipo			= current_instance.section_tipo
+		node.children_container		= current_instance.children_container
+		node.link_children_element	= current_instance.link_children_element
 
 		// find if the current record was the term searched
 		const searched_node = to_hilite.find(el => el.section_tipo===item.section_tipo && el.section_id===item.section_id)
 		// if the record was a searched term add a hilite class to remark it
 		if(searched_node){
-			const term_node = node.term_node
+			const term_node = current_instance.term_node
 			if (term_node) {
-				term_node.classList.add('element_hilite');
-				if (!node_to_scroll) {
-					node_to_scroll = term_node
-				}
+				requestAnimationFrame(
+					() => {
+						term_node.classList.add('element_hilite');
+						if (!node_to_scroll) {
+							node_to_scroll = term_node
+						}
+					}
+				);
 			}
 		}
 		// store the result
@@ -1467,6 +1471,7 @@ ts_object.prototype.parse_search_result = function( data, to_hilite, main_div, i
 	// link the nodes with his own parent node
 	const ts_nodes_length = ts_nodes.length
 	for (let i = 0; i < ts_nodes_length; i++) {
+
 		const current_node = ts_nodes[i]
 
 		// only the root parent node needs to be linked to the main node.
@@ -1482,12 +1487,15 @@ ts_object.prototype.parse_search_result = function( data, to_hilite, main_div, i
 				main_div.appendChild(current_node)
 			}
 		}else{
+
 			// link the node with its own parent
 			const parent_node = ts_nodes.find(el => el.ts_id===current_node.ts_parent)
 
 			if(parent_node && parent_node.children_container){
 				// set the link children state (arrow icon open)
-				parent_node.link_children.firstChild.classList.add('ts_object_children_arrow_icon_open');
+				parent_node.link_children_element.firstChild.classList.add('ts_object_children_arrow_icon_open');
+
+				// add node
 				parent_node.children_container.appendChild(current_node)
 			}
 		}
