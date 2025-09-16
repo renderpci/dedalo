@@ -165,7 +165,7 @@ const get_content_value = (key, current_value, self) => {
 		}//end load_editor
 
 	// observe in viewport
-		when_in_viewport(content_value, dd_request_idle_callback(load_editor));
+		when_in_viewport(content_value, load_editor);
 
 
 	return content_value

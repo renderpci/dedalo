@@ -61,11 +61,26 @@
 					$safe_value	= !empty($value) ? $value : [];
 					foreach ($safe_value as $current_value) {
 
+						// Check safe component IRI value. Expected format {"iri":"https://dedalo.es","title":"Dedalo","id":1}
+						if (!isset($current_value->id)) {
+							// skip old value to prevent to crash the application.
+							debug_log(__METHOD__
+								. " Ignored non valid value. Expected property 'id' but is not defined" . PHP_EOL
+								. ' tipo: ' . $this->tipo . PHP_EOL
+								. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+								. ' section_id: ' . $this->section_id . PHP_EOL
+								. ' current_value: ' . to_string($current_value)
+								, logger::ERROR
+							);
+							continue;
+						}
+
 						$locator = new locator();
 							$locator->set_section_tipo($this->section_tipo);
 							$locator->set_section_id($current_value->id);
 						$ar_locator[] = $locator;
 					}
+
 				// subdatum
 					$subdatum = $this->get_subdatum($this->tipo, $ar_locator);
 
