@@ -16,11 +16,13 @@
 
 				// input  (text title/url)
 				.input_value {
-					width: calc(20% - 0.5rem);
+					// width: calc(20% - 0.5rem);
 					padding-right: 0.5rem;
 
 
 					&.title {
+						width: calc(17% - 0.5rem);
+						padding-left: 0.5rem;
 
 					}
 
@@ -30,18 +32,32 @@
 							padding-right: 3.15rem;
 						}
 					}
+					@media screen and (max-width: @width_break_point_1) {
+						&.title {
+							width: calc(100% );
+						}
+						&.url {
+							width: calc(100%);
+							margin-bottom: 3rem;
+						}
+					}
 
 
 				}
 				.dataframe {
 					width: calc(20% - 0.5rem);
+					padding-right: 0.5rem;
+					height: 2rem;
+					@media screen and (max-width: @width_break_point_1) {
+						height: unset;
+					}
 				}
 
 				// buttons
 				>.button {
 					position: absolute;
 					top: 0.5rem;
-					right: 0.7rem;
+					right: -0.5rem;
 					z-index: 1;
 
 					&.active_check {
@@ -53,7 +69,16 @@
 					}
 
 					&.remove {
-						right: 2.0rem;
+						right: 1.0rem;
+					}
+					@media screen and (max-width: @width_break_point_1) {
+						top: 8.5rem;
+						&.remove {
+							right: 30vh;
+						}
+						&.link {
+							right: 10vh;
+						}
 					}
 				}
 
