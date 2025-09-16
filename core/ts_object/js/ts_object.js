@@ -5,15 +5,16 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {common} from '../../common/js/common.js'
 	import {get_instance, add_instance, get_instance_by_id} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback, when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
+		list,
 		render_children,
-		render
-	} from './render_ts_object.js'
+	} from './view_default_list_js_object.js'
 
 
 
@@ -56,6 +57,7 @@ export const ts_object = function() {
 	this.permissions_indexation		= null
 	this.ar_elements				= null
 	this.ts_id						= null
+	this.ts_parent					= null
 	this.is_descriptor				= null
 
 	this.has_descriptor_children = null;
@@ -70,11 +72,18 @@ export const ts_object = function() {
 
 
 
+/**
+* COMMON FUNCTIONS
+* extend component functions from component common
+*/
 // prototypes assign
-	ts_object.prototype.render = render
+	ts_object.prototype.render	= common.prototype.render
+	ts_object.prototype.refresh	= common.prototype.refresh
+	ts_object.prototype.destroy	= common.prototype.destroy
+
+	// render
+	ts_object.prototype.list = list
 	ts_object.prototype.render_children = render_children
-
-
 
 /**
 * INIT
@@ -89,7 +98,7 @@ ts_object.prototype.init = async function(options) {
 	// status update
 	self.status = 'initializing'
 
-	self.mode					= options.mode
+	self.mode					= options.mode || 'list'
 	self.caller					= options.caller
 	self.linker					= options.linker
 
@@ -101,6 +110,7 @@ ts_object.prototype.init = async function(options) {
 	self.virtual_order			= options.virtual_order
 	self.children_data			= options.children_data
 	self.ts_id					= options.ts_id
+	self.ts_parent				= options.ts_parent
 	self.is_descriptor			= options.is_descriptor
 	self.thesaurus_mode			= options.thesaurus_mode
 
@@ -111,7 +121,15 @@ ts_object.prototype.init = async function(options) {
 
 	self.has_descriptor_children = options.has_descriptor_children
 
-	self.id = `ts_object_${self.section_tipo}_${self.section_id}_${self.children_tipo}_${self.target_section_tipo}_${self.thesaurus_mode}`
+	const key_parts = [
+		self.section_tipo,
+		self.section_id,
+		self.children_tipo,
+		self.target_section_tipo,
+		self.thesaurus_mode
+	]
+	// self.id = `ts_object_${self.section_tipo}_${self.section_id}_${self.children_tipo}_${self.target_section_tipo}_${self.thesaurus_mode}`
+	self.id = 'ts_object_' + key_parts.filter(el => el).join('_')
 
 	// save current instance into the instance cache
 	add_instance(
@@ -1477,14 +1495,18 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 		// only the root parent node needs to be linked to the main node.
 		if(current_node.ts_parent==='root'){
 			// get the main div into the doom
-			main_div = document.querySelector(`.hierarchy_root_node.${current_node.section_tipo}>.children_container`)
-			if (main_div) {
+			const children_container = document.querySelector(`.hierarchy_root_node.${current_node.section_tipo}>.children_container`);
+			if (children_container) {
 
 				// Clean main div (Clean previous nodes from root)
-				while (main_div.firstChild) {
-					main_div.removeChild(main_div.firstChild);
+				while (children_container.firstChild) {
+					children_container.removeChild(children_container.firstChild);
 				}
-				main_div.appendChild(current_node)
+
+				// add node (and all root term children)
+				children_container.appendChild(current_node)
+			}else{
+				console.error('Error finding the children_container');
 			}
 		}else{
 
@@ -1497,6 +1519,30 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 				// add node
 				parent_node.children_container.appendChild(current_node)
+			}
+		}
+	}
+
+	// root node case hilite
+	if (data_length<1 && to_hilite) {
+
+		const to_hilite_length = to_hilite.length
+		for (let i = 0; i < to_hilite_length; i++) {
+
+			const item = to_hilite[i]
+
+			const wrap_ts_node = document.querySelector(`.wrap_ts_object[data-section_tipo="${item.section_tipo}"][data-section_id="${item.section_id}"]`)
+			// find the wrapper term_node pointer
+			const term_node = wrap_ts_node?.term_node
+			if (term_node) {
+				requestAnimationFrame(
+					() => {
+						term_node.classList.add('element_hilite');
+						if (!node_to_scroll) {
+							node_to_scroll = term_node
+						}
+					}
+				);
 			}
 		}
 	}

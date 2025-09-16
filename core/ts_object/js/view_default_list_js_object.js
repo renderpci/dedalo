@@ -22,6 +22,120 @@
 
 
 /**
+* LIST
+* Global render for the ts_object.
+* It created the DOM nodes needed from the instance (wrapper, children_container, etc.)
+* Render a wrapper containing all ts_object item nodes.
+* Before render the instance, you need to load the data using `ts_node.get_children_data()`
+* @param object ts_record
+*/
+export const list = function() {
+
+	const self = this
+
+	// is_root_node
+		const is_root_node = self.is_root_node ?? false
+
+	// is_descriptor
+		const is_descriptor = self.is_descriptor
+
+	// wrapper. ts_object wrapper
+		// root node case do not needs id column, etc.
+		if (is_root_node) {
+			const wrapper = render_root_wrapper(self);
+			self.node = wrapper
+			return self.node
+		}
+		// common case
+		const wrapper = render_wrapper(self)
+
+	// ID COLUMN . id column content
+		const id_column_node = render_id_column({
+			self	: self,
+			wrapper	: wrapper
+		})
+		wrapper.appendChild(id_column_node)
+
+	// ELEMENTS CONTAINER . elements container and ts_line (term, buttons, indexations, etc.)
+		const caller_model_style = self.caller?.model
+			? ' ' + self.caller?.model
+			: ''
+		const elements_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'elements_container' + caller_model_style,
+			data_set		: {role : 'elements_container'},
+			parent			: wrapper
+		})
+		// ts_line_node is rendered at end for performance
+
+	// DATA CONTAINER . elements data container
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'data_container',
+			data_set		: {role : 'data_container'},
+			parent			: wrapper
+		})
+
+	// INDEXATIONS CONTAINER
+		const indexations_container_id = 'u' + self.section_tipo + '_' + self.section_id +'_'+ (new Date()).getTime()
+		ui.create_dom_element({
+			element_type	: 'div',
+			id				: indexations_container_id,
+			class_name		: 'indexations_container hide',
+			parent			: wrapper
+		})
+
+	// ND CONTAINER
+		if ( is_descriptor===true ) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'nd_container hide',
+				data_set		: {role : 'nd_container'},
+				parent			: wrapper
+			})
+		}
+
+	// CHILDREN CONTAINER
+		if ( is_descriptor===true ) {
+			if (self.children_container) {
+				// Use already calculated children_container node
+				wrapper.appendChild(self.children_container)
+			}else{
+				const children_container_class_name = 'children_container js_first_load'
+				const children_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: children_container_class_name,
+					parent			: wrapper
+				})
+				// set pointer
+				self.children_container = children_container
+			}
+		}//end if (is_descriptor===true)
+
+	// LIST_THESAURUS_ELEMENTS > elements_container
+		const ts_line_node = render_ts_line({
+			self						: self,
+			indexations_container_id	: indexations_container_id,
+			show_arrow_opened			: false,
+			is_descriptor				: is_descriptor,
+			wrapper						: wrapper
+		})
+		requestAnimationFrame(
+			() => {
+				elements_container.appendChild(ts_line_node)
+			}
+		);
+
+	// Fix DOM node wrapper
+	self.node = wrapper
+
+
+	return wrapper
+}//end list
+
+
+
+/**
 * RENDER_CHILDREN
 * Get the JSON data from the server. When data is loaded, render DOM element
 * Data is built from parent node info (current object section_tipo and section_id)
@@ -118,7 +232,7 @@ export const render_children = async function(options) {
 * }
 * @return bool
 */
-export const render_children_list = function(options) {
+const render_children_list = async function(options) {
 
 	// options
 		const self			= options.self
@@ -191,7 +305,7 @@ export const render_children_list = function(options) {
 			permissions_indexation		: item.permissions_indexation
 		})
 
-		const node = ts_object_instance.render()
+		const node = await ts_object_instance.render()
 
 		const parent_node = item.is_descriptor
 			? children_container
@@ -216,124 +330,6 @@ export const render_children_list = function(options) {
 
 
 /**
-* RENDER
-* Global render for the ts_object.
-* It created the DOM nodes needed from the instance (wrapper, children_container, etc.)
-* Render a wrapper containing all ts_object item nodes.
-* Before render the instance, you need to load the data using `ts_node.get_children_data()`
-* @param object ts_record
-*/
-export const render = function() {
-
-	const self = this
-
-	// is_root_node
-		const is_root_node = self.is_root_node ?? false
-
-	// is_descriptor
-		const is_descriptor = self.is_descriptor
-
-	// wrapper. ts_object wrapper
-		// root node case do not needs id column, etc.
-		if (is_root_node) {
-			const wrapper = render_root_wrapper(self);
-			self.node = wrapper
-			return self.node
-		}
-		// common case
-		const wrapper = render_wrapper(self)
-
-	// ID COLUMN . id column content
-		const id_column_node = render_id_column({
-			self	: self,
-			wrapper	: wrapper
-		})
-		wrapper.appendChild(id_column_node)
-
-	// ELEMENTS CONTAINER . elements container and ts_line (term, buttons, indexations, etc.)
-		const caller_model_style = self.caller?.model
-			? ' ' + self.caller?.model
-			: ''
-		const elements_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'elements_container' + caller_model_style,
-			data_set		: {role : 'elements_container'},
-			parent			: wrapper
-		})
-		// ts_line_node is rendered at end for performance
-
-	// DATA CONTAINER . elements data container
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'data_container',
-			data_set		: {role : 'data_container'},
-			parent			: wrapper
-		})
-
-	// INDEXATIONS CONTAINER
-		const indexations_container_id = 'u' + self.section_tipo + '_' + self.section_id +'_'+ (new Date()).getTime()
-		ui.create_dom_element({
-			element_type	: 'div',
-			id				: indexations_container_id,
-			class_name		: 'indexations_container hide',
-			parent			: wrapper
-		})
-
-	// ND CONTAINER
-		if ( is_descriptor===true ) {
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'nd_container hide',
-				data_set		: {role : 'nd_container'},
-				parent			: wrapper
-			})
-		}
-
-	// CHILDREN CONTAINER
-		if ( is_descriptor===true ) {
-			if (self.children_container) {
-				// Use already calculated children_container node
-				wrapper.appendChild(self.children_container)
-			}else{
-				const children_container_class_name = 'children_container js_first_load'
-				const children_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: children_container_class_name,
-					data_set		: {
-						role : 'children_container'
-					},
-					parent			: wrapper
-				})
-				// set pointer
-				// wrapper.children_container = children_container
-				self.children_container = children_container
-			}
-		}//end if (is_descriptor===true)
-
-	// LIST_THESAURUS_ELEMENTS > elements_container
-		const ts_line_node = render_ts_line({
-			self						: self,
-			indexations_container_id	: indexations_container_id,
-			show_arrow_opened			: false,
-			is_descriptor				: is_descriptor,
-			wrapper						: wrapper
-		})
-		requestAnimationFrame(
-			() => {
-				elements_container.appendChild(ts_line_node)
-			}
-		);
-
-	// Fix DOM node wrapper
-	self.node = wrapper
-
-
-	return wrapper
-}//end render
-
-
-
-/**
 * RENDER_TS_LINE
 * Render standardized complete ts line with term ans buttons
 * @param object options
@@ -347,7 +343,7 @@ export const render = function() {
 * }
 * @return DocumentFragment fragment
 */
-export const render_ts_line = function(options) {
+const render_ts_line = function(options) {
 
 	// options
 		const self						= options.self
@@ -632,7 +628,7 @@ export const render_ts_line = function(options) {
 * }
 * @return HTMLElement button_show_more
 */
-export const render_ts_pagination = function(options) {
+const render_ts_pagination = function(options) {
 
 	// options
 		const self					= options.self
@@ -1444,15 +1440,14 @@ const render_wrapper = function(self) {
 		const is_descriptor = self.is_descriptor ?? true
 
 	// short vars
-		const section_tipo	= self.section_tipo
-		const section_id	= self.section_id
-		const children_tipo	= self.children_tipo
+		const section_tipo		= self.section_tipo
+		const section_id		= self.section_id
+		// const children_tipo	= self.children_tipo
 
 	// dataset
 		const dataset = {
-			section_id		: section_id,
 			section_tipo	: section_tipo,
-			children_tipo	: children_tipo,
+			section_id		: section_id,
 			id				: self.id
 		}
 
@@ -1463,7 +1458,8 @@ const render_wrapper = function(self) {
 		const wrap_ts_object = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: class_name,
-			data_set		: dataset
+			data_set		: dataset,
+			// id				: self.id
 		})
 		// drag events attach
 		if (is_descriptor===true) {
@@ -1522,16 +1518,15 @@ const render_wrapper = function(self) {
 const render_root_wrapper = function (self) {
 
 	// options
-		const section_tipo			= self.section_tipo
-		const section_id			= self.section_id
-		const children_tipo			= self.children_tipo
+		const section_tipo				= self.section_tipo
+		const section_id				= self.section_id
+		// const children_tipo			= self.children_tipo
 		const target_section_tipo	= self.target_section_tipo
 
 	// dataset
 		const dataset = {
 			section_id		: section_id,
 			section_tipo	: section_tipo,
-			children_tipo	: children_tipo,
 			id				: self.id
 		}
 
@@ -1546,35 +1541,32 @@ const render_root_wrapper = function (self) {
 		const children_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'children_container',
-			dataset			: {
-				role : 'children_container'
-			},
 			parent			: hierarchy_wrapper
 		})
 		// hierarchy_wrapper.children_container = children_container
 		self.children_container = children_container
 
 	// fake items to preserve ts_objec->get_children structure and flow
-		// hierarchy_elements_container
-		const hierarchy_elements_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'hierarchy_elements_container',
-			parent			: hierarchy_wrapper
-		})
-		// link_children button
-		const link_children_element = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'link_children arrow_icon unselectable',
-			parent			: hierarchy_elements_container
-		})
-		// set pointer
-		self.link_children_element = link_children_element
-		// arrow icon
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'ts_object_children_arrow_icon',
-			parent			: link_children_element
-		})
+		// // hierarchy_elements_container
+		// const hierarchy_elements_container = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'hierarchy_elements_container',
+		// 	parent			: hierarchy_wrapper
+		// })
+		// // link_children button
+		// const link_children_element = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'link_children arrow_icon unselectable',
+		// 	parent			: hierarchy_elements_container
+		// })
+		// // set pointer
+		// self.link_children_element = link_children_element
+		// // arrow icon
+		// ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'ts_object_children_arrow_icon',
+		// 	parent			: link_children_element
+		// })
 
 
 	return hierarchy_wrapper
@@ -1594,7 +1586,7 @@ const render_root_wrapper = function (self) {
 * }
 * @return HTMLElement link_children_element
 */
-export const render_link_children = function (options) {
+const render_link_children = function (options) {
 
 	// options
 		const self				= options.self
