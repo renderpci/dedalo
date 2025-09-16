@@ -338,7 +338,11 @@ const get_content_value = (i, current_value, self) => {
 			// open a new window
 				const url				= input_iri.value
 				const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
-				current_window.focus()
+				// Ensure no reverse tabnabbing
+				if (current_window) {
+					current_window.opener = null;
+					current_window.focus()
+				}
 		})
 
 	// transliterate value
@@ -407,12 +411,15 @@ const get_content_value_read = (i, current_value, self) => {
 		})
 
 	// iri
-		ui.create_dom_element({
-			element_type	: 'span',
+		const link = ui.create_dom_element({
+			element_type	: 'a',
+			href			: iri,
 			class_name		: 'iri',
 			inner_html		: iri,
 			parent			: content_value
 		})
+		// safe open
+		link.setAttribute("rel", "noopener noreferrer");
 
 
 	return content_value
