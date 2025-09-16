@@ -12,23 +12,28 @@
 // context
 	$context = [];
 
-	if($options->get_context===true) { //  && $permissions>0
-		switch ($options->context_type) {
-			case 'simple':
-				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
-				break;
+	// if($options->get_context===true) { //  && $permissions>0
+	// 	switch ($options->context_type) {
+	// 		case 'simple':
+	// 			// Component structure context_simple (tipo, relations, properties, etc.)
+	// 			$context[] = $this->get_structure_context_simple($permissions);
+	// 			break;
 
-			default:
-				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions);
+	// 		default:
+	// 			// Component structure context (tipo, relations, properties, etc.)
+	// 				$this->context = $this->get_structure_context($permissions, true);
+	// 				$context[] = $this->context;
+	// 			// add buttons
+	// 				$context = array_merge($context, $this->get_structure_buttons($permissions));
+	// 			break;
+	// 	}
+	// }//end if($options->get_context===true)
 
-				// add buttons
-					$context = array_merge($context, $this->get_structure_buttons($permissions));
-				break;
-		}
-	}//end if($options->get_context===true)
-
+// Component structure context (tipo, relations, properties, etc.)
+	$this->context = $this->get_structure_context($permissions, true);
+	$context[] = $this->context;
+// add buttons
+	$context = array_merge($context, $this->get_structure_buttons($permissions));
 
 
 // data
@@ -47,6 +52,33 @@
 					$value = $this->get_dato();
 					break;
 			}
+
+		// dataframe. If it exists, calculate the subdatum
+			// if ($has_dataframe===true && $mode!=='search') {
+
+				// locators (using value key as section_id)
+					$ar_locator	= [];
+					$safe_value	= !empty($value) ? $value : [];
+					foreach ($safe_value as $current_value) {
+
+						$locator = new locator();
+							$locator->set_section_tipo($this->section_tipo);
+							$locator->set_section_id($current_value->id);
+						$ar_locator[] = $locator;
+					}
+				// subdatum
+					$subdatum = $this->get_subdatum($this->tipo, $ar_locator);
+
+					$ar_subcontext = $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
+
+					$ar_subdata = $subdatum->data;
+					foreach ($ar_subdata as $sub_value) {
+						$data[] = $sub_value;
+					}
+			// }
 
 		// data item
 			$item  = $this->get_data_item($value);
