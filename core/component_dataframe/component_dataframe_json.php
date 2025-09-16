@@ -48,6 +48,7 @@
 
 		$dato = $this->get_dato();
 
+
 		// value
 			switch ($mode) {
 
