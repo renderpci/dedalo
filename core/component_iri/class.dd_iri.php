@@ -58,15 +58,22 @@ class dd_iri extends stdClass {
 	* SET_IRI
 	* Set IRI value with check
 	* Expected format is 'https://my_domain/org/item=1'
-	* @param string $value
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_iri( string $value ) {
+	public function set_iri( ?string $value ) {
 
-		$iri = parse_url($value);
-		if(empty($iri['scheme']) || empty($iri['host'])){
-			throw new Exception("Error Processing Request. Invalid IRI value: $value", 1);
+		if (!empty($value)) {
+			$iri = parse_url($value);
+			if(empty($iri['scheme']) || empty($iri['host'])){
+				debug_log(__METHOD__
+					. " Invalid IRI value " . PHP_EOL
+					. ' value: ' . to_string($value)
+					, logger::ERROR
+				);
+			}
 		}
+
 		$this->iri = $value;
 	}//end set_iri
 
@@ -82,6 +89,19 @@ class dd_iri extends stdClass {
 
 		$this->title = $value;
 	}//end set_title
+
+
+
+	/**
+	* SET_ID
+	* Set the id property of the IRI value element.
+	* The value set is always an integer, but a string is accepted as a parameter.
+	* @param string|int $value
+	*/
+	public function set_id( string|int $value ) {
+
+		$this->id = (int)$value;
+	}//end set_id
 
 
 
