@@ -38,7 +38,17 @@ class dd_iri extends stdClass {
 
 		foreach ($data as $key => $value) {
 			$method = 'set_'.$key;
-			$this->$method($value);
+			if (method_exists($this, $method)) {
+				// Execute the setter
+				$this->$method($value);
+			}else{
+				debug_log(__METHOD__
+					.' Ignored invalid property: "'.$key.'" is not defined as set method.' . PHP_EOL
+					.' key: ' . to_string($key) . PHP_EOL
+					.' value: ' . to_string($value)
+					, logger::ERROR
+				);
+			}
 		}
 	}
 
@@ -46,24 +56,31 @@ class dd_iri extends stdClass {
 
 	/**
 	* SET_IRI
+	* Set IRI value with check
+	* Expected format is 'https://my_domain/org/item=1'
+	* @param string $value
+	* @return void
 	*/
-	public function set_iri($value) {
+	public function set_iri( string $value ) {
 
 		$iri = parse_url($value);
 		if(empty($iri['scheme']) || empty($iri['host'])){
-			throw new Exception("Error Processing Request. Invalid iri: $value", 1);
+			throw new Exception("Error Processing Request. Invalid IRI value: $value", 1);
 		}
-		$this->iri = (string)$value;
+		$this->iri = $value;
 	}//end set_iri
 
 
 
 	/**
 	* SET_TITLE
+	* Set the title or label to show in the web or other places
+	* Expected descriptive string as 'My organization'
+	* @param string $value
 	*/
-	public function set_title($value) {
+	public function set_title( string $value ) {
 
-		$this->title = (string)$value;
+		$this->title = $value;
 	}//end set_title
 
 
