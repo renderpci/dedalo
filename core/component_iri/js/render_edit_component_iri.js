@@ -10,7 +10,7 @@
 	import {view_default_edit_iri} from './view_default_edit_iri.js'
 	import {view_line_edit_iri} from './view_line_edit_iri.js'
 	import {view_mini_iri} from './view_mini_iri.js'
-
+	import {get_dataframe} from '../../component_common/js/component_common.js'
 
 
 /**
@@ -116,6 +116,28 @@ const get_content_value = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value'
+		})
+
+	// dataframe
+
+		get_dataframe({
+			self				: self,
+			section_id			: self.section_id,
+			// section_tipo		: self.section_tipo,
+			// tipo_key			: self.tipo,
+			section_id_key		: current_value.id,
+			section_tipo_key	: self.section_tipo,
+			view				: self.view
+		})
+		.then(async function(component_dataframe){
+
+			if(component_dataframe){
+
+				self.ar_instances.push(component_dataframe)
+				const dataframe_node = await component_dataframe.render()
+				dataframe_node.classList.add('dataframe')
+				content_value.appendChild(dataframe_node)
+			}
 		})
 
 	// title
@@ -433,8 +455,7 @@ export const get_buttons = (self) => {
 					refresh			: true
 				})
 				.then(()=>{
-					// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
-					const input_node = self.node.content_data[changed_data.key].querySelector('input')
+					const input_node = self.node.content_data[changed_data[0].key].querySelector('input')
 					if (input_node) {
 						input_node.focus()
 					}
