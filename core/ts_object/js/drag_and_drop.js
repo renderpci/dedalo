@@ -4,7 +4,7 @@
 // imports
 	import {get_instance_by_id} from '../../common/js/instances.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
-	import {render_children} from './render_ts_object.js'
+	import {render_children} from './view_default_list_js_object.js'
 
 
 
