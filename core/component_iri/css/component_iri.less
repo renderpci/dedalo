@@ -14,11 +14,17 @@
 				display: flex;
 				flex-wrap: wrap;
 
+				&.read_only {
+
+					>.iri {
+						padding-left: 0.5rem;
+					}
+				}
+
 				// input  (text title/url)
 				.input_value {
 					// width: calc(20% - 0.5rem);
 					padding-right: 0.5rem;
-
 
 					&.title {
 						width: calc(17% - 0.5rem);
@@ -44,6 +50,7 @@
 
 
 				}
+
 				.dataframe {
 					width: calc(20% - 0.5rem);
 					padding-right: 0.5rem;

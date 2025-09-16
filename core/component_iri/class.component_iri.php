@@ -85,9 +85,9 @@ class component_iri extends component_common {
 					);
 				}
 				if (is_string($dato)) {
-					$object = new stdClass();
-						$object->iri = $dato;
-					$dato = [$object];
+					$dd_iri = new dd_iri();
+						$dd_iri->set_iri($dato);
+					$dato = [$dd_iri];
 					$this->set_dato($dato);
 					$this->Save();
 				}
@@ -135,10 +135,10 @@ class component_iri extends component_common {
 					$counter = $this->get_counter();
 					$counter++;
 					$id = $counter;
-					$object = new stdClass();
-						$object->iri = $value;
-						$object->id = $id;
-					$dato[$key] = $object;
+					$dd_iri = new dd_iri();
+						$dd_iri->set_iri($value);
+						$dd_iri->set_id($id);
+					$dato[$key] = $dd_iri;
 					// set the new counter as the id (previous counter + 1)
 					$this->set_counter( $id );
 				}
@@ -423,27 +423,51 @@ class component_iri extends component_common {
 	*	$response->result = 0; // the component don't have the function "update_dato_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
+	* 	$response->new_dato = mixed; // new dato when result is 1
+	* 	$response->msg = string; // status message
 	*/
 	public static function update_dato_version(object $options) : object {
+
+		// Validate options structure
+		if (!isset($options->update_version)) {
+			throw new InvalidArgumentException("Missing required option: update_version");
+		}
 
 		// options
 			$update_version	= $options->update_version ?? null;
 			$dato_unchanged	= $options->dato_unchanged ?? null;
-			$reference_id	= $options->reference_id ?? null;
+			$reference_id	= $options->reference_id ?? '';
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
 			$section_tipo	= $options->section_tipo ?? null;
 			$context		= $options->context ?? 'update_component_dato';
 
-		$update_version = implode(".", $update_version);
-		switch ($update_version) {
+		// model. Expected 'component_iri'
+		$model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+
+		// Response
+		$response = new stdClass();
+
+		// Safe version_string
+		$version_string = '';
+		if (is_array($update_version)) {
+			$version_string = implode('.', $update_version);
+		} elseif (is_string($update_version)) {
+			$version_string = $update_version;
+		} else {
+			$response->result = 0;
+			$response->msg = "Invalid update_version format";
+			return $response;
+		}
+
+		switch ($version_string) {
 
 			case '6.8.0':
 
-			// Update the locator to move old ds and dataframe to v6 dataframe model.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
 
-					$model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+					// Update the locator to move old ds and dataframe to v6 dataframe model.
+
 					$component = component_common::get_instance(
 						$model, // string model
 						$tipo, // string tipo
@@ -454,38 +478,43 @@ class component_iri extends component_common {
 					);
 
 					$new_data = [];
-					foreach ( (array)$dato_unchanged as $current_data) {
+					foreach ($dato_unchanged as $current_data) {
+
 						// Clone the current data so as not to touch the originals.
 						$iri_data = json_decode(json_encode( $current_data ));
 
-						// set the id to the data
-						if(!isset($iri_data->id)){
+						// Set the id to the data if not already exists
+						if( !isset($iri_data->id)) {
+							// Get the current value of the current component counter
 							$counter = $component->get_counter();
+							// Add 1 to use it as new id
 							$counter++;
 							$id = $counter;
+							// Set new counter value as id
 							$iri_data->id = $id;
+							// Update current component counter
 							$component->set_counter( $id );
 						}
+
 						$new_data[] = $iri_data;
+					}
 
-					}//end foreach
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_data;
-						$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_data).".<br />";
-
+					$response->result	= 1;
+					$response->new_dato	= $new_data;
+					$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_data).".<br />";
 				}else{
 
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+					// empty data case
+
+					$response->result	= 2;
+					$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
 				break;
+
 			default:
-				$response = new stdClass();
-					$response->result	= 0;
-					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
+
+				$response->result	= 0;
+				$response->msg		= "This component '$model' don't have update to this version ($version_string). Ignored action";
 				break;
 		}
 

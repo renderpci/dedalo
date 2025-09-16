@@ -318,19 +318,6 @@ const get_content_value = (i, current_value, self) => {
 					// force possible input change before remove
 					document.activeElement.blur()
 
-
-					// remove dataframe
-						// delete_dataframe_record
-						delete_dataframe({
-							self				: self,
-							section_id			: self.section_id,
-							section_tipo		: self.section_tipo,
-							section_id_key		: current_value.id,
-							section_tipo_key	: self.section_tipo,
-							paginated_key		: false,
-							row_key				: false
-						})
-
 					const changed_data = [Object.freeze({
 						action	: 'remove',
 						key		: i,
@@ -342,6 +329,17 @@ const get_content_value = (i, current_value, self) => {
 						refresh			: true
 					})
 
+					// remove dataframe
+					// delete_dataframe_record
+					delete_dataframe({
+						self				: self,
+						section_id			: self.section_id,
+						section_tipo		: self.section_tipo,
+						section_id_key		: current_value.id,
+						section_tipo_key	: self.section_tipo,
+						paginated_key		: false,
+						row_key				: false
+					})
 				})
 
 			// button link
@@ -355,10 +353,14 @@ const get_content_value = (i, current_value, self) => {
 					e.stopPropagation()
 					e.preventDefault()
 
-					// open a new window
-						const url				= input_iri.value
-						const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
+				// open a new window
+					const url				= input_iri.value
+					const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
+					// Ensure no reverse tabnabbing
+					if (current_window) {
+						current_window.opener = null;
 						current_window.focus()
+					}
 				})
 
 			// transliterate value
@@ -428,12 +430,15 @@ const get_content_value_read = (i, current_value, self) => {
 		})
 
 	// iri
-		ui.create_dom_element({
-			element_type	: 'span',
+		const link = ui.create_dom_element({
+			element_type	: 'a',
+			href			: iri,
 			class_name		: 'iri',
 			inner_html		: iri,
 			parent			: content_value
 		})
+		// safe open
+		link.setAttribute("rel", "noopener noreferrer");
 
 
 	return content_value
