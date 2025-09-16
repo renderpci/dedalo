@@ -147,6 +147,7 @@ export const ui = {
 				const label					= instance.label // instance.context.label
 				const ontology_css			= instance.context.css || null // Ontology CSS
 				const state_of_component	= instance.context.properties?.state_of_component || null
+				const show_label			= instance.show_interface.label
 
 			// options
 				const add_styles = options.add_styles || null
@@ -218,7 +219,7 @@ export const ui = {
 					wrapper.addEventListener('mousedown', mousedown_handler)
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
-				if (options.label===null) {
+				if (options.label===null || show_label===false) {
 					// no label add (line view cases for example)
 				}else if(options.label) {
 					// add custom label node
