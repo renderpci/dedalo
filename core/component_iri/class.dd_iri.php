@@ -2,19 +2,19 @@
 /**
 * CLASS DD_IRI
 *
+* 	DTO that defines each compoent_iri value schema and validation.
+*
 *	Format:
-*	[
-*	  {
-*	    "iri": "http://www.render.es/dedalo",
-*	    "title": "dedalo"
-*	   }
-*	]
-*	$iri->iri	= (string)$iri; //mandatory
-*	$iri->title	= (string)$title; //aditional no mandatory
+*	{
+*		"iri": "https://dedalo.dev",
+*		"title": "dedalo"
+*	}
+*	$iri->iri	= (string) $iri; // mandatory
+*	$iri->title	= (string) $title; // additional no mandatory
 *
 *	(!) Note that properties can exists or not (are created on the fly).
 * 	The resulting object contains only the properties assigned to it and IRI object can be empty or partially set.
-*	For example, one link with title have only $iri property
+*	For example, one link without title ,have only $iri property
 */
 class dd_iri extends stdClass {
 
@@ -32,7 +32,9 @@ class dd_iri extends stdClass {
 	*/
 	public function __construct( ?object $data=null ) {
 
-		if (is_null($data)) return;
+		if (empty($data)) {
+			return;
+		}
 
 		foreach ($data as $key => $value) {
 			$method = 'set_'.$key;
@@ -70,16 +72,16 @@ class dd_iri extends stdClass {
 	* SET_IRI_FROM_URL_PARTS
 	* @param object $url_parts
 	*/
-	public function set_iri_from_url_parts(object $url_parts) {
+	public function set_iri_from_url_parts( object $url_parts ) {
 
-		$scheme		= $url_parts->scheme;//mandatory
-		$host		= $url_parts->host;//mandatory
-		$port		= isset($url_parts->port) ? $url_parts->port :null;//optional
-		$user		= isset($url_parts->user) ? $url_parts->user :null;//optional
-		$pass		= isset($url_parts->pass) ? $url_parts->pass :null;//optional
-		$path		= isset($url_parts->path) ? $url_parts->path :null;//optional
-		$query		= isset($url_parts->query) ? $url_parts->query :null;//optional
-		$fragment	= isset($url_parts->fragment) ? $url_parts->fragment :null;//optional
+		$scheme		= $url_parts->scheme; //mandatory
+		$host		= $url_parts->host; //mandatory
+		$port		= $url_parts->port ?? null; //optional
+		$user		= $url_parts->user ?? null; //optional
+		$pass		= $url_parts->pass ?? null; //optional
+		$path		= $url_parts->path ?? null; //optional
+		$query		= $url_parts->query ?? null; //optional
+		$fragment	= $url_parts->fragment ?? null; //optional
 
 		if(empty($scheme) || empty($host)){
 			throw new Exception("Error Processing Request. Invalid url_parts: ".to_string($url_parts), 1);

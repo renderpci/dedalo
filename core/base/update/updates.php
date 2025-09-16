@@ -34,6 +34,7 @@ global $updates;
 $updates = new stdClass();
 
 
+
 $v=680; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -63,7 +64,8 @@ $updates->$v = new stdClass();
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
 			'component_iri'
-		];	// Force convert from string to array
+		];
+
 
 
 $v=674; #####################################################################################
