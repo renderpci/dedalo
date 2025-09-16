@@ -475,7 +475,6 @@ class area_thesaurus extends area_common {
 				}
 			}
 
-
 		// total_records count
 			$total_records = count($ar_records);
 

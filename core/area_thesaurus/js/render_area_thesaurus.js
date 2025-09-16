@@ -69,15 +69,15 @@ render_area_thesaurus.prototype.list = async function(options) {
 					// }
 
 				// render. parse_search_result with ts_object
-					dd_request_idle_callback(
-						() => {
-							ts_object.parse_search_result(
-								data.ts_search.result, // object data
-								data.ts_search.found, // to hilite
-								null, // HTMLElement main_div
-								false // bool is_recursion
-							)
-						}
+					const ts_object_instance = new ts_object()
+					await ts_object_instance.init({
+						caller : self
+					})
+					await ts_object_instance.parse_search_result(
+						data.ts_search.result, // object data
+						data.ts_search.found, // to hilite
+						null, // HTMLElement main_div
+						false // bool is_recursion
 					)
 
 				return content_data
@@ -124,7 +124,11 @@ render_area_thesaurus.prototype.list = async function(options) {
 		if (data.ts_search) {
 			const render_handler = () => {
 				dd_request_idle_callback(
-					() => {
+					async () => {
+						const ts_object_instance = new ts_object()
+						await ts_object_instance.init({
+							caller : self
+						})
 						ts_object.parse_search_result(
 							data.ts_search.result,
 							data.ts_search.found, // to hilite
@@ -289,6 +293,7 @@ const render_content_data = function(self) {
 						continue;
 					}
 
+					// ts_object_instance
 					const ts_object_instance = new ts_object()
 					ts_object_instance.init({
 						thesaurus_mode		: self.context?.thesaurus_mode || null,
@@ -301,10 +306,10 @@ const render_content_data = function(self) {
 						is_root_node		: true,
 						is_descriptor		: true
 					})
-					.then(function(){
+					.then(async function(){
 
 						// hierarchy_wrapper node
-							const hierarchy_wrapper = ts_object_instance.render()
+							const hierarchy_wrapper = await ts_object_instance.render()
 							typology_container.appendChild(hierarchy_wrapper)
 
 						// loading
@@ -317,8 +322,8 @@ const render_content_data = function(self) {
 
 						// children_data - render_children_data from API
 							ts_object_instance.get_children_data({
-								pagination		: null,
-								children		: root_terms
+								pagination	: null,
+								children	: root_terms
 							})
 							.then(function(){
 								// ts_object: render element children
