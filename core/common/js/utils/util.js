@@ -890,4 +890,26 @@ export const get_section_id_from_tipo = function (tipo) {
 
 
 
+/**
+* GET_CALLER_BY_MODEL
+* Find the caller instance of the given model
+* e.g. section caller of the component
+* @param object instance
+* @param string model
+* @return object|null instance
+*/
+export const get_caller_by_model = function(instance, model){
+
+	while (instance.caller) {
+		if(instance.model === model){
+			return instance
+		}
+		instance = instance.caller
+	}
+
+	return null
+}//end get_caller_by_model
+
+
+
 // @license-end

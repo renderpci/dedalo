@@ -3728,7 +3728,18 @@ abstract class component_common extends common {
 				//dataframe
 					$dataframe_ddo = $this->get_dataframe_ddo();
 					if(!empty($dataframe_ddo) && $changed_data->key!==false ){
-						$this->remove_dataframe_data( $dato[$key] );
+						// set the locator with the data of the component
+						// when the component is a relation pick the correct locator
+						$locator = $dato[$key];
+						// if the caller is a literal as component_iri
+						// build a new locator with the id of the component data and its own section_tipo
+						if( get_called_class() === 'component_iri'){
+							$locator = new locator();
+								$locator->set_section_tipo($this->section_tipo);
+								$locator->set_section_id($dato[$key]->id);
+						}
+						// remove the dataframe data
+						$this->remove_dataframe_data( $locator );
 					}
 
 				switch (true) {
