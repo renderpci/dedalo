@@ -119,6 +119,57 @@ final class component_iri_test extends TestCase {
 			'expected [] : ' . PHP_EOL
 				. to_string($component->dato)
 		);
+
+		// dd_iri
+		$iri	= 'https://dedalo.dev';
+		$id		= 2;
+		$title	= 'Dédalo site';
+		$dd_iri = new dd_iri();
+			$dd_iri->set_iri($iri);
+			$dd_iri->set_id($id);
+			$dd_iri->set_title($title);
+
+		$this->assertTrue(
+			gettype($dd_iri)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($dd_iri)
+		);
+
+		$this->assertTrue(
+			get_class($dd_iri)==='dd_iri',
+			'expected class dd_iri : ' . PHP_EOL
+				. gettype($dd_iri)
+		);
+
+		$this->assertTrue(
+			$dd_iri->iri === $iri,
+			'expected: ' . $iri . PHP_EOL
+				. to_string($dd_iri->iri)
+		);
+
+		$this->assertTrue(
+			gettype($dd_iri->id)==='integer',
+			'expected type integer : ' . PHP_EOL
+				. gettype($dd_iri->id)
+		);
+
+		$this->assertTrue(
+			$dd_iri->id === $id,
+			'expected: ' . $id . PHP_EOL
+				. to_string($dd_iri->id)
+		);
+
+		$this->assertTrue(
+			gettype($dd_iri->title)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($dd_iri)
+		);
+
+		$this->assertTrue(
+			$dd_iri->title===$title,
+			'expected : ' . $title . PHP_EOL
+				. $dd_iri->title
+		);
 	}//end test_set_dato
 
 
