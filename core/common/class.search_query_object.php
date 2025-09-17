@@ -1,65 +1,66 @@
 <?php declare(strict_types=1);
-/*
+/**
 * SEARCH QUERY OBJECT (SQO)
-* Defines object with normalized properties and checks.
-* SQO or Search Query Object definition is based on
-* Mango Query (A MongoDB inspired query language interface for Apache CouchDB)
-
-
-	// FORMAT
-		id						: 'oh1'		// optional. section_tipo and other params to define the unique id
-		section_tipo			: ['oh1']	// array of section_tipo for search
-		mode					: ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB
-		filter					: {
-									operator : // string ('$and' || '$or')
-										[{
-											q 			: '2'	// string to search
-											q_opeator	: '<'	// string || null
-											path		: [{	// array of components creating a sequential path
-												section_tipo
-												component_tipo
-											}]
-											format : 'direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function' // string, use to change the WHERE format
-											use_function : 'relations_flat_fct_st_si' // if format is function use_function define the PostgreSQL function to be used.
-											q_split : true || false // bool, define if the q need to be split into multiple WHERE queries
-											unaccent : true || false // bool, define if the q will us the unaccent function in WHERE
-											type : 'jsonb' || 'string' // define the type of data to be searched
-											lang : string || null  // defines if the search will be lang selective. If not defined lang = all langs, if defined lang = the lang sent as `lg-eng
-										}]
-								  } || null
-		select					: [{	// array of objects optional
-									section_tipo
-									component_tipo
-								  }]
-		limit					: 1 // int
-		offset					: 2 // int
-		total                   : (null || int ) // by default total is null to be calculate, when int is set the sqo don't count and return his value
-		full_count				: (true || false || 4) // boolean or int (int disable the function for full count and get the number as total)
-		group_by 				: ['section_tipo'] // array with the columns or components (used to count values)
-		order					: [{
-										direction 	: (ASC || DESC) // string
-										path		: [{
+*
+*	DTO that defines an search query object with normalized schema properties and validation.
+*
+* 	SQO or Search Query Object definition is based on
+* 	Mango Query (A MongoDB inspired query language interface for Apache CouchDB)
+*
+*
+* // FORMAT
+	id						: 'oh1'		// optional. section_tipo and other params to define the unique id
+	section_tipo			: ['oh1']	// array of section_tipo for search
+	mode					: ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB
+	filter					: {
+								operator : // string ('$and' || '$or')
+									[{
+										q 			: '2'	// string to search
+										q_opeator	: '<'	// string || null
+										path		: [{	// array of components creating a sequential path
 											section_tipo
 											component_tipo
 										}]
-								  }]
-		order_custom 			: {
-									column_name : [values]
-								  }
-		filter_by_locators		: [{
+										format : 'direct' || 'array_elements' || 'typeof' || 'column' || 'in_column' || 'function' // string, use to change the WHERE format
+										use_function : 'relations_flat_fct_st_si' // if format is function use_function define the PostgreSQL function to be used.
+										q_split : true || false // bool, define if the q need to be split into multiple WHERE queries
+										unaccent : true || false // bool, define if the q will us the unaccent function in WHERE
+										type : 'jsonb' || 'string' // define the type of data to be searched
+										lang : string || null  // defines if the search will be lang selective. If not defined lang = all langs, if defined lang = the lang sent as `lg-eng
+									}]
+							  } || null
+	select					: [{	// array of objects optional
+								section_tipo
+								component_tipo
+							  }]
+	limit					: 1 // int
+	offset					: 2 // int
+	total                   : (null || int ) // by default total is null to be calculate, when int is set the sqo don't count and return his value
+	full_count				: (true || false || 4) // boolean or int (int disable the function for full count and get the number as total)
+	group_by 				: ['section_tipo'] // array with the columns or components (used to count values)
+	order					: [{
+									direction 	: (ASC || DESC) // string
+									path		: [{
 										section_tipo
 										component_tipo
-								  }]
-		filter_by_locators_op 	: (OR || AND)
-		allow_sub_select_by_id	: (true || false)
-		children_recursive 		: (true || false)
-		remove_distinct			: (true || false)
-		skip_projects_filter	: (true || false)
-		parsed					: (true || false) // boolean, state of the sqo
-		breakdown				: (true || false)
-
+									}]
+							  }]
+	order_custom 			: {
+								column_name : [values]
+							  }
+	filter_by_locators		: [{
+									section_tipo
+									component_tipo
+							  }]
+	filter_by_locators_op 	: (OR || AND)
+	allow_sub_select_by_id	: (true || false)
+	children_recursive 		: (true || false)
+	remove_distinct			: (true || false)
+	skip_projects_filter	: (true || false)
+	parsed					: (true || false) // boolean, state of the sqo
+	breakdown				: (true || false)
 */
-class search_query_object {
+class search_query_object extends stdClass {
 
 
 
