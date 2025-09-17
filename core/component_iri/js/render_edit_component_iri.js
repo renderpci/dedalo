@@ -11,7 +11,7 @@
 	import {view_line_edit_iri} from './view_line_edit_iri.js'
 	import {view_mini_iri} from './view_mini_iri.js'
 	import {get_dataframe} from '../../component_common/js/component_common.js'
-
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 
 /**
 * RENDER_EDIT_COMPONENT_IRI
@@ -83,6 +83,7 @@ export const get_content_data = function(self) {
 			const content_value_node = (self.permissions===1)
 				? get_content_value_read(i, current_value, self)
 				: get_content_value(i, current_value, self)
+
 			content_data.appendChild(content_value_node)
 			// set pointers
 			content_data[i] = content_value_node
@@ -118,9 +119,13 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'content_value'
 		})
 
-	// dataframe
+	// If the value is empty, return the empty node
+		if(Object.keys(current_value).length === 0){
+			return content_value;
+		}
 
-		get_dataframe({
+	// dataframe
+		const component_dataframe = get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
 			// section_tipo		: self.section_tipo,
@@ -131,247 +136,261 @@ const get_content_value = (i, current_value, self) => {
 		})
 		.then(async function(component_dataframe){
 
-			if(component_dataframe){
+			// dataframe
+				// set the component_dataframe
+				// is mandatory use it
+				if(component_dataframe){
+					self.ar_instances.push(component_dataframe)
+					const dataframe_node = await component_dataframe.render()
+					dataframe_node.classList.add('dataframe')
+					content_value.appendChild(dataframe_node)
+				}
 
-				self.ar_instances.push(component_dataframe)
-				const dataframe_node = await component_dataframe.render()
-				dataframe_node.classList.add('dataframe')
-				content_value.appendChild(dataframe_node)
-			}
-		})
+			// title
+				const use_title = typeof(self.context.properties.use_title) !== 'undefined'
+					? self.context.properties.use_title
+					: true
+				if(use_title){
+					// placeholder. Strip label HTML tags
+						const placeholder_label = mode.indexOf('edit')!==-1
+							? (get_label.title || 'Title')
+							: null
+						const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
 
-	// title
-		const use_title = typeof(self.context.properties.use_title) !== 'undefined'
-			? self.context.properties.use_title
-			: true
-		if(use_title){
-			// placeholder. Strip label HTML tags
-				const placeholder_label = mode.indexOf('edit')!==-1
-					? (get_label.title || 'Title')
-					: null
-				const placeholder_text = placeholder_label ? strip_tags(placeholder_label) : null
+					// input title field
+						const input_title = ui.create_dom_element({
+							element_type	: 'input',
+							type			: 'text',
+							class_name		: 'input_value title',
+							placeholder		: placeholder_text,
+							value			: title,
+							parent			: content_value
+						})
+						// change event
+						const change_title_handler = (e) => {
+							// update_value(self, i, current_value)
+							current_value.title = input_title.value
+							self.change_handler(i, current_value)
+						}
+						input_title.addEventListener('change', change_title_handler)
+						// focus event
+							input_title.addEventListener('focus', function() {
+								// force activate on input focus (tabulating case)
+								if (!self.active) {
+									ui.component.activate(self, false)
+								}
+							})
+						// click event
+							input_title.addEventListener('click', function(e) {
+								e.stopPropagation()
+							})
+						// click event
+							input_title.addEventListener('mousedown', function(e) {
+								e.stopPropagation()
+							})
+						// keyup event
+							const input_title_keyup_handler = (e) => {
+								if(e.key === 'Enter'){
+									input_iri.focus()
+									return false
+								}
+							}
+							input_title.addEventListener('keyup', input_title_keyup_handler)
+				}// end if(use_title)
 
-			// input title field
-				const input_title = ui.create_dom_element({
+			// IRI input field
+				// const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
+				const input_iri = ui.create_dom_element({
 					element_type	: 'input',
-					type			: 'text',
-					class_name		: 'input_value title',
-					placeholder		: placeholder_text,
-					value			: title,
+					type			: 'url',
+					class_name		: 'input_value url',
+					placeholder		: 'http://',
+					value			: iri,
 					parent			: content_value
 				})
 				// change event
-				const change_title_handler = (e) => {
-					// update_value(self, i, current_value)
-					current_value.title = input_title.value
-					self.change_handler(i, current_value)
-				}
-				input_title.addEventListener('change', change_title_handler)
+					const change_iri_handler = (e) => {
+						// check if the new value is valid
+						// only uris with protocol (http || https) and valid domain are validated
+						const valid_value = self.check_iri_value( input_iri.value )
+						// if the value is not valid stop the change and show error style
+						if( !valid_value ){
+							input_iri.classList.add('error')
+							return false
+						}
+
+						// clean error class if exists
+						// if the new value is valid, remove previous error style
+							if (input_iri.classList.contains('error')) {
+								input_iri.classList.remove('error')
+							}
+
+						// update property iri
+							current_value.iri = input_iri.value
+
+						// update_value(self, i, current_value)
+							self.change_handler(i, current_value)
+
+					}//end keyup
+					input_iri.addEventListener('change', change_iri_handler)
+
 				// focus event
-					input_title.addEventListener('focus', function() {
+					input_iri.addEventListener('focus', function() {
 						// force activate on input focus (tabulating case)
 						if (!self.active) {
 							ui.component.activate(self, false)
 						}
 					})
-				// click event
-					input_title.addEventListener('click', function(e) {
-						e.stopPropagation()
-					})
-				// click event
-					input_title.addEventListener('mousedown', function(e) {
-						e.stopPropagation()
-					})
 				// keyup event
-					const input_title_keyup_handler = (e) => {
-						if(e.key === 'Enter'){
-							input_iri.focus()
+					const input_iri_keyup_handler = (e) => {
+						// Enter key force to dispatchEvent change
+						if ( e.key === 'Enter' && self.data.changed_data?.length ) {
+							input_iri.dispatchEvent(new Event('change'))
+							self.save()
 							return false
 						}
 					}
-					input_title.addEventListener('keyup', input_title_keyup_handler)
-		}// end if(use_title)
+					input_iri.addEventListener('keyup', input_iri_keyup_handler)
 
-	// IRI input field
-		// const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
-		const input_iri = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'url',
-			class_name		: 'input_value url',
-			placeholder		: 'http://',
-			value			: iri,
-			parent			: content_value
-		})
-		// change event
-			const change_iri_handler = (e) => {
-				// check if the new value is valid
-				// only uris with protocol (http || https) and valid domain are validated
-				const valid_value = self.check_iri_value( input_iri.value )
-				// if the value is not valid stop the change and show error style
-				if( !valid_value ){
-					input_iri.classList.add('error')
-					return false
-				}
+			// active
+				const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
+					? self.context.properties.use_active_check
+					: false
+				if(use_active_check){
 
-				// clean error class if exists
-				// if the new value is valid, remove previous error style
-					if (input_iri.classList.contains('error')) {
-						input_iri.classList.remove('error')
-					}
+					const dataframe_data = current_value.dataframe
+						? true
+						: false
 
-				// update property iri
-					current_value.iri = input_iri.value
-
-				// update_value(self, i, current_value)
-					self.change_handler(i, current_value)
-
-			}//end keyup
-			input_iri.addEventListener('change', change_iri_handler)
-
-		// focus event
-			input_iri.addEventListener('focus', function() {
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self, false)
-				}
-			})
-		// keyup event
-			const input_iri_keyup_handler = (e) => {
-				// Enter key force to dispatchEvent change
-				if ( e.key === 'Enter' && self.data.changed_data?.length ) {
-					input_iri.dispatchEvent(new Event('change'))
-					self.save()
-					return false
-				}
-			}
-			input_iri.addEventListener('keyup', input_iri_keyup_handler)
-
-	// active
-		const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
-			? self.context.properties.use_active_check
-			: false
-		if(use_active_check){
-
-			const dataframe_data = current_value.dataframe
-				? true
-				: false
-
-			const input_iri_active = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'checkbox',
-				class_name		: 'input_iri_active',
-				parent			: content_value
-			})
-			input_iri_active.checked = dataframe_data
-			input_iri_active.addEventListener('change', fn_chnage)
-			async function fn_chnage(e){
-
-				// add style modified to wrapper node
-					if (!self.node.classList.contains('modified')) {
-						self.node.classList.add('modified')
-					}
-
-				// checked set for dataframe
-					current_value.dataframe = input_iri_active.checked
-
-				// set_changed_data
-					const changed_data_item = Object.freeze({
-						action	: 'update',
-						key		: i,
-						value	: current_value
+					const input_iri_active = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'checkbox',
+						class_name		: 'input_iri_active',
+						parent			: content_value
 					})
-					// fix instance changed_data
-					await self.set_changed_data(changed_data_item)
+					input_iri_active.checked = dataframe_data
+					input_iri_active.addEventListener('change', fn_chnage)
+					async function fn_chnage(e){
 
-				// force to save on every change
-					const changed_data = self.data.changed_data || []
+						// add style modified to wrapper node
+							if (!self.node.classList.contains('modified')) {
+								self.node.classList.add('modified')
+							}
+
+						// checked set for dataframe
+							current_value.dataframe = input_iri_active.checked
+
+						// set_changed_data
+							const changed_data_item = Object.freeze({
+								action	: 'update',
+								key		: i,
+								value	: current_value
+							})
+							// fix instance changed_data
+							await self.set_changed_data(changed_data_item)
+
+						// force to save on every change
+							const changed_data = self.data.changed_data || []
+							self.change_value({
+								changed_data	: changed_data,
+								refresh			: false
+							})
+					}//end change event
+				}
+
+				const active_check_class = (use_active_check) ? 'active_check' : ''
+
+			// button remove
+				const button_remove = ui.create_dom_element({
+					element_type	: 'span',
+					title			: get_label.delete || 'Delete',
+					class_name		: 'button remove hidden_button '+ active_check_class,
+					parent			: content_value
+				})
+				button_remove.addEventListener('mousedown', function(e) {
+					e.stopPropagation()
+					e.preventDefault()
+
+					if (!confirm(get_label.sure || 'Sure?')) {
+						return
+					}
+
+					// force possible input change before remove
+					document.activeElement.blur()
+
+					const changed_data = [Object.freeze({
+						action	: 'remove',
+						key		: i,
+						value	: null
+					})]
 					self.change_value({
 						changed_data	: changed_data,
-						refresh			: false
+						label			: button_remove.previousElementSibling.value,
+						refresh			: true
 					})
-			}//end change event
-		}
 
-		const active_check_class = (use_active_check) ? 'active_check' : ''
+					// remove dataframe
+					// delete_dataframe_record
+					delete_dataframe({
+						self				: self,
+						section_id			: self.section_id,
+						section_tipo		: self.section_tipo,
+						section_id_key		: current_value.id,
+						section_tipo_key	: self.section_tipo,
+						paginated_key		: false,
+						row_key				: false
+					})
+				})
 
-	// button remove
-		const button_remove = ui.create_dom_element({
-			element_type	: 'span',
-			title			: get_label.delete || 'Delete',
-			class_name		: 'button remove hidden_button '+ active_check_class,
-			parent			: content_value
-		})
-		button_remove.addEventListener('mousedown', function(e) {
-			e.stopPropagation()
-			e.preventDefault()
+			// button link
+				const button_link = ui.create_dom_element({
+					element_type	: 'span',
+					title			: get_label.vincular_recurso || 'Link resource',
+					class_name		: 'button link hidden_button '+ active_check_class,
+					parent			: content_value
+				})
+				button_link.addEventListener('mousedown', function(e) {
+					e.stopPropagation()
+					e.preventDefault()
 
-			if (!confirm(get_label.sure || 'Sure?')) {
-				return
-			}
+				// open a new window
+					const url				= input_iri.value
+					const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
+					// Ensure no reverse tabnabbing
+					if (current_window) {
+						current_window.opener = null;
+						current_window.focus()
+					}
+				})
 
-			// force possible input change before remove
-			document.activeElement.blur()
+			// transliterate value
+				if(self.data.transliterate_value) {
 
-			const changed_data = [Object.freeze({
-				action	: 'remove',
-				key		: i,
-				value	: null
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				label			: button_remove.previousElementSibling.value,
-				refresh			: true
-			})
-		})
+					const transliterate_value = self.data.transliterate_value[0] || {}
 
-	// button link
-		const button_link = ui.create_dom_element({
-			element_type	: 'span',
-			title			: get_label.vincular_recurso || 'Link resource',
-			class_name		: 'button link hidden_button '+ active_check_class,
-			parent			: content_value
-		})
-		button_link.addEventListener('mousedown', function(e) {
-			e.stopPropagation()
-			e.preventDefault()
-
-			// open a new window
-				const url				= input_iri.value
-				const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
-				// Ensure no reverse tabnabbing
-				if (current_window) {
-					current_window.opener = null;
-					current_window.focus()
+					const transliterate_value_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'transliterate_value',
+						parent			: content_value
+					})
+					// title
+						const title_text = transliterate_value.title || ''
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'title',
+							inner_html		: title_text,
+							parent			: transliterate_value_container
+						})
+					// IRI
+						const iri_text = transliterate_value.iri || ''
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'iri',
+							inner_html		: iri_text,
+							parent			: transliterate_value_container
+						})
 				}
-		})
-
-	// transliterate value
-		if(self.data.transliterate_value) {
-
-			const transliterate_value = self.data.transliterate_value[0] || {}
-
-			const transliterate_value_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'transliterate_value',
-				parent			: content_value
-			})
-			// title
-				const title_text = transliterate_value.title || ''
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'title',
-					inner_html		: title_text,
-					parent			: transliterate_value_container
-				})
-			// IRI
-				const iri_text = transliterate_value.iri || ''
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'iri',
-					inner_html		: iri_text,
-					parent			: transliterate_value_container
-				})
-		}
+		})// end .then
 
 
 	return content_value
@@ -454,7 +473,7 @@ export const get_buttons = (self) => {
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: self.data.value.length,
+					key		: self.data.value?.length || 0,
 					value	: null
 				})]
 				self.change_value({

@@ -274,9 +274,9 @@ class component_dataframe extends component_portal {
 	/**
 	* GET_MAIN_COMPONENT_DATA
 	* Create the main component and return its data
-	* @return array $main_componenet_data
+	* @return array|null $main_componenet_data
 	*/
-	public function get_main_component_data() : array {
+	public function get_main_component_data() : ?array {
 
 		$main_component_tipo = $this->get_main_component_tipo();
 
