@@ -56,7 +56,7 @@ $updates->$v = new stdClass();
 		$alert->command .= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
 			<p>
-			<strong>This update will get the title values of your component_iri and create new unification list with this values.</strong>
+			<strong>This update will get the title values of your component_iri and create a new unification list with this values.</strong>
 			</p>
 		";
 		$updates->$v->alert_update[] = $alert;

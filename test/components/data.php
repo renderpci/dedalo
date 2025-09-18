@@ -227,7 +227,6 @@ function random_email() {
 
 
 function random_filter_records() {
-
 	// randomly generated N = 40 length array 0 <= A[N] <= 39
 	$value = array_map(function () {
 		return mt_rand(0, 39);
@@ -265,8 +264,9 @@ function random_geolocation() {
 
 function random_iri_data() {
 	$result = (object)[
-		"iri"	=> "https://www." . random_string(64) . '-' . random_string(50) .  '.' . random_string(3),
-		"title"	=> random_string(128)
+		'iri'	=> "https://www." . random_string(64) . '-' . random_string(50) .  '.' . random_string(3),
+		'title'	=> random_string(128),
+		'id'	=> random_number(15)
 	];
 	return [$result];
 }

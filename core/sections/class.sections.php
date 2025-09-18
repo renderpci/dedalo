@@ -417,6 +417,18 @@ class sections extends common {
 							);
 						}
 					}
+
+				// delete Ontology case (jer_dd record).
+				// If current section is a Ontology section (ends with zero like 'numisdata0'),
+				// the 'jer_dd' record must to be deleted too, to preserve the deletion coherence.
+					$section_id_from_tipo = get_section_id_from_tipo($section_tipo);
+					if ($section_id_from_tipo=='0') {
+						// is ontology. Create a 'terminoID' value for delete it in 'jer_dd'
+						$tipo_to_delete	= get_tld_from_tipo($section_tipo) . $section_id; // as 'numisdata631'
+						$RecordObj_dd	= new RecordObj_dd($tipo_to_delete);
+						// Note that 'Delete' action does not return anything because is a __destruct action.
+						$RecordObj_dd->Delete();
+					}
 			}
 
 		// ar_delete section_id
