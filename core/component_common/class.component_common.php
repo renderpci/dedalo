@@ -2593,10 +2593,11 @@ abstract class component_common extends common {
 		$dataframe_ddo = $this->get_dataframe_ddo();
 
 		$caller_dataframe = new stdClass();
-			$caller_dataframe->section_tipo		= $this->section_tipo;
-			$caller_dataframe->section_id		= $this->section_id;
-			$caller_dataframe->section_id_key	= $locator->section_id;
-			$caller_dataframe->section_tipo_key	= $locator->section_tipo;
+			$caller_dataframe->section_tipo			= $this->section_tipo;
+			$caller_dataframe->section_id			= $this->section_id;
+			$caller_dataframe->section_id_key		= $locator->section_id;
+			$caller_dataframe->section_tipo_key		= $locator->section_tipo;
+			$caller_dataframe->main_component_tipo	= $this->tipo;
 
 
 		// config_context. Get_config_context normalized
