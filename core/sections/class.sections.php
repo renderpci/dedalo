@@ -417,6 +417,26 @@ class sections extends common {
 							);
 						}
 					}
+
+				// delete Ontology case (dd_ontology record). V7
+				// If current section is a Ontology section (ends with zero like 'numisdata0'),
+				// the 'dd_ontology' record must to be deleted too, to preserve the deletion coherence.
+					$section_id_from_tipo = get_section_id_from_tipo($section_tipo);
+					if ($section_id_from_tipo=='0') {
+						// is ontology. Create a 'terminoID' value for delete it in 'dd_ontology'
+						$tipo_to_delete	= get_tld_from_tipo($section_tipo) . $section_id; // as 'numisdata631'
+						$ontology_node	= ontology_node::get_instance($tipo_to_delete);
+						$delete_result	= $ontology_node->delete();
+						if (!$delete_result) {
+							$response->errors[] = 'Error on delete Ontology node: ' . $tipo_to_delete;
+							debug_log(__METHOD__
+								. " Error on delete Ontology node " . PHP_EOL
+								. ' tipo_to_delete: ' . to_string($tipo_to_delete) . PHP_EOL
+								. ' options: ' . json_encode($options, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
+						}
+					}
 			}
 
 		// ar_delete section_id
