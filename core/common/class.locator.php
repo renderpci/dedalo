@@ -2,6 +2,8 @@
 /**
 * CLASS LOCATOR
 *
+* 	DTO that defines relation object values schema and validation.
+*
 *	Format:
 *
 *		$locator->section_top_tipo		= (string)$section_top_tipo;
