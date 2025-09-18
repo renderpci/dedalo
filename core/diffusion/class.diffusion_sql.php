@@ -3595,6 +3595,9 @@ class diffusion_sql extends diffusion  {
 		// replace
 		$replace = $process_dato_arguments->replace ?? false;
 
+		// check_publishable
+		$check_publishable = $process_dato_arguments->check_publishable ?? $process_dato_arguments->custom_arguments->check_publishable ?? false;
+
 		// prepend_parents
 		// used in Ontology web. See 'dd0_1189'
 		$prepend_parents = $process_dato_arguments->prepend_parents ?? false;
@@ -3622,7 +3625,7 @@ class diffusion_sql extends diffusion  {
 			foreach ((array)$dato as $current_locator) {
 
 				// check_publishable
-				if (isset($process_dato_arguments->check_publishable) && $process_dato_arguments->check_publishable===true) {
+				if ($check_publishable===true) {
 					$current_is_publicable = diffusion::get_is_publicable($current_locator);
 					if ($current_is_publicable!==true) {
 						continue;
@@ -3677,7 +3680,7 @@ class diffusion_sql extends diffusion  {
 			}
 
 			// check_publishable
-			if (isset($process_dato_arguments->check_publishable) && $process_dato_arguments->check_publishable===true) {
+			if ($check_publishable===true) {
 				$current_is_publicable = diffusion::get_is_publicable($current_locator);
 				if ($current_is_publicable!==true) {
 					continue;
