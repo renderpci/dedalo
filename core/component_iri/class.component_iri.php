@@ -24,6 +24,8 @@ class component_iri extends component_common {
 	*/
 	// with_lang_versions. Set in properties for true like component_input_text
 	public $with_lang_versions = true;
+	//
+	private $included_dataframe_properties = false;
 
 
 
@@ -186,6 +188,61 @@ class component_iri extends component_common {
 		// Save in standard format
 		return parent::Save();
 	}//end Save
+
+
+
+	/**
+	* GET_PROPERTIES
+	* overwrite the common get_properties()
+	* Use to define a fixed dataframe for the component.
+	* component_iri use a component_dataframe to define a title in a structured data
+	* this component_dataframe is always injected into the request_config for all component_iri
+	* @return object|null $properties
+	*/
+	public function get_properties() : ?object {
+
+
+		if ( $this->included_dataframe_properties ){
+			return $this->properties; // already fixed
+		}
+
+		$ontology_properties = parent::get_properties() ?? new stdClass();
+
+		$sqo_section_tipo = new stdClass();
+			$sqo_section_tipo->value = [$this->section_tipo];
+			$sqo_section_tipo->source = 'section';
+
+		$sqo = new stdClass();
+			$sqo->section_tipo = [$sqo_section_tipo];
+
+		$ddo = new dd_object();
+			$ddo->set_info( 'Title dataframe' );
+			$ddo->set_mode( 'edit' );
+			$ddo->set_tipo( DEDALO_COMPONENT_IRI_LABEL_DATAFRAME );
+			$ddo->set_view( 'line' );
+			$ddo->set_parent( 'self' );
+			$ddo->set_section_tipo( $this->section_tipo );
+
+		$show = new stdClass();
+			$show->ddo_map = [$ddo];
+			$show->fields_separator = ' | ';
+
+		$source = new stdClass();
+		$source->request_config = $ontology_properties->source->request_config ?? [];
+		$source->request_config[] = (object)[
+			'sqo'	=> $sqo,
+			'show'	=> $show
+		];
+
+		$ontology_properties->source = $source;
+
+		// fix the properties
+		$this->properties = $ontology_properties;
+
+		$this->included_dataframe_properties = true;
+
+		return $ontology_properties;
+	}//end get_properties
 
 
 
