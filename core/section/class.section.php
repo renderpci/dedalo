@@ -4055,9 +4055,10 @@ class section extends common {
 													foreach ($dataframe_data as $key => $current_dataframe_data) {
 														// create the caller_dataframe with the current data information
 														$new_caller_dataframe = new stdClass();
-															$new_caller_dataframe->section_id_key	= $current_dataframe_data->section_id_key;
-															$new_caller_dataframe->section_tipo_key	= $current_dataframe_data->section_tipo_key;
-															$new_caller_dataframe->section_tipo		= $section_tipo;
+															$new_caller_dataframe->section_id_key		= $current_dataframe_data->section_id_key;
+															$new_caller_dataframe->section_tipo_key		= $current_dataframe_data->section_tipo_key;
+															$new_caller_dataframe->section_tipo			= $section_tipo;
+															$new_caller_dataframe->main_component_tipo	= $tipo;
 
 														// // create the dataframe component
 														$dataframe_component = component_common::get_instance(

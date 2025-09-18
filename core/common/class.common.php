@@ -2228,9 +2228,10 @@ abstract class common {
 								// caller_dataframe cases
 								$caller_dataframe = (strpos($source_model, 'component_')===0)
 									? (object)[
-										'section_id_key'	=> $section_id_key,
-										'section_tipo_key'	=> $section_tipo_key,
-										'section_tipo'		=> $this->get_section_tipo()
+										'section_id_key'		=> $section_id_key,
+										'section_tipo_key'		=> $section_tipo_key,
+										'section_tipo'			=> $this->get_section_tipo(),
+										'main_component_tipo'	=> $from_parent,
 									  ]
 									: null;
 
