@@ -3644,14 +3644,6 @@ class diffusion_sql extends diffusion  {
 					$current_locator->set_section_id($current_section_id);
 			}
 
-			// check_publishable
-			if (isset($process_dato_arguments->check_publishable) && $process_dato_arguments->check_publishable===true) {
-				$current_is_publicable = diffusion::get_is_publicable($current_locator);
-				if ($current_is_publicable!==true) {
-					continue;
-				}
-			}
-
 			if ($ar_filter!==false) foreach ($ar_filter as $filter_obj) {
 				foreach ($filter_obj as $f_property => $f_value) {
 					if (!property_exists($current_locator, $f_property) || $current_locator->{$f_property} != $f_value) {
@@ -3671,6 +3663,14 @@ class diffusion_sql extends diffusion  {
 						. ' current_locator: ' . to_string($current_locator)
 						, logger::WARNING
 					);
+					continue;
+				}
+			}
+
+			// check_publishable
+			if (isset($process_dato_arguments->check_publishable) && $process_dato_arguments->check_publishable===true) {
+				$current_is_publicable = diffusion::get_is_publicable($current_locator);
+				if ($current_is_publicable!==true) {
 					continue;
 				}
 			}
