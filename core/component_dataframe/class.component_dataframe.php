@@ -262,9 +262,28 @@ class component_dataframe extends component_portal {
 	*/
 	public function get_main_component_tipo() : string {
 
-		$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
-		$main_component_tipo	= $RecordObj_dd->get_parent();
+		$main_component_tipo = $this->caller_dataframe->main_component_tipo ?? null;
 
+		if( empty($main_component_tipo) ){
+			// default
+			$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
+			$main_component_tipo	= $RecordObj_dd->get_parent();
+		}else{
+			// Check valid main_component_tipo
+			$model = RecordObj_dd::get_modelo_name_by_tipo($main_component_tipo,true);
+			if ($model!=='component_iri') {
+				$RecordObj_dd				= new RecordObj_dd( $this->get_tipo() );
+				$test_main_component_tipo	= $RecordObj_dd->get_parent();
+				if ($test_main_component_tipo!==$main_component_tipo) {
+					debug_log(__METHOD__
+						. " Wrong main_component_tipo. " . PHP_EOL
+						. ' received main_component_tipo: ' . to_string($main_component_tipo) . PHP_EOL
+						. ' calculated test_main_component_tipo: ' . to_string($test_main_component_tipo)
+						, logger::ERROR
+					);
+				}
+			}
+		}
 
 		return $main_component_tipo;
 	}//end get_main_component_tipo
