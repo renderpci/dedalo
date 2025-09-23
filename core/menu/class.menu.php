@@ -66,7 +66,7 @@ class menu extends common {
 			}else{
 
 				// get authorized areas for the current user with the data of component_security_access
-				$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
+				$ar_permissions_areas = security::get_ar_authorized_areas_for_user();
 
 				// filter areas excluding by permissions and special tipos
 				$ar_full_areas_length = sizeof($ar_full_areas);
@@ -85,8 +85,8 @@ class menu extends common {
 						continue;
 					}
 
-					$found = array_find($ar_permisions_areas, function($permisions_item) use($area_item){
-						return $permisions_item->tipo===$area_item->tipo;
+					$found = array_find($ar_permissions_areas, function($permissions_item) use($area_item){
+						return $permissions_item->tipo===$area_item->tipo;
 					});
 					if (!is_null($found)) {
 						$ar_areas[] = $area_item;
@@ -105,16 +105,16 @@ class menu extends common {
 				return in_array($item->tipo, DEDALO_ENTITY_MENU_SKIP_TIPOS);
 			});
 			// retrieve the access areas without the skip tipos
-			$acces_areas = array_filter($ar_areas, function($item) {
+			$access_areas = array_filter($ar_areas, function($item) {
 				return !in_array($item->tipo, DEDALO_ENTITY_MENU_SKIP_TIPOS);
 			});
 			// rearrange the array to remunerate the arrays
 			$skip_parents		= array_values($skip_parents);
-			$acces_areas		= array_values($acces_areas);
-			$ar_areas_length	= sizeof($acces_areas);
+			$access_areas		= array_values($access_areas);
+			$ar_areas_length	= sizeof($access_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
 
-				$current_area = $acces_areas[$i];
+				$current_area = $access_areas[$i];
 
 				// get my parent recursively
 				$parent = self::get_my_parent($current_area, $skip_parents);

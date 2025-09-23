@@ -2782,7 +2782,7 @@ final class dd_core_api {
 	/**
 	* LOG_ACTIVITY
 	* Writes log_message in Dédalo logger
-	* It is used to registrate the navigation of the users by sections and areas.
+	* It is used to registrar the navigation of the users by sections and areas.
 	* @see dd_core_api::read
 	* @param object $options
 	* {
