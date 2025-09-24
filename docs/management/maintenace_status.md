@@ -116,4 +116,5 @@ To change the Dédalo status to maintenance follow this steps:
 
 When DEDALO_MAINTENANCE_MODE is active, all user sessions will be deleted and users will be automatically logged out and unable to log in. Only the root user will be able to log in.
 
-    ![user login is not allowed](assets/20230910_122431_login_not_allowed.png)
+![User login is not allowed](assets/20230910_122431_login_not_allowed.png)
+
