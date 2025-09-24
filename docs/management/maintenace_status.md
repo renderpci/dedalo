@@ -16,7 +16,7 @@ To alert to users follow this steps:
 
 2. Go to the maintenance, and locate the `Check config` panel.
 
-![Check panel](assets/2052409_192635_check_status_panel.png)
+    ![Check panel](assets/2052409_192635_check_status_panel.png)
 
 3. Set an alert notification for the users.
 
@@ -83,7 +83,7 @@ To change the Dédalo status to maintenance follow this steps:
 
 2. Go to the maintenance panel, and locate the `Check config` panel.
 
-![Check panel](assets/2052409_192635_check_status_panel.png)
+    ![Check panel](assets/2052409_192635_check_status_panel.png)
 
 3. Click the `Activate maintenance mode` button.
 
