@@ -374,6 +374,21 @@ page.prototype.build = async function(autoload=false) {
 					console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
 				}
 
+				// Invalid tipo case.
+				if (api_response.errors) {
+					const is_invalid_tipo = api_response.errors.some(item => item.includes('Invalid tipo'));
+					if (is_invalid_tipo) {
+						// API start error. Invalid tipo.
+						page_globals.api_errors.push(
+							{
+								error	: 'start_error', // error type
+								msg		: api_response.msg || api_response.errors.join(' - '),
+								trace	: 'page build'
+							}
+						)
+					}
+				}
+
 				// set context and data to current instance
 				self.context	= api_response.result.context
 				self.data		= {}
