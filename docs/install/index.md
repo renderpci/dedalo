@@ -108,7 +108,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
             Replace the previous `a2enconf` with:
 
             ```shell
-            sudo a2enconf php8.4-fpm
+            sudo a2enconf php8.3-fpm
             ```
 
     3. Install PostgreSQL
