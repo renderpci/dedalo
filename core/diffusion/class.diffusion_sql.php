@@ -3595,6 +3595,9 @@ class diffusion_sql extends diffusion  {
 		// replace
 		$replace = $process_dato_arguments->replace ?? false;
 
+		// check_publishable
+		$check_publishable = $process_dato_arguments->check_publishable ?? $process_dato_arguments->custom_arguments->check_publishable ?? false;
+
 		// prepend_parents
 		// used in Ontology web. See 'dd0_1189'
 		$prepend_parents = $process_dato_arguments->prepend_parents ?? false;
@@ -3620,6 +3623,15 @@ class diffusion_sql extends diffusion  {
 		if ($add_parents===true) {
 			$ar_parents = [];
 			foreach ((array)$dato as $current_locator) {
+
+				// check_publishable
+				if ($check_publishable===true) {
+					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					if ($current_is_publicable!==true) {
+						continue;
+					}
+				}
+
 				$parents = component_relation_parent::get_parents_recursive(
 					$current_locator->section_id,
 					$current_locator->section_tipo,
@@ -3663,6 +3675,14 @@ class diffusion_sql extends diffusion  {
 						. ' current_locator: ' . to_string($current_locator)
 						, logger::WARNING
 					);
+					continue;
+				}
+			}
+
+			// check_publishable
+			if ($check_publishable===true) {
+				$current_is_publicable = diffusion::get_is_publicable($current_locator);
+				if ($current_is_publicable!==true) {
 					continue;
 				}
 			}
