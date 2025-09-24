@@ -524,7 +524,6 @@ class component_iri extends component_common {
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
 
 					// Update the locator to move old ds and dataframe to v6 dataframe model.
-
 					$component = component_common::get_instance(
 						$model, // string model
 						$tipo, // string tipo
@@ -554,6 +553,109 @@ class component_iri extends component_common {
 						}
 
 						$new_data[] = $iri_data;
+
+						// create the new label record and link with the label dataframe.
+						// check if the data has a title defined as value.
+						if( empty($iri->title) ){
+							continue;
+						}
+						$label					= $iri_data->title;
+						$section_id_key			= $iri_data->id;
+						$target_section_tipo	= 'dd1706';
+						$target_component_tipo	= 'dd1715';
+
+						// Remove accents
+						// $string = iconv('UTF-8', 'ASCII//TRANSLIT', $label);
+
+						// Convert to lowercase
+						// $string = strtolower($string);
+
+						// Remove spaces
+						$new_label = trim($label);
+
+						// search the label into target section:
+						$sqo ='
+							{
+								"section_tipo": ["dd1706"],
+								"limit": 1,
+								"filter": {
+									"$and": [{
+										"q": ["\''.$new_label.'\'"],
+										"q_operator": null,
+										"path": [{
+											"section_tipo": "dd1706",
+											"component_tipo": "dd1715"
+										}]
+									}]
+								}
+							}
+						';
+						$search_query_object = json_decode($sqo);
+						// search
+						$search = search::get_instance(
+							$search_query_object // object sqo
+						);
+						$result			= $search->search();
+						$label_record	= $result->ar_records[0] ?? null;
+
+						if( empty($label_record) ){
+
+							// create new section for label record
+								$section_to_save = section::get_instance(
+									null, // string|null section_id
+									$target_section_tipo, // string section_tipo
+									'list', // string mode
+									false // bool bool
+								);
+								$target_section_id = $section_to_save->Save();
+
+							// component to set the new label value
+								$component_label = component_common::get_instance(
+									'component_input_text', // string model
+									$target_component_tipo, // string tipo
+									$target_section_id, // string section_id
+									'list', // string mode
+									DEDALO_DATA_NOLAN, // string lang
+									$target_section_tipo // string section_tipo
+								);
+
+								$component_label->set_dato( $new_label );
+								$component_label->Save();
+
+						}else{
+							// the label has match with exists data, use the found section_id
+							$target_section_id = $label_record->section_id;
+						}
+
+							// component dataframe of the component iri
+							$caller_dataframe = new stdClass();
+								$caller_dataframe->section_id_key		= $section_id_key;
+								$caller_dataframe->section_tipo_key		= $section_tipo;
+								$caller_dataframe->main_component_tipo	= $tipo;
+
+							// Build the component
+							$component_dataframe_label = component_common::get_instance(
+								'component_dataframe', // string model
+								DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
+								$section_id, // string section_id
+								'list', // string mode
+								DEDALO_DATA_NOLAN, // string lang
+								$section_tipo ,// string section_tipo,
+								false, //cache
+								$caller_dataframe // caller dataframe
+							);
+
+							$new_locator = new locator();
+								$new_locator->set_section_tipo( $target_component_tipo );
+								$new_locator->set_section_id( $target_section_id );
+								$new_locator->set_section_id_key( $section_id_key );
+								$new_locator->set_section_tipo_key( $section_tipo );
+
+							$component_dataframe_label->set_dato( $new_locator );
+
+							// Save
+							$component_dataframe_label->Save();
+
 					}
 
 					$response->result	= 1;
