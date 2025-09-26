@@ -1612,6 +1612,12 @@ export const get_dataframe = async function(options) {
 	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_tipo_key}_${section_id_key}`
 	instance_options.standalone	= false
 
+	// matrix_id. time machine matrix_id
+		if (self.matrix_id) {
+			instance_options.matrix_id = self.matrix_id
+			instance_options.id_variant = `${instance_options.id_variant}_${self.matrix_id}`
+		}
+
 	// component_dataframe init instance
 	const component_dataframe = await get_instance(instance_options)
 
@@ -1631,7 +1637,7 @@ export const get_dataframe = async function(options) {
 					)
 				}
 				// normal case
-				if( !self.matrix_id ){
+				else{
 					return (
 						parseInt(el.section_id_key)	=== parseInt(section_id_key)
 						&& el.section_tipo_key		=== section_tipo_key
@@ -1641,6 +1647,7 @@ export const get_dataframe = async function(options) {
 			}
 		return false
 	})
+
 	const dataframe_data = data
 		? data
 		: {
