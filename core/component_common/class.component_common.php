@@ -4175,6 +4175,23 @@ abstract class component_common extends common {
 
 
 	/**
+	* IMPORT_SAVE
+	* Only called by the import process
+	* Is used to perform any process after the conform data and previous to save
+	* As clean its dataframe or any other process.
+	* By default it only call to save function.
+	*
+	* @return
+	*/
+	public function import_save() {
+
+		$this->Save();
+
+	}//end import_save
+
+
+
+	/**
 	* IS_EMPTY
 	* Generic check if given value is or not empty considering
 	* @param mixed $value
