@@ -323,8 +323,34 @@ class component_iri extends component_common {
 
 					$current_iri	= $current_value->iri ?? '';
 					$current_title	= $current_value->title ?? '';
+				// component dataframe of the component iri
+					$caller_dataframe 		= (object)[
+						'section_tipo'			=> $this->section_tipo,
+						'section_id_key'		=> $current_value->id,
+						'section_tipo_key'		=> $this->section_tipo,
+						'main_component_tipo'	=> $this->tipo
+					];
 
-					$ar_values[] = $current_title . $fields_separator . $current_iri;
+					// Build the component
+					$component_dataframe_label = component_common::get_instance(
+						'component_dataframe', // string model
+						DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
+						$this->section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$this->section_tipo ,// string section_tipo,
+						false, //cache
+						$caller_dataframe // caller dataframe
+					);
+
+					$dataframe_label = $component_dataframe_label->get_value();
+					$title = $dataframe_label ?? $current_title;
+					// set the title of the data as label of the dataframe
+					if( !empty($title) ){
+						$current_value->title = $title;
+					}
+					// set a flat version to be downloaded
+					$ar_values[] = $title . $fields_separator . $current_iri;
 				}
 			}
 
