@@ -27,6 +27,12 @@ class component_iri extends component_common {
 	//
 	private $included_dataframe_properties = false;
 
+	// Label dataframe target section tipo
+	private static $label_target_section_tipo	= 'dd1706';
+
+	// Label dataframe target component tipo
+	private	static $label_target_component_tipo	= 'dd1715';
+
 
 
 	/**
@@ -114,7 +120,7 @@ class component_iri extends component_common {
 		}
 
 		// check type
-		if (!is_array($dato) && !is_null($dato)) {
+		if ( !is_array($dato) && !is_null($dato) ){
 			debug_log(__METHOD__
 				. " Warning. Received dato is NOT array. Type is '".gettype($dato)."' and will be converted to array" . PHP_EOL
 				. " tipo: $this->tipo" . PHP_EOL
@@ -127,26 +133,49 @@ class component_iri extends component_common {
 		}
 
 		// check the data values to fit the IRI data
-		$input_text = false;
+		// changes the data to create a object
 		if(!empty($dato)) {
-			foreach ((array)$dato as $key => $value) {
-				if(!is_object($value) ){
-					$input_text = true;
+			$ar_id = [];
+			foreach( (array)$dato as $key => $value ){
+				// check if the data is different that an object
+				// data could be a string or null
+				// null = new value
+				// string = previous data become from a input_text
+
+				if( !is_object($value) || empty($value->id) ){
 					// get the component counter
 					// it's the last counter used
 					$counter = $this->get_counter();
 					$counter++;
 					$id = $counter;
+					$iri_value = ( is_string($value) )
+						? $value
+						: $value->iri;
 					$dd_iri = new dd_iri();
-						$dd_iri->set_iri($value);
-						$dd_iri->set_id($id);
-					$dato[$key] = $dd_iri;
-					// set the new counter as the id (previous counter + 1)
+						$dd_iri->set_iri( $iri_value );
+						$dd_iri->set_id( $id );
+					// Check if the data has a label_id
+					// used by import to set a temporary target section_id for the label dataframe
+					// it will create a new locator of the dataframe when the component_iri will save
+					if( !empty($value->label_id) ){
+						$dd_iri->set_label_id( $value->label_id );
+					}
+					// set the counter to use next value
 					$this->set_counter( $id );
+
+					$dato[$key] = $dd_iri;
 				}
-			}
-			if($input_text===true) {
-				$this->dato = $dato;
+				// get all id from data
+				$ar_id[] = $dato[$key]->id;
+			}// end foreach
+
+			//set the counter with the max id when the counter is bellow it.
+			$counter = $this->get_counter();
+			$max_id = max($ar_id);
+
+			if( $counter < $max_id ){
+				// set the new counter with the id
+				$this->set_counter( $max_id );
 			}
 		}
 
