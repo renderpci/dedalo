@@ -165,37 +165,11 @@ class component_dataframe extends component_portal {
 	*/
 	public function empty_full_data_associated_to_main_component() : true {
 
-		$all_data = parent::get_all_data();
-
-		$to_save = false;
-
-		$all_data_size = sizeof($all_data);
-		for ($i=0; $i < $all_data_size; $i++) {
-
-			$locator = $all_data[$i];
-			// remove current locator from component dato
-
-			$caller_dataframe = new stdClass();
-				$caller_dataframe->section_id_key	= $locator->section_id_key;
-				$caller_dataframe->section_tipo_key	= $locator->section_tipo_key;
-				$caller_dataframe->section_tipo		= $this->section_tipo;
-
-			$this->set_caller_dataframe($caller_dataframe);
-
-			// exec remove (return bool)
-			$removed = $this->remove_locator_from_dato(
-				$locator
-			);
-
-			if ($removed) {
-				$to_save = true;
-			}
-		}
-
-		if ($to_save) {
-			$this->Save();
-		}
-
+		$section = $this->get_my_section();
+		$options = (object)[
+			'component_tipo' => $this->tipo
+		];
+		$section->remove_relations_from_component_tipo($options);
 
 		return true;
 	}//end empty_full_data_associated_to_main_component
