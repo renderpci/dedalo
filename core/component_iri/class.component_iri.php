@@ -221,6 +221,79 @@ class component_iri extends component_common {
 
 
 	/**
+	* IMPORT_SAVE
+	* @return
+	*/
+	public function import_save() {
+
+		// dato candidate to save
+			$dato = $this->dato;
+
+		// Label dataframe.
+		// Check if the data has a `label_id` property.
+		// When the import process set the `label_id` indicate that this data has a label dataframe
+		// and `label_id` needs to be used as section_id for the locator of the label dataframe.
+		// `label_id` is not a part of the data structure, therefore, it will need to remove.
+			$label_dataframe_data = [];
+			foreach( (array)$dato as $value ){
+				if( property_exists($value, 'label_id') ){
+
+					// create new daraframe locator to be set as new data
+					$locator = new locator();
+						$locator->set_section_tipo( component_iri::$label_target_section_tipo );
+						$locator->set_section_id( $value->label_id );
+						$locator->set_section_id_key( $value->id );
+						$locator->set_section_tipo_key( $this->section_tipo );
+
+					$label_dataframe_data[]	= $locator;
+
+					// remove the property label_id
+						 unset($value->label_id);
+				}
+			}
+		// set the clean data without the label_id
+		$this->set_dato( $dato );
+
+		if( !empty($label_dataframe_data) ){
+
+			// component dataframe of the component iri
+			$caller_dataframe = new stdClass();
+				$caller_dataframe->main_component_tipo	= $this->tipo;
+				$caller_dataframe->section_tipo_key		= $this->section_tipo;
+				$caller_dataframe->section_tipo			= $this->section_tipo;
+
+			// Build the component
+			$component_dataframe_label = component_common::get_instance(
+				'component_dataframe', // string model
+				DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
+				$this->section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$this->section_tipo,// string section_tipo,
+				false, //cache
+				$caller_dataframe // caller dataframe
+			);
+
+			$component_dataframe_label->empty_full_data_associated_to_main_component();
+
+			$component_dataframe_label->set_dato( $label_dataframe_data );
+			// remove the time machine to save the dataframe
+			// the main component_iri will save the full imported data in save
+			$dataframe_section = $component_dataframe_label->get_my_section();
+			$dataframe_section->save_tm = false;
+			$component_dataframe_label->Save();
+			// re activate the time machine
+			$dataframe_section->save_tm = true;
+		}
+
+		// save the component
+		// it will save the dataframe in Time machine also.
+		$this->Save();
+	}//end import_save
+
+
+
+	/**
 	* GET_PROPERTIES
 	* overwrite the common get_properties()
 	* Use to define a fixed dataframe for the component.
