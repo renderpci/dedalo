@@ -55,8 +55,20 @@ $updates->$v = new stdClass();
 		$alert->command = '';
 		$alert->command .= "
 			<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+			<br>
+			<br>
 			<p>
-			<strong>This update will get the title values of your component_iri and create a new unification list with this values.</strong>
+			<strong>This update will get the title values of your URI fields, all `component_iri`, and will create a new unification list with this values.</strong>
+			</p>
+			<br>
+			<p>
+			Now, all URI fields has a new data frame to be used as labels of the URI. This new behavior will process all data in your URI titles and will create a unique values into a controlled list.
+			</p>
+			<p>
+			As this process is an automatic group of values, you will need to check the list and set possible duplicates, because the script doesn't try to unify close names, so, wikidata and wikidata.org titles will create 2 different values.
+			</p>
+			<p>
+			The current title is not changed, is preserved to check the new label value list, but, in next versions it will be deleted. Use only the label list for the URI fields.
 			</p>
 		";
 		$updates->$v->alert_update[] = $alert;
