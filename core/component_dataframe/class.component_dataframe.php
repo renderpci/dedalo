@@ -183,30 +183,17 @@ class component_dataframe extends component_portal {
 	*/
 	public function set_time_machine_data( array $data ) : bool {
 
-		$section = $this->get_my_section();
-			$section->save_tm = false;
-
+		// remove all previous data
 		$this->empty_full_data_associated_to_main_component();
 
-		$data_size = sizeof($data);
-		for ($i=0; $i < $data_size; $i++) {
-
-			$locator = $data[$i];
-
-			$caller_dataframe = new stdClass();
-				$caller_dataframe->section_id_key	= $locator->section_id_key;
-				$caller_dataframe->section_tipo_key	= $locator->section_tipo_key;
-				$caller_dataframe->section_tipo		= $this->section_tipo;
-
-			$this->set_caller_dataframe($caller_dataframe);
-
-			// exec remove (return bool)
-			$this->set_dato( [$locator] );
-			$this->Save();
-		}
-
+		// Remove the time machine to save the dataframe
+		// this set will be saved by main component.
+		$section = $this->get_my_section();
+		$section->save_tm = false;
+		$this->set_dato( $data );
+		$this->Save();
+		// re activate the time machine
 		$section->save_tm = true;
-
 
 		return true;
 	}//end set_time_machine_data
