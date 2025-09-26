@@ -919,22 +919,6 @@ class component_iri extends component_common {
 				$response->errors	= [];
 				$response->msg		= 'Error. Request failed';
 
-
-		// $has_protocol function to be used in any case, $import_value is an array of objects (IRI format)
-		// or array of strings or string values needed to begin with the protocol HTTP or HTTPS
-			$has_protocol = function(string $text_value) : bool {
-
-				$begins_http	= substr($text_value, 0, 7);
-				$begins_https	= substr($text_value, 0, 8);
-
-				if($begins_http === 'http://' || $begins_https === 'https://') {
-
-					return true;
-				}
-
-				return false;
-			};
-
 		// valid_string
 		// check the begin and end of the value string, if it has a [] or other combination that seems array
 		// if the text has [" or "] it's not admitted, because it's a bad array of strings.
@@ -963,9 +947,17 @@ class component_iri extends component_common {
 				// try to JSON decode (null on not decode)
 				$dato_from_json	= json_handler::decode($import_value);
 
+				// data send is an object
+				// it could be a non translatable object with the iri data:
+				// {"iri":"https://dedalo.dev"}
+				// or a translatable object, that can be set like:
+				// {"lg-spa":{"iri":"https://dedalo.dev"}}
+				// or with a string as value
+				// {"lg-spa":"https://dedalo.dev"}
 				if(is_object($dato_from_json)){
 
 					$first_key = array_keys((array)$dato_from_json)[0];
+					// check if the object is a translatable
 					if (strpos($first_key, 'lg-')===0) {
 
 						$conformed_value = new stdClass();
@@ -1000,13 +992,14 @@ class component_iri extends component_common {
 							foreach ($safe_ar_value as $key => $iri_object) {
 
 								$data_iri = new stdClass();
-
+								// data send is an object, therefore it has almost an iri property defined
+								// {"iri":"https://dedalo.dev"}
 								if(is_object($iri_object)){
 
 									if(!empty($iri_object->iri)){
 										// remove unused spaces or other invalid code as \t \n, etc
 										$iri_object->iri = trim($iri_object->iri);
-										$result = $has_protocol($iri_object->iri);
+										$result = $this->has_protocol($iri_object->iri);
 										if($result===false){
 
 											// import value seems to be a JSON malformed.
@@ -1030,15 +1023,36 @@ class component_iri extends component_common {
 
 										$data_iri->iri = $iri_object->iri;
 									}
+									// set the id given
+									if(!empty($iri_object->id)){
+										$data_iri->id = $iri_object->id;
+									}
+									// set the label_id given, used to create the label dataframe
+									// this property will not saved
+									if(!empty($iri_object->label_id)){
+										$data_iri->label_id = $iri_object->label_id;
+									}
+									// set the title given - Deprecated
 									if(!empty($iri_object->title)){
 										$data_iri->title = $iri_object->title;
 									}
 								}else if(is_string($iri_object)){
+									// data send is a string, therefore value is the URL
+									// "https://dedalo.dev"
+									// or the value has the label dataframe
+									// "3, https://dedalo.dev" || "dedalo, https://dedalo.dev"
 
-									$valid_string = $is_valid_string($iri_object);
-									$result = $has_protocol($current_value);
+									$properties = $this->get_properties();
 
-									if($valid_string===false || $result===false){
+									$fields_separator = isset($properties->fields_separator)
+										? $properties->fields_separator
+										: ', ';
+
+									$valid_string			= $is_valid_string($iri_object);
+									$has_field_separator	= strpos($iri_object, $fields_separator.'http')!==false;
+									$with_protocol			= $this->has_protocol($iri_object);
+
+									if($has_field_separator===false && ($valid_string===false || $with_protocol===false)){
 										// import value seems to be a JSON malformed.
 										// it begin [" or end with "]
 										// log JSON conversion error
@@ -1057,12 +1071,14 @@ class component_iri extends component_common {
 
 										return $response;
 									}
-									$data_iri->iri = $iri_object;
+
+									// set the string value
+									$data_iri = $this->conform_string_import_data( $iri_object );
 								}
 
 								$value[] = $data_iri;
 							}
-
+							// set new object with its lang
 							$conformed_value->$lang = $value;
 						}
 
@@ -1072,11 +1088,12 @@ class component_iri extends component_common {
 						return $response;
 
 					}else{
-
+						// non translatable object
+						// {"iri":"https://dedalo.dev"}
 						$iri_object = new stdClass();
 						if(isset($dato_from_json->iri)){
 
-							$result = $has_protocol($dato_from_json->iri);
+							$result = $this->has_protocol($dato_from_json->iri);
 							if($result===false){
 
 								// import value seems to be a JSON malformed.
@@ -1100,6 +1117,16 @@ class component_iri extends component_common {
 
 							$iri_object->iri = $dato_from_json->iri;
 						}
+						// set the id given
+						if(isset($dato_from_json->id)){
+							$iri_object->id = $dato_from_json->id;
+						}
+						// set the label_id given, used to create the label dataframe
+						// this property will not saved
+						if(!empty($iri_object->label_id)){
+							$iri_object->label_id = $iri_object->label_id;
+						}
+						// set the title given - Deprecated
 						if(isset($dato_from_json->title)){
 							$iri_object->title = $dato_from_json->title;
 						}
@@ -1114,7 +1141,9 @@ class component_iri extends component_common {
 				}
 
 				// the importer support array of objects (default, iri data) of array of strings as:
+				// default iri
 				// [{"iri":"https://dedalo.dev","title":"Dedalo webpage"},{"iri":"https://dedalo.dev/docs","title":"Dedalo documentation"}]
+				// Or like string
 				// ["https://dedalo.dev","https://dedalo.dev/docs"]
 				if(is_array($dato_from_json)){
 
@@ -1122,13 +1151,18 @@ class component_iri extends component_common {
 					foreach ($dato_from_json as $current_value) {
 						// check if the value is a flat string with the uri
 						if(is_string($current_value)){
-							$result = $has_protocol($current_value);
 
-							if ($result === false) {
+							$properties = $this->get_properties();
 
-								// import value seems to be a JSON malformed.
-								// it begin [" or end with "]
-								// log JSON conversion error
+							$fields_separator = isset($properties->fields_separator)
+								? $properties->fields_separator
+								: ', ';
+
+							$has_field_separator	= strpos($current_value, $fields_separator.'http')!==false;
+							$with_protocol			= $this->has_protocol($current_value);
+							if ($has_field_separator===false && $with_protocol===false) {
+
+								// error
 								debug_log(__METHOD__
 									." invalid http uri value, looks like a syntax error: ". PHP_EOL
 									. to_string($import_value)
@@ -1144,11 +1178,12 @@ class component_iri extends component_common {
 
 								return $response;
 							}
-
-							$iri_object = new stdClass();
-								$iri_object->iri = $current_value;
+							// set the string value
+							$iri_object = $this->conform_string_import_data( $import_value );
 
 							$value[] = $iri_object;
+
+							// $value[] = $iri_object;
 						// check if the value is a object
 						}else if(is_object($current_value)){
 
@@ -1156,7 +1191,7 @@ class component_iri extends component_common {
 
 							if(isset($current_value->iri)){
 
-								$result = $has_protocol($current_value->iri);
+								$result = $this->has_protocol($current_value->iri);
 								if($result===false){
 
 									// import value seems to be a JSON malformed.
@@ -1180,6 +1215,16 @@ class component_iri extends component_common {
 
 								$iri_object->iri = $current_value->iri;
 							}
+							// set the id given
+							if(isset($current_value->id)){
+								$iri_object->id = $current_value->id;
+							}
+							// set the label_id given, used to create the label dataframe
+							// this property will not saved
+							if(!empty($iri_object->label_id)){
+								$iri_object->label_id = $iri_object->label_id;
+							}
+							// set the title given - Deprecated
 							if(isset($current_value->title)){
 								$iri_object->title = $current_value->title;
 							}
@@ -1202,7 +1247,19 @@ class component_iri extends component_common {
 				}
 			}
 
-		// string case
+		// String case
+		// the value can be:
+		// A literal URI like :
+		// 		https//dedalo.dev
+		// a multiple parts of the data with separator | and , like:
+		// 		dédalo, https://dedalo.dev | nomisma, https//nomisma.org | 3, https://wikidata.org
+		// it will change to:
+		// 		[{"label_id":1,"iri":"https://dedalo.dev"},
+		//		 {"label_id":2,"iri":"https://nomisma.org"},
+		//		 {"label_id":3,"iri":"https://wikidata.org"}]
+		// label_id is the target section_id for label dataframe of the values: dédalo, nomisma and wikidata
+		// the label dataframe will be created when the component save
+		// @see Save()
 			$valid = $is_valid_string($import_value);
 			if ($valid===false) {
 
@@ -1225,62 +1282,56 @@ class component_iri extends component_common {
 				return $response;
 			}
 
-		$value = null;
-		if(!empty($import_value)) {
+			$value = null;
+			if(!empty($import_value)) {
 
-			$iri_object = new stdClass();
+				$iri_object = new stdClass();
 
-			$properties = $this->get_properties();
+				$properties = $this->get_properties();
 
-			$records_separator = isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ';
+				$records_separator = isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ';
 
-			$fields_separator = isset($properties->fields_separator)
-				? $properties->fields_separator
-				: ', ';
+				$fields_separator = isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ';
 
-			$has_records_separator	= strpos($import_value, $records_separator)!==false;
-			$has_field_separator	= strpos($import_value, $fields_separator.'http')!==false;
-			$with_protocol			= $has_protocol($import_value);
-			if ($has_records_separator===false && $has_field_separator===false && $with_protocol===false) {
+				$has_records_separator	= strpos($import_value, $records_separator)!==false;
+				$has_field_separator	= strpos($import_value, $fields_separator.'http')!==false;
+				$with_protocol			= $this->has_protocol($import_value);
 
-				// error
-				debug_log(__METHOD__
-					." invalid http uri value, looks like a syntax error: ". PHP_EOL
-					. to_string($import_value)
-					, logger::ERROR
-				);
+				if ($has_records_separator===false && $has_field_separator===false && $with_protocol===false) {
 
-				$failed = new stdClass();
-					$failed->section_id		= $this->section_id;
-					$failed->data			= to_string($import_value);
-					$failed->component_tipo	= $this->get_tipo();
-					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-				$response->errors[] = $failed;
+					// error
+					debug_log(__METHOD__
+						." invalid http uri value, looks like a syntax error: ". PHP_EOL
+						. to_string($import_value)
+						, logger::ERROR
+					);
 
-				return $response;
-			}else{
+					$failed = new stdClass();
+						$failed->section_id		= $this->section_id;
+						$failed->data			= to_string($import_value);
+						$failed->component_tipo	= $this->get_tipo();
+						$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+					$response->errors[] = $failed;
 
-				$value = [];
-				$records = explode($records_separator, $import_value);
-				foreach ($records as $record) {
-					$iri_object = new stdClass();
+					return $response;
+				}else{
 
-					$fields = explode($fields_separator, $record);
+					$value = [];
+					$values = explode($records_separator, $import_value);
 
-					if ( $has_protocol($fields[0])===true ) {
-						$iri_object->iri = $fields[0];
-					}else{
-						$iri_object->title = $fields[0];
+					foreach ($values as $current_value) {
+						// set the string value
+						$iri_object = $this->conform_string_import_data( $current_value );
+
+						$value[] = $iri_object;
 					}
-					if ( isset($fields[1]) && $has_protocol($fields[1])===true ) {
-						$iri_object->iri = $fields[1];
-					}
-					$value[] = $iri_object;
 				}
-			}
-		}//end if(!empty($import_value))
+
+			}//end if(!empty($import_value))
 
 		$response->result	= $value;
 		$response->msg		= 'OK';
@@ -1288,6 +1339,84 @@ class component_iri extends component_common {
 
 		return $response;
 	}//end conform_import_data
+
+
+
+
+	/**
+	* HAS_PROTOCOL
+	* To be used in different cases.
+	* When import values are an array of objects (IRI format)
+	* or array of strings
+	* or string values needed to begin with the protocol HTTP or HTTPS
+	* @param string $text_value
+	* @return bool
+	*/
+	private function has_protocol(string $text_value) : bool  {
+
+		$begins_http	= substr($text_value, 0, 7);
+		$begins_https	= substr($text_value, 0, 8);
+
+		if($begins_http === 'http://' || $begins_https === 'https://') {
+
+			return true;
+		}
+
+		return false;
+	}//end has_protocol
+
+
+
+	/**
+	* CONFORM_STRING_IMPORT_DATA
+	* @return
+	*/
+	private function conform_string_import_data( string $value) : object {
+
+		// get the component properties
+		$properties = $this->get_properties();
+
+		// get the fields separator, it can be defined in properties of use the default
+		$fields_separator = isset($properties->fields_separator)
+			? $properties->fields_separator
+			: ', ';
+
+
+		$iri_object = new stdClass();
+
+		$fields = explode($fields_separator, $value);
+
+		if ( $this->has_protocol($fields[0])===true ) {
+			$iri_object->iri = $fields[0];
+		}else{
+			// check if the value is a number: 1 or "4"
+			// if it is a number it will be interpreted as the target section_id of the label dataframe
+			// and set as label_id
+			// if the value is a string: "dedalo" or "wikidata"
+			// check the value in the list and give me the id, if not exist create new one.
+			if( is_numeric($fields[0]) ){
+				$iri_object->label_id = (int)$fields[0];
+
+			}else{
+				// string case.
+				// set the new label, if exist give me the section_id, if not create new one and give me its section_id
+				// Remove spaces
+				$new_label = trim($fields[0]);
+
+				if( !empty($new_label)){
+					$target_section_id = component_iri::save_label_dataframe_from_string( $new_label );
+					$iri_object->label_id = (int)$target_section_id;
+				}
+			}
+
+			// $iri_object->title = $fields[0];
+		}
+		if ( isset($fields[1]) && $this->has_protocol($fields[1])===true ) {
+			$iri_object->iri = $fields[1];
+		}
+
+		return $iri_object;
+	}//end conform_string_import_data
 
 
 
@@ -1321,6 +1450,158 @@ class component_iri extends component_common {
 
 		return $counter;
 	}//end get_counter
+
+
+
+	/**
+	* GET_LABEL_RECORD
+	* Search the target section of component dataframe `dd1706`
+	* and return the result. Is used to check if the label exists
+	* @return object|null $label_record
+	*/
+	private static function get_label_record( string $label ) : ?object {
+
+		// Remove spaces
+			$new_label = trim($label);
+
+		// search the label into target section:
+		$sqo ='
+			{
+				"section_tipo": ["dd1706"],
+				"limit": 1,
+				"filter": {
+					"$and": [{
+						"q": ["\''.$new_label.'\'"],
+						"q_operator": null,
+						"path": [{
+							"section_tipo": "dd1706",
+							"component_tipo": "dd1715"
+						}]
+					}]
+				}
+			}
+		';
+		$search_query_object = json_decode($sqo);
+		// search
+		$search = search::get_instance(
+			$search_query_object // object sqo
+		);
+		$result			= $search->search();
+		$label_record	= $result->ar_records[0] ?? null;
+
+		return $label_record;
+	}//end get_label_record
+
+
+
+	/**
+	* SAVE_LABEL_DATAFRAME_FROM_STRING
+	* Check if the label exist in the dataframe value list
+	* if not exist; create new section and set the label as new value, and return the locator of the new value
+	* is exist; get the locator of the label
+	* then assign the locator to dataframe.
+	* in both cases create the dataframe component and set the locator of the label.
+	* @param string $label "dedalo"
+	* @return nul|int $target_section_id
+	*/
+	private static function save_label_dataframe_from_string( string $label ) : ?int {
+
+		// Remove spaces
+			$new_label = trim($label);
+
+		if( empty($new_label) ){
+			return null;
+		}
+
+		// check if the label exist in the value list of the dataframe
+		$label_record = component_iri::get_label_record( $new_label );
+
+		if( empty($label_record) ){
+
+			// create new section for label record
+				$section_to_save = section::get_instance(
+					null, // string|null section_id
+					component_iri::$label_target_section_tipo, // string section_tipo
+					'list', // string mode
+					false // bool bool
+				);
+				$target_section_id = $section_to_save->Save();
+
+			// component to set the new label value
+				$component_label = component_common::get_instance(
+					'component_input_text', // string model
+					component_iri::$label_target_component_tipo, // string tipo
+					$target_section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					component_iri::$label_target_section_tipo // string section_tipo
+				);
+
+				$component_label->set_dato( $new_label );
+				$component_label->Save();
+
+		}else{
+			// the label has match with exists data, use the found section_id
+			$target_section_id = $label_record->section_id;
+		}
+
+		return (int)$target_section_id;
+	}//end save_label_dataframe_from_string
+
+
+
+	/**
+	* SAVE_LABEL_DATAFRAME
+	* @param object $options
+	* {
+	* 	section_tipo	: "rsc205",
+	*	section_id		: "1",
+	*	component_tipo	: "rsc217",
+	*	section_id_key	: 1,
+	* 	target_section_id : "3"
+	* }
+	* @return
+	*/
+	public static function save_label_dataframe( object $options ) {
+
+		// set options
+		$section_tipo			= $options->section_tipo;
+		$section_id				= $options->section_id;
+		$component_tipo			= $options->component_tipo;
+		$section_id_key			= $options->section_id_key;
+		$target_section_id		= $options->target_section_id;
+
+		// component dataframe of the component iri
+		$caller_dataframe = new stdClass();
+			$caller_dataframe->section_id_key		= $section_id_key;
+			$caller_dataframe->section_tipo_key		= $section_tipo;
+			$caller_dataframe->main_component_tipo	= $component_tipo;
+
+		// Build the component
+		$component_dataframe_label = component_common::get_instance(
+			'component_dataframe', // string model
+			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
+			$section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$section_tipo ,// string section_tipo,
+			false, //cache
+			$caller_dataframe // caller dataframe
+		);
+
+		// create new daraframe locator to be set as new data
+		$new_locator = new locator();
+			$new_locator->set_section_tipo( component_iri::$label_target_section_tipo );
+			$new_locator->set_section_id( $target_section_id );
+			$new_locator->set_section_id_key( $section_id_key );
+			$new_locator->set_section_tipo_key( $section_tipo );
+
+		$component_dataframe_label->set_dato( $new_locator );
+
+		// Save
+		$component_dataframe_label->Save();
+
+	}//end save_label_dataframe
 
 
 
