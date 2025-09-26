@@ -55,6 +55,18 @@
 					width: calc(20% - 0.5rem);
 					padding-right: 0.5rem;
 					height: 2rem;
+
+					.section_record{
+						&.dd560{
+							flex-wrap: nowrap;
+
+							.column_dd560{
+								max-height: 1.3rem;
+								overflow: hidden;
+							}
+						}
+					}
+
 					@media screen and (max-width: @width_break_point_1) {
 						height: unset;
 					}
