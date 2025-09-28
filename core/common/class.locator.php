@@ -427,6 +427,23 @@ class locator extends stdClass {
 	}//end set_section_tipo_key
 
 
+
+	/**
+	* SET_MAIN_COMPONENT_TIPO
+	* Used by dataframe to identify its own main component
+	* @param string $value
+	* @return bool
+	*/
+	public function set_main_component_tipo(string $value) {
+		if(!get_tld_from_tipo($value)) {
+			throw new Exception("Error Processing Request. Invalid main_component_tipo: $value", 1);
+		}
+		$this->main_component_tipo = $value;
+
+		return true;
+	}//end set_main_component_tipo
+
+
 	/**
 	* SET_TIPO
 	* @param string $value

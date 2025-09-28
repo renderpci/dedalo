@@ -752,11 +752,13 @@ component_common.prototype.update_datum = async function(new_datum) {
 						&& parseInt(el.section_id) 	=== parseInt(self.section_id)
 						&& el.mode 					=== self.mode
 						){
-						// if the new data provides by dataframe it will has section_id_key and section_tipo_key
-						// in this case check the previous data in datum has correspondence with section_id_key and his tipo_key
-						const to_delete = (el.section_id_key && el.section_tipo_key)
-							 ? parseInt(el.section_id_key) === parseInt(self.section_id_key) && el.section_tipo_key === self.section_tipo_key
-							 : true
+						// if the new data provides by dataframe it will has section_id_key, section_tipo_key and main_component_tipo
+						// in this case check the previous data in datum has correspondence with section_id_key, section_tipo_key and its main_component_tipo
+						const to_delete = ( el.section_id_key && el.section_tipo_key && el.main_component_tipo )
+							? parseInt(el.section_id_key)	=== parseInt(self.section_id_key)
+								&& el.section_tipo_key		=== self.section_tipo_key
+								&& el.main_component_tipo	=== self.main_component_tipo
+							: true
 
 						if(to_delete){
 							el.value = [];
@@ -778,12 +780,13 @@ component_common.prototype.update_datum = async function(new_datum) {
 							&& parseInt(el.section_id) 	=== parseInt(data_item.section_id)
 							&& el.mode 					=== data_item.mode
 							){
-							// if the new data provides by dataframe it will has section_id_key && section_tipo_key
-							// in this case check the previous data in datum has correspondence with section_id_key and his section_tipo_key
-							if(el.section_id_key && el.section_tipo_key){
+							// if the new data provides by dataframe it will has section_id_key, section_tipo_key and main_component_tipo
+							// in this case check the previous data in datum has correspondence with section_id_key, section_tipo_key and its main_component_tipo
+							if( el.section_id_key && el.section_tipo_key && el.main_component_tipo ){
 								return (
 									parseInt(el.section_id_key)	=== parseInt(data_item.section_id_key)
 									&& el.section_tipo_key		=== data_item.section_tipo_key
+									&& el.main_component_tipo	=== data_item.main_component_tipo
 								)
 							}
 							return true
@@ -1589,11 +1592,11 @@ export const get_dataframe = async function(options) {
 
 	const self = options.self
 
-	const section_id		= options.section_id
-	// const section_tipo	= options.section_tipo
-	const section_id_key	= options.section_id_key
-	const section_tipo_key	= options.section_tipo_key
-	const view				= options.view
+	const section_id			= options.section_id
+	const section_id_key		= options.section_id_key
+	const section_tipo_key		= options.section_tipo_key
+	const main_component_tipo	= options.main_component_tipo
+	const view					= options.view
 
 	const request_config = self.context.request_config || null
 
@@ -1609,7 +1612,7 @@ export const get_dataframe = async function(options) {
 	// instance_options
 	const instance_options = clone(original_dataframe_ddo)
 	instance_options.section_id	= section_id
-	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_tipo_key}_${section_id_key}`
+	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_tipo_key}_${section_id_key}_${main_component_tipo}_${Math.random()}`
 	instance_options.standalone	= false
 
 	// matrix_id. time machine matrix_id
@@ -1634,6 +1637,7 @@ export const get_dataframe = async function(options) {
 						parseInt(el.matrix_id)			=== parseInt(self.matrix_id)
 						&& el.section_tipo_key			=== section_tipo_key
 						&& parseInt(el.section_id_key)	=== parseInt(section_id_key)
+						&& el.main_component_tipo		=== main_component_tipo
 					)
 				}
 				// normal case
@@ -1641,6 +1645,7 @@ export const get_dataframe = async function(options) {
 					return (
 						parseInt(el.section_id_key)	=== parseInt(section_id_key)
 						&& el.section_tipo_key		=== section_tipo_key
+						&& el.main_component_tipo	=== main_component_tipo
 
 					)
 				}
@@ -1652,7 +1657,8 @@ export const get_dataframe = async function(options) {
 		? data
 		: {
 			section_tipo_key	: section_tipo_key,
-			section_id_key		: section_id_key
+			section_id_key		: section_id_key,
+			main_component_tipo	: main_component_tipo
 		}
 
 	// context
@@ -1697,13 +1703,14 @@ export const delete_dataframe = async function(options) {
 	const self = options.self
 
 	// options
-		const section_id		= options.section_id
-		const section_tipo		= options.section_tipo
-		const section_id_key	= options.section_id_key
-		const section_tipo_key	= options.section_tipo_key
-		const paginated_key		= options.paginated_key || false
-		const row_key			= options.row_key || false
-		const delete_instace	= options.delete_instace || false
+		const section_id			= options.section_id
+		const section_tipo			= options.section_tipo
+		const section_id_key		= options.section_id_key
+		const section_tipo_key		= options.section_tipo_key
+		const main_component_tipo	= options.main_component_tipo
+		const paginated_key			= options.paginated_key || false
+		const row_key				= options.row_key || false
+		const delete_instace		= options.delete_instace || false
 
 	// ddo_dataframe.
 	// check if the show has any ddo that call to any dataframe section.
@@ -1721,6 +1728,7 @@ export const delete_dataframe = async function(options) {
 			&& parseInt(el.section_id)			=== parseInt(section_id)
 			&& el.data.section_tipo_key			=== section_tipo_key
 			&& parseInt(el.data.section_id_key)	=== parseInt(section_id_key)
+			&& el.data.main_component_tipo		=== main_component_tipo
 		)
 
 	if(!component_dataframe){
