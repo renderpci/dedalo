@@ -132,6 +132,7 @@ const get_content_value = (i, current_value, self) => {
 			// tipo_key			: self.tipo,
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
+			main_component_tipo	: self.tipo,
 			view				: self.view
 		})
 		.then(async function(component_dataframe){
@@ -429,6 +430,7 @@ const get_content_value_read = (i, current_value, self) => {
 			// tipo_key			: self.tipo,
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
+			main_component_tipo : self.tipo,
 			view				: self.view
 		})
 		.then(async function(component_dataframe){

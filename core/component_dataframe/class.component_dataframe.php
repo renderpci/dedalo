@@ -8,7 +8,7 @@ class component_dataframe extends component_portal {
 
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
+	public $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key','main_component_tipo'];
 
 
 
@@ -70,9 +70,11 @@ class component_dataframe extends component_portal {
 			if(	isset($locator->from_component_tipo)
 				&& isset($locator->section_id_key)
 				&& isset($locator->section_tipo_key)
+				&& isset($locator->main_component_tipo)
 				&& $locator->from_component_tipo	=== $this->tipo
 				&& (int)$locator->section_id_key	=== (int)$caller_dataframe->section_id_key
 				&& $locator->section_tipo_key		=== $caller_dataframe->section_tipo_key
+				&& $locator->main_component_tipo	=== $caller_dataframe->main_component_tipo
 			) {
 				$all_data[] = $locator;
 			}
@@ -129,6 +131,7 @@ class component_dataframe extends component_portal {
 		// locator_to_remove. add custom properties from caller_dataframe
 			$locator_to_remove->section_id_key		= $caller_dataframe->section_id_key;
 			$locator_to_remove->section_tipo_key	= $caller_dataframe->section_tipo_key;
+			$locator_to_remove->main_component_tipo	= $caller_dataframe->main_component_tipo;
 
 		// locator_properties_to_check
 			$locator_properties_to_check = $this->get_locator_properties_to_check();

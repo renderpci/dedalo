@@ -238,12 +238,13 @@ class component_iri extends component_common {
 			foreach( (array)$dato as $value ){
 				if( property_exists($value, 'label_id') ){
 
-					// create new daraframe locator to be set as new data
+					// create new dataframe locator to be set as new data
 					$locator = new locator();
 						$locator->set_section_tipo( component_iri::$label_target_section_tipo );
 						$locator->set_section_id( $value->label_id );
 						$locator->set_section_id_key( $value->id );
 						$locator->set_section_tipo_key( $this->section_tipo );
+						$locator->set_main_component_tipo( $this->tipo );
 
 					$label_dataframe_data[]	= $locator;
 
@@ -1641,6 +1642,7 @@ class component_iri extends component_common {
 			$new_locator->set_section_id( $target_section_id );
 			$new_locator->set_section_id_key( $section_id_key );
 			$new_locator->set_section_tipo_key( $section_tipo );
+			$new_locator->set_main_component_tipo( $component_tipo );
 
 		$component_dataframe_label->set_dato( $new_locator );
 

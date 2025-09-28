@@ -2084,10 +2084,10 @@ abstract class common {
 						continue;
 					}
 
-				$section_id			= $current_locator->section_id;
-				$section_tipo		= $current_locator->section_tipo;
-				$section_id_key		= $current_locator->section_id;
-				$section_tipo_key	= $current_locator->section_tipo;
+				$section_id				= $current_locator->section_id;
+				$section_tipo			= $current_locator->section_tipo;
+				$section_id_key			= $current_locator->section_id;
+				$section_tipo_key		= $current_locator->section_tipo;
 
 				// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
 				// but when the ddo is a component_dataframe (used as sub section as data frame of the locator) get include it.

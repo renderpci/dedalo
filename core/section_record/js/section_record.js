@@ -209,7 +209,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 
 		// dataframe
 			instance_options.id_variant = (instance_options.model==='component_dataframe')
-				? `${section_record_id_variant}_${current_data.section_tipo_key}_${current_data.section_id_key}`
+				? `${section_record_id_variant}_${current_data.section_tipo_key}_${current_data.section_id_key}_${current_data.main_component_tipo}`
 				: instance_options.id_variant
 
 	// component / section group. Create the instance options for build it, the instance is reflect of the context and section_id
@@ -551,6 +551,11 @@ section_record.prototype.get_component_data = function(options) {
 			? ddo.caller_dataframe.section_tipo_key
 			: self.section_tipo
 
+	// main_component_tipo
+		const main_component_tipo = (ddo.caller_dataframe)
+			? ddo.caller_dataframe.main_component_tipo
+			: self.tipo
+
 
 	// no data elements case (groupers)
 		if (ddo.model==='section_group') {
@@ -574,7 +579,8 @@ section_record.prototype.get_component_data = function(options) {
 						return (
 							parseInt(el.matrix_id)		=== parseInt(matrix_id)	&&
 							el.section_tipo_key			=== section_tipo_key &&
-							parseInt(el.section_id_key)	=== parseInt(section_id_key)
+							parseInt(el.section_id_key)	=== parseInt(section_id_key) &&
+							el.main_component_tipo		=== main_component_tipo
 						)
 					}
 
@@ -590,7 +596,7 @@ section_record.prototype.get_component_data = function(options) {
 
 				if (ddo.model==='component_dataframe') {
 
-					return parseInt(el.section_id_key)===parseInt(section_id_key) && el.section_tipo_key === section_tipo_key
+					return parseInt(el.section_id_key)===parseInt(section_id_key) && el.section_tipo_key === section_tipo_key && el.main_component_tipo === main_component_tipo
 				}
 
 				return true
@@ -613,9 +619,10 @@ section_record.prototype.get_component_data = function(options) {
 			}
 
 			if (ddo.model==='component_dataframe') {
-				// add section_id_key and section_tipo_key
-				empty_data.section_id_key	= section_id_key
-				empty_data.section_tipo_key	= section_tipo_key
+				// add section_id_key, section_tipo_key and main_component_tipo
+				empty_data.section_id_key		= section_id_key
+				empty_data.section_tipo_key		= section_tipo_key
+				empty_data.main_component_tipo	= main_component_tipo
 
 			}
 			return empty_data
