@@ -470,32 +470,6 @@ class transform_data {
 								// Nothing to change
 								break;
 						}
-
-					// time machine data update
-						// $old_locator = clone $locator;
-						// self::fix_dataframe_tm(
-						// 	$datos->section_id,
-						// 	$datos->section_tipo,
-						// 	$old_locator,
-						// 	$locator
-						// );
-
-					// ratting component update
-						// 	$component_rating = component_common::get_instance(
-						// 		'component_radio_button', // string model
-						// 		$ratting_tipo, // string tipo
-						// 		$new_target_section_id, // string section_id
-						// 		'list', // string mode
-						// 		DEDALO_DATA_NOLAN, // string lang
-						// 		$target_section_tipo // string section_tipo
-						// 	);
-
-						// 	$dato = new locator();
-						// 		$dato->set_section_tipo('dd500');
-						// 		$dato->set_section_id('1');
-
-						// 	$component_rating->set_dato([$dato]);
-						// 	$component_rating->Save();
 				}//end if(isset($locator->section_id_key))
 
 			}//end foreach ($relations as $locator)
