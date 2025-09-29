@@ -417,13 +417,16 @@ class locator extends stdClass {
 
 	/**
 	* SET_SECTION_TIPO_KEY
-	* @return
+	* @param string $value
+	* @return bool
 	*/
 	public function set_section_tipo_key(string $value) {
 		if(!get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_tipo_key: $value", 1);
 		}
 		$this->section_tipo_key = $value;
+
+		return true;
 	}//end set_section_tipo_key
 
 
