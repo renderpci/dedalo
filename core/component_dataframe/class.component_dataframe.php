@@ -443,6 +443,74 @@ class component_dataframe extends component_portal {
 				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
 				break;
 
+			case '6.8.0':
+				// Update the component_dataframe to use the `main_component_tipo` property
+				// `main_component_tipo` property is used to identify the caller component
+				// when a component_dataframe definition is shared between different components
+				// like a label for `component_iri`, that is used by every `component_iri`
+				// in those cases, the `from_component_tipo` is the same, because is only 1 definition in ontology
+				// and become necessary to disambiguate who is the main component, who is the caller component
+				// this allows to create a common `component_dataframe` used by multiple components
+				// In version < 6.8.0 every component_dataframe needs to be defined, and common definitions are not allowed.
+
+				// change the data
+				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+					$RecordObj_dd			= new RecordObj_dd($tipo);
+					$main_component_tipo	= $RecordObj_dd->get_parent();
+
+					$new_dato		= [];
+					$need_to_be_updated	= false;
+					foreach ((array)$dato_unchanged as $current_locator) {
+						// id the data has section_tipo_key do not change
+						if(isset($current_locator->main_component_tipo)){
+							continue;
+						}
+
+						$current_locator->main_component_tipo = $main_component_tipo;
+						$need_to_be_updated = true;
+
+						$new_dato[] = $current_locator;
+					}//end foreach ((array)$dato_unchanged as $key => $current_locator)
+
+					if ($need_to_be_updated === true) {
+
+						// section update and save locators
+							$section_to_save = section::get_instance(
+								$section_id, // string|null section_id
+								$section_tipo, // string section_tipo
+								'list', // string mode
+								false // bool bool
+							);
+							$remove_options = new stdClass();
+								$remove_options->component_tipo			= $tipo;
+								$remove_options->relations_container	= 'relations';
+
+							$section_to_save->remove_relations_from_component_tipo( $remove_options );
+							foreach ($new_dato as $current_locator) {
+								$section_to_save->add_relation($current_locator);
+							}
+							$section_to_save->Save();
+							debug_log(__METHOD__." ----> Saved ($section_tipo - $section_id) ".to_string($new_dato), logger::WARNING);
+
+						$response = new stdClass();
+							$response->result	= 3;
+							$response->new_dato	= $new_dato;
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+					}else{
+
+						$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+
+					}// end if($need_to_be_updated === true)
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+
+				break;
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
