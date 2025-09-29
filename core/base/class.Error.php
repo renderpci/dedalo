@@ -128,7 +128,8 @@ class dd_error {
 				]);
 			}
 
-			error_log('ERROR [dd_error::captureShutdown]: '. print_r($error_to_show, true));
+			$error_msg = sprintf("\033[43m%s\033[0m", 'ERROR [dd_error::captureError]: '.print_r($error_to_show, true));
+			error_log('ERROR [dd_error::captureShutdown]: '. $error_msg);
 
 			// PHP-APACHE LOG
 			error_log('ERROR [dd_error::captureShutdown]: '.$error_to_show['debug'].$error_to_show['dump']);
