@@ -650,6 +650,59 @@ class component_iri extends component_common {
 
 			case '6.8.0':
 
+				// Time Machine Update
+
+				// get the component data in Time Machine.
+				$component_tm_data = transform_data::get_tm_data_from_tipo($section_id, $section_tipo, $tipo);
+
+				// query error case, return an empty array
+				if($component_tm_data===false){
+					debug_log(__METHOD__
+						. " The time machine data has error. " . PHP_EOL
+						. ' main tipo error: '  . to_string($main_component_tipo) . PHP_EOL
+						. ' options: '  . to_string($options)
+						, logger::ERROR
+					);
+
+					break;
+				}
+				// get an array with the result
+				while($tm_row = pg_fetch_assoc($component_tm_data)) {
+
+					// check if the data has information, if is null or empty, continue to next one.
+					if( !isset($tm_row['dato'] ) || $tm_row['dato']===null ){
+						continue;
+					}
+
+					$matrix_id	= (int)$tm_row['id'];
+					$data		= json_decode($tm_row['dato']);
+
+					// id data is empty continue to the next one.
+					if( empty($data) ){
+						continue;
+					}
+
+					$new_tm_data = [];
+					$id = 1;
+					// process every locator to check if the main_comopnent_tipo is set in the dataframe data
+					foreach ($data as $current_value) {
+						// clean null values and other invalid data
+						if( !is_object($current_value) ){
+							continue;
+						}
+						// if the locator match with the `component_dataframe` tipo and its data has not the main_comonent_tipo
+						if( !isset($current_value->id) ){
+							$current_value->id = $id;
+							$id++;
+						}
+
+						$new_tm_data[] = $current_value;
+					}
+
+					transform_data::set_tm_data($matrix_id, $new_tm_data);
+				}
+
+
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
 
 					// Update the locator to move old ds and dataframe to v6 dataframe model.
@@ -702,7 +755,6 @@ class component_iri extends component_common {
 							];
 
 							component_iri::save_label_dataframe( $dataframe_options );
-
 					}
 
 					$response->result	= 1;
