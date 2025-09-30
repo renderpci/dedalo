@@ -556,6 +556,60 @@ class transform_data {
 	}//end fix_dataframe_tm
 
 
+	/**
+	* GET_TM_DATA_FROM_TIPO
+	* Return all Time Machine records of the given component for specific section (section_id and section_tipo)
+	* If Time Machine has not records or the process fail, return an empty array.
+	* @param string|int $section_id
+	* @param string $section_tipo
+	* @param string $tipo (it can be a section or component)
+	* @return array $component_tm_data
+	*/
+	public static function get_tm_data_from_tipo(string|int $section_id, string $section_tipo, string $tipo) : \PgSql\Result|false {
+
+		// get all records of the time_machine for the given component
+		$query = "
+			SELECT * FROM matrix_time_machine
+			WHERE section_id = $1
+			AND section_tipo = $2
+			AND tipo = $3
+		";
+		$result	= pg_query_params(DBi::_getConnection(), $query, [$section_id, $section_tipo, $tipo]);
+
+		return $result;
+	}//end get_tm_data_from_tipo
+
+
+
+	/**
+	* SET_TM_DATA
+	* Set the Time Machine data of the given matrix_id
+	* @param string|int $section_id
+	* @param array $data
+	* @return bool
+	*/
+	public static function set_tm_data( int $matrix_id, array $data) : bool {
+
+		// data_encoded : JSON ENCODE ALWAYS !!!
+			$data_encoded = json_handler::encode($data);
+			// prevent null encoded errors
+			$safe_data = str_replace(['\\u0000','\u0000'], ' ', $data_encoded);
+
+			$query	= "UPDATE matrix_time_machine SET dato = $1 WHERE id = $2 ";
+			$result	= pg_query_params(DBi::_getConnection(), $query, [$safe_data, $matrix_id]);
+			if($result===false) {
+				$msg = "Failed Update section_data $matrix_id";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					.' strQuery: ' . $query
+					, logger::ERROR
+				);
+			}
+
+		return true;
+	}//end set_tm_data
+
+
 
 	/**
 	* UPDATE_PAPER_LIB_DATA
