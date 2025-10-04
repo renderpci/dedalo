@@ -191,15 +191,24 @@ const add_resources_to_cache = async (options) => {
 	// custom cache add equivalent to 'cache.add' but using fetch param 'cache' as 'reload'
 	// to force load the file from server always
 	const custom_cache_add = async (url) => {
-		const response = await fetch(url, {
-			headers	: get_headers(),
-			method	: 'GET',
-			cache	: 'reload'
-		})
-		if (!response.ok) {
-			throw new TypeError("bad response status");
+		try {
+
+			const response = await fetch(url, {
+				headers	: get_headers(),
+				method	: 'GET',
+				cache	: 'reload'
+			})
+			if (!response.ok) {
+				throw new TypeError("bad response status");
+			}
+			return cache.put(url, response);
+
+		} catch (error) {
+			console.log('Failed fetch file. URL:', url);
+			console.error(error)
 		}
-		return cache.put(url, response);
+
+		return false
 	}
 
 	// await cache.addAll( files_list );
