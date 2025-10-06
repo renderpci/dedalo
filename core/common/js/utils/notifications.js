@@ -83,6 +83,17 @@ export function render_node_info(options) {
 			break;
 		}
 
+		case 'success' : {
+			node_info.classList.add('ok')
+			const text = msg
+			node_info.insertAdjacentHTML('afterbegin', text)
+			// remove node on timeout
+			if (remove_time) {
+				fade_away(node_info, remove_time || 3000)
+			}
+			break;
+		}
+
 		case 'save':
 		default:
 			// msg. Based on API response result
