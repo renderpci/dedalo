@@ -3512,7 +3512,19 @@ class component_relation_common extends component_common {
 				}
 
 			// send to diffusion for normalize formats
-				$term_id = diffusion_sql::map_locator_to_term_id(null, $dato);
+				$map_options = null;
+				$check_publishable = $options->check_publishable ?? false;
+				if ($check_publishable) {
+					// Pass 'check_publishable' value to diffusion_sql to apply
+					// path: $process_dato_arguments = $options->properties->process_dato_arguments
+					$map_options = new stdClass();
+						$map_options->properties = (object)[
+							'process_dato_arguments' => (object)[
+								'check_publishable' => true
+							]
+						];
+				}
+				$term_id = diffusion_sql::map_locator_to_term_id($map_options, $dato);
 		}
 
 		return $term_id;
