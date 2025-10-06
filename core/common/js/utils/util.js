@@ -914,6 +914,36 @@ export const get_section_id_from_tipo = function (tipo) {
 
 
 /**
+* GET_CALLER_BY_MODEL
+* Find the caller instance of the given model
+* e.g. section caller of the component
+* @param object instance
+* @param string model
+* @return object|null instance
+*/
+export const get_caller_by_model = function(instance, model) {
+
+	if (!instance.model) {
+		console.error('Error. Instance do not proved model. NULL is returned:', instance);
+		return null
+	}
+
+	let current_instance = instance;
+
+	while (current_instance) {
+		if (current_instance.model === model) {
+			return current_instance;
+		}
+
+		current_instance = current_instance.caller;
+	}
+
+	return null;
+}//end get_caller_by_model
+
+
+
+/**
  * Generates a 32-bit integer hash from a string using a simple rolling hash algorithm.
  *
  * This is a non-cryptographic hash function suitable for hash tables, checksums,
