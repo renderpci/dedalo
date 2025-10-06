@@ -744,6 +744,29 @@ export function find_up_node(el, target_tag, compare) {
 
 
 /**
+* FIND_UP_TAG
+* Search parent with given CSS selector looking up recursively
+* @param HTMLElement el
+* @param string class_name 'wrap_ts_object'
+* @return HTMLElement|null
+*/
+export function find_up_tag(el, class_name) {
+	// Use a while loop to traverse up the DOM tree from the starting element
+	while (el) {
+		// Check if the current element has the specified class
+		if (el.classList && el.classList.contains(class_name)) {
+			return el;
+		}
+		// Move up to the next parent element in the hierarchy
+		el = el.parentNode;
+	}
+	// If no parent with the class is found, return null
+	return null;
+}//end find_up_tag
+
+
+
+/**
 * PAUSE
 * Creates a pause in the async execution
 * using a promise over a timeout
