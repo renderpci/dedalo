@@ -17,6 +17,10 @@
 			margin-bottom: 0.25rem;
 		}
 
+		.show_all {
+			white-space: nowrap;
+		}
+
 		// other_buttons_block
 		>.other_buttons_block {
 			display: flex;
@@ -129,6 +133,30 @@
 				// typology_container
 				>.typology_container {
 					padding: 0px;
+					margin: 0px;
+
+					// wrapper_placeholder. Is placeholder for ontology node wrapper
+					// It will be replaced by the final real wrapper
+					>.wrapper_placeholder {
+						display: block;
+						position: relative;
+						width: 100%;
+						margin: 0px;
+						padding: 0px;
+						// min-height: 1.71rem;
+						height: 1.69rem;
+
+						// loading message
+						>.loading {
+							display: flex;
+							align-items: center;
+							font-size: 1rem;
+							min-width: 150px;
+							margin: 0;
+							padding: 0.35rem;
+							padding-left: 1.6rem;
+						}
+					}
 				}
 			}
 		}

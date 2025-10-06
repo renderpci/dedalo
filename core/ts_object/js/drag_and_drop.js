@@ -4,7 +4,8 @@
 // imports
 	import {get_instance_by_id} from '../../common/js/instances.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
-	import {render_children} from './view_default_list_js_object.js'
+	import {find_up_tag} from '../../common/js/utils/util.js'
+	import {render_children} from './view_default_edit_ts_object.js'
 
 
 
@@ -101,81 +102,32 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 			// default scenario, dragging from self thesaurus / ontology
 
 			// data_transfer vars
-			const moving_instance_id		= data_transfer_json.id
-			const moving_section_tipo		= data_transfer_json.moving_section_tipo
-			const moving_section_id			= data_transfer_json.moving_section_id
-			const old_parent_section_tipo	= data_transfer_json.parent_section_tipo
-			const old_parent_section_id		= data_transfer_json.parent_section_id
-			const old_parent_id				= data_transfer_json.parent_instance_id
-
-			// target instance vars
-			const target_instance			= self
-			const new_parent_section_tipo	= target_instance.section_tipo
-			const new_parent_section_id		= target_instance.section_id
-
-			// Validate source.  Don't proceed if source is the same as target.
-			if (target_instance.section_tipo === moving_section_tipo && target_instance.section_id == moving_section_id) {
-				console.warn('[ts_object.on_drop] Invalid drop: source and target are the same.');
-				return false;
-			}
-
-			// children_container. Find the container for children within the target.
-			const children_container = target_instance.children_container
-			// If no children container, log an error and stop.
-			if (!children_container) {
-				console.warn('[ts_object.on_drop] No children_container found in target instance:', target_instance);
-				return false;
-			}
-
-			// update_parent_data. Call API to update parent data
-			const update_parent_data_options = {
-				section_id				: moving_section_id,
-				section_tipo			: moving_section_tipo,
-				old_parent_section_id	: old_parent_section_id,
-				old_parent_section_tipo	: old_parent_section_tipo,
-				new_parent_section_id	: new_parent_section_id,
-				new_parent_section_tipo	: new_parent_section_tipo
-			}
-			const response = await self.update_parent_data(update_parent_data_options)
-			if (!response.result) {
-				console.error('[ts_object.on_drop] Error on update_parent_data response:', response);
-				return false;
-			}
+			const moving_instance_id	= data_transfer_json.moving_instance_id
+			const old_parent_id			= data_transfer_json.parent_instance_id
 
 			// Get moving_instance
-			const moving_instance = get_instance_by_id(moving_instance_id)
+			const moving_instance = get_instance_by_id( moving_instance_id )
 			if (!moving_instance) {
 				console.error('[ts_object.on_drop] No moving_instance found in instances map cache.', moving_instance_id);
 				return false;
 			}
 
-			// update moving instance caller.
-			// It is important to allow the term to be moved again without causing any inconsistencies.
-			moving_instance.caller = self
-
-			// Move moving node from old parent to the new parent (current dropped)
-			self.children_container.appendChild(moving_instance.node);
-
-			// hilite moved term. Allows arrow state update
-			dd_request_idle_callback(
-				() => {
-					// hilite term node
-					const element = moving_instance.term_node
-					if (element) {
-						self.hilite_element(element)
-					}
-				}
-			)
-
 			// Get old_parent_instance
-			const old_parent_instance = get_instance_by_id(old_parent_id)
+			const old_parent_instance = get_instance_by_id( old_parent_id )
 			if (!old_parent_instance) {
 				console.error('[ts_object.on_drop] No old_parent_instance found in instances map cache.', old_parent_id);
 				return false;
 			}
-			// update_arrow_state. If the instance has no children, then the arrow icon should be hidden.
-			old_parent_instance.update_arrow_state(false)
 
+			// swap_parent from self (target_instance)
+			// this function already refresh the moving instance to display
+			// updated information about order etc.
+			const result = await self.swap_parent({
+				moving_instance,
+				old_parent_instance
+			});
+
+			return result
 		}else{
 
 			// tool_cataloging and similar using event dataTransfer case
@@ -263,7 +215,7 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 						)
 
 						// update parent arrow button
-						self.update_arrow_state(link_children_element, false)
+						// self.update_arrow_state(link_children_element, false)
 
 						// hilite added term. Allows arrow state update
 						dd_request_idle_callback(
@@ -289,7 +241,7 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 	}
 
 
-	return true;
+	return false;
 }//end on_drop
 
 
@@ -307,7 +259,7 @@ export const on_dragover = function(self, event) {
 	event.stopPropagation();
 
 	// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
-	const wrap_ts_object = self.find_up_tag(event.target, 'wrap_ts_object')
+	const wrap_ts_object = find_up_tag(event.target, 'wrap_ts_object')
 	if (wrap_ts_object.classList.contains('drag_over')) {
 		return false
 	}
@@ -333,7 +285,7 @@ export const on_dragleave = function(self, event) {
 	event.stopPropagation();
 
 	// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
-	const wrap_ts_object = self.find_up_tag(event.target, 'wrap_ts_object')
+	const wrap_ts_object = find_up_tag(event.target, 'wrap_ts_object')
 
 	// Remove drag_over class
 	if (wrap_ts_object.classList.contains('drag_over')) {

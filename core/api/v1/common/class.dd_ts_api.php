@@ -33,7 +33,7 @@ final class dd_ts_api {
 			$section_tipo			= $source->section_tipo ?? null;
 			$section_id				= $source->section_id ?? null;
 			$children_tipo			= $source->children_tipo ?? null;
-			$area_model				= $source->model ?? 'area_thesaurus';
+			$area_model				= $source->area_model ?? 'area_thesaurus';
 			$options				= $rqo->options ?? new stdClass();
 			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
 
@@ -43,26 +43,27 @@ final class dd_ts_api {
 					? true
 					: false; // get from URL as thesaurus_view_mode=model
 
-		// children. Calculated from given locator
-			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
-				$locator->set_from_component_tipo($children_tipo);
+		// data
+			// children. Calculated from given locator
+				$locator = new locator();
+					$locator->set_section_tipo($section_tipo);
+					$locator->set_section_id($section_id);
+					$locator->set_from_component_tipo($children_tipo);
 
-			$children = [$locator];
+			// parse_child_data
+				$ar_children_data = ts_object::parse_child_data(
+					[$locator],
+					$area_model,
+					$ts_object_options
+				);
 
-		// parse_child_data
-			$ar_children_data = ts_object::parse_child_data(
-				$children,
-				$area_model,
-				$ts_object_options
-			);
+			// build data result object
+				$data = $ar_children_data[0] ?? null;
 
-		// build children_data result object
-			$children_data = $ar_children_data[0] ?? null;
+		$result = $data;
 
 		// response
-			$response->result	= $children_data;
+			$response->result	= $result;
 			$response->msg		= empty($response->errors)
 				? 'OK. Request done successfully'
 				: 'Warning! Request done with errors';
