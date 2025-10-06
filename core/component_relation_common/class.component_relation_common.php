@@ -458,9 +458,10 @@ class component_relation_common extends component_common {
 				// if the component has a dataframe component, create his caller_dataframe to related with the locator
 				$caller_dataframe 		= ($ddo->model === 'component_dataframe')
 					? (object)[
-						'section_tipo'		=> $ddo->section_tipo,
-						'section_id_key'	=> $locator->section_id,
-						'section_tipo_key'	=> $locator->section_tipo_key ?? null
+						'section_tipo'			=> $ddo->section_tipo,
+						'section_id_key'		=> $locator->section_id,
+						'section_tipo_key'		=> $locator->section_tipo_key ?? null,
+						'main_component_tipo'	=> $locator->main_component_tipo
 					  ]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;

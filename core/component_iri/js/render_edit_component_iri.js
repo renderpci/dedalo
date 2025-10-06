@@ -132,6 +132,7 @@ const get_content_value = (i, current_value, self) => {
 			// tipo_key			: self.tipo,
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
+			main_component_tipo	: self.tipo,
 			view				: self.view
 		})
 		.then(async function(component_dataframe){
@@ -421,24 +422,52 @@ const get_content_value_read = (i, current_value, self) => {
 			class_name		: 'content_value read_only'
 		})
 
-	// title
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'title',
-			inner_html		: title,
-			parent			: content_value
+	// dataframe
+		const component_dataframe = get_dataframe({
+			self				: self,
+			section_id			: self.section_id,
+			// section_tipo		: self.section_tipo,
+			// tipo_key			: self.tipo,
+			section_id_key		: current_value.id,
+			section_tipo_key	: self.section_tipo,
+			main_component_tipo : self.tipo,
+			view				: self.view
 		})
+		.then(async function(component_dataframe){
 
-	// iri
-		const link = ui.create_dom_element({
-			element_type	: 'a',
-			href			: iri,
-			class_name		: 'iri',
-			inner_html		: iri,
-			parent			: content_value
+			// dataframe
+				// set the component_dataframe
+				// is mandatory use it
+				if(component_dataframe){
+					self.ar_instances.push(component_dataframe)
+					component_dataframe.view = 'line'
+					component_dataframe.context.mode = 'list'
+					const dataframe_node = await component_dataframe.render()
+					dataframe_node.classList.add('dataframe')
+					content_value.appendChild(dataframe_node)
+
+				}
+
+
+			// title
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'title',
+					inner_html		: title,
+					parent			: content_value
+				})
+
+			// iri
+				const link = ui.create_dom_element({
+					element_type	: 'a',
+					href			: iri,
+					class_name		: 'iri',
+					inner_html		: iri,
+					parent			: content_value
+				})
+				// safe open
+				link.setAttribute("rel", "noopener noreferrer");
 		})
-		// safe open
-		link.setAttribute("rel", "noopener noreferrer");
 
 
 	return content_value

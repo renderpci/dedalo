@@ -381,7 +381,7 @@ abstract class component_common extends common {
 				$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
 				if(isset($caller_dataframe)) {
 					// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->section_tipo_key;
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->main_component_tipo;
 				}
 				if ( !isset(self::$ar_component_instances[$cache_key]) ) {
 					// instance new component
@@ -797,12 +797,14 @@ abstract class component_common extends common {
 						// If the component is a dataframe filter the tm data with the section_id_key also.
 						if($this->get_model()==='component_dataframe'){
 
-							$section_id_key		= $this->caller_dataframe->section_id_key;
-							$section_tipo_key	= $this->caller_dataframe->section_tipo_key;
+							$section_id_key			= $this->caller_dataframe->section_id_key;
+							$section_tipo_key		= $this->caller_dataframe->section_tipo_key;
+							$main_component_tipo	= $this->caller_dataframe->main_component_tipo;
 
-							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key, $section_tipo_key) {
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key, $section_tipo_key, $main_component_tipo) {
 								return ( isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key )
-									&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key );
+									&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key )
+									&& ( isset($el->main_component_tipo) && $el->main_component_tipo===$main_component_tipo );
 							}));
 						}
 					}
@@ -4171,6 +4173,23 @@ abstract class component_common extends common {
 
 		return $response;
 	}//end conform_import_data
+
+
+
+	/**
+	* IMPORT_SAVE
+	* Only called by the import process
+	* Is used to perform any process after the conform data and previous to save
+	* As clean its dataframe or any other process.
+	* By default it only call to save function.
+	*
+	* @return
+	*/
+	public function import_save() {
+
+		$this->Save();
+
+	}//end import_save
 
 
 

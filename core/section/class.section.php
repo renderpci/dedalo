@@ -161,7 +161,7 @@ class section extends common {
 			// find current instance in cache
 				$cache_key = implode('_', [$section_id, $tipo, $mode]);
 				if(isset($caller_dataframe)){
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key;
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
 
 				}
 				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
@@ -494,6 +494,7 @@ class section extends common {
 								? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
 									&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
 									&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
+									&& $el->main_component_tipo===$component_obj->caller_dataframe->main_component_tipo
 								: isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
 
 							 return $previous_dato;
@@ -3119,6 +3120,7 @@ class section extends common {
 					( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
 					&& ( isset($current_locator->section_id_key) && intval($current_locator->section_id_key)===intval($caller_dataframe->section_id_key) )
 					&& ( isset($current_locator->section_tipo_key) && $current_locator->section_tipo_key===$caller_dataframe->section_tipo_key)
+					&& ( isset($current_locator->main_component_tipo) && $current_locator->main_component_tipo===$caller_dataframe->main_component_tipo)
 					){
 						$ar_deleted_locators[] = $current_locator;
 

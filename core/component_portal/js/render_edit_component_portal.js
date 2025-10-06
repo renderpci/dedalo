@@ -553,7 +553,8 @@ export const render_column_remove = function(options) {
 									section_id			: self.section_id,
 									section_tipo		: self.section_tipo,
 									section_id_key		: section_id,
-									section_tipo_key	: section_tipo
+									section_tipo_key	: section_tipo,
+									main_component_tipo	: self.tipo,
 								})
 
 								// refresh the component. Don't wait here
@@ -621,7 +622,8 @@ export const render_column_remove = function(options) {
 							section_id			: self.section_id,
 							section_tipo		: self.section_tipo,
 							section_id_key		: section_id,
-							section_tipo_key	: section_tipo
+							section_tipo_key	: section_tipo,
+							main_component_tipo : self.tipo
 						})
 
 						// close modal

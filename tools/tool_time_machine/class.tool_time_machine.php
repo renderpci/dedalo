@@ -141,6 +141,13 @@ class tool_time_machine extends tool_common {
 
 								$dataframe_tipo = $current_dataframe_ddo->tipo;
 
+								// component dataframe of the component iri
+								// here only use the main_component_tipo
+								// the dataframe will save all time machine data independent of section_id_key or section_tipo_key
+								// and it don't save the revert in Time Machine, as main component does.
+								$caller_dataframe = new stdClass();
+									$caller_dataframe->main_component_tipo	= $tipo;
+
 								// delete all data of the dataframe
 								// it will delete all section_id_key
 								// create the dataframe component
@@ -151,7 +158,9 @@ class tool_time_machine extends tool_common {
 										$section_id,
 										'list',
 										DEDALO_DATA_NOLAN,
-										$section_tipo
+										$section_tipo,
+										false,
+										$caller_dataframe
 									);
 
 								// get the dataframe data from dato, filtering by dataframe_tipo

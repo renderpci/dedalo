@@ -8,7 +8,7 @@ class component_dataframe extends component_portal {
 
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
+	public $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key','main_component_tipo'];
 
 
 
@@ -70,9 +70,11 @@ class component_dataframe extends component_portal {
 			if(	isset($locator->from_component_tipo)
 				&& isset($locator->section_id_key)
 				&& isset($locator->section_tipo_key)
+				&& isset($locator->main_component_tipo)
 				&& $locator->from_component_tipo	=== $this->tipo
 				&& (int)$locator->section_id_key	=== (int)$caller_dataframe->section_id_key
 				&& $locator->section_tipo_key		=== $caller_dataframe->section_tipo_key
+				&& $locator->main_component_tipo	=== $caller_dataframe->main_component_tipo
 			) {
 				$all_data[] = $locator;
 			}
@@ -129,6 +131,7 @@ class component_dataframe extends component_portal {
 		// locator_to_remove. add custom properties from caller_dataframe
 			$locator_to_remove->section_id_key		= $caller_dataframe->section_id_key;
 			$locator_to_remove->section_tipo_key	= $caller_dataframe->section_tipo_key;
+			$locator_to_remove->main_component_tipo	= $caller_dataframe->main_component_tipo;
 
 		// locator_properties_to_check
 			$locator_properties_to_check = $this->get_locator_properties_to_check();
@@ -165,37 +168,11 @@ class component_dataframe extends component_portal {
 	*/
 	public function empty_full_data_associated_to_main_component() : true {
 
-		$all_data = parent::get_all_data();
-
-		$to_save = false;
-
-		$all_data_size = sizeof($all_data);
-		for ($i=0; $i < $all_data_size; $i++) {
-
-			$locator = $all_data[$i];
-			// remove current locator from component dato
-
-			$caller_dataframe = new stdClass();
-				$caller_dataframe->section_id_key	= $locator->section_id_key;
-				$caller_dataframe->section_tipo_key	= $locator->section_tipo_key;
-				$caller_dataframe->section_tipo		= $this->section_tipo;
-
-			$this->set_caller_dataframe($caller_dataframe);
-
-			// exec remove (return bool)
-			$removed = $this->remove_locator_from_dato(
-				$locator
-			);
-
-			if ($removed) {
-				$to_save = true;
-			}
-		}
-
-		if ($to_save) {
-			$this->Save();
-		}
-
+		$section = $this->get_my_section();
+		$options = (object)[
+			'component_tipo' => $this->tipo
+		];
+		$section->remove_relations_from_component_tipo($options);
 
 		return true;
 	}//end empty_full_data_associated_to_main_component
@@ -209,30 +186,17 @@ class component_dataframe extends component_portal {
 	*/
 	public function set_time_machine_data( array $data ) : bool {
 
-		$section = $this->get_my_section();
-			$section->save_tm = false;
-
+		// remove all previous data
 		$this->empty_full_data_associated_to_main_component();
 
-		$data_size = sizeof($data);
-		for ($i=0; $i < $data_size; $i++) {
-
-			$locator = $data[$i];
-
-			$caller_dataframe = new stdClass();
-				$caller_dataframe->section_id_key	= $locator->section_id_key;
-				$caller_dataframe->section_tipo_key	= $locator->section_tipo_key;
-				$caller_dataframe->section_tipo		= $this->section_tipo;
-
-			$this->set_caller_dataframe($caller_dataframe);
-
-			// exec remove (return bool)
-			$this->set_dato( [$locator] );
-			$this->Save();
-		}
-
+		// Remove the time machine to save the dataframe
+		// this set will be saved by main component.
+		$section = $this->get_my_section();
+		$section->save_tm = false;
+		$this->set_dato( $data );
+		$this->Save();
+		// re activate the time machine
 		$section->save_tm = true;
-
 
 		return true;
 	}//end set_time_machine_data
@@ -479,6 +443,74 @@ class component_dataframe extends component_portal {
 				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
 				break;
 
+			case '6.8.0':
+				// Update the component_dataframe to use the `main_component_tipo` property
+				// `main_component_tipo` property is used to identify the caller component
+				// when a component_dataframe definition is shared between different components
+				// like a label for `component_iri`, that is used by every `component_iri`
+				// in those cases, the `from_component_tipo` is the same, because is only 1 definition in ontology
+				// and become necessary to disambiguate who is the main component, who is the caller component
+				// this allows to create a common `component_dataframe` used by multiple components
+				// In version < 6.8.0 every component_dataframe needs to be defined, and common definitions are not allowed.
+
+				// change the data
+				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+					$RecordObj_dd			= new RecordObj_dd($tipo);
+					$main_component_tipo	= $RecordObj_dd->get_parent();
+
+					$new_dato		= [];
+					$need_to_be_updated	= false;
+					foreach ((array)$dato_unchanged as $current_locator) {
+						// id the data has section_tipo_key do not change
+						if(isset($current_locator->main_component_tipo)){
+							continue;
+						}
+
+						$current_locator->main_component_tipo = $main_component_tipo;
+						$need_to_be_updated = true;
+
+						$new_dato[] = $current_locator;
+					}//end foreach ((array)$dato_unchanged as $key => $current_locator)
+
+					if ($need_to_be_updated === true) {
+
+						// section update and save locators
+							$section_to_save = section::get_instance(
+								$section_id, // string|null section_id
+								$section_tipo, // string section_tipo
+								'list', // string mode
+								false // bool bool
+							);
+							$remove_options = new stdClass();
+								$remove_options->component_tipo			= $tipo;
+								$remove_options->relations_container	= 'relations';
+
+							$section_to_save->remove_relations_from_component_tipo( $remove_options );
+							foreach ($new_dato as $current_locator) {
+								$section_to_save->add_relation($current_locator);
+							}
+							$section_to_save->Save();
+							debug_log(__METHOD__." ----> Saved ($section_tipo - $section_id) ".to_string($new_dato), logger::WARNING);
+
+						$response = new stdClass();
+							$response->result	= 3;
+							$response->new_dato	= $new_dato;
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+					}else{
+
+						$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+
+					}// end if($need_to_be_updated === true)
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+
+				break;
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
