@@ -69,6 +69,15 @@
 					continue;
 				}
 
+				if (empty($hierarchy_data->children_tipo)) {
+					debug_log(__METHOD__
+						. " Ignored invalid hierarchy section without children_tipo " . PHP_EOL
+						. ' hierarchy_data: ' . to_string($hierarchy_data)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 				if (!in_array($hierarchy_data->typology_section_id, $ar_tipologies_section_id)) {
 					$ar_tipologies_section_id[] = $hierarchy_data->typology_section_id;
 					$typology = new stdClass();
