@@ -64,6 +64,7 @@ class ontology_node {
 	* GET_INSTANCE
 	* Create the ontology node instance with the ontology identification; tipo
 	* @param ?string $tipo = null
+	* 	E.g. 'dd156'
 	* @return self
 	*/
 	public static function get_instance( ?string $tipo = null ) : self {

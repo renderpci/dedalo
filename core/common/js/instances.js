@@ -241,6 +241,7 @@ export const add_instance = function(key, instance_element) {
 }//end add_instance
 
 
+
 /**
 * GET_INSTANCE_BY_KEY
 * Select a instance form the cache map by key (instance id)

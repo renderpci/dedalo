@@ -21,44 +21,29 @@ export const on_dragstart = function(self, event) {
 	event.stopPropagation()
 
 	// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
-		const wrap_ts_object = event.target
+	const wrap_ts_object = event.target
 
 	// event_handle (it's activated on user mousedown drag icon)
-		const event_handle = wrap_ts_object.event_handle
+	const event_handle = wrap_ts_object.event_handle
 
 	// if not event_handle
-		if (!event_handle) {
-			event.preventDefault();
-			return
-		}
+	if (!event_handle) {
+		event.preventDefault();
+		return
+	}
 
-	// if event_handle
-		self.source = wrap_ts_object;
-		event.dataTransfer.effectAllowed = 'move';
+	// if event_handle set to move
+	event.dataTransfer.effectAllowed = 'move';
 
-		// event.dataTransfer.setData('text/html', wrap_ts_object.innerHTML);
+	// Store JSON string in dataTransfer
+	const data = {
+		source_type			: 'default',
+		moving_instance_id	: self.id, // moving instance is self
+		parent_instance_id	: self.caller.id // parent is the current caller
+	}
 
-		const parent_section_tipo	= self.caller.section_tipo
-		const parent_section_id		= self.caller.section_id
-		const parent_instance_id	= self.caller.id
-
-		// Store JSON string in dataTransfer
-		const data = {
-			id					: self.id,
-			source_type			: 'default',
-			moving_section_tipo	: self.section_tipo,
-			moving_section_id	: self.section_id,
-			parent_section_tipo	: parent_section_tipo,
-			parent_section_id	: parent_section_id,
-			parent_instance_id	: parent_instance_id
-		}
-		event.dataTransfer.setData('text/plain', JSON.stringify(data));
-
-	// Fix class var 'old_parent_wrap'
-		self.old_parent_wrap = wrap_ts_object.parentNode.parentNode;
-		if(!self.old_parent_wrap) {
-			console.error("[on_dragstart] Error on set old_parent_wrap");
-		}
+	// Transfer data as JSON stringified string
+	event.dataTransfer.setData('text/plain', JSON.stringify(data));
 }//end on_dragstart
 
 
@@ -299,7 +284,6 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 			}
 		}
 
-
 	} catch (e) {
 		console.error('Failed to parse JSON data:', e);
 	}
@@ -329,7 +313,7 @@ export const on_dragover = function(self, event) {
 	}
 
 	// dataTransfer
-	event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
+	event.dataTransfer.dropEffect = 'move'; // See the section on the DataTransfer object.
 
 	// Add drag_over class
 	wrap_ts_object.classList.add('drag_over')
