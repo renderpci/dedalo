@@ -9,11 +9,6 @@
 
 // wrap_ts_object
 .wrap_ts_object {
-	position: relative;
-	width: 100%;
-	display: flex;
-	flex-wrap: wrap;
-	align-items: flex-start;
 
 	// local vars
 	@ts_object_line_height: 20px;
@@ -37,596 +32,523 @@
 			width: @ts_object_line_height;
 		}
 
-	&:hover > .id_column_content {
-		opacity: 1;
-	}
+	>.content_data {
+		position: relative;
+		width: 100%;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
 
-	// column ID : Add, drag, delete, order, edit buttons --------------------------------------------------
-	>.id_column_content {
-		.inline_common;
-		opacity: 0.5;
-		flex-wrap: nowrap;
+		// column ID : Add, drag, delete, order, edit buttons --------------------------------------------------
+		>.id_column_content {
+			.inline_common;
+			opacity: 0.5;
+			flex-wrap: nowrap;
 
-		.id_column_link {
-			display: inline-block;
-			height: 1.4em;
-			line-height: 1.5rem;
-			z-index: 1; // overlap term hilite
+			.id_column_link {
+				display: inline-block;
+				height: 1.4em;
+				line-height: 1.5rem;
+				z-index: 1; // overlap term hilite
 
-			width: 1.5rem;
-			margin-right: 0.25rem;
+				width: 1.5rem;
+				margin-right: 0.25rem;
 
-			&:active {
-				opacity: 0.5;
+				&:active {
+					opacity: 0.5;
+				}
 			}
-		}
 
-		a.id_column_link div {
-			height: @ts_object_line_height;
-			margin-right: 6px;
-		}
-
-		.ts_object_add_icon {
-		.ts_icons_all;
-			background-image: url('../../themes/default/icons/add_light.svg');
-
-			&:hover {
-				background-color: @color_blue_3;
-				border-radius: 3px;
-				filter: invert(100%);
+			a.id_column_link div {
+				height: @ts_object_line_height;
+				margin-right: 6px;
 			}
-		}
 
-		 // drag_button
-		.ts_object_drag {
-			margin-right: 4px;
-		}
-		.ts_object_drag_icon {
+			.ts_object_add_icon {
 			.ts_icons_all;
-			background-image: url('../../themes/default/icons/move.svg');
-
-			&:hover {
-				background-color: @color_orange_dedalo;
-				border-radius: 3px;
-				filter: invert(100%);
-			}
-		}
-
-		 // delete_button
-		.ts_object_delete {
-
-			.ts_object_delete_icon {
-				.ts_icons_all;
-				background-image: url('../../themes/default/icons/trash.svg');
-				background-size: 76%;
-				margin-right: 2px;
+				background-image: url('../../themes/default/icons/add_light.svg');
 
 				&:hover {
-					background-color: @color_cyan;
+					background-color: @color_blue_3;
 					border-radius: 3px;
 					filter: invert(100%);
 				}
 			}
-		}
 
-		// order_number
-		.ts_object_order_number {
-			width: 1rem;
-			min-width: 14px;
-			text-align: center;
-			padding-top: 0px;
-			margin-right: 3px;
-			font-size: 0.8rem;
-			line-height: 1.4rem;
-			font-family: monospace;
-			text-decoration: none;
-		}
-
-		.input_order {
-			text-align: center;
-			width: 22px;
-			border: 1px solid @color_warning;
-			border-radius: 2px;
-			position: relative;
-			top: 1px;
-			left: -0.2rem;
-			margin: 0px;
-		}
-
-		// edit_button
-		.ts_object_edit {
-
-			&:hover {
-				background-color: @color_purple;
-				border-radius: 3px;
-				filter: invert(100%);
+			 // drag_button
+			.ts_object_drag {
+				margin-right: 4px;
 			}
-
-			 // id number
-			.ts_object_section_id_number {
-				height: @ts_object_line_height;
-				min-width: 36px;
-				float: left;
-				padding: 2px;
-				font-size: 1.05em;
-				padding-right: 4px;
-				text-align: right;
-				display: none;
-			}
-
-			// edit_icon
-			.ts_object_edit_icon {
-				background-image: url('../../themes/default/icons/edit.svg');
-				background-repeat: no-repeat;
-				background-size: 65%;
-				background-position: center;
-				float: left;
-				width: 24px;
-				height: @ts_object_line_height;
-				cursor: pointer;
-			}
-		}//end ts_object_edit
-	}
-
-	// elements_container : Term, indexation buttons and arrow show children ------------------------------------------
-	>.elements_container {
-		.inline_common;
-		min-width: 150px;
-		margin-left: 0px;
-		min-height: 22px;
-		flex: 1 0;
-
-		// ts_object_children_arrow_icon
-		.term_img {
-			padding: 0px !important;
-			cursor: pointer;
-
-			>img {
-				max-height: 22px;
-			}
-		}
-
-		// list_thesaurus commons
-		>.list_thesaurus_element {
-			position: relative;
-			display: table-cell;
-			min-width: 24px;
-			padding: 2px;
-			padding-right: 5px;
-			font-size: 1.1em;
-			text-align: center;
-			border-left: 1px solid @grey_color;
-			opacity: 0.3;
-			width: 29px;
-			vertical-align: top;
-
-			&.term_img {
-				height: 1.3rem;
-				opacity: 1;
-			}
-
-			mark {
-				color: @color_grey_4 !important;
-				font-style: italic;
-			}
-
-			img {
-				height: 100%;
-			}
-
-			&.loading {
-				background-color: transparent;
-
-				>span {
-					opacity: 0.12;
-				}
-
-				img {
-					opacity: 0;
-				}
-
-				&:after {
-					content: " ";
-					display: block;
-					position: absolute;
-					top: 2px;
-					left: 30%;
-					width: 1.1rem;
-					height: 1.1rem;
-					border: 2px solid @color_grey_12;
-					border-top-color: @color_orange_dedalo;
-					border-radius: 50%;
-					animation: run_spinner 800ms linear infinite;
-				}
-			}
-
-			// model_value (used in Ontology to display de model value of each term)
-			&.model_value {
-				// color: @color_grey_8;
-				color: @color_orange_dedalo;
-				opacity: 1;
-				font-size: 0.98rem;
-				width: auto;
-				border: none;
-				padding-top: 0px;
-			}
-		}
-
-		// term
-		.list_thesaurus_element.term {
-			border: 0px;
-			opacity: 1;
-			text-align: left;
-			inline-size: auto;
-			overflow-wrap: break-word;
-			hyphens: auto;
-			font-weight: 300;
-
-			// span term_text
-			>.term_text {
-				cursor: pointer;
-				display: inline-block;
-				min-width: 1.5rem;
-				min-height: 1rem;
-
-				@size : 0.25rem;
-				padding: @size;
-				margin: -@size;
-
-				// background-color: #cae3ba;
+			.ts_object_drag_icon {
+				.ts_icons_all;
+				background-image: url('../../themes/default/icons/move.svg');
 
 				&:hover {
-					color: @color_orange_dedalo !important;
-					opacity: 1;
+					background-color: @color_orange_dedalo;
+					border-radius: 3px;
+					filter: invert(100%);
 				}
+			}
 
-				// no_descriptor term span
-				&.no_descriptor {
-					color: @color_grey_9;
+			 // delete_button
+			.ts_object_delete {
 
-					&:before {
-						content: '[ND] ';
+				.ts_object_delete_icon {
+					.ts_icons_all;
+					background-image: url('../../themes/default/icons/trash.svg');
+					background-size: 76%;
+					margin-right: 2px;
+
+					&:hover {
+						background-color: @color_cyan;
+						border-radius: 3px;
+						filter: invert(100%);
 					}
 				}
 			}
 
-			&.loading {
-
-				>span {
-					opacity: 0.12;
-				}
-
-				&:after {
-					content: " ";
-					display: block;
-					position: absolute;
-					top: 2px;
-					left: 0px;
-					width: 1.1rem;
-					height: 1.1rem;
-					border: 2px solid @color_grey_12;
-					border-top-color: @color_orange_dedalo;
-					border-radius: 50%;
-					animation: run_spinner 800ms linear infinite;
-				}
-			}
-		}
-
-		.no-drag {
-			-webkit-user-select: none;
-			user-select: none;
-			pointer-events: none;
-		}
-
-		.element_hilite > .term_text {
-			background-color: @color_hilite_yellow;
-			color: @color_black;
-		}
-
-		.id_info {
-			color: @color_grey_9;
-			font-size: 80%;
-			vertical-align: text-top;
-			padding-left: 5px;
-			padding-right: 0.25rem;
-			user-select: auto;
-			line-height: 1.4rem;
-
-			&.show_section {
-				color: @color_orange_dedalo;
-			}
-		}
-
-		// indexations
-		.list_thesaurus_element.button_show_indexations,
-		.list_thesaurus_element.default	{
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			background-color: @color_orange_dedalo;
-			opacity: 0.6;
-			border: 0px;
-			padding-left: 3px;
-			padding-right: 3px;
-			color: @color_white;
-			border-radius: 3px;
-			margin: 0px;
-			margin-right: 5px;
-			width: auto;
-			height: 17px;
-			line-height: 1.2rem;
-			font-size: 0.9rem;
-			cursor: pointer;
-
-			&.default {
-
+			// order_number
+			.ts_object_order_number {
+				width: 1rem;
+				text-align: center;
+				font-size: 0.8rem;
+				line-height: 1.4rem;
+				font-family: monospace;
+				text-decoration: none;
 			}
 
-			&.link_children_nd {
-
-			}
-
-			// area_ontology elements common
-			.area_ontology & {
-				min-width: 1.16rem;
-				background-color: @grey_color;
-				color: @grey_dark_color;
-				padding: 3px;
-				border-radius: 1px;
-				height: 1.2rem;
-				font-size: 11px;
-				vertical-align: bottom;
-				top: -1px;
-			}
-
-			// ontology CSS properties
-			&.ontology16 {
-				background-color: @color_ontology_css;
-				color: @color_white;
-			}
-
-			// ontology RQO properties
-			&.ontology17 {
-				background-color: @color_ontology_rqo;
-				color: @color_white;
-			}
-
-			// ontology properties
-			&.ontology18 {
-				background-color: @color_ontology_properties;
-				color: @color_white;
-			}
-
-			// ontology v5 properties
-			&.ontology19 {
-				background-color: @color_ontology_properties_v5;
-				color: @grey_dark_color;
-				&:hover {
-					color: @grey_dark_color !important;
-				}
-			}
-
-			// ontology model
-			&.ontology6 {
-				// background-color: @grey_color;
-			}
-
-			&:hover {
-				color: @color_white !important;
-				opacity: 1;
-			}
-			&:active {
-				background-color: @color_grey_13;
-				color: @color_grey_7 !important;
-			}
-
-			&.loading {
-				background-color: transparent;
-				>span {
-					opacity: 0;
-				}
-
-				&:after {
-					content: " ";
-					display: block;
-					position: absolute;
-					top: 2px;
-					left: 32%;
-					width: 1.1rem;
-					height: 1.1rem;
-					border: 2px solid @color_grey_12;
-					border-top-color: @color_orange_dedalo;
-					border-radius: 50%;
-					animation: run_spinner 800ms linear infinite;
-					// overwrite
-					left: 0rem;
-					top: 1px;
-				}
-			}
-		}
-
-		.button_duplicate {
-			background-color: @grey_color;
-			color: @grey_dark_color;
-			margin: 0;
-			width: 1.1rem;
-			display: inline-block;
-			text-align: center;
-			line-height: 1.23rem;
-			vertical-align: text-top;
-			font-size: 80%;
-			font-size: 1rem;
-			margin-left: 2px;
-			border-radius: 1px;
-			cursor: pointer;
-			padding: 0px;
-			opacity: 0.6;
-
-			&:hover {
-				opacity: 1;
-				color: @color_white;
-			}
-
-			>span {
+			.input_order {
+				text-align: center;
+				width: 22px;
+				border: 1px solid @color_warning;
+				border-radius: 2px;
 				position: relative;
-				top: -1px;
-			}
-		}
-
-		.list_thesaurus_element.button_recusive_indexations{
-			font-size: 1.5rem;
-			font-weight: bolder;
-			line-height: 1rem;
-			display: inline-block;
-		}
-
-		// ts_object_children_arrow_icon mixins
-		@triangle_color: @color_orange_dedalo;
-		.triangle_down {
-			width: 0px;
-			height: 0px;
-			border-style: solid;
-			border-width: 10.4px 6px 0px 6px;
-			border-color: @triangle_color transparent transparent transparent;
-		}
-		.triangle_right {
-			height: 0px;
-			width: 0px;
-			border-style: solid;
-			border-width: 6px 0px 6px 10.4px;
-			border-color: transparent transparent transparent @triangle_color;
-		}
-
-		.ts_object_children_arrow_icon {
-			height: 1.4em;
-			position: static;
-			width: 1.4em;
-			margin: 2px;
-			margin-top: 0px;
-			.triangle_right;
-			opacity: 0.6;
-			cursor: pointer;
-
-			// ontology children arrow
-			.area_ontology & {
-				border-color: transparent transparent transparent @color_grey_4;
+				top: 1px;
+				left: -0.2rem;
+				margin: 0px;
+				padding: 0.25rem;
+				font-size: 0.9rem;
 			}
 
-			&:hover {
-				opacity: 1;
-			}
+			// edit_button
+			.ts_object_edit {
 
-			&:active {
-				opacity: 0.4;
-			}
+				&:hover {
+					background-color: @color_purple;
+					border-radius: 3px;
+					filter: invert(100%);
+				}
+
+				 // id number
+				.ts_object_section_id_number {
+					height: @ts_object_line_height;
+					min-width: 36px;
+					float: left;
+					padding: 2px;
+					font-size: 1.05em;
+					padding-right: 4px;
+					text-align: right;
+					display: none;
+				}
+
+				// edit_icon
+				.ts_object_edit_icon {
+					background-image: url('../../themes/default/icons/edit.svg');
+					background-repeat: no-repeat;
+					background-size: 65%;
+					background-position: center;
+					float: left;
+					width: 24px;
+					height: @ts_object_line_height;
+					cursor: pointer;
+				}
+			}//end ts_object_edit
 		}
 
-		.ts_object_children_arrow_icon_open {
-			.triangle_down;
-			position: relative;
-			left: -2px;
-			top: 2px;
-
-			// ontology children arrow
-			.area_ontology & {
-				border-color: @color_grey_4 transparent transparent;
-			}
-
-			&.arrow_spinner {
-				border-color: transparent;
-				pointer-events: none;
-			}
-		}
-
-		.ts_object_children_arrow_icon_open_nd {
-
-		}
-
-		.arrow_unactive {
-			display: none;
-		}
-
-		[data-type='link_children'] {
-			border: 0px;
+		&:hover > .id_column_content {
 			opacity: 1;
 		}
-	}//end .elements_container
 
-	// data_container ----------------------------------------------
-	>.data_container {
-		display: block;
-		width: 100%;
-		height: auto;
-		padding-left: 4rem;
+		// elements_container : Term, indexation buttons and arrow show children ------------------------------------------
+		>.elements_container {
+			.inline_common;
+			min-width: 150px;
+			margin-left: 0px;
+			min-height: 22px;
+			flex: 1 0;
 
-		>.loader {
-			width: 100%;
-			display: inline-block;
-			padding-top: 1.8rem;
-			padding-bottom: 1.5rem;
-			padding-left: 2rem;
-		}
+			// ts_object_children_arrow_icon
+			.term_img {
+				margin-right: 0.33rem;
+				cursor: pointer;
 
-		// all components showed inside
-		>.wrapper_component {
-			min-height: initial;
-			padding: 1rem;
-			width: auto;
-			min-width: 50%;
-			margin-top: 0.5rem;
-			margin-bottom: 0.5rem;
-			float: left;
-			clear: both;
-		}
-	}//end .data_container
-
-	// indexations_container ---------------------------------------
-	>.indexations_container {
-		.inline_common;
-		height: auto;
-		width: 100%;
-
-		.css_spinner {
-			float: left;
-			width: 21px;
-			margin-left: 80px;
-			min-height: 24px;
-		}
-		.blink {
-			position: relative;
-			top: 2px;
-			color: @color_grey_7;
-			font-size: 13px;
-		}
-	}//end .indexations_container
-
-	// nd_container ------------------------------------------------
-	>.nd_container {
-		.inline_common;
-		display: block;
-		margin-left: 5.2rem;
-		width: 100%;
-
-		>.wrap_ts_object {
-			width: calc(100% - 4rem);
-		}
-
-		.data_container {
-			padding-left: 3rem;
-		}
-
-		.wrap_ts_object_nd {
-			color: @color_grey_7;
-			// padding: 2px;
-			// padding-left: 0px;
-			// padding-right: 0px;
-			// width: auto;
-
-			> .id_column_content > .ts_object_edit {
-				margin-left: 17px;
+				>img {
+					// max-height: 22px;
+					max-height: 1.25rem;
+				}
 			}
+
+			// term as 'Flora 1'
+			>.term {
+				position: relative;
+				border: 0px;
+				opacity: 1;
+				text-align: left;
+				inline-size: auto;
+				overflow-wrap: break-word;
+				hyphens: auto;
+				font-weight: 300;
+				display: flex;
+				align-items: center;
+
+				font-size: 1.1rem;
+				line-height: 1.5rem;
+
+				// span term_text
+				>.term_text {
+					cursor: pointer;
+					display: inline-block;
+					min-width: 1.5rem;
+					min-height: 1rem;
+
+					@size : 0.25rem;
+					padding: @size;
+					margin: -@size;
+
+					// background-color: #cae3ba;
+
+					&:hover {
+						color: @color_orange_dedalo !important;
+						opacity: 1;
+					}
+
+					&:active {
+						opacity: 0.5;
+					}
+
+					// no_descriptor term span
+					&.no_descriptor {
+						color: @color_grey_9;
+
+						&:before {
+							content: '[ND] ';
+						}
+					}
+				}
+			}
+
+			// id_info as '[flora1_1]'
+			>.id_info {
+				color: @color_grey_9;
+				font-size: 80%;
+				vertical-align: text-top;
+				padding-left: 0px;
+				padding-right: 0.25rem;
+				user-select: auto;
+				line-height: 1.4rem;
+				margin-left: 0.25rem;
+				margin-right: 0.25rem;
+
+				&.show_section {
+					color: @color_orange_dedalo;
+				}
+			}
+
+			// button duplicate
+			>.button_duplicate {
+				background-color: @grey_color;
+				color: @grey_dark_color;
+				// min-width: 1.27rem;
+				margin: 0px;
+				margin-left: 0px;
+				margin-right: 0.43rem;
+				padding-right: 0.20rem;
+				padding-left: 0.2rem;
+				width: 1.1rem;
+				text-align: center;
+				line-height: 1.23rem;
+				vertical-align: text-top;
+				font-size: 1rem;
+				border-radius: 1px;
+				cursor: pointer;
+				opacity: 0.6;
+
+				&:hover {
+					opacity: 1;
+					color: @color_white;
+				}
+
+				>span {
+					position: relative;
+					top: -1px;
+				}
+			}
+
+			// button_show_component as 'M'
+			>.button_show_component {
+
+			}
+
+			// model_value (used in Ontology to display de model value of each term)
+			>.model_value {
+				display: block;
+				color: @color_orange_dedalo;
+				font-size: 0.98rem;
+				margin-right: 0.33rem;
+			}
+
+			// link_children (icon arrow) v7
+			>.link_children {
+				position: relative;
+				width: 1rem;
+				height: 1rem;
+				cursor: pointer;
+
+				&:active {
+					opacity: 0.5;
+				}
+
+				// default status : closed
+				border-style: solid;
+				border-width: 6px 0px 6px 10.4px;
+				border-color: transparent transparent transparent @color_orange;
+
+				.area_ontology & {
+					border-left-color: @color_grey_9;
+				}
+
+				&.open {
+					border-width: 10.4px 6px 0px 6px;
+					border-color: @color_orange transparent transparent transparent;
+					top: 2px;
+					left: -2px;
+
+					.area_ontology & {
+						border-top-color: @color_grey_9;
+					}
+				}
+			}
+
+			// // list_thesaurus commons
+			// >.list_thesaurus_element {
+			// 	position: relative;
+			// 	display: table-cell;
+			// 	min-width: 24px;
+			// 	padding: 2px;
+			// 	padding-right: 5px;
+			// 	font-size: 1.1em;
+			// 	text-align: center;
+			// 	border-left: 1px solid @grey_color;
+			// 	opacity: 0.3;
+			// 	width: 29px;
+			// 	vertical-align: top;
+
+			// 	&.term_img {
+			// 		height: 1.3rem;
+			// 		opacity: 1;
+			// 	}
+
+			// 	mark {
+			// 		color: @color_grey_4 !important;
+			// 		font-style: italic;
+			// 	}
+
+			// 	img {
+			// 		height: 100%;
+			// 	}
+			// }
+
+			.no-drag {
+				-webkit-user-select: none;
+				user-select: none;
+				pointer-events: none;
+			}
+
+			.element_hilite > .term_text {
+				background-color: @color_hilite_yellow;
+				color: @color_black;
+				padding: 0.25rem;
+				margin: -0.25rem;
+				padding-left: 0.33rem;
+				margin-left: -0.33rem;
+				padding-right: 0.33rem;
+				margin-right: -0.33rem;
+			}
+
+			// indexations
+			.button_show_indexations,
+			.default {
+				position: relative;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				background-color: @color_orange_dedalo;
+				opacity: 0.6;
+				border: 0px;
+				padding-left: 3px;
+				padding-right: 3px;
+				color: @color_white;
+				border-radius: 3px;
+				margin: 0px;
+				margin-right: 5px;
+				width: auto;
+				min-width: 1.27rem;
+				height: 17px;
+				line-height: 1.2rem;
+				font-size: 0.9rem;
+				cursor: pointer;
+
+				// area_ontology elements common
+				.area_ontology & {
+					min-width: 1.16rem;
+					background-color: @grey_color;
+					color: @grey_dark_color;
+					padding: 3px;
+					border-radius: 1px;
+					height: 1.2rem;
+					font-size: 11px;
+					vertical-align: bottom;
+					// top: -1px;
+				}
+
+				&.button_show_component {
+
+					// ontology CSS properties
+					&.ontology16 {
+						background-color: @color_ontology_css;
+						color: @color_white;
+					}
+
+					// ontology RQO properties
+					&.ontology17 {
+						background-color: @color_ontology_rqo;
+						color: @color_white;
+					}
+
+					// ontology properties
+					&.ontology18 {
+						background-color: @color_ontology_properties;
+						color: @color_white;
+					}
+
+					// ontology v5 properties
+					&.ontology19 {
+						background-color: @color_ontology_properties_v5;
+						color: @grey_dark_color;
+						&:hover {
+							color: @grey_dark_color !important;
+						}
+					}
+
+					// ontology model
+					&.ontology6 {
+						background-color: @grey_color;
+					}
+				}
+
+				&:hover {
+					color: @color_white !important;
+					opacity: 1;
+				}
+				&:active {
+					background-color: @color_grey_13;
+					color: @color_grey_7 !important;
+				}
+			}
+
+			.list_thesaurus_element.button_recusive_indexations {
+				font-size: 1.5rem;
+				font-weight: bolder;
+				line-height: 1rem;
+				display: inline-block;
+			}
+
+			.arrow_unactive {
+				display: none;
+			}
+		}//end .elements_container
+
+		// data_container ----------------------------------------------
+		>.data_container {
+			display: block;
+			width: 100%;
+			height: auto;
+			padding-left: 4rem;
+
+			>.loader {
+				width: 100%;
+				display: inline-block;
+				padding-top: 1.8rem;
+				padding-bottom: 1.5rem;
+				padding-left: 2rem;
+			}
+
+			// all components showed inside
+			>.wrapper_component {
+				min-height: initial;
+				padding: 1rem;
+				width: auto;
+				min-width: 50%;
+				margin-top: 0.5rem;
+				margin-bottom: 0.5rem;
+				float: left;
+				clear: both;
+			}
+		}//end .data_container
+
+		// indexations_container ---------------------------------------
+		>.indexations_container {
+			.inline_common;
+			height: auto;
+			width: 100%;
+
+			.css_spinner {
+				float: left;
+				width: 21px;
+				margin-left: 80px;
+				min-height: 24px;
+			}
+			.blink {
+				position: relative;
+				top: 2px;
+				color: @color_grey_7;
+				font-size: 13px;
+			}
+		}//end .indexations_container
+
+		// nd_container ------------------------------------------------
+		>.nd_container {
+			.inline_common;
+			display: block;
+			margin-left: 5.2rem;
+			width: 100%;
+
+			>.wrap_ts_object {
+				width: calc(100% - 4rem);
+			}
+
+			.data_container {
+				padding-left: 3rem;
+			}
+
+			.wrap_ts_object_nd {
+				color: @color_grey_7;
+				// padding: 2px;
+				// padding-left: 0px;
+				// padding-right: 0px;
+				// width: auto;
+
+				> .id_column_content > .ts_object_edit {
+					margin-left: 17px;
+				}
+			}
+		}//end .nd_container
+
+		// others ------------------------------------------------------
+		>.hierarchy_elements_container {
+			padding: 0px;
 		}
-	}//end .nd_container
+	}//end >.data_container
 
 	// children_container ------------------------------------------
 	>.children_container {
@@ -637,20 +559,15 @@
 		padding-left: 1.75rem;
 	}
 
-	// others ------------------------------------------------------
-	>.hierarchy_elements_container {
-		padding: 0px;
-	}
+	// drag and drop colors
+	&.drag_over {
+		>.content_data >.elements_container {
+			background-color: @color_blue_2;
+			border-radius: 3px;
+			color: @color_white !important;
 
-	&.hierarchy_root_node {
-		padding-left: 1rem;
-
-		>.children_container {
-			padding-left: 0px;
-
-			>.wrap_ts_object >.elements_container >.term >.term_text {
-				// font-weight: normal;
-				color: @color_black;
+			mark {
+				color: @color_white !important;
 			}
 		}
 	}
@@ -670,21 +587,27 @@
 		}
 	}//end .ts_object_related
 
-	.arrow_spinner {
-		border: none;
+	// loading_spinner
+	.loading_spinner {
+		position: relative;
+		background-color: transparent !important;
 		margin: 0px;
 		padding: 0px;
+		top: 0px !important;
+		left: 0px !important;
+		border: none !important;
 		opacity: 1;
-		position: relative;
+
+		>span {
+			opacity: 0 !important;
+		}
 
 		&:after {
 			content: " ";
 			display: block;
 			position: absolute;
-			// top: 0.17rem;
-			// left: 0.27rem;
-			top: -13px;
-			left: -6px;
+			top: 0px;
+			left: calc(50% - 0.55rem);
 			width: 1.1rem;
 			height: 1.1rem;
 			border: 2px solid @color_grey_12;
@@ -692,10 +615,10 @@
 			border-radius: 50%;
 			animation: run_spinner 800ms linear infinite;
 
-			@media screen and (max-width: @width_break_point_0) {
-				top: 0.10rem;
-				left: 0.17rem;
-			}
+			// @media screen and (max-width: @width_break_point_0) {
+			// 	top: 0.10rem;
+			// 	left: 0.17rem;
+			// }
 		}
 
 		.area_ontology & {
@@ -712,7 +635,7 @@
 		color: @color_grey_9;
 		line-height: 1rem;
 		margin: 0.5rem;
-		margin-left: 8.5rem;
+		margin-left: 6.9rem;
 		margin-top: 0.25rem;
 		margin-bottom: 0.6rem;
 		padding-right: 1.5rem;
@@ -722,11 +645,10 @@
 			opacity: 0.5;
 		}
 
-		&.arrow_spinner {
+		&.loading_spinner {
 			&:after {
-				left: unset;
-				right: 0px;
-				top: 0px;
+				left: unset !important;
+				right: 0px !important;
 			}
 		}
 
@@ -740,14 +662,4 @@
 		display: none;
 	}
 
-	// drag and drop
-	.drag_over > .elements_container {
-		background-color: @color_blue_2;
-		border-radius: 3px;
-		color: @color_white !important;
-
-		mark {
-			color: @color_white !important;
-		}
-	}
 }//end .wrap_ts_object

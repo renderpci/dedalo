@@ -6,15 +6,20 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {common} from '../../common/js/common.js'
-	import {get_instance, add_instance, get_instance_by_id} from '../../common/js/instances.js'
+	import {
+		get_instance,
+		add_instance,
+		get_instance_by_id,
+		get_all_instances,
+		get_instances_custom_map,
+		delete_instance
+	} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback, when_in_dom} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {
-		list,
-		render_children,
-	} from './view_default_list_js_object.js'
+	import {render_edit_ts_object} from './render_edit_ts_object.js'
+	import {render_children} from './view_default_edit_ts_object.js'
 
 
 
@@ -24,50 +29,97 @@
 */
 export const ts_object = function() {
 
+	// string id. Composed by key_parts list
 	this.id
+	// string model. Fix 'ts_object' value.
+	this.model
+	// string mode. Default is 'edit'.
+	this.mode
+	// object|null caller. Caller instance pointer. Is area_thesaurus/area_ontology for roots and ts_object for others.
+	this.caller
+	// object linker. Used for tool indexation
+	// E.g.  {
+	// 	id		: caller_id,
+	// 	caller	: indexing_component
+	// }
+	this.linker
+
+	// string section_tipo. Current thesaurus item section_tipo
+	this.section_tipo
+	// string|int section_id. Current thesaurus item section_tipo
+	this.section_id
+	// string children_tipo. Tipo of the componetn_children for current section (for easy access)
+	this.children_tipo
+	// string target_section_tipo. Tipo of the target section for current item.
+		// this.target_section_tipo
+	// bool is_root_node. Identifies the area_thesaurus/area_ontology direct 'children'
+	// This elements do not have 'parent', they are linked by a portal in hierarchy section.
+	this.is_root_node
+	// int virtual_order. Calculated element order based on 'order' filed value and the position into the children array
+	this.virtual_order
+
+	// object data. Data from current instance (term)
+	this.data
+	// object children_data. E.g. {
+	//	  ar_children_data : [{ar_elements:[]...}],
+	//	  pagination : {"limit": 300,"offset": 0,"total": 2}
+	// }
+	this.children_data
+
+	// string ts_id. Node contraction of section_tipo + section_id as tipo like 'dd256'
+	this.ts_id
+	// string ts_parent. Parent contraction of section_tipo + section_id as tipo like 'dd98'
+	this.ts_parent
+
+	// bool is_descriptor. False for non descriptors (ND)
+	this.is_descriptor
+	// bool is_ontology. If caller model is 'area_ontology' is true, false otherwise.
+	this.is_ontology
 
 	// vars from options
 	// Set on update element in DOM (refresh)
-	this.element_to_hilite = null
+	this.element_to_hilite
 	// thesaurus_mode . Defines appearance of thesaurus
-	this.thesaurus_mode = null
+	this.thesaurus_mode
+	// thesaurus_view_mode. Values: model|default
+	this.thesaurus_view_mode
 	// events_tokens
 	this.events_tokens = []
-	// opened_elements
-	this.opened_elements = {}
-	// children_data. Object as {ar_children_data:[],pagination:{limit:0,offset:0,total:20}}
-	this.children_data = null
+	// bool is_open. Default false
+	this.is_open = false
 	// status
-	this.status = null
+	this.status
+	// instances
+	this.ar_instances = []
 
-	this.mode					= null
-	this.caller					= null
-	this.linker					= null
+	// int permissions_button_delete. Values from 0,1,2,3
+	this.permissions_button_delete
+	// int permissions_button_new. Values from 0,1,2,3
+	this.permissions_button_new
+	// int permissions_indexation. Values from 0,1,2,3
+	this.permissions_indexation
 
-	this.section_tipo			= null
-	this.section_id				= null
-	this.children_tipo			= null
-	this.target_section_tipo	= null
-	this.is_root_node			= false
-	this.virtual_order			= null
-	this.children_data			= null
+	// bool has_descriptor_children. Identifies is current node has or not descriptor children
+	this.has_descriptor_children
+	// string area_model. Model of current thesaurus/ontology area
+	this.area_model
 
-	this.permissions_button_delete	= null
-	this.permissions_button_new		= null
-	this.permissions_indexation		= null
-	this.ar_elements				= null
-	this.ts_id						= null
-	this.ts_parent					= null
-	this.is_descriptor				= null
-
-	this.has_descriptor_children = null;
-
-	// wrapper DOM node. Set on render render_wrapper
+	// HTMLElement wrapper DOM node. Set on render render_wrapper
 	this.node
-
-	this.children_container = null
-	this.link_children_element = null
-	this.term_node = null
+	// HTMLElement children_container
+	this.children_container
+	// HTMLElement link_children_element
+	this.link_children_element
+	// HTMLElement term_node
+	this.term_node
+	// HTMLElement term_text (inside term_node)
+	this.term_text
+	// HTMLElement data_container
+	this.data_container
+	// HTMLElement indexations_container
+	this.indexations_container
+	// HTMLElement nd_container
+	this.nd_container
 }//end ts_object
 
 
@@ -82,8 +134,80 @@ export const ts_object = function() {
 	ts_object.prototype.destroy	= common.prototype.destroy
 
 	// render
-	ts_object.prototype.list = list
-	ts_object.prototype.render_children = render_children
+	ts_object.prototype.edit			= render_edit_ts_object.prototype.edit
+	ts_object.prototype.search			= render_edit_ts_object.prototype.edit
+	ts_object.prototype.render_children	= render_children
+
+
+
+/**
+* KEY_ORDER
+* Defines de vars and the order to create the instances key
+*/
+const key_order = ['section_tipo','section_id','children_tipo','target_section_tipo','thesaurus_mode']
+
+
+
+/**
+* GET_INSTANCE
+* Returns an instance of a ts_object by either retrieving it from a cache or dynamically importing and initializing it.
+* - If the instance is cached, it is returned immediately.
+* - If not cached, is instantiated, initialized, cached, and returned.
+* @param object options
+* @return object instance_element
+*/
+ts_object.get_instance = async function (options) {
+
+	const key = key_instances_builder(options)
+
+	// search. Check if the instance is already in the cache
+	const found_instance = get_instance_by_id(key)
+	if (found_instance) {
+		return found_instance;
+	}
+
+	// Get the ts_object instance
+	const instance_element = new ts_object()
+
+	// id
+	instance_element.id = key
+
+	// Init the new instance
+	await instance_element.init(options)
+
+	// Cache instance
+	add_instance(key, instance_element)
+
+
+	return instance_element
+}//end get_instance
+
+
+
+/**
+* KEY_INSTANCES_BUILDER
+* Builds a normalized string key from selected properties of the given `options` object.
+* The key is used to uniquely identify an instance based on a defined order of parameters.
+* @param object options
+* @return string key - A concatenated, underscore-delimited string key composed of non-empty values.
+*/
+export const key_instances_builder = function(options) {
+
+	const key_parts = []
+
+	for (const prop of key_order) {
+		const value = options[prop];
+		if (value !== undefined && value !== null && value !== '') {
+			const string_value = String(value);
+			key_parts.push(string_value);
+		}
+	}
+
+	// join all non empty elements in an string used as ID for the instance
+	return 'ts_object_' + key_parts.join('_')
+}//end key_instances_builder
+
+
 
 /**
 * INIT
@@ -98,44 +222,57 @@ ts_object.prototype.init = async function(options) {
 	// status update
 	self.status = 'initializing'
 
-	self.mode					= options.mode || 'list'
-	self.caller					= options.caller
-	self.linker					= options.linker
+	// string model. Fix 'ts_object' value.
+	self.model = 'ts_object'
+	// string mode. Default is 'edit'.
+	self.mode = options.mode || 'edit'
+	// object|null caller. Caller instance pointer. Is area_thesaurus/area_ontology for roots and ts_object for others.
+	self.caller	= options.caller
+	// object linker. Used for tool indexation
+	// E.g.  {
+	// 	id		: caller_id,
+	// 	caller	: indexing_component
+	// }
+	self.linker	= options.linker
+	// string section_tipo. Current thesaurus item section_tipo
+	self.section_tipo = options.section_tipo
+	// string|int section_id. Current thesaurus item section_tipo
+	self.section_id = options.section_id
+	// string children_tipo. Tipo of the componetn_children for current section (for easy access)
+	self.children_tipo = options.children_tipo
+	// string target_section_tipo. Tipo of the target section for current item.
+		// self.target_section_tipo = options.target_section_tipo
+	// bool is_root_node. Identifies the area_thesaurus/area_ontology direct 'children'
+	// This elements do not have 'parent', they are linked by a portal in hierarchy section.
+	self.is_root_node = options.is_root_node
+	// int virtual_order. Calculated element order based on 'order' filed value and the position into the children array
+	self.virtual_order = options.virtual_order
+	// object data. Data from current instance (term)
+	self.data = options.data
+	// object children_data. E.g. {
+	//	  ar_children_data : [{ar_elements:[]...}],
+	//	  pagination : {"limit": 300,"offset": 0,"total": 2}
+	// }
+	self.children_data = options.children_data
+	// string ts_id. Node contraction of section_tipo + section_id as tipo like 'dd256'
+	self.ts_id = options.ts_id
+	// string ts_parent. Parent contraction of section_tipo + section_id as tipo like 'dd98'
+	self.ts_parent = options.ts_parent
 
-	self.section_tipo			= options.section_tipo
-	self.section_id				= options.section_id
-	self.children_tipo			= options.children_tipo
-	self.target_section_tipo	= options.target_section_tipo
-	self.is_root_node			= options.is_root_node
-	self.virtual_order			= options.virtual_order
-	self.children_data			= options.children_data
-	self.ts_id					= options.ts_id
-	self.ts_parent				= options.ts_parent
-	self.is_descriptor			= options.is_descriptor
-	self.thesaurus_mode			= options.thesaurus_mode
-
-	self.permissions_button_delete	= options.permissions_button_delete
-	self.permissions_button_new		= options.permissions_button_new
-	self.permissions_indexation		= options.permissions_indexation
-	self.ar_elements				= options.ar_elements
-
-	self.has_descriptor_children = options.has_descriptor_children
-
-	const key_parts = [
-		self.section_tipo,
-		self.section_id,
-		self.children_tipo,
-		self.target_section_tipo,
-		self.thesaurus_mode
-	]
-	// self.id = `ts_object_${self.section_tipo}_${self.section_id}_${self.children_tipo}_${self.target_section_tipo}_${self.thesaurus_mode}`
-	self.id = 'ts_object_' + key_parts.filter(el => el).join('_')
-
-	// save current instance into the instance cache
-	add_instance(
-		self.id,
-		self
-	)
+	// bool is_ontology. If caller model is 'area_ontology' is true, false otherwise.
+	self.is_ontology = options.is_ontology
+	// string thesaurus_mode. Special thesaurus mode from properties. Default is 'default'
+	self.thesaurus_mode = options.thesaurus_mode
+	// string thesaurus_view_mode. Values: model|default
+	self.thesaurus_view_mode = options.thesaurus_view_mode
+	// int permissions_button_delete. Values from 0,1,2,3
+	self.permissions_button_delete = options.permissions_button_delete
+	// int permissions_button_new. Values from 0,1,2,3
+	self.permissions_button_new	= options.permissions_button_new
+	// int permissions_indexation. Values from 0,1,2,3
+	self.permissions_indexation	= options.permissions_indexation
+	// string area_model. Model of current thesaurus/ontology area
+	self.area_model = options.area_model
 
 	// status update
 	self.status = 'initialized'
@@ -147,10 +284,143 @@ ts_object.prototype.init = async function(options) {
 
 
 /**
+* BUILD
+* Generic agnostic build function created to maintain
+* unity of calls.
+* (!) For components, remember use always component_common.build()
+* @param bool autoload = false
+* @return bool
+*/
+ts_object.prototype.build = async function(autoload=false) {
+
+	const self = this
+
+	// status update
+		self.status = 'building'
+
+	// load node data from database
+		if (!self.data || autoload===true) {
+
+			// Get and fix
+			self.data = await self.get_node_data()
+		}
+
+	// fix vars from data
+		if (self.data) {
+			// fix permissions
+			self.permissions_button_new		= self.data.permissions_button_new
+			self.permissions_button_delete	= self.data.permissions_button_delete
+			self.permissions_indexation		= self.data.permissions_indexation
+			self.permissions_structuration	= self.data.permissions_structuration
+
+			self.is_descriptor				= self.data.is_descriptor
+			self.is_indexable				= self.data.is_indexable
+
+			self.ts_id						= self.data.ts_id || self.ts_id
+			self.ts_parent					= self.data.ts_parent || self.ts_parent
+			self.order						= self.data.order
+			self.has_descriptor_children	= self.data.has_descriptor_children
+		}
+
+	// status update
+		self.status = 'built'
+
+
+	return true
+}//end common.prototype.build
+
+
+
+/**
+* GET_NODE_DATA
+* Get the instance JSON data from the server across the API request.
+* Data is built from current node info (current instance section_tipo and section_id)
+* @return promise
+* 	Resolve object api_response.result {ar_children_data: [], pagination: {}}
+*/
+ts_object.prototype.get_node_data = async function() {
+
+	const self = this
+
+	// short vars
+		const caller				= self.caller
+		const thesaurus_view_mode	= caller.thesaurus_view_mode
+		const terms_are_model		= thesaurus_view_mode==='model'
+		const section_tipo			= self.section_tipo
+		const section_id			= self.section_id
+		const children_tipo			= self.children_tipo
+
+	try {
+
+		// API call
+		const rqo = {
+			dd_api			: 'dd_ts_api',
+			prevent_lock	: true,
+			action			: 'get_node_data',
+			source			: {
+				section_id		: section_id,
+				section_tipo	: section_tipo,
+				children_tipo	: children_tipo,
+				area_model		: self.area_model,
+				build_options	: {
+					terms_are_model : terms_are_model
+				}
+			},
+			options : {
+				thesaurus_view_mode	: thesaurus_view_mode
+			}
+		}
+
+		const api_response = await data_manager.request({
+			use_worker	: false,
+			body		: rqo
+		})
+		// debug
+		if(SHOW_DEBUG===true) {
+			console.log('get_node_data api_response:', api_response);
+		}
+
+		// Validate response structure
+		if (!api_response || typeof api_response !== 'object') {
+			throw new Error("Invalid API response format");
+		}
+
+		if (api_response.result) {
+
+			// success case
+
+			return api_response.result
+
+		}else{
+
+			// error case
+
+			console.warn("[get_node_data] Error, api_response.result is null or undefined");
+			throw new Error("API response did not contain a valid result.");
+		}
+	} catch (error) {
+		// Catch network errors or explicit throws
+		console.error("[get_node_data] API request failed:", error);
+		// Propagate the error by re-throwing or rejecting the promise
+		const custom_error = new Error(`get_node_data failed for section_tipo: ${section_tipo}, section_id: ${section_id} - ${error.message}`);
+		custom_error.originalError = error;
+		custom_error.context = { section_tipo, section_id };
+		throw custom_error;
+	}
+}//end get_node_data
+
+
+
+/**
 * GET_CHILDREN_DATA
 * Get the JSON data from the server across the API request.
 * Data is built from parent node info (current object section_tipo and section_id)
 * @param object options
+* {
+* 	pagination: object
+* 	children: array
+* 	cache: bool
+* }
 * @return promise
 */
 ts_object.prototype.get_children_data = async function(options) {
@@ -159,11 +429,9 @@ ts_object.prototype.get_children_data = async function(options) {
 
 	// options
 		const {
-			// section_id,
-			// section_tipo,
-			// children_tipo,
 			pagination = null,
-			children = null
+			children = null,
+			cache = true
 		} = options;
 
 	// short vars
@@ -174,6 +442,11 @@ ts_object.prototype.get_children_data = async function(options) {
 		const model					= caller.model
 		const thesaurus_view_mode	= caller.thesaurus_view_mode
 		const terms_are_model		= thesaurus_view_mode==='model'
+
+	// cache
+		if (cache && self.children_data) {
+			return self.children_data
+		}
 
 	try {
 
@@ -204,17 +477,14 @@ ts_object.prototype.get_children_data = async function(options) {
 		})
 		// debug
 		if(SHOW_DEBUG===true) {
-			console.log('get_children_data api_response:', api_response);
+			console.warn('get_children_data api_response:', api_response);
 		}
 
 		if (api_response && api_response.result) {
 
 			// success case
 
-			// fix
-			self.children_data = api_response.result
-
-			return self.children_data
+			return api_response.result
 
 		}else{
 
@@ -234,74 +504,106 @@ ts_object.prototype.get_children_data = async function(options) {
 
 
 /**
-* GET_NODE_DATA
-* Get the instance JSON data from the server across the API request.
-* Data is built from parent node info (current object section_tipo and section_id)
-* @param object options
-* @return promise
+* ADD_CHILDREN_ITEM
+* Add a new children data to current instance children_data.ar_children_data array
+* @param children_data
+* E.g. {
+	"section_tipo": "flora1",
+	"section_id": "4",
+	"ts_id": "flora1_4",
+	"ar_elements": [
+		{
+			"type": "term",
+			"tipo": "hierarchy25",
+			"value": "Flora 4",
+			"model": "component_input_text"
+		}
+	],
+	"children_tipo": "hierarchy49",
+	"has_descriptor_children": false
+  }
+* @return bool
 */
-ts_object.prototype.get_node_data = async function(section_tipo, section_id, children_tipo) {
+ts_object.prototype.add_children_item = function ( children_data ) {
 
-	const self = this
-
-	// short vars
-		const caller				= self.caller
-		const model					= caller.model
-		const thesaurus_view_mode	= caller.thesaurus_view_mode
-		const terms_are_model		= thesaurus_view_mode==='model'
-
-	try {
-
-		// API call
-		const rqo = {
-			dd_api			: 'dd_ts_api',
-			prevent_lock	: true,
-			action			: 'get_node_data',
-			source			: {
-				section_id		: section_id,
-				section_tipo	: section_tipo,
-				children_tipo	: children_tipo,
-				build_options	: {
-					terms_are_model : terms_are_model
-				}
-			},
-			options : {
-				thesaurus_view_mode	: thesaurus_view_mode
-			}
-		}
-
-		const api_response = await data_manager.request({
-			use_worker	: false,
-			body		: rqo
-		})
-		// debug
-		if(SHOW_DEBUG===true) {
-			console.log('get_node_data api_response:', api_response);
-		}
-
-		if (api_response && api_response.result) {
-
-			// success case
-
-			// fix
-			self.node_data = api_response.result
-
-			return self.node_data
-
-		}else{
-
-			// error case
-
-			console.warn("[get_node_data] Error, api_response.result is null or undefined");
-			throw new Error("API response did not contain a valid result.");
-		}
-	} catch (error) {
-		// Catch network errors or explicit throws
-		console.error("[get_node_data] API request failed:", error);
-		// Propagate the error by re-throwing or rejecting the promise
-		throw error;
+	if (!children_data) {
+		console.error('Invalid children_data provided');
+		return false;
 	}
-}//end get_node_data
+
+	if (!this.children_data) {
+		this.children_data = {
+			ar_children_data : [],
+			pagination : null
+		}
+	}
+	this.children_data.ar_children_data.push( children_data )
+
+	// Update the has_descriptor_children property
+	if (this.children_data.ar_children_data.length===1) {
+		this.data.has_descriptor_children = this.has_descriptor_children = true
+		this.is_open = true // Forces is_open to allow to see the added children in new renders
+	}
+
+
+	return true
+}//end add_children_item
+
+
+
+/**
+* REMOVE_CHILDREN_ITEM
+* Deletes a children data from current instance children_data.ar_children_data array
+* @param children_data
+* E.g. {
+	"section_tipo": "flora1",
+	"section_id": "4",
+	"ts_id": "flora1_4",
+	"ar_elements": [
+		{
+			"type": "term",
+			"tipo": "hierarchy25",
+			"value": "Flora 4",
+			"model": "component_input_text"
+		}
+	],
+	"children_tipo": "hierarchy49",
+	"has_descriptor_children": false
+  }
+* @return bool
+*/
+ts_object.prototype.remove_children_item = function ( children_data ) {
+
+	if (!children_data || !children_data.ts_id) {
+		console.error('Invalid children_data provided - missing ts_id');
+		return false;
+	}
+
+	if (!this.children_data?.ar_children_data) {
+		console.error('Current instance do not has children_data');
+		return false;
+	}
+
+	const index = this.children_data.ar_children_data.findIndex(el => el.ts_id === children_data.ts_id);
+
+	if (index === -1) {
+		console.error('Children data not found with ts_id:', children_data.ts_id);
+		return false;
+	}
+
+	// Remove the element directly
+	this.children_data.ar_children_data.splice(index, 1);
+
+	// Update the has_descriptor_children property
+	if (this.children_data.ar_children_data.length===0) {
+		this.data.has_descriptor_children = this.has_descriptor_children = false
+		this.is_open = false
+		this.link_children_element = null
+	}
+
+
+	return true
+}//end remove_children_item
 
 
 
@@ -385,84 +687,73 @@ ts_object.prototype.get_children_recursive = function( options ) {
 
 
 
-/**
-* UPDATE_ARROW_STATE
-* Updates arrow state when updated wrap
-* @param bool toggle
-* 	Specifies if the children should be toggled on an empty container.
-* @return void
-*/
-ts_object.prototype.update_arrow_state = function(toggle) {
+// /**
+// * UPDATE_ARROW_STATE
+// * Updates arrow state when updated wrap
+// * @param bool toggle
+// * 	Specifies if the children should be toggled on an empty container.
+// * @return void
+// */
+// ts_object.prototype.update_arrow_state = function(toggle) {
 
-	const self = this
+// 	const self = this
 
-	// Children_container
-	const children_container = self.children_container
+// 	// Children_container
+// 	const children_container = self.children_container
 
-	const has_children = children_container.hasChildNodes()
+// 	const has_children = children_container.hasChildNodes()
 
-	const is_first_load_or_hidden = children_container.classList.contains(
-		'js_first_load') || children_container.classList.contains('removed_from_view'
-	);
+// 	if (!has_children) {
+// 		// reset arrow status
+// 		self.link_children_element.remove()
+// 	}
 
-	// Toggle children if container is in a specific state
-	const link_children_element = self.link_children_element
-	if (is_first_load_or_hidden || (!has_children && toggle)) {
-		self.toggle_view_children(link_children_element);
-	}
+// 	console.warn('has_children:', has_children);
 
-	// Update arrow icon state
-	const arrow_icon= link_children_element.querySelector('.ts_object_children_arrow_icon')
-	if (has_children) {
-		arrow_icon.classList.remove('arrow_unactive');
-	} else {
-		arrow_icon.classList.add('arrow_unactive');
-	}
-}//end update_arrow_state
+// 	// const is_first_load_or_hidden = children_container.classList.contains(
+// 	// 	'js_first_load') || children_container.classList.contains('removed_from_view'
+// 	// );
 
+// 	// // Toggle children if container is in a specific state
+// 	// const link_children_element = self.link_children_element
+// 	// if (is_first_load_or_hidden || (!has_children && toggle)) {
+// 	// 	self.toggle_view_children(link_children_element);
+// 	// }
 
-
-/**
-* FIND_UP_TAG
-* Search parent with given CSS selector looking up recursively
-* @param HTMLElement el
-* @param string class_name 'wrap_ts_object'
-* @return HTMLElement|null
-*/
-ts_object.prototype.find_up_tag = function(el, class_name) {
-	// Use a while loop to traverse up the DOM tree from the starting element
-	while (el) {
-		// Check if the current element has the specified class
-		if (el.classList && el.classList.contains(class_name)) {
-			return el;
-		}
-		// Move up to the next parent element in the hierarchy
-		el = el.parentNode;
-	}
-	// If no parent with the class is found, return null
-	return null;
-}//end find_up_tag
+// 	// // Update arrow icon state
+// 	// const arrow_icon= link_children_element.querySelector('.ts_object_children_arrow_icon')
+// 	// if (has_children) {
+// 	// 	arrow_icon.classList.remove('arrow_unactive');
+// 	// } else {
+// 	// 	arrow_icon.classList.add('arrow_unactive');
+// 	// }
+// }//end update_arrow_state
 
 
 
 /**
 * UPDATE_PARENT_DATA
+* Call API to update the parent data in the database.
+* @see ts_object drag_and_drop.js use.
 * @param HTMLElement wrap_ts_object
 * @return promise
 */
 ts_object.prototype.update_parent_data = async function(options) {
+console.warn('*** update_parent_data options:', options);
+	const {
+		section_id,
+		section_tipo,
+		old_parent_section_id,
+		old_parent_section_tipo,
+		new_parent_section_id,
+		new_parent_section_tipo
+	} = options
 
-	const section_id				= options.section_id
-	const section_tipo				= options.section_tipo
-	const old_parent_section_id		= options.old_parent_section_id
-	const old_parent_section_tipo	= options.old_parent_section_tipo
-	const new_parent_section_id		= options.new_parent_section_id
-	const new_parent_section_tipo	= options.new_parent_section_tipo
-
-	/* NOTA:
-		QUEDA PENDIENTE RESETEAR EL ESTADO DE LAS FLECHAS SHOW CHILDREN DE LOS HIJOS CUANDO SE ACTUALZA EL PADRE
-		PORQUE SI NO NO SE PUEDE VOLVER A ABRIR UN LISTADO DE HIJOS (FLECHA)
-	*/
+	// check vars
+	if (!old_parent_section_id) {
+		console.error('Invalid old_parent_section_id from options:', options);
+		return false
+	}
 
 	// API call
 		const rqo = {
@@ -488,198 +779,54 @@ ts_object.prototype.update_parent_data = async function(options) {
 
 
 
-/**
-* TOGGLE_VIEW_CHILDREN
-* Show/hide the children container of current term
-* @param HTMLElement link_children_element - The link element that toggles the view.
-* @param event - The event object from the click.
-* @return promise - A promise that resolves to true on success, false on error.
-*/
-ts_object.prototype.toggle_view_children = async function(event) {
+// /**
+// * SAVE_OPENED_ELEMENTS
+// * Saves and track given element open status
+// * @param HTMLElement link_children_element
+// * @param string action
+// * @return bool
+// */
+// ts_object.prototype.save_opened_elements = function(action) {
 
-	const self = this
+// 	const self = this
 
-	// Get and check the parent wrapper
-	const wrapper = self.node;
-	if (!wrapper) {
-		console.error("[toggle_view_children] Error: Wrapper element not found.");
-		return false;
-	}
+// 	// const current_key = link_children_element.child_data.ts_id
+// 	const current_key = self.id
+// 	if (!current_key) {
+// 		console.error('Error.invalid ts_id from current ts_object instance:', self);
+// 		return false
+// 	}
 
-	// Get and check the children_container node
-	const children_container = self.children_container
-	if (!children_container) {
-		console.error("[toggle_view_children] Error: Children container not found.");
-		return false;
-	}
+// 	if (action==='add') {
+// 		window.opened_elements[current_key] = true
+// 	}else{
+// 		delete window.opened_elements[current_key]
+// 	}
 
-	// link_children_element
-	const link_children_element = self.link_children_element
-	if (!link_children_element) {
-		console.error("[toggle_view_children] Error: link_children_element not found.");
-		return false;
-	}
-
-	// arrow_icon
-	const arrow_icon = link_children_element.firstChild;
-	if (!arrow_icon) {
-		console.error("[toggle_view_children] Error: Arrow icon not found.");
-		return false;
-	}
-
-	// short vars
-		const section_tipo	= self.section_tipo
-		const section_id	= self.section_id
-		const children_tipo	= self.children_tipo
-
-		const children_list	= link_children_element.children_list
-
-	// If is the first time that the children are loaded, remove the first class selector and send the query for get the children
-	if (children_container.classList.contains('js_first_load') && !children_container.hasChildNodes()) {
-
-		children_container.classList.remove('js_first_load');
-		arrow_icon.classList.add('ts_object_children_arrow_icon_open', 'arrow_spinner');
-		children_container.classList.add('loading')
-
-		try {
-			// children_data - render_children_data from API
-			const children_data = await self.get_children_data({
-				// section_tipo	: section_tipo,
-				// section_id		: section_id,
-				// children_tipo	: children_tipo,
-				pagination		: null,
-				children		: children_list
-			})
-
-			if (!children_data) {
-				// error case
-				console.warn("[ts_object.render_children] Error, children_data is null");
-				return false
-			}
-
-			// render_children nodes
-			await self.render_children({
-				clean_children_container : false // bool clean_children_container
-			});
-
-		} catch (error) {
-			console.error("[toggle_view_children] Error loading children data:", error);
-			return false;
-		} finally {
-			arrow_icon.classList.remove('arrow_spinner');
-			children_container.classList.remove('loading')
-		}
-
-		// save_opened_elements
-		self.save_opened_elements('add')
-
-	}else{ // Toggle view state
-
-		// the toggle view state with the class
-		if(children_container.classList.contains('removed_from_view')){
-
-			children_container.classList.remove('removed_from_view');
-			arrow_icon.classList.add('ts_object_children_arrow_icon_open');
-
-			// Reload children data on alt-click
-			if (event && event.altKey) {
-
-				children_container.classList.add('loading')
-
-				try {
-					// children_data - render_children_data from API
-					const children_data = await self.get_children_data({
-						// section_tipo	: section_tipo,
-						// section_id		: section_id,
-						// children_tipo	: children_tipo,
-						pagination		: null,
-						children		: children_list
-					})
-
-					if (!children_data) {
-						// error case
-						console.warn("[ts_object.render_children] Error, children_data is null");
-						return false
-					}
-
-					await self.render_children({
-						clean_children_container : true // bool clean_children_container
-					});
-				} catch (error) {
-					console.error("[toggle_view_children] Error reloading children data:", error);
-				} finally {
-					children_container.classList.remove('loading')
-				}
-			}
-
-			// save_opened_elements
-			self.save_opened_elements('add')
-
-		}else{
-
-			children_container.classList.add('removed_from_view');
-			arrow_icon.classList.remove('ts_object_children_arrow_icon_open');
-
-			// save_opened_elements
-			self.save_opened_elements('remove')
-
-		}
-	}
-
-
-	return true
-}//end toggle_view_children
+// 	return true
+// }//end save_opened_elements
 
 
 
-/**
-* SAVE_OPENED_ELEMENTS
-* Saves and track given element open status
-* @param HTMLElement link_children_element
-* @param string action
-* @return bool
-*/
-ts_object.prototype.save_opened_elements = function(action) {
+// /**
+// * REMOVE_CHILDREN_FROM_OPENED_ELEMENTS
+// * @return bool
+// */
+// ts_object.prototype.remove_children_from_opened_elements = function(parent_key) {
 
-	const self = this
+// 	for (let key in this.opened_elements) {
+// 		let current_parent = this.opened_elements[key]
+// 		if (current_parent == parent_key){
+// 			delete this.opened_elements[key]
+// 			if(SHOW_DEBUG===true) {
+// 				console.log("[remove_children_from_opened_elements] Removed key ",key)
+// 			}
+// 			this.remove_children_from_opened_elements(key)
+// 		}
+// 	}
 
-	// const current_key = link_children_element.child_data.ts_id
-	const current_key = self.id
-	if (!current_key) {
-		console.error('Error.invalid ts_id from current ts_object instance:', self);
-		return false
-	}
-
-	if (action==='add') {
-		this.opened_elements[current_key] = true
-	}else{
-		delete this.opened_elements[current_key]
-	}
-
-	return true
-}//end save_opened_elements
-
-
-
-/**
-* REMOVE_CHILDREN_FROM_OPENED_ELEMENTS
-* @return bool
-*/
-ts_object.prototype.remove_children_from_opened_elements = function(parent_key) {
-
-	for (let key in this.opened_elements) {
-		let current_parent = this.opened_elements[key]
-		if (current_parent == parent_key){
-			delete this.opened_elements[key]
-			if(SHOW_DEBUG===true) {
-				console.log("[remove_children_from_opened_elements] Removed key ",key)
-			}
-			this.remove_children_from_opened_elements(key)
-		}
-	}
-
-	return true
-}//end remove_children_from_opened_elements
+// 	return true
+// }//end remove_children_from_opened_elements
 
 
 
@@ -699,6 +846,11 @@ ts_object.prototype.hilite_element = function(element, clean_others) {
 			return 0
 		}
 
+		if (element.nodeType !== Node.ELEMENT_NODE) {
+			console.error('element hilite is not a HTMLElment node:', element);
+			return 0
+		}
+
 	// undefined clean_others case
 		if (typeof clean_others==='undefined') {
 			clean_others = true
@@ -710,27 +862,14 @@ ts_object.prototype.hilite_element = function(element, clean_others) {
 		}
 
 	// hilite all appearances of current component (may appear more than once)
-		const matches = document.querySelectorAll(`.term[data-type="${element.dataset.type}"][data-section_tipo="${element.dataset.section_tipo}"][data-section_id="${element.dataset.section_id}"]`);
+		// const matches = document.querySelectorAll(`.term[data-type="${element.dataset.type}"][data-section_tipo="${element.dataset.section_tipo}"][data-section_id="${element.dataset.section_id}"]`);
+		const matches = [element]
 		const matches_length = matches.length;
 		for (let i = matches_length - 1; i >= 0; i--) {
 
 			const node = matches[i]
-			node.classList.add('element_hilite');
 
-			// check parent is arrow_icon_open
-				const parent_wrapper = node.parentNode.parentNode.parentNode.parentNode;
-				if (!parent_wrapper) {
-					console.warn('Unable to get parent wrapper from node:', node);
-					return
-				}
-				const elements_container = [...parent_wrapper.childNodes].find(el => el.classList.contains('elements_container'));
-				if (elements_container) {
-					const arrow_icon = [...elements_container.childNodes].find(el => el.classList.contains('arrow_icon'));
-					if (arrow_icon) {
-						arrow_icon.firstChild.classList.remove('arrow_unactive')
-						arrow_icon.firstChild.classList.add('ts_object_children_arrow_icon_open')
-					}
-				}
+			node.classList.add('element_hilite');
 		}
 
 	return matches_length
@@ -758,160 +897,45 @@ ts_object.prototype.reset_hilites = function() {
 /**
 * REFRESH_ELEMENT
 * Reload selected element/s wrapper in DOM
-* @param string section_tipo - The section_tipo of the section to refresh.
-* @param string section_id - The section_id of the section to refresh.
 * @param bool hilite = true - Whether to highlight the refreshed element
 * @param function callback - An optional callback function to run after refresh.
 * @return int matches_length - The number of elements matched and processed.
 */
-ts_object.prototype.refresh_element = async function(section_tipo, section_id, hilite=true, callback) {
+ts_object.prototype.refresh_element = async function(hilite=true, callback) {
 
 	const self = this
 
-	// Locate all term elements
-	const type		= 'term';
-	const matches	= document.querySelectorAll(
-		`.list_thesaurus_element[data-type="${type}"][data-section_tipo="${section_tipo}"][data-section_id="${section_id}"]`
-	);
-	const matches_length = matches.length
+	// fire common refresh action
+	await self.refresh({
+		render_level	: 'content',
+		destroy			: false
+	})
 
-	// no matches case
-	if (matches_length===0) {
-		console.error("[refresh_element] Error on match elements. Not terms found for section_tipo: "+section_tipo+", section_id: "+section_id+", type: "+type);
-		return matches_length;
+	// element to hilite
+	if (hilite) {
+		requestAnimationFrame( () => { self.hilite_element(self.term_node) })
 	}
 
-	// Iterate all matches
-	for (let i = matches_length - 1; i >= 0; i--) {
+	// callback
+	if (callback) {
+		callback(self.term_node)
+	}
 
-		const term_node = matches[i]
-
-		const direct_wrap = term_node.closest('.wrap_ts_object');
-		const parent_wrap = direct_wrap.parentNode.closest('.wrap_ts_object');
-		if (!parent_wrap) {
-			console.warn("[refresh_element] Could not find the parent wrapper for term node.");
-			continue; // Skip to the next match
-		}
-
-		// current ts_object instance
-		const instance_id = direct_wrap.dataset.id
-		const ts_object_instance = instance_id===self.id
-			? self
-			: get_instance_by_id(instance_id)
-		if (!ts_object_instance) {
-			console.error('Unable to find the current instance by id:', instance_id);
-			continue;
-		}
-
-		// short vars
-		const section_tipo	= ts_object_instance.section_tipo
-		const section_id	= ts_object_instance.section_id
-		const children_tipo	= ts_object_instance.children_tipo
-
-		// get_node_data
-		await self.get_node_data(section_tipo, section_id, children_tipo);
-		// update data
-		self.ar_elements = self.node_data.ar_elements
-
-		// Render current instance node again and replace the existing one
-		const current_node	= self.node
-		const new_node		= await self.render()
-		current_node.replaceWith(new_node)
-
-		// // is_open detection
-		// const link_children_element	= ts_object_instance.link_children_element
-		// const is_open				= link_children_element?.firstChild?.classList.contains('ts_object_children_arrow_icon_open') || self.is_root_node
-		// if(is_open) {
-
-		// 	// Children are open case, so refresh by fetching new data
-
-		// 	const children_container = ts_object_instance.children_container
-		// 	if (!children_container) {
-		// 		console.error("[refresh_element] Could not find children_container.");
-		// 		continue; // Skip to the next match
-		// 	}
-
-		// 	// pagination is set in DOM link_children_element from API response in get_children call
-		// 		const pagination = link_children_element.pagination
-		// 			? link_children_element.pagination
-		// 			: null
-
-		// 		// Set offset correction when refresh to allow to to see current paginated list
-		// 		const edit_pagination = pagination?.offset > 0
-		// 			? {
-		// 				limit	: pagination.limit + pagination.offset,
-		// 				offset	: 0,
-		// 				total	: pagination.total
-		// 			  }
-		// 			: pagination;
-
-		// 	// loading style
-		// 		children_container.classList.add('loading')
-
-		// 	try {
-		// 		// children_data - render_children_data from API
-		// 		const children_data = await ts_object_instance.get_children_data({
-		// 			section_tipo	: section_tipo,
-		// 			section_id		: section_id,
-		// 			children_tipo	: children_tipo,
-		// 			pagination		: edit_pagination,
-		// 			children		: null
-		// 		})
-
-		// 		if (children_data) {
-
-		// 			// Delete previous open opened_elements. (!) Important
-		// 			// They are checked in `render_link_children` to prevent duplicity in infinite loop cases
-		// 			const ar_children_data = children_data.ar_children_data || []
-		// 			const ar_children_data_length = ar_children_data.length
-		// 			for (let i = 0; i < ar_children_data_length; i++) {
-		// 				const item = ar_children_data[i]
-		// 				if (ts_object_instance.opened_elements[item.ts_id]) {
-		// 					delete ts_object_instance.opened_elements[item.ts_id]
-		// 				}
-		// 			}
-
-		// 			// Render nodes
-		// 			await ts_object_instance.render_children({
-		// 				clean_children_container : true, // bool clean_children_container
-		// 			})
-		// 		}
-		// 	} catch (error) {
-		// 		console.error("[refresh_element] An error occurred during data fetch or render:", error);
-		// 	} finally {
-		// 		// Remove loading style
-		// 		children_container.classList.remove('loading');
-		// 	}
-		// }
-
-		// element to hilite
-		if (hilite) {
-			requestAnimationFrame( () => { self.hilite_element(term_node) })
-		}
-
-		// callback
-		if (callback) {
-			callback(term_node)
-		}
-	}//end for (let i = matches_length - 1; i >= 0; i--)
-
-
-	return matches_length
+	return true
 }//end refresh_element
 
 
 
 /**
-* EDIT
-* Opens a new window where edit current record
-* section_id is optional. If not get, the function uses button_obj dataset section_id
-* @param HTMLElement button_obj
+* OPEN_RECORD
+* Opens a new window where you can edit the current record.
+* On open window blur, self instance will be refresh and hilited.
 * @param int|string section_id
 * @param string section_tipo
 * @return bool
 */
 ts_object.prototype.edit_window = null; // Class var
-ts_object.prototype.edit = function(section_id, section_tipo) {
+ts_object.prototype.open_record = function(section_id, section_tipo) {
 
 	const self = this
 
@@ -939,7 +963,15 @@ ts_object.prototype.edit = function(section_id, section_tipo) {
 			top		: 0,
 			left	: (width - 1280),
 			on_blur : () => {
-				self.refresh_element(section_tipo, section_id)
+				// refresh the instance
+				const instance = (self.section_id==section_id && self.section_tipo===section_tipo)
+					? self
+					: get_all_instances().find(el => parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo && el.model==='ts_object')
+				if (instance) {
+					instance.refresh_element()
+				}else{
+					console.error('Unable to get the instance');
+				}
 			}
 		})
 
@@ -955,40 +987,21 @@ ts_object.prototype.edit = function(section_id, section_tipo) {
 
 
 	return true
-}//end edit
+}//end open_record
 
 
 
 /**
 * ADD_CHILD
 * Call to API to create a new record and add the current element his parent
-* @param object options
-* {
-* 	section_id : string|int
-* 	section_tipo: string
-* }
 * @return api_response
 */
-ts_object.prototype.add_child = async function(options) {
-
-	// options
-		const section_id	= options.section_id
-		const section_tipo	= options.section_tipo
-
-	// mandatory options check
-		const mandatory = ['section_id','section_tipo']
-		mandatory.map(el => {
-			if (!options[el]) {
-				alert(`Error: var ${el} is mandatory!`);
-				console.warn('options:', options);
-				throw '[add_child] Mandatory vars check fail for options: ' + el
-			}
-		})
+ts_object.prototype.add_child = async function() {
 
 	// source
 		const source = {
-			section_id		: section_id,
-			section_tipo	: section_tipo
+			section_id		: this.section_id,
+			section_tipo	: this.section_tipo
 		}
 
 	// API call
@@ -1000,7 +1013,8 @@ ts_object.prototype.add_child = async function(options) {
 
 	// API request
 		const api_response = await data_manager.request({
-			body : rqo
+			use_worker	: false,
+			body		: rqo
 		})
 
 		// debug
@@ -1096,8 +1110,173 @@ ts_object.prototype.delete_term = async function(options) {
 
 
 /**
+* SWAP_PARENT
+* Changes from one parent to another a ts_object node.
+* It is used when user drag and drop terms in the tree.
+* @param object options
+* {
+* 	moving_instance: object - ts_object instance,
+* 	old_parent_instance: object - ts_object instance
+* }
+* @return bool
+*/
+ts_object.prototype.swap_parent = async function (options) {
+
+	const self = this
+
+	// options
+	const {
+		moving_instance,
+		old_parent_instance
+	} = options
+
+	// check vars
+	if (!moving_instance) {
+		console.error('[ts_object.on_drop] No moving_instance is received.', options);
+		return false;
+	}
+	if (!old_parent_instance) {
+		console.error('[ts_object.on_drop] No old_parent_instance is received.', options);
+		return false;
+	}
+
+	// target instance is self (currently dropped wrapper). Set for clarify names.
+	const target_instance = self
+
+	// Validate moving instance. Don't proceed if moving instance is the same as target.
+	if ( moving_instance.ts_id === target_instance.ts_id ) {
+		console.warn('Invalid action: moving and target instances are the same.');
+		return false;
+	}
+
+	// Validate target instance. Check if parent already contains current child.
+	const target_instance_ar_children_data = target_instance.children_data?.ar_children_data || []
+	const found = target_instance_ar_children_data.find(el => el.ts_id === moving_instance.ts_id)
+	if (found) {
+		console.log('Ignored action. Parent instance already contains this node.', found);
+		return false;
+	}
+
+	// children_container. Check the container for children within the target.
+	// If no children container, log an error and stop.
+	const children_container = target_instance.children_container
+	if (!children_container) {
+		console.warn('No children_container found in the target instance:', target_instance);
+		return false;
+	}
+
+	// update_parent_data. Request API to update parent data
+	const update_parent_data_options = {
+		section_id				: moving_instance.section_id,
+		section_tipo			: moving_instance.section_tipo,
+		old_parent_section_id	: old_parent_instance.section_id,
+		old_parent_section_tipo	: old_parent_instance.section_tipo,
+		new_parent_section_id	: target_instance.section_id,
+		new_parent_section_tipo	: target_instance.section_tipo
+	}
+	self.update_parent_data(update_parent_data_options)
+	.then(function(api_response){
+		if(SHOW_DEBUG===true) {
+			console.log('update_parent_data. Response:', api_response);
+		}
+		if (!api_response?.result) {
+			console.error('Error on update_parent_data. Unable to continue.');
+			// bubbles notifications
+			const msg = SHOW_DEBUG
+				? 'Error on update parent data. ' + api_response?.msg || 'Unknown error'
+				: 'Error on update parent data.'
+			event_manager.publish('notification', {
+				msg			: msg,
+				type		: 'error',
+				remove_time	: 10000
+			})
+		}else{
+			event_manager.publish('notification', {
+				msg			: api_response?.msg || 'OK',
+				type		: 'success',
+				remove_time	: 1200
+			})
+		}
+	})
+
+	// update moving instance caller.
+	// It is important to allow the term to be moved again without causing any inconsistencies.
+	moving_instance.caller = target_instance
+
+	// Move moving instance node from old parent to the new one (current dropped)
+	target_instance.children_container.appendChild( moving_instance.node );
+
+	// Update moving instance virtual_order
+	const total = [...target_instance.children_container.childNodes].filter(el =>
+		el.classList.contains('wrap_ts_object')
+	).length;
+	moving_instance.virtual_order = total
+	// Refresh the instance (without call API) to update the order value.
+	await moving_instance.refresh({
+		build_autoload	: false, // Do not load data from API
+		render_level	: 'content',
+		destroy			: false
+	})
+
+	// update_arrow_state. If the instance has no children, then the arrow icon should be hidden.
+	// old_parent_instance.update_arrow_state(false)
+	dd_request_idle_callback(
+		async () => {
+
+			// Updated old_parent_instance
+			// Remove children from data (client side only action)
+			old_parent_instance.remove_children_item( moving_instance.data )
+			// Refresh the instance data to update the children arrow
+			old_parent_instance.refresh({
+				build_autoload	: false, // Do not load data from API
+				render_level	: 'content', // updated arrow status and render
+				destroy			: false
+			})
+			if(SHOW_DEBUG===true) {
+				console.log('Updated old_parent_instance :', old_parent_instance);
+			}
+
+			// Updates target instance
+			// Add children to data (client side only action)
+			target_instance.add_children_item( moving_instance.data )
+
+			// Refresh the instance data to update the children arrow
+			await target_instance.refresh({
+				build_autoload	: false, // Do not load data from API
+				render_level	: 'content', // updated arrow status and render
+				destroy			: false
+			})
+
+			// Update styles. Ensure the target instance display the children.
+			requestAnimationFrame(() => {
+				// show children container
+				target_instance.children_container.classList.remove('hide')
+				// set arrow down
+				target_instance.link_children_element.classList.add('open')
+
+				// hilite moved term. Allows arrow state update
+				const term_node = moving_instance.term_node
+				if (term_node) {
+					self.hilite_element(term_node)
+				}
+			})
+
+			if(SHOW_DEBUG===true) {
+				console.log('Updated target_instance :', target_instance);
+			}
+		}
+	);
+
+
+	return true
+}//end swap_parent
+
+
+
+/**
 * SELECT_FIRST_INPUT_IN_EDITOR
 * @param HTMLElement element_data_div
+* @return bool
 */
 ts_object.prototype.select_first_input_in_editor = function(element_data_div) {
 
@@ -1107,10 +1286,10 @@ ts_object.prototype.select_first_input_in_editor = function(element_data_div) {
 			// Select all content
 			first_input.select()
 			// Hide editor on change value
-			first_input.addEventListener("change", function(){
-				//self.refresh_element(section_tipo, section_id)
+			const change_handler = (e) => {
 				element_data_div.style.display = 'none'
-			});
+			}
+			first_input.addEventListener('change', change_handler)
 		}
 
 	return true
@@ -1121,24 +1300,34 @@ ts_object.prototype.select_first_input_in_editor = function(element_data_div) {
 /**
 * SHOW_COMPONENT_IN_TS_OBJECT
 * Show and hide component data in ts_object content_data div
-* @param object button_obj
+* @param object options
+* E.g. {
+*    "tipo": "ontology17",
+*    "type": "icon",
+*    "model": "component_json"
+* }
 * @return promise
 */
-ts_object.prototype.show_component_in_ts_object = async function(button_obj, event) {
+ts_object.prototype.show_component_in_ts_object = async function(options) {
 
 	const self = this
 
+	// options
+		const {
+			tipo, // array expected. String is accepted too. e.g. 'ontology17'
+			type, // string e.g. 'icon'
+			model // string e.g. 'component_json'
+		} = options
+
 	// short vars
-		const wrapper		= button_obj.parentNode.parentNode;
-		const section_tipo	= wrapper.dataset.section_tipo
-		const section_id	= wrapper.dataset.section_id
-		const type			= button_obj.dataset.type
-		const tipo			= button_obj.dataset.tipo
-		const tipos			= tipo.split(',')
+		const section_tipo	= self.section_tipo
+		const section_id	= self.section_id
 		const lang			= page_globals.dedalo_data_lang
+		const tipos			= Array.isArray(tipo) ? tipo : tipo.split(',') // handle always as array
 
 	// delete the previous registered events
-		self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+		self.events_tokens.forEach(token => event_manager.unsubscribe(token))
+		self.events_tokens = []
 
 	// render_component_node function
 		const components = [] // array of created component instances
@@ -1150,8 +1339,6 @@ ts_object.prototype.show_component_in_ts_object = async function(button_obj, eve
 				inner_html		: 'Loading component..',
 				parent			: element_data_contanier
 			})
-
-			const model = await data_manager.resolve_model(tipo, section_tipo)
 
 			// component instance
 				const current_component = await get_instance({
@@ -1172,47 +1359,46 @@ ts_object.prototype.show_component_in_ts_object = async function(button_obj, eve
 				if(type==='term') {
 
 					// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
-						const save_handler = function() {
+					const save_handler = function() {
 
-							const caller = current_component
+						const caller = current_component
 
-							const ar_values = []
-							switch (caller.model) {
-								case 'component_portal': {
-									const data = caller.datum.data.filter(el => el.tipo !== caller.tipo)
-									ar_values.push(...data.map(el => el.value))
-									break;
+						const ar_values = []
+						switch (caller.model) {
+							case 'component_portal': {
+								const data = caller.datum.data.filter(el => el.tipo !== caller.tipo)
+								ar_values.push(...data.map(el => el.value))
+								break;
+							}
+							default: {
+								const components_length = components.length
+								for (let i = 0; i < components_length; i++) {
+									ar_values.push(...components[i].data.value)
 								}
-								default: {
-									const components_length = components.length
-									for (let i = 0; i < components_length; i++) {
-										ar_values.push(...components[i].data.value)
-									}
-									break;
+								break;
+							}
+						}
+
+						const value = ar_values.join(' ')
+						// change the value of the current DOM element
+						self.term_text.innerHTML = value
+
+						dd_request_idle_callback(
+							() => {
+								// destroy
+								// current_component.destroy(true, true, true)
+								components.forEach((component) => {
+									component.destroy(true, true, true)
+								});
+								// clean up array of components
+								while(components.length > 0) {
+									components.pop();
 								}
 							}
-
-							const value = ar_values.join(' ')
-							// change the value of the current DOM element
-							button_obj.firstChild.innerHTML = value
-
-							dd_request_idle_callback(
-								() => {
-									// destroy
-									// current_component.destroy(true, true, true)
-									components.forEach((component) => {
-										component.destroy(true, true, true)
-									});
-									// clean up array of components
-									while(components.length > 0) {
-										components.pop();
-									}
-								}
-							)
-						}
-						self.events_tokens.push(
-							event_manager.subscribe('save_' + current_component.id_base, save_handler)
 						)
+					}
+					const token = event_manager.subscribe('save_' + current_component.id_base, save_handler)
+					self.events_tokens.push(token)
 				}
 
 				// build and render component
@@ -1237,7 +1423,7 @@ ts_object.prototype.show_component_in_ts_object = async function(button_obj, eve
 		}//end render_component_node
 
 	// data_contanier
-		const element_data_contanier	= [...wrapper.childNodes].find(el => el.classList.contains('data_container'))
+		const element_data_contanier	= self.data_container
 		const all_element_data_div		= element_data_contanier.children // childNodes;
 
 	// get the children nodes of data_contanier
@@ -1381,7 +1567,6 @@ ts_object.prototype.show_indexations = async function(options) {
 * @param object data
 *  sample:
 	* [{
-	* 	"hierarchy1_66": {
 	* 		"section_tipo": "hierarchy1",
 	* 		"section_id": "66",
 	* 		"order": 2,
@@ -1409,7 +1594,6 @@ ts_object.prototype.show_indexations = async function(options) {
 	* 				"model": "component_relation_children"
 	* 			}
 	* 		]
-	* 	}
 	* }]
 * @param array to_hilite
 * 	array of locators found in search as
@@ -1417,139 +1601,221 @@ ts_object.prototype.show_indexations = async function(options) {
 *    "section_tipo": "flora1",
 *    "section_id": "1"
 * }]
-* @return bool
+* @return {Promise<boolean>} - True on successful execution.
 */
-ts_object.prototype.current_main_div = null;
 ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
+	const start_time = performance.now();
+	if(SHOW_DEBUG===true) {
+		console.warn('parse_search_result data:', data, to_hilite);
+	}
 
 	const self = this
 
-	// reset previous hilites
-	self.reset_hilites()
+	if (!data || !Array.isArray(data)) {
+		console.error('Invalid data provided to parse_search_result');
+		// Display result info
+		event_manager.publish('notification', {
+			msg			: `Invalid empty data provided to parse_search_result`,
+			type		: 'error',
+			remove_time	: 7000
+		})
+		return false;
+	}
 
-	// render all nodes and store it
-	const data_length = data.length
-	const ts_nodes = []
+	// Pre-process 'to_hilite' for faster lookup and type consistency
+	const hilite_set = new Set(
+		to_hilite.map(el => `${el.section_tipo}_${parseInt(el.section_id)}`)
+	);
 
+	// Map of rendered search instances based on received data list
+	const search_instances_map = new Map()
+
+	// Set node to scroll. Used to scroll page when is needed.
 	let node_to_scroll = null
 
+	// --------------------------------------------------------------------------------
+	// 1. CREATE OR RETRIEVE INSTANCES AND RENDER
+	// --------------------------------------------------------------------------------
+
+	// Iterate 'data' and create the non already existing instances.
+	// 'data' is an array of all terms needed to create the results paths, that means, from the root
+	// terms to the last node matching the search like a branch path [term_root, term_middle1, term_middle2, term_matched]
+	// Every data item is an object with ts_node properties like section_tipo, section_id, permissions, ar_elements..
+	// See param sample at docblock.
+	const data_length = data.length
 	for (let i = 0; i < data_length; i++) {
 
-		const item = data[i]
+		const data_item = data[i]
 
-		// Render using instances
-		const current_instance = new ts_object()
-		await current_instance.init({
-			thesaurus_mode				: self.thesaurus_mode,
-			caller						: self,
-			linker						: self.linker, // usually a portal component instance
-			section_tipo				: item.section_tipo,
-			section_id					: item.section_id,
-			children_tipo				: item.children_tipo,
-			target_section_tipo			: self.target_section_tipo,
-			is_indexable				: item.is_indexable,
-			is_descriptor				: item.is_descriptor,
-			ar_elements					: item.ar_elements,
-			ts_id						: item.ts_id,
-			ts_parent					: item.ts_parent,
-			order						: item.order,
-			permissions_button_delete	: item.permissions_button_delete,
-			permissions_button_new		: item.permissions_button_new,
-			permissions_indexation		: item.permissions_indexation
-		})
-		const node = await current_instance.render()
+		// set non included 'thesaurus_mode' that is needed to create the instance id.
+		data_item.thesaurus_mode = self.thesaurus_mode
 
-		// set pointers
-		node.ts_id					= current_instance.ts_id
-		node.ts_parent				= current_instance.ts_parent
-		node.section_tipo			= current_instance.section_tipo
-		node.children_container		= current_instance.children_container
-		node.link_children_element	= current_instance.link_children_element
+		const key = key_instances_builder(data_item); // normalized id of the instance
+		const found_instance = get_instance_by_id(key); // Look in all Dédalo instances Map
+		if (found_instance) {
 
-		// find if the current record was the term searched
-		const searched_node = to_hilite.find(el => el.section_tipo===item.section_tipo && el.section_id===item.section_id)
-		// if the record was a searched term add a hilite class to remark it
-		if(searched_node){
-			const term_node = current_instance.term_node
-			if (term_node) {
-				requestAnimationFrame(
-					() => {
-						term_node.classList.add('element_hilite');
-						if (!node_to_scroll) {
-							node_to_scroll = term_node
-						}
-					}
-				);
+			// Instance already exists
+			if(SHOW_DEBUG===true) {
+				console.log('==== Matched already existing instance. found_instance:', key, found_instance);
 			}
-		}
-		// store the result
-		ts_nodes.push(node)
-	}
 
-	// link the nodes with his own parent node
-	const ts_nodes_length = ts_nodes.length
-	for (let i = 0; i < ts_nodes_length; i++) {
+			// Add to map
+			search_instances_map.set(found_instance.ts_id, found_instance);
 
-		const current_node = ts_nodes[i]
-
-		// only the root parent node needs to be linked to the main node.
-		if(current_node.ts_parent==='root'){
-			// get the main div into the doom
-			const children_container = document.querySelector(`.hierarchy_root_node.${current_node.section_tipo}>.children_container`);
-			if (children_container) {
-
-				// Clean main div (Clean previous nodes from root)
-				while (children_container.firstChild) {
-					children_container.removeChild(children_container.firstChild);
-				}
-
-				// add node (and all root term children)
-				children_container.appendChild(current_node)
-			}else{
-				console.error('Error finding the children_container');
-			}
 		}else{
 
-			// link the node with its own parent
-			const parent_node = ts_nodes.find(el => el.ts_id===current_node.ts_parent)
-
-			if(parent_node && parent_node.children_container){
-				// set the link children state (arrow icon open)
-				parent_node.link_children_element.firstChild.classList.add('ts_object_children_arrow_icon_open');
-
-				// add node
-				parent_node.children_container.appendChild(current_node)
+			// New instance creation
+			const new_instance = await ts_object.get_instance({
+				// key_parts only
+				section_tipo		: data_item.section_tipo,
+				section_id			: data_item.section_id,
+				children_tipo		: data_item.children_tipo,
+				target_section_tipo	: null,
+				thesaurus_mode		: self.thesaurus_mode
+			});
+			if(SHOW_DEBUG===true) {
+				console.log('++++ Created new instance. new_instance:', key, new_instance);
 			}
+
+			// callers
+			const root_caller	= self.caller // area_thesaurus
+			const caller		= (data_item.ts_parent === 'root') ? self.caller : self // area_thesaurus|ts_object
+
+			// set new properties (overwrites possible cached properties)
+			new_instance.caller			= caller
+			new_instance.linker			= self.linker // usually a portal component instance
+			new_instance.is_root_node	= data_item.ts_parent === 'root'
+			new_instance.ts_id			= data_item.ts_id
+			new_instance.ts_parent		= data_item.ts_parent
+			new_instance.order			= data_item.order
+			new_instance.area_model		= root_caller.model
+			new_instance.is_ontology	= (root_caller.model === 'area_ontology')
+			new_instance.mode			= 'search' // hide some elements like 'order'
+			new_instance.data			= data_item // inject row as data itself
+
+			// Build the instance without load from API (data is already injected)
+			await new_instance.build(false)
+			// Render the instance
+			await new_instance.render()
+
+			// Add to search instances map
+			search_instances_map.set(new_instance.ts_id, new_instance);
 		}
 	}
 
-	// root node case hilite
-	if (data_length<1 && to_hilite) {
+	// Reset possible previous hilites.
+	self.reset_hilites()
 
-		const to_hilite_length = to_hilite.length
-		for (let i = 0; i < to_hilite_length; i++) {
+	// --------------------------------------------------------------------------------
+	// 2. HIERARCHIZE INSTANCES AND COLLECT PARENTS TO OPEN
+	// --------------------------------------------------------------------------------
 
-			const item = to_hilite[i]
+	// Hierarchize instances. Add child instances data and DOM nodes to their parents.
+	const instances_to_open = new Map()
+	const instances_to_hilite = new Map()
+	// const search_instances_length = search_instances.length
+	// for (let i = 0; i < search_instances_length; i++) {
+	for(const [key, instance] of search_instances_map) {
 
-			const wrap_ts_node = document.querySelector(`.wrap_ts_object[data-section_tipo="${item.section_tipo}"][data-section_id="${item.section_id}"]`)
-			// find the wrapper term_node pointer
-			const term_node = wrap_ts_node?.term_node
-			if (term_node) {
-				requestAnimationFrame(
-					() => {
-						term_node.classList.add('element_hilite');
-						if (!node_to_scroll) {
-							node_to_scroll = term_node
-						}
-					}
-				);
-			}
+		// Hilite. Remark search result from the 'hilite_set'.
+		if (hilite_set.has(instance.ts_id)) {
+			instances_to_hilite.set(instance.ts_id, instance);
 		}
+
+		// Look for parent_instance. If not found, this instance is a root term. Continue without changes.
+		const parent_instance = search_instances_map.get(instance.ts_parent);
+		if (!parent_instance) {
+			continue; // root nodes case
+		}
+
+		// Ensure parent's children data structure is initialized.
+		parent_instance.children_data = parent_instance.children_data || {};
+		parent_instance.children_data.ar_children_data = parent_instance.children_data.ar_children_data || [];
+
+		// Inspect parent children data to check if current instance is already added.
+		// If not, update the parent instance adding the current instance data as child.
+		const child_found = parent_instance.children_data.ar_children_data.some(
+			el => el.ts_id === instance.ts_id
+		);
+		if (!child_found) {
+			// Update parent children data adding current instance data as child
+			parent_instance.add_children_item(instance.data);
+		}
+
+		// Update current instance caller.
+		instance.caller = parent_instance
+
+		// Set to open the parent children
+		instances_to_open.set(parent_instance.ts_id, parent_instance)
 	}
 
-	// scroll to first found element
-	if (node_to_scroll) {
-		scroll_to_node(node_to_scroll)
+	// --------------------------------------------------------------------------------
+	// 3. OPEN PARENTS (ASYNC)
+	// --------------------------------------------------------------------------------
+
+	// Open all parents to render and display they children.
+	// Ensure that all rendering children are complete before highlighting the nodes.
+	await Promise.all(
+		Array.from(instances_to_open.values()).map(async (parent_instance) => {
+			if(SHOW_DEBUG===true) {
+				console.log('Opening Hierarchized instance parent:',parent_instance.ts_id, parent_instance);
+			}
+
+			// Add rendered children nodes into self.children_container or parent_nd_container
+			await parent_instance.render_children({
+				clean_children_container	: true,
+				children_data				: parent_instance.children_data
+			})
+
+			// Update styles. Note that unsync (requestAnimationFrame) is used.
+			// This allows the children render to be completed before.
+			requestAnimationFrame(() => {
+				// show children container
+				parent_instance.children_container.classList.remove('hide')
+				// set arrow down
+				parent_instance.link_children_element.classList.add('open')
+			})
+		})
+	);
+	// Clear Maps when done
+	instances_to_open.clear();
+
+	// --------------------------------------------------------------------------------
+	// 4. HILITE AND SCROLL (IDLE/ANIMATION FRAME)
+	// --------------------------------------------------------------------------------
+
+	// Hilite instances
+	dd_request_idle_callback(()=>{
+		instances_to_hilite.forEach(instance => {
+			if (instance.term_node) {
+				if(SHOW_DEBUG===true) {
+					console.log('Hiliting instance:',instance.ts_id, instance);
+				}
+				requestAnimationFrame(() => {
+					instance.hilite_element(instance.term_node, false)
+				});
+				if (!node_to_scroll) {
+					// scroll page to first found element
+					node_to_scroll = instance.term_node
+					scroll_to_node(node_to_scroll)
+				}
+			}
+		});
+		// Display result info
+		const total_found = to_hilite.length
+		event_manager.publish('notification', {
+			msg			: `Displaying ${total_found} records`,
+			type		: total_found > 0 ? 'success' : 'warning',
+			remove_time	: 5000
+		})
+		// Clear Maps when done
+		instances_to_hilite.clear();
+		search_instances_map.clear();
+	})
+
+	// debug
+	if(SHOW_DEBUG===true) {
+		console.log(`_*_Time to parse search result: ${(performance.now() - start_time).toFixed(2)}ms`);
 	}
 
 
@@ -1657,117 +1923,49 @@ const scroll_to_node = (node_to_scroll) => {
 
 
 /**
-* BUILD_ORDER_FORM
-* @param HTMLElement button_obj
-* @return bool
-*/
-ts_object.prototype.build_order_form = function(button_obj) {
-
-	const self = this
-
-	// Remove previous inputs
-		const order_inputs	= document.querySelectorAll('input.input_order')
-		const len			= order_inputs.length
-		for (let i = len - 1; i >= 0; i--) {
-			order_inputs[i].remove()
-		}
-
-	const old_value = parseInt(button_obj.textContent)
-
-	// input
-		const input = document.createElement('input')
-		input.classList.add('id_column_link','input_order')
-		input.value = old_value
-
-		// keydown event
-		const keydown_handler = (e) => {
-			// prevent to fire open search panel
-			e.stopPropagation()
-		}
-		input.addEventListener('keydown', keydown_handler);
-		input.addEventListener('keyup', keydown_handler);
-
-		// change event
-		const change_handler = (e) => {
-			e.stopPropagation()
-			self.save_order( button_obj, parseInt(input.value) )
-			setTimeout(function(){
-				input.blur()
-			}, 300)
-		}
-		input.addEventListener('change', change_handler);
-
-		// blur event
-		const blur_handler = (e) => {
-			e.stopPropagation()
-			e.preventDefault()
-			input.remove()
-			button_obj.classList.remove('hide')
-		}
-		input.addEventListener('blur', blur_handler);
-
-	// Add input element after
-		button_obj.parentNode.insertBefore(input, button_obj.nextSibling);
-
-	// Hide button_obj
-		button_obj.classList.add('hide')
-
-	// Focus and select new input element
-		input.focus();
-		input.select();
-
-
-	return true
-}//end build_order_form
-
-
-
-/**
 * SAVE_ORDER
-* @param HTMLElement button_obj
+* @param int value
 * @param mixed new_value
 * @return promise
 */
-ts_object.prototype.save_order = async function(button_obj, new_value) {
+ts_object.prototype.save_order = async function( value ) {
 
 	const self = this
 
-	const old_value = parseInt(button_obj.textContent)
+	let new_value = parseInt( value )
 
-	// check is new_value
-		if (new_value===old_value) {
-			if(SHOW_DEBUG===true) {
-				console.log("[ts_object.save_order] Value is not changed. ignored save_order action")
-			}
-			return Promise.resolve(false);
+	const old_value = parseInt( self.virtual_order )
+
+	// check is new_value is valid
+	if (new_value===old_value) {
+		if(SHOW_DEBUG===true) {
+			console.log("[ts_object.save_order] Value is not changed. ignored save_order action")
 		}
+		return Promise.resolve(false);
+	}
 
 	// short vars
-		const element_wrap			= button_obj.parentNode.parentNode
-		const element_section_tipo	= element_wrap.dataset.section_tipo
-		const element_section_id	= element_wrap.dataset.section_id
-		const wrap					= element_wrap.parentNode.parentNode
-		// children nodes of type 'wrap_ts_object'
-		const children				= [...element_wrap.parentNode.childNodes].filter(el => el.classList.contains('wrap_ts_object'))
-		const children_len			= children.length
+	// children nodes of type 'wrap_ts_object'
+	const child_nodes		= [...self.caller.children_container.childNodes].filter(el => el.classList.contains('wrap_ts_object'))
+	const child_nodes_len	= child_nodes.length
 
 	// new_value. Prevent set invalid values
-		if (new_value>children_len){
-			new_value = children_len // max value is array length
-		}else if (new_value<1) {
-			new_value = 1;    // min value is 1
-		}
+	if ( new_value > child_nodes_len ){
+		new_value = child_nodes_len // max value is array length
+	}else if ( new_value<1 ) {
+		new_value = 1; // min value is 1
+	}
 
-	// ar_locators. Iterate children elements
-		const ar_locators = []
-		for (let i = 0; i < children_len; i++) {
-			if (children[i].dataset.section_tipo && children[i].dataset.section_id) {
-				ar_locators.push({
-					section_tipo	: children[i].dataset.section_tipo,
-					section_id		: children[i].dataset.section_id
-				})
-			}
+	// ar_locators. Iterate child_nodes elements
+	const ar_locators = []
+	for (let i = 0; i < child_nodes_len; i++) {
+		if (child_nodes[i].dataset.section_tipo && child_nodes[i].dataset.section_id) {
+			ar_locators.push({
+				section_tipo	: child_nodes[i].dataset.section_tipo,
+				section_id		: child_nodes[i].dataset.section_id
+			})
 		}
+	}
 
 	// sort array with new keys
 		// function move_locator(ar_locators, from, to) {
@@ -1808,49 +2006,100 @@ ts_object.prototype.save_order = async function(button_obj, new_value) {
 		const to	= parseInt(new_value)-1
 		move_locator(ar_locators, from, to)
 
-	// short vars
-		const section_tipo	= wrap.dataset.section_tipo
+	// Update load instances and values before call API
 
-	// loading
-		wrap.classList.add('loading')
+		// Update parent instance children data order
 
-	// API request
+		// current_ar_children_data from caller (parent instance)
+		const current_ar_children_data = self.caller.children_data.ar_children_data
+
+		// order_reference as [ts1_7,ts1_25]
+		const order_reference = ar_locators.map(el => el.section_tipo + '_' + el.section_id)
+
+		// order_children. New array with sorted children
+		const order_children = current_ar_children_data.sort((a, b) => {
+
+			const index_a = order_reference.indexOf(a.section_tipo + '_' + a.section_id);
+			const index_b = order_reference.indexOf(b.section_tipo + '_' + b.section_id);
+
+			// Place items not found in order_reference (index of -1) at the end.
+			if (index_a === -1 && index_b !== -1) return 1;
+			if (index_b === -1 && index_a !== -1) return -1;
+
+			// Otherwise, sort by the indices
+			return index_a - index_b;
+		});
+
+		// overwrite value
+		self.caller.children_data.ar_children_data = order_children
+
+		// Create a custom instances list with only ts_object instances
+		const ts_object_instances_list = get_all_instances().filter(el => {
+			if (el.model==='ts_object' && el.section_tipo && el.section_id) {
+				return el
+			}
+			return false
+		})
+
+		const order_children_length = order_children.length
+		for (let i = 0; i < order_children_length; i++) {
+
+			const item = order_children[i]
+
+			const found = ts_object_instances_list.find(el =>
+				el.section_tipo===item.section_tipo && el.section_id==item.section_id
+			)
+			if (found) {
+				// Set the new position value
+				found.virtual_order = i + 1
+			}else{
+				console.error('Unable to find the instance for child:', item);
+			}
+		}
+
+	// API request to save_order in database
 		const rqo = {
 			dd_api			: 'dd_ts_api',
 			prevent_lock	: true,
 			action			: 'save_order',
 			source			: {
-				section_tipo	: section_tipo,
+				section_tipo	: self.section_tipo,
 				ar_locators		: ar_locators
 			}
 		}
-		// API request
-		const api_response = await data_manager.request({
+		// API request. Don't wait here
+		data_manager.request({
 			body : rqo
 		})
-
-		// debug
+		.then(function(api_response){
+			// debug
 			if(SHOW_DEBUG===true) {
 				console.log("[ts_object.save_order] api_response", api_response)
 			}
 
-		if (api_response.result && api_response.result!==false) {
-			// Refresh element
-			self.refresh_element(
-				element_section_tipo,
-				element_section_id,
-				true, // hilite
-				() => {
-					// callback executed after refresh is done
-					wrap.classList.remove('loading')
-				}
-			)
-		}else{
-			alert("[ts_object.save_order] Error on save order. \n\n"+ api_response.msg )
-		}
+			// error handling
+			if (!api_response?.result) {
+				console.error('Error on save order. api_response:', api_response);
+				// bubbles notifications
+				const msg = SHOW_DEBUG
+					? 'Error on save order. ' + api_response?.msg || 'Unknown error'
+					: 'Error on save order.'
+				event_manager.publish('notification', {
+					msg			: msg,
+					type		: 'error',
+					remove_time	: 10000
+				})
+			}else{
+				event_manager.publish('notification', {
+					msg			: api_response?.msg || 'OK',
+					type		: 'success',
+					remove_time	: 1200
+				})
+			}
+		})
 
 
-	return api_response
+	return true
 }//end save_order
 
 
@@ -1866,7 +2115,8 @@ ts_object.prototype.toggle_nd = async function(button_obj) {
 	const self = this
 
 	// nd_container
-	const nd_container = self.get_my_parent_container(button_obj, 'nd_container')
+	// const nd_container = self.get_my_parent_container(button_obj, 'nd_container')
+	const nd_container = self.nd_container
 	if (!nd_container) {
 		if(SHOW_DEBUG===true) {
 			console.log("[ts_object.toggle_nd] Error on locate nd_container from button_obj",button_obj);
@@ -1884,7 +2134,8 @@ ts_object.prototype.toggle_nd = async function(button_obj) {
 	}
 
 	// If already is loaded (contains nodes), just show it.
-	const children_container = self.get_my_parent_container(button_obj, 'children_container')
+	// const children_container = self.get_my_parent_container(button_obj, 'children_container')
+	const children_container = self.children_container
 	const has_nodes = children_container.childNodes.length > 0
 	if (has_nodes) {
 		nd_container.classList.remove('hide')
@@ -1944,36 +2195,36 @@ ts_object.prototype.toggle_nd = async function(button_obj) {
 
 
 
-/**
-* GET_MY_PARENT_CONTAINER
-* Returns current element (list_thesaurus_element) container of type inside his ts_element
-* @param HTMLElement button_obj
-* @param string role
-* @return HTMLElement|null parent_container
-*/
-ts_object.prototype.get_my_parent_container = function(button_obj, role) {
+// /**
+// * GET_MY_PARENT_CONTAINER
+// * Returns current element (list_thesaurus_element) container of type inside his ts_element
+// * @param HTMLElement button_obj
+// * @param string role
+// * @return HTMLElement|null parent_container
+// */
+// ts_object.prototype.get_my_parent_container = function(button_obj, role) {
 
-	if (!button_obj || !role) {
-		console.error("GET_MY_PARENT_CONTAINER: Invalid arguments provided. 'button_obj' and 'role' are required.", button_obj, role);
-		return null;
-	}
+// 	if (!button_obj || !role) {
+// 		console.error("GET_MY_PARENT_CONTAINER: Invalid arguments provided. 'button_obj' and 'role' are required.", button_obj, role);
+// 		return null;
+// 	}
 
-	// Get the closest 'wrap_ts_object' ancestor of button_obj
-	const wrapper = button_obj.closest('.wrap_ts_object');
-	if (!wrapper) {
-		console.error("GET_MY_PARENT_CONTAINER: Could not find a parent element with class 'wrap_ts_object'.");
-		return null;
-	}
+// 	// Get the closest 'wrap_ts_object' ancestor of button_obj
+// 	const wrapper = button_obj.closest('.wrap_ts_object');
+// 	if (!wrapper) {
+// 		console.error("GET_MY_PARENT_CONTAINER: Could not find a parent element with class 'wrap_ts_object'.");
+// 		return null;
+// 	}
 
-	for (const child of wrapper.children) {
-		if (child.dataset.role === role) {
-			return child;
-		}
-	}
+// 	for (const child of wrapper.children) {
+// 		if (child.dataset.role === role) {
+// 			return child;
+// 		}
+// 	}
 
-	console.warn(`GET_MY_PARENT_CONTAINER: No child element with data-role='${role}' found inside the wrapper.`);
-	return null;
-}//end get_my_parent_container
+// 	console.warn(`GET_MY_PARENT_CONTAINER: No child element with data-role='${role}' found inside the wrapper.`);
+// 	return null;
+// }//end get_my_parent_container
 
 
 

@@ -69,15 +69,22 @@ render_area_thesaurus.prototype.list = async function(options) {
 					// }
 
 				// render. parse_search_result with ts_object
-					const ts_object_instance = new ts_object()
-					await ts_object_instance.init({
-						caller : self
+					const ts_object_instance = await ts_object.get_instance({
+						thesaurus_mode		: self.context?.thesaurus_mode || 'default',
+						caller				: self,
+						linker				: self.linker, // usually a portal component instance
+						section_tipo		: self.section_tipo,
+						section_id			: self.section_id,
+						// children_tipo		: children_tipo,
+						thesaurus_view_mode	: self.thesaurus_view_mode,
+						is_root_node		: true,
+						area_model			: self.model,
+						is_ontology			: self.model === 'area_ontology'
 					})
+					self.ar_instances.push(ts_object_instance)
 					await ts_object_instance.parse_search_result(
 						data.ts_search.result, // object data
-						data.ts_search.found, // to hilite
-						null, // HTMLElement main_div
-						false // bool is_recursion
+						data.ts_search.found // to hilite
 					)
 
 				return content_data
@@ -125,10 +132,11 @@ render_area_thesaurus.prototype.list = async function(options) {
 			const render_handler = () => {
 				dd_request_idle_callback(
 					async () => {
-						const ts_object_instance = new ts_object()
-						await ts_object_instance.init({
-							caller : self
+						const ts_object_instance = await ts_object.get_instance({
+							caller			: self,
+							section_tipo	: self.section_tipo
 						})
+						self.ar_instances.push(ts_object_instance)
 						ts_object.parse_search_result(
 							data.ts_search.result,
 							data.ts_search.found, // to hilite
@@ -255,7 +263,7 @@ const render_content_data = function(self) {
 			// typology_container
 				const typology_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'typology_container',
+					class_name		: 'typology_container hide',
 					parent			: li
 				})
 
@@ -284,59 +292,27 @@ const render_content_data = function(self) {
 
 					const hierarchy_sections_item = hierarchy_sections[j]
 
-					const section_tipo			= hierarchy_sections_item.section_tipo
-					const section_id			= hierarchy_sections_item.section_id
-					const children_tipo			= hierarchy_sections_item.children_tipo
-					const target_section_tipo	= hierarchy_sections_item.target_section_tipo
-					const root_terms			= hierarchy_sections_item.root_terms
+					const root_terms = hierarchy_sections_item.root_terms
 					if (root_terms.length<1) {
 						continue;
 					}
 
-					// ts_object_instance
-					const ts_object_instance = new ts_object()
-					ts_object_instance.init({
-						thesaurus_mode		: self.context?.thesaurus_mode || null,
-						caller				: self,
-						linker				: self.linker, // usually a portal component instance
-						section_tipo		: section_tipo,
-						section_id			: section_id,
-						children_tipo		: children_tipo,
-						target_section_tipo	: target_section_tipo,
-						is_root_node		: true,
-						is_descriptor		: true
-					})
-					.then(async function(){
+					console.log('root_terms:', root_terms);
 
-						// hierarchy_wrapper node
-							const hierarchy_wrapper = await ts_object_instance.render()
-							typology_container.appendChild(hierarchy_wrapper)
+					root_terms.forEach((root_term)=>{
+						// Render current root term node
+						const placeholder_wrapper = render_root_term({
+							self,
+							root_term,
+							hierarchy_sections_item
+						})
+						typology_container.appendChild(placeholder_wrapper)
+					})//end foreach root_terms
 
-						// loading
-							const loading_node = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'elements_container loading',
-								inner_html		: `Loading ${root_terms[0].section_tipo}`,
-								parent			: hierarchy_wrapper
-							})
-
-						// children_data - render_children_data from API
-							ts_object_instance.get_children_data({
-								pagination	: null,
-								children	: root_terms
-							})
-							.then(function(){
-								// ts_object: render element children
-								ts_object_instance.render_children({
-									clean_children_container : false
-								})
-								.then(()=>{
-									// remove loading
-									loading_node.remove()
-								})
-							})
-					})
+					// break;
 				}//end iterate hierarchy_sections
+
+			// break;
 		}//end for (let i = 0; i < typology_length; i++) typology_nodes
 
 	// content_data
@@ -347,6 +323,77 @@ const render_content_data = function(self) {
 
 	return content_data
 }//end render_content_data
+
+
+
+/**
+* RENDER_ROOT_TERM
+* Create the ts_object instances and render it for the first level of terms.
+* @param object options
+* @return HTMLElement placeholder_wrapper
+*/
+export const render_root_term = function (options) {
+
+	const {
+		self,
+		root_term,
+		hierarchy_sections_item
+	} = options
+
+	// short vars
+	const section_tipo			= root_term.section_tipo
+	const section_id			= root_term.section_id
+	const children_tipo			= hierarchy_sections_item.children_tipo
+	const thesaurus_view_mode	= self.thesaurus_view_mode // model|default
+
+	// placeholder_wrapper
+	const placeholder_wrapper = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'wrapper_placeholder'
+	})
+
+	// loading message
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'loading',
+		inner_html		: `Loading ${section_tipo}`,
+		parent			: placeholder_wrapper
+	})
+
+	// ts_object_instance
+	// Note that we do NOT wait here, we return the placeholder_wrapper
+	// and, when the ts_object if fully rendered, the placeholder is replaced.
+	ts_object.get_instance({
+		// key_parts
+		section_tipo		: section_tipo,
+		section_id			: section_id,
+		children_tipo		: children_tipo,
+		thesaurus_mode		: self.context?.thesaurus_mode || null,
+		// others
+		thesaurus_view_mode	: thesaurus_view_mode,
+		caller				: self,
+		linker				: self.linker, // usually a portal component instance
+		is_root_node		: true,
+		area_model			: self.model,
+		is_ontology			: self.model === 'area_ontology'
+	})
+	.then(async (ts_object_instance)=>{
+
+		await ts_object_instance.build()
+
+		const node_wrapper = await ts_object_instance.render()
+
+		// hierarchy wrapper node
+		requestAnimationFrame(
+			() => {
+				placeholder_wrapper.replaceWith(node_wrapper);
+			}
+		);
+	})
+
+
+	return placeholder_wrapper
+}//end render_root_term
 
 
 

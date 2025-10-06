@@ -373,6 +373,21 @@ class area_thesaurus extends area_common {
 					$section_tipo
 				);
 
+				if (empty($ar_parents)) {
+					// create the ts_object of the root and get its data
+					// to be stored into the full array.
+					$ts_object = new ts_object(
+						$section_id,
+						$section_tipo,
+						null,
+						'edit',
+						'root' // root node
+					);
+
+					$ar_ts_objects[] = $ts_object->get_data();
+					continue;
+				}
+
 				// reverse the order to get the root term, top term, at first position
 				$ar_path = array_reverse($ar_parents);
 
