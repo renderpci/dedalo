@@ -231,6 +231,32 @@ export const get_all_instances = function() {
 
 
 /**
+* GET_INSTANCES_CUSTOM_MAP
+* Retrieves a filtered instances map organized by custom keys
+* @param function custom_key_builder
+* Function to handle the map key creation.
+* If returns null or false, the item will be excluded of the final map.
+* @return Map custom_map - All instances
+*/
+export const get_instances_custom_map = function( custom_key_builder ) {
+
+	const custom_map = new Map()
+
+	instances_map.forEach((value) => {
+
+		const custom_key = custom_key_builder(value)
+
+		if (custom_key) {
+			custom_map.set(custom_key, value)
+		}
+	});
+
+	return custom_map;
+}//end get_instances_custom_map
+
+
+
+/**
 * ADD_INSTANCE
 * Add to the instances cache map
 * @return void
