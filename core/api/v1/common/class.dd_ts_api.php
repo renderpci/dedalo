@@ -405,8 +405,8 @@ final class dd_ts_api {
 				// All is OK. Result is new created section section_id
 				$response->result	= (int)$new_section_id;
 				$response->msg		= empty($response->errors)
-					? 'OK. Request done successfully'
-					: 'Warning! Request done with errors';
+					? 'OK. Added child successfully'
+					: 'Warning! Added child with errors';
 
 				// debug
 					if(SHOW_DEBUG===true) {
@@ -516,8 +516,8 @@ final class dd_ts_api {
 		// response
 			$response->result	= true;
 			$response->msg		= empty($response->errors)
-				? 'OK. Request done successfully'
-				: 'Warning! Request done with errors';
+				? 'OK. Parent data updated successfully'
+				: 'Warning! Parent data updated with errors';
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -570,7 +570,7 @@ final class dd_ts_api {
 		// response
 			$response->msg = $result===false
 				? 'Error. The order cannot be established. Invalid section map. Please, define a valid section list map such as {"order":"hierarchy49"}'
-				: 'OK. Request done successfully. Changed values: ' . count($result);
+				: 'OK. Order saved successfully. Changed values: ' . count($result);
 			$response->result = $result;
 
 		// debug

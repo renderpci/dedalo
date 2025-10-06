@@ -35,7 +35,6 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 
 	const self = this
 
-
 	// self.context.fields_separator
 		if (!self.context.fields_separator) {
 			self.context.fields_separator = ', '
@@ -43,7 +42,6 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 
 	// view
 		const view = self.context.view || 'default'
-
 
 	switch(view) {
 
