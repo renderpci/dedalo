@@ -106,6 +106,22 @@ class dd_iri extends stdClass {
 
 
 	/**
+	* SET_LABEL_ID
+	* Set a temporal label id property of the IRI value element.
+	* Used by import process to define the target section_id of the IRI label dataframe.
+	* This property is not part of data schema of the component_iri
+	* and this property is not saved.
+	* The value set is always an integer, but a string is accepted as a parameter.
+	* @param string|int $value
+	*/
+	public function set_label_id( string|int $value ) {
+
+		$this->label_id = (int)$value;
+	}//end set_label_id
+
+
+
+	/**
 	* SET_IRI_FROM_URL_PARTS
 	* @param object $url_parts
 	*/
