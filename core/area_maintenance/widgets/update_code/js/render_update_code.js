@@ -9,7 +9,7 @@
 	import {update_process_status} from '../../../../common/js/common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
-	import {quit} from '../../../../login/js/login.js'
+	import {login} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 
 
@@ -237,7 +237,7 @@ const force_quit = async function () {
 	alert('You must exit and login again to continue.');
 
 	// force exit Dédalo (login quit)
-	await quit()
+	await login.quit()
 
 	return true
 }//end force_quit
