@@ -459,6 +459,21 @@ const get_buttons = function(self) {
 		// })
 		// filter_button.insertAdjacentHTML('beforeend', get_label.find)
 
+	// show_all_button. Show all records button
+		const show_all_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning show_all',
+			inner_html		: get_label.show_all || 'Show all',
+			parent			: buttons_container
+		})
+		// mousedown event
+		const show_all_mousedown_handler = (e) => {
+			e.stopPropagation()
+			// Trigger section filter (search.js instance) method 'show_all' like search form do.
+			self.filter.show_all(show_all_button)
+		}
+		show_all_button.addEventListener('mousedown', show_all_mousedown_handler)
+
 	// other_buttons_block
 		const other_buttons_block = ui.create_dom_element({
 			element_type	: 'div',
