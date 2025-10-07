@@ -73,6 +73,11 @@ $updates->$v = new stdClass();
 		";
 		$updates->$v->alert_update[] = $alert;
 
+	// Add index for relations used in project filter.
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS relations_section_tipo_section_id_from_component_tipo ON public.relations USING btree (section_tipo, section_id, from_component_tipo);
+		');
+
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
 			'component_iri'
