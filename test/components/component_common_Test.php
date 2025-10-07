@@ -1263,45 +1263,45 @@ final class component_common_test extends TestCase {
 
 
 
-	/**
-	* TEST_PARSE_SEARCH_DYNAMIC
-	* @return void
-	*/
-	public function XXX_test_parse_search_dynamic() {
+	// /**
+	// * TEST_PARSE_SEARCH_DYNAMIC
+	// * @return void
+	// */
+	// public function XXX_test_parse_search_dynamic() {
 
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+	// 	// default dato
+	// 	foreach (get_elements() as $element) {
+	// 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
+	// 		$component = component_common::get_instance(
+	// 			$element->model, // string model
+	// 			$element->tipo, // string tipo
+	// 			$element->section_id, // string section_id
+	// 			$element->mode, // string mode
+	// 			$element->lang, // string lang
+	// 			$element->section_tipo, // string section_tipo
+	// 			false
+	// 		);
 
-			$response = $component->parse_search_dynamic(
-				$ar_filtered_by_search_dynamic
-			);
-				// dump($response, ' $response ++ '.to_string($element->model));
+	// 		$response = $component->parse_search_dynamic(
+	// 			$ar_filtered_by_search_dynamic
+	// 		);
+	// 			// dump($response, ' $response ++ '.to_string($element->model));
 
-			$this->assertTrue(
-				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
-			);
+	// 		$this->assertTrue(
+	// 			empty($_ENV['DEDALO_LAST_ERROR']),
+	// 			'expected running without errors'
+	// 		);
 
-			$this->assertTrue(
-				gettype($response)==='string' || gettype($response)==='NULL',
-				'response type expected string|null. current type: ' .gettype($response) .' - '.$element->model
-			);
+	// 		$this->assertTrue(
+	// 			gettype($response)==='string' || gettype($response)==='NULL',
+	// 			'response type expected string|null. current type: ' .gettype($response) .' - '.$element->model
+	// 		);
 
-			// (!) Important. This method is still used by diffusion (v5)
-			// DO NOT CHANGE THE RETURN VALUES
-		}
-	}//end test_parse_search_dynamic
+	// 		// (!) Important. This method is still used by diffusion (v5)
+	// 		// DO NOT CHANGE THE RETURN VALUES
+	// 	}
+	// }//end test_parse_search_dynamic
 
 
 
