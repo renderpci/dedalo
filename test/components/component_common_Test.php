@@ -1918,26 +1918,33 @@ final class component_common_test extends TestCase {
 				'expected json_data->data type is array'
 			);
 
-			if (!empty($json_data->data[0])) {
+			// data could be formed for various items (from subdatum) in different order.
+			// We get the matching item with current component tipo.
+			$data		= $json_data->data ?? [];
+			$found_data	= array_find($data, function($el) use ($element){
+				return $el->tipo===$element->tipo;
+			});
 
-				$this->assertTrue( $json_data->data[0]->section_id===$component->get_section_id() );
-				$this->assertTrue( $json_data->data[0]->section_tipo===$component->get_section_tipo() );
-				$this->assertTrue( $json_data->data[0]->lang===$component->get_lang() );
-				$this->assertTrue( $json_data->data[0]->from_component_tipo===$component->get_tipo() );
+			if ($found_data) {
 
-				// if (gettype($json_data->data[0]->value)!=='array' && !is_null($json_data->data[0]->value)) {
-				// 	dump($json_data->data[0], ' var ++ ))))))))))))))))) '.to_string($element->model));
-				// 	dump(gettype($json_data->data[0]->value), ' gettype ((((((((((((((((((( ))))))))))))))))))) ++ '.to_string($element->model));
+				$this->assertTrue( $found_data->section_id===$component->get_section_id() );
+				$this->assertTrue( $found_data->section_tipo===$component->get_section_tipo() );
+				$this->assertTrue( $found_data->lang===$component->get_lang() );
+				$this->assertTrue( $found_data->from_component_tipo===$component->get_tipo() );
+
+				// if (gettype($found_data->value)!=='array' && !is_null($found_data->value)) {
+				// 	dump($found_data, ' var ++ ))))))))))))))))) '.to_string($element->model));
+				// 	dump(gettype($found_data->value), ' gettype ((((((((((((((((((( ))))))))))))))))))) ++ '.to_string($element->model));
 				// }
 				if ($element->model==='component_section_id') {
 					$this->assertTrue(
-						gettype($json_data->data[0]->value)==='integer' && $json_data->data[0]->value==$component->get_section_id(),
+						gettype($found_data->value)==='integer' && $found_data->value==$component->get_section_id(),
 						'expected type integer and equal to section_id: '.$component->get_section_id()
 					);
 				}else{
 					$this->assertTrue(
-						gettype($json_data->data[0]->value)==='array' || is_null($json_data->data[0]->value) ,
-						'expected type array|null value. type: '.gettype($json_data->data[0]->value)
+						gettype($found_data->value)==='array' || is_null($found_data->value) ,
+						'expected type array|null value. type: '.gettype($found_data->value)
 					);
 				}
 			}
