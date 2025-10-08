@@ -661,7 +661,7 @@ class component_iri extends component_common {
 				if($component_tm_data===false){
 					debug_log(__METHOD__
 						. " The time machine data has error. " . PHP_EOL
-						. ' main tipo error: '  . to_string($main_component_tipo) . PHP_EOL
+						. ' main tipo error: '  . to_string($tipo) . PHP_EOL
 						. ' options: '  . to_string($options)
 						, logger::ERROR
 					);
@@ -704,7 +704,7 @@ class component_iri extends component_common {
 					transform_data::set_tm_data($matrix_id, $new_tm_data);
 				}
 
-
+				// Update the component data
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
 
 					// Update the locator to move old ds and dataframe to v6 dataframe model.
