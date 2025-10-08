@@ -2313,6 +2313,10 @@ class section extends common {
 	*/
 	public function get_component_counter( string $tipo ) : int {
 
+		// check if section_id is numeric and is not empty
+		if( empty($this->section_id) || !is_numeric($this->section_id) ){
+			return 0;
+		}
 		$dato				= $this->get_dato();
 		$component_counter	= $dato->counters->$tipo ?? 0; // default counter value is always 1, including the empty counter
 

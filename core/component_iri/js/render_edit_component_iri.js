@@ -121,7 +121,8 @@ const get_content_value = (i, current_value, self) => {
 
 	// If the value is empty, return the empty node
 		if(Object.keys(current_value).length === 0){
-			return content_value;
+			current_value.id = self.data.counter+1
+			// return content_value;
 		}
 
 	// dataframe
@@ -133,7 +134,7 @@ const get_content_value = (i, current_value, self) => {
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
 			main_component_tipo	: self.tipo,
-			view				: self.view
+			view				: self.view || 'line'
 		})
 		.then(async function(component_dataframe){
 
