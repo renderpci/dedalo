@@ -110,7 +110,8 @@ class tool_import_rdf extends tool_common {
 
 					debug_log(__METHOD__
 						." Ignored broken link in RDF" . PHP_EOL
-						.' rdf_uri: ' . to_string($rdf_uri)
+						.' rdf_uri: ' . to_string($rdf_uri) . PHP_EOL
+						.' exception: ' . $e->getMessage()
 						, logger::ERROR
 					);
 					continue;
