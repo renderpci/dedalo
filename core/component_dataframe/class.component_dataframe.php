@@ -453,16 +453,65 @@ class component_dataframe extends component_portal {
 				// this allows to create a common `component_dataframe` used by multiple components
 				// In version < 6.8.0 every component_dataframe needs to be defined, and common definitions are not allowed.
 
-				// change the data
-				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+				// get the main component tipo
 					$RecordObj_dd			= new RecordObj_dd($tipo);
 					$main_component_tipo	= $RecordObj_dd->get_parent();
+
+				// Time Machine Update
+
+				// get the main component data in Time Machine. `component_dataframe` has not its own records in Time Machine,
+				// only main component storage changes (including the dataframe data)
+				$component_tm_data = transform_data::get_tm_data_from_tipo($section_id, $section_tipo, $main_component_tipo);
+
+				// query error case, return an empty array
+				if($component_tm_data===false){
+					debug_log(__METHOD__
+						. " The time machine data has error. " . PHP_EOL
+						. ' main tipo error: '  . to_string($main_component_tipo) . PHP_EOL
+						. ' options: '  . to_string($options)
+						, logger::ERROR
+					);
+
+					break;
+				}
+				// get an array with the result
+				while($tm_row = pg_fetch_assoc($component_tm_data)) {
+
+					// check if the data has information, if is null or empty, continue to next one.
+					if( !isset($tm_row['dato'] ) || $tm_row['dato']===null ){
+						continue;
+					}
+
+					$matrix_id	= (int)$tm_row['id'];
+					$data		= json_decode($tm_row['dato']);
+
+					// id data is empty continue to the next one.
+					if( empty($data) ){
+						continue;
+					}
+
+					$new_tm_data = [];
+					// process every locator to check if the main_comopnent_tipo is set in the dataframe data
+					foreach ($data as $current_locator) {
+						// if the locator match with the `component_dataframe` tipo and its data has not the main_comonent_tipo
+						if($current_locator->from_component_tipo===$tipo && !isset($current_locator->main_component_tipo)){
+							$current_locator->main_component_tipo = $main_component_tipo;
+						}
+
+						$new_tm_data[] = $current_locator;
+					}
+
+					transform_data::set_tm_data($matrix_id, $new_tm_data);
+				}
+
+				// change the data
+				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
 
 					$new_dato		= [];
 					$need_to_be_updated	= false;
 					foreach ((array)$dato_unchanged as $current_locator) {
 						// id the data has section_tipo_key do not change
-						if(isset($current_locator->main_component_tipo)){
+						if( isset($current_locator->main_component_tipo) ){
 							continue;
 						}
 
