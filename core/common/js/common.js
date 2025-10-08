@@ -776,7 +776,7 @@ const do_delete_self = async function (self) {
 	// delete caller instance reference (ar_instances)
 		if (self.caller?.ar_instances) {
 			const ar_instances_length = self.caller.ar_instances.length
-			for (let i = 0; i < ar_instances_length; i++) {
+			for (let i = ar_instances_length - 1; i >= 0; i--) {
 				const item = self.caller.ar_instances[i]
 				if (item.id===self.id) {
 					self.caller.ar_instances.splice(i, 1)
