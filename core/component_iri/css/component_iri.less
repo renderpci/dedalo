@@ -7,7 +7,18 @@
 
 	&.edit {
 
+		// disabled (E.g. Tool Time machine preview)
+		// Hide pen and trash icons.
+		&.disabled_component {
+			.component_dataframe >.content_data {
+				.column_section_id,	.column_remove {
+					display: none !important;
+				}
+			}
+		}
+
 		>.content_data {
+			padding-right: 0.6rem;
 
 			>.content_value {
 				align-items: center;
@@ -21,9 +32,8 @@
 					}
 				}
 
-				// input  (text title/url)
+				// input (text title/url)
 				.input_value {
-					// width: calc(20% - 0.5rem);
 					padding-right: 0.5rem;
 
 					&.title {
@@ -38,37 +48,53 @@
 							padding-right: 3.15rem;
 						}
 					}
+
 					@media screen and (max-width: @width_break_point_1) {
+						margin-right: 1px;
+
 						&.title {
-							width: calc(100% );
+							width: 100%;
 						}
+
 						&.url {
-							width: calc(100%);
-							margin-bottom: 3rem;
+							width: 100%;
+							margin-bottom: 1rem;
 						}
 					}
-
-
 				}
 
-				.dataframe {
+				// dataframe inside
+				.component_dataframe {
 					width: calc(20% - 0.5rem);
-					padding-right: 0.5rem;
 					height: 2rem;
 
-					.section_record{
-						&.dd560{
+					>.content_data {
+						>.section_record {
+							// One line only always
 							flex-wrap: nowrap;
 
-							.column_dd560{
-								max-height: 1.3rem;
-								overflow: hidden;
+							// Icon pen
+							.column.column_section_id {
+								min-height: 1.6rem;
 							}
 						}
 					}
 
 					@media screen and (max-width: @width_break_point_1) {
 						height: unset;
+						min-height: unset;
+
+						>.content_data {
+						    padding: 0px;
+						    padding-left: 0.5rem;
+
+						    >.section_record {
+						    	// Icon pen
+								.column.column_section_id {
+									min-height: 1.2rem;
+								}
+							}
+						}
 					}
 				}
 
@@ -87,16 +113,23 @@
 						background-color: darken(@color_orange_dedalo, 15%);
 					}
 
-					&.remove {
-						right: 2.0rem;
+					&.link {
+						right: 2.25rem;
 					}
+
+					&.remove {
+						right: 0.66rem;
+					}
+
 					@media screen and (max-width: @width_break_point_1) {
-						top: 8.5rem;
+						top: 5.2rem;
+
 						&.remove {
-							right: 30vh;
+							right: 0.45rem;
 						}
+
 						&.link {
-							right: 10vh;
+							right: 2.20rem;
 						}
 					}
 				}
@@ -116,9 +149,6 @@
 							padding-left: 0.5rem;
 							padding-right: 0.5rem;
 						}
-					}
-					.iri {
-
 					}
 				}
 			}
@@ -182,3 +212,6 @@
 	}
 
 }//end .component_iri
+
+// component_dataframe inside case details
+// @see component_dataframe.less &.view_line
