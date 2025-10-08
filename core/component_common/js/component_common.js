@@ -1587,6 +1587,7 @@ export const deactivate_components = function(e) {
 * 	view: string|null
 * }
 * @return object|null component_dataframe
+* 	A built componetn_datataframe instance (status = 'built')
 */
 export const get_dataframe = async function(options) {
 

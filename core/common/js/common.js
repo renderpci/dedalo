@@ -1116,7 +1116,7 @@ export const get_columns_map = function(options) {
 			? options.ddo_map_sequence // service_autocomplete gives this value as [choose,search,show]
 			: context.mode==='search'
 				? ['search','show'] // normally portals in search mode
-		 		: ['show'] // default value
+				: ['show'] // default value
 
 	const columns_map = []
 
@@ -2974,22 +2974,22 @@ export const set_environment = function (api_response_environment) {
 export const update_process_status = function (id, pid, pfile, container, update_rate=1000, callback) {
 
 	// Validate essential parameters
-    if (!container || !(container instanceof HTMLElement)) {
-        console.error('Error: "container" must be a valid HTMLElement.');
-        return;
-    }
-    if (typeof id !== 'string' || (typeof pid !== 'string' && typeof pid !== 'number') || typeof pfile !== 'string') {
-        console.error('Error: Invalid id, pid, or pfile types.');
-        return;
-    }
-    if (typeof update_rate !== 'number' || update_rate <= 0) {
-        console.warn('Warning: Invalid update_rate. Using default 1000ms.');
-        update_rate = 1000;
-    }
+	if (!container || !(container instanceof HTMLElement)) {
+		console.error('Error: "container" must be a valid HTMLElement.');
+		return;
+	}
+	if (typeof id !== 'string' || (typeof pid !== 'string' && typeof pid !== 'number') || typeof pfile !== 'string') {
+		console.error('Error: Invalid id, pid, or pfile types.');
+		return;
+	}
+	if (typeof update_rate !== 'number' || update_rate <= 0) {
+		console.warn('Warning: Invalid update_rate. Using default 1000ms.');
+		update_rate = 1000;
+	}
 
-    if(SHOW_DEBUG===true) {
-    	console.log(`Initiating process status update for ID: ${id}, PID: ${pid}`);
-    }
+	if(SHOW_DEBUG===true) {
+		console.log(`Initiating process status update for ID: ${id}, PID: ${pid}`);
+	}
 
 	// get_process_status from API and returns a SEE stream
 	data_manager.request_stream({
@@ -3006,9 +3006,9 @@ export const update_process_status = function (id, pid, pfile, container, update
 	.then((stream) => {
 
 		if (!stream) {
-            console.error('Error: data_manager.request_stream did not return a valid stream.');
-            return;
-        }
+			console.error('Error: data_manager.request_stream did not return a valid stream.');
+			return;
+		}
 
 		// render base nodes and set functions to manage
 		// the stream reader events
