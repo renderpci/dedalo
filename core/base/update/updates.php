@@ -62,7 +62,7 @@ $updates->$v = new stdClass();
 			</p>
 			<br>
 			<p>
-			Now, all URI fields has a new data frame to be used as labels of the URI. This new behavior will process all data in your URI titles and will create a unique values into a controlled list.
+			Now, all URI fields have a new data frame to be used as labels of the URI. This new behavior will process all data in your URI titles and will create a unique values into a controlled list.
 			</p>
 			<p>
 			As this process is an automatic group of values, you will need to check the list and set possible duplicates, because the script doesn't try to unify close names, so, wikidata and wikidata.org titles will create 2 different values.
@@ -70,8 +70,16 @@ $updates->$v = new stdClass();
 			<p>
 			The current title is not changed, is preserved to check the new label value list, but, in next versions it will be deleted. Use only the label list for the URI fields.
 			</p>
+			<p>
+			Ensure that you have updated the Ontology before proceeding.
+			</p>
 		";
 		$updates->$v->alert_update[] = $alert;
+
+	// Add index for relations used in project filter.
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS relations_section_tipo_section_id_from_component_tipo ON public.relations USING btree (section_tipo, section_id, from_component_tipo);
+		');
 
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
