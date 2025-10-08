@@ -142,15 +142,17 @@ class component_iri extends component_common {
 				// null = new value
 				// string = previous data become from a input_text
 
-				if( !is_object($value) || empty($value->id) ){
+				$has_id = $value->id ?? false;
+				if( !$has_id ){
+				// if( !is_object($value) || empty($value->id) ){
 					// get the component counter
 					// it's the last counter used
 					$counter = $this->get_counter();
 					$counter++;
 					$id = $counter;
-					$iri_value = ( is_string($value) )
-						? $value
-						: $value->iri;
+					$iri_value = ( is_object($value) )
+						? ($value->iri ?? null)
+						: $value;
 					$dd_iri = new dd_iri();
 						$dd_iri->set_iri( $iri_value );
 						$dd_iri->set_id( $id );
