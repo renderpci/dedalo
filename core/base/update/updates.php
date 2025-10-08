@@ -83,7 +83,8 @@ $updates->$v = new stdClass();
 
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
-			'component_iri'
+			'component_iri',
+			'component_dataframe'
 		];
 
 
