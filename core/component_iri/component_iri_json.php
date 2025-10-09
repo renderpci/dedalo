@@ -92,8 +92,6 @@
 					// If the component has not data, create the locator to get the context of dataframe
 					// with the counter, it will be used to show the fields to be filled by default.
 					// if the dataframe has not its own context, is not possible to create the instance in client.
-
-
 					if( empty($ar_locator) ){
 						$locator = new locator();
 							$locator->set_section_tipo($this->section_tipo);
