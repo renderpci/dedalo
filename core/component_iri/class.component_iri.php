@@ -1720,13 +1720,24 @@ class component_iri extends component_common {
 	* Check every data language of the component and get the id of the data key in the array
 	* If the key of the data has not id return null to set new id of the counter.
 	* @param int $key
+	* @param array $skip_langs use to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
 	* @return int|null $id
 	*/
-	public function get_id_from_key( int $key ) : ?int {
+	public function get_id_from_key( int $key, array $skip_langs=[] ) : ?int {
 
 		$all_data = $this->get_dato_full();
 
 		foreach ($all_data as $lang => $value) {
+			// check if the data is a language to skip
+			// when the component check if the id has been used by other languages
+			// it needs to remove its own language data to avoid false positives.
+			// Explain: removing data will remove its dataframe.
+			// But other languages can use it (same id = same dataframe)
+			// In those cases the data to be deleted needs to be removed of the check.
+			// and return only if the id exist in other languages.
+			if( in_array( $lang, $skip_langs) ){
+				continue;
+			}
 			$valid_data = $value[$key] ?? null;
 			if ( $valid_data ) {
 				$id = $valid_data->id ?? null;
