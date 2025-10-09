@@ -3807,6 +3807,8 @@ abstract class component_common extends common {
 						$ar_langs = $this->get_component_ar_langs();
 						foreach ($ar_langs as $current_lang) {
 
+							$this->dato_resolved = null;
+
 							// change lang and get dato
 							$this->set_lang($current_lang);
 							$dato = $this->get_dato();
