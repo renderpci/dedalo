@@ -718,6 +718,7 @@ class component_iri extends component_common {
 					);
 
 					$new_data = [];
+					$counter = 0;
 					foreach ($dato_unchanged as $current_data) {
 
 						// Clone the current data so as not to touch the originals.
@@ -725,9 +726,7 @@ class component_iri extends component_common {
 
 						// Set the id to the data if not already exists
 						if( !isset($iri_data->id)) {
-							// Get the current value of the current component counter
-							$counter = $component->get_counter();
-							// Add 1 to use it as new id
+
 							$counter++;
 							$id = $counter;
 							// Set new counter value as id
@@ -758,6 +757,15 @@ class component_iri extends component_common {
 
 							component_iri::save_label_dataframe( $dataframe_options );
 					}
+
+					// Get the current value of the current component counter
+						$db_counter = $component->get_counter();
+
+					// check the max
+						if( $db_counter < $counter ){
+							$component->set_counter( $counter );
+						}
+
 
 					$response->result	= 1;
 					$response->new_dato	= $new_data;
@@ -1704,6 +1712,52 @@ class component_iri extends component_common {
 		$component_dataframe_label->Save();
 
 	}//end save_label_dataframe
+
+
+
+	/**
+	* GET_ID_FROM_KEY
+	* Check every data language of the component and get the id of the data key in the array
+	* If the key of the data has not id return null to set new id of the counter.
+	* @param int $key
+	* @param array $skip_langs use to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
+	* @return int|null $id
+	*/
+	public function get_id_from_key( int $key, array $skip_langs=[] ) : ?int {
+
+		$all_data = $this->get_dato_full();
+
+		foreach ($all_data as $lang => $value) {
+			// check if the data is a language to skip
+			// when the component check if the id has been used by other languages
+			// it needs to remove its own language data to avoid false positives.
+			// Explain: removing data will remove its dataframe.
+			// But other languages can use it (same id = same dataframe)
+			// In those cases the data to be deleted needs to be removed of the check.
+			// and return only if the id exist in other languages.
+			if( in_array( $lang, $skip_langs) ){
+				continue;
+			}
+			$valid_data = $value[$key] ?? null;
+			if ( $valid_data ) {
+				$id = $valid_data->id ?? null;
+				if(empty($id)){
+					debug_log(__METHOD__
+						. " iri data without id " . PHP_EOL
+						. " section_id: ". $this->section_id . PHP_EOL
+						. " section_tipo: ". $this->section_tipo . PHP_EOL
+						. " tipo: ". $this->tipo . PHP_EOL
+						. to_string()
+						, logger::ERROR
+					);
+				}else{
+					return $id;
+				}
+			}
+		}
+
+		return null;
+	}//end get_id_from_key
 
 
 
