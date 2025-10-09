@@ -3682,6 +3682,29 @@ abstract class component_common extends common {
 
 			// insert given value in dato
 			case 'insert':
+
+				// set the id of the comonent_iri
+				// check all data languages to get the if of the array key
+				// if the other data lang has not id, set new one from counter in the component
+				// if the other data lang has an id, set the new data with it.
+				if( get_called_class() === 'component_iri'){
+					// get the id of the key in other languages
+					$id = $this->get_id_from_key( $changed_data->key );
+					// if other lang has an id set it
+					if( !empty($id) ){
+						// Check if the data is an object because as insert action could be null data
+						if( !is_object($changed_data->value) ){
+							// create new object
+							$changed_data->value = new dd_iri();
+								$changed_data->value->set_iri( null );
+								$changed_data->value->set_id( $id );
+						}else{
+							// set the id to the data
+							$changed_data->value->id = $id;
+						}
+					}
+				}
+
 				$dato[] = $changed_data->value;
 
 				$this->set_dato($dato);
@@ -3708,6 +3731,28 @@ abstract class component_common extends common {
 						}
 					}
 					$dato[$changed_data->key] = $changed_data->value;
+				}
+
+				// set the id of the comonent_iri
+				// check all data languages to get the if of the array key
+				// if the other data lang has not id, set new one from counter in the component
+				// if the other data lang has an id, set the new data with it.
+				if( get_called_class() === 'component_iri'){
+					// get the id of the key in other languages
+					$id = $this->get_id_from_key( $changed_data->key );
+					// if other lang has an id set it
+					if( !empty($id) ){
+						// Check if the data is an object because as insert action could be null data
+						if( !is_object($changed_data->value) ){
+							// create new object
+							$changed_data->value = new dd_iri();
+								$changed_data->value->set_iri( null );
+								$changed_data->value->set_id( $id );
+						}else{
+							// set the id to the data
+							$changed_data->value->id = $id;
+						}
+					}
 				}
 
 				$this->set_dato($dato);
@@ -3737,12 +3782,22 @@ abstract class component_common extends common {
 						// if the caller is a literal as component_iri
 						// build a new locator with the id of the component data and its own section_tipo
 						if( get_called_class() === 'component_iri'){
+
 							$locator = new locator();
 								$locator->set_section_tipo($this->section_tipo);
 								$locator->set_section_id($dato[$key]->id);
+							// check if the dataframe is used in other langs
+							// if the id is used don't remove the dataframe.
+							$id_exists = $this->get_id_from_key( $key, [$lang]);
+							if( !empty($id_exists) ){
+								$locator = null;
+							}
 						}
 						// remove the dataframe data
-						$this->remove_dataframe_data( $locator );
+						if( !empty($locator) ){
+							$this->remove_dataframe_data( $locator );
+						}
+
 					}
 
 				switch (true) {
@@ -3761,6 +3816,8 @@ abstract class component_common extends common {
 
 						$ar_langs = $this->get_component_ar_langs();
 						foreach ($ar_langs as $current_lang) {
+
+							$this->dato_resolved = null;
 
 							// change lang and get dato
 							$this->set_lang($current_lang);
