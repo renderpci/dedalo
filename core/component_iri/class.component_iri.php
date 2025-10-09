@@ -718,6 +718,7 @@ class component_iri extends component_common {
 					);
 
 					$new_data = [];
+					$counter = 0;
 					foreach ($dato_unchanged as $current_data) {
 
 						// Clone the current data so as not to touch the originals.
@@ -725,9 +726,7 @@ class component_iri extends component_common {
 
 						// Set the id to the data if not already exists
 						if( !isset($iri_data->id)) {
-							// Get the current value of the current component counter
-							$counter = $component->get_counter();
-							// Add 1 to use it as new id
+
 							$counter++;
 							$id = $counter;
 							// Set new counter value as id
@@ -758,6 +757,15 @@ class component_iri extends component_common {
 
 							component_iri::save_label_dataframe( $dataframe_options );
 					}
+
+					// Get the current value of the current component counter
+						$db_counter = $component->get_counter();
+
+					// check the max
+						if( $db_counter < $counter ){
+							$component->set_counter( $counter );
+						}
+
 
 					$response->result	= 1;
 					$response->new_dato	= $new_data;
