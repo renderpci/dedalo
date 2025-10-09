@@ -126,7 +126,8 @@ const get_content_value = (i, current_value, self) => {
 		}
 
 	// dataframe
-		const component_dataframe = get_dataframe({
+	// Get a built component_datataframe instance ready for render
+		get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
 			// section_tipo		: self.section_tipo,
@@ -134,7 +135,7 @@ const get_content_value = (i, current_value, self) => {
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
 			main_component_tipo	: self.tipo,
-			view				: self.view || 'line'
+			view				: 'line'
 		})
 		.then(async function(component_dataframe){
 
@@ -142,7 +143,9 @@ const get_content_value = (i, current_value, self) => {
 				// set the component_dataframe
 				// is mandatory use it
 				if(component_dataframe){
+					// Add dataframe instance to component dependencies array
 					self.ar_instances.push(component_dataframe)
+					// Render it and add to content_value
 					const dataframe_node = await component_dataframe.render()
 					dataframe_node.classList.add('dataframe')
 					content_value.appendChild(dataframe_node)
@@ -233,7 +236,7 @@ const get_content_value = (i, current_value, self) => {
 						// update_value(self, i, current_value)
 							self.change_handler(i, current_value)
 
-					}//end keyup
+					}//end change_iri_handler
 					input_iri.addEventListener('change', change_iri_handler)
 
 				// focus event
@@ -392,7 +395,7 @@ const get_content_value = (i, current_value, self) => {
 							parent			: transliterate_value_container
 						})
 				}
-		})// end .then
+		})//end .then
 
 
 	return content_value
@@ -424,7 +427,7 @@ const get_content_value_read = (i, current_value, self) => {
 		})
 
 	// dataframe
-		const component_dataframe = get_dataframe({
+		get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
 			// section_tipo		: self.section_tipo,
@@ -432,7 +435,7 @@ const get_content_value_read = (i, current_value, self) => {
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
 			main_component_tipo : self.tipo,
-			view				: self.view
+			view				: 'line'
 		})
 		.then(async function(component_dataframe){
 
@@ -440,15 +443,15 @@ const get_content_value_read = (i, current_value, self) => {
 				// set the component_dataframe
 				// is mandatory use it
 				if(component_dataframe){
+					// Add dataframe instance to component dependencies array
 					self.ar_instances.push(component_dataframe)
-					component_dataframe.view = 'line'
+					// Configure component_dataframe
 					component_dataframe.context.mode = 'list'
+					// Render it and append to content_value
 					const dataframe_node = await component_dataframe.render()
 					dataframe_node.classList.add('dataframe')
 					content_value.appendChild(dataframe_node)
-
 				}
-
 
 			// title
 				ui.create_dom_element({

@@ -1576,8 +1576,9 @@ export const deactivate_components = function(e) {
 
 /**
 * GET_DATAFRAME
-* Check if the component has a component_dataframe in his own rqo
-* if it has a dataframe, create the component, and inject his context and data
+* Checks if the component has a component_dataframe in his own RQO.
+* If it has a dataframe, creates the component, and inject his context and data.
+* Returns a built 'component_dataframe' instance.
 * @param object options
 * {
 * 	section_id: int|string|null
@@ -1586,12 +1587,13 @@ export const deactivate_components = function(e) {
 * 	section_tipo_key: string
 * 	view: string|null
 * }
-* @return object|null component_dataframe
+* @return object|null component_dataframe instance
+* 	A built componetn_datataframe instance (status = 'built')
 */
 export const get_dataframe = async function(options) {
 
-	const self = options.self
-
+	// options
+	const self					= options.self
 	const section_id			= options.section_id
 	const section_id_key		= options.section_id_key
 	const section_tipo_key		= options.section_tipo_key
@@ -1600,10 +1602,10 @@ export const get_dataframe = async function(options) {
 
 	const request_config = self.context.request_config || null
 
+	// original_dataframe_ddo
 	const original_dataframe_ddo = request_config
-		? request_config[0].show.ddo_map.find(el => el.model === 'component_dataframe')
-		: null
-
+		? request_config[0]?.show?.ddo_map?.find(el => el.model === 'component_dataframe')
+		: null;
 	// no ddo found case, stop here
 	if(!original_dataframe_ddo){
 		return null
@@ -1616,10 +1618,10 @@ export const get_dataframe = async function(options) {
 	instance_options.standalone	= false
 
 	// matrix_id. time machine matrix_id
-		if (self.matrix_id) {
-			instance_options.matrix_id = self.matrix_id
-			instance_options.id_variant = `${instance_options.id_variant}_${self.matrix_id}`
-		}
+	if (self.matrix_id) {
+		instance_options.matrix_id = self.matrix_id
+		instance_options.id_variant = `${instance_options.id_variant}_${self.matrix_id}`
+	}
 
 	// component_dataframe init instance
 	const component_dataframe = await get_instance(instance_options)
@@ -1666,6 +1668,10 @@ export const get_dataframe = async function(options) {
 		el.tipo				=== component_dataframe.tipo
 		&& el.section_tipo	=== component_dataframe.section_tipo
 	)
+	if (!context) {
+        console.warn(`Context not found for component ${component_dataframe.tipo} in section ${component_dataframe.section_id}. Cannot proceed.`);
+        return null;
+    }
 
 	// view. Get view from options. If not defined, get from ddo
 	context.view = (view)

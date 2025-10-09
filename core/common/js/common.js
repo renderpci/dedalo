@@ -776,7 +776,7 @@ const do_delete_self = async function (self) {
 	// delete caller instance reference (ar_instances)
 		if (self.caller?.ar_instances) {
 			const ar_instances_length = self.caller.ar_instances.length
-			for (let i = 0; i < ar_instances_length; i++) {
+			for (let i = ar_instances_length - 1; i >= 0; i--) {
 				const item = self.caller.ar_instances[i]
 				if (item.id===self.id) {
 					self.caller.ar_instances.splice(i, 1)
@@ -797,14 +797,16 @@ const do_delete_self = async function (self) {
 /**
 * DO_DELETE_DEPENDENCIES
 * Remove instance dependencies added in the array 'self.ar_instances'
-* @return bool
-* 	if all instances are deleted, returns true, false if not
+* @param object self - Element instance
+* @return {Promise<boolean>}
+* 	`true` if every instance was removed, otherwise `false`.
 */
 const do_delete_dependencies = async function (self) {
 
-	if (!self.ar_instances) {
-		console.log("Undefined self.ar_instances:", self);
-		return false
+	// Guard against missing array
+	if (!Array.isArray(self.ar_instances)) {
+		console.error("Undefined or invalid self.ar_instances:", self);
+		return false;
 	}
 
 	// remove instances from self ar_instances
@@ -813,44 +815,37 @@ const do_delete_dependencies = async function (self) {
 
 			const current_instance = self.ar_instances[i]
 
-			// check instance
-				if (!current_instance) {
-					// if(SHOW_DEBUG===true) {
-					// 	console.error('Ignored destroy for non exiting instance:', i, current_instance);
-					// }
-					continue;
-				}
-
-			// prevent destroy non destroyable instances (menu, etc.)
-				const destroyable = current_instance.destroyable ?? true
-				if (destroyable===false) {
-					// if(SHOW_DEBUG===true) {
-					// 	console.error('Ignored non destroyable instance:', i, current_instance);
-					// }
-					continue;
-				}
+			// Skip non‑existing or non‑destroyable instances
+			if (!current_instance || current_instance.destroyable === false) {
+				continue;
+			}
 
 			// destroy instance
-				if (typeof current_instance.destroy==='function') {
+			if (typeof current_instance.destroy==='function') {
+				try {
 
-					await current_instance.destroy(
+					const current_result = await current_instance.destroy(
 						true, // delete_self
 						true, // delete_dependencies
 						false // remove_dom
-					)
-					// .then(()=>{
-						// remove from current element array of instances
-						if (self.ar_instances[i]) {
-							self.ar_instances.splice(i, 1)
-						}
-					// })
-				}else{
-					console.error("Ignored destroyed_elements[0] without property 'destroy':", self, destroyed_elements[0]);
-					console.warn("self.ar_instances:",self.ar_instances);
+					);
+
+					self.ar_instances.splice(i, 1); // remove after successful destroy
+
+					if(SHOW_DEBUG===true) {
+						console.log('instance to destroy:', current_instance);
+					}
+				} catch (err) {
+					console.error("Error destroying instance:", err, current_instance);
 				}
+			}else{
+				console.error("Ignored instance without 'destroy' method:", self, current_instance);
+				console.warn("self.ar_instances:",self.ar_instances);
+			}
 		}
 
-	const result = (self.ar_instances.length===0) ? true : false
+	// All instances removed? Returns true if self.ar_instances.length is 0.
+	const result = self.ar_instances.length === 0;
 
 
 	return result
@@ -1121,7 +1116,7 @@ export const get_columns_map = function(options) {
 			? options.ddo_map_sequence // service_autocomplete gives this value as [choose,search,show]
 			: context.mode==='search'
 				? ['search','show'] // normally portals in search mode
-		 		: ['show'] // default value
+				: ['show'] // default value
 
 	const columns_map = []
 
@@ -2979,22 +2974,22 @@ export const set_environment = function (api_response_environment) {
 export const update_process_status = function (id, pid, pfile, container, update_rate=1000, callback) {
 
 	// Validate essential parameters
-    if (!container || !(container instanceof HTMLElement)) {
-        console.error('Error: "container" must be a valid HTMLElement.');
-        return;
-    }
-    if (typeof id !== 'string' || (typeof pid !== 'string' && typeof pid !== 'number') || typeof pfile !== 'string') {
-        console.error('Error: Invalid id, pid, or pfile types.');
-        return;
-    }
-    if (typeof update_rate !== 'number' || update_rate <= 0) {
-        console.warn('Warning: Invalid update_rate. Using default 1000ms.');
-        update_rate = 1000;
-    }
+	if (!container || !(container instanceof HTMLElement)) {
+		console.error('Error: "container" must be a valid HTMLElement.');
+		return;
+	}
+	if (typeof id !== 'string' || (typeof pid !== 'string' && typeof pid !== 'number') || typeof pfile !== 'string') {
+		console.error('Error: Invalid id, pid, or pfile types.');
+		return;
+	}
+	if (typeof update_rate !== 'number' || update_rate <= 0) {
+		console.warn('Warning: Invalid update_rate. Using default 1000ms.');
+		update_rate = 1000;
+	}
 
-    if(SHOW_DEBUG===true) {
-    	console.log(`Initiating process status update for ID: ${id}, PID: ${pid}`);
-    }
+	if(SHOW_DEBUG===true) {
+		console.log(`Initiating process status update for ID: ${id}, PID: ${pid}`);
+	}
 
 	// get_process_status from API and returns a SEE stream
 	data_manager.request_stream({
@@ -3011,9 +3006,9 @@ export const update_process_status = function (id, pid, pfile, container, update
 	.then((stream) => {
 
 		if (!stream) {
-            console.error('Error: data_manager.request_stream did not return a valid stream.');
-            return;
-        }
+			console.error('Error: data_manager.request_stream did not return a valid stream.');
+			return;
+		}
 
 		// render base nodes and set functions to manage
 		// the stream reader events
