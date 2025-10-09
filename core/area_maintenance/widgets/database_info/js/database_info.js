@@ -5,6 +5,7 @@
 
 
 // imports
+	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_database_info} from './render_database_info.js'
@@ -78,6 +79,50 @@ database_info.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
+
+
+
+/**
+* CONSOLIDATE_TABLES
+* Process given tables to consolidate the id numbers.
+* Only 'jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd' are allowed.
+* @param array tables
+* 	E.g. ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd']
+* @return promise - api_response
+*/
+database_info.prototype.consolidate_tables = async function(tables) {
+
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source			: {
+				action : 'consolidate_tables'
+			},
+			options			: {
+				tables : tables
+			}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end consolidate_tables
+
+
+
+
+
+
 
 
 
