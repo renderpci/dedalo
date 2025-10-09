@@ -1715,4 +1715,39 @@ class component_iri extends component_common {
 
 
 
+	/**
+	* GET_ID_FROM_KEY
+	* Check every data language of the component and get the id of the data key in the array
+	* If the key of the data has not id return null to set new id of the counter.
+	* @param int $key
+	* @return int|null $id
+	*/
+	public function get_id_from_key( int $key ) : ?int {
+
+		$all_data = $this->get_dato_full();
+
+		foreach ($all_data as $lang => $value) {
+			$valid_data = $value[$key] ?? null;
+			if ( $valid_data ) {
+				$id = $valid_data->id ?? null;
+				if(empty($id)){
+					debug_log(__METHOD__
+						. " iri data without id " . PHP_EOL
+						. " section_id: ". $this->section_id . PHP_EOL
+						. " section_tipo: ". $this->section_tipo . PHP_EOL
+						. " tipo: ". $this->tipo . PHP_EOL
+						. to_string()
+						, logger::ERROR
+					);
+				}else{
+					return $id;
+				}
+			}
+		}
+
+		return null;
+	}//end get_id_from_key
+
+
+
 }//end class component_iri
