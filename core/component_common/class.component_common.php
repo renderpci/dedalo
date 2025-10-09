@@ -3782,12 +3782,22 @@ abstract class component_common extends common {
 						// if the caller is a literal as component_iri
 						// build a new locator with the id of the component data and its own section_tipo
 						if( get_called_class() === 'component_iri'){
+
 							$locator = new locator();
 								$locator->set_section_tipo($this->section_tipo);
 								$locator->set_section_id($dato[$key]->id);
+							// check if the dataframe is used in other langs
+							// if the id is used don't remove the dataframe.
+							$id_exists = $this->get_id_from_key( $key, [$lang]);
+							if( !empty($id_exists) ){
+								$locator = null;
+							}
 						}
 						// remove the dataframe data
-						$this->remove_dataframe_data( $locator );
+						if( !empty($locator) ){
+							$this->remove_dataframe_data( $locator );
+						}
+
 					}
 
 				switch (true) {
