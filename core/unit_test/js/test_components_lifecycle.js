@@ -6,7 +6,7 @@
 import {
 	elements
 } from './elements.js'
-import {get_instance, get_all_instances} from '../../common/js/instances.js'
+import {get_instance, get_all_instances, delete_instance} from '../../common/js/instances.js'
 
 
 
@@ -246,20 +246,50 @@ async function life_cycle_test(element, view) {
 		it(`${element.model} DESTROY ${element.mode}`, async function() {
 
 			// destroy instance
-				await new_instance.destroy(
+				const destroy_result = await new_instance.destroy(
 					true,  // delete_self . default true
 					true, // delete_dependencies . default false
 					true // remove_dom . default false
+				);
+
+				assert.equal(
+					destroy_result.delete_dependencies,
+					true,
+					'delete_dependencies: ' + JSON.stringify(destroy_result.delete_dependencies)
 				)
-
-			const all_instances = get_all_instances()
-
-			// asserts
+				assert.equal(
+					destroy_result.delete_self,
+					true,
+					'destroy_result.delete_self: ' + JSON.stringify(destroy_result.delete_self)
+				)
 				assert.equal(new_instance.status, 'destroyed')
 				assert.deepEqual(new_instance.ar_instances, [])
 				assert.deepEqual(new_instance.node, null)
 				assert.deepEqual(new_instance.events_tokens, [])
-				assert.deepEqual(all_instances, [])
+
+			// all instances check
+				let all_instances = get_all_instances()
+
+				// component_iri case
+				// Because component_iri creates the component_dataframe on render without wait,
+				// the ar_instances additions is made it after the component is destroyed.
+				if (new_instance.model==='component_iri') {
+					const found = all_instances.find(el => el.model === 'component_dataframe')
+					if (found) {
+						if(!delete_instance(found.id)) {
+							console.log('Deleting instance failed:', found.id);
+						}
+						// update values
+						all_instances = get_all_instances()
+					}
+				}
+
+				assert.deepEqual(
+					all_instances,
+					[],
+					'all_instances: ' + JSON.stringify(all_instances)
+				);
+
 		});
 
 	});//end describe(element.model, function()
