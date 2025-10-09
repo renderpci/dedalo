@@ -47,14 +47,21 @@
 					line-height: unset;
 				}
 
+				&.column_component_dataframe {
+					padding: 0px;
+				}
+
 				&.column_section_id {
 					width: 1rem;
+					padding-top: 0px;
+					margin-right: 0.25rem;
 				}
 
 				&.column_section_id, &.column_remove {
 					background-color: unset;
 					display: inline-block;
 					flex-grow: 0;
+
 
 					>.button_edit, >.button_remove {
 						width: 1rem;
@@ -84,7 +91,7 @@
 				}
 
 				&.column_remove {
-					margin-top: 0.15rem;
+					padding-top: 0px;
 
 					>.button_remove {
 						opacity: 0.75;
