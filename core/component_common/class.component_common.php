@@ -3682,6 +3682,29 @@ abstract class component_common extends common {
 
 			// insert given value in dato
 			case 'insert':
+
+				// set the id of the comonent_iri
+				// check all data languages to get the if of the array key
+				// if the other data lang has not id, set new one from counter in the component
+				// if the other data lang has an id, set the new data with it.
+				if( get_called_class() === 'component_iri'){
+					// get the id of the key in other languages
+					$id = $this->get_id_from_key( $changed_data->key );
+					// if other lang has an id set it
+					if( !empty($id) ){
+						// Check if the data is an object because as insert action could be null data
+						if( !is_object($changed_data->value) ){
+							// create new object
+							$changed_data->value = new dd_iri();
+								$changed_data->value->set_iri( null );
+								$changed_data->value->set_id( $id );
+						}else{
+							// set the id to the data
+							$changed_data->value->id = $id;
+						}
+					}
+				}
+
 				$dato[] = $changed_data->value;
 
 				$this->set_dato($dato);
@@ -3708,6 +3731,28 @@ abstract class component_common extends common {
 						}
 					}
 					$dato[$changed_data->key] = $changed_data->value;
+				}
+
+				// set the id of the comonent_iri
+				// check all data languages to get the if of the array key
+				// if the other data lang has not id, set new one from counter in the component
+				// if the other data lang has an id, set the new data with it.
+				if( get_called_class() === 'component_iri'){
+					// get the id of the key in other languages
+					$id = $this->get_id_from_key( $changed_data->key );
+					// if other lang has an id set it
+					if( !empty($id) ){
+						// Check if the data is an object because as insert action could be null data
+						if( !is_object($changed_data->value) ){
+							// create new object
+							$changed_data->value = new dd_iri();
+								$changed_data->value->set_iri( null );
+								$changed_data->value->set_id( $id );
+						}else{
+							// set the id to the data
+							$changed_data->value->id = $id;
+						}
+					}
 				}
 
 				$this->set_dato($dato);
