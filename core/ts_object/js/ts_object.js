@@ -1703,7 +1703,9 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 				if (!node_to_scroll) {
 					// scroll page to first found element
 					node_to_scroll = instance.term_node
-					scroll_to_node(node_to_scroll)
+					when_in_dom(node_to_scroll, ()=> {
+						scroll_to_node(node_to_scroll)
+					});
 				}
 			}
 		});
@@ -1712,7 +1714,7 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 		event_manager.publish('notification', {
 			msg			: `Displaying ${total_found} records`,
 			type		: total_found > 0 ? 'success' : 'warning',
-			remove_time	: 5000
+			remove_time	: total_found == 1 ? 1000 : 6000
 		})
 		// Clear Maps when done
 		instances_to_hilite.clear();
@@ -1738,92 +1740,114 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 */
 const scroll_to_node = (node_to_scroll) => {
 
-	when_in_dom(node_to_scroll, ()=> {
+	let scrolled = false
 
-		// user wheel event
-		// To prevent to change the early user scroll, check for user wheel event
-		// before to try it programmatically (less intrusive behavior)
-		let user_scroll = false
-		const wheel_handler = () => {
-			user_scroll = true
-			window.removeEventListener('wheel', wheel_handler, { passive: true });
+	const center_with_scroll_to = (el, offsetTop = 0)=> {
+		const rect   = el.getBoundingClientRect(); // position relative to viewport
+		const scrollTop  = window.pageYOffset || document.documentElement.scrollTop;
+		const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+		// Desired Y coordinate of the element’s top edge after scrolling
+		const desiredY = scrollTop + rect.top - (window.innerHeight / 2) + (rect.height / 2) + offsetTop;
+
+		// Desired X coordinate – center horizontally
+		const desiredX = scrollLeft + rect.left - (window.innerWidth / 2) + (rect.width / 2);
+
+		window.scrollTo({
+			top:   desiredY,
+			left:  desiredX,
+			behavior: 'smooth'   // optional
+		});
+
+		scrolled = true
+	}
+
+	// user wheel event
+	// To prevent to change the early user scroll, check for user wheel event
+	// before to try it programmatically (less intrusive behavior)
+	let user_scroll = false
+	const wheel_handler = () => {
+		user_scroll = true
+		window.removeEventListener('wheel', wheel_handler, { passive: true });
+	}
+	window.addEventListener('wheel', wheel_handler, { passive: true });
+
+	const scroll_node = () => {
+		if (user_scroll) {
+			return
 		}
-		window.addEventListener('wheel', wheel_handler, { passive: true });
+		// node_to_scroll.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" })
+		center_with_scroll_to(node_to_scroll, 0)
+	}
 
-		const scroll_node = () => {
-			if (user_scroll) {
-				return
-			}
-			node_to_scroll.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" })
-		}
+	let scroll_interval = null;
+	let scroll_attempts = 0;
+	const MAX_SCROLL_ATTEMPTS = 10; // Prevent infinite scrolling
 
-		let scroll_interval = null;
-		let scroll_attempts = 0;
-		const MAX_SCROLL_ATTEMPTS = 10; // Prevent infinite scrolling
+	// Create observer
+	const observer = new IntersectionObserver((entries) => {
+		entries.forEach(entry => {
 
-		// Create observer
-		const observer = new IntersectionObserver((entries) => {
-			entries.forEach(entry => {
+			if (entry.isIntersecting) {
+				// console.error('Element is visible:', entry.target);
 
-				if (entry.isIntersecting) {
-					// console.error('Element is visible:', entry.target);
-
-					const visibilityPercentage = Math.round(entry.intersectionRatio * 100);
-					if (visibilityPercentage > 5) {
-						// Success - clean up everything
-						observer.disconnect();
-						if (scroll_interval) {
-							clearInterval(scroll_interval);
-							scroll_interval = null;
-						}				            					            	// try again to prevent slow tree parses
-						setTimeout(scroll_node, 2000)
-					}
-				} else {
-					// console.log('Element is not visible:', entry.target);
-
-					// Clear any existing interval
+				const visibilityPercentage = Math.round(entry.intersectionRatio * 100);
+				if (visibilityPercentage > 5) {
+					// Success - clean up everything
+					observer.disconnect();
 					if (scroll_interval) {
 						clearInterval(scroll_interval);
+						scroll_interval = null;
+					}				            					            	// try again to prevent slow tree parses
+					setTimeout(scroll_node, 2000)
+				}
+			} else {
+				// console.log('Element is not visible:', entry.target);
+
+				// Clear any existing interval
+				if (scroll_interval) {
+					clearInterval(scroll_interval);
+				}
+
+				// Initial scroll attempt
+				scroll_node();
+				scroll_attempts = 1;
+
+				// Set up interval with retry limit
+				const do_scroll = () => {
+					if (scroll_attempts >= MAX_SCROLL_ATTEMPTS) {
+						console.warn('Max scroll attempts reached, giving up');
+						clearInterval(scroll_interval);
+						observer.disconnect();
+						return;
 					}
 
-					// Initial scroll attempt
-					scroll_node();
-					scroll_attempts = 1;
+					console.log(`Scrolling attempt ${scroll_attempts + 1}`);
+					scroll_attempts++;
+					dd_request_idle_callback(scroll_node);
+				};
 
-					// Set up interval with retry limit
-					const do_scroll = () => {
-						if (scroll_attempts >= MAX_SCROLL_ATTEMPTS) {
-							console.warn('Max scroll attempts reached, giving up');
-							clearInterval(scroll_interval);
-							observer.disconnect();
-							return;
-						}
-
-						console.log(`Scrolling attempt ${scroll_attempts + 1}`);
-						scroll_attempts++;
-						dd_request_idle_callback(scroll_node);
-					};
-
-					scroll_interval = setInterval(do_scroll, 350);
-				}
-			});
-		}, {
-			threshold: [0, 0.05, 0.1] // Check at 0%, 5%, and 10% visibility
-		})
-
-		observer.observe(node_to_scroll);
-
-		// Cleanup timeout as fallback
-		setTimeout(() => {
-			if (observer) {
-				observer.disconnect();
+				scroll_interval = setInterval(do_scroll, 350);
 			}
-			if (scroll_interval) {
-				clearInterval(scroll_interval);
-			}
-			console.log('Scroll operation timed out after 10 seconds');
-		}, 10000);
+		});
+	}, {
+		threshold: [0, 0.05, 0.1] // Check at 0%, 5%, and 10% visibility
 	})
+
+	observer.observe(node_to_scroll);
+
+	// Cleanup timeout as fallback
+	setTimeout(() => {
+		if (observer) {
+			observer.disconnect();
+		}
+		if (scroll_interval) {
+			clearInterval(scroll_interval);
+		}
+		if (!scrolled) {
+			console.log('Scroll operation timed out after 10 seconds');
+		}
+	}, 10000);
 }//end scroll_to_node
 
 
