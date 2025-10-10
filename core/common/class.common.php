@@ -674,6 +674,11 @@ abstract class common {
 				unset($this->valor);
 			}
 
+		// unset previous calculated dato_resolved
+			if (isset($this->dato_resolved)) {
+				unset($this->dato_resolved);
+			}
+
 		// force reload dato from database when dato is requested again
 			$this->set_bl_loaded_matrix_data(false);
 	}//end set_to_force_reload_dato
