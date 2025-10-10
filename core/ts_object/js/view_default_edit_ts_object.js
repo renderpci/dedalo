@@ -1715,11 +1715,16 @@ const render_link_children = function (self) {
 
 
 /**
-* render_ORDER_FORM
-* Creates the order input to allow users change the current value.
-* After apply using 'Enter', the input field is removed and
-* the link with the new value is displayed.
+* RENDER_ORDER_FORM
+* Creates an `<input>` that temporarily replaces the “order number” link.
+* When the user changes the value and presses **Enter** (or blurs the field)
+* the new order is saved, the children are re‑ordered and the original
+* link is shown again.
 * @param object options
+* {
+* 	self : object - ts_object instance,
+* 	order_number_link: HTMLElement
+* }
 * @return bool
 */
 const render_order_form = function(options) {
@@ -1730,12 +1735,16 @@ const render_order_form = function(options) {
 		order_number_link
 	} = options
 
+	// Check mandatory order_number_link
+	if (!order_number_link) {
+		return false
+	}
+
 	// Remove all previous inputs
-		const order_inputs = document.querySelectorAll('input.input_order')
-		order_inputs.forEach(node => node.remove())
+	document.querySelectorAll('input.input_order').forEach(node => node.remove())
 
 	// Current value (old)
-	const old_value = parseInt(self.virtual_order)
+	const old_value = Number(self.virtual_order) || 0
 
 	// input. Create a input to contain the current order value
 	const input = document.createElement('input')
@@ -1743,14 +1752,13 @@ const render_order_form = function(options) {
 	input.value = old_value
 
 	// keydown event
+	// Prevent the event from bubbling up (e.g. to the tree view click)
 	const keydown_handler = (e) => {
-		// prevent to fire open search panel
 		e.stopPropagation()
 	}
 	input.addEventListener('keydown', keydown_handler);
-	input.addEventListener('keyup', keydown_handler);
 
-	// change event
+	// Async change handler – called when the user presses Enter
 	const change_handler = async () => {
 
 		const wrapper = self.node
@@ -1762,14 +1770,8 @@ const render_order_form = function(options) {
 		// a error notification is displayed at top
 		await self.save_order( input.value )
 
-		wrapper.classList.remove('loading')
-		input.blur()
-
-		// // Render the parent children again with updated order
-		// await self.caller.render_children({
-		// 	clean_children_container	: true,
-		// 	children_data				: self.caller.children_data
-		// })
+		wrapper.classList.remove('loading');
+		input.blur();
 
 		// Re-order the children_container nodes
 		// The nodes are ordered manually (avoiding use 'render_children') to
@@ -1777,55 +1779,55 @@ const render_order_form = function(options) {
 		const order_children	= self.caller.children_data.ar_children_data
 		const chidren_list		= [...self.caller.children_container.childNodes]
 
-		order_children.forEach(async item => {
+		for (const item of order_children) {
 
 			// Find wrapper into the parent children_container
 			const found_wrapper = chidren_list.find(el => {
 				return  el.dataset.section_tipo===item.section_tipo &&
 						el.dataset.section_id==item.section_id;
 			});
-			if (found_wrapper) {
 
-				// Move wrapper node to the end of the container in each
-				// iteration to ends matching the order of the children data (order_children).
-				self.caller.children_container.appendChild(found_wrapper)
+			if (!found_wrapper) continue;
 
-				// Instance refresh. Force instance to update order value link
-				// without render their children nodes
-				const instance = get_all_instances().find(el =>
-					el.section_id===item.section_id &&
-					el.section_tipo===item.section_tipo &&
-					el.model==='ts_object'
-				);
-				if (instance) {
-					await instance.refresh({
-						render_level	: 'content',
-						destroy			: false,
-						build_autoload	: false
-					})
-				}
+			// Move wrapper node to the end of the container in each
+			// iteration to ends matching the order of the children data (order_children).
+			self.caller.children_container.appendChild(found_wrapper)
+
+			// Instance refresh. Force instance to update order value link
+			// without render their children nodes
+			const instance = get_all_instances().find(el =>
+				el.section_id===item.section_id &&
+				el.section_tipo===item.section_tipo &&
+				el.model==='ts_object'
+			);
+			if (instance) {
+				await instance.refresh({
+					render_level	: 'content',
+					destroy			: false,
+					build_autoload	: false
+				})
 			}
-		})
+		}
 
 		// hilite current term
 		dd_request_idle_callback(()=>{
 			// hilite
 			self.hilite_element(self.term_node)
 		})
-
 	}
 	input.addEventListener('change', change_handler);
 
-	// blur event
+	// blur event – hide the input and show the original link
 	const blur_handler = (e) => {
 		e.stopPropagation()
-		e.preventDefault()
 		// Remove the unnecessary input field node
 		input.remove()
 		// Display the hidden order link
 		order_number_link.classList.remove('hide')
 	}
 	input.addEventListener('blur', blur_handler);
+
+	// Insert the input into the DOM
 
 	// Add input element after the order_number_link
 	order_number_link.parentNode.insertBefore(input, order_number_link.nextSibling);
