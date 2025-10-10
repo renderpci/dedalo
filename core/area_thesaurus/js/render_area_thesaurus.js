@@ -68,18 +68,21 @@ render_area_thesaurus.prototype.list = async function(options) {
 					// 	}
 					// }
 
-				// render. parse_search_result with ts_object
+				// render. Search : parse_search_result with ts_object
 					const ts_object_instance = await ts_object.get_instance({
-						thesaurus_mode		: self.context?.thesaurus_mode || 'default',
-						caller				: self,
-						linker				: self.linker, // usually a portal component instance
-						section_tipo		: self.section_tipo,
-						section_id			: self.section_id,
+						// key options
+						section_tipo			: self.section_tipo,
+						section_id				: self.section_id,
 						// children_tipo		: children_tipo,
-						thesaurus_view_mode	: self.thesaurus_view_mode,
-						is_root_node		: true,
-						area_model			: self.model,
-						is_ontology			: self.model === 'area_ontology'
+						// target_section_tipo	: null,
+						thesaurus_mode			: self.context?.thesaurus_mode || 'default',
+						// others
+						caller					: self,
+						linker					: self.linker, // usually a portal component instance
+						thesaurus_view_mode		: self.thesaurus_view_mode,
+						is_root_node			: true,
+						area_model				: self.model,
+						is_ontology				: self.model === 'area_ontology'
 					})
 					self.ar_instances.push(ts_object_instance)
 					await ts_object_instance.parse_search_result(
