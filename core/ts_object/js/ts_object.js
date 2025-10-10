@@ -2020,6 +2020,7 @@ ts_object.prototype.save_order = async function( value ) {
 					remove_time	: 10000
 				})
 			}else{
+				// Bubbles notification
 				event_manager.publish('notification', {
 					msg			: api_response?.msg || 'OK',
 					type		: 'success',
