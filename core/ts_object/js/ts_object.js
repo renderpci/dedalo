@@ -1564,7 +1564,8 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 			}
 
 			// Add to map
-			search_instances_map.set(found_instance.ts_id, found_instance);
+			const map_id = `${found_instance.section_tipo}_${found_instance.section_id}`
+			search_instances_map.set(map_id, found_instance);
 
 		}else{
 
@@ -1603,7 +1604,8 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 			await new_instance.render()
 
 			// Add to search instances map
-			search_instances_map.set(new_instance.ts_id, new_instance);
+			const map_id = `${new_instance.section_tipo}_${new_instance.section_id}`
+			search_instances_map.set(map_id, new_instance);
 		}
 	}
 
