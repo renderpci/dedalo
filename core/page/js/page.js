@@ -678,58 +678,54 @@ page.prototype.add_events = function() {
 
 	// keydown events
 		const keydown_handler = function(evt) {
-			switch(true) {
+			switch(evt.key) {
 
-				case evt.key==='Escape':
+				case 'Escape':
 					// modal is open case
-						if (window.modal) {
-							// Note that dd-modal has is own ESC event to close the modal
-							return
-						}
+					if (window.modal) {
+						// Note that dd-modal has is own ESC event to close the modal
+						return
+					}
 					// inactive user activated component
-						if (page_globals.component_active) {
-							ui.component.deactivate(page_globals.component_active)
-						}
+					if (page_globals.component_active) {
+						ui.component.deactivate(page_globals.component_active)
+					}
 					// blur active input
-						document.activeElement.blur()
+					document.activeElement.blur()
 					break;
 
-				case (evt.key==='ArrowLeft' && evt.shiftKey===true): {
-					// paginator left arrow <
-						// paginator right arrow >
+				case 'ArrowLeft': {
+					if (evt.shiftKey) {
+						// paginator left arrow <
 						const section_prev = self.ar_instances.find(el => el.model==='section')
 						if (section_prev && section_prev.paginator) {
 							section_prev.paginator.navigate_to_previous_page()
 						}
+					}
 					break;
 				}
 
-				case (evt.key==='ArrowRight' && evt.shiftKey===true): {
-					// paginator right arrow >
+				case 'ArrowRight': {
+					if (evt.shiftKey) {
+						// paginator right arrow >
 						const section_next = self.ar_instances.find(el => el.model==='section')
 						if (section_next && section_next.paginator) {
 							section_next.paginator.navigate_to_next_page()
 						}
+					}
 					break;
 				}
 
-				case (evt.ctrlKey===true && evt.key==='i'): {
-					// inspector toggle
+				case 'i': {
+					if (evt.ctrlKey) {
+						// inspector toggle
 						ui.toggle_inspector()
+					}
 					break;
 				}
 
-				default:
-					break;
-			}//end switch
-		}
-		document.addEventListener('keydown', keydown_handler)
-
-	// page keyup
-		const keyup_handler = (evt) => {
-
-			if (evt.key==='Enter') {
-				// parent recursive check on document.activeElement
+				case 'Enter': {
+					// parent recursive check on document.activeElement
 					if (document.activeElement) {
 						// find_up_node returns node|null
 						const top_node = find_up_node(
@@ -745,19 +741,19 @@ page.prototype.add_events = function() {
 							return
 						}
 					}
-				// active component case
+					// active component case
 					if (page_globals.component_active && page_globals.component_active.mode!=='search') {
 						// stop here if a component is active
 						return
 					}
-				// search with current section/area_thesaurus/area_graph/area_ontology filter
+					// search with current section/area_thesaurus/area_graph/area_ontology filter
 					const with_filter_models	= ['section','area_thesaurus','area_graph','area_ontology']
 					const with_filter_instance	= self.ar_instances.find(el => with_filter_models.includes(el.model))
 					if (with_filter_instance && with_filter_instance.filter && with_filter_instance.mode==='list') {
 						if (with_filter_instance.filter.search_panel_is_open===true) {
 							// always blur active component to force set dato (!)
 							document.activeElement.blur()
-
+							console.warn('this:', this);
 							dd_request_idle_callback(
 								() => {
 									// exec search
@@ -765,12 +761,18 @@ page.prototype.add_events = function() {
 								}
 							)
 						}
-						// toggle filter container
-							event_manager.publish('toggle_search_panel_'+with_filter_instance.id)
+						// toggle filter search container
+						event_manager.publish('toggle_search_panel_' + with_filter_instance.id)
 					}
-			}
+					break;
+				}
+
+				default:
+
+					break;
+			}//end switch
 		}
-		document.addEventListener('keyup', keyup_handler)
+		document.addEventListener('keydown', keydown_handler)
 
 	// page click/mousedown
 		const mousedown_handler = (e) => {
