@@ -2076,19 +2076,10 @@ ts_object.prototype.toggle_nd = async function(button_obj) {
 	// Load children and show the container
 	try {
 
-		// nodes
-		const wrapper				= button_obj.parentNode.parentNode
-		const link_children_element	= self.link_children_element
-		const section_tipo			= wrapper.dataset.section_tipo
-		const section_id			= wrapper.dataset.section_id
-		const children_tipo			= wrapper.dataset.children_tipo
-
 		const children_data = await self.get_children_data({
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			children_tipo	: children_tipo,
-			pagination		: null,
-			children		: null
+			pagination	: null,
+			children	: null,
+			cache		: true
 		})
 
 		if (!children_data) {
@@ -2098,23 +2089,12 @@ ts_object.prototype.toggle_nd = async function(button_obj) {
 		}
 
 		await self.render_children({
-			clean_children_container : true, // bool clean_children_container
+			clean_children_container	: true, // bool clean_children_container
+			children_data				: children_data
 		})
 
 		// Show hidden nd_container
 		nd_container.classList.remove('hide')
-
-		// Check if children were already loaded
-		// When not already opened children, hide it (all children descriptors and not are loaded together)
-		const icon_arrow = link_children_element.firstChild
-		if (icon_arrow.classList.contains('ts_object_children_arrow_icon_open')) {
-			console.log("[ts_object.toggle_nd] Children are already loaded before");
-		}else{
-			// Children are NOT loaded before. Set as not loaded and hide
-			children_container.classList.remove('js_first_load') // Set as already loaded
-			children_container.classList.add('removed_from_view')	// Set as hidden
-			icon_arrow.classList.remove('ts_object_children_arrow_icon_open') // Always remove state 'open' from arrow
-		}
 
 		return true;
 
