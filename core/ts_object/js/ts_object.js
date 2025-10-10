@@ -10,9 +10,7 @@
 		get_instance,
 		add_instance,
 		get_instance_by_id,
-		get_all_instances,
-		get_instances_custom_map,
-		delete_instance
+		get_all_instances
 	} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -1529,7 +1527,7 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 	// Pre-process 'to_hilite' for faster lookup and type consistency
 	const hilite_set = new Set(
-		to_hilite.map(el => `${el.section_tipo}_${parseInt(el.section_id)}`)
+		to_hilite.map(el => `${el.section_tipo}_${el.section_id}`)
 	);
 
 	// Map of rendered search instances based on received data list
@@ -1542,7 +1540,7 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 	// 1. CREATE OR RETRIEVE INSTANCES AND RENDER
 	// --------------------------------------------------------------------------------
 
-	// Iterate 'data' and create the non already existing instances.
+	// Iterate 'data' and creates the non already existing instances.
 	// 'data' is an array of all terms needed to create the results paths, that means, from the root
 	// terms to the last node matching the search like a branch path [term_root, term_middle1, term_middle2, term_matched]
 	// Every data item is an object with ts_node properties like section_tipo, section_id, permissions, ar_elements..
@@ -1553,6 +1551,7 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 		const data_item = data[i]
 
 		// set non included 'thesaurus_mode' that is needed to create the instance id.
+		// Values: default|relation
 		data_item.thesaurus_mode = self.thesaurus_mode
 
 		const key = key_instances_builder(data_item); // normalized id of the instance
@@ -1666,14 +1665,14 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 				console.log('Opening Hierarchized instance parent:',parent_instance.ts_id, parent_instance);
 			}
 
-			// Add rendered children nodes into self.children_container or parent_nd_container
+			// Render and add children nodes into self.children_container or parent_nd_container
 			await parent_instance.render_children({
 				clean_children_container	: true,
 				children_data				: parent_instance.children_data
 			})
 
 			// Update styles. Note that unsync (requestAnimationFrame) is used.
-			// This allows the children render to be completed before.
+			// This allows the children render to be completed before apply the styles.
 			requestAnimationFrame(() => {
 				// show children container
 				parent_instance.children_container.classList.remove('hide')
