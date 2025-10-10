@@ -687,50 +687,6 @@ ts_object.prototype.get_children_recursive = function( options ) {
 
 
 
-// /**
-// * UPDATE_ARROW_STATE
-// * Updates arrow state when updated wrap
-// * @param bool toggle
-// * 	Specifies if the children should be toggled on an empty container.
-// * @return void
-// */
-// ts_object.prototype.update_arrow_state = function(toggle) {
-
-// 	const self = this
-
-// 	// Children_container
-// 	const children_container = self.children_container
-
-// 	const has_children = children_container.hasChildNodes()
-
-// 	if (!has_children) {
-// 		// reset arrow status
-// 		self.link_children_element.remove()
-// 	}
-
-// 	console.warn('has_children:', has_children);
-
-// 	// const is_first_load_or_hidden = children_container.classList.contains(
-// 	// 	'js_first_load') || children_container.classList.contains('removed_from_view'
-// 	// );
-
-// 	// // Toggle children if container is in a specific state
-// 	// const link_children_element = self.link_children_element
-// 	// if (is_first_load_or_hidden || (!has_children && toggle)) {
-// 	// 	self.toggle_view_children(link_children_element);
-// 	// }
-
-// 	// // Update arrow icon state
-// 	// const arrow_icon= link_children_element.querySelector('.ts_object_children_arrow_icon')
-// 	// if (has_children) {
-// 	// 	arrow_icon.classList.remove('arrow_unactive');
-// 	// } else {
-// 	// 	arrow_icon.classList.add('arrow_unactive');
-// 	// }
-// }//end update_arrow_state
-
-
-
 /**
 * UPDATE_PARENT_DATA
 * Call API to update the parent data in the database.
@@ -776,57 +732,6 @@ console.warn('*** update_parent_data options:', options);
 
 	return api_response
 }//end update_parent_data
-
-
-
-// /**
-// * SAVE_OPENED_ELEMENTS
-// * Saves and track given element open status
-// * @param HTMLElement link_children_element
-// * @param string action
-// * @return bool
-// */
-// ts_object.prototype.save_opened_elements = function(action) {
-
-// 	const self = this
-
-// 	// const current_key = link_children_element.child_data.ts_id
-// 	const current_key = self.id
-// 	if (!current_key) {
-// 		console.error('Error.invalid ts_id from current ts_object instance:', self);
-// 		return false
-// 	}
-
-// 	if (action==='add') {
-// 		window.opened_elements[current_key] = true
-// 	}else{
-// 		delete window.opened_elements[current_key]
-// 	}
-
-// 	return true
-// }//end save_opened_elements
-
-
-
-// /**
-// * REMOVE_CHILDREN_FROM_OPENED_ELEMENTS
-// * @return bool
-// */
-// ts_object.prototype.remove_children_from_opened_elements = function(parent_key) {
-
-// 	for (let key in this.opened_elements) {
-// 		let current_parent = this.opened_elements[key]
-// 		if (current_parent == parent_key){
-// 			delete this.opened_elements[key]
-// 			if(SHOW_DEBUG===true) {
-// 				console.log("[remove_children_from_opened_elements] Removed key ",key)
-// 			}
-// 			this.remove_children_from_opened_elements(key)
-// 		}
-// 	}
-
-// 	return true
-// }//end remove_children_from_opened_elements
 
 
 
@@ -2192,39 +2097,6 @@ ts_object.prototype.toggle_nd = async function(button_obj) {
 		return false;
 	}
 }//end toggle_nd
-
-
-
-// /**
-// * GET_MY_PARENT_CONTAINER
-// * Returns current element (list_thesaurus_element) container of type inside his ts_element
-// * @param HTMLElement button_obj
-// * @param string role
-// * @return HTMLElement|null parent_container
-// */
-// ts_object.prototype.get_my_parent_container = function(button_obj, role) {
-
-// 	if (!button_obj || !role) {
-// 		console.error("GET_MY_PARENT_CONTAINER: Invalid arguments provided. 'button_obj' and 'role' are required.", button_obj, role);
-// 		return null;
-// 	}
-
-// 	// Get the closest 'wrap_ts_object' ancestor of button_obj
-// 	const wrapper = button_obj.closest('.wrap_ts_object');
-// 	if (!wrapper) {
-// 		console.error("GET_MY_PARENT_CONTAINER: Could not find a parent element with class 'wrap_ts_object'.");
-// 		return null;
-// 	}
-
-// 	for (const child of wrapper.children) {
-// 		if (child.dataset.role === role) {
-// 			return child;
-// 		}
-// 	}
-
-// 	console.warn(`GET_MY_PARENT_CONTAINER: No child element with data-role='${role}' found inside the wrapper.`);
-// 	return null;
-// }//end get_my_parent_container
 
 
 

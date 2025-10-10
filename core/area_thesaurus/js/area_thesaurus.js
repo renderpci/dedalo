@@ -25,7 +25,6 @@
 
 
 
-
 /**
 * AREA_THESAURUS
 */
