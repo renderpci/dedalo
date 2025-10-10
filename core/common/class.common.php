@@ -662,17 +662,25 @@ abstract class common {
 
 	/**
 	* SET_TO_FORCE_RELOAD_DATO
+	* Clean data caches and set the 'loaded_matrix_data' as false
+	* forcing new get data actions to refresh the data.
+	* It usually called when a set lang is made.
 	* @return void
 	*/
-	public function set_to_force_reload_dato() {
+	public function set_to_force_reload_dato() : void {
 
 		// unset previous calculated valor
-			if (isset($this->valor)) {
-				unset($this->valor);
-			}
+		if (isset($this->valor)) {
+			unset($this->valor);
+		}
+
+		// Clean dato_resolved cache always
+		if (isset($this->dato_resolved)) {
+			unset($this->dato_resolved);
+		}
 
 		// force reload dato from database when dato is requested again
-			$this->set_is_loaded_matrix_data(false);
+		$this->set_is_loaded_matrix_data(false);
 	}//end set_to_force_reload_dato
 
 
