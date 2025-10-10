@@ -10,7 +10,6 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport, dd_request_idle_callback} from '../../common/js/events.js'
-	import {create_cookie, read_cookie} from '../../common/js/utils/cookie.js'
 	import {render_preset_modal, select_preset} from '../../section/js/view_search_user_presets.js'
 	import {
 		create_new_search_preset,
@@ -868,6 +867,8 @@ const render_sections_selector = (self) => {
 		self.wrapper_sections_selector = wrapper_sections_selector
 
 	// typologies
+		const caller_model				= self.caller.model || ''
+		const typologies_cookie_name	= `selected_typology_${caller_model}`
 		const typologies = self.sections_selector_data.typologies || []
 		// typologies.sort((a, b) => new Intl.Collator().compare(a.label, b.label));
 		typologies.sort((a, b) => parseFloat(a.order) - parseFloat(b.order));
@@ -885,8 +886,7 @@ const render_sections_selector = (self) => {
 				event_manager.publish('update_sections_list_' + self.id)
 
 				// Store selected value as cookie to recover later
-				const cookie_name = 'selected_typology'
-				create_cookie(cookie_name, typology_id, 365)
+				localStorage.setItem(typologies_cookie_name, typology_id)
 			})
 
 		// options for selector
@@ -902,9 +902,7 @@ const render_sections_selector = (self) => {
 
 		// cookie. previous cookie stored value
 			// get the model to set into the cookie / area_thesaurus || area_ontology
-			const caller_model  	= self.caller.model
-			const cookie_name		= `selected_typology_${caller_model}`
-			const selected_typology	= read_cookie(cookie_name)
+			const selected_typology	= localStorage.getItem(typologies_cookie_name)
 			if (selected_typology) {
 				typology_selector.value = selected_typology
 			}
@@ -953,7 +951,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	// cookie value (selected_search_sections)
 		const cookie_name						= 'selected_search_sections'
-		const selected_search_sections_value	= read_cookie(cookie_name)
+		const selected_search_sections_value	= localStorage.getItem(cookie_name)
 		const selected_search_sections			= selected_search_sections_value
 			? JSON.parse(selected_search_sections_value)
 			: {}
@@ -998,11 +996,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 			// Store selected value as cookie to recover later
 				selected_search_sections[typology_id] = self.target_section_tipo
-				create_cookie(
-					cookie_name,
-					JSON.stringify(selected_search_sections),
-					365
-				)
+				localStorage.setItem(cookie_name, JSON.stringify(selected_search_sections))
 
 			// loading remove
 				self.search_container_selector.classList.remove('loading')
