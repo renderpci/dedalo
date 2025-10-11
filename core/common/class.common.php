@@ -675,8 +675,11 @@ abstract class common {
 			}
 
 		// unset previous calculated dato_resolved
-			if (isset($this->dato_resolved)) {
-				unset($this->dato_resolved);
+		// (!) Do not apply in time machine mode because the data is injected
+			if ($this->mode !== 'tm') {
+				if (isset($this->dato_resolved)) {
+					unset($this->dato_resolved);
+				}
 			}
 
 		// force reload dato from database when dato is requested again
