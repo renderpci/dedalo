@@ -674,10 +674,13 @@ abstract class common {
 			unset($this->valor);
 		}
 
-		// Clean dato_resolved cache always
-		if (isset($this->dato_resolved)) {
-			unset($this->dato_resolved);
-		}
+		// unset previous calculated dato_resolved
+		// (!) Do not apply in time machine mode because the data is injected
+			if ($this->mode !== 'tm') {
+				if (isset($this->dato_resolved)) {
+					unset($this->dato_resolved);
+				}
+			}
 
 		// force reload dato from database when dato is requested again
 		$this->set_is_loaded_matrix_data(false);
