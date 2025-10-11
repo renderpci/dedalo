@@ -263,8 +263,19 @@ class component_dataframe extends component_portal {
 
 		$main_component_tipo = $this->get_main_component_tipo();
 
-		$model	= RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
-		$lang	= RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		// dataframe_root case (dd555)
+		$model = RecordObj_dd::get_modelo_name_by_tipo( $main_component_tipo );
+		if ( strpos($model, 'component_')===false ) {
+			debug_log(__METHOD__
+				. " Ignored invalid component " . PHP_EOL
+				. ' $main_component_tipo: ' . to_string($main_component_tipo) . PHP_EOL
+				. ' $model: ' . to_string($model)
+				, logger::WARNING
+			);
+			return null;
+		}
+
+		$lang = RecordObj_dd::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 		$main_component = component_common::get_instance(
 			$model, // string model
 			$main_component_tipo, // string tipo
