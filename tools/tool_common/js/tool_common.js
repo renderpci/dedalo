@@ -45,21 +45,21 @@ export const tool_common = function(){
 * }
 */
 tool_common.prototype.init = async function(options) {
+	const self = this
+
 	if(SHOW_DEVELOPER===true) {
 		dd_console(`init tool options`, 'DEBUG', options)
 	}
 
-	const self = this
-
 	// safe init double control. To detect duplicated events cases
-		if (typeof this.is_init!=='undefined') {
-			console.error('Duplicated init for element:', this);
+		if (self.is_init) {
+			console.error('Duplicated init for element:', self);
 			if(SHOW_DEBUG===true) {
 				alert('Duplicated init element');
 			}
 			return false
 		}
-		this.is_init = true
+		self.is_init = true
 
 	// status update
 		self.status = 'initializing'
@@ -82,7 +82,7 @@ tool_common.prototype.init = async function(options) {
 
 				// re-build from caller_ddo
 					// searchParams
-					const searchParams = new URLSearchParams(window.location.href)
+					const searchParams = new URLSearchParams(window.location.search)
 					// raw_data
 					const raw_data = searchParams.has('raw_data')
 						? searchParams.get('raw_data') // string from url
@@ -90,113 +90,122 @@ tool_common.prototype.init = async function(options) {
 
 					if (raw_data) {
 
-						// Note that url param 'url_data' is an object stringify-ed and compressed-encoded
-						// Expected raw_data decoded is an object as
-						// {
-						//	 caller_ddo : object {...},
-						//	 tool_config : object {...}
-						// }
-						const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
-						const url_data_object	= JSON.parse(url_data_string)
-						const caller_ddo		= url_data_object.caller_ddo
-						const tool_config		= url_data_object.tool_config
-						const caller_options	= url_data_object.caller_options
+						try {
 
-						// debug
+							// Note that url param 'url_data' is an object stringify-ed and compressed-encoded
+							// Expected raw_data decoded is an object as
+							// {
+							//	 caller_ddo : object {...},
+							//	 tool_config : object {...}
+							// }
+							const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
+							const url_data_object	= JSON.parse(url_data_string)
+							const caller_ddo		= url_data_object.caller_ddo
+							const tool_config		= url_data_object.tool_config
+							const caller_options	= url_data_object.caller_options
+
+							// debug
 							if(SHOW_DEBUG===true) {
 								console.log(')) tool common url_data_object:', url_data_object);
 							}
 
-						// set and build caller
-							// self.caller = await get_instance( caller_ddo )
-
-						// dataframe
+							// dataframe
 							self.caller_dataframe = caller_ddo.caller_dataframe ?? null
 
-						// set and build caller
+							// set and build caller
 							self.caller = await get_instance( caller_ddo )
 
-						// set current tool as caller
-							self.caller.caller = self
+							if (self.caller) {
 
-						// set caller options
-							self.caller_options = caller_options ?? null
+								// set current tool as caller
+								self.caller.caller = self
 
-						// set label (see self.view_window())
-							self.caller.label = caller_ddo.label ?? null
+								// set caller options
+								self.caller_options = caller_options ?? null
 
-						// build caller when is not section
-							if(caller_ddo.model!=='section'){
-								// build only when the caller is a component, section will build by tm
-								await self.caller.build(true)
+								// set label (see self.view_window())
+								self.caller.label = caller_ddo.label ?? null
+
+								// build caller when is not section
+								if(caller_ddo.model!=='section'){
+									// build only when the caller is a component, section will build by tm
+									await self.caller.build(true)
+								}
+
+								// set tool_config
+								self.tool_config = tool_config
 							}
-
-						// set tool_config
-							self.tool_config = tool_config
-
+						} catch (error) {
+							console.error('Error decoding/parsing raw_data from URL:', error, raw_data);
+						}
 					}else{
-						console.error('Error. Unable to get caller_ddo from URL:', window.location.href);
+						console.error('Error. Unable to get raw_data from URL for caller_ddo:', window.location.search);
 					}
 			}
+
+			// Check if the caller is available
 			if (!self.caller) {
+
+				// caller is not mandatory, but we alert for possible mistakes
+
 				self.error = `Warning. Empty caller !`
 				console.warn(self.error, self)
-				// return false
-			}
 
-		// tool_config. Contains the needed ddo_map
-			if (!self.tool_config && self.caller) {
+			}else{
 
-				if (self.caller.config && self.caller.config.tool_context) {
+				// tool_config. Contains the needed ddo_map
+				if (!self.tool_config) {
 
-					// section_tool case
+					if (self.caller.config && self.caller.config.tool_context) {
 
-					// from caller config (transcription case for example)
-						self.tool_config = clone(self.caller.config.tool_context.tool_config)
-						if(SHOW_DEBUG===true) {
-							// console.log("/// -> section_tool case self.caller.config -> self.tool_config:", self.tool_config);
+						// section_tool case
+
+						// from caller config (transcription case for example)
+							self.tool_config = clone(self.caller.config.tool_context.tool_config)
+							if(SHOW_DEBUG===true) {
+								// console.log("/// -> section_tool case self.caller.config -> self.tool_config:", self.tool_config);
+							}
+
+					}else if (self.caller.tools) {
+
+						// component case
+
+						const tool_found = self.caller.tools.find(el => el.model===self.model)
+						self.tool_config = tool_found?.tool_config || null
+					}
+
+					// final fallback
+						if (!self.tool_config) {
+
+							// fallback
+								self.tool_config = {
+									ddo_map : [{
+										tipo				: self.caller.tipo,
+										section_tipo		: self.caller.section_tipo,
+										section_id			: self.caller.section_id,
+										model				: self.caller.model,
+										mode				: self.caller.mode, //'edit',
+										lang				: self.caller.lang,
+										role				: 'main_element',
+										caller_dataframe	: (self.caller.model==='component_dataframe')
+											? self.caller_dataframe
+											: null
+									}]
+								}
+								if(SHOW_DEBUG===true) {
+									console.warn("-> tool_common init final fallback case self.tool_config:", self.tool_config);
+								}
 						}
-
-				}else if (self.caller.tools) {
-
-					// component case
-
-					const tool_found = self.caller.tools.find(el => el.model===self.model)
-
-					self.tool_config = tool_found?.tool_config || null
 				}
 
-				// final fallback
-					if (!self.tool_config) {
-
-						// fallback
-							self.tool_config = {
-								ddo_map : [{
-									tipo				: self.caller.tipo,
-									section_tipo		: self.caller.section_tipo,
-									section_id			: self.caller.section_id,
-									model				: self.caller.model,
-									mode				: self.caller.mode, //'edit',
-									lang				: self.caller.lang,
-									role				: 'main_element',
-									caller_dataframe	: (self.caller.model==='component_dataframe')
-										? self.caller_dataframe
-										: null
-								}]
-							}
-							if(SHOW_DEBUG===true) {
-								console.warn("-> tool_common init final fallback case self.tool_config:", self.tool_config);
-							}
-					}
-			}
-
-		// parse ddo_map section_id
-			if (self.tool_config && self.tool_config.ddo_map) {
-				self.tool_config.ddo_map.map(el => {
-					if (el.section_id==='self' && el.section_tipo===self.caller.section_tipo) {
-						el.section_id = self.caller.section_id || self.caller.section_id_selected
-					}
-				})
+				// parse ddo_map section_id
+				if (self.tool_config?.ddo_map) {
+					self.tool_config.ddo_map.forEach(el => {
+						if (el.section_id==='self' && el.section_tipo===self.caller.section_tipo) {
+							el.section_id = self.caller.section_id || self.caller.section_id_selected
+						}
+					})
+				}
 			}
 
 	// set some common vars
