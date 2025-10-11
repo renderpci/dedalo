@@ -4055,7 +4055,6 @@ class section extends common {
 														}));
 													}
 
-
 													// 3 get the component dataframe data with time machine data
 													$dataframe_model = RecordObj_dd::get_modelo_name_by_tipo($dataframe_tipo);
 													foreach ($dataframe_data as $key => $current_dataframe_data) {
@@ -4106,6 +4105,7 @@ class section extends common {
 
 									// data add
 										$ar_subdata = array_merge($ar_subdata, $component_data);
+
 								}//end if ($is_dd_grid_column===true)
 								break;
 						}//end switch(true)

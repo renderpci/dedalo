@@ -11,7 +11,7 @@
 	import {view_line_list_portal} from './view_line_list_portal.js'
 	//indexation
 	import {view_indexation_list_portal} from './view_indexation_list_portal.js'
-	// dataframe
+	// dataframe views (outside this portal)
 	import {view_default_list_dataframe} from '../../component_dataframe/js/view_default_list_dataframe.js'
 	import {view_mini_list_dataframe} from '../../component_dataframe/js/view_mini_list_dataframe.js'
 
