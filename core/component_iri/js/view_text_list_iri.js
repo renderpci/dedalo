@@ -50,6 +50,8 @@ view_text_list_iri.render = async function(self, options) {
 			if (ar_line.length>0) {
 				ar_value_string.push(ar_line.join(' | '))
 			}
+
+
 		}
 		const value_string = (ar_value_string && ar_value_string.length)
 			? ar_value_string.join(', ')
