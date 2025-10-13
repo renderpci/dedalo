@@ -1451,7 +1451,6 @@ class component_iri extends component_common {
 
 
 
-
 	/**
 	* HAS_PROTOCOL
 	* To be used in different cases.
