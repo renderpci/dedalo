@@ -76,6 +76,9 @@ $updates->$v = new stdClass();
 		";
 		$updates->$v->alert_update[] = $alert;
 
+	// execution order
+		$updates->$v->execution_order = ['run_scripts', 'SQL_update', 'components_update'];
+
 	// Change the numisdata33 to object1
 	// the order of the scripts is important!
 		$ar_tables = [
