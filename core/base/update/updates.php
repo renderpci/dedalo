@@ -58,7 +58,62 @@ $updates->$v = new stdClass();
 			<br>
 			<br>
 			<p>
-			<strong>This update will get the title values of your URI fields, all `component_iri`, and will create a new unification list with this values.</strong>
+			<strong>1. Ensure that you have updated the Ontology before proceeding.</strong>
+			</p>
+			<br>
+			<p>
+			This update change the Numismatic model and set new Data frame for the component_iri (all URL fields).
+			</p>
+			<br>
+			<br>
+			<p>
+			<strong>2. Moving data from old Denomination section <a href=\"https://dedalo.dev/ontology/numisdata33\"> numisdata33</a> to Object thesaurus object1.</strong>
+			</p>
+			<br>
+			<p>
+			If you installation is using «numisdata» ontology, this update will move your Denomination data to the Object thesaurus behind the «Coin» node and will be set as `Denomination` typology.
+			</p>
+			<p>
+			To run this update your installation will needs:
+			<br>
+			1.- The Object thesaurus active
+			<br>
+			If you don't have the Object thesaurus, the data will be moved but you will not see the thesarus tree and the <a href=\"https://dedalo.dev/ontology/numisdata34\">Denomination</a> field in Types and the publication will fail.
+			You can see the thesaurus dependences <a href=\"https://dedalo.dev/docs/config/thesaurus_dependeces/#dependencies\">here.</a>
+			<br>
+			2.- A `Coin` term node into the <strong>object1</strong> thesaurus tree with the <a href=\"https://dedalo.dev/ontology/hierarchy89\">URL component</a> pointing to «nomisma» defintion.
+			<strong>http://nomisma.org/id/coin</strong>
+			</p>
+			<p>
+			3.- A typology term node in <strong>object2</strong> (model thesarus) for «Denomination» with the <a href=\"https://dedalo.dev/ontology/hierarchy89\">URL component</a> pointing to «nomisma» defintion.
+			<strong>https://nomisma.org/id/denomination</strong>
+			</p>
+			<br>
+			<p>
+			For more information see the <a href=\"https://agora.dedalo.dev/d/237-denominations-numisdata33\"> Àgora topic</a>
+			</p>
+			<p>
+			Note:
+			</p>
+			<p>
+			If your installation is not ready to run this change, you can uncheck the tree scrips behind the «run_scripts» and run they manually in the maintenance panel after you will ready to do it.
+			</p>
+			<p>
+			The order of the scripts is important, the correct order is:
+			</p>
+			<p>
+			<strong>denomination_numisdata33_to_matrix_hierachy.json</strong> ---> located into the «MOVE TO TABLE» maintenance panel
+			</p>
+			<p>
+			<strong>denomination_numisdata33_to_object1.json</strong> ---> located into the «MOVE TO LOCATOR» maintenance panel
+			</p>
+			<p>
+			<strong>denomination_components_numisdata33_to_object1.json</strong> ---> located into the «MOVE TO TLD» maintenance panel
+			</p>
+			<br>
+			<br>
+			<p>
+			<strong>3. This update will get the title values of your URI fields, from all `component_iri`, and will create a new unique list with this values.</strong>
 			</p>
 			<br>
 			<p>
@@ -70,8 +125,10 @@ $updates->$v = new stdClass();
 			<p>
 			The current title is not changed, is preserved to check the new label value list, but, in next versions it will be deleted. Use only the label list for the URI fields.
 			</p>
+			<br>
+			<br>
 			<p>
-			Ensure that you have updated the Ontology before proceeding.
+			<strong>4. The ontology needs to be updated after proceeding.</strong>
 			</p>
 		";
 		$updates->$v->alert_update[] = $alert;
