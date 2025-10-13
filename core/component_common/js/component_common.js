@@ -1599,6 +1599,7 @@ export const get_dataframe = async function(options) {
 	const section_tipo_key		= options.section_tipo_key
 	const main_component_tipo	= options.main_component_tipo
 	const view					= options.view
+	const mode					= options.mode
 
 	const request_config = self.context.request_config || null
 
@@ -1679,6 +1680,13 @@ export const get_dataframe = async function(options) {
 		: instance_options.view
 			? instance_options.view
 			: 'default'
+
+	// mode. Get mode from options. If not defined, get from ddo
+	context.mode = (mode)
+		? mode
+		: instance_options.mode
+			? instance_options.mode
+			: 'edit'
 
 	// inject properties before build
 	component_dataframe.datum	= self.datum

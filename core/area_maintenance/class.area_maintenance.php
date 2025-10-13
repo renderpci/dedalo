@@ -687,22 +687,34 @@ class area_maintenance extends area_common {
 	/**
 	* CONSOLIDATE_TABLES
 	* Remunerates table id column to consolidate id sequence from 1,2,...
+	* @param object $options
 	* @return object $response
 	*/
-	public static function consolidate_tables() : object {
-
+	public static function consolidate_tables( object $options ) : object {
+	
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ';
 			$response->errors	= [];
 			$response->success	= 0;
 
-		$ar_sql_query = [];
+		// options
+		$tables = $options->tables ?? [];
 
-		$ar_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
+		// Restrict to allow tables
+		$allow_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd'];
 
 		// exec
-		foreach ($ar_tables as $table) {
+		foreach ($tables as $table) {
+
+			if (!in_array($table, $allow_tables)) {
+				debug_log(__METHOD__
+					. " Ignored non allow table " . PHP_EOL
+					. ' table: ' . to_string($table)
+					, logger::ERROR
+				);
+				continue;
+			}
 
 			$result = db_tasks::consolidate_table( $table );
 
@@ -717,8 +729,6 @@ class area_maintenance extends area_common {
 		$response->msg		= count($response->errors)>0
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
-		$response->n_queries = count($ar_sql_query);
-		$response->n_errors = count($response->errors);
 
 
 		return $response;

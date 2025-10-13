@@ -88,6 +88,7 @@ component_dataframe.prototype.create_new_section = async function(options) {
 }//end  create_new_section
 
 
+
 /**
 * GET_RATING
 * Get the component with the rating value of the dataframe section
