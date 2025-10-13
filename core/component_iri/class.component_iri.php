@@ -109,10 +109,11 @@ class component_iri extends component_common {
 
 	/**
 	* SET_DATO
+	* Fix given data as 'dato' for the current component instance.
 	* @param array|null $dato
 	* @return bool
 	*/
-	public function set_dato($dato) : bool {
+	public function set_dato( $dato ) : bool {
 
 		// string case. Tool Time machine mode, dato is string
 		if (is_string($dato)) {
@@ -132,54 +133,95 @@ class component_iri extends component_common {
 			);
 		}
 
+		// cast to array
+		if (is_object($dato)) {
+			$dato = [$dato];
+		}
+
 		// check the data values to fit the IRI data
 		// changes the data to create a object
 		if(!empty($dato)) {
 			$ar_id = [];
-			foreach( (array)$dato as $key => $value ){
+			$safe_dato = [];
+			foreach( (array)$dato as $value ){
+
+				// Check if the data is an object before attempting property access
+                $is_object = is_object($value);
+
 				// check if the data is different that an object
 				// data could be a string or null
 				// null = new value
 				// string = previous data become from a input_text
 
-				$has_id = $value->id ?? false;
+				// Determine if the value has a valid, non-empty ID to be treated as existing data.
+                // This ensures objects with an 'id' property set to null/0/empty are treated as new.
+				$has_id = ($is_object && property_exists($value, 'id') && $value->id) ? true : false;
 				if( !$has_id ){
-				// if( !is_object($value) || empty($value->id) ){
+
+					if ($is_object && !property_exists($value, 'iri')) {
+						// write an error to inform administrators.
+						debug_log(__METHOD__
+							. " Ignored invalid value " . PHP_EOL
+							. ' value: ' . to_string($value) . PHP_EOL
+							. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
+							. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+							. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
+							, logger::ERROR
+						);
+						continue;
+					}
+
 					// get the component counter
 					// it's the last counter used
 					$counter = $this->get_counter();
 					$counter++;
 					$id = $counter;
-					$iri_value = ( is_object($value) )
+
+					// Safely get the 'iri' property
+					$iri_value = ( $is_object )
 						? ($value->iri ?? null)
 						: $value;
+
 					$dd_iri = new dd_iri();
 						$dd_iri->set_iri( $iri_value );
 						$dd_iri->set_id( $id );
+
 					// Check if the data has a label_id
 					// used by import to set a temporary target section_id for the label dataframe
 					// it will create a new locator of the dataframe when the component_iri will save
-					if( !empty($value->label_id) ){
+					if( $is_object && !empty($value->label_id) ){
 						$dd_iri->set_label_id( $value->label_id );
 					}
 					// set the counter to use next value
 					$this->set_counter( $id );
 
-					$dato[$key] = $dd_iri;
+				}else{
+
+					// Existing item - pass the original object through
+					$dd_iri = $value;
 				}
+
+				$safe_dato[] = $dd_iri;
+
 				// get all id from data
-				$ar_id[] = $dato[$key]->id;
-			}// end foreach
+				$ar_id[] = $dd_iri->id;
+			}//end foreach
 
-			//set the counter with the max id when the counter is bellow it.
+			// Assign the processed data back to $dato
+            $dato = $safe_dato;
+
+			// Set the counter with the max id when the counter is bellow it.
 			$counter = $this->get_counter();
-			$max_id = max($ar_id);
 
-			if( $counter < $max_id ){
-				// set the new counter with the id
-				$this->set_counter( $max_id );
+			if (!empty($ar_id)) {
+				$max_id = max($ar_id);
+
+				if( $counter < $max_id ){
+					// set the new counter with the id
+					$this->set_counter( $max_id );
+				}
 			}
-		}
+		}//end if(!empty($dato))
 
 
 		return parent::set_dato( $dato );
