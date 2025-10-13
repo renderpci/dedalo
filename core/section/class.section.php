@@ -3947,15 +3947,13 @@ class section extends common {
 									// if the component has a dataframe
 									// the time machine data will has both data, the main data from the main component
 									// and the dataframe data.
-									// to inject the correct main data is necessary filter it with the from_component_tipo
-										if ( strpos($source_model, 'component_')!==false ) {
+									// To inject the correct main data is necessary filter it with the from_component_tipo
+										if ( strpos($source_model, 'component_')!==false && !empty($dato) ) {
+
 											$dataframe_ddo = $current_component->get_dataframe_ddo();
-											if( !empty($dataframe_ddo) && !empty($dato) && $source_model!=='section'){
-												if (is_array($dato)) {
-													$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
-														return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
-													}));
-												}else{
+											if( !empty($dataframe_ddo) ) {
+												if (!is_array($dato)) {
+
 													debug_log(__METHOD__
 														. " [has dataframe] dato expected type is array " . PHP_EOL
 														. ' dato type: ' . gettype($dato) . PHP_EOL
@@ -3965,6 +3963,23 @@ class section extends common {
 														. ' dataframe_ddo: ' . to_string($dataframe_ddo) . PHP_EOL
 														, logger::ERROR
 													);
+
+												}else{
+
+													// Remove dataframe values (locators)
+													$components_with_relations = component_relation_common::get_components_with_relations();
+													if (in_array($component_model, $components_with_relations) ) {
+														// Relation.
+														$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
+															return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
+														}));
+
+													}else{
+														// literal.
+														$current_dato = array_values( array_filter( $dato, function($el) {
+															return !isset($el->from_component_tipo);
+														}));
+													}
 												}
 											}
 										}
@@ -4031,32 +4046,31 @@ class section extends common {
 									// has_dataframe
 										// if the component has a dataframe create new component and inject his own data
 										// dataframe data is saved by the main dataframe and is part of the row data
-										if ( strpos($source_model, 'component_')!==false ) {
-											if( !empty($dataframe_ddo) ){
-												foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
+										if (strpos($source_model, 'component_')!==false && !empty($dataframe_ddo)) {
+											foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
 
-													$dataframe_tipo = $current_dataframe_ddo->tipo;
+												$dataframe_tipo = $current_dataframe_ddo->tipo;
 
-													// 1 remove dataframe data created by the main component in his subdatum process
-													// when the main component create his own subdatum it can get incorrect dataframe data
-													// because the main component use the time machine data but not the dataframe data by itself.
-													// and it can meet his data with the current dataframe data.
-													// to avoid it, remove the dataframe data from the main component.
-													foreach ($element_json->data as $key => $current_source_data) {
-														if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
-															unset($element_json->data[$key]);
-														}
+												// 1 remove dataframe data created by the main component in his subdatum process
+												// when the main component create his own subdatum it can get incorrect dataframe data
+												// because the main component use the time machine data but not the dataframe data by itself.
+												// and it can meet his data with the current dataframe data.
+												// to avoid it, remove the dataframe data from the main component.
+												foreach ($element_json->data as $key => $current_source_data) {
+													if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
+														unset($element_json->data[$key]);
 													}
+												}
 
-													// 2 get the dataframe data from dato, filtering by dataframe_tipo
-													if( !empty($dato) ){
-														$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
-															return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
-														}));
-													}
+												// 2 get the dataframe data from dato, filtering by dataframe_tipo
+												if( !empty($dato) ){
+													$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
+														return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
+													}));
+												}
 
-
-													// 3 get the component dataframe data with time machine data
+												// 3 get the component dataframe data with time machine data
+												if (!empty($dataframe_data)) {
 													$dataframe_model = RecordObj_dd::get_modelo_name_by_tipo($dataframe_tipo);
 													foreach ($dataframe_data as $key => $current_dataframe_data) {
 														// create the caller_dataframe with the current data information
@@ -4066,7 +4080,7 @@ class section extends common {
 															$new_caller_dataframe->section_tipo			= $section_tipo;
 															$new_caller_dataframe->main_component_tipo	= $tipo;
 
-														// // create the dataframe component
+														// create the dataframe component
 														$dataframe_component = component_common::get_instance(
 															$dataframe_model,
 															$dataframe_tipo,
@@ -4106,6 +4120,7 @@ class section extends common {
 
 									// data add
 										$ar_subdata = array_merge($ar_subdata, $component_data);
+
 								}//end if ($is_dd_grid_column===true)
 								break;
 						}//end switch(true)

@@ -674,6 +674,14 @@ abstract class common {
 				unset($this->valor);
 			}
 
+		// unset previous calculated dato_resolved
+		// (!) Do not apply in time machine mode because the data is injected
+			if ($this->mode !== 'tm') {
+				if (isset($this->dato_resolved)) {
+					unset($this->dato_resolved);
+				}
+			}
+
 		// force reload dato from database when dato is requested again
 			$this->set_bl_loaded_matrix_data(false);
 	}//end set_to_force_reload_dato
@@ -2145,16 +2153,9 @@ abstract class common {
 						}
 
 						$current_section_tipo = $section_tipo;
-						// if the component is a dataframe assign a possible suffix to be used
-						$dataframe_tm_mode = (get_called_class() === 'component_dataframe')
-							? '_dataframe'
-							: '';
-						// time machine mode
-						// If the component or section is in tm mode propagate the mode to the ddo
-						// and it's a dataframe add the suffix '_dataframe' to differentiate it of the tm mode in the component
-						// see radio_button case of the dataframe component of the numisdata161
+
 						$mode = $this->mode==='tm'
-							? 'tm' . $dataframe_tm_mode // propagate tm mode from parent
+							? 'tm' // propagate tm mode from parent
 							: ($dd_object->mode ?? $this->get_mode());
 
 					// prevent resolve non children from path ddo, remove the non direct child,
