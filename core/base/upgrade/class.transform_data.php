@@ -2298,7 +2298,13 @@ class transform_data {
 		$component_tipo			= $options->component_tipo;
 		$value					= $options->value;
 		$datos					= $options->datos;
+		$q						= $options->q;
+		$model					= $options->model;
+		$name					= $options->name;
 
+		if( !empty($q) ){
+			$q = addslashes($q);
+		}
 		// cache to be used when the data needs to apply into every new record
 		static $cache_set_move_identification_value;
 		$cache_key = $action.'_'.$section_tipo.'_'.$component_tipo;
@@ -2323,7 +2329,7 @@ class transform_data {
 					$sqo = json_decode('
 						{
 							"section_tipo": [
-								"rsc450"
+								"'.$section_tipo.'"
 							],
 							"limit": 10,
 							"offset": 0,
@@ -2331,15 +2337,15 @@ class transform_data {
 								"$and": [
 									{
 										"q": [
-											"Moved from People"
+											"'.$q.'"
 										],
 										"q_operator": null,
 										"path": [
 											{
-												"section_tipo": "rsc450",
-												"component_tipo": "rsc452",
-												"model": "component_input_text",
-												"name": "Typology"
+												"section_tipo": "'.$section_tipo.'",
+												"component_tipo": "'.$component_tipo.'",
+												"model": "'.$model.'",
+												"name": "'.$name.'"
 											}
 										],
 										"q_split": true,
@@ -2992,6 +2998,19 @@ class transform_data {
 
 		return $section_tipo_key;
 	}//end get_section_tipo_key_from_main_component
+
+
+
+	/**
+	* CHANGE_DATA_LANG
+	* Switch language of some component form original lang to target lang
+	* Used to set non translatable component to translatable component or vice versa.
+	* @return
+	*/
+	public static function change_data_lang( object $options ) {
+
+	}//end change_data_lang
+
 
 
 
