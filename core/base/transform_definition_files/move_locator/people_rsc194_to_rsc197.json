@@ -12,6 +12,9 @@
 				"from_component_tipo"	: "rsc449",
 				"type"					: "dd151",
 				"component_tipo"		: "rsc452",
+				"q" 					: "Moved from People",
+				"model"					: "component_input_text",
+				"name" 					: "Typology",
 				"value": {
 					"lg-cat": ["Mogut des de Persona"],
 					"lg-deu": ["Umgezogen aus Personen"],
