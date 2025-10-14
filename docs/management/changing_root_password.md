@@ -12,6 +12,11 @@ For security reasons, the root user is not accessible via the Dédalo web interf
 
 ## Requirements
 
+!!! warning "Secure Environment Required"
+    Isolate Installation During Procedure.
+    Before beginning this sensitive operation, ensure your Dédalo installation is not publicly accessible.
+    This critical security procedure requires that you temporarily remove public access to Dédalo to prevent unauthorized access during the password change process.
+
 1. Server access using the GNU/Linux account created for Dédalo installation
 2. Privileged user access to the Dédalo PostgreSQL database
 
