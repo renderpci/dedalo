@@ -73,6 +73,18 @@ tool_lang.prototype.init = async function(options) {
 				: null
 			self.target_lang	= null
 
+			// lg-nolan case. If the tool is open from a nolan component, add the
+			// component lang to the langs list because is not added by default in the page_globals.dedalo_projects_default_langs.
+			const found = self.langs.find(el => el.value===self.source_lang)
+			if (!found && self.source_lang==='lg-nolan') {
+				const nolan = {
+					label	: 'No lang',
+					value	: 'lg-nolan',
+					tld2	: 'nolan'
+				}
+				self.langs.push(nolan);
+			}
+
 		// target translator. When user changes it, a local DB var is stored as 'translator_engine_select' in table 'status'
 			const translator_engine_select_object = await data_manager.get_local_db_data(
 				'translator_engine_select',
