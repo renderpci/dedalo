@@ -12,6 +12,9 @@
 	import {view_mini_iri} from './view_mini_iri.js'
 	import {get_dataframe} from '../../component_common/js/component_common.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
+
+
 
 /**
 * RENDER_EDIT_COMPONENT_IRI
@@ -501,7 +504,7 @@ export const get_buttons = (self) => {
 				title			: get_label.new || 'New',
 				parent			: fragment
 			})
-			button_add_input.addEventListener('click', function(e) {
+			const button_add_input_click_habdler = (e) => {
 				e.stopPropagation()
 
 				const changed_data = [Object.freeze({
@@ -514,12 +517,15 @@ export const get_buttons = (self) => {
 					refresh			: true
 				})
 				.then(()=>{
-					const input_node = self.node.content_data[changed_data[0].key].querySelector('input')
-					if (input_node) {
-						input_node.focus()
-					}
+					dd_request_idle_callback(()=>{
+						const input_node = self.node.content_data[changed_data[0].key].querySelector('input.url')
+						if (input_node) {
+							input_node.focus()
+						}
+					})
 				})
-			})
+			}
+			button_add_input.addEventListener('click', button_add_input_click_habdler)
 		}
 
 	// buttons tools
