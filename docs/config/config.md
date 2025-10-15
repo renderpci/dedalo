@@ -2637,13 +2637,17 @@ define('DEDALO_UPLOAD_TMP_URL', DEDALO_MEDIA_URL  . '/upload/service_upload/tmp'
 
 ./dedalo/config/config.php
 
-DEDALO_UPLOAD_SERVICE_CHUNK_FILES `int || bool`
+DEDALO_UPLOAD_SERVICE_CHUNK_FILES `int || false`
 
-When has a int this parameter defines the size to split into chunk files.
+Defines the size at which files are split into chunks for upload.
 
-When the parameter is `false` the files will not chunked, the upload will be without split.
+This parameter allows you to break large files into smaller, more manageable pieces for reliable resumable uploads.
 
-This parameter will use to split files at specific size into small chunks or blobs. The value is expressed in MB, but do not use the MB string, the value is a integer, for ex: 95 will be interpreted as 95MB.
+This parameter will use to split files at specific size into small chunks or blobs. The value is expressed in MB, but do not use the MB string, the value is a integer, for ex: 5 will be interpreted as 5MB.
+
+When an integer is provided, any file larger than this value will be automatically segmented into chunks. The value is interpreted as Megabytes (MB). For example, chunkSize: 95 will create chunks of approximately 95MB each.
+
+When set to `false`, the chunking feature is disabled, and all files are uploaded in a single request.
 
 ```php
 define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES', false); // 5 = 5MB
