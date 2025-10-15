@@ -2464,6 +2464,9 @@ abstract class common {
 
 					// debug
 						if(SHOW_DEBUG===true) {
+							$related_model = isset($related_element)
+								? $related_element->get_model()
+								: ($dd_object->tipo ?? null);
 							$len = !empty($dd_object->tipo)
 								? strlen($dd_object->tipo)
 								: 0;
@@ -2472,7 +2475,7 @@ abstract class common {
 								: 0;
 							$tipo_line = $dd_object->tipo .' '. str_repeat('-', $repeat);
 							debug_log(
-								'--- resolve ddo ------------------ '.$tipo_line.' '. number_format(exec_time_unit($ddo_start_time,'ms'), 3).' ms' . ' - ' . $related_element->get_model(),
+								'--- resolve ddo ------------------ '.$tipo_line.' '. number_format(exec_time_unit($ddo_start_time,'ms'), 3).' ms' . ' - ' . $related_model,
 								logger::DEBUG
 							);
 						}
