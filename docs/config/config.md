@@ -2649,6 +2649,32 @@ This parameter will use to split files at specific size into small chunks or blo
 define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES', false); // 5 = 5MB
 ```
 
+---
+
+### Defining the maximum number of simultaneous connections for uploading chunked files
+
+./dedalo/config/config.php
+
+DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT `int || false`
+
+Defines the maximum number of simultaneous HTTP requests that can be open to the server when uploading a file in chunks.
+
+When set to `false`, the internal limit is removed. The browser will then determine the maximum number of concurrent requests, which is typically based on the HTTP protocol version (see below).
+When set to a positive integer (e.g., 50), the client will enforce that limit, ensuring no more than the specified number of chunks are uploaded simultaneously.
+
+Protocol Dependencies:
+This parameter is highly dependent on the HTTP protocol version in use:
+
+For HTTP/1.1: The standard limits the number of simultaneous requests per domain to a very low number (typically 4-6). In this environment, setting a value higher than ~6 is ineffective and will be ignored by the browser. For optimal performance with HTTP/1.1, it is recommended to set this value to 4.
+For HTTP/2: The protocol supports multiplexing, allowing many requests to be sent concurrently over a single connection. While this allows for a higher limit, setting the value too high can overwhelm the server with simultaneous processing load. This parameter should be used to throttle the requests to a level your server can handle reliably.
+
+Purpose:
+This setting allows you to optimize upload performance and ensure server stability by defining a number of concurrent chunk upload requests that your server can process efficiently.
+
+```php
+define('DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT', 50);
+```
+
 ### Georeferencing variables
 
 Dédalo use a georeference system based in leaflet library to create maps for the heritage.
