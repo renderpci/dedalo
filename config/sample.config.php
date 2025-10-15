@@ -530,8 +530,12 @@
 	// values supported:
 	// bool: false -> the files will not chunked
 	// int: 95 -> files will be chunked in xMB fragments. 95MB files
-	define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES', false); // 5 = 5MB
-
+	define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES', 4); // 5 = 5MB
+	// DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT
+	// Used to limit the maximum request that client can open to the server when the uploaded file is chunked
+	// in HTTP1.1 connections the limit is 4 request and is not possible to change it.
+	// in HTTP2 connections is not limited and can overload the server, this param set a valid upload request that servers can handle.
+	define('DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT', 50); // 50 chunk request simultaneous.
 
 
 // geo location. string from values: OSM | ARCGIS | GOOGLE | VARIOUS | ARCGIS . Default: 'VARIOUS'
