@@ -348,7 +348,6 @@ class component_iri extends component_common {
 	*/
 	public function get_properties() : ?object {
 
-
 		if ( $this->included_dataframe_properties ){
 			return $this->properties; // already fixed
 		}
@@ -439,36 +438,24 @@ class component_iri extends component_common {
 			if (!empty($data)) {
 				foreach ($data as $current_value) {
 
-					$current_iri	= $current_value->iri ?? '';
-					$current_title	= $current_value->title ?? '';
-				// component dataframe of the component iri
-					$caller_dataframe 		= (object)[
-						'section_tipo'			=> $this->section_tipo,
-						'section_id_key'		=> $current_value->id,
-						'section_tipo_key'		=> $this->section_tipo,
-						'main_component_tipo'	=> $this->tipo
-					];
+					$ar_parts = [];
 
-					// Build the component
-					$component_dataframe_label = component_common::get_instance(
-						'component_dataframe', // string model
-						DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
-						$this->section_id, // string section_id
-						'list', // string mode
-						DEDALO_DATA_NOLAN, // string lang
-						$this->section_tipo ,// string section_tipo,
-						false, //cache
-						$caller_dataframe // caller dataframe
-					);
-
-					$dataframe_label = $component_dataframe_label->get_value();
-					$title = $dataframe_label ?? $current_title;
-					// set the title of the data as label of the dataframe
-					if( !empty($title) ){
-						$current_value->title = $title;
+					// iri property
+					$current_iri = $current_value->iri ?? null;
+					if ($current_iri) {
+						$ar_parts[] = $current_iri;
 					}
+
+					// title property
+					$current_title = $this->resolve_title( $current_value );
+					if (!empty($current_title)) {
+						$ar_parts[] = $current_title;
+						// set the title of the data as label of the dataframe
+						$current_value->title = $current_title;
+					}
+
 					// set a flat version to be downloaded
-					$ar_values[] = $title . $fields_separator . $current_iri;
+					$ar_values[] = implode($fields_separator, $ar_parts);
 				}
 			}
 
@@ -493,6 +480,46 @@ class component_iri extends component_common {
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
+
+
+
+	/**
+	* RESOLVE_TITLE
+	* Resolve the IRI title using the dataframe value when is available.
+	* @param object $value
+	*  E.g. {"id":1,"title":"Old title","iri":"https://dedalo.dev"}
+	* @return string|null $title
+	*/
+	public function resolve_title( object $value ) : ?string {
+
+		// component dataframe of the component_iri
+		$caller_dataframe = (object)[
+			'section_tipo'			=> $this->section_tipo,
+			'section_id_key'		=> $value->id,
+			'section_tipo_key'		=> $this->section_tipo,
+			'main_component_tipo'	=> $this->tipo
+		];
+
+		// Build the component
+		$component_dataframe_label = component_common::get_instance(
+			'component_dataframe', // string model
+			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
+			$this->section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$this->section_tipo ,// string section_tipo,
+			false, //cache
+			$caller_dataframe // caller dataframe
+		);
+		// dataframe value as string
+		$dataframe_label = $component_dataframe_label->get_value();
+
+		// Set title with fallback from dataframe value to data item value (old values).
+		$title = $dataframe_label ?? $value->title ?? null;
+
+
+		return $title;
+	}//end resolve_title
 
 
 
@@ -617,7 +644,6 @@ class component_iri extends component_common {
 				return null;
 			}
 
-
 		$ar_values = [];
 		foreach ($dato as $value) {
 
@@ -626,9 +652,12 @@ class component_iri extends component_common {
 			}
 
 			$ar_parts = [];
-			if (!empty($value->title)) {
-				$ar_parts[] = $value->title;
+
+			$current_title = $this->resolve_title( $value );
+			if (!empty($current_title)) {
+				$ar_parts[] = $current_title;
 			}
+
 			if (!empty($value->iri)) {
 				$ar_parts[] = $value->iri;
 			}
@@ -1751,7 +1780,6 @@ class component_iri extends component_common {
 
 		// Save
 		$component_dataframe_label->Save();
-
 	}//end save_label_dataframe
 
 
