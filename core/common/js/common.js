@@ -603,7 +603,7 @@ common.prototype.refresh = async function(options={}) {
 			// var t2 = performance.now()
 		}
 
-	// render. Only render content_data, not the whole element wrapper
+	// Render. Only render content_data, not the whole element wrapper
 		let result
 		if (self.status==='built') {
 			await self.render({

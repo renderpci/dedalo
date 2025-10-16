@@ -12,6 +12,9 @@
 	import {view_mini_iri} from './view_mini_iri.js'
 	import {get_dataframe} from '../../component_common/js/component_common.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
+
+
 
 /**
 * RENDER_EDIT_COMPONENT_IRI
@@ -97,9 +100,10 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @param int i
-* @param object current_value
-* @param object self
+* Renders the current value DOM nodes.
+* @param int i - Value key from the data array
+* @param object current_value - Value itself
+* @param object self - component instance
 * @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
@@ -130,8 +134,6 @@ const get_content_value = (i, current_value, self) => {
 		get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
-			// section_tipo		: self.section_tipo,
-			// tipo_key			: self.tipo,
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
 			main_component_tipo	: self.tipo,
@@ -141,8 +143,7 @@ const get_content_value = (i, current_value, self) => {
 		.then(async function(component_dataframe){
 
 			// dataframe
-				// set the component_dataframe
-				// is mandatory use it
+				// set the component_dataframe, is mandatory use it.
 				if(component_dataframe){
 					// Add dataframe instance to component dependencies array
 					self.ar_instances.push(component_dataframe)
@@ -417,7 +418,6 @@ const get_content_value_read = (i, current_value, self) => {
 		current_value = current_value || {}
 
 	// short vars
-		const mode	= self.mode
 		const title	= current_value.title || ''
 		const iri	= current_value.iri || ''
 
@@ -431,8 +431,6 @@ const get_content_value_read = (i, current_value, self) => {
 		get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
-			// section_tipo		: self.section_tipo,
-			// tipo_key			: self.tipo,
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
 			main_component_tipo	: self.tipo,
@@ -442,8 +440,7 @@ const get_content_value_read = (i, current_value, self) => {
 		.then(async function(component_dataframe){
 
 			// dataframe
-				// set the component_dataframe
-				// is mandatory use it
+				// set the component_dataframe, is mandatory use it.
 				if(component_dataframe){
 					// Add dataframe instance to component dependencies array
 					self.ar_instances.push(component_dataframe)
@@ -481,7 +478,9 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object self
+* Renders the component main buttons DOM nodes displayed at top.
+* Included 'Add' and tool buttons.
+* @param object self - component instance
 * @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
@@ -501,7 +500,7 @@ export const get_buttons = (self) => {
 				title			: get_label.new || 'New',
 				parent			: fragment
 			})
-			button_add_input.addEventListener('click', function(e) {
+			const button_add_input_click_habdler = (e) => {
 				e.stopPropagation()
 
 				const changed_data = [Object.freeze({
@@ -514,12 +513,15 @@ export const get_buttons = (self) => {
 					refresh			: true
 				})
 				.then(()=>{
-					const input_node = self.node.content_data[changed_data[0].key].querySelector('input')
-					if (input_node) {
-						input_node.focus()
-					}
+					dd_request_idle_callback(()=>{
+						const input_node = self.node.content_data[changed_data[0].key].querySelector('input.url')
+						if (input_node) {
+							input_node.focus()
+						}
+					})
 				})
-			})
+			}
+			button_add_input.addEventListener('click', button_add_input_click_habdler)
 		}
 
 	// buttons tools
