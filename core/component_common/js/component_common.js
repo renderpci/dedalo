@@ -1600,6 +1600,7 @@ export const get_dataframe = async function(options) {
 	const main_component_tipo	= options.main_component_tipo
 	const view					= options.view
 	const mode					= options.mode
+	const lang					= options.lang
 
 	const request_config = self.context.request_config || null
 
@@ -1623,6 +1624,9 @@ export const get_dataframe = async function(options) {
 		instance_options.matrix_id = self.matrix_id
 		instance_options.id_variant = `${instance_options.id_variant}_${self.matrix_id}`
 	}
+
+	// add lang if is defined from options
+	instance_options.lang = lang
 
 	// component_dataframe init instance
 	const component_dataframe = await get_instance(instance_options)
