@@ -1767,8 +1767,11 @@ class component_iri extends component_common {
 	public function get_id_from_key( int $key, array $skip_langs=[] ) : ?int {
 
 		$all_data = $this->get_dato_full();
+		if (empty($all_data)) {
+			return null;
+		}
 
-		foreach ($all_data as $lang => $value) {
+		foreach ((array)$all_data as $lang => $value) {
 			// check if the data is a language to skip
 			// when the component check if the id has been used by other languages
 			// it needs to remove its own language data to avoid false positives.
