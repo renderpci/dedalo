@@ -116,6 +116,7 @@ const get_content_value = (i, current_value, self) => {
 		const title					= current_value.title || ''
 		const iri					= current_value.iri || ''
 		const with_lang_versions	= self.context.properties.with_lang_versions || false
+		const transliterate_value	= self.data?.transliterate_value?.[i] || null
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -124,9 +125,13 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// If the value is empty, return the empty node
-		if(Object.keys(current_value).length === 0){
-			current_value.id = self.data.counter+1
-			// return content_value;
+		const value_is_empty = !current_value || Object.keys(current_value).length === 0
+		if(value_is_empty){
+			if (transliterate_value?.id) {
+				current_value.id = transliterate_value.id
+			}else{
+				current_value.id = self.data.counter+1
+			}
 		}
 
 	// dataframe
@@ -150,6 +155,10 @@ const get_content_value = (i, current_value, self) => {
 					// Render it and add to content_value
 					const dataframe_node = await component_dataframe.render()
 					dataframe_node.classList.add('dataframe')
+					// Ensure empty transliterations do not add new dataframes accidentally
+					if (value_is_empty && transliterate_value) {
+						dataframe_node.classList.add('loading')
+					}
 					content_value.appendChild(dataframe_node)
 				}
 
@@ -237,6 +246,22 @@ const get_content_value = (i, current_value, self) => {
 
 						// update_value(self, i, current_value)
 							self.change_handler(i, current_value)
+
+						// Refresh dataframe once
+							if(component_dataframe
+								&& component_dataframe.node?.classList.contains('loading')
+								){
+								// Force render again component_dataframe to load
+								// value that is not loaded if component_iri value is empty
+								// because it depends of the subdatum in current lang.
+								component_dataframe.refresh({
+									build_autoload	: true,
+									render_level	: 'content'
+								})
+								.then(function(){
+									component_dataframe.node.classList.remove('loading')
+								})
+							}
 
 					}//end change_iri_handler
 					input_iri.addEventListener('change', change_iri_handler)
@@ -370,32 +395,10 @@ const get_content_value = (i, current_value, self) => {
 					}
 				})
 
-			// transliterate value
-				if(self.data.transliterate_value) {
-
-					const transliterate_value = self.data.transliterate_value[0] || {}
-
-					const transliterate_value_container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'transliterate_value',
-						parent			: content_value
-					})
-					// title
-						const title_text = transliterate_value.title || ''
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'title',
-							inner_html		: title_text,
-							parent			: transliterate_value_container
-						})
-					// IRI
-						const iri_text = transliterate_value.iri || ''
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'iri',
-							inner_html		: iri_text,
-							parent			: transliterate_value_container
-						})
+			// transliterate value object
+				if(transliterate_value) {
+					const transliterate_value_container = render_transliterate_value(transliterate_value);
+					content_value.appendChild(transliterate_value_container)
 				}
 		})//end .then
 
@@ -406,7 +409,66 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
+* RENDER_TRANSLITERATE_VALUE
+* Create the transliterate value DOM nodes from transliterate_value
+* @param object transliterate_value
+* @return HTMLElement transliterate_value_container
+*/
+export const render_transliterate_value = function (transliterate_value) {
+
+	const transliterate_value_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'transliterate_value'
+	})
+
+	// elements
+	const transliterate_elements = []
+
+	// title
+	if (transliterate_value.title) {
+		const transliterate_title = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'title',
+			inner_html		: transliterate_value.title
+		})
+		transliterate_elements.push(transliterate_title)
+	}
+
+	// IRI
+	if (transliterate_value.iri) {
+		const transliterate_iri = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'iri',
+			inner_html		: transliterate_value.iri
+		})
+		transliterate_elements.push(transliterate_iri)
+	}
+
+	// Add nodes to transliterate_value_container
+	const transliterate_elements_length = transliterate_elements.length
+	for (let i = 0; i < transliterate_elements_length; i++) {
+		const item = transliterate_elements[i]
+		transliterate_value_container.appendChild(item)
+		// separator. Add to all except the last node
+		if (i < transliterate_elements_length -1) {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'separator',
+				inner_html		: ' - ',
+				parent			: transliterate_value_container
+			})
+		}
+	}
+
+
+	return transliterate_value_container
+}//end render_transliterate_value
+
+
+
+/**
 * GET_CONTENT_VALUE_READ
+* Renders the current value DOM nodes for read only cases.
 * @param int i
 * @param object current_value
 * @param object self
@@ -444,10 +506,12 @@ const get_content_value_read = (i, current_value, self) => {
 				if(component_dataframe){
 					// Add dataframe instance to component dependencies array
 					self.ar_instances.push(component_dataframe)
-					// Render it and append to content_value
-					const dataframe_node = await component_dataframe.render()
-					dataframe_node.classList.add('dataframe')
-					content_value.appendChild(dataframe_node)
+					// Render it and append to content_value only if has value
+					if (component_dataframe.data?.value?.length) {
+						const dataframe_node = await component_dataframe.render()
+						dataframe_node.classList.add('dataframe')
+						content_value.appendChild(dataframe_node)
+					}
 				}
 
 			// title
@@ -503,6 +567,13 @@ export const get_buttons = (self) => {
 			const button_add_input_click_habdler = (e) => {
 				e.stopPropagation()
 
+				// check existing key in transliterate_value
+				// If the same key exists in the transliterate_value, force to refresh the component_iri
+				// to get the subdatum of the dataframe.
+				const current_key			= self.data.value?.length || 0
+				const transliterate_value	= self.data.transliterate_value || []
+				const build_autoload		= transliterate_value[current_key] ? true : false
+
 				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: self.data.value?.length || 0,
@@ -510,7 +581,8 @@ export const get_buttons = (self) => {
 				})]
 				self.change_value({
 					changed_data	: changed_data,
-					refresh			: true
+					refresh			: true,
+					build_autoload	: build_autoload
 				})
 				.then(()=>{
 					dd_request_idle_callback(()=>{
