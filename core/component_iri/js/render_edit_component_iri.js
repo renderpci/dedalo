@@ -100,9 +100,10 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @param int i
-* @param object current_value
-* @param object self
+* Renders the current value DOM nodes.
+* @param int i - Value key from the data array
+* @param object current_value - Value itself
+* @param object self - component instance
 * @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
@@ -133,8 +134,6 @@ const get_content_value = (i, current_value, self) => {
 		get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
-			// section_tipo		: self.section_tipo,
-			// tipo_key			: self.tipo,
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
 			main_component_tipo	: self.tipo,
@@ -144,8 +143,7 @@ const get_content_value = (i, current_value, self) => {
 		.then(async function(component_dataframe){
 
 			// dataframe
-				// set the component_dataframe
-				// is mandatory use it
+				// set the component_dataframe, is mandatory use it.
 				if(component_dataframe){
 					// Add dataframe instance to component dependencies array
 					self.ar_instances.push(component_dataframe)
@@ -420,7 +418,6 @@ const get_content_value_read = (i, current_value, self) => {
 		current_value = current_value || {}
 
 	// short vars
-		const mode	= self.mode
 		const title	= current_value.title || ''
 		const iri	= current_value.iri || ''
 
@@ -434,8 +431,6 @@ const get_content_value_read = (i, current_value, self) => {
 		get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
-			// section_tipo		: self.section_tipo,
-			// tipo_key			: self.tipo,
 			section_id_key		: current_value.id,
 			section_tipo_key	: self.section_tipo,
 			main_component_tipo	: self.tipo,
@@ -445,8 +440,7 @@ const get_content_value_read = (i, current_value, self) => {
 		.then(async function(component_dataframe){
 
 			// dataframe
-				// set the component_dataframe
-				// is mandatory use it
+				// set the component_dataframe, is mandatory use it.
 				if(component_dataframe){
 					// Add dataframe instance to component dependencies array
 					self.ar_instances.push(component_dataframe)
@@ -484,7 +478,9 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object self
+* Renders the component main buttons DOM nodes displayed at top.
+* Included 'Add' and tool buttons.
+* @param object self - component instance
 * @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {
