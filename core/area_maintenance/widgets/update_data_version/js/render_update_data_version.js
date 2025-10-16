@@ -249,6 +249,8 @@ const get_content_data = async function(self) {
 					parent			: body_response
 				})
 				break;
+			case (updates.lock === true):
+				break
 			default:
 				// create the submit button
 				self.caller?.init_form({
