@@ -270,12 +270,13 @@ const get_content_value = (i, current_value, self) => {
 					}
 					input_iri.addEventListener('mousedown', click_handler)
 				// focus event
-					input_iri.addEventListener('focus', function() {
+					const focus_handler = (e) => {
 						// force activate on input focus (tabulating case)
 						if (!self.active) {
 							ui.component.activate(self, false)
 						}
-					})
+					}
+					input_iri.addEventListener('focus', focus_handler)
 				// keyup event
 					const input_iri_keyup_handler = (e) => {
 						// Enter key force to dispatchEvent change
@@ -287,7 +288,7 @@ const get_content_value = (i, current_value, self) => {
 					}
 					input_iri.addEventListener('keyup', input_iri_keyup_handler)
 
-			// active
+			// active checkbox
 				const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
 					? self.context.properties.use_active_check
 					: false
@@ -332,7 +333,6 @@ const get_content_value = (i, current_value, self) => {
 							})
 					}//end change event
 				}
-
 				const active_check_class = (use_active_check) ? 'active_check' : ''
 
 			// button remove
