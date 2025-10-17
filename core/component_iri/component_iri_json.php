@@ -145,6 +145,9 @@
 				$this->set_lang($original_lang);
 			}
 
+		// full data in all langs
+			$item->dato_full = $this->get_dato_full();
+
 		// debug
 			if(SHOW_DEBUG===true) {
 				metrics::add_metric('data_total_time', $start_time);
