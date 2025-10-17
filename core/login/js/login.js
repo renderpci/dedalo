@@ -317,11 +317,12 @@ export const quit = async function(options={}) {
 
 			}else{
 				console.error('API call failed:', api_response);
-				// Remove loading style from body
-				document.body.classList.remove('loading');
+				// redirect to Dédalo base URL to force access to default user section
+				window.location.href = DEDALO_ROOT_WEB
 			}
 	} catch (error) {
 		console.error('Error in quit function:', error);
+	} finally {
 		// Remove loading style from body
 		document.body.classList.remove('loading');
 	}
