@@ -43,7 +43,14 @@ render_page.prototype.edit = async function(options) {
 
 	// wrapper
 		const wrapper = document.createElement('div')
-		wrapper.classList.add('wrapper', self.type)
+
+		// styles
+		const classes = ['wrapper',self.type]
+		if (page_globals?.dedalo_version) {
+			classes.push( 'version_' + page_globals.dedalo_version.replaceAll('.','_') )
+		}
+		wrapper.classList.add(...classes)
+
 		wrapper.appendChild(content_data)
 		// set pointers
 		wrapper.content_data = content_data
