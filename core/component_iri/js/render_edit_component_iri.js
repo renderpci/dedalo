@@ -262,10 +262,13 @@ const get_content_value = (i, current_value, self) => {
 									component_dataframe.node.classList.remove('loading')
 								})
 							}
-
 					}//end change_iri_handler
 					input_iri.addEventListener('change', change_iri_handler)
-
+				// click event
+					const click_handler = (e) => {
+						e.stopPropagation()
+					}
+					input_iri.addEventListener('mousedown', click_handler)
 				// focus event
 					input_iri.addEventListener('focus', function() {
 						// force activate on input focus (tabulating case)
