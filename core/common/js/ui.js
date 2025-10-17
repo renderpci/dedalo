@@ -798,6 +798,12 @@ export const ui = {
 					return false
 				}
 
+			// blur active Element. This forces the component update changed_data
+				const input_active = document.activeElement
+				if (input_active) {
+					input_active.blur()
+				}
+
 			// styles. Remove wrapper css active if exists
 				if(component.node && component.node.classList.contains('active')) {
 					component.node.classList.remove('active')
@@ -810,6 +816,7 @@ export const ui = {
 						? component.save_on_deactivate
 						: true
 					if (save_on_deactivate===true) {
+						// saves the unsaved value
 						component.change_value({
 							changed_data	: component.data.changed_data,
 							refresh			: false
