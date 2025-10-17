@@ -597,9 +597,9 @@ const render_filters_selector = function(self) {
 		}
 
 	// localStorage
-		if (!localStorage.getItem(self.id)) {
+		if (!localStorage.getItem(`service_autocomplete_${self.id_base}`)) {
 			// add full the first time
-			localStorage.setItem(self.id, JSON.stringify(ar_id) )
+			localStorage.setItem(`service_autocomplete_${self.id_base}`, JSON.stringify(ar_id) )
 		}
 
 
@@ -715,7 +715,7 @@ const render_option_checkbox = function(self, datalist_item) {
 		input_checkbox.dd_value	= value
 
 		// local storage check. If exists, use it to update checked status
-			const local_storage_ar_id = JSON.parse(localStorage.getItem(self.id))
+			const local_storage_ar_id = JSON.parse(localStorage.getItem(`service_autocomplete_${self.id_base}`))
 			if (local_storage_ar_id) {
 
 				const current_state = input_checkbox.checked
@@ -754,7 +754,7 @@ const render_option_checkbox = function(self, datalist_item) {
 				const id			= element.id
 				const current_state	= element.checked
 
-				const local_storage_ar_id = JSON.parse(localStorage.getItem(self.id))
+				const local_storage_ar_id = JSON.parse(localStorage.getItem(`service_autocomplete_${self.id_base}`))
 				if (local_storage_ar_id) {
 					// search current id in local_storage_ar_id array
 					const key = local_storage_ar_id.indexOf(id)
@@ -764,7 +764,7 @@ const render_option_checkbox = function(self, datalist_item) {
 						local_storage_ar_id.splice(key, 1);
 					}
 					// save updated array
-					localStorage.setItem(self.id, JSON.stringify(local_storage_ar_id) )
+					localStorage.setItem(`service_autocomplete_${self.id_base}`, JSON.stringify(local_storage_ar_id) )
 
 					return key
 				}
