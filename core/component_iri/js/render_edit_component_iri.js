@@ -350,6 +350,28 @@ const get_content_value = (i, current_value, self) => {
 						return
 					}
 
+					// Check if current value already exists in another lang
+					const dato_full = self.data?.dato_full || {};
+					const existing_key_langs = []
+					for (const current_lang in dato_full) {
+						const lang_values = dato_full[current_lang] || []
+						// Add existing values in lang different from actual
+						if (lang_values[i] && current_lang!==self.lang) {
+							const current_iri = lang_values[i].iri || 'Empty value'
+							const string = `${current_iri} [${current_lang}]`
+							existing_key_langs.push(string)
+						}
+					}
+					if (existing_key_langs.length > 0) {
+						const msg = (get_label.value_already_exits_in_other_langs || `Value already exists in another langs`) + ':'
+							+ '\n\n' + existing_key_langs.join('\n')
+							+ '\n\n' + (get_label.all_this_values_will_be_removed || 'All this values will be removed too') + '.'
+							+ '\n\n' + (get_label.sure || 'Sure?')
+						if (!confirm(msg)) {
+							return
+						}
+					}
+
 					// force possible input change before remove
 					document.activeElement.blur()
 
