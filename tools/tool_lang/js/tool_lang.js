@@ -5,7 +5,7 @@
 
 
 // import
-	import {dd_console} from '../../../core/common/js/utils/index.js'
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
@@ -67,7 +67,7 @@ tool_lang.prototype.init = async function(options) {
 	try {
 
 		// set the self specific vars not defined by the generic init (in tool_common)
-			self.langs			= page_globals.dedalo_projects_default_langs
+			self.langs			= clone(page_globals.dedalo_projects_default_langs)
 			self.source_lang	= self.caller && self.caller.lang
 				? self.caller.lang
 				: null
