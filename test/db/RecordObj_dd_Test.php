@@ -1425,7 +1425,6 @@ final class RecordObj_dd_test extends TestCase {
 		$tipo			= 'test99999';
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$result			= $RecordObj_dd->Delete();
-			dump($result, ' test_delete result ++ '.to_string());
 
 		$expected	= 'NULL';
 		$eq			= gettype($result)===$expected;
