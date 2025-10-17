@@ -314,13 +314,15 @@ login.quit = async function(options={}) {
 				}
 			);
 
-		}else{
-			console.error('API call failed:', api_response);
-		}
+			}else{
+				console.error('API call failed:', api_response);
+				// redirect to Dédalo base URL to force access to default user section
+				window.location.href = DEDALO_ROOT_WEB
+			}
 	} catch (error) {
 		console.error('Error in quit function:', error);
 	} finally {
-		// Ensure loading class is always removed
+		// Remove loading style from body
 		document.body.classList.remove('loading');
 	}
 }//end quit
