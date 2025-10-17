@@ -420,8 +420,8 @@ const get_content_value = (i, current_value, self) => {
 					}
 				})
 
-			// transliterate value object
-				if(transliterate_value) {
+			// transliterate value object. Add only if has iri value.
+				if(transliterate_value?.iri) {
 					const transliterate_value_container = render_transliterate_value(transliterate_value);
 					content_value.appendChild(transliterate_value_container)
 				}

@@ -177,6 +177,11 @@ component_iri.prototype.focus_first_input = function() {
 */
 component_iri.prototype.check_iri_value = function( input_iri_value ) {
 
+	// Empty values are accepted to clean up the value
+	if (!input_iri_value || input_iri_value.length===0) {
+		return true
+	}
+
 	// First check the input string with a strict regex before passing to URL
 	const strict_pattern = /^https?:\/\/([a-zA-Z0-9\-._~%]+)(:[0-9]+)?(\/.*)?$/i;
 	if (!strict_pattern.test(input_iri_value)) {

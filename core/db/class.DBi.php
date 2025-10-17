@@ -386,7 +386,7 @@ abstract class DBi {
 
 	/**
 	* CHECK_TABLE_EXISTS
-	* Verify is the given table already exists in Dédalo DDBB
+	* Verify is the given table already exists in Dédalo DB
 	* @param string $table
 	* @return bool
 	*/
@@ -425,7 +425,7 @@ abstract class DBi {
 
 	/**
 	* CHECK_COLUMN_EXISTS
-	* Verify is the given column already exists in Dédalo DDBB
+	* Verify is the given column already exists in Dédalo DB
 	* @param string $table
 	* @param string $column
 	* @return bool
@@ -510,7 +510,6 @@ abstract class DBi {
 		// --- Statement 2: COMMENT ON COLUMN (Only if a comment is provided) ---
 		if (!empty($comment)) {
 
-			// 2. FIX: SQL Syntax & Logic ✍️ - Use COMMENT ON COLUMN
 			// We use pg_escape_literal for the actual comment string
 			$safe_comment = pg_escape_literal($conn, $comment);
 
@@ -527,18 +526,18 @@ abstract class DBi {
 		}
 
 		return $added;
-	} //end add_column
+	}//end add_column
 
 
 
 	/**
-	 * REMOVE_COLUMN
-	 * Removes a column from the given table in Dédalo DB
-	 * @param string $table
-	 * @param string $column
-	 * @return bool
-	 */
-	public static function remove_column(string $table, string $column): bool {
+	* REMOVE_COLUMN
+	* Removes a column from the given table in Dédalo DB
+	* @param string $table
+	* @param string $column
+	* @return bool
+	*/
+	public static function remove_column( string $table, string $column ): bool {
 
 		// Check if the column exists. If it does NOT exist, the goal is achieved, return true.
 		if (false === DBi::check_column_exists($table, $column)) {
@@ -570,7 +569,7 @@ abstract class DBi {
 
 		// Column dropped successfully
 		return true;
-	} //end remove_column
+	}//end remove_column
 
 
 

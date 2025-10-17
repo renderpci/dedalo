@@ -32,40 +32,9 @@
 					}
 				}
 
-				// input (text title/url)
-				.input_value {
-					padding-right: 0.5rem;
-
-					&.title {
-						width: calc(20% - 0.5rem);
-						padding-left: 0.5rem;
-
-					}
-
-					&.url {
-						width: 60%;
-						&:focus {
-							padding-right: 3.15rem;
-						}
-					}
-
-					@media screen and (max-width: @width_break_point_1) {
-						margin-right: 1px;
-
-						&.title {
-							width: 100%;
-						}
-
-						&.url {
-							width: 100%;
-							margin-bottom: 1rem;
-						}
-					}
-				}
-
 				// dataframe inside
-				.component_dataframe {
-					width: calc(20% - 0.5rem);
+				>.component_dataframe {
+					width: calc(30% - 0.5rem);
 					height: 2rem;
 
 					>.content_data {
@@ -94,6 +63,37 @@
 									min-height: 1.2rem;
 								}
 							}
+						}
+					}
+				}
+
+				// input (text title && url)
+				>.input_value {
+					padding-right: 0.5rem;
+
+					&.title {
+						width: calc(20% - 0.5rem);
+						padding-left: 0.5rem;
+
+					}
+
+					&.url {
+						width: 50%;
+						&:focus {
+							padding-right: 3.15rem;
+						}
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						margin-right: 1px;
+
+						&.title {
+							width: 100%;
+						}
+
+						&.url {
+							width: 100%;
+							margin-bottom: 1rem;
 						}
 					}
 				}
