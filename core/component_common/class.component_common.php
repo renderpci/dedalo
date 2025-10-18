@@ -3768,46 +3768,25 @@ abstract class component_common extends common {
 				// get the key to be removed into data
 					$key = $changed_data->key;
 
-				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
-				$this->observable_dato = (get_called_class()==='component_relation_related')
+				// set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
+				$this->observable_dato = ( get_called_class()==='component_relation_related' )
 					? $this->get_dato_with_references()
 					: $dato;
 
-				//dataframe
-					$dataframe_ddo = $this->get_dataframe_ddo();
-					if(!empty($dataframe_ddo) && $changed_data->key!==false ){
-						// set the locator with the data of the component
-						// when the component is a relation pick the correct locator
-						$locator = $dato[$key];
-						// if the caller is a literal as component_iri
-						// build a new locator with the id of the component data and its own section_tipo
-						if( get_called_class() === 'component_iri'){
+				// Fix locator used to delete dataframe
+				// Set the locator with the data of the component.
+				// When the component is a relation, pick the correct locator
+				$locator = $dato[$key] ?? null;
 
-							$locator = new locator();
-								$locator->set_section_tipo($this->section_tipo);
-								$locator->set_section_id($dato[$key]->id);
-							// check if the dataframe is used in other langs
-							// if the id is used don't remove the dataframe.
-							$id_exists = $this->get_id_from_key( $key, [$lang]);
-							if( !empty($id_exists) ){
-								$locator = null;
-							}
-						}
-						// remove the dataframe data
-						if( !empty($locator) ){
-							$this->remove_dataframe_data( $locator );
-						}
-
-					}
-
+				// Delete dato
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
 						$value = [];
 						$this->set_dato($value);
 						break;
 
-					case ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)):
-						// propagate to other data langs
+					case ($changed_data->value===null && ($with_lang_versions===true && $lang===DEDALO_DATA_NOLAN)):
+						// propagate deletion to other data langs
 						$section = $this->get_my_section();
 
 						// deactivate save option
@@ -3839,6 +3818,43 @@ abstract class component_common extends common {
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
 						break;
+				}
+
+				// Delete dataframe
+				$dataframe_ddo = $this->get_dataframe_ddo();
+				if( !empty($dataframe_ddo) && $changed_data->key!==false && isset($locator) ){
+
+					// If the caller is a literal as component_iri
+					// build a new locator with the id of the component data and its own section_tipo
+					if( get_called_class()==='component_iri'){
+
+						// Builds a virtual locator for IRI
+							$current_section_id = $locator->id;
+
+						// Overwrite locator
+							$locator = new locator();
+								$locator->set_section_tipo($this->section_tipo);
+								$locator->set_section_id($current_section_id);
+
+						if( $lang!==DEDALO_DATA_NOLAN ){
+							// Prevents to delete the dataframe on any langs different of nolan
+							// Only the nolan should delete the dataframe, other langs will delete main data only.
+
+							// Check if the dataframe is used in nolan.
+							// If the id is already used, don't remove the dataframe.
+							$id_exists_in_nolan = $this->get_key_from_id( $current_section_id, DEDALO_DATA_NOLAN);
+
+							if( $id_exists_in_nolan !== null ){
+								// Prevents to delete the dataframe
+								$locator = null;
+							}
+						}
+					}
+
+					// Remove the dataframe data
+					if( !empty($locator) ){
+						$this->remove_dataframe_data( $locator );
+					}
 				}
 				break;
 
