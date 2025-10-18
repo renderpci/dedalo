@@ -146,7 +146,7 @@ class component_iri extends component_common {
 			foreach( (array)$dato as $value ){
 
 				// Check if the data is an object before attempting property access
-                $is_object = is_object($value);
+				$is_object = is_object($value);
 
 				// check if the data is different that an object
 				// data could be a string or null
@@ -154,7 +154,7 @@ class component_iri extends component_common {
 				// string = previous data become from a input_text
 
 				// Determine if the value has a valid, non-empty ID to be treated as existing data.
-                // This ensures objects with an 'id' property set to null/0/empty are treated as new.
+				// This ensures objects with an 'id' property set to null/0/empty are treated as new.
 				$has_id = ($is_object && property_exists($value, 'id') && $value->id) ? true : false;
 				if( !$has_id ){
 
@@ -208,7 +208,7 @@ class component_iri extends component_common {
 			}//end foreach
 
 			// Assign the processed data back to $dato
-            $dato = $safe_dato;
+			$dato = $safe_dato;
 
 			// Set the counter with the max id when the counter is bellow it.
 			$counter = $this->get_counter();
@@ -1849,7 +1849,7 @@ class component_iri extends component_common {
 				);
 			}
 		}
-		
+
 
 		// If the loop completes without finding a valid ID in any language, return null.
 		return null;
@@ -1868,16 +1868,16 @@ class component_iri extends component_common {
 
 		// All langs array data from component
 		$all_data = $this->get_dato_full();
-		if (empty($all_data)) {
+		if ( empty($all_data) || !is_object($all_data) ) {
 			return null;
 		}
 
 		// Check if the requested language exists
-		if (!isset($all_data[$lang]) || !is_array($all_data[$lang])) {
+		if ( !isset($all_data->{$lang}) || !is_array($all_data->{$lang}) ) {
 			return null;
 		}
 
-		$lang_data = $all_data[$lang];
+		$lang_data = $all_data->{$lang};
 
 		foreach ($lang_data as $key => $current_value) {
 
