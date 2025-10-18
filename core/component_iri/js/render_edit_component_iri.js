@@ -342,7 +342,7 @@ const get_content_value = (i, current_value, self) => {
 					class_name		: 'button remove hidden_button '+ active_check_class,
 					parent			: content_value
 				})
-				button_remove.addEventListener('mousedown', function(e) {
+				const button_remove_mousedown_handler = async (e) => {
 					e.stopPropagation()
 					e.preventDefault()
 
@@ -351,53 +351,87 @@ const get_content_value = (i, current_value, self) => {
 					}
 
 					// Check if current value already exists in another lang
-					const dato_full = self.data?.dato_full || {};
-					const existing_key_langs = []
-					for (const current_lang in dato_full) {
-						const lang_values = dato_full[current_lang] || []
-						// Add existing values in lang different from actual
-						if (lang_values[i] && current_lang!==self.lang) {
-							const current_iri = lang_values[i].iri || 'Empty value'
-							const string = `${current_iri} [${current_lang}]`
-							existing_key_langs.push(string)
+					if (self.lang==='lg-nolan') {
+						const dato_full = self.data?.dato_full || {};
+						const existing_key_langs = []
+						for (const current_lang in dato_full) {
+							const lang_values = dato_full[current_lang] || []
+							// Add existing values in lang different from actual
+							if (lang_values[i] && current_lang!==self.lang) {
+								const current_iri = lang_values[i].iri || 'Empty value'
+								const string = `${current_iri} [${current_lang}]`
+								existing_key_langs.push(string)
+							}
+						}
+						if (existing_key_langs.length > 0) {
+							const msg = (get_label.value_already_exits_in_other_langs || `Value already exists in another langs`) + ':'
+								+ '\n\n' + existing_key_langs.join('\n')
+								+ '\n\n' + (get_label.all_this_values_will_be_removed || 'All this values will be removed too') + '.'
+								+ '\n\n' + (get_label.sure || 'Sure?')
+							if (!confirm(msg)) {
+								return
+							}
 						}
 					}
-					if (existing_key_langs.length > 0) {
-						const msg = (get_label.value_already_exits_in_other_langs || `Value already exists in another langs`) + ':'
-							+ '\n\n' + existing_key_langs.join('\n')
-							+ '\n\n' + (get_label.all_this_values_will_be_removed || 'All this values will be removed too') + '.'
-							+ '\n\n' + (get_label.sure || 'Sure?')
-						if (!confirm(msg)) {
+
+					try {
+						// force possible input change before remove
+						if (document.activeElement) {
+							document.activeElement.blur()
+						}
+
+						// Save value
+						const changed_data = [Object.freeze({
+							action	: 'remove',
+							key		: i,
+							value	: null
+						})]
+						await self.change_value({
+							changed_data	: changed_data,
+							label			: button_remove.previousElementSibling?.value || '',
+							refresh			: true
+						})
+
+						if (typeof current_value === 'undefined') {
+							console.error('current_value is not defined')
 							return
 						}
+
+						// remove dataframe
+						// delete_dataframe_record
+						await delete_dataframe({
+							self				: self,
+							section_id			: self.section_id,
+							section_tipo		: self.section_tipo,
+							section_id_key		: current_value.id,
+							section_tipo_key	: self.section_tipo,
+							paginated_key		: false,
+							row_key				: false
+						})
+
+						// Refresh caller instances (tool_lang_multi case)
+						if (self.caller?.ar_instances) {
+							const components = self.caller.ar_instances.filter(el =>
+								el.model===self.model && el.data?.value
+							)
+
+							if(SHOW_DEBUG===true) {
+								console.log('Refreshing tool components. Total:', components.length - 1);
+							}
+
+							for (const component of components) {
+								if (component.id !== self.id) {
+									await component.refresh() // await the refresh if it's async
+								}
+							}
+						}
+					} catch (error) {
+						console.error('Error in remove operation:', error)
+						// You might want to show a user-friendly error message here
+						alert('An error occurred while removing the item. Please try again.')
 					}
-
-					// force possible input change before remove
-					document.activeElement.blur()
-
-					const changed_data = [Object.freeze({
-						action	: 'remove',
-						key		: i,
-						value	: null
-					})]
-					self.change_value({
-						changed_data	: changed_data,
-						label			: button_remove.previousElementSibling.value,
-						refresh			: true
-					})
-
-					// remove dataframe
-					// delete_dataframe_record
-					delete_dataframe({
-						self				: self,
-						section_id			: self.section_id,
-						section_tipo		: self.section_tipo,
-						section_id_key		: current_value.id,
-						section_tipo_key	: self.section_tipo,
-						paginated_key		: false,
-						row_key				: false
-					})
-				})
+				}
+				button_remove.addEventListener('mousedown', button_remove_mousedown_handler)
 
 			// button link
 				const button_link = ui.create_dom_element({
