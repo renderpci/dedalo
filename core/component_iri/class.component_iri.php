@@ -1800,6 +1800,8 @@ class component_iri extends component_common {
 		}
 
 		foreach ((array)$all_data as $lang => $value) {
+
+			// Skip the language if it's in the exclusion list.
 			// check if the data is a language to skip
 			// when the component check if the id has been used by other languages
 			// it needs to remove its own language data to avoid false positives.
@@ -1810,24 +1812,46 @@ class component_iri extends component_common {
 			if( in_array( $lang, $skip_langs) ){
 				continue;
 			}
-			$valid_data = $value[$key] ?? null;
-			if ( $valid_data ) {
+
+			// Ensure $value is a structured array and the specific $key exists in it.
+			if (!is_array($value) || !array_key_exists($key, $value)) {
+				continue;
+			}
+
+			$valid_data = $value[$key];
+
+			// The 'id' must be contained within an object with an 'id' property.
+			if (is_object($valid_data) && property_exists($valid_data, 'id')) {
+
 				$id = $valid_data->id ?? null;
-				if(empty($id)){
-					debug_log(__METHOD__
-						. " iri data without id " . PHP_EOL
-						. " section_id: ". $this->section_id . PHP_EOL
-						. " section_tipo: ". $this->section_tipo . PHP_EOL
-						. " tipo: ". $this->tipo . PHP_EOL
-						. to_string()
-						, logger::ERROR
-					);
-				}else{
-					return $id;
+
+				// Strict check: We expect a non-empty, non-zero id that can be an integer.
+				// is_numeric covers integer strings and actual integers.
+				if (is_numeric($id) && (int)$id > 0) {
+					// Return the id as an integer.
+					return (int)$id;
 				}
+
+				// If an object with an 'id' property was found, but the id value itself is
+				// invalid (null, 0, or non-numeric), log the error.
+				$log_message = (null !== $id)
+					? ' iri data with invalid id value: ' . var_export($id, true)
+					: ' iri data without id';
+				// Log detailed information about the missing/invalid id.
+				debug_log(__METHOD__
+					. $log_message . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' value: ' . to_string($value)
+					, logger::ERROR
+				);
 			}
 		}
+		
 
+		// If the loop completes without finding a valid ID in any language, return null.
 		return null;
 	}//end get_id_from_key
 
