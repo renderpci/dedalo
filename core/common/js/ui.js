@@ -23,6 +23,9 @@
 
 /**
 * UI
+* User Interface
+* Create common DOM nodes and structures used by areas, sections, components, tools etc.
+* Assign common DOM events and actions
 */
 export const ui = {
 
