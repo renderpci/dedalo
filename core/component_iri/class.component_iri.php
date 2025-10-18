@@ -1833,4 +1833,69 @@ class component_iri extends component_common {
 
 
 
+	/**
+	* GET_KEY_FROM_ID
+	* Check if the given ID exists in the specified data language.
+	* @param int $id
+	* @param string $lang
+	* @return
+	*/
+	public function get_key_from_id( int $id, string $lang ) : ?int {
+
+		// All langs array data from component
+		$all_data = $this->get_dato_full();
+		if (empty($all_data)) {
+			return null;
+		}
+
+		// Check if the requested language exists
+		if (!isset($all_data[$lang]) || !is_array($all_data[$lang])) {
+			return null;
+		}
+
+		$lang_data = $all_data[$lang];
+
+		foreach ($lang_data as $key => $current_value) {
+
+			// // Skip non-objects. Validate current_value is an object with id property
+			if (!is_object($current_value)) {
+				debug_log(__METHOD__
+					. ' iri malformed data (non-object)' . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' current_value: ' .to_string($current_value)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$valid_id = $current_value->id ?? null;
+
+			// Check the current value of the 'id' property and notify if it is malformed.
+			if( empty($valid_id) ){
+				debug_log(__METHOD__
+					. " iri malformed data (missing id)" . PHP_EOL
+					. " section_id: ". $this->section_id . PHP_EOL
+					. " section_tipo: ". $this->section_tipo . PHP_EOL
+					. " tipo: ". $this->tipo . PHP_EOL
+					. to_string()
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Compares id. If is the same, result the array key value.
+			if($current_value->id === $id){
+				return (int)$key;
+			}
+		}
+
+
+		return null;
+	}//end get_key_from_id
+
+
+
 }//end class component_iri
