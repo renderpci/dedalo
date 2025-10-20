@@ -146,7 +146,7 @@ class component_iri extends component_common {
 			foreach( (array)$dato as $value ){
 
 				// Check if the data is an object before attempting property access
-                $is_object = is_object($value);
+				$is_object = is_object($value);
 
 				// check if the data is different that an object
 				// data could be a string or null
@@ -154,7 +154,7 @@ class component_iri extends component_common {
 				// string = previous data become from a input_text
 
 				// Determine if the value has a valid, non-empty ID to be treated as existing data.
-                // This ensures objects with an 'id' property set to null/0/empty are treated as new.
+				// This ensures objects with an 'id' property set to null/0/empty are treated as new.
 				$has_id = ($is_object && property_exists($value, 'id') && $value->id) ? true : false;
 				if( !$has_id ){
 
@@ -208,7 +208,7 @@ class component_iri extends component_common {
 			}//end foreach
 
 			// Assign the processed data back to $dato
-            $dato = $safe_dato;
+			$dato = $safe_dato;
 
 			// Set the counter with the max id when the counter is bellow it.
 			$counter = $this->get_counter();
@@ -1800,6 +1800,8 @@ class component_iri extends component_common {
 		}
 
 		foreach ((array)$all_data as $lang => $value) {
+
+			// Skip the language if it's in the exclusion list.
 			// check if the data is a language to skip
 			// when the component check if the id has been used by other languages
 			// it needs to remove its own language data to avoid false positives.
@@ -1810,26 +1812,113 @@ class component_iri extends component_common {
 			if( in_array( $lang, $skip_langs) ){
 				continue;
 			}
-			$valid_data = $value[$key] ?? null;
-			if ( $valid_data ) {
+
+			// Ensure $value is a structured array and the specific $key exists in it.
+			if (!is_array($value) || !array_key_exists($key, $value)) {
+				continue;
+			}
+
+			$valid_data = $value[$key];
+
+			// The 'id' must be contained within an object with an 'id' property.
+			if (is_object($valid_data) && property_exists($valid_data, 'id')) {
+
 				$id = $valid_data->id ?? null;
-				if(empty($id)){
-					debug_log(__METHOD__
-						. " iri data without id " . PHP_EOL
-						. " section_id: ". $this->section_id . PHP_EOL
-						. " section_tipo: ". $this->section_tipo . PHP_EOL
-						. " tipo: ". $this->tipo . PHP_EOL
-						. to_string()
-						, logger::ERROR
-					);
-				}else{
-					return $id;
+
+				// Strict check: We expect a non-empty, non-zero id that can be an integer.
+				// is_numeric covers integer strings and actual integers.
+				if (is_numeric($id) && (int)$id > 0) {
+					// Return the id as an integer.
+					return (int)$id;
 				}
+
+				// If an object with an 'id' property was found, but the id value itself is
+				// invalid (null, 0, or non-numeric), log the error.
+				$log_message = (null !== $id)
+					? ' iri data with invalid id value: ' . var_export($id, true)
+					: ' iri data without id';
+				// Log detailed information about the missing/invalid id.
+				debug_log(__METHOD__
+					. $log_message . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' value: ' . to_string($value)
+					, logger::ERROR
+				);
 			}
 		}
 
+
+		// If the loop completes without finding a valid ID in any language, return null.
 		return null;
 	}//end get_id_from_key
+
+
+
+	/**
+	* GET_KEY_FROM_ID
+	* Check if the given ID exists in the specified data language.
+	* @param int $id
+	* @param string $lang
+	* @return
+	*/
+	public function get_key_from_id( int $id, string $lang ) : ?int {
+
+		// All langs array data from component
+		$all_data = $this->get_dato_full();
+		if ( empty($all_data) || !is_object($all_data) ) {
+			return null;
+		}
+
+		// Check if the requested language exists
+		if ( !isset($all_data->{$lang}) || !is_array($all_data->{$lang}) ) {
+			return null;
+		}
+
+		$lang_data = $all_data->{$lang};
+
+		foreach ($lang_data as $key => $current_value) {
+
+			// // Skip non-objects. Validate current_value is an object with id property
+			if (!is_object($current_value)) {
+				debug_log(__METHOD__
+					. ' iri malformed data (non-object)' . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' current_value: ' .to_string($current_value)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$valid_id = $current_value->id ?? null;
+
+			// Check the current value of the 'id' property and notify if it is malformed.
+			if( empty($valid_id) ){
+				debug_log(__METHOD__
+					. " iri malformed data (missing id)" . PHP_EOL
+					. " section_id: ". $this->section_id . PHP_EOL
+					. " section_tipo: ". $this->section_tipo . PHP_EOL
+					. " tipo: ". $this->tipo . PHP_EOL
+					. to_string()
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Compares id. If is the same, result the array key value.
+			if($current_value->id === $id){
+				return (int)$key;
+			}
+		}
+
+
+		return null;
+	}//end get_key_from_id
 
 
 
