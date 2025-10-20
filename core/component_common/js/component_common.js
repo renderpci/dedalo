@@ -1787,7 +1787,7 @@ export const delete_dataframe = async function(options) {
 
 	// remove the instance
 		if(delete_instace===true){
-			component_dataframe.destroy(
+			await component_dataframe.destroy(
 				true, // delete_self
 				true, // delete_dependencies
 				true // remove_dom

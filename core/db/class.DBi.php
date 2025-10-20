@@ -386,18 +386,37 @@ abstract class DBi {
 
 	/**
 	* CHECK_TABLE_EXISTS
-	* Verify is the given table already exists in Dédalo DDBB
+	* Verify is the given table already exists in Dédalo DB
 	* @param string $table
 	* @return bool
 	*/
 	public static function check_table_exists( string $table ) : bool {
 
-		$sql = '
-			SELECT EXISTS (SELECT table_name FROM information_schema.tables WHERE table_name = \''.$table.'\');
-		';
-		$result	= pg_query(DBi::_getConnection(), $sql);
-		$row	= pg_fetch_object($result);
-		$exists	= ($row->exists==='t');
+		$conn = DBi::_getConnection();
+
+		$safe_table = pg_escape_literal($conn, $table);
+
+		$sql = "
+			SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = $safe_table) AS table_exists;
+		";
+
+		$result = pg_query($conn, $sql);
+
+		if ($result === false) {
+			debug_log(
+				__METHOD__
+					. " Error. PostgreSQL query failed" . PHP_EOL
+					. 'error: ' . pg_last_error($conn),
+				logger::ERROR
+			);
+			return false;
+		}
+
+		$row = pg_fetch_object($result);
+
+		// Used the explicit alias 'table_exists'
+		$exists = ($row->table_exists === 't');
+
 
 		return $exists;
 	}//end check_table_exists
@@ -406,21 +425,44 @@ abstract class DBi {
 
 	/**
 	* CHECK_COLUMN_EXISTS
-	* Verify is the given column already exists in Dédalo DDBB
+	* Verify is the given column already exists in Dédalo DB
 	* @param string $table
 	* @param string $column
 	* @return bool
 	*/
 	public static function check_column_exists( string $table, string $column ) : bool {
 
-		$sql = '
+		$conn = DBi::_getConnection();
+
+		// Use pg_escape_literal to safely quote and escape the table and column names.
+		// This function adds the necessary single quotes for the SQL string.
+		$safe_table = pg_escape_literal($conn, $table);
+		$safe_column = pg_escape_literal($conn, $column);
+
+		$sql = "
 			SELECT EXISTS (SELECT 1
 			FROM information_schema.columns
-			WHERE table_name = \''.$table.'\' and column_name = \''.$column.'\');
-		';
-		$result	= pg_query(DBi::_getConnection(), $sql);
-		$row	= pg_fetch_object($result);
-		$exists	= ($row->exists==='t');
+			WHERE table_name = $safe_table AND column_name = $safe_column) AS column_exists;
+		";
+
+		$result = pg_query($conn, $sql);
+
+		// Check if the query failed before attempting to fetch results.
+		if ($result === false) {						
+			debug_log(
+				__METHOD__
+					. " Error. PostgreSQL query failed" . PHP_EOL
+					. 'error: ' . pg_last_error($conn),
+				logger::ERROR
+			);
+			return false;
+		}
+
+		$row = pg_fetch_object($result);
+
+		// Use the alias 'column_exists' and check for the PostgreSQL 't' (true) value
+		$exists = ($row->column_exists === 't');
+
 
 		return $exists;
 	}//end check_column_exists
@@ -429,29 +471,105 @@ abstract class DBi {
 
 	/**
 	* ADD_COLUMN
-	* Verify is the given column already exists in Dédalo DDBB
+	* Add a column to the given table in Dédalo DB
 	* @param string $table
 	* @param string $column
 	* @return bool
 	*/
 	public static function add_column( string $table, string $column, $type='jsonb NULL', $comment='' ) : bool {
 
+		$conn = DBi::_getConnection();
+
 		// check if column already exists before
 		if (true===DBi::check_column_exists($table, $column)) {
 			return true;
 		}
 
-		$sql = '
-			ALTER TABLE "'.$table.'"
-			ADD "'.$column.'" '.$type.';
-			COMMENT ON TABLE "'.$table.'" IS \''.$comment.'\';
-		';
-		$result	= pg_query(DBi::_getConnection(), $sql);
+		$safe_table = pg_escape_identifier($conn, $table);
+		$safe_column = pg_escape_identifier($conn, $column);
 
-		$added = ($result!==false);
+		$sql_alter = "
+			ALTER TABLE $safe_table
+			ADD $safe_column $type;
+		";
+
+		$result_alter = pg_query($conn, $sql_alter);
+
+		if ($result_alter === false) {
+			debug_log(
+				__METHOD__
+					. " Error. PostgreSQL query failed" . PHP_EOL
+					. 'error: ' . pg_last_error($conn),
+				logger::ERROR
+			);
+			return false;
+		}
+
+		$added = true;
+
+		// --- Statement 2: COMMENT ON COLUMN (Only if a comment is provided) ---
+		if (!empty($comment)) {
+
+			// We use pg_escape_literal for the actual comment string
+			$safe_comment = pg_escape_literal($conn, $comment);
+
+			$sql_comment = "
+				COMMENT ON COLUMN $safe_table.$safe_column IS $safe_comment;
+			";
+
+			$result_comment = pg_query($conn, $sql_comment);
+
+			if ($result_comment === false) {
+				// The column was added, but the comment failed.				
+				error_log("PostgreSQL COMMENT ON COLUMN failed on $table.$column: " . pg_last_error($conn));
+			}
+		}
 
 		return $added;
 	}//end add_column
+
+
+
+	/**
+	* REMOVE_COLUMN
+	* Removes a column from the given table in Dédalo DB
+	* @param string $table
+	* @param string $column
+	* @return bool
+	*/
+	public static function remove_column( string $table, string $column ): bool {
+
+		// Check if the column exists. If it does NOT exist, the goal is achieved, return true.
+		if (false === DBi::check_column_exists($table, $column)) {
+			return true;
+		}
+
+		$conn = DBi::_getConnection();
+
+		$safe_table = pg_escape_identifier($conn, $table);
+		$safe_column = pg_escape_identifier($conn, $column);
+
+		// Construct the DROP COLUMN SQL query
+		$sql = "
+            ALTER TABLE $safe_table
+            DROP COLUMN $safe_column;
+        ";
+
+		$result = pg_query($conn, $sql);
+
+		if ($result === false) {
+			debug_log(
+				__METHOD__
+					. " Error. PostgreSQL query failed" . PHP_EOL
+					. " PostgreSQL DROP COLUMN failed on $table.$column: " . pg_last_error($conn),
+				logger::ERROR
+			);
+			return false;
+		}
+
+		// Column dropped successfully
+		return true;
+	}//end remove_column
 
 
 
