@@ -2616,7 +2616,6 @@ class component_media_common extends component_common {
 		// Options
 			$delete_normalized_files = $options->delete_normalized_files ?? true;
 
-
 		// full remove the original files except the uploaded file (.pdf, .tiff, .psd, .mov etc)
 			if( $delete_normalized_files===true ){
 				$this->delete_normalized_files();
@@ -2977,7 +2976,11 @@ class component_media_common extends component_common {
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
 					. " original_quality: " . $original_quality . PHP_EOL
-					. ' original_file_path: ' . to_string($original_file_path)
+					. ' original_file_path: ' . to_string($original_file_path) . PHP_EOL
+					. ' model: ' . $this->get_model() . PHP_EOL
+					. ' id: ' . $id . PHP_EOL
+					. ' quality: ' .$quality . PHP_EOL
+					. ' original_quality: ' . to_string($original_quality)
 					, logger::ERROR
 				);
 				$response->errors[] = 'invalid empty original_file_path';
