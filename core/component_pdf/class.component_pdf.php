@@ -285,7 +285,7 @@ class component_pdf extends component_media_common implements component_media_in
 				return $response;
 			}
 
-		// upload info
+		// upload info (uploading original only)
 			$original_quality = $this->get_original_quality();
 			if ($this->quality===$original_quality) {
 				// update upload file info
