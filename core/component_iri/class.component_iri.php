@@ -1641,35 +1641,43 @@ class component_iri extends component_common {
 	*/
 	private static function get_label_record( string $label ) : ?object {
 
-		// Remove spaces
-			$new_label = trim($label);
+		// Sanitize input
+		$new_label = trim(strip_tags($label));
 
-		// search the label into target section:
-		$sqo ='
-			{
-				"section_tipo": ["dd1706"],
-				"limit": 1,
-				"filter": {
-					"$and": [{
-						"q": ["\''.$new_label.'\'"],
-						"q_operator": null,
-						"path": [{
-							"section_tipo": "dd1706",
-							"component_tipo": "dd1715"
-						}]
-					}]
-				}
-			}
-		';
-		$search_query_object = json_decode($sqo);
-		// search
-		$search = search::get_instance(
-			$search_query_object // object sqo
-		);
-		$result			= $search->search();
-		$label_record	= $result->ar_records[0] ?? null;
+		if ($new_label === '') {
+			return null;
+		}
 
-		return $label_record;
+		// Build the query as a PHP object.
+		$search_query_object = (object)[
+			'section_tipo' => ['dd1706'],
+			'limit' => 1,
+			'filter' => (object)[
+				'$and' => [(object)[
+					'q' => [$new_label],
+					'q_operator' => null,
+					'path' => [(object)[
+						'section_tipo' => 'dd1706',
+						'component_tipo' => 'dd1715'
+					]]
+				]]
+			]
+		];
+
+		try {
+			// search the label into target section:
+			$search = search::get_instance($search_query_object);
+			$result = $search->search();
+
+			return $result->ar_records[0] ?? null;
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__
+				. ' Search failed: ' . $e->getMessage()
+				, logger::ERROR
+			);
+			return null;
+		}
 	}//end get_label_record
 
 
@@ -1687,7 +1695,7 @@ class component_iri extends component_common {
 	private static function save_label_dataframe_from_string( string $label ) : ?int {
 
 		// Remove spaces
-			$new_label = trim($label);
+		$new_label = trim(strip_tags($label));
 
 		if( empty($new_label) ){
 			return null;
