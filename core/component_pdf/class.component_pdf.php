@@ -351,19 +351,27 @@ class component_pdf extends component_media_common implements component_media_in
 			// then if the normalized files doesn't exist, will create it
 			// then will create the JPG format of the default
 			// then save the data.
+			if ($this->quality===$original_quality) {
 				$regenerate_options = new stdClass();
 					$regenerate_options->first_page		= $file_data->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
 					$regenerate_options->transcription	= true;
 					$regenerate_options->ocr			= $process_options->ocr ?? false;
 					$regenerate_options->ocr_lang		= $process_options->ocr_lang ?? null;
 
-			// process PDF files regenerating the component.
+				// process PDF files regenerating the component.
 				$result = $this->regenerate_component( $regenerate_options );
-
 				if ($result === false) {
 					$response->msg .= ' Error processing the uploaded file';
 					return $response;
 				}
+			}else{
+				// files_info. Updates component dato files info values iterating available files
+				// This action updates the component data ($this->data) but does not save it
+				// Note that this method is called again on save, but this is intentional
+				$this->update_component_dato_files_info();
+				// Save to store updated component data.
+				$this->Save();
+			}
 
 			// all is OK
 				$response->result	= true;
