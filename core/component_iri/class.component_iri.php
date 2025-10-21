@@ -1635,7 +1635,8 @@ class component_iri extends component_common {
 	/**
 	* GET_LABEL_RECORD
 	* Search the target section of component dataframe `dd1706`
-	* and return the result. Is used to check if the label exists
+	* and return the result. Is used to check if the given label already exists.
+	* @param string $label
 	* @return object|null $label_record
 	*/
 	private static function get_label_record( string $label ) : ?object {
@@ -1719,6 +1720,13 @@ class component_iri extends component_common {
 				$component_label->set_dato( $new_label );
 				$component_label->Save();
 
+				debug_log(__METHOD__
+					. " Created new label dataframe" . PHP_EOL
+					. ' new_label: ' . to_string($new_label) . PHP_EOL
+					.' target_section_id: ' . $target_section_id
+					, logger::WARNING
+				);
+
 		}else{
 			// the label has match with exists data, use the found section_id
 			$target_section_id = $label_record->section_id;
@@ -1768,7 +1776,7 @@ class component_iri extends component_common {
 			$caller_dataframe // caller dataframe
 		);
 
-		// create new daraframe locator to be set as new data
+		// create new dataframe locator to be set as new data
 		$new_locator = new locator();
 			$new_locator->set_section_tipo( component_iri::$label_target_section_tipo );
 			$new_locator->set_section_id( $target_section_id );

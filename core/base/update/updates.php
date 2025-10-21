@@ -69,7 +69,6 @@ $updates->$v = new stdClass();
 				<strong>Ensure that you have updated the Ontology before proceeding and then, reload this page to run the scripts.</strong>
 				</p>
 			";
-
 			$updates->$v->alert_update[] = $alert;
 			$updates->$v->lock = true;
 		}else{
@@ -153,95 +152,94 @@ $updates->$v = new stdClass();
 			";
 			$updates->$v->alert_update[] = $alert;
 
-		// execution order
-			$updates->$v->execution_order = ['run_scripts', 'SQL_update', 'components_update'];
+	// execution order
+		$updates->$v->execution_order = ['run_scripts', 'SQL_update', 'components_update'];
 
-		// Change the numisdata33 to object1
-		// the order of the scripts is important!
-			$ar_tables = [
-				// 'new_matrix'
-				'matrix',
-				'matrix_activities',
-				'matrix_activity',
-				'matrix_counter',
-				'matrix_hierarchy',
-				'matrix_hierarchy_main',
-				'matrix_list',
-				'matrix_time_machine'
+	// Change the numisdata33 to object1
+	// the order of the scripts is important!
+		$ar_tables = [
+			// 'new_matrix'
+			'matrix',
+			'matrix_activities',
+			'matrix_activity',
+			'matrix_counter',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_list',
+			'matrix_time_machine'
+		];
+
+		require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+
+		// 1- change language of the URL components
+			$json_files =[
+				'change_component_iri_to_nolan.json'
 			];
 
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "URL translatable in thesaurus => URL non translatable and transliterable";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "change_data_lang";
+				$script_obj->script_vars	= [
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
 
-			// 1- change language of the URL components
-				$json_files =[
-					'change_component_iri_to_nolan.json'
-				];
-
-				$script_obj = new stdClass();
-					$script_obj->info			= "URL translatable in thesaurus => URL non translatable and transliterable";
-					$script_obj->script_class	= "transform_data";
-					$script_obj->script_method	= "change_data_lang";
-					$script_obj->script_vars	= [
-						$json_files
-					]; // Note that only ONE argument encoded is sent
-				$updates->$v->run_scripts[] = $script_obj;
-
-
-			// 1- move data between matrix
-				$json_files =[
-					'denomination_numisdata33_to_matrix_hierachy.json'
-				];
-
-				$script_obj = new stdClass();
-					$script_obj->info			= "Move actv1 data between matrix tables";
-					$script_obj->script_class	= "transform_data";
-					$script_obj->script_method	= "move_data_between_matrix_tables";
-					$script_obj->script_vars	= [
-						$json_files
-					]; // Note that only ONE argument encoded is sent
-				$updates->$v->run_scripts[] = $script_obj;
-
-			// 2- move from the numisdata33 to object1 (create new objects1 section and map the new locator with old one)
-				$json_files =[
-					'denomination_numisdata33_to_object1.json'
-				];
-
-				$script_obj = new stdClass();
-					$script_obj->info			= "Move data from section: Denomination => Object | numisdata33 => object1";
-					$script_obj->script_class	= "transform_data";
-					$script_obj->script_method	= "changes_in_locators";
-					$script_obj->script_vars	= [
-						$ar_tables,
-						$json_files
-					]; // Note that only ONE argument encoded is sent
-				$updates->$v->run_scripts[] = $script_obj;
-
-			// 3- move from the componentes from numisdata33 to hierarchy
-				$json_files =[
-					'denomination_components_numisdata33_to_object1.json'
-				];
-
-				$script_obj = new stdClass();
-					$script_obj->info			= "Change tld's from numisdata33 thesaurus to object1 (hierarchy components)";
-					$script_obj->script_class	= "transform_data";
-					$script_obj->script_method	= "changes_in_tipos";
-					$script_obj->script_vars	= [
-						$ar_tables,
-						$json_files
-					]; // Note that only ONE argument encoded is sent
-				$updates->$v->run_scripts[] = $script_obj;
-
-		// Add index for relations used in project filter.
-			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				CREATE INDEX IF NOT EXISTS relations_section_tipo_section_id_from_component_tipo ON public.relations USING btree (section_tipo, section_id, from_component_tipo);
-			');
-
-		// UPDATE COMPONENTS
-			$updates->$v->components_update = [
-				'component_iri',
-				'component_dataframe'
+		// 2- move data between matrix. numisdata33 (section 'Denomination')
+			$json_files = [
+				'denomination_numisdata33_to_matrix_hierachy.json'
 			];
-		}
+
+			$script_obj = new stdClass();
+				$script_obj->info			= "Move numisdata33 data between matrix tables";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "move_data_between_matrix_tables";
+				$script_obj->script_vars	= [
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// 3- move from the numisdata33 to object1 (create new objects1 section and map the new locator with old one)
+			$json_files =[
+				'denomination_numisdata33_to_object1.json'
+			];
+
+			$script_obj = new stdClass();
+				$script_obj->info			= "Move data from section: Denomination => Object | numisdata33 => object1";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "changes_in_locators";
+				$script_obj->script_vars	= [
+					$ar_tables,
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// 4- move from the components from numisdata33 to hierarchy
+			$json_files = [
+				'denomination_components_numisdata33_to_object1.json'
+			];
+
+			$script_obj = new stdClass();
+				$script_obj->info			= "Change tld's from numisdata33 thesaurus to object1 (hierarchy components)";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "changes_in_tipos";
+				$script_obj->script_vars	= [
+					$ar_tables,
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+	// Add index for relations used in project filter.
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS relations_section_tipo_section_id_from_component_tipo ON public.relations USING btree (section_tipo, section_id, from_component_tipo);
+		');
+
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_iri',
+			'component_dataframe'
+		];
+	}
 
 
 
