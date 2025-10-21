@@ -767,8 +767,8 @@ class update {
 					}//end foreach($ar_component_tipo as $current_component_tipo)
 
 					if ($i===0) {
-						// wait for 15 milliseconds every 3000 records
-						usleep(15000);
+						// wait for 10 milliseconds every 5000 records
+						usleep(10000);
 						// Forces collection of any existing garbage cycles
 						gc_collect_cycles();
 
@@ -778,7 +778,7 @@ class update {
 						);
 					}
 					$i++;
-					if ($i>3000) {
+					if ($i>5001) {
 						$i = 0;
 					}
 				}//end while ($row = pg_fetch_assoc($result))
@@ -789,7 +789,7 @@ class update {
 			unset($ar_component_tipo);
 
 			// let GC do the memory job
-			sleep(1);
+			usleep(10000);
 
 			// Forces collection of any existing garbage cycles
 			gc_collect_cycles();
@@ -1107,7 +1107,7 @@ class update {
 
 				// reset counter
 					$i_ref++;
-					if ($i_ref > 3001) {
+					if ($i_ref > 5001) {
 						$i_ref = 0;
 					}
 			}//end for ($i=$min; $i<=$max; $i++)
