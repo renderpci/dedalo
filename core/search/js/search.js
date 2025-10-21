@@ -664,10 +664,12 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			if (add_arguments !== false) {
 
 				const component_wrapper	 = element.querySelector('.wrapper_component')
-				const component_instance = self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
+				const component_instance = component_wrapper?.id
+					? self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
+					: null
 
 				if(!component_instance){
-					console.log('Error. Ignored not found component instance id:', component_wrapper.id);
+					console.log('Error. Ignored not found component instance id:', component_wrapper?.id);
 					continue
 				}
 
