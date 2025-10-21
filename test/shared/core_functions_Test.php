@@ -246,7 +246,7 @@ final class core_functions_test extends TestCase {
 		// local API
 		$api_url = defined('DEDALO_API_URL_UNIT_TEST')
 			? DEDALO_API_URL_UNIT_TEST
-			: 'https://localhost:8443/' .DEDALO_API_URL;
+			: TEST_HOST . '/' . DEDALO_API_URL;
 
 		$response = curl_request((object)[
 			'url'				=> $api_url,
@@ -295,7 +295,7 @@ final class core_functions_test extends TestCase {
 		);
 
 		// wrong URL
-		$api_url = 'https://localhost:8443/dedalo/core/api/v7/json/';
+		$api_url = DEDALO_API_URL_UNIT_TEST . '/fakedir/';
 
 		$response = curl_request((object)[
 			'url'				=> $api_url,
@@ -303,17 +303,22 @@ final class core_functions_test extends TestCase {
 			'header'			=> false,
 			'httpheader'		=> ['Content-Type: application/json']
 		]);
-			dump($response, ' response ++ '.to_string());
 
-		$eq = $response->code===404;
-		$this->assertTrue(
-			$eq,
-			'expected true, but received is: '
-				. to_string( $eq ) .PHP_EOL
-				. ' response code: ' . to_string( $response->code ) . PHP_EOL
-				. ' api_url: ' . $api_url . PHP_EOL
-				. ' response: ' . json_encode( $response, JSON_PRETTY_PRINT )
-		);
+		if ($response->code===405) {
+			// nginx default code (Not allowed)
+		}else{
+			// Apache default response (Not found)
+			$eq = $response->code===404;
+			$this->assertTrue(
+				$eq,
+				'expected true, but received is: '
+					. to_string( $eq ) .PHP_EOL
+					. ' response code: ' . to_string( $response->code ) . PHP_EOL
+					. ' api_url: ' . $api_url . PHP_EOL
+					. ' response: ' . json_encode( $response, JSON_PRETTY_PRINT )
+			);
+		}
+
 	}//end test_curl_request
 
 
