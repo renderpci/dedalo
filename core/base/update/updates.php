@@ -55,7 +55,7 @@ $updates->$v = new stdClass();
 		$alert->command = '';
 
 		// Ontology version. Check if is valid version
-		$min_date				= '2025-01-15';
+		$min_date				= '2025-10-23';
 		$min_date_time			= new DateTime($min_date);
 		$ontology_is_updated	= ontology::jer_dd_version_is_valid( $min_date );
 		if ( !$ontology_is_updated ) {
