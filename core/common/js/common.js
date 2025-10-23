@@ -916,7 +916,7 @@ export const create_source = function (self, action) {
 			source.caller_dataframe = self.caller_dataframe
 				? self.caller_dataframe
 				: {
-					main_component_tipo	: self.caller?.tipo ?? null,
+					main_component_tipo	: self.caller?.tipo || null,
 					section_tipo		: self.section_tipo,
 					section_id			: self.section_id,
 					section_id_key		: self.data.section_id_key,
