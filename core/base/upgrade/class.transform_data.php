@@ -2096,7 +2096,15 @@ class transform_data {
 								// replace old tipo with the new one in any locator property
 								$locator->{$loc_key}	= $ar_transform_map[$loc_value]->new;
 								$new_section_id			= (int)$ar_transform_map[$loc_value]->base_counter + (int)$locator->section_id;
-								$locator->section_id	= (string)$new_section_id;
+								// dataframe locator pointing to main locator that are changed its own section_tipo
+								// if the dataframe locator is pointing to the changed section_tipo, the new section_id will be set into section_id_key
+								// because the dataframe is linked to a locator in the main component that was changed.
+								if($loc_key==='section_tipo_key'){
+									$locator->section_id_key	= (int)$new_section_id;
+								}else{
+									// regular locator
+									$locator->section_id	= (string)$new_section_id;
+								}
 							}
 						}
 					}
@@ -2204,8 +2212,15 @@ class transform_data {
 					$current_locator->$loc_key	= $ar_transform_map[$current_value]->new;
 					$base_section_id			= $ar_transform_map[$current_value]->base_counter;
 
-					if($loc_key === 'section_tipo'){
-						$new_section_id					= (int)$base_section_id + (int)$current_locator->section_id;
+					$new_section_id				= (int)$base_section_id + (int)$current_locator->section_id;
+
+					// dataframe locator pointing to main locator that are changed its own section_tipo
+					// if the dataframe locator is pointing to the changed section_tipo, the new section_id will be set into section_id_key
+					// because the dataframe is linked to a locator in the main component that was changed.
+					if($loc_key==='section_tipo_key'){
+						$current_locator->section_id_key	= (int)$new_section_id;
+					}else{
+						// regular locator
 						$current_locator->section_id	= (string)$new_section_id;
 					}
 				}
