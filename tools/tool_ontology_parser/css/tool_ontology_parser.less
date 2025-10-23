@@ -44,8 +44,19 @@
 				white-space: nowrap;
 				width: 100%;
 				font-size: 1rem;
-				line-height: 1rem;
+				line-height: 1.1rem;
 				cursor: pointer;
+
+				&:active {
+					opacity: 0.5;
+				}
+
+				>.item_label_name {
+					font-weight: 200;
+					padding-left: 0.33rem;
+					color: @color_grey_8;
+					font-size: 0.98rem;
+				}
 
 				input {
 					margin-right: 0.3rem;
@@ -55,10 +66,10 @@
 				// only parent labels
 				&.typology_label {
 					background-color: @color_grey_15;
-					font-size: 1.25rem;
+					font-size: 1.15rem;
 					letter-spacing: 0.25px;
 					line-height: 1.25rem;
-					border-bottom: 1px solid @color_grey_10;
+					border-bottom: 1px solid @color_grey_12;
 					padding-bottom: 0.33rem;
 					padding-top: 0.33rem;
 					border-top-left-radius: 4px;
@@ -78,7 +89,6 @@
 				grid-template-columns: repeat(4, 1fr);
 				grid-gap: 0.5rem;
 				margin-top: 0.5rem;
-				margin-bottom: 1.2rem;
 				padding: 0.25rem;
 				padding-top: 0.5rem;
 				padding-bottom: 1.2rem;
