@@ -168,8 +168,8 @@ class tool_ontology_parser extends tool_common {
 		// response
 			$response->result	= empty($response->errors);
 			$response->msg		= $response->result
-				? 'OK. Request done: '.$done
-				: 'Errors found. Request failed';
+				? 'OK. Export of ontologies completed successfully. Done: '.$done
+				: 'Errors found. Export Ontologies request failed.';
 			$response->ar_msg = $ar_msg;
 
 

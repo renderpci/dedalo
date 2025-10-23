@@ -2617,11 +2617,11 @@ class component_relation_common extends component_common {
 
 					$ar_section_tipo[] = $source_item;
 					debug_log(__METHOD__
-						." ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
+						." +++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
 						.' source_item: '.to_string($source_item) . PHP_EOL
 						.' ar_section_tipo_sources: '.to_string($ar_section_tipo_sources) . PHP_EOL
 						.' caller_section_tipo: '.to_string($caller_section_tipo)
-						,logger::ERROR
+						,logger::WARNING
 					);
 					continue;
 				}
