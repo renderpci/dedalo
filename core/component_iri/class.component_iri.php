@@ -36,6 +36,26 @@ class component_iri extends component_common {
 
 
 	/**
+	* __CONSTRUCT
+	*/
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
+
+		// lang. Force always DEDALO_DATA_NOLAN
+			$lang = DEDALO_DATA_NOLAN;
+
+		// Fix with_lang_versions for clarity
+			$this->with_lang_versions = true;
+
+		// Fix translatable for clarity
+			$this->traducible = 'no';
+
+		// common constructor. Creates the component as normally do with parent class
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);
+	}//end __construct
+
+
+
+	/**
 	* GET DATO
 	* Array with objects, every object have two properties:
 	* "iri" mandatory with string value and "title" optional with string value

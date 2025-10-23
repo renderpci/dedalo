@@ -78,6 +78,7 @@
 
 			input {
 				width: 100%;
+
 				&.mandatory {
 					border-left: 2px solid @color_danger;
 
@@ -96,10 +97,31 @@
 			overflow: auto;
 			background-color: @color_hilite;
 
+			>.widget_label {
+				background-color: @color_hilite;
+				transition: background-color 1000ms ease-in-out;
+			}
+
 			&.danger {
 				>.widget_label {
-					transition: background-color 300ms ease-in-out;
 					background-color: @color_danger;
+
+					&:before {
+						display: inline-block;
+						content: " ";
+						margin-right: 0.5rem;
+						line-height: 1rem;
+						background-color: #ffffff;
+						width: 1rem;
+						height: 1rem;
+						vertical-align: bottom;
+
+						@icon-path: url(../../themes/default/icons/alert.svg);
+						mask-image: @icon-path;
+						mask-size: contain;
+						mask-repeat: no-repeat;
+						mask-position: center;
+					}
 				}
 			}
 
@@ -148,6 +170,7 @@
 				position: relative;
 
 				&.icon_arrow {
+
 					&:after {
 						margin-right: 0.87rem;
 						background-color: @color_white;
