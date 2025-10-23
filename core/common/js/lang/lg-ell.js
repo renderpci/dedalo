@@ -474,5 +474,7 @@
     "por_favor_indexe_desde_una_seccion_de_inventario": "Παρακαλείστε να αναπροσαρμόζονται από ένα τμήμα των αποθεμάτων (σε. Προφορικής Ιστορίας) και όχι από έναν πόρο",
     "name": "όνομα",
     "procesar": "διαδικασία",
-    "user_code_does_not_exist_error": "Ο κωδικός χρήστη δεν υπάρχει"
+    "user_code_does_not_exist_error": "Ο κωδικός χρήστη δεν υπάρχει",
+    "value_already_exits_in_other_langs": "Η τιμή υπάρχει ήδη σε άλλες γλώσσες",
+    "all_this_values_will_be_removed": "Όλες αυτές οι τιμές θα αφαιρεθούν επίσης"
 }
