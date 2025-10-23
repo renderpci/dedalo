@@ -55,7 +55,7 @@ $updates->$v = new stdClass();
 		$alert->command = '';
 
 		// Ontology version. Check if is valid version
-		$min_date				= '2025-10-15';
+		$min_date				= '2025-01-15';
 		$min_date_time			= new DateTime($min_date);
 		$ontology_is_updated	= ontology::jer_dd_version_is_valid( $min_date );
 		if ( !$ontology_is_updated ) {
@@ -147,7 +147,20 @@ $updates->$v = new stdClass();
 				<br>
 				<br>
 				<p>
-				<strong>4. The ontology needs to be updated after proceeding.</strong>
+				<strong>4. Review your config.php file.</strong>
+				</p>
+				<br>
+				<p>
+				A new constat was added to limit the maximum request that client can open to the server for uploading chunked files.
+				</p>
+				<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				define('DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT', 50);
+				</pre>
+				</p>
+				<br>
+				<br>
+				<p>
+				<strong>5. The ontology needs to be updated after proceeding.</strong>
 				</p>
 			";
 			$updates->$v->alert_update[] = $alert;
