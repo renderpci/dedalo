@@ -474,5 +474,7 @@
     "por_favor_indexe_desde_una_seccion_de_inventario": "Please, index from a section of inventory (eg. Oral History) and not from a resource",
     "name": "Name",
     "procesar": "process",
-    "user_code_does_not_exist_error": "The user code does not exist"
+    "user_code_does_not_exist_error": "The user code does not exist",
+    "value_already_exits_in_other_langs": "Value already exists in another langs",
+    "all_this_values_will_be_removed": "All this values will be removed too"
 }

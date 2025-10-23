@@ -474,5 +474,7 @@
     "por_favor_indexe_desde_una_seccion_de_inventario": "Per favore, indicizza da una sezione d'inventario (es. Storia orale) e non da una risorsa",
     "name": "Nome",
     "procesar": "Processare",
-    "user_code_does_not_exist_error": "Il codice utente non esiste"
+    "user_code_does_not_exist_error": "Il codice utente non esiste",
+    "value_already_exits_in_other_langs": "Il valore esiste già in un'altra lingua",
+    "all_this_values_will_be_removed": "Anche tutti questi valori verranno rimossi"
 }

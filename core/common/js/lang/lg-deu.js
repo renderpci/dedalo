@@ -474,5 +474,7 @@
     "por_favor_indexe_desde_una_seccion_de_inventario": "Bitte indexieren Sie von einer Sektion des Inventars aus (z.B. Orale Geschichte) und nicht von einer Ressource",
     "name": "Name",
     "procesar": "Verarbeiten",
-    "user_code_does_not_exist_error": "Der Benutzercode existiert nicht"
+    "user_code_does_not_exist_error": "Der Benutzercode existiert nicht",
+    "value_already_exits_in_other_langs": "Wird gelöscht: alle gefundenen Einträge",
+    "all_this_values_will_be_removed": "Alle diese Werte werden ebenfalls entfernt"
 }

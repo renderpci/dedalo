@@ -474,5 +474,7 @@
     "por_favor_indexe_desde_una_seccion_de_inventario": "Por favor, indexe desde una sección de inventario (ej. Historia Oral) y no desde un  recurso",
     "name": "Nom",
     "procesar": "processar",
-    "user_code_does_not_exist_error": "El codi d'usuari no existeix"
+    "user_code_does_not_exist_error": "El codi d'usuari no existeix",
+    "value_already_exits_in_other_langs": "El valor ja existeix en una altra llengua",
+    "all_this_values_will_be_removed": "Tots aquests valors també s'eliminaran"
 }
