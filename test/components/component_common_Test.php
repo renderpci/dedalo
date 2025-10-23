@@ -1682,12 +1682,12 @@ final class component_common_test extends TestCase {
 			);
 
 			$response = $component->regenerate_component();
-				// dump($response, '  response ++ '.to_string($element->model));
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors' . PHP_EOL
-				. to_string($_ENV['DEDALO_LAST_ERROR'])
+					'expected running without errors' . PHP_EOL
+					. to_string($_ENV['DEDALO_LAST_ERROR'])  . PHP_EOL
+					. ' response: ' . to_string($response)  . PHP_EOL
 			);
 
 			$this->assertTrue(

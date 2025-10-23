@@ -27,7 +27,7 @@ final class dd_api_Test extends TestCase {
 
 		$api_url = defined('DEDALO_API_URL_UNIT_TEST')
 			? DEDALO_API_URL_UNIT_TEST
-			: 'https://localhost:8443/' .DEDALO_API_URL;
+			: TEST_HOST . '/' . DEDALO_API_URL;
 
 		$response = curl_request((object)[
 			'url'				=> $api_url,
