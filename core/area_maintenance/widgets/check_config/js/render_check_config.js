@@ -7,7 +7,8 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {dd_request_idle_callback,when_in_viewport} from '../../../../common/js/events.js'
+	import {dd_request_idle_callback} from '../../../../common/js/events.js'
+	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
 
@@ -236,6 +237,21 @@ const render_config_vars_status = function (self) {
 				})
 			}
 		}//end for (let i = 0; i < value_length; i++)
+
+	// Check if some config present var in sample is not defined in config
+	// If true, set widget label header style 'danger' (in red color)
+		const value_config		= value?.[0] || {}
+		const sample_vs_config	= value_config.sample_vs_config || []
+		if (sample_vs_config.length>0) {
+			// set widget container label color style
+			set_widget_label_style(self, 'danger', 'add',
+				tables // reference node to attach in when_in_dom event
+			)
+		}else{
+			set_widget_label_style(self, 'danger', 'remove',
+				tables // reference node to attach in when_in_dom event
+			)
+		}
 
 
 	return fragment;
