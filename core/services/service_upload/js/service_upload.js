@@ -33,7 +33,7 @@ export const service_upload = function () {
 	this.max_size_bytes		= null
 	this.allowed_extensions	= null
 
-	this.max_concurrent 	= DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT ?? 50
+	this.max_concurrent 	= null
 }//end page
 
 
@@ -66,6 +66,9 @@ service_upload.prototype.init = async function(options) {
 		self.model				= options.model || 'service_upload'
 		self.allowed_extensions	= options.allowed_extensions || []
 		self.key_dir			= options.key_dir || null
+		self.max_concurrent 	= typeof DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT === 'undefined'
+			? 50
+			: DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT
 
 	// check
 		if (!self.caller) {
