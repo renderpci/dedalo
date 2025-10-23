@@ -1497,12 +1497,14 @@ class component_relation_common extends component_common {
 		// 	"use_function": "relations_flat_fct_st_si"
 		// }
 		if (strpos($q, '{')===false && $format!=='function') {
-			debug_log(__METHOD__
-				. ' Ignored invalid unsafe q ' . PHP_EOL
-				. ' q: ' . to_string($q) . PHP_EOL
-				. ' query_object: ' . to_string($query_object)
-				, logger::ERROR
-			);
+			if ($q!=='only_operator') {
+				debug_log(__METHOD__
+					. ' Ignored invalid unsafe q ' . PHP_EOL
+					. ' q: ' . to_string($q) . PHP_EOL
+					. ' query_object: ' . to_string($query_object)
+					, logger::ERROR
+				);
+			}
 			$q = '[]';
 		}
 
