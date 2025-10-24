@@ -67,6 +67,9 @@ const get_content_data = async function(self) {
 		throw new Error('Invalid self parameter: missing caller property');
 	}
 
+	// Create content_data (moved up for closure access)
+	const content_data = ui.tool.build_content_data(self);
+
 	const fragment = new DocumentFragment()
 
 	// Create user_info header
@@ -147,9 +150,6 @@ const get_content_data = async function(self) {
 		parent			: fragment
 	});
 
-	// Create content_data (moved up for closure access)
-	const content_data = ui.tool.build_content_data(self);
-
 	// button_generate
 	const button_generate = ui.create_dom_element({
 		element_type	: 'button',
@@ -223,9 +223,15 @@ const get_content_data = async function(self) {
 	button_generate.addEventListener('click', click_handler)
 	// focus buttons
 	when_in_dom(button_generate, () => {
-		setTimeout(function(){
-			button_generate.focus()
-		}, 100)
+		// Force button to keep focused
+		function keep_focus(target) {
+		  target.focus({ preventScroll: true });
+		  target.addEventListener('blur', () => {
+		    // Re-focus if something else tries to steal it
+		    setTimeout(() => target.focus({ preventScroll: true }), 0);
+		  });
+		}
+		keep_focus(button_generate);
 	})
 
 	// Assemble final content
