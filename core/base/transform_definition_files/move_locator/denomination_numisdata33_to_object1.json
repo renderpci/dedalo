@@ -39,6 +39,22 @@
 					}]
 				}
 			}
+		},
+			{
+			"fn":"transform_data::set_move_identification_value",
+			"options":{
+				"action"				: "new_only_once",
+				"section_tipo"			: "object1",
+				"from_component_tipo"	: "hierarchy23",
+				"type"					: "dd151",
+				"component_tipo"		: "dd62",
+				"q" 					: "Yes",
+				"model"					: "component_input_text",
+				"name" 					: "Yes/No list",
+				"value": {
+					"lg-eng": ["Yes"]
+				}
+			}
 		}
 	],
 	"info": "Old Denominations => New Object behind Coin"
