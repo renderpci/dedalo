@@ -461,7 +461,7 @@ class component_relation_common extends component_common {
 						'section_tipo'			=> $ddo->section_tipo,
 						'section_id_key'		=> $locator->section_id,
 						'section_tipo_key'		=> $locator->section_tipo_key ?? null,
-						'main_component_tipo'	=> $locator->main_component_tipo
+						'main_component_tipo'	=> $locator->main_component_tipo ?? null
 					  ]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
