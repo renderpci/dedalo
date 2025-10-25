@@ -286,7 +286,8 @@ class area_maintenance extends area_common {
 				$item->label	= 'PHP USER';
 				$item->value	= (object)[
 					'info' => $php_user_info,
-					'php_error_log_path' => $php_error_log_path
+					'php_error_log_path' => $php_error_log_path,
+					'php_session_path' => session_save_path()
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;

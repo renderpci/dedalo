@@ -69,6 +69,7 @@ const get_content_data_edit = async function(self) {
 		const value					= self.value || {}
 		const info					= value.info || {}
 		const php_error_log_path	= value.php_error_log_path || ''
+		const php_session_path		= value.php_session_path || ''
 		const name					= info.name || ''
 
 	// content_data
@@ -102,7 +103,21 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: '',
-			inner_html		:  php_error_log_path,
+			inner_html		: php_error_log_path,
+			parent			: content_data
+		})
+
+	// PHP session path
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: '',
+			inner_html		: `<br>PHP session path:`,
+			parent			: content_data
+		})
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: '',
+			inner_html		: php_session_path,
 			parent			: content_data
 		})
 
