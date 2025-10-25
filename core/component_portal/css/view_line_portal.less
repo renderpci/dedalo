@@ -7,6 +7,7 @@
 	display: block;
 
 	// hide label when is inside a column (another portal)
+	// TO BE REMOVED
 	.column & {
 		.label {
 			display: none;
@@ -15,6 +16,13 @@
 
 	// content_data
 	>.content_data {
+
+		>.component_placeholder {
+			padding-left: 0.5rem;
+			color: @color_grey_10;
+			font-style: italic;
+			margin-top: -0.55rem;
+		}
 
 		// section_record list
 		.section_record {
@@ -39,14 +47,21 @@
 					line-height: unset;
 				}
 
+				&.column_component_dataframe {
+					padding: 0px;
+				}
+
 				&.column_section_id {
 					width: 1rem;
+					padding-top: 0px;
+					margin-right: 0.25rem;
 				}
 
 				&.column_section_id, &.column_remove {
 					background-color: unset;
 					display: inline-block;
 					flex-grow: 0;
+
 
 					>.button_edit, >.button_remove {
 						width: 1rem;
@@ -76,7 +91,7 @@
 				}
 
 				&.column_remove {
-					margin-top: 0.15rem;
+					padding-top: 0px;
 
 					>.button_remove {
 						opacity: 0.75;

@@ -210,7 +210,8 @@ $global_start_time = hrtime(true);
 
 		debug_log(__METHOD__
 			. ' API end point caught exception ' . PHP_EOL
-			. json_encode($e->getTrace(), JSON_PRETTY_PRINT)
+			. ' msg: ' . $e->getMessage()  . PHP_EOL
+			. ' trace: ' . json_encode($e->getTrace(), JSON_PRETTY_PRINT)
 			, logger::ERROR
 		);
 
@@ -219,10 +220,13 @@ $global_start_time = hrtime(true);
 			$response->msg		= (SHOW_DEBUG===true)
 				? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
 				: 'Throwable Exception when calling Dédalo API. Contact with your admin';
-			$response->errors	= ['Throwable Exception when calling Dédalo API'];
-			$response->debug	= (object)[
-				'rqo' => $rqo
-			];
+			$response->errors	= ['An unexpected error occurred'];
+			if (SHOW_DEBUG===true) {
+				$response->debug = (object)[
+					'exception' => $e->getMessage(),
+					'rqo' => $rqo
+				];
+			}
 	}
 
 

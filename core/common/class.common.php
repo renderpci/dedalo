@@ -682,6 +682,14 @@ abstract class common {
 				}
 			}
 
+		// unset previous calculated dato_resolved
+		// (!) Do not apply in time machine mode because the data is injected
+			if ($this->mode !== 'tm') {
+				if (isset($this->dato_resolved)) {
+					unset($this->dato_resolved);
+				}
+			}
+
 		// force reload dato from database when dato is requested again
 		$this->set_is_loaded_matrix_data(false);
 	}//end set_to_force_reload_dato
@@ -2089,10 +2097,10 @@ abstract class common {
 						continue;
 					}
 
-				$section_id			= $current_locator->section_id;
-				$section_tipo		= $current_locator->section_tipo;
-				$section_id_key		= $current_locator->section_id;
-				$section_tipo_key	= $current_locator->section_tipo;
+				$section_id				= $current_locator->section_id;
+				$section_tipo			= $current_locator->section_tipo;
+				$section_id_key			= $current_locator->section_id;
+				$section_tipo_key		= $current_locator->section_tipo;
 
 				// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
 				// but when the ddo is a component_dataframe (used as sub section as data frame of the locator) get include it.
@@ -2150,16 +2158,9 @@ abstract class common {
 						}
 
 						$current_section_tipo = $section_tipo;
-						// if the component is a dataframe assign a possible suffix to be used
-						$dataframe_tm_mode = (get_called_class() === 'component_dataframe')
-							? '_dataframe'
-							: '';
-						// time machine mode
-						// If the component or section is in tm mode propagate the mode to the ddo
-						// and it's a dataframe add the suffix '_dataframe' to differentiate it of the tm mode in the component
-						// see radio_button case of the dataframe component of the numisdata161
+
 						$mode = $this->mode==='tm'
-							? 'tm' . $dataframe_tm_mode // propagate tm mode from parent
+							? 'tm' // propagate tm mode from parent
 							: ($dd_object->mode ?? $this->get_mode());
 
 					// prevent resolve non children from path ddo, remove the non direct child,
@@ -2233,9 +2234,10 @@ abstract class common {
 								// caller_dataframe cases
 								$caller_dataframe = (strpos($source_model, 'component_')===0)
 									? (object)[
-										'section_id_key'	=> $section_id_key,
-										'section_tipo_key'	=> $section_tipo_key,
-										'section_tipo'		=> $this->get_section_tipo()
+										'section_id_key'		=> $section_id_key,
+										'section_tipo_key'		=> $section_tipo_key,
+										'section_tipo'			=> $this->get_section_tipo(),
+										'main_component_tipo'	=> $from_parent,
 									  ]
 									: null;
 
@@ -2253,7 +2255,7 @@ abstract class common {
 								);
 
 								// the the component is a dataframe and it's in time_machine call
-								// set data_source as tm, and the matreix_id from the main component
+								// set data_source as tm, and the matrix_id from the main component
 								// it will get the correct data from the time_machine
 								// used to load the component in edit mode in time_machine tool.
 								if($model==='component_dataframe' && isset($this->matrix_id) ){
@@ -2467,6 +2469,9 @@ abstract class common {
 
 					// debug
 						if(SHOW_DEBUG===true) {
+							$related_model = isset($related_element)
+								? $related_element->get_model()
+								: ($dd_object->tipo ?? null);
 							$len = !empty($dd_object->tipo)
 								? strlen($dd_object->tipo)
 								: 0;
@@ -2475,7 +2480,7 @@ abstract class common {
 								: 0;
 							$tipo_line = $dd_object->tipo .' '. str_repeat('-', $repeat);
 							debug_log(
-								'--- resolve ddo ------------------ '.$tipo_line.' '. number_format(exec_time_unit($ddo_start_time,'ms'), 3).' ms' . ' - ' . $related_element->get_model(),
+								'--- resolve ddo ------------------ '.$tipo_line.' '. number_format(exec_time_unit($ddo_start_time,'ms'), 3).' ms' . ' - ' . $related_model,
 								logger::DEBUG
 							);
 						}

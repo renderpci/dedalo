@@ -14,7 +14,8 @@
 		object_to_url_vars,
 		open_window,
 		open_records_in_window,
-		clone
+		clone,
+		get_caller_by_model
 	} from '../../common/js/utils/index.js'
 
 /**
@@ -387,8 +388,10 @@ buttons.render_list_from_component_data_button = (self) => {
 	const mousedown_handler = async (e) => {
 		e.stopPropagation()
 
+		const caller_section = get_caller_by_model(self, 'section')
+
 		const options ={
-			sqo				: clone(self.caller.caller.rqo?.sqo) || {},
+			sqo	: caller_section.rqo?.sqo || {},
 			caller_tipo		: self.tipo,
 			rqo_options		: {
 				type			: 'component',

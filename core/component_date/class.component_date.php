@@ -10,7 +10,7 @@
 *	"minute": 33,
 *	"second": 49
 * }
-* Dates are objects enclosed with start and/or end container
+* Dates' data are objects enclosed with start and/or end container
 * [{
 *	"start" : {
 *		"year": 2012,

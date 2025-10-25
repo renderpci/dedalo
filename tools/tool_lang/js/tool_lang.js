@@ -5,7 +5,7 @@
 
 
 // import
-	import {dd_console} from '../../../core/common/js/utils/index.js'
+	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
@@ -67,11 +67,23 @@ tool_lang.prototype.init = async function(options) {
 	try {
 
 		// set the self specific vars not defined by the generic init (in tool_common)
-			self.langs			= page_globals.dedalo_projects_default_langs
+			self.langs			= clone(page_globals.dedalo_projects_default_langs)
 			self.source_lang	= self.caller && self.caller.lang
 				? self.caller.lang
 				: null
 			self.target_lang	= null
+
+			// lg-nolan case. If the tool is open from a nolan component, add the
+			// component lang to the langs list because is not added by default in the page_globals.dedalo_projects_default_langs.
+			const found = self.langs.find(el => el.value===self.source_lang)
+			if (!found && self.source_lang==='lg-nolan') {
+				const nolan = {
+					label	: 'No lang',
+					value	: 'lg-nolan',
+					tld2	: 'nolan'
+				}
+				self.langs.push(nolan);
+			}
 
 		// target translator. When user changes it, a local DB var is stored as 'translator_engine_select' in table 'status'
 			const translator_engine_select_object = await data_manager.get_local_db_data(

@@ -140,23 +140,36 @@ const get_content_data = async function(self) {
 
 				// call API
 					const api_response = await self.export_ontologies()
+					if(SHOW_DEBUG===true) {
+						console.log('export_ontologies api_response', api_response)
+					}
+
+					if (!api_response) {
+						console.error('Error getting API response: export_ontologies');
+						return
+					}
 
 				// user messages
 					messages_container.innerHTML = api_response.msg
 						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
 						: 'Unknown error'
 
-				// process messages
+				// process errors
 					process_error_container.innerHTML = ''
-					if (api_response.errors.length) {
+					if (api_response.errors?.length) {
 						process_error_container.innerHTML = api_response.errors.join('<br>')
 						process_error_container.classList.remove('hidden')
+					}else{
+						process_error_container.classList.add('hidden')
 					}
 
+				// process messages
 					process_messages_container.innerHTML = ''
-					if (api_response.ar_msg.length) {
+					if (api_response.ar_msg?.length) {
 						process_messages_container.innerHTML = api_response.ar_msg.join('<br>')
 						process_messages_container.classList.remove('hidden')
+					}else{
+						process_messages_container.classList.add('hidden')
 					}
 
 				set_loading(false)
@@ -215,17 +228,36 @@ const get_content_data = async function(self) {
 
 				// call API
 					const api_response = await self.regenerate_ontologies()
+					if(SHOW_DEBUG===true) {
+						console.log('regenerate_ontologies api_response', api_response)
+					}
+
+					if (!api_response) {
+						console.error('Error getting API response: regenerate_ontologies');
+						return
+					}
 
 				// user messages
 					messages_container.innerHTML = api_response.msg
 						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
 						: 'Unknown error'
 
-				// process messages
+				// process errors
 					process_error_container.innerHTML = ''
-					if (api_response.errors.length) {
+					if (api_response.errors?.length) {
 						process_error_container.innerHTML = api_response.errors.join('<br>')
 						process_error_container.classList.remove('hidden')
+					}else{
+						process_error_container.classList.add('hidden')
+					}
+
+				// process messages
+					process_messages_container.innerHTML = ''
+					if (api_response.ar_msg?.length) {
+						process_messages_container.innerHTML = api_response.ar_msg.join('<br>')
+						process_messages_container.classList.remove('hidden')
+					}else{
+						process_messages_container.classList.add('hidden')
 					}
 
 				set_loading(false)
@@ -351,11 +383,22 @@ const render_ontologies_list = function (self) {
 				// item_label
 				const item_label = ui.create_dom_element({
 					element_type	: 'label',
-					class_name		: 'item_label',
-					inner_html		: child.name,
+					class_name		: 'item_label unselectable',
+					inner_html		: child.tld,
 					title			: child.tld,
 					parent			: children_container
 				})
+
+				// item_label_name
+				const name_first_part = child.name.split(' | ')[0]
+				if (name_first_part!==child.tld) {
+					 ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'item_label_name',
+						inner_html		: name_first_part,
+						parent			: item_label
+					})
+				}
 
 				// input checkbox
 				const input_checkbox = ui.create_dom_element({

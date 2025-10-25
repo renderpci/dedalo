@@ -7,26 +7,93 @@
 
 	&.edit {
 
+		// disabled (E.g. Tool Time machine preview)
+		// Hide pen and trash icons.
+		&.disabled_component {
+			.component_dataframe >.content_data {
+				.column_section_id,	.column_remove {
+					display: none !important;
+				}
+			}
+		}
+
 		>.content_data {
+			padding-right: 0.6rem;
 
 			>.content_value {
 				align-items: center;
 				display: flex;
 				flex-wrap: wrap;
 
-				// input  (text title/url)
-				.input_value {
-					width: calc(50% - 0.5rem);
+				&.read_only {
+
+					>.iri {
+						padding-left: 0.5rem;
+					}
+				}
+
+				// dataframe inside
+				>.component_dataframe {
+					width: calc(30% - 0.5rem);
+					height: 2rem;
+
+					>.content_data {
+						>.section_record {
+							// One line only always
+							flex-wrap: nowrap;
+
+							// Icon pen
+							.column.column_section_id {
+								min-height: 1.6rem;
+							}
+						}
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						height: unset;
+						min-height: unset;
+
+						>.content_data {
+						    padding: 0px;
+						    padding-left: 0.5rem;
+
+						    >.section_record {
+						    	// Icon pen
+								.column.column_section_id {
+									min-height: 1.2rem;
+								}
+							}
+						}
+					}
+				}
+
+				// input (text title && url)
+				>.input_value {
 					padding-right: 0.5rem;
 
 					&.title {
+						width: calc(20% - 0.5rem);
+						padding-left: 0.5rem;
 
 					}
 
 					&.url {
-
+						width: 50%;
 						&:focus {
 							padding-right: 3.15rem;
+						}
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						margin-right: 1px;
+
+						&.title {
+							width: 100%;
+						}
+
+						&.url {
+							width: 100%;
+							margin-bottom: 1rem;
 						}
 					}
 				}
@@ -46,15 +113,33 @@
 						background-color: darken(@color_orange_dedalo, 15%);
 					}
 
+					&.link {
+						right: 2.25rem;
+					}
+
 					&.remove {
-						right: 2.0rem;
+						right: 0.66rem;
+					}
+
+					@media screen and (max-width: @width_break_point_1) {
+						top: 5.2rem;
+
+						&.remove {
+							right: 0.45rem;
+						}
+
+						&.link {
+							right: 2.20rem;
+						}
 					}
 				}
 
 				.transliterate_value {
 					width: 100%;
 					padding-top: 0.5rem;
-					padding-left: 0.5rem;
+					padding-bottom: 0.5rem;
+					padding-right: 1rem;
+					text-align: right;
 					color: @color_orange_dedalo;
 					opacity: 0.65;
 
@@ -66,9 +151,6 @@
 							padding-left: 0.5rem;
 							padding-right: 0.5rem;
 						}
-					}
-					.iri {
-
 					}
 				}
 			}
@@ -132,3 +214,6 @@
 	}
 
 }//end .component_iri
+
+// component_dataframe inside case details
+// @see component_dataframe.less &.view_line

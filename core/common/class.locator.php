@@ -2,6 +2,8 @@
 /**
 * CLASS LOCATOR
 *
+* 	DTO that defines relation object values schema and validation.
+*
 *	Format:
 *
 *		$locator->section_top_tipo		= (string)$section_top_tipo;
@@ -415,14 +417,34 @@ class locator extends stdClass {
 
 	/**
 	* SET_SECTION_TIPO_KEY
-	* @return
+	* @param string $value
+	* @return bool
 	*/
 	public function set_section_tipo_key(string $value) {
 		if(!get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_tipo_key: $value", 1);
 		}
 		$this->section_tipo_key = $value;
+
+		return true;
 	}//end set_section_tipo_key
+
+
+
+	/**
+	* SET_MAIN_COMPONENT_TIPO
+	* Used by dataframe to identify its own main component
+	* @param string $value
+	* @return bool
+	*/
+	public function set_main_component_tipo(string $value) {
+		if(!get_tld_from_tipo($value)) {
+			throw new Exception("Error Processing Request. Invalid main_component_tipo: $value", 1);
+		}
+		$this->main_component_tipo = $value;
+
+		return true;
+	}//end set_main_component_tipo
 
 
 	/**

@@ -423,12 +423,22 @@ const render_consolidate_table_sequences = (self) => {
 	}
 	body_response.addEventListener('dblclick', dblclick_handler)
 
+	// tables
+	const source_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd']
+
 	self.caller?.init_form({
 		submit_label	: 'Consolidate tables',
 		confirm_text	: get_label.seguro || 'Sure?',
 		body_info		: consolidate_table_sequences_container,
 		body_response	: body_response,
-		on_submit		: async (e) => {
+		inputs			: [{
+			type		: 'text',
+			name		: 'tables',
+			label		: 'Tables list as jer_dd,matrix_ontology,matrix',
+			value		: source_tables.join(','),
+			mandatory	: true
+		}],
+		on_submit		: async (e, values) => {
 
 			// clean body_response nodes
 			while (body_response.firstChild) {
@@ -443,30 +453,32 @@ const render_consolidate_table_sequences = (self) => {
 			})
 			body_response.prepend(spinner)
 
+			// value
+			const tables = values.filter(el => el.name==='tables')
+				.map(el => el.value)[0]
+				.split(',')
+				.map(el => el.trim())
+
+			if (!tables || tables.length < 1) {
+				// loading  remove
+				spinner.remove()
+				e.target.classList.remove('lock')
+				return
+			}
+
+			if (tables.length === source_tables.length) {
+				const label = (get_label.all || 'All') + ' ?';
+				if (!confirm(label)) {
+					return
+				}
+			}
+
 			// API worker call
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source	: {
-						action : 'consolidate_tables'
-					},
-					options	: {}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
+			const api_response = await self.consolidate_tables( tables )
 
 			// loading  remove
 			spinner.remove()
 			e.target.classList.remove('lock')
-
-			// remove annoying rqo_string from object
-			if (api_response && api_response.debug && api_response.debug.rqo_string) {
-				delete api_response.debug.rqo_string
-			}
 
 			// response_node pre JSON response
 			if (api_response) {

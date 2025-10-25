@@ -12,6 +12,9 @@
 				"from_component_tipo"	: "rsc24",
 				"type"					: "dd151",
 				"component_tipo"		: "rsc743",
+				"q" 					: "Administrative record",
+				"model"					: "component_input_text",
+				"name" 					: "Typology",
 				"value": {
 					"lg-cat": ["Document administratiu"],
 					"lg-deu": ["Administratives Dossier"],

@@ -5,13 +5,14 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {ui} from '../../../core/common/js/ui.js'
-	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
-	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
-	import {open_tool} from '../../tool_common/js/tool_common.js'
-	import {get_current_lang_info} from './tool_transcription.js'
+	import { event_manager } from '../../../core/common/js/event_manager.js'
+	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { ui } from '../../../core/common/js/ui.js'
+	import { ua } from '../../../core/common/js/ua.js'
+	import { keyboard_codes } from '../../../core/common/js/utils/keyboard.js'
+	import { render_node_info } from '../../../core/common/js/utils/notifications.js'
+	import { open_tool } from '../../tool_common/js/tool_common.js'
+	import { get_current_lang_info } from './tool_transcription.js'
 
 
 
@@ -779,30 +780,10 @@ const render_automatic_transcription = function (options) {
 		const button_automatic_transcription_click_handler = async function(e){
 			e.stopPropagation()
 
-			// check for browser requirements. This check allows Edge (Chromium) too
-			const is_chrome137_or_higher = () => {
-				if (navigator.userAgentData) {
-					const brands = navigator.userAgentData.brands;
-					const chromeBrand = brands.find(b => b.brand === "Google Chrome" || b.brand === "Chromium");
-
-					if (chromeBrand) {
-						const version = parseInt(chromeBrand.version, 10);
-						return version >= 137;
-					}
-				}
-
-				// Fallback to userAgent
-				const ua = navigator.userAgent;
-				const match = ua.match(/Chrome\/(\d+)/i);
-				if (match && match[1]) {
-					const version = parseInt(match[1], 10);
-					return version >= 137;
-				}
-
-				return false;
-			}
-			if (!is_chrome137_or_higher()) {
-				if(!confirm("This feature requires Chrome version 136 or newer. Continue?")) {
+			// Check the user agent can perform correctly and using webGPU
+			const is_a_valid_user_agent = await ua.check_transformers_webgpu()
+			if (!is_a_valid_user_agent.overall) {
+				if(!confirm("For optimal performance, use a webGPU-compatible browser. Your current browser may run this task very slowly. Continue?")) {
 					return false
 				}
 			}

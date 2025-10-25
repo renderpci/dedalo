@@ -32,6 +32,8 @@ export const service_upload = function () {
 
 	this.max_size_bytes		= null
 	this.allowed_extensions	= null
+
+	this.max_concurrent 	= null
 }//end page
 
 
@@ -64,6 +66,9 @@ service_upload.prototype.init = async function(options) {
 		self.model				= options.model || 'service_upload'
 		self.allowed_extensions	= options.allowed_extensions || []
 		self.key_dir			= options.key_dir || null
+		self.max_concurrent 	= typeof DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT === 'undefined'
+			? 50
+			: DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT
 
 	// check
 		if (!self.caller) {
@@ -183,21 +188,27 @@ const get_system_info = async function() {
 export const upload = async function(options) {
 
 	// options
+		const self 					= options.self
 		const id					= options.id // id done by the caller, used to send the events of progress
 		const file					= options.file // object {name:'xxx.jpg',size:5456456}
 		const key_dir				= options.key_dir // object {type: 'dedalo_config', value: 'DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH'}
 		const allowed_extensions	= options.allowed_extensions // array ['tiff', 'jpeg']
 		const max_size_bytes		= options.max_size_bytes // int 352142
 		const tipo					= options.tipo // self.caller.caller.tipo, like service_upload.tool_upload.component_image.tipo
+		const max_concurrent 		= options.max_concurrent
 
-
-	return new Promise(function(resolve){
+	return new Promise( async function(resolve){
 
 		// short vars
 			const api_url	= DEDALO_API_URL
 			const response	= {
 				result : false
 			}
+
+			const queue				= [];
+			let active_count		= 0;
+			let total_chunks		= 0;
+			let file_size 			= 0;
 
 		// check file extension
 			const file_extension = file.name.split('.').pop().toLowerCase();
@@ -215,13 +226,6 @@ export const upload = async function(options) {
 				return false
 			}
 
-		// FormData build
-			// 	const fd = new FormData();
-			// 	fd.append('key_dir',		key_dir);
-			// 	// fd.append('allowed_extensions', 	JSON.stringify(allowed_extensions));
-			// 	// file
-			// 	fd.append('fileToUpload', file);
-
 		// upload_loadstart
 			const upload_loadstart = function() {
 				// progress_line.value		= 0;
@@ -230,6 +234,7 @@ export const upload = async function(options) {
 					value	: 0,
 					msg		: 'Loading file ' + file.name
 				})
+
 			}//end upload_loadstart
 
 		// upload_load.(finished)
@@ -243,7 +248,6 @@ export const upload = async function(options) {
 
 		// upload_error
 			const upload_error = function() {
-				// response_msg.innerHTML = `<span class="error">${get_label.error_on_upload_file} ${file.name}</span>`
 				event_manager.publish('upload_file_status_'+id, {
 					value	: false,
 					msg		: `${get_label.error_on_upload_file} ${file.name}`
@@ -252,15 +256,25 @@ export const upload = async function(options) {
 
 		// upload_abort
 			const upload_abort = function() {
-				// response_msg.innerHTML = '<span class="error">User aborts upload</span>'
 				event_manager.publish('upload_file_status_'+id, {
 					value	: false,
 					msg		: `User aborts upload`
 				})
 			}//end upload_abort
 
+		// upload_try
+			// when a network error happens, the upload try to resume, if the resume success, the error message will change to show the current state.
+			const upload_try = function() {
+				event_manager.publish('upload_file_status_'+id, {
+					value	: false,
+					msg		: 'Trying to upload file ' + file.name
+				})
+			}//end upload_try
+
 		// upload_progress
+			// Update the upload state and progress bar
 			const loaded = []
+			let last_percent = -1
 			const upload_progress = function(options) {
 
 				const event			= options.event
@@ -272,6 +286,11 @@ export const upload = async function(options) {
 				const sum = loaded.reduce((first, second) => first + second);
 
 				const percent = Math.round(sum/total_chunks);
+				if(percent === last_percent){
+					return
+				}
+				last_percent = percent
+
 				// info line show numerical percentage of load
 			    event_manager.publish('upload_file_status_'+id, {
 					value	: percent,
@@ -282,14 +301,16 @@ export const upload = async function(options) {
 				}
 			}//end upload_progress
 
-		// xhr_load
+		// on_xhr_load
+			// check if the upload was done, and process the result in the server
+			// if the process use a chunk files, join the chunks previously.
 			const files_chunked		= []
 			const count_uploaded	= []
-			const xhr_load = function(evt) {
+			const on_xhr_load = function(evt) {
 
 				// debug
 					if(SHOW_DEBUG===true) {
-						console.log('xhr_load evt:', evt);
+						console.log('on_xhr_load evt:', evt);
 					}
 
 				// parse response string as JSON
@@ -330,18 +351,57 @@ export const upload = async function(options) {
 						resolve(api_response)
 						return true
 					}
-			}//end xhr_load
+			}//end on_xhr_load
+
+		// process_queue
+			// Fire a maximum of request define in the config.php
+			// If the max_concurrent is achieve stop to open new connections.
+			const process_queue = async function(){
+				// stop if the max_councurrent is achieve
+				if ( (max_concurrent && active_count >= max_concurrent) || queue.length === 0) {
+					return;
+				}
+				// get the next queue chunk to open the connection
+				active_count++;
+				const { chunk, chunk_index, start, end, resolve, reject } = queue.shift();
+
+				try {
+					// open de connection and send the current chunk
+					const result = await send_chunk({
+						chunk		: chunk,
+						chunk_index	: chunk_index,
+						start		: start,
+						end			: end
+					});
+					resolve(result);
+				} catch (error) {
+					reject(error);
+				} finally {
+					active_count--;
+					process_queue();
+				}
+			}
+
+		// add_to_queue
+			const add_to_queue = async function( options ){
+				const { chunk, chunk_index, start, end } = options
+				return new Promise((resolve, reject) => {
+					queue.push({ chunk, chunk_index, start, end, resolve, reject });
+					process_queue();
+				});
+			}
 
 		// chunk_file
-			const chunk_file = function (file) {
+			const chunk_file = async function (file) {
 
-				const file_size		= file.size;
+				file_size			= file.size;
 				// break into xMB chunks
 				const size			= DEDALO_UPLOAD_SERVICE_CHUNK_FILES || 80; // maximum size for chunks
 				const chunk_size	= size*1024*1024;
 				let start			= 0;
-				const total_chunks	= Math.ceil(file_size / chunk_size);
-
+				total_chunks		= Math.ceil(file_size / chunk_size);
+				// store all promises for every chunk
+				const upload_promises = [];
 				for (let i = 0; i < total_chunks; i++) {
 
 					const check_end = start + chunk_size
@@ -350,17 +410,20 @@ export const upload = async function(options) {
 						: check_end;
 					const chunk = slice(file, start, end);
 
-					send_chunk({
-						chunk			: chunk,
-						chunk_index		: i,
-						total_chunks	: total_chunks,
-						start			: start,
-						end				: end,
-						file_size		: file_size
+					const current_promise = add_to_queue({
+						chunk		: chunk,
+						chunk_index	: i,
+						start		: start,
+						end			: end
 					});
+					upload_promises.push(current_promise)
 
 					start += chunk_size;
 				}
+				// fire all promises, (the max_concurrent will limit the connections)
+				await Promise.all(upload_promises);
+
+				console.log('All promises done !', upload_promises);
 			}
 
 		// slice the file
@@ -379,76 +442,118 @@ export const upload = async function(options) {
 		// send the chunk files to server
 			function send_chunk(options) {
 
-				const chunked 		= true
+				// options
 				const chunk			= options.chunk
 				const chunk_index	= options.chunk_index
-				const total_chunks	= options.total_chunks
 				const start			= options.start
 				const end			= options.end
-				const file_size		= options.file_size
+				const retry_number	= options.retry_number || 0
 
-				const formdata = new FormData();
-				const xhr = new XMLHttpRequest();
+				const chunked 		= true
+				const max_retry		= 3
 
-				xhr.open('POST', api_url, true);
+				return new Promise(function(resolve){
 
-				const chunk_end = end-1;
+					const xhr = new XMLHttpRequest();
 
-				// Content-Range: bytes 0-999999/4582884
-				const contentRange = "bytes "+ start +"-"+ chunk_end +"/"+ file_size;
-				xhr.setRequestHeader("Content-Range",contentRange);
+					xhr.open('POST', api_url, true);
 
-				// request header
-				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+					// Content-Range: bytes 0-999999/4582884
+					const chunk_end = end-1;
+					const contentRange = "bytes "+ start +"-"+ chunk_end +"/"+ file_size;
+					xhr.setRequestHeader("Content-Range",contentRange);
 
-					formdata.append('key_dir', key_dir);
-					formdata.append('file_name', file.name);
-					formdata.append('chunked', chunked);
-					formdata.append('start', start);
-					formdata.append('end', end);
-					formdata.append('chunk_index', chunk_index);
-					formdata.append('total_chunks', total_chunks);
-					formdata.append('file_to_upload', chunk);
+					// request header
+					xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
-				// upload_loadstart (the upload begins)
-					xhr.upload.addEventListener("loadstart", upload_loadstart, false);
+					// FormData
+					const formdata = new FormData();
+						formdata.append('key_dir', key_dir);
+						formdata.append('file_name', file.name);
+						formdata.append('chunked', chunked);
+						formdata.append('start', start);
+						formdata.append('end', end);
+						formdata.append('chunk_index', chunk_index);
+						formdata.append('total_chunks', total_chunks);
+						formdata.append('file_to_upload', chunk);
 
-				// upload_error (the upload ends in error)
-					// xhr.upload.addEventListener("error", upload_error, false);
-					xhr.upload.addEventListener("error", function(evt) {
-						upload_error(evt)
-						console.error('evt:', evt);
-						console.log('chunk:', chunk);
-						// clearInterval(intervalTimer);
-						setTimeout(function(){
-							send_chunk(options)
-						}, 5000)
-					}, false);
+					// upload_error (the upload ends in error)
+						xhr.upload.addEventListener("error", function(evt) {
+							upload_error(evt)
+							console.error('xhr.upload error evt:', evt);
+							console.log('xhr.upload error chunk:', chunk);
 
-				// upload_abort (the upload has been aborted by the user)
-					xhr.upload.addEventListener("abort", upload_abort, false);
+							if (retry_number <= max_retry) {
 
-				// progress
-					xhr.upload.addEventListener("progress", function(event) {
-						 upload_progress({
-							event			: event,
-							chunk_index		: chunk_index,
-							total_chunks	: total_chunks
-						 })
-					}, false);
+								const next_retry = retry_number + 1
+								console.log(`Retry attempt ${next_retry}/${max_retry}`);
 
-				// xhr_load (the XMLHttpRequest ends successfully)
-					xhr.addEventListener("load", xhr_load, false);
+								const result_retry = new Promise(function(resolve, reject){
+									setTimeout( function(){
+										// Clean up current XHR to prevent memory leaks
+										xhr.onreadystatechange = null;
+										xhr.upload.onerror = null;
+										xhr.abort();
+										upload_try()
 
-				xhr.send(formdata);
+										 // Retry with updated options
+										const updated_options = {
+											...options,
+											retry_number: next_retry
+										};
+
+										// fire the upload
+										send_chunk(updated_options)
+											.then(resolve)
+											.catch(reject);
+
+									}, 5000)
+								})
+								resolve( result_retry )
+							}else {
+								// Max retries exceeded - reject with meaningful error
+								const error = new Error(`Upload failed after ${max_retry} retries`);
+								error.chunk = chunk;
+								error.event = evt;
+								reject(error);
+							}
+						}, false);
+
+					// upload_abort (the upload has been aborted by the user)
+						const abort_handler = (e) => {
+							console.error('xhr.upload abort');
+							upload_abort(e)
+							reject(e)
+						}
+						xhr.upload.addEventListener("abort", abort_handler, false);
+
+					// progress
+						xhr.upload.addEventListener("progress", function(event) {
+							 upload_progress({
+								event			: event,
+								chunk_index		: chunk_index,
+								total_chunks	: total_chunks
+							 })
+						}, false);
+
+					// on_xhr_load (the XMLHttpRequest ends successfully)
+						const load_handler = (e) => {
+							console.log('xhr.upload loaded chunk: ', chunk_index);
+							on_xhr_load(e)
+							resolve(e)
+						}
+						xhr.addEventListener("load", load_handler, false);
+
+					xhr.send(formdata);
+				})
 			}//end send_chunk
+
 
 		// send the entire file to server
 			function send(options) {
 
 				const chunked = false
 
-				const formdata = new FormData();
 				const xhr = new XMLHttpRequest();
 
 				xhr.open('POST', api_url, true);
@@ -456,6 +561,7 @@ export const upload = async function(options) {
 				// request header
 				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
+				const formdata = new FormData();
 					formdata.append('key_dir', key_dir);
 					formdata.append('file_name', file.name);
 					formdata.append('chunked', chunked);
@@ -483,11 +589,12 @@ export const upload = async function(options) {
 						 })
 					}, false);
 
-				// xhr_load (the XMLHttpRequest ends successfully)
-					xhr.addEventListener("load", xhr_load, false);
+				// on_xhr_load (the XMLHttpRequest ends successfully)
+					xhr.addEventListener("load", on_xhr_load, false);
 
 				xhr.send(formdata);
 			}//end send
+
 
 		// chunk_file on end, else send next chunk
 			if (DEDALO_UPLOAD_SERVICE_CHUNK_FILES > 0) {
@@ -531,7 +638,8 @@ service_upload.prototype.upload_file = async function(options) {
 			key_dir				: key_dir, // string like 'image' used to target dir
 			allowed_extensions	: allowed_extensions, // array ['tiff', 'jpeg']
 			max_size_bytes		: self.max_size_bytes, // int 352142
-			tipo				: self.caller.caller?.tipo || null
+			tipo				: self.caller.caller?.tipo || null,
+			max_concurrent 		: self.max_concurrent // int | false, limit the open connections with the server
 		})
 		if (!api_response.result) {
 			console.error("Error on api_response:", api_response);
