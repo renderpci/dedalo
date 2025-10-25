@@ -227,6 +227,10 @@ define('ONTOLOGY_SECTION_TIPOS', [
 	'json_item'		=> 'dd1556'
 ]);
 
+// COMPONENTS DATA-FRAME
+// Default component_iri label dataframe definition
+define('DEDALO_COMPONENT_IRI_LABEL_DATAFRAME',	'dd560'); // dd560
+
 
 // if (!defined('DEDALO_PROTOCOL')) {
 // 	define('DEDALO_PROTOCOL', 'http://');

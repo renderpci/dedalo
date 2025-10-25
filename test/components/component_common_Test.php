@@ -1263,45 +1263,45 @@ final class component_common_test extends TestCase {
 
 
 
-	/**
-	* TEST_PARSE_SEARCH_DYNAMIC
-	* @return void
-	*/
-	public function XXX_test_parse_search_dynamic() {
+	// /**
+	// * TEST_PARSE_SEARCH_DYNAMIC
+	// * @return void
+	// */
+	// public function XXX_test_parse_search_dynamic() {
 
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+	// 	// default dato
+	// 	foreach (get_elements() as $element) {
+	// 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
+	// 		$component = component_common::get_instance(
+	// 			$element->model, // string model
+	// 			$element->tipo, // string tipo
+	// 			$element->section_id, // string section_id
+	// 			$element->mode, // string mode
+	// 			$element->lang, // string lang
+	// 			$element->section_tipo, // string section_tipo
+	// 			false
+	// 		);
 
-			$response = $component->parse_search_dynamic(
-				$ar_filtered_by_search_dynamic
-			);
-				// dump($response, ' $response ++ '.to_string($element->model));
+	// 		$response = $component->parse_search_dynamic(
+	// 			$ar_filtered_by_search_dynamic
+	// 		);
+	// 			// dump($response, ' $response ++ '.to_string($element->model));
 
-			$this->assertTrue(
-				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
-			);
+	// 		$this->assertTrue(
+	// 			empty($_ENV['DEDALO_LAST_ERROR']),
+	// 			'expected running without errors'
+	// 		);
 
-			$this->assertTrue(
-				gettype($response)==='string' || gettype($response)==='NULL',
-				'response type expected string|null. current type: ' .gettype($response) .' - '.$element->model
-			);
+	// 		$this->assertTrue(
+	// 			gettype($response)==='string' || gettype($response)==='NULL',
+	// 			'response type expected string|null. current type: ' .gettype($response) .' - '.$element->model
+	// 		);
 
-			// (!) Important. This method is still used by diffusion (v5)
-			// DO NOT CHANGE THE RETURN VALUES
-		}
-	}//end test_parse_search_dynamic
+	// 		// (!) Important. This method is still used by diffusion (v5)
+	// 		// DO NOT CHANGE THE RETURN VALUES
+	// 	}
+	// }//end test_parse_search_dynamic
 
 
 
@@ -1682,12 +1682,12 @@ final class component_common_test extends TestCase {
 			);
 
 			$response = $component->regenerate_component();
-				// dump($response, '  response ++ '.to_string($element->model));
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors' . PHP_EOL
-				. to_string($_ENV['DEDALO_LAST_ERROR'])
+					'expected running without errors' . PHP_EOL
+					. to_string($_ENV['DEDALO_LAST_ERROR'])  . PHP_EOL
+					. ' response: ' . to_string($response)  . PHP_EOL
 			);
 
 			$this->assertTrue(
@@ -1927,26 +1927,33 @@ final class component_common_test extends TestCase {
 				'expected json_data->data type is array'
 			);
 
-			if (!empty($json_data->data[0])) {
+			// data could be formed for various items (from subdatum) in different order.
+			// We get the matching item with current component tipo.
+			$data		= $json_data->data ?? [];
+			$found_data	= array_find($data, function($el) use ($element){
+				return $el->tipo===$element->tipo;
+			});
 
-				$this->assertTrue( $json_data->data[0]->section_id===$component->get_section_id() );
-				$this->assertTrue( $json_data->data[0]->section_tipo===$component->get_section_tipo() );
-				$this->assertTrue( $json_data->data[0]->lang===$component->get_lang() );
-				$this->assertTrue( $json_data->data[0]->from_component_tipo===$component->get_tipo() );
+			if ($found_data) {
 
-				// if (gettype($json_data->data[0]->value)!=='array' && !is_null($json_data->data[0]->value)) {
-				// 	dump($json_data->data[0], ' var ++ ))))))))))))))))) '.to_string($element->model));
-				// 	dump(gettype($json_data->data[0]->value), ' gettype ((((((((((((((((((( ))))))))))))))))))) ++ '.to_string($element->model));
+				$this->assertTrue( $found_data->section_id===$component->get_section_id() );
+				$this->assertTrue( $found_data->section_tipo===$component->get_section_tipo() );
+				$this->assertTrue( $found_data->lang===$component->get_lang() );
+				$this->assertTrue( $found_data->from_component_tipo===$component->get_tipo() );
+
+				// if (gettype($found_data->value)!=='array' && !is_null($found_data->value)) {
+				// 	dump($found_data, ' var ++ ))))))))))))))))) '.to_string($element->model));
+				// 	dump(gettype($found_data->value), ' gettype ((((((((((((((((((( ))))))))))))))))))) ++ '.to_string($element->model));
 				// }
 				if ($element->model==='component_section_id') {
 					$this->assertTrue(
-						gettype($json_data->data[0]->value)==='integer' && $json_data->data[0]->value==$component->get_section_id(),
+						gettype($found_data->value)==='integer' && $found_data->value==$component->get_section_id(),
 						'expected type integer and equal to section_id: '.$component->get_section_id()
 					);
 				}else{
 					$this->assertTrue(
-						gettype($json_data->data[0]->value)==='array' || is_null($json_data->data[0]->value) ,
-						'expected type array|null value. type: '.gettype($json_data->data[0]->value)
+						gettype($found_data->value)==='array' || is_null($found_data->value) ,
+						'expected type array|null value. type: '.gettype($found_data->value)
 					);
 				}
 			}

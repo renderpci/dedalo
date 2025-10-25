@@ -584,6 +584,11 @@ export const save_preset = async function(options) {
 				console.error(`Error on create save preset section (${section_tipo} - ${section_id}). api_response: `, api_response);
 			}
 
+		// Update cache with the new filter
+		// Used when user back from a tool and open the search
+		// if the cache is not refresh the data search changes will be accumulated into the components
+			self.component_json_data.value = [filter_obj]
+
 		resolve(api_response)
 	})
 }//end save_preset

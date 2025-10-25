@@ -141,6 +141,13 @@ class tool_time_machine extends tool_common {
 
 								$dataframe_tipo = $current_dataframe_ddo->tipo;
 
+								// component dataframe of the component iri
+								// here only use the main_component_tipo
+								// the dataframe will save all time machine data independent of section_id_key or section_tipo_key
+								// and it don't save the revert in Time Machine, as main component does.
+								$caller_dataframe = new stdClass();
+									$caller_dataframe->main_component_tipo	= $tipo;
+
 								// delete all data of the dataframe
 								// it will delete all section_id_key
 								// create the dataframe component
@@ -151,7 +158,9 @@ class tool_time_machine extends tool_common {
 										$section_id,
 										'list',
 										DEDALO_DATA_NOLAN,
-										$section_tipo
+										$section_tipo,
+										false,
+										$caller_dataframe
 									);
 
 								// get the dataframe data from dato, filtering by dataframe_tipo
@@ -169,12 +178,23 @@ class tool_time_machine extends tool_common {
 							}
 						}// end if($has_dataframe === true)
 
+					$relation_components = component_relation_common::get_components_with_relations();
+					$relation_components[] = 'component_iri';// add the component_iri, it can handle dataframes
+					if ( is_array($dato_time_machine) && in_array( $model, $relation_components) ){
 
-					if ( is_array($dato_time_machine) && in_array( $model, component_relation_common::get_components_with_relations()) ){
-						// Main component and other components without dataframe
-						$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) use($tipo) {
-							return isset($el->from_component_tipo) && $el->from_component_tipo===$tipo;
-						}));
+						// Get only the component data. Remove possible dataframe data
+						// component_iri exception, it doesn't has from_componnet_tipo to select its own tm data
+						if($model==='component_iri'){
+							$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) {
+								// return only the objects with iri property
+								return property_exists($el, 'iri');;
+							}));
+						}else{
+							// Main component and other components without dataframe
+							$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) use($tipo) {
+								return isset($el->from_component_tipo) && $el->from_component_tipo===$tipo;
+							}));
+						}
 					}
 
 					// dataframe caller

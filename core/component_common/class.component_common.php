@@ -387,7 +387,7 @@ abstract class component_common extends common {
 				$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
 				if(isset($caller_dataframe)) {
 					// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->section_tipo_key;
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->main_component_tipo;
 				}
 				if ( !isset(self::$ar_component_instances[$cache_key]) ) {
 					// instance new component
@@ -788,21 +788,34 @@ abstract class component_common extends common {
 
 				// Main components with dataframe and other relation components.
 					$relation_components = component_relation_common::get_components_with_relations();
+					$relation_components[] = 'component_iri';// add the component_iri
 					if ( is_array($dato_tm) && in_array( $this->get_model(), $relation_components) ){
+
 						// Get only the component data. Remove possible dataframe data
-						$dato_tm = array_values( array_filter( $dato_tm, function($el) use($component_tipo) {
-							return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
-						}));
+						// component_iri exception, it doesn't has from_componnet_tipo to select its own tm data
+						if($this->get_model()==='component_iri'){
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) {
+								// return only the objects with iri property
+								return property_exists($el, 'iri');;
+							}));
+						}else{
+							// any other relation component
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($component_tipo) {
+								return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+							}));
+						}
 
 						// If the component is a dataframe filter the tm data with the section_id_key also.
 						if($this->get_model()==='component_dataframe'){
 
-							$section_id_key		= $this->caller_dataframe->section_id_key;
-							$section_tipo_key	= $this->caller_dataframe->section_tipo_key;
+							$section_id_key			= $this->caller_dataframe->section_id_key;
+							$section_tipo_key		= $this->caller_dataframe->section_tipo_key;
+							$main_component_tipo	= $this->caller_dataframe->main_component_tipo;
 
-							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key, $section_tipo_key) {
+							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key, $section_tipo_key, $main_component_tipo) {
 								return ( isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key )
-									&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key );
+									&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key )
+									&& ( isset($el->main_component_tipo) && $el->main_component_tipo===$main_component_tipo );
 							}));
 						}
 					}
@@ -2575,10 +2588,11 @@ abstract class component_common extends common {
 		$dataframe_ddo = $this->get_dataframe_ddo();
 
 		$caller_dataframe = new stdClass();
-			$caller_dataframe->section_tipo		= $this->section_tipo;
-			$caller_dataframe->section_id		= $this->section_id;
-			$caller_dataframe->section_id_key	= $locator->section_id;
-			$caller_dataframe->section_tipo_key	= $locator->section_tipo;
+			$caller_dataframe->section_tipo			= $this->section_tipo;
+			$caller_dataframe->section_id			= $this->section_id;
+			$caller_dataframe->section_id_key		= $locator->section_id;
+			$caller_dataframe->section_tipo_key		= $locator->section_tipo;
+			$caller_dataframe->main_component_tipo	= $this->tipo;
 
 
 		// config_context. Get_config_context normalized
@@ -3518,6 +3532,29 @@ abstract class component_common extends common {
 
 			// insert given value in dato
 			case 'insert':
+
+				// set the id of the comonent_iri
+				// check all data languages to get the if of the array key
+				// if the other data lang has not id, set new one from counter in the component
+				// if the other data lang has an id, set the new data with it.
+				if( get_called_class() === 'component_iri'){
+					// get the id of the key in other languages
+					$id = $this->get_id_from_key( $changed_data->key );
+					// if other lang has an id set it
+					if( !empty($id) ){
+						// Check if the data is an object because as insert action could be null data
+						if( !is_object($changed_data->value) ){
+							// create new object
+							$changed_data->value = new dd_iri();
+								$changed_data->value->set_iri( null );
+								$changed_data->value->set_id( $id );
+						}else{
+							// set the id to the data
+							$changed_data->value->id = $id;
+						}
+					}
+				}
+
 				$dato[] = $changed_data->value;
 
 				$this->set_dato($dato);
@@ -3546,6 +3583,28 @@ abstract class component_common extends common {
 					$dato[$changed_data->key] = $changed_data->value;
 				}
 
+				// set the id of the comonent_iri
+				// check all data languages to get the if of the array key
+				// if the other data lang has not id, set new one from counter in the component
+				// if the other data lang has an id, set the new data with it.
+				if( get_called_class() === 'component_iri'){
+					// get the id of the key in other languages
+					$id = $this->get_id_from_key( $changed_data->key );
+					// if other lang has an id set it
+					if( !empty($id) ){
+						// Check if the data is an object because as insert action could be null data
+						if( !is_object($changed_data->value) ){
+							// create new object
+							$changed_data->value = new dd_iri();
+								$changed_data->value->set_iri( null );
+								$changed_data->value->set_id( $id );
+						}else{
+							// set the id to the data
+							$changed_data->value->id = $id;
+						}
+					}
+				}
+
 				$this->set_dato($dato);
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
@@ -3559,25 +3618,25 @@ abstract class component_common extends common {
 				// get the key to be removed into data
 					$key = $changed_data->key;
 
-				//set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
-				$this->observable_dato = (get_called_class()==='component_relation_related')
+				// set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
+				$this->observable_dato = ( get_called_class()==='component_relation_related' )
 					? $this->get_dato_with_references()
 					: $dato;
 
-				//dataframe
-					$dataframe_ddo = $this->get_dataframe_ddo();
-					if(!empty($dataframe_ddo) && $changed_data->key!==false ){
-						$this->remove_dataframe_data( $dato[$key] );
-					}
+				// Fix locator used to delete dataframe
+				// Set the locator with the data of the component.
+				// When the component is a relation, pick the correct locator
+				$locator = $dato[$key] ?? null;
 
+				// Delete dato
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
 						$value = [];
 						$this->set_dato($value);
 						break;
 
-					case ($changed_data->value===null && ($lang!==DEDALO_DATA_NOLAN && $with_lang_versions===true)):
-						// propagate to other data langs
+					case ($changed_data->value===null && ($with_lang_versions===true && $lang===DEDALO_DATA_NOLAN)):
+						// propagate deletion to other data langs
 						$section = $this->get_my_section();
 
 						// deactivate save option
@@ -3586,6 +3645,8 @@ abstract class component_common extends common {
 
 						$ar_langs = $this->get_component_ar_langs();
 						foreach ($ar_langs as $current_lang) {
+
+							$this->dato_resolved = null;
 
 							// change lang and get dato
 							$this->set_lang($current_lang);
@@ -3607,6 +3668,43 @@ abstract class component_common extends common {
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
 						break;
+				}
+
+				// Delete dataframe
+				$dataframe_ddo = $this->get_dataframe_ddo();
+				if( !empty($dataframe_ddo) && $changed_data->key!==false && isset($locator) ){
+
+					// If the caller is a literal as component_iri
+					// build a new locator with the id of the component data and its own section_tipo
+					if( get_called_class()==='component_iri'){
+
+						// Builds a virtual locator for IRI
+							$current_section_id = $locator->id;
+
+						// Overwrite locator
+							$locator = new locator();
+								$locator->set_section_tipo($this->section_tipo);
+								$locator->set_section_id($current_section_id);
+
+						if( $lang!==DEDALO_DATA_NOLAN ){
+							// Prevents to delete the dataframe on any langs different of nolan
+							// Only the nolan should delete the dataframe, other langs will delete main data only.
+
+							// Check if the dataframe is used in nolan.
+							// If the id is already used, don't remove the dataframe.
+							$id_exists_in_nolan = $this->get_key_from_id( $current_section_id, DEDALO_DATA_NOLAN);
+
+							if( $id_exists_in_nolan !== null ){
+								// Prevents to delete the dataframe
+								$locator = null;
+							}
+						}
+					}
+
+					// Remove the dataframe data
+					if( !empty($locator) ){
+						$this->remove_dataframe_data( $locator );
+					}
 				}
 				break;
 
@@ -3998,6 +4096,23 @@ abstract class component_common extends common {
 
 		return $response;
 	}//end conform_import_data
+
+
+
+	/**
+	* IMPORT_SAVE
+	* Only called by the import process
+	* Is used to perform any process after the conform data and previous to save
+	* As clean its dataframe or any other process.
+	* By default it only call to save function.
+	*
+	* @return
+	*/
+	public function import_save() {
+
+		$this->Save();
+
+	}//end import_save
 
 
 

@@ -1,0 +1,9 @@
+[
+{"old":"numisdata95"	,"new": "hierarchy22" 		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Old id => id object1 in hierarchy"},
+{"old":"numisdata511"	,"new": "hierarchy26" 		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Old public => Public object1 in hierarchy"},
+{"old":"numisdata97"	,"new": "hierarchy25" 		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Old Denomination => Term object1 in hierarchy"},
+{"old":"numisdata96"	,"new": "hierarchy99" 		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Old Definition => Definition object1 in hierarchy"},
+{"old":"numisdata98"	,"new": "hierarchy89" 		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Old URL => URL object1 in hierarchy"},
+{"old":"numisdata827"	,"new": "hierarchy101" 		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Old Colour => Colour object1 in hierarchy"},
+{"old":"numisdata100"	,"new": "hierarchy55" 		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Old Project => Project object1 in hierarchy"}
+]

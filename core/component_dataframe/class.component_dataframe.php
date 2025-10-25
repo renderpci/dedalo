@@ -8,7 +8,7 @@ class component_dataframe extends component_portal {
 
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
+	public $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key','main_component_tipo'];
 
 
 
@@ -70,9 +70,11 @@ class component_dataframe extends component_portal {
 			if(	isset($locator->from_component_tipo)
 				&& isset($locator->section_id_key)
 				&& isset($locator->section_tipo_key)
+				&& isset($locator->main_component_tipo)
 				&& $locator->from_component_tipo	=== $this->tipo
 				&& (int)$locator->section_id_key	=== (int)$caller_dataframe->section_id_key
 				&& $locator->section_tipo_key		=== $caller_dataframe->section_tipo_key
+				&& $locator->main_component_tipo	=== $caller_dataframe->main_component_tipo
 			) {
 				$all_data[] = $locator;
 			}
@@ -129,6 +131,7 @@ class component_dataframe extends component_portal {
 		// locator_to_remove. add custom properties from caller_dataframe
 			$locator_to_remove->section_id_key		= $caller_dataframe->section_id_key;
 			$locator_to_remove->section_tipo_key	= $caller_dataframe->section_tipo_key;
+			$locator_to_remove->main_component_tipo	= $caller_dataframe->main_component_tipo;
 
 		// locator_properties_to_check
 			$locator_properties_to_check = $this->get_locator_properties_to_check();
@@ -165,37 +168,11 @@ class component_dataframe extends component_portal {
 	*/
 	public function empty_full_data_associated_to_main_component() : true {
 
-		$all_data = parent::get_all_data();
-
-		$to_save = false;
-
-		$all_data_size = sizeof($all_data);
-		for ($i=0; $i < $all_data_size; $i++) {
-
-			$locator = $all_data[$i];
-			// remove current locator from component dato
-
-			$caller_dataframe = new stdClass();
-				$caller_dataframe->section_id_key	= $locator->section_id_key;
-				$caller_dataframe->section_tipo_key	= $locator->section_tipo_key;
-				$caller_dataframe->section_tipo		= $this->section_tipo;
-
-			$this->set_caller_dataframe($caller_dataframe);
-
-			// exec remove (return bool)
-			$removed = $this->remove_locator_from_dato(
-				$locator
-			);
-
-			if ($removed) {
-				$to_save = true;
-			}
-		}
-
-		if ($to_save) {
-			$this->Save();
-		}
-
+		$section = $this->get_my_section();
+		$options = (object)[
+			'component_tipo' => $this->tipo
+		];
+		$section->remove_relations_from_component_tipo($options);
 
 		return true;
 	}//end empty_full_data_associated_to_main_component
@@ -209,30 +186,17 @@ class component_dataframe extends component_portal {
 	*/
 	public function set_time_machine_data( array $data ) : bool {
 
-		$section = $this->get_my_section();
-			$section->save_tm = false;
-
+		// remove all previous data
 		$this->empty_full_data_associated_to_main_component();
 
-		$data_size = sizeof($data);
-		for ($i=0; $i < $data_size; $i++) {
-
-			$locator = $data[$i];
-
-			$caller_dataframe = new stdClass();
-				$caller_dataframe->section_id_key	= $locator->section_id_key;
-				$caller_dataframe->section_tipo_key	= $locator->section_tipo_key;
-				$caller_dataframe->section_tipo		= $this->section_tipo;
-
-			$this->set_caller_dataframe($caller_dataframe);
-
-			// exec remove (return bool)
-			$this->set_dato( [$locator] );
-			$this->Save();
-		}
-
+		// Remove the time machine to save the dataframe
+		// this set will be saved by main component.
+		$section = $this->get_my_section();
+		$section->save_tm = false;
+		$this->set_dato( $data );
+		$this->Save();
+		// re activate the time machine
 		$section->save_tm = true;
-
 
 		return true;
 	}//end set_time_machine_data
@@ -262,9 +226,28 @@ class component_dataframe extends component_portal {
 	*/
 	public function get_main_component_tipo() : string {
 
-		$ontology_node			= new ontology_node( $this->get_tipo() );
-		$main_component_tipo	= $ontology_node->get_parent();
+		$main_component_tipo = $this->caller_dataframe->main_component_tipo ?? null;
 
+		if( empty($main_component_tipo) ){
+			// default
+			$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
+			$main_component_tipo	= $RecordObj_dd->get_parent();
+		}else{
+			// Check valid main_component_tipo
+			$model = RecordObj_dd::get_modelo_name_by_tipo($main_component_tipo,true);
+			if ($model!=='component_iri') {
+				$RecordObj_dd				= new RecordObj_dd( $this->get_tipo() );
+				$test_main_component_tipo	= $RecordObj_dd->get_parent();
+				if ($test_main_component_tipo!==$main_component_tipo) {
+					debug_log(__METHOD__
+						. " Wrong main_component_tipo. " . PHP_EOL
+						. ' received main_component_tipo: ' . to_string($main_component_tipo) . PHP_EOL
+						. ' calculated test_main_component_tipo: ' . to_string($test_main_component_tipo)
+						, logger::ERROR
+					);
+				}
+			}
+		}
 
 		return $main_component_tipo;
 	}//end get_main_component_tipo
@@ -274,14 +257,26 @@ class component_dataframe extends component_portal {
 	/**
 	* GET_MAIN_COMPONENT_DATA
 	* Create the main component and return its data
-	* @return array $main_componenet_data
+	* @return array|null $main_componenet_data
 	*/
-	public function get_main_component_data() : array {
+	public function get_main_component_data() : ?array {
 
 		$main_component_tipo = $this->get_main_component_tipo();
 
 		$model	= ontology_node::get_model_by_tipo( $main_component_tipo );
 		$lang	= ontology_node::get_translatable($main_component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+
+		// dataframe_root case (dd555)
+		if ( strpos($model, 'component_')===false ) {
+			debug_log(__METHOD__
+				. " Ignored invalid component " . PHP_EOL
+				. ' $main_component_tipo: ' . to_string($main_component_tipo) . PHP_EOL
+				. ' $model: ' . to_string($model)
+				, logger::WARNING
+			);
+			return null;
+		}
+
 		$main_component = component_common::get_instance(
 			$model, // string model
 			$main_component_tipo, // string tipo
@@ -291,10 +286,15 @@ class component_dataframe extends component_portal {
 			$this->get_section_tipo() // string section_tipo
 		);
 
-		$main_componenet_data = $main_component->get_dato_full();
+		$relation_component = component_relation_common::get_components_with_relations();
 
+		// if the main component is a relation component get the full data
+		// if the main component is a literal component get its data (don't use the full data because is an object with lang that as key instead an array)
+		$main_component_data = in_array($model, $relation_component)
+			? $main_component->get_dato_full()
+			: $main_component->get_dato();
 
-		return $main_componenet_data;
+		return $main_component_data;
 	}//end get_main_component_data
 
 
@@ -455,6 +455,123 @@ class component_dataframe extends component_portal {
 				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
 				break;
 
+			case '6.8.0':
+				// Update the component_dataframe to use the `main_component_tipo` property
+				// `main_component_tipo` property is used to identify the caller component
+				// when a component_dataframe definition is shared between different components
+				// like a label for `component_iri`, that is used by every `component_iri`
+				// in those cases, the `from_component_tipo` is the same, because is only 1 definition in ontology
+				// and become necessary to disambiguate who is the main component, who is the caller component
+				// this allows to create a common `component_dataframe` used by multiple components
+				// In version < 6.8.0 every component_dataframe needs to be defined, and common definitions are not allowed.
+
+				// get the main component tipo
+					$RecordObj_dd			= new RecordObj_dd($tipo);
+					$main_component_tipo	= $RecordObj_dd->get_parent();
+
+				// Time Machine Update
+
+				// get the main component data in Time Machine. `component_dataframe` has not its own records in Time Machine,
+				// only main component storage changes (including the dataframe data)
+				$component_tm_data = transform_data::get_tm_data_from_tipo($section_id, $section_tipo, $main_component_tipo);
+
+				// query error case, return an empty array
+				if($component_tm_data===false){
+					debug_log(__METHOD__
+						. " The time machine data has error. " . PHP_EOL
+						. ' main tipo error: '  . to_string($main_component_tipo) . PHP_EOL
+						. ' options: '  . to_string($options)
+						, logger::ERROR
+					);
+
+					break;
+				}
+				// get an array with the result
+				while($tm_row = pg_fetch_assoc($component_tm_data)) {
+
+					// check if the data has information, if is null or empty, continue to next one.
+					if( !isset($tm_row['dato'] ) || $tm_row['dato']===null ){
+						continue;
+					}
+
+					$matrix_id	= (int)$tm_row['id'];
+					$data		= json_decode($tm_row['dato']);
+
+					// id data is empty continue to the next one.
+					if( empty($data) ){
+						continue;
+					}
+
+					$new_tm_data = [];
+					// process every locator to check if the main_comopnent_tipo is set in the dataframe data
+					foreach ($data as $current_locator) {
+						// if the locator match with the `component_dataframe` tipo and its data has not the main_comonent_tipo
+						if($current_locator->from_component_tipo===$tipo && !isset($current_locator->main_component_tipo)){
+							$current_locator->main_component_tipo = $main_component_tipo;
+						}
+
+						$new_tm_data[] = $current_locator;
+					}
+
+					transform_data::set_tm_data($matrix_id, $new_tm_data);
+				}
+
+				// change the data
+				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+
+					$new_dato		= [];
+					$need_to_be_updated	= false;
+					foreach ((array)$dato_unchanged as $current_locator) {
+						// id the data has section_tipo_key do not change
+						if( isset($current_locator->main_component_tipo) ){
+							continue;
+						}
+
+						$current_locator->main_component_tipo = $main_component_tipo;
+						$need_to_be_updated = true;
+
+						$new_dato[] = $current_locator;
+					}//end foreach ((array)$dato_unchanged as $key => $current_locator)
+
+					if ($need_to_be_updated === true) {
+
+						// section update and save locators
+							$section_to_save = section::get_instance(
+								$section_id, // string|null section_id
+								$section_tipo, // string section_tipo
+								'list', // string mode
+								false // bool bool
+							);
+							$remove_options = new stdClass();
+								$remove_options->component_tipo			= $tipo;
+								$remove_options->relations_container	= 'relations';
+
+							$section_to_save->remove_relations_from_component_tipo( $remove_options );
+							foreach ($new_dato as $current_locator) {
+								$section_to_save->add_relation($current_locator);
+							}
+							$section_to_save->Save();
+							debug_log(__METHOD__." ----> Saved ($section_tipo - $section_id) ".to_string($new_dato), logger::WARNING);
+
+						$response = new stdClass();
+							$response->result	= 3;
+							$response->new_dato	= $new_dato;
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+					}else{
+
+						$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+
+					}// end if($need_to_be_updated === true)
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+
+				break;
 			default:
 				$response = new stdClass();
 					$response->result	= 0;

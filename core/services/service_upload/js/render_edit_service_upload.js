@@ -354,6 +354,25 @@ export const render_info = function(self) {
 		})
 
 
+	// Max simultaneous request
+		// when this param is change in the interface, the upload will set its value as a limit of open connections
+		ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: 'Max simultaneous request',
+			parent			: info
+		})
+		const max_concurrent_input = ui.create_dom_element({
+			element_type	: 'input',
+			type 			: 'number',
+			value			: self.max_concurrent,
+			parent			: info
+		})
+		const change_concurrent_handler = function() {
+			self.max_concurrent = parseInt( max_concurrent_input.value )
+		}
+		max_concurrent_input.addEventListener('change', change_concurrent_handler)
+
+
 	return info
 }//end render_info
 

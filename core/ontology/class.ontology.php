@@ -2189,7 +2189,7 @@ class ontology {
 		// response
 			if( empty($response->errors) ){
 				$response->result	= true;
-				$response->msg		= 'OK. Request done successfully';
+				$response->msg		= 'OK. The regenerate records request has been completed successfully.';
 			}
 			// total_insert dd_ontology records
 			$response->total_insert = $total_insert;

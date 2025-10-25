@@ -752,11 +752,13 @@ component_common.prototype.update_datum = async function(new_datum) {
 						&& parseInt(el.section_id) 	=== parseInt(self.section_id)
 						&& el.mode 					=== self.mode
 						){
-						// if the new data provides by dataframe it will has section_id_key and section_tipo_key
-						// in this case check the previous data in datum has correspondence with section_id_key and his tipo_key
-						const to_delete = (el.section_id_key && el.section_tipo_key)
-							 ? parseInt(el.section_id_key) === parseInt(self.section_id_key) && el.section_tipo_key === self.section_tipo_key
-							 : true
+						// if the new data provides by dataframe it will has section_id_key, section_tipo_key and main_component_tipo
+						// in this case check the previous data in datum has correspondence with section_id_key, section_tipo_key and its main_component_tipo
+						const to_delete = ( el.section_id_key && el.section_tipo_key && el.main_component_tipo )
+							? parseInt(el.section_id_key)	=== parseInt(self.section_id_key)
+								&& el.section_tipo_key		=== self.section_tipo_key
+								&& el.main_component_tipo	=== self.main_component_tipo
+							: true
 
 						if(to_delete){
 							el.value = [];
@@ -778,12 +780,13 @@ component_common.prototype.update_datum = async function(new_datum) {
 							&& parseInt(el.section_id) 	=== parseInt(data_item.section_id)
 							&& el.mode 					=== data_item.mode
 							){
-							// if the new data provides by dataframe it will has section_id_key && section_tipo_key
-							// in this case check the previous data in datum has correspondence with section_id_key and his section_tipo_key
-							if(el.section_id_key && el.section_tipo_key){
+							// if the new data provides by dataframe it will has section_id_key, section_tipo_key and main_component_tipo
+							// in this case check the previous data in datum has correspondence with section_id_key, section_tipo_key and its main_component_tipo
+							if( el.section_id_key && el.section_tipo_key && el.main_component_tipo ){
 								return (
 									parseInt(el.section_id_key)	=== parseInt(data_item.section_id_key)
 									&& el.section_tipo_key		=== data_item.section_tipo_key
+									&& el.main_component_tipo	=== data_item.main_component_tipo
 								)
 							}
 							return true
@@ -1573,8 +1576,9 @@ export const deactivate_components = function(e) {
 
 /**
 * GET_DATAFRAME
-* Check if the component has a component_dataframe in his own rqo
-* if it has a dataframe, create the component, and inject his context and data
+* Checks if the component has a component_dataframe in his own RQO.
+* If it has a dataframe, creates the component, and inject his context and data.
+* Returns a built 'component_dataframe' instance.
 * @param object options
 * {
 * 	section_id: int|string|null
@@ -1583,24 +1587,27 @@ export const deactivate_components = function(e) {
 * 	section_tipo_key: string
 * 	view: string|null
 * }
-* @return object|null component_dataframe
+* @return object|null component_dataframe instance
+* 	A built componetn_datataframe instance (status = 'built')
 */
 export const get_dataframe = async function(options) {
 
-	const self = options.self
-
-	const section_id		= options.section_id
-	// const section_tipo	= options.section_tipo
-	const section_id_key	= options.section_id_key
-	const section_tipo_key	= options.section_tipo_key
-	const view				= options.view
+	// options
+	const self					= options.self
+	const section_id			= options.section_id
+	const section_id_key		= options.section_id_key
+	const section_tipo_key		= options.section_tipo_key
+	const main_component_tipo	= options.main_component_tipo
+	const view					= options.view
+	const mode					= options.mode
+	const lang					= options.lang
 
 	const request_config = self.context.request_config || null
 
+	// original_dataframe_ddo
 	const original_dataframe_ddo = request_config
-		? request_config[0].show.ddo_map.find(el => el.model === 'component_dataframe')
-		: null
-
+		? request_config[0]?.show?.ddo_map?.find(el => el.model === 'component_dataframe')
+		: null;
 	// no ddo found case, stop here
 	if(!original_dataframe_ddo){
 		return null
@@ -1609,8 +1616,17 @@ export const get_dataframe = async function(options) {
 	// instance_options
 	const instance_options = clone(original_dataframe_ddo)
 	instance_options.section_id	= section_id
-	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_tipo_key}_${section_id_key}`
+	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_tipo_key}_${section_id_key}_${main_component_tipo}_${Math.random()}`
 	instance_options.standalone	= false
+
+	// matrix_id. time machine matrix_id
+	if (self.matrix_id) {
+		instance_options.matrix_id = self.matrix_id
+		instance_options.id_variant = `${instance_options.id_variant}_${self.matrix_id}`
+	}
+
+	// add lang if is defined from options
+	instance_options.lang = lang
 
 	// component_dataframe init instance
 	const component_dataframe = await get_instance(instance_options)
@@ -1628,24 +1644,28 @@ export const get_dataframe = async function(options) {
 						parseInt(el.matrix_id)			=== parseInt(self.matrix_id)
 						&& el.section_tipo_key			=== section_tipo_key
 						&& parseInt(el.section_id_key)	=== parseInt(section_id_key)
+						&& el.main_component_tipo		=== main_component_tipo
 					)
 				}
 				// normal case
-				if( !self.matrix_id ){
+				else{
 					return (
 						parseInt(el.section_id_key)	=== parseInt(section_id_key)
 						&& el.section_tipo_key		=== section_tipo_key
+						&& el.main_component_tipo	=== main_component_tipo
 
 					)
 				}
 			}
 		return false
 	})
+
 	const dataframe_data = data
 		? data
 		: {
 			section_tipo_key	: section_tipo_key,
-			section_id_key		: section_id_key
+			section_id_key		: section_id_key,
+			main_component_tipo	: main_component_tipo
 		}
 
 	// context
@@ -1653,6 +1673,10 @@ export const get_dataframe = async function(options) {
 		el.tipo				=== component_dataframe.tipo
 		&& el.section_tipo	=== component_dataframe.section_tipo
 	)
+	if (!context) {
+        console.warn(`Context not found for component ${component_dataframe.tipo} in section ${component_dataframe.section_id}. Cannot proceed.`);
+        return null;
+    }
 
 	// view. Get view from options. If not defined, get from ddo
 	context.view = (view)
@@ -1660,6 +1684,13 @@ export const get_dataframe = async function(options) {
 		: instance_options.view
 			? instance_options.view
 			: 'default'
+
+	// mode. Get mode from options. If not defined, get from ddo
+	context.mode = (mode)
+		? mode
+		: instance_options.mode
+			? instance_options.mode
+			: 'edit'
 
 	// inject properties before build
 	component_dataframe.datum	= self.datum
@@ -1690,13 +1721,14 @@ export const delete_dataframe = async function(options) {
 	const self = options.self
 
 	// options
-		const section_id		= options.section_id
-		const section_tipo		= options.section_tipo
-		const section_id_key	= options.section_id_key
-		const section_tipo_key	= options.section_tipo_key
-		const paginated_key		= options.paginated_key || false
-		const row_key			= options.row_key || false
-		const delete_instace	= options.delete_instace || false
+		const section_id			= options.section_id
+		const section_tipo			= options.section_tipo
+		const section_id_key		= options.section_id_key
+		const section_tipo_key		= options.section_tipo_key
+		const main_component_tipo	= options.main_component_tipo
+		const paginated_key			= options.paginated_key || false
+		const row_key				= options.row_key || false
+		const delete_instace		= options.delete_instace || false
 
 	// ddo_dataframe.
 	// check if the show has any ddo that call to any dataframe section.
@@ -1714,6 +1746,7 @@ export const delete_dataframe = async function(options) {
 			&& parseInt(el.section_id)			=== parseInt(section_id)
 			&& el.data.section_tipo_key			=== section_tipo_key
 			&& parseInt(el.data.section_id_key)	=== parseInt(section_id_key)
+			&& el.data.main_component_tipo		=== main_component_tipo
 		)
 
 	if(!component_dataframe){
@@ -1754,7 +1787,7 @@ export const delete_dataframe = async function(options) {
 
 	// remove the instance
 		if(delete_instace===true){
-			component_dataframe.destroy(
+			await component_dataframe.destroy(
 				true, // delete_self
 				true, // delete_dependencies
 				true // remove_dom
