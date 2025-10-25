@@ -44,7 +44,7 @@
 			"fn":"transform_data::set_move_identification_value",
 			"options":{
 				"action"				: "new_only_once",
-				"section_tipo"			: "object1",
+				"section_tipo"			: "dd64",
 				"from_component_tipo"	: "hierarchy23",
 				"type"					: "dd151",
 				"component_tipo"		: "dd62",
