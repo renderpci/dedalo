@@ -1741,6 +1741,7 @@ function session_start_manager(array $options) : bool {
 
 
 
+
 /**
 * SAFE_TABLE
 * Remove extra malicious code

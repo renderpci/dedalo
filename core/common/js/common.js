@@ -286,7 +286,7 @@ common.prototype.render = async function (options={}) {
 
 	// options
 		const render_mode	= options.render_mode || self.mode
-		const render_level	= options.render_level || 'full'
+		const render_level	= options.render_level || 'full' // full|content
 
 	// api_errors case
 		if (page_globals.api_errors.length) {
