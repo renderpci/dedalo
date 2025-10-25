@@ -470,32 +470,6 @@ class transform_data {
 								// Nothing to change
 								break;
 						}
-
-					// time machine data update
-						// $old_locator = clone $locator;
-						// self::fix_dataframe_tm(
-						// 	$datos->section_id,
-						// 	$datos->section_tipo,
-						// 	$old_locator,
-						// 	$locator
-						// );
-
-					// ratting component update
-						// 	$component_rating = component_common::get_instance(
-						// 		'component_radio_button', // string model
-						// 		$ratting_tipo, // string tipo
-						// 		$new_target_section_id, // string section_id
-						// 		'list', // string mode
-						// 		DEDALO_DATA_NOLAN, // string lang
-						// 		$target_section_tipo // string section_tipo
-						// 	);
-
-						// 	$dato = new locator();
-						// 		$dato->set_section_tipo('dd500');
-						// 		$dato->set_section_id('1');
-
-						// 	$component_rating->set_dato([$dato]);
-						// 	$component_rating->Save();
 				}//end if(isset($locator->section_id_key))
 
 			}//end foreach ($relations as $locator)
@@ -580,6 +554,60 @@ class transform_data {
 
 		return $tm_ar_changed;
 	}//end fix_dataframe_tm
+
+
+	/**
+	* GET_TM_DATA_FROM_TIPO
+	* Return all Time Machine records of the given component for specific section (section_id and section_tipo)
+	* If Time Machine has not records or the process fail, return an empty array.
+	* @param string|int $section_id
+	* @param string $section_tipo
+	* @param string $tipo (it can be a section or component)
+	* @return array $component_tm_data
+	*/
+	public static function get_tm_data_from_tipo(string|int $section_id, string $section_tipo, string $tipo) : \PgSql\Result|false {
+
+		// get all records of the time_machine for the given component
+		$query = "
+			SELECT * FROM matrix_time_machine
+			WHERE section_id = $1
+			AND section_tipo = $2
+			AND tipo = $3
+		";
+		$result	= pg_query_params(DBi::_getConnection(), $query, [$section_id, $section_tipo, $tipo]);
+
+		return $result;
+	}//end get_tm_data_from_tipo
+
+
+
+	/**
+	* SET_TM_DATA
+	* Set the Time Machine data of the given matrix_id
+	* @param string|int $section_id
+	* @param array $data
+	* @return bool
+	*/
+	public static function set_tm_data( int $matrix_id, array $data) : bool {
+
+		// data_encoded : JSON ENCODE ALWAYS !!!
+			$data_encoded = json_handler::encode($data);
+			// prevent null encoded errors
+			$safe_data = str_replace(['\\u0000','\u0000'], ' ', $data_encoded);
+
+			$query	= "UPDATE matrix_time_machine SET dato = $1 WHERE id = $2 ";
+			$result	= pg_query_params(DBi::_getConnection(), $query, [$safe_data, $matrix_id]);
+			if($result===false) {
+				$msg = "Failed Update section_data $matrix_id";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					.' strQuery: ' . $query
+					, logger::ERROR
+				);
+			}
+
+		return true;
+	}//end set_tm_data
 
 
 
@@ -1748,8 +1776,17 @@ class transform_data {
 							if( isset($ar_transform_map[$loc_value]) ){
 								// replace old tipo with the new one in any locator property
 								$locator->{$loc_key}	= $ar_transform_map[$loc_value]->new;
-								$new_section_id			= (int)$ar_transform_map[$loc_value]->base_counter + (int)$locator->section_id;
-								$locator->section_id	= (string)$new_section_id;
+								// dataframe locator pointing to main locator that are changed its own section_tipo
+								// if the dataframe locator is pointing to the changed section_tipo, the new section_id will be set into section_id_key
+								// because the dataframe is linked to a locator in the main component that was changed.
+								if($loc_key==='section_tipo_key'){
+									$new_section_id				= (int)$ar_transform_map[$loc_value]->base_counter + (int)$locator->section_id_key;
+									$locator->section_id_key	= (int)$new_section_id;
+								}else{
+									$new_section_id			= (int)$ar_transform_map[$loc_value]->base_counter + (int)$locator->section_id;
+									// regular locator
+									$locator->section_id	= (string)$new_section_id;
+								}
 							}
 						}
 					}
@@ -1857,7 +1894,14 @@ class transform_data {
 					$current_locator->$loc_key	= $ar_transform_map[$current_value]->new;
 					$base_section_id			= $ar_transform_map[$current_value]->base_counter;
 
-					if($loc_key === 'section_tipo'){
+					// dataframe locator pointing to main locator that are changed its own section_tipo
+					// if the dataframe locator is pointing to the changed section_tipo, the new section_id will be set into section_id_key
+					// because the dataframe is linked to a locator in the main component that was changed.
+					if($loc_key==='section_tipo_key'){
+						$new_section_id						= (int)$base_section_id + (int)$current_locator->section_id_key;
+						$current_locator->section_id_key	= (int)$new_section_id;
+					}else{
+						// regular locator
 						$new_section_id					= (int)$base_section_id + (int)$current_locator->section_id;
 						$current_locator->section_id	= (string)$new_section_id;
 					}
@@ -1951,7 +1995,13 @@ class transform_data {
 		$component_tipo			= $options->component_tipo;
 		$value					= $options->value;
 		$datos					= $options->datos;
+		$q						= $options->q;
+		$model					= $options->model;
+		$name					= $options->name;
 
+		if( !empty($q) ){
+			$q = addslashes($q);
+		}
 		// cache to be used when the data needs to apply into every new record
 		static $cache_set_move_identification_value;
 		$cache_key = $action.'_'.$section_tipo.'_'.$component_tipo;
@@ -1976,7 +2026,7 @@ class transform_data {
 					$sqo = json_decode('
 						{
 							"section_tipo": [
-								"rsc450"
+								"'.$section_tipo.'"
 							],
 							"limit": 10,
 							"offset": 0,
@@ -1984,15 +2034,15 @@ class transform_data {
 								"$and": [
 									{
 										"q": [
-											"Moved from People"
+											"'.$q.'"
 										],
 										"q_operator": null,
 										"path": [
 											{
-												"section_tipo": "rsc450",
-												"component_tipo": "rsc452",
-												"model": "component_input_text",
-												"name": "Typology"
+												"section_tipo": "'.$section_tipo.'",
+												"component_tipo": "'.$component_tipo.'",
+												"model": "'.$model.'",
+												"name": "'.$name.'"
 											}
 										],
 										"q_split": true,
@@ -2549,6 +2599,262 @@ class transform_data {
 
 		return $section_tipo_key;
 	}//end get_section_tipo_key_from_main_component
+
+
+
+	/**
+	* CHANGE_DATA_LANG
+	* Switch language of some component form original lang to target lang
+	* Used to set non translatable component to translatable component or vice versa.
+	* @return
+	*/
+	public static function change_data_lang( array $json_files ) {
+
+
+		// disable activity log
+			logger_backend_activity::$enable_log = false;
+
+
+		debug_log(__METHOD__ . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			. " CONVERTING ... " . PHP_EOL
+			. " changes_in_component_lang - json_files: " . json_encode($json_files) . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			, logger::WARNING
+		);
+
+		$path = DEDALO_CORE_PATH.'/base/transform_definition_files/move_lang/';
+		// get transform map from files
+			//  value: {
+			// 	"tipo"		: "hierarchy89" ,
+			// 	"type"		: "component"
+			// 	"ar_tables" : ["matrix","matrix_hierarchy","matrix_list","matrix_activities"]
+			// 	"perform"	: ["lang_to_nolan"]
+			// 	"info"		: "URL translatable => URL non translatable and transliterable"
+			// }
+
+			$ar_transform_map = [];
+			foreach ($json_files as $current_json_file) {
+				$contents			= file_get_contents($path.$current_json_file);
+				$transform_map		= json_decode($contents);
+				foreach ($transform_map as $transform_object) {
+					$ar_transform_map[$transform_object->tipo] = $transform_object;
+				}
+			}
+
+			// ar_tables without keys like ["matrix"]
+			// get the unique values specify by the definition
+			$ar_tables = array_unique( array_merge( ...array_map( function($el) {
+				return $el->ar_tables ?? [];
+			}, $ar_transform_map, []) ) );
+
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->table = '';
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
+		update::tables_rows_iterator(
+			$ar_tables, // array of tables to iterate
+			function($row, $table, $max) use($ar_transform_map) { // callback function
+
+				$id				= $row['id'];
+				$section_tipo	= $row['section_tipo'] ?? null;
+				$section_id		= $row['section_id'] ?? null;
+				$datos			= (isset($row['datos'])) ? json_handler::decode($row['datos']) : null;
+
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': changes_in_locators'
+							. ' | table: ' 			. $table
+							. ' | id: ' 			. $id .' - ' . $max
+							. ' | section_tipo: ' 	. $section_tipo
+							. ' | section_id: '  	. ($row['section_id'] ?? '');
+						common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+							? dd_memory_usage() // update memory information once every 5000 items
+							: common::$pdata->memory;
+						common::$pdata->table = $table;
+						common::$pdata->section_tipo = $section_tipo;
+						common::$pdata->counter++;
+						// send to output
+						print_cli(common::$pdata);
+					}
+
+				// datos. Common matrix tables
+				if( isset($datos) ){
+
+					// datos properties
+					foreach ($datos as $datos_key => $datos_value) {
+
+						if( empty($datos_value) ){
+							continue;
+						}
+
+						switch ($datos_key) {
+							// Only literal components has lang
+							case 'components':
+								// update components object
+								$literal_components = $datos_value ?? [];
+
+								$new_components = new stdClass();
+
+								foreach ($literal_components as $literal_tipo => $literal_value) {
+									if( isset($ar_transform_map[$literal_tipo]) ){
+
+										// Get the perform from definition
+										$perform = $ar_transform_map[$literal_tipo]->perform;
+										foreach ($perform as $action) {
+
+											// check method already exists
+												if(!method_exists('transform_data', $action)) {
+													debug_log(__METHOD__
+														. " Error. Calling undefined method transform_data::$action . Ignored action !"
+														, logger::ERROR
+													);
+													continue;
+												}
+
+											$options = new stdClass();
+												$options->transform_object	= $ar_transform_map[$literal_tipo];
+												$options->new_components	= &$new_components; // pass by reference to allow add (!)
+												$options->literal_tipo		= $literal_tipo;
+												$options->literal_value		= $literal_value;
+
+											transform_data::{$action}( $options );
+										}
+									}else{
+										$new_components->{$literal_tipo} = $literal_value;
+									}
+								}
+
+								// replace whole object
+								$datos->$datos_key = $new_components;
+								break;
+
+							default:
+
+								break;
+						}
+					}//end foreach ($datos as $datos_key => $datos_value)
+
+					$section_data_encoded = json_encode($datos);
+
+					$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+					if($result===false) {
+						$msg = "Failed Update section_data ($table) $id";
+						debug_log(__METHOD__
+							." ERROR: $msg "
+							, logger::ERROR
+						);
+						return false;
+					}
+				}//end if( isset($datos) )
+			}//end anonymous function
+		);
+
+		// Time machine matrix table
+		// change the langs into time machine rows
+		foreach ($ar_transform_map as $tipo => $item) {
+
+			// Get the perform from definition
+			$perform = $item->perform;
+			foreach ($perform as $action) {
+				// define the query for all actions
+				$strQuery = "
+					UPDATE matrix_time_machine SET lang = $1 WHERE id in(
+						SELECT id
+						FROM \"matrix_time_machine\"
+						WHERE \"tipo\" = $2 AND \"lang\" = $3
+					);
+				";
+				// set the query values with the correct order based in perform actions
+				switch ($action) {
+					case 'lang_to_nolan':
+						// set the default lang as nolan
+						$result	= pg_query_params(
+							DBi::_getConnection(),
+							$strQuery,
+							[DEDALO_DATA_NOLAN, $tipo, DEDALO_DATA_LANG_DEFAULT]
+						);
+
+						break;
+					case 'nolang_to_lang':
+					default:
+						// set the nolan as default lang
+						$result	= pg_query_params(
+							DBi::_getConnection(),
+							$strQuery,
+							[DEDALO_DATA_LANG_DEFAULT, $tipo, DEDALO_DATA_NOLAN]
+						);
+						break;
+				}
+				if($result===false) {
+					$msg = "Failed Update time machine record";
+					debug_log(__METHOD__
+						." ERROR: $msg ".PHP_EOL
+						." tipo: ".$tipo .PHP_EOL
+						." querry: ".$strQuery .PHP_EOL
+						, logger::ERROR
+					);
+					return false;
+				}
+			}
+		}
+
+		// re-enable activity log
+			logger_backend_activity::$enable_log = true;
+
+	}//end change_data_lang
+
+
+
+	/**
+	* LANG_TO_NOLAN
+	* Set the literal component lang defined as main lang to nolan
+	* @param object $options
+	* @return void
+	*/
+	public static function lang_to_nolan(object $options) {
+
+		$transform_object	= $options->transform_object;
+		$new_components		= $options->new_components; // pass by reference
+		$literal_value		= $options->literal_value;
+
+		$lang		= DEDALO_DATA_LANG_DEFAULT;
+		$nolan		= DEDALO_DATA_NOLAN;
+		$all_langs	= common::get_ar_all_langs();
+
+		// check if the default lang exist in data
+		if( !empty($literal_value->dato->$lang) ){
+			// set the old values into the nolan
+			$literal_value->dato->$nolan = $literal_value->dato->$lang;
+			// remove the default lang
+			unset($literal_value->dato->$lang);
+		}else{
+			// set the fallback lang
+			foreach ($all_langs as $current_lang) {
+				// pick any of the projects langs
+				if( !empty($literal_value->dato->$current_lang) ){
+					// set the old values into the nolan
+					$literal_value->dato->$nolan = $literal_value->dato->$current_lang;
+					// remove the default lang
+					unset($literal_value->dato->$current_lang);
+					// stop
+					break;
+				}
+			}
+		}
+
+		// modifies passed by reference object new_components
+		$new_components->{$transform_object->tipo} = $literal_value;
+	}//end lang_to_nolan
+
 
 
 

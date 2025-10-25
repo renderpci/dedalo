@@ -164,7 +164,7 @@ class section extends common {
 			// find current instance in cache
 				$cache_key = implode('_', [$section_id, $tipo, $mode]);
 				if(isset($caller_dataframe)){
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key;
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
 
 				}
 				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
@@ -483,10 +483,10 @@ class section extends common {
 			if ($component_data_type==='relation') {
 
 				// relation components
-
 				// previous component dato from unchanged section dato object
-				// It is used to check time_machine data when time_machine has not previous
-				// data of the component, because was a explicit not time_machine save.
+				// It is used to check time_machine data
+				// when time_machine has not previous data of the component,
+				// because was a explicit not time_machine save.
 				// The previous_component_dato will be used to set it as previous time_machine_data.
 				// It avoids losing previous data modifications.
 				$previous_component_dato = array_values(
@@ -501,7 +501,9 @@ class section extends common {
 							? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
 								&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
 								&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
+								&& $el->main_component_tipo===$component_obj->caller_dataframe->main_component_tipo
 							: isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+
 
 						 return $previous_dato;
 					})
@@ -536,6 +538,7 @@ class section extends common {
 
 		// time machine data. We save only current component lang 'dato' in time machine
 			$save_options = new stdClass();
+
 				// get the time_machine data from component
 				// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
 				$save_options->time_machine_data	= $component_obj->get_time_machine_data_to_save();//$component_obj->get_dato_unchanged();
@@ -2326,6 +2329,51 @@ class section extends common {
 
 
 	/**
+	* GET_COMPONENT_COUNTER
+	* Obtain the counter for given component ontology tipo
+	* Components storage its id to match with any other component as dataframe
+	* @param string $tipo
+	* @return int $component_counter
+	*/
+	public function get_component_counter( string $tipo ) : int {
+
+		// check if section_id is numeric and is not empty
+		if( empty($this->section_id) || !is_numeric($this->section_id) ){
+			return 0;
+		}
+		$dato				= $this->get_dato();
+		$component_counter	= $dato->counters->$tipo ?? 0; // default counter value is always 1, including the empty counter
+
+		return $component_counter;
+	}//end get_component_counter
+
+
+
+	/**
+	* SET_COMPONENT_COUNTER
+	* Fix the component counter with given ontology tipo and value
+	* Set the counter of the component into section data schema
+	* @param string $tipo
+	* @param int value
+	* @return int $dato->counters->$tipo
+	*/
+	public function set_component_counter( string $tipo, int $value ) : int {
+
+		$dato = $this->get_dato(); // Force load
+
+		if( !isset($dato->counters) ){
+			$dato->counters = new stdClass();
+		}
+
+		$dato->counters->$tipo = $value; // set the new counter for the component adding 1 to the counter.
+		$this->set_dato($dato); // Force update
+
+		return $dato->counters->$tipo;
+	}//end set_component_counter
+
+
+
+	/**
 	* GET_AR_ALL_SECTION_RECORDS_UNFILTERED
 	* @see diffusion::build_table_data_recursive
 	*
@@ -3100,6 +3148,7 @@ class section extends common {
 					( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
 					&& ( isset($current_locator->section_id_key) && intval($current_locator->section_id_key)===intval($caller_dataframe->section_id_key) )
 					&& ( isset($current_locator->section_tipo_key) && $current_locator->section_tipo_key===$caller_dataframe->section_tipo_key)
+					&& ( isset($current_locator->main_component_tipo) && $current_locator->main_component_tipo===$caller_dataframe->main_component_tipo)
 					){
 						$ar_deleted_locators[] = $current_locator;
 
@@ -3922,15 +3971,13 @@ class section extends common {
 									// if the component has a dataframe
 									// the time machine data will has both data, the main data from the main component
 									// and the dataframe data.
-									// to inject the correct main data is necessary filter it with the from_component_tipo
-										if ( strpos($source_model, 'component_')!==false ) {
+									// To inject the correct main data is necessary filter it with the from_component_tipo
+										if ( strpos($source_model, 'component_')!==false && !empty($dato) ) {
+
 											$dataframe_ddo = $current_component->get_dataframe_ddo();
-											if( !empty($dataframe_ddo) && !empty($dato) && $source_model!=='section'){
-												if (is_array($dato)) {
-													$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
-														return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
-													}));
-												}else{
+											if( !empty($dataframe_ddo) ) {
+												if (!is_array($dato)) {
+
 													debug_log(__METHOD__
 														. " [has dataframe] dato expected type is array " . PHP_EOL
 														. ' dato type: ' . gettype($dato) . PHP_EOL
@@ -3940,6 +3987,23 @@ class section extends common {
 														. ' dataframe_ddo: ' . to_string($dataframe_ddo) . PHP_EOL
 														, logger::ERROR
 													);
+
+												}else{
+
+													// Remove dataframe values (locators)
+													$components_with_relations = component_relation_common::get_components_with_relations();
+													if (in_array($component_model, $components_with_relations) ) {
+														// Relation.
+														$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
+															return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
+														}));
+
+													}else{
+														// literal.
+														$current_dato = array_values( array_filter( $dato, function($el) {
+															return !isset($el->from_component_tipo);
+														}));
+													}
 												}
 											}
 										}
@@ -4006,41 +4070,43 @@ class section extends common {
 									// has_dataframe
 										// if the component has a dataframe create new component and inject his own data
 										// dataframe data is saved by the main dataframe and is part of the row data
-										if ( strpos($source_model, 'component_')!==false ) {
-											if( !empty($dataframe_ddo) ){
-												foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
+										if (strpos($source_model, 'component_')!==false && !empty($dataframe_ddo)) {
+											foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
 
-													$dataframe_tipo = $current_dataframe_ddo->tipo;
+												$dataframe_tipo = $current_dataframe_ddo->tipo;
 
-													// 1 remove dataframe data created by the main component in his subdatum process
-													// when the main component create his own subdatum it can get incorrect dataframe data
-													// because the main component use the time machine data but not the dataframe data by itself.
-													// and it can meet his data with the current dataframe data.
-													// to avoid it, remove the dataframe data from the main component.
-													foreach ($element_json->data as $key => $current_source_data) {
-														if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
-															unset($element_json->data[$key]);
-														}
+												// 1 remove dataframe data created by the main component in his subdatum process
+												// when the main component create his own subdatum it can get incorrect dataframe data
+												// because the main component use the time machine data but not the dataframe data by itself.
+												// and it can meet his data with the current dataframe data.
+												// to avoid it, remove the dataframe data from the main component.
+												foreach ($element_json->data as $key => $current_source_data) {
+													if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
+														unset($element_json->data[$key]);
 													}
+												}
 
-													// 2 get the dataframe data from dato, filtering by dataframe_tipo
-													if( !empty($dato) ){
-														$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
-															return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
-														}));
-													}
+												// 2 get the dataframe data from dato, filtering by dataframe_tipo
+												if( !empty($dato) ){
+													$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
+														return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
+													}));
+												}
 
+												// 3 get the component dataframe data with time machine data
+												if (!empty($dataframe_data)) {
 
-													// 3 get the component dataframe data with time machine data
 													$dataframe_model = ontology_node::get_model_by_tipo($dataframe_tipo);
+
 													foreach ($dataframe_data as $key => $current_dataframe_data) {
 														// create the caller_dataframe with the current data information
 														$new_caller_dataframe = new stdClass();
-															$new_caller_dataframe->section_id_key	= $current_dataframe_data->section_id_key;
-															$new_caller_dataframe->section_tipo_key	= $current_dataframe_data->section_tipo_key;
-															$new_caller_dataframe->section_tipo		= $section_tipo;
+															$new_caller_dataframe->section_id_key		= $current_dataframe_data->section_id_key;
+															$new_caller_dataframe->section_tipo_key		= $current_dataframe_data->section_tipo_key;
+															$new_caller_dataframe->section_tipo			= $section_tipo;
+															$new_caller_dataframe->main_component_tipo	= $tipo;
 
-														// // create the dataframe component
+														// create the dataframe component
 														$dataframe_component = component_common::get_instance(
 															$dataframe_model,
 															$dataframe_tipo,
@@ -4080,6 +4146,7 @@ class section extends common {
 
 									// data add
 										$ar_subdata = array_merge($ar_subdata, $component_data);
+
 								}//end if ($is_dd_grid_column===true)
 								break;
 						}//end switch(true)

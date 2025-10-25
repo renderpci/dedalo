@@ -113,7 +113,7 @@ class area_maintenance extends area_common {
 				$item->value	= (object)[
 					'body' => 'Move TLD defined map items from source (ex. numisdata279) to target (ex. tchi1).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_tld.<br>
-							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+							   Note: this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_tld' )
 				];
 			$widget = $this->widget_factory($item);
@@ -127,7 +127,7 @@ class area_maintenance extends area_common {
 				$item->value	= (object)[
 					'body' => 'Move locator defined map items from source (ex. rsc194) to target (ex. rsc197) adding new section_id based in the last section_id of destiny.<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_locator.<br>
-							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+							   Note: this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_locator' )
 				];
 			$widget = $this->widget_factory($item);
@@ -141,7 +141,7 @@ class area_maintenance extends area_common {
 				$item->value	= (object)[
 					'body' => 'Move data from a section to another linked section and link together with a portal (e.g. "Use and function" components behind qdp443 to section rsc1340).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
-							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+							   Note: this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_to_portal' )
 				];
 			$widget = $this->widget_factory($item);
@@ -156,6 +156,20 @@ class area_maintenance extends area_common {
 					'body' => 'Move data from a table to another (e.g. move utoponymy1 to matrix_hierarchy).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_table.<br>',
 					'files' => area_maintenance::get_definitions_files( 'move_to_table' )
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+		// move_lang
+			$item = new stdClass();
+				$item->id		= 'move_lang';
+				$item->type		= 'widget';
+				$item->label	= 'Move LANG';
+				$item->value	= (object)[
+					'body' => 'Convert map items (e.g., hierarchy89) between translatable and non-translatable components (or vice-versa).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_lang.<br>
+							   Note: This process can be very time-consuming, as it iterates through all relevant records in the database.',
+					'files' => area_maintenance::get_definitions_files( 'move_lang' )
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -688,9 +702,10 @@ class area_maintenance extends area_common {
 	/**
 	* CONSOLIDATE_TABLES
 	* Remunerates table id column to consolidate id sequence from 1,2,...
+	* @param object $options
 	* @return object $response
 	*/
-	public static function consolidate_tables() : object {
+	public static function consolidate_tables( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -698,12 +713,22 @@ class area_maintenance extends area_common {
 			$response->errors	= [];
 			$response->success	= 0;
 
-		$ar_sql_query = [];
+		// options
+		$tables = $options->tables ?? [];
 
 		$ar_tables = ['dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd'];
 
 		// exec
-		foreach ($ar_tables as $table) {
+		foreach ($tables as $table) {
+
+			if (!in_array($table, $ar_tables)) {
+				debug_log(__METHOD__
+					. " Ignored non allow table " . PHP_EOL
+					. ' table: ' . to_string($table)
+					, logger::ERROR
+				);
+				continue;
+			}
 
 			$result = db_tasks::consolidate_table( $table );
 
@@ -718,8 +743,6 @@ class area_maintenance extends area_common {
 		$response->msg		= count($response->errors)>0
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
-		$response->n_queries = count($ar_sql_query);
-		$response->n_errors = count($response->errors);
 
 
 		return $response;
@@ -1682,6 +1705,63 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end move_to_table
+
+
+	/**
+	* MOVE_LANG
+	* Transform Dédalo data from specific tables defined changing data lang
+	* using selected JSON file map
+	* Is called from widget 'move_lang' as process
+	* @param object $options
+	* {
+	* 	files_selected : array ['change_hierarchy89_to_nolan.json']
+	* }
+	* @return object $response
+	*/
+	public static function move_lang(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// options
+			$files_selected = $options->files_selected;
+			if (empty($files_selected)) {
+				$response->errors[] = 'empty files_selected';
+				return $response;
+			}
+
+		// files
+			$definitions_files	= area_maintenance::get_definitions_files( 'move_lang' );
+			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
+				return in_array($el->file_name, $files_selected);
+			});
+			if (empty($json_files)) {
+				$response->errors[] = 'json_files not found';
+				return $response;
+			}
+
+			// ar_file_name
+			$ar_file_name = array_values(
+				array_map(function($el){
+					return $el->file_name;
+				}, $json_files)
+			);
+
+			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
+			$result = transform_data::change_data_lang(
+				$ar_file_name
+			);
+
+		$response->result	= $result;
+		$response->msg		= ($result===false)
+			? 'Error. changes_in_tipos failed'
+			: 'OK. request done successfully';
+
+
+		return $response;
+	}//end move_lang
 
 
 

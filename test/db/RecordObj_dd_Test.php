@@ -1292,4 +1292,58 @@ final class ontology_node_test extends TestCase {
 
 
 
+	/**
+	* TEST_insert
+	* @return void
+	*/
+	public function test_insert(): void {
+
+		$tipo			= 'test99999';
+		$RecordObj_dd	= new RecordObj_dd($tipo);
+		$result			= $RecordObj_dd->insert();
+
+		$expected	= 'string';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result type: ' . gettype($result) . PHP_EOL
+				. ' expected type: ' . to_string($expected)
+		);
+
+		// terminoID response
+			$expected	= $tipo;
+			$eq			= $result === $expected;
+			$this->assertTrue(
+				$eq,
+				'expected equal true' . PHP_EOL
+					. ' result: ' . to_string($result) . PHP_EOL
+					. ' expected: ' . to_string($expected)
+			);
+	}//end test_insert
+
+
+
+	/**
+	* TEST_delete
+	* @return void
+	*/
+	public function test_delete(): void {
+
+		$tipo			= 'test99999';
+		$RecordObj_dd	= new RecordObj_dd($tipo);
+		$result			= $RecordObj_dd->Delete();
+
+		$expected	= 'NULL';
+		$eq			= gettype($result)===$expected;
+		$this->assertTrue(
+			$eq,
+			'expected equal true' . PHP_EOL
+				. ' result type: ' . gettype($result) . PHP_EOL
+				. ' expected type: ' . to_string($expected)
+		);
+	}//end test_delete
+
+
+
 }//end class

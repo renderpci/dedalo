@@ -29,6 +29,17 @@
 		die("Error. System is in maintenance mode. Unable to test in this mode.");
 	}
 
+// host test
+	define('TEST_HOST',
+		// 'https://localhost:8443/'
+		'https://localhost:7443'
+	);
+
+// DEDALO_API_URL_UNIT_TEST. Used only to internal test. Define as full URL with protocol, domain and port
+	define('DEDALO_API_URL_UNIT_TEST',
+		TEST_HOST . DEDALO_ROOT_WEB .'/core/api/v1/json/'
+	);
+
 // PHPUnit classes
 	// use PHPUnit\Framework\TestCase;
 	// use PHPUnit\Framework\Attributes\TestDox;

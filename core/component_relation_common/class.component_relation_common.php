@@ -463,9 +463,10 @@ class component_relation_common extends component_common {
 				// if the component has a dataframe component, create his caller_dataframe to related with the locator
 				$caller_dataframe 		= ($ddo->model === 'component_dataframe')
 					? (object)[
-						'section_tipo'		=> $ddo->section_tipo,
-						'section_id_key'	=> $locator->section_id,
-						'section_tipo_key'	=> $locator->section_tipo_key ?? null
+						'section_tipo'			=> $ddo->section_tipo,
+						'section_id_key'		=> $locator->section_id,
+						'section_tipo_key'		=> $locator->section_tipo_key ?? null,
+						'main_component_tipo'	=> $locator->main_component_tipo ?? null
 					  ]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
@@ -1500,12 +1501,14 @@ class component_relation_common extends component_common {
 		// 	"use_function": "relations_flat_fct_st_si"
 		// }
 		if (strpos($q, '{')===false && $format!=='function') {
-			debug_log(__METHOD__
-				. ' Ignored invalid unsafe q ' . PHP_EOL
-				. ' q: ' . to_string($q) . PHP_EOL
-				. ' query_object: ' . to_string($query_object)
-				, logger::ERROR
-			);
+			if ($q!=='only_operator') {
+				debug_log(__METHOD__
+					. ' Ignored invalid unsafe q ' . PHP_EOL
+					. ' q: ' . to_string($q) . PHP_EOL
+					. ' query_object: ' . to_string($query_object)
+					, logger::ERROR
+				);
+			}
 			$q = '[]';
 		}
 
@@ -2620,11 +2623,11 @@ class component_relation_common extends component_common {
 
 					$ar_section_tipo[] = $source_item;
 					debug_log(__METHOD__
-						." ++++++++++++++++++++++++++++++++++++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
+						." +++ Added string source item (but expected object). Format values as {'source':'section', 'value'='hierarchy1'} ". PHP_EOL
 						.' source_item: '.to_string($source_item) . PHP_EOL
 						.' ar_section_tipo_sources: '.to_string($ar_section_tipo_sources) . PHP_EOL
 						.' caller_section_tipo: '.to_string($caller_section_tipo)
-						,logger::ERROR
+						,logger::WARNING
 					);
 					continue;
 				}
@@ -3515,7 +3518,8 @@ class component_relation_common extends component_common {
 				$map_options = null;
 				$check_publishable = $options->check_publishable ?? false;
 				if ($check_publishable) {
-					// Pass 'check_publishable' value to diffusion_sql to apply
+
+					// Pass 'check_publishable' value to diffusion_sql to apply (mupreva138 case)
 					// path: $process_dato_arguments = $options->properties->process_dato_arguments
 					$map_options = new stdClass();
 						$map_options->properties = (object)[
@@ -3524,6 +3528,7 @@ class component_relation_common extends component_common {
 							]
 						];
 				}
+			// send to diffusion for normalize formats
 				$term_id = diffusion_sql::map_locator_to_term_id($map_options, $dato);
 		}
 

@@ -660,7 +660,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 							// component save
 								$component->set_dato($conformed_value);
-								$component->Save();
+								$component->import_save();
 							break;
 
 						// created_by_user
@@ -689,7 +689,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 							// component save
 								$component->set_dato($conformed_value);
-								$component->Save();
+								$component->import_save();
 							break;
 
 						default:
@@ -707,7 +707,7 @@ class tool_import_dedalo_csv extends tool_common {
 									if (strpos($v_key, 'lg-')===0) {
 										$component->set_lang( $v_key );
 										$component->set_dato( $v_value );
-										$component->Save();
+										$component->import_save();
 									}else{
 										debug_log(__METHOD__
 											. " ERROR ON IMPORT VALUE FROM $model_name [$component_tipo]"
@@ -768,7 +768,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 								// Save of course
 								// Note that $component->save_to_database = false, avoid real save.
-									$component->Save();
+									$component->import_save();
 							}
 							break;
 					}//end switch (true)

@@ -128,6 +128,12 @@ const get_content_value = (i, current_value, self) => {
 			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})//end event change
+		// paste event
+		const paste_handler = (e) => {
+			// Trigger paste_tipo function to handle TLD 'ontology7' cases
+			paste_tipo(e, self, input);
+		}
+		input.addEventListener('paste', paste_handler)
 
 	// set the lang option checkbox when the component is translatable.
 	// It can change the language search behavior.
@@ -145,6 +151,61 @@ const get_content_value = (i, current_value, self) => {
 
 	return content_value
 }//end get_content_value
+
+
+
+/**
+* PASTE_HANDLER
+* Handle tipo paste when current component tipo is 'ontology7' (TLD).
+* This is a special case useful for Ontology searches.
+* It splits the pasted tipo like 'dd156' to 'dd' and '156' and
+* fix the values into the corresponding inputs (TLD, section_id)
+* @param e event
+* @param object self - component instance
+* @return void
+*/
+const paste_tipo = (e, self) => {
+
+	// Only TLD input handle the paste value
+	if (self.tipo!=='ontology7') {
+		return
+	}
+
+	// Get pasted text from clipboard as dd1
+	const pasted_text = e.clipboardData.getData('text');
+	const match = pasted_text.match(/^([a-zA-Z_]+)(\d+)$/);
+	if (match) {
+		const [ , text, number ] = match;
+		if (text && number) {
+			// Find section_id "ontology2"
+			const component_section_id = document.querySelector('.wrapper_component.ontology2')
+			if (component_section_id) {
+				const component_section_id_input = component_section_id.querySelector('input.input_value')
+				if (component_section_id_input) {
+
+					// Prevent duplicate values on paste
+					e.preventDefault();
+
+					const input = e.target
+
+					// set new input values
+					input.value = text
+					component_section_id_input.value = number
+
+					if(SHOW_DEBUG===true) {
+						console.log('debug paste_tipo set text:', text, 'number:', number);
+					}
+
+					// Trigger change event in both inputs to save it in search preset
+					input.dispatchEvent(new Event('change', { bubbles: true }));
+					component_section_id_input.dispatchEvent(new Event('change', { bubbles: true }));
+
+					component_section_id_input.focus()
+				}
+			}
+		}
+	}
+}//end paste_handler
 
 
 

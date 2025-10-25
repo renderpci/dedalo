@@ -12,7 +12,7 @@ Dédalo data model has a abstraction layer that use the ontology definitions to 
 
 ## Format
 
-Dédalo use the [standard csv](https://datatracker.ietf.org/doc/html/rfc4180) to import data with [UTF-8](http://www.unicode.org/versions/latest/) encoding without BOM (Byte Order Mark).
+Dédalo use the [standard CSV](https://datatracker.ietf.org/doc/html/rfc4180) to import data with [UTF-8](http://www.unicode.org/versions/latest/) encoding without BOM (Byte Order Mark).
 
 !!! warning
 
@@ -38,7 +38,7 @@ Example of [locator](locator.md):
 }]
 ```
 
-Will need to be encoded in csv format as:
+Will need to be encoded in CSV format as:
 
 > "\[{""type"":""dd151"",""section_id"":""2"",""section_tipo"":""rsc723""}]"
 
@@ -50,7 +50,7 @@ Example of text:
 My plain text without double quotes
 ```
 
-Will need to be encoded in csv format as:
+It will need to be encoded in CSV format as:
 
 > My plain text without double quotes
 
@@ -60,7 +60,7 @@ Example of text with double quotes inside:
 my plain text with "double quotes"
 ```
 
-Will need to be encoded in csv format as:
+It will need to be encoded in CSV format as:
 
 > "my plain text with ""double quotes"""
 
@@ -78,17 +78,17 @@ Example, file with interviews data to import in Interviews section [oh1](https:/
 
 > interviews_2015-oh1.csv
 
-But is possible indicate the destination section in the import csv tool.
+But is possible indicate the destination section in the import CSV tool.
 
 ## Using editors
 
-Is possible use a editor to create the csv import files. If you want to use spreadsheet editor as LibreOffice [Calc](https://www.libreoffice.org/discover/calc/), remember that you will need to export csv with UTF-8 encoding.
+Is possible use a editor to create the CSV import files. If you want to use spreadsheet editor as LibreOffice [Calc](https://www.libreoffice.org/discover/calc/), remember that you will need to export CSV with UTF-8 encoding.
 
 ## Using a spreadsheet
 
-Dédalo data can be represented as a spreadsheet, with columns and rows, columns represent the components(fields), rows represent the records.
+Dédalo data can be represented as a spreadsheet with columns and rows. The columns represent the components (fields), and the rows represent the records.
 
-Every csv import file represent a section, if you need import multiple sections you will need a csv file for every section. To import in Types section [numisdata3](https://dedalo.dev/ontology/numisdata3), the name of the csv must be has this section_tipo as:
+Every CSV import file represents a single section. If you need to import multiple sections, you will need a separate CSV file for each one. To import into the "Types" section [numisdata3](https://dedalo.dev/ontology/numisdata3), the CSV file must be named using its section_tipo as follows:
 
 > my_import_types-numisdata3.csv
 
@@ -103,7 +103,7 @@ Every column represent a component(field) and every row represent a record, data
 
 Every column in the first row in the file, the head, will content the ontology tipo of the target component of the section to be imported. At least one column need to be set as the section_id to identify the column with the unique id, by convention it will be the first one, but it is not mandatory.
 
-To import the component `Key` [numisdata81](https://dedalo.dev/ontology/numisdata81) and the component `Number` [numisdata27](https://dedalo.dev/ontology/numisdata27) as fields do the `Types` section [numisdata3](https://dedalo.dev/ontology/numisdata3), you will need to create a csv as:
+To import the component `Key` [numisdata81](https://dedalo.dev/ontology/numisdata81) and the component `Number` [numisdata27](https://dedalo.dev/ontology/numisdata27) as fields do the `Types` section [numisdata3](https://dedalo.dev/ontology/numisdata3), you will need to create a CSV as:
 
 | section_id | numisdata81 | numisdata27 |
 | --- | --- | --- |
@@ -114,7 +114,7 @@ To import the component `Key` [numisdata81](https://dedalo.dev/ontology/numisdat
 
     Is possible use "human" names in the columns, but the import tool will not match with the component and you will need to set manually before import.
 
-    the previous csv could be named in this way:
+    the previous CSV could be named in this way:
 
     | id  | Key | Number |
     | --- | --- | ------ |
@@ -148,7 +148,7 @@ By default import model use the JSON format of his data, an object with lang pro
 }
 ```
 
-As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
 
 The table to import
 
@@ -156,7 +156,7 @@ The table to import
 | ------------  | ---- |
 | 1             | {"lg-spa": \["mi dato para importar","Otro dato"]} |
 
-Will be encoded in csv format as:
+Will be encoded in CSV format as:
 
 ```text
 section_id;rsc86
@@ -219,7 +219,7 @@ section_id;rsc86
 
 #### HTML
 
-Dédalo use HTML standard format to import formated text.
+Dédalo uses standard HTML format to import formatted text.
 
 As Dédalo use ck-editor as text editor, HTML tags accepted are the same than [ck-editor](https://ckeditor.com/docs/ckeditor5/latest/features/basic-styles.html#available-text-styles):
 
@@ -247,7 +247,7 @@ Dédalo has two editors, `text_area` and `html_text`
     <sup></sup> // Superscript text
     ```
 
-Besides, import format text support some compatible elements and css styles:
+Besides, import format text support some compatible elements and CSS styles:
 
 ```html
 <b>             <* style="font-weight: bold"> // (or numeric values that are greater or equal 600)
@@ -378,7 +378,7 @@ By default import model use the JSON format of his data, an object with lang pro
 }
 ```
 
-As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
 
 The table to import
 
@@ -386,7 +386,7 @@ The table to import
 | ------------  | ---- |
 | 1             | `{"lg-cat": ["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]}` |
 
-Will be encoded in csv format as:
+Will be encoded in CSV format as:
 
 ```text
 section_id;numisdata18
@@ -487,7 +487,7 @@ By default import model use the JSON format of his value, as the component do no
 [104,-75.35]
 ```
 
-As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
 
 The table to import
 
@@ -495,7 +495,7 @@ The table to import
 | ------------  | ---------------- |
 | 1             | \[104,-75.35]    |
 
-Will be encoded in csv format as:
+Will be encoded in CSV format as:
 
 ```text
 section_id;rsc86
@@ -552,7 +552,7 @@ By default import model use the JSON format of his value, as the component do no
 }]
 ```
 
-As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
 
 The table to import
 
@@ -560,7 +560,7 @@ The table to import
 | ------------  | ------ |
 | 1             | \[{"start":{"year":1238,"month":10,"day":9}}] |
 
-Will be encoded in csv format as:
+Will be encoded in CSV format as:
 
 ```text
 section_id;tch56
@@ -864,7 +864,7 @@ In Dédalo format it will be:
 }
 ```
 
-And it could be represented in csv spreadsheet columns in this way:
+And it could be represented in CSV spreadsheet columns in this way:
 
 > types-numisdata3.csv
 
@@ -880,7 +880,7 @@ By default import model use the JSON format of his data, an array of [locator](l
 [{"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}]
 ```
 
-As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
 
 The table to import
 
@@ -888,7 +888,7 @@ The table to import
 | ------------  | :----: |
 | 1             | \[{"type":"dd151","section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191"}] |
 
-Will need to be encoded in csv format as:
+Will need to be encoded in CSV format as:
 
 ```text
 section_id;tch191
@@ -966,28 +966,37 @@ It's possible remove the `type` and `from_component_tipo` properties because the
 
 ### URI
 
-By default import model use the JSON format of his value, if the component does not use languages the main format to import is the array of dd_iri objects.
+By default import model use the JSON format of his value, if the component does not use languages the main format to import is the array of `dd_iri` objects.
+
+!!! info "Data format in version 6.8.0"
+    Data version for iri component has changed in version 6.8.0. `title` property has deprecated and will be removed in future verions.
+    In version >= 6.8.0 use the property `label_id` to define the title.
 
 ```json
 [{
-    "iri" : "https://dedalo.dev",
-    "title": "Dédalo website"
+    "iri"      : "https://dedalo.dev",
+    "id"       : 1,
+    "label_id" : 5
 }]
 ```
 
-As Dédalo import use a csv without format, JSON data need to be stringified in this way:
+- `iri` property, **mandatory**. Defines the URL, it needs to have the protocol and a valid structure with domain.
+- `id` property **optional**. Defines the unique id of the data, it will be used to be linked with the label dataframe.
+- `label_id` property **optional**. Defines the target id (section_id) to be used as value of the label in dataframe.
+
+Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
 
 The table to import
 
 | section_id    | tch442  |
 | ------------  | ------ |
-| 1             | \[{"iri":"https://dedalo.dev","title":"Dédalo website"}]|
+| 1             | \[{"iri":"https://dedalo.dev","id":1,"label_id":5}]|
 
-Will be encoded in csv format as:
+Will be encoded in CSV format as:
 
 ```text
 section_id;tch442
-1;"[{""iri"":""https://dedalo.dev"",""title"":""Dédalo website""}]
+1;"[{""iri"":""https://dedalo.dev"",""id"":"1",""label_id"":"5"}]"
 ```
 
 ### Multiple values
@@ -997,12 +1006,14 @@ To import multiple values in the same component/field, add new object to the arr
 ```json
 [
     {
-        "iri" : "https://dedalo.dev",
-        "title": "Dédalo website"
+        "iri"      : "https://dedalo.dev",
+        "id"       : 1,
+        "label_id" : 5
     },
     {
-        "iri" : "http://monedaiberica.org",
-        "title": "MIB website"
+        "iri"      : "http://monedaiberica.org",
+        "id"       : 2,
+        "label_id" : 6
     }
 ]
 ```
@@ -1030,6 +1041,218 @@ The table to import
 | 1             | {"lg-spa":\[{"iri":"https://es.wikipedia.org/wiki/Escrituras_paleohispánicas"}\],"lg-deu":\[{"iri":"https://de.wikipedia.org/wiki/Althispanische_Schriften"}\]} |
 
 #### Alternative formats to import URI's
+
+1. Flat string:
+
+    ```text
+    https://dedalo.dev
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------ |
+    | 1             | https://dedalo.dev |
+
+    it will be parse as:
+
+    ```json
+    [{
+        "iri":"https://dedalo.dev"
+    }]
+    ```
+
+2. Array of strings:
+
+    Used to import multiple URI's into the component / field.
+
+    ```json
+    ["https://dedalo.dev","https://dedalo.dev/docs"]
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------ |
+    | 1             |  \["https://dedalo.dev","https://dedalo.dev/docs"]
+
+    will be parse as:
+
+    ```json
+    [
+        {"iri":"https://dedalo.dev"},
+        {"iri":"https://dedalo.dev/docs"}
+    ]
+    ```
+
+3. String with id label
+
+    To import the id label to be used to point specific value of the list of labels for the URI use the `, ` separator in this way:
+
+    ```text
+    8, https://dedalo.dev
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------ |
+    | 1             | 8, https://dedalo.dev |
+
+    It will be parse as:
+
+    ```json
+    [{
+        "iri"      : "https://dedalo.dev",
+        "id_label" : 8
+    }]
+    ```
+    And it will be processed to create the label relation with a `component_dataframe` pointing to the value 8 and create the relation with the `component_iri`.
+    The `component_dataframe` will point to the `section_id` 8 that is the `Dédalo` label.
+
+    !!! tip "Separator format"
+
+        Dédalo interpreted the `, ` separator between data to differentiate two parts, left of the comma is the id label and the right of the comma will be the URI, if you are using this separator is important to add the space between comma and the URI, because is possible identify the comma when the URI is clear, sometimes the title or the URI can use this character. To minimized errors ensure that the space is after the comma in the separator.
+
+4. String with label
+
+    To import the a new label or string value of the label you can use the `, ` separator in this way:
+
+    ```text
+    Dédalo, https://dedalo.dev
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------ |
+    | 1             | Dédalo, https://dedalo.dev |
+
+    The string value will be checked in the import process. If the string value exists in the value list, it will be set with its own id(section_id), if not exist will create new value in the list.
+
+    It will be parse as:
+
+    ```json
+    [{
+        "iri"      : "https://dedalo.dev",
+        "id_label" : 8
+    }]
+    ```
+
+    And it will be processed to create the label relation with a `component_dataframe` pointing to the value 8 and create the relation with the `component_iri`.
+    The `component_dataframe` will point to the `section_id` 8 that is the `Dédalo` label.
+
+    !!! tip "Separator format"
+
+        Dédalo interpreted the `, ` separator between data to differentiate two parts, left of the comma is the id label and the right of the comma will be the URI, if you are using this separator is important to add the space between comma and the URI, because is possible identify the comma when the URI is clear, sometimes the title or the URI can use this character. To minimized errors ensure that the space is after the comma in the separator.
+
+
+4. String of multiple values
+
+    To import multiple values of the URI use the ` | ` separator in this way:
+
+    ```text
+    https://dedalo.dev | https://dedalo.dev/docs
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------- |
+    | 1             | https://dedalo.dev \| https://dedalo.dev/docs |
+
+    it will be parse as:
+
+    ```json
+    [
+        {"iri":"https://dedalo.dev"},
+        {"iri":"https://dedalo.dev/docs"}
+    ]
+    ```
+
+    !!! tip "Separator format"
+
+        Dédalo interpreted the ` | ` separator between data to differentiate two or more values. Is possible that some URI's will use this character inside the variables. To minimized errors ensure that the space is before and after of the separator character.
+
+5. String of multiple values with label id
+
+    Is possible combine the label string or id with the separator `, ` and the values separator ` | ` in the same string in this way:
+
+    ```text
+    Dédalo, https://dedalo.dev | https://dedalo.dev/docs
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------- |
+    | 1             |  Dédalo, https://dedalo.dev \| https://dedalo.dev/docs |
+
+    it will be parse as:
+
+    ```json
+    [
+        {
+            "iri":"https://dedalo.dev",
+            "id_label": 8
+        },
+        {
+            "iri":"https://dedalo.dev/docs"
+        }
+    ]
+    ```
+#### Version format < 6.8.0
+
+```json
+[{
+    "iri" : "https://dedalo.dev",
+    "title": "Dédalo website"
+}]
+```
+
+Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
+
+The table to import
+
+| section_id    | tch442  |
+| ------------  | ------ |
+| 1             | \[{"iri":"https://dedalo.dev","title":"Dédalo website"}]|
+
+Will be encoded in CSV format as:
+
+```text
+section_id;tch442
+1;"[{""iri"":""https://dedalo.dev"",""title"":""Dédalo website""}]
+```
+
+##### Multiple values
+
+To import multiple values in the same component/field, add new object to the array in this way:
+
+```json
+[
+    {
+        "iri" : "https://dedalo.dev",
+        "title": "Dédalo website"
+    },
+    {
+        "iri" : "http://monedaiberica.org",
+        "title": "MIB website"
+    }
+]
+```
+
+###### Languages
+
+The import will marked this data as `lg-nolan` because the component interpreted that the URI has not language by default. But sometimes you will manage multilingual URI's, as wikipedia articles, so in those cases is possible identify the language of the URI in this way:
+
+```json
+{
+    "lg-spa": [{
+        "iri" : "https://es.wikipedia.org/wiki/Escrituras_paleohispánicas"
+    }],
+    "lg-deu": [{
+        "iri" : "https://de.wikipedia.org/wiki/Althispanische_Schriften"
+    }]
+
+}
+```
+
+The table to import
+
+| section_id    | tch442  |
+| ------------  | ------ |
+| 1             | {"lg-spa":\[{"iri":"https://es.wikipedia.org/wiki/Escrituras_paleohispánicas"}\],"lg-deu":\[{"iri":"https://de.wikipedia.org/wiki/Althispanische_Schriften"}\]} |
+
+###### Alternative formats to import URI's
 
 1. Flat string:
 

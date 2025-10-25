@@ -7,6 +7,7 @@
 // imports
 	import { ui } from '../../../core/common/js/ui.js'
 	import { render_tool_image_crop } from './render_tool_image_crop.js'
+	import { ua } from '../../../core/common/js/ua.js'
 
 
 
@@ -446,30 +447,10 @@ const get_buttons = function(self) {
 			const image = DEDALO_MEDIA_URL + image_file?.file_path
 			nodes.main_element_image = self.main_element_image
 
-			// check for browser requirements. This check allows Edge (Chromium) too
-			const is_chrome137_or_higher = () => {
-				if (navigator.userAgentData) {
-					const brands = navigator.userAgentData.brands;
-					const chromeBrand = brands.find(b => b.brand === "Google Chrome" || b.brand === "Chromium");
-
-					if (chromeBrand) {
-						const version = parseInt(chromeBrand.version, 10);
-						return version >= 137;
-					}
-				}
-
-				// Fallback to userAgent
-				const ua = navigator.userAgent;
-				const match = ua.match(/Chrome\/(\d+)/i);
-				if (match && match[1]) {
-					const version = parseInt(match[1], 10);
-					return version >= 137;
-				}
-
-				return false;
-			}
-			if (!is_chrome137_or_higher()) {
-				if(!confirm("This feature requires Chrome version 136 or newer. Continue?")) {
+			// Check the user agent can perform correctly and using webGPU
+			const is_a_valid_user_agent = await ua.check_transformers_webgpu()
+			if (!is_a_valid_user_agent.overall) {
+				if(!confirm("For optimal performance, use a webGPU-compatible browser. Your current browser may run this task very slowly. Continue?")) {
 					return false
 				}
 			}

@@ -38,6 +38,10 @@ tail -f /var/log/php-fpm/php_error_log
 
 And reproduce the failing task in the browser.
 
+##### Changing Root Password
+
+For security reasons, the root user cannot be managed through the Dédalo web interface. To change the root password, follow [this procedure](./changing_root_password.md).
+
 #### General admin
 
 General admin account is the every day administration account, the user is set in the users section and it has the global access to the installation, this account can manage the users, it has full data access, and it can perform daily administrative tasks.

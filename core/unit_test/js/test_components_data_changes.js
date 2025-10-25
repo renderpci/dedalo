@@ -90,16 +90,16 @@ describe("COMPONENTS DATA CHANGES", async function() {
 								console.error('response error:', response);
 							}
 
+						const data = response?.result?.data || []
+						const response_value = data.find(el => el.tipo===old_instance.tipo)
+
 						// api_returned_value
-							const api_returned_value = response.result.data[0] && response.result.data[0].value
-								? (element.new_value_action==='set_data' ? response.result.data[0].value : response.result.data[0].value[0])
+							const api_returned_value = response_value && response_value.value
+								? (element.new_value_action==='set_data' ? response_value.value : response_value.value[0])
 								: undefined
 							const component_data_value = old_instance.data.value
 								? (element.new_value_action==='set_data' ? old_instance.data.value : old_instance.data.value[0])
 								: undefined
-
-							console.log('new_value:', new_value);
-							console.log('api_returned_value:', api_returned_value);
 
 							// portal locator cases remove paginated_key
 								if (api_returned_value && api_returned_value.hasOwnProperty('paginated_key')) {

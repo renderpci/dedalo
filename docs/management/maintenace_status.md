@@ -12,37 +12,52 @@ When Dédalo switches to maintenance, all user sessions will be deleted and if t
 
 To alert to users follow this steps:
 
-1. Locate the config.php file in your Dédalo installation, it is stored in the `/config` directory
+1. Log in as `root`
 
-    ```shell
-    cd /httpdocs/dedalo/config/
-    ```
+2. Go to the maintenance, and locate the `Check config` panel.
 
-2. Edit the config.php file, you can use a vim, nano or other text editor.
+    ![Check panel](assets/2052409_192635_check_status_panel.png)
 
-    ```shell
-    nano config.php
-    ```
+3. Set an alert notification for the users.
 
-3. Locate the [`notice_to_active_user`](../config/config.md#notice-to-active-users) at the end of the config file and change the `$notice` variable with the message:
+    Write something like:
+    "The system will shut down in a few minutes for maintenance updates. Please save any unsaved work and log out as soon as possible."
 
-    ```php
-    $notice = '<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
-    Please, save the unsaved work and log out as soon as possible.
-    After a few minutes, you can re-login to Dédalo and work again';
-    // notice_to_active_users(array('msg'=>$notice, 'mode'=>'warning'));
-    ```
+4. Click `Activate notification` to set the alert.
 
-4. Uncomment the call to activate the notification
+??? tip "Option. If you want to do it manually in your server installation"
 
-    ```php
-    $notice = '<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
-    Please, save the unsaved work and log out as soon as possible.
-    After a few minutes, you can re-login to Dédalo and work again';
-    notice_to_active_users(array('msg'=>$notice, 'mode'=>'warning'));
-    ```
+    1. Locate the config.php file in your Dédalo installation, it is stored in the `/config` directory
 
-    Save the config file and Dédalo will show the notice.
+        ```shell
+        cd /httpdocs/dedalo/config/
+        ```
+
+    2. Edit the config.php file, you can use a vim, nano or other text editor.
+
+        ```shell
+        nano config.php
+        ```
+
+    3. Locate the [`notice_to_active_user`](../config/config.md#notice-to-active-users) at the end of the config file and change the `$notice` variable with the message:
+
+        ```php
+        $notice = '<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
+        Please, save the unsaved work and log out as soon as possible.
+        After a few minutes, you can re-login to Dédalo and work again';
+        // notice_to_active_users(array('msg'=>$notice, 'mode'=>'warning'));
+        ```
+
+    4. Uncomment the call to activate the notification
+
+        ```php
+        $notice = '<b>Warning</b>. In a few minutes the system will shut down about 5 minutes for maintenance updates. <br>
+        Please, save the unsaved work and log out as soon as possible.
+        After a few minutes, you can re-login to Dédalo and work again';
+        notice_to_active_users(array('msg'=>$notice, 'mode'=>'warning'));
+        ```
+
+        Save the config file and Dédalo will show the notice.
 
 All users will see the message in all Dédalo pages:
 
@@ -64,29 +79,42 @@ The first rows will be the last users actions.
 
 To change the Dédalo status to maintenance follow this steps:
 
-1. Locate the config.php file in your Dédalo installation, it is stored in the `/config` directory
+1. log in as root.
 
-    ```shell
-    cd /httpdocs/dedalo/config/
-    ```
+2. Go to the maintenance panel, and locate the `Check config` panel.
 
-2. Edit the config.php file, you can use a vim, nano or other text editor.
+    ![Check panel](assets/2052409_192635_check_status_panel.png)
 
-    ```shell
-    nano config.php
-    ```
+3. Click the `Activate maintenance mode` button.
 
-3. Locate the [`DEDALO_MAINTENANCE_MODE`](../config/config.md#defining-maintenance-mode) constant at the end of the config file and chagne it to `true`
+    This action will change the DEDALO_MAINTENANCE_MODE to true`
 
-    ```php
-    define('DEDALO_MAINTENANCE_MODE', true);
-    ```
+??? tip "Option. If you want to do it manually in your server installation"
 
-    ??? note "Returning to normal state"
-        To revert to normal state set the DEDALO_MAINTENANCE_MODE to `false`.
+    1. Locate the config.php file in your Dédalo installation, it is stored in the `/config` directory
 
-    Save the config file and Dédalo will enter in maintenance mode.
+        ```shell
+        cd /httpdocs/dedalo/config/
+        ```
 
-    When DEDALO_MAINTENANCE_MODE is active, all user sessions will be deleted and users will be automatically logged out and unable to log in. Only the root user will be able to log in.
+    2. Edit the config.php file, you can use a vim, nano or other text editor.
 
-    ![user login is not allowed](assets/20230910_122431_login_not_allowed.png)
+        ```shell
+        nano config.php
+        ```
+
+    3. Locate the [`DEDALO_MAINTENANCE_MODE`](../config/config.md#defining-maintenance-mode) constant at the end of the config file and chagne it to `true`
+
+        ```php
+        define('DEDALO_MAINTENANCE_MODE', true);
+        ```
+
+        ??? note "Returning to normal state"
+            To revert to normal state set the DEDALO_MAINTENANCE_MODE to `false`.
+
+        Save the config file and Dédalo will enter in maintenance mode.
+
+When DEDALO_MAINTENANCE_MODE is active, all user sessions will be deleted and users will be automatically logged out and unable to log in. Only the root user will be able to log in.
+
+![User login is not allowed](assets/20230910_122431_login_not_allowed.png)
+

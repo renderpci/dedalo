@@ -853,7 +853,8 @@ const view_window = async function(options) {
 				section_tipo		: caller.section_tipo,
 				section_id			: caller.section_id,
 				section_id_key		: caller.data.section_id_key,
-				section_tipo_key	: caller.data.section_tipo_key
+				section_tipo_key	: caller.data.section_tipo_key,
+				main_component_tipo	: caller.tipo
 			}
 		}
 

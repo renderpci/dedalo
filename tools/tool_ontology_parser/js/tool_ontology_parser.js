@@ -141,38 +141,49 @@ tool_ontology_parser.prototype.build = async function(autoload=false) {
 /**
 * GET_ONTOLOGIES
 * Call the API to process the get the list of available ontologies from main_ontology
-* @return promise response
+* @return promise object response
 */
 tool_ontology_parser.prototype.get_ontologies = async function() {
 
 	const self = this
 
+	// Construct the source identifier
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'get_ontologies')
+	const source = create_source(self, 'get_ontologies')
 
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
-			source	: source,
-			options	: {}
-		}
+	// Construct the Request Object (rqo)
+	const rqo = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: source,
+		options	: {}
+	}
 
-	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
+	// Call to the API, fetch data and get response.
+    try {
+        // Await the promise returned by data_manager.request
+        const response = await data_manager.request({
+            body: rqo
+        });
 
-			data_manager.request({
-				body : rqo
-			})
-			.then(function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> get_ontologies API response:",'DEBUG',response);
-				}
+        if (SHOW_DEVELOPER === true) {
+            // Use standard console.log if dd_console is a custom/legacy function
+            // Otherwise, keep dd_console if it's required for logging setup.
+            console.log("-> get_ontologies API response:", response);
+            // dd_console("-> get_ontologies API response:", 'DEBUG', response);
+        }
 
-				resolve(response)
-			})
-		})
+        // The async function implicitly returns the resolved value
+        return response;
+
+    } catch (error) {
+        // Log the error and either re-throw it or return a structure indicating failure.
+        console.error("Error in get_ontologies API call:", error);
+
+        // Re-throw the error so calling code can handle the rejection
+        throw error;
+    }
 }//end get_ontologies
 
 

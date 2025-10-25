@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {get_dataframe} from '../../component_common/js/component_common.js'
 
 
 
@@ -40,27 +41,55 @@ view_text_list_iri.render = async function(self, options) {
 
 			const ar_line = []
 
+			// dataframe
+			const component_dataframe = await get_dataframe({
+				self				: self,
+				section_id			: self.section_id,
+				section_id_key		: value[i].id,
+				section_tipo_key	: self.section_tipo,
+				main_component_tipo	: self.tipo,
+				view				: 'line',
+				mode				: 'list'
+			})
+			// Add dataframe instance to component dependencies array
+			self.ar_instances.push(component_dataframe)
+			// Render the dataframe wrapper
+			const dataframe_node = await component_dataframe.render()
+			// Get only the text content discarding HTML nodes
+			const text_node = dataframe_node.textContent
+			if (text_node) {
+				ar_line.push(text_node)
+			}
+
+			// title
 			if (value[i].title) {
 				ar_line.push(value[i].title)
 			}
+
+			// IRI
 			if (value[i].iri) {
 				ar_line.push(value[i].iri)
 			}
 
+			// Line add
 			if (ar_line.length>0) {
 				ar_value_string.push(ar_line.join(' | '))
 			}
 		}
-		const value_string = (ar_value_string && ar_value_string.length)
+
+		const value_string = (ar_value_string.length)
 			? ar_value_string.join(', ')
 			: ''
 
 	// wrapper. Set as span
 		const wrapper = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
-			inner_html		: value_string
+			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`
 		})
+
+	// Append text_node
+		const text_node = document.createTextNode(value_string);
+		wrapper.appendChild(text_node)
 
 
 	return wrapper

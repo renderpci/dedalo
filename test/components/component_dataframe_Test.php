@@ -95,7 +95,7 @@ final class component_dataframe_test extends TestCase {
 
 		// test_equal_properties
 		$result		= $component->test_equal_properties;
-		$expected	= ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
+		$expected	= ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key','main_component_tipo'];
 		$this->assertTrue(
 			$result===$expected,
 			'expected mismatch : ' . PHP_EOL
@@ -237,7 +237,7 @@ final class component_dataframe_test extends TestCase {
 
 		// default_relation_type
 		$result		= $component->get_locator_properties_to_check();
-		$expected	= ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
+		$expected	= ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key','main_component_tipo'];
 		$this->assertTrue(
 			$result===$expected,
 			'expected mismatch : ' . PHP_EOL
