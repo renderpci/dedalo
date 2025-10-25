@@ -133,6 +133,7 @@ const get_content_value = (i, current_value, self) => {
 						section_tipo		: self.section_tipo,
 						section_id_key		: self.data.value[0].section_id,
 						section_tipo_key	: self.data.value[0].section_tipo,
+						main_component_tipo	: self.data.value[0].main_component_tipo,
 						delete_instace 		: true
 					})
 				}
@@ -168,6 +169,7 @@ const get_content_value = (i, current_value, self) => {
 									section_tipo		: self.section_tipo,
 									section_id_key		: section_id,
 									section_tipo_key	: section_tipo,
+									main_component_tipo	: self.tipo,
 									view				: 'default'
 								}).then(async function(component_dataframe){
 
@@ -302,6 +304,7 @@ const get_content_value = (i, current_value, self) => {
 				section_tipo		: self.section_tipo,
 				section_id_key		: current_value.section_id,
 				section_tipo_key	: current_value.section_tipo,
+				main_component_tipo	: current_value.main_component_tipo,
 				view				: 'default'
 			}).then(async function(component_dataframe){
 

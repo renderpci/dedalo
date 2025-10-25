@@ -2,7 +2,17 @@
 include dirname(__FILE__) . '/class.dd_iri.php';
 /**
 * CLASS COMPONENT_IRI
-* Manages Internationalized Resource Identifiers (URI allowing Unicode). E.g. https://valència.dev
+* Manages Internationalized Resource Identifiers (URI allowing Unicode). E.g. https://dedalo.dev
+*
+*[
+*	{
+*		"id": 1,
+*		"iri": "https://dedalo.dev",
+*		"title": "Dédalo web site",
+*		"id": 1
+*	}
+*]
+*
 */
 class component_iri extends component_common {
 
@@ -14,8 +24,39 @@ class component_iri extends component_common {
 	*/
 	// with_lang_versions. Set in properties for true like component_input_text
 	public $with_lang_versions = true;
+
 	// data_column. DB column where to get the data.
 	protected $data_column = 'iri';
+
+	//
+	private $included_dataframe_properties = false;
+
+	// Label dataframe target section tipo
+	private static $label_target_section_tipo	= 'dd1706';
+
+	// Label dataframe target component tipo
+	private	static $label_target_component_tipo	= 'dd1715';
+
+
+
+	/**
+	* __CONSTRUCT
+	*/
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
+
+		// lang. Force always DEDALO_DATA_NOLAN
+			$lang = DEDALO_DATA_NOLAN;
+
+		// Fix with_lang_versions for clarity
+			$this->with_lang_versions = true;
+
+		// Fix translatable for clarity
+			$this->traducible = 'no';
+
+		// common constructor. Creates the component as normally do with parent class
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);
+	}//end __construct
+
 
 
 
@@ -25,10 +66,11 @@ class component_iri extends component_common {
 	* "iri" mandatory with string value and "title" optional with string value
 	* Sample:
 		* [
-		*	{
-		*    "iri": "http://www.render.es/dedalo",
-		*    "title": "dedalo"
-		* 	}
+		*		{
+		*			"id": 1,
+		*			"iri": "https://dedalo.dev",
+		*			"title": "Dédalo web site",
+		*		}
 		* ]
 	* @return array|null $dato
 	*/
@@ -36,16 +78,25 @@ class component_iri extends component_common {
 
 		$dato = parent::get_dato();
 
-		// input_text. To accept values from component_input_text, we need
-		// to change the string value of the input_text to IRI object value
+		// check if the data becomes from input_text.
+		// To accept values from component_input_text,
+		// needs to change the string value of the input_text to IRI object value
+		// setting the `iri` property with the previous input_text value.
 			$input_text = false;
 			if(!empty($dato)) {
 				foreach ((array)$dato as $key => $value) {
-					if(!is_object($value)){
+					if(!is_object($value) ){
 						$input_text = true;
+						// get the component counter
+						// it's the last counter used
+						$counter = $this->get_counter();
+						$id = $counter++;
 						$object = new stdClass();
 							$object->iri = $value;
+							$object->id = $id;
 						$dato[$key] = $object;
+						// set the new counter as the id (previous counter + 1)
+						$this->set_counter( $id );
 					}
 				}
 				if($input_text===true) {
@@ -67,9 +118,9 @@ class component_iri extends component_common {
 					);
 				}
 				if (is_string($dato)) {
-					$object = new stdClass();
-						$object->iri = $dato;
-					$dato = [$object];
+					$dd_iri = new dd_iri();
+						$dd_iri->set_iri($dato);
+					$dato = [$dd_iri];
 					$this->set_dato($dato);
 					$this->Save();
 				}
@@ -83,10 +134,11 @@ class component_iri extends component_common {
 
 	/**
 	* SET_DATO
+	* Fix given data as 'dato' for the current component instance.
 	* @param array|null $dato
 	* @return bool
 	*/
-	public function set_dato($dato) : bool {
+	public function set_dato( $dato ) : bool {
 
 		// string case. Tool Time machine mode, dato is string
 		if (is_string($dato)) {
@@ -94,7 +146,7 @@ class component_iri extends component_common {
 		}
 
 		// check type
-		if (!is_array($dato) && !is_null($dato)) {
+		if ( !is_array($dato) && !is_null($dato) ){
 			debug_log(__METHOD__
 				. " Warning. Received dato is NOT array. Type is '".gettype($dato)."' and will be converted to array" . PHP_EOL
 				. " tipo: $this->tipo" . PHP_EOL
@@ -105,6 +157,96 @@ class component_iri extends component_common {
 				, logger::DEBUG
 			);
 		}
+
+		// cast to array
+		if (is_object($dato)) {
+			$dato = [$dato];
+		}
+
+		// check the data values to fit the IRI data
+		// changes the data to create a object
+		if(!empty($dato)) {
+			$ar_id = [];
+			$safe_dato = [];
+			foreach( (array)$dato as $value ){
+
+				// Check if the data is an object before attempting property access
+				$is_object = is_object($value);
+
+				// check if the data is different that an object
+				// data could be a string or null
+				// null = new value
+				// string = previous data become from a input_text
+
+				// Determine if the value has a valid, non-empty ID to be treated as existing data.
+				// This ensures objects with an 'id' property set to null/0/empty are treated as new.
+				$has_id = ($is_object && property_exists($value, 'id') && $value->id) ? true : false;
+				if( !$has_id ){
+
+					if ($is_object && !property_exists($value, 'iri')) {
+						// write an error to inform administrators.
+						debug_log(__METHOD__
+							. " Ignored invalid value " . PHP_EOL
+							. ' value: ' . to_string($value) . PHP_EOL
+							. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
+							. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+							. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
+							, logger::ERROR
+						);
+						continue;
+					}
+
+					// get the component counter
+					// it's the last counter used
+					$counter = $this->get_counter();
+					$counter++;
+					$id = $counter;
+
+					// Safely get the 'iri' property
+					$iri_value = ( $is_object )
+						? ($value->iri ?? null)
+						: $value;
+
+					$dd_iri = new dd_iri();
+						$dd_iri->set_iri( $iri_value );
+						$dd_iri->set_id( $id );
+
+					// Check if the data has a label_id
+					// used by import to set a temporary target section_id for the label dataframe
+					// it will create a new locator of the dataframe when the component_iri will save
+					if( $is_object && !empty($value->label_id) ){
+						$dd_iri->set_label_id( $value->label_id );
+					}
+					// set the counter to use next value
+					$this->set_counter( $id );
+
+				}else{
+
+					// Existing item - pass the original object through
+					$dd_iri = $value;
+				}
+
+				$safe_dato[] = $dd_iri;
+
+				// get all id from data
+				$ar_id[] = $dd_iri->id;
+			}//end foreach
+
+			// Assign the processed data back to $dato
+			$dato = $safe_dato;
+
+			// Set the counter with the max id when the counter is bellow it.
+			$counter = $this->get_counter();
+
+			if (!empty($ar_id)) {
+				$max_id = max($ar_id);
+
+				if( $counter < $max_id ){
+					// set the new counter with the id
+					$this->set_counter( $max_id );
+				}
+			}
+		}//end if(!empty($dato))
 
 
 		return parent::set_dato( $dato );
@@ -138,12 +280,140 @@ class component_iri extends component_common {
 						, logger::ERROR
 					);
 				}
-				return false;
+				return null;
 			}
 
 		// Save in standard format
 		return parent::Save();
 	}//end Save
+
+
+
+	/**
+	* IMPORT_SAVE
+	* @return
+	*/
+	public function import_save() {
+
+		// dato candidate to save
+			$dato = $this->dato;
+
+		// Label dataframe.
+		// Check if the data has a `label_id` property.
+		// When the import process set the `label_id` indicate that this data has a label dataframe
+		// and `label_id` needs to be used as section_id for the locator of the label dataframe.
+		// `label_id` is not a part of the data structure, therefore, it will need to remove.
+			$label_dataframe_data = [];
+			foreach( (array)$dato as $value ){
+				if( property_exists($value, 'label_id') ){
+
+					// create new dataframe locator to be set as new data
+					$locator = new locator();
+						$locator->set_section_tipo( component_iri::$label_target_section_tipo );
+						$locator->set_section_id( $value->label_id );
+						$locator->set_section_id_key( $value->id );
+						$locator->set_section_tipo_key( $this->section_tipo );
+						$locator->set_main_component_tipo( $this->tipo );
+
+					$label_dataframe_data[]	= $locator;
+
+					// remove the property label_id
+						 unset($value->label_id);
+				}
+			}
+		// set the clean data without the label_id
+		$this->set_dato( $dato );
+
+		if( !empty($label_dataframe_data) ){
+
+			// component dataframe of the component iri
+			$caller_dataframe = new stdClass();
+				$caller_dataframe->main_component_tipo	= $this->tipo;
+				$caller_dataframe->section_tipo_key		= $this->section_tipo;
+				$caller_dataframe->section_tipo			= $this->section_tipo;
+
+			// Build the component
+			$component_dataframe_label = component_common::get_instance(
+				'component_dataframe', // string model
+				DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
+				$this->section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$this->section_tipo,// string section_tipo,
+				false, //cache
+				$caller_dataframe // caller dataframe
+			);
+
+			$component_dataframe_label->empty_full_data_associated_to_main_component();
+
+			$component_dataframe_label->set_dato( $label_dataframe_data );
+			// remove the time machine to save the dataframe
+			// the main component_iri will save the full imported data in save
+			$dataframe_section = $component_dataframe_label->get_my_section();
+			$dataframe_section->save_tm = false;
+			$component_dataframe_label->Save();
+			// re activate the time machine
+			$dataframe_section->save_tm = true;
+		}
+
+		// save the component
+		// it will save the dataframe in Time machine also.
+		$this->Save();
+	}//end import_save
+
+
+
+	/**
+	* GET_PROPERTIES
+	* overwrite the common get_properties()
+	* Use to define a fixed dataframe for the component.
+	* component_iri use a component_dataframe to define a title in a structured data
+	* this component_dataframe is always injected into the request_config for all component_iri
+	* @return object|null $properties
+	*/
+	public function get_properties() : ?object {
+
+		if ( $this->included_dataframe_properties ){
+			return $this->properties; // already fixed
+		}
+
+		$ontology_properties = parent::get_properties() ?? new stdClass();
+
+		$sqo_section_tipo = new stdClass();
+			$sqo_section_tipo->value = [$this->section_tipo];
+			$sqo_section_tipo->source = 'section';
+
+		$sqo = new stdClass();
+			$sqo->section_tipo = [$sqo_section_tipo];
+
+		$ddo = new dd_object();
+			$ddo->set_info( 'Title dataframe' );
+			$ddo->set_mode( 'edit' );
+			$ddo->set_tipo( DEDALO_COMPONENT_IRI_LABEL_DATAFRAME );
+			$ddo->set_view( 'line' );
+			$ddo->set_parent( 'self' );
+			$ddo->set_section_tipo( $this->section_tipo );
+
+		$show = new stdClass();
+			$show->ddo_map = [$ddo];
+			$show->fields_separator = ' | ';
+
+		$source = new stdClass();
+		$source->request_config = $ontology_properties->source->request_config ?? [];
+		$source->request_config[] = (object)[
+			'sqo'	=> $sqo,
+			'show'	=> $show
+		];
+
+		$ontology_properties->source = $source;
+
+		// fix the properties
+		$this->properties = $ontology_properties;
+
+		$this->included_dataframe_properties = true;
+
+		return $ontology_properties;
+	}//end get_properties
 
 
 
@@ -193,10 +463,24 @@ class component_iri extends component_common {
 			if (!empty($data)) {
 				foreach ($data as $current_value) {
 
-					$current_iri	= $current_value->iri ?? '';
-					$current_title	= $current_value->title ?? '';
+					$ar_parts = [];
 
-					$ar_values[] = $current_title . $fields_separator . $current_iri;
+					// iri property
+					$current_iri = $current_value->iri ?? null;
+					if ($current_iri) {
+						$ar_parts[] = $current_iri;
+					}
+
+					// title property
+					$current_title = $this->resolve_title( $current_value );
+					if (!empty($current_title)) {
+						$ar_parts[] = $current_title;
+						// set the title of the data as label of the dataframe
+						$current_value->title = $current_title;
+					}
+
+					// set a flat version to be downloaded
+					$ar_values[] = implode($fields_separator, $ar_parts);
 				}
 			}
 
@@ -221,6 +505,46 @@ class component_iri extends component_common {
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
+
+
+
+	/**
+	* RESOLVE_TITLE
+	* Resolve the IRI title using the dataframe value when is available.
+	* @param object $value
+	*  E.g. {"id":1,"title":"Old title","iri":"https://dedalo.dev"}
+	* @return string|null $title
+	*/
+	public function resolve_title( object $value ) : ?string {
+
+		// component dataframe of the component_iri
+		$caller_dataframe = (object)[
+			'section_tipo'			=> $this->section_tipo,
+			'section_id_key'		=> $value->id,
+			'section_tipo_key'		=> $this->section_tipo,
+			'main_component_tipo'	=> $this->tipo
+		];
+
+		// Build the component
+		$component_dataframe_label = component_common::get_instance(
+			'component_dataframe', // string model
+			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
+			$this->section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$this->section_tipo ,// string section_tipo,
+			false, //cache
+			$caller_dataframe // caller dataframe
+		);
+		// dataframe value as string
+		$dataframe_label = $component_dataframe_label->get_value();
+
+		// Set title with fallback from dataframe value to data item value (old values).
+		$title = $dataframe_label ?? $value->title ?? null;
+
+
+		return $title;
+	}//end resolve_title
 
 
 
@@ -345,7 +669,6 @@ class component_iri extends component_common {
 				return null;
 			}
 
-
 		$ar_values = [];
 		foreach ($dato as $value) {
 
@@ -354,9 +677,12 @@ class component_iri extends component_common {
 			}
 
 			$ar_parts = [];
-			if (!empty($value->title)) {
-				$ar_parts[] = $value->title;
+
+			$current_title = $this->resolve_title( $value );
+			if (!empty($current_title)) {
+				$ar_parts[] = $current_title;
 			}
+
 			if (!empty($value->iri)) {
 				$ar_parts[] = $value->iri;
 			}
@@ -376,35 +702,183 @@ class component_iri extends component_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_dato_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
+	* 	$response->new_dato = mixed; // new dato when result is 1
+	* 	$response->msg = string; // status message
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_dato_version(object $options) : object {
 
-		$options = new stdClass();
-			$options->update_version	= null;
-			$options->dato_unchanged	= null;
-			$options->reference_id		= null;
-			$options->tipo				= null;
-			$options->section_id		= null;
-			$options->section_tipo		= null;
-			$options->context			= 'update_component_dato';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// Validate options structure
+		if (!isset($options->update_version)) {
+			throw new InvalidArgumentException("Missing required option: update_version");
+		}
 
-			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
-			$reference_id	= $options->reference_id;
+		// options
+			$update_version	= $options->update_version ?? null;
+			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$reference_id	= $options->reference_id ?? '';
+			$tipo			= $options->tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$context		= $options->context ?? 'update_component_dato';
 
-		$update_version = implode(".", $update_version);
-		switch ($update_version) {
+		// model. Expected 'component_iri'
+		$model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+
+		// Response
+		$response = new stdClass();
+
+		// Safe version_string
+		$version_string = '';
+		if (is_array($update_version)) {
+			$version_string = implode('.', $update_version);
+		} elseif (is_string($update_version)) {
+			$version_string = $update_version;
+		} else {
+			$response->result = 0;
+			$response->msg = "Invalid update_version format";
+			return $response;
+		}
+
+		switch ($version_string) {
+
+			case '6.8.0':
+
+				// Time Machine Update
+
+				// get the component data in Time Machine.
+				$component_tm_data = transform_data::get_tm_data_from_tipo($section_id, $section_tipo, $tipo);
+
+				// query error case, return an empty array
+				if($component_tm_data===false){
+					debug_log(__METHOD__
+						. " The time machine data has error. " . PHP_EOL
+						. ' main tipo error: '  . to_string($tipo) . PHP_EOL
+						. ' options: '  . to_string($options)
+						, logger::ERROR
+					);
+
+					break;
+				}
+				// get an array with the result
+				while($tm_row = pg_fetch_assoc($component_tm_data)) {
+
+					// check if the data has information, if is null or empty, continue to next one.
+					if( !isset($tm_row['dato'] ) || $tm_row['dato']===null ){
+						continue;
+					}
+
+					$matrix_id	= (int)$tm_row['id'];
+					$data		= json_decode($tm_row['dato']);
+
+					// id data is empty continue to the next one.
+					if( empty($data) ){
+						continue;
+					}
+
+					$new_tm_data = [];
+					$id = 1;
+					// process every locator to check if the main_comopnent_tipo is set in the dataframe data
+					foreach ($data as $current_value) {
+						// clean null values and other invalid data
+						if( !is_object($current_value) ){
+							continue;
+						}
+						// if the locator match with the `component_dataframe` tipo and its data has not the main_comonent_tipo
+						if( !isset($current_value->id) ){
+							$current_value->id = $id;
+							$id++;
+						}
+
+						$new_tm_data[] = $current_value;
+					}
+
+					transform_data::set_tm_data($matrix_id, $new_tm_data);
+				}
+
+				// Update the component data
+				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+
+					// Update the locator to move old ds and dataframe to v6 dataframe model.
+					$component = component_common::get_instance(
+						$model, // string model
+						$tipo, // string tipo
+						$section_id, // string section_id
+						'edit', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$section_tipo // string section_tipo
+					);
+
+					$new_data = [];
+					$counter = 0;
+					foreach ($dato_unchanged as $current_data) {
+
+						// Clone the current data so as not to touch the originals.
+						$iri_data = json_decode(json_encode( $current_data ));
+
+						// Set the id to the data if not already exists
+						if( !isset($iri_data->id)) {
+
+							$counter++;
+							$id = $counter;
+							// Set new counter value as id
+							$iri_data->id = $id;
+							// Update current component counter
+							$component->set_counter( $id );
+						}
+
+						$new_data[] = $iri_data;
+
+						// create the new label record and link with the label dataframe.
+						// check if the data has a title defined as value.
+						if( empty($iri_data->title) ){
+							continue;
+						}
+
+						// set the new label, if exist give me the section_id, if not create new one and give me its section_id
+							$target_section_id = component_iri::save_label_dataframe_from_string( $iri_data->title );
+
+						// set the new dataframe
+							$dataframe_options = (object)[
+								'section_tipo'			=> $section_tipo,
+								'section_id'			=> $section_id,
+								'component_tipo'		=> $tipo,
+								'section_id_key'		=> $iri_data->id,
+								'target_section_id'		=> $target_section_id,
+							];
+
+							component_iri::save_label_dataframe( $dataframe_options );
+					}
+
+					// Get the current value of the current component counter
+						$db_counter = $component->get_counter();
+
+					// check the max
+						if( $db_counter < $counter ){
+							$component->set_counter( $counter );
+						}
+
+
+					$response->result	= 1;
+					$response->new_dato	= $new_data;
+					$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_data).".<br />";
+				}else{
+
+					// empty data case
+
+					$response->result	= 2;
+					$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+				break;
 
 			default:
-				$response = new stdClass();
-					$response->result	= 0;
-					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
+
+				$response->result	= 0;
+				$response->msg		= "This component '$model' don't have update to this version ($version_string). Ignored action";
 				break;
 		}
 
@@ -650,22 +1124,6 @@ class component_iri extends component_common {
 				$response->errors	= [];
 				$response->msg		= 'Error. Request failed';
 
-
-		// $has_protocol function to be used in any case, $import_value is an array of objects (IRI format)
-		// or array of strings or string values needed to begin with the protocol HTTP or HTTPS
-			$has_protocol = function(string $text_value) : bool {
-
-				$begins_http	= substr($text_value, 0, 7);
-				$begins_https	= substr($text_value, 0, 8);
-
-				if($begins_http === 'http://' || $begins_https === 'https://') {
-
-					return true;
-				}
-
-				return false;
-			};
-
 		// valid_string
 		// check the begin and end of the value string, if it has a [] or other combination that seems array
 		// if the text has [" or "] it's not admitted, because it's a bad array of strings.
@@ -694,9 +1152,17 @@ class component_iri extends component_common {
 				// try to JSON decode (null on not decode)
 				$dato_from_json	= json_handler::decode($import_value);
 
+				// data send is an object
+				// it could be a non translatable object with the iri data:
+				// {"iri":"https://dedalo.dev"}
+				// or a translatable object, that can be set like:
+				// {"lg-spa":{"iri":"https://dedalo.dev"}}
+				// or with a string as value
+				// {"lg-spa":"https://dedalo.dev"}
 				if(is_object($dato_from_json)){
 
 					$first_key = array_keys((array)$dato_from_json)[0];
+					// check if the object is a translatable
 					if (strpos($first_key, 'lg-')===0) {
 
 						$conformed_value = new stdClass();
@@ -731,13 +1197,14 @@ class component_iri extends component_common {
 							foreach ($safe_ar_value as $key => $iri_object) {
 
 								$data_iri = new stdClass();
-
+								// data send is an object, therefore it has almost an iri property defined
+								// {"iri":"https://dedalo.dev"}
 								if(is_object($iri_object)){
 
 									if(!empty($iri_object->iri)){
 										// remove unused spaces or other invalid code as \t \n, etc
 										$iri_object->iri = trim($iri_object->iri);
-										$result = $has_protocol($iri_object->iri);
+										$result = $this->has_protocol($iri_object->iri);
 										if($result===false){
 
 											// import value seems to be a JSON malformed.
@@ -761,15 +1228,36 @@ class component_iri extends component_common {
 
 										$data_iri->iri = $iri_object->iri;
 									}
+									// set the id given
+									if(!empty($iri_object->id)){
+										$data_iri->id = $iri_object->id;
+									}
+									// set the label_id given, used to create the label dataframe
+									// this property will not saved
+									if(!empty($iri_object->label_id)){
+										$data_iri->label_id = $iri_object->label_id;
+									}
+									// set the title given - Deprecated
 									if(!empty($iri_object->title)){
 										$data_iri->title = $iri_object->title;
 									}
 								}else if(is_string($iri_object)){
+									// data send is a string, therefore value is the URL
+									// "https://dedalo.dev"
+									// or the value has the label dataframe
+									// "3, https://dedalo.dev" || "dedalo, https://dedalo.dev"
 
-									$valid_string = $is_valid_string($iri_object);
-									$result = $has_protocol($current_value);
+									$properties = $this->get_properties();
 
-									if($valid_string===false || $result===false){
+									$fields_separator = isset($properties->fields_separator)
+										? $properties->fields_separator
+										: ', ';
+
+									$valid_string			= $is_valid_string($iri_object);
+									$has_field_separator	= strpos($iri_object, $fields_separator.'http')!==false;
+									$with_protocol			= $this->has_protocol($iri_object);
+
+									if($has_field_separator===false && ($valid_string===false || $with_protocol===false)){
 										// import value seems to be a JSON malformed.
 										// it begin [" or end with "]
 										// log JSON conversion error
@@ -788,12 +1276,14 @@ class component_iri extends component_common {
 
 										return $response;
 									}
-									$data_iri->iri = $iri_object;
+
+									// set the string value
+									$data_iri = $this->conform_string_import_data( $iri_object );
 								}
 
 								$value[] = $data_iri;
 							}
-
+							// set new object with its lang
 							$conformed_value->$lang = $value;
 						}
 
@@ -803,11 +1293,12 @@ class component_iri extends component_common {
 						return $response;
 
 					}else{
-
+						// non translatable object
+						// {"iri":"https://dedalo.dev"}
 						$iri_object = new stdClass();
 						if(isset($dato_from_json->iri)){
 
-							$result = $has_protocol($dato_from_json->iri);
+							$result = $this->has_protocol($dato_from_json->iri);
 							if($result===false){
 
 								// import value seems to be a JSON malformed.
@@ -831,6 +1322,16 @@ class component_iri extends component_common {
 
 							$iri_object->iri = $dato_from_json->iri;
 						}
+						// set the id given
+						if(isset($dato_from_json->id)){
+							$iri_object->id = $dato_from_json->id;
+						}
+						// set the label_id given, used to create the label dataframe
+						// this property will not saved
+						if(!empty($iri_object->label_id)){
+							$iri_object->label_id = $iri_object->label_id;
+						}
+						// set the title given - Deprecated
 						if(isset($dato_from_json->title)){
 							$iri_object->title = $dato_from_json->title;
 						}
@@ -845,7 +1346,9 @@ class component_iri extends component_common {
 				}
 
 				// the importer support array of objects (default, iri data) of array of strings as:
+				// default iri
 				// [{"iri":"https://dedalo.dev","title":"Dedalo webpage"},{"iri":"https://dedalo.dev/docs","title":"Dedalo documentation"}]
+				// Or like string
 				// ["https://dedalo.dev","https://dedalo.dev/docs"]
 				if(is_array($dato_from_json)){
 
@@ -853,13 +1356,18 @@ class component_iri extends component_common {
 					foreach ($dato_from_json as $current_value) {
 						// check if the value is a flat string with the uri
 						if(is_string($current_value)){
-							$result = $has_protocol($current_value);
 
-							if ($result === false) {
+							$properties = $this->get_properties();
 
-								// import value seems to be a JSON malformed.
-								// it begin [" or end with "]
-								// log JSON conversion error
+							$fields_separator = isset($properties->fields_separator)
+								? $properties->fields_separator
+								: ', ';
+
+							$has_field_separator	= strpos($current_value, $fields_separator.'http')!==false;
+							$with_protocol			= $this->has_protocol($current_value);
+							if ($has_field_separator===false && $with_protocol===false) {
+
+								// error
 								debug_log(__METHOD__
 									." invalid http uri value, looks like a syntax error: ". PHP_EOL
 									. to_string($import_value)
@@ -875,11 +1383,12 @@ class component_iri extends component_common {
 
 								return $response;
 							}
-
-							$iri_object = new stdClass();
-								$iri_object->iri = $current_value;
+							// set the string value
+							$iri_object = $this->conform_string_import_data( $import_value );
 
 							$value[] = $iri_object;
+
+							// $value[] = $iri_object;
 						// check if the value is a object
 						}else if(is_object($current_value)){
 
@@ -887,7 +1396,7 @@ class component_iri extends component_common {
 
 							if(isset($current_value->iri)){
 
-								$result = $has_protocol($current_value->iri);
+								$result = $this->has_protocol($current_value->iri);
 								if($result===false){
 
 									// import value seems to be a JSON malformed.
@@ -911,6 +1420,16 @@ class component_iri extends component_common {
 
 								$iri_object->iri = $current_value->iri;
 							}
+							// set the id given
+							if(isset($current_value->id)){
+								$iri_object->id = $current_value->id;
+							}
+							// set the label_id given, used to create the label dataframe
+							// this property will not saved
+							if(!empty($iri_object->label_id)){
+								$iri_object->label_id = $iri_object->label_id;
+							}
+							// set the title given - Deprecated
 							if(isset($current_value->title)){
 								$iri_object->title = $current_value->title;
 							}
@@ -933,7 +1452,19 @@ class component_iri extends component_common {
 				}
 			}
 
-		// string case
+		// String case
+		// the value can be:
+		// A literal URI like :
+		// 		https//dedalo.dev
+		// a multiple parts of the data with separator | and , like:
+		// 		dédalo, https://dedalo.dev | nomisma, https//nomisma.org | 3, https://wikidata.org
+		// it will change to:
+		// 		[{"label_id":1,"iri":"https://dedalo.dev"},
+		//		 {"label_id":2,"iri":"https://nomisma.org"},
+		//		 {"label_id":3,"iri":"https://wikidata.org"}]
+		// label_id is the target section_id for label dataframe of the values: dédalo, nomisma and wikidata
+		// the label dataframe will be created when the component save
+		// @see Save()
 			$valid = $is_valid_string($import_value);
 			if ($valid===false) {
 
@@ -956,62 +1487,56 @@ class component_iri extends component_common {
 				return $response;
 			}
 
-		$value = null;
-		if(!empty($import_value)) {
+			$value = null;
+			if(!empty($import_value)) {
 
-			$iri_object = new stdClass();
+				$iri_object = new stdClass();
 
-			$properties = $this->get_properties();
+				$properties = $this->get_properties();
 
-			$records_separator = isset($properties->records_separator)
-				? $properties->records_separator
-				: ' | ';
+				$records_separator = isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ';
 
-			$fields_separator = isset($properties->fields_separator)
-				? $properties->fields_separator
-				: ', ';
+				$fields_separator = isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ';
 
-			$has_records_separator	= strpos($import_value, $records_separator)!==false;
-			$has_field_separator	= strpos($import_value, $fields_separator.'http')!==false;
-			$with_protocol			= $has_protocol($import_value);
-			if ($has_records_separator===false && $has_field_separator===false && $with_protocol===false) {
+				$has_records_separator	= strpos($import_value, $records_separator)!==false;
+				$has_field_separator	= strpos($import_value, $fields_separator.'http')!==false;
+				$with_protocol			= $this->has_protocol($import_value);
 
-				// error
-				debug_log(__METHOD__
-					." invalid http uri value, looks like a syntax error: ". PHP_EOL
-					. to_string($import_value)
-					, logger::ERROR
-				);
+				if ($has_records_separator===false && $has_field_separator===false && $with_protocol===false) {
 
-				$failed = new stdClass();
-					$failed->section_id		= $this->section_id;
-					$failed->data			= to_string($import_value);
-					$failed->component_tipo	= $this->get_tipo();
-					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-				$response->errors[] = $failed;
+					// error
+					debug_log(__METHOD__
+						." invalid http uri value, looks like a syntax error: ". PHP_EOL
+						. to_string($import_value)
+						, logger::ERROR
+					);
 
-				return $response;
-			}else{
+					$failed = new stdClass();
+						$failed->section_id		= $this->section_id;
+						$failed->data			= to_string($import_value);
+						$failed->component_tipo	= $this->get_tipo();
+						$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+					$response->errors[] = $failed;
 
-				$value = [];
-				$records = explode($records_separator, $import_value);
-				foreach ($records as $record) {
-					$iri_object = new stdClass();
+					return $response;
+				}else{
 
-					$fields = explode($fields_separator, $record);
+					$value = [];
+					$values = explode($records_separator, $import_value);
 
-					if ( $has_protocol($fields[0])===true ) {
-						$iri_object->iri = $fields[0];
-					}else{
-						$iri_object->title = $fields[0];
+					foreach ($values as $current_value) {
+						// set the string value
+						$iri_object = $this->conform_string_import_data( $current_value );
+
+						$value[] = $iri_object;
 					}
-					if ( isset($fields[1]) && $has_protocol($fields[1])===true ) {
-						$iri_object->iri = $fields[1];
-					}
-					$value[] = $iri_object;
 				}
-			}
-		}//end if(!empty($import_value))
+
+			}//end if(!empty($import_value))
 
 		$response->result	= $value;
 		$response->msg		= 'OK';
@@ -1019,6 +1544,422 @@ class component_iri extends component_common {
 
 		return $response;
 	}//end conform_import_data
+
+
+
+	/**
+	* HAS_PROTOCOL
+	* To be used in different cases.
+	* When import values are an array of objects (IRI format)
+	* or array of strings
+	* or string values needed to begin with the protocol HTTP or HTTPS
+	* @param string $text_value
+	* @return bool
+	*/
+	private function has_protocol(string $text_value) : bool  {
+
+		$begins_http	= substr($text_value, 0, 7);
+		$begins_https	= substr($text_value, 0, 8);
+
+		if($begins_http === 'http://' || $begins_https === 'https://') {
+
+			return true;
+		}
+
+		return false;
+	}//end has_protocol
+
+
+
+	/**
+	* CONFORM_STRING_IMPORT_DATA
+	* @return
+	*/
+	private function conform_string_import_data( string $value) : object {
+
+		// get the component properties
+		$properties = $this->get_properties();
+
+		// get the fields separator, it can be defined in properties of use the default
+		$fields_separator = isset($properties->fields_separator)
+			? $properties->fields_separator
+			: ', ';
+
+
+		$iri_object = new stdClass();
+
+		$fields = explode($fields_separator, $value);
+
+		if ( $this->has_protocol($fields[0])===true ) {
+			$iri_object->iri = $fields[0];
+		}else{
+			// check if the value is a number: 1 or "4"
+			// if it is a number it will be interpreted as the target section_id of the label dataframe
+			// and set as label_id
+			// if the value is a string: "dedalo" or "wikidata"
+			// check the value in the list and give me the id, if not exist create new one.
+			if( is_numeric($fields[0]) ){
+				$iri_object->label_id = (int)$fields[0];
+
+			}else{
+				// string case.
+				// set the new label, if exist give me the section_id, if not create new one and give me its section_id
+				// Remove spaces
+				$new_label = trim($fields[0]);
+
+				if( !empty($new_label)){
+					$target_section_id = component_iri::save_label_dataframe_from_string( $new_label );
+					$iri_object->label_id = (int)$target_section_id;
+				}
+			}
+
+			// $iri_object->title = $fields[0];
+		}
+		if ( isset($fields[1]) && $this->has_protocol($fields[1])===true ) {
+			$iri_object->iri = $fields[1];
+		}
+
+		return $iri_object;
+	}//end conform_string_import_data
+
+
+
+	/**
+	* SET_COUNTER
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* Set the component counter with the given value in the section's data
+	* @param int $value
+	* @return int $counter
+	*/
+	public function set_counter( int $value ) : int {
+
+		$section	= $this->get_my_section();
+		$counter	= $section->set_component_counter( $this->tipo, $value );
+
+		return $counter;
+	}//end set_counter
+
+
+
+	/**
+	* GET_COUNTER
+	* Get last counter used by the component
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* @return int $counter
+	*/
+	public function get_counter() : int {
+
+		$section	= $this->get_my_section();
+		$counter	= $section->get_component_counter( $this->tipo );
+
+		return $counter;
+	}//end get_counter
+
+
+
+	/**
+	* GET_LABEL_RECORD
+	* Search the target section of component dataframe `dd1706`
+	* and return the result. Is used to check if the given label already exists.
+	* @param string $label
+	* @return object|null $label_record
+	*/
+	private static function get_label_record( string $label ) : ?object {
+
+		// Sanitize input
+		$new_label = trim(strip_tags($label));
+
+		if ($new_label === '') {
+			return null;
+		}
+
+		// Build the query as a PHP object.
+		$search_query_object = (object)[
+			'section_tipo' => ['dd1706'],
+			'limit' => 1,
+			'filter' => (object)[
+				'$and' => [(object)[
+					'q' => [$new_label],
+					'q_operator' => null,
+					'path' => [(object)[
+						'section_tipo' => 'dd1706',
+						'component_tipo' => 'dd1715'
+					]]
+				]]
+			]
+		];
+
+		try {
+			// search the label into target section:
+			$search = search::get_instance($search_query_object);
+			$result = $search->search();
+
+			return $result->ar_records[0] ?? null;
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__
+				. ' Search failed: ' . $e->getMessage()
+				, logger::ERROR
+			);
+			return null;
+		}
+	}//end get_label_record
+
+
+
+	/**
+	* SAVE_LABEL_DATAFRAME_FROM_STRING
+	* Check if the label exist in the dataframe value list
+	* if not exist; create new section and set the label as new value, and return the locator of the new value
+	* is exist; get the locator of the label
+	* then assign the locator to dataframe.
+	* in both cases create the dataframe component and set the locator of the label.
+	* @param string $label "dedalo"
+	* @return nul|int $target_section_id
+	*/
+	private static function save_label_dataframe_from_string( string $label ) : ?int {
+
+		// Remove spaces
+		$new_label = trim(strip_tags($label));
+
+		if( empty($new_label) ){
+			return null;
+		}
+
+		// check if the label exist in the value list of the dataframe
+		$label_record = component_iri::get_label_record( $new_label );
+
+		if( empty($label_record) ){
+
+			// create new section for label record
+				$section_to_save = section::get_instance(
+					null, // string|null section_id
+					component_iri::$label_target_section_tipo, // string section_tipo
+					'list', // string mode
+					false // bool bool
+				);
+				$target_section_id = $section_to_save->Save();
+
+			// component to set the new label value
+				$component_label = component_common::get_instance(
+					'component_input_text', // string model
+					component_iri::$label_target_component_tipo, // string tipo
+					$target_section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					component_iri::$label_target_section_tipo // string section_tipo
+				);
+
+				$component_label->set_dato( $new_label );
+				$component_label->Save();
+
+				debug_log(__METHOD__
+					. " Created new label dataframe" . PHP_EOL
+					. ' new_label: ' . to_string($new_label) . PHP_EOL
+					.' target_section_id: ' . $target_section_id
+					, logger::WARNING
+				);
+
+		}else{
+			// the label has match with exists data, use the found section_id
+			$target_section_id = $label_record->section_id;
+		}
+
+		return (int)$target_section_id;
+	}//end save_label_dataframe_from_string
+
+
+
+	/**
+	* SAVE_LABEL_DATAFRAME
+	* @param object $options
+	* {
+	* 	section_tipo	: "rsc205",
+	*	section_id		: "1",
+	*	component_tipo	: "rsc217",
+	*	section_id_key	: 1,
+	* 	target_section_id : "3"
+	* }
+	* @return
+	*/
+	public static function save_label_dataframe( object $options ) {
+
+		// set options
+		$section_tipo			= $options->section_tipo;
+		$section_id				= $options->section_id;
+		$component_tipo			= $options->component_tipo;
+		$section_id_key			= $options->section_id_key;
+		$target_section_id		= $options->target_section_id;
+
+		// component dataframe of the component iri
+		$caller_dataframe = new stdClass();
+			$caller_dataframe->section_id_key		= $section_id_key;
+			$caller_dataframe->section_tipo_key		= $section_tipo;
+			$caller_dataframe->main_component_tipo	= $component_tipo;
+
+		// Build the component
+		$component_dataframe_label = component_common::get_instance(
+			'component_dataframe', // string model
+			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
+			$section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$section_tipo ,// string section_tipo,
+			false, //cache
+			$caller_dataframe // caller dataframe
+		);
+
+		// create new dataframe locator to be set as new data
+		$new_locator = new locator();
+			$new_locator->set_section_tipo( component_iri::$label_target_section_tipo );
+			$new_locator->set_section_id( $target_section_id );
+			$new_locator->set_section_id_key( $section_id_key );
+			$new_locator->set_section_tipo_key( $section_tipo );
+			$new_locator->set_main_component_tipo( $component_tipo );
+
+		$component_dataframe_label->set_dato( $new_locator );
+
+		// Save
+		$component_dataframe_label->Save();
+	}//end save_label_dataframe
+
+
+
+	/**
+	* GET_ID_FROM_KEY
+	* Check every data language of the component and get the id of the data key in the array
+	* If the key of the data has not id return null to set new id of the counter.
+	* @param int $key
+	* @param array $skip_langs use to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
+	* @return int|null $id
+	*/
+	public function get_id_from_key( int $key, array $skip_langs=[] ) : ?int {
+
+		$all_data = $this->get_dato_full();
+		if (empty($all_data)) {
+			return null;
+		}
+
+		foreach ((array)$all_data as $lang => $value) {
+
+			// Skip the language if it's in the exclusion list.
+			// check if the data is a language to skip
+			// when the component check if the id has been used by other languages
+			// it needs to remove its own language data to avoid false positives.
+			// Explain: removing data will remove its dataframe.
+			// But other languages can use it (same id = same dataframe)
+			// In those cases the data to be deleted needs to be removed of the check.
+			// and return only if the id exist in other languages.
+			if( in_array( $lang, $skip_langs) ){
+				continue;
+			}
+
+			// Ensure $value is a structured array and the specific $key exists in it.
+			if (!is_array($value) || !array_key_exists($key, $value)) {
+				continue;
+			}
+
+			$valid_data = $value[$key];
+
+			// The 'id' must be contained within an object with an 'id' property.
+			if (is_object($valid_data) && property_exists($valid_data, 'id')) {
+
+				$id = $valid_data->id ?? null;
+
+				// Strict check: We expect a non-empty, non-zero id that can be an integer.
+				// is_numeric covers integer strings and actual integers.
+				if (is_numeric($id) && (int)$id > 0) {
+					// Return the id as an integer.
+					return (int)$id;
+				}
+
+				// If an object with an 'id' property was found, but the id value itself is
+				// invalid (null, 0, or non-numeric), log the error.
+				$log_message = (null !== $id)
+					? ' iri data with invalid id value: ' . var_export($id, true)
+					: ' iri data without id';
+				// Log detailed information about the missing/invalid id.
+				debug_log(__METHOD__
+					. $log_message . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' value: ' . to_string($value)
+					, logger::ERROR
+				);
+			}
+		}
+
+
+		// If the loop completes without finding a valid ID in any language, return null.
+		return null;
+	}//end get_id_from_key
+
+
+
+	/**
+	* GET_KEY_FROM_ID
+	* Check if the given ID exists in the specified data language.
+	* @param int $id
+	* @param string $lang
+	* @return
+	*/
+	public function get_key_from_id( int $id, string $lang ) : ?int {
+
+		// All langs array data from component
+		$all_data = $this->get_dato_full();
+		if ( empty($all_data) || !is_object($all_data) ) {
+			return null;
+		}
+
+		// Check if the requested language exists
+		if ( !isset($all_data->{$lang}) || !is_array($all_data->{$lang}) ) {
+			return null;
+		}
+
+		$lang_data = $all_data->{$lang};
+
+		foreach ($lang_data as $key => $current_value) {
+
+			// // Skip non-objects. Validate current_value is an object with id property
+			if (!is_object($current_value)) {
+				debug_log(__METHOD__
+					. ' iri malformed data (non-object)' . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' current_value: ' .to_string($current_value)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$valid_id = $current_value->id ?? null;
+
+			// Check the current value of the 'id' property and notify if it is malformed.
+			if( empty($valid_id) ){
+				debug_log(__METHOD__
+					. " iri malformed data (missing id)" . PHP_EOL
+					. " section_id: ". $this->section_id . PHP_EOL
+					. " section_tipo: ". $this->section_tipo . PHP_EOL
+					. " tipo: ". $this->tipo . PHP_EOL
+					. to_string()
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Compares id. If is the same, result the array key value.
+			if($current_value->id === $id){
+				return (int)$key;
+			}
+		}
+
+
+		return null;
+	}//end get_key_from_id
 
 
 

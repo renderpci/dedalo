@@ -27,9 +27,6 @@
 				align-items: center;
 				cursor: pointer !important;
 
-				&:hover {
-
-				}
 				&:active {
 					opacity: 0.4;
 				}
@@ -48,7 +45,6 @@
 				}
 			}//end .button
 		}//end .content_value
-
 	}
 
 	&.list {
@@ -69,6 +65,35 @@
 	&.component_dataframe_mini {
 		>.content_data {
 			display: inline-flex !important;
+		}
+	}
+
+	&.view_line {
+
+		// into component_iri case
+		.column_component_dataframe {
+
+			>.wrapper_component.component_input_text {
+				display: grid;
+				width: 100%;
+
+				@media screen and (max-width: 1024px) {
+					padding: 0px;
+				}
+
+				>span {
+					display: inline-block !important;
+					line-height: 1.1rem !important;
+					overflow: hidden;
+					white-space: nowrap;
+					text-overflow: ellipsis;
+					width: 100%;
+					padding: 0px;
+					padding-left: 0.25rem;
+					position: relative;
+					top: -0.1rem;
+				}
+			}
 		}
 	}
 

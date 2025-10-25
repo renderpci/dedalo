@@ -33,6 +33,229 @@
 global $updates;
 $updates = new stdClass();
 
+
+
+$v=680; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 8;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 7;
+	$updates->$v->update_from_minor		= 4;
+
+	// Information
+		$alert = new stdClass();
+		$alert->notification = 'V '.$v;
+
+		$alert->command = '';
+
+		// Ontology version. Check if is valid version
+		$min_date				= '2025-10-23';
+		$min_date_time			= new DateTime($min_date);
+		$ontology_is_updated	= ontology::jer_dd_version_is_valid( $min_date );
+		if ( !$ontology_is_updated ) {
+			$alert->command .= "
+				The Ontology is outdated. Minimum date: ".$min_date_time->format('d-m-Y')."
+				<h1>
+					<br>🧐 Before apply this data update, update Ontology to latest version! <br><br><br>
+
+				</h1>
+				<p>
+				<strong>Ensure that you have updated the Ontology before proceeding and then, reload this page to run the scripts.</strong>
+				</p>
+			";
+			$updates->$v->alert_update[] = $alert;
+			$updates->$v->lock = true;
+		}else{
+			$alert->command .= "
+				<h1>🧐 IMPORTANT! Please read carefully before applying this update:</h1>
+				<br>
+				<br>
+				<p>
+				<strong>1. Ensure that you have updated the Ontology before proceeding.</strong>
+				</p>
+				<br>
+				<p>
+				This update change the Numismatic model and set new Data frame for the component_iri (all URL fields).
+				</p>
+				<br>
+				<br>
+				<p>
+				<strong>2. Moving data from old Denomination section <a href=\"https://dedalo.dev/ontology/numisdata33\"> numisdata33</a> to Object thesaurus object1.</strong>
+				</p>
+				<br>
+				<p>
+				If you installation is using «numisdata» ontology, this update will move your Denomination data to the Object thesaurus behind the «Coin» node and will be set as `Denomination` typology.
+				</p>
+				<p>
+				To run this update your installation will needs:
+				<br>
+				1.- The Object thesaurus active
+				<br>
+				If you don't have the Object thesaurus, the data will be moved but you will not see the thesarus tree and the <a href=\"https://dedalo.dev/ontology/numisdata34\">Denomination</a> field in Types and the publication will fail.
+				You can see the thesaurus dependences <a href=\"https://dedalo.dev/docs/config/thesaurus_dependeces/#dependencies\">here.</a>
+				<br>
+				2.- A `Coin` term node into the <strong>object1</strong> thesaurus tree with the <a href=\"https://dedalo.dev/ontology/hierarchy89\">URL component</a> pointing to «nomisma» defintion.
+				<strong>http://nomisma.org/id/coin</strong>
+				</p>
+				<p>
+				3.- A typology term node in <strong>object2</strong> (model thesarus) for «Denomination» with the <a href=\"https://dedalo.dev/ontology/hierarchy89\">URL component</a> pointing to «nomisma» defintion.
+				<strong>https://nomisma.org/id/denomination</strong>
+				</p>
+				<br>
+				<p>
+				For more information see the <a href=\"https://agora.dedalo.dev/d/237-denominations-numisdata33\"> Àgora topic</a>
+				</p>
+				<p>
+				Note:
+				</p>
+				<p>
+				If your installation is not ready to run this change, you can uncheck the tree scrips behind the «run_scripts» and run they manually in the maintenance panel after you will ready to do it.
+				</p>
+				<p>
+				The order of the scripts is important, the correct order is:
+				</p>
+				<p>
+				<strong>denomination_numisdata33_to_matrix_hierachy.json</strong> ---> located into the «MOVE TO TABLE» maintenance panel
+				</p>
+				<p>
+				<strong>denomination_numisdata33_to_object1.json</strong> ---> located into the «MOVE TO LOCATOR» maintenance panel
+				</p>
+				<p>
+				<strong>denomination_components_numisdata33_to_object1.json</strong> ---> located into the «MOVE TO TLD» maintenance panel
+				</p>
+				<br>
+				<br>
+				<p>
+				<strong>3. This update will get the title values of your URI fields, from all `component_iri`, and will create a new unique list with this values.</strong>
+				</p>
+				<br>
+				<p>
+				Now, all URI fields have a new data frame to be used as labels of the URI. This new behavior will process all data in your URI titles and will create a unique values into a controlled list.
+				</p>
+				<p>
+				As this process is an automatic group of values, you will need to check the list and set possible duplicates, because the script doesn't try to unify close names, so, wikidata and wikidata.org titles will create 2 different values.
+				</p>
+				<p>
+				The current title is not changed, is preserved to check the new label value list, but, in next versions it will be deleted. Use only the label list for the URI fields.
+				</p>
+				<br>
+				<br>
+				<p>
+				<strong>4. Review your config.php file.</strong>
+				</p>
+				<br>
+				<p>
+				A new constat was added to limit the maximum request that client can open to the server for uploading chunked files.
+				</p>
+				<pre style=\"color:#000000;background-color: unset;border: 1px dotted #777777;padding: 1.3rem;\">
+				define('DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT', 50);
+				</pre>
+				</p>
+				<br>
+				<br>
+				<p>
+				<strong>5. The ontology needs to be updated after proceeding.</strong>
+				</p>
+			";
+			$updates->$v->alert_update[] = $alert;
+
+	// execution order
+		$updates->$v->execution_order = ['run_scripts', 'SQL_update', 'components_update'];
+
+	// Change the numisdata33 to object1
+	// the order of the scripts is important!
+		$ar_tables = [
+			// 'new_matrix'
+			'matrix',
+			'matrix_activities',
+			'matrix_activity',
+			'matrix_counter',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_list',
+			'matrix_time_machine'
+		];
+
+		require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+
+		// 1- change language of the URL components
+			$json_files =[
+				'change_component_iri_to_nolan.json'
+			];
+
+			$script_obj = new stdClass();
+				$script_obj->info			= "URL translatable in thesaurus => URL non translatable and transliterable";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "change_data_lang";
+				$script_obj->script_vars	= [
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// 2- move data between matrix. numisdata33 (section 'Denomination')
+			$json_files = [
+				'denomination_numisdata33_to_matrix_hierachy.json'
+			];
+
+			$script_obj = new stdClass();
+				$script_obj->info			= "Move numisdata33 data between matrix tables";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "move_data_between_matrix_tables";
+				$script_obj->script_vars	= [
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// 3- move from the numisdata33 to object1 (create new objects1 section and map the new locator with old one)
+			$json_files =[
+				'denomination_numisdata33_to_object1.json'
+			];
+
+			$script_obj = new stdClass();
+				$script_obj->info			= "Move data from section: Denomination => Object | numisdata33 => object1";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "changes_in_locators";
+				$script_obj->script_vars	= [
+					$ar_tables,
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// 4- move from the components from numisdata33 to hierarchy
+			$json_files = [
+				'denomination_components_numisdata33_to_object1.json'
+			];
+
+			$script_obj = new stdClass();
+				$script_obj->info			= "Change tld's from numisdata33 thesaurus to object1 (hierarchy components)";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "changes_in_tipos";
+				$script_obj->script_vars	= [
+					$ar_tables,
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+	// Add index for relations used in project filter.
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			CREATE INDEX IF NOT EXISTS relations_section_tipo_section_id_from_component_tipo ON public.relations USING btree (section_tipo, section_id, from_component_tipo);
+		');
+
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_iri',
+			'component_dataframe'
+		];
+	}
+
+
+
 $v=674; #####################################################################################
 $updates->$v = new stdClass();
 

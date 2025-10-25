@@ -161,6 +161,14 @@ const get_content_data = async function(self, ar_section_record) {
 			// no records found case
 			// const row_item = no_records_node()
 			// fragment.appendChild(row_item)
+			if (self.caller?.model==='component_iri') {
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'component_placeholder',
+					inner_html		: self.label,
+					parent			: fragment
+				})
+			}
 		}else{
 			// The portal has data. We render the section_record instances
 			for (let i = 0; i < ar_section_record_length; i++) {

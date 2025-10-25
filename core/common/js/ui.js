@@ -23,6 +23,9 @@
 
 /**
 * UI
+* User Interface
+* Create common DOM nodes and structures used by areas, sections, components, tools etc.
+* Assign common DOM events and actions
 */
 export const ui = {
 
@@ -147,6 +150,7 @@ export const ui = {
 				const label					= instance.label // instance.context.label
 				const ontology_css			= instance.context.css || null // Ontology CSS
 				const state_of_component	= instance.context.properties?.state_of_component || null
+				const show_label			= instance.show_interface.label
 
 			// options
 				const add_styles = options.add_styles || null
@@ -218,7 +222,7 @@ export const ui = {
 					wrapper.addEventListener('mousedown', mousedown_handler)
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
-				if (options.label===null) {
+				if (options.label===null || show_label===false) {
 					// no label add (line view cases for example)
 				}else if(options.label) {
 					// add custom label node
@@ -797,6 +801,12 @@ export const ui = {
 					return false
 				}
 
+			// blur active Element. This forces the component update changed_data
+				const input_active = document.activeElement
+				if (input_active) {
+					input_active.blur()
+				}
+
 			// styles. Remove wrapper css active if exists
 				if(component.node && component.node.classList.contains('active')) {
 					component.node.classList.remove('active')
@@ -809,6 +819,7 @@ export const ui = {
 						? component.save_on_deactivate
 						: true
 					if (save_on_deactivate===true) {
+						// saves the unsaved value
 						component.change_value({
 							changed_data	: component.data.changed_data,
 							refresh			: false

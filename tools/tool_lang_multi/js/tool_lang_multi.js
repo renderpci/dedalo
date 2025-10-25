@@ -60,20 +60,40 @@ tool_lang_multi.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-	// langs
-		const lang	= options.lang || page_globals.dedalo_data_lang
-		const langs	= clone(page_globals.dedalo_projects_default_langs)
-		// sort current lang as first
-		const preferredOrder = [lang];
-		langs.sort(function (a, b) {
-			return preferredOrder.indexOf(b.value) - preferredOrder.indexOf(a.value);
-		});
+	try {
 
-	// set the self specific vars not defined by the generic init (in tool_common)
-		self.lang			= lang // page_globals.dedalo_data_lang
-		self.langs			= langs // page_globals.dedalo_projects_default_langs
-		self.source_lang	= options.caller ? options.caller.lang : lang
-		self.target_lang	= null
+		// langs
+			const lang	= options.lang || page_globals.dedalo_data_lang
+			const langs	= clone(page_globals.dedalo_projects_default_langs)
+			// sort current lang as first
+			const preferredOrder = [lang];
+			langs.sort(function (a, b) {
+				return preferredOrder.indexOf(b.value) - preferredOrder.indexOf(a.value);
+			});
+
+		// set the self specific vars not defined by the generic init (in tool_common)
+			self.lang			= lang // page_globals.dedalo_data_lang
+			self.langs			= langs // page_globals.dedalo_projects_default_langs
+			self.source_lang	= options.caller ? options.caller.lang : lang
+			self.target_lang	= null
+
+			// lg-nolan case. If the tool is open from a nolan component, add the
+			// component lang to the langs list because is not added by default in the page_globals.dedalo_projects_default_langs.
+			const found = self.langs.find(el => el.value===self.source_lang)
+			if (!found && self.source_lang==='lg-nolan') {
+				const nolan = {
+					label	: 'No lang',
+					value	: 'lg-nolan',
+					tld2	: 'nolan'
+				}
+				// Add to the beginning
+				self.langs.unshift(nolan);
+			}
+
+	} catch (error) {
+		self.error = error
+		console.error(error)
+	}
 
 
 	return common_init

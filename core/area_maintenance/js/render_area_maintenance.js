@@ -459,12 +459,13 @@ export const set_widget_label_style = function (self, style, mode, ref_node) {
 	const wrapper = self.node
 	const widget_container = wrapper.parentNode?.parentNode
 	if (widget_container) {
-
-		if (mode==='remove') {
-			widget_container.classList.remove(style)
-		}else{
-			widget_container.classList.add(style)
-		}
+		requestAnimationFrame(()=>{
+			if (mode==='remove') {
+				widget_container.classList.remove(style)
+			}else{
+				widget_container.classList.add(style)
+			}
+		})
 	}
 }//end set_widget_label_style
 
