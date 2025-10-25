@@ -65,8 +65,8 @@ final class dd_ts_api {
 		// response
 			$response->result	= $result;
 			$response->msg		= empty($response->errors)
-				? 'OK. Request done successfully'
-				: 'Warning! Request done with errors';
+				? 'OK. get_node_data request done successfully'
+				: 'Warning! get_node_data request done with errors';
 
 
 		return $response;
