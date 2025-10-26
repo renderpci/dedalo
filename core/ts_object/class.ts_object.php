@@ -203,6 +203,10 @@ class ts_object {
 		// Is index-able check
 		$is_indexable = (bool)self::is_indexable($this->section_tipo, $this->section_id);
 
+		// Permissions calculation
+		$permissions_button_new		= $this->get_permissions_element('button_new');
+		$permissions_button_delete	= $this->get_permissions_element('button_delete');
+
 		// Global object
 		$data = new stdClass();
 			$data->section_tipo					= $this->section_tipo;
@@ -214,11 +218,11 @@ class ts_object {
 			$data->lang							= DEDALO_DATA_LANG;
 			$data->is_descriptor				= true;
 			$data->is_indexable					= $is_indexable;
-			$data->permissions_button_new		= $this->get_permissions_element('button_new');
-			$data->permissions_button_delete	= $this->get_permissions_element('button_delete');
-			$data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
-			$data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
 			$data->ar_elements					= [];
+			$data->permissions_button_new		= $permissions_button_new;
+			$data->permissions_button_delete	= $permissions_button_delete;
+			// Permissions indexation is commented now because it has not yet been implemented in thesaurus v7.
+			// $data->permissions_indexation	= $this->get_permissions_element('component_relation_index');
 
 		// model boolean
 			$model = $this->options->model ?? null; // options are set when building the class
