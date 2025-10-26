@@ -368,8 +368,203 @@ class db_tasks {
 
 
 	/**
-	* REBUILD_INDEXES
+	* EXEC_MAINTENANCE
 	* Forces rebuilding of PostgreSQL main indexes, extensions and functions
+	* @return object $response
+	*/
+	public static function exec_maintenance() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+		$ar_maintenance = [];
+
+		// import file with all definitions of indexes
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+
+		// Validation for db_pg_definitions vars.
+		if (!isset($ar_maintenance) || !is_array($ar_maintenance) || empty($ar_maintenance)) {
+			$response->errors[] = "No SQL queries found for maintenance in db_pg_definitions.php";
+			return $response;
+		}
+
+		// exec
+		foreach ($ar_maintenance as $sql_query) {
+
+			$query_response	= db_tasks::exec_sql_query($sql_query);
+
+			if( $query_response->result===false ) {
+				$response->errors[] = $query_response->error;
+				continue;
+			}
+
+			$response->success++;
+		}
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec exec_maintenance " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_maintenance) . PHP_EOL
+				, logger::DEBUG
+			);
+
+		// response OK
+		$response->result	= true;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_maintenance);
+		$response->n_errors = count($response->errors);
+
+
+		return $response;
+	}//end exec_maintenance
+
+
+
+	/**
+	* CREATE_EXTENSIONS
+	* Forces rebuilding of PostgreSQL main indexes, extensions and functions
+	* @return object $response
+	*/
+	public static function create_extensions() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+		$ar_extensions = [];
+
+		// import file with all definitions of indexes
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+
+		// Validation for db_pg_definitions vars.
+		if (!isset($ar_extensions) || !is_array($ar_extensions) || empty($ar_extensions)) {
+			$response->errors[] = "No SQL queries for extensions are found in db_pg_definitions.php";
+			return $response;
+		}
+
+		// exec
+		foreach ($ar_extensions as $sql_query) {
+
+			$query_response	= db_tasks::exec_sql_query($sql_query);
+
+			if( $query_response->result===false ) {
+				$response->errors[] = $query_response->error;
+				continue;
+			}
+
+			$response->success++;
+		}
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec create_extensions " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_extensions) . PHP_EOL
+				, logger::DEBUG
+			);
+
+		// response OK
+		$response->result	= true;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_extensions);
+		$response->n_errors = count($response->errors);
+
+
+		return $response;
+	}//end create_extensions
+
+
+
+	/**
+	* REBUILD_FUNCTIONS
+	* Forces rebuilding of PostgreSQL main functions
+	* @return object $response
+	*/
+	public static function rebuild_functions() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+		$ar_function = [];
+
+		// import file with all definitions of indexes
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+
+		// Validation for db_pg_definitions vars.
+		if (!isset($ar_function) || !is_array($ar_function) || empty($ar_function)) {
+			$response->errors[] = "No SQL function queries found in db_pg_definitions.php";
+			return $response;
+		}
+
+		// exec
+		foreach ($ar_function as $function) {
+
+			// debug info
+			debug_log(__METHOD__
+				. " Executing rebuild_functions SQL sentence " . PHP_EOL
+				. ' name: ' . trim($function->name)
+				. ' info: ' . trim($function->info)
+				, logger::WARNING
+			);
+
+			// 1 Drop
+				// exec drop query
+				$sql_query		= db_tasks::clean_sql_sentence($function->drop);
+				$query_response	= db_tasks::exec_sql_query($sql_query);
+
+				if( $query_response->result===false ) {
+					$response->errors[] = $query_response->error;
+					continue;
+				}
+
+			// 2 Add
+				// exec add query
+				$sql_query		= db_tasks::clean_sql_sentence($function->add);
+				$query_response	= db_tasks::exec_sql_query($sql_query);
+
+				if( $query_response->result===false ) {
+					$response->errors[] = $query_response->error;
+					continue;
+				}
+
+				$response->success++;
+		}
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec rebuild_functions " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_function) . PHP_EOL
+				, logger::DEBUG
+			);
+
+		// response OK
+		$response->result	= true;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_function);
+		$response->n_errors = count($response->errors);
+
+
+		return $response;
+	}//end rebuild_functions
+
+
+
+	/**
+	* REBUILD_INDEXES
+	* Forces rebuilding of PostgreSQL main indexes
 	* @return object $response
 	*/
 	public static function rebuild_indexes() : object {
@@ -380,48 +575,62 @@ class db_tasks {
 			$response->errors	= [];
 			$response->success	= 0;
 
-		$ar_sql_query = [];
+		$ar_index = [];
 
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_indexes.php';
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
 
-		// Validation for db_indexes vars.
-		if (!isset($ar_sql_query) || !is_array($ar_sql_query) || empty($ar_sql_query)) {
-			$response->errors[] = "No SQL queries found in db_indexes.php";
+		// Validation for db_pg_definitions vars.
+		if (!isset($ar_index) || !is_array($ar_index) || empty($ar_index)) {
+			$response->errors[] = "No SQL function queries found in db_pg_definitions.php";
 			return $response;
 		}
 
 		// exec
-		foreach ($ar_sql_query as $sql_query) {
+		foreach ($ar_index as $index) {
 
 			// debug info
 			debug_log(__METHOD__
 				. " Executing rebuild_indexes SQL sentence " . PHP_EOL
-				. ' sql_query: ' . trim($sql_query)
+				. ' name: ' . trim($index->name)
+				. ' info: ' . trim($index->info)
 				, logger::WARNING
 			);
 
-			// exec query
-			$result = pg_query(DBi::_getConnection(), $sql_query);
-			if($result===false) {
-				// error case
-				debug_log(__METHOD__
-					." Error Processing sql_query Request ". PHP_EOL
-					. pg_last_error(DBi::_getConnection()) .PHP_EOL
-					. 'sql_query: '.to_string($sql_query)
-					, logger::ERROR
-				);
-				$response->errors[] = " Error Processing sql_query Request: ". pg_last_error(DBi::_getConnection());
-				continue;
+			$tables = $index->tables;
+
+			foreach ($tables as $table) {
+
+				// 1 Drop
+					// exec drop query
+					$sql_query		= db_tasks::parse_sql_sentence($index->drop, $table);
+					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+					$query_response	= db_tasks::exec_sql_query($sql_query);
+
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->error;
+						continue;
+					}
+
+				// 2 Add
+					// exec add query
+					$sql_query		= db_tasks::parse_sql_sentence($index->add, $table);
+					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+					$query_response	= db_tasks::exec_sql_query($sql_query);
+
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->error;
+						continue;
+					}
 			}
 
-			$response->success++;
+				$response->success++;
 		}
 
 		// debug
 			debug_log(__METHOD__
 				. " Exec rebuild_indexes " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_sql_query) . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_index) . PHP_EOL
 				, logger::DEBUG
 			);
 
@@ -430,12 +639,98 @@ class db_tasks {
 		$response->msg		= count($response->errors)>0
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
-		$response->n_queries = count($ar_sql_query);
+		$response->n_queries = count($ar_index);
 		$response->n_errors = count($response->errors);
 
 
 		return $response;
 	}//end rebuild_indexes
+
+
+
+	/**
+	* REBUILD_CONSTAINTS
+	* Forces rebuilding of PostgreSQL main constraints
+	* @return object $response
+	*/
+	public static function rebuild_constaints() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+		$ar_constraint = [];
+
+		// import file with all definitions of indexes
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+
+		// Validation for db_pg_definitions vars.
+		if (!isset($ar_constraint) || !is_array($ar_constraint) || empty($ar_constraint)) {
+			$response->errors[] = "No SQL function queries found in db_pg_definitions.php";
+			return $response;
+		}
+
+		// exec
+		foreach ($ar_constraint as $constraint) {
+
+			// debug info
+			debug_log(__METHOD__
+				. " Executing rebuild_constaints SQL sentence " . PHP_EOL
+				. ' name: ' . trim($constraint->name)
+				. ' info: ' . trim($constraint->info)
+				, logger::WARNING
+			);
+
+			$tables = $constraint->tables;
+
+			foreach ($tables as $table) {
+
+				// 1 Drop
+					// exec drop query
+					$sql_query		= db_tasks::parse_sql_sentence($constraint->drop, $table);
+					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+					$query_response	= db_tasks::exec_sql_query($sql_query);
+
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->error;
+						continue;
+					}
+
+				// 2 Add
+					// exec add query
+					$sql_query		= db_tasks::parse_sql_sentence($constraint->add, $table);
+					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+					$query_response	= db_tasks::exec_sql_query($sql_query);
+
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->error;
+						continue;
+					}
+			}
+
+				$response->success++;
+		}
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec rebuild_constaints " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_constraint) . PHP_EOL
+				, logger::DEBUG
+			);
+
+		// response OK
+		$response->result	= true;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_constraint);
+		$response->n_errors = count($response->errors);
+
+
+		return $response;
+	}//end rebuild_constaints
 
 
 
@@ -467,6 +762,70 @@ class db_tasks {
 
 		return $tables;
 	}//end get_tables
+
+
+	/**
+	* PARSE_SQL_SENTENCE
+	* Replace the SQL sentence template given with the table given
+	* @param string $template
+	* @param string $table
+	* @return string $sql_query
+	*/
+	private static function parse_sql_sentence( string $template, string $table) : string {
+		return str_replace('{$table}', $table, $template);
+	}//end parse_sql_sentence
+
+
+
+	/**
+	* CLEAN_SQL_SENTENCE
+	* Replace the SQL sentence tabs and returns given and flat the sentence.
+	* @param string $sql_query
+	* @return string $sql_query
+	*/
+	private static function clean_sql_sentence( string $sql_query ) : string {
+		return trim(str_replace(["\n","\t"], [' ',''], $sql_query));
+	}//end clean_sql_sentence
+
+
+
+	/**
+	* EXEC_SQL_QUERY
+	* Execute the SQL query given.
+	* @param string $sql_query
+	* @return object $response
+	*/
+	private static function exec_sql_query( string $sql_query ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+
+		// debug info
+			debug_log(__METHOD__
+				. " Executing ql_query SQL sentence " . PHP_EOL
+				. ' sql_query: ' . trim($sql_query)
+				, logger::WARNING
+			);
+
+		//exec the SQL query
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+		if($result===false) {
+			// error case
+			debug_log(__METHOD__
+				." Error Processing sql query Request ". PHP_EOL
+				. pg_last_error(DBi::_getConnection()) .PHP_EOL
+				. 'sql query: '.to_string($sql_query)
+				, logger::ERROR
+			);
+			// the the PostgreSQL error to show into the response
+			$response->errors[] = " Error Processing sql query Request: ". pg_last_error(DBi::_getConnection());
+		}
+		// set the result
+		$response->result = $result;
+
+
+		return $response;
+	}//end exec_sql_query
 
 
 

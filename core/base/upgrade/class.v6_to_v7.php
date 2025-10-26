@@ -945,13 +945,64 @@ class v6_to_v7 {
 	public function rename_constraint() {
 
 		$ar_constraint = [
-			'matrix' => ['matrix_id', 'matrix_id_pkey'],
-			'matrix_activities' => ['matrix_activities_pkey', 'matrix_activities_id_pkey'],
-			'matrix_activity' => ['matrix_activity_id_primary', 'matrix_activity_id_pkey'],
-			'matrix_counter' => ['matrix_counter_id', 'counter_id_pkey'],
-
-
+			'matrix'				=> ['matrix_id', 'matrix_pkey'],
+			'matrix_activities'		=> ['matrix_activities_pkey', 'matrix_activities_pkey'],
+			'matrix_activity'		=> ['matrix_activity_id_primary', 'matrix_activity_pkey'],
+			'matrix_counter'		=> ['matrix_counter_id', 'matrix_counter_pkey'],
+			'matrix_counter_dd'		=> ['matrix_counter_dd_id', 'matrix_counter_dd_pkey'],
+			'matrix_dataframe'		=> ['matrix_dataframe_pkey', 'matrix_dataframe_pkey'],
+			'matrix_dd'				=> ['matrix_dd_id', 'matrix_dd_pkey'],
+			'matrix_hierarchy'		=> ['matrix_hierarchy_pkey', 'matrix_hierarchy_pkey'],
+			'matrix_hierarchy_main'	=> ['matrix_hierarchy_main_pkey', 'matrix_hierarchy_main_pkey'],
+			'matrix_indexations'	=> ['matrix_indexations_pkey', 'matrix_indexations_pkey'],
+			'matrix_langs'			=> ['matrix_langs_pkey', 'matrix_langs_pkey'],
+			'matrix_layout'			=> ['matrix_layout_pkey', 'matrix_layout_pkey'],
+			'matrix_layout_dd'		=> ['matrix_layout_dd_pkey', 'matrix_layout_dd_pkey'],
+			'matrix_list'			=> ['matrix_list_pkey', 'matrix_list_pkey'],
+			'matrix_nexus'			=> ['matrix_nexus_pkey', 'matrix_nexus_pkey'],
+			'matrix_nexus_main'		=> ['matrix_nexus_main_pkey', 'matrix_nexus_main_pkey'],
+			'matrix_notes'			=> ['matrix_notes_pkey', 'matrix_notes_pkey'],
+			'matrix_notifications'	=> ['matrix_notifications_id', 'matrix_notifications_pkey'],
+			'matrix_ontology'		=> ['matrix_ontology_pkey', 'matrix_ontology_pkey'],
+			'matrix_ontology_main'	=> ['matrix_ontology_main_pkey', 'matrix_ontology_main_pkey'],
+			'matrix_profiles'		=> ['matrix_profiles_pkey', 'matrix_profiles_pkey'],
+			'matrix_projects'		=> ['matrix_projects_id', 'matrix_projects_pkey'],
+			'matrix_stats'			=> ['matrix_stats_pkey', 'matrix_stats_pkey'],
+			'matrix_test'			=> ['matrix_test_pkey', 'matrix_test_pkey'],
+			'matrix_time_machine'	=> ['matrix_time_machine_id', 'matrix_time_machine_pkey'],
+			'matrix_tools'			=> ['matrix_tools_pkey', 'matrix_tools_pkey'],
+			'matrix_updates'		=> ['matrix_updates_id', 'matrix_updates_pkey'],
+			'matrix_users'			=> ['matrix_users_pkey', 'matrix_users_pkey'],
 		];
+
+		foreach ($ar_constraint as $matrix_table => $ar_constraint_to_change) {
+
+			$sql_query 	= "ALTER TABLE IF EXISTS {$matrix_table} DROP CONSTRAINT {$ar_constraint_to_change[0]};";
+			$result		= pg_query(DBi::_getConnection(), $sql_query);
+
+			if($result===false) {
+				$msg = "Failed to delete constraints in PostgreSQL!";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					." Function failed: $sql_query "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+			$sql_query 	= "ALTER TABLE IF EXISTS {$matrix_table} ADD CONSTRAINT {$ar_constraint_to_change[1]};";
+			$result		= pg_query(DBi::_getConnection(), $sql_query);
+
+			if($result===false) {
+				$msg = "Failed to create constraints in PostgreSQL!";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					." Function failed: $sql_query "
+					, logger::ERROR
+				);
+				return false;
+			}
+		}
 
 	}//end rename_constraint
 
