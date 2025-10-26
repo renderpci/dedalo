@@ -383,11 +383,11 @@ class db_tasks {
 		$ar_maintenance = [];
 
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_indexes.php';
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
 
-		// Validation for db_indexes vars.
+		// Validation for db_pg_definitions vars.
 		if (!isset($ar_maintenance) || !is_array($ar_maintenance) || empty($ar_maintenance)) {
-			$response->errors[] = "No SQL queries found in db_indexes.php";
+			$response->errors[] = "No SQL queries found for maintenance in db_pg_definitions.php";
 			return $response;
 		}
 
@@ -441,11 +441,11 @@ class db_tasks {
 		$ar_extensions = [];
 
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_indexes.php';
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
 
-		// Validation for db_indexes vars.
+		// Validation for db_pg_definitions vars.
 		if (!isset($ar_extensions) || !is_array($ar_extensions) || empty($ar_extensions)) {
-			$response->errors[] = "No SQL queries for extensions are found in db_indexes.php";
+			$response->errors[] = "No SQL queries for extensions are found in db_pg_definitions.php";
 			return $response;
 		}
 
@@ -499,11 +499,11 @@ class db_tasks {
 		$ar_function = [];
 
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_indexes.php';
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
 
-		// Validation for db_indexes vars.
+		// Validation for db_pg_definitions vars.
 		if (!isset($ar_function) || !is_array($ar_function) || empty($ar_function)) {
-			$response->errors[] = "No SQL function queries found in db_indexes.php";
+			$response->errors[] = "No SQL function queries found in db_pg_definitions.php";
 			return $response;
 		}
 
@@ -578,11 +578,11 @@ class db_tasks {
 		$ar_index = [];
 
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_indexes.php';
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
 
-		// Validation for db_indexes vars.
+		// Validation for db_pg_definitions vars.
 		if (!isset($ar_index) || !is_array($ar_index) || empty($ar_index)) {
-			$response->errors[] = "No SQL function queries found in db_indexes.php";
+			$response->errors[] = "No SQL function queries found in db_pg_definitions.php";
 			return $response;
 		}
 
@@ -664,11 +664,11 @@ class db_tasks {
 		$ar_constraint = [];
 
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_indexes.php';
+		require_once dirname(__FILE__) . '/db_pg_definitions.php';
 
-		// Validation for db_indexes vars.
+		// Validation for db_pg_definitions vars.
 		if (!isset($ar_constraint) || !is_array($ar_constraint) || empty($ar_constraint)) {
-			$response->errors[] = "No SQL function queries found in db_indexes.php";
+			$response->errors[] = "No SQL function queries found in db_pg_definitions.php";
 			return $response;
 		}
 
