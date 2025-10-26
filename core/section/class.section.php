@@ -1762,7 +1762,7 @@ class section extends common {
 					$original_tipo, // string tipo
 					'exclude_elements', // string model_name
 					'children', // string relation_type
-					$search_exact // bool search_exact
+					true // $search_exact // bool search_exact
 				);
 			}
 			if (!isset($ar_tipo_exclude_elements[0])) {
