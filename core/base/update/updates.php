@@ -46,8 +46,8 @@ $updates->$v = new stdClass();
 
 	// MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
-	$updates->$v->update_from_medium	= 7;
-	$updates->$v->update_from_minor		= 2;
+	$updates->$v->update_from_medium	= 8;
+	$updates->$v->update_from_minor		= 0;
 
 	// require a clean installation
 	 // it only could be 'clean' | null. Incremental option has not sense to be forced.
@@ -174,9 +174,9 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// Update all data in PostgreSQL with new format
+		// Delete all indexes in PostgreSQL
 			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'Update all data in PostgreSQL with new v7 format (SAVE DATA IGNORING FOUND ERRORS)',
+				'info'			=> 'Delete all indexes and functions in PostgreSQL. Cleaning unused indexes',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'delete_v6_db_indexes',
 				'stop_on_error'	=> false,
@@ -184,5 +184,14 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
+		// Rename the constraints in PostgreSQL
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Rename all constraints in PostgreSQL. Unification of the constraints',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'rename_constraint',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
 
 
