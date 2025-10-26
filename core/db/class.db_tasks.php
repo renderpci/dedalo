@@ -571,6 +571,13 @@ class db_tasks {
 		$response = new stdClass();
 			$response->result	= false;
 
+		// debug info
+			debug_log(__METHOD__
+				. " Executing ql_query SQL sentence " . PHP_EOL
+				. ' sql_query: ' . trim($sql_query)
+				, logger::WARNING
+			);
+
 		//exec the SQL query
 		$result = pg_query(DBi::_getConnection(), $sql_query);
 		if($result===false) {
@@ -586,6 +593,7 @@ class db_tasks {
 		}
 		// set the result
 		$response->result = $result;
+
 
 		return $response;
 	}//end exec_sql_query
