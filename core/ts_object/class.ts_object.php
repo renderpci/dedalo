@@ -92,7 +92,7 @@ class ts_object {
 			$children_tipo	= $ar_children[0] ?? null;
 			$properties		= null;
 			if ($children_tipo) {
-				$ontology_node	= new ontology_node($ar_children[0]);
+				$ontology_node	= ontology_node::get_instance($ar_children[0]);
 				$properties		= $ontology_node->get_properties();
 			}
 
@@ -110,7 +110,7 @@ class ts_object {
 					);
 					// relation map defined in properties
 					if (isset($ar_children[0])) {
-						$ontology_node	= new ontology_node($ar_children[0]);
+						$ontology_node	= ontology_node::get_instance($ar_children[0]);
 						$properties		= $ontology_node->get_properties();
 					}
 				}

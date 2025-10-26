@@ -260,7 +260,7 @@ class component_security_access extends component_common {
 
 		// v6
 		// see if the section has a ddo_map defined
-			$ontology_node		= new ontology_node($section_tipo);
+			$ontology_node		= ontology_node::get_instance($section_tipo);
 			$section_properties	= $ontology_node->get_properties();
 			// check section properties request_config
 			if(isset($section_properties->source) && isset($section_properties->source->request_config)){
@@ -386,7 +386,7 @@ class component_security_access extends component_common {
 
 			default:
 				# Areas or section groups ...
-				$ontology_node	= new ontology_node($tipo);
+				$ontology_node	= ontology_node::get_instance($tipo);
 				$ar_ts_children	= $ontology_node->get_ar_children_of_this();
 				break;
 		}
@@ -467,7 +467,7 @@ class component_security_access extends component_common {
 
 		if(!empty($ar_result[0])) {
 			$tipo					= $ar_result[0];
-			$obj					= new ontology_node($tipo);
+			$obj					= ontology_node::get_instance($tipo);
 			$ar_children_of_this	= $obj->get_ar_children_of_this();
 			$ar_tesauro				= $ar_children_of_this;
 		}

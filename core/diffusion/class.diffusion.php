@@ -101,7 +101,7 @@ abstract class diffusion  {
 				$ar_children = ontology_node::get_ar_children($current_tipo);
 				foreach ($ar_children as $current_children) {
 
-					$ontology_node	= new ontology_node($current_children);
+					$ontology_node	= ontology_node::get_instance($current_children);
 					$properties		= $ontology_node->get_propiedades(true);
 					if (!empty($properties) && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
@@ -215,7 +215,7 @@ abstract class diffusion  {
 
 			foreach ($ar_diffusion_element_tipo as $diffusion_element_tipo) {
 
-				$ontology_node	= new ontology_node($diffusion_element_tipo);
+				$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
 				$properties		= $ontology_node->get_propiedades(true);
 
 				// class name. Class handler to current diffusion element (e.g. diffusion_mysql, diffusion_rdf, diffusion_xml, ..)
@@ -676,7 +676,7 @@ abstract class diffusion  {
 		$field_value = null;
 
 		// Diffusion element (current column/field)
-			$diffusion_term		= new ontology_node($tipo);
+			$diffusion_term		= ontology_node::get_instance($tipo);
 			$properties			= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 			// $diffusion_model	= ontology_node::get_model_by_tipo($tipo,true);
 
@@ -887,14 +887,14 @@ abstract class diffusion  {
 			return [];
 		}
 
-		$ontology_node 	   = new ontology_node($table);
+		$ontology_node 	   = ontology_node::get_instance($table);
 		$ar_table_children = $ontology_node->get_ar_children_of_this();
 
 		// Add children from table alias
 		$table_alias_tipo = $diffusion_element_tables_map->{$section_tipo}->from_alias ?? null;
 		if (!empty($table_alias_tipo)) {
 
-			$ontology_node_alias 	 = new ontology_node($table_alias_tipo);
+			$ontology_node_alias 	 = ontology_node::get_instance($table_alias_tipo);
 			$ar_table_alias_children = $ontology_node_alias->get_ar_children_of_this();
 
 			// Merge all
@@ -1692,7 +1692,7 @@ abstract class diffusion  {
 			$response->msg		= __METHOD__. ' Error. Request failed';
 
 
-		$ontology_node	= new ontology_node($diffusion_element_tipo);
+		$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
 		$propiedades	= $ontology_node->get_propiedades(true);
 		$schema_obj		= (is_object($propiedades) && isset($propiedades->publication_schema))
 			? $propiedades->publication_schema
@@ -1774,7 +1774,7 @@ abstract class diffusion  {
 			$child_tipo = $child_object->tipo;
 			$parent =  $child_object->parent;
 
-			$ontology_node = new ontology_node($child_tipo);
+			$ontology_node = ontology_node::get_instance($child_tipo);
 			$properties = $ontology_node->get_properties();
 			// all properties value is a request_config_object
 			$request_config_object = $properties ?? null;
@@ -1821,7 +1821,7 @@ abstract class diffusion  {
 		$children = ontology_node::get_ar_children($tipo);
 		if (empty($children)) {
 			// fallback to properties definition
-			$ontology_node = new ontology_node($tipo);
+			$ontology_node = ontology_node::get_instance($tipo);
 			$properties = $ontology_node->get_properties();
 			$children = $properties->children ?? [];
 		}
@@ -1865,7 +1865,7 @@ abstract class diffusion  {
 			return true;
 		}
 
-		$ontology_node	= new ontology_node($diffusion_element_tipo);
+		$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
 		$properties		= $ontology_node->get_properties();
 		$parser			= $properties->diffusion->parser ?? null;
 		if ($parser) {

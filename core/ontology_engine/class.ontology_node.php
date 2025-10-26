@@ -460,7 +460,7 @@ class ontology_node {
 	*/
 	public static function get_translatable( string $tipo ) : bool {
 
-		$ontology_node	= new ontology_node($tipo);
+		$ontology_node	= ontology_node::get_instance($tipo);
 		$translatable	= $ontology_node->get_is_translatable();
 
 		return $translatable;
@@ -675,7 +675,7 @@ class ontology_node {
 		$lang = $lang ?? DEDALO_DATA_LANG;
 
 		// term object
-		$ontology_node	= new ontology_node($tipo);
+		$ontology_node	= ontology_node::get_instance($tipo);
 		$label			= $ontology_node->get_term($lang, $fallback);
 
 		// cache
@@ -704,7 +704,7 @@ class ontology_node {
 			return $model_by_tipo[$cache_uid];
 		}
 
-		$ontology_node	= new ontology_node($tipo);
+		$ontology_node	= ontology_node::get_instance($tipo);
 		$modelo	= $ontology_node->get_model();
 
 		// cache
@@ -727,7 +727,7 @@ class ontology_node {
 	*/
 	public static function get_legacy_model_by_tipo( string $tipo ) : ?string {
 
-		$ontology_node	= new ontology_node( $tipo );
+		$ontology_node	= ontology_node::get_instance( $tipo );
 		$model_name		= $ontology_node->get_legacy_model();
 
 		return $model_name;
@@ -836,7 +836,7 @@ class ontology_node {
 	*/
 	public static function get_ar_children( string $tipo ) : array {
 
-		$ontology_node	= new ontology_node( $tipo );
+		$ontology_node	= ontology_node::get_instance( $tipo );
 		$ar_children	= $ontology_node->get_ar_children_of_this();
 
 		return $ar_children;
@@ -856,7 +856,7 @@ class ontology_node {
 		// IMPORTANT: DO NOT CACHE THIS METHOD (AFFECTS COMPONENT_FILTER_MASTER)
 
 		// We create an independent instance of ontology_node and resolve the direct children.
-		$ontology_node			= new ontology_node( $tipo );
+		$ontology_node			= ontology_node::get_instance( $tipo );
 		$ar_children_of_this	= $ontology_node->get_ar_children_of_this();
 		$ar_children_of_this_size = sizeof( $ar_children_of_this );
 
@@ -900,7 +900,7 @@ class ontology_node {
 			$ar_resolved[] = $tipo;
 		}
 
-		$ontology_node	= new ontology_node( $tipo );
+		$ontology_node	= ontology_node::get_instance( $tipo );
 		$ar_children	= $ontology_node->get_ar_children_of_this();
 		$ar_children_size = sizeof( $ar_children );
 
@@ -963,7 +963,7 @@ class ontology_node {
 				$ar_parents_of_this[] = $parent;
 			}
 
-			$ontology_node	= new ontology_node($parent);
+			$ontology_node	= ontology_node::get_instance($parent);
 			$parent			= $ontology_node->get_parent();
 
 		} while ( !empty($parent) && ($parent !== $parent_zero) && $parent !== $parent_inicial );
@@ -1025,7 +1025,7 @@ class ontology_node {
 
 		// do not cache in this method !
 
-		$ontology_node	= new ontology_node($tipo);
+		$ontology_node	= ontology_node::get_instance($tipo);
 		$ar_relations	= $ontology_node->get_relations() ?? [];
 
 		// simple. Only returns the clean array with the 'tipo' listing
@@ -1079,13 +1079,13 @@ class ontology_node {
 			case 'children' :
 
 				// we get the children
-				$ontology_node	= new ontology_node($tipo);
+				$ontology_node	= ontology_node::get_instance($tipo);
 				$ar_children	= $ontology_node->get_ar_children_of_this();
 
 				// we go through them to filter by model
 				if(is_array($ar_children)) foreach($ar_children as $tipo) {
 
-					$ontology_node	= new ontology_node($tipo);
+					$ontology_node	= ontology_node::get_instance($tipo);
 					$model			= $ontology_node->get_model_tipo();
 					if(empty($model)) {
 						debug_log(__METHOD__
@@ -1118,13 +1118,13 @@ class ontology_node {
 			case 'children_recursive' :
 
 				// We get the children recursively
-				$ontology_node	= new ontology_node($tipo);
+				$ontology_node	= ontology_node::get_instance($tipo);
 				$ar_children	= $ontology_node->get_ar_recursive_children_of_this($tipo);
 
 				// we go through them to filter by model
 				if(is_array($ar_children)) foreach($ar_children as $tipo) {
 
-					$ontology_node	= new ontology_node($tipo);
+					$ontology_node	= ontology_node::get_instance($tipo);
 					$model_tipo		= $ontology_node->get_model_tipo();
 					if(empty($model_tipo)) {
 						debug_log(__METHOD__
@@ -1155,7 +1155,7 @@ class ontology_node {
 			case 'related' :
 
 				// We get the related terms
-				$ontology_node	= new ontology_node($tipo);
+				$ontology_node	= ontology_node::get_instance($tipo);
 				$relation_nodes	= $ontology_node->get_relation_nodes(
 					$tipo,
 					true, // bool cache
@@ -1163,9 +1163,9 @@ class ontology_node {
 				);
 
 				// we go through them to filter by model
-				if(is_array($relation_nodes)) foreach($relation_nodes as $tipo) {
+				foreach($relation_nodes as $tipo) {
 
-					$ontology_node	= new ontology_node($tipo);
+					$ontology_node	= ontology_node::get_instance($tipo);
 					$model_tipo		= $ontology_node->get_model_tipo();
 					if(empty($model_tipo)) {
 						debug_log(__METHOD__
@@ -1187,7 +1187,7 @@ class ontology_node {
 						}
 					}else{
 						if(strpos($current_model_name, $model_name)!==false) {
-							 $result[] = $tipo;
+							$result[] = $tipo;
 						}
 					}
 				}
@@ -1196,13 +1196,13 @@ class ontology_node {
 			case 'parent' :
 
 				// we get the parents
-				$ontology_node	= new ontology_node($tipo);
+				$ontology_node	= ontology_node::get_instance($tipo);
 				$ar_parents		= $ontology_node->get_ar_parents_of_this();
 
 				// we go through them to filter by model
 				if(is_array($ar_parents)) foreach($ar_parents as $tipo) {
 
-					$ontology_node	= new ontology_node($tipo);
+					$ontology_node	= ontology_node::get_instance($tipo);
 					$model_tipo		= $ontology_node->get_model_tipo();
 					if(empty($model_tipo)) {
 						debug_log(__METHOD__
@@ -1260,7 +1260,7 @@ class ontology_node {
 	*/
 	public static function get_color( string $section_tipo ) : string {
 
-		$ontology_node	= new ontology_node( $section_tipo );
+		$ontology_node	= ontology_node::get_instance( $section_tipo );
 		$properties		= $ontology_node->get_properties();
 
 		$color = isset($properties->color)

@@ -18,7 +18,7 @@ class diffusion_data {
 		// ddo_map create or get from properties
 		$ddo_map = [];
 
-		$ontology_node	= new ontology_node($diffusion_node_tipo);
+		$ontology_node	= ontology_node::get_instance($diffusion_node_tipo);
 		$properties		= $ontology_node->get_properties();
 
 		// check if the ontology has his own ddo_map defined, if not, it will create a ddo_map with related components.

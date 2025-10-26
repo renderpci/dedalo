@@ -76,7 +76,7 @@ class diffusion_rdf extends diffusion {
 			$save_file				= $options->save_file ?? true;
 
 		// target_section_tipo
-			$ontology_node			= new ontology_node($diffusion_element_tipo);
+			$ontology_node			= ontology_node::get_instance($diffusion_element_tipo);
 			$propiedades			= $ontology_node->get_propiedades(true);
 			// $target_section_tipo	= $propiedades->diffusion->target_section_tipo;
 
@@ -357,7 +357,7 @@ class diffusion_rdf extends diffusion {
 		// get the name of the property, it is defined in the ontology term, and will use as rdf property
 		$object_name		= ontology_node::get_term_by_tipo($ObjectProperty_tipo);
 		$object_model_name	= ontology_node::get_model_by_tipo($ObjectProperty_tipo);
-		$ontology_node		= new ontology_node($ObjectProperty_tipo);
+		$ontology_node		= ontology_node::get_instance($ObjectProperty_tipo);
 		$properties			= $ontology_node->get_propiedades(true);
 		// result of the recursion, to be used in the component_portals to check if the resource linked has data
 		// if yes, it will create the resource link in the graph, else, it will doesn't create the link
@@ -1082,7 +1082,7 @@ class diffusion_rdf extends diffusion {
 
 				$service_name = $this->service_name;
 
-				$ontology_node	= new ontology_node($component_tipo);
+				$ontology_node	= ontology_node::get_instance($component_tipo);
 				$model			= $ontology_node->get_model();
 
 				// NO CONFIG FILE CHANGED CASE
@@ -1276,7 +1276,7 @@ class diffusion_rdf extends diffusion {
 
 				$service_name = $this->service_name;
 
-				$ontology_node	= new ontology_node($component_tipo);
+				$ontology_node	= ontology_node::get_instance($component_tipo);
 				$model			= $ontology_node->get_model();
 
 				// ontology_node::get_model_by_tipo($component_tipo);

@@ -1372,7 +1372,7 @@ class login extends common {
 				'value'	=> implode('.', get_current_data_version())
 			];
 		// ontology version
-			$ontology_node		= new ontology_node('dd1');
+			$ontology_node		= ontology_node::get_instance('dd1');
 			$dd1_properties		= $ontology_node->get_properties();
 			$properties->info[] = [
 				'type'	=> 'version',

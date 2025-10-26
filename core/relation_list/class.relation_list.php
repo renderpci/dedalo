@@ -101,7 +101,7 @@ class relation_list extends common {
 
 				if( isset($ar_children[0]) ) {
 					$current_children	= reset($ar_children);
-					$ontology_node		= new ontology_node($current_children);
+					$ontology_node		= ontology_node::get_instance($current_children);
 					$ar_relation_components[$current_section_tipo] = $ontology_node->get_relations();
 					if(isset($ar_relation_components[$current_section_tipo])){
 						foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {

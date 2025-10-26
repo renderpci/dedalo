@@ -51,7 +51,7 @@ class component_iri extends component_common {
 			$this->with_lang_versions = true;
 
 		// Fix translatable for clarity
-			$this->traducible = 'no';
+			$this->translatable = 'no';
 
 		// common constructor. Creates the component as normally do with parent class
 			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);

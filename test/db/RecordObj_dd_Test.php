@@ -18,7 +18,7 @@ final class ontology_node_test extends TestCase {
 
 		$test_term_id = 'dd1';
 
-		$ontology_node	= new ontology_node( $test_term_id );
+		$ontology_node	= ontology_node::get_instance( $test_term_id );
 		$tipo		= $ontology_node->get_tipo();
 
 		$type = gettype($tipo);
@@ -36,7 +36,7 @@ final class ontology_node_test extends TestCase {
 				.'tipo: ' . $tipo
 		);
 
-		$ontology_node	= new ontology_node( null, 'dd' );
+		$ontology_node	= ontology_node::get_instance( null, 'dd' );
 		$tipo		= $ontology_node->get_tipo();
 
 		$eq = $tipo===null;
@@ -77,7 +77,7 @@ final class ontology_node_test extends TestCase {
 		$_ENV['DEDALO_RECOVERY_MODE'] = true;
 
 		$test_term_id	= 'dd1';
-		$ontology_node	= new ontology_node( $test_term_id );
+		$ontology_node	= ontology_node::get_instance( $test_term_id );
 
 		$table = ontology_node::$table;
 		$eq = $table==='dd_ontology_recovery';
@@ -100,7 +100,7 @@ final class ontology_node_test extends TestCase {
 	public function test_definePrimaryKeyName(): void {
 
 		$test_term_id	= 'dd1';
-		$ontology_node	= new ontology_node( $test_term_id );
+		$ontology_node	= ontology_node::get_instance( $test_term_id );
 
 		$result = $ontology_node->get_strPrimaryKeyName();
 		$eq = $result==='tipo';
@@ -120,7 +120,7 @@ final class ontology_node_test extends TestCase {
 	public function test_defineRelationMap(): void {
 
 		$test_term_id	= 'dd1';
-		$ontology_node	= new ontology_node( $test_term_id );
+		$ontology_node	= ontology_node::get_instance( $test_term_id );
 
 		$result = $ontology_node->get_arRelationMap();
 		$eq = $result===[
@@ -156,7 +156,7 @@ final class ontology_node_test extends TestCase {
 
 		$test_term_id	= 'dd1';
 
-		$ontology_node	= new ontology_node($test_term_id);
+		$ontology_node	= ontology_node::get_instance($test_term_id);
 		$result			= $ontology_node->get_propiedades();
 
 		$expected	= 'NULL';
@@ -192,7 +192,7 @@ final class ontology_node_test extends TestCase {
 
 		$test_term_id	= 'dd1';
 
-		$ontology_node	= new ontology_node($test_term_id);
+		$ontology_node	= ontology_node::get_instance($test_term_id);
 		$result			= $ontology_node->get_properties();
 
 		$expected	= 'object';
@@ -237,7 +237,7 @@ final class ontology_node_test extends TestCase {
 
 		$test_term_id	= 'dd1';
 
-		$ontology_node	= new ontology_node($test_term_id);
+		$ontology_node	= ontology_node::get_instance($test_term_id);
 		$result			= $ontology_node->get_term_data();
 
 		$expected	= 'object';
@@ -273,7 +273,7 @@ final class ontology_node_test extends TestCase {
 			DEDALO_STRUCTURE_LANG => 'Test'
 		];
 
-		$ontology_node	= new ontology_node($test_term_id);
+		$ontology_node	= ontology_node::get_instance($test_term_id);
 		$ontology_node->Load(); // force load
 		$result			= $ontology_node->set_term_data($sample_value);
 
@@ -338,7 +338,7 @@ final class ontology_node_test extends TestCase {
 	public function test_get_model(): void {
 
 		$test_term_id	= 'dd1';
-		$ontology_node	= new ontology_node($test_term_id);
+		$ontology_node	= ontology_node::get_instance($test_term_id);
 		$result			= $ontology_node->get_model();
 
 		$expected	= 'string';
@@ -439,7 +439,7 @@ final class ontology_node_test extends TestCase {
 	public function test_get_legacy_model(): void {
 
 		$test_term_id	= 'hierarchy92';
-		$ontology_node	= new ontology_node($test_term_id);
+		$ontology_node	= ontology_node::get_instance($test_term_id);
 		$result			= $ontology_node->get_legacy_model();
 
 		$expected	= 'string';
@@ -660,7 +660,7 @@ final class ontology_node_test extends TestCase {
 	*/
 	public function test_get_ar_children_of_this(): void {
 
-		$ontology_node	= new ontology_node('dd1', 'dd');
+		$ontology_node	= ontology_node::get_instance('dd1', 'dd');
 
 		$result = $ontology_node->get_ar_children_of_this();
 
@@ -730,7 +730,7 @@ final class ontology_node_test extends TestCase {
 	*/
 	public function test_get_ar_recursive_children_of_this(): void {
 
-		$ontology_node	= new ontology_node('dd242');
+		$ontology_node	= ontology_node::get_instance('dd242');
 		$result			= $ontology_node->get_ar_recursive_children_of_this('dd242');
 
 		$expected	= 'array';
@@ -792,7 +792,7 @@ final class ontology_node_test extends TestCase {
 	public function test_get_ar_parents_of_this(): void {
 		// $start_time=start_time();
 
-		$ontology_node	= new ontology_node('rsc85');
+		$ontology_node	= ontology_node::get_instance('rsc85');
 		$result			= $ontology_node->get_ar_parents_of_this();
 
 		// $total = exec_time_unit($start_time,'ms').' ms';
@@ -828,7 +828,7 @@ final class ontology_node_test extends TestCase {
 	*/
 	public function test_get_ar_siblings_of_this(): void {
 
-		$ontology_node	= new ontology_node('rsc85');
+		$ontology_node	= ontology_node::get_instance('rsc85');
 		$result			= $ontology_node->get_ar_siblings_of_this();
 
 		$expected	= 'array';
@@ -875,7 +875,7 @@ final class ontology_node_test extends TestCase {
 	public function test_get_relations(): void {
 
 		// image rsc88
-		$ontology_node	= new ontology_node('rsc88');
+		$ontology_node	= ontology_node::get_instance('rsc88');
 		$result			= $ontology_node->get_relations();
 
 		$expected	= 'array';
@@ -927,7 +927,7 @@ final class ontology_node_test extends TestCase {
 	public function test_set_relaciones(): void {
 
 		// image rsc88
-		$ontology_node = new ontology_node('rsc88');
+		$ontology_node = ontology_node::get_instance('rsc88');
 		// force load DB value
 		$ontology_node->Load();
 		$result			= $ontology_node->set_relaciones(['tipo'=>'rsc91']);

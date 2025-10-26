@@ -45,7 +45,7 @@ class component_external extends component_common {
 			}
 
 		// section_properties
-			$ontology_node		= new ontology_node($section_tipo);
+			$ontology_node		= ontology_node::get_instance($section_tipo);
 			$section_properties	= $ontology_node->get_properties();
 
 		// format reference
@@ -103,7 +103,7 @@ class component_external extends component_common {
 				);
 				foreach ($children_tipo as $component_tipo) {
 
-					$ontology_node			= new ontology_node($component_tipo);
+					$ontology_node			= ontology_node::get_instance($component_tipo);
 					$component_properties	= $ontology_node->get_properties();
 
 					// check component_properties

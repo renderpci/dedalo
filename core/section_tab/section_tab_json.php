@@ -32,7 +32,7 @@
 
 				// children
 					$current_context->children = [];
-					$ontology_node	= new ontology_node($tipo);
+					$ontology_node	= ontology_node::get_instance($tipo);
 					$children_tipo	= $ontology_node->get_ar_children_of_this();
 
 					// get the valid tabs of the section

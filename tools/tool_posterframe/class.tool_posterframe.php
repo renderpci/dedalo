@@ -254,7 +254,7 @@ class tool_posterframe extends tool_common {
 		// match properties->identifying_image with portal_tipo
 			foreach ($ar_portals_tipo as $portal_tipo) {
 
-				$ontology_node	= new ontology_node($portal_tipo);
+				$ontology_node	= ontology_node::get_instance($portal_tipo);
 				$properties		= $ontology_node->get_properties();
 				if ($properties && isset($properties->identifying_image)) {
 

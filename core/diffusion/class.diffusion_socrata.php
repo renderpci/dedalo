@@ -84,7 +84,7 @@ class diffusion_socrata extends diffusion  {
 
 		// table
 			$table_tipo			= diffusion::get_table_tipo($diffusion_element_tipo, $section_tipo);
-			$ontology_node		= new ontology_node($table_tipo);
+			$ontology_node		= ontology_node::get_instance($table_tipo);
 			$table_properties	= $ontology_node->get_propiedades(true) ?? new stdClass();
 
 		// ar_rows. Build data (array of json_row objects) for each lang
