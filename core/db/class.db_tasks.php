@@ -494,4 +494,36 @@ class db_tasks {
 
 
 
+	/**
+	* EXEC_SQL_QUERY
+	* Execute the SQL query given.
+	* @param string $sql_query
+	* @return object $response
+	*/
+	private static function exec_sql_query( string $sql_query ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+
+		//exec the SQL query
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+		if($result===false) {
+			// error case
+			debug_log(__METHOD__
+				." Error Processing sql query Request ". PHP_EOL
+				. pg_last_error(DBi::_getConnection()) .PHP_EOL
+				. 'sql query: '.to_string($sql_query)
+				, logger::ERROR
+			);
+			// the the PostgreSQL error to show into the response
+			$response->errors[] = " Error Processing sql query Request: ". pg_last_error(DBi::_getConnection());
+		}
+		// set the result
+		$response->result = $result;
+
+		return $response;
+	}//end exec_sql_query
+
+
+
 }//end db_tasks
