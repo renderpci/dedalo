@@ -1725,23 +1725,25 @@
 
 // Maintenance
 
+	$ar_maintenance = [];
+
 	// matrix_dd REINDEX
-		$ar_sql_query[] = '
+		$ar_maintenance[] = '
 			REINDEX TABLE matrix_dd;
 		';
 
 	// matrix_dd vacuum
-		$ar_sql_query[] = '
+		$ar_maintenance[] = '
 			VACUUM FULL VERBOSE ANALYZE matrix_dd;
 		';
 
 	// vacuum. Vacuum analyze main tables
-		$ar_sql_query[] = '
+		$ar_maintenance[] = '
 			VACUUM ANALYZE "matrix_hierarchy";
 		';
-		$ar_sql_query[] = '
+		$ar_maintenance[] = '
 			VACUUM ANALYZE "matrix";
 		';
-		$ar_sql_query[] = '
+		$ar_maintenance[] = '
 			VACUUM ANALYZE "matrix_activity";
 		';
