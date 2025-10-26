@@ -469,5 +469,16 @@ class db_tasks {
 	}//end get_tables
 
 
+	/**
+	* PARSE_SQL_SENTENCE
+	* Replace the SQL sentence template given with the table given
+	* @param string $template
+	* @param string $table
+	* @return string $sql_query
+	*/
+	private function parse_sql_sentence( string $template, string $table) : string {
+		return str_replace('{$table}', $table, $template);
+	}//end parse_sql_sentence
+
 
 }//end db_tasks
