@@ -7,11 +7,12 @@
 		CREATE EXTENSION IF NOT EXISTS unaccent;
 	';
 
+
 // functions
 	$ar_function = [];
 
 	$ar_function[] = (object)[
-		'sql' => '
+		'add' => '
 			CREATE OR REPLACE FUNCTION f_unaccent(text)
 			RETURNS text
 			LANGUAGE \'sql\'
@@ -39,7 +40,7 @@
 	//  Create function with base flat locators st=section_tipo si=section_id (dd64_1)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_st_si(data) @> \'["dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
-		'sql' => '
+		'add' => '
 			CREATE OR REPLACE FUNCTION data_relations_flat_st_si(data jsonb)
 			RETURNS jsonb
 			LANGUAGE sql IMMUTABLE
@@ -73,7 +74,7 @@
 	// Create function with base flat locators fct=from_section_tipo st=section_tipo si=section_id (tchi7_dd64_1)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_fct_st_si(data) @> \'["tchi7_dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
-		'sql' => '
+		'add' => '
 			CREATE OR REPLACE FUNCTION data_relations_flat_fct_st_si(data jsonb)
 			RETURNS jsonb
 			LANGUAGE sql IMMUTABLE
@@ -108,7 +109,7 @@
 	// Create function with base flat locators ty=type st=section_tipo si=section_id (dd151_dd64_1)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_ty_st_si(data) @> \'["dd151_dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
-		'sql' => '
+		'add' => '
 			CREATE OR REPLACE FUNCTION data_relations_flat_ty_st_si(data jsonb)
 			RETURNS jsonb
 			LANGUAGE sql IMMUTABLE
@@ -143,7 +144,7 @@
 	// Create function with base flat locators ty=type st=section_tipo (dd96_rsc197)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_ty_st(data) @> \'["dd96_rsc197"]\'::jsonb;
 	$ar_function[] = (object)[
-		'sql' => '
+		'add' => '
 			CREATE OR REPLACE FUNCTION data_relations_flat_ty_st(data jsonb)
 			RETURNS jsonb
 			LANGUAGE sql IMMUTABLE
@@ -182,7 +183,7 @@
 	// uses regexp_replace 	- remove all HTML tags as <p>
 
 	$ar_function[] = (object)[
-		'sql' => '
+		'add' => '
 			CREATE OR REPLACE FUNCTION get_searchable_string(data jsonb)
 			RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
 			$$
@@ -215,7 +216,7 @@
 	// check_array_component
 	// Used by component date to search inside its data
 		$ar_function[] = (object)[
-		'sql' => '
+		'add' => '
 			CREATE OR REPLACE FUNCTION check_array_component(condition bool, component_path jsonb)
 			RETURNS SETOF jsonb
 			LANGUAGE plpgsql
@@ -261,14 +262,6 @@
 	];
 
 
-	foreach ($ar_function as $function_object) {
-
-		$current_sql_query	= sanitize_query($function_object->sql);
-		$ar_sql_query[]		= trim(str_replace(["\n","\t"], [' ',''], $current_sql_query));
-
-	}
-
-
 // Constraints
 	$ar_constraint = [];
 
@@ -299,7 +292,7 @@
 					'matrix_tools',
 					'matrix_users'
 				],
-				'sql' => '
+				'add' => '
 					ALTER TABLE IF EXISTS {$table}
 					ADD CONSTRAINT {$table}_section_id_section_tipo_key
 					UNIQUE ( section_id, section_tipo );
@@ -313,15 +306,16 @@
 					VALUES
 						(1, \'dd153\');
 				',
+				'name' => 'constraint_section_id_section_tipo_key',
 				'info' => 'Used to avoid duplicated records, is not possible to storage the same section_id with the same section_tipo'
 			];
 
-	// tipotipo
+	// tipo_key
 			$ar_constraint[] = (object)[
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					ALTER TABLE IF EXISTS {$table}
 					ADD CONSTRAINT {$table}_tipo_key
 					UNIQUE ( section_id, section_tipo );
@@ -339,7 +333,6 @@
 			];
 
 
-
 // Indexes
 	$ar_index = [];
 
@@ -351,7 +344,7 @@
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_is_model_idx
 					ON {$table}
 					USING btree ( is_model ASC NULLS LAST );
@@ -373,7 +366,7 @@
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_model_idx
 					ON {$table}
 					USING btree ( model COLLATE pg_catalog.\"default\" ASC NULLS LAST );
@@ -395,7 +388,7 @@
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_model_tipo_idx
 					ON {$table}
 					USING btree ( model_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST );
@@ -417,7 +410,7 @@
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_order_number_idx
 					ON {$table}
 					USING btree ( order_number ASC NULLS LAST );
@@ -439,7 +432,7 @@
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_parent_idx
 					ON {$table}
 					USING btree ( parent ASC NULLS LAST );
@@ -462,7 +455,7 @@
 					'dd_ontology',
 					'main_dd'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_tld_idx
 					ON {$table}
 					USING btree ( tld COLLATE pg_catalog.\"default\" ASC NULLS LAST );
@@ -484,7 +477,7 @@
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_relations_idx
 					ON {$table}
 					USING btree ( relations COLLATE pg_catalog.\"default\" ASC NULLS LAST );
@@ -506,7 +499,7 @@
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_is_translatable_idx
 					ON {$table}
 					USING btree ( is_translatable ASC NULLS LAST );
@@ -528,7 +521,7 @@
 				'tables' => [
 					'dd_ontology'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_parent_order_number_idx
 					ON {$table}
 					USING btree (
@@ -579,7 +572,7 @@
 					'matrix_users',
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_section_id_idx
 					ON {$table}
 					USING btree (section_id ASC NULLS LAST);
@@ -624,7 +617,7 @@
 					'matrix_users',
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_section_id_desc_idx
 					ON {$table}
 					USING btree (section_id DESC NULLS LAST);
@@ -668,7 +661,7 @@
 					'matrix_tools',
 					'matrix_users'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_idx
 					ON {$table}
 					USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST);
@@ -713,7 +706,7 @@
 					'matrix_users',
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_idx
 					ON {$table}
 					USING btree (section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST);
@@ -757,11 +750,10 @@
 					'matrix_users',
 					'matrix_time_machine'
 				],
-				'sql' => '
-
-				CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_desc_idx
-					ON {$table}
-					USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST, section_id DESC NULLS FIRST);
+				'add' => '
+					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_desc_idx
+						ON {$table}
+						USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST, section_id DESC NULLS FIRST);
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_desc_idx;
@@ -804,7 +796,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_string_gin_idx
 				ON {$table}
 				USING gin (
@@ -851,7 +843,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				ALTER TABLE {$table} ADD COLUMN search_string text NOT NULL GENERATED ALWAYS AS (
 					 COALESCE( get_searchable_string(string), \'\' )
 				) STORED;
@@ -906,7 +898,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_gin_idx
 				ON {$table}
 				USING gin (
@@ -953,7 +945,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_locators_gin_idx
 				ON {$table}
 				USING gin (
@@ -1002,7 +994,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_st_si_gin_idx
 				ON matrix
 				USING gin (data_relations_flat_st_si(relation) jsonb_path_ops);
@@ -1049,7 +1041,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_fct_st_si_gin_idx
 				ON matrix
 				USING gin (data_relations_flat_fct_st_si(relation) jsonb_path_ops);
@@ -1096,7 +1088,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
 				ON matrix
 				USING gin (data_relations_flat_ty_st(relation) jsonb_path_ops);
@@ -1144,7 +1136,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
 				ON matrix
 				USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
@@ -1189,7 +1181,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_date_gin_idx
 				ON {$table}
 				USING gin (
@@ -1236,7 +1228,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_iri_gin_idx
 				ON {$table}
 				USING gin (
@@ -1283,7 +1275,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_geo_gin_idx
 				ON {$table}
 				USING gin (
@@ -1330,7 +1322,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_number_gin_idx
 				ON {$table}
 				USING gin (
@@ -1377,7 +1369,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_media_gin_idx
 				ON {$table}
 				USING gin (
@@ -1424,7 +1416,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_misc_gin_idx
 				ON {$table}
 				USING gin (
@@ -1471,7 +1463,7 @@
 				'matrix_tools',
 				'matrix_users'
 			],
-			'sql' => '
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_search_gin_idx
 				ON {$table}
 				USING gin (
@@ -1499,7 +1491,7 @@
 				'tables' => [
 					'matrix_activity'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_id_desc_idx
 					ON {$table}
 					USING btree (id DESC NULLS LAST);
@@ -1523,7 +1515,7 @@
 					'matrix_counter_dd',
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_tipo_idx
 					ON {$table}
 					USING btree (tipo ASC NULLS LAST);
@@ -1545,7 +1537,7 @@
 				'tables' => [
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_lang_idx
 					ON {$table}
 					USING btree (lang COLLATE pg_catalog.\"default\" ASC NULLS LAST);
@@ -1567,7 +1559,7 @@
 				'tables' => [
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id_idx
 					ON {$table}
 					USING btree ( bulk_process_id ASC NULLS LAST);
@@ -1589,7 +1581,7 @@
 				'tables' => [
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_state_idx
 					ON {$table}
 					USING btree ( state COLLATE pg_catalog.\"default\" ASC NULLS LAST );
@@ -1611,7 +1603,7 @@
 				'tables' => [
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_timestamp_idx
 					ON {$table}
 					USING btree ( "timestamp" DESC NULLS LAST );
@@ -1633,7 +1625,7 @@
 				'tables' => [
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_user_id_idx
 					ON {$table}
 					USING btree ( "userID" ASC NULLS LAST );
@@ -1655,7 +1647,7 @@
 				'tables' => [
 					'matrix_time_machine'
 				],
-				'sql' => '
+				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id_idx
 					ON {$table}
 					USING btree (
@@ -1679,10 +1671,6 @@
 			];
 
 
-	function process_sql_sentence($template, $table) {
-	    return str_replace('{$table}', $table, $template);
-	}
-
 
 	foreach ($ar_index as $index_object) {
 
@@ -1697,24 +1685,25 @@
 	}
 
 
+// Maintenance
 
-// matrix_dd REINDEX
-	$ar_sql_query[] = '
-		REINDEX TABLE matrix_dd;
-	';
+	// matrix_dd REINDEX
+		$ar_sql_query[] = '
+			REINDEX TABLE matrix_dd;
+		';
 
-// matrix_dd vacuum
-	$ar_sql_query[] = '
-		VACUUM FULL VERBOSE ANALYZE matrix_dd;
-	';
+	// matrix_dd vacuum
+		$ar_sql_query[] = '
+			VACUUM FULL VERBOSE ANALYZE matrix_dd;
+		';
 
-// vacuum. Vacuum analyze main tables
-	$ar_sql_query[] = '
-		VACUUM ANALYZE "matrix_hierarchy";
-	';
-	$ar_sql_query[] = '
-		VACUUM ANALYZE "matrix";
-	';
-	$ar_sql_query[] = '
-		VACUUM ANALYZE "matrix_activity";
-	';
+	// vacuum. Vacuum analyze main tables
+		$ar_sql_query[] = '
+			VACUUM ANALYZE "matrix_hierarchy";
+		';
+		$ar_sql_query[] = '
+			VACUUM ANALYZE "matrix";
+		';
+		$ar_sql_query[] = '
+			VACUUM ANALYZE "matrix_activity";
+		';
