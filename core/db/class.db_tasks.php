@@ -539,7 +539,7 @@ class db_tasks {
 				, logger::WARNING
 			);
 
-			$tables = $index_object->tables;
+			$tables = $index->tables;
 
 			foreach ($tables as $table) {
 
