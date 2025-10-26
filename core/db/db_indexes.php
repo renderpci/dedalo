@@ -1,4 +1,5 @@
 <?php
+
 // db index
 
 // extensions
@@ -358,6 +359,7 @@
 					WHERE is_model = 1
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_is_model_idx',
 				'info' => 'Used to search if the term is a descriptor or not, possible values: 1|2. 1 = yes, 2 = no'
 			];
 
@@ -380,6 +382,7 @@
 					WHERE model = \'section\'
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_model_idx',
 				'info' => 'Used to search if the descriptor model'
 			];
 
@@ -402,6 +405,7 @@
 					WHERE model_tipo = \'dd6\'
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_model_tipo_idx',
 				'info' => 'Used to search if the descriptor model_tipo'
 			];
 
@@ -424,6 +428,7 @@
 					WHERE order = 2
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_order_number_idx',
 				'info' => 'Used to search if the descriptor model_tipo'
 			];
 
@@ -446,6 +451,7 @@
 					WHERE parent = \'tch1\'
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_parent_idx',
 				'info' => 'Used to search if the descriptor model_tipo'
 			];
 
@@ -469,6 +475,7 @@
 					WHERE tld = \'tch\'
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_tld_idx',
 				'info' => 'Used to search if the descriptor model_tipo'
 			];
 
@@ -491,6 +498,7 @@
 					WHERE relations = \'tch\'
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_relations_idx',
 				'info' => 'Used to search if the descriptor model_tipo'
 			];
 
@@ -513,6 +521,7 @@
 					WHERE is_translatable = true
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_is_translatable_idx',
 				'info' => 'Used to search if the term is translatable or not, boolean values: true | false'
 			];
 
@@ -538,6 +547,7 @@
 					WHERE parent = \'tch1\'
 					LIMIT 1;
 				',
+				'name' => 'dd_ontology_order_number_idx',
 				'info' => 'Used to search descriptors by parent, is_descriptor and order'
 			];
 
@@ -586,6 +596,7 @@
 					WHERE section_id = 5
 					LIMIT 10;
 				',
+				'name' => 'all_matrix_section_id_idx',
 				'info' => 'Used to search by id ordered ascendant.'
 			];
 
@@ -631,6 +642,7 @@
 					WHERE section_id = 5
 					LIMIT 10;
 				',
+				'name' => 'all_matrix_section_id_desc_idx',
 				'info' => 'Used to search by id ordered ascendant.'
 			];
 
@@ -675,6 +687,7 @@
 					WHERE section_tipo = \'oh1\'
 					LIMIT 10;
 				',
+				'name' => 'all_matrix_section_tipo_idx',
 				'info' => 'Used to search by section_tipo ordered ascendant.'
 			];
 
@@ -720,6 +733,7 @@
 					WHERE section_id = 5 AND section_tipo = \'rsc197\'
 					LIMIT 10;
 				',
+				'name' => 'all_matrix_section_tipo_section_id_idx',
 				'info' => 'Used to search by section_tipo ordered ascendant.'
 			];
 
@@ -764,6 +778,7 @@
 					WHERE section_id = 5 AND section_tipo = \'rsc197\'
 					LIMIT 10;
 				',
+				'name' => 'all_matrix_section_tipo_section_id_desc_idx',
 				'info' => 'Used to search by section_tipo ordered descendant by id.'
 			];
 
@@ -812,6 +827,7 @@
 				FROM matrix
 				WHERE strings @> \'{"rsc85":[{"value":"Pere"}]}\';
 			',
+			'name' => 'all_matrix_string_gin_idx',
 			'info' => 'Used to search string literals as full components data'
 		];
 
@@ -866,6 +882,7 @@
 				ORDER BY section_id ASC
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_strings_value_gin_idx',
 			'info' => 'Used to search literal string values as strings across all sections, it could be used as global search, but is not possible use with specific language'
 		];
 
@@ -915,6 +932,7 @@
 				WHERE relation @> \'{"rsc91":[{"section_tipo":"es1"}]}\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_relation_gin_idx',
 			'info' => 'Used to search relations as components data'
 		];
 
@@ -962,6 +980,7 @@
 				WHERE jsonb_path_query_array(relation, \'$.*[*]\') @> \'[{"section_tipo":"es1"}]\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_relation_locators_gin_idx',
 			'info' => 'Used to search relations across all components data'
 		];
 
@@ -1008,6 +1027,7 @@
 				WHERE data_relations_flat_st_si(data) @> \'["dd64_1"]\'::jsonb;
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_relation_flat_st_si_gin_idx',
 			'info' => 'Used to search relations across all components data with a flat text of the relation such as es1_65'
 		];
 
@@ -1055,6 +1075,7 @@
 				WHERE data_relations_flat_fct_st_si(data) @> \'["oh33_dd64_1"]\'::jsonb;
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_relation_flat_fct_st_si_gin_idx',
 			'info' => 'Used to search relations across all components data with a flat text of the relation such as oh33_dd64_1'
 		];
 
@@ -1102,6 +1123,7 @@
 				WHERE data_relations_flat_ty_st(data) @> \'["dd151_dd64"]\'::jsonb;
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_relation_flat_ty_st_gin_idx',
 			'info' => 'Used to search relations across all components data with a flat text of the relation such as dd151_dd64'
 		];
 
@@ -1150,6 +1172,7 @@
 				WHERE data_relations_flat_ty_st_si(data) @> \'["dd151_dd64"]\'::jsonb;
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_relation_flat_ty_st_gin_idx',
 			'info' => 'Used to search relations across all components data with a flat text of the relation such as dd151_dd64'
 		];
 
@@ -1197,6 +1220,7 @@
 				WHERE date @> \'[{"time":57958546}]\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_date_gin_idx',
 			'info' => 'Used to search dates by any property.'
 		];
 
@@ -1244,6 +1268,7 @@
 				WHERE iri @> \'[{"iri":"https://dedalo.dev"}]\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_iri_gin_idx',
 			'info' => 'Used to search IRI data by any of its properties, iri or title.'
 		];
 
@@ -1291,6 +1316,7 @@
 				WHERE jsonb_path_query_array(geo, \'$.*[*]\') @> \'[{"lat":"39.462571"}]\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_geo_gin_idx',
 			'info' => 'Used to search IRI data by any of its properties, lat, log or alt.'
 		];
 
@@ -1338,6 +1364,7 @@
 				WHERE jsonb_path_query_array(number, \'$.*[*].value\') @> \'[5]\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_number_gin_idx',
 			'info' => 'Used to search number data values.'
 		];
 
@@ -1385,6 +1412,7 @@
 				WHERE jsonb_path_query_array(media, \'$.*[*]\') @> \'[{"original_file_name":"my_image.png"}]\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_media_gin_idx',
 			'info' => 'Used to search media data by any of its properties, original_file_name, or others.'
 		];
 
@@ -1432,6 +1460,7 @@
 				WHERE jsonb_path_query_array(misc, \'$.*[*].value\') @> \'[{"section_tipo":"lg-spa"}]\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_misc_gin_idx',
 			'info' => 'Used to search miscellaneous data by any of its properties.'
 		];
 
@@ -1479,6 +1508,7 @@
 				WHERE relations_search @> \'[{"section_tipo":"es1"}]\'
 				LIMIT 10;
 			',
+			'name' => 'all_matrix_search_gin_idx',
 			'info' => 'Used to search relation all children data with specific parent. Give me all data indexed with a child using any of its parents.'
 		];
 
@@ -1505,6 +1535,7 @@
 					WHERE id = 5
 					LIMIT 10;
 				',
+				'name' => 'matrix_activity_id_desc_idx',
 				'info' => 'Used to search by id ordered descendant.'
 			];
 
@@ -1529,6 +1560,7 @@
 					WHERE tipo = \'oh1\'
 					LIMIT 1;
 				',
+				'name' => 'counters_tm_tipo_idx',
 				'info' => 'Used to search by tipo.'
 			];
 
@@ -1551,6 +1583,7 @@
 					WHERE lang = \'lg-spa\'
 					LIMIT 1;
 				',
+				'name' => 'matrix_time_machine_lang_idx',
 				'info' => 'Used to search by tipo.'
 			];
 
@@ -1573,6 +1606,7 @@
 					WHERE bulk_process_id = 751
 					LIMIT 1;
 				',
+				'name' => 'matrix_time_machine_bulk_process_id_idx',
 				'info' => 'Used to search by bulk_process_id.'
 			];
 
@@ -1595,6 +1629,7 @@
 					WHERE state = \'deleted\'
 					LIMIT 1;
 				',
+				'name' => 'matrix_time_machine_state_idx',
 				'info' => 'Used to search by state, possible values: deleted | created.'
 			];
 
@@ -1617,6 +1652,7 @@
 					WHERE timestamp = \'2025-08-18 19:09:05\'
 					LIMIT 1;
 				',
+				'name' => 'matrix_time_machine_timestamp_idx',
 				'info' => 'Used to search by timestamp, in time machine always descendant.'
 			];
 
@@ -1639,6 +1675,7 @@
 					WHERE user_id = 2
 					LIMIT 1;
 				',
+				'name' => 'matrix_time_machine_user_id_idx',
 				'info' => 'Used to search by user id.'
 			];
 
@@ -1648,7 +1685,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id_idx
+					CREATE INDEX IF NOT EXISTS {$table}_si_bulk_st_tipo_lang_idx
 					ON {$table}
 					USING btree (
 						section_id ASC NULLS LAST,
@@ -1659,7 +1696,7 @@
 					);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_bulk_process_id_idx;
+					DROP INDEX IF EXISTS {$table}_si_bulk_st_tipo_lang_idx;
 				',
 				'sample' => "
 					SELECT *
@@ -1667,7 +1704,8 @@
 					WHERE bulk_process_id = 751
 					LIMIT 1;
 				",
-				'info' => 'Used to search by bulk_process_id.'
+				'name' => 'matrix_time_machine_si_bulk_st_tipo_lang_idx',
+				'info' => 'Used to search by bulk_process_id with all parameters, section_id, bulk_process_id, section_tipo, tipo and lang.'
 			];
 
 
