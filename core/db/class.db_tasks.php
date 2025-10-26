@@ -426,6 +426,64 @@ class db_tasks {
 
 
 	/**
+	* CREATE_EXTENSIONS
+	* Forces rebuilding of PostgreSQL main indexes, extensions and functions
+	* @return object $response
+	*/
+	public static function create_extensions() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+		$ar_extensions = [];
+
+		// import file with all definitions of indexes
+		require_once dirname(__FILE__) . '/db_indexes.php';
+
+		// Validation for db_indexes vars.
+		if (!isset($ar_extensions) || !is_array($ar_extensions) || empty($ar_extensions)) {
+			$response->errors[] = "No SQL queries for extensions are found in db_indexes.php";
+			return $response;
+		}
+
+		// exec
+		foreach ($ar_extensions as $sql_query) {
+
+			$query_response	= db_tasks::exec_sql_query($sql_query);
+
+			if( $query_response->result===false ) {
+				$response->errors[] = $query_response->error;
+				continue;
+			}
+
+			$response->success++;
+		}
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec create_extensions " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_extensions) . PHP_EOL
+				, logger::DEBUG
+			);
+
+		// response OK
+		$response->result	= true;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_extensions);
+		$response->n_errors = count($response->errors);
+
+
+		return $response;
+	}//end create_extensions
+
+
+
+	/**
 	* REBUILD_FUNCTIONS
 	* Forces rebuilding of PostgreSQL main functions
 	* @return object $response
