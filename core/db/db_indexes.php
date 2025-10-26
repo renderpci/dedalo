@@ -1709,20 +1709,6 @@
 			];
 
 
-
-	foreach ($ar_index as $index_object) {
-
-		$tables = $index_object->tables;
-
-		foreach ($tables as $table) {
-			$current_sql_query	= process_sql_sentence($index_object->sql, $table);
-			$ar_sql_query[]		= trim(str_replace(["\n","\t"], [' ',''], $current_sql_query));
-
-		}
-
-	}
-
-
 // Maintenance
 
 	$ar_maintenance = [];
