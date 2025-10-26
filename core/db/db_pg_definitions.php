@@ -1,8 +1,22 @@
 <?php
 
-// db index
+// DB_PG_DEFINTIONS
+//
+// PostgreSQL db definitions for extensions, functions, constraints, indexes and maintenance.
+// This file defines in a common way the SQL sentences to perform into a maintenance process.
+// It create a multiple arrays for every kind of process (index, function, etc.)
+// The specific SQL sentence is defined with a common object:
+//	{
+//		"tables" : array, optional, the tables to perform the SQL sentences
+//		"add" : string, mandatory, the SQL sentence to create or add the functionality (index, function, etc.)
+//		"drop" : string, mandatory, the SQL sentence to drop the functionality (index, function, etc.)
+//		"sample" : string, optional, the SQL sentence to test the functionality (index, function, etc.)
+//		"name" : string, mandatory, the name of the functionality to identify it.
+//		"info" : string, mandatory, additional information about the functionality describing its use.
+//	}
 
-// extensions
+
+// Extensions
 	$ar_extensions = [];
 
 	// pg_trgm extension
@@ -16,7 +30,7 @@
 		';
 
 
-// functions
+// Functions
 	$ar_function = [];
 
 	$ar_function[] = (object)[
