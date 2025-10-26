@@ -481,4 +481,17 @@ class db_tasks {
 	}//end parse_sql_sentence
 
 
+
+	/**
+	* CLEAN_SQL_SENTENCE
+	* Replace the SQL sentence tabs and returns given and flat the sentence.
+	* @param string $sql_query
+	* @return string $sql_query
+	*/
+	private function clean_sql_sentence( string $sql_query ) : string {
+		return trim(str_replace(["\n","\t"], [' ',''], $sql_query));
+	}//end clean_sql_sentence
+
+
+
 }//end db_tasks
