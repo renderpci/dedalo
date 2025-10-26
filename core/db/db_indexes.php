@@ -3,10 +3,17 @@
 // db index
 
 // extensions
-	$ar_sql_query[] = '
-		CREATE EXTENSION IF NOT EXISTS pg_trgm;
-		CREATE EXTENSION IF NOT EXISTS unaccent;
-	';
+	$ar_extensions = [];
+
+	// pg_trgm extension
+		$ar_extensions[] = '
+			CREATE EXTENSION IF NOT EXISTS pg_trgm;
+		';
+
+	// unaccent extension
+		$ar_extensions[] = '
+			CREATE EXTENSION IF NOT EXISTS unaccent;
+		';
 
 
 // functions
