@@ -1043,7 +1043,7 @@ abstract class common {
 		}
 
 		// cache
-			$ar_related_by_model_data[$uid] = $ar_related_by_model;
+		$ar_related_by_model_data[$uid] = $ar_related_by_model;
 
 
 		return $ar_related_by_model;

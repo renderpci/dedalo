@@ -200,6 +200,7 @@ class ts_object {
 	public function get_data() : object {
 		// $start_time=start_time();
 
+		// Is index-able check
 		$is_indexable = (bool)self::is_indexable($this->section_tipo, $this->section_id);
 
 		// Global object
@@ -512,8 +513,8 @@ class ts_object {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// $total = round( (start_time()-$start_time), 3 );
-				#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
+				// $total = exec_time_unit_auto($start_time);
+				// debug_log(__METHOD__.")))))))))))))) Total2: $total", logger::DEBUG);
 				// $data->total_time = $total;
 				// error_log('********************* get_data total: '. exec_time_unit($start_time,'ms'));
 			}
@@ -999,6 +1000,9 @@ class ts_object {
 
 	/**
 	* GET_PERMISSIONS_ELEMENT
+	* Resolve permissions value for given element name (model)
+	* E.g. 'button_new'
+	* @param string $element_name
 	* @return int $permissions
 	*/
 	public function get_permissions_element( string $element_name ) : int {
