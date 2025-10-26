@@ -440,6 +440,86 @@ class db_tasks {
 
 
 	/**
+	* REBUILD_FUNCTIONS
+	* Forces rebuilding of PostgreSQL main functions
+	* @return object $response
+	*/
+	public static function rebuild_functions() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+		$ar_function = [];
+
+		// import file with all definitions of indexes
+		require_once dirname(__FILE__) . '/db_indexes.php';
+
+		// Validation for db_indexes vars.
+		if (!isset($ar_function) || !is_array($ar_function) || empty($ar_function)) {
+			$response->errors[] = "No SQL function queries found in db_indexes.php";
+			return $response;
+		}
+
+		// exec
+		foreach ($ar_function as $function) {
+
+			// debug info
+			debug_log(__METHOD__
+				. " Executing rebuild_functions SQL sentence " . PHP_EOL
+				. ' name: ' . trim($function->name)
+				. ' info: ' . trim($function->info)
+				, logger::WARNING
+			);
+
+			// 1 Drop
+				// exec drop query
+				$sql_query		= db_tasks::clean_sql_sentence($function->drop);
+				$query_response	= db_tasks::exec_sql_query($sql_query);
+
+				if( $query_response->result===false ) {
+					$response->errors[] = $query_response->error;
+					continue;
+				}
+
+			// 2 Add
+				// exec add query
+				$sql_query		= db_tasks::clean_sql_sentence($function->add);
+				$query_response	= db_tasks::exec_sql_query($sql_query);
+
+				if( $query_response->result===false ) {
+					$response->errors[] = $query_response->error;
+					continue;
+				}
+
+				$response->success++;
+		}
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec rebuild_functions " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_function) . PHP_EOL
+				, logger::DEBUG
+			);
+
+		// response OK
+		$response->result	= true;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_function);
+		$response->n_errors = count($response->errors);
+
+
+		return $response;
+	}//end rebuild_functions
+
+
+
+
+	/**
 	* GET_TABLES
 	* Get the full list of tables (in 'public' schema) from Dédalo DDBB
 	* @return array $tables
