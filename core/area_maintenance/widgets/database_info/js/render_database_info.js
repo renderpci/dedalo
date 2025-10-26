@@ -424,7 +424,7 @@ const render_consolidate_table_sequences = (self) => {
 	body_response.addEventListener('dblclick', dblclick_handler)
 
 	// tables
-	const source_tables = ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd']
+	const source_tables = ['dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd']
 
 	self.caller?.init_form({
 		submit_label	: 'Consolidate tables',
@@ -434,7 +434,7 @@ const render_consolidate_table_sequences = (self) => {
 		inputs			: [{
 			type		: 'text',
 			name		: 'tables',
-			label		: 'Tables list as jer_dd,matrix_ontology,matrix',
+			label		: 'Tables list as dd_ontology,matrix_ontology,matrix',
 			value		: source_tables.join(','),
 			mandatory	: true
 		}],

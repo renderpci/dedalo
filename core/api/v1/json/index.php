@@ -160,7 +160,7 @@ $global_start_time = hrtime(true);
 		if (defined('DEDALO_RECOVERY_MODE') && DEDALO_RECOVERY_MODE===true) {
 			// change config environmental var value after verify
 			// that Dédalo is really in recovery mode (set in config_core)
-			// Note that this action changes the default Ontology table used: jer_dd -> jer_dd_recovery
+			// Note that this action changes the default Ontology table used: dd_ontology -> dd_ontology_recovery
 			$_ENV['DEDALO_RECOVERY_MODE'] = true;
 		}
 	}

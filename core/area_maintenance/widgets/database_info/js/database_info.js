@@ -85,9 +85,9 @@ database_info.prototype.build = async function(autoload=false) {
 /**
 * CONSOLIDATE_TABLES
 * Process given tables to consolidate the id numbers.
-* Only 'jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd' are allowed.
+* Only 'dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd' are allowed.
 * @param array tables
-* 	E.g. ['jer_dd','matrix_ontology','matrix_ontology_main','matrix_dd']
+* 	E.g. ['dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd']
 * @return promise - api_response
 */
 database_info.prototype.consolidate_tables = async function(tables) {
