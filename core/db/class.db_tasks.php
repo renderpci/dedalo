@@ -590,6 +590,91 @@ class db_tasks {
 
 
 
+	/**
+	* REBUILD_CONSTAINTS
+	* Forces rebuilding of PostgreSQL main constraints
+	* @return object $response
+	*/
+	public static function rebuild_constaints() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+		$ar_constraint = [];
+
+		// import file with all definitions of indexes
+		require_once dirname(__FILE__) . '/db_indexes.php';
+
+		// Validation for db_indexes vars.
+		if (!isset($ar_constraint) || !is_array($ar_constraint) || empty($ar_constraint)) {
+			$response->errors[] = "No SQL function queries found in db_indexes.php";
+			return $response;
+		}
+
+		// exec
+		foreach ($ar_constraint as $constraint) {
+
+			// debug info
+			debug_log(__METHOD__
+				. " Executing rebuild_constaints SQL sentence " . PHP_EOL
+				. ' name: ' . trim($constraint->name)
+				. ' info: ' . trim($constraint->info)
+				, logger::WARNING
+			);
+
+			$tables = $constraint->tables;
+
+			foreach ($tables as $table) {
+
+				// 1 Drop
+					// exec drop query
+					$sql_query		= db_tasks::parse_sql_sentence($constraint->drop, $table);
+					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+					$query_response	= db_tasks::exec_sql_query($sql_query);
+
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->error;
+						continue;
+					}
+
+				// 2 Add
+					// exec add query
+					$sql_query		= db_tasks::parse_sql_sentence($constraint->add, $table);
+					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+					$query_response	= db_tasks::exec_sql_query($sql_query);
+
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->error;
+						continue;
+					}
+			}
+
+				$response->success++;
+		}
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec rebuild_constaints " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_constraint) . PHP_EOL
+				, logger::DEBUG
+			);
+
+		// response OK
+		$response->result	= true;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_constraint);
+		$response->n_errors = count($response->errors);
+
+
+		return $response;
+	}//end rebuild_constaints
+
+
 
 	/**
 	* GET_TABLES

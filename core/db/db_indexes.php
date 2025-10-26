@@ -299,7 +299,7 @@
 					UNIQUE ( section_id, section_tipo );
 				',
 				'drop' => '
-					ALTER TABLE {$table} DROP CONSTRAINT {$table}_section_id_section_tipo_key
+					ALTER TABLE {$table} DROP CONSTRAINT {$table}_section_id_section_tipo_key;
 				',
 				'sample' => '
 					INSERT INTO "matrix_projects"
@@ -307,7 +307,7 @@
 					VALUES
 						(1, \'dd153\');
 				',
-				'name' => 'constraint_section_id_section_tipo_key',
+				'name' => 'all_matrix_constraint_section_id_section_tipo_key',
 				'info' => 'Used to avoid duplicated records, is not possible to storage the same section_id with the same section_tipo'
 			];
 
@@ -322,7 +322,7 @@
 					UNIQUE ( section_id, section_tipo );
 				',
 				'drop' => '
-					ALTER TABLE {$table} DROP CONSTRAINT {$table}_tipo_key
+					ALTER TABLE {$table} DROP CONSTRAINT {$table}_tipo_key;
 				',
 				'sample' => '
 					INSERT INTO "dd_ontology"
@@ -330,6 +330,7 @@
 					VALUES
 						(\'dd1\');
 				',
+				'name' => 'dd_ontology_constraint_tipo_key',
 				'info' => 'Used to avoid duplicated records, is not possible to storage the same tipo'
 			];
 
