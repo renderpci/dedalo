@@ -352,7 +352,7 @@
 					USING btree ( is_model ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_is_model_idx
+					DROP INDEX IF EXISTS {$table}_is_model_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -374,7 +374,7 @@
 					USING btree ( model COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_model_idx
+					DROP INDEX IF EXISTS {$table}_model_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -396,7 +396,7 @@
 					USING btree ( model_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_model_tipo_idx
+					DROP INDEX IF EXISTS {$table}_model_tipo_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -418,7 +418,7 @@
 					USING btree ( order_number ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_order_number_idx
+					DROP INDEX IF EXISTS {$table}_order_number_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -440,7 +440,7 @@
 					USING btree ( parent ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_parent_idx
+					DROP INDEX IF EXISTS {$table}_parent_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -463,7 +463,7 @@
 					USING btree ( tld COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_tld_idx
+					DROP INDEX IF EXISTS {$table}_tld_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -485,7 +485,7 @@
 					USING btree ( relations COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_relations_idx
+					DROP INDEX IF EXISTS {$table}_relations_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -507,7 +507,7 @@
 					USING btree ( is_translatable ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_is_translatable_idx
+					DROP INDEX IF EXISTS {$table}_is_translatable_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -532,7 +532,7 @@
 					);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_parent_order_number_idx
+					DROP INDEX IF EXISTS {$table}_parent_order_number_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -580,7 +580,7 @@
 					USING btree (section_id ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_id_idx
+					DROP INDEX IF EXISTS {$table}_section_id_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -625,7 +625,7 @@
 					USING btree (section_id DESC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_id_desc_idx
+					DROP INDEX IF EXISTS {$table}_section_id_desc_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -664,13 +664,12 @@
 					'matrix_users'
 				],
 				'sql' => '
-
 					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_idx
 					ON {$table}
 					USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo_idx
+					DROP INDEX IF EXISTS {$table}_section_tipo_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -710,13 +709,12 @@
 					'matrix_time_machine'
 				],
 				'sql' => '
-
 					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_idx
 					ON {$table}
 					USING btree (section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_idx
+					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -761,7 +759,7 @@
 					USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST, section_id DESC NULLS FIRST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_desc_idx
+					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_desc_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -810,7 +808,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_string_gin_idx
+				DROP INDEX IF EXISTS {$table}_string_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -912,7 +910,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_gin_idx
+				DROP INDEX IF EXISTS {$table}_relation_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -959,7 +957,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_locators_gin_idx
+				DROP INDEX IF EXISTS {$table}_relation_locators_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1005,7 +1003,7 @@
 				USING gin (data_relations_flat_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_st_si_gin_idx
+				DROP INDEX IF EXISTS {$table}_relation_flat_st_si_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1052,7 +1050,7 @@
 				USING gin (data_relations_flat_fct_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_fct_st_si_gin_idx
+				DROP INDEX IF EXISTS {$table}_relation_flat_fct_st_si_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1099,7 +1097,7 @@
 				USING gin (data_relations_flat_ty_st(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx
+				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1147,7 +1145,7 @@
 				USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx
+				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1194,7 +1192,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_date_gin_idx
+				DROP INDEX IF EXISTS {$table}_date_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1241,7 +1239,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_iri_gin_idx
+				DROP INDEX IF EXISTS {$table}_iri_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1288,7 +1286,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_geo_gin_idx
+				DROP INDEX IF EXISTS {$table}_geo_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1335,7 +1333,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_number_gin_idx
+				DROP INDEX IF EXISTS {$table}_number_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1382,7 +1380,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_media_gin_idx
+				DROP INDEX IF EXISTS {$table}_media_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1429,7 +1427,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_misc_gin_idx
+				DROP INDEX IF EXISTS {$table}_misc_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1476,7 +1474,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_search_gin_idx
+				DROP INDEX IF EXISTS {$table}_relation_search_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1502,7 +1500,7 @@
 					USING btree (id DESC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_id_desc_idx
+					DROP INDEX IF EXISTS {$table}_id_desc_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -1526,7 +1524,7 @@
 					USING btree (tipo ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_tipo_idx
+					DROP INDEX IF EXISTS {$table}_tipo_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -1548,7 +1546,7 @@
 					USING btree (lang COLLATE pg_catalog.\"default\" ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_lang_idx
+					DROP INDEX IF EXISTS {$table}_lang_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -1570,7 +1568,7 @@
 					USING btree ( bulk_process_id ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_bulk_process_id_idx
+					DROP INDEX IF EXISTS {$table}_bulk_process_id_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -1592,7 +1590,7 @@
 					USING btree ( state COLLATE pg_catalog.\"default\" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_state_idx
+					DROP INDEX IF EXISTS {$table}_state_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -1614,7 +1612,7 @@
 					USING btree ( "timestamp" DESC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_timestamp_idx
+					DROP INDEX IF EXISTS {$table}_timestamp_idx;
 				',
 				'sample' => '
 					SELECT *
@@ -1636,7 +1634,7 @@
 					USING btree ( "userID" ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_user_id_idx
+					DROP INDEX IF EXISTS {$table}_user_id_idx;
 				',
 				'sample' => '
 					SELECT *
