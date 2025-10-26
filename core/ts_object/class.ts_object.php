@@ -1011,58 +1011,56 @@ class ts_object {
 	*/
 	public function get_permissions_element( string $element_name ) : int {
 
+		$permissions = 0;
+
+		// Helper closure for repeated logic
+		$get_child_permissions = function (string $element_name, bool $recursive = false): int {
+			$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
+				$this->section_tipo,
+				[$element_name],
+				true,  // from_cache
+				true,  // resolve_virtual
+				$recursive,
+				true,   // search_exact
+				[] // ar_tipo_exclude_elements
+			);
+
+			if (!empty($ar_children[0])) {
+				return common::get_permissions($this->section_tipo, $ar_children[0]);
+			}
+
+			// debug_log(__METHOD__ . " WARNING: Element not defined: $element_name", logger::DEBUG);
+			return 0;
+		};
+
 		switch ($element_name) {
 			case 'button_new':
-				if ($this->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+				if ($this->section_tipo === DEDALO_HIERARCHY_SECTION_TIPO) {
 					$tipo = DEDALO_HIERARCHY_BUTTON_NEW_TIPO;
-					$permissions = common::get_permissions($this->section_tipo,$tipo);
-				}elseif ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
+					$permissions = common::get_permissions($this->section_tipo, $tipo);
+				} elseif ($this->section_tipo === DEDALO_THESAURUS_SECTION_TIPO) {
 					$tipo = DEDALO_THESAURUS_BUTTON_NEW_TIPO;
-					$permissions = common::get_permissions($this->section_tipo,$tipo);
-				}else{
-					$ar_children = section::get_ar_children_tipo_by_model_name_in_section($this->section_tipo, [$element_name], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
-					# dump($ar_children, ' ar_children ++ '.to_string());
-					if (isset($ar_children[0])) {
-						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
-					}else{
-						$permissions = 0;
-					}
+					$permissions = common::get_permissions($this->section_tipo, $tipo);
+				} else {
+					$permissions = $get_child_permissions($element_name, false);
 				}
 				break;
+
 			case 'button_delete':
-				# hierarchy1 case
-				if ($this->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-					$permissions = 0; // Always is 0
-				}elseif ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
+				if ($this->section_tipo === DEDALO_HIERARCHY_SECTION_TIPO) {
+					$permissions = 0; // Always 0 for hierarchy
+				} elseif ($this->section_tipo === DEDALO_THESAURUS_SECTION_TIPO) {
 					$tipo = DEDALO_THESAURUS_BUTTON_DELETE_TIPO;
-					$permissions = common::get_permissions($this->section_tipo,$tipo);
-				}else{
-					$ar_children = section::get_ar_children_tipo_by_model_name_in_section($this->section_tipo, [$element_name], $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
-					# dump($ar_children, ' ar_children ++ '.to_string());
-					if (isset($ar_children[0])) {
-						$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
-					}else{
-						$permissions = 0;
-					}
+					$permissions = common::get_permissions($this->section_tipo, $tipo);
+				} else {
+					$permissions = $get_child_permissions($element_name, false);
 				}
 				break;
+
 			default:
-				$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
-					$this->section_tipo,
-					[$element_name], // ar_model_name
-					$from_cache=true,
-					$resolve_virtual=true,
-					$recursive=true,
-					$search_exact=true
-				);
-				if (isset($ar_children[0])) {
-					$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
-				}else{
-					$permissions = 0;
-					// debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned as permissions ".to_string(), logger::DEBUG);
-				}
+				$permissions = $get_child_permissions($element_name, true);
 				break;
-		}//end switch ($element_name)
+		}
 
 
 		return (int)$permissions;
