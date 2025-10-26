@@ -686,8 +686,71 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* REBUILD_DB_INDEXES
+	* RECREATE_DB_ASSETS
 	* Force to re-build the PostgreSQL main indexes, extensions and functions
+	* @return object $response
+	*/
+	public static function recreate_db_assets() : object {
+
+		$response = new stdClass();
+			$response->result	= new stdClass();
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+		//extensions
+		$response_extensions	= db_tasks::create_extensions();
+			$response->result->extensions	= $response_extensions->result;
+			$response->errors				= $response_extensions->errors;
+		// functions
+		$response_functions		= db_tasks::rebuild_functions();
+			$response->result->functions	= $response_functions->result;
+			$response->errors[]				= array_merge($response->errors, $response_functions->errors);
+		// indexes
+		$response_indexes		= db_tasks::rebuild_indexes();
+			$response->result->indexes		= $response_indexes->result;
+			$response->errors[]				= array_merge($response->errors, $response_indexes->errors);
+		// maintenance
+		$response_maintenance	= db_tasks::exec_maintenance();
+			$response->result->maintenance	= $response_maintenance->result;
+			$response->errors[]				= array_merge($response->errors, $response_maintenance->errors);
+
+
+		return $response;
+	}//end recreate_db_assets
+
+
+
+	/**
+	* CREATE_DB_EXTENSIONS
+	* Force to create the PostgreSQL main extensions
+	* @return object $response
+	*/
+	public static function create_db_extensions() : object {
+
+		$response = db_tasks::create_extensions();
+
+		return $response;
+	}//end create_db_extensions
+
+
+
+	/**
+	* REBUILD_DB_FUNCTIONS
+	* Force to re-build the PostgreSQL main functions
+	* @return object $response
+	*/
+	public static function rebuild_db_functions() : object {
+
+		$response = db_tasks::rebuild_functions();
+
+		return $response;
+	}//end rebuild_db_functions
+
+
+
+	/**
+	* REBUILD_DB_INDEXES
+	* Force to re-build the PostgreSQL main indexes
 	* @return object $response
 	*/
 	public static function rebuild_db_indexes() : object {
@@ -696,6 +759,20 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end rebuild_db_indexes
+
+
+
+	/**
+	* EXEC_DB_MAINTENANCE
+	* Force to perform a basic PostgreSQL maintenance for indexing
+	* @return object $response
+	*/
+	public static function exec_db_maintenance() : object {
+
+		$response = db_tasks::exec_maintenance();
+
+		return $response;
+	}//end exec_db_maintenance
 
 
 
