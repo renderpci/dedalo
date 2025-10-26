@@ -32,6 +32,7 @@
 			ORDER BY section_id ASC
 			LIMIT 10;
 		',
+		'name' => 'f_unaccent',
 		'info' => 'Used to process the relation column and get the string value of section_tipo ans section_id as oh1_3'
 	];
 
@@ -65,6 +66,7 @@
 			ORDER BY section_id ASC
 			LIMIT 10;
 		',
+		'name' => 'data_relations_flat_st_si',
 		'info' => 'Used to process the relation column and get the string value of section_tipo ans section_id as oh1_3'
 	];
 
@@ -99,6 +101,7 @@
 			ORDER BY section_id ASC
 			LIMIT 10;
 		',
+		'name' => 'data_relations_flat_fct_st_si',
 		'info' => 'Used to process the relation column and get the string value of fct=from_section_tipo st=section_tipo si=section_id e.g. oh25_oh1_3'
 	];
 
@@ -133,6 +136,7 @@
 			ORDER BY section_id ASC
 			LIMIT 10;
 		',
+		'name' => 'data_relations_flat_ty_st_si',
 		'info' => 'Used to process the relation column and get the string value of ty=type st=section_tipo si=section_id e.g. dd151_dd64_1'
 	];
 
@@ -166,6 +170,7 @@
 			ORDER BY section_id ASC
 			LIMIT 10;
 		',
+		'name' => 'data_relations_flat_ty_st',
 		'info' => 'Used to process the relation column and get the string value of ty=type st=section_tipo e.g. dd151_dd64_1'
 	];
 
@@ -203,6 +208,7 @@
 			ORDER BY section_id ASC
 			LIMIT 10;
 		',
+		'name' => 'get_searchable_string',
 		'info' => 'Used to process the string column and get the string value without accents in lowercase and without HTML. Is used to create a `string_seach` column'
 	];
 
