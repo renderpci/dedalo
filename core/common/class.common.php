@@ -1016,18 +1016,35 @@ abstract class common {
 	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
 		// cache
-			static $ar_related_by_model_data = [];
-			$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
-			// if (isset($ar_related_by_model_data[$uid])) {
-			if (array_key_exists($uid, $ar_related_by_model_data)) {
-				return $ar_related_by_model_data[$uid];
-			}
+		static $ar_related_by_model_data = [];
+		$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
+		if (isset($ar_related_by_model_data[$uid])) {
+			return $ar_related_by_model_data[$uid];
+		}
 
-		$ontology_node	= new ontology_node($tipo);
+		$ar_related_by_model = [];
+
+		$ontology_node	= ontology_node::get_instance($tipo);
 		$relations		= $ontology_node->get_relations();
+		// E.g. [{"tipo": "hierarchy20"}]
 
-		$ar_related_by_model=array();
-		foreach ((array)$relations as $relation) foreach ((array)$relation as $current_tipo) {
+		// Expected array or null from $relations
+		if ($relations===null) {
+		    return $ar_related_by_model_data[$uid] = [];
+		}
+
+		foreach ($relations as $relation) {
+
+			$current_tipo = $relation->tipo ?? null;
+			if (!$current_tipo) {
+				debug_log(__METHOD__
+					. " Skip invalid relation " . PHP_EOL
+					. ' tipo; ' . $tipo . PHP_EOL
+					. ' relations: ' . to_string($relations)
+					, logger::ERROR
+				);
+				continue;
+			}
 
 			$current_model_name = ontology_node::get_model_by_tipo($current_tipo, true);
 			if ($strict===true) {
