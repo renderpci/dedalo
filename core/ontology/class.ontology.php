@@ -1302,7 +1302,7 @@ class ontology {
 		// tipo
 			// create the ontology_node with the term_id and set the tld
 			$ontology_node = ontology_node::get_instance( $tipo );
-			$ontology_node->set_tld( $tld );
+			// $ontology_node->load_data();
 
 		// parent
 		// parent needs to know the parent tld of the locator to build the term_id
