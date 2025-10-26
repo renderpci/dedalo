@@ -235,7 +235,7 @@ class component_portal extends component_relation_common {
 			case '6.0.0':
 				// Update the locator to move old ds and dataframe to v6 dataframe model.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
-					$ontology_node			= new ontology_node($tipo);
+					$ontology_node			= ontology_node::get_instance($tipo);
 					$properties				= $ontology_node->get_properties();
 					$v6_update_dataframe	= $properties->v6_update_dataframe ?? null;
 

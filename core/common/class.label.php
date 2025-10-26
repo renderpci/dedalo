@@ -150,7 +150,7 @@ abstract class label {
 		$ar_term = ontology_utils::get_ar_tipo_by_model('label');
 		foreach ($ar_term as $current_tipo) {
 
-			$ontology_node	= new ontology_node($current_tipo);
+			$ontology_node	= ontology_node::get_instance($current_tipo);
 			$properties		= $ontology_node->get_properties();
 
 			// No data in field 'properties'
@@ -210,7 +210,7 @@ abstract class label {
 		$ar_term_id_by_model_name = (array)ontology_utils::get_ar_tipo_by_model('label');
 		foreach ($ar_term_id_by_model_name as $current_tipo) {
 
-			$ontology_node	= new ontology_node($current_tipo);
+			$ontology_node	= ontology_node::get_instance($current_tipo);
 			$properties		= $ontology_node->get_properties();
 
 			// No data in field 'properties'

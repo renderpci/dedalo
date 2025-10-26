@@ -366,7 +366,7 @@ class component_dataframe extends component_portal {
 				// it able to create components dataframe for components with multiple target section_tipo
 				// this update get the target_section of the main component to assign it to the dataframe data.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
-					$ontology_node			= new ontology_node($tipo);
+					$ontology_node			= ontology_node::get_instance($tipo);
 					$main_component_tipo	= $ontology_node->get_parent();
 
 					// create the main component to obtain his data

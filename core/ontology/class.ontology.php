@@ -307,7 +307,7 @@ class ontology {
 			// 	$properties = $new_properties;
 
 			// 	// update dd_ontology record with the new properties
-			// 	$ontology_node = new ontology_node($dd_ontology_row->tipo);
+			// 	$ontology_node = ontology_node::get_instance($dd_ontology_row->tipo);
 			// 	$ontology_node->get_properties(); // force load data
 			// 	$ontology_node->set_properties($new_properties);
 			// 	$ontology_node->update();
@@ -688,7 +688,7 @@ class ontology {
 		// it is defined as tld+0, because the nodes start with 1 as dd1, rsc1, etc.
 			$tipo = $tld.'0'; // as mdcat0, mupreva0, etc.
 
-			$ontology_node = new ontology_node($tipo);
+			$ontology_node = ontology_node::get_instance($tipo);
 				$ontology_node->set_parent($parent_grouper_tipo);
 				$ontology_node->set_model_tipo('dd6');
 				$ontology_node->set_model('section');
@@ -778,12 +778,12 @@ class ontology {
 			$parent_node_tipo	= $parent_tld.'0';
 
 			// dd_ontology. Check if the parent already exists in dd_ontology
-				$parent_node = new ontology_node( $parent_node_tipo );
+				$parent_node = ontology_node::get_instance( $parent_node_tipo );
 				$parent_ontology_row_data = $parent_node->get_data();
 				if( empty($parent_ontology_row_data) ){
 
 					// set parent nodes
-					// $ontology_node = new ontology_node($parent_node_tipo);
+					// $ontology_node = ontology_node::get_instance($parent_node_tipo);
 					$parent_node->set_parent($parent_group);
 					$parent_node->set_model_tipo('dd6');
 					$parent_node->set_model('section');
@@ -1301,7 +1301,7 @@ class ontology {
 
 		// tipo
 			// create the ontology_node with the term_id and set the tld
-			$ontology_node = new ontology_node( $tipo );
+			$ontology_node = ontology_node::get_instance( $tipo );
 			$ontology_node->set_tld( $tld );
 
 		// parent
@@ -2494,7 +2494,7 @@ class ontology {
 	public static function dd_ontology_version_is_valid( string $min_date ) : bool {
 
 		// Ontology version. Check if is valid version
-		$ontology_node	= new ontology_node('dd1');
+		$ontology_node	= ontology_node::get_instance('dd1');
 		$term			= $ontology_node->get_term_data();
 		$term_value		= $term->{DEDALO_STRUCTURE_LANG} ?? null;
 		if (empty($term_value)) {

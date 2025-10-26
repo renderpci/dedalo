@@ -2627,7 +2627,7 @@ function is_ontology_available() {
 
 	try {
 
-		$ontology_node	= new ontology_node('dd1');
+		$ontology_node	= ontology_node::get_instance('dd1');
 		$term			= $ontology_node->get_term_data();
 
 		return is_object($term);

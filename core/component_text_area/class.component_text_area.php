@@ -1797,7 +1797,7 @@ class component_text_area extends component_string_common {
 						$to_be_saved = ( $count>0 );
 
 					// get the properties of the component
-					$ontology_node = new ontology_node($tipo);
+					$ontology_node = ontology_node::get_instance($tipo);
 					$properties = $ontology_node->get_properties();
 
 					// reference
