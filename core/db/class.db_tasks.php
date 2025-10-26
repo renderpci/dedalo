@@ -368,11 +368,11 @@ class db_tasks {
 
 
 	/**
-	* REBUILD_INDEXES
+	* EXEC_MAINTENANCE
 	* Forces rebuilding of PostgreSQL main indexes, extensions and functions
 	* @return object $response
 	*/
-	public static function rebuild_indexes() : object {
+	public static function exec_maintenance() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -380,38 +380,24 @@ class db_tasks {
 			$response->errors	= [];
 			$response->success	= 0;
 
-		$ar_sql_query = [];
+		$ar_maintenance = [];
 
 		// import file with all definitions of indexes
 		require_once dirname(__FILE__) . '/db_indexes.php';
 
 		// Validation for db_indexes vars.
-		if (!isset($ar_sql_query) || !is_array($ar_sql_query) || empty($ar_sql_query)) {
+		if (!isset($ar_maintenance) || !is_array($ar_maintenance) || empty($ar_maintenance)) {
 			$response->errors[] = "No SQL queries found in db_indexes.php";
 			return $response;
 		}
 
 		// exec
-		foreach ($ar_sql_query as $sql_query) {
+		foreach ($ar_maintenance as $sql_query) {
 
-			// debug info
-			debug_log(__METHOD__
-				. " Executing rebuild_indexes SQL sentence " . PHP_EOL
-				. ' sql_query: ' . trim($sql_query)
-				, logger::WARNING
-			);
+			$query_response	= db_tasks::exec_sql_query($sql_query);
 
-			// exec query
-			$result = pg_query(DBi::_getConnection(), $sql_query);
-			if($result===false) {
-				// error case
-				debug_log(__METHOD__
-					." Error Processing sql_query Request ". PHP_EOL
-					. pg_last_error(DBi::_getConnection()) .PHP_EOL
-					. 'sql_query: '.to_string($sql_query)
-					, logger::ERROR
-				);
-				$response->errors[] = " Error Processing sql_query Request: ". pg_last_error(DBi::_getConnection());
+			if( $query_response->result===false ) {
+				$response->errors[] = $query_response->error;
 				continue;
 			}
 
@@ -420,8 +406,8 @@ class db_tasks {
 
 		// debug
 			debug_log(__METHOD__
-				. " Exec rebuild_indexes " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_sql_query) . PHP_EOL
+				. " Exec exec_maintenance " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_maintenance) . PHP_EOL
 				, logger::DEBUG
 			);
 
@@ -430,12 +416,12 @@ class db_tasks {
 		$response->msg		= count($response->errors)>0
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
-		$response->n_queries = count($ar_sql_query);
+		$response->n_queries = count($ar_maintenance);
 		$response->n_errors = count($response->errors);
 
 
 		return $response;
-	}//end rebuild_indexes
+	}//end exec_maintenance
 
 
 
