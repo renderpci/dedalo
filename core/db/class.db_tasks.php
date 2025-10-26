@@ -504,6 +504,92 @@ class db_tasks {
 
 
 
+	/**
+	* REBUILD_INDEXES
+	* Forces rebuilding of PostgreSQL main indexes
+	* @return object $response
+	*/
+	public static function rebuild_indexes() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+		$ar_index = [];
+
+		// import file with all definitions of indexes
+		require_once dirname(__FILE__) . '/db_indexes.php';
+
+		// Validation for db_indexes vars.
+		if (!isset($ar_index) || !is_array($ar_index) || empty($ar_index)) {
+			$response->errors[] = "No SQL function queries found in db_indexes.php";
+			return $response;
+		}
+
+		// exec
+		foreach ($ar_index as $index) {
+
+			// debug info
+			debug_log(__METHOD__
+				. " Executing rebuild_indexes SQL sentence " . PHP_EOL
+				. ' name: ' . trim($index->name)
+				. ' info: ' . trim($index->info)
+				, logger::WARNING
+			);
+
+			$tables = $index_object->tables;
+
+			foreach ($tables as $table) {
+
+				// 1 Drop
+					// exec drop query
+					$sql_query		= db_tasks::parse_sql_sentence($index->drop, $table);
+					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+					$query_response	= db_tasks::exec_sql_query($sql_query);
+
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->error;
+						continue;
+					}
+
+				// 2 Add
+					// exec add query
+					$sql_query		= db_tasks::parse_sql_sentence($index->add, $table);
+					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+					$query_response	= db_tasks::exec_sql_query($sql_query);
+
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->error;
+						continue;
+					}
+			}
+
+				$response->success++;
+		}
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec rebuild_indexes " . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_index) . PHP_EOL
+				, logger::DEBUG
+			);
+
+		// response OK
+		$response->result	= true;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_index);
+		$response->n_errors = count($response->errors);
+
+
+		return $response;
+	}//end rebuild_indexes
+
+
+
 
 	/**
 	* GET_TABLES
