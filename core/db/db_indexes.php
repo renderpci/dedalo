@@ -1646,35 +1646,32 @@
 			];
 
 		// section_id_key
-			// $ar_index[] = (object)[
-			// 	'tables' => [
-			// 		'matrix_time_machine'
-			// 	],
-			// 	'sql' => "
-
-			// 		CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id
-			// 		ON {$table}
-			// 		USING btree (
-			// 			section_id ASC NULLS LAST,
-			// 			section_id_key ASC NULLS LAST,
-			// 			section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST,
-			// 			tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST,
-			// 			lang COLLATE pg_catalog.\"default\" ASC NULLS LAST
-			// 		);
-
-			// 	",
-			// 	'drop' => '
-			//'
-			// 		DROP INDEX IF EXISTS {$table}_bulk_process_id
-			// 	",
-			// 	'sample' => "
-			// 		SELECT *
-			// 		FROM matrix_time_machine
-			// 		WHERE bulk_process_id = 751
-			// 		LIMIT 1;
-			// 	",
-			// 	'info' => 'Used to search by tipo.'
-			// ];
+			$ar_index[] = (object)[
+				'tables' => [
+					'matrix_time_machine'
+				],
+				'sql' => '
+					CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id_idx
+					ON {$table}
+					USING btree (
+						section_id ASC NULLS LAST,
+						bulk_process_id ASC NULLS LAST,
+						section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST,
+						tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST,
+						lang COLLATE pg_catalog.\"default\" ASC NULLS LAST
+					);
+				',
+				'drop' => '
+					DROP INDEX IF EXISTS {$table}_bulk_process_id_idx;
+				',
+				'sample' => "
+					SELECT *
+					FROM matrix_time_machine
+					WHERE bulk_process_id = 751
+					LIMIT 1;
+				",
+				'info' => 'Used to search by bulk_process_id.'
+			];
 
 
 	function process_sql_sentence($template, $table) {
