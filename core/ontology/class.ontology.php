@@ -1518,11 +1518,9 @@ class ontology {
 
 			if( !is_empty_dato( $properties_v5_data ) ){
 				$properties_v5 = json_encode( $properties_v5_data[0] );
-
 			}else{
 				$properties_v5 = null;
 			}
-
 			$ontology_node->set_propiedades( $properties_v5 );
 
 		// Properties
