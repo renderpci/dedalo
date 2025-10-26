@@ -227,33 +227,32 @@
 			DROP FUNCTION IF EXISTS check_array_component;
 		',
 		'sample' => '
-				id IN (
-					SELECT
-						id
-					FROM
-						check_array_component(
-							( jsonb_typeof(	datos#>\'{components, numisdata35, dato, lg-nolan}\') = \'array\' AND
-											datos#>\'{components, numisdata35, dato, lg-nolan}\' != \'[]\' ),
-							( datos#>\'{components, numisdata35, dato, lg-nolan}\' )
-						) as numisdata35_array_elements
-					WHERE
-						-- TIME
-						numisdata35_array_elements#>\'{time}\' = \'32269363200\'
-						-- RANGE
-						OR (
-						numisdata35_array_elements#>\'{start, time}\' <= \'32269363200\' AND
-						numisdata35_array_elements#>\'{end, time}\' >= \'32269363200\')
-						OR (
-						numisdata35_array_elements#>\'{start, time}\' = \'32269363200\')
-						-- PERIOD
-						OR (
-						numisdata35_array_elements#>\'{period, time}\' = \'32269363200\')
-				)
+			SELECT *
+			FROM matrix
+			WHERE id IN (
+				SELECT id
+				FROM check_array_component(
+						( jsonb_typeof(	datos#>\'{components, numisdata35, dato, lg-nolan}\') = \'array\' AND
+										datos#>\'{components, numisdata35, dato, lg-nolan}\' != \'[]\' ),
+						( datos#>\'{components, numisdata35, dato, lg-nolan}\' )
+					) as numisdata35_array_elements
+				WHERE
+					-- TIME
+					numisdata35_array_elements#>\'{time}\' = \'32269363200\'
+					-- RANGE
+					OR (
+					numisdata35_array_elements#>\'{start, time}\' <= \'32269363200\' AND
+					numisdata35_array_elements#>\'{end, time}\' >= \'32269363200\')
+					OR (
+					numisdata35_array_elements#>\'{start, time}\' = \'32269363200\')
+					-- PERIOD
+					OR (
+					numisdata35_array_elements#>\'{period, time}\' = \'32269363200\')
+			);
 		',
-		'info' => 'Used to process the string column and get the string value without accents in lowercase and without HTML. Is used to create a `string_seach` column'
+		'name' => 'check_array_component',
+		'info' => 'Used to process the date column.'
 	];
-
-
 
 
 	foreach ($ar_function as $function_object) {
