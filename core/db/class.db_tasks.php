@@ -476,7 +476,7 @@ class db_tasks {
 	* @param string $table
 	* @return string $sql_query
 	*/
-	private function parse_sql_sentence( string $template, string $table) : string {
+	private static function parse_sql_sentence( string $template, string $table) : string {
 		return str_replace('{$table}', $table, $template);
 	}//end parse_sql_sentence
 
@@ -488,7 +488,7 @@ class db_tasks {
 	* @param string $sql_query
 	* @return string $sql_query
 	*/
-	private function clean_sql_sentence( string $sql_query ) : string {
+	private static function clean_sql_sentence( string $sql_query ) : string {
 		return trim(str_replace(["\n","\t"], [' ',''], $sql_query));
 	}//end clean_sql_sentence
 
