@@ -2055,7 +2055,7 @@ class area_maintenance extends area_common {
 			dd_cache::delete_cache_files();
 
 		// get new Ontology info
-			$ontology_node = new ontology_node(DEDALO_ROOT_TIPO);
+			$ontology_node = ontology_node::get_instance(DEDALO_ROOT_TIPO);
 			$root_info = (object)[
 				'term' => ontology_node::get_term_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
 				'properties' => $ontology_node->get_properties()

@@ -243,7 +243,7 @@ class diffusion_sql extends diffusion  {
 						$save_options->section_tipo						= $section_tipo;
 
 						// engine switch
-						$ontology_node			= new ontology_node($database_tipo);
+						$ontology_node			= ontology_node::get_instance($database_tipo);
 						$database_properties	= $ontology_node->get_propiedades(true);
 						if (isset($database_properties->engine)) {
 							$save_options->record_data['engine'] = $database_properties->engine; // If defined in database properties
@@ -278,7 +278,7 @@ class diffusion_sql extends diffusion  {
 						if (!isset($table_properties->global_table_maps)) {
 
 							// try from real
-							$ontology_node		= new ontology_node($table_tipo);
+							$ontology_node		= ontology_node::get_instance($table_tipo);
 							$target_properties	= $ontology_node->get_propiedades(true);
 							if (is_object($target_properties) && isset($target_properties->global_table_maps)) {
 								// overwrite global_table_maps
@@ -390,7 +390,7 @@ class diffusion_sql extends diffusion  {
 							}
 
 						// skip resolve components with dato external (portals)
-							$ontology_node					= new ontology_node($current_component_tipo);
+							$ontology_node					= ontology_node::get_instance($current_component_tipo);
 							$current_component_properties	= $ontology_node->get_propiedades(true);
 							if (isset($current_component_properties->source->mode) && $current_component_properties->source->mode==='external') {
 								debug_log(__METHOD__
@@ -543,7 +543,7 @@ class diffusion_sql extends diffusion  {
 		// 		# Recorremos hijos de la primera/as tabla/s
 		// 		foreach ($ar_diffusion_table_thesaurus as $current_table_tipo) {
 
-		// 			$ontology_node = new ontology_node($current_table_tipo);
+		// 			$ontology_node = ontology_node::get_instance($current_table_tipo);
 		// 			$properties  = json_decode( $ontology_node->get_properties() );
 		// 				#dump($properties, ' properties ++ '.to_string());
 		// 			if (isset($properties->ar_tables)) {
@@ -585,7 +585,7 @@ class diffusion_sql extends diffusion  {
 			$ar_table_data['ar_fields']		= array();
 
 		// Table properties SCHEMA optional
-			// $ontology_node 	  = new ontology_node($table_tipo);
+			// $ontology_node 	  = ontology_node::get_instance($table_tipo);
 			// $str_properties  = $ontology_node->get_properties();
 			// if($properties = json_decode($str_properties)) {
 			// 	if (isset($properties->schema)) {
@@ -608,13 +608,13 @@ class diffusion_sql extends diffusion  {
 		// other fields . Normal columns
 			$ar_table_children = $ar_children_tipo;
 			if (empty($ar_table_children)) {
-				$ontology_node		= new ontology_node($table_tipo);
+				$ontology_node		= ontology_node::get_instance($table_tipo);
 				$ar_table_children	= $ontology_node->get_ar_children_of_this();
 
 				// Add from table alias too
 				if (!empty($table_from_alias)) {
 
-					$ontology_node_alias			= new ontology_node($table_from_alias);
+					$ontology_node_alias			= ontology_node::get_instance($table_from_alias);
 					$ar_table_alias_children	= $ontology_node_alias->get_ar_children_of_this();
 
 					// merge all
@@ -653,7 +653,7 @@ class diffusion_sql extends diffusion  {
 
 				default:
 					// field
-					$ontology_node	= new ontology_node($curent_children_tipo);
+					$ontology_node	= ontology_node::get_instance($curent_children_tipo);
 					$properties		= $ontology_node->get_propiedades(true);
 
 					switch (true) {
@@ -838,7 +838,7 @@ class diffusion_sql extends diffusion  {
 					? ontology_node::get_term_by_tipo($related_component_tipo)." - $related_component_tipo"
 					: $ar_field_data['field_name'];
 
-				$ontology_node	= new ontology_node($tipo);
+				$ontology_node	= ontology_node::get_instance($tipo);
 				$properties		= $ontology_node->get_propiedades(true);
 
 				$diffusion_model_name = ontology_node::get_model_by_tipo($tipo,true);
@@ -1017,12 +1017,12 @@ class diffusion_sql extends diffusion  {
 		# TABLE CHILDREN (FIELDS)
 			$ar_table_children = $ar_children_tipo;
 			if (empty($ar_table_children)) {
-				$ontology_node 	   = new ontology_node($table_tipo);
+				$ontology_node 	   = ontology_node::get_instance($table_tipo);
 				$ar_table_children = $ontology_node->get_ar_children_of_this();
 
 				# Add from table alias too
 				if (!empty($table_from_alias)) {
-					$ontology_node_alias			= new ontology_node($table_from_alias);
+					$ontology_node_alias			= ontology_node::get_instance($table_from_alias);
 					$ar_table_alias_children	= (array)$ontology_node_alias->get_ar_children_of_this();
 
 					# Merge all
@@ -1159,7 +1159,7 @@ class diffusion_sql extends diffusion  {
 								}
 
 							// properties
-								$ontology_node	= new ontology_node($curent_children_tipo);
+								$ontology_node	= ontology_node::get_instance($curent_children_tipo);
 								$properties		= $ontology_node->get_propiedades(true);
 
 							// switch discriminate by propiedades
@@ -1425,7 +1425,7 @@ class diffusion_sql extends diffusion  {
 
 						$table_tipo = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
 						// try from real
-						$ontology_node		= new ontology_node($table_tipo);
+						$ontology_node		= ontology_node::get_instance($table_tipo);
 						$target_properties	= $ontology_node->get_propiedades(true);
 						if (is_object($target_properties) && isset($target_properties->global_table_maps)) {
 							// overwrite global_table_maps
@@ -1601,7 +1601,7 @@ class diffusion_sql extends diffusion  {
 
 				#
 				# Diffusion element
-				$diffusion_term					= new ontology_node($options->tipo);
+				$diffusion_term					= ontology_node::get_instance($options->tipo);
 				$properties						= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
 
 				#
@@ -2721,7 +2721,7 @@ class diffusion_sql extends diffusion  {
 
 		# CEDIS ONLY. Override in 'properties' the base point for calculate diffusion tables
 		# This is useful for development purposes, and allow publish in different database without duplicate all tables structure for each difusion_element
-			$diffusion_element_tipo_obj = new ontology_node($diffusion_element_tipo);
+			$diffusion_element_tipo_obj = ontology_node::get_instance($diffusion_element_tipo);
 			$properties = $diffusion_element_tipo_obj->get_propiedades(true);
 			if (isset($properties->force_source_tables_tipo)) {
 				# Override
@@ -2788,7 +2788,7 @@ class diffusion_sql extends diffusion  {
 			#}
 
 			# Propiedades
-			$table_obj			= new ontology_node($current_table_tipo);
+			$table_obj			= ontology_node::get_instance($current_table_tipo);
 			$table_properties	= $table_obj->get_propiedades(true);
 
 			$model_name = ontology_node::get_model_by_tipo($current_table_tipo,true);
@@ -2851,7 +2851,7 @@ class diffusion_sql extends diffusion  {
 
 						if (empty($table_properties)) {
 							# Try with real table when alias is empty
-							$table_obj			= new ontology_node($real_table);
+							$table_obj			= ontology_node::get_instance($real_table);
 							$table_properties	= $table_obj->get_propiedades(true);
 						}
 						$data = new stdClass();
@@ -2865,7 +2865,7 @@ class diffusion_sql extends diffusion  {
 						$diffusion_element_tables_map->$section_tipo = $data;
 					}else{
 						// bad structure configuration for current diffusion element
-							$ontology_node	= new ontology_node($real_table);
+							$ontology_node	= ontology_node::get_instance($real_table);
 							$properties		= $ontology_node->get_propiedades(true);
 							debug_log(__METHOD__
 								." ERROR: Bad structure/ontology configuration for current diffusion element. Expected a section related but empty related section" . PHP_EOL
@@ -2883,7 +2883,7 @@ class diffusion_sql extends diffusion  {
 					$real_table 		 = $current_table_tipo;
 					$name 				 = ontology_node::get_term_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
 
-					$ontology_node = new ontology_node($current_table_tipo);
+					$ontology_node = ontology_node::get_instance($current_table_tipo);
 					$properties  = json_decode($ontology_node->get_properties());
 					$thesaurus_ar_prefix = isset($properties->diffusion->thesaurus_ar_prefix) ? $properties->diffusion->thesaurus_ar_prefix : array();
 
@@ -4156,7 +4156,7 @@ class diffusion_sql extends diffusion  {
 
 		#
 		# TERMINOS_RELACIONADOS . We get the related terms of the current component
-		$ontology_node	= new ontology_node($component_tipo);
+		$ontology_node	= ontology_node::get_instance($component_tipo);
 		$relation_nodes	= (array)$ontology_node->get_relations();
 
 
@@ -4352,7 +4352,7 @@ class diffusion_sql extends diffusion  {
 		switch ($column) {
 			case 'esmodelo': // typology
 
-				$ontology_node	= new ontology_node($term_id);
+				$ontology_node	= ontology_node::get_instance($term_id);
 				$model			= $ontology_node->get_is_model();
 
 				$value = (bool)($model);
@@ -4362,7 +4362,7 @@ class diffusion_sql extends diffusion  {
 
 			case 'modelo' : // object_model, object_model_label
 
-				$ontology_node	= new ontology_node($term_id);
+				$ontology_node	= ontology_node::get_instance($term_id);
 				$model_tipo			= $ontology_node->get_model_tipo();
 
 				$value = ($resolve_label===true && !empty($model_tipo))
@@ -4389,7 +4389,7 @@ class diffusion_sql extends diffusion  {
 
 				if ($mode==='get_children') {
 
-					$ontology_node	= new ontology_node($term_id);
+					$ontology_node	= ontology_node::get_instance($term_id);
 					$tipos			= $ontology_node->get_ar_children($term_id);
 
 					$value = ($resolve_label===true && !empty($tipos))
@@ -4400,7 +4400,7 @@ class diffusion_sql extends diffusion  {
 
 				}else if ($mode==='get_parents') {
 
-					$ontology_node	= new ontology_node($term_id);
+					$ontology_node	= ontology_node::get_instance($term_id);
 					$tipos			= array_values( $ontology_node->get_ar_parents_of_this($ksort=true) );
 
 					$value = ($resolve_label===true && !empty($tipos))
@@ -4411,7 +4411,7 @@ class diffusion_sql extends diffusion  {
 
 				}else{
 
-					$ontology_node	= new ontology_node($term_id);
+					$ontology_node	= ontology_node::get_instance($term_id);
 					$tipo			= $ontology_node->get_parent();
 
 					$value = ($resolve_label===true && !empty($tipo))
@@ -4424,7 +4424,7 @@ class diffusion_sql extends diffusion  {
 
 			case 'traducible': // translatable
 
-				$ontology_node	= new ontology_node($term_id);
+				$ontology_node	= ontology_node::get_instance($term_id);
 				$value		= $ontology_node->get_is_translatable();
 
 				return $value;
@@ -4432,7 +4432,7 @@ class diffusion_sql extends diffusion  {
 
 			case 'norden': // norder
 
-				$ontology_node	= new ontology_node($term_id);
+				$ontology_node	= ontology_node::get_instance($term_id);
 				$db_value		= $ontology_node->get_order_number();
 
 				$value = intval($db_value)>0
@@ -4444,7 +4444,7 @@ class diffusion_sql extends diffusion  {
 
 			case 'propiedades': // properties
 
-				$ontology_node	= new ontology_node($term_id);
+				$ontology_node	= ontology_node::get_instance($term_id);
 				$db_value		= $ontology_node->get_propiedades();
 
 				$value = !empty($db_value) ? $db_value : null;
@@ -4454,7 +4454,7 @@ class diffusion_sql extends diffusion  {
 
 			case 'properties': // properties
 
-				$ontology_node	= new ontology_node($term_id);
+				$ontology_node	= ontology_node::get_instance($term_id);
 				$db_value		= $ontology_node->get_properties();
 
 				$value = !empty($db_value) ? $db_value : null;
@@ -5335,7 +5335,7 @@ class diffusion_sql extends diffusion  {
 	public static function get_related_section(string $table_tipo) : ?string {
 
 		// properties way (implemented to allow Ontology sections like 'dd0')
-			$ontology_node	= new ontology_node($table_tipo);
+			$ontology_node	= ontology_node::get_instance($table_tipo);
 			$properties		= $ontology_node->get_propiedades(true);
 			$target_section = $properties->target_section ?? null;
 			if (!empty($target_section)) {

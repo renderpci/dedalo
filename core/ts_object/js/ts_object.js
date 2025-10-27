@@ -309,7 +309,6 @@ ts_object.prototype.build = async function(autoload=false) {
 			self.permissions_button_new		= self.data.permissions_button_new
 			self.permissions_button_delete	= self.data.permissions_button_delete
 			self.permissions_indexation		= self.data.permissions_indexation
-			self.permissions_structuration	= self.data.permissions_structuration
 
 			self.is_descriptor				= self.data.is_descriptor
 			self.is_indexable				= self.data.is_indexable
@@ -1480,7 +1479,6 @@ ts_object.prototype.show_indexations = async function(options) {
 	* 		"permissions_button_new": 3,
 	* 		"permissions_button_delete": 0,
 	* 		"permissions_indexation": 0,
-	* 		"permissions_structuration": 0,
 	* 		"ts_id": "hierarchy1_66",
 	* 		"ts_parent": "hierarchy1_1"
 	* 		"ar_elements": [

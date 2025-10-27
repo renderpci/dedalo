@@ -650,7 +650,7 @@ class hierarchy extends ontology {
 			$section_map_tipo = $ar_children[0];
 
 			// relation map
-			$ontology_node	= new ontology_node($section_map_tipo);
+			$ontology_node	= ontology_node::get_instance($section_map_tipo);
 			$ar_properties	= $ontology_node->get_properties();
 
 			$ar_elements = (array)$ar_properties;
@@ -1030,7 +1030,7 @@ class hierarchy extends ontology {
 
 			// parents
 				$parents		= [];
-				$ontology_node	= new ontology_node($current_section->tipo);
+				$ontology_node	= ontology_node::get_instance($current_section->tipo);
 				$parents_tipo	= $ontology_node->get_ar_parents_of_this();
 				foreach ($parents_tipo as $parent_tipo) {
 

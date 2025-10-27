@@ -61,7 +61,7 @@ class update_ontology {
 			));
 
 		// current_ontology: dd1 properties
-			$ontology_node		= new ontology_node('dd1');
+			$ontology_node		= ontology_node::get_instance('dd1');
 			$dd1_properties		= $ontology_node->get_properties();
 			$current_ontology	= (object)[
 				'date'			=> $dd1_properties->date,

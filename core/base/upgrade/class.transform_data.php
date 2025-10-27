@@ -2565,7 +2565,7 @@ class transform_data {
 	*/
 	private static function get_section_tipo_key_from_main_component( string $section_tipo, int|string $section_id, string $dataframe_tipo ) : ?string {
 
-		$ontology_node			= new ontology_node($dataframe_tipo);
+		$ontology_node			= ontology_node::get_instance($dataframe_tipo);
 		$main_component_tipo	= $ontology_node->get_parent();
 
 		// create the main component to obtain his data

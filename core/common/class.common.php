@@ -367,7 +367,7 @@ abstract class common {
 
 		if( !$this->bl_loaded_structure_data) {
 
-			$this->ontology_node	= new ontology_node($this->tipo);
+			$this->ontology_node	= ontology_node::get_instance($this->tipo);
 
 			// fix vars
 				$this->model	= $this->ontology_node->get_model();
@@ -573,7 +573,7 @@ abstract class common {
 				}
 
 				// properties
-				$ontology_node	= new ontology_node( $table_tipo );
+				$ontology_node	= ontology_node::get_instance( $table_tipo );
 				$properties		= $ontology_node->get_properties();
 				if (isset($properties) && property_exists($properties,'inverse_relations')) {
 
@@ -1016,18 +1016,35 @@ abstract class common {
 	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
 		// cache
-			static $ar_related_by_model_data = [];
-			$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
-			// if (isset($ar_related_by_model_data[$uid])) {
-			if (array_key_exists($uid, $ar_related_by_model_data)) {
-				return $ar_related_by_model_data[$uid];
-			}
+		static $ar_related_by_model_data = [];
+		$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
+		if (isset($ar_related_by_model_data[$uid])) {
+			return $ar_related_by_model_data[$uid];
+		}
 
-		$ontology_node	= new ontology_node($tipo);
+		$ar_related_by_model = [];
+
+		$ontology_node	= ontology_node::get_instance($tipo);
 		$relations		= $ontology_node->get_relations();
+		// E.g. [{"tipo": "hierarchy20"}]
 
-		$ar_related_by_model=array();
-		foreach ((array)$relations as $relation) foreach ((array)$relation as $current_tipo) {
+		// Expected array or null from $relations
+		if ($relations===null) {
+		    return $ar_related_by_model_data[$uid] = [];
+		}
+
+		foreach ($relations as $relation) {
+
+			$current_tipo = $relation->tipo ?? null;
+			if (!$current_tipo) {
+				debug_log(__METHOD__
+					. " Skip invalid relation " . PHP_EOL
+					. ' tipo; ' . $tipo . PHP_EOL
+					. ' relations: ' . to_string($relations)
+					, logger::ERROR
+				);
+				continue;
+			}
 
 			$current_model_name = ontology_node::get_model_by_tipo($current_tipo, true);
 			if ($strict===true) {
@@ -1043,7 +1060,7 @@ abstract class common {
 		}
 
 		// cache
-			$ar_related_by_model_data[$uid] = $ar_related_by_model;
+		$ar_related_by_model_data[$uid] = $ar_related_by_model;
 
 
 		return $ar_related_by_model;
@@ -1530,7 +1547,7 @@ abstract class common {
 					true
 				);
 				if(isset($ar_terms[0])) {
-					$ontology_node	= new ontology_node($ar_terms[0]);
+					$ontology_node	= ontology_node::get_instance($ar_terms[0]);
 					$properties		= $ontology_node->get_properties();
 				}else{
 					// in cases that section_list is not present (usually component_portal)
@@ -1555,7 +1572,7 @@ abstract class common {
 			// (!) new. Section overwrite css (virtual sections case)
 			// see sample at section 'rsc170'
 			if (strpos($model, 'component_')===0) {
-				$ontology_node		= new ontology_node($section_tipo);
+				$ontology_node		= ontology_node::get_instance($section_tipo);
 				$section_properties	= $ontology_node->get_properties();
 				if (isset($section_properties->css) && isset($section_properties->css->{$tipo})) {
 					$css = $section_properties->css->{$tipo};
@@ -2967,7 +2984,7 @@ abstract class common {
 						// section_list. Use properties from section list instead self properties
 
 						// override properties var
-						$ontology_node		= new ontology_node($ar_terms[0]);
+						$ontology_node		= ontology_node::get_instance($ar_terms[0]);
 						$source_properties	= $ontology_node->get_properties();
 					}
 					break;
@@ -3267,7 +3284,7 @@ abstract class common {
 								// when this property is present and true, get the component fields_map
 								// see 'zenon5' or 'isad30'
 									if(isset($current_ddo->fields_map) && $current_ddo->fields_map===true){
-										$ontology_node				= new ontology_node($current_ddo->tipo);
+										$ontology_node				= ontology_node::get_instance($current_ddo->tipo);
 										$current_ddo_properties		= $ontology_node->get_properties();
 										$current_ddo->properties	= $current_ddo_properties;
 										$current_ddo->fields_map	= isset($current_ddo_properties->fields_map)
@@ -3586,7 +3603,7 @@ abstract class common {
 								? $parsed_item->show->ddo_map[0]->section_tipo
 								: null;
 							if (!empty($engine_section_tipo)) {
-								$ontology_node				= new ontology_node($engine_section_tipo);
+								$ontology_node				= ontology_node::get_instance($engine_section_tipo);
 								$engine_section_properties	= $ontology_node->get_properties();
 								if (is_object($engine_section_properties) && property_exists($engine_section_properties, 'api_config')) {
 									$parsed_item->set_api_config($engine_section_properties->api_config);
@@ -3831,7 +3848,7 @@ abstract class common {
 					$ddo_map = array_map(function($current_tipo) use($tipo, $target_section_tipo, $current_mode, $children_view){
 
 						$model						= ontology_node::get_model_by_tipo($current_tipo, true);
-						$current_tipo_ontology_node	= new ontology_node($current_tipo);
+						$current_tipo_ontology_node	= ontology_node::get_instance($current_tipo);
 						$current_tipo_properties	= $current_tipo_ontology_node->get_properties();
 						$own_view					= isset($current_tipo_properties->view)
 							? $current_tipo_properties->view
@@ -4255,7 +4272,7 @@ abstract class common {
 
 		// 	}else{
 
-		// 		$ontology_node_component_tipo = new ontology_node($tipo);
+		// 		$ontology_node_component_tipo = ontology_node::get_instance($tipo);
 		// 		$component_tipo_properties 	 = $ontology_node_component_tipo->get_properties(true);
 
 		// 		// source search. If not defined, use fallback to legacy related terms and build one
@@ -4895,7 +4912,7 @@ abstract class common {
 					$button_label = ontology_node::get_term_by_tipo($current_button_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 				// properties
-					$ontology_node		= new ontology_node($current_button_tipo);
+					$ontology_node		= ontology_node::get_instance($current_button_tipo);
 					$button_properties	= $ontology_node->get_properties();
 					if(isset($button_properties->disable) && $button_properties->disable === true ){
 						continue;
@@ -5009,7 +5026,7 @@ abstract class common {
 					if(isset($ar_terms[0])) {
 						# Use found related terms as new list
 						$current_term	= $ar_terms[0];
-						$ontology_node	= new ontology_node($current_term);
+						$ontology_node	= ontology_node::get_instance($current_term);
 						$properties		= $ontology_node->get_properties();
 					}
 					else{
@@ -5127,7 +5144,7 @@ abstract class common {
 				);
 				if(isset($ar_terms[0])) {
 					$current_term	= $ar_terms[0];
-					$ontology_node	= new ontology_node($current_term);
+					$ontology_node	= ontology_node::get_instance($current_term);
 					$properties		= $ontology_node->get_properties();
 					if( isset($properties->view) ) {
 						return $properties->view;

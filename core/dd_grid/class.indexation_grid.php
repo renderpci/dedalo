@@ -123,7 +123,7 @@ class indexation_grid {
 
 			// grid features. Used to pass the section color when is defined
 				// section
-				$ontology_node		= new ontology_node($current_section_tipo);
+				$ontology_node		= ontology_node::get_instance($current_section_tipo);
 				$section_properties	= $ontology_node->get_properties();
 				if (isset($section_properties->color)) {
 					$section_grid->set_features((object)[
@@ -169,7 +169,7 @@ class indexation_grid {
 
 			// get the properties of the indexation_list with all ddo_map
 			// the ddo_map need to be processed to get a full ddo_map with all section_tipo resolved.
-				$ontology_node	= new ontology_node($indexation_list);
+				$ontology_node	= ontology_node::get_instance($indexation_list);
 				$properties		= $ontology_node->get_properties();
 
 				// css selector add to section_grid if exists (like 'audiovisual')
