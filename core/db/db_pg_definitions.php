@@ -393,7 +393,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_model_idx
 					ON {$table}
-					USING btree ( model COLLATE pg_catalog.\"default\" ASC NULLS LAST );
+					USING btree ( model COLLATE pg_catalog.default ASC NULLS LAST );
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_model_idx;
@@ -416,7 +416,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_model_tipo_idx
 					ON {$table}
-					USING btree ( model_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST );
+					USING btree ( model_tipo COLLATE pg_catalog.default ASC NULLS LAST );
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_model_tipo_idx;
@@ -486,7 +486,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_tld_idx
 					ON {$table}
-					USING btree ( tld COLLATE pg_catalog.\"default\" ASC NULLS LAST );
+					USING btree ( tld COLLATE pg_catalog.default ASC NULLS LAST );
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_tld_idx;
@@ -509,7 +509,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_relations_idx
 					ON {$table}
-					USING btree ( relations COLLATE pg_catalog.\"default\" ASC NULLS LAST );
+					USING gin ( relations );
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_relations_idx;
@@ -556,7 +556,7 @@
 					CREATE INDEX IF NOT EXISTS {$table}_parent_order_number_idx
 					ON {$table}
 					USING btree (
-						parent COLLATE pg_catalog.\"default\" ASC NULLS LAST,
+						parent COLLATE pg_catalog.default ASC NULLS LAST,
 						order_number ASC NULLS LAST
 					);
 				',
@@ -698,7 +698,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_idx
 					ON {$table}
-					USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST);
+					USING btree (section_tipo COLLATE pg_catalog.default ASC NULLS LAST);
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_section_tipo_idx;
@@ -788,8 +788,8 @@
 				],
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_desc_idx
-						ON {$table}
-						USING btree (section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST, section_id DESC NULLS FIRST);
+					ON {$table}
+					USING btree (section_tipo COLLATE pg_catalog.default ASC NULLS LAST, section_id DESC NULLS FIRST);
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_desc_idx;
@@ -883,9 +883,52 @@
 			],
 			'add' => '
 				ALTER TABLE {$table} ADD COLUMN search_string text NOT NULL GENERATED ALWAYS AS (
-					 COALESCE( get_searchable_string(string), \'\' )
+					COALESCE( get_searchable_string(string), \'\' )
 				) STORED;
+			',
+			'drop' => '
+				DROP INDEX IF EXISTS {$table}_strings_value_gin_idx;
+				ALTER TABLE {$table} DROP COLUMN IF EXISTS search_string;
+			',
+			'sample' => '
+				SELECT *
+				FROM matrix
+				WHERE
+					search_string LIKE unaccent(lower(\'%ripoll%\'))
+				ORDER BY section_id ASC
+				LIMIT 10;
+			',
+			'name' => 'all_matrix_strings_value_gin_idx',
+			'info' => 'Used to search literal string values as strings across all sections, it could be used as global search, but is not possible use with specific language'
+		];
 
+		$ar_index[] = (object)[
+			'tables' => [
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_ontology',
+				'matrix_ontology_main',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_test',
+				'matrix_tools',
+				'matrix_users'
+			],
+			'add' => '
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_strings_value_gin_idx
 				ON {$table}
 				USING gin (
@@ -894,7 +937,6 @@
 			',
 			'drop' => '
 				DROP INDEX IF EXISTS {$table}_strings_value_gin_idx;
-				ALTER TABLE {$table} DROP COLUMN search_string;
 			',
 			'sample' => '
 				SELECT *
@@ -1037,7 +1079,7 @@
 			],
 			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_st_si_gin_idx
-				ON matrix
+				ON {$table}
 				USING gin (data_relations_flat_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
@@ -1085,7 +1127,7 @@
 			],
 			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_fct_st_si_gin_idx
-				ON matrix
+				ON {$table}
 				USING gin (data_relations_flat_fct_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
@@ -1133,7 +1175,7 @@
 			],
 			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
-				ON matrix
+				ON {$table}
 				USING gin (data_relations_flat_ty_st(relation) jsonb_path_ops);
 			',
 			'drop' => '
@@ -1182,7 +1224,7 @@
 			],
 			'add' => '
 				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
-				ON matrix
+				ON {$table}
 				USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
@@ -1518,7 +1560,7 @@
 				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_search_gin_idx
 				ON {$table}
 				USING gin (
-					relations_search jsonb_path_ops
+					relation_search jsonb_path_ops
 				);
 			',
 			'drop' => '
@@ -1527,7 +1569,7 @@
 			'sample' => '
 				SELECT *
 				FROM matrix
-				WHERE relations_search @> \'[{"section_tipo":"es1"}]\'
+				WHERE relation_search @> \'[{"section_tipo":"es1"}]\'
 				LIMIT 10;
 			',
 			'name' => 'all_matrix_search_gin_idx',
@@ -1594,7 +1636,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_lang_idx
 					ON {$table}
-					USING btree (lang COLLATE pg_catalog.\"default\" ASC NULLS LAST);
+					USING btree (lang COLLATE pg_catalog.default ASC NULLS LAST)
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_lang_idx;
@@ -1640,7 +1682,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_state_idx
 					ON {$table}
-					USING btree ( state COLLATE pg_catalog.\"default\" ASC NULLS LAST );
+					USING btree ( state COLLATE pg_catalog.default ASC NULLS LAST );
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_state_idx;
@@ -1663,7 +1705,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_timestamp_idx
 					ON {$table}
-					USING btree ( "timestamp" DESC NULLS LAST );
+					USING btree ("timestamp" DESC NULLS LAST );
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_timestamp_idx;
@@ -1686,8 +1728,8 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_user_id_idx
 					ON {$table}
-					USING btree ( "userID" ASC NULLS LAST );
-				',
+					USING btree ("userID" ASC NULLS LAST );
+					',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_user_id_idx;
 				',
@@ -1712,20 +1754,20 @@
 					USING btree (
 						section_id ASC NULLS LAST,
 						bulk_process_id ASC NULLS LAST,
-						section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST,
-						tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST,
-						lang COLLATE pg_catalog.\"default\" ASC NULLS LAST
+						section_tipo COLLATE pg_catalog.default ASC NULLS LAST,
+						tipo COLLATE pg_catalog.default ASC NULLS LAST,
+						lang COLLATE pg_catalog.default ASC NULLS LAST
 					);
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_si_bulk_st_tipo_lang_idx;
 				',
-				'sample' => "
+				'sample' => '
 					SELECT *
 					FROM matrix_time_machine
 					WHERE bulk_process_id = 751
 					LIMIT 1;
-				",
+				',
 				'name' => 'matrix_time_machine_si_bulk_st_tipo_lang_idx',
 				'info' => 'Used to search by bulk_process_id with all parameters, section_id, bulk_process_id, section_tipo, tipo and lang.'
 			];
