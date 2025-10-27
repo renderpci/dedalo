@@ -1052,9 +1052,9 @@ class v6_to_v7 {
 				// send to output
 				print_cli(common::$pdata);
 			}
-		$response_constaints	= db_tasks::rebuild_constaints();
-			$response->result->constaints	= $response_constaints->result;
-			$response->errors				= array_merge($response->errors, $response_constaints->errors);
+		$response_constraints	= db_tasks::rebuild_constraints();
+			$response->result->constraints	= $response_constraints->result;
+			$response->errors				= array_merge($response->errors, $response_constraints->errors);
 		// functions
 			$proces_name = 'functions';
 			if ( running_in_cli()===true ) {

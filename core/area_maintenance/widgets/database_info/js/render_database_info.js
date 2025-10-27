@@ -274,9 +274,9 @@ const render_recreate_db_assets = (self) => {
 	recreate_db_options_container.appendChild(rebuild_functions_container)
 
 
-	// render rebuild constrains
-	const rebuild_constaints_container = render_rebuild_constrains(self, body_response)
-	recreate_db_options_container.appendChild(rebuild_constaints_container)
+	// render rebuild constraints
+	const rebuild_constraints_container = render_rebuild_constraints(self, body_response)
+	recreate_db_options_container.appendChild(rebuild_constraints_container)
 
 	// add body_response at end
 	recreate_db_assets_container.appendChild(body_response)
@@ -388,12 +388,12 @@ const render_rebuild_functions = (self, body_response) => {
 
 
 /**
-* RENDER_REBUILD_CONSTRAINS
+* RENDER_REBUILD_CONSTRAINTS
 * @param object self widget instance
 * @param HTMLElement body_response - API response node
 * @return HTMLElement rebuild_constraits_container
 */
-const render_rebuild_constrains = (self, body_response) => {
+const render_rebuild_constraints = (self, body_response) => {
 
 	const rebuild_constraits_container = ui.create_dom_element({
 		element_type	: 'div',
@@ -426,14 +426,14 @@ const render_rebuild_constrains = (self, body_response) => {
 			await handle_submit(
 				body_response,
 				e.target,
-				self.rebuild_db_constaints
+				self.rebuild_db_constraints
 			)
 		}
 	})
 
 
 	return rebuild_constraits_container
-}//end render_rebuild_constrains
+}//end render_rebuild_constraints
 
 
 

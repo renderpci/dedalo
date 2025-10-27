@@ -182,11 +182,11 @@ database_info.prototype.rebuild_db_functions = async function() {
 
 
 /**
-* REBUILD_DB_CONSTAINTS
+* REBUILD_DB_CONSTRAINTS
 * Forces rebuilding PostgreSQL main constraints.
 * @return promise - api_response
 */
-database_info.prototype.rebuild_db_constaints = async function() {
+database_info.prototype.rebuild_db_constraints = async function() {
 
 	// API worker call
 	const api_response = await data_manager.request({
@@ -196,7 +196,7 @@ database_info.prototype.rebuild_db_constaints = async function() {
 			action			: 'class_request',
 			prevent_lock	: true,
 			source	: {
-				action : 'rebuild_db_constaints'
+				action : 'rebuild_db_constraints'
 			},
 			options	: {}
 		},
@@ -210,7 +210,7 @@ database_info.prototype.rebuild_db_constaints = async function() {
 	}
 
 	return api_response
-}//end rebuild_db_constaints
+}//end rebuild_db_constraints
 
 
 
