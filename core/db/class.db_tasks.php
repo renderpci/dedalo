@@ -399,7 +399,7 @@ class db_tasks {
 			$query_response	= db_tasks::exec_sql_query($sql_query);
 
 			if( $query_response->result===false ) {
-				$response->errors[] = $query_response->error;
+				$response->errors[] = $query_response->errors;
 				continue;
 			}
 
@@ -457,7 +457,7 @@ class db_tasks {
 			$query_response	= db_tasks::exec_sql_query($sql_query);
 
 			if( $query_response->result===false ) {
-				$response->errors[] = $query_response->error;
+				$response->errors[] = $query_response->errors;
 				continue;
 			}
 
@@ -526,7 +526,7 @@ class db_tasks {
 				$query_response	= db_tasks::exec_sql_query($sql_query);
 
 				if( $query_response->result===false ) {
-					$response->errors[] = $query_response->error;
+					$response->errors[] = $query_response->errors;
 					continue;
 				}
 
@@ -536,7 +536,7 @@ class db_tasks {
 				$query_response	= db_tasks::exec_sql_query($sql_query);
 
 				if( $query_response->result===false ) {
-					$response->errors[] = $query_response->error;
+					$response->errors[] = $query_response->errors;
 					continue;
 				}
 
@@ -610,7 +610,7 @@ class db_tasks {
 					$query_response	= db_tasks::exec_sql_query($sql_query);
 
 					if( $query_response->result===false ) {
-						$response->errors[] = $query_response->error;
+						$response->errors[] = $query_response->errors;
 						continue;
 					}
 
@@ -621,7 +621,7 @@ class db_tasks {
 					$query_response	= db_tasks::exec_sql_query($sql_query);
 
 					if( $query_response->result===false ) {
-						$response->errors[] = $query_response->error;
+						$response->errors[] = $query_response->errors;
 						continue;
 					}
 			}
@@ -696,7 +696,7 @@ class db_tasks {
 					$query_response	= db_tasks::exec_sql_query($sql_query);
 
 					if( $query_response->result===false ) {
-						$response->errors[] = $query_response->error;
+						$response->errors[] = $query_response->errors;
 						continue;
 					}
 
@@ -707,7 +707,7 @@ class db_tasks {
 					$query_response	= db_tasks::exec_sql_query($sql_query);
 
 					if( $query_response->result===false ) {
-						$response->errors[] = $query_response->error;
+						$response->errors[] = $query_response->errors;
 						continue;
 					}
 			}
