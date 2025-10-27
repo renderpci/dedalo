@@ -98,7 +98,7 @@ const get_content_data_edit = async function(self) {
 	if (self.caller?.init_form) {
 
 		// rebuild indexes
-		const rebuild_indexes_container = render_rebuild_indexes(self)
+		const rebuild_indexes_container = render_recreate_db_assests(self)
 		content_data.appendChild(rebuild_indexes_container)
 
 		// render_optimize_tables
@@ -117,6 +117,156 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RENDER_RECREATE_DB_ASSESTS
+* @param object self widget instance
+* @return HTMLElement rebuild_indexes_container
+*/
+const render_recreate_db_assests = (self) => {
+
+	const recreate_db_assets_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'group_container recreate_db_assets_container'
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'h3',
+		class_name		: 'group_label',
+		inner_html		: get_label.recreate_db_assests || 'Recreate database assets',
+		parent			: recreate_db_assets_container
+	})
+
+	// info_text
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'info_text',
+		inner_html		: 'Forces recreate all PostgreSQL main indexes, constraints, extensions and functions.',
+		parent			: recreate_db_assets_container
+	})
+
+	const body_response = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'body_response'
+	})
+	// dblclick event
+	const dblclick_handler = (e) => {
+		// clean body_response nodes
+		while (body_response.firstChild) {
+			body_response.removeChild(body_response.firstChild);
+		}
+	}
+	body_response.addEventListener('dblclick', dblclick_handler)
+
+	self.caller?.init_form({
+		submit_label	: 'Re-create db assets',
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: recreate_db_assets_container,
+		body_response	: body_response,
+		on_submit	: async (e) => {
+
+			// clean body_response nodes
+			while (body_response.firstChild) {
+				body_response.removeChild(body_response.firstChild);
+			}
+
+			// loading add
+			e.target.classList.add('lock')
+			const spinner = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner'
+			})
+			body_response.prepend(spinner)
+
+			// API worker call
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: {
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
+					source	: {
+						action : 'recreate_db_assets'
+					},
+					options	: {}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
+			})
+
+			// loading remove
+			spinner.remove()
+			e.target.classList.remove('lock')
+
+			// remove annoying rqo_string from object
+			if (api_response?.debug?.rqo_string) {
+				delete api_response.debug.rqo_string
+			}
+
+			// response_node pre JSON response
+			if (api_response) {
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'response_node',
+					inner_html		: JSON.stringify(api_response, null, 2),
+					parent			: body_response
+				})
+			}else{
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'response_node error',
+					inner_html		: 'Unknown error calling API',
+					parent			: body_response
+				})
+			}
+		}
+	})
+
+	// specific options
+	const recreate_db_options_label = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'recreate_db_options_label icon_arrow ',
+		inner_html		: get_label.options || 'Options',
+		parent			: recreate_db_assets_container
+	})
+	// mouse up event
+	const options_mouse_up = (e) => {
+		recreate_db_options.classList.toggle('hide');
+		if( recreate_db_options.classList.contains('hide') ){
+			recreate_db_options_label.classList.remove('up')
+		}else{
+			recreate_db_options_label.classList.add('up')
+		}
+	}
+	recreate_db_options_label.addEventListener('mouseup', options_mouse_up)
+
+	const recreate_db_options = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'recreate_db_options hide',
+		parent			: recreate_db_assets_container
+	})
+
+	// render rebuild indexes
+		const rebuild_indexes_container = render_rebuild_indexes(self)
+		recreate_db_options.appendChild(rebuild_indexes_container)
+
+	// render rebuild indexes
+		const rebuild_functions_container = render_rebuild_functions(self)
+		recreate_db_options.appendChild(rebuild_functions_container)
+
+
+	// render rebuild indexes
+		const rebuild_constaints_container = render_rebuild_constaints(self)
+		recreate_db_options.appendChild(rebuild_constaints_container)
+
+	// add body_response at end
+	recreate_db_assets_container.appendChild(body_response)
+
+	return recreate_db_assets_container
+}//end render_recreate_db_assests
 
 
 
@@ -144,7 +294,7 @@ const render_rebuild_indexes = (self) => {
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'info_text',
-		inner_html		: 'Forces rebuilding of PostgreSQL main indexes, extensions and functions.',
+		inner_html		: 'Forces rebuild PostgreSQL main indexes.',
 		parent			: rebuild_indexes_container
 	})
 
@@ -163,7 +313,7 @@ const render_rebuild_indexes = (self) => {
 
 	self.caller?.init_form({
 		submit_label	: 'Re-build indexes',
-		confirm_text	: get_label.seguro || 'Sure?',
+		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: rebuild_indexes_container,
 		body_response	: body_response,
 		on_submit	: async (e) => {
@@ -235,6 +385,234 @@ const render_rebuild_indexes = (self) => {
 
 
 /**
+* RENDER_REBUILD_FUNCTIONS
+* @param object self widget instance
+* @return HTMLElement rebuild_functions_container
+*/
+const render_rebuild_functions = (self) => {
+
+	const rebuild_functions_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'group_container rebuild_functions_container'
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'h3',
+		class_name		: 'group_label',
+		inner_html		: get_label.rebuild_functions || 'Rebuild functions',
+		parent			: rebuild_functions_container
+	})
+
+	// info_text
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'info_text',
+		inner_html		: 'Forces rebuilding PostgreSQL main functions.',
+		parent			: rebuild_functions_container
+	})
+
+	const body_response = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'body_response'
+	})
+	// dblclick event
+	const dblclick_handler = (e) => {
+		// clean body_response nodes
+		while (body_response.firstChild) {
+			body_response.removeChild(body_response.firstChild);
+		}
+	}
+	body_response.addEventListener('dblclick', dblclick_handler)
+
+	self.caller?.init_form({
+		submit_label	: 'Re-build functions',
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: rebuild_functions_container,
+		body_response	: body_response,
+		on_submit	: async (e) => {
+
+			// clean body_response nodes
+			while (body_response.firstChild) {
+				body_response.removeChild(body_response.firstChild);
+			}
+
+			// loading add
+			e.target.classList.add('lock')
+			const spinner = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner'
+			})
+			body_response.prepend(spinner)
+
+			// API worker call
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: {
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
+					source	: {
+						action : 'rebuild_db_functions'
+					},
+					options	: {}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
+			})
+
+			// loading remove
+			spinner.remove()
+			e.target.classList.remove('lock')
+
+			// remove annoying rqo_string from object
+			if (api_response?.debug?.rqo_string) {
+				delete api_response.debug.rqo_string
+			}
+
+			// response_node pre JSON response
+			if (api_response) {
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'response_node',
+					inner_html		: JSON.stringify(api_response, null, 2),
+					parent			: body_response
+				})
+			}else{
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'response_node error',
+					inner_html		: 'Unknown error calling API',
+					parent			: body_response
+				})
+			}
+		}
+	})
+
+	// add body_response at end
+	rebuild_functions_container.appendChild(body_response)
+
+
+	return rebuild_functions_container
+}//end render_rebuild_functions
+
+
+
+/**
+* RENDER_REBUILD_CONSTAINTS
+* @param object self widget instance
+* @return HTMLElement rebuild_constraits_container
+*/
+const render_rebuild_constaints = (self) => {
+
+	const rebuild_constraits_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'group_container rebuild_constraits_container'
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'h3',
+		class_name		: 'group_label',
+		inner_html		: get_label.rebuild_constraits || 'Rebuild constraints',
+		parent			: rebuild_constraits_container
+	})
+
+	// info_text
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'info_text',
+		inner_html		: 'Forces rebuilding PostgreSQL main constraints.',
+		parent			: rebuild_constraits_container
+	})
+
+	const body_response = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'body_response'
+	})
+	// dblclick event
+	const dblclick_handler = (e) => {
+		// clean body_response nodes
+		while (body_response.firstChild) {
+			body_response.removeChild(body_response.firstChild);
+		}
+	}
+	body_response.addEventListener('dblclick', dblclick_handler)
+
+	self.caller?.init_form({
+		submit_label	: 'Re-build constraints',
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: rebuild_constraits_container,
+		body_response	: body_response,
+		on_submit	: async (e) => {
+
+			// clean body_response nodes
+			while (body_response.firstChild) {
+				body_response.removeChild(body_response.firstChild);
+			}
+
+			// loading add
+			e.target.classList.add('lock')
+			const spinner = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner'
+			})
+			body_response.prepend(spinner)
+
+			// API worker call
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: {
+					dd_api			: 'dd_area_maintenance_api',
+					action			: 'class_request',
+					prevent_lock	: true,
+					source	: {
+						action : 'rebuild_db_constaints'
+					},
+					options	: {}
+				},
+				retries : 1, // one try only
+				timeout : 3600 * 1000 // 1 hour waiting response
+			})
+
+			// loading remove
+			spinner.remove()
+			e.target.classList.remove('lock')
+
+			// remove annoying rqo_string from object
+			if (api_response?.debug?.rqo_string) {
+				delete api_response.debug.rqo_string
+			}
+
+			// response_node pre JSON response
+			if (api_response) {
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'response_node',
+					inner_html		: JSON.stringify(api_response, null, 2),
+					parent			: body_response
+				})
+			}else{
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'response_node error',
+					inner_html		: 'Unknown error calling API',
+					parent			: body_response
+				})
+			}
+		}
+	})
+
+	// add body_response at end
+	rebuild_constraits_container.appendChild(body_response)
+
+
+	return rebuild_constraits_container
+}//end render_rebuild_constaints
+
+
+
+/**
 * RENDER_OPTIMIZE_TABLES
 * @param object self widget instance
 * @return HTMLElement rebuild_indexes_container
@@ -280,7 +658,7 @@ const render_optimize_tables = (self) => {
 
 	self.caller?.init_form({
 		submit_label	: 'Optimize tables',
-		confirm_text	: get_label.seguro || 'Sure?',
+		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: optimize_tables_container,
 		body_response	: body_response,
 		inputs			: [{
@@ -428,7 +806,7 @@ const render_consolidate_table_sequences = (self) => {
 
 	self.caller?.init_form({
 		submit_label	: 'Consolidate tables',
-		confirm_text	: get_label.seguro || 'Sure?',
+		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: consolidate_table_sequences_container,
 		body_response	: body_response,
 		inputs			: [{
