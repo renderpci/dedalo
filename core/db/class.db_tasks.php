@@ -383,7 +383,9 @@ class db_tasks {
 		$ar_maintenance = [];
 
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		// require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		$config = include dirname(__FILE__) . '/db_pg_definitions.php';
+		$ar_maintenance = $config['ar_maintenance'];
 
 		// Validation for db_pg_definitions vars.
 		if (!isset($ar_maintenance) || !is_array($ar_maintenance) || empty($ar_maintenance)) {
@@ -438,10 +440,10 @@ class db_tasks {
 			$response->errors	= [];
 			$response->success	= 0;
 
-		$ar_extensions = [];
-
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		// require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		$config = include dirname(__FILE__) . '/db_pg_definitions.php';
+		$ar_extensions = $config['ar_extensions'];
 
 		// Validation for db_pg_definitions vars.
 		if (!isset($ar_extensions) || !is_array($ar_extensions) || empty($ar_extensions)) {
@@ -496,10 +498,10 @@ class db_tasks {
 			$response->errors	= [];
 			$response->success	= 0;
 
-		$ar_function = [];
-
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		// require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		$config = include dirname(__FILE__) . '/db_pg_definitions.php';
+		$ar_function = $config['ar_function'];
 
 		// Validation for db_pg_definitions vars.
 		if (!isset($ar_function) || !is_array($ar_function) || empty($ar_function)) {
@@ -575,10 +577,10 @@ class db_tasks {
 			$response->errors	= [];
 			$response->success	= 0;
 
-		$ar_index = [];
-
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		// require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		$config		= include dirname(__FILE__) . '/db_pg_definitions.php';
+		$ar_index	= $config['ar_index'];
 
 		// Validation for db_pg_definitions vars.
 		if (!isset($ar_index) || !is_array($ar_index) || empty($ar_index)) {
@@ -661,10 +663,10 @@ class db_tasks {
 			$response->errors	= [];
 			$response->success	= 0;
 
-		$ar_constraint = [];
-
 		// import file with all definitions of indexes
-		require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		// require_once dirname(__FILE__) . '/db_pg_definitions.php';
+		$config			= include dirname(__FILE__) . '/db_pg_definitions.php';
+		$ar_constraint	= $config['ar_constraint'];
 
 		// Validation for db_pg_definitions vars.
 		if (!isset($ar_constraint) || !is_array($ar_constraint) || empty($ar_constraint)) {
