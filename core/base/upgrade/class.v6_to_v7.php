@@ -343,7 +343,7 @@ class v6_to_v7 {
 
 				// CLI process data
 					if ( running_in_cli()===true ) {
-						common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': changes_in_tipos'
+						common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': reformat_matrix_data'
 							. ' | table: '			. $table
 							. ' | id: '				. $id .' - ' . $max
 							. ' | section_tipo: '	. $section_tipo
@@ -1005,6 +1005,102 @@ class v6_to_v7 {
 		}
 
 	}//end rename_constraint
+
+
+
+	/**
+	* RECREATE_DB_ASSETS
+	* Force to re-build the PostgreSQL main indexes, extensions and functions
+	* @return object $response
+	*/
+	public static function recreate_db_assets() : object {
+
+		$response = new stdClass();
+			$response->result	= new stdClass();
+			$response->msg		= 'Error. Request failed ';
+			$response->errors	= [];
+			$response->success	= 0;
+
+
+		// CLI process data
+			$proces_name = 'extensions';
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->counter = 0;
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+					? dd_memory_usage() // update memory information once every 5000 items
+					: common::$pdata->memory;
+				common::$pdata->counter++;
+				// send to output
+				print_cli(common::$pdata);
+			}
+		//extensions
+		$response_extensions	= db_tasks::create_extensions();
+			$response->result->extensions	= $response_extensions->result;
+			$response->errors				= $response_extensions->errors;
+		//constraints
+			$proces_name = 'constraints';
+			if ( running_in_cli()===true ) {
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+					? dd_memory_usage() // update memory information once every 5000 items
+					: common::$pdata->memory;
+				common::$pdata->counter++;
+				// send to output
+				print_cli(common::$pdata);
+			}
+		$response_constaints	= db_tasks::rebuild_constaints();
+			$response->result->constaints	= $response_constaints->result;
+			$response->errors				= array_merge($response->errors, $response_constaints->errors);
+		// functions
+			$proces_name = 'functions';
+			if ( running_in_cli()===true ) {
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+					? dd_memory_usage() // update memory information once every 5000 items
+					: common::$pdata->memory;
+				common::$pdata->counter++;
+				// send to output
+				print_cli(common::$pdata);
+			}
+		$response_functions		= db_tasks::rebuild_functions();
+			$response->result->functions	= $response_functions->result;
+			$response->errors[]				= array_merge($response->errors, $response_functions->errors);
+		// indexes
+			$proces_name = 'indexes';
+			if ( running_in_cli()===true ) {
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+					? dd_memory_usage() // update memory information once every 5000 items
+					: common::$pdata->memory;
+				common::$pdata->counter++;
+				// send to output
+				print_cli(common::$pdata);
+			}
+		$response_indexes		= db_tasks::rebuild_indexes();
+			$response->result->indexes		= $response_indexes->result;
+			$response->errors[]				= array_merge($response->errors, $response_indexes->errors);
+		// maintenance
+			$proces_name = 'maintenance';
+			if ( running_in_cli()===true ) {
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+					? dd_memory_usage() // update memory information once every 5000 items
+					: common::$pdata->memory;
+				common::$pdata->counter++;
+				// send to output
+				print_cli(common::$pdata);
+			}
+		$response_maintenance	= db_tasks::exec_maintenance();
+			$response->result->maintenance	= $response_maintenance->result;
+			$response->errors[]				= array_merge($response->errors, $response_maintenance->errors);
+
+
+		return $response;
+	}//end recreate_db_assets
 
 
 

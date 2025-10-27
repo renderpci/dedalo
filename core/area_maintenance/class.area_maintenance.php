@@ -701,7 +701,7 @@ class area_maintenance extends area_common {
 		$response_extensions	= db_tasks::create_extensions();
 			$response->result->extensions	= $response_extensions->result;
 			$response->errors				= $response_extensions->errors;
-		//constaints
+		//constraints
 		$response_constaints	= db_tasks::rebuild_constaints();
 			$response->result->constaints	= $response_constaints->result;
 			$response->errors				= array_merge($response->errors, $response_constaints->errors);
