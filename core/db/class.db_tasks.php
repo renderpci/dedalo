@@ -409,7 +409,7 @@ class db_tasks {
 		// debug
 			debug_log(__METHOD__
 				. " Exec exec_maintenance " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_maintenance) . PHP_EOL
+				. ' sql_query: ' . implode(PHP_EOL . PHP_EOL, $ar_maintenance) . PHP_EOL
 				, logger::DEBUG
 			);
 
@@ -467,7 +467,7 @@ class db_tasks {
 		// debug
 			debug_log(__METHOD__
 				. " Exec create_extensions " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_extensions) . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_extensions)
 				, logger::DEBUG
 			);
 
@@ -546,7 +546,7 @@ class db_tasks {
 		// debug
 			debug_log(__METHOD__
 				. " Exec rebuild_functions " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_function) . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. json_encode( $ar_function ) . PHP_EOL
 				, logger::DEBUG
 			);
 
@@ -632,7 +632,7 @@ class db_tasks {
 		// debug
 			debug_log(__METHOD__
 				. " Exec rebuild_indexes " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_index) . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. json_encode( $ar_index ) . PHP_EOL
 				, logger::DEBUG
 			);
 
@@ -718,7 +718,7 @@ class db_tasks {
 		// debug
 			debug_log(__METHOD__
 				. " Exec rebuild_constaints " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. implode(PHP_EOL . PHP_EOL, $ar_constraint) . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. json_encode( $ar_constraint ) . PHP_EOL
 				, logger::DEBUG
 			);
 
