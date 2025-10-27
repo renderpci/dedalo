@@ -849,8 +849,8 @@ class v6_to_v7 {
 		$all_indexes = DBi::get_indexes();
 
 		$unique_indexes_to_delete = [
-			'terminoID_unique',
-			'tld',
+			// 'terminoID_unique',
+			// 'tld',
 			'matrix_section_id_section_tipo',
 			'matrix_activities_section_id_section_tipo',
 			'matrix_activity_section_id_section_tipo',
@@ -895,7 +895,7 @@ class v6_to_v7 {
 
 					foreach ($constraints as $constraint_item) {
 
-						$sql_query	= "ALTER TABLE {$constraint_item->table_name} DROP CONSTRAINT {$constraint_item->constraint_name};";
+						$sql_query	= "ALTER TABLE {$constraint_item->table_name} DROP CONSTRAINT IF EXISTS {$constraint_item->constraint_name};";
 						$result		= pg_query(DBi::_getConnection(), $sql_query);
 					}
 				}
@@ -942,7 +942,7 @@ class v6_to_v7 {
 	* RENAME_CONSTRAINT
 	* @return
 	*/
-	public function rename_constraint() {
+	public static function rename_constraint() {
 
 		$ar_constraint = [
 			'matrix'				=> ['matrix_id', 'matrix_pkey'],
@@ -990,7 +990,7 @@ class v6_to_v7 {
 				return false;
 			}
 
-			$sql_query 	= "ALTER TABLE IF EXISTS {$matrix_table} ADD CONSTRAINT {$ar_constraint_to_change[1]};";
+			$sql_query 	= "ALTER TABLE IF EXISTS {$matrix_table} ADD CONSTRAINT {$ar_constraint_to_change[1]} PRIMARY KEY (id) ;";
 			$result		= pg_query(DBi::_getConnection(), $sql_query);
 
 			if($result===false) {
@@ -1044,7 +1044,7 @@ class v6_to_v7 {
 		//constraints
 			$proces_name = 'constraints';
 			if ( running_in_cli()===true ) {
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate database assets'	. ' | '.$proces_name;
 				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
 					? dd_memory_usage() // update memory information once every 5000 items
 					: common::$pdata->memory;
@@ -1058,7 +1058,7 @@ class v6_to_v7 {
 		// functions
 			$proces_name = 'functions';
 			if ( running_in_cli()===true ) {
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate database assets'	. ' | '.$proces_name;
 				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
 					? dd_memory_usage() // update memory information once every 5000 items
 					: common::$pdata->memory;
@@ -1072,7 +1072,7 @@ class v6_to_v7 {
 		// indexes
 			$proces_name = 'indexes';
 			if ( running_in_cli()===true ) {
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate database assets'	. ' | '.$proces_name;
 				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
 					? dd_memory_usage() // update memory information once every 5000 items
 					: common::$pdata->memory;
@@ -1086,7 +1086,7 @@ class v6_to_v7 {
 		// maintenance
 			$proces_name = 'maintenance';
 			if ( running_in_cli()===true ) {
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
+				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate database assets'	. ' | '.$proces_name;
 				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
 					? dd_memory_usage() // update memory information once every 5000 items
 					: common::$pdata->memory;
