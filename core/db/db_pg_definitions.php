@@ -1755,3 +1755,13 @@
 		$ar_maintenance[] = '
 			VACUUM ANALYZE "matrix_activity";
 		';
+
+
+
+return [
+	'ar_extensions'		=> $ar_extensions,
+	'ar_function'		=> $ar_function,
+	'ar_constraint'		=> $ar_constraint,
+	'ar_index'			=> $ar_index,
+	'ar_maintenance'	=> $ar_maintenance,
+];
