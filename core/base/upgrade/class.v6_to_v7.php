@@ -977,7 +977,7 @@ class v6_to_v7 {
 
 		foreach ($ar_constraint as $matrix_table => $ar_constraint_to_change) {
 
-			$sql_query 	= "ALTER TABLE IF EXISTS {$matrix_table} DROP CONSTRAINT {$ar_constraint_to_change[0]};";
+			$sql_query 	= "ALTER TABLE {$matrix_table} DROP CONSTRAINT IF EXISTS {$ar_constraint_to_change[0]};";
 			$result		= pg_query(DBi::_getConnection(), $sql_query);
 
 			if($result===false) {

@@ -320,7 +320,7 @@
 					UNIQUE ( section_id, section_tipo );
 				',
 				'drop' => '
-					ALTER TABLE {$table} DROP CONSTRAINT {$table}_section_id_section_tipo_key;
+					ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_section_id_section_tipo_key;
 				',
 				'sample' => '
 					INSERT INTO "matrix_projects"
@@ -340,10 +340,10 @@
 				'add' => '
 					ALTER TABLE IF EXISTS {$table}
 					ADD CONSTRAINT {$table}_tipo_key
-					UNIQUE ( section_id, section_tipo );
+					UNIQUE ( tipo );
 				',
 				'drop' => '
-					ALTER TABLE {$table} DROP CONSTRAINT {$table}_tipo_key;
+					ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_tipo_key;
 				',
 				'sample' => '
 					INSERT INTO "dd_ontology"
