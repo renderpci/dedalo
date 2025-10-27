@@ -714,50 +714,50 @@
 			];
 
 		// section_id and section_tipo
-			$ar_index[] = (object)[
-				'tables' => [
-					'matrix',
-					'matrix_activities',
-					'matrix_activity',
-					'matrix_dataframe',
-					'matrix_dd',
-					'matrix_hierarchy',
-					'matrix_hierarchy_main',
-					'matrix_indexations',
-					'matrix_langs',
-					'matrix_layout',
-					'matrix_layout_dd',
-					'matrix_list',
-					'matrix_nexus',
-					'matrix_nexus_main',
-					'matrix_notes',
-					'matrix_ontology',
-					'matrix_ontology_main',
-					'matrix_profiles',
-					'matrix_projects',
-					'matrix_stats',
-					'matrix_test',
-					'matrix_tools',
-					'matrix_users',
-					'matrix_time_machine'
-				],
-				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_idx
-					ON {$table}
-					USING btree (section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.\"default\" ASC NULLS LAST);
-				',
-				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_idx;
-				',
-				'sample' => '
-					SELECT *
-					FROM matrix
-					WHERE section_id = 5 AND section_tipo = \'rsc197\'
-					LIMIT 10;
-				',
-				'name' => 'all_matrix_section_tipo_section_id_idx',
-				'info' => 'Used to search by section_tipo ordered ascendant.'
-			];
+			// $ar_index[] = (object)[
+			// 	'tables' => [
+			// 		'matrix',
+			// 		'matrix_activities',
+			// 		'matrix_activity',
+			// 		'matrix_dataframe',
+			// 		'matrix_dd',
+			// 		'matrix_hierarchy',
+			// 		'matrix_hierarchy_main',
+			// 		'matrix_indexations',
+			// 		'matrix_langs',
+			// 		'matrix_layout',
+			// 		'matrix_layout_dd',
+			// 		'matrix_list',
+			// 		'matrix_nexus',
+			// 		'matrix_nexus_main',
+			// 		'matrix_notes',
+			// 		'matrix_ontology',
+			// 		'matrix_ontology_main',
+			// 		'matrix_profiles',
+			// 		'matrix_projects',
+			// 		'matrix_stats',
+			// 		'matrix_test',
+			// 		'matrix_tools',
+			// 		'matrix_users',
+			// 		'matrix_time_machine'
+			// 	],
+			// 	'add' => '
+			// 		CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_idx
+			// 		ON {$table}
+			// 		USING btree (section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.default ASC NULLS LAST);
+			// 	',
+			// 	'drop' => '
+			// 		DROP INDEX IF EXISTS {$table}_section_tipo_section_id_idx;
+			// 	',
+			// 	'sample' => '
+			// 		SELECT *
+			// 		FROM matrix
+			// 		WHERE section_id = 5 AND section_tipo = \'rsc197\'
+			// 		LIMIT 10;
+			// 	',
+			// 	'name' => 'all_matrix_section_tipo_section_id_idx',
+			// 	'info' => 'Used to search by section_tipo ordered ascendant.'
+			// ];
 
 			$ar_index[] = (object)[
 				'tables' => [
