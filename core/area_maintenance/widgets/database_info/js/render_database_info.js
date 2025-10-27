@@ -97,11 +97,11 @@ const get_content_data_edit = async function(self) {
 	// form init
 	if (self.caller?.init_form) {
 
-		// rebuild indexes
-		const rebuild_indexes_container = render_recreate_db_assests(self)
-		content_data.appendChild(rebuild_indexes_container)
+		// recreate db assets
+		const recreate_db_assets_container = render_recreate_db_assets(self)
+		content_data.appendChild(recreate_db_assets_container)
 
-		// render_optimize_tables
+		// optimize tables
 		const optimize_tables_container = render_optimize_tables(self)
 		content_data.appendChild(optimize_tables_container)
 
@@ -121,11 +121,75 @@ const get_content_data_edit = async function(self) {
 
 
 /**
-* RENDER_RECREATE_DB_ASSESTS
+* HANDLE_SUBMIT
+* @param HTMLElement body_response - Target div for the API response messages
+* @param HTMLElement target_lock - DIV to lock until execution
+* @param callable api_call - API call function
+* @return HTMLElement rebuild_indexes_container
+*/
+const handle_submit = async (body_response, target_lock, api_call) => {
+
+	if (!body_response) {
+		console.error('Body response div is mandatory.');
+		return
+	}
+
+	if (!target_lock) {
+		console.error('Target lock div is mandatory.');
+		return
+	}
+
+	if (typeof api_call !== 'function') {
+		console.error('Invalid api_call. Expected valid function.');
+		return
+	}
+
+	// clean body_response nodes
+	while (body_response.firstChild) {
+		body_response.removeChild(body_response.firstChild);
+	}
+
+	// loading add
+	target_lock.classList.add('lock')
+	const spinner = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'spinner'
+	})
+	body_response.prepend(spinner)
+
+	// API worker call
+	const api_response = await api_call();
+
+	// response_node pre JSON response
+	if (api_response) {
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'response_node',
+			inner_html		: JSON.stringify(api_response, null, 2),
+			parent			: body_response
+		})
+	}else{
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'response_node error',
+			inner_html		: 'Unknown error calling API',
+			parent			: body_response
+		})
+	}
+
+	// loading remove
+	spinner.remove()
+	target_lock.classList.remove('lock')
+}//end handle_submit
+
+
+
+/**
+* RENDER_RECREATE_DB_ASSETS
 * @param object self widget instance
 * @return HTMLElement rebuild_indexes_container
 */
-const render_recreate_db_assests = (self) => {
+const render_recreate_db_assets = (self) => {
 
 	const recreate_db_assets_container = ui.create_dom_element({
 		element_type	: 'div',
@@ -166,62 +230,13 @@ const render_recreate_db_assests = (self) => {
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: recreate_db_assets_container,
 		body_response	: body_response,
-		on_submit	: async (e) => {
+		on_submit		: async (e) => {
 
-			// clean body_response nodes
-			while (body_response.firstChild) {
-				body_response.removeChild(body_response.firstChild);
-			}
-
-			// loading add
-			e.target.classList.add('lock')
-			const spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner'
-			})
-			body_response.prepend(spinner)
-
-			// API worker call
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source	: {
-						action : 'recreate_db_assets'
-					},
-					options	: {}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
-
-			// loading remove
-			spinner.remove()
-			e.target.classList.remove('lock')
-
-			// remove annoying rqo_string from object
-			if (api_response?.debug?.rqo_string) {
-				delete api_response.debug.rqo_string
-			}
-
-			// response_node pre JSON response
-			if (api_response) {
-				ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'response_node',
-					inner_html		: JSON.stringify(api_response, null, 2),
-					parent			: body_response
-				})
-			}else{
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_node error',
-					inner_html		: 'Unknown error calling API',
-					parent			: body_response
-				})
-			}
+			await handle_submit(
+				body_response,
+				e.target,
+				self.recreate_db_assets
+			)
 		}
 	})
 
@@ -234,8 +249,8 @@ const render_recreate_db_assests = (self) => {
 	})
 	// mouse up event
 	const options_mouse_up = (e) => {
-		recreate_db_options.classList.toggle('hide');
-		if( recreate_db_options.classList.contains('hide') ){
+		recreate_db_options_container.classList.toggle('hide');
+		if( recreate_db_options_container.classList.contains('hide') ){
 			recreate_db_options_label.classList.remove('up')
 		}else{
 			recreate_db_options_label.classList.add('up')
@@ -243,39 +258,42 @@ const render_recreate_db_assests = (self) => {
 	}
 	recreate_db_options_label.addEventListener('mouseup', options_mouse_up)
 
-	const recreate_db_options = ui.create_dom_element({
+	// db options container
+	const recreate_db_options_container = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'recreate_db_options hide',
+		class_name		: 'recreate_db_options_container hide',
 		parent			: recreate_db_assets_container
 	})
 
 	// render rebuild indexes
-		const rebuild_indexes_container = render_rebuild_indexes(self)
-		recreate_db_options.appendChild(rebuild_indexes_container)
+	const rebuild_indexes_container = render_rebuild_indexes(self, body_response)
+	recreate_db_options_container.appendChild(rebuild_indexes_container)
 
-	// render rebuild indexes
-		const rebuild_functions_container = render_rebuild_functions(self)
-		recreate_db_options.appendChild(rebuild_functions_container)
+	// render rebuild functions
+	const rebuild_functions_container = render_rebuild_functions(self, body_response)
+	recreate_db_options_container.appendChild(rebuild_functions_container)
 
 
-	// render rebuild indexes
-		const rebuild_constaints_container = render_rebuild_constaints(self)
-		recreate_db_options.appendChild(rebuild_constaints_container)
+	// render rebuild constrains
+	const rebuild_constaints_container = render_rebuild_constrains(self, body_response)
+	recreate_db_options_container.appendChild(rebuild_constaints_container)
 
 	// add body_response at end
 	recreate_db_assets_container.appendChild(body_response)
 
+
 	return recreate_db_assets_container
-}//end render_recreate_db_assests
+}//end render_recreate_db_assets
 
 
 
 /**
 * RENDER_REBUILD_INDEXES
 * @param object self widget instance
+* @param HTMLElement body_response - API response node
 * @return HTMLElement rebuild_indexes_container
 */
-const render_rebuild_indexes = (self) => {
+const render_rebuild_indexes = (self, body_response) => {
 
 	const rebuild_indexes_container = ui.create_dom_element({
 		element_type	: 'div',
@@ -298,85 +316,20 @@ const render_rebuild_indexes = (self) => {
 		parent			: rebuild_indexes_container
 	})
 
-	const body_response = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'body_response'
-	})
-	// dblclick event
-	const dblclick_handler = (e) => {
-		// clean body_response nodes
-		while (body_response.firstChild) {
-			body_response.removeChild(body_response.firstChild);
-		}
-	}
-	body_response.addEventListener('dblclick', dblclick_handler)
-
 	self.caller?.init_form({
 		submit_label	: 'Re-build indexes',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: rebuild_indexes_container,
 		body_response	: body_response,
-		on_submit	: async (e) => {
+		on_submit		: async (e) => {
 
-			// clean body_response nodes
-			while (body_response.firstChild) {
-				body_response.removeChild(body_response.firstChild);
-			}
-
-			// loading add
-			e.target.classList.add('lock')
-			const spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner'
-			})
-			body_response.prepend(spinner)
-
-			// API worker call
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source	: {
-						action : 'rebuild_db_indexes'
-					},
-					options	: {}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
-
-			// loading remove
-			spinner.remove()
-			e.target.classList.remove('lock')
-
-			// remove annoying rqo_string from object
-			if (api_response?.debug?.rqo_string) {
-				delete api_response.debug.rqo_string
-			}
-
-			// response_node pre JSON response
-			if (api_response) {
-				ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'response_node',
-					inner_html		: JSON.stringify(api_response, null, 2),
-					parent			: body_response
-				})
-			}else{
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_node error',
-					inner_html		: 'Unknown error calling API',
-					parent			: body_response
-				})
-			}
+			await handle_submit(
+				body_response,
+				e.target,
+				self.rebuild_db_indexes
+			)
 		}
 	})
-
-	// add body_response at end
-	rebuild_indexes_container.appendChild(body_response)
 
 
 	return rebuild_indexes_container
@@ -387,9 +340,10 @@ const render_rebuild_indexes = (self) => {
 /**
 * RENDER_REBUILD_FUNCTIONS
 * @param object self widget instance
+* @param HTMLElement body_response - API response node
 * @return HTMLElement rebuild_functions_container
 */
-const render_rebuild_functions = (self) => {
+const render_rebuild_functions = (self, body_response) => {
 
 	const rebuild_functions_container = ui.create_dom_element({
 		element_type	: 'div',
@@ -412,85 +366,20 @@ const render_rebuild_functions = (self) => {
 		parent			: rebuild_functions_container
 	})
 
-	const body_response = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'body_response'
-	})
-	// dblclick event
-	const dblclick_handler = (e) => {
-		// clean body_response nodes
-		while (body_response.firstChild) {
-			body_response.removeChild(body_response.firstChild);
-		}
-	}
-	body_response.addEventListener('dblclick', dblclick_handler)
-
 	self.caller?.init_form({
 		submit_label	: 'Re-build functions',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: rebuild_functions_container,
 		body_response	: body_response,
-		on_submit	: async (e) => {
+		on_submit		: async (e) => {
 
-			// clean body_response nodes
-			while (body_response.firstChild) {
-				body_response.removeChild(body_response.firstChild);
-			}
-
-			// loading add
-			e.target.classList.add('lock')
-			const spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner'
-			})
-			body_response.prepend(spinner)
-
-			// API worker call
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source	: {
-						action : 'rebuild_db_functions'
-					},
-					options	: {}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
-
-			// loading remove
-			spinner.remove()
-			e.target.classList.remove('lock')
-
-			// remove annoying rqo_string from object
-			if (api_response?.debug?.rqo_string) {
-				delete api_response.debug.rqo_string
-			}
-
-			// response_node pre JSON response
-			if (api_response) {
-				ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'response_node',
-					inner_html		: JSON.stringify(api_response, null, 2),
-					parent			: body_response
-				})
-			}else{
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_node error',
-					inner_html		: 'Unknown error calling API',
-					parent			: body_response
-				})
-			}
+			await handle_submit(
+				body_response,
+				e.target,
+				self.rebuild_db_functions
+			)
 		}
 	})
-
-	// add body_response at end
-	rebuild_functions_container.appendChild(body_response)
 
 
 	return rebuild_functions_container
@@ -499,11 +388,12 @@ const render_rebuild_functions = (self) => {
 
 
 /**
-* RENDER_REBUILD_CONSTAINTS
+* RENDER_REBUILD_CONSTRAINS
 * @param object self widget instance
+* @param HTMLElement body_response - API response node
 * @return HTMLElement rebuild_constraits_container
 */
-const render_rebuild_constaints = (self) => {
+const render_rebuild_constrains = (self, body_response) => {
 
 	const rebuild_constraits_container = ui.create_dom_element({
 		element_type	: 'div',
@@ -526,89 +416,24 @@ const render_rebuild_constaints = (self) => {
 		parent			: rebuild_constraits_container
 	})
 
-	const body_response = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'body_response'
-	})
-	// dblclick event
-	const dblclick_handler = (e) => {
-		// clean body_response nodes
-		while (body_response.firstChild) {
-			body_response.removeChild(body_response.firstChild);
-		}
-	}
-	body_response.addEventListener('dblclick', dblclick_handler)
-
 	self.caller?.init_form({
 		submit_label	: 'Re-build constraints',
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: rebuild_constraits_container,
 		body_response	: body_response,
-		on_submit	: async (e) => {
+		on_submit		: async (e) => {
 
-			// clean body_response nodes
-			while (body_response.firstChild) {
-				body_response.removeChild(body_response.firstChild);
-			}
-
-			// loading add
-			e.target.classList.add('lock')
-			const spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner'
-			})
-			body_response.prepend(spinner)
-
-			// API worker call
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source	: {
-						action : 'rebuild_db_constaints'
-					},
-					options	: {}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
-
-			// loading remove
-			spinner.remove()
-			e.target.classList.remove('lock')
-
-			// remove annoying rqo_string from object
-			if (api_response?.debug?.rqo_string) {
-				delete api_response.debug.rqo_string
-			}
-
-			// response_node pre JSON response
-			if (api_response) {
-				ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'response_node',
-					inner_html		: JSON.stringify(api_response, null, 2),
-					parent			: body_response
-				})
-			}else{
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_node error',
-					inner_html		: 'Unknown error calling API',
-					parent			: body_response
-				})
-			}
+			await handle_submit(
+				body_response,
+				e.target,
+				self.rebuild_db_constaints
+			)
 		}
 	})
 
-	// add body_response at end
-	rebuild_constraits_container.appendChild(body_response)
-
 
 	return rebuild_constraits_container
-}//end render_rebuild_constaints
+}//end render_rebuild_constrains
 
 
 
@@ -670,84 +495,34 @@ const render_optimize_tables = (self) => {
 		}],
 		on_submit	: async (e, values) => {
 
-			// clean body_response nodes
-			while (body_response.firstChild) {
-				body_response.removeChild(body_response.firstChild);
-			}
+			await handle_submit(
+				body_response,
+				e.target,
+				async () => {
+					// value
+					const tables = values.filter(el => el.name==='tables')
+						.map(el => el.value)[0]
+						.split(',')
+						.map(el => el.trim())
 
-			// loading add
-			e.target.classList.add('lock')
-			const spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner'
-			})
-			body_response.prepend(spinner)
-
-			// value
-			const tables = values.filter(el => el.name==='tables')
-				.map(el => el.value)[0]
-				.split(',')
-				.map(el => el.trim())
-
-			if (!tables || tables.length < 1) {
-				// loading  remove
-				spinner.remove()
-				e.target.classList.remove('lock')
-				return
-			}
-
-			if (tables.length === source_tables.length) {
-				const label = (get_label.all || 'All') + ' ?';
-				if (!confirm(label)) {
-					return
-				}
-			}
-
-			// API worker call
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'widget_request',
-					prevent_lock	: true,
-					source			: {
-						type	: 'widget',
-						model	: 'database_info',
-						action	: 'optimize_tables'
-					},
-					options	: {
-						tables : tables
+					if (!tables || tables.length < 1) {
+						// loading  remove
+						spinner.remove()
+						e.target.classList.remove('lock')
+						return
 					}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
 
-			// loading remove
-			spinner.remove()
-			e.target.classList.remove('lock')
+					if (tables.length === source_tables.length) {
+						const label = (get_label.all || 'All') + ' ?';
+						if (!confirm(label)) {
+							return
+						}
+					}
 
-			// remove annoying rqo_string from object
-			if (api_response?.debug?.rqo_string) {
-				delete api_response.debug.rqo_string
-			}
-
-			// response_node pre JSON response
-			if (api_response) {
-				ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'response_node',
-					inner_html		: JSON.stringify(api_response, null, 2),
-					parent			: body_response
-				})
-			}else{
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_node error',
-					inner_html		: 'Unknown error calling API',
-					parent			: body_response
-				})
-			}
+					// API worker call
+					return await self.optimize_tables(tables)
+				}
+			);
 		}
 	})
 
@@ -818,62 +593,34 @@ const render_consolidate_table_sequences = (self) => {
 		}],
 		on_submit		: async (e, values) => {
 
-			// clean body_response nodes
-			while (body_response.firstChild) {
-				body_response.removeChild(body_response.firstChild);
-			}
+			await handle_submit(
+				body_response,
+				e.target,
+				async () => {
+					// value
+					const tables = values.filter(el => el.name==='tables')
+						.map(el => el.value)[0]
+						.split(',')
+						.map(el => el.trim())
 
-			// loading add
-			e.target.classList.add('lock')
-			const spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner'
-			})
-			body_response.prepend(spinner)
+					if (!tables || tables.length < 1) {
+						// loading  remove
+						spinner.remove()
+						e.target.classList.remove('lock')
+						return
+					}
 
-			// value
-			const tables = values.filter(el => el.name==='tables')
-				.map(el => el.value)[0]
-				.split(',')
-				.map(el => el.trim())
+					if (tables.length === source_tables.length) {
+						const label = (get_label.all || 'All') + ' ?';
+						if (!confirm(label)) {
+							return
+						}
+					}
 
-			if (!tables || tables.length < 1) {
-				// loading  remove
-				spinner.remove()
-				e.target.classList.remove('lock')
-				return
-			}
-
-			if (tables.length === source_tables.length) {
-				const label = (get_label.all || 'All') + ' ?';
-				if (!confirm(label)) {
-					return
+					// API worker call
+					return await self.consolidate_tables( tables )
 				}
-			}
-
-			// API worker call
-			const api_response = await self.consolidate_tables( tables )
-
-			// loading  remove
-			spinner.remove()
-			e.target.classList.remove('lock')
-
-			// response_node pre JSON response
-			if (api_response) {
-				ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'response_node',
-					inner_html		: JSON.stringify(api_response, null, 2),
-					parent			: body_response
-				})
-			}else{
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_node error',
-					inner_html		: 'Unknown error calling API',
-					parent			: body_response
-				})
-			}
+			);
 		}
 	})
 
@@ -938,87 +685,29 @@ const render_rebuild_user_stats = (self) => {
 			label		: 'User section_id or a sequence as 1,2,3',
 			mandatory	: true
 		}],
-		on_submit	: async (e, values) => {
+		on_submit		: async (e, values) => {
 
-			// clean body_response nodes
-			while (body_response.firstChild) {
-				body_response.removeChild(body_response.firstChild);
-			}
+			await handle_submit(
+				body_response,
+				e.target,
+				async () => {
+					// value
+					const users = values.filter(el => el.name==='users')
+						.map(el => el.value)[0]
+						.split(',')
+						.map(el => el.trim())
 
-			// loading add
-			e.target.classList.add('lock')
-			const spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner'
-			})
-			body_response.prepend(spinner)
-
-			// value
-			const users = values.filter(el => el.name==='users')
-				.map(el => el.value)[0]
-				.split(',')
-				.map(el => el.trim())
-
-			if (!users || users.length < 1) {
-				// loading  remove
-				spinner.remove()
-				e.target.classList.remove('lock')
-				return
-			}
-
-			// API worker call
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source	: {
-						action : 'rebuild_user_stats'
-					},
-					options	: {
-						users : users // array
+					if (!users || users.length < 1) {
+						// loading  remove
+						spinner.remove()
+						e.target.classList.remove('lock')
+						return
 					}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
 
-			// loading  remove
-			spinner.remove()
-			e.target.classList.remove('lock')
-
-			// remove annoying rqo_string from object
-			if (api_response && api_response.debug && api_response.debug.rqo_string) {
-				delete api_response.debug.rqo_string
-			}
-
-			// errors
-			if (api_response.errors && api_response.errors.length) {
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'error',
-					inner_html		: api_response.errors.join('<br>'),
-					parent			: body_response
-				})
-			}
-
-			// response_node pre JSON response
-			if (api_response) {
-				ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'response_node',
-					inner_html		: JSON.stringify(api_response, null, 2),
-					parent			: body_response
-				})
-			}else{
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'response_node error',
-					inner_html		: 'Unknown error calling API',
-					parent			: body_response
-				})
-			}
+					// API worker call
+					return await self.rebuild_user_stats(users)
+				}
+			);
 		}
 	})
 

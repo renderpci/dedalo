@@ -37,7 +37,6 @@
 
 			.response_node {
 				padding: 1rem;
-				// white-space: pre;
 				position: relative;
 
 				&::after {
@@ -50,28 +49,36 @@
 				}
 			}
 
-			&.recreate_db_assets_container{
+			&.recreate_db_assets_container {
 				margin-bottom: 0;
 			}
 
-			.recreate_db_options_label{
-				text-align	: right;
-				top			: -1rem;
+			.recreate_db_options_label {
+				text-align: right;
+				top: -1rem;
+				padding-right: 1.5rem;
 			}
-			.recreate_db_options{
+
+			.recreate_db_options_container {
 				border-top: 2px dotted @color_grey_11;
-				display					: grid;
-				grid-template-columns	: repeat(3, 1fr);
-				padding-top				: 2rem;
-				text-align				: left;
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				padding-top: 2rem;
+				text-align: left;
 				margin-bottom: 1rem;
-				> div{
-					margin-right: 1rem ;
+
+				> div {
+					margin-right: 1rem;
 					height: 100%;
-				}
-				/* Add borders between columns */
-				> div:not(:last-child) {
-					border-right: 1px solid @color_grey_11;
+
+					display: flex;
+					flex-wrap: wrap;
+					align-content: space-between;
+
+					// Add borders between columns except for the last one
+					&:not(:last-child) {
+						border-right: 1px solid @color_grey_11;
+					}
 				}
 			}
 		}
