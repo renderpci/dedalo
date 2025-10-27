@@ -37,7 +37,7 @@
 
 			.response_node {
 				padding: 1rem;
-				white-space: pre;
+				// white-space: pre;
 				position: relative;
 
 				&::after {
@@ -47,6 +47,31 @@
 					right: 0.5rem;
 					color: @color_grey_10;
 					cursor: pointer;
+				}
+			}
+
+			&.recreate_db_assets_container{
+				margin-bottom: 0;
+			}
+
+			.recreate_db_options_label{
+				text-align	: right;
+				top			: -1rem;
+			}
+			.recreate_db_options{
+				border-top: 2px dotted @color_grey_11;
+				display					: grid;
+				grid-template-columns	: repeat(3, 1fr);
+				padding-top				: 2rem;
+				text-align				: left;
+				margin-bottom: 1rem;
+				> div{
+					margin-right: 1rem ;
+					height: 100%;
+				}
+				/* Add borders between columns */
+				> div:not(:last-child) {
+					border-right: 1px solid @color_grey_11;
 				}
 			}
 		}
