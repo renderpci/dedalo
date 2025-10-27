@@ -21,7 +21,7 @@ class tool_import_rdf extends tool_common {
 	*/
 	public function get_ontology_tipo(string $component_tipo) : string {
 
-		$ontology_node	= new ontology_node($component_tipo);
+		$ontology_node	= ontology_node::get_instance($component_tipo);
 		$properties		= $ontology_node->get_properties(true);
 
 		// Retrieve the ontology tipo from the 'tool_import_rdf' property
@@ -79,7 +79,7 @@ class tool_import_rdf extends tool_common {
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// properties
-			$ontology_node = new ontology_node($ontology_tipo);
+			$ontology_node = ontology_node::get_instance($ontology_tipo);
 			$properties = $ontology_node->get_properties();
 
 		// namespace
@@ -240,7 +240,7 @@ class tool_import_rdf extends tool_common {
 			$current_tipo			= reset($related_dd_tipo);
 
 			// properties
-				$ontology_node = new ontology_node($ObjectProperty_tipo);
+				$ontology_node = ontology_node::get_instance($ObjectProperty_tipo);
 				$properties = $ontology_node->get_properties(true);
 			// When the data to import has a section between the source and resource (as ref biblio or ref person)
 			// it will have a ddo_map to indicate the path to the resource.
@@ -475,7 +475,7 @@ class tool_import_rdf extends tool_common {
 								$ar_literal_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation($class_dd_tipo[0], 'section', 'related', false);
 
 								// check if the current literal has a record inside Dédalo.
-									$class_dd_tipo_ontology_node = new ontology_node($class_dd_tipo[0]);
+									$class_dd_tipo_ontology_node = ontology_node::get_instance($class_dd_tipo[0]);
 									$class_properties = $class_dd_tipo_ontology_node->get_properties();
 
 									if(isset($class_properties->match)){
@@ -552,7 +552,7 @@ class tool_import_rdf extends tool_common {
 									continue;
 								}
 							// check if the current resource has a record inside Dédalo.
-								$class_dd_tipo_ontology_node = new ontology_node($class_dd_tipo[0]);
+								$class_dd_tipo_ontology_node = ontology_node::get_instance($class_dd_tipo[0]);
 								$class_properties = $class_dd_tipo_ontology_node->get_properties();
 
 								if(isset($class_properties->match)){

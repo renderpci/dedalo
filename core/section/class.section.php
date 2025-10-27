@@ -1762,7 +1762,7 @@ class section extends common {
 					$original_tipo, // string tipo
 					'exclude_elements', // string model_name
 					'children', // string relation_type
-					$search_exact // bool search_exact
+					true // $search_exact // bool search_exact
 				);
 			}
 			if (!isset($ar_tipo_exclude_elements[0])) {
@@ -1800,7 +1800,7 @@ class section extends common {
 			if (true===$recursive) { // Default is recursive
 				$ar_recursive_children = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
 			}else{
-				$ontology_node			= new ontology_node($tipo);
+				$ontology_node			= ontology_node::get_instance($tipo);
 				$ar_recursive_children	= $ontology_node->get_ar_children_of_this();
 			}
 
@@ -1813,7 +1813,7 @@ class section extends common {
 					break;
 				// Others (section_xx, buttons, etc.) are in the first level
 				default:
-					$ontology_node			= new ontology_node($tipo);
+					$ontology_node			= ontology_node::get_instance($tipo);
 					$ar_recursive_children	= $ontology_node->get_ar_children_of_this();
 					break;
 			}
@@ -3258,7 +3258,7 @@ class section extends common {
 			if( isset($ar_children[0]) ) {
 
 				$tipo			= $ar_children[0];
-				$ontology_node	= new ontology_node($tipo);
+				$ontology_node	= ontology_node::get_instance($tipo);
 				$section_map	= $ontology_node->get_properties() ?? null;
 			}
 

@@ -198,7 +198,7 @@ class component_date extends component_common {
 	*/
 	public static function get_date_mode_static( string $tipo ) : string {
 
-		$ontology_node = new ontology_node($tipo);
+		$ontology_node = ontology_node::get_instance($tipo);
 		$properties	= $ontology_node->get_properties();
 		$date_mode	= $properties->date_mode ?? component_date::$default_date_mode;
 
@@ -648,7 +648,7 @@ class component_date extends component_common {
 			$q_operator						= isset($query_object->q_operator) ? $query_object->q_operator : null;
 			$operator						= !empty($q_operator) ? trim($q_operator) : '=';
 			$component_tipo					= end($query_object->path)->component_tipo;
-			$ontology_node					= new ontology_node($component_tipo);
+			$ontology_node					= ontology_node::get_instance($component_tipo);
 			$properties						= $ontology_node->get_properties();
 			$date_mode						= isset($properties->date_mode) ? $properties->date_mode : 'date';
 			$query_object->component_path	= ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];

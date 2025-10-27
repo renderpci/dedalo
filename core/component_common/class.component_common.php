@@ -1464,7 +1464,7 @@ abstract class component_common extends common {
 	public static function update_observer_dato(object $observer, object $locator, ?array $observable_dato, string $observable_tipo) : array {
 
 		// ar_observe. Create the observer component
-			$ontology_node	= new ontology_node($observer->component_tipo);
+			$ontology_node	= ontology_node::get_instance($observer->component_tipo);
 			$properties		= $ontology_node->get_properties();
 			$ar_observe		= $properties->observe ?? [];
 

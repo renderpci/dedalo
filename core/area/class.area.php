@@ -108,7 +108,7 @@ class area extends area_common  {
 					if(in_array($area_tipo, $config_areas->areas_deny)) continue;
 
 				// areas. Get the JSON format of the ontology
-					$ontology_node = new ontology_node( $area_tipo );
+					$ontology_node = ontology_node::get_instance( $area_tipo );
 					$areas[] = (object)[
 						'tipo'			=> $ontology_node->get_tipo(),
 						'model'			=> $ontology_node->get_model(),
@@ -126,7 +126,7 @@ class area extends area_common  {
 						// skip the areas_deny
 						if(in_array($child_area_tipo, $config_areas->areas_deny)) continue;
 
-						$ontology_node = new ontology_node( $child_area_tipo );
+						$ontology_node = ontology_node::get_instance( $child_area_tipo );
 						$areas[] = (object)[
 							'tipo'			=> $ontology_node->get_tipo(),
 							'model'			=> $ontology_node->get_model(),
@@ -170,7 +170,7 @@ class area extends area_common  {
 		$ar_children_areas_recursive = [];
 
 		// short vars
-		$ontology_node			= new ontology_node($tipo);
+		$ontology_node			= ontology_node::get_instance($tipo);
 		$ar_ts_children			= $ontology_node->get_ar_children_of_this();
 		$ar_ts_children_size	= sizeof($ar_ts_children);
 
@@ -181,7 +181,7 @@ class area extends area_common  {
 
 				$children_tipo = $ar_ts_children[$i];
 
-				$ontology_node	= new ontology_node($children_tipo);
+				$ontology_node	= ontology_node::get_instance($children_tipo);
 				$model			= ontology_node::get_model_by_tipo($children_tipo,true);
 
 				// Test if model is accepted or not (more restrictive)

@@ -94,7 +94,7 @@ class component_relation_common extends component_common {
 			}
 
 		// relation config . Set current component relation_type and relation_type_rel based on properties config
-			$ontology_node	= new ontology_node($tipo);
+			$ontology_node	= ontology_node::get_instance($tipo);
 			$properties		= $ontology_node->get_properties();
 
 			// relation_type

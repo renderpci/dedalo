@@ -339,7 +339,7 @@ final class ontology_test extends TestCase {
 			);
 
 		// check dd_ontology created record
-			$ontology_node = new ontology_node($result);
+			$ontology_node = ontology_node::get_instance($result);
 				$term = $ontology_node->get_term_data();
 
 				$expected = 'Test dd_ontology_ontology_section_node ES';
@@ -359,7 +359,7 @@ final class ontology_test extends TestCase {
 			$result = ontology::create_dd_ontology_ontology_section_node($file_item2);
 
 		// check dd_ontology created record
-			$ontology_node2 = new ontology_node($result);
+			$ontology_node2 = ontology_node::get_instance($result);
 				$term2 = $ontology_node2->get_term_data();
 				$this->assertTrue(
 					$term2->{$lang}===$expected2,
@@ -408,7 +408,7 @@ final class ontology_test extends TestCase {
 			);
 
 		// check dd_ontology created record
-			$ontology_node = new ontology_node($result);
+			$ontology_node = ontology_node::get_instance($result);
 				$ontology_node->use_cache = false;
 
 				// term
@@ -1354,7 +1354,7 @@ final class ontology_test extends TestCase {
 
 		// 	$response		= ontology_converter::matrix_to_dd_ontology($section_tipo, $section_id);
 		// 	$dd_ontology_row		= $response->result;
-		// 	$ontology_node	= new ontology_node($dd_ontology_row->tipo);
+		// 	$ontology_node	= ontology_node::get_instance($dd_ontology_row->tipo);
 		// 	foreach ($dd_ontology_row as $key => $value) {
 		// 		if ($key==='tipo') {
 		// 			continue;

@@ -242,7 +242,7 @@ abstract class filter {
 			}
 
 		// projects_name_tipo. Get ts_map for locate name component (for future )
-			$ontology_node	= new ontology_node($section_map);
+			$ontology_node	= ontology_node::get_instance($section_map);
 			$properties		= $ontology_node->get_properties();
 			if (empty($properties)) {
 				dump($properties, ' properties ++ '.to_string($section_map));

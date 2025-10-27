@@ -348,7 +348,7 @@ class area_thesaurus extends area_common {
 				];
 
 				// properties children_search check (case rsc197 People)
-					// $ontology_node		= new ontology_node($section_tipo);
+					// $ontology_node		= ontology_node::get_instance($section_tipo);
 					// $section_properties	= $ontology_node->get_properties();
 
 					// switch (true) {

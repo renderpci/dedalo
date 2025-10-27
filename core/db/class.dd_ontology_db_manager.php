@@ -20,11 +20,11 @@ abstract class dd_ontology_db_manager {
 
 	// columns list
 	public static array $ontology_columns = [
-		'id'				=> true,
 		'tipo'				=> true,
 		'parent'			=> true,
 		'term'				=> true,
 		'model'				=> true,
+		'order_number'		=> true,
 		'relations'			=> true,
 		'tld'				=> true,
 		'properties'		=> true,
@@ -38,13 +38,11 @@ abstract class dd_ontology_db_manager {
 	public static array $ontology_json_columns = [
 		'term'				=> true,
 		'relations'			=> true,
-		'properties'		=> true,
-		'propiedades'		=> true
+		'properties'		=> true
 	];
 
 	// int columns to parse
 	public static array $ontology_int_columns = [
-		'id'				=> true,
 		'order_number'		=> true
 	];
 
@@ -59,9 +57,162 @@ abstract class dd_ontology_db_manager {
 
 
 
+	/**
+	* CREATE
+	* Inserts a single row into a "ontology" table with automatic handling for JSON columns
+	* and guaranteed inclusion of the `tipo` column.
+	* It is executed using prepared statement when the values are empty (default creation of empty record
+	* adding `tipo` only) and with query params when is not (other dynamic combinations of columns data).
+	* @param string $tipo
+	* A string identifier representing the unique type of ontology node.
+	* Used as part of the WHERE clause in the SQL query.
+	* @param array $values = [] (optional)
+	* Assoc array with [column name => value] structure.
+	* Keys are column names, values are their new values.
+	* @return int|false $id
+	* Returns the new `id` on success, or `false` if validation fails,
+	* query preparation fails, or execution fails.
+	*/
+	public static function create( string $tipo, array $values=[] ) : int|false {
+
+		$table = self::$ontology_table;
+
+		// Connection
+		$conn = DBi::_getConnection();
+
+		// Start building query
+		$columns		= ['"tipo"']; // required columns
+		$placeholders	= ['$1']; // placeholders for them
+		$params			= [$tipo]; // param values (first one for tipo)
+		$param_index	= 2; // next param index ($2, $3, ...)
+
+		// Add dynamic columns
+		// foreach ($values as $col => $value) {
+
+		// 	// Prevent double columns. Already added by default (required).
+		// 	if ($col==='tipo') continue;
+
+		// 	// Columns. Only accepts normalized columns
+		// 	if (!isset(self::$ontology_columns[$col])) {
+		// 		throw new Exception("Invalid column name: $col");
+		// 	}
+		// 	$columns[] = pg_escape_identifier($conn, $col);
+
+		// 	// Placeholders / Values
+		// 	 if ($value !== null && isset(self::$ontology_json_columns[$col])) {
+		// 		// Encode PHP array/object as JSON string
+		// 		$params[]		= json_handler::encode($value);
+		// 		$placeholders[]	= '$' . $param_index . '::jsonb';
+		// 	}else if(is_bool($value)) {
+		// 		// Parse boolean values to safe save as t|f
+		// 		$params[]		= $value ? 't' : 'f';
+		// 		$placeholders[]	= '$' . $param_index . '::boolean';
+		// 	}else{
+		// 		$params[]		= $value;
+		// 		$placeholders[]	= '$' . $param_index;
+		// 	}
+
+		// 	// Increase param index value
+		// 	$param_index++;
+		// }
+
+		// Add fixed columns
+		foreach (self::$ontology_columns as $col => $col_value) {
+			// Prevent double columns. Already added by default (required).
+			if ($col==='tipo') continue;
+
+			$columns[] = pg_escape_identifier($conn, $col);
+
+			$value = $values[$col] ?? null;
+
+			// Placeholders / Values
+			 if ($value !== null && isset(self::$ontology_json_columns[$col])) {
+				// Encode PHP array/object as JSON string
+				$params[]		= json_handler::encode($value);
+				$placeholders[]	= '$' . $param_index . '::jsonb';
+			}else if(is_bool($value)) {
+				// Parse boolean values to safe save as t|f
+				$params[]		= $value ? 't' : 'f';
+				$placeholders[]	= '$' . $param_index . '::boolean';
+			}else{
+				$params[]		= $value;
+				$placeholders[]	= '$' . $param_index;
+			}
+
+			// Increase param index value
+			$param_index++;
+		}
+
+		// Build UPDATE SET parts using EXCLUDED
+		// Used by PostgreSQL to set values on conflict.
+		$conflict_column = '"tipo"';
+		$update_parts = [];
+		foreach ($columns as $column) {
+			if ($column !== $conflict_column) { // Don't update the conflict column
+				$update_parts[] = "$column = EXCLUDED.$column";
+			}
+		}
+
+		// SQL. Note that counter (id) is updated auto-handled by the database.
+		// If a previous record with the same value for the 'tipo' column exists:
+		// Update the record using the ON CONFLICT clause.
+		$sql = "
+			INSERT INTO $table (" . implode(', ', $columns) . ")
+			VALUES (" . implode(', ', $placeholders) . ")
+			ON CONFLICT ($conflict_column)
+			DO UPDATE SET " . implode(', ', $update_parts) . "
+			RETURNING \"id\"
+		";
+
+		// Execute query with prepared statement
+		$stmt_name = __METHOD__ . '_' . $table;
+		if (!isset(DBi::$prepared_statements[$stmt_name])) {
+			if (!pg_prepare(
+				$conn,
+				$stmt_name,
+				$sql)
+			) {
+				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+				return false;
+			}
+			// Set the statement as existing.
+			DBi::$prepared_statements[$stmt_name] = true;
+		}
+		$result = pg_execute(
+			$conn,
+			$stmt_name,
+			$params
+		);
+		if (!$result) {
+			debug_log(__METHOD__
+				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				.' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// Fetch id
+		$id = pg_fetch_result($result, 0, 'id');
+		if ($id===false) {
+			debug_log(__METHOD__
+				. " Error giving the new id". PHP_EOL
+				. ' last_error: '. pg_last_error($conn) .PHP_EOL
+				. ' sql: ' . to_string($sql)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		// Cast to INT always (received is string by default)
+		return (int)$id;
+	}//end create
+
+
 
 	/**
-	* LOAD
+	* READ
 	* Retrieves a single row of data from the ontology table
 	* based on `tipo`.
 	* It's designed to provide a unified way of accessing data from
@@ -73,7 +224,7 @@ abstract class dd_ontology_db_manager {
 	* Returns the processed data as an associative array with parsed int and JSON values.
 	* If no row is found, it returns an empty array []. If a critical error occurs, it returns false.
 	*/
-	public static function load( string $tipo ) : array|false {
+	public static function read( string $tipo ) : array|false {
 
 		// debug
 		if(SHOW_DEBUG===true) {
@@ -97,7 +248,9 @@ abstract class dd_ontology_db_manager {
 		// With prepared statement
 		$stmt_name = __METHOD__ . '_' . $table;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			$select_fields	= '*';
+			$select_fields = '"' . implode('","', array_keys(self::$ontology_columns)) . '"';
+				dump(null, ' select_fields ++ '.to_string($select_fields));
+			// $select_fields = '*';
 			$sql = 'SELECT '.$select_fields.' FROM "'.$table.'" WHERE tipo = $1 LIMIT 1';
 			if (!pg_prepare(
 				$conn,
@@ -173,7 +326,7 @@ abstract class dd_ontology_db_manager {
 
 
 		return $row;
-	}//end load
+	}//end read
 
 
 
@@ -281,123 +434,6 @@ abstract class dd_ontology_db_manager {
 
 		return true;
 	}//end update
-
-
-
-	/**
-	* INSERT
-	* Inserts a single row into a "ontology" table with automatic handling for JSON columns
-	* and guaranteed inclusion of the `tipo` column.
-	* It is executed using prepared statement when the values are empty (default creation of empty record
-	* adding `tipo` only) and with query params when is not (other dynamic combinations of columns data).
-	* @param string $tipo
-	* A string identifier representing the unique type of ontology node.
-	* Used as part of the WHERE clause in the SQL query.
-	* @param array $values = [] (optional)
-	* Assoc array with [column name => value] structure.
-	* Keys are column names, values are their new values.
-	* @return int|false $id
-	* Returns the new `id` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
-	*/
-	public static function insert( string $tipo, array $values=[] ) : int|false {
-
-		$table = self::$ontology_table;
-
-		// Connection
-		$conn = DBi::_getConnection();
-
-		// Start building query
-		$columns		= ['"tipo"']; // required columns
-		$placeholders	= ['$1']; // placeholders for them
-		$params			= [$tipo]; // param values (first one for tipo)
-		$param_index	= 1; // next param index ($2, $3, ...)
-
-		// Add dynamic columns
-		foreach ($values as $col => $value) {
-
-			// Columns. Only accepts normalized columns
-			if (!isset(self::$ontology_columns[$col])) {
-				throw new Exception("Invalid column name: $col");
-			}
-			$columns[] = pg_escape_identifier($conn, $col);
-
-			// Placeholders / Values
-			 if ($value !== null && isset(self::$ontology_json_columns[$col])) {
-				// Encode PHP array/object as JSON string
-				$params[]		= json_handler::encode($value);
-				$placeholders[]	= '$' . $param_index . '::jsonb';
-			}else{
-				$params[]		= $value;
-				$placeholders[]	= '$' . $param_index;
-			}
-
-			// Increase param index value
-			$param_index++;
-		}
-
-		// SQL. Note that counter is updated auto-handled by the database.
-		$sql = "
-			INSERT INTO $table (" . implode(', ', $columns) . ")
-			SELECT " . implode(', ', $placeholders) . "
-			RETURNING \"id\";
-		";
-
-		// Execute query
-		if (empty($values)) {
-			// Only record creation, without additional data (fixed)
-			// With prepared statement
-			$stmt_name = __METHOD__ . '_' . $table;
-			if (!isset(DBi::$prepared_statements[$stmt_name])) {
-				if (!pg_prepare(
-					$conn,
-					$stmt_name,
-					$sql)
-				) {
-					debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-					return false;
-				}
-				// Set the statement as existing.
-				DBi::$prepared_statements[$stmt_name] = true;
-			}
-			$result = pg_execute(
-				$conn,
-				$stmt_name,
-				$params
-			);
-		}else{
-			// Record creation with additional columns data (dynamic)
-			$result = pg_query_params(
-				$conn,
-				$sql,
-				$params
-			);
-		}
-		if (!$result) {
-			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
-			return false;
-		}
-
-		// Fetch id
-		$id = pg_fetch_result($result, 0, 'id');
-		if ($id===false) {
-			debug_log(__METHOD__
-				. " Error giving the new id". PHP_EOL
-				. ' last_error: '. pg_last_error($conn) .PHP_EOL
-				. ' sql: ' . to_string($sql)
-				, logger::ERROR
-			);
-			return false;
-		}
-
-
-		// Cast to INT always (received is string by default)
-		return (int)$id;
-	}//end insert
 
 
 
