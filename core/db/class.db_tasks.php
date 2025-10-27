@@ -651,11 +651,11 @@ class db_tasks {
 
 
 	/**
-	* REBUILD_CONSTAINTS
+	* REBUILD_CONSTRAINTS
 	* Forces rebuilding of PostgreSQL main constraints
 	* @return object $response
 	*/
-	public static function rebuild_constaints() : object {
+	public static function rebuild_constraints() : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -679,7 +679,7 @@ class db_tasks {
 
 			// debug info
 			debug_log(__METHOD__
-				. " Executing rebuild_constaints SQL sentence " . PHP_EOL
+				. " Executing rebuild_constraints SQL sentence " . PHP_EOL
 				. ' name: ' . trim($constraint->name)
 				. ' info: ' . trim($constraint->info)
 				, logger::WARNING
@@ -717,7 +717,7 @@ class db_tasks {
 
 		// debug
 			debug_log(__METHOD__
-				. " Exec rebuild_constaints " . PHP_EOL
+				. " Exec rebuild_constraints " . PHP_EOL
 				. ' sql_query: ' .PHP_EOL. json_encode( $ar_constraint ) . PHP_EOL
 				, logger::DEBUG
 			);
@@ -732,7 +732,7 @@ class db_tasks {
 
 
 		return $response;
-	}//end rebuild_constaints
+	}//end rebuild_constraints
 
 
 

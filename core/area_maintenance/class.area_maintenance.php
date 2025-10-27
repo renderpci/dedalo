@@ -702,9 +702,9 @@ class area_maintenance extends area_common {
 			$response->result->extensions	= $response_extensions->result;
 			$response->errors				= $response_extensions->errors;
 		//constraints
-		$response_constaints	= db_tasks::rebuild_constaints();
-			$response->result->constaints	= $response_constaints->result;
-			$response->errors				= array_merge($response->errors, $response_constaints->errors);
+		$response_constraints	= db_tasks::rebuild_constraints();
+			$response->result->constraints	= $response_constraints->result;
+			$response->errors				= array_merge($response->errors, $response_constraints->errors);
 		// functions
 		$response_functions		= db_tasks::rebuild_functions();
 			$response->result->functions	= $response_functions->result;
@@ -739,16 +739,16 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* REBUILD_DB_CONSTAINTS
+	* REBUILD_DB_CONSTRAINTS
 	* Force to create the PostgreSQL constraints
 	* @return object $response
 	*/
-	public static function rebuild_db_constaints() : object {
+	public static function rebuild_db_constraints() : object {
 
-		$response = db_tasks::rebuild_constaints();
+		$response = db_tasks::rebuild_constraints();
 
 		return $response;
-	}//end rebuild_db_constaints
+	}//end rebuild_db_constraints
 
 
 
