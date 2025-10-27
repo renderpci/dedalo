@@ -83,6 +83,175 @@ database_info.prototype.build = async function(autoload=false) {
 
 
 /**
+* RECREATE_DB_ASSETS
+* Forces recreate all PostgreSQL main indexes, constraints, extensions and functions.
+* @return promise - api_response
+*/
+database_info.prototype.recreate_db_assets = async function() {
+
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source	: {
+				action : 'recreate_db_assets'
+			},
+			options	: {}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end recreate_db_assets
+
+
+
+/**
+* REBUILD_DB_INDEXES
+* Forces rebuild PostgreSQL main indexes.
+* @return promise - api_response
+*/
+database_info.prototype.rebuild_db_indexes = async function() {
+
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source	: {
+				action : 'rebuild_db_indexes'
+			},
+			options	: {}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end rebuild_db_indexes
+
+
+
+/**
+* REBUILD_DB_FUNCTIONS
+* Forces rebuilding PostgreSQL main functions.
+* @return promise - api_response
+*/
+database_info.prototype.rebuild_db_functions = async function() {
+
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source	: {
+				action : 'rebuild_db_functions'
+			},
+			options	: {}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end rebuild_db_functions
+
+
+
+/**
+* REBUILD_DB_CONSTAINTS
+* Forces rebuilding PostgreSQL main constraints.
+* @return promise - api_response
+*/
+database_info.prototype.rebuild_db_constaints = async function() {
+
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source	: {
+				action : 'rebuild_db_constaints'
+			},
+			options	: {}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end rebuild_db_constaints
+
+
+
+/**
+* OPTIMIZE_TABLES
+* Forces rebuilding PostgreSQL main constraints.
+* @return promise - api_response
+*/
+database_info.prototype.optimize_tables = async function(tables) {
+
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'optimize_tables'
+			},
+			options	: {
+				tables : tables
+			}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end optimize_tables
+
+
+
+/**
 * CONSOLIDATE_TABLES
 * Process given tables to consolidate the id numbers.
 * Only 'dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd' are allowed.
@@ -120,9 +289,39 @@ database_info.prototype.consolidate_tables = async function(tables) {
 
 
 
+/**
+* REBUILD_USER_STATS
+* Re-creates the user statistics about access and actions based on the activity log.
+* @param array users
+* @return promise - api_response
+*/
+database_info.prototype.rebuild_user_stats = async function(users) {
 
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'class_request',
+			prevent_lock	: true,
+			source	: {
+				action : 'rebuild_user_stats'
+			},
+			options	: {
+				users : users // array
+			}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
 
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
 
+	return api_response
+}//end rebuild_user_stats
 
 
 
