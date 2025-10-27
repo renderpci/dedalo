@@ -194,4 +194,14 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
+		// Recreate the database assets in PostgreSQL (functions, indexes, constraints, etc.)
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Recreate all assess in PostgreSQL (extensions, constraints, functions, indexes)',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'recreate_db_assets',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+
 
