@@ -15,9 +15,11 @@
 		find_up_node,
 		url_vars_to_object,
 		JSON_parse_safely,
-		object_to_url_vars
+		object_to_url_vars,
+		generate_hash
 	} from '../../common/js/utils/index.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
+	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {prune_rules,get_inserted_rules} from '../../page/js/css.js'
 	import {render_page, render_notification_msg} from './render_page.js'
@@ -302,6 +304,16 @@ page.prototype.build = async function(autoload=false) {
 					  )
 					: true
 
+				// cache_handler. 'dedalo_logged' cookie is set in server side on login
+					// const local_page_data_id = 'page_cache_' + generate_hash(searchParams.toString())
+					// const dedalo_logged = cookie_manager.get('dedalo_logged') || false;
+					// const cache_handler = dedalo_logged
+					// 	? {
+					// 		handler	: 'localdb',
+					// 		id		: local_page_data_id
+					// 	  }
+					// 	: null
+
 				// start bootstrap
 					const rqo = { // rqo (request query object)
 						action			: 'start',
@@ -314,7 +326,8 @@ page.prototype.build = async function(autoload=false) {
 
 				// request page context (usually menu and section/area context)
 					const api_response = await data_manager.request({
-						body : rqo
+						body				: rqo,
+						// cache_handler	: cache_handler
 					});
 					if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
 						console.log('))) page build api_response:', api_response);
