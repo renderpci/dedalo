@@ -48,8 +48,8 @@ trait section_v7 {
 	// @v7 array data_columns. Assoc array with all v7 DB columns
 
 
-	// matrix_data class instance
-	protected object $matrix_data;
+	// section_record_data class instance
+	protected object $section_record_data;
 
 
 
@@ -64,25 +64,41 @@ trait section_v7 {
 	*/
 	private function load_section_data() : bool {
 
-		// init matrix_data instance.
+		// init section_record_data instance.
 		// It's instanced once and handles all the section data database tasks.
-		if (!isset($this->matrix_data)) {
+		if (!isset($this->section_record_data)) {
 			$section_id = $this->section_id ? (int)$this->section_id : null;
-			$this->matrix_data = matrix_data::get_instance(
+			$this->section_record_data = section_record_data::get_instance(
 				$this->tipo,
 				$section_id
 			);
 		}
 
-		// If the matrix_data instance has already been loaded,
+		// If the section_record_data instance has already been loaded,
 		// it returns the cached data without reconnecting to the database.
 		// All section instances with the same section_tipo and section_id values
-		// share the same cached instance of 'matrix_data', independent of the mode.
-		$this->matrix_data->read();
+		// share the same cached instance of 'section_record_data', independent of the mode.
+		$this->section_record_data->read();
 
+		/* TEST
+		$data_column = 'string';
+		$tipo = 'rsc21';
+		// $rsc21_data = $this->section_record_data->get_data_columns()['string']->{$tipo} ?? null;
+		// $rsc21_data = $this->get_column('string')->{$tipo} ?? null;
+		$rsc21_data = $this->data_columns[$data_column]->{$tipo} ?? null;
+			dump($rsc21_data, ' rsc21_data ++ '.to_string());
+			*/
 
 		return true;
 	}//end load_section_data
+
+	/**
+	* GET_COLUMN
+	* @return
+	*/
+	public function get_column($column_name) {
+		return $this->section_record_data->get_data_columns()[$column_name];
+	}//end get_column
 
 
 
@@ -101,7 +117,8 @@ trait section_v7 {
 		// Load the DB data once
 		$this->load_section_data();
 
-		$component_data = $this->data_columns[$data_column]->{$tipo} ?? null;
+		// $component_data = $this->data_columns[$data_column]->{$tipo} ?? null;
+		$component_data = $this->section_record_data->get_data_columns()[$data_column]->{$tipo} ?? null;
 
 
 		return $component_data;

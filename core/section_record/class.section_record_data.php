@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 /**
-* Class MATRIX_DATA
+* Class SECTION_RECORD_DATA
 *
 * It is a normalized matrix data container to get centralized access
 * to matrix records as CRUD.
@@ -10,7 +10,7 @@
 * - Updating existing records
 * - Inserting new records with optional initial data
 */
-class matrix_data {
+class section_record_data {
 
 
 
@@ -74,19 +74,19 @@ class matrix_data {
 
 	/**
 	* GET_INSTANCE
-	* Singleton instance constructor for the class matrix_data
+	* Singleton instance constructor for the class section_record_data
 	* Stores cache instances based on the contraction of section_tipo and $section_id
 	* as 'oh1_1'. If the section id is null, no cache is used.
 	* @param string $section_tipo
 	* 	Ontology identifier of the section. E.g. 'oh1'
 	* @param ?int $section_id=null
 	* 	Unique id of the section. E.g. 1
-	* @return class matrix_data instance
+	* @return class section_record_data instance
 	*/
 	public static function get_instance( string $section_tipo, ?int $section_id=null ) : self {
 
 		if ($section_id===null) {
-			return new matrix_data( $section_tipo, null );
+			return new section_record_data( $section_tipo, null );
 		}
 
 		// cache
@@ -96,7 +96,7 @@ class matrix_data {
 		}
 
 		return self::$instances[$cache_key] = new self($section_tipo, $section_id);
-	}//end get_matrix_data_instance
+	}//end get_section_record_data_instance
 
 
 
@@ -164,11 +164,11 @@ class matrix_data {
 	* @param bool $cache = true
 	* On true (default), if isset $this->data_columns, no new database call is made.
 	* On false, a new database query is always forced.
-	* @return array|false $this->data_columns
+	* @return array $this->data_columns
 	* Returns the processed data as an associative array with parsed JSON values.
-	* If no row is found, it returns an empty array []. If a critical error occurs, it returns false.
+	* If no row is found, it returns an empty array [].
 	*/
-	public function read( bool $cache=true ) : array|false {
+	public function read( bool $cache=true ) : array {
 
 		if ($cache && $this->is_loaded_data) {
 			return $this->data_columns;
@@ -190,7 +190,9 @@ class matrix_data {
 		}
 
 		// assign data_columns from database results
-		foreach ($this->data_columns as $column => $column_value) {
+		// foreach ($this->data_columns as $column => $column_value) {
+		$colum_names = array_keys($this->data_columns);
+		foreach ($colum_names as $column) {
 
 			if (!array_key_exists($column, $row)) {
 				// Ignore non existing data_columns key
@@ -199,13 +201,14 @@ class matrix_data {
 
 			$data_value = $row[$column];
 
-			if ($data_value === null) {
-				$this->data_columns[$column] = null;
-			} elseif (isset(self::$matrix_json_columns[$column])) {
+			if ($data_value!==null && isset(matrix_db_manager::$matrix_json_columns[$column])) {
+				// JSON case
 				$this->data_columns[$column] = json_decode($data_value);
-			} elseif (isset(self::$matrix_int_columns[$column])) {
+			} elseif (isset(matrix_db_manager::$matrix_int_columns[$column])) {
+				// int case
 				$this->data_columns[$column] = (int)$data_value;
 			} else {
+				// default case
 				$this->data_columns[$column] = $data_value;
 			}
 		}
@@ -260,28 +263,15 @@ class matrix_data {
 	* DELETE
 	* Safely deletes one record in a "matrix" table,
 	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param array $values
-	* Assoc array with [column name => value] structure
-	* Keys are column names, values are their new values.
 	* @return bool
 	* Returns `true` on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public function delete( array $values ) : bool {
+	public function delete() : bool {
 
 		$table			= $this->table;
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
-
-		// check values
-		if (empty($values)) {
-			debug_log(__METHOD__
-				." Empty values array " . PHP_EOL
-				.' values: ' . json_encode($values)
-				, logger::ERROR
-			);
-			return false;
-		}
 
 		return matrix_db_manager::delete(
 			$table,
@@ -292,4 +282,4 @@ class matrix_data {
 
 
 
-}//end class matrix_data
+}//end class section_record_data
