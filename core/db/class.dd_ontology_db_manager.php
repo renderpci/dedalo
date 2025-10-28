@@ -249,7 +249,6 @@ abstract class dd_ontology_db_manager {
 		$stmt_name = __METHOD__ . '_' . $table;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 			$select_fields = '"' . implode('","', array_keys(self::$ontology_columns)) . '"';
-				dump(null, ' select_fields ++ '.to_string($select_fields));
 			// $select_fields = '*';
 			$sql = 'SELECT '.$select_fields.' FROM "'.$table.'" WHERE tipo = $1 LIMIT 1';
 			if (!pg_prepare(

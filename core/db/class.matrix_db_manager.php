@@ -7,9 +7,12 @@
 * table and column definitions within the matrix model.
 *
 * Supported actions include:
-* - Loading record data
-* - Updating existing records
-* - Inserting new records with optional initial data
+* - Loading record data (read)
+* - Updating existing records (update)
+* - Inserting new records with optional initial data (create)
+* - Deleting existing records (delete)
+*
+* Additionally, simple searches using filters are available.
 */
 class matrix_db_manager {
 
@@ -453,7 +456,7 @@ class matrix_db_manager {
 			);
 			return false;
 		}
-		
+
 		$conn = DBi::_getConnection();
 
 		// With prepared statement

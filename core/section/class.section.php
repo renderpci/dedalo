@@ -1684,7 +1684,7 @@ class section extends common {
 	* Resolves current section real tipo if is a virtual section statically
 	* @param string $section_tipo
 	* @return string $section_real_tipo
-	*	If not exists related section, returns the same received section_tipo
+	*	If there is no related section, the same section_tipo is returned.
 	*/
 	public static function get_section_real_tipo_static(string $section_tipo) : string {
 
