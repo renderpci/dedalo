@@ -3263,6 +3263,11 @@ abstract class component_common extends common {
 								? 2
 								: 1;
 						break;
+
+					// IRI dataframe case. Allow users access to component_iri dataframe (is generic).
+					case ($this->tipo==='dd560'):
+						$this->permissions = 2;
+						break;
 				}//end switch (true) - special cases
 		}
 
