@@ -325,7 +325,15 @@ class section extends common {
 
 		// data is loaded once
 			// JSON_RecordObj_matrix
-				$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
+			$matrix_table = common::get_matrix_table_from_tipo($this->tipo);
+			if (empty($matrix_table)) {
+				debug_log(__METHOD__
+					. " Section without table. Check this config to fix it. " . PHP_EOL
+					. ' section_tipo: ' . to_string($this->tipo)
+					, logger::ERROR
+				);
+				$dato = null;
+			}else{
 				$JSON_RecordObj_matrix	= $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
 					$matrix_table,
 					(int)$this->section_id, // int section_id
@@ -334,8 +342,9 @@ class section extends common {
 				);
 				$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
 
-			// load dato from db
+				// load dato from db
 				$dato = $JSON_RecordObj_matrix->get_dato();
+			}
 
 		// fix dato (force object)
 			$this->dato = is_object($dato)
