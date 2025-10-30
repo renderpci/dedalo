@@ -4303,51 +4303,6 @@ class section extends common {
 					$component->Save(); // forces to create each relation in relation table and time machine and activity records
 				}
 
-			// inherits from father if exists
-				// component_relation_parent find
-				$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true, false);
-				if (!empty($ar_parent_tipo)) {
-					// calls to current section as child from another sections
-					$parents_data = component_relation_parent::get_parents(
-						$this->get_section_id(),
-						$section_tipo
-					);
-					if (!empty($parents_data)) {
-
-						$current_tipo	= $ar_parent_tipo[0];
-						$current_model	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-
-						$save_current = true;
-						// model safe
-						if (strpos($current_model, 'component_')!==0) {
-							debug_log(__METHOD__
-								. " Skipped non component model " . PHP_EOL
-								. ' model: ' . to_string($current_model) . PHP_EOL
-								. ' tipo: ' . to_string($current_tipo) . PHP_EOL
-								. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-								. ' new_section_id: ' . to_string($new_section_id)
-								, logger::ERROR
-							);
-							$save_current = false;
-						}
-						if (in_array($current_model, $skip_models)) {
-							$save_current = false;
-						}
-						if ($save_current===true) {
-							$component = component_common::get_instance(
-								$current_model,
-								$current_tipo,
-								$new_section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
-							);
-							$component->set_dato($parents_data);
-							$component->Save(); // forces to create each relation in relation table and time machine and activity records
-						}
-					}
-				}
-
 			// literal components
 				$ar_media_components = component_media_common::get_media_components();
 
