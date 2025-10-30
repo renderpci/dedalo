@@ -713,9 +713,20 @@ class v6_to_v7 {
 								}//end reach ($literal_components as $literal_tipo => $literal_value)
 								break;
 
+							case 'section_real_tipo':
+
+								// ignore this property. To extinct.
+								break;
+
+							case 'created_by_userID':
+
+								// Rename the property
+								$column_data->created_by_user_id = $datos_value;
+								break;
+
 							default:
 
-								// update other properties like section_tipo, section_real_tipo, etc.
+								// update other properties like section_tipo, created_date, etc.
 								$column_data->{$datos_key} = $datos_value;
 								break;
 						}
