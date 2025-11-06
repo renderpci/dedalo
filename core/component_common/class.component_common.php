@@ -1351,7 +1351,7 @@ abstract class component_common extends common {
 					. ' lang: ' . $lang
 					, logger::ERROR
 				);
-				return null;
+				return false;
 			}
 
 		// tm mode case
@@ -1367,56 +1367,56 @@ abstract class component_common extends common {
 					. ' lang: ' . $lang
 					, logger::ERROR
 				);
-				return null;
-			}
-
-		// section_id validate
-			// if ( abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-			// 	if(SHOW_DEBUG===true) {
-			// 		dump($this, "this section_tipo:$section_tipo - section_id:$section_id - tipo:$tipo - lang:$lang");
-			// 	}
-			// 	trigger_error('Error Processing component save. Inconsistency detected: component trying to save without section_id: '. $section_id);
-			// 	return false;
-			// }
-
-		// is temp case
-		// Sometimes we need use component as temporal element without save real data to database. Is this case
-		// data is saved to session as temporal data
-			/*
-			if (isset($this->is_temp) && $this->is_temp===true) {
-				$temp_data_uid = $tipo.'_'.$section_id.'_'.$lang.'_'.$section_tipo;
-				$_SESSION['dedalo']['component_temp_data'][$temp_data_uid] = $dato ;
-				if(SHOW_DEBUG===true) {
-					debug_log("INFO: IS_TEMP: saved dato from component $temp_data_uid");
-				}
 				return false;
 			}
-			*/
 
-		// section save. The section will be the responsible to save the component data
-			$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
-			$section			= $this->get_my_section();
-			$section_id			= $section->save_component_dato($this, 'direct', $save_to_database);
+		// Section record
+			$section_record		= $this->get_my_section_record();
 
-		// section_id : Check valid section_id returned
-		// if (abs($section_id)<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) {
-			if ( empty($section_id) || (abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
-				debug_log(__METHOD__
-					. " Error on component Save: received id ($section_id) is not valid for save! Ignored order " . PHP_EOL
-					. ' section_id: ' . to_string($section_id) . PHP_EOL
-					. ' section_tipo: ' . $section_tipo . PHP_EOL
-					. ' tipo: ' . $tipo
-					, logger::ERROR
-				);
-				return null;
+		// section save.
+			// The section will be the responsible to save the component data
+			// optional stop the save process to delay DDBB access
+			$save_to_database = isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
+			if($save_to_database===false) {
+				// Stop here (remember make a real section save later!)
+				// No component time machine data will be saved when section saves later
+				// debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
+				return true;
 			}
 
-		// save_to_database. Optional stop the save process to delay ddbb access
-			if ($save_to_database===false) {
-				# Stop here (remember make a real section save later!)
-				# No component time machine data will be saved when section saves later
-				return (int)$section_id;
-			}
+		// Save the component data into DB
+			$result = $section_record->save_component_data( $data_column_name, $tipo, $data );
+
+		// time machine data.
+			// We save only current component lang 'dato' in time machine
+			// get the time_machine data from component
+			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
+			$tm_save_options = new stdClass();
+				$tm_save_options->time_machine_data			= $this->get_time_machine_data_to_save();
+				$tm_save_options->time_machine_lang			= $lang;
+				$tm_save_options->time_machine_tipo			= $tipo;
+				$tm_save_options->time_machine_section_id	= (int)$this->section_id;
+
+				// component_dataframe
+				// when the component is dataframe, save all information together
+				// use the main and dataframe data as locators, mix all and save with the main component tipo
+				if ( $model==='component_dataframe' ) {
+					// use the main component
+					$main_tipo = $this->get_main_component_tipo();
+					$tm_save_options->time_machine_tipo	= $main_tipo;
+				}
+				// bulk_process_id column
+				if( isset($this->bulk_process_id) ){
+					$tm_save_options->time_machine_bulk_process_id = $this->bulk_process_id;
+				}
+			//Save the time machine record
+			$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
+				common::get_matrix_table_from_tipo($this->tipo),
+				(int)$this->section_id, // int section_id
+				$this->tipo, // string section tipo
+				true // bool enable cache
+			);
+			$JSON_RecordObj_matrix->save_time_machine($tm_save_options);
 
 		// activity
 			$this->save_activity();
@@ -1425,7 +1425,7 @@ abstract class component_common extends common {
 			$this->propagate_to_observers();
 
 
-		return (int)$section_id;
+		return $result;
 	}//end Save
 
 
