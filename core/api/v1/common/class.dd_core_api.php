@@ -988,7 +988,6 @@ final class dd_core_api {
 				$options->delete_mode				= $ddo_source->delete_mode ?? 'delete_data';
 				$options->section_tipo				= $ddo_source->section_tipo ?? $tipo;
 				$options->section_id				= $ddo_source->section_id ?? null;
-				$options->caller_dataframe			= $ddo_source->caller_dataframe ?? null;
 				$options->sqo						= $rqo->sqo ?? null;
 				$options->delete_diffusion_records	= $rqo->options->delete_diffusion_records ?? null;
 				$options->delete_with_children		= $rqo->options->delete_with_children ?? false;
