@@ -9,7 +9,7 @@ class section extends common {
 
 
 	// traits. Files added to current class file to split the large code.
-	use section_v7;
+	// use section_v7;
 
 
 
@@ -815,16 +815,7 @@ class section extends common {
 	// 	return $fixed_component_dato;
 	// }//end set_component_direct_dato
 
-			// ADD_RELATION . Add locator one by one
-			foreach ((array)$component_dato as $current_locator) {
 
-				// Add relation
-				$add_relation = $this->add_relation( $current_locator, 'relations' );
-				// If something goes wrong, let me know
-				if($add_relation===false) {
-					debug_log(__METHOD__
-						." ERROR ON ADD LOCATOR:  " . to_string($current_locator)
-						, logger::ERROR)
 
 	// /**
 	// * SET_COMPONENT_RELATION_DATO
@@ -1761,145 +1752,446 @@ class section extends common {
 
 
 
-					// relation references. Remove all relation references (children, model, etc.)
-						// $this->remove_all_relation_references();
+	// /**
+	// * DELETE (SECTION)
+	// * Delete section with options
+	// * @param string $delete_mode
+	// * 	Options: delete_record|delete_data|delete_dataframe
+	// * @param bool $delete_diffusion_records = true
+	// *	Selected by user in delete dialog checkbox
+	// * @return bool
+	// */
+	// public function Delete( string $delete_mode, bool $delete_diffusion_records=true ) : bool {
 
-					// media. Remove media files associated to this section
-						$this->remove_section_media_files();
+	// 	// section_id
+	// 		// force type int
+	// 		$section_id = intval($this->section_id);
+	// 		// prevent delete <1 records
+	// 		if($section_id<1) {
+	// 			debug_log(__METHOD__
+	// 				." Invalid section_id: $section_id. Delete action is aborted "
+	// 				, logger::WARNING
+	// 			);
+	// 			return false;
+	// 		}
 
-					// logger message
-						$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and references. delete_mode: $delete_mode";
-					break;
+	// 	// section_tipo
+	// 		$section_tipo = $this->tipo;
+	// 		// section_real_tipo. If the virtual section has the section_tipo "real" in properties, change the tipo of the section to the real one.
+	// 		if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
+	// 			$section_tipo = $this->get_section_real_tipo();
+	// 		}
+	// 		// user id
+	// 		$user_id = logged_user_id();
+	// 		// matrix_table
+	// 		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+	// 		// Ignore invalid empty matrix tables
+	// 		if (empty($matrix_table)) {
+	// 			debug_log(__METHOD__
+	// 				. " ERROR: invalid empty matrix table " . PHP_EOL
+	// 				. ' section_tipo: ' . $section_tipo
+	// 				, logger::ERROR
+	// 			);
+	// 			return false;
+	// 		}
 
-				case 'delete_data' :
-					// children : Calculate components children of current section
-					$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-						$section_tipo ,
-						['component_'],
-						true, // from_cache
-						true, // resolve virtual
-						true, // recursive
-						false, // search exact
-					);
+	// 	// delete_mode based actions
+	// 		switch($delete_mode) {
 
-					// don't delete some components
-					$ar_components_model_no_delete_dato = [
-						'component_section_id',
-						'component_external',
-						'component_inverse'
-					];
+	// 			case 'delete_record' :
+	// 				// create a new time machine record. Always, even when the section has recovered previously, a new time machine record is created
+	// 				// to mark every section delete point in the time. For tool list, only the last record (state 'deleted') will be used.
+	// 					$RecordObj_time_machine_new = new RecordObj_time_machine(null);
+	// 						$RecordObj_time_machine_new->set_section_id( (int)$this->section_id );
+	// 						$RecordObj_time_machine_new->set_section_tipo( (string)$section_tipo );
+	// 						$RecordObj_time_machine_new->set_tipo( (string)$section_tipo );
+	// 						$RecordObj_time_machine_new->set_lang( (string)$this->get_lang() );
+	// 						$RecordObj_time_machine_new->set_timestamp( dd_date::get_timestamp_now_for_db() ); // Format 2012-11-05 19:50:44
+	// 						$RecordObj_time_machine_new->set_userID( logged_user_id() );
+	// 						$RecordObj_time_machine_new->set_dato( $this->get_dato() );
+	// 						$RecordObj_time_machine_new->set_state('deleted');
+	// 					$id_time_machine = (int)$RecordObj_time_machine_new->Save();
+	// 					// check save resulting id
+	// 					if ($id_time_machine<1) {
+	// 						debug_log(__METHOD__
+	// 							." Error Processing Request. id_time_machine is empty "
+	// 							, logger::ERROR
+	// 						);
+	// 						throw new Exception("Error Processing Request. id_time_machine is empty", 1);
+	// 					}
 
-					$ar_models_of_media_components = section::get_components_with_media_content();
+	// 					// check time machine dato
+	// 					$dato_time_machine	= $RecordObj_time_machine_new->get_dato();
+	// 					$dato_section		= $this->get_dato();
+	// 					// JSON encode and decode each of them to unify types before compare
+	// 					$a			= json_handler::decode(json_handler::encode($dato_time_machine));
+	// 					$b			= json_handler::decode(json_handler::encode($dato_section));
+	// 					$is_equal	= (bool)($a == $b);
+	// 					if ($is_equal===false) {
+	// 						debug_log(__METHOD__
+	// 							. " ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
+	// 							. ' Record is NOT deleted ! (3) ' . PHP_EOL
+	// 							. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+	// 							. ' section_id: ' . $this->section_id
+	// 							, logger::ERROR
+	// 						);
+	// 						// debug
+	// 						dump($dato_time_machine, 'SHOW_DEBUG COMPARE ERROR dato_time_machine');
+	// 						dump($dato_section,		 'SHOW_DEBUG COMPARE ERROR dato_section');
 
-					$ar_deleted_tipos = [];
-					foreach ($ar_component_tipo as $current_component_tipo) {
+	// 						return false;
+	// 					}
 
-						$current_model_name = ontology_node::get_model_by_tipo($current_component_tipo, true);
+	// 				// clean old time machine records status (only the last record must be 'deleted' to allow tool_time_machine list easily)
+	// 					// get all time machine records for this section
+	// 					$ar_id_time_machine = RecordObj_time_machine::get_ar_time_machine_of_this(
+	// 						$section_tipo,
+	// 						(int)$this->section_id,
+	// 						DEDALO_DATA_NOLAN,
+	// 						$section_tipo
+	// 					);
+	// 					// iterate all and remove 'deleted' state if is set (except for the last new created)
+	// 					foreach ($ar_id_time_machine as $current_id_time_machine) {
+	// 						if ($current_id_time_machine==$id_time_machine) {
+	// 							continue; // already set
+	// 						}
+	// 						$RecordObj_time_machine = new RecordObj_time_machine( (string)$current_id_time_machine );
+	// 						if ( $RecordObj_time_machine->get_state()==='deleted' ) {
+	// 							$RecordObj_time_machine->set_state(null);
+	// 							$RecordObj_time_machine->Save();
+	// 						}
+	// 					}
 
-						// don't delete some components check
-							if (in_array($current_model_name, $ar_components_model_no_delete_dato)){
-								continue;
-							}
+	// 				// section delete. Delete matrix record
+	// 					// $JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
+	// 					// 	? $this->JSON_RecordObj_matrix
+	// 					// 	: JSON_RecordObj_matrix::get_instance(
+	// 					// 		$matrix_table,
+	// 					// 		(int)$this->section_id,
+	// 					// 		$section_tipo,
+	// 					// 		true // bool cache
+	// 					// 	  );
 
-						$translatable	= ontology_node::get_translatable($current_component_tipo);
-						$ar_lang		= ($translatable === false)
-							? [DEDALO_DATA_NOLAN]
-							: DEDALO_PROJECTS_DEFAULT_LANGS;
+	// 					// // mark for deletion
+	// 					// $JSON_RecordObj_matrix->MarkForDeletion();
 
-						foreach ($ar_lang as $current_lang) {
+	// 					// // force JSON_RecordObj_matrix destruct to real deletion exec
+	// 					// $JSON_RecordObj_matrix->__destruct();
 
-							$current_component = component_common::get_instance(
-								$current_model_name,
-								$current_component_tipo,
-								$section_id,
-								'list',
-								$current_lang,
-								$section_tipo,
-								false
-							);
+	// 					// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+	// 					$this->get_JSON_RecordObj_matrix();
 
-							$current_component_dato = $current_component->get_dato();
-							if(empty($current_component_dato)){
-								continue;
-							}
+	// 					// mark for deletion
+	// 					$this->JSON_RecordObj_matrix->MarkForDeletion();
 
-							$dato_empty = ($current_model_name==='component_filter')
-								? $current_component->get_default_dato_for_user($user_id)
-								: null;
+	// 					// force JSON_RecordObj_matrix destruct to real deletion exec
+	// 					$this->JSON_RecordObj_matrix->__destruct();
 
-							$current_component->set_dato($dato_empty);
-							$current_component->Save();
-						}
+	// 				// inverse references. Remove all inverse references to this section
+	// 					$this->remove_all_inverse_references(true);
 
-						if(in_array($current_model_name, $ar_models_of_media_components)){
-							$current_component->remove_component_media_files();
-						}
+	// 				// relation references. Remove all relation references (children, model, etc.)
+	// 					// $this->remove_all_relation_references();
 
-						$ar_deleted_tipos[] = $current_component_tipo;
-					}
+	// 				// media. Remove media files associated to this section
+	// 					$this->remove_section_media_files();
 
-					// remove component inside section data in DDBB
-						$section_data = $this->get_dato();
-						foreach($ar_deleted_tipos as $current_component_tipo){
-							if(isset($section_data->components->$current_component_tipo)){
-								unset($section_data->components->$current_component_tipo);
-							}
-						}
-						$this->Save();
+	// 				// logger message
+	// 					$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and references. delete_mode: $delete_mode";
+	// 				break;
 
-					$logger_msg = "Deleted section and children data";
-					break;
+	// 			case 'delete_data' :
+	// 				// children : Calculate components children of current section
+	// 				$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+	// 					$section_tipo ,
+	// 					['component_'],
+	// 					true, // from_cache
+	// 					true, // resolve virtual
+	// 					true, // recursive
+	// 					false, // search exact
+	// 				);
 
-				default:
+	// 				// don't delete some components
+	// 				$ar_components_model_no_delete_dato = [
+	// 					'component_section_id',
+	// 					'component_external',
+	// 					'component_inverse'
+	// 				];
 
-					debug_log(__METHOD__
-						. " Error on delete section. Delete mode not defined !" .PHP_EOL
-						. ' delete_mode is mandatory to call section->Delete( $delete_mode ) '
-						, logger::ERROR
-					);
-					return false;
-			}
-			debug_log(__METHOD__
-				." Deleted section '$this->section_id' and their 'children'". PHP_EOL
-				.' delete_mode:' . $delete_mode
-				, logger::DEBUG
-			);
+	// 				$ar_models_of_media_components = section::get_components_with_media_content();
 
-		// publication . Remove published records in MYSQL, etc.
-			if ($delete_diffusion_records===true) {
-				try {
-					diffusion::delete_record($this->tipo, $this->section_id);
-				} catch (Exception $e) {
-					debug_log(__METHOD__
-						." Error on diffusion::delete_record: " .PHP_EOL
-						.' Exception Catch message: '.$e->getMessage()
-						, logger::WARNING
-					);
-				}
-			}
+	// 				$ar_deleted_tipos = [];
+	// 				foreach ($ar_component_tipo as $current_component_tipo) {
 
-		// log
-			$is_portal = (TOP_TIPO!==$this->tipo);
-			// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'DELETE',
-				logger::INFO,
-				$this->get_tipo(),
-				null,
-				array(
-					'msg'			=> $logger_msg,
-					'section_id'	=> $this->section_id,
-					'tipo'			=> $this->tipo,
-					'is_portal'		=> intval($is_portal),
-					// 'top_id'		=> TOP_ID ?? null,
-					// 'top_tipo'	=> TOP_TIPO ?? null,
-					'table'			=> $matrix_table,
-					'delete_mode'	=> $delete_mode,
-					'section_tipo'	=> $this->tipo
-				),
-				logged_user_id() // int
-			);
+	// 					$current_model_name = ontology_node::get_model_by_tipo($current_component_tipo, true);
 
+	// 					// don't delete some components check
+	// 						if (in_array($current_model_name, $ar_components_model_no_delete_dato)){
+	// 							continue;
+	// 						}
+
+	// 					$translatable	= ontology_node::get_translatable($current_component_tipo);
+	// 					$ar_lang		= ($translatable === false)
+	// 						? [DEDALO_DATA_NOLAN]
+	// 						: DEDALO_PROJECTS_DEFAULT_LANGS;
+
+	// 					foreach ($ar_lang as $current_lang) {
+
+	// 						$current_component = component_common::get_instance(
+	// 							$current_model_name,
+	// 							$current_component_tipo,
+	// 							$section_id,
+	// 							'list',
+	// 							$current_lang,
+	// 							$section_tipo,
+	// 							false
+	// 						);
+
+	// 						$current_component_dato = $current_component->get_dato();
+	// 						if(empty($current_component_dato)){
+	// 							continue;
+	// 						}
+
+	// 						$dato_empty = ($current_model_name==='component_filter')
+	// 							? $current_component->get_default_dato_for_user($user_id)
+	// 							: null;
+
+	// 						$current_component->set_dato($dato_empty);
+	// 						$current_component->Save();
+	// 					}
+
+	// 					if(in_array($current_model_name, $ar_models_of_media_components)){
+	// 						$current_component->remove_component_media_files();
+	// 					}
+
+	// 					$ar_deleted_tipos[] = $current_component_tipo;
+	// 				}
+
+	// 				// remove component inside section data in DDBB
+	// 					$section_data = $this->get_dato();
+	// 					foreach($ar_deleted_tipos as $current_component_tipo){
+	// 						if(isset($section_data->components->$current_component_tipo)){
+	// 							unset($section_data->components->$current_component_tipo);
+	// 						}
+	// 					}
+	// 					$this->Save();
+
+	// 				$logger_msg = "Deleted section and children data";
+	// 				break;
+
+	// 			default:
+
+	// 				debug_log(__METHOD__
+	// 					. " Error on delete section. Delete mode not defined !" .PHP_EOL
+	// 					. ' delete_mode is mandatory to call section->Delete( $delete_mode ) '
+	// 					, logger::ERROR
+	// 				);
+	// 				return false;
+	// 		}
+	// 		debug_log(__METHOD__
+	// 			." Deleted section '$this->section_id' and their 'children'". PHP_EOL
+	// 			.' delete_mode:' . $delete_mode
+	// 			, logger::DEBUG
+	// 		);
+
+	// 	// publication . Remove published records in MYSQL, etc.
+	// 		if ($delete_diffusion_records===true) {
+	// 			try {
+	// 				diffusion::delete_record($this->tipo, $this->section_id);
+	// 			} catch (Exception $e) {
+	// 				debug_log(__METHOD__
+	// 					." Error on diffusion::delete_record: " .PHP_EOL
+	// 					.' Exception Catch message: '.$e->getMessage()
+	// 					, logger::WARNING
+	// 				);
+	// 			}
+	// 		}
+
+	// 	// log
+	// 		$is_portal = (TOP_TIPO!==$this->tipo);
+	// 		// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+	// 		logger::$obj['activity']->log_message(
+	// 			'DELETE',
+	// 			logger::INFO,
+	// 			$this->get_tipo(),
+	// 			null,
+	// 			array(
+	// 				'msg'			=> $logger_msg,
+	// 				'section_id'	=> $this->section_id,
+	// 				'tipo'			=> $this->tipo,
+	// 				'is_portal'		=> intval($is_portal),
+	// 				// 'top_id'		=> TOP_ID ?? null,
+	// 				// 'top_tipo'	=> TOP_TIPO ?? null,
+	// 				'table'			=> $matrix_table,
+	// 				'delete_mode'	=> $delete_mode,
+	// 				'section_tipo'	=> $this->tipo
+	// 			),
+	// 			logged_user_id() // int
+	// 		);
+
+
+	// 	return true;
+	// }//end Delete
+
+
+
+	// /**
+	// * Delete record (SECTION)
+	// * Delete section with options
+	// * @param int $section_id
+	// * @param bool $delete_diffusion_records = true
+	// *	Selected by user in delete dialog checkbox
+	// * @return bool
+	// */
+	// public function delete_record( int $section_id, bool $delete_diffusion_records=true ) : bool {
+
+	// 	// section_id
+	// 		// prevent delete <1 records
+	// 		if($section_id<1) {
+	// 			debug_log(__METHOD__
+	// 				." Invalid section_id: $section_id. Delete action is aborted "
+	// 				, logger::WARNING
+	// 			);
+	// 			return false;
+	// 		}
+
+	// 	// section_tipo
+	// 		$section_tipo = $this->tipo;
+
+	// 	// user id
+	// 		$user_id = logged_user_id();
+
+	// 	// Get the section record data to be storage into Time Machine
+	// 		$section_record = new section_record( $section_tipo, $section_id );
+	// 		$data = $section_record->get_data();
+
+	// 	// delete_mode based actions
+	// 	// create a new time machine record. Always, even when the section has recovered previously, a new time machine record is created
+	// 	// to mark every section delete point in the time. For tool list, only the last record (state 'deleted') will be used.
+	// 		$RecordObj_time_machine_new = new RecordObj_time_machine(null);
+	// 			$RecordObj_time_machine_new->set_section_id( $section_id );
+	// 			$RecordObj_time_machine_new->set_section_tipo( $section_tipo );
+	// 			$RecordObj_time_machine_new->set_tipo( $section_tipo );
+	// 			$RecordObj_time_machine_new->set_lang( $this->get_lang() );
+	// 			$RecordObj_time_machine_new->set_timestamp( dd_date::get_timestamp_now_for_db() ); // Format 2012-11-05 19:50:44
+	// 			$RecordObj_time_machine_new->set_userID( $user_id );
+	// 			$RecordObj_time_machine_new->set_dato( $data );
+	// 			$RecordObj_time_machine_new->set_state('deleted');
+	// 		$id_time_machine = (int)$RecordObj_time_machine_new->Save();
+	// 		// check save resulting id
+	// 		if ($id_time_machine<1) {
+	// 			debug_log(__METHOD__
+	// 				." Error Processing Request. id_time_machine is empty "
+	// 				, logger::ERROR
+	// 			);
+	// 			throw new Exception("Error Processing Request. id_time_machine is empty", 1);
+	// 		}
+
+	// 		// check time machine dato
+	// 		$RecordObj_time_machine_new->blIsLoaded = false; // force to load the Time Machine data from DDBB
+	// 		$dato_time_machine	= $RecordObj_time_machine_new->get_dato();
+
+	// 		// JSON encode and decode each of them to unify types before compare
+	// 		$a			= json_handler::decode(json_handler::encode( $dato_time_machine ));
+	// 		$b			= json_handler::decode(json_handler::encode( $data ));
+	// 		$is_equal	= (bool)($a == $b);
+	// 		if ($is_equal===false) {
+	// 			debug_log(__METHOD__
+	// 				. " ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
+	// 				. ' Record is NOT deleted ! (3) ' . PHP_EOL
+	// 				. ' section_tipo: ' . $section_tipo . PHP_EOL
+	// 				. ' section_id: ' . $section_id
+	// 				, logger::ERROR
+	// 			);
+	// 			// debug
+	// 			dump($dato_time_machine, 'SHOW_DEBUG COMPARE ERROR dato_time_machine');
+	// 			dump($data,		 'SHOW_DEBUG COMPARE ERROR data');
+
+	// 			return false;
+	// 		}
+
+	// 	// clean old time machine records status (only the last record must be 'deleted' to allow tool_time_machine list easily)
+	// 		// get all time machine records for this section
+	// 		$ar_id_time_machine = RecordObj_time_machine::get_ar_time_machine_of_this(
+	// 			$section_tipo,
+	// 			$section_id,
+	// 			DEDALO_DATA_NOLAN,
+	// 			$section_tipo
+	// 		);
+	// 		// iterate all and remove 'deleted' state if is set (except for the last new created)
+	// 		foreach ($ar_id_time_machine as $current_id_time_machine) {
+	// 			if ($current_id_time_machine==$id_time_machine) {
+	// 				continue; // already set
+	// 			}
+	// 			$RecordObj_time_machine = new RecordObj_time_machine( (string)$current_id_time_machine );
+	// 			if ( $RecordObj_time_machine->get_state()==='deleted' ) {
+	// 				$RecordObj_time_machine->set_state(null);
+	// 				$RecordObj_time_machine->Save();
+	// 			}
+	// 		}
+
+	// 	// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+	// 		$delete_result = $section_record->delete_record();
+
+	// 		// Destroy the instance of the section_record
+	// 		// Avoid others to edit, change the deleted data.
+	// 		$section_record->__destruct();
+
+	// 	// inverse references. Remove all inverse references to this section
+	// 		$this->remove_all_inverse_references(true);
+
+	// 	// relation references. Remove all relation references (children, model, etc.)
+	// 		// $this->remove_all_relation_references();
+
+	// 	// media. Remove media files associated to this section
+	// 		$this->remove_section_media_files();
+
+	// 	// logger message
+	// 		$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and references. Deleted record";
+
+	// 		debug_log(__METHOD__
+	// 			." Deleted section '$section_tipo'_'$section_id' and their 'children'"
+	// 			, logger::DEBUG
+	// 		);
+
+	// 	// publication . Remove published records in MYSQL, etc.
+	// 		if ($delete_diffusion_records===true) {
+	// 			try {
+	// 				diffusion::delete_record($this->tipo, $section_id);
+	// 			} catch (Exception $e) {
+	// 				debug_log(__METHOD__
+	// 					." Error on diffusion::delete_record: " .PHP_EOL
+	// 					.' Exception Catch message: '.$e->getMessage()
+	// 					, logger::WARNING
+	// 				);
+	// 			}
+	// 		}
+
+	// 	// log
+	// 		$is_portal = (TOP_TIPO!==$this->tipo);
+	// 		// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+	// 		logger::$obj['activity']->log_message(
+	// 			'DELETE',
+	// 			logger::INFO,
+	// 			$this->get_tipo(),
+	// 			null,
+	// 			array(
+	// 				'msg'			=> $logger_msg,
+	// 				'section_id'	=> $section_id,
+	// 				'tipo'			=> $this->tipo,
+	// 				'is_portal'		=> intval($is_portal),
+	// 				// 'top_id'		=> TOP_ID ?? null,
+	// 				// 'top_tipo'	=> TOP_TIPO ?? null,
+	// 				'table'			=> common::get_matrix_table_from_tipo($section_tipo),
+	// 				'delete_mode'	=> 'delete_record',
+	// 				'section_tipo'	=> $this->tipo
+	// 			),
+	// 			logged_user_id() // int
+	// 		);
+
+
+	// 	return true;
+	// }//end delete_record
 
 
 
@@ -2687,86 +2979,83 @@ class section extends common {
 
 
 
-	/**
-	* GET_COMPONENTS_WITH_MEDIA_CONTENT
-	* Return array with model names of defined as 'media components'.
-	* Used to locate components to remove media content
-	* @return array
-	*/
-	public static function get_components_with_media_content() : array {
+	// /**
+	// * GET_COMPONENTS_WITH_MEDIA_CONTENT
+	// * Return array with model names of defined as 'media components'.
+	// * Used to locate components to remove media content
+	// * @return array
+	// */
+	// public static function get_components_with_media_content() : array {
 
-		$components_with_media_content = array_merge(
-			component_media_common::get_media_components(), // 'component_av','component_image','component_pdf','component_svg'
-			[
-				'component_html_file' // component_html_file. Could include user uploaded files
-			]
-		);
+	// 	 // 'component_av','component_image','component_pdf','component_svg'
+	// 	$components_with_media_content = component_media_common::get_media_components();
 
-		return $components_with_media_content;
-	}//end get_components_with_media_content
+
+	// 	return $components_with_media_content;
+	// }//end get_components_with_media_content
 
 
 
-	/**
-	* REMOVE_SECTION_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file linked to current section (all quality versions)
-	* @see section->Delete
-	* @return array|null
-	* 	Array of objects (removed components info)
-	*/
-	protected function remove_section_media_files() : ?array {
+	// /**
+	// * REMOVE_SECTION_MEDIA_FILES
+	// * "Remove" (rename and move files to deleted folder) all media file linked to current section (all quality versions)
+	// * @see section->Delete
+	// * @return array|null
+	// * 	Array of objects (removed components info)
+	// */
+	// protected function remove_section_media_files() : ?array {
 
-		$ar_removed = [];
+	// 	$ar_removed = [];
 
-		// short vars
-			$section_tipo		= $this->tipo;
-			$section_id			= $this->section_id;
-			$section_dato		= $this->get_dato();
-			$ar_media_elements	= section::get_components_with_media_content();
+	// 	// short vars
+	// 		$section_tipo		= $this->tipo;
+	// 		$section_id			= $this->section_id;
+	// 		$section_dato		= $this->get_dato();
+	// 		$ar_media_elements	= section::get_components_with_media_content();
 
-		// section components property empty case
-			if (!isset($section_dato->components) || empty($section_dato->components)) {
-				debug_log(__METHOD__." Nothing to remove ".to_string(), logger::DEBUG);
-				return $ar_removed;
-			}
+	// 	// section components property empty case
+	// 		if (!isset($section_dato->components) || empty($section_dato->components)) {
+	// 			debug_log(__METHOD__." Nothing to remove ".to_string(), logger::DEBUG);
+	// 			return $ar_removed;
+	// 		}
 
-		// components into section dato
-			foreach ($section_dato->components as $component_tipo => $component_value) {
+	// 	// components into section dato
+	// 		foreach ($section_dato->components as $component_tipo => $component_value) {
 
-				$model = ontology_node::get_model_by_tipo($component_tipo,true);
-				if (!in_array($model, $ar_media_elements)) continue; # Skip
+	// 			$model = ontology_node::get_model_by_tipo($component_tipo,true);
+	// 			if (!in_array($model, $ar_media_elements)) continue; # Skip
 
-				$lang		= common::get_element_lang($component_tipo, DEDALO_DATA_LANG);
-				$component	= component_common::get_instance(
-					$model,
-					$component_tipo,
-					$section_id,
-					'edit',
-					$lang,
-					$section_tipo
-				);
-				if ( false===$component->remove_component_media_files() ) {
-					debug_log(__METHOD__
-						." Error on remove_section_media_files: model:$model, tipo:$component_tipo, section_id:$section_id, section_tipo:$section_tipo"
-						, logger::ERROR
-					);
-					continue;
-				}
+	// 			$lang		= common::get_element_lang($component_tipo, DEDALO_DATA_LANG);
+	// 			$component	= component_common::get_instance(
+	// 				$model,
+	// 				$component_tipo,
+	// 				$section_id,
+	// 				'edit',
+	// 				$lang,
+	// 				$section_tipo
+	// 			);
+	// 			if ( false===$component->remove_component_media_files() ) {
+	// 				debug_log(__METHOD__
+	// 					." Error on remove_section_media_files: model:$model, tipo:$component_tipo, section_id:$section_id, section_tipo:$section_tipo"
+	// 					, logger::ERROR
+	// 				);
+	// 				continue;
+	// 			}
 
-				$ar_restored[] = (object)[
-					'tipo'	=> $component_tipo,
-					'model'	=> $model
-				];
+	// 			$ar_restored[] = (object)[
+	// 				'tipo'	=> $component_tipo,
+	// 				'model'	=> $model
+	// 			];
 
-				debug_log(__METHOD__
-					." removed media files from  model:$model, tipo:$component_tipo, section_id:$section_id, section_tipo:$section_tipo"
-					, logger::WARNING
-				);
-			}//end foreach
+	// 			debug_log(__METHOD__
+	// 				." removed media files from  model:$model, tipo:$component_tipo, section_id:$section_id, section_tipo:$section_tipo"
+	// 				, logger::WARNING
+	// 			);
+	// 		}//end foreach
 
 
-		return $ar_removed;
-	}//end remove_section_media_files
+	// 	return $ar_removed;
+	// }//end remove_section_media_files
 
 
 
@@ -2784,7 +3073,7 @@ class section extends common {
 			$section_tipo		= $this->tipo;
 			$section_id			= $this->section_id;
 			$section_dato		= $this->get_dato();
-			$ar_media_elements	= section::get_components_with_media_content();
+			$ar_media_elements	= component_media_common::get_media_components();
 
 		// section components property empty case
 			if (!isset($section_dato->components) || empty($section_dato->components)) {
@@ -2973,201 +3262,201 @@ class section extends common {
 
 
 
-	/**
-	* DIFFUSION_INFO_PROPAGATE_CHANGES
-	* Resolve section caller to current section (from inverse locators)
-	* and set every diffusion info as null to set publication as Outdated
-	* @return bool
-	*/
-	public function diffusion_info_propagate_changes() : bool {
-		$start_time = start_time();
+	// /**
+	// * DIFFUSION_INFO_PROPAGATE_CHANGES
+	// * Resolve section caller to current section (from inverse locators)
+	// * and set every diffusion info as null to set publication as Outdated
+	// * @return bool
+	// */
+	// public function diffusion_info_propagate_changes() : bool {
+	// 	$start_time = start_time();
 
-		// (!) stopped temporally 27-03-2023 by Paco to prevent unexpected errors in diffusion
-		return true;
+	// 	// (!) stopped temporally 27-03-2023 by Paco to prevent unexpected errors in diffusion
+	// 	return true;
 
-		// exclude some matrix_table records to propagate diffusion info
-			$exclude_tables = [
-				'matrix_users',
-				'matrix_projects',
-				'matrix_profiles',
-				'matrix_activity',
-				'matrix_dd',
-				'matrix_list',
-				'matrix_hierarchy_main',
-				'matrix_indexations',
-				'matrix_langs',
-				'matrix_layout',
-				'matrix_tools'
-			];
-			$matrix_table = common::get_matrix_table_from_tipo($this->tipo);
-			if (in_array($matrix_table, $exclude_tables)) {
-				return true;
-			}
+	// 	// exclude some matrix_table records to propagate diffusion info
+	// 		$exclude_tables = [
+	// 			'matrix_users',
+	// 			'matrix_projects',
+	// 			'matrix_profiles',
+	// 			'matrix_activity',
+	// 			'matrix_dd',
+	// 			'matrix_list',
+	// 			'matrix_hierarchy_main',
+	// 			'matrix_indexations',
+	// 			'matrix_langs',
+	// 			'matrix_layout',
+	// 			'matrix_tools'
+	// 		];
+	// 		$matrix_table = common::get_matrix_table_from_tipo($this->tipo);
+	// 		if (in_array($matrix_table, $exclude_tables)) {
+	// 			return true;
+	// 		}
 
-		// inverse_locators
-		$inverse_locators = $this->get_inverse_references();
-		foreach($inverse_locators as $locator) {
+	// 	// inverse_locators
+	// 	$inverse_locators = $this->get_inverse_references();
+	// 	foreach($inverse_locators as $locator) {
 
-			$current_section_tipo	= $locator->from_section_tipo;
-			$current_section_id		= $locator->from_section_id;
+	// 		$current_section_tipo	= $locator->from_section_tipo;
+	// 		$current_section_id		= $locator->from_section_id;
 
-			$section = section::get_instance(
-				$current_section_id,
-				$current_section_tipo,
-				'list' // string mode
-			);
-			$dato = $section->get_dato();
+	// 		$section = section::get_instance(
+	// 			$current_section_id,
+	// 			$current_section_tipo,
+	// 			'list' // string mode
+	// 		);
+	// 		$dato = $section->get_dato();
 
-			if (!empty($dato->diffusion_info)) {
+	// 		if (!empty($dato->diffusion_info)) {
 
-				// Unset section diffusion_info in section dato
-				$dato->diffusion_info = null; // Default value
+	// 			// Unset section diffusion_info in section dato
+	// 			$dato->diffusion_info = null; // Default value
 
-				// Update section whole dato
-				$section->set_dato($dato);
+	// 			// Update section whole dato
+	// 			$section->set_dato($dato);
 
-				// Save section with updated dato
-				$section->Save();
-				debug_log(__METHOD__
-					." Propagated diffusion_info changes to section $current_section_tipo, $current_section_id ". exec_time_unit($start_time).' ms'
-					, logger::DEBUG
-				);
-			}else{
-				debug_log(__METHOD__
-					." Unnecessary do diffusion_info changes to section $current_section_tipo, $current_section_id ". exec_time_unit($start_time).' ms'
-					, logger::DEBUG
-				);
-			}
-		}
+	// 			// Save section with updated dato
+	// 			$section->Save();
+	// 			debug_log(__METHOD__
+	// 				." Propagated diffusion_info changes to section $current_section_tipo, $current_section_id ". exec_time_unit($start_time).' ms'
+	// 				, logger::DEBUG
+	// 			);
+	// 		}else{
+	// 			debug_log(__METHOD__
+	// 				." Unnecessary do diffusion_info changes to section $current_section_tipo, $current_section_id ". exec_time_unit($start_time).' ms'
+	// 				, logger::DEBUG
+	// 			);
+	// 		}
+	// 	}
 
-		return true;
-	}//end diffusion_info_propagate_changes
-
-
-
-	### INVERSE LOCATORS / REFERENCES #####################################################################################
+	// 	return true;
+	// }//end diffusion_info_propagate_changes
 
 
 
-	/**
-	* GET_INVERSE_REFERENCES
-	* Get calculated inverse locators for all matrix tables
-	* @see search::calculate_inverse_locator
-	* @return array $inverse_locators
-	*/
-	public function get_inverse_references() : array {
-
-		if (empty($this->section_id)) {
-			// The section does not exist yet. Return empty array
-			return [];
-		}
-
-		// Create a minimal locator based on current section
-		$filter_locator = new locator();
-			$filter_locator->set_section_tipo($this->tipo);
-			$filter_locator->set_section_id($this->section_id);
-
-		// Get calculated inverse locators for all matrix tables
-		$ar_inverse_locators = search_related::get_referenced_locators(
-			[$filter_locator]
-		);
-
-
-		return $ar_inverse_locators;
-	}//end get_inverse_references
+	// ### INVERSE LOCATORS / REFERENCES #####################################################################################
 
 
 
-	/**
-	* REMOVE_ALL_INVERSE_REFERENCES
-	* @see section->Delete()
-	* @param bool $save = true
-	* On true, saves the component dato (set false to test purposes only)
-	* @return array $removed_locators
-	*/
-	public function remove_all_inverse_references( bool $save=true ) : array {
+	// /**
+	// * GET_INVERSE_REFERENCES
+	// * Get calculated inverse locators for all matrix tables
+	// * @see search::calculate_inverse_locator
+	// * @return array $inverse_locators
+	// */
+	// public function get_inverse_references() : array {
 
-		$removed_locators = [];
-		$caller_dataframe = $this->get_caller_dataframe();
-		$inverse_locators = $this->get_inverse_references();
-		foreach ($inverse_locators as $current_locator) {
+	// 	if (empty($this->section_id)) {
+	// 		// The section does not exist yet. Return empty array
+	// 		return [];
+	// 	}
 
-			$component_tipo	= $current_locator->from_component_tipo;
-			$section_tipo	= $current_locator->from_section_tipo;
-			$section_id		= $current_locator->from_section_id;
+	// 	// Create a minimal locator based on current section
+	// 	$filter_locator = new locator();
+	// 		$filter_locator->set_section_tipo($this->tipo);
+	// 		$filter_locator->set_section_id($this->section_id);
 
-			$model_name = ontology_node::get_model_by_tipo( $component_tipo, true );
-			#if ($model_name!=='component_portal' && $model_name!=='component_autocomplete' && $model_name!=='component_relation_children') {
-			if ('component_relation_common' !== get_parent_class($model_name) && $model_name !== 'component_dataframe') {
-				debug_log(__METHOD__
-					. " ERROR (remove_all_inverse_references): Only portals are supported!! Ignored received: $model_name " . PHP_EOL
-					, logger::WARNING
-				);
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$model_name,
-				$component_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo,
-				true,
-				$caller_dataframe
-			);
-
-			// locator_to_remove
-			$locator_to_remove = new locator();
-				$locator_to_remove->set_type($component->get_relation_type());
-				$locator_to_remove->set_section_id($this->section_id);
-				$locator_to_remove->set_section_tipo($this->tipo);
-				$locator_to_remove->set_from_component_tipo($component_tipo);
-
-			if (true === $component->remove_locator_from_dato( $locator_to_remove )) {
-
-				// removed case
-
-				// Save component dato
-				if ($save===true) {
-					$component->Save();
-				}
-
-				$removed_locators[] = (object)[
-					'removed_from'		=> $current_locator,
-					'locator_to_remove'	=> $locator_to_remove
-				];
-
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__
-						." !!!! Removed inverse reference to tipo:$this->tipo, section_id:$this->section_id in $model_name: tipo:$current_locator->from_component_tipo, section_id:$current_locator->from_section_id, section_tipo:$current_locator->from_section_tipo "
-						, logger::DEBUG
-					);
-				}
-			}else{
-
-				// not removed case
-
-				debug_log(__METHOD__
-					." Error on remove reference to current_locator. locator_to_remove was not removed from inverse_locators! ". PHP_EOL
-					.' current_locator: ' . to_string($current_locator) . PHP_EOL
-					.' locator_to_remove: ' . to_string($locator_to_remove) . PHP_EOL
-					.' component: ' . $model_name . PHP_EOL
-					.' tipo: ' . $component_tipo . PHP_EOL
-					.' section_tipo: ' . $section_tipo . PHP_EOL
-					.' section_id: ' . $section_id
-					, logger::WARNING
-				);
-				if(SHOW_DEBUG===true) {
-					dump($inverse_locators, ' remove_all_inverse_references inverse_locators ++ save: '.to_string($save));
-					dump($component->get_dato(), ' remove_all_inverse_references component->get_dato() ++ '.to_string());
-				}
-			}
-		}//end foreach ($inverse_locators as $current_locator)
+	// 	// Get calculated inverse locators for all matrix tables
+	// 	$ar_inverse_locators = search_related::get_referenced_locators(
+	// 		[$filter_locator]
+	// 	);
 
 
-		return $removed_locators;
-	}//end remove_all_inverse_references
+	// 	return $ar_inverse_locators;
+	// }//end get_inverse_references
+
+
+
+	// /**
+	// * REMOVE_ALL_INVERSE_REFERENCES
+	// * @see section->Delete()
+	// * @param bool $save = true
+	// * On true, saves the component dato (set false to test purposes only)
+	// * @return array $removed_locators
+	// */
+	// public function remove_all_inverse_references( bool $save=true ) : array {
+
+	// 	$removed_locators = [];
+	// 	$caller_dataframe = $this->get_caller_dataframe();
+	// 	$inverse_locators = $this->get_inverse_references();
+	// 	foreach ($inverse_locators as $current_locator) {
+
+	// 		$component_tipo	= $current_locator->from_component_tipo;
+	// 		$section_tipo	= $current_locator->from_section_tipo;
+	// 		$section_id		= $current_locator->from_section_id;
+
+	// 		$model_name = ontology_node::get_model_by_tipo( $component_tipo, true );
+	// 		#if ($model_name!=='component_portal' && $model_name!=='component_autocomplete' && $model_name!=='component_relation_children') {
+	// 		if ('component_relation_common' !== get_parent_class($model_name) && $model_name !== 'component_dataframe') {
+	// 			debug_log(__METHOD__
+	// 				. " ERROR (remove_all_inverse_references): Only portals are supported!! Ignored received: $model_name " . PHP_EOL
+	// 				, logger::WARNING
+	// 			);
+	// 			continue;
+	// 		}
+
+	// 		$component = component_common::get_instance(
+	// 			$model_name,
+	// 			$component_tipo,
+	// 			$section_id,
+	// 			'list',
+	// 			DEDALO_DATA_NOLAN,
+	// 			$section_tipo,
+	// 			true,
+	// 			$caller_dataframe
+	// 		);
+
+	// 		// locator_to_remove
+	// 		$locator_to_remove = new locator();
+	// 			$locator_to_remove->set_type($component->get_relation_type());
+	// 			$locator_to_remove->set_section_id($this->section_id);
+	// 			$locator_to_remove->set_section_tipo($this->tipo);
+	// 			$locator_to_remove->set_from_component_tipo($component_tipo);
+
+	// 		if (true === $component->remove_locator_from_dato( $locator_to_remove )) {
+
+	// 			// removed case
+
+	// 			// Save component dato
+	// 			if ($save===true) {
+	// 				$component->Save();
+	// 			}
+
+	// 			$removed_locators[] = (object)[
+	// 				'removed_from'		=> $current_locator,
+	// 				'locator_to_remove'	=> $locator_to_remove
+	// 			];
+
+	// 			if(SHOW_DEBUG===true) {
+	// 				debug_log(__METHOD__
+	// 					." !!!! Removed inverse reference to tipo:$this->tipo, section_id:$this->section_id in $model_name: tipo:$current_locator->from_component_tipo, section_id:$current_locator->from_section_id, section_tipo:$current_locator->from_section_tipo "
+	// 					, logger::DEBUG
+	// 				);
+	// 			}
+	// 		}else{
+
+	// 			// not removed case
+
+	// 			debug_log(__METHOD__
+	// 				." Error on remove reference to current_locator. locator_to_remove was not removed from inverse_locators! ". PHP_EOL
+	// 				.' current_locator: ' . to_string($current_locator) . PHP_EOL
+	// 				.' locator_to_remove: ' . to_string($locator_to_remove) . PHP_EOL
+	// 				.' component: ' . $model_name . PHP_EOL
+	// 				.' tipo: ' . $component_tipo . PHP_EOL
+	// 				.' section_tipo: ' . $section_tipo . PHP_EOL
+	// 				.' section_id: ' . $section_id
+	// 				, logger::WARNING
+	// 			);
+	// 			if(SHOW_DEBUG===true) {
+	// 				dump($inverse_locators, ' remove_all_inverse_references inverse_locators ++ save: '.to_string($save));
+	// 				dump($component->get_dato(), ' remove_all_inverse_references component->get_dato() ++ '.to_string());
+	// 			}
+	// 		}
+	// 	}//end foreach ($inverse_locators as $current_locator)
+
+
+	// 	return $removed_locators;
+	// }//end remove_all_inverse_references
 
 
 
@@ -3635,135 +3924,135 @@ class section extends common {
 
 
 
-	/**
-	* UPDATE_MODIFIED_SECTION_DATA
-	* @param object $options
-	* @return object $this->dato
-	*/
-	public function update_modified_section_data(object $options) : object {
+	// /**
+	// * UPDATE_MODIFIED_SECTION_DATA
+	// * @param object $options
+	// * @return object $this->dato
+	// */
+	// public function update_modified_section_data(object $options) : object {
 
-		if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-			return $this->dato;
-		}
+	// 	if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+	// 		return $this->dato;
+	// 	}
 
-		// options
-			$mode = $options->mode;
+	// 	// options
+	// 		$mode = $options->mode;
 
-		// Fixed private tipos
-			$modified_section_tipos = section::get_modified_section_tipos();
-				$created_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
-				$created_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
-				$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');
-				$modified_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
+	// 	// Fixed private tipos
+	// 		$modified_section_tipos = section::get_modified_section_tipos();
+	// 			$created_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
+	// 			$created_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
+	// 			$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');
+	// 			$modified_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
 
-		// Current user locator
-			$user_id		= logged_user_id();
-			$user_locator	= new locator();
-				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
-				$user_locator->set_section_id($user_id); // logged user
-				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+	// 	// Current user locator
+	// 		$user_id		= logged_user_id();
+	// 		$user_locator	= new locator();
+	// 			$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
+	// 			$user_locator->set_section_id($user_id); // logged user
+	// 			$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
-		// Current date
-			$base_date	= component_date::get_date_now();
-			$dd_date	= new dd_date($base_date);
-			$time		= dd_date::convert_date_to_seconds($dd_date);
-			$dd_date->set_time($time);
-			$date_now 	= new stdClass();
-				$date_now->start = $dd_date;
+	// 	// Current date
+	// 		$base_date	= component_date::get_date_now();
+	// 		$dd_date	= new dd_date($base_date);
+	// 		$time		= dd_date::convert_date_to_seconds($dd_date);
+	// 		$dd_date->set_time($time);
+	// 		$date_now 	= new stdClass();
+	// 			$date_now->start = $dd_date;
 
-		switch ($mode) {
+	// 	switch ($mode) {
 
-			case 'new_record': // new record
+	// 		case 'new_record': // new record
 
-				// Created by user
-					$user_locator->set_from_component_tipo($created_by_user['tipo']);
-					// set value with safe path
-						if (!isset($this->dato->relations)) {
-							$this->dato->relations = [];
-						}
-						$temp_relations = array_filter($this->dato->relations, function($el) use($user_locator){
-							return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
-						});
-						// add current locator
-						$temp_relations[] = $user_locator;
-						// update relations container
-						$this->dato->relations = array_values($temp_relations);
+	// 			// Created by user
+	// 				$user_locator->set_from_component_tipo($created_by_user['tipo']);
+	// 				// set value with safe path
+	// 					if (!isset($this->dato->relations)) {
+	// 						$this->dato->relations = [];
+	// 					}
+	// 					$temp_relations = array_filter($this->dato->relations, function($el) use($user_locator){
+	// 						return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+	// 					});
+	// 					// add current locator
+	// 					$temp_relations[] = $user_locator;
+	// 					// update relations container
+	// 					$this->dato->relations = array_values($temp_relations);
 
-				// Creation date
-					$component = component_common::get_instance(
-						$created_date['model'],
-						$created_date['tipo'],
-						$this->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$this->tipo // section_tipo
-					);
-					$component->set_dato( $date_now );
-					// $this->set_component_direct_dato( $component ); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
-					$component_dato = $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+	// 			// Creation date
+	// 				$component = component_common::get_instance(
+	// 					$created_date['model'],
+	// 					$created_date['tipo'],
+	// 					$this->section_id,
+	// 					'list',
+	// 					DEDALO_DATA_NOLAN,
+	// 					$this->tipo // section_tipo
+	// 				);
+	// 				$component->set_dato( $date_now );
+	// 				// $this->set_component_direct_dato( $component ); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
+	// 				$component_dato = $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 
-				// set value with safe path
-					if (!isset($this->dato->components)) {
-						$this->dato->components = new stdClass();
-					}
-					$component_full_dato = (object)[
-						'inf'	=> 'created_date [component_date]',
-						'dato'	=> (object)[
-							DEDALO_DATA_NOLAN => $component_dato
-						]
-					];
-					$this->dato->components->{$created_date['tipo']} = $component_full_dato;
-				break;
+	// 			// set value with safe path
+	// 				if (!isset($this->dato->components)) {
+	// 					$this->dato->components = new stdClass();
+	// 				}
+	// 				$component_full_dato = (object)[
+	// 					'inf'	=> 'created_date [component_date]',
+	// 					'dato'	=> (object)[
+	// 						DEDALO_DATA_NOLAN => $component_dato
+	// 					]
+	// 				];
+	// 				$this->dato->components->{$created_date['tipo']} = $component_full_dato;
+	// 			break;
 
-			case 'update_record': // update_record (record already exists)
+	// 		case 'update_record': // update_record (record already exists)
 
-				// forced to load section data
-					$this->get_dato();
+	// 			// forced to load section data
+	// 				$this->get_dato();
 
-				// Modified by user
-					$user_locator->set_from_component_tipo($modified_by_user['tipo']);
-					// set value with safe path
-						if (!isset($this->dato->relations)) {
-							$this->dato->relations = [];
-						}
-						$temp_relations = array_filter($this->dato->relations, function($el) use($user_locator){
-							return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
-						});
-						// add current locator
-						$temp_relations[] = $user_locator;
-						// update relations container
-						$this->dato->relations = array_values($temp_relations);
+	// 			// Modified by user
+	// 				$user_locator->set_from_component_tipo($modified_by_user['tipo']);
+	// 				// set value with safe path
+	// 					if (!isset($this->dato->relations)) {
+	// 						$this->dato->relations = [];
+	// 					}
+	// 					$temp_relations = array_filter($this->dato->relations, function($el) use($user_locator){
+	// 						return !isset($el->from_component_tipo) || $el->from_component_tipo!==$user_locator->from_component_tipo;
+	// 					});
+	// 					// add current locator
+	// 					$temp_relations[] = $user_locator;
+	// 					// update relations container
+	// 					$this->dato->relations = array_values($temp_relations);
 
-				// Modification date
-					$component = component_common::get_instance(
-						$modified_date['model'],
-						$modified_date['tipo'],
-						$this->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$this->tipo // section_tipo
-					);
-					$component->set_dato($date_now);
-					// $this->set_component_direct_dato($component); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
-					$component_dato = $component->get_dato_unchanged(); // (!) IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+	// 			// Modification date
+	// 				$component = component_common::get_instance(
+	// 					$modified_date['model'],
+	// 					$modified_date['tipo'],
+	// 					$this->section_id,
+	// 					'list',
+	// 					DEDALO_DATA_NOLAN,
+	// 					$this->tipo // section_tipo
+	// 				);
+	// 				$component->set_dato($date_now);
+	// 				// $this->set_component_direct_dato($component); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
+	// 				$component_dato = $component->get_dato_unchanged(); // (!) IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 
-				// set value with safe path
-					if (!isset($this->dato->components)) {
-						$this->dato->components = new stdClass();
-					}
-					$component_full_dato = (object)[
-						'inf'	=> 'modified_date [component_date]',
-						'dato'	=> (object)[
-							DEDALO_DATA_NOLAN => $component_dato
-						]
-					];
-					$this->dato->components->{$modified_date['tipo']} = $component_full_dato;
-				break;
-		}
+	// 			// set value with safe path
+	// 				if (!isset($this->dato->components)) {
+	// 					$this->dato->components = new stdClass();
+	// 				}
+	// 				$component_full_dato = (object)[
+	// 					'inf'	=> 'modified_date [component_date]',
+	// 					'dato'	=> (object)[
+	// 						DEDALO_DATA_NOLAN => $component_dato
+	// 					]
+	// 				];
+	// 				$this->dato->components->{$modified_date['tipo']} = $component_full_dato;
+	// 			break;
+	// 	}
 
 
-		return $this->dato;
-	}//end update_modified_section_data
+	// 	return $this->dato;
+	// }//end update_modified_section_data
 
 
 
