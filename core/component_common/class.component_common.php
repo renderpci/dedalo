@@ -3468,6 +3468,36 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_MY_SECTION_RECORD
+	* Creates or get from memory the component section object
+	* @return object $this->section_obj
+	*/
+	public function get_my_section_record() : object {
+
+		// Note that (06-02-2022) the section cache has not conflicts with same instance in list or edit modes
+		// now the JSON_RecordObj_matrix has the cache of section data. (same data for list and edit)
+			if (isset($this->section_record)) {
+				return $this->section_record;
+			}
+
+		// cache. Note that component cache will be sync with section. Set as false for component update
+			$cache = $this->cache;
+
+		// section build instance
+			$section = section::get_instance(
+				$this->section_tipo,
+				$cache, // bool cache (synced whit this component)
+			);
+		//section_record
+			$section_record = $section->get_section_record( $this->section_id );
+			$this->section_record = $section_record;
+
+		return $this->section_record;
+	}//end get_my_section_record
+
+
+
+	/**
 	* GET_CALCULATION_DATA
 	* @param object|null $options = null
 	* @return $data
