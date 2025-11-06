@@ -131,7 +131,7 @@ class component_portal extends component_relation_common {
 	* GET_CURRENT_SECTION_FILTER_DATA
 	* Gets fast project data of current section
 	* Search component filter in current section and get the component data
-	* @return array|null $component_filter_dato
+	* @return array|null $component_filter_data
 	*/
 	public function get_current_section_filter_data() : ?array {
 
@@ -140,7 +140,7 @@ class component_portal extends component_relation_common {
 			$section_tipo	= $this->get_section_tipo();
 
 		// default value
-			$component_filter_dato = null;
+			$component_filter_data = null;
 
 		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
 
@@ -149,7 +149,7 @@ class component_portal extends component_relation_common {
 			$filter_locator = new locator();
 				$filter_locator->set_section_tipo($section_tipo);
 				$filter_locator->set_section_id($section_id);
-			$component_filter_dato = [$filter_locator];
+			$component_filter_data = [$filter_locator];
 
 		}else{
 
@@ -188,12 +188,12 @@ class component_portal extends component_relation_common {
 					$section_tipo
 				);
 
-				$component_filter_dato = $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
+				$component_filter_data = $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
 			}
 		}
 
 
-		return $component_filter_dato;
+		return $component_filter_data;
 	}//end get_current_section_filter_data
 
 

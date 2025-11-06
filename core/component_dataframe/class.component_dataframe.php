@@ -104,14 +104,14 @@ class component_dataframe extends component_portal {
 
 
 	/**
-	* REMOVE_LOCATOR_FROM_DATO
+	* REMOVE_LOCATOR_FROM_DATA
 	* Removes from dato one or more locators that accomplish given locator equality
 	* (!) Not save the result
 	* @param object $locator_to_remove
 	* @param array $ar_properties = []
 	* @return bool
 	*/
-	public function remove_locator_from_dato( object $locator_to_remove, array $ar_properties=[] ) : bool {
+	public function remove_locator_from_data( object $locator_to_remove, array $ar_properties=[] ) : bool {
 
 		// caller_dataframe. fixed on construct
 			$caller_dataframe = $this->get_caller_dataframe();
@@ -137,14 +137,14 @@ class component_dataframe extends component_portal {
 			$locator_properties_to_check = $this->get_locator_properties_to_check();
 
 		// exec remove (return bool)
-			$removed = parent::remove_locator_from_dato(
+			$removed = parent::remove_locator_from_data(
 				$locator_to_remove,
 				$locator_properties_to_check
 			);
 
 
 		return $removed;
-	}//end remove_locator_from_dato
+	}//end remove_locator_from_data
 
 
 
@@ -319,7 +319,7 @@ class component_dataframe extends component_portal {
 
 
 		return $time_machine_data_to_save;
-	}//end get_time_machine_data
+	}//end get_time_machine_data_to_save
 
 
 	/**
