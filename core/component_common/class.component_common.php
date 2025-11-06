@@ -974,6 +974,82 @@ abstract class component_common extends common {
 
 		return $dato; // <- The language fallback for the mode list will be directly applied
 	}//end get_dato
+	/**
+	* GET_DATA_LANG
+	* Returns component data filtered by given lang
+	* If no lang is passed, the current component lang is used
+	* that means, the language used to instantiate this component.
+	* @param string|null $lang = null
+	* @return array|null $data_lang
+	* 	sample:  [
+	*		{"id":1, "lang": "lg-spa", "value": "L'Horta Sud"}
+	*	]
+	*/
+	public function get_data_lang( ?string $lang=null ) : ?array {
+
+		$data = $this->get_data();
+
+		// Check if the component supports translation.
+		// This property is independent of the Ontology definition $translatable
+		// one component can support translation as component_input_text but the ontology
+		// defines this specific component is not translatable.
+		// Any component that doesn't not supports translation will return the result to get full data
+		if($this->supports_translation === false){
+			return $data;
+		}
+
+		if(empty($data)){
+			return $data;
+		}
+
+		$safe_lang = $lang ?? $this->get_lang();
+		$data_lang = array_filter( $data, function($el) use ($safe_lang) {
+			return $el->lang === $safe_lang;
+		});
+
+
+		return $data_lang;
+	}//end get_data_lang
+
+
+
+	/**
+	* LOAD_COMPONENT_DATA
+	* Get data once from matrix about section_id, dato
+	* @see component_relation_common->load_component_data()
+	* @return bool
+	*/
+	protected function load_component_data() : bool {
+
+		// check vars
+			if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
+				return false;
+			}
+			if (empty($this->section_tipo)) {
+				debug_log(__METHOD__
+					." Error Processing Request. section tipo not found for component tipo: $this->tipo "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		if($this->is_loaded_matrix_data!==true) {
+
+			// section create
+				$section_record = $this->get_my_section_record();
+
+			// component full_data
+				$this->data = $section_record->get_component_data(
+					$this->tipo,
+					$this->data_column
+				);
+
+			// Set as loaded
+				$this->is_loaded_matrix_data = true;
+		}
+
+		return true;
+	}//end load_component_data
 
 
 
