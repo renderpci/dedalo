@@ -4,12 +4,12 @@
 	<meta charset="utf-8">
 	<title>Dédalo V6 unit test</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<link rel="shortcut icon" href="../../favicon.ico?ckcachebust=20C9E48A97F649F6FCA9500A5AEA9416" />
-	<link rel="stylesheet" href="../page/css/main.css?ckcachebust=53006AA6C326C1FE39A706DA72CD4AD7" />
+	<link rel="shortcut icon" href="../../favicon.ico" />
+	<link rel="stylesheet" href="../../core/page/css/main.css" />
 	<!-- add mocha css, to show results https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.css | https://unpkg.com/mocha/mocha.css -->
-	<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css?ckcachebust=623CF20ACD30F4623290D71F9DFE584C">
+	<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css">
 	<!-- add unit_test custom styles p-->
-	<link rel="stylesheet" href="css/unit_test.css?ckcachebust=5885625150D27F6BDF60B2F48780FC9C" media="print" onload="this.media='all'; this.onload=null;">
+	<link rel="stylesheet" href="css/unit_test.css" media="print" onload="this.media='all'; this.onload=null;">
 	<script type="importmap">
 		{
 			"imports": {
@@ -19,7 +19,7 @@
 		}
 	</script>
 	<!-- add mocha framework code https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.js | https://unpkg.com/mocha/mocha.js -->
-	<script src="../../lib/mocha/dist/mocha.js?ckcachebust=DE469A65B854DA5A7D0F0DD0AE6EBF54"></script>
+	<script src="../../lib/mocha/dist/mocha.js"></script>
 	<script>
 		// mocha.setup. Use "tdd" interface, check global leaks, and force all tests to be asynchronous
 		mocha.setup({
@@ -30,7 +30,7 @@
 		// mocha.growl(); // <-- Enables web notifications
 	</script>
 	<!-- add chai  https://unpkg.com/chai/chai.js | https://cdnjs.cloudflare.com/ajax/libs/chai/3.5.0/chai.js -->
-	<script src="../../lib/chai/chai.js?ckcachebust=3E676AD20CA861DA28190AAF407E8D73"></script>
+	<script src="../../lib/chai/chai.js"></script>
 	<script>
 		// chai has a lot of stuff, let's make assert global
 		let assert = chai.assert;
@@ -44,6 +44,6 @@
 		<div id="content" class="section_record"></div>
 
 	<!-- tests file -->
-		<script defer="defer" type="module" src="js/index.js?ckcachebust=4F582A2110C9ABC0FCDD8274F966B9E6"></script>
+		<script defer="defer" type="module" src="js/index.js"></script>
 </body>
 </html>

@@ -5,9 +5,9 @@
 import {
 	elements
 } from './elements.js'
-import {get_instance} from '../../common/js/instances.js'
-import {event_manager} from '../../common/js/event_manager.js'
-import {ui} from '../../common/js/ui.js'
+import {get_instance} from '../../../core/common/js/instances.js'
+import {event_manager} from '../../../core/common/js/event_manager.js'
+import {ui} from '../../../core/common/js/ui.js'
 
 
 

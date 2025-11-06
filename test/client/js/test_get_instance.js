@@ -6,9 +6,9 @@ import {
 	mode,
 	lang
 } from './elements.js'
-import {get_instance,get_all_instances,delete_instance,delete_instances,find_instances,key_instances_builder} from '../../common/js/instances.js'
-import {page} from '../../page/js/page.js'
-import {component_input_text} from '../../component_input_text/js/component_input_text.js'
+import {get_instance,get_all_instances,delete_instance,delete_instances,find_instances,key_instances_builder} from '../../../core/common/js/instances.js'
+import {page} from '../../../core/page/js/page.js'
+import {component_input_text} from '../../../core/component_input_text/js/component_input_text.js'
 
 
 

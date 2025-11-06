@@ -10,9 +10,9 @@
 
 
 // imports
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {set_environment} from '../../common/js/common.js'
-	import {url_vars_to_object} from '../../common/js/utils/index.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {set_environment} from '../../../core/common/js/common.js'
+	import {url_vars_to_object} from '../../../core/common/js/utils/index.js'
 
 // check url vars
 	const url_vars = url_vars_to_object(window.location.search);
@@ -51,16 +51,15 @@
 
 		// user is not logged
 
-		import ('../../common/js/instances.js')
+		import ('../../../core/common/js/instances.js')
 		.then(async function(module){
-
 			const instance = await module.get_instance({
 				model	: 'login',
 				tipo	: 'dd229',
 				mode	: 'edit',
 				lang	: page_globals.dedalo_application_lang
 			})
-			await instance.build(true)
+			await instance.build(true);
 			const wrapper = await instance.render()
 			document.body.appendChild(wrapper)
 		})

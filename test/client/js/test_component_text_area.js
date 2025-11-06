@@ -5,9 +5,9 @@
 import {
 	elements
 } from './elements.js'
-import {ui} from '../../common/js/ui.js'
-import {get_instance} from '../../common/js/instances.js'
-import {pause} from '../../common/js/utils/util.js'
+import {ui} from '../../../core/common/js/ui.js'
+import {get_instance} from '../../../core/common/js/instances.js'
+import {pause} from '../../../core/common/js/utils/util.js'
 
 
 
