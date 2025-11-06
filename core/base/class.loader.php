@@ -94,7 +94,6 @@ include DEDALO_SHARED_PATH . '/class.subtitles.php';
 	// 	'component_filter_master',
 	// 	'component_filter_records',
 	// 	'component_geolocation',
-	// 	'component_html_file',
 	// 	'component_image',
 	// 	'component_info',
 	// 	'component_input_text',
