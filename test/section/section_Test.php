@@ -1589,7 +1589,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_get_components_with_media_content() : void {
 
-		$result = section::get_components_with_media_content();
+		$result = component_media_common::get_media_components();
 
 		$this->assertTrue(
 			gettype($result)==='array',
