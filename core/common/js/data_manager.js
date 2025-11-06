@@ -40,7 +40,7 @@ export const data_manager = function() {
 * @return string
 */
 export const get_api_url = () => {
-	return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/'
+	return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../../core/api/v1/json/'
 }//end get_api_url
 
 

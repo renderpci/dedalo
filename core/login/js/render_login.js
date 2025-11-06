@@ -436,7 +436,7 @@ const get_content_data = function(self) {
 		ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'dedalo_logo',
-			src				: '../themes/default/dedalo_logo.svg',
+			src				: '../../core/themes/default/dedalo_logo.svg',
 			parent			: powered_by
 		})
 		const link = ui.create_dom_element({
