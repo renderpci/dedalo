@@ -72,18 +72,18 @@ final class CodeCoverage
         return self::$instance;
     }
 
-    public function init(Configuration $configuration, CodeCoverageFilterRegistry $codeCoverageFilterRegistry, bool $extensionRequiresCodeCoverageCollection): void
+    public function init(Configuration $configuration, CodeCoverageFilterRegistry $codeCoverageFilterRegistry, bool $extensionRequiresCodeCoverageCollection): CodeCoverageInitializationStatus
     {
         $codeCoverageFilterRegistry->init($configuration);
 
         if (!$configuration->hasCoverageReport() && !$extensionRequiresCodeCoverageCollection) {
-            return;
+            return CodeCoverageInitializationStatus::NOT_REQUESTED;
         }
 
         $this->activate($codeCoverageFilterRegistry->get(), $configuration->pathCoverage());
 
         if (!$this->isActive()) {
-            return;
+            return CodeCoverageInitializationStatus::FAILED;
         }
 
         if ($configuration->hasCoverageCacheDirectory()) {
@@ -154,10 +154,12 @@ final class CodeCoverage
                 $statistics['cacheMisses'],
             );
         }
+
+        return CodeCoverageInitializationStatus::SUCCEEDED;
     }
 
     /**
-     * @phpstan-assert-if-true !null $this->instance
+     * @phpstan-assert-if-true !null $this->codeCoverage
      */
     public function isActive(): bool
     {

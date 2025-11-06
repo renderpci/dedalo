@@ -106,7 +106,7 @@ class TestSuite implements IteratorAggregate, Reorderable, Test
                 continue;
             }
 
-            if (TestUtil::isHookMethod($method)) {
+            if ((new HookMethods)->isHookMethod($method)) {
                 Event\Facade::emitter()->testRunnerTriggeredPhpunitWarning(
                     sprintf(
                         'Method %s::%s() cannot be used both as a hook method and as a test method',
@@ -514,6 +514,23 @@ class TestSuite implements IteratorAggregate, Reorderable, Test
         try {
             $test = (new TestBuilder)->build($class, $methodName, $groups);
         } catch (InvalidDataProviderException $e) {
+            if ($e->getProviderLabel() === null) {
+                $message = sprintf(
+                    "The data provider specified for %s::%s is invalid\n%s",
+                    $className,
+                    $methodName,
+                    $this->exceptionToString($e),
+                );
+            } else {
+                $message = sprintf(
+                    "The data provider %s specified for %s::%s is invalid\n%s",
+                    $e->getProviderLabel(),
+                    $className,
+                    $methodName,
+                    $this->exceptionToString($e),
+                );
+            }
+
             Event\Facade::emitter()->testTriggeredPhpunitError(
                 new TestMethod(
                     $className,
@@ -527,12 +544,7 @@ class TestSuite implements IteratorAggregate, Reorderable, Test
                     MetadataCollection::fromArray([]),
                     Event\TestData\TestDataCollection::fromArray([]),
                 ),
-                sprintf(
-                    "The data provider specified for %s::%s is invalid\n%s",
-                    $className,
-                    $methodName,
-                    $this->exceptionToString($e),
-                ),
+                $message,
             );
 
             return;

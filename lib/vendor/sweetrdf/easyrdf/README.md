@@ -29,7 +29,7 @@ an `EasyRdf\Graph` object.
 ## Example
 
 ```php
-$foaf = new \EasyRdf\Graph("http://njh.me/foaf.rdf");
+$foaf = new \EasyRdf\Graph("https://www.aelius.com/njh/foaf.rdf");
 $foaf->load();
 $me = $foaf->primaryTopic();
 echo "My name is: ".$me->get('foaf:name')."\n";

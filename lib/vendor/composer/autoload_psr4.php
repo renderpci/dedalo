@@ -14,6 +14,7 @@ return array(
     'PhpParser\\' => array($vendorDir . '/nikic/php-parser/lib/PhpParser'),
     'OneLogin\\' => array($vendorDir . '/onelogin/php-saml/src'),
     'Linfo\\' => array($vendorDir . '/linfo/linfo/src/Linfo'),
+    'JsonMachine\\' => array($vendorDir . '/halaxa/json-machine/src'),
     'EasyRdf\\' => array($vendorDir . '/sweetrdf/easyrdf/lib'),
     'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
 );

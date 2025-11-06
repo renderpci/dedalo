@@ -459,7 +459,12 @@ class ResultTest extends TestCase
                 'ReflectionProperty::setAccessible() is not available.'
             );
         } else {
-            $reflector->setAccessible(true);
+            // TODO: remove this if-clause when dropping 8.0.x support
+            // From documentation > http://php.net/manual/en/reflectionproperty.setaccessible.php:
+            // As of PHP 8.1.0, calling this method has no effect; all properties are accessible by default.
+            if (version_compare(PHP_VERSION, '8.1.0', '<')) {
+                $reflector->setAccessible(true);
+            }
         }
         $reflector->setValue($result, 'foobar');
 

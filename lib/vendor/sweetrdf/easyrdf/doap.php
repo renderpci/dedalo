@@ -34,7 +34,7 @@
     $repository->addResource('doap:location', 'git://github.com/sweetrdf/easyrdf.git');
     $easyrdf->addResource('doap:repository', $repository);
 
-    $njh = $doap->resource('http://njh.me/', 'foaf:Person');
+    $njh = $doap->resource('https://www.aelius.com/njh/', 'foaf:Person');
     $njh->addLiteral('foaf:name', 'Nicholas J Humfrey');
     $njh->addResource('foaf:homepage', 'http://www.aelius.com/njh/');
     $easyrdf->add('doap:maintainer', $njh);

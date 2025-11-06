@@ -27,6 +27,7 @@ use function preg_match;
 use function preg_replace;
 use function preg_split;
 use function realpath;
+use function sprintf;
 use function str_contains;
 use function str_starts_with;
 use function strncasecmp;
@@ -177,7 +178,7 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
             ),
         );
 
-        EventFacade::emitter()->testRunnerFinishedChildProcess($jobResult->stdout(), $jobResult->stderr());
+        EventFacade::emitter()->childProcessFinished($jobResult->stdout(), $jobResult->stderr());
 
         $output = $jobResult->stdout();
 
@@ -344,10 +345,12 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
 
             $output = $jobResult->stdout();
 
-            EventFacade::emitter()->testRunnerFinishedChildProcess($output, $jobResult->stderr());
+            EventFacade::emitter()->childProcessFinished($output, $jobResult->stderr());
         } else {
             $output = $this->runCodeInLocalSandbox($skipIfCode);
         }
+
+        $this->triggerRunnerWarningOnPhpErrors('SKIPIF', $output);
 
         if (strncasecmp('skip', ltrim($output), 4) === 0) {
             $message = '';
@@ -429,19 +432,21 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
         $cleanCode = (new Renderer)->render($this->filename, $sections['CLEAN']);
 
         if ($this->shouldRunInSubprocess($sections, $cleanCode)) {
-            $result = JobRunnerRegistry::run(
+            $jobResult = JobRunnerRegistry::run(
                 new Job(
                     $cleanCode,
                     $this->settings($collectCoverage),
                 ),
             );
 
-            EventFacade::emitter()->testRunnerFinishedChildProcess($result->stdout(), $result->stderr());
+            $output = $jobResult->stdout();
 
-            return;
+            EventFacade::emitter()->childProcessFinished($jobResult->stdout(), $jobResult->stderr());
+        } else {
+            $output = $this->runCodeInLocalSandbox($cleanCode);
         }
 
-        $this->runCodeInLocalSandbox($cleanCode);
+        $this->triggerRunnerWarningOnPhpErrors('CLEAN', $output);
     }
 
     /**
@@ -659,7 +664,6 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
             'open_basedir=',
             'output_buffering=Off',
             'output_handler=',
-            'report_memleaks=0',
             'report_zend_debug=0',
         ];
 
@@ -678,5 +682,28 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
         }
 
         return $settings;
+    }
+
+    private function triggerRunnerWarningOnPhpErrors(string $section, string $output): void
+    {
+        if (str_contains($output, 'Parse error:')) {
+            EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                sprintf(
+                    '%s section triggered a parse error: %s',
+                    $section,
+                    $output,
+                ),
+            );
+        }
+
+        if (str_contains($output, 'Fatal error:')) {
+            EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                sprintf(
+                    '%s section triggered a fatal error: %s',
+                    $section,
+                    $output,
+                ),
+            );
+        }
     }
 }

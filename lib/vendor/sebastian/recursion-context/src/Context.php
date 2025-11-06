@@ -44,7 +44,6 @@ final class Context
     public function __destruct()
     {
         foreach ($this->arrays as &$array) {
-            /* @phpstan-ignore function.alreadyNarrowedType */
             if (is_array($array)) {
                 array_pop($array);
                 array_pop($array);
@@ -129,8 +128,8 @@ final class Context
 
     private function addObject(object $object): int
     {
-        if (!$this->objects->contains($object)) {
-            $this->objects->attach($object);
+        if (!$this->objects->offsetExists($object)) {
+            $this->objects->offsetSet($object);
         }
 
         return spl_object_id($object);
@@ -145,6 +144,7 @@ final class Context
 
         if (isset($end[1]) &&
             $end[1] === $this->objects &&
+            isset($end[0]) &&
             is_int($end[0])) {
             return $end[0];
         }
@@ -154,7 +154,7 @@ final class Context
 
     private function containsObject(object $value): false|int
     {
-        if ($this->objects->contains($value)) {
+        if ($this->objects->offsetExists($value)) {
             return spl_object_id($value);
         }
 

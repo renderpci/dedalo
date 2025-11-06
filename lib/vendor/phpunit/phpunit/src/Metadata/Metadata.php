@@ -138,9 +138,9 @@ abstract readonly class Metadata
      * @param class-string     $className
      * @param non-empty-string $methodName
      */
-    public static function dataProvider(string $className, string $methodName): DataProvider
+    public static function dataProvider(string $className, string $methodName, bool $validateArgumentCount): DataProvider
     {
-        return new DataProvider(self::METHOD_LEVEL, $className, $methodName);
+        return new DataProvider(self::METHOD_LEVEL, $className, $methodName, $validateArgumentCount);
     }
 
     /**
@@ -225,14 +225,20 @@ abstract readonly class Metadata
         return new Group(self::METHOD_LEVEL, $groupName);
     }
 
-    public static function ignoreDeprecationsOnClass(): IgnoreDeprecations
+    /**
+     * @param null|non-empty-string $messagePattern
+     */
+    public static function ignoreDeprecationsOnClass(?string $messagePattern = null): IgnoreDeprecations
     {
-        return new IgnoreDeprecations(self::CLASS_LEVEL);
+        return new IgnoreDeprecations(self::CLASS_LEVEL, $messagePattern);
     }
 
-    public static function ignoreDeprecationsOnMethod(): IgnoreDeprecations
+    /**
+     * @param null|non-empty-string $messagePattern
+     */
+    public static function ignoreDeprecationsOnMethod(?string $messagePattern = null): IgnoreDeprecations
     {
-        return new IgnoreDeprecations(self::METHOD_LEVEL);
+        return new IgnoreDeprecations(self::METHOD_LEVEL, $messagePattern);
     }
 
     /**
@@ -464,10 +470,18 @@ abstract readonly class Metadata
     }
 
     /**
-     * @param array<array<mixed>> $data
-     * @param ?non-empty-string   $name
+     * @param class-string     $className
+     * @param non-empty-string $methodName
      */
-    public static function testWith(array $data, ?string $name = null): TestWith
+    public static function testDoxFormatter(string $className, string $methodName): TestDoxFormatter
+    {
+        return new TestDoxFormatter(self::METHOD_LEVEL, $className, $methodName);
+    }
+
+    /**
+     * @param ?non-empty-string $name
+     */
+    public static function testWith(mixed $data, ?string $name = null): TestWith
     {
         return new TestWith(self::METHOD_LEVEL, $data, $name);
     }
@@ -532,6 +546,14 @@ abstract readonly class Metadata
     public static function withoutErrorHandler(): WithoutErrorHandler
     {
         return new WithoutErrorHandler(self::METHOD_LEVEL);
+    }
+
+    /**
+     * @param null|non-empty-string $messagePattern
+     */
+    public static function ignorePhpunitWarnings(?string $messagePattern): IgnorePhpunitWarnings
+    {
+        return new IgnorePhpunitWarnings(self::METHOD_LEVEL, $messagePattern);
     }
 
     /**
@@ -899,6 +921,14 @@ abstract readonly class Metadata
     }
 
     /**
+     * @phpstan-assert-if-true TestDoxFormatter $this
+     */
+    public function isTestDoxFormatter(): bool
+    {
+        return false;
+    }
+
+    /**
      * @phpstan-assert-if-true TestWith $this
      */
     public function isTestWith(): bool
@@ -966,6 +996,14 @@ abstract readonly class Metadata
      * @phpstan-assert-if-true WithoutErrorHandler $this
      */
     public function isWithoutErrorHandler(): bool
+    {
+        return false;
+    }
+
+    /**
+     * @phpstan-assert-if-true IgnorePhpunitWarnings $this
+     */
+    public function isIgnorePhpunitWarnings(): bool
     {
         return false;
     }
