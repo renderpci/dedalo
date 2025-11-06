@@ -1130,14 +1130,14 @@ section.prototype.delete_section = async function (options) {
 	// options
 		const sqo						= clone(options.sqo)
 		const delete_mode				= options.delete_mode
-		const caller_dataframe			= options.caller_dataframe || null
+		// const caller_dataframe			= options.caller_dataframe || null
 		const delete_diffusion_records	= options.delete_diffusion_records ?? true
 
 	// source
 		const source			= create_source(self, 'delete')
 		source.section_id		= self.section_id
 		source.delete_mode		= delete_mode
-		source.caller_dataframe	= caller_dataframe
+		// source.caller_dataframe	= caller_dataframe
 
 	// data_manager. delete
 		const rqo = {

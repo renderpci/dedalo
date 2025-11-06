@@ -200,14 +200,14 @@ final class component_filter_master_test extends TestCase {
 
 
 	/**
-	* TEST_get_default_dato_for_user
+	* TEST_get_default_data_for_user
 	* @return void
 	*/
-	public function test_get_default_dato_for_user() {
+	public function test_get_default_data_for_user() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_default_dato_for_user(
+		$result	= $component->get_default_data_for_user(
 			1
 		);
 
@@ -216,7 +216,7 @@ final class component_filter_master_test extends TestCase {
 			'expected type array : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_default_dato_for_user
+	}//end test_get_default_data_for_user
 
 
 

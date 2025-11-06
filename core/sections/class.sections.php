@@ -250,7 +250,6 @@ class sections extends common {
 			$delete_mode				= $options->delete_mode ?? 'delete_data';
 			$section_tipo				= $options->section_tipo ?? $options->tipo;
 			$section_id					= $options->section_id ?? null;
-			$caller_dataframe			= $options->caller_dataframe ?? null;
 			$sqo						= $options->sqo ?? null;
 			$delete_diffusion_records	= $options->delete_diffusion_records ?? true;
 			$delete_with_children		= $options->delete_with_children ?? false;
@@ -258,7 +257,6 @@ class sections extends common {
 
 		// permissions check (only sections area expected here)
 			$section = section::get_instance(
-				$section_id, // string|null section_id
 				$section_tipo // string section_tipo
 			);
 			$permissions = $section->get_section_permissions($section_tipo, $section_tipo);
@@ -390,20 +388,26 @@ class sections extends common {
 							DEDALO_DATA_NOLAN,
 							$current_section_tipo
 						);
-						$dato = $component_relation_children->get_dato();
-						if (!empty($dato)) {
+						$data = $component_relation_children->get_data();
+						if (!empty($data)) {
 							$children = array_map(function($el){
 								return $el->section_id;
-							}, $dato);
+							}, $data);
 							$response->errors[] = (label::get_label('skip_deletion_cause_children') ?? 'skipped record deletion because it has children')
 								.' : ' . to_string($current_section_id). ' ['.join(',',$children).']';
 							continue;
 						}
 					}
 
-				// Delete the section
-					$section	= section::get_instance($current_section_id, $current_section_tipo, 'list', true, $caller_dataframe);
-					$deleted	= $section->Delete($delete_mode, (bool)$delete_diffusion_records);
+				// Delete the section record
+					$section_record = new section_record( $current_section_tipo, $current_section_id );
+					// perform the delete in correct function
+					$deleted = false;
+					if ($delete_mode==='delete_record') {
+						$deleted = $section_record->delete_record( $delete_diffusion_records );
+					}else if ($delete_mode==='delete_data') {
+						$deleted = $section_record->delete_data();
+					}
 					if ($deleted!==true) {
 						$response->errors[] = 'unable to delete record: '.to_string($current_section_id);
 					}else{
@@ -418,12 +422,12 @@ class sections extends common {
 						}
 					}
 
-				// delete Ontology case (dd_ontology record). V7
+				// Delete Ontology case (dd_ontology record).
 				// If current section is a Ontology section (ends with zero like 'numisdata0'),
 				// the 'dd_ontology' record must to be deleted too, to preserve the deletion coherence.
 					$section_id_from_tipo = get_section_id_from_tipo($section_tipo);
 					if ($section_id_from_tipo=='0') {
-						// is ontology. Create a 'terminoID' value for delete it in 'dd_ontology'
+						// is ontology. Create a 'tipo' value for delete it in 'dd_ontology'
 						$tipo_to_delete	= get_tld_from_tipo($section_tipo) . $section_id; // as 'numisdata631'
 						$ontology_node	= ontology_node::get_instance($tipo_to_delete);
 						$delete_result	= $ontology_node->delete();

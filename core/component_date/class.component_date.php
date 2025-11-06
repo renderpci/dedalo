@@ -45,8 +45,11 @@ class component_date extends component_common {
 	public static $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
 	// default date mode
 	public static $default_date_mode = 'date';
-	// data_column. DB column where to get the data.
-	protected $data_column = 'date';
+	// data_column_name. DB column where to get the data.
+	protected $data_column_name = 'date';
+
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = false;
 
 
 
@@ -212,7 +215,7 @@ class component_date extends component_common {
 	* Get current full date (with hours, minutes and seconds) as dd_date object
 	* @return object dd_date
 	*/
-	public static function get_date_now() {
+	public static function get_date_now() : dd_date {
 
 		$date = new DateTime();
 
