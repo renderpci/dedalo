@@ -75,6 +75,37 @@ class component_string_common extends component_common {
 
 
 	/**
+	* GET_DATA
+	* @return array|null $dato
+	*/
+	public function get_data() : ?array {
+
+		$data = parent::get_data();
+
+		if (!is_null($data) && !is_array($data)) {
+			$type = gettype($data);
+			debug_log(__METHOD__
+				. " Expected dato type array or null, but type is: $type. Converted to array of strings and saving " . PHP_EOL
+				. ' tipo: ' . $this->tipo . PHP_EOL
+				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+				. ' section_id: ' . $this->section_id
+				, logger::ERROR
+			);
+			dump($data, ' dato ++ ');
+
+			$data = !empty($data)
+				? [to_string($data)]
+				: null;
+
+			// update
+			$this->set_dato($data);
+			$this->Save();
+		}
+
+
+		return $data;
+	}//end get_data
+
 	* GET_DATO
 	* @return array|null $dato
 	*/
