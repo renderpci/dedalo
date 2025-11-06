@@ -294,119 +294,83 @@ class section extends common {
 	* Gets or creates the JSON_RecordObj_matrix instance and set it as section property.
 	* @return JSON_RecordObj_matrix $this->JSON_RecordObj_matrix
 	*/
-	private function get_JSON_RecordObj_matrix() : JSON_RecordObj_matrix {
+	// private function get_JSON_RecordObj_matrix() : JSON_RecordObj_matrix {
 
-		$this->JSON_RecordObj_matrix = $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
-			common::get_matrix_table_from_tipo($this->tipo),
-			(int)$this->section_id, // int section_id
-			$this->tipo, // string section tipo
-			true // bool enable cache
-		);
+	// 	$this->JSON_RecordObj_matrix = $this->JSON_RecordObj_matrix ?? JSON_RecordObj_matrix::get_instance(
+	// 		common::get_matrix_table_from_tipo($this->tipo),
+	// 		(int)$this->section_id, // int section_id
+	// 		$this->tipo, // string section tipo
+	// 		true // bool enable cache
+	// 	);
 
-		return $this->JSON_RecordObj_matrix;
-	}//end get_JSON_RecordObj_matrix
+	// 	return $this->JSON_RecordObj_matrix;
+	// }//end get_JSON_RecordObj_matrix
+
+
+
+	// /**
+	// * GET_IDENTIFIER
+	// * Compound a chained plain flat identifier string for use as media component name, etc..
+	// * @return string $name Like 'dd207_1'
+	// */
+	// public function get_identifier() : string {
+
+	// 	if ( empty($this->get_tipo() ) ) {
+	// 		throw new Exception("Error Processing Request. empty section_tipo", 1);
+	// 	}
+	// 	if ( empty($this->get_section_id() ) ) {
+	// 		throw new Exception("Error Processing Request. empty section_id", 1);
+	// 	}
+
+	// 	$identifier = $this->tipo . locator::DELIMITER . $this->section_id;
+
+	// 	return $identifier;
+	// }//end get_identifier
+
+
+
+	// /**
+	// * SET_IS_LOADED_MATRIX_DATA
+	// * Pass is_loaded_matrix_data to own $JSON_RecordObj_matrix instance
+	// * only when value is 'false' to force reload data from DDBB
+	// * When value is 'true' is ignored because the section manages this value
+	// * on set_dato
+	// * @see $this->set_dato()
+	// * @param bool $value
+	// * @return bool
+	// */
+	// public function set_is_loaded_matrix_data(bool $value) : bool {
+
+	// 	if ($value===false) {
+
+	// 		if (empty($this->section_id)) {
+	// 			return false;
+	// 		}
+
+	// 		// Get and set $this->JSON_RecordObj_matrix
+	// 		$this->get_JSON_RecordObj_matrix();
+	// 		// force updates value
+	// 		$this->JSON_RecordObj_matrix->set_is_loaded_matrix_data(false);
+	// 	}
+
+	// 	return  true;
+	// }//end set_is_loaded_matrix_data
 
 
 
 	/**
-	* GET_IDENTIFIER
-	* Compound a chained plain flat identifier string for use as media component name, etc..
-	* @return string $name Like 'dd207_1'
+	* GET_DATA
+	* Get all section_record_data for this section
+	* @return array $data
 	*/
-	public function get_identifier() : string {
+	public function get_data() : array {
 
-		if ( empty($this->get_tipo() ) ) {
-			throw new Exception("Error Processing Request. empty section_tipo", 1);
-		}
-		if ( empty($this->get_section_id() ) ) {
-			throw new Exception("Error Processing Request. empty section_id", 1);
-		}
+		$data = $this->data;
 
-		$identifier = $this->tipo . locator::DELIMITER . $this->section_id;
-
-		return $identifier;
-	}//end get_identifier
+		return $data;
+	}//end get_data
 
 
-
-	/**
-	* SET_IS_LOADED_MATRIX_DATA
-	* Pass is_loaded_matrix_data to own $JSON_RecordObj_matrix instance
-	* only when value is 'false' to force reload data from DDBB
-	* When value is 'true' is ignored because the section manages this value
-	* on set_dato
-	* @see $this->set_dato()
-	* @param bool $value
-	* @return bool
-	*/
-	public function set_is_loaded_matrix_data(bool $value) : bool {
-
-		if ($value===false) {
-
-			if (empty($this->section_id)) {
-				return false;
-			}
-
-			// Get and set $this->JSON_RecordObj_matrix
-			$this->get_JSON_RecordObj_matrix();
-			// force updates value
-			$this->JSON_RecordObj_matrix->set_is_loaded_matrix_data(false);
-		}
-
-		return  true;
-	}//end set_is_loaded_matrix_data
-
-
-
-	/**
-	* GET DATO
-	* Loads the section data from database if is not already loaded
-	* and returns the assigned value.
-	* @return object $dato
-	*/
-	public function get_dato() : object {
-
-		// check valid call
-			if ( abs(intval($this->section_id))<1 &&
-				(strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)===false &&
-				strpos((string)$this->section_id, 'search')===false)
-				) {
-
-				if(SHOW_DEBUG===true) {
-					if ($this->section_id==='result') {
-						throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
-					};
-				}
-				debug_log(__METHOD__
-					." section_id <1 is not allowed . section_id: ".to_string($this->section_id)
-					, logger::ERROR
-				);
-				$dbt = debug_backtrace();
-				dump($dbt, ' dbt debug_backtrace ++ '.to_string());
-				throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
-			}
-
-		// save_handler session case
-			// If section_id have a temporal string, the save handier will be 'session'
-			// the section will be saved in memory, NOT in the database and you will get the data from there
-			if( strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
-				$this->save_handler = 'session';
-			}
-			// Sometimes we need use section as temporal element without save real data to database. Is this case
-			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
-			if (isset($this->save_handler) && $this->save_handler==='session') {
-				if (!isset($this->dato)) {
-					$temp_data_uid = $this->tipo .'_'. $this->section_id;
-					# Fix dato as object
-					$this->dato = isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])
-						? clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]
-						: new stdClass();
-				}
-				return $this->dato;
-			}
-
-		// data is loaded once
-			// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
 				$this->get_JSON_RecordObj_matrix();
 
 			// load dato from db
