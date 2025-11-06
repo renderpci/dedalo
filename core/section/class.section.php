@@ -5045,6 +5045,20 @@ class section extends common {
 
 
 	/**
+	* GET_SECTION_RECORD
+	* @return
+	*/
+	public function get_section_record( string|int|null $section_id ) {
+
+		$section_record = new section_record( $this->section_tipo, $section_id );
+
+
+
+	}//end get_section_record
+
+
+
+	/**
 	* __DESTRUCT
 	*/
 		// public function __destruct() {
