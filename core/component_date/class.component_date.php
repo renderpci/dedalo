@@ -215,7 +215,7 @@ class component_date extends component_common {
 	* Get current full date (with hours, minutes and seconds) as dd_date object
 	* @return object dd_date
 	*/
-	public static function get_date_now() {
+	public static function get_date_now() : dd_date {
 
 		$date = new DateTime();
 
