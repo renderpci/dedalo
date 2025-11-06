@@ -255,7 +255,7 @@ export const render_server_response_error = function(errors) {
 		})
 
 	// icon_dedalo
-		const icon_url = '../themes/default/dedalo_logo.svg'
+		const icon_url = '../../core/themes/default/dedalo_logo.svg'
 		ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'icon_dedalo',
