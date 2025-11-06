@@ -4322,28 +4322,57 @@ abstract class component_common extends common {
 	/**
 	* IS_EMPTY
 	* Generic check if given value is or not empty considering
-	* @param mixed $value
+	* @param array|null $value
 	* @return bool
 	*/
-	public function is_empty(mixed $value) : bool {
+	public function is_empty(?array $value) : bool {
 
-		// null case
-			if(is_null($value)){
-				return true;
+		// null case explicit
+		if( $value===null ) {
+			return true;
+		}
+
+		// array case
+		if ( is_array($value) ) {
+			foreach ($value as $item) {
+				if( !empty($item) && $item!==0 ) {
+					return false;
+				}
 			}
+		}
 
-		// string length 0 case
-			$value = is_string($value)
-				? trim($value)
-				: $value;
 
-		// common empty check
-			if(empty($value)){
-				return true;
+		return true;
+	}//end is_empty
+
+
+
+	/**
+	* IS_EMPTY_DATA
+	* @param array|null $data
+	* Check if given data is empty or not considering
+	* spaces and ' ' as empty values.
+	* @return bool
+	*/
+	public function is_empty_data( ?array $data ) : bool {
+
+		$is_empty_data = true;
+
+		if($data===null) {
+			return $is_empty_data;
+		}
+
+		foreach ($data as $data_item) {
+			$value = $data_item->value ?? null;
+			$is_empty_value = $this->is_empty( $value );
+			if( $is_empty_value === false ){
+				$is_empty_data = false;
+				break;
 			}
+		}
 
 
-		return false;
+		return $is_empty_data ;
 	}//end is_empty
 
 
