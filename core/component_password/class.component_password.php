@@ -8,9 +8,8 @@ class component_password extends component_common {
 
 
 	public $fake_value = '****************';
-	// data_column. DB column where to get the data.
-	protected $data_column = 'string';
-
+	// data_column_name. DB column where to get the data.
+	protected $data_column_name = 'string';
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;

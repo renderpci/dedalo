@@ -51,8 +51,9 @@ class component_relation_common extends component_common {
 
 		// V7 PROPERTIES //
 
-		// data_column. DB column where to get the data.
-		protected $data_column = 'relation';
+		// data_column_name. DB column where to get the data.
+		protected $data_column_name = 'relation';
+
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation = false;
 

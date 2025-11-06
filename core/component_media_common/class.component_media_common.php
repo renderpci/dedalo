@@ -85,8 +85,9 @@ class component_media_common extends component_common {
 		// external_source
 		public $external_source;
 
-		// data_column. DB column where to get the data.
-		protected $data_column = 'media';
+		// data_column_name. DB column where to get the data.
+		protected $data_column_name = 'media';
+
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation = false;
 

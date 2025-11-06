@@ -81,29 +81,31 @@ trait section_v7 {
 		$this->section_record_data->read();
 
 		/* TEST
-		$data_column = 'string';
+		$data_column_name = 'string';
 		$tipo = 'rsc21';
 		// $rsc21_data = $this->section_record_data->get_data_columns()['string']->{$tipo} ?? null;
 		// $rsc21_data = $this->get_column('string')->{$tipo} ?? null;
-		$rsc21_data = $this->data_columns[$data_column]->{$tipo} ?? null;
+		$rsc21_data = $this->data_columns[$data_column_name]->{$tipo} ?? null;
 			dump($rsc21_data, ' rsc21_data ++ '.to_string());
 			*/
 
 		return true;
 	}//end load_section_data
 
+
+
 	/**
 	* GET_COLUMN
 	* @return
 	*/
-	public function get_column($column_name) {
-		return $this->section_record_data->get_data_columns()[$column_name];
+	public function get_column($data_column_name) {
+		return $this->section_record_data->get_data_columns()[$data_column_name];
 	}//end get_column
 
 
 
 	/**
-	* GET_COMPONENT_FULL_DATA @v7
+	* GET_COMPONENT_DATA @v7
 	* It gets all the data from the component as the database is stored,
 	* with all languages, using the proper data column.
 	* @param string $tipo
@@ -112,7 +114,7 @@ trait section_v7 {
 	* 	DB data_column where to get the data (relation,string...)
 	* @return array|null $component_data
 	*/
-	public function get_component_full_data( string $tipo, string $data_column ) : ?array {
+	public function get_component_data( string $tipo, string $data_column ) : ?array {
 
 		// Load the DB data once
 		$this->load_section_data();
@@ -122,7 +124,7 @@ trait section_v7 {
 
 
 		return $component_data;
-	}//end get_component_full_data
+	}//end get_component_data
 
 
 
@@ -130,8 +132,8 @@ trait section_v7 {
 	* SAVE_PARTIAL @v7
 	* Saves given value into the component container.
 	* Creates the path from the component tipo as {dd197}.
-	* @param string $column_name
-	* 	DB column_name
+	* @param string $data_column_name
+	* 	DB data_column_name
 	* @param string $tipo
 	* 	Component tipo
 	* @param ?array $value
@@ -139,7 +141,7 @@ trait section_v7 {
 	* @return bool
 	* 	Returns false if JSON fragment save fails.
 	*/
-	public function save_partial( string $column_name, string $tipo, ?array $value ) : bool {
+	public function save_partial( string $data_column_name, string $tipo, ?array $value ) : bool {
 
 		// sample SQL
 			// UPDATE matrix
@@ -164,8 +166,8 @@ trait section_v7 {
 				$stmt_name,
 				"
 					UPDATE $table
-					SET $column_name = jsonb_set(
-						$column_name,
+					SET $data_column_name = jsonb_set(
+						$data_column_name,
 						$1::text[],
 						$2::jsonb,
 						true
@@ -240,14 +242,14 @@ trait section_v7 {
 	* Removes section data partially using the component's column and tipo
 	* as keys for path selection, like {dd197}.
 	* If the path does not already exist, no error is generated.
-	* @param string $column_name
-	* 	Component data column_name name. E.g. 'date'
+	* @param string $data_column_name
+	* 	Component data data_column_name name. E.g. 'date'
 	* @param string $tipo
 	* 	Component tipo
 	* @return bool
 	* 	Returns false if JSON fragment delete fails.
 	*/
-	public function delete_partial( string $column_name, string $tipo ) : bool {
+	public function delete_partial( string $data_column_name, string $tipo ) : bool {
 
 		// sample SQL
 			// -- Removing
@@ -267,7 +269,7 @@ trait section_v7 {
 				$stmt_name,
 				"
 					UPDATE $table
-					SET $column_name = $column_name #- $1::text[]
+					SET $data_column_name = $data_column_name #- $1::text[]
 					WHERE section_tipo = $2
 					  AND section_id = $3
 					RETURNING id

@@ -130,8 +130,12 @@ abstract class component_common extends common {
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
 
+		// Defined in every component
+		public $data_column;
+
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation;
+
 
 
 	/**
