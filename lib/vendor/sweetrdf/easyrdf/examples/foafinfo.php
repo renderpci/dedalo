@@ -22,7 +22,7 @@ require_once __DIR__.'/html_tag_helpers.php';
 <h1>EasyRdf FOAF Info Example</h1>
 
 <?php echo form_tag(); ?>
-<?php echo text_field_tag('uri', 'http://njh.me/foaf.rdf', ['size' => 50]); ?>
+<?php echo text_field_tag('uri', 'https://www.aelius.com/njh/foaf.rdf', ['size' => 50]); ?>
 <?php echo submit_tag(); ?>
 <?php echo form_end_tag(); ?>
 

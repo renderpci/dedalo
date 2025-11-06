@@ -23,17 +23,17 @@ $graph->addLiteral('http://example.com/joe', 'foaf:name', 'Joe Bloggs');
 $graph->addLiteral('http://example.com/joe', 'foaf:name', 'Joseph Bloggs');
 $graph->add('http://example.com/joe', 'rdfs:label', 'Joe');
 
-$graph->setType('http://njh.me/', 'foaf:Person');
-$graph->add('http://njh.me/', 'rdfs:label', 'Nick');
-$graph->addLiteral('http://njh.me/', 'foaf:name', 'Nicholas Humfrey');
-$graph->addResource('http://njh.me/', 'foaf:homepage', 'http://www.aelius.com/njh/');
+$graph->setType('https://www.aelius.com/njh/', 'foaf:Person');
+$graph->add('https://www.aelius.com/njh/', 'rdfs:label', 'Nick');
+$graph->addLiteral('https://www.aelius.com/njh/', 'foaf:name', 'Nicholas Humfrey');
+$graph->addResource('https://www.aelius.com/njh/', 'foaf:homepage', 'http://www.aelius.com/njh/');
 ?>
 
 <p>
   <b>Name:</b> <?php echo $graph->get('http://example.com/joe', 'foaf:name'); ?> <br />
   <b>Names:</b> <?php echo $graph->join('http://example.com/joe', 'foaf:name'); ?> <br />
 
-  <b>Label:</b> <?php echo $graph->label('http://njh.me/'); ?> <br />
+  <b>Label:</b> <?php echo $graph->label('https://www.aelius.com/njh/'); ?> <br />
   <b>Properties:</b> <?php echo implode(', ', $graph->properties('http://example.com/joe')); ?> <br />
   <b>PropertyUris:</b> <?php echo implode(', ', $graph->propertyUris('http://example.com/joe')); ?> <br />
   <b>People:</b> <?php echo implode(', ', $graph->allOfType('foaf:Person')); ?> <br />

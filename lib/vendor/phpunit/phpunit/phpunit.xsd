@@ -2,7 +2,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:annotation>
         <xs:documentation source="https://phpunit.de/documentation.html">
-            This Schema file defines the rules by which the XML configuration file of PHPUnit 12.2 may be structured.
+            This Schema file defines the rules by which the XML configuration file of PHPUnit 12.4 may be structured.
         </xs:documentation>
         <xs:appinfo source="https://phpunit.de/documentation.html"/>
     </xs:annotation>
@@ -118,6 +118,7 @@
         <xs:restriction base="xs:string">
             <xs:enumeration value="default"/>
             <xs:enumeration value="defects"/>
+            <xs:enumeration value="defects,random"/>
             <xs:enumeration value="depends"/>
             <xs:enumeration value="depends,defects"/>
             <xs:enumeration value="depends,duration"/>
@@ -253,6 +254,7 @@
             </xs:choice>
         </xs:sequence>
         <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="bootstrap" type="xs:string" use="optional"/>
     </xs:complexType>
     <xs:group name="testSuitePathGroup">
         <xs:sequence>
