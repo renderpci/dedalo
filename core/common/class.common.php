@@ -32,6 +32,7 @@ abstract class common {
 		// string label. like 'component_section_id'
 		public $label;
 		public $dato; // object dato (JSON encoded in db)
+		public $data; // object data (JSON encoded in db)
 		public $section_id;
 
 		// object ontology_node. Ontology definition object
