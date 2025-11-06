@@ -13,7 +13,7 @@ import {
 	delete_instances,
 	find_instances,
 	key_instances_builder
-} from '../../common/js/instances.js'
+} from '../../../core/common/js/instances.js'
 
 
 
@@ -47,7 +47,7 @@ describe(`INSTANCES LIFE-CYCLE`, async function() {
 	// instances
 	it(`instances`, async function() {
 
-		const module = await import('../../common/js/instances.js')
+		const module = await import('../../../core/common/js/instances.js')
 
 		assert.equal(typeof module, 'object', 'module must be object');
 		[
@@ -237,7 +237,7 @@ async function life_cycle_test(element) {
 				})
 				element.caller.ar_instances.push(to_destroy_instance)
 				const destroyed = await to_destroy_instance.destroy(true)
-				
+
 			// asserts
 				assert.deepEqual(destroyed, { delete_self : true })
 

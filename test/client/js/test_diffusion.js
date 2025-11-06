@@ -2,9 +2,9 @@
 /*global it, describe, assert */
 /*eslint no-undef: "error"*/
 
-// import {ui} from '../../common/js/ui.js'
-import {get_instance} from '../../common/js/instances.js'
-import {pause} from '../../common/js/utils/util.js'
+// import {ui} from '../../../core/common/js/ui.js'
+import {get_instance} from '../../../core/common/js/instances.js'
+import {pause} from '../../../core/common/js/utils/util.js'
 
 
 
@@ -232,7 +232,7 @@ describe(`SECTION PUBLICATION IMAGE LIST TEST`,  function() {
 	it(`Create section`, async function() {
 
 		section = await get_instance(options)
-		
+
 		console.log('section:', section);
 
 		await section.build(true)

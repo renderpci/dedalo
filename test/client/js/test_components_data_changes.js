@@ -5,7 +5,7 @@
 import {
 	elements
 } from './elements.js'
-import {get_instance} from '../../common/js/instances.js'
+import {get_instance} from '../../../core/common/js/instances.js'
 
 
 

@@ -5,8 +5,8 @@
 import {
 	elements
 } from './elements.js'
-import {get_instance} from '../../common/js/instances.js'
-import {ui} from '../../common/js/ui.js'
+import {get_instance} from '../../../core/common/js/instances.js'
+import {ui} from '../../../core/common/js/ui.js'
 
 
 describe("COMPONENTS ACTIVATE", async function() {

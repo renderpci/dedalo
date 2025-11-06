@@ -5,7 +5,7 @@
 // import {
 // 	elements
 // } from './elements.js'
-import {get_instance, get_all_instances} from '../../common/js/instances.js'
+import {get_instance, get_all_instances} from '../../../core/common/js/instances.js'
 
 
 
@@ -86,7 +86,7 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 		const add = (name) => {
 			elements.push({
 				name	: name,
-				path	: '../../area_maintenance/widgets/'+name+'/js/'+name+'.js',
+				path	: '../../../core/area_maintenance/widgets/'+name+'/js/'+name+'.js',
 				mode	: mode,
 				lang	: lang,
 				value	: null
@@ -133,7 +133,7 @@ import {get_instance, get_all_instances} from '../../common/js/instances.js'
 		const add = (name) => {
 			elements.push({
 				name	: name,
-				path	: `../../services/${name}/js/${name}.js`,
+				path	: `../../../core/services/${name}/js/${name}.js`,
 				mode	: mode,
 				lang	: lang,
 				value	: null

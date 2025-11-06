@@ -2,6 +2,7 @@
 
 // require __DIR__ . '/../src/autoload.php';
 // require __DIR__ . '/autoload.php';
+// require dirname(__FILE__, 3) . '/lib/vendor/autoload.php';
 
 // SHOW_DEBUG. Overwrite config SHOW_DEBUG
 	define('SHOW_DEBUG', false);
@@ -17,7 +18,7 @@
 	define('IS_UNIT_TEST', true);
 
 // config file
-	require_once dirname(__FILE__, 2) . '/config/config.php';
+	require_once dirname(__FILE__, 3) . '/config/config.php';
 
 // check is development server. if not, throw to prevent malicious access
 	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {

@@ -5,7 +5,7 @@
 
 
 
-import {event_manager} from '../../common/js/event_manager.js'
+import {event_manager} from '../../../core/common/js/event_manager.js'
 
 
 
@@ -29,7 +29,7 @@ describe(`EVENT_MANAGER`, async () => {
 		assert.equal(typeof event_manager, 'object', 'event_manager must be object');
 		assert.deepEqual(window.event_manager, event_manager, 'token must be the same');
 
-		const module = await import('../../common/js/event_manager.js');
+		const module = await import('../../../core/common/js/event_manager.js');
 		[
 			'subscribe',
 			'unsubscribe',

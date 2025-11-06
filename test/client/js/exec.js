@@ -14,7 +14,7 @@
 
 		// user is not logged
 
-		import ('../../common/js/instances.js')
+		import ('../../../core/common/js/instances.js')
 		.then(async function(module){
 
 			// login instance add

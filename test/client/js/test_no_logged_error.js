@@ -4,8 +4,8 @@
 
 
 
-import {get_instance} from '../../common/js/instances.js'
-import {render_relogin} from '../../login/js/render_login.js'
+import {get_instance} from '../../../core/common/js/instances.js'
+import {render_relogin} from '../../../core/login/js/render_login.js'
 
 
 

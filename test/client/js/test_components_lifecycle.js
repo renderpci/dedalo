@@ -6,7 +6,7 @@
 import {
 	elements
 } from './elements.js'
-import {get_instance, get_all_instances, delete_instance} from '../../common/js/instances.js'
+import {get_instance, get_all_instances, delete_instance} from '../../../core/common/js/instances.js'
 
 
 

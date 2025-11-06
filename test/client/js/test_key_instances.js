@@ -10,7 +10,7 @@ import {
 } from './elements.js'
 import {
 	key_instances_builder
-} from '../../common/js/instances.js'
+} from '../../../core/common/js/instances.js'
 
 
 

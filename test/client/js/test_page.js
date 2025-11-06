@@ -3,10 +3,10 @@
 /*eslint no-undef: "error"*/
 
 
-import {section} from '../../section/js/section.js'
-import {get_instance} from '../../common/js/instances.js'
-import {ui} from '../../common/js/ui.js'
-import {render_relogin} from '../../login/js/render_login.js'
+import {section} from '../../../core/section/js/section.js'
+import {get_instance} from '../../../core/common/js/instances.js'
+import {ui} from '../../../core/common/js/ui.js'
+import {render_relogin} from '../../../core/login/js/render_login.js'
 
 
 

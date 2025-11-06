@@ -5,9 +5,9 @@
 import {
 	elements
 } from './elements.js'
-import {get_instance} from '../../common/js/instances.js'
-import {ui} from '../../common/js/ui.js'
-import {url_vars_to_object} from '../../common/js/utils/index.js'
+import {get_instance} from '../../../core/common/js/instances.js'
+import {ui} from '../../../core/common/js/ui.js'
+import {url_vars_to_object} from '../../../core/common/js/utils/index.js'
 
 
 

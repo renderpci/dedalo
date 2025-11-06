@@ -8,7 +8,7 @@ import {
 	mode,
 	lang
 } from './elements.js'
-import {get_instance, delete_instances} from '../../common/js/instances.js'
+import {get_instance, delete_instances} from '../../../core/common/js/instances.js'
 
 
 
