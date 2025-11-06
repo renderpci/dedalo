@@ -16,6 +16,8 @@ class component_security_access extends component_common {
 	protected $data_column = 'misc';
 
 
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = false;
 
 	/**
 	* GET_CACHE_TREE_FILE_NAME

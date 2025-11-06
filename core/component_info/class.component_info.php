@@ -20,6 +20,8 @@ class component_info extends component_common {
 	protected $data_column = 'mics';
 
 
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = false;
 
 	/**
 	* GET_DATO

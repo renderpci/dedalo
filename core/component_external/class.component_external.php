@@ -13,6 +13,8 @@ class component_external extends component_common {
 	protected $data_column = 'misc';
 
 
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = false;
 
 	/**
 	* LOAD_DATA_FROM_REMOTE
