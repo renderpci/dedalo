@@ -371,436 +371,449 @@ class section extends common {
 	}//end get_data
 
 
-				$this->get_JSON_RecordObj_matrix();
-
-			// load dato from db
-				$dato = $this->JSON_RecordObj_matrix->get_dato();
-
-		// fix dato (force object)
-			$this->dato = is_object($dato)
-				? $dato
-				: (empty($dato) ? new stdClass() : (object)$dato);
-
-		// @v7 loading new columns hack with v6 column datos compatibility
-			$this->load_section_data();
-
-
-		return $this->dato;
-	}//end get_dato
-
-
 
 	/**
-	* SET_DATO
-	* Set whole section data as raw object
-	* Fix section relations and components to prevent save issues
-	* @return bool true
+	* SET_DATA
+	* @param array|null $data
+	* @return
 	*/
-	public function set_dato($dato) : bool {
-
-		// call common->set_dato (!) fix var 'is_loaded_matrix_data' as true
-			$result = parent::set_dato($dato);
-
-		// update JSON_RecordObj_matrix cached data
-			if (!empty($this->section_id)) {
-				// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
-				$this->get_JSON_RecordObj_matrix();
-				// Set dato
-				$this->JSON_RecordObj_matrix->set_dato($dato);
-				$this->JSON_RecordObj_matrix->set_blIsLoaded(true);
-			}
-
-
-		return $result;
-	}//end set_dato
-
-
-
-	/**
-	* GET_COMPONENT_DATO
-	* Extract from the container of the section, the specific data of each component in the required language
-	* will be deprecated with the get_all_component_data (08-2017)
-	*/
-	public function get_component_dato(string $component_tipo, string $lang, bool $lang_fallback=false) {
-
-		$all_component_data = $this->get_all_component_data($component_tipo);
-
-		if ($lang_fallback===true) { // case mode list (see component common)
-
-			if (isset($all_component_data->dato->{$lang}) && !empty($all_component_data->dato->{$lang})) {
-				// lang data exists
-				$component_dato = $all_component_data->dato->{$lang};
-			}else{
-				// fallback to default lang
-				$lang_default	= DEDALO_DATA_LANG_DEFAULT;
-				$component_dato	= ($lang!==$lang_default && !empty($all_component_data->dato->{$lang_default}))
-					? $all_component_data->dato->{$lang_default}
-					: null;
-			}
-
-		}else{
-
-			$component_dato = isset($all_component_data->dato->{$lang})
-				? $all_component_data->dato->{$lang}
-				: null;
-		}
-
-		return $component_dato;
-	}//end get_component_dato
-
-
-
-	/**
-	* GET_ALL_COMPONENT_DATA
-	* Get all data of the component, with dato, valor, valor_list and dataframe
-	* this function will be the only communication with the component for get the information (08-2017)
-	* @param string $component_tipo
-	* @return object|null component_data
-	*/
-	public function get_all_component_data(string $component_tipo) : ?object {
-
-		$section_data = $this->get_dato();
-
-		if (!is_object($section_data)) {
-			trigger_error("[get_all_component_data] Error on read component_data component_tipo: $component_tipo" );
-		}
-
-		$component_data = isset($section_data->components->{$component_tipo})
-			? $section_data->components->{$component_tipo}
-			: null;
-
-		return $component_data;
-	}//end get_all_component_data
-
-
-
-	/**
-	* SAVE_COMPONENT_DATO
-	* Save the component data received in the JSON container of the section
-	* Rebuild the global object of the section (at the moment it is not possible to save only part of the JSON object in PostgreSQL)
-	* @param object $component_obj
-	* @param string $component_data_type
-	* @param bool $save_to_database
-	* @return int|string|null $section_id
-	*/
-	public function save_component_dato(object $component_obj, string $component_data_type, bool $save_to_database) : int|string|null {
-
-		// section. The section is necessary before managing the component data. If it does not exist, we will create it previously
-			if (abs(intval($this->get_section_id()))<1  && strpos((string)$this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
-				$section_id = $this->Save();
-				// throw new Exception("Warning : Trying save component in section without section_id. Created section and saved", 1);
-				debug_log(__METHOD__
-					." Warning : Trying save component in section without section_id.". PHP_EOL
-					." Created and saved a new section" . PHP_EOL
-					.' new section_id: ' . $section_id
-					, logger::ERROR
-				);
-			}
-
-		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
-		// current section conflicts (and for speed)
-			// $component_obj->set_section_obj($this);
-
-		// component_global_dato : Extract the component portion from the section's global object
-			$component_tipo	= $component_obj->get_tipo();
-			$component_lang	= $component_obj->get_lang();
-			if (empty($component_tipo)) {
-				throw new Exception("Error Processing Request: component_tipo is empty", 1);
-			}
-
-		// set dato
-			if ($component_data_type==='relation') {
-
-				// relation components
-				// previous component dato from unchanged section dato object
-				// It is used to check time_machine data
-				// when time_machine has not previous data of the component,
-				// because was a explicit not time_machine save.
-				// The previous_component_dato will be used to set it as previous time_machine_data.
-				// It avoids losing previous data modifications.
-				$previous_component_dato = array_values(
-					array_filter($this->get_relations(), function($el) use ($component_tipo, $component_obj){
-
-						// dataframe case
-						// by default, component_dataframe is built with caller_dataframe except when import data.
-						// When import data from CSV files, the component is built without dataframe
-						// because is not possible to create different instances for every dataframe data.
-						// In those cases the component_dataframe manage its data as other components with whole data.
-						$previous_dato = (get_class($component_obj)==='component_dataframe' && isset($component_obj->caller_dataframe) )
-							? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
-								&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
-								&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
-								&& $el->main_component_tipo===$component_obj->caller_dataframe->main_component_tipo
-							: isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
-
-
-						 return $previous_dato;
-					})
-				);
-
-				$this->set_component_relation_dato( $component_obj );
-
-			}else{
-
-				// direct components
-
-				// previous component dato from unchanged section dato object
-				$previous_component_dato = $this->get_component_dato(
-					$component_tipo,
-					$component_lang,
-					false // bool lang_fallback
-				);
-
-				$this->set_component_direct_dato( $component_obj );
-			}
-
-		// diffusion_info
-			$this->dato->diffusion_info = null;	// Always reset section diffusion_info on save components
-
-		// optional stop the save process to delay DDBB access
-			if($save_to_database===false) {
-				// Stop here (remember make a real section save later!)
-				// No component time machine data will be saved when section saves later
-				// debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
-				return $this->section_id;
-			}
-
-		// time machine data. We save only current component lang 'dato' in time machine
-			$save_options = new stdClass();
-
-				// get the time_machine data from component
-				// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
-				$save_options->time_machine_data	= $component_obj->get_time_machine_data_to_save();//$component_obj->get_dato_unchanged();
-				$save_options->time_machine_lang	= $component_lang;
-				$save_options->time_machine_tipo	= $component_tipo;
-				// previous_component_dato
-				$save_options->previous_component_dato	= $previous_component_dato;
-
-				// component_dataframe
-				// when the component is dataframe, save all information together
-				// use the main and dataframe data as locators, mix all and save with the main component tipo
-				if (get_class($component_obj)==='component_dataframe') {
-					// use the main component
-					$main_tipo = $component_obj->get_main_component_tipo();
-					$save_options->time_machine_tipo	= $main_tipo;
-				}
-				// bulk_process_id column
-				if( isset($component_obj->bulk_process_id) ){
-					$save_options->time_machine_bulk_process_id	= $component_obj->bulk_process_id;
-				}
-
-		// save section result
-			$result = $this->Save( $save_options );
-
-		// @v7 partial save temporal
-			// if ($component_obj->get_data_column()==='string') {
-			// 	dump($component_obj->get_full_data(), ' $component_obj->get_full_data() ++ '.to_string($component_obj->get_tipo()));
-			// 	$this->save_partial(
-			// 		$component_obj->get_data_column(),
-			// 		$component_obj->get_tipo(),
-			// 		$component_obj->get_full_data()
-			// 	);
-			// }
-
-			// DIFFUSION_INFO
-			// Note that this process can be very long if there are many inverse locators in this section
-			// To optimize save process in scripts of importation, you can disable this option if is not really necessary
-			//
-			// $dato->diffusion_info = null;	// Always reset section diffusion_info on save components
-			// register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
-			if ($component_obj->update_diffusion_info_propagate_changes===true) {
-				$this->diffusion_info_propagate_changes();
-			}
-
-		// post_save_component_processes
-			$this->post_save_component_processes((object)[
-				'component' => $component_obj
-			]);
-
-
-		return $result;
-	}//end save_component_dato
-
-
-
-	/**
-	* SET_COMPONENT_DIRECT_DATO
-	* Set literal value to component (path: dato->relations)
-	* @param object $component_obj
-	* @return object|null $fixed_component_dato
-	*  sample:
-	*  {
-	*	    "inf": "input_text [component_input_text]",
-	*	    "dato": {
-	*	        "lg-eng": null
-	*	    }
-	*	}
-	*/
-	public function set_component_direct_dato( object $component_obj ) : ?object {
-
-		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
-		// current section conflicts (and for speed)
-			$component_obj->set_section_obj($this);
-
-		// component short vars
-			$component_tipo			= $component_obj->get_tipo();
-			$component_lang			= $component_obj->get_lang();
-			$component_model_name	= get_class($component_obj);
-
-		// section dato
-			$dato = $this->get_dato();
-			if (!is_object($dato)) {
-				// $dato = $this->dato = new stdClass();
-				throw new Exception("Error Processing Request. Section Dato is not as expected type (object). type: ".gettype($dato), 1);
-			}
-
-		// component_global_dato. Select component in section dato
-			if (isset($dato->components->{$component_tipo})) {
-
-				// component dato already exists in section object. Only select it
-					$component_global_dato = $dato->components->{$component_tipo};
-
-				// component dato property
-					if (!isset($component_global_dato->dato)) {
-						$component_global_dato->dato = new stdClass();
-					}
-
-			}else{
-
-				// component dato NOT exists in section object. We build a new one with current info
-					#$obj_global 						= new stdClass();
-					#$obj_global->$component_tipo 		= new stdClass();
-					#$component_global_dato 			= new stdClass();
-					#$component_global_dato				= $obj_global->$component_tipo;
-
-					$component_global_dato = new stdClass();
-
-						// INFO : We create the info of the current component
-							// $component_global_dato->info 		= new stdClass();
-							// 	$component_global_dato->info->label = ontology_node::get_term_by_tipo($component_tipo,null,true);
-							// 	$component_global_dato->info->model= $component_model_name;
-							$inf = ontology_node::get_term_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
-							$component_global_dato->inf = $inf;
-
-						$component_global_dato->dato = new stdClass();
-						// $component_global_dato->valor		= new stdClass();
-						// $component_global_dato->valor_list	= new stdClass();
-			}
-
-		// component_lang
-			if (!isset($component_global_dato->dato->{$component_lang})) {
-				$component_global_dato->dato->{$component_lang} = new stdClass();
-			}
-
-		// dato_unchanged : We update the data in the current language
-			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
-
-		// unset when data null
-			if($component_dato===null || empty($component_dato)){
-
-				// unset current language
-				if (isset($component_global_dato->dato->{$component_lang})) {
-					unset($component_global_dato->dato->{$component_lang});
-				}
-
-				// check all languages, if any other languages has null data, remove it.
-				if (!empty($component_global_dato->dato)) {
-					foreach ($component_global_dato->dato as $current_lang => $current_value) {
-						if($current_value===null){
-							unset($component_global_dato->dato->{$current_lang});
-						}
-					}
-				}
-
-				// check data object, if do not has any property, remove the global object.
-				$component_global_dato_count = isset($component_global_dato->dato)
-					? count(get_object_vars($component_global_dato->dato))
-					: 0;
-				if($component_global_dato_count === 0){
-
-					// remove whole component dato definition
-					unset($dato->components->{$component_tipo});
-
-					// update section with full data object
-					$this->set_dato($dato);
-
-					// stop here
-					return null;
-				}
-			}else{
-
-				// update component dato current lang value
-				$component_global_dato->dato->{$component_lang} = $component_dato;
-			}
-
-		// replace component portion of global object :  we update the entire component in the section global object
-			if (!isset($dato->components->{$component_tipo})) {
-				if (!isset($dato->components)) {
-					$dato->components = new stdClass();
-				}
-				$dato->components->{$component_tipo} = new stdClass();
-			}
-			$dato->components->{$component_tipo} = $component_global_dato;
-
-		// update section full data object
-			$this->set_dato($dato);
-
-		// component_dato
-			$fixed_component_dato = $dato->components->{$component_tipo};
-
-
-		return $fixed_component_dato;
-	}//end set_component_direct_dato
-
-
-
-	/**
-	* SET_COMPONENT_RELATION_DATO
-	* Set relation value to section (path: dato->relations)
-	* @param object $component_obj
-	* 	Component instance
-	* @return array $fixed_component_dato
-	* 	sample:
-	* 	[
-	*	    {
-	*	        "section_tipo": "test3",
-	*	        "section_id": "1",
-	*	        "type": "dd151",
-	*	        "from_component_tipo": "test101"
-	*	    },
-	*	    {
-	*	        "type": "dd151",
-	*	        "section_id": "21",
-	*	        "section_tipo": "test3",
-	*	        "from_component_tipo": "test101"
-	*	    }
-	*	]
-	*/
-	public function set_component_relation_dato( object $component_obj ) : array {
-
-		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
-		// current section conflicts (and for speed)
-			$component_obj->set_section_obj($this);
-
-		// component short vars
-			$component_tipo	= $component_obj->get_tipo();
-			$component_dato	= $component_obj->get_dato_full();
-
-		$options = new stdClass();
-			$options->component_tipo		= $component_tipo;
-			$options->relations_container	= 'relations';
-			$options->model					= $component_obj->get_model();
-			$options->caller_dataframe		= $component_obj->get_caller_dataframe();
-
-		// Remove all previous locators of current component tipo
-		$this->remove_relations_from_component_tipo( $options );
-
-		// Remove all existing search locators of current component tipo
-		$options->relations_container = 'relations_search';
-		$this->remove_relations_from_component_tipo( $options );
-
-		// add locators
-		if (!empty($component_dato)) {
+	public function set_data( ?array $data ) {
+
+		$this->data = $data;
+
+	}//end set_data
+
+
+
+	// /**
+	// * GET DATO
+	// * Loads the section data from database if is not already loaded
+	// * and returns the assigned value.
+	// * @return object $dato
+	// */
+	// public function get_dato() : object {
+
+	// 	// check valid call
+	// 		if ( abs(intval($this->section_id))<1 &&
+	// 			(strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)===false &&
+	// 			strpos((string)$this->section_id, 'search')===false)
+	// 			) {
+
+	// 			if(SHOW_DEBUG===true) {
+	// 				if ($this->section_id==='result') {
+	// 					throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
+	// 				};
+	// 			}
+	// 			debug_log(__METHOD__
+	// 				." section_id <1 is not allowed . section_id: ".to_string($this->section_id)
+	// 				, logger::ERROR
+	// 			);
+	// 			$dbt = debug_backtrace();
+	// 			dump($dbt, ' dbt debug_backtrace ++ '.to_string());
+	// 			throw new Exception("Error Processing Request. get_component_data of section section_id <1 is not allowed (section_id:'$this->section_id')", 1);
+	// 		}
+
+	// 	// save_handler session case
+	// 		// If section_id have a temporal string, the save handier will be 'session'
+	// 		// the section will be saved in memory, NOT in the database and you will get the data from there
+	// 		if( strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
+	// 			$this->save_handler = 'session';
+	// 		}
+	// 		// Sometimes we need use section as temporal element without save real data to database. Is this case
+	// 		// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+	// 		if (isset($this->save_handler) && $this->save_handler==='session') {
+	// 			if (!isset($this->dato)) {
+	// 				$temp_data_uid = $this->tipo .'_'. $this->section_id;
+	// 				# Fix dato as object
+	// 				$this->dato = isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])
+	// 					? clone $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]
+	// 					: new stdClass();
+	// 			}
+	// 			return $this->dato;
+	// 		}
+
+	// 	// data is loaded once
+	// 		// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+	// 			$this->get_JSON_RecordObj_matrix();
+
+	// 		// load dato from db
+	// 			$dato = $this->JSON_RecordObj_matrix->get_dato();
+
+	// 	// fix dato (force object)
+	// 		$this->dato = is_object($dato)
+	// 			? $dato
+	// 			: (empty($dato) ? new stdClass() : (object)$dato);
+
+	// 	// @v7 loading new columns hack with v6 column datos compatibility
+	// 		$this->load_section_data();
+
+
+	// 	return $this->dato;
+	// }//end get_dato
+
+
+
+	// /**
+	// * SET_DATO
+	// * Set whole section data as raw object
+	// * Fix section relations and components to prevent save issues
+	// * @return bool true
+	// */
+	// public function set_dato($dato) : bool {
+
+	// 	// call common->set_dato (!) fix var 'is_loaded_matrix_data' as true
+	// 		$result = parent::set_dato($dato);
+
+	// 	// update JSON_RecordObj_matrix cached data
+	// 		if (!empty($this->section_id)) {
+	// 			// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
+	// 			$this->get_JSON_RecordObj_matrix();
+	// 			// Set dato
+	// 			$this->JSON_RecordObj_matrix->set_dato($dato);
+	// 			$this->JSON_RecordObj_matrix->set_blIsLoaded(true);
+	// 		}
+
+
+	// 	return $result;
+	// }//end set_dato
+
+
+
+	// /**
+	// * GET_COMPONENT_DATO
+	// * Extract from the container of the section, the specific data of each component in the required language
+	// * will be deprecated with the get_all_component_data (08-2017)
+	// */
+	// public function get_component_dato(string $component_tipo, string $lang, bool $lang_fallback=false) {
+
+	// 	$all_component_data = $this->get_all_component_data($component_tipo);
+
+	// 	if ($lang_fallback===true) { // case mode list (see component common)
+
+	// 		if (isset($all_component_data->dato->{$lang}) && !empty($all_component_data->dato->{$lang})) {
+	// 			// lang data exists
+	// 			$component_dato = $all_component_data->dato->{$lang};
+	// 		}else{
+	// 			// fallback to default lang
+	// 			$lang_default	= DEDALO_DATA_LANG_DEFAULT;
+	// 			$component_dato	= ($lang!==$lang_default && !empty($all_component_data->dato->{$lang_default}))
+	// 				? $all_component_data->dato->{$lang_default}
+	// 				: null;
+	// 		}
+
+	// 	}else{
+
+	// 		$component_dato = isset($all_component_data->dato->{$lang})
+	// 			? $all_component_data->dato->{$lang}
+	// 			: null;
+	// 	}
+
+	// 	return $component_dato;
+	// }//end get_component_dato
+
+
+
+	// /**
+	// * GET_ALL_COMPONENT_DATA
+	// * Get all data of the component, with dato, valor, valor_list and dataframe
+	// * this function will be the only communication with the component for get the information (08-2017)
+	// * @param string $component_tipo
+	// * @return object|null component_data
+	// */
+	// public function get_all_component_data(string $component_tipo) : ?object {
+
+	// 	$section_data = $this->get_dato();
+
+	// 	if (!is_object($section_data)) {
+	// 		trigger_error("[get_all_component_data] Error on read component_data component_tipo: $component_tipo" );
+	// 	}
+
+	// 	$component_data = isset($section_data->components->{$component_tipo})
+	// 		? $section_data->components->{$component_tipo}
+	// 		: null;
+
+	// 	return $component_data;
+	// }//end get_all_component_data
+
+
+
+	// /**
+	// * SAVE_COMPONENT_DATO
+	// * Save the component data received in the JSON container of the section
+	// * Rebuild the global object of the section (at the moment it is not possible to save only part of the JSON object in PostgreSQL)
+	// * @param object $component_obj
+	// * @param string $component_data_type
+	// * @param bool $save_to_database
+	// * @return int|string|null $section_id
+	// */
+	// public function save_component_dato(object $component_obj, string $component_data_type, bool $save_to_database) : int|string|null {
+
+	// 	// section. The section is necessary before managing the component data. If it does not exist, we will create it previously
+	// 		if (abs(intval($this->get_section_id()))<1  && strpos((string)$this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
+	// 			$section_id = $this->Save();
+	// 			// throw new Exception("Warning : Trying save component in section without section_id. Created section and saved", 1);
+	// 			debug_log(__METHOD__
+	// 				." Warning : Trying save component in section without section_id.". PHP_EOL
+	// 				." Created and saved a new section" . PHP_EOL
+	// 				.' new section_id: ' . $section_id
+	// 				, logger::ERROR
+	// 			);
+	// 		}
+
+	// 	// set self section_obj to component. (!) Important to prevent cached and not cached versions of
+	// 	// current section conflicts (and for speed)
+	// 		// $component_obj->set_section_obj($this);
+
+	// 	// component_global_dato : Extract the component portion from the section's global object
+	// 		$component_tipo	= $component_obj->get_tipo();
+	// 		$component_lang	= $component_obj->get_lang();
+	// 		if (empty($component_tipo)) {
+	// 			throw new Exception("Error Processing Request: component_tipo is empty", 1);
+	// 		}
+
+	// 	// set dato
+	// 		if ($component_data_type==='relation') {
+
+	// 			// relation components
+	// 			// previous component dato from unchanged section dato object
+	// 			// It is used to check time_machine data
+	// 			// when time_machine has not previous data of the component,
+	// 			// because was a explicit not time_machine save.
+	// 			// The previous_component_dato will be used to set it as previous time_machine_data.
+	// 			// It avoids losing previous data modifications.
+	// 			$previous_component_dato = array_values(
+	// 				array_filter($this->get_relations(), function($el) use ($component_tipo, $component_obj){
+
+	// 					// dataframe case
+	// 					// by default, component_dataframe is built with caller_dataframe except when import data.
+	// 					// When import data from CSV files, the component is built without dataframe
+	// 					// because is not possible to create different instances for every dataframe data.
+	// 					// In those cases the component_dataframe manage its data as other components with whole data.
+	// 					$previous_dato = (get_class($component_obj)==='component_dataframe' && isset($component_obj->caller_dataframe) )
+	// 						? ( isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo )
+	// 							&& $el->section_tipo_key===$component_obj->caller_dataframe->section_tipo_key
+	// 							&& (int)$el->section_id_key===(int)$component_obj->caller_dataframe->section_id_key
+	// 							&& $el->main_component_tipo===$component_obj->caller_dataframe->main_component_tipo
+	// 						: isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+
+
+	// 					 return $previous_dato;
+	// 				})
+	// 			);
+
+	// 			$this->set_component_relation_dato( $component_obj );
+
+	// 		}else{
+
+	// 			// direct components
+
+	// 			// previous component dato from unchanged section dato object
+	// 			$previous_component_dato = $this->get_component_dato(
+	// 				$component_tipo,
+	// 				$component_lang,
+	// 				false // bool lang_fallback
+	// 			);
+
+	// 			$this->set_component_direct_dato( $component_obj );
+	// 		}
+
+	// 	// diffusion_info
+	// 		$this->dato->diffusion_info = null;	// Always reset section diffusion_info on save components
+
+	// 	// optional stop the save process to delay DDBB access
+	// 		if($save_to_database===false) {
+	// 			// Stop here (remember make a real section save later!)
+	// 			// No component time machine data will be saved when section saves later
+	// 			// debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
+	// 			return $this->section_id;
+	// 		}
+
+	// 	// time machine data. We save only current component lang 'dato' in time machine
+	// 		$save_options = new stdClass();
+
+	// 			// get the time_machine data from component
+	// 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
+	// 			$save_options->time_machine_data	= $component_obj->get_time_machine_data_to_save();//$component_obj->get_dato_unchanged();
+	// 			$save_options->time_machine_lang	= $component_lang;
+	// 			$save_options->time_machine_tipo	= $component_tipo;
+	// 			// previous_component_dato
+	// 			$save_options->previous_component_dato	= $previous_component_dato;
+
+	// 			// component_dataframe
+	// 			// when the component is dataframe, save all information together
+	// 			// use the main and dataframe data as locators, mix all and save with the main component tipo
+	// 			if (get_class($component_obj)==='component_dataframe') {
+	// 				// use the main component
+	// 				$main_tipo = $component_obj->get_main_component_tipo();
+	// 				$save_options->time_machine_tipo	= $main_tipo;
+	// 			}
+	// 			// bulk_process_id column
+	// 			if( isset($component_obj->bulk_process_id) ){
+	// 				$save_options->time_machine_bulk_process_id	= $component_obj->bulk_process_id;
+	// 			}
+
+	// 	// save section result
+	// 		$result = $this->Save( $save_options );
+
+	// 	// @v7 partial save temporal
+	// 		// if ($component_obj->get_data_column()==='string') {
+	// 		// 	dump($component_obj->get_full_data(), ' $component_obj->get_full_data() ++ '.to_string($component_obj->get_tipo()));
+	// 		// 	$this->save_partial(
+	// 		// 		$component_obj->get_data_column(),
+	// 		// 		$component_obj->get_tipo(),
+	// 		// 		$component_obj->get_full_data()
+	// 		// 	);
+	// 		// }
+
+	// 		// DIFFUSION_INFO
+	// 		// Note that this process can be very long if there are many inverse locators in this section
+	// 		// To optimize save process in scripts of importation, you can disable this option if is not really necessary
+	// 		//
+	// 		// $dato->diffusion_info = null;	// Always reset section diffusion_info on save components
+	// 		// register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
+	// 		if ($component_obj->update_diffusion_info_propagate_changes===true) {
+	// 			$this->diffusion_info_propagate_changes();
+	// 		}
+
+	// 	// post_save_component_processes
+	// 		$this->post_save_component_processes((object)[
+	// 			'component' => $component_obj
+	// 		]);
+
+
+	// 	return $result;
+	// }//end save_component_dato
+
+
+
+	// /**
+	// * SET_COMPONENT_DIRECT_DATO
+	// * Set literal value to component (path: dato->relations)
+	// * @param object $component_obj
+	// * @return object|null $fixed_component_dato
+	// *  sample:
+	// *  {
+	// *	    "inf": "input_text [component_input_text]",
+	// *	    "dato": {
+	// *	        "lg-eng": null
+	// *	    }
+	// *	}
+	// */
+	// public function set_component_direct_dato( object $component_obj ) : ?object {
+
+	// 	// set self section_obj to component. (!) Important to prevent cached and not cached versions of
+	// 	// current section conflicts (and for speed)
+	// 		$component_obj->set_section_obj($this);
+
+	// 	// component short vars
+	// 		$component_tipo			= $component_obj->get_tipo();
+	// 		$component_lang			= $component_obj->get_lang();
+	// 		$component_model_name	= get_class($component_obj);
+
+	// 	// section dato
+	// 		$dato = $this->get_dato();
+	// 		if (!is_object($dato)) {
+	// 			// $dato = $this->dato = new stdClass();
+	// 			throw new Exception("Error Processing Request. Section Dato is not as expected type (object). type: ".gettype($dato), 1);
+	// 		}
+
+	// 	// component_global_dato. Select component in section dato
+	// 		if (isset($dato->components->{$component_tipo})) {
+
+	// 			// component dato already exists in section object. Only select it
+	// 				$component_global_dato = $dato->components->{$component_tipo};
+
+	// 			// component dato property
+	// 				if (!isset($component_global_dato->dato)) {
+	// 					$component_global_dato->dato = new stdClass();
+	// 				}
+
+	// 		}else{
+
+	// 			// component dato NOT exists in section object. We build a new one with current info
+	// 				#$obj_global 						= new stdClass();
+	// 				#$obj_global->$component_tipo 		= new stdClass();
+	// 				#$component_global_dato 			= new stdClass();
+	// 				#$component_global_dato				= $obj_global->$component_tipo;
+
+	// 				$component_global_dato = new stdClass();
+
+	// 					// INFO : We create the info of the current component
+	// 						// $component_global_dato->info 		= new stdClass();
+	// 						// 	$component_global_dato->info->label = ontology_node::get_term_by_tipo($component_tipo,null,true);
+	// 						// 	$component_global_dato->info->model= $component_model_name;
+	// 						$inf = ontology_node::get_term_by_tipo($component_tipo,null,true) .' ['.$component_model_name.']';
+	// 						$component_global_dato->inf = $inf;
+
+	// 					$component_global_dato->dato = new stdClass();
+	// 					// $component_global_dato->valor		= new stdClass();
+	// 					// $component_global_dato->valor_list	= new stdClass();
+	// 		}
+
+	// 	// component_lang
+	// 		if (!isset($component_global_dato->dato->{$component_lang})) {
+	// 			$component_global_dato->dato->{$component_lang} = new stdClass();
+	// 		}
+
+	// 	// dato_unchanged : We update the data in the current language
+	// 		$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+
+	// 	// unset when data null
+	// 		if($component_dato===null || empty($component_dato)){
+
+	// 			// unset current language
+	// 			if (isset($component_global_dato->dato->{$component_lang})) {
+	// 				unset($component_global_dato->dato->{$component_lang});
+	// 			}
+
+	// 			// check all languages, if any other languages has null data, remove it.
+	// 			if (!empty($component_global_dato->dato)) {
+	// 				foreach ($component_global_dato->dato as $current_lang => $current_value) {
+	// 					if($current_value===null){
+	// 						unset($component_global_dato->dato->{$current_lang});
+	// 					}
+	// 				}
+	// 			}
+
+	// 			// check data object, if do not has any property, remove the global object.
+	// 			$component_global_dato_count = isset($component_global_dato->dato)
+	// 				? count(get_object_vars($component_global_dato->dato))
+	// 				: 0;
+	// 			if($component_global_dato_count === 0){
+
+	// 				// remove whole component dato definition
+	// 				unset($dato->components->{$component_tipo});
+
+	// 				// update section with full data object
+	// 				$this->set_dato($dato);
+
+	// 				// stop here
+	// 				return null;
+	// 			}
+	// 		}else{
+
+	// 			// update component dato current lang value
+	// 			$component_global_dato->dato->{$component_lang} = $component_dato;
+	// 		}
+
+	// 	// replace component portion of global object :  we update the entire component in the section global object
+	// 		if (!isset($dato->components->{$component_tipo})) {
+	// 			if (!isset($dato->components)) {
+	// 				$dato->components = new stdClass();
+	// 			}
+	// 			$dato->components->{$component_tipo} = new stdClass();
+	// 		}
+	// 		$dato->components->{$component_tipo} = $component_global_dato;
+
+	// 	// update section full data object
+	// 		$this->set_dato($dato);
+
+	// 	// component_dato
+	// 		$fixed_component_dato = $dato->components->{$component_tipo};
+
+
+	// 	return $fixed_component_dato;
+	// }//end set_component_direct_dato
 
 			// ADD_RELATION . Add locator one by one
 			foreach ((array)$component_dato as $current_locator) {
