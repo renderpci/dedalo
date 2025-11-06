@@ -30,8 +30,6 @@ class section extends common {
 		public $section_virtual = false;
 		public $section_real_tipo;
 
-		public static $active_section_id;
-
 		public $is_temp = false; // Used to force save data to session instead database. Default is false
 
 		public $options;
@@ -92,27 +90,107 @@ class section extends common {
 
 
 
+	// /**
+	// * GET_INSTANCE
+	// * Cache section instances (singleton pattern)
+	// * @param string|int|null $section_id = null
+	// * @param string|null $tipo = null
+	// * @param string|null $mode = 'list'
+	// * @param bool $cache = true
+	// * @param object|null $caller_dataframe = null
+	// * @return object $section
+	// */
+	// public static function get_instance( string|int|null $section_id=null, ?string $tipo=null, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section {
+
+	// 	// tipo check. Is mandatory
+	// 		if (empty($tipo)) {
+	// 			$msg = "Error: on construct section : tipo is mandatory. section_id:'$section_id', tipo:'$tipo', mode:'$mode'";
+	// 			debug_log(__METHOD__
+	// 				. $msg
+	// 				, logger::ERROR
+	// 			);
+	// 			throw new Exception($msg, 1);
+	// 		}
+
+	// 	// tipo check model (only section is expected)
+	// 		$model = ontology_node::get_model_by_tipo($tipo,true);
+	// 		if ($model!=='section') {
+	// 			debug_log(__METHOD__
+	// 				. ' Expected model of tipo '.$tipo.' is section, but received is ' . PHP_EOL
+	// 				. ' model: ' . to_string($model)
+	// 				, logger::ERROR
+	// 			);
+	// 			if(SHOW_DEBUG===true) {
+	// 				$bt = debug_backtrace();
+	// 				dump($bt, ' bt ++ '.to_string());
+	// 			}
+	// 		}
+
+	// 	// cache
+	// 		// $cache = false;
+
+	// 	// cache is false case. Use always (cache=false) in imports (!). Not cache new sections (without section_id)
+	// 		if ($cache===false || empty($section_id) || $mode==='update' || $mode==='tm') {
+
+	// 			// instance new section
+	// 			$section = new section($section_id, $tipo, $mode);
+	// 			// dataframe case
+	// 			if(isset($caller_dataframe)){
+	// 				$section->set_caller_dataframe($caller_dataframe);
+	// 			}
+
+	// 			return $section;
+	// 		}//end if ($cache===false || empty($section_id))
+
+	// 	// cache is true case. Get cache instance if it exists. Otherwise, create a new one
+	// 		// cache overload
+	// 			$max_cache_instances	= 1200;
+	// 			$cache_slice_on			= 400;
+	// 			$total					= count(self::$ar_section_instances);
+	// 			if ( $total > $max_cache_instances ) {
+	// 				// new array
+	// 				$new_array = [];
+	// 				$i = 1;
+	// 				foreach (self::$ar_section_instances as $inst_key => $inst_value) {
+	// 					if ($i > $cache_slice_on) {
+	// 						$new_array[$inst_key] = $inst_value;
+	// 					}else{
+	// 						$i++;
+	// 					}
+	// 				}
+	// 				// replace matrix_instances array
+	// 				self::$ar_section_instances = $new_array;
+	// 			}
+
+	// 		// find current instance in cache
+	// 			$cache_key = implode('_', [$section_id, $tipo, $mode]);
+	// 			if(isset($caller_dataframe)){
+	// 				$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
+
+	// 			}
+	// 			if ( !isset(self::$ar_section_instances[$cache_key]) ) {
+	// 				self::$ar_section_instances[$cache_key] = new section($section_id, $tipo, $mode);
+	// 				// dataframe case
+	// 				if(isset($caller_dataframe)) {
+	// 					self::$ar_section_instances[$cache_key]->set_caller_dataframe($caller_dataframe);
+	// 				}
+	// 			}
+
+
+	// 	return self::$ar_section_instances[$cache_key];
+	// }//end get_instance
+
+
 	/**
 	* GET_INSTANCE
 	* Cache section instances (singleton pattern)
-	* @param string|int|null $section_id = null
-	* @param string|null $tipo = null
+	* @param string $tipo
 	* @param string|null $mode = 'list'
 	* @param bool $cache = true
 	* @param object|null $caller_dataframe = null
 	* @return object $section
 	*/
-	public static function get_instance( string|int|null $section_id=null, ?string $tipo=null, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section {
-
-		// tipo check. Is mandatory
-			if (empty($tipo)) {
-				$msg = "Error: on construct section : tipo is mandatory. section_id:'$section_id', tipo:'$tipo', mode:'$mode'";
-				debug_log(__METHOD__
-					. $msg
-					, logger::ERROR
-				);
-				throw new Exception($msg, 1);
-			}
+	public static function get_instance( string $tipo, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section {
 
 		// tipo check model (only section is expected)
 			$model = ontology_node::get_model_by_tipo($tipo,true);
@@ -132,10 +210,10 @@ class section extends common {
 			// $cache = false;
 
 		// cache is false case. Use always (cache=false) in imports (!). Not cache new sections (without section_id)
-			if ($cache===false || empty($section_id) || $mode==='update' || $mode==='tm') {
+			if ($cache===false || $mode==='update' || $mode==='tm') {
 
 				// instance new section
-				$section = new section($section_id, $tipo, $mode);
+				$section = new section($tipo, $mode);
 				// dataframe case
 				if(isset($caller_dataframe)){
 					$section->set_caller_dataframe($caller_dataframe);
@@ -165,13 +243,13 @@ class section extends common {
 				}
 
 			// find current instance in cache
-				$cache_key = implode('_', [$section_id, $tipo, $mode]);
+				$cache_key = implode('_', [$tipo, $mode]);
 				if(isset($caller_dataframe)){
 					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
 
 				}
 				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
-					self::$ar_section_instances[$cache_key] = new section($section_id, $tipo, $mode);
+					self::$ar_section_instances[$cache_key] = new section( $tipo, $mode );
 					// dataframe case
 					if(isset($caller_dataframe)) {
 						self::$ar_section_instances[$cache_key]->set_caller_dataframe($caller_dataframe);
