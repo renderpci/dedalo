@@ -157,6 +157,10 @@ class matrix_db_manager {
 			$param_index++;
 		}
 
+		// (!) Note that value returned by Save action, in case of activity, is the section_id
+		// auto created by table sequence 'matrix_activity_section_id_seq', not by counter
+
+
 		// SQL. Note that counter is updated (+1) and the new value is used as section_id.
 		// If no counter exists for current tipo, a new one is created.
 		$sql = "
@@ -426,6 +430,152 @@ class matrix_db_manager {
 
 		return true;
 	}//end update
+
+
+
+	/**
+	* UPDATE_BY_KEY
+	* Saves given value into the specified JSON key, it could be:
+	* a component container
+	* a section property data as created_date
+	* a component counter data
+	* Creates the path from the given key as componente_tipo {dd197} or property {created_date}.
+	* @param string $table
+	* 	DB table name. E.g. 'matrix'
+	* @param string $section_tipo
+	* 	Section tipo. E.g. 'oh1'
+	* @param int $section_id
+	* 	Section id. E.g. '1582'
+	* @param string $data_column_name
+	* 	Name of the column in current table. E.g. 'string'
+	* @param string $key
+	* 	Key of the value in the column JSON object. E.g. 'oh25'
+	* @param ?array $value
+	* 	Element value. E.g. [{"id": 1, "lang": "lg-nolan", "value": "code 95"}]
+	* @return bool
+	* 	Returns false if JSON fragment save fails.
+	*/
+	public static function update_by_key(
+		string $table,
+		string $section_tipo,
+		int $section_id,
+		string $data_column_name,
+		string $key,
+		?array $value
+		) : bool {
+
+		// sample SQL
+			// UPDATE matrix
+			// SET data = jsonb_set(
+			//     data,  -- original JSONB
+			//     '{numisdataXX}', -- path to the element
+			//     '{"key":1,"lang":"lg-spa","type":"dd750","value":"CODE1"}'::jsonb, -- new value (must be valid JSON)
+			//     true  -- create if missing (true/false)
+			// )
+			// WHERE section_tipo = 'numisdata224' AND section_id = 1;
+
+		// check matrix table
+		if (!isset(self::$matrix_tables[$table])) {
+			debug_log(__METHOD__
+				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
+				. ' table: ' . $table . PHP_EOL
+				. ' allowed_tables: ' . json_encode(self::$matrix_tables)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// check values
+		if (empty($value)) {
+			debug_log(__METHOD__
+				." Empty values array " . PHP_EOL
+				.' values: ' . json_encode($value)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$conn		= DBi::_getConnection();
+		$path		= '{'.$key.'}'; // JSON path
+		$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); // JSONB value
+
+		// With prepared statement
+		$stmt_name = __METHOD__;
+		if (!isset(DBi::$prepared_statements[$stmt_name])) {
+			pg_prepare(
+				$conn,
+				$stmt_name,
+				"
+					UPDATE $table
+					SET $data_column_name = jsonb_set(
+						$data_column_name,
+						$1::text[],
+						$2::jsonb,
+						true
+					)
+					WHERE section_tipo = $3
+					  AND section_id = $4
+					RETURNING id
+				"
+			);
+			// Set the statement as existing.
+			DBi::$prepared_statements[$stmt_name] = true;
+		}
+		$result = pg_execute(
+			$conn,
+			$stmt_name,
+			[
+				$path,
+				$json_value,
+				$section_tipo,
+				$section_id
+			]
+		);
+
+		if ($result) {
+			$rows_affected = pg_num_rows($result);
+			if ($rows_affected > 0) {
+
+				// JSON path was successfully saved
+				$saved_id = pg_fetch_result($result, 0, 0);
+				debug_log(__METHOD__
+					. " Successfully saved JSON path '$path'. Affected record ID: $table $saved_id"
+					, logger::WARNING
+				);
+
+				return true;
+
+			}else{
+
+				// No rows were updated (JSON path didn't exist or conditions didn't match)
+				debug_log(__METHOD__
+					. " No JSON data was saved - path '$path' may not exist or conditions didn't match." . PHP_EOL
+					. ' path: ' . to_string($path) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($section_id)
+					, logger::ERROR
+				);
+			}
+
+		}else{
+
+			// throw new RuntimeException("Database query failed: " . pg_last_error($conn));
+
+			// Query failed
+			debug_log(__METHOD__
+				. " Delete operation failed:  " . PHP_EOL
+				. ' Error: ' . pg_last_error($conn) . PHP_EOL
+				. ' path: ' . to_string($path) . PHP_EOL
+				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+				. ' section_id: ' . to_string($section_id)
+				, logger::ERROR
+			);
+		}
+
+
+		return false;
+	}//end update_by_key
+
 
 
 
