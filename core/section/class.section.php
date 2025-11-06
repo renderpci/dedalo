@@ -265,37 +265,21 @@ class section extends common {
 	/**
 	* CONSTRUCT
 	* Extends parent abstract class common
-	* @param string|int|null $section_id = null
-	* @param string|null $tipo = null
+	* @param string $tipo
 	* @param string|null $mode = 'edit'
 	*/
-	private function __construct( string|int|null $section_id=null, ?string $tipo=null, string $mode='list' ) {
-
-		// check tipo
-			if (empty($tipo)) {
-				throw new Exception("Error: on __construct section : tipo is mandatory. section_id:$section_id, tipo:$tipo, mode:$mode", 1);
-			}
+	private function __construct( string $tipo, string $mode ) {
 
 		// uid
 			$this->uid = hrtime(true); // nanoseconds
 
 		// Set general vars
 			$this->lang			= DEDALO_DATA_NOLAN;
-			$this->section_id	= $section_id;
 			$this->tipo			= $tipo;
-			$this->mode			= $mode ?? 'edit';
+			$this->mode			= $mode;
 
 		// load_structure_data. When tipo is set, calculate structure data
-			parent::load_structure_data();
-
-		// active_section_section_id : Set global var
-			if(		$mode==='edit'
-				&&	(isset($this->section_id) && ($this->section_id>0 || strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)!==false))
-				&&	!isset(section::$active_section_id) ) {
-
-					// fix active_section_id
-					section::$active_section_id = $this->get_section_id();
-			}
+			// parent::load_structure_data();
 
 		// pagination. Set defaults
 			$this->pagination = new stdClass();
