@@ -52,24 +52,30 @@ class component_string_common extends component_common {
 
 	/**
 	* IS_EMPTY
-	* @param mixed $value
+	* @param array|null $value
 	* Check if given value is or not empty considering
 	* spaces and ' ' as empty values
 	* @return bool
 	*/
-	public function is_empty(mixed $value) : bool {
+	public function is_empty(?array $value) : bool {
 
+		// null case explicit
 		if($value===null) {
 			return true;
 		}
 
-		// check for only spaces values as ' '
-		$trim_value = is_string($value) ? trim($value) : $value;
-		if($trim_value!=='0' && empty($trim_value)) {
-			return true;
+		// array case
+		if ( is_array($value) ) {
+			foreach ($value as $item) {
+				$trim_value = is_string($item) ? trim($item) : $item;
+				if( !empty($trim_value) ) {
+					return false;
+				}
+			}
 		}
 
-		return false;
+
+		return true;
 	}//end is_empty
 
 
