@@ -202,6 +202,71 @@ class component_string_common extends component_common {
 
 
 	/**
+	* GET_COMPONENT_DATA_FALLBACK
+	* Retrieves component data for a specific language and implements
+	* a fallback mechanism when data is missing or empty. It follows
+	* a hierarchical fallback strategy to ensure data availability across different
+	* language contexts.
+	*
+	* FALLBACK HIERARCHY:
+	* 1. Current language data (if not empty)
+	* 2. Main/default language data
+	* 3. No-language (NOLAN) data
+	* 4. All other available project languages (in sequence)
+	* 5. null (if no data found in any language)
+	*
+	* ALGORITHM FLOW:
+	* - Preserves current language state for restoration
+	* - Retrieves data for the requested language
+	* - For each empty value, iterates through fallback languages
+	* - Returns first non-empty value found or null
+	* - Restores original language state
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
+	* @return array|null $dato_fb
+	*/
+	public function get_component_data_fallback(string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?array {
+
+		$data = $this->get_data();
+		if (empty($data)) {
+			return null;
+		}
+
+		// Try main lang
+		if ($main_lang!==$lang) {
+			$main_lang_data = $this->get_data_lang($main_lang);
+			if (!$this->is_empty($main_lang_data)) {
+				return $main_lang_data;
+			}
+		}
+
+		// Try nolan
+		$data_nolan = $this->get_data_lang(DEDALO_DATA_NOLAN);
+		if (!$this->is_empty($data_nolan)) {
+			return $data_nolan;
+		}
+
+		// Try any other
+		$data_langs = common::get_ar_all_langs(); // Langs from config projects
+		foreach ($data_langs as $current_lang) {
+			if ($current_lang===$lang || $current_lang===$main_lang) {
+				continue; // Already checked
+			}
+			// Get current lang group of items from data
+			$current_lang_data = $this->get_data_lang($current_lang);
+			if (!$this->is_empty($data_nolan)) {
+				return $current_lang_data ;
+			}
+		}
+
+
+		return null;
+	}//end get_component_data_fallback
+
+
+
+
+	/**
 	* EXTRACT_COMPONENT_DATO_FALLBACK
 	* Retrieves component data for a specific language and implements
 	* a fallback mechanism when data is missing or empty. It follows
