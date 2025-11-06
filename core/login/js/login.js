@@ -143,6 +143,10 @@ login.prototype.build = async function(autoload=false) {
 				if(SHOW_DEBUG===true) {
 					console.log('login api_response:', api_response);
 				}
+				if (!api_response.result) {
+					console.error('Error on get login context. api_response:', api_response);
+					return false
+				}
 
 			// set context and data to current instance
 				self.context	= api_response.result.find(element => element.model===self.model);
