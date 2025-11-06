@@ -1467,62 +1467,141 @@ class section extends common {
 
 	// 	return $this->section_id;
 	// }//end Save
-								$tipo
-							);
-							$component_filter->set_dato( $options->component_filter_dato );
-							$component_filter->Save();
-
-						}else{
-
-							// default case
-
-							// When component_filter is called in edit mode, the component check if dato is empty and if is,
-							// add default user project and save it
-							// (!) Note that construct component_filter in edit mode, saves default value too. Here, current section is saved again
-							$component_filter = component_common::get_instance(
-								'component_filter',
-								$ar_tipo_component_filter[0],
-								$this->section_id,
-								'edit', // Important edit !! # Already saves default project when load in edit mode
-								DEDALO_DATA_NOLAN,
-								$tipo
-							);
-							// note that section is auto-saved here
-						}
-					}//end if (empty($ar_tipo_component_filter[0]))
-
-				}//end if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO)
 
 
-				// component state defaults set. Set default values on component_state when is present
-					/* DEACTIVATED 24-08-2023 by Paco because model component_state is not used in v6 (mapped to component_info)
-					$ar_component_state = section::get_ar_children_tipo_by_model_name_in_section(
-						$section_real_tipo, // section_tipo
-						['component_state'], // ar_model_name_required
-						true, // from_cache
-						false, // resolve_virtual
-						true // recursive
-					);
-					if (isset($ar_component_state[0])) {
-						$component_state = component_common::get_instance(
-							'component_state',
-							$ar_component_state[0],
-							$this->section_id,
-							'edit',
-							DEDALO_DATA_NOLAN,
-							$tipo
-						);
-						// (!) Note that set_defaults saves too. Here, current section is saved again if component_state is founded
-						$component_state->set_defaults();
-					}//end if (isset($ar_component_state[0]))
-					*/
 
-			}//end if($this->tipo!==DEDALO_ACTIVITY_SECTION_TIPO)
-		}//end if ($this->id >= 1)
+	/**
+	* CREATE_RECORD
+	* Create new record a section record in matrix
+	* @param object|null $options = null
+	* @return int|null $section_id
+	*/
+	public function create_record( ?object $options=null ) : int|false {
+		$start_time = start_time();
 
+		if(SHOW_DEBUG===true) {
+			// metrics
+				metrics::$section_save_total_calls++;
+		}
 
-		// reset caches
-			switch ($this->tipo) {
+		// Options
+			// Project Inheritance. When a new section is created from a component_portal
+			// the main section project is injected into the new section
+			// because the projects from the main section needs to be the same.
+			$component_filter_data = $options->component_filter_data ?? null;
+
+		// Tipo. Current section tipo
+			$tipo = $this->get_tipo();
+
+		// User id. Current logged user id
+			$user_id = logged_user_id();
+
+		// Column to store section data
+			$data_column_name = $this->get_data_column_name();
+
+		// These processes are for all sections except Activity section
+		// Activity section is the logger section and this process is not correct.
+		// All other sections has Time Machine, uses projects data and uses caches.
+			if($tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+				debug_log(__METHOD__
+					. " Error to create a new section record, this section is an Activity section that can not be handle here! " . PHP_EOL
+					. " section_tipo: " .$tipo
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// 1. Create new record
+			// Section record
+			// To create the new record in the DDBB
+			$section_record	= section_record::create( $tipo );
+			$section_id		= $section_record->section_id;
+
+			// Check error when new record was created
+			if( $section_id===false ){
+				debug_log(__METHOD__
+					. " Error to create a new section record " . PHP_EOL
+					. " section_tipo: " .$tipo
+					, logger::ERROR
+				);
+
+				return false;
+			}
+
+		// 2. Save section data
+			// Section data
+			// When section is created at first time, a basic data is set to write into the new section.
+			$section_data = [
+				'section_id'			=> (int)$section_id,
+				'section_tipo'			=> (string)$tipo,
+				'label'					=> (string)ontology_node::get_term_by_tipo($tipo,null,true),
+				'created_by_user_id'	=> (int)$user_id,
+				'created_date'			=> dd_date::get_timestamp_now_for_db(), // Format 2012-11-05 19:50:44
+				'diffusion_info'		=> null, // null by default
+			];
+
+			// Save data of the section
+			$saved_data = $section_record->save_column(
+				$data_column_name,
+				$section_data
+			);
+
+			// Check an error saving data into the new record
+			if( $saved_data===false ){
+				debug_log(__METHOD__
+					. " Error to create a new section record " . PHP_EOL
+					. " section_tipo: " .$tipo. PHP_EOL
+					. " section_id: " .$section_id
+					, logger::ERROR
+				);
+
+				return false;
+			}
+
+			// Update modified section data. After set section data, resolve and add creation date and user to current section data
+			$section_record->update_modified_section_data((object)[
+				'mode' => 'new_record'
+			]);
+
+		// 3. Save time machine data
+			// Save current new section in time machine (section info data will not change, only components can do changes)
+				$tm_save_options = new stdClass();
+					$tm_save_options->time_machine_data	= $section_data;
+					$tm_save_options->time_machine_lang	= DEDALO_DATA_NOLAN; // Always nolan for section
+					$tm_save_options->time_machine_tipo	= $tipo;
+					$tm_save_options->new_record		= true;
+
+			//Save the time machine record
+				$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
+					common::get_matrix_table_from_tipo($tipo),
+					(int)$section_id, // int section_id
+					$tipo, // string section tipo
+					true // bool enable cache
+				);
+				$JSON_RecordObj_matrix->save_time_machine($tm_save_options);
+
+		// 4. Log the creation process
+			// Logger activity
+				logger::$obj['activity']->log_message(
+					'NEW', // string $message
+					logger::INFO, // int $log_level
+					$tipo, // string $tipo_where
+					null, // string $operations
+					[ // associative array datos
+						'msg'			=> 'Created section record',
+						'section_id'	=> $section_id,
+						'section_tipo'	=> $tipo,
+						'tipo'			=> $tipo,
+						'table'			=> common::get_matrix_table_from_tipo($tipo)
+					],
+					$user_id // int
+				);
+
+		// 5. Set defaults project data (dd153)
+			$this->set_projects_to_new_section_record( $section_id, $component_filter_data );
+
+		// 6. Reset caches
+			switch ($tipo) {
 
 				case DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO:
 					request_config_presets::clean_cache();
@@ -1534,7 +1613,7 @@ class section extends common {
 
 				case DEDALO_SECTION_PROJECTS_TIPO:
 					filter::clean_cache(
-						logged_user_id(), // user id. Current logged user id
+						$user_id, // user id. Current logged user id
 						DEDALO_FILTER_MASTER_TIPO // dd170
 					);
 					break;
@@ -1544,7 +1623,7 @@ class section extends common {
 					break;
 			}
 
-		// debug
+		// 7. Debug
 			if(SHOW_DEBUG===true) {
 
 				$total_time_ms = exec_time_unit($start_time, 'ms');
@@ -1553,154 +1632,134 @@ class section extends common {
 					metrics::$section_save_total_time += $total_time_ms;
 
 				debug_log(__METHOD__
-					." Saved section finish: ($this->tipo - $this->section_id) in time: ".$total_time_ms.' ms'
+					." Create new section finish: ($tipo - $section_id) in time: ".$total_time_ms.' ms'
 					, logger::DEBUG
 				);
 			}
 
 
-		return $this->section_id;
-	}//end Save
+		return $section_id;
+	}//end create_record
 
 
 
 	/**
-	* DELETE (SECTION)
-	* Delete section with options
-	* @param string $delete_mode
-	* 	Options: delete_record|delete_data|delete_dataframe
-	* @param bool $delete_diffusion_records = true
-	*	Selected by user in delete dialog checkbox
-	* @return bool
+	* SET_PROJECTS_TO_NEW_SECTION_record
+	* Assign the project to new sections, it could be inheritance from caller section
+	* @param int $section_id
+	* @param array|null $component_filter_data
 	*/
-	public function Delete( string $delete_mode, bool $delete_diffusion_records=true ) : bool {
+	private function set_projects_to_new_section_record( int $section_id, ?array $component_filter_data ) {
 
-		// section_id
-			// force type int
-			$section_id = intval($this->section_id);
-			// prevent delete <1 records
-			if($section_id<1) {
-				debug_log(__METHOD__
-					." Invalid section_id: $section_id. Delete action is aborted "
-					, logger::WARNING
-				);
-				return false;
-			}
+		// tipo. Current section tipo
+			$tipo = $this->get_tipo();
 
-		// section_tipo
-			$section_tipo = $this->tipo;
-			// section_real_tipo. If the virtual section has the section_tipo "real" in properties, change the tipo of the section to the real one.
-			if(isset($this->properties->section_tipo) && $this->properties->section_tipo==='real'){
-				$section_tipo = $this->get_section_real_tipo();
-			}
-			// user id
+		// user id. Current logged user id
 			$user_id = logged_user_id();
-			// matrix_table
-			$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
-			// Ignore invalid empty matrix tables
-			if (empty($matrix_table)) {
-				debug_log(__METHOD__
-					. " ERROR: invalid empty matrix table " . PHP_EOL
-					. ' section_tipo: ' . $section_tipo
-					, logger::ERROR
+
+		// Projects set defaults data (dd153)
+			if ($tipo===DEDALO_SECTION_PROJECTS_TIPO) {
+
+				// Auto authorize this project for current user
+				// If this newly created section is a project, the new project is added as authorized to the user who created it.
+				// User currently logged in
+					$component_filter_master = component_common::get_instance(
+						'component_filter_master',
+						DEDALO_FILTER_MASTER_TIPO, // dd170
+						$user_id,
+						'edit',
+						DEDALO_DATA_NOLAN,
+						DEDALO_SECTION_USERS_TIPO // dd153
+					);
+					$data_filter_master = $component_filter_master->get_data();
+
+					$filter_master_locator = new locator();
+						$filter_master_locator->set_section_id($section_id);
+						$filter_master_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+						$filter_master_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+						$filter_master_locator->set_from_component_tipo(DEDALO_FILTER_MASTER_TIPO);
+					$data_filter_master[] = $filter_master_locator; // Add locator to dato
+
+					$component_filter_master->set_data($data_filter_master);
+					$component_filter_master->Save();
+					debug_log(__METHOD__
+						.' Added locator from section save to component_filter_master ' . PHP_EOL
+						.' User filter caches will be deleted to force refresh the data ' . PHP_EOL
+						.' user_id: ' .$user_id. PHP_EOL
+						.' filter_master_locator: ' . to_string($filter_master_locator)
+						, logger::DEBUG
+					);
+					// (!) Note that component_filter_master force refresh user projects caches on save
+
+			}else{
+
+				// Filter defaults.
+				// Note that portal already saves inherited project to new created section
+				// To prevent to saves twice, only set default project when not is a portal call to create new record
+
+				// Default project for create standard sections
+				// When a section record is created, it is auto assigned the default project (defined in config DEDALO_DEFAULT_PROJECT)
+				// when the section has a 'component_filter' defined
+				$ar_tipo_component_filter = section::get_ar_children_tipo_by_model_name_in_section(
+					$tipo,
+					['component_filter'],
+					true, // from_cache
+					true, // resolve_virtual
+					true, // recursive
+					true, // search_exact
+					[] // ar_tipo_exclude_elements
 				);
-				return false;
-			}
+				if (empty($ar_tipo_component_filter[0])) {
 
-		// delete_mode based actions
-			switch($delete_mode) {
+					// section without project case (list of values mainly)
+					debug_log(__METHOD__
+						." Ignored set project default in section without component_filter: $tipo" . PHP_EOL
+						.' section_tipo: ' . $tipo . PHP_EOL
+						.' section label ' . ontology_node::get_term_by_tipo($tipo, DEDALO_APPLICATION_LANG)
+						, logger::WARNING
+					);
 
-				case 'delete_record' :
-					// create a new time machine record. Always, even when the section has recovered previously, a new time machine record is created
-					// to mark every section delete point in the time. For tool list, only the last record (state 'deleted') will be used.
-						$RecordObj_time_machine_new = new RecordObj_time_machine(null);
-							$RecordObj_time_machine_new->set_section_id( (int)$this->section_id );
-							$RecordObj_time_machine_new->set_section_tipo( (string)$section_tipo );
-							$RecordObj_time_machine_new->set_tipo( (string)$section_tipo );
-							$RecordObj_time_machine_new->set_lang( (string)$this->get_lang() );
-							$RecordObj_time_machine_new->set_timestamp( dd_date::get_timestamp_now_for_db() ); // Format 2012-11-05 19:50:44
-							$RecordObj_time_machine_new->set_userID( logged_user_id() );
-							$RecordObj_time_machine_new->set_dato( $this->get_dato() );
-							$RecordObj_time_machine_new->set_state('deleted');
-						$id_time_machine = (int)$RecordObj_time_machine_new->Save();
-						// check save resulting id
-						if ($id_time_machine<1) {
-							debug_log(__METHOD__
-								." Error Processing Request. id_time_machine is empty "
-								, logger::ERROR
-							);
-							throw new Exception("Error Processing Request. id_time_machine is empty", 1);
-						}
+				}else{
 
-						// check time machine dato
-						$dato_time_machine	= $RecordObj_time_machine_new->get_dato();
-						$dato_section		= $this->get_dato();
-						// JSON encode and decode each of them to unify types before compare
-						$a			= json_handler::decode(json_handler::encode($dato_time_machine));
-						$b			= json_handler::decode(json_handler::encode($dato_section));
-						$is_equal	= (bool)($a == $b);
-						if ($is_equal===false) {
-							debug_log(__METHOD__
-								. " ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
-								. ' Record is NOT deleted ! (3) ' . PHP_EOL
-								. ' section_tipo: ' . $this->section_tipo . PHP_EOL
-								. ' section_id: ' . $this->section_id
-								, logger::ERROR
-							);
-							// debug
-							dump($dato_time_machine, 'SHOW_DEBUG COMPARE ERROR dato_time_machine');
-							dump($dato_section,		 'SHOW_DEBUG COMPARE ERROR dato_section');
+					if (!empty($component_filter_data)) {
 
-							return false;
-						}
-
-					// clean old time machine records status (only the last record must be 'deleted' to allow tool_time_machine list easily)
-						// get all time machine records for this section
-						$ar_id_time_machine = RecordObj_time_machine::get_ar_time_machine_of_this(
-							$section_tipo,
-							(int)$this->section_id,
+						// custom projects dato passed
+						// set the component_filter with the dato sent by the caller (portals)
+						$component_filter = component_common::get_instance(
+							'component_filter',
+							$ar_tipo_component_filter[0],
+							$section_id,
+							'list', // Important 'list' to avoid auto save default value !!
 							DEDALO_DATA_NOLAN,
-							$section_tipo
+							$tipo
 						);
-						// iterate all and remove 'deleted' state if is set (except for the last new created)
-						foreach ($ar_id_time_machine as $current_id_time_machine) {
-							if ($current_id_time_machine==$id_time_machine) {
-								continue; // already set
-							}
-							$RecordObj_time_machine = new RecordObj_time_machine( (string)$current_id_time_machine );
-							if ( $RecordObj_time_machine->get_state()==='deleted' ) {
-								$RecordObj_time_machine->set_state(null);
-								$RecordObj_time_machine->Save();
-							}
-						}
+						$component_filter->set_data( $component_filter_data );
+						$component_filter->Save();
 
-					// section delete. Delete matrix record
-						// $JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)
-						// 	? $this->JSON_RecordObj_matrix
-						// 	: JSON_RecordObj_matrix::get_instance(
-						// 		$matrix_table,
-						// 		(int)$this->section_id,
-						// 		$section_tipo,
-						// 		true // bool cache
-						// 	  );
+					}else{
 
-						// // mark for deletion
-						// $JSON_RecordObj_matrix->MarkForDeletion();
+						// default case
 
-						// // force JSON_RecordObj_matrix destruct to real deletion exec
-						// $JSON_RecordObj_matrix->__destruct();
+						// When component_filter is called in edit mode, the component check if dato is empty and if is,
+						// add default user project and save it
+						// (!) Note that construct component_filter in edit mode, saves default value too. Here, current section is saved again
+						$component_filter = component_common::get_instance(
+							'component_filter',
+							$ar_tipo_component_filter[0],
+							$section_id,
+							'edit', // Important edit !! // Already saves default project when load in edit mode
+							DEDALO_DATA_NOLAN,
+							$tipo
+						);
+						// note that section is auto-saved here
+					}
+				}//end if (empty($ar_tipo_component_filter[0]))
 
-						// JSON_RecordObj_matrix. Get and set $this->JSON_RecordObj_matrix
-						$this->get_JSON_RecordObj_matrix();
+			}//end if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO)
 
-						// mark for deletion
-						$this->JSON_RecordObj_matrix->MarkForDeletion();
+	}//end set_projects_to_new_section_record
 
-						// force JSON_RecordObj_matrix destruct to real deletion exec
-						$this->JSON_RecordObj_matrix->__destruct();
 
-					// inverse references. Remove all inverse references to this section
-						$this->remove_all_inverse_references(true);
 
 					// relation references. Remove all relation references (children, model, etc.)
 						// $this->remove_all_relation_references();
@@ -1842,8 +1901,6 @@ class section extends common {
 			);
 
 
-		return true;
-	}//end Delete
 
 
 
