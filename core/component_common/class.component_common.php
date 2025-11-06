@@ -43,6 +43,7 @@ abstract class component_common extends common {
 
 		public $exists_dato_in_any_lan = false;
 		public $dato_resolved;
+		public $data_resolved;
 
 		// expected language for this component (used to verify that the structure is well formed)
 		public $expected_lang;
@@ -130,6 +131,8 @@ abstract class component_common extends common {
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
 
+		public $section_record;
+		// string column in Database
 		// Defined in every component
 		public $data_column;
 
@@ -679,68 +682,39 @@ abstract class component_common extends common {
 
 
 	/**
-	* SET_DATO
-	* @param array|null dato
-	* @return bool true
+	* SET_DATA
+	* @param array|null data
+	* @return bool $result
 	*/
-	public function set_dato($dato) : bool {
+	public function set_data( ?array $data ) : bool {
 
-		// dato format check
-			if (!is_null($dato) && !is_array($dato) && $this->mode!=='update') {
-
-				$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
-				if ($matrix_table==='matrix_dd') {
-					// v5 matrix_dd list compatibility
-					// nothing to do here
-				}else{
-					debug_log(__METHOD__ . ' '
-						. '[SET] RECEIVED DATO TO SET, IS NOT AS EXPECTED TYPE array|null' . PHP_EOL
-						. 'type: '. gettype($dato) .PHP_EOL
-						. 'dato: '. to_string($dato) .PHP_EOL
-						. 'model: '. get_called_class() .PHP_EOL
-						. 'tipo: ' . $this->tipo . PHP_EOL
-						. 'section_tipo: ' . $this->section_tipo . PHP_EOL
-						. 'section_id: ' . $this->section_id . PHP_EOL
-						. 'mode: '. $this->mode .PHP_EOL
-						. 'cache: '. to_string($this->cache) .PHP_EOL
-						. 'table: '. $matrix_table
-						, logger::ERROR
-					);
-				}
-			}
-
-		// force array on non empty
-			if (!is_array($dato) && !is_null($dato)) {
-				$dato = [$dato];
-			}
-
-		// unset previous calculated valor
-			if (isset($this->valor)) {
-				unset($this->valor);
-			}
 		// unset previous calculated ar_list_of_values
 			if (isset($this->ar_list_of_values)) {
 				unset($this->ar_list_of_values);
 			}
 
 		// empty array cases: [null] to null
-			if (is_array($dato) && count($dato)===1 && (is_null($dato[0]) || $dato[0]==='')) {
-				$dato = null;
+			if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
+				$data = null;
 			}
 
-		// call common->set_dato (!) fix var 'is_loaded_matrix_data' as true
-			parent::set_dato($dato);
-
 		// resolved set
-			$this->dato_resolved = $dato;
+			// $this->dato_resolved = $data;
 
-		// @v7 way
-			// if ($this->data_column==='string') {
-			// 	$this->set_component_data( $this->lang, $dato );
-			// }
+		// section record
+			$section_record = $this->get_my_section_record();
+			$result = $section_record->set_component_data(
+				$this->tipo,
+				$this->data_column,
+				$data
+			);
 
 
-		return true;
+		return $result;
+	}//end set_data
+
+
+
 	/**
 	* SET_DATA_LANG
 	* Assign or remove the data_lang of specified lang
@@ -837,16 +811,16 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_DATO
+	* GET_DATA
 	* Get component dato from database.
 	* To get data from other sources, set var $data_source like 'tm'
 	* @return array|null $dato
 	*/
-	public function get_dato() {
+	public function get_data() : ?array {
 
-		// dato_resolved. Already resolved case
-			if(isset($this->dato_resolved)) {
-				return $this->dato_resolved;
+		// data_resolved. Already resolved case
+			if(isset($this->data_resolved)) {
+				return $this->data_resolved;
 			}
 
 		// time machine mode case. data_source='tm'
@@ -924,31 +898,31 @@ abstract class component_common extends common {
 					$this->is_loaded_matrix_data = true;
 
 					// inject dato to component
-					$this->dato_resolved = $dato_tm;
+					$this->data_resolved = $dato_tm;
 
-				return $this->dato_resolved;
+				return $this->data_resolved;
 			}
 
 		// MATRIX DATA : Load matrix data
-		$this->load_component_dato();
+		$this->load_component_data();
 
-		$dato = $this->dato;
+		$data = $this->data;
 
 		// invalid data formats case. Expected array|null
-		if (!is_null($dato) && !is_array($dato)) {
+		if ( !is_null($data) && !is_array($data) ) {
 			$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
 			if ($matrix_table==='matrix_dd') {
 				// v5 matrix_dd list compatibility
-				$dato = [$dato];
+				$data = [$data];
 			}else{
 				if ($this->mode!=='update') {
-					$dato_to_show = get_called_class()==='component_password'
+					$data_to_show = get_called_class()==='component_password'
 						? '************'
-						: $dato;
+						: $data;
 					debug_log(__METHOD__ . ' '
 						. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null ' .PHP_EOL
-						. 'type: '				. gettype($dato) . PHP_EOL
-						. 'dato: '				. json_encode($dato_to_show, JSON_PRETTY_PRINT) . PHP_EOL
+						. 'type: '				. gettype($data) . PHP_EOL
+						. 'dato: '				. json_encode($data_to_show, JSON_PRETTY_PRINT) . PHP_EOL
 						. 'model: '				. get_called_class() . PHP_EOL
 						. 'table: '				. $matrix_table . PHP_EOL
 						. 'component_tipo: '	. $this->tipo . PHP_EOL
@@ -956,24 +930,16 @@ abstract class component_common extends common {
 						. 'section_id: '		. $this->section_id
 						, logger::WARNING
 					);
-					/**
-					* @todo Unify all components behavior when dato format is wrong (fix, save ..)
-						// fix as array
-							// $dato = [$dato];
-							// $this->set_dato($dato);
-							// debug_log(__METHOD__
-							// 	. " Fixed and set bad format dato to array " . PHP_EOL
-							// 	. to_string($dato)
-							// 	, logger::WARNING
-							// );
-					*/
 				}
 			}
 		}
 
 
-		return $dato; // <- The language fallback for the mode list will be directly applied
-	}//end get_dato
+		return $data;
+	}//end get_data
+
+
+
 	/**
 	* GET_DATA_LANG
 	* Returns component data filtered by given lang
@@ -1093,7 +1059,7 @@ abstract class component_common extends common {
 	*/
 	public function get_time_machine_data_to_save() : ?array {
 
-		$time_machine_data_to_save = $this->dato;
+		$time_machine_data_to_save = $this->get_data_lang();
 
 		$ar_component_dataframe = $this->get_dataframe_ddo();
 		if( !empty($ar_component_dataframe) ){
@@ -1122,7 +1088,7 @@ abstract class component_common extends common {
 
 
 		return $time_machine_data_to_save;
-	}//end get_time_machine_data
+	}//end get_time_machine_data_to_save
 
 
 
@@ -1359,19 +1325,22 @@ abstract class component_common extends common {
 	* Save component data in matrix using parent section
 	* Verify all necessary vars to save and call section 'save_component_dato($this)'
 	* @see section->save_component_dato($this)
-	* @return int|null $section_matrix_id
+	* @return bool $result
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		// short vars
-			$section_tipo	= $this->get_section_tipo();
-			$section_id		= $this->get_section_id();
-			$tipo			= $this->get_tipo();
-			$lang			= $this->get_lang() ?? DEDALO_DATA_LANG;
-			$mode			= $this->get_mode();
+			$section_tipo		= $this->get_section_tipo();
+			$section_id			= $this->get_section_id();
+			$tipo				= $this->get_tipo();
+			$lang				= $this->get_lang() ?? DEDALO_DATA_LANG;
+			$model 				= $this->get_model();
+			$mode				= $this->get_mode();
+			$data_column_name	= $this->get_data_column_name();
+			$data				= $this->get_data();
 
 		// check component minimum vars before save
-			if( empty($section_id) || empty($tipo) || empty($lang) ) {
+			if( empty($section_tipo) || empty($section_id) || empty($tipo) || empty($lang) ) {
 				debug_log(__METHOD__
 					. " Error on save: Few vars! . Ignored order" . PHP_EOL
 					. ' section_id: ' . to_string($section_id) . PHP_EOL
@@ -1883,7 +1852,7 @@ abstract class component_common extends common {
 	*/
 	public function empty_data() : bool {
 
-		$this->set_dato(null);
+		$this->set_data(null);
 
 		return true;
 	}//end empty_data
@@ -2749,8 +2718,8 @@ abstract class component_common extends common {
 	* REMOVE_DATAFRAME_DATA
 	* Remove all information associate to the main component
 	* This method is called when the main component remove a row (@see update_data_value() in component_common)
-	* And is possible that his dataframe will has data
-	* Therefore, the dataframe needs to be delete as his own main caller dataframe.
+	* And it's possible that your dataframe contains data.
+	* Therefore, the dataframe needs to be delete as its own main caller dataframe.
 	* @param object $locator
 	* @return array | null $ar_dataframe_ddo
 	*
@@ -3906,6 +3875,8 @@ abstract class component_common extends common {
 
 					// Remove the dataframe data
 					if( !empty($locator) ){
+						// Remove the dataframe data before the main component save
+						// to save the correct data into Time Machine
 						$this->remove_dataframe_data( $locator );
 					}
 				}
