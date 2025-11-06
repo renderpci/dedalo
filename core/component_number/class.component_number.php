@@ -23,6 +23,8 @@ class component_number extends component_common {
 	protected $data_column = 'number';
 
 
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = false;
 
 	/**
 	* __CONSTRUCT

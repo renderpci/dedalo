@@ -12,6 +12,8 @@ class component_geolocation extends component_common {
 	protected $data_column = 'geo';
 
 
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = false;
 
 	/**
 	* __CONSTRUCT

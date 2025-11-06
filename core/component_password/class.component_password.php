@@ -12,6 +12,8 @@ class component_password extends component_common {
 	protected $data_column = 'string';
 
 
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = false;
 
 	/**
 	* __CONSTRUCT
