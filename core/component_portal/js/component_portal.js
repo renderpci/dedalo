@@ -1340,7 +1340,7 @@ component_portal.prototype.delete_linked_record = async function(options) {
 	// options
 		const section_id		= options.section_id
 		const section_tipo		= options.section_tipo
-		const caller_dataframe	= options.caller_dataframe || null
+		// const caller_dataframe	= options.caller_dataframe || null
 
 	// delete_diffusion_records
 		const delete_diffusion_records = self.delete_diffusion_records ?? true
@@ -1376,7 +1376,7 @@ component_portal.prototype.delete_linked_record = async function(options) {
 		const delete_section_result = await section.delete_section({
 			sqo							: sqo,
 			delete_mode					: 'delete_record',
-			caller_dataframe			: caller_dataframe,
+			// caller_dataframe			: caller_dataframe,
 			delete_diffusion_records	: delete_diffusion_records
 		})
 

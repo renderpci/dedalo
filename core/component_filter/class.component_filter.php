@@ -163,7 +163,7 @@ class component_filter extends component_relation_common {
 
 					// filter always save default project.
 					$user_id				= logged_user_id();
-					$default_dato_for_user	= $this->get_default_dato_for_user($user_id);
+					$default_dato_for_user	= $this->get_default_data_for_user($user_id);
 
 					// set current user projects default
 					if (!empty($default_dato_for_user)) {
@@ -190,14 +190,14 @@ class component_filter extends component_relation_common {
 
 
 	/**
-	* GET_DEFAULT_DATO_FOR_USER
+	* GET_DEFAULT_DATa_FOR_USER
 	* Calculates default value for given user (normally the logged user)
 	* @param int $user_id
-	* @return array $default_dato
+	* @return array $default_data
 	*/
-	public function get_default_dato_for_user(int $user_id) : array {
+	public function get_default_data_for_user(int $user_id) : array {
 
-		$default_dato = [];
+		$default_data = [];
 
 		// 1 file: optional defaults for '/config/config_defaults.json' file
 			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
@@ -234,7 +234,7 @@ class component_filter extends component_relation_common {
 						});
 						if (is_object($found)) {
 							// update default dato
-							$default_dato = is_array($found->value)
+							$default_data = is_array($found->value)
 								? $found->value
 								: [$found->value];
 						}
@@ -243,7 +243,7 @@ class component_filter extends component_relation_common {
 			}
 
 		// 2 properties: optional properties dato_default. It is appended to already set dato if defined
-			if (empty($default_dato)) {
+			if (empty($default_data)) {
 
 				// Only for compatibility with old installations like mdcat
 				// (!) Move ASAP generic default values from properties, to custom CONFIG_DEFAULT_FILE_PATH JSON file
@@ -280,7 +280,7 @@ class component_filter extends component_relation_common {
 							$filter_locator->set_from_component_tipo($this->tipo);
 
 						// add
-						$default_dato[] = $filter_locator;
+						$default_data[] = $filter_locator;
 
 					// info debug log
 						debug_log(__METHOD__
@@ -303,7 +303,7 @@ class component_filter extends component_relation_common {
 
 						// check current added project is accessible for current user
 							$in_my_projects = false;
-							foreach ($default_dato as $current_locator) {
+							foreach ($default_data as $current_locator) {
 								$in_my_projects = locator::in_array_locator(
 									$current_locator,
 									$user_projects,
@@ -326,13 +326,13 @@ class component_filter extends component_relation_common {
 									$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
 									$filter_locator->set_from_component_tipo($this->tipo);
 
-								$default_dato[] = $filter_locator;
+								$default_data[] = $filter_locator;
 							}
 					}
 			}
 
 		// final fallback config: default from config file
-			if (empty($default_dato)) {
+			if (empty($default_data)) {
 
 				// Add default project defined in config
 					$filter_locator = new locator();
@@ -341,7 +341,7 @@ class component_filter extends component_relation_common {
 						$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
 						$filter_locator->set_from_component_tipo($this->tipo);
 
-					$default_dato[] = $filter_locator;
+					$default_data[] = $filter_locator;
 
 				// info debug log
 					debug_log(__METHOD__
@@ -352,7 +352,7 @@ class component_filter extends component_relation_common {
 			}
 
 		// check value. Not empty value is expected here
-			if (empty($default_dato)) {
+			if (empty($default_data)) {
 				debug_log(__METHOD__
 					. " Unable to get default filter dato " . PHP_EOL
 					. ' user_id : ' . to_string($user_id) . PHP_EOL
@@ -364,8 +364,8 @@ class component_filter extends component_relation_common {
 			}
 
 
-		return $default_dato;
-	}//end get_default_dato_for_user
+		return $default_data;
+	}//end get_default_data_for_user
 
 
 

@@ -115,41 +115,41 @@ class component_input_text extends component_string_common {
 
 
 
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+	// /**
+	// * GET_VALOR_EXPORT
+	// * Return component value sent to export data
+	// * @return string $valor
+	// */
+	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
-		if (empty($valor)) {
+	// 	if (empty($valor)) {
 
-			$valor = $this->get_valor($lang);
+	// 		$valor = $this->get_valor($lang);
 
-		}else{
+	// 	}else{
 
-			// Add value of current lang to nolan data
-			if ($this->with_lang_versions===true) {
+	// 		// Add value of current lang to nolan data
+	// 		if ($this->with_lang_versions===true) {
 
-				$component = $this;
-				$component->set_lang($lang);
-				$add_value = $component->get_valor($lang);
-				if (!empty($add_value) && $add_value!==$valor) {
-					$valor .= ' ('.$add_value.')';
-				}
-			}
-		}
+	// 			$component = $this;
+	// 			$component->set_lang($lang);
+	// 			$add_value = $component->get_valor($lang);
+	// 			if (!empty($add_value) && $add_value!==$valor) {
+	// 				$valor .= ' ('.$add_value.')';
+	// 			}
+	// 		}
+	// 	}
 
-		if (empty($valor)) {
-			$valor = $this->extract_component_value_fallback(
-				DEDALO_DATA_LANG, // lang
-				true, // mark
-				DEDALO_DATA_LANG_DEFAULT // main_lang
-			);
-		}
+	// 	if (empty($valor)) {
+	// 		$valor = $this->extract_component_value_fallback(
+	// 			DEDALO_DATA_LANG, // lang
+	// 			true, // mark
+	// 			DEDALO_DATA_LANG_DEFAULT // main_lang
+	// 		);
+	// 	}
 
-		return to_string($valor);
-	}//end get_valor_export
+	// 	return to_string($valor);
+	// }//end get_valor_export
 
 
 

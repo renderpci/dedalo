@@ -51,8 +51,11 @@ class component_relation_common extends component_common {
 
 		// V7 PROPERTIES //
 
-		// data_column. DB column where to get the data.
-		protected $data_column = 'relation';
+		// data_column_name. DB column where to get the data.
+		protected $data_column_name = 'relation';
+
+		// Property to enable or disable the get and set data in different languages
+		protected $supports_translation = false;
 
 
 
@@ -987,14 +990,14 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* REMOVE_LOCATOR_FROM_DATO
+	* REMOVE_LOCATOR_FROM_DATA
 	* Removes from dato one or more locators that accomplish given locator equality
 	* (!) Not save the result
 	* @param object $locator
 	* @param array $ar_properties = []
 	* @return bool
 	*/
-	public function remove_locator_from_dato( object $locator_to_remove, array $ar_properties=['section_tipo','section_id','from_component_tipo','type'] ) : bool {
+	public function remove_locator_from_data( object $locator_to_remove, array $ar_properties=['section_tipo','section_id','from_component_tipo','type'] ) : bool {
 
 		// empty case
 			if (empty($locator_to_remove)) {
@@ -1034,13 +1037,13 @@ class component_relation_common extends component_common {
 		// iterate and add to new_relations only different locators
 			$removed		= false;
 			$new_relations	= array();
-			$dato			= $this->get_dato();
-			if (!empty($dato)) {
-				foreach($dato as $current_locator_obj) {
+			$data			= $this->get_data();
+			if (!empty($data)) {
+				foreach($data as $current_locator) {
 
 					// Test if already exists
 					$equal = locator::compare_locators(
-						$current_locator_obj,
+						$current_locator,
 						$locator,
 						$ar_properties, // array check properties
 						['paginated_key'] // $ar_exclude_properties (prevent errors in accidental saved paginated_key cases)
@@ -1048,22 +1051,23 @@ class component_relation_common extends component_common {
 					if ($equal===true) {
 
 						$removed = true;
-
+						// Remove dataframe
+						$this->remove_dataframe_data( $current_locator );
 					}else{
 
-						$new_relations[] = $current_locator_obj;
+						$new_relations[] = $current_locator;
 					}
 				}
 			}
 
 		// Updates current dato relations with clean array of locators
 			if ($removed===true) {
-				$this->set_dato( $new_relations );
+				$this->set_data( $new_relations );
 			}
 
 
 		return (bool)$removed;
-	}//end remove_locator_from_dato
+	}//end remove_locator_from_data
 
 
 
@@ -3393,10 +3397,10 @@ class component_relation_common extends component_common {
 		// 1 PROJECTS GET
 			// We get current portal filter data (projects) to heritage in the new portal record
 			$section_id				= $this->get_section_id();
-			$component_filter_dato	= (strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)!==false)
+			$component_filter_data	= (strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)!==false)
 				? null
 				: $this->get_current_section_filter_data();
-			if(empty($component_filter_dato)) {
+			if(empty($component_filter_data)) {
 
 				debug_log(__METHOD__
 					." Empty filter value in current section. Default project value will be used: "
@@ -3410,7 +3414,7 @@ class component_relation_common extends component_common {
 				$locator = new locator();
 					$locator->set_section_tipo(DEDALO_SECTION_PROJECTS_TIPO);
 					$locator->set_section_id(DEDALO_DEFAULT_PROJECT);
-				$component_filter_dato = [$locator];
+				$component_filter_data = [$locator];
 			}
 
 		// 2 SECTION
@@ -3419,7 +3423,7 @@ class component_relation_common extends component_common {
 
 			$save_options = new stdClass();
 				$save_options->caller_dato				= $this->get_dato();
-				$save_options->component_filter_dato	= $component_filter_dato;
+				$save_options->component_filter_data	= $component_filter_data;
 
 			$new_section_id = $section_new->Save( $save_options );
 

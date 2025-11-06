@@ -43,6 +43,7 @@ abstract class component_common extends common {
 
 		public $exists_dato_in_any_lan = false;
 		public $dato_resolved;
+		public $data_resolved;
 
 		// expected language for this component (used to verify that the structure is well formed)
 		public $expected_lang;
@@ -129,6 +130,14 @@ abstract class component_common extends common {
 		// dataframe ddo
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
+
+		public $section_record;
+		// string column in Database
+		// Defined in every component
+		public $data_column;
+
+		// Property to enable or disable the get and set data in different languages
+		protected $supports_translation;
 
 
 
@@ -673,83 +682,145 @@ abstract class component_common extends common {
 
 
 	/**
-	* SET_DATO
-	* @param array|null dato
-	* @return bool true
+	* SET_DATA
+	* @param array|null data
+	* @return bool $result
 	*/
-	public function set_dato($dato) : bool {
+	public function set_data( ?array $data ) : bool {
 
-		// dato format check
-			if (!is_null($dato) && !is_array($dato) && $this->mode!=='update') {
-
-				$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
-				if ($matrix_table==='matrix_dd') {
-					// v5 matrix_dd list compatibility
-					// nothing to do here
-				}else{
-					debug_log(__METHOD__ . ' '
-						. '[SET] RECEIVED DATO TO SET, IS NOT AS EXPECTED TYPE array|null' . PHP_EOL
-						. 'type: '. gettype($dato) .PHP_EOL
-						. 'dato: '. to_string($dato) .PHP_EOL
-						. 'model: '. get_called_class() .PHP_EOL
-						. 'tipo: ' . $this->tipo . PHP_EOL
-						. 'section_tipo: ' . $this->section_tipo . PHP_EOL
-						. 'section_id: ' . $this->section_id . PHP_EOL
-						. 'mode: '. $this->mode .PHP_EOL
-						. 'cache: '. to_string($this->cache) .PHP_EOL
-						. 'table: '. $matrix_table
-						, logger::ERROR
-					);
-				}
-			}
-
-		// force array on non empty
-			if (!is_array($dato) && !is_null($dato)) {
-				$dato = [$dato];
-			}
-
-		// unset previous calculated valor
-			if (isset($this->valor)) {
-				unset($this->valor);
-			}
 		// unset previous calculated ar_list_of_values
 			if (isset($this->ar_list_of_values)) {
 				unset($this->ar_list_of_values);
 			}
 
 		// empty array cases: [null] to null
-			if (is_array($dato) && count($dato)===1 && (is_null($dato[0]) || $dato[0]==='')) {
-				$dato = null;
+			if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
+				$data = null;
 			}
 
-		// call common->set_dato (!) fix var 'is_loaded_matrix_data' as true
-			parent::set_dato($dato);
-
 		// resolved set
-			$this->dato_resolved = $dato;
+			// $this->dato_resolved = $data;
 
-		// @v7 way
-			// if ($this->data_column==='string') {
-			// 	$this->set_component_data( $this->lang, $dato );
-			// }
+		// section record
+			$section_record = $this->get_my_section_record();
+			$result = $section_record->set_component_data(
+				$this->tipo,
+				$this->data_column,
+				$data
+			);
 
 
-		return true;
-	}//end set_dato
+		return $result;
+	}//end set_data
 
 
 
 	/**
-	* GET_DATO
+	* SET_DATA_LANG
+	* Assign or remove the data_lang of specified lang
+	* if data_lang = null it will be removed
+	* if data_lang doesn't have lang assigned, lang will be set
+	* if the lang property of data_lang doesn't match with the given lang,
+	* the data_lang will be set to given lang.
+	* @param array|null $data_lang
+	* 	Array of data items or null to remove
+	* @param string $lang
+	* 	Language code to set
+	* @return bool $result
+	*/
+	public function set_data_lang( ?array $data_lang, string $lang ) : bool {
+
+		// Check if the component supports translation.
+		// This property is independent of the Ontology definition $translatable
+		// one component can support translation as component_input_text but the ontology
+		// defines this specific component is not translatable.
+		// Any component that doesn't not supports translation will return the result to set full data
+		if($this->supports_translation === false){
+			return $this->set_data( $data_lang );
+		}
+
+		// Check the given data and if match with the lang assigned
+			$safe_data_lang = [];
+			if( $data_lang !== null ){
+				foreach ($data_lang as $item) {
+
+					// Validate item structure
+					if (!is_object($item)) {
+						debug_log(__METHOD__
+							. " Invalid data item, expected object but got: " . gettype($item)
+							, logger::ERROR
+						);
+						continue;
+					}
+
+					// Check for lang mismatch and log warning
+					if( isset($item->lang) && $item->lang !== $lang ){
+						debug_log(__METHOD__
+							. " Error set data lang, the lang defined in data and the lang to set is not equal " . PHP_EOL
+							. " Item: ".to_string($item).PHP_EOL
+							. " lang: ".to_string($lang).PHP_EOL
+							. " !!! Data will be changed to set the given lang !!! "
+							, logger::ERROR
+						);
+					}
+
+					// Create modified copy to avoid side effects
+					$modified_item = clone $item;
+					$modified_item->lang = $lang;
+
+					$safe_data_lang[] = $modified_item;
+				}
+			}
+
+		// get all component data
+			$data = $this->get_data() ?? [];
+
+		// Clean all previous data lang
+			$filtered_data = [];
+			foreach ($data as $item) {
+
+				// Skip items with missing lang property
+				$current_lang = $item->lang ?? null;
+				if( empty($current_lang) ){
+					debug_log(__METHOD__
+						. " Error in data item, it doesn't have the lang property defined. Ignored value" . PHP_EOL
+						. " Item: ".to_string($item)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				 // Keep only items that don't match the target language
+				if ($item->lang !== $lang) {
+					$filtered_data[] = $item;
+				}
+			}
+
+		// Merge filtered data with new language data
+			$merged_data = array_merge($filtered_data, $safe_data_lang);
+
+		 // Set the final data (null if empty)
+			$final_data = $this->is_empty($merged_data)
+				? null
+				: $merged_data;
+
+
+		return $this->set_data( $final_data );
+	}//end set_data_lang
+
+
+
+	/**
+	* GET_DATA
 	* Get component dato from database.
 	* To get data from other sources, set var $data_source like 'tm'
 	* @return array|null $dato
 	*/
-	public function get_dato() {
+	public function get_data() : ?array {
 
-		// dato_resolved. Already resolved case
-			if(isset($this->dato_resolved)) {
-				return $this->dato_resolved;
+		// data_resolved. Already resolved case
+			if(isset($this->data_resolved)) {
+				return $this->data_resolved;
 			}
 
 		// time machine mode case. data_source='tm'
@@ -827,31 +898,31 @@ abstract class component_common extends common {
 					$this->is_loaded_matrix_data = true;
 
 					// inject dato to component
-					$this->dato_resolved = $dato_tm;
+					$this->data_resolved = $dato_tm;
 
-				return $this->dato_resolved;
+				return $this->data_resolved;
 			}
 
 		// MATRIX DATA : Load matrix data
-		$this->load_component_dato();
+		$this->load_component_data();
 
-		$dato = $this->dato;
+		$data = $this->data;
 
 		// invalid data formats case. Expected array|null
-		if (!is_null($dato) && !is_array($dato)) {
+		if ( !is_null($data) && !is_array($data) ) {
 			$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
 			if ($matrix_table==='matrix_dd') {
 				// v5 matrix_dd list compatibility
-				$dato = [$dato];
+				$data = [$data];
 			}else{
 				if ($this->mode!=='update') {
-					$dato_to_show = get_called_class()==='component_password'
+					$data_to_show = get_called_class()==='component_password'
 						? '************'
-						: $dato;
+						: $data;
 					debug_log(__METHOD__ . ' '
 						. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null ' .PHP_EOL
-						. 'type: '				. gettype($dato) . PHP_EOL
-						. 'dato: '				. json_encode($dato_to_show, JSON_PRETTY_PRINT) . PHP_EOL
+						. 'type: '				. gettype($data) . PHP_EOL
+						. 'dato: '				. json_encode($data_to_show, JSON_PRETTY_PRINT) . PHP_EOL
 						. 'model: '				. get_called_class() . PHP_EOL
 						. 'table: '				. $matrix_table . PHP_EOL
 						. 'component_tipo: '	. $this->tipo . PHP_EOL
@@ -859,24 +930,92 @@ abstract class component_common extends common {
 						. 'section_id: '		. $this->section_id
 						, logger::WARNING
 					);
-					/**
-					* @todo Unify all components behavior when dato format is wrong (fix, save ..)
-						// fix as array
-							// $dato = [$dato];
-							// $this->set_dato($dato);
-							// debug_log(__METHOD__
-							// 	. " Fixed and set bad format dato to array " . PHP_EOL
-							// 	. to_string($dato)
-							// 	, logger::WARNING
-							// );
-					*/
 				}
 			}
 		}
 
 
-		return $dato; // <- The language fallback for the mode list will be directly applied
-	}//end get_dato
+		return $data;
+	}//end get_data
+
+
+
+	/**
+	* GET_DATA_LANG
+	* Returns component data filtered by given lang
+	* If no lang is passed, the current component lang is used
+	* that means, the language used to instantiate this component.
+	* @param string|null $lang = null
+	* @return array|null $data_lang
+	* 	sample:  [
+	*		{"id":1, "lang": "lg-spa", "value": "L'Horta Sud"}
+	*	]
+	*/
+	public function get_data_lang( ?string $lang=null ) : ?array {
+
+		$data = $this->get_data();
+
+		// Check if the component supports translation.
+		// This property is independent of the Ontology definition $translatable
+		// one component can support translation as component_input_text but the ontology
+		// defines this specific component is not translatable.
+		// Any component that doesn't not supports translation will return the result to get full data
+		if($this->supports_translation === false){
+			return $data;
+		}
+
+		if(empty($data)){
+			return $data;
+		}
+
+		$safe_lang = $lang ?? $this->get_lang();
+		$data_lang = array_filter( $data, function($el) use ($safe_lang) {
+			return $el->lang === $safe_lang;
+		});
+
+
+		return $data_lang;
+	}//end get_data_lang
+
+
+
+	/**
+	* LOAD_COMPONENT_DATA
+	* Get data once from matrix about section_id, dato
+	* @see component_relation_common->load_component_data()
+	* @return bool
+	*/
+	protected function load_component_data() : bool {
+
+		// check vars
+			if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
+				return false;
+			}
+			if (empty($this->section_tipo)) {
+				debug_log(__METHOD__
+					." Error Processing Request. section tipo not found for component tipo: $this->tipo "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		if($this->is_loaded_matrix_data!==true) {
+
+			// section create
+				$section_record = $this->get_my_section_record();
+
+			// component full_data
+				$this->data = $section_record->get_component_data(
+					$this->tipo,
+					$this->data_column
+				);
+
+			// Set as loaded
+				$this->is_loaded_matrix_data = true;
+		}
+
+		return true;
+	}//end load_component_data
 
 
 
@@ -920,7 +1059,7 @@ abstract class component_common extends common {
 	*/
 	public function get_time_machine_data_to_save() : ?array {
 
-		$time_machine_data_to_save = $this->dato;
+		$time_machine_data_to_save = $this->get_data_lang();
 
 		$ar_component_dataframe = $this->get_dataframe_ddo();
 		if( !empty($ar_component_dataframe) ){
@@ -949,7 +1088,7 @@ abstract class component_common extends common {
 
 
 		return $time_machine_data_to_save;
-	}//end get_time_machine_data
+	}//end get_time_machine_data_to_save
 
 
 
@@ -1186,19 +1325,22 @@ abstract class component_common extends common {
 	* Save component data in matrix using parent section
 	* Verify all necessary vars to save and call section 'save_component_dato($this)'
 	* @see section->save_component_dato($this)
-	* @return int|null $section_matrix_id
+	* @return bool $result
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		// short vars
-			$section_tipo	= $this->get_section_tipo();
-			$section_id		= $this->get_section_id();
-			$tipo			= $this->get_tipo();
-			$lang			= $this->get_lang() ?? DEDALO_DATA_LANG;
-			$mode			= $this->get_mode();
+			$section_tipo		= $this->get_section_tipo();
+			$section_id			= $this->get_section_id();
+			$tipo				= $this->get_tipo();
+			$lang				= $this->get_lang() ?? DEDALO_DATA_LANG;
+			$model 				= $this->get_model();
+			$mode				= $this->get_mode();
+			$data_column_name	= $this->get_data_column_name();
+			$data				= $this->get_data();
 
 		// check component minimum vars before save
-			if( empty($section_id) || empty($tipo) || empty($lang) ) {
+			if( empty($section_tipo) || empty($section_id) || empty($tipo) || empty($lang) ) {
 				debug_log(__METHOD__
 					. " Error on save: Few vars! . Ignored order" . PHP_EOL
 					. ' section_id: ' . to_string($section_id) . PHP_EOL
@@ -1209,7 +1351,7 @@ abstract class component_common extends common {
 					. ' lang: ' . $lang
 					, logger::ERROR
 				);
-				return null;
+				return false;
 			}
 
 		// tm mode case
@@ -1225,56 +1367,56 @@ abstract class component_common extends common {
 					. ' lang: ' . $lang
 					, logger::ERROR
 				);
-				return null;
-			}
-
-		// section_id validate
-			// if ( abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-			// 	if(SHOW_DEBUG===true) {
-			// 		dump($this, "this section_tipo:$section_tipo - section_id:$section_id - tipo:$tipo - lang:$lang");
-			// 	}
-			// 	trigger_error('Error Processing component save. Inconsistency detected: component trying to save without section_id: '. $section_id);
-			// 	return false;
-			// }
-
-		// is temp case
-		// Sometimes we need use component as temporal element without save real data to database. Is this case
-		// data is saved to session as temporal data
-			/*
-			if (isset($this->is_temp) && $this->is_temp===true) {
-				$temp_data_uid = $tipo.'_'.$section_id.'_'.$lang.'_'.$section_tipo;
-				$_SESSION['dedalo']['component_temp_data'][$temp_data_uid] = $dato ;
-				if(SHOW_DEBUG===true) {
-					debug_log("INFO: IS_TEMP: saved dato from component $temp_data_uid");
-				}
 				return false;
 			}
-			*/
 
-		// section save. The section will be the responsible to save the component data
-			$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
-			$section			= $this->get_my_section();
-			$section_id			= $section->save_component_dato($this, 'direct', $save_to_database);
+		// Section record
+			$section_record		= $this->get_my_section_record();
 
-		// section_id : Check valid section_id returned
-		// if (abs($section_id)<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) {
-			if ( empty($section_id) || (abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false) ) {
-				debug_log(__METHOD__
-					. " Error on component Save: received id ($section_id) is not valid for save! Ignored order " . PHP_EOL
-					. ' section_id: ' . to_string($section_id) . PHP_EOL
-					. ' section_tipo: ' . $section_tipo . PHP_EOL
-					. ' tipo: ' . $tipo
-					, logger::ERROR
-				);
-				return null;
+		// section save.
+			// The section will be the responsible to save the component data
+			// optional stop the save process to delay DDBB access
+			$save_to_database = isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
+			if($save_to_database===false) {
+				// Stop here (remember make a real section save later!)
+				// No component time machine data will be saved when section saves later
+				// debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
+				return true;
 			}
 
-		// save_to_database. Optional stop the save process to delay ddbb access
-			if ($save_to_database===false) {
-				# Stop here (remember make a real section save later!)
-				# No component time machine data will be saved when section saves later
-				return (int)$section_id;
-			}
+		// Save the component data into DB
+			$result = $section_record->save_component_data( $data_column_name, $tipo, $data );
+
+		// time machine data.
+			// We save only current component lang 'dato' in time machine
+			// get the time_machine data from component
+			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
+			$tm_save_options = new stdClass();
+				$tm_save_options->time_machine_data			= $this->get_time_machine_data_to_save();
+				$tm_save_options->time_machine_lang			= $lang;
+				$tm_save_options->time_machine_tipo			= $tipo;
+				$tm_save_options->time_machine_section_id	= (int)$this->section_id;
+
+				// component_dataframe
+				// when the component is dataframe, save all information together
+				// use the main and dataframe data as locators, mix all and save with the main component tipo
+				if ( $model==='component_dataframe' ) {
+					// use the main component
+					$main_tipo = $this->get_main_component_tipo();
+					$tm_save_options->time_machine_tipo	= $main_tipo;
+				}
+				// bulk_process_id column
+				if( isset($this->bulk_process_id) ){
+					$tm_save_options->time_machine_bulk_process_id = $this->bulk_process_id;
+				}
+			//Save the time machine record
+			$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
+				common::get_matrix_table_from_tipo($this->tipo),
+				(int)$this->section_id, // int section_id
+				$this->tipo, // string section tipo
+				true // bool enable cache
+			);
+			$JSON_RecordObj_matrix->save_time_machine($tm_save_options);
 
 		// activity
 			$this->save_activity();
@@ -1283,7 +1425,7 @@ abstract class component_common extends common {
 			$this->propagate_to_observers();
 
 
-		return (int)$section_id;
+		return $result;
 	}//end Save
 
 
@@ -1710,7 +1852,7 @@ abstract class component_common extends common {
 	*/
 	public function empty_data() : bool {
 
-		$this->set_dato(null);
+		$this->set_data(null);
 
 		return true;
 	}//end empty_data
@@ -2576,8 +2718,8 @@ abstract class component_common extends common {
 	* REMOVE_DATAFRAME_DATA
 	* Remove all information associate to the main component
 	* This method is called when the main component remove a row (@see update_data_value() in component_common)
-	* And is possible that his dataframe will has data
-	* Therefore, the dataframe needs to be delete as his own main caller dataframe.
+	* And it's possible that your dataframe contains data.
+	* Therefore, the dataframe needs to be delete as its own main caller dataframe.
 	* @param object $locator
 	* @return array | null $ar_dataframe_ddo
 	*
@@ -3462,6 +3604,36 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_MY_SECTION_RECORD
+	* Creates or get from memory the component section object
+	* @return object $this->section_obj
+	*/
+	public function get_my_section_record() : object {
+
+		// Note that (06-02-2022) the section cache has not conflicts with same instance in list or edit modes
+		// now the JSON_RecordObj_matrix has the cache of section data. (same data for list and edit)
+			if (isset($this->section_record)) {
+				return $this->section_record;
+			}
+
+		// cache. Note that component cache will be sync with section. Set as false for component update
+			$cache = $this->cache;
+
+		// section build instance
+			$section = section::get_instance(
+				$this->section_tipo,
+				$cache, // bool cache (synced whit this component)
+			);
+		//section_record
+			$section_record = $section->get_section_record( $this->section_id );
+			$this->section_record = $section_record;
+
+		return $this->section_record;
+	}//end get_my_section_record
+
+
+
+	/**
 	* GET_CALCULATION_DATA
 	* @param object|null $options = null
 	* @return $data
@@ -3703,6 +3875,8 @@ abstract class component_common extends common {
 
 					// Remove the dataframe data
 					if( !empty($locator) ){
+						// Remove the dataframe data before the main component save
+						// to save the correct data into Time Machine
 						$this->remove_dataframe_data( $locator );
 					}
 				}
@@ -4119,28 +4293,57 @@ abstract class component_common extends common {
 	/**
 	* IS_EMPTY
 	* Generic check if given value is or not empty considering
-	* @param mixed $value
+	* @param array|null $value
 	* @return bool
 	*/
-	public function is_empty(mixed $value) : bool {
+	public function is_empty(?array $value) : bool {
 
-		// null case
-			if(is_null($value)){
-				return true;
+		// null case explicit
+		if( $value===null ) {
+			return true;
+		}
+
+		// array case
+		if ( is_array($value) ) {
+			foreach ($value as $item) {
+				if( !empty($item) && $item!==0 ) {
+					return false;
+				}
 			}
+		}
 
-		// string length 0 case
-			$value = is_string($value)
-				? trim($value)
-				: $value;
 
-		// common empty check
-			if(empty($value)){
-				return true;
+		return true;
+	}//end is_empty
+
+
+
+	/**
+	* IS_EMPTY_DATA
+	* @param array|null $data
+	* Check if given data is empty or not considering
+	* spaces and ' ' as empty values.
+	* @return bool
+	*/
+	public function is_empty_data( ?array $data ) : bool {
+
+		$is_empty_data = true;
+
+		if($data===null) {
+			return $is_empty_data;
+		}
+
+		foreach ($data as $data_item) {
+			$value = $data_item->value ?? null;
+			$is_empty_value = $this->is_empty( $value );
+			if( $is_empty_value === false ){
+				$is_empty_data = false;
+				break;
 			}
+		}
 
 
-		return false;
+		return $is_empty_data ;
 	}//end is_empty
 
 

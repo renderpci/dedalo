@@ -62,10 +62,9 @@
 			case 'list':
 			case 'tm':
 				$value			= $this->get_list_value();
-				$fallback_value	= $this->extract_component_dato_fallback(
-					DEDALO_DATA_LANG, // lang
-					DEDALO_DATA_LANG_DEFAULT // main_lang
-				);
+				$fallback_value	= $this->is_empty_data( $value )
+					? null
+					: $this->get_component_data_fallback();
 				break;
 
 			case 'search':
@@ -75,44 +74,10 @@
 
 			case 'edit':
 			default:
-				$value			= $this->get_dato();
-				$fallback_value	= $this->extract_component_dato_fallback(
-					DEDALO_DATA_LANG, // lang
-					DEDALO_DATA_LANG_DEFAULT // main_lang
-				);
-
-				// @v7 test
-				// $value = json_decode('
-				// 	[
-				// 		{
-				// 	      "id": 1,
-				// 	      "lang": "lg-eng",
-				// 	      "value": "The one id: 1"
-				// 	    },
-				// 	    {
-				// 	      "id": 2,
-				// 	      "lang": "lg-eng",
-				// 	      "value": "The one id: 2"
-				// 	    }
-				//     ]
-				// ');
-				// $fallback_value	= json_decode('
-				// 	[
-				// 		{
-				// 	      "id": 1,
-				// 	      "lang": "lg-spa",
-				// 	      "value": "El uno id: 1"
-				// 	    },
-				// 	    {
-				// 	      "id": 2,
-				// 	      "lang": "lg-spa",
-				// 	      "value": "El uno id: 2"
-				// 	    }
-				//     ]
-				// ');
-
-				// 	dump($value, ' value ++ '.to_string($this->lang));
-				// 	dump($fallback_value, ' fallback_value ++ '.to_string($this->lang));
+				$value			= $this->get_data_lang();
+				$fallback_value	= $this->is_empty_data( $value )
+					? null
+					: $this->get_component_data_fallback();
 				break;
 		}
 

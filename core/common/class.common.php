@@ -32,6 +32,7 @@ abstract class common {
 		// string label. like 'component_section_id'
 		public $label;
 		public $dato; // object dato (JSON encoded in db)
+		public $data; // object data (JSON encoded in db)
 		public $section_id;
 
 		// object ontology_node. Ontology definition object
@@ -621,21 +622,21 @@ abstract class common {
 
 
 
-	/**
-	* SET_DATO
-	* @param mixed dato
-	* @return bool true
-	*/
-	public function set_dato($dato) : bool {
+	// /**
+	// * SET_DATO
+	// * @param mixed dato
+	// * @return bool true
+	// */
+	// public function set_dato($dato) : bool {
 
-		// set
-		$this->dato = $dato;
+	// 	// set
+	// 	$this->dato = $dato;
 
-		// loaded. Fix this element as data loaded to prevent overwrite current fixed dato, with database dato
-		$this->set_is_loaded_matrix_data(true);
+	// 	// loaded. Fix this element as data loaded to prevent overwrite current fixed dato, with database dato
+	// 	$this->set_is_loaded_matrix_data(true);
 
-		return true;
-	}//end set_dato
+	// 	return true;
+	// }//end set_dato
 
 
 

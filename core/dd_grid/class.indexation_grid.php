@@ -508,11 +508,11 @@ class indexation_grid {
 							DEDALO_DATA_NOLAN,
 							$section_top_tipo
 						);
-						$component_filter_dato = (array)$component_filter->get_dato();
+						$component_filter_data = (array)$component_filter->get_dato();
 
 						$in_user_projects = false;
 						foreach ($ar_user_projects as $user_project_locator) {
-							if (true===locator::in_array_locator($user_project_locator, $component_filter_dato, $ar_properties=['section_id','section_tipo'])) {
+							if (true===locator::in_array_locator($user_project_locator, $component_filter_data, $ar_properties=['section_id','section_tipo'])) {
 								$in_user_projects = true;
 								break;
 							}

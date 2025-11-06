@@ -26,8 +26,11 @@ class component_string_common extends component_common {
 	* CLASS VARS
 	*/
 
-	// data_column. DB column where to get the data.
-	protected $data_column = 'string';
+	// data_column_name. DB column where to get the data.
+	protected $data_column_name = 'string';
+
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = true;
 
 
 	/**
@@ -49,25 +52,66 @@ class component_string_common extends component_common {
 
 	/**
 	* IS_EMPTY
-	* @param mixed $value
+	* @param array|null $value
 	* Check if given value is or not empty considering
 	* spaces and ' ' as empty values
 	* @return bool
 	*/
-	public function is_empty(mixed $value) : bool {
+	public function is_empty(?array $value) : bool {
 
+		// null case explicit
 		if($value===null) {
 			return true;
 		}
 
-		// check for only spaces values as ' '
-		$trim_value = is_string($value) ? trim($value) : $value;
-		if($trim_value!=='0' && empty($trim_value)) {
-			return true;
+		// array case
+		if ( is_array($value) ) {
+			foreach ($value as $item) {
+				$trim_value = is_string($item) ? trim($item) : $item;
+				if( !empty($trim_value) ) {
+					return false;
+				}
+			}
 		}
 
-		return false;
+
+		return true;
 	}//end is_empty
+
+
+
+	/**
+	* GET_DATA
+	* @return array|null $dato
+	*/
+	public function get_data() : ?array {
+
+		$data = parent::get_data();
+
+		if (!is_null($data) && !is_array($data)) {
+			$type = gettype($data);
+			debug_log(__METHOD__
+				. " Expected dato type array or null, but type is: $type. Converted to array of strings and saving " . PHP_EOL
+				. ' tipo: ' . $this->tipo . PHP_EOL
+				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+				. ' section_id: ' . $this->section_id
+				, logger::ERROR
+			);
+			dump($data, ' dato ++ ');
+
+			$data = !empty($data)
+				? [to_string($data)]
+				: null;
+
+			// update
+			$this->set_dato($data);
+			$this->Save();
+		}
+
+
+		return $data;
+	}//end get_data
+
 
 
 
@@ -164,6 +208,71 @@ class component_string_common extends component_common {
 
 		return parent::set_dato( $dato );
 	}//end set_dato
+
+
+
+	/**
+	* GET_COMPONENT_DATA_FALLBACK
+	* Retrieves component data for a specific language and implements
+	* a fallback mechanism when data is missing or empty. It follows
+	* a hierarchical fallback strategy to ensure data availability across different
+	* language contexts.
+	*
+	* FALLBACK HIERARCHY:
+	* 1. Current language data (if not empty)
+	* 2. Main/default language data
+	* 3. No-language (NOLAN) data
+	* 4. All other available project languages (in sequence)
+	* 5. null (if no data found in any language)
+	*
+	* ALGORITHM FLOW:
+	* - Preserves current language state for restoration
+	* - Retrieves data for the requested language
+	* - For each empty value, iterates through fallback languages
+	* - Returns first non-empty value found or null
+	* - Restores original language state
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
+	* @return array|null $dato_fb
+	*/
+	public function get_component_data_fallback(string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?array {
+
+		$data = $this->get_data();
+		if (empty($data)) {
+			return null;
+		}
+
+		// Try main lang
+		if ($main_lang!==$lang) {
+			$main_lang_data = $this->get_data_lang($main_lang);
+			if (!$this->is_empty($main_lang_data)) {
+				return $main_lang_data;
+			}
+		}
+
+		// Try nolan
+		$data_nolan = $this->get_data_lang(DEDALO_DATA_NOLAN);
+		if (!$this->is_empty($data_nolan)) {
+			return $data_nolan;
+		}
+
+		// Try any other
+		$data_langs = common::get_ar_all_langs(); // Langs from config projects
+		foreach ($data_langs as $current_lang) {
+			if ($current_lang===$lang || $current_lang===$main_lang) {
+				continue; // Already checked
+			}
+			// Get current lang group of items from data
+			$current_lang_data = $this->get_data_lang($current_lang);
+			if (!$this->is_empty($data_nolan)) {
+				return $current_lang_data ;
+			}
+		}
+
+
+		return null;
+	}//end get_component_data_fallback
+
 
 
 
@@ -268,66 +377,66 @@ class component_string_common extends component_common {
 
 
 
-	/**
-	* EXTRACT_COMPONENT_VALUE_FALLBACK
-	* @todo Note: It is still using 'get_valor()'. Normalize to modern 'get_value()'
-	* reviewing all references
-	* @param string $lang = DEDALO_DATA_LANG
-	* @param bool $mark = true
-	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
-	* @return string $value
-	*/
-	public function extract_component_value_fallback(string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
+	// /**
+	// * EXTRACT_COMPONENT_VALUE_FALLBACK
+	// * @todo Note: It is still using 'get_valor()'. Normalize to modern 'get_value()'
+	// * reviewing all references
+	// * @param string $lang = DEDALO_DATA_LANG
+	// * @param bool $mark = true
+	// * @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
+	// * @return string $value
+	// */
+	// public function extract_component_value_fallback(string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
 
-		// get and store initial lang to restore later
-		$initial_lang = $this->get_lang();
+	// 	// get and store initial lang to restore later
+	// 	$initial_lang = $this->get_lang();
 
-		// Try direct value
-		$value = $this->get_valor($lang);
+	// 	// Try direct value
+	// 	$value = $this->get_valor($lang);
 
-		if (empty($value)) {
+	// 	if (empty($value)) {
 
-			// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
-			if ($lang!==$main_lang) {
-				$this->set_lang($main_lang);
-				$value = $this->get_valor($main_lang);
-			}
+	// 		// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+	// 		if ($lang!==$main_lang) {
+	// 			$this->set_lang($main_lang);
+	// 			$value = $this->get_valor($main_lang);
+	// 		}
 
-			// Try nolan
-			if (empty($value)) {
-				$this->set_lang(DEDALO_DATA_NOLAN);
-				$value = $this->get_valor(DEDALO_DATA_NOLAN);
-			}
+	// 		// Try nolan
+	// 		if (empty($value)) {
+	// 			$this->set_lang(DEDALO_DATA_NOLAN);
+	// 			$value = $this->get_valor(DEDALO_DATA_NOLAN);
+	// 		}
 
-			// Try all projects langs sequence
-			if (empty($value)) {
-				$data_langs = common::get_ar_all_langs(); // Langs from config projects
-				foreach ($data_langs as $current_lang) {
-					if ($current_lang===$lang || $current_lang===$main_lang) {
-						continue; // Already checked
-					}
-					$this->set_lang($current_lang);
-					$value = $this->get_valor($current_lang);
-					if (!empty($value)) break; // Stops when first data is found
-				}
-			}
+	// 		// Try all projects langs sequence
+	// 		if (empty($value)) {
+	// 			$data_langs = common::get_ar_all_langs(); // Langs from config projects
+	// 			foreach ($data_langs as $current_lang) {
+	// 				if ($current_lang===$lang || $current_lang===$main_lang) {
+	// 					continue; // Already checked
+	// 				}
+	// 				$this->set_lang($current_lang);
+	// 				$value = $this->get_valor($current_lang);
+	// 				if (!empty($value)) break; // Stops when first data is found
+	// 			}
+	// 		}
 
-			// Set value as untranslated
-			if ($mark===true) {
-				$value = '<mark>'.$value.'</mark>';
-			}
-		}
+	// 		// Set value as untranslated
+	// 		if ($mark===true) {
+	// 			$value = '<mark>'.$value.'</mark>';
+	// 		}
+	// 	}
 
-		if (!is_string($value)) {
-			$value = to_string($value);
-		}
+	// 	if (!is_string($value)) {
+	// 		$value = to_string($value);
+	// 	}
 
-		// restore initial lang
-		$this->set_lang($initial_lang);
+	// 	// restore initial lang
+	// 	$this->set_lang($initial_lang);
 
 
-		return $value;
-	}//end extract_component_value_fallback
+	// 	return $value;
+	// }//end extract_component_value_fallback
 
 
 
