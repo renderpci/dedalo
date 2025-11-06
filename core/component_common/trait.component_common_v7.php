@@ -14,18 +14,18 @@ trait component_common_v7 {
 	protected $full_data;
 
 	// string data column name. E.g. 'relation'
-	protected $data_column; // Override in each component
+	protected $data_column_name; // Override in each component
 
 
 
 	/**
-	* GET_DATA_COLUMN @v7
+	* DATA_COLUMN_NAME
 	* Reads the component class property 'data_column' value.
 	* @return string
 	*/
-	public function get_data_column() : string {
-		return $this->data_column;
-	}//end get_data_column
+	public function data_column_name() : string {
+		return $this->data_column_name;
+	}//end data_column_name
 
 
 

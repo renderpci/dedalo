@@ -7,8 +7,8 @@ class component_section_id extends component_common {
 
 
 
-	// data_column. DB column where to get the data.
-	protected $data_column = 'section_id';
+	// data_column_name. DB column where to get the data.
+	protected $data_column_name = 'section_id';
 
 
 

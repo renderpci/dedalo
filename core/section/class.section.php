@@ -73,6 +73,9 @@ class section extends common {
 		// It contains the section data source directly from DB.
 		protected $JSON_RecordObj_matrix;
 
+		// data_column_name. DB column where to get the data.
+		protected $data_column_name = 'data';
+
 
 
 	# DIFFUSION INFO

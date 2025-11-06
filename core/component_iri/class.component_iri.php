@@ -28,6 +28,9 @@ class component_iri extends component_common {
 		// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = true;
 
+	// data_column_name. DB column where to get the data.
+	protected $data_column_name = 'iri';
+
 	//
 	private $included_dataframe_properties = false;
 
