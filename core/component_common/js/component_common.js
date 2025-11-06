@@ -1755,7 +1755,7 @@ export const delete_dataframe = async function(options) {
 
 	// hard_delete
 	// delete the target section linked to the component
-	// REMOVED because time machine needs to show the previous state, so, never deletes it
+	// REMOVED, Don't use it!. because time machine needs to show the previous state, so, never deletes it
 		// const hard_delete = (component_dataframe.context.properties.hard_delete)
 		// 	? component_dataframe.context.properties.hard_delete
 		// 	: false
