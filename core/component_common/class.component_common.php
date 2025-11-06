@@ -741,7 +741,98 @@ abstract class component_common extends common {
 
 
 		return true;
-	}//end set_dato
+	/**
+	* SET_DATA_LANG
+	* Assign or remove the data_lang of specified lang
+	* if data_lang = null it will be removed
+	* if data_lang doesn't have lang assigned, lang will be set
+	* if the lang property of data_lang doesn't match with the given lang,
+	* the data_lang will be set to given lang.
+	* @param array|null $data_lang
+	* 	Array of data items or null to remove
+	* @param string $lang
+	* 	Language code to set
+	* @return bool $result
+	*/
+	public function set_data_lang( ?array $data_lang, string $lang ) : bool {
+
+		// Check if the component supports translation.
+		// This property is independent of the Ontology definition $translatable
+		// one component can support translation as component_input_text but the ontology
+		// defines this specific component is not translatable.
+		// Any component that doesn't not supports translation will return the result to set full data
+		if($this->supports_translation === false){
+			return $this->set_data( $data_lang );
+		}
+
+		// Check the given data and if match with the lang assigned
+			$safe_data_lang = [];
+			if( $data_lang !== null ){
+				foreach ($data_lang as $item) {
+
+					// Validate item structure
+					if (!is_object($item)) {
+						debug_log(__METHOD__
+							. " Invalid data item, expected object but got: " . gettype($item)
+							, logger::ERROR
+						);
+						continue;
+					}
+
+					// Check for lang mismatch and log warning
+					if( isset($item->lang) && $item->lang !== $lang ){
+						debug_log(__METHOD__
+							. " Error set data lang, the lang defined in data and the lang to set is not equal " . PHP_EOL
+							. " Item: ".to_string($item).PHP_EOL
+							. " lang: ".to_string($lang).PHP_EOL
+							. " !!! Data will be changed to set the given lang !!! "
+							, logger::ERROR
+						);
+					}
+
+					// Create modified copy to avoid side effects
+					$modified_item = clone $item;
+					$modified_item->lang = $lang;
+
+					$safe_data_lang[] = $modified_item;
+				}
+			}
+
+		// get all component data
+			$data = $this->get_data() ?? [];
+
+		// Clean all previous data lang
+			$filtered_data = [];
+			foreach ($data as $item) {
+
+				// Skip items with missing lang property
+				$current_lang = $item->lang ?? null;
+				if( empty($current_lang) ){
+					debug_log(__METHOD__
+						. " Error in data item, it doesn't have the lang property defined. Ignored value" . PHP_EOL
+						. " Item: ".to_string($item)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				 // Keep only items that don't match the target language
+				if ($item->lang !== $lang) {
+					$filtered_data[] = $item;
+				}
+			}
+
+		// Merge filtered data with new language data
+			$merged_data = array_merge($filtered_data, $safe_data_lang);
+
+		 // Set the final data (null if empty)
+			$final_data = $this->is_empty($merged_data)
+				? null
+				: $merged_data;
+
+
+		return $this->set_data( $final_data );
+	}//end set_data_lang
 
 
 
