@@ -506,7 +506,7 @@ class calculation extends widget_common {
 
 
 		# Filter element optional
-		if(isset($data->component_filter_dato)) {
+		if(isset($data->component_filter_data)) {
 
 			$q_op 	 = '$and';
 			$q_op_or = '$or';
@@ -521,8 +521,8 @@ class calculation extends widget_common {
 				$search_query_object->filter = $filter_obj;
 			}
 
-			$component_filter_dato = $data->component_filter_dato;
-			foreach ($component_filter_dato as $search) {
+			$component_filter_data = $data->component_filter_data;
+			foreach ($component_filter_data as $search) {
 				foreach ($search as $current_component_tipo => $q) {
 
 					$path    = search::get_query_path($current_component_tipo, $current_section_tipo, false);
