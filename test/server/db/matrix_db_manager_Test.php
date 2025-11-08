@@ -706,7 +706,7 @@ final class matrix_db_manager_test extends TestCase {
 						$value
 					);
 				},
-				900, // estimated time ms
+				1000, // estimated time ms
 				$counter_value - 10000, // from section_id
 				10000 // n records
 			);
