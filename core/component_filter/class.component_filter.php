@@ -370,14 +370,14 @@ class component_filter extends component_relation_common {
 
 
 	/**
-	* SAVE OVERRIDE
+	* SAVE
 	* Overwrite component_common method
-	* @return int|null $section_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		// we save normally but we save the result
-			$parent_save_result = parent::Save();
+			$parent_save_result = parent::save();
 
 		// activity case logger only
 			if( $this->tipo===logger_backend_activity::$_COMPONENT_PROJECTS['tipo'] ) {
@@ -393,7 +393,7 @@ class component_filter extends component_relation_common {
 
 
 		return $parent_save_result;
-	}//end Save
+	}//end save
 
 
 

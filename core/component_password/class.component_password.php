@@ -181,11 +181,11 @@ class component_password extends component_common {
 
 
 	/**
-	* SAVE OVERRIDE
+	* SAVE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
-	* @return int|null
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		if(isset($this->updating_dato) && $this->updating_dato===true) {
 			// Dato is saved plain (unencrypted) only for updates
@@ -207,13 +207,13 @@ class component_password extends component_common {
 					. " Attempt to change dedalo demo user password blocked "
 					, logger::ERROR
 				);
-				return null;
+				return false;
 			}
 
 
 		// from here, we save as standard way
-		return parent::Save();
-	}//end Save
+		return parent::save();
+	}//end save
 
 
 

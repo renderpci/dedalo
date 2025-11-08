@@ -258,19 +258,19 @@ class component_iri extends component_common {
 
 
 	/**
-	* SAVE OVERRIDE
+	* SAVE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
-	* @return int|null $section_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		// dato candidate to save
 			$dato = $this->dato;
 
 		// deleting IRI
 			if (empty($dato)) {
-				# Save in standard empty format
-				return parent::Save();
+				// Save in standard empty format
+				return parent::save();
 			}
 
 		// dato format verify
@@ -283,12 +283,12 @@ class component_iri extends component_common {
 						, logger::ERROR
 					);
 				}
-				return null;
+				return false;
 			}
 
 		// Save in standard format
-		return parent::Save();
-	}//end Save
+		return parent::save();
+	}//end save
 
 
 

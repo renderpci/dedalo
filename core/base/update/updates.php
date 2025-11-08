@@ -203,5 +203,3 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
-
-
