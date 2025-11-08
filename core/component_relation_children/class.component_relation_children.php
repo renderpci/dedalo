@@ -63,20 +63,15 @@ class component_relation_children extends component_relation_common {
 	}//end get_valor
 
 
+
 	/**
 	* SAVE
 	* Overwrite relation common action
-	* @return int|null $section_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 		// Noting to do. This component don`t save
-
-		$section_id = !empty($this->section_id)
-			? (int)$this->section_id
-			: null;
-
-		// return section id
-		return $section_id;
+		return true;
 	}//end Save
 
 

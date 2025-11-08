@@ -1322,21 +1322,18 @@ abstract class component_common extends common {
 
 	/**
 	* SAVE
-	* Save component data in matrix using parent section
-	* Verify all necessary vars to save and call section 'save_component_dato($this)'
-	* @see section->save_component_dato($this)
+	* Updates and saves current component data in the database.
+	* Uses current 'section_record' instance to manage all process.
 	* @return bool $result
 	*/
 	public function save() : bool {
 
 		// short vars
-			$section_tipo		= $this->get_section_tipo();
-			$section_id			= $this->get_section_id();
-			$tipo				= $this->get_tipo();
-			$lang				= $this->get_lang() ?? DEDALO_DATA_LANG;
+			$section_tipo		= $this->section_tipo;
+			$lang				= $lang ?? DEDALO_DATA_LANG;
 			$model 				= $this->get_model();
-			$mode				= $this->get_mode();
-			$data_column_name	= $this->get_data_column_name();
+			$mode				= $this->mode;
+			$data_column	= $this->data_column;
 			$data				= $this->get_data();
 
 		// check component minimum vars before save
@@ -1371,7 +1368,7 @@ abstract class component_common extends common {
 			}
 
 		// Section record
-			$section_record		= $this->get_my_section_record();
+			$section_record	= $this->get_my_section_record();
 
 		// section save.
 			// The section will be the responsible to save the component data
@@ -1385,7 +1382,7 @@ abstract class component_common extends common {
 			}
 
 		// Save the component data into DB
-			$result = $section_record->save_component_data( $data_column_name, $tipo, $data );
+			$result = $section_record->save_component_data( $data_column, $tipo, $data );
 
 		// time machine data.
 			// We save only current component lang 'dato' in time machine
@@ -1426,7 +1423,7 @@ abstract class component_common extends common {
 
 
 		return $result;
-	}//end Save
+	}//end save
 
 
 

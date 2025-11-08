@@ -56,9 +56,9 @@ class component_email extends component_string_common {
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
-	* @return int|null $section_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		// Optionally, the data could be validated here... although it has already been done in javascript
 			$email = $this->get_dato();
@@ -69,15 +69,15 @@ class component_email extends component_string_common {
 						. ' value:' . to_string($value)
 						, logger::ERROR
 					);
-					return null;
+					return false;
 				}
 			}
 
 		// from here, we save as standard
-			$result = parent::Save();
+			$result = parent::save();
 
 		return $result;
-	}//end Save
+	}//end save
 
 
 

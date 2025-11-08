@@ -78,9 +78,9 @@ class component_date extends component_common {
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method
-	* @return int|null $section_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		// dato
 			$dato = $this->dato;
@@ -88,7 +88,7 @@ class component_date extends component_common {
 		// deleting date case
 			if (empty($dato)) {
 				// saving empty value
-				return parent::Save();
+				return parent::save();
 			}
 
 		// dato format verify
@@ -100,7 +100,7 @@ class component_date extends component_common {
 						, logger::ERROR
 					);
 				}
-				return null;
+				return false;
 			}
 
 		// add_time to dato (always)
@@ -111,11 +111,11 @@ class component_date extends component_common {
 			}
 
 		// from here, save normally
-			$result = parent::Save();
+			$result = parent::save();
 
 
 		return $result;
-	}//end Save
+	}//end save
 
 
 

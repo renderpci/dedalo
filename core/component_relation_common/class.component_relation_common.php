@@ -1076,9 +1076,9 @@ class component_relation_common extends component_common {
 	* Save component data in matrix using parent section
 	* Verify all necessary vars to save and call section 'save_component_dato($this)'
 	* @see section->save_component_dato($this)
-	* @return int|null $section_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		// short vars
 			$section_tipo	= $this->get_section_tipo();
@@ -1176,7 +1176,7 @@ class component_relation_common extends component_common {
 
 
 		return (int)$section_id;
-	}//end Save
+	}//end save
 
 
 

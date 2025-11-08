@@ -58,9 +58,9 @@ class component_inverse extends component_common {
 	/**
 	* SAVE
 	* Only used to catch common method here
-	* @return int|null $section_matrix_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		debug_log(__METHOD__
 			. " Ignored save command for component (component_inverse) "
@@ -68,7 +68,7 @@ class component_inverse extends component_common {
 		);
 
 		return $this->section_id;
-	}//end Save
+	}//end save
 
 
 

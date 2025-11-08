@@ -41,10 +41,9 @@ class component_image extends component_media_common implements component_media_
 	/**
 	* SAVE
 	* Manages specific svg file creation and exec parent Save
-	* @return int|null $result
-	* 	section_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		$dato = $this->get_dato();
 
@@ -59,10 +58,10 @@ class component_image extends component_media_common implements component_media_
 
 		$this->dato = $dato;
 
-		$result = parent::Save();
+		$result = parent::save();
 
 		return $result;
-	}//end Save
+	}//end save
 
 
 

@@ -3180,16 +3180,16 @@ class component_media_common extends component_common {
 
 	/**
 	* SAVE
-	* Update component dato reading media files before Save
-	* @return int|null $section_matrix_id
+	* Update component dato reading media files before save
+	* @return bool
 	* @test true
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		$this->update_component_dato_files_info();
 
-		return parent::Save();
-	}//end Save
+		return parent::save();
+	}//end save
 
 
 

@@ -11,9 +11,9 @@ class component_filter_master extends component_filter {
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_filter method
-	* @return int|null $section_id
+	* @return bool
 	*/
-	public function Save() : ?int {
+	public function save() : bool {
 
 		// Reset cache on every save action. IMPORTANT !
 			filter::clean_cache(
@@ -21,8 +21,8 @@ class component_filter_master extends component_filter {
 				$this->tipo // DEDALO_FILTER_MASTER_TIPO dd170
 			);
 
-		return parent::Save();
-	}//end Save
+		return parent::save();
+	}//end save
 
 
 
