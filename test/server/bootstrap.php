@@ -5,7 +5,7 @@
 // require dirname(__FILE__, 3) . '/lib/vendor/autoload.php';
 
 // SHOW_DEBUG. Overwrite config SHOW_DEBUG
-	define('SHOW_DEBUG', false);
+	define('SHOW_DEBUG', true);
 
 // TEST_USER_ID: [
 	// -1, // root development user

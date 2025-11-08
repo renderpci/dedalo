@@ -532,6 +532,7 @@ class matrix_db_manager {
 			if ($rows_affected > 0) {
 
 				// Success. JSON path was successfully saved
+
 				// $saved_id = pg_fetch_result($result, 0, 0);
 				// debug_log(__METHOD__
 				// 	. " Successfully saved JSON path '$path'. Affected record ID: $table $saved_id"
