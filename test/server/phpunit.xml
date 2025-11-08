@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/|version|/phpunit.xsd"
+         executionOrder="default"
+         cacheResult="false"
          bootstrap="../test/bootstrap.php">
     <php>
         <ini name="error_reporting" value="E_ALL &amp; ~E_NOTICE &amp; ~E_WARNING &amp; ~E_DEPRECATED"/>
