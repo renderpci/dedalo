@@ -311,6 +311,16 @@ class section_record_data {
 		$section_id		= $this->section_id;
 		$value			= $this->data[$column][$key] ?? null;
 
+		// check null values
+		if( $value===null ){
+			// check if the column is null
+			$table_data_is_null = $this->data[$column] ?? null;
+			// if the column is null, remove all
+			if( $table_data_is_null===null ){
+				return $this->save_column_data([$column]);
+			}
+		}
+
 		return matrix_db_manager::update_by_key(
 			$table,
 			$section_tipo,

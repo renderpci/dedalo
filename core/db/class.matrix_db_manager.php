@@ -130,7 +130,7 @@ class matrix_db_manager {
 
 		// Start building query
 		$columns		= ['"section_tipo"', '"section_id"']; // required columns
-		$placeholders	= ['$1', 'updated_counter.dato']; // placeholders for them
+		$placeholders	= ['$1', 'updated_counter.value']; // placeholders for them
 		$params			= [$section_tipo]; // param values (first one for tipo)
 		$param_index	= 2; // next param index ($2, $3, ...)
 
@@ -160,64 +160,68 @@ class matrix_db_manager {
 		// (!) Note that value returned by Save action, in case of activity, is the section_id
 		// auto created by table sequence 'matrix_activity_section_id_seq', not by counter
 
-
-		// SQL. Note that counter is updated (+1) and the new value is used as section_id.
-		// If no counter exists for current tipo, a new one is created.
-		$sql = "
-			WITH updated_counter AS (
-				INSERT INTO $counter_table (tipo, dato, parent, lang)
-				  VALUES ($1, 1, 0, 'lg-nolan')
-				ON CONFLICT (tipo) DO UPDATE
-				  SET dato = $counter_table.dato + 1
-				RETURNING dato
-			)
-			INSERT INTO $table (" . implode(', ', $columns) . ")
-			SELECT " . implode(', ', $placeholders) . "
-			FROM updated_counter
-			RETURNING \"section_id\";
-		";
-
-		// Execute query
-		if (empty($values)) {
-			// Only record creation, without additional data (fixed)
-			// With prepared statement
-			$stmt_name = __METHOD__ . '_' . $table;
-			if (!isset(DBi::$prepared_statements[$stmt_name])) {
-				if (!pg_prepare(
-					$conn,
-					$stmt_name,
-					$sql)
-				) {
-					debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-					return false;
-				}
-				// Set the statement as existing.
-				DBi::$prepared_statements[$stmt_name] = true;
-			}
-			$result = pg_execute(
-				$conn,
-				$stmt_name,
-				$params
-			);
-		}else{
-			// Record creation with additional columns data (dynamic)
-			$result = pg_query_params(
-				$conn,
-				$sql,
-				$params
-			);
-		}
+		// 1. Start the transaction and set the isolation level
+		// Ensure the entire operation runs under the SERIALIZABLE transaction isolation level.
+		// Guarantees that the counter update and the subsequent INSERT will reflect a consistent,
+		// serial order of execution, preventing the "lost update" problem often associated with counters under high load.
+		$begin_sql = "BEGIN ISOLATION LEVEL SERIALIZABLE;";
+		$result = pg_query($conn, $begin_sql);
 		if (!$result) {
 			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				." Error Processing Request. ISOLATION LEVEL SERIALIZABLE fails." . PHP_EOL
+				.' begin_sql: ' . to_string($begin_sql) . PHP_EOL
+				.' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false; // Return false immediately since the transaction couldn't start.
+		}
+
+		// 2. Execute the main atomic SQL block with parameters
+		// SQL. Note that counter is updated (+1) and the new value is used as section_id.
+		// If no counter exists for current tipo, a new one is created using CONFLICT fallback.
+		$sql = "
+			WITH updated_counter AS (
+				INSERT INTO $counter_table (tipo, value)
+				VALUES ($1, 1)
+				ON CONFLICT (tipo) DO UPDATE
+				SET value = $counter_table.value + 1
+				RETURNING value
+			)
+			INSERT INTO $table (" . implode(', ', $columns) . ")
+			SELECT " . implode(', ', $placeholders) . "	FROM updated_counter
+			RETURNING section_id;
+		";
+		// Execute query with params
+		$result = pg_query_params(
+			$conn,
+			$sql,
+			$params
+		);
+
+		if (!$result) {
+			// 3a. CRITICAL: Handle error and MUST rollback the open transaction
+			pg_query($conn, "ROLLBACK;");
+
+			debug_log(__METHOD__
+				." Error Processing Request (after rollback) ".to_string($sql) . PHP_EOL
 				.' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
 			return false;
 		}
 
+		// 3b. Commit the transaction if the main query succeeded
+		$commit_result = pg_query($conn, "COMMIT;");
+
+		if (!$commit_result) {
+			// Log error if COMMIT fails (rare, but possible due to network or server issues)
+			debug_log(__METHOD__ . " CRITICAL: COMMIT FAILED: " . pg_last_error($conn), logger::ERROR);
+			return false;
+		}
+
 		// Fetch section_id
 		$section_id = pg_fetch_result($result, 0, 'section_id');
+		// Check valid section_id
 		if ($section_id===false) {
 			debug_log(__METHOD__
 				. " Error giving the new section_id". PHP_EOL
@@ -302,13 +306,9 @@ class matrix_db_manager {
 		$row = pg_fetch_assoc($result);
 		pg_free_result($result);
 
-		// No results found
-		if (!$row) {
-			return [];
-		}
 
-
-		return $row;
+		// Return the result or an empty array if not found
+		return $row ?: [];
 	}//end read
 
 
@@ -328,12 +328,11 @@ class matrix_db_manager {
 	* Assoc array with [column name => value] structure
 	* Keys are column names, values are their new values.
 	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* Returns `true` on success, or `false` on failure.
 	*/
 	public static function update( string $table, string $section_tipo, int $section_id, array $values ) : bool {
 
-		// check matrix table
+		// Validate table name against allowed list (Security/Guardrail)
 		if (!isset(self::$matrix_tables[$table])) {
 			debug_log(__METHOD__
 				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
@@ -344,7 +343,7 @@ class matrix_db_manager {
 			return false;
 		}
 
-		// check values
+		// Check for empty update payload
 		if (empty($values)) {
 			debug_log(__METHOD__
 				." Empty values array " . PHP_EOL
@@ -354,70 +353,45 @@ class matrix_db_manager {
 			return false;
 		}
 
+		// DB connection
 		$conn = DBi::_getConnection();
 
-		$columns = array_keys($values); // array keys are the column names as 'date' => [{...}]
+		// Initialize parameters with the WHERE clause values
+		$params = [
+			$section_id,     // $1 in SQL
+			$section_tipo    // $2 in SQL
+		];
 
-		$safe_values = [];
-		foreach ($values as $key => $value) {
-			if (!isset(self::$matrix_columns[$key])) {
-				throw new Exception("Invalid column name: $key");
+		$set_clauses = [];
+		$param_index = 3;
+
+		// Single-pass loop: Validate columns, prepare values, and build SQL parts simultaneously.
+		foreach ($values as $column => $value) {
+			// Validate column name (Security/Guardrail)
+			if (!isset(self::$matrix_columns[$column])) {
+				throw new Exception("Invalid column name: $column");
 			}
-			$safe_value = ($value !== null && isset(self::$matrix_json_columns[$key]))
+
+			// Prepare value: JSON encode if it's a designated JSON column and not null
+			$safe_value = ($value !== null && isset(self::$matrix_json_columns[$column]))
 				? json_handler::encode($value)
 				: $value;
 
-			$safe_values[] = $safe_value;
+			// Build the SET clause, safely quoting the column name for PostgreSQL
+			$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $' . $param_index++;
+
+			// Add the prepared value directly to the parameter array
+			$params[] = $safe_value;
 		}
 
-		// With prepared statement
-			// $stmt_name = md5(__METHOD__ . '_' . $table .'_'. implode('', $columns));
-			// if (!isset(DBi::$prepared_statements[$stmt_name])) {
+		// SQL Execution
+		// Construct the final query string
+		$sql = 'UPDATE ' . $table
+			. ' SET ' . implode(', ', $set_clauses)
+			. ' WHERE section_id = $1 AND section_tipo = $2';
 
-			// 	// set_clauses
-			// 	$counter = 3; // 1 and  2 are reserved to section_id, section_tipo
-			// 	$set_clauses = [];
-			// 	foreach ($values as $key => $value) {
-			// 		if (!isset(self::$matrix_columns[$key])) {
-			// 			throw new Exception("Invalid column name: $key");
-			// 		}
-			// 		$set_clauses[] = '"'.$key.'" = $' . $counter++;
-			// 	}
-
-			// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
-			// 		 .' WHERE section_id = $1 AND section_tipo = $2';
-
-			// 	if (!pg_prepare(
-			// 		$conn,
-			// 		$stmt_name,
-			// 		$sql)
-			// 	) {
-			//         debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-			//         return false;
-			//     }
-			// 	// Set the statement as existing.
-			// 	DBi::$prepared_statements[$stmt_name] = true;
-			// }
-			// $result = pg_execute(
-			// 	$conn,
-			// 	$stmt_name,
-			// 	[$section_id, $section_tipo, ...$safe_values] // spread values
-			// );
-
-		// Without prepared statement (more dynamic and appropriate for changing columns scenarios)
-			// set_clauses
-			$counter = 3; // 1 and  2 are reserved to section_id, section_tipo
-			$set_clauses = [];
-			foreach ($columns as $column) {
-				$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $'. $counter++;
-			}
-
-			$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
-				 .' WHERE section_id = $1 AND section_tipo = $2';
-
-			$params = [$section_id, $section_tipo, ...$safe_values];
-
-			$result = pg_query_params($conn, $sql, $params);
+		// Execute using pg_query_params for performance and security (using the binary protocol)
+		$result = pg_query_params($conn, $sql, $params);
 
 		if (!$result) {
 			debug_log(__METHOD__
@@ -440,6 +414,7 @@ class matrix_db_manager {
 	* a section property data as created_date
 	* a component counter data
 	* Creates the path from the given key as componente_tipo {dd197} or property {created_date}.
+	* If the given value is empty, the path will be removed for clean database.
 	* @param string $table
 	* 	DB table name. E.g. 'matrix'
 	* @param string $section_tipo
@@ -467,7 +442,7 @@ class matrix_db_manager {
 		// sample SQL
 			// UPDATE matrix
 			// SET data = jsonb_set(
-			//     data,  -- original JSONB
+			//     COALESCE(data, '{}'::jsonb), -- Use an empty object if data is NULL
 			//     '{numisdataXX}', -- path to the element
 			//     '{"key":1,"lang":"lg-spa","type":"dd750","value":"CODE1"}'::jsonb, -- new value (must be valid JSON)
 			//     true  -- create if missing (true/false)
@@ -485,30 +460,49 @@ class matrix_db_manager {
 			return false;
 		}
 
-		// check values
-		if (empty($value)) {
-			debug_log(__METHOD__
-				." Empty values array " . PHP_EOL
-				.' values: ' . json_encode($value)
-				, logger::ERROR
-			);
-			return false;
-		}
-
-		$conn		= DBi::_getConnection();
-		$path		= '{'.$key.'}'; // JSON path
-		$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); // JSONB value
-
-		// With prepared statement
+		$conn = DBi::_getConnection();
+		// Path is generated once, for top-level key
+		$path = '{'.$key.'}'; // JSON path for top-level key
+		// statement base name with prepared statement
 		$stmt_name = __METHOD__;
-		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			pg_prepare(
-				$conn,
-				$stmt_name,
-				"
+
+		if (empty($value)) {
+
+			// DELETE operation
+			$full_stmt_name = $stmt_name . '_delete_' . $table . '_' . $data_column_name;
+
+			if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
+				// Optimized SQL for deletion: deletes key, then checks if the result is '{}'. If so, sets column to NULL.
+				$sql = "
+					UPDATE $table
+					SET $data_column_name = CASE
+						WHEN ($data_column_name #- $1::text[]) = '{}'::jsonb THEN
+							NULL
+						ELSE
+							$data_column_name #- $1::text[]
+					END
+					WHERE section_id = $3 AND section_tipo = $2
+					RETURNING id
+				";
+				pg_prepare($conn, $full_stmt_name, $sql);
+				DBi::$prepared_statements[$full_stmt_name] = true;
+			}
+
+			// Parameters: $1=path, $2=tipo, $3=section_id
+			$params = [ $path, $section_tipo, $section_id ];
+
+		} else {
+
+			// UPDATE/SET operation
+			$full_stmt_name = $stmt_name . '_update_' . $table . '_' . $data_column_name;
+			$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); // JSONB value
+
+			if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
+				// Efficient SQL for setting/updating a key (uses COALESCE for NULL safety)
+				$sql = "
 					UPDATE $table
 					SET $data_column_name = jsonb_set(
-						$data_column_name,
+						COALESCE($data_column_name, '{}'::jsonb),
 						$1::text[],
 						$2::jsonb,
 						true
@@ -516,32 +510,33 @@ class matrix_db_manager {
 					WHERE section_tipo = $3
 					  AND section_id = $4
 					RETURNING id
-				"
-			);
-			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
+				";
+				pg_prepare($conn, $full_stmt_name, $sql);
+				DBi::$prepared_statements[$full_stmt_name] = true;
+			}
+
+			// Parameters: $1=path, $2=json_value, $3=tipo, $4=section_id
+			$params = [ $path, $json_value, $section_tipo, $section_id ];
 		}
+
+		// 2. Execute Statement
 		$result = pg_execute(
 			$conn,
-			$stmt_name,
-			[
-				$path,
-				$json_value,
-				$section_tipo,
-				$section_id
-			]
+			$full_stmt_name,
+			$params
 		);
 
+		// 3. Handle Result
 		if ($result) {
 			$rows_affected = pg_num_rows($result);
 			if ($rows_affected > 0) {
 
-				// JSON path was successfully saved
-				$saved_id = pg_fetch_result($result, 0, 0);
-				debug_log(__METHOD__
-					. " Successfully saved JSON path '$path'. Affected record ID: $table $saved_id"
-					, logger::WARNING
-				);
+				// Success. JSON path was successfully saved
+				// $saved_id = pg_fetch_result($result, 0, 0);
+				// debug_log(__METHOD__
+				// 	. " Successfully saved JSON path '$path'. Affected record ID: $table $saved_id"
+				// 	, logger::WARNING
+				// );
 
 				return true;
 
@@ -549,25 +544,29 @@ class matrix_db_manager {
 
 				// No rows were updated (JSON path didn't exist or conditions didn't match)
 				debug_log(__METHOD__
-					. " No JSON data was saved - path '$path' may not exist or conditions didn't match." . PHP_EOL
-					. ' path: ' . to_string($path) . PHP_EOL
+					. " Partial JSON data was NOT saved. Maybe path '$path' or section_id '$section_id' does not exist." . PHP_EOL
+					. ' table: ' . to_string($table) . PHP_EOL
+					. ' column: ' . to_string($data_column_name) . PHP_EOL
+					. ' path: ' . $path . PHP_EOL
 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-					. ' section_id: ' . to_string($section_id)
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' value: ' . json_encode($value)
 					, logger::ERROR
 				);
 			}
 
 		}else{
 
-			// throw new RuntimeException("Database query failed: " . pg_last_error($conn));
-
 			// Query failed
 			debug_log(__METHOD__
 				. " Delete operation failed:  " . PHP_EOL
 				. ' Error: ' . pg_last_error($conn) . PHP_EOL
+				. ' table: ' . to_string($table) . PHP_EOL
+				. ' column: ' . to_string($data_column_name) . PHP_EOL
 				. ' path: ' . to_string($path) . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-				. ' section_id: ' . to_string($section_id)
+				. ' section_id: ' . to_string($section_id) . PHP_EOL
+				. ' value: ' . json_encode($value)
 				, logger::ERROR
 			);
 		}
@@ -610,32 +609,34 @@ class matrix_db_manager {
 		$conn = DBi::_getConnection();
 
 		// With prepared statement
-			$stmt_name = __METHOD__ . '_' . $table;
-			if (!isset(DBi::$prepared_statements[$stmt_name])) {
+		$stmt_name = __METHOD__ . '_' . $table;
+		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 
-				$sql = 'DELETE FROM "' .$table. '"'
-				 	 .' WHERE section_id = $1 AND section_tipo = $2';
+			$sql = 'DELETE FROM "' .$table. '"'
+				 .' WHERE section_id = $1 AND section_tipo = $2';
 
-				if (!pg_prepare(
-					$conn,
-					$stmt_name,
-					$sql)
-				) {
-			        debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-			        return false;
-			    }
-				// Set the statement as existing.
-				DBi::$prepared_statements[$stmt_name] = true;
-			}
-			$result = pg_execute(
+			if (!pg_prepare(
 				$conn,
 				$stmt_name,
-				[$section_id, $section_tipo] // spread values
-			);
+				$sql)
+			) {
+				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+				return false;
+			}
+			// Set the statement as existing.
+			DBi::$prepared_statements[$stmt_name] = true;
+		}
+
+		$result = pg_execute(
+			$conn,
+			$stmt_name,
+			[$section_id, $section_tipo] // spread values
+		);
 
 		if (!$result) {
 			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				.' Error executing DELETE on table: ' . $table . PHP_EOL
+				.' sql ' . to_string($sql) . PHP_EOL
 				.' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
