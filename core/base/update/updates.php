@@ -84,6 +84,76 @@ $updates->$v = new stdClass();
 			$$;
 		');
 
+
+		// @TODO : ADD TO DB_PG_DEFINTIONS !
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "matrix_counter_tipo_idx";
+
+				BEGIN;
+
+				-- Drop the constraint if it exists (safe operation in recent PostgreSQL versions)
+				ALTER TABLE matrix_counter
+				DROP CONSTRAINT IF EXISTS matrix_counter_tipo_key;
+
+				-- Add the constraint
+				ALTER TABLE matrix_counter
+				ADD CONSTRAINT matrix_counter_tipo_key UNIQUE (tipo);
+
+				COMMIT;
+			');
+
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "matrix_counter_dd_tipo_idx";
+
+				BEGIN;
+
+				-- Drop the constraint if it exists (safe operation in recent PostgreSQL versions)
+				ALTER TABLE matrix_counter_dd
+				DROP CONSTRAINT IF EXISTS matrix_counter_dd_tipo_key;
+
+				-- Add the constraint
+				ALTER TABLE matrix_counter_dd
+				ADD CONSTRAINT matrix_counter_dd_tipo_key UNIQUE (tipo);
+
+				COMMIT;
+			');
+
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				-- Rename the Original Table
+				ALTER TABLE matrix_counter RENAME TO temp_matrix_counter;
+				-- Create a New Table
+				CREATE TABLE matrix_counter (
+				 "tipo" character varying(128) NOT NULL,
+				 "value" integer,
+				 "ref" text,
+				 CONSTRAINT matrix_counter_tipo_pkey PRIMARY KEY ("tipo")
+				);
+				-- Copy Data from the temporary table to the new table
+				INSERT INTO matrix_counter (tipo, value, ref)
+				SELECT tipo, dato, ref
+				FROM temp_matrix_counter;
+				-- Drop the Temporary Table
+				DROP TABLE temp_matrix_counter;
+			');
+
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				-- Rename the Original Table
+				ALTER TABLE matrix_counter RENAME TO temp_matrix_counter_dd;
+				-- Create a New Table
+				CREATE TABLE matrix_counter_dd (
+				 "tipo" character varying(128) NOT NULL,
+				 "value" integer,
+				 "ref" text,
+				 CONSTRAINT matrix_counter_dd_tipo_pkey PRIMARY KEY ("tipo")
+				);
+				-- Copy Data from the temporary table to the new table
+				INSERT INTO matrix_counter_dd (tipo, value, ref)
+				SELECT tipo, dato, ref
+				FROM temp_matrix_counter_dd;
+				-- Drop the Temporary Table
+				DROP TABLE temp_matrix_counter_dd;
+			');
+
 		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			$ar_tables = [
