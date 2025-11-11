@@ -16,9 +16,9 @@ final class matrix_db_manager_test extends TestCase {
 
 	/**
 	* EXECUTION_TIMING
-	* @return
+	* @return void
 	*/
-	protected function execution_timing( string $action, callable $callback, int $estimated_time, int $from=1, int $n=10000 ) {
+	protected function execution_timing( string $action, callable $callback, int $estimated_time, int $from=1, int $n=10000 ) : void {
 
 		$start_time=start_time();
 
