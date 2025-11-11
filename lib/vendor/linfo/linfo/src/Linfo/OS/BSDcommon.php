@@ -40,7 +40,6 @@ abstract class BSDcommon extends Unixcommon
     protected $settings,
         $exec,
         $dmesg,
-        $systemProfiler,
         $sysctl = [];
 
     // Start us off
