@@ -47,7 +47,7 @@ abstract class dd_ontology_db_manager {
 	];
 
 	// bool columns to parse
-	public static array $ontology_boolean = [
+	public static array $ontology_boolean_columns = [
 		'is_model'			=> true,
 		'is_translatable'	=> true
 	];
@@ -300,7 +300,7 @@ abstract class dd_ontology_db_manager {
 				$row[$key] = json_decode($value, false);
 			} elseif (isset(self::$ontology_int_columns[$key])) {
 				$row[$key] = (int)$value;
-			} elseif (isset(self::$ontology_boolean[$key])) {
+			} elseif (isset(self::$ontology_boolean_columns[$key])) {
 				$row[$key] = ($value === 't' || $value === true || $value === '1');
 			}
 		}

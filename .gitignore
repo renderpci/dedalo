@@ -24,6 +24,7 @@ config/*
 # various
 acc
 _acc
+_versions
 des
 .DS_Store
 .eslintrc
@@ -43,13 +44,10 @@ test
 .idea
 certs
 
-
 # install/import/hierarchy
 str_data*
 
-# lib ignore all except dedalo
-#lib
-#!lib/*/dist
+# babel_engine
 lib/babel_engine
 
 # extras ignore all except common
@@ -108,7 +106,7 @@ core/tools/tool_layout_print/print_pdf/*
 
 # Automatic created files
 cookie_auth.php
-core/common/css/structure.css
+
 # core/common/js/lang/*
 *.log
 CHANGELOG.md
@@ -137,10 +135,6 @@ core/**/*-min.css
 # legacy dedalo lib
 /lib/dedalo
 
-# Drafts
-core/component_date_mod/
-core/component_portal/_versions/
-
 # structure css
 core/common/css/structure.css
 
@@ -159,7 +153,7 @@ node_modules
 # generated html documentation files
 docs_site
 
-#count data
+# count data
 /.VSCodeCounter/*
 
 # main read me auto-generated file
@@ -178,8 +172,8 @@ phpunit-results.*
 # ignore old ontology editor 'v5'
 /core/ontology/v5
 
-#ontology
+# ontology files
 /install/import/ontology/
 
-#local files and configurations
+# local files and configurations
 /local
