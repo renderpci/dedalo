@@ -67,17 +67,17 @@
         },
         {
             "name": "linfo/linfo",
-            "version": "v4.0.8",
-            "version_normalized": "4.0.8.0",
+            "version": "v4.0.9",
+            "version_normalized": "4.0.9.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/jrgp/linfo.git",
-                "reference": "cddc6963dc507342bc3b6bf828cf87fe2aa55a2e"
+                "reference": "3228a8d35d7f4214aded8f68dffa907de79c0cab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jrgp/linfo/zipball/cddc6963dc507342bc3b6bf828cf87fe2aa55a2e",
-                "reference": "cddc6963dc507342bc3b6bf828cf87fe2aa55a2e",
+                "url": "https://api.github.com/repos/jrgp/linfo/zipball/3228a8d35d7f4214aded8f68dffa907de79c0cab",
+                "reference": "3228a8d35d7f4214aded8f68dffa907de79c0cab",
                 "shasum": ""
             },
             "require": {
@@ -90,7 +90,7 @@
             "suggest": {
                 "ext-com": "On Windows"
             },
-            "time": "2023-08-09T20:09:20+00:00",
+            "time": "2025-11-11T04:37:52+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -121,7 +121,7 @@
             ],
             "support": {
                 "issues": "https://github.com/jrgp/linfo/issues",
-                "source": "https://github.com/jrgp/linfo/tree/v4.0.8"
+                "source": "https://github.com/jrgp/linfo/tree/v4.0.9"
             },
             "install-path": "../linfo/linfo"
         },
