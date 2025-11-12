@@ -2195,7 +2195,7 @@ class web_data {
 
 		// short vars
 			$av_section_id	= $locator->section_id;
-			$tag_id			= $locator->tag_id;
+			$tag_id			= $locator->tag_id ?? null;
 
 		// audiovisual data. Raw text
 			$s_options = new stdClass();

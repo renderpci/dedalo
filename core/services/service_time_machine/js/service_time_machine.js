@@ -301,7 +301,8 @@ service_time_machine.prototype.build_request_config = function() {
 				order			: [{
 					direction	: 'DESC',
 					path		: [{ component_tipo : 'id' }]
-				}]
+				}],
+				skip_projects_filter : true
 			  }
 		// custom sqo modifier based on config model
 		if (!config_sqo) {
