@@ -176,13 +176,25 @@ class login extends common {
 				DEDALO_SECTION_USERS_TIPO,
 				false
 			);
-			$ar_password_dato	= $component_password->get_dato();
-			$password_dato		= is_array($ar_password_dato)
-				? $ar_password_dato[0]
-				: $ar_password_dato; // pre-v6 dato cases
+			$ar_password_data	= $component_password->get_data() ?? [];
+			$password_data		= $ar_password_data[0]->value ?? null;
+
+			// password length check
+				if( empty($password_data) || strlen($password_data)<8 ) {
+					$response->msg = 'Error: Wrong password [2]';
+					$response->errors[] = 'Wrong password [2]';
+					// error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' username: ' . $username . PHP_EOL
+						. ' DEDALO_ENTITY: ' . DEDALO_ENTITY
+						, logger::WARNING
+					);
+					return $response;
+				}
 
 			// password match check
-				if( $password_encrypted!==$password_dato ) {
+				if( $password_encrypted!==$password_data ) {
 
 					#
 					# STOP : PASSWORD IS WRONG
@@ -211,24 +223,10 @@ class login extends common {
 						, logger::WARNING
 					);
 					return $response;
-				}//end if( $password_encrypted!==$password_dato )
-
-			// password length check
-				if( empty($password_dato) || strlen($password_dato)<8 ) {
-					$response->msg = 'Error: Wrong password [2]';
-					$response->errors[] = 'Wrong password [2]';
-					// error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
-					debug_log(__METHOD__
-						. " $response->msg " . PHP_EOL
-						. ' username: ' . $username . PHP_EOL
-						. ' DEDALO_ENTITY: ' . DEDALO_ENTITY
-						, logger::WARNING
-					);
-					return $response;
-				}
+				}//end if( $password_encrypted!==$password_data )
 
 		// active account check
-			$active_account = login::active_account_check($section_id);
+			$active_account = login::active_account_check( $section_id );
 			if( $active_account!==true ) {
 
 				#
@@ -614,7 +612,7 @@ class login extends common {
 
 		$active_account = false; // Default false
 
-		$model					= ontology_node::get_model_by_tipo(DEDALO_ACTIVE_ACCOUNT_TIPO,true);
+		$model = ontology_node::get_model_by_tipo( DEDALO_ACTIVE_ACCOUNT_TIPO, true );
 		$component_radio_button	= component_common::get_instance(
 			$model,
 			DEDALO_ACTIVE_ACCOUNT_TIPO,
@@ -623,14 +621,20 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$cuenta_activa_dato = $component_radio_button->get_dato();
+		$active_account_data = $component_radio_button->get_data();
+
+		// Empty or null data, the user has not defined if the account is active or not, therefore is not active.
+		if( empty($active_account_data) ){
+			return $active_account; // false
+		}
 
 		// NOTE: The valid value can only be 1, which is 'Yes' in the referenced list of values and is assigned as a constant in config 'NUMERICAL_MATRIX_VALUE_YES'
-		if (isset($cuenta_activa_dato[0]) && isset($cuenta_activa_dato[0]->section_id) && $cuenta_activa_dato[0]->section_id==NUMERICAL_MATRIX_VALUE_YES) {
+		$section_id = $active_account_data[0]->section_id ?? null;
+		if ( $section_id && (int)$section_id === NUMERICAL_MATRIX_VALUE_YES ) {
 			$active_account = true;
 		}
 
-		return (bool)$active_account;
+		return $active_account;
 	}//end active_account_check
 
 
