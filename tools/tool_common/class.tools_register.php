@@ -1025,15 +1025,15 @@ class tools_register {
 			}');
 
 		// search
-			$config_search	= search::get_instance($sqo_config_tool_active);
+			$config_search	= search::get_instance( $sqo_config_tool_active );
 			$config_result	= $config_search->search();
 			$ar_records		= $config_result->ar_records ?? [];
 
 		// map result as ar_config
-			$ar_config = array_map(function($record) use($name_tipo, $config_tipo){
+			$ar_config = array_map( function($record) use($name_tipo, $config_tipo) {
 
-				$section = section::get_instance($record->section_id, $record->section_tipo);
-				$section->set_dato($record->datos);
+				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
+				$section_record->set_data( $record );
 
 				// name
 					$model		= ontology_node::get_model_by_tipo($name_tipo,true);
@@ -1045,10 +1045,8 @@ class tools_register {
 						DEDALO_DATA_NOLAN,
 						$record->section_tipo
 					);
-					$dato	= $component->get_dato();
-					$name	= !empty($dato)
-						? reset($dato)
-						: null;
+					$data	= $component->get_data_lang();
+					$name	= $data[0]->value ?? null;
 
 				// config
 					$model		= ontology_node::get_model_by_tipo($config_tipo,true);
@@ -1060,10 +1058,8 @@ class tools_register {
 						DEDALO_DATA_NOLAN,
 						$record->section_tipo
 					);
-					$dato	= $component->get_dato();
-					$config	= !empty($dato)
-						? reset($dato)
-						: null;
+					$data	= $component->get_data_lang();
+					$config	= $data[0]->value ?? null;
 
 				$value = (object)[
 					'name'		=> $name,
@@ -1115,8 +1111,8 @@ class tools_register {
 		// map result as ar_config
 			$ar_config = array_map(function($record) use($name_tipo, $config_tipo){
 
-				$section = section::get_instance($record->section_id, $record->section_tipo);
-				$section->set_dato($record->datos);
+				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
+				$section_record->set_data( $record );
 
 				// name
 					$model = ontology_node::get_model_by_tipo($name_tipo,true);
@@ -1136,10 +1132,8 @@ class tools_register {
 							DEDALO_DATA_NOLAN,
 							$record->section_tipo
 						);
-						$dato	= $component->get_dato();
-						$name	= !empty($dato)
-							? ($dato[0] ?? null)
-							: null;
+						$data	= $component->get_data_lang();
+						$name	= $data[0]->value ?? null;
 					}
 
 				// config
@@ -1160,10 +1154,8 @@ class tools_register {
 							DEDALO_DATA_NOLAN,
 							$record->section_tipo
 						);
-						$dato	= $component->get_dato();
-						$config	= !empty($dato)
-							? ($dato[0] ?? null)
-							: null;
+						$data	= $component->get_data_lang();
+						$config	= $data[0]->value ?? null;
 					}
 
 				// value
