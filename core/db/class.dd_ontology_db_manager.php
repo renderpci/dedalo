@@ -357,70 +357,116 @@ abstract class dd_ontology_db_manager {
 
 		$table = self::$ontology_table;
 
+		// DB connection
 		$conn = DBi::_getConnection();
 
-		$columns = array_keys($values); // array keys are the column names as 'date' => [{...}]
+		// Initialize parameters with the WHERE clause values
+		$params = [
+			$tipo, // $1 in SQL
+		];
 
-		$safe_values = [];
-		foreach ($values as $key => $value) {
-			if (!isset(self::$ontology_columns[$key])) {
-				throw new Exception("Invalid column name: $key");
+		$set_clauses = [];
+		$param_index = 2;
+
+		// Single-pass loop: Validate columns, prepare values, and build SQL parts simultaneously.
+		foreach ($values as $column => $value) {
+			// Validate column name (Security/Guardrail)
+			if (!isset(self::$ontology_columns[$column])) {
+				throw new Exception("Invalid column name: $column");
 			}
-			$safe_value = ($value !== null && isset(self::$ontology_json_columns[$key]))
-				? json_handler::encode($value)
-				: $value;
 
-			$safe_values[] = $safe_value;
+			// Placeholders / Values
+			 if ($value !== null && isset(self::$ontology_json_columns[$column])) {
+				// Encode PHP array/object as JSON string
+				$params[] = json_handler::encode($value);
+				// Build the SET clause, safely quoting the column name for PostgreSQL
+				$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $' . $param_index++ . '::jsonb';
+			}else if(isset(self::$ontology_boolean_columns[$column])) {
+				// Change to normalized string for Boolean value
+				$params[] = ($value === true) ? 't' : 'f';
+				// Build the SET clause, safely quoting the column name for PostgreSQL
+				$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $' . $param_index++ ;
+			}else{
+				$params[] = $value;
+				// Build the SET clause, safely quoting the column name for PostgreSQL
+				$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $' . $param_index++;
+			}
 		}
 
-		// With prepared statement
-			// $stmt_name = md5(__METHOD__ . '_' . $table .'_'. implode('', $columns));
-			// if (!isset(DBi::$prepared_statements[$stmt_name])) {
+		// SQL Execution
+		// Construct the final query string
+		$sql = 'UPDATE ' . $table
+			. ' SET ' . implode(', ', $set_clauses)
+			. ' WHERE tipo = $1';
 
-			// 	// set_clauses
-			// 	$counter = 2; // 1 is reserved to tipo
-			// 	$set_clauses = [];
-			// 	foreach ($values as $key => $value) {
-			// 		if (!isset(self::$ontology_columns[$key])) {
-			// 			throw new Exception("Invalid column name: $key");
-			// 		}
-			// 		$set_clauses[] = '"'.$key.'" = $' . $counter++;
-			// 	}
+		// $columns = array_keys($values); // array keys are the column names as 'date' => [{...}]
 
-			// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
-			// 		 .' WHERE tipo = $1';
+		// $safe_values = [];
+		// foreach ($values as $key => $value) {
+		// 	if (!isset(self::$ontology_columns[$key])) {
+		// 		throw new Exception("Invalid column name: $key");
+		// 		// debug_log(__METHOD__
+		// 		// 	. " Error: Invalid column name: $key " . PHP_EOL
+		// 		// 	. ' values: ' . to_string($values)
+		// 		// 	, logger::ERROR
+		// 		// );
+		// 		// return false;
+		// 	}
+		// 	$safe_value = ($value !== null && isset(self::$ontology_json_columns[$key]))
+		// 		? json_handler::encode($value)
+		// 		: $value;
 
-			// 	if (!pg_prepare(
-			// 		$conn,
-			// 		$stmt_name,
-			// 		$sql)
-			// 	) {
-			//         debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-			//         return false;
-			//     }
-			// 	// Set the statement as existing.
-			// 	DBi::$prepared_statements[$stmt_name] = true;
-			// }
-			// $result = pg_execute(
-			// 	$conn,
-			// 	$stmt_name,
-			// 	[$tipo, ...$safe_values] // spread values
-			// );
+		// 	$safe_values[] = $safe_value;
+		// }
 
-		// Without prepared statement (more dynamic and appropriate for changing columns scenarios)
-			// set_clauses
-			$counter = 2; // 1 is reserved to tipo
-			$set_clauses = [];
-			foreach ($columns as $column) {
-				$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $'. $counter++;
-			}
+		// // With prepared statement
+		// 	// $stmt_name = md5(__METHOD__ . '_' . $table .'_'. implode('', $columns));
+		// 	// if (!isset(DBi::$prepared_statements[$stmt_name])) {
 
-			$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
-				 .' WHERE tipo = $1';
+		// 	// 	// set_clauses
+		// 	// 	$counter = 2; // 1 is reserved to tipo
+		// 	// 	$set_clauses = [];
+		// 	// 	foreach ($values as $key => $value) {
+		// 	// 		if (!isset(self::$ontology_columns[$key])) {
+		// 	// 			throw new Exception("Invalid column name: $key");
+		// 	// 		}
+		// 	// 		$set_clauses[] = '"'.$key.'" = $' . $counter++;
+		// 	// 	}
 
-			$params = [$tipo, ...$safe_values];
+		// 	// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
+		// 	// 		 .' WHERE tipo = $1';
 
-			$result = pg_query_params($conn, $sql, $params);
+		// 	// 	if (!pg_prepare(
+		// 	// 		$conn,
+		// 	// 		$stmt_name,
+		// 	// 		$sql)
+		// 	// 	) {
+		// 	//         debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+		// 	//         return false;
+		// 	//     }
+		// 	// 	// Set the statement as existing.
+		// 	// 	DBi::$prepared_statements[$stmt_name] = true;
+		// 	// }
+		// 	// $result = pg_execute(
+		// 	// 	$conn,
+		// 	// 	$stmt_name,
+		// 	// 	[$tipo, ...$safe_values] // spread values
+		// 	// );
+
+		// // Without prepared statement (more dynamic and appropriate for changing columns scenarios)
+		// 	// set_clauses
+		// 	$counter = 2; // 1 is reserved to tipo
+		// 	$set_clauses = [];
+		// 	foreach ($columns as $column) {
+		// 		$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $'. $counter++;
+		// 	}
+
+		// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
+		// 		 .' WHERE tipo = $1';
+
+		// 	$params = [$tipo, ...$safe_values];
+
+		$result = pg_query_params($conn, $sql, $params);
 
 		if (!$result) {
 			debug_log(__METHOD__
@@ -430,6 +476,12 @@ abstract class dd_ontology_db_manager {
 			);
 			return false;
 		}
+
+		// Delete cache
+		if (isset(self::$load_cache[$tipo])) {
+			unset(self::$load_cache[$tipo]);
+		}
+
 
 		return true;
 	}//end update
@@ -482,6 +534,12 @@ abstract class dd_ontology_db_manager {
 			);
 			return false;
 		}
+
+		// Delete cache
+		if (isset(self::$load_cache[$tipo])) {
+			unset(self::$load_cache[$tipo]);
+		}
+
 
 		return true;
 	}//end delete
