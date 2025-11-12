@@ -268,7 +268,7 @@ class component_relation_common extends component_common {
 			$class_list			= $ddo->class_list ?? null;
 
 		// data
-			$data = $this->get_dato() ?? [];
+			$data = $this->get_data() ?? [];
 
 		// set the label of the component as column label
 			$label = $this->get_label();
