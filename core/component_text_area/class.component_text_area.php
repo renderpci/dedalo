@@ -62,7 +62,7 @@ class component_text_area extends component_string_common {
 			];
 
 		// data
-			$data = $this->get_dato();
+			$data = $this->get_data_lang();
 
 		// processed_data
 			switch ($this->mode) {
@@ -75,10 +75,10 @@ class component_text_area extends component_string_common {
 				default:
 					$processed_data = [];
 					if (!empty($data)) {
-						foreach ($data as $current_value) {
-							// $current_value = trim($current_value);
-							if (!$this->is_empty($current_value)) {
-								$processed_data[] = TR::add_tag_img_on_the_fly($current_value);
+						foreach ($data as $item) {
+							// $item = trim($item);
+							if (!$this->is_empty($item->value)) {
+								$processed_data[] = TR::add_tag_img_on_the_fly($item->value);
 							}
 						}
 					}
@@ -104,10 +104,10 @@ class component_text_area extends component_string_common {
 					default:
 						$processed_fallback_value = [];
 						if (!empty($data)) {
-							foreach ($data as $current_value) {
-								// $current_value = trim($current_value);
-								if (!$this->is_empty($current_value)) {
-									$processed_fallback_value[] = TR::add_tag_img_on_the_fly($current_value);
+							foreach ($data as $item) {
+								// $item = trim($item);
+								if (!$this->is_empty($item->value)) {
+									$processed_fallback_value[] = TR::add_tag_img_on_the_fly($item->value);
 								}
 							}
 						}
@@ -250,9 +250,9 @@ class component_text_area extends component_string_common {
 	* @param bool $update_all_langs_tags_state
 	* @param bool $clean_text
 	*
-	* @return int|null $section_id
+	* @return bool $result
 	*/
-	public function Save(bool $update_all_langs_tags_state=false, bool $clean_text=true) : ?int {
+	public function save(bool $update_all_langs_tags_state=false, bool $clean_text=true) : bool {
 
 		// update_all_langs_tags_state
 		// we review the labels to update their status in the other languages
@@ -262,25 +262,25 @@ class component_text_area extends component_string_common {
 			// }
 
 		// Dato current assigned
-			$dato_current = $this->dato;
+			$dato_current = $this->data;
 
-		// clean dato
-			if ($clean_text && !empty($dato_current)) {
-				foreach ($dato_current as $key => $current_value) {
+		// clean data
+			if ($clean_text && !empty($data_current)) {
+				foreach ($data_current as $key => $current_value) {
 					if (!empty($current_value)) {
-						$dato_current[$key] = TR::conform_tr_data($current_value);
+						$data_current[$key] = TR::conform_tr_data($current_value);
 					}
 				}
 			}
 
-		// Set dato again (cleaned)
-			$this->dato = $dato_current;
+		// Set data again (cleaned)
+			$this->data = $dato_current;
 
 		// From here, we save in the standard way. Expected int $section_id
-			$section_id = parent::Save();
+			$result = parent::save();
 
 
-		return $section_id;
+		return $result;
 	}//end Save
 
 
