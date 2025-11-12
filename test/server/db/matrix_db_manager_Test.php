@@ -2,7 +2,7 @@
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
 // bootstrap
-require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
+require_once dirname(__FILE__, 2) . '/bootstrap.php';
 
 
 
