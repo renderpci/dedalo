@@ -1,29 +1,46 @@
 <?php declare(strict_types=1);
-
 /**
 * CLASS SECTION RECORD
-*
+* It represents a database record in the PHP space.
 */
 class section_record {
+
 
 
 	/**
 	* CLASS VARS
 	*/
- 	public $section_tipo;
- 	public $section_id;
-
+	// string section_tipo
+ 	public string $section_tipo;
+ 	// string|int section_id
+ 	public string|int $section_id;
 	// section_record_data class instance
 	protected object $data_instance;
+
+
+
+	/**
+	* GET_INSTANCE
+	* Get an instance of a section_record object.
+	* Not cached at now because the real shared data is from section_record_data.
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return section_record $section_record
+	*/
+	public static function get_instance( string $section_tipo, string|int $section_id ) : section_record {
+
+		return new section_record($section_tipo, (int)$section_id);
+	}//end get_instance
+
 
 
 	/**
 	* GET_INSTANCE
 	* Cache section instances (singleton pattern)
 	* @param string $section_tipo
-	* @param string|int $section_id
+	* @param int $section_id
 	*/
-	public function __construct( string $section_tipo, string|int $section_id ) {
+	private function __construct( string $section_tipo, int $section_id ) {
 
 		// Set general vars
 			$this->section_tipo	= $section_tipo;
