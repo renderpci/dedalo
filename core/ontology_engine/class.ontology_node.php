@@ -449,7 +449,7 @@ class ontology_node {
 	*/
 	public function get_is_translatable() : bool {
 		$this->load_data();
-		return $this->data->is_translatable;
+		return $this->data->is_translatable ?? false;
 	}//end get_is_translatable
 
 
