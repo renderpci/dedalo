@@ -2278,6 +2278,29 @@ function check_basic_system() : object {
 		// 	return $response;
 		// }
 
+	// pre update
+		// Check if 'dd_ontology' table is already installed
+		$table_exists = DBi::check_table_exists('dd_ontology');
+		if (!$table_exists) {
+			// Try to create it running the pre_update_version script
+			include DEDALO_CORE_PATH . '/base/update/class.update.php';
+			$pre_update_response = update::pre_update_version();
+			if ($pre_update_response->result===false) {
+
+				$response->result	= false;
+				$response->msg		= 'Error. pre_update_version script failed';
+
+				debug_log(__METHOD__
+					. " Error. pre_update_version script failed " . PHP_EOL
+					. ' pre_update_response: ' . to_string($pre_update_response)
+					, logger::ERROR
+				);
+
+				return $response;
+			}
+		}
+
+
 	$response->result 	= true;
 	$response->msg 		= 'OK. check_basic_system done';
 
