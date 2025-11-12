@@ -1069,112 +1069,112 @@ class component_relation_common extends component_common {
 
 
 
-	/**
-	* SAVE
-	* Save component data in matrix using parent section
-	* Verify all necessary vars to save and call section 'save_component_dato($this)'
-	* @see section->save_component_dato($this)
-	* @return bool
-	*/
-	public function save() : bool {
+	// /**
+	// * SAVE
+	// * Save component data in matrix using parent section
+	// * Verify all necessary vars to save and call section 'save_component_dato($this)'
+	// * @see section->save_component_dato($this)
+	// * @return bool
+	// */
+	// public function save() : bool {
 
-		// short vars
-			$section_tipo	= $this->get_section_tipo();
-			$section_id		= $this->get_section_id();
-			$tipo			= $this->get_tipo();
-			$mode			= $this->get_mode();
-			$lang			= DEDALO_DATA_LANG;
+	// 	// short vars
+	// 		$section_tipo	= $this->get_section_tipo();
+	// 		$section_id		= $this->get_section_id();
+	// 		$tipo			= $this->get_tipo();
+	// 		$mode			= $this->get_mode();
+	// 		$lang			= DEDALO_DATA_LANG;
 
-		// check component minimum vars before save
-			if( empty($section_id) || empty($tipo) || empty($lang) ) {
-				debug_log(__METHOD__
-					. " Error on save: Few vars! . Ignored order" . PHP_EOL
-					. ' section_id: ' . to_string($section_id) . PHP_EOL
-					. ' section_tipo: ' . $section_tipo . PHP_EOL
-					. ' tipo: ' . $tipo . PHP_EOL
-					. ' model: ' . get_class($this) . PHP_EOL
-					. ' mode: ' . $mode . PHP_EOL
-					. ' lang: ' . $lang
-					, logger::ERROR
-				);
-				return null;
-			}
+	// 	// check component minimum vars before save
+	// 		if( empty($section_id) || empty($tipo) || empty($lang) ) {
+	// 			debug_log(__METHOD__
+	// 				. " Error on save: Few vars! . Ignored order" . PHP_EOL
+	// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
+	// 				. ' section_tipo: ' . $section_tipo . PHP_EOL
+	// 				. ' tipo: ' . $tipo . PHP_EOL
+	// 				. ' model: ' . get_class($this) . PHP_EOL
+	// 				. ' mode: ' . $mode . PHP_EOL
+	// 				. ' lang: ' . $lang
+	// 				, logger::ERROR
+	// 			);
+	// 			return false;
+	// 		}
 
-		// tm mode case
-			if ($this->mode==='tm' || $this->data_source==='tm') {
-				debug_log(__METHOD__
-					. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
-					. ' section_id: ' . to_string($section_id) . PHP_EOL
-					. ' section_tipo: ' . $section_tipo . PHP_EOL
-					. ' tipo: ' . $tipo . PHP_EOL
-					. ' model: ' . get_class($this) . PHP_EOL
-					. ' mode: ' . $mode . PHP_EOL
-					. ' data_source: ' . $this->data_source . PHP_EOL
-					. ' lang: ' . $lang
-					, logger::ERROR
-				);
-				return null;
-			}
+	// 	// tm mode case
+	// 		if ($this->mode==='tm' || $this->data_source==='tm') {
+	// 			debug_log(__METHOD__
+	// 				. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
+	// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
+	// 				. ' section_tipo: ' . $section_tipo . PHP_EOL
+	// 				. ' tipo: ' . $tipo . PHP_EOL
+	// 				. ' model: ' . get_class($this) . PHP_EOL
+	// 				. ' mode: ' . $mode . PHP_EOL
+	// 				. ' data_source: ' . $this->data_source . PHP_EOL
+	// 				. ' lang: ' . $lang
+	// 				, logger::ERROR
+	// 			);
+	// 			return false;
+	// 		}
 
-		// section save. The section will be the responsible to save the component data
-			$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
-			$section			= $this->get_my_section();
-			$section_id			= $section->save_component_dato(
-				$this, // object $component_obj
-				'relation', // string $component_data_type
-				$save_to_database // bool $save_to_database
-			);
+	// 	// section save. The section will be the responsible to save the component data
+	// 		$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
+	// 		$section			= $this->get_my_section();
+	// 		$section_id			= $section->save_component_dato(
+	// 			$this, // object $component_obj
+	// 			'relation', // string $component_data_type
+	// 			$save_to_database // bool $save_to_database
+	// 		);
 
-		// relations table links update (default is true)
-			if ($this->save_to_database_relations===true) {
-				// Dataframe
-				// When the component is a dataframe it get only the section_id_key and section_tipo_key
-				// but to save in relations will need the full data (all locators of the component) to replace relations rows
-				// so remove the caller_dataframe for the component and all caches (dato_resolved and is_loaded_matrix_data)
-				// to get the full data of the component.
-				if(get_called_class() === 'component_dataframe'){
-					$current_caller_dataframe		= $this->get_caller_dataframe();
-					$this->caller_dataframe			= null;
-					$this->dato_resolved			= null;
-					$this->is_loaded_matrix_data	= false;
-				}
+	// 	// relations table links update (default is true)
+	// 		// if ($this->save_to_database_relations===true) {
+	// 		// 	// Dataframe
+	// 		// 	// When the component is a dataframe it get only the section_id_key and section_tipo_key
+	// 		// 	// but to save in relations will need the full data (all locators of the component) to replace relations rows
+	// 		// 	// so remove the caller_dataframe for the component and all caches (dato_resolved and is_loaded_matrix_data)
+	// 		// 	// to get the full data of the component.
+	// 		// 	if(get_called_class() === 'component_dataframe'){
+	// 		// 		$current_caller_dataframe		= $this->get_caller_dataframe();
+	// 		// 		$this->caller_dataframe			= null;
+	// 		// 		$this->dato_resolved			= null;
+	// 		// 		$this->is_loaded_matrix_data	= false;
+	// 		// 	}
 
-				$current_dato = $this->get_dato_full();
+	// 		// 	$current_dato = $this->get_dato_full();
 
-				$relation_options = new stdClass();
-					$relation_options->section_tipo			= $section_tipo;
-					$relation_options->section_id			= $section_id;
-					$relation_options->from_component_tipo	= $tipo;
-					$relation_options->ar_locators			= $current_dato;
+	// 		// 	$relation_options = new stdClass();
+	// 		// 		$relation_options->section_tipo			= $section_tipo;
+	// 		// 		$relation_options->section_id			= $section_id;
+	// 		// 		$relation_options->from_component_tipo	= $tipo;
+	// 		// 		$relation_options->ar_locators			= $current_dato;
 
-				search::propagate_component_dato_to_relations_table($relation_options);
+	// 		// 	search::propagate_component_dato_to_relations_table($relation_options);
 
-				// Dataframe
-				// restores the caller dataframe of the component
-				// and delete his data caches to be re-calculated for other calls with the caller_dataframe
-				if(get_called_class() === 'component_dataframe'){
-					$this->caller_dataframe			= $current_caller_dataframe;
-					$this->dato_resolved			= null;
-					$this->is_loaded_matrix_data	= false;
-				}
-			}
+	// 		// 	// Dataframe
+	// 		// 	// restores the caller dataframe of the component
+	// 		// 	// and delete his data caches to be re-calculated for other calls with the caller_dataframe
+	// 		// 	if(get_called_class() === 'component_dataframe'){
+	// 		// 		$this->caller_dataframe			= $current_caller_dataframe;
+	// 		// 		$this->dato_resolved			= null;
+	// 		// 		$this->is_loaded_matrix_data	= false;
+	// 		// 	}
+	// 		// }
 
-		// save_to_database. Optional stop the save process to delay ddbb access
-			if ($save_to_database===false) {
-				# Stop here (remember make a real section save later!)
-				# No component time machine data will be saved when section saves later
-				return (int)$section_id;
-			}
+	// 	// save_to_database. Optional stop the save process to delay ddbb access
+	// 		if ($save_to_database===false) {
+	// 			# Stop here (remember make a real section save later!)
+	// 			# No component time machine data will be saved when section saves later
+	// 			return false;
+	// 		}
 
-		// activity
-			$this->save_activity();
+	// 	// activity
+	// 		$this->save_activity();
 
-		// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
-			$this->propagate_to_observers();
+	// 	// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
+	// 		$this->propagate_to_observers();
 
 
-		return (int)$section_id;
-	}//end save
+	// 	return true;
+	// }//end save
 
 
 
