@@ -99,7 +99,6 @@ class sections extends common {
 
 						// section case
 						$section = section::get_instance(
-							null, // string|null section_id
 							$this->caller_tipo // string section_tipo
 						);
 						// request_config (is array)
@@ -400,7 +399,7 @@ class sections extends common {
 					}
 
 				// Delete the section record
-					$section_record = new section_record( $current_section_tipo, $current_section_id );
+					$section_record = section_record::get_instance( $current_section_tipo, $current_section_id );
 					// perform the delete in correct function
 					$deleted = false;
 					if ($delete_mode==='delete_record') {
