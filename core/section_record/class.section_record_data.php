@@ -12,43 +12,86 @@
 */
 class section_record_data {
 
+	// Data
+	// An object structure with the data columns defined in database
+	private stdClass $data;
 
-
-	protected array $data = [
+	// array columns_name
+	private array $columns_name = [
 		// object|null data. Section data value from DB column 'data'
 		// Section specific data like label, diffusion info, etc.
-		'data' => null,
+		'data',
 		// object|null relation. Section data value from DB column 'relation'.
 		// Stores the list of locators grouped by component tipo as {"dd20":[locators],"dd35":[locators]}
-		'relation' => null,
+		'relation',
 		// object|null string. Section data value from DB column 'string'
 		// Stores string literals values used from component_input_text, component_text_area and others.
-		'string' => null,
+		'string',
 		// object|null date. Section data value from DB column 'date'
 		// Stores date values handled by component_date
-		'date' => null,
+		'date',
 		// object|null iri. Section data value from DB column 'iri'
 		// Stores IRI object values handled by component_iri as {"dd85":{"title":"My site URI","uri":"https://mysite.org"}}
-		'iri' => null,
+		'iri',
 		// object|null geo. Section data value from DB column 'geo'
 		// Stores geo data handled by component_geolocation.
-		'geo' => null,
+		'geo',
 		// object|null number. Section data value from DB column 'number'
 		// Stores numeric values handled by component_number.
-		'number' => null,
+		'number',
 		// object|null media. Section data value from DB column 'media'
 		// Stores media values handled by media components (3d,av,image,pdf,svg)
-		'media' => null,
+		'media',
 		// object|null misc. Section data value from DB column 'misc'
 		// Stores other components values like component_security_access, component_json, etc.
-		'misc' => null,
+		'misc',
 		// object|null relation_search. Section data value from DB column 'relation_search'
 		// Stores relation optional data useful for search across parents like toponymy.
-		'relation_search' => null,
+		'relation_search',
 		// object|null counters. Section data value from DB column 'counters'
 		// Stores string components counters used to get unique identifiers for the values as {"id":1,"lang":"lg-nolan","type":"dd750","value":"Hello"}
 		// The format of the counter data is {"dd750":1,"dd201":1,..}
-		'counters' => null
+		'counters'
+	];
+
+	// Column map
+	// Define the component data column the it will use to store its data in the database
+	public static array $column_map = [
+		'component_3d'					=> 'media',
+		'component_av'					=> 'media',
+		'component_check_box'			=> 'relation',
+		'component_dataframe'			=> 'relation',
+		'component_date'				=> 'date',
+		'component_email'				=> 'string',
+		'component_external'			=> 'misc',
+		'component_filter'				=> 'relation',
+		'component_filter_master'		=> 'relation',
+		'component_filter_records'		=> 'misc',
+		'component_geolocation'			=> 'geo',
+		'component_image'				=> 'media',
+		'component_info'				=> 'misc',
+		'component_input_text'			=> 'string',
+		'component_inverse'				=> 'misc',
+		'component_iri'					=> 'iri',
+		'component_json'				=> 'misc',
+		'component_number'				=> 'number',
+		'component_password'			=> 'string',
+		'component_pdf'					=> 'media',
+		'component_portal'				=> 'relation',
+		'component_publication'			=> 'relation',
+		'component_radio_button'		=> 'relation',
+		'component_relation_children'	=> 'relation',
+		'component_relation_index'		=> 'relation',
+		'component_relation_model'		=> 'relation',
+		'component_relation_parent'		=> 'relation',
+		'component_relation_related'	=> 'relation',
+		'component_section_id'			=> 'section_id',
+		'component_security_access'		=> 'misc',
+		'component_select'				=> 'relation',
+		'component_select_lang'			=> 'relation',
+		'component_svg'					=> 'media',
+		'component_text_area'			=> 'string',
+		'section'						=> 'data'
 	];
 
 	// bool is_loaded_data_columns. Defines if section data_columns is already loaded from the database
@@ -107,6 +150,13 @@ class section_record_data {
 		$this->section_tipo	= $section_tipo;
 		$this->section_id	= $section_id;
 		$this->table		= common::get_matrix_table_from_tipo($this->section_tipo);
+
+		// Data columns
+		$this->data = new stdClass();
+		// Assign the valid columns. Every column has its own homonym column in database.
+		foreach ($this->columns_name as $column_name) {
+			$this->data->{$column_name} = null;
+		}
 	}//end __construct
 
 
@@ -129,12 +179,19 @@ class section_record_data {
 	/**
 	* SET_DATA
 	* Replace data as full data of the section_record
-	* @param array $data
+	* @param object $data
 	* @return bool
 	*/
-	public function set_data( array $data ) : bool {
+	public function set_data( object $data ) : bool {
 
-		$this->data = $data;
+		foreach ($data as $column => $value ) {
+
+			if ( !in_array($column, $this->columns_name) ) {
+				continue;
+			}
+
+			$this->set_column_data( $column, $value );
+		}
 
 		return true;
 	}//end set_data
@@ -145,12 +202,12 @@ class section_record_data {
 	* SET_COLUMN_DATA
 	* Assign the given data to the indicated column.
 	* @param string $column
-	* @param array|null $data
+	* @param object|null $data
 	* @return bool
 	*/
-	public function set_column_data( string $column, ?array $data ) : bool {
+	public function set_column_data( string $column, ?object $value ) : bool {
 
-		if( !isset($this->data[$column]) ){
+		if ( !property_exists($this->data, $column) ) {
 			debug_log(__METHOD__
 				. " Abort. Invalid column " . PHP_EOL
 				. "column: " . $column
@@ -158,7 +215,7 @@ class section_record_data {
 			);
 			return false;
 		}
-		$this->data[$column] = $data;
+		$this->data->$column = $value;
 
 		return true;
 	}//end set_column_data
@@ -175,7 +232,7 @@ class section_record_data {
 	*/
 	public function set_key_data( string $column, string $key, ?array $data ) : bool {
 
-		if( !isset($this->data[$column]) ){
+		if ( !property_exists($this->data, $column) ) {
 			debug_log(__METHOD__
 				. " Abort. Invalid column " . PHP_EOL
 				. "column: " . $column
@@ -186,14 +243,18 @@ class section_record_data {
 
 		// remove the data of the key when data is set as null
 		if( $data===null ){
-			if ( isset($this->data[$column][$key]) ){
-				unset( $this->data[$column][$key] );
+			if ( isset($this->data->$column->$key) ){
+				unset( $this->data->$column->$key );
 			}
 			return true;
 		}
 
+		if (!$this->data->$column) {
+			$this->data->$column = new stdClass();
+		}
+
 		// Set or change the data of the given key
-		$this->data[$column][$key] = $data;
+		$this->data->$column->$key = $data;
 
 		return true;
 	}//end set_key_data
@@ -206,7 +267,7 @@ class section_record_data {
 	* Returns the full data array
 	* @return array $this->data
 	*/
-	public function get_data() : array {
+	public function get_data() : object {
 
 		return $this->data;
 	}//end get_data
@@ -221,7 +282,7 @@ class section_record_data {
 	*/
 	public function get_column_data( string $column ) : array {
 
-		return $this->data[$column] ?? null;
+		return $this->data->$column ?? null;
 	}//end get_column_data
 
 
@@ -235,7 +296,7 @@ class section_record_data {
 	*/
 	public function get_key_data( string $column, string $key ) : ?array {
 
-		return $this->data[$column][$key] ?? null;
+		return $this->data->$column->$key ?? null;
 	}//end get_key_data
 
 
@@ -279,9 +340,9 @@ class section_record_data {
 		$table			= $this->table;
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
-		$values			= [];
+		$values			= new stdClass();
 		foreach ($columns as $current_column) {
-			$values[$current_column] = $this->data[$current_column] ?? null;
+			$values->$current_column = $this->data->$current_column ?? null;
 		}
 
 		return matrix_db_manager::update(
@@ -309,15 +370,15 @@ class section_record_data {
 		$table			= $this->table;
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
-		$value			= $this->data[$column][$key] ?? null;
+		$value			= $this->data->$column->$key ?? null;
 
 		// check null values
 		if( $value===null ){
 			// check if the column is null
-			$table_data_is_null = $this->data[$column] ?? null;
+			$table_data_is_null = $this->data->$column ?? null;
 			// if the column is null, remove all
 			if( $table_data_is_null===null ){
-				return $this->save_column_data([$column]);
+				return $this->save_column_data( [$column] );
 			}
 		}
 
@@ -337,9 +398,6 @@ class section_record_data {
 
 
 
-
-
-
 	/**
 	* READ
 	* Retrieves a single row of data from a specified PostgreSQL table
@@ -351,11 +409,11 @@ class section_record_data {
 	* @param bool $cache = true
 	* On true (default), if isset $this->data, no new database call is made.
 	* On false, a new database query is always forced.
-	* @return array $this->data
+	* @return object|null $this->data
 	* Returns the processed data as an associative array with parsed JSON values.
 	* If no row is found, it returns an empty array [].
 	*/
-	public function read( bool $cache=true ) : array {
+	public function read( bool $cache=true ) : ?object {
 
 		if ($cache && $this->is_loaded_data) {
 			return $this->data;
@@ -373,30 +431,20 @@ class section_record_data {
 
 		// No results found
 		if (!$row) {
-			return [];
+			return null;
 		}
 
 		// assign data_columns from database results
-		// foreach ($this->data as $column => $column_value) {
-		$colum_names = array_keys($this->data);
-		foreach ($colum_names as $column) {
+		foreach ($this->columns_name as $column) {
 
-			if (!array_key_exists($column, $row)) {
+			if ( !isset($row->$column) ) {
 				// Ignore non existing data_columns key
 				continue;
 			}
 
-			$data_value = $row[$column];
-
-			if ($data_value!==null && isset(matrix_db_manager::$matrix_json_columns[$column])) {
+			if ( $row->$column!==null ) {
 				// JSON case
-				$this->data[$column] = json_decode($data_value);
-			} elseif (isset(matrix_db_manager::$matrix_int_columns[$column])) {
-				// int case
-				$this->data[$column] = (int)$data_value;
-			} else {
-				// default case
-				$this->data[$column] = $data_value;
+				$this->data->$column = json_decode($row->$column);
 			}
 		}
 
