@@ -2227,17 +2227,20 @@ abstract class common {
 							case ($model==='section'):
 								// section
 									$section = section::get_instance(
-										$section_id,
 										$section_tipo,
 										$mode,
 										true // cache
 									);
 
+									$section_record = section_record::get_instance( $section_tipo, $section_id );
+
+									$section->add_section_record( $section_record );
+
 								// datos column already resolved case, inject data in current section
-									$datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
-									if (!is_null($datos)) {
-										$section->set_dato($datos);
-									}
+									// $datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
+									// if (!is_null($datos)) {
+									// 	$section->set_dato($datos);
+									// }
 
 								// set element
 									$related_element = $section;
