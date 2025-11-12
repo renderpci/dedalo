@@ -2298,7 +2298,30 @@ function check_basic_system() : object {
 
 				return $response;
 			}
+
+			$updates				= update::get_updates();
+			$version = 700;
+			$update_v7 = $updates->$version;
+
+			$updates_checked = new stdClass();
+
+			foreach ($update_v7->SQL_update ?? [] as $key => $value) {
+				$propety = 'SQL_update_'.$key;
+				$updates_checked->$propety = true;
+			}
+			foreach ($update_v7->components_update ?? [] as $key => $value) {
+				$propety = 'components_update_'.$key;
+				$updates_checked->$propety = true;
+			}
+			foreach ($update_v7->run_scripts ?? [] as $key => $value) {
+				$propety = 'run_scripts_'.$key;
+				$updates_checked->$propety = true;
+			}
+
+			$pre_update_response = update::update_version( $updates_checked );
 		}
+
+
 
 
 	$response->result 	= true;
