@@ -201,7 +201,7 @@ class v6_to_v7 {
 	public static function create_dd_ontology_table() : bool {
 
 		$sql_query = sanitize_query ('
-			CREATE TABLE IF NOT EXIST dd_ontology AS
+			CREATE TABLE IF NOT EXISTS dd_ontology AS
 				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades
 			FROM jer_dd;
 
