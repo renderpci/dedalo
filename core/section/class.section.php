@@ -50,6 +50,10 @@ class section extends common {
 		// injected whole database record, with all columns
 		public $record;
 
+		// string column in Database
+		// Defined in every component
+		public $data_column_name;
+
 		// tm_context. Array
 		public $tm_context;
 
@@ -72,8 +76,9 @@ class section extends common {
 		// It contains the section data source directly from DB.
 		protected $JSON_RecordObj_matrix;
 
-		// data_column_name. DB column where to get the data.
-		protected $data_column_name = 'data';
+
+		// Section record instances, array
+		protected array $section_records;
 
 
 
@@ -194,7 +199,7 @@ class section extends common {
 	public static function get_instance( string $tipo, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section {
 
 		// tipo check model (only section is expected)
-			$model = ontology_node::get_model_by_tipo($tipo,true);
+			$model = ontology_node::get_model_by_tipo( $tipo, true );
 			if ($model!=='section') {
 				debug_log(__METHOD__
 					. ' Expected model of tipo '.$tipo.' is section, but received is ' . PHP_EOL
@@ -279,8 +284,14 @@ class section extends common {
 			$this->tipo			= $tipo;
 			$this->mode			= $mode;
 
+		// Column data name
+			$this->data_column_name = section_record_data::get_column_name( get_called_class() );
+
+		// Section records instances
+			$this->section_records = [];
+
 		// load_structure_data. When tipo is set, calculate structure data
-			// parent::load_structure_data();
+			parent::load_structure_data();
 
 		// pagination. Set defaults
 			$this->pagination = new stdClass();
@@ -1482,6 +1493,9 @@ class section extends common {
 			// because the projects from the main section needs to be the same.
 			$component_filter_data = $options->component_filter_data ?? null;
 
+			// values, inject a given values into new section record
+			$values = $optons->values ?? null;
+
 		// Tipo. Current section tipo
 			$tipo = $this->get_tipo();
 
@@ -1494,7 +1508,7 @@ class section extends common {
 		// These processes are for all sections except Activity section
 		// Activity section is the logger section and this process is not correct.
 		// All other sections has Time Machine, uses projects data and uses caches.
-			if($tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+			if( $tipo===DEDALO_ACTIVITY_SECTION_TIPO ) {
 				debug_log(__METHOD__
 					. " Error to create a new section record, this section is an Activity section that can not be handle here! " . PHP_EOL
 					. " section_tipo: " .$tipo
@@ -1506,7 +1520,7 @@ class section extends common {
 		// 1. Create new record
 			// Section record
 			// To create the new record in the DDBB
-			$section_record	= section_record::create( $tipo );
+			$section_record	= section_record::create( $tipo, $values );
 			$section_id		= $section_record->section_id;
 
 			// Check error when new record was created
@@ -1519,11 +1533,13 @@ class section extends common {
 
 				return false;
 			}
+			// Store the section record instance
+			$this->add_section_record( $section_record );
 
 		// 2. Save section data
 			// Section data
 			// When section is created at first time, a basic data is set to write into the new section.
-			$section_data = [
+			$section_data = (object)[
 				'section_id'			=> (int)$section_id,
 				'section_tipo'			=> (string)$tipo,
 				'label'					=> (string)ontology_node::get_term_by_tipo($tipo,null,true),
@@ -1632,6 +1648,34 @@ class section extends common {
 
 		return $section_id;
 	}//end create_record
+
+
+
+	/**
+	* ADD_SECTION_RECORD
+	* Storage section_record given into the section_records instances
+	* The array will replace the section_record with the same section_id
+	* @param section_record $section_record
+	* @return void
+	*/
+	public function add_section_record( section_record $section_record ) : void {
+		$this->section_records[$section_record->section_id] = $section_record;
+	}//end add_section_record
+
+
+
+	/**
+	* REMOVE_SECTION_RECORD
+	* Remove section_record given from the section_records instances
+	* Will be deleted the section_record given with the same section_id if exist
+	* @param section_record $section_record
+	* @return void
+	*/
+	public function remove_section_record( section_record $section_record ) : void {
+		if( isset($this->section_records[$section_record->section_id]) ){
+			unset( $this->section_records[$section_record->section_id] );
+		}
+	}//end remove_section_record
 
 
 
