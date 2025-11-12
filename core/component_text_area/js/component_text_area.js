@@ -423,6 +423,7 @@ component_text_area.prototype.destroy = async function(delete_self=true, delete_
 * TAGS_TO_HTML
 * Parses Dédalo server side tags to html tags
 * e.g. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
+* @param string value
 * @return string html
 */
 component_text_area.prototype.tags_to_html = function(value) {
@@ -455,7 +456,7 @@ component_text_area.prototype.tags_to_html = function(value) {
 * @param object value
 * {
 *  	key 	// int  : defined in container dataset key
-*	value 	// string : value from active text editor
+*	value 	// object : value from active text editor
 * }
 * @return promise
 */

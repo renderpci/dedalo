@@ -149,17 +149,18 @@
 								}
 						}
 
-					$value = $this->get_dato();
+					$value = $this->get_data_lang() ?? [];
 
 					// fix broken tags
 						if (isset($properties->tags_index) || isset($properties->tags_draw) && !empty($value)) {
-							$value = array_map(function($raw_text){
-								if (!empty($raw_text)) {
-									$response = $this->fix_broken_index_tags($raw_text);
-									return $response->result;
+							$value = array_map(function($item){
+								if (!empty($item->value)) {
+									$response = $this->fix_broken_index_tags($item->value);
+									$item->value = $response->result;
+									return $item;
 								}
-								return $raw_text;
-							}, (array)$value);
+								return $item;
+							}, $value);
 						}
 
 					// fallback_value. Is used to create a placeholder to display a reference data to the user
