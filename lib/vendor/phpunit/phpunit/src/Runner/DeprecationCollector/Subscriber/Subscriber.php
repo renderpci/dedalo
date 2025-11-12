@@ -16,14 +16,14 @@ namespace PHPUnit\Runner\DeprecationCollector;
  */
 abstract class Subscriber
 {
-    private readonly Collector|InIsolationCollector $collector;
+    private readonly Collector $collector;
 
-    public function __construct(Collector|InIsolationCollector $collector)
+    public function __construct(Collector $collector)
     {
         $this->collector = $collector;
     }
 
-    protected function collector(): Collector|InIsolationCollector
+    protected function collector(): Collector
     {
         return $this->collector;
     }

@@ -117,7 +117,6 @@ final readonly class DefaultConfiguration extends Configuration
                 false,
                 false,
                 null,
-                [],
                 false,
                 false,
                 false,

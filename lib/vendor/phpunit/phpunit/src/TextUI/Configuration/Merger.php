@@ -865,31 +865,31 @@ final readonly class Merger
             $displayDetailsOnAllIssues = true;
         }
 
-        if ($failOnDeprecation && !$doNotFailOnDeprecation) {
+        if ($failOnDeprecation) {
             $displayDetailsOnTestsThatTriggerDeprecations = true;
         }
 
-        if ($failOnPhpunitDeprecation && !$doNotFailOnPhpunitDeprecation) {
+        if ($failOnPhpunitDeprecation) {
             $displayDetailsOnPhpunitDeprecations = true;
         }
 
-        if ($failOnPhpunitNotice && !$doNotFailOnPhpunitNotice) {
+        if ($failOnPhpunitNotice) {
             $displayDetailsOnPhpunitNotices = true;
         }
 
-        if ($failOnNotice && !$doNotFailOnNotice) {
+        if ($failOnNotice) {
             $displayDetailsOnTestsThatTriggerNotices = true;
         }
 
-        if ($failOnWarning && !$doNotFailOnWarning) {
+        if ($failOnWarning) {
             $displayDetailsOnTestsThatTriggerWarnings = true;
         }
 
-        if ($failOnIncomplete && !$doNotFailOnIncomplete) {
+        if ($failOnIncomplete) {
             $displayDetailsOnIncompleteTests = true;
         }
 
-        if ($failOnSkipped && !$doNotFailOnSkipped) {
+        if ($failOnSkipped) {
             $displayDetailsOnSkippedTests = true;
         }
 
@@ -897,7 +897,6 @@ final readonly class Merger
             $cliConfiguration->arguments(),
             $configurationFile,
             $bootstrap,
-            $xmlConfiguration->phpunit()->bootstrapForTestSuite(),
             $cacheResult,
             $cacheDirectory,
             $coverageCacheDirectory,
