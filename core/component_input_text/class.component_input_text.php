@@ -32,17 +32,17 @@ class component_input_text extends component_string_common {
 					? $properties->records_separator
 					: ' | ');
 
-		// dato
-			$dato			= $this->get_dato() ?? [];
+		// data
+			$data			= $this->get_data_lang() ?? [];
 			$fallback_value	= $this->extract_component_dato_fallback(
 				$this->get_lang(), // string lang
 				DEDALO_DATA_LANG_DEFAULT // string main_lang
 			);
 
 		// flat_value (array of one value full resolved)
-			$flat_value = empty($dato)
+			$flat_value = empty($data)
 				? []
-				: [implode($records_separator, $dato)];
+				: [implode( $records_separator, array_column($data, 'value') )];
 
 		// flat_fallback_value (array of one value full resolved)
 			$flat_fallback_value = [implode($records_separator, $fallback_value)];

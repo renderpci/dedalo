@@ -105,21 +105,21 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value,
+			value			: current_value.value,
 			parent			: content_value
 		})
 		input.addEventListener('change', function() {
 
 			// parsed_value
-				const parsed_value = (input.value.length>0)
-					? input.value
-					: null
+			current_value.value = (input.value.length>0)
+				? input.value
+				: null
 
 			// changed_data
 				const changed_data_item = Object.freeze({
 					action	: 'update',
 					key		: i,
-					value	: parsed_value
+					value	: current_value
 				})
 
 			// update the instance data (previous to save)
