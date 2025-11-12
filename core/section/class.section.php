@@ -2107,7 +2107,7 @@ class section extends common {
 	// 		$user_id = logged_user_id();
 
 	// 	// Get the section record data to be storage into Time Machine
-	// 		$section_record = new section_record( $section_tipo, $section_id );
+	// 		$section_record = section_record::get_instance( $section_tipo, $section_id );
 	// 		$data = $section_record->get_data();
 
 	// 	// delete_mode based actions
@@ -4826,202 +4826,202 @@ class section extends common {
 
 
 
-	/**
-	* DUPLICATE_CURRENT_SECTION
-	* Creates a new record cloning all data from current section
-	* @return int|string|null $section_id
-	*/
-	public function duplicate_current_section() : int|string|null {
+	// /**
+	// * DUPLICATE_CURRENT_SECTION
+	// * Creates a new record cloning all data from current section
+	// * @return int|string|null $section_id
+	// */
+	// public function duplicate_current_section() : int|string|null {
 
-		$section_tipo = $this->get_tipo();
+	// 	$section_tipo = $this->get_tipo();
 
-		// create a new blank section record with same the section_tipo that current
-			$new_section	= section::get_instance(null, $section_tipo);
-			$new_section_id	= $new_section->Save();
+	// 	// create a new blank section record with same the section_tipo that current
+	// 		$new_section	= section::get_instance(null, $section_tipo);
+	// 		$new_section_id	= $new_section->Save();
 
-			if (empty($new_section_id) || (int)$new_section_id<1) {
-				return null;
-			}
+	// 		if (empty($new_section_id) || (int)$new_section_id<1) {
+	// 			return null;
+	// 		}
 
-		// copy data
-			$source_dato = clone $this->get_dato();
+	// 	// copy data
+	// 		$source_dato = clone $this->get_dato();
 
-			// load new_section dato
-			$new_section->get_dato();
+	// 		// load new_section dato
+	// 		$new_section->get_dato();
 
-			// ar_section_info_tipos. Ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
-				$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
+	// 		// ar_section_info_tipos. Ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
+	// 			$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
-			// tipos to skip on copy
-				$skip_tipos = $ar_section_info_tipos;
+	// 		// tipos to skip on copy
+	// 			$skip_tipos = $ar_section_info_tipos;
 
-			// models to skip on copy
-				$skip_models = [
-					// 'component_state',
-					'component_publication',
-					'component_info'
-				];
+	// 		// models to skip on copy
+	// 			$skip_models = [
+	// 				// 'component_state',
+	// 				'component_publication',
+	// 				'component_info'
+	// 			];
 
-			// relation components
-				$group_locators = []; // group locator to prevent save component for each locator
-				foreach ($source_dato->relations as $locator) {
-					$current_tipo = $locator->from_component_tipo ?? false;
-					if ($current_tipo!==false) {
-						// tipo filter
-						if (in_array($current_tipo, $skip_tipos)) {
-							continue;
-						}
-						// its OK. Add value
-						$group_locators[$current_tipo][] = $locator;
-					}
-				}
-				foreach ($group_locators as $current_tipo => $ar_locators) {
-					// model filter
-					$current_model = ontology_node::get_model_by_tipo($current_tipo,true);
-					// model safe
-					if (strpos($current_model, 'component_')!==0) {
-						debug_log(__METHOD__
-							. " Skipped non component model " . PHP_EOL
-							. ' model: ' . to_string($current_model) . PHP_EOL
-							. ' tipo: ' . to_string($current_tipo) . PHP_EOL
-							. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-							. ' new_section_id: ' . to_string($new_section_id)
-							, logger::ERROR
-						);
-						continue;
-					}
-					if (in_array($current_model, $skip_models)) {
-						continue;
-					}
-					$lang		= $ar_locators[0]->lang ?? DEDALO_DATA_NOLAN; // could exists locators with lang
-					$component	= component_common::get_instance(
-						$current_model,
-						$current_tipo,
-						$new_section_id,
-						'list',
-						$lang,
-						$section_tipo
-					);
-					$component->set_dato($ar_locators);
-					$component->Save(); // forces to create each relation in relation table and time machine and activity records
-				}
+	// 		// relation components
+	// 			$group_locators = []; // group locator to prevent save component for each locator
+	// 			foreach ($source_dato->relations as $locator) {
+	// 				$current_tipo = $locator->from_component_tipo ?? false;
+	// 				if ($current_tipo!==false) {
+	// 					// tipo filter
+	// 					if (in_array($current_tipo, $skip_tipos)) {
+	// 						continue;
+	// 					}
+	// 					// its OK. Add value
+	// 					$group_locators[$current_tipo][] = $locator;
+	// 				}
+	// 			}
+	// 			foreach ($group_locators as $current_tipo => $ar_locators) {
+	// 				// model filter
+	// 				$current_model = ontology_node::get_model_by_tipo($current_tipo,true);
+	// 				// model safe
+	// 				if (strpos($current_model, 'component_')!==0) {
+	// 					debug_log(__METHOD__
+	// 						. " Skipped non component model " . PHP_EOL
+	// 						. ' model: ' . to_string($current_model) . PHP_EOL
+	// 						. ' tipo: ' . to_string($current_tipo) . PHP_EOL
+	// 						. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+	// 						. ' new_section_id: ' . to_string($new_section_id)
+	// 						, logger::ERROR
+	// 					);
+	// 					continue;
+	// 				}
+	// 				if (in_array($current_model, $skip_models)) {
+	// 					continue;
+	// 				}
+	// 				$lang		= $ar_locators[0]->lang ?? DEDALO_DATA_NOLAN; // could exists locators with lang
+	// 				$component	= component_common::get_instance(
+	// 					$current_model,
+	// 					$current_tipo,
+	// 					$new_section_id,
+	// 					'list',
+	// 					$lang,
+	// 					$section_tipo
+	// 				);
+	// 				$component->set_dato($ar_locators);
+	// 				$component->Save(); // forces to create each relation in relation table and time machine and activity records
+	// 			}
 
-			// inherits from father if exists
-				// component_relation_parent find
-				$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true, false);
-				if (!empty($ar_parent_tipo)) {
-					// calls to current section as child from another sections
-					$parents_data = component_relation_parent::get_parents(
-						$this->get_section_id(),
-						$section_tipo
-					);
-					if (!empty($parents_data)) {
+	// 		// inherits from father if exists
+	// 			// component_relation_parent find
+	// 			$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true, false);
+	// 			if (!empty($ar_parent_tipo)) {
+	// 				// calls to current section as child from another sections
+	// 				$parents_data = component_relation_parent::get_parents(
+	// 					$this->get_section_id(),
+	// 					$section_tipo
+	// 				);
+	// 				if (!empty($parents_data)) {
 
-						$current_tipo	= $ar_parent_tipo[0];
-						$current_model	= ontology_node::get_model_by_tipo($current_tipo,true);
+	// 					$current_tipo	= $ar_parent_tipo[0];
+	// 					$current_model	= ontology_node::get_model_by_tipo($current_tipo,true);
 
-						$save_current = true;
-						// model safe
-						if (strpos($current_model, 'component_')!==0) {
-							debug_log(__METHOD__
-								. " Skipped non component model " . PHP_EOL
-								. ' model: ' . to_string($current_model) . PHP_EOL
-								. ' tipo: ' . to_string($current_tipo) . PHP_EOL
-								. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-								. ' new_section_id: ' . to_string($new_section_id)
-								, logger::ERROR
-							);
-							$save_current = false;
-						}
-						if (in_array($current_model, $skip_models)) {
-							$save_current = false;
-						}
-						if ($save_current===true) {
-							$component = component_common::get_instance(
-								$current_model,
-								$current_tipo,
-								$new_section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
-							);
-							$component->set_dato($parents_data);
-							$component->Save(); // forces to create each relation in relation table and time machine and activity records
-						}
-					}
-				}
+	// 					$save_current = true;
+	// 					// model safe
+	// 					if (strpos($current_model, 'component_')!==0) {
+	// 						debug_log(__METHOD__
+	// 							. " Skipped non component model " . PHP_EOL
+	// 							. ' model: ' . to_string($current_model) . PHP_EOL
+	// 							. ' tipo: ' . to_string($current_tipo) . PHP_EOL
+	// 							. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+	// 							. ' new_section_id: ' . to_string($new_section_id)
+	// 							, logger::ERROR
+	// 						);
+	// 						$save_current = false;
+	// 					}
+	// 					if (in_array($current_model, $skip_models)) {
+	// 						$save_current = false;
+	// 					}
+	// 					if ($save_current===true) {
+	// 						$component = component_common::get_instance(
+	// 							$current_model,
+	// 							$current_tipo,
+	// 							$new_section_id,
+	// 							'list',
+	// 							DEDALO_DATA_NOLAN,
+	// 							$section_tipo
+	// 						);
+	// 						$component->set_dato($parents_data);
+	// 						$component->Save(); // forces to create each relation in relation table and time machine and activity records
+	// 					}
+	// 				}
+	// 			}
 
-			// literal components
-				$ar_media_components = component_media_common::get_media_components();
+	// 		// literal components
+	// 			$ar_media_components = component_media_common::get_media_components();
 
-				foreach ($source_dato->components as $current_tipo => $component_full_dato) {
-					// tipo filter
-					if (in_array($current_tipo, $skip_tipos)) {
-						continue;
-					}
-					// model filter
-					$current_model = ontology_node::get_model_by_tipo($current_tipo,true);
-					// model safe
-					if (strpos($current_model, 'component_')!==0) {
-						debug_log(__METHOD__
-							. " Skipped non component model " . PHP_EOL
-							. ' model: ' . to_string($current_model) . PHP_EOL
-							. ' tipo: ' . to_string($current_tipo) . PHP_EOL
-							. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-							. ' new_section_id: ' . to_string($new_section_id)
-							, logger::ERROR
-						);
-						continue;
-					}
-					if (in_array($current_model, $skip_models)) {
-						continue;
-					}
-					// media common cases
-					if( in_array($current_model, $ar_media_components) ){
+	// 			foreach ($source_dato->components as $current_tipo => $component_full_dato) {
+	// 				// tipo filter
+	// 				if (in_array($current_tipo, $skip_tipos)) {
+	// 					continue;
+	// 				}
+	// 				// model filter
+	// 				$current_model = ontology_node::get_model_by_tipo($current_tipo,true);
+	// 				// model safe
+	// 				if (strpos($current_model, 'component_')!==0) {
+	// 					debug_log(__METHOD__
+	// 						. " Skipped non component model " . PHP_EOL
+	// 						. ' model: ' . to_string($current_model) . PHP_EOL
+	// 						. ' tipo: ' . to_string($current_tipo) . PHP_EOL
+	// 						. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+	// 						. ' new_section_id: ' . to_string($new_section_id)
+	// 						, logger::ERROR
+	// 					);
+	// 					continue;
+	// 				}
+	// 				if (in_array($current_model, $skip_models)) {
+	// 					continue;
+	// 				}
+	// 				// media common cases
+	// 				if( in_array($current_model, $ar_media_components) ){
 
-						$source_component = component_common::get_instance(
-							$current_model,
-							$current_tipo,
-							$this->section_id,
-							'list',
-							$lang,
-							$section_tipo
-						);
+	// 					$source_component = component_common::get_instance(
+	// 						$current_model,
+	// 						$current_tipo,
+	// 						$this->section_id,
+	// 						'list',
+	// 						$lang,
+	// 						$section_tipo
+	// 					);
 
-						$source_component->duplicate_component_media_files( $new_section_id );
-					}
-					// its OK. Add value
-					foreach ($component_full_dato->dato as $lang => $local_value) {
+	// 					$source_component->duplicate_component_media_files( $new_section_id );
+	// 				}
+	// 				// its OK. Add value
+	// 				foreach ($component_full_dato->dato as $lang => $local_value) {
 
-						// target component
-						$target_component = component_common::get_instance(
-							$current_model,
-							$current_tipo,
-							$new_section_id,
-							'list',
-							$lang,
-							$section_tipo
-						);
-						// media common cases
-						if( in_array($current_model, $ar_media_components) ){
+	// 					// target component
+	// 					$target_component = component_common::get_instance(
+	// 						$current_model,
+	// 						$current_tipo,
+	// 						$new_section_id,
+	// 						'list',
+	// 						$lang,
+	// 						$section_tipo
+	// 					);
+	// 					// media common cases
+	// 					if( in_array($current_model, $ar_media_components) ){
 
-							// consolidate media files and save it
-							$target_component->regenerate_component( (object)[
-								'delete_normalized_files' => false
-							]);
+	// 						// consolidate media files and save it
+	// 						$target_component->regenerate_component( (object)[
+	// 							'delete_normalized_files' => false
+	// 						]);
 
-						}else{
-							// save in a common way
-							$target_component->set_dato($local_value); // set dato in current lang
-							$target_component->Save(); // save each lang to force to create a time machine and activity records
-						}
-					}
+	// 					}else{
+	// 						// save in a common way
+	// 						$target_component->set_dato($local_value); // set dato in current lang
+	// 						$target_component->Save(); // save each lang to force to create a time machine and activity records
+	// 					}
+	// 				}
 
-				}
+	// 			}
 
 
-		return (int)$new_section_id;
-	}//end duplicate_current_section
+	// 	return (int)$new_section_id;
+	// }//end duplicate_current_section
 
 
 
@@ -5087,19 +5087,6 @@ class section extends common {
 		return $sqo_id;
 	}//end build_sqo_id
 
-
-
-	/**
-	* GET_SECTION_RECORD
-	* @return
-	*/
-	public function get_section_record( string|int|null $section_id ) {
-
-		$section_record = new section_record( $this->section_tipo, $section_id );
-
-
-
-	}//end get_section_record
 
 
 
