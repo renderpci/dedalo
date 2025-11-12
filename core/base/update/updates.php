@@ -138,7 +138,7 @@ $updates->$v = new stdClass();
 
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				-- Rename the Original Table
-				ALTER TABLE matrix_counter RENAME TO temp_matrix_counter_dd;
+				ALTER TABLE matrix_counter_dd RENAME TO temp_matrix_counter_dd;
 				-- Create a New Table
 				CREATE TABLE matrix_counter_dd (
 				 "tipo" character varying(128) NOT NULL,
