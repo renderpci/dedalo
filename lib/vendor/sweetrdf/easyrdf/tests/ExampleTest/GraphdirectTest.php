@@ -58,7 +58,7 @@ class GraphdirectTest extends TestCase
             $output
         );
         $this->assertStringContainsString(
-            '<b>People:</b> http://example.com/joe, https://www.aelius.com/njh/ <br />',
+            '<b>People:</b> http://example.com/joe, http://njh.me/ <br />',
             $output
         );
         $this->assertStringContainsString('<b>Unknown:</b>  <br />', $output);

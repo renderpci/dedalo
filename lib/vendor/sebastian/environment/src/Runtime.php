@@ -277,7 +277,7 @@ final class Runtime
         return $diff;
     }
 
-    public function isOpcacheActive(): bool
+    private function isOpcacheActive(): bool
     {
         if (!extension_loaded('Zend OPcache')) {
             return false;

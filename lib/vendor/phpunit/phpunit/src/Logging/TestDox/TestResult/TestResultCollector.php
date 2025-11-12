@@ -308,10 +308,6 @@ final class TestResultCollector
             return;
         }
 
-        if ($event->ignoredByTest()) {
-            return;
-        }
-
         $this->updateTestStatus(TestStatus::warning());
     }
 

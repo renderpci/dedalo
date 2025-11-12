@@ -45,7 +45,7 @@
    </div>
    <div class="row">
     <div class="col-md-6">
-     <h3 style="margin-top: 2rem;">Insufficient Coverage</h3>
+     <h3>Insufficient Coverage</h3>
      <div class="scrollbox">
       <table class="table">
        <thead>
@@ -61,14 +61,12 @@
      </div>
     </div>
     <div class="col-md-6">
-     <h3 style="margin-top: 2rem;">Project Risks</h3>
+     <h3>Project Risks</h3>
      <div class="scrollbox">
       <table class="table">
        <thead>
         <tr>
          <th>Class</th>
-         <th class="text-right">Coverage</th>
-         <th class="text-right">Complexity</th>
          <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
         </tr>
        </thead>
@@ -81,7 +79,7 @@
    </div>
    <div class="row">
     <div class="col-md-12">
-     <h2 style="margin-top: 3rem;">Methods</h2>
+     <h2>Methods</h2>
     </div>
    </div>
    <div class="row">
@@ -100,7 +98,7 @@
    </div>
    <div class="row">
     <div class="col-md-6">
-     <h3 style="margin-top: 2rem;">Insufficient Coverage</h3>
+     <h3>Insufficient Coverage</h3>
      <div class="scrollbox">
       <table class="table">
        <thead>
@@ -116,14 +114,12 @@
      </div>
     </div>
     <div class="col-md-6">
-     <h3 style="margin-top: 2rem;">Project Risks</h3>
+     <h3>Project Risks</h3>
      <div class="scrollbox">
       <table class="table">
        <thead>
         <tr>
          <th>Method</th>
-         <th class="text-right">Coverage</th>
-         <th class="text-right">Complexity</th>
          <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
         </tr>
        </thead>
@@ -275,12 +271,10 @@
         const coverage = Math.round(data[0].x);
         const complexity = data[0].value;
         const targetName = complexityData[data[0].index][3];
-        const crap = complexityData[data[0].index][4];
         return `<table class="bb-tooltip"><tbody>
             <tr><th colspan="2">${targetName}</th></tr>
             <tr class="bb-tooltip-name-complexity"><td>Coverage</td><td class="name">${coverage}%</td></tr>
             <tr class="bb-tooltip-name-complexity"><td>Complexity</td><td class="value">${complexity}</td></tr>
-            <tr class="bb-tooltip-name-complexity"><td>Crap</td><td class="value">${crap}</td></tr>
           </tbody></table>`;
       },
       grouped: false,

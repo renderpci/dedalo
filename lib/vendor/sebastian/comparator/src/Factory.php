@@ -14,9 +14,6 @@ use function array_unshift;
 use function extension_loaded;
 use function version_compare;
 
-/**
- * @no-named-arguments Parameter names are not covered by the backward compatibility promise for sebastian/comparator
- */
 final class Factory
 {
     private static ?Factory $instance = null;

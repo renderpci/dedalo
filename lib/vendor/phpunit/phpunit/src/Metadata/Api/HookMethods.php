@@ -11,8 +11,6 @@ namespace PHPUnit\Metadata\Api;
 
 use function assert;
 use function class_exists;
-use function in_array;
-use function strtolower;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Metadata\After;
 use PHPUnit\Metadata\AfterClass;
@@ -25,7 +23,6 @@ use PHPUnit\Runner\HookMethod;
 use PHPUnit\Runner\HookMethodCollection;
 use PHPUnit\Util\Reflection;
 use ReflectionClass;
-use ReflectionMethod;
 
 /**
  * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
@@ -118,31 +115,6 @@ final class HookMethods
         }
 
         return self::$hookMethods[$className];
-    }
-
-    public function isHookMethod(ReflectionMethod $method): bool
-    {
-        $defaultNames = [
-            'setupbeforeclass',
-            'setup',
-            'assertpreconditions',
-            'assertpostconditions',
-            'teardown',
-            'teardownafterclass',
-        ];
-
-        if (in_array(strtolower($method->getName()), $defaultNames, true)) {
-            return true;
-        }
-
-        $metadata = Registry::parser()->forMethod($method->getDeclaringClass()->getName(), $method->getName());
-
-        return $metadata->isBeforeClass()->isNotEmpty() ||
-            $metadata->isBefore()->isNotEmpty() ||
-            $metadata->isPreCondition()->isNotEmpty() ||
-            $metadata->isPostCondition()->isNotEmpty() ||
-            $metadata->isAfter()->isNotEmpty() ||
-            $metadata->isAfterClass()->isNotEmpty();
     }
 
     /**

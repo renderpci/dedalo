@@ -10,13 +10,18 @@
 namespace SebastianBergmann\CodeCoverage\Report\Xml;
 
 use const DIRECTORY_SEPARATOR;
+use const PHP_EOL;
 use function count;
 use function dirname;
 use function file_get_contents;
+use function file_put_contents;
 use function is_array;
 use function is_dir;
 use function is_file;
 use function is_writable;
+use function libxml_clear_errors;
+use function libxml_get_errors;
+use function libxml_use_internal_errors;
 use function sprintf;
 use function strlen;
 use function substr;
@@ -28,8 +33,7 @@ use SebastianBergmann\CodeCoverage\Node\Directory as DirectoryNode;
 use SebastianBergmann\CodeCoverage\Node\File;
 use SebastianBergmann\CodeCoverage\Node\File as FileNode;
 use SebastianBergmann\CodeCoverage\PathExistsButIsNotDirectoryException;
-use SebastianBergmann\CodeCoverage\Util\Filesystem;
-use SebastianBergmann\CodeCoverage\Util\Xml;
+use SebastianBergmann\CodeCoverage\Util\Filesystem as DirectoryUtil;
 use SebastianBergmann\CodeCoverage\Version;
 use SebastianBergmann\CodeCoverage\WriteOperationFailedException;
 use SebastianBergmann\CodeCoverage\XmlException;
@@ -103,7 +107,7 @@ final class Facade
             // @codeCoverageIgnoreEnd
         }
 
-        Filesystem::createDirectory($directory);
+        DirectoryUtil::createDirectory($directory);
     }
 
     /**
@@ -283,8 +287,38 @@ final class Facade
     {
         $filename = sprintf('%s/%s.xml', $this->targetDirectory(), $name);
 
+        $document->formatOutput       = true;
+        $document->preserveWhiteSpace = false;
         $this->initTargetDirectory(dirname($filename));
 
-        Filesystem::write($filename, Xml::asString($document));
+        file_put_contents($filename, $this->documentAsString($document));
+    }
+
+    /**
+     * @throws XmlException
+     *
+     * @see https://bugs.php.net/bug.php?id=79191
+     */
+    private function documentAsString(DOMDocument $document): string
+    {
+        $xmlErrorHandling = libxml_use_internal_errors(true);
+        $xml              = $document->saveXML();
+
+        if ($xml === false) {
+            // @codeCoverageIgnoreStart
+            $message = 'Unable to generate the XML';
+
+            foreach (libxml_get_errors() as $error) {
+                $message .= PHP_EOL . $error->message;
+            }
+
+            throw new XmlException($message);
+            // @codeCoverageIgnoreEnd
+        }
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($xmlErrorHandling);
+
+        return $xml;
     }
 }

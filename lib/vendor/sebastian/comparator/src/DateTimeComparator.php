@@ -18,11 +18,6 @@ use DateTime;
 use DateTimeImmutable;
 use DateTimeZone;
 
-/**
- * @no-named-arguments Parameter names are not covered by the backward compatibility promise for sebastian/comparator
- *
- * @internal This class is not covered by the backward compatibility promise for sebastian/comparator
- */
 final class DateTimeComparator extends ObjectComparator
 {
     public function accepts(mixed $expected, mixed $actual): bool

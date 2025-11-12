@@ -70,7 +70,10 @@ final class TestRunner
             $test->name(),
         );
 
-        $shouldCodeCoverageBeCollected = $codeCoverageMetadataApi->shouldCodeCoverageBeCollectedFor($test);
+        $shouldCodeCoverageBeCollected = $codeCoverageMetadataApi->shouldCodeCoverageBeCollectedFor(
+            $test::class,
+            $test->name(),
+        );
 
         $this->performSanityChecks($test, $coversTargets, $usesTargets, $shouldCodeCoverageBeCollected);
 
@@ -81,7 +84,7 @@ final class TestRunner
         $skipped    = false;
 
         if ($this->shouldErrorHandlerBeUsed($test)) {
-            ErrorHandler::instance()->enable($test);
+            ErrorHandler::instance()->enable();
         }
 
         $collectCodeCoverage = CodeCoverage::instance()->isActive() &&
