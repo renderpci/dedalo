@@ -3,6 +3,7 @@ require_once 'trait.section_v7.php';
 /**
 * CLASS SECTION
 *
+* data_column_name : 'data'
 */
 class section extends common {
 

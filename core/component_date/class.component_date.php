@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT DATE
+* data_column_name : 'date'
 * used to manage dates, component_date use a object to represent dates, ISO dates as '2012-11-07 17:33:49' will be transform to object format as:
 * {
 *	"year": 2012,
@@ -45,8 +46,6 @@ class component_date extends component_common {
 	public static $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
 	// default date mode
 	public static $default_date_mode = 'date';
-	// data_column_name. DB column where to get the data.
-	protected $data_column_name = 'date';
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;

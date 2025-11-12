@@ -2,18 +2,14 @@
 /**
 * CLASS COMPONENT_SECTION_ID
 *
+* data_column_name : 'section_id'
 */
 class component_section_id extends component_common {
 
 
 
-	// data_column_name. DB column where to get the data.
-	protected $data_column_name = 'section_id';
-
-
-
 	/**
-	* GET_DATO
+	* GET_DATA
 	* @return int|null $dato
 	*/
 	public function get_dato() : ?int {

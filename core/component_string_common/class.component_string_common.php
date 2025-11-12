@@ -3,6 +3,8 @@
 * INTERFACE COMPONENT_STRING_COMMON
 * Used as common base from all components that works with media
 * like component_3d, component_av, component_image, component_pdf, component_svg
+*
+* data_column_name : 'string'
 */
 interface component_string_interface {
 
@@ -25,9 +27,6 @@ class component_string_common extends component_common {
 	/**
 	* CLASS VARS
 	*/
-
-	// data_column_name. DB column where to get the data.
-	protected $data_column_name = 'string';
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = true;

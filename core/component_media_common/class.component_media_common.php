@@ -58,6 +58,8 @@ interface component_media_interface {
 * CLASS COMPONENT_MEDIA_COMMON
 * Used as common base from all components that works with media
 * like component_3d, component_av, component_image, component_pdf, component_svg
+*
+* data_column_name : 'media'
 */
 class component_media_common extends component_common {
 
@@ -84,10 +86,6 @@ class component_media_common extends component_common {
 		public $extension;
 		// external_source
 		public $external_source;
-
-		// data_column_name. DB column where to get the data.
-		protected $data_column_name = 'media';
-
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation = false;
 
