@@ -813,6 +813,8 @@ class RdfXml extends Parser
             }
         }
 
+        xml_parser_free($this->xmlParser);
+
         return $this->tripleCount;
     }
 }

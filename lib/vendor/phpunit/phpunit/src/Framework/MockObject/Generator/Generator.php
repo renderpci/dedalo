@@ -64,9 +64,20 @@ final class Generator
     use TemplateLoader;
 
     /**
-     * @var null|non-empty-array<non-empty-string, true>
+     * @var non-empty-array<non-empty-string, true>
      */
-    private static ?array $excludedMethodNames = null;
+    private const array EXCLUDED_METHOD_NAMES = [
+        '__CLASS__'       => true,
+        '__DIR__'         => true,
+        '__FILE__'        => true,
+        '__FUNCTION__'    => true,
+        '__LINE__'        => true,
+        '__METHOD__'      => true,
+        '__NAMESPACE__'   => true,
+        '__TRAIT__'       => true,
+        '__clone'         => true,
+        '__halt_compiler' => true,
+    ];
 
     /**
      * @var array<non-empty-string, DoubledClass>
@@ -640,27 +651,7 @@ final class Generator
 
     private function isMethodNameExcluded(string $name): bool
     {
-        if (self::$excludedMethodNames === null) {
-            self::$excludedMethodNames = [
-                '__CLASS__'       => true,
-                '__DIR__'         => true,
-                '__FILE__'        => true,
-                '__FUNCTION__'    => true,
-                '__LINE__'        => true,
-                '__METHOD__'      => true,
-                '__NAMESPACE__'   => true,
-                '__TRAIT__'       => true,
-                '__clone'         => true,
-                '__halt_compiler' => true,
-            ];
-
-            if (version_compare(PHP_VERSION, '8.5', '>=')) {
-                self::$excludedMethodNames['__sleep']  = true;
-                self::$excludedMethodNames['__wakeup'] = true;
-            }
-        }
-
-        return isset(self::$excludedMethodNames[$name]);
+        return isset(self::EXCLUDED_METHOD_NAMES[$name]);
     }
 
     /**
@@ -714,15 +705,11 @@ final class Generator
     }
 
     /**
-     * @template T of object
-     *
-     * @param class-string<T> $className
+     * @param class-string $className
      *
      * @throws ReflectionException
      *
-     * @return ReflectionClass<T>
-     *
-     * @phpstan-ignore throws.unusedType
+     * @phpstan-ignore missingType.generics, throws.unusedType
      */
     private function reflectClass(string $className): ReflectionClass
     {

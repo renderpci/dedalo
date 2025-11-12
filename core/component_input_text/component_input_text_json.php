@@ -85,15 +85,14 @@
 			if ($this->get_section_tipo()===DEDALO_ACTIVITY_SECTION_TIPO) {
 				// activity 'Where' case
 					if ($this->tipo==='dd546') {
-						$first_value = reset($value);
-						if (is_array($first_value)) {
-							$first_value = reset($first_value);
-							// dump($value, ' value ++ '.$this->section_id.' - '.to_string($mode));
-							debug_log(__METHOD__." Fixed bad data (array of arrays) in $this->tipo - $this->section_id ".to_string(), logger::DEBUG);
+						$first_value = $value[0]->value ?? null;
+						if( !empty($first_value) ){
+							$term = ontology_node::get_term_by_tipo($first_value, DEDALO_DATA_LANG, true, true) ?? '';
+							$term = strip_tags($term);
+							$value = [$term . ' ['. $first_value."]"];
+						}else{
+							$value = [];
 						}
-						$term = ontology_node::get_term_by_tipo($first_value, DEDALO_DATA_LANG, true, true) ?? '';
-						$term = strip_tags($term);
-						$value = [$term . ' ['. $first_value."]"];
 					}
 				// activity 'Data' case
 					if ($this->tipo==='dd551') {
@@ -146,7 +145,7 @@
 			$with_lang_versions	= $this->with_lang_versions;
 			if($with_lang_versions===true) {
 
-				$original_lang = $this->lang;
+				// $original_lang = $this->lang;
 
 				// if the original_lang is nolan change to get the transliterable data in current data lang.
 				// if the original_lang is any lang set to nolan (is use into translate component inside tool_lang)
@@ -155,10 +154,10 @@
 					: DEDALO_DATA_NOLAN;
 
 				$this->set_lang($tranliterable_lang);
-				$item->transliterate_value = $this->get_dato();
+				$item->transliterate_value = $this->get_data_lang( $tranliterable_lang );
 
 				// restore the component lang to the original value
-				$this->set_lang($original_lang);
+				// $this->set_lang($original_lang);
 			}
 
 		// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;

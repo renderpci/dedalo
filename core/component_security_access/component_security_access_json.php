@@ -60,7 +60,7 @@
 
 				case 'edit':
 				default:
-					$value			= $this->get_dato();
+					$value			= $this->get_data_lang();
 					$datalist		= $this->get_datalist($user_id);
 					$changes_files	= hierarchy::get_simple_schema_changes_files();
 					break;

@@ -75,7 +75,6 @@
 
 			// section instance
 				$section = $section_class::get_instance(
-					null,
 					$current_section_tipo,
 					$mode
 				);
@@ -116,28 +115,24 @@
 			// 	$pagination->limit	= $limit;
 			// 	$pagination->offset	= $offset;
 
-		// subdatum
+			$grouped_sections = [];
 			foreach ($dato as $key => $current_record) {
 
 				$section_tipo	= $current_record->section_tipo;
 				$section_id		= $current_record->section_id;
 
-				// load data into JSON_RecordObj_matrix (used by section to get his data)
-					$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
-					$JSON_RecordObj_matrix	= JSON_RecordObj_matrix::get_instance(
-						$matrix_table,
-						$section_id,
-						$section_tipo,
-						true // bool cache
-					);
-					$datos = $current_record->datos ?? null;
-					if (!is_null($datos)) {
-						$JSON_RecordObj_matrix->set_dato($datos);
-					}
+				// section record
+					$section_record = section_record::get_instance( $section_tipo, $section_id );
+					$section_record->set_data( $current_record );
+
+					$grouped_sections[$section_tipo][] = $section_record;
+			}
+
+		// subdatum
+			foreach ($grouped_sections as $section_tipo => $section_records) {
 
 				// section instance
 					$section = $section_class::get_instance(
-						$section_id,
 						$section_tipo,
 						$mode,
 						true // bool cache
@@ -150,6 +145,11 @@
 					if($permissions<1){
 						// in any other cases stop the process
 						continue;
+					}
+
+				// Adding section record instances
+					foreach ($section_records as $current_section_record) {
+						$section->add_section_record( $current_section_record );
 					}
 
 				// properties optional

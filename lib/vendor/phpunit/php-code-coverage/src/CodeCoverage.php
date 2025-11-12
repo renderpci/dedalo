@@ -47,54 +47,33 @@ final class CodeCoverage
     private const string UNCOVERED_FILES = 'UNCOVERED_FILES';
     private readonly Driver $driver;
     private readonly Filter $filter;
-    private ?FileAnalyser $analyser                  = null;
     private ?Mapper $targetMapper                    = null;
-    private ?string $cacheDirectory                  = null;
     private bool $checkForUnintentionallyCoveredCode = false;
-    private bool $collectBranchAndPathCoverage       = false;
     private bool $includeUncoveredFiles              = true;
     private bool $ignoreDeprecatedCode               = false;
-    private bool $useAnnotationsForIgnoringCode      = true;
+    private ?string $currentId                       = null;
+    private ?TestSize $currentSize                   = null;
+    private ProcessedCodeCoverageData $data;
+    private bool $useAnnotationsForIgnoringCode = true;
+
+    /**
+     * @var array<string, TestType>
+     */
+    private array $tests = [];
 
     /**
      * @var list<class-string>
      */
     private array $parentClassesExcludedFromUnintentionallyCoveredCodeCheck = [];
-    private ?string $currentId                                              = null;
-    private ?TestSize $currentSize                                          = null;
-    private ProcessedCodeCoverageData $data;
-
-    /**
-     * @var array<string, TestType>
-     */
-    private array $tests             = [];
-    private ?Directory $cachedReport = null;
+    private ?FileAnalyser $analyser                                         = null;
+    private ?string $cacheDirectory                                         = null;
+    private ?Directory $cachedReport                                        = null;
 
     public function __construct(Driver $driver, Filter $filter)
     {
         $this->driver = $driver;
         $this->filter = $filter;
         $this->data   = new ProcessedCodeCoverageData;
-    }
-
-    public function __serialize(): array
-    {
-        $prefix = "\x00" . self::class . "\x00";
-
-        return [
-            // Configuration
-            $prefix . 'cacheDirectory'                                           => $this->cacheDirectory,
-            $prefix . 'checkForUnintentionallyCoveredCode'                       => $this->checkForUnintentionallyCoveredCode,
-            $prefix . 'includeUncoveredFiles'                                    => $this->includeUncoveredFiles,
-            $prefix . 'ignoreDeprecatedCode'                                     => $this->ignoreDeprecatedCode,
-            $prefix . 'parentClassesExcludedFromUnintentionallyCoveredCodeCheck' => $this->parentClassesExcludedFromUnintentionallyCoveredCodeCheck,
-            $prefix . 'useAnnotationsForIgnoringCode'                            => $this->useAnnotationsForIgnoringCode,
-            $prefix . 'filter'                                                   => $this->filter,
-
-            // Data
-            $prefix . 'data'  => $this->data,
-            $prefix . 'tests' => $this->tests,
-        ];
     }
 
     /**
@@ -384,20 +363,16 @@ final class CodeCoverage
     public function enableBranchAndPathCoverage(): void
     {
         $this->driver->enableBranchAndPathCoverage();
-
-        $this->collectBranchAndPathCoverage = true;
     }
 
     public function disableBranchAndPathCoverage(): void
     {
         $this->driver->disableBranchAndPathCoverage();
-
-        $this->collectBranchAndPathCoverage = false;
     }
 
     public function collectsBranchAndPathCoverage(): bool
     {
-        return $this->collectBranchAndPathCoverage;
+        return $this->driver->collectsBranchAndPathCoverage();
     }
 
     public function validate(TargetCollection $targets): ValidationResult
@@ -443,15 +418,15 @@ final class CodeCoverage
 
     private function applyFilter(RawCodeCoverageData $data): void
     {
-        if (!$this->filter->isEmpty()) {
-            foreach (array_keys($data->lineCoverage()) as $filename) {
-                if ($this->filter->isExcluded($filename)) {
-                    $data->removeCoverageDataForFile($filename);
-                }
-            }
+        if ($this->filter->isEmpty()) {
+            return;
         }
 
-        $data->skipEmptyLines();
+        foreach (array_keys($data->lineCoverage()) as $filename) {
+            if ($this->filter->isExcluded($filename)) {
+                $data->removeCoverageDataForFile($filename);
+            }
+        }
     }
 
     private function applyExecutableLinesFilter(RawCodeCoverageData $data): void

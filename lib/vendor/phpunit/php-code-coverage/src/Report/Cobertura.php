@@ -12,22 +12,22 @@ namespace SebastianBergmann\CodeCoverage\Report;
 use const DIRECTORY_SEPARATOR;
 use function basename;
 use function count;
+use function dirname;
+use function file_put_contents;
 use function preg_match;
 use function range;
+use function str_contains;
 use function str_replace;
 use function time;
 use DOMImplementation;
 use SebastianBergmann\CodeCoverage\CodeCoverage;
 use SebastianBergmann\CodeCoverage\Node\File;
 use SebastianBergmann\CodeCoverage\Util\Filesystem;
-use SebastianBergmann\CodeCoverage\Util\Xml;
 use SebastianBergmann\CodeCoverage\WriteOperationFailedException;
 
 final class Cobertura
 {
     /**
-     * @param null|non-empty-string $target
-     *
      * @throws WriteOperationFailedException
      */
     public function process(CodeCoverage $coverage, ?string $target = null): string
@@ -44,9 +44,10 @@ final class Cobertura
             'http://cobertura.sourceforge.net/xml/coverage-04.dtd',
         );
 
-        $document             = $implementation->createDocument('', '', $documentType);
-        $document->xmlVersion = '1.0';
-        $document->encoding   = 'UTF-8';
+        $document               = $implementation->createDocument('', '', $documentType);
+        $document->xmlVersion   = '1.0';
+        $document->encoding     = 'UTF-8';
+        $document->formatOutput = true;
 
         $coverageElement = $document->createElement('coverage');
 
@@ -288,10 +289,16 @@ final class Cobertura
 
         $coverageElement->setAttribute('complexity', (string) $complexity);
 
-        $buffer = Xml::asString($document);
+        $buffer = $document->saveXML();
 
         if ($target !== null) {
-            Filesystem::write($target, $buffer);
+            if (!str_contains($target, '://')) {
+                Filesystem::createDirectory(dirname($target));
+            }
+
+            if (@file_put_contents($target, $buffer) === false) {
+                throw new WriteOperationFailedException($target);
+            }
         }
 
         return $buffer;

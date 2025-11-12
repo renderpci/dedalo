@@ -84,17 +84,16 @@
 			$context[] = $this->context;
 
 			// subdata
-				// default locator build with this section params
-					$section_id		= $this->get_section_id();
-					$section_tipo	= $this->get_tipo();
 
-			if(!empty($section_id)) {
+			// foreach ($this->section_records as $section_record) {
+			// 	$section_id		= $section_record->section_id;
+			// 	$section_tipo	= $section_record->section_tipo;
 
-				$locator = new locator();
-				 	$locator->set_section_tipo($section_tipo);
-				 	$locator->set_section_id($section_id);
+			// 	$locator = new locator();
+			// 	 	$locator->set_section_tipo($section_tipo);
+			// 	 	$locator->set_section_id($section_id);
 
-				$value = [$locator];
+				$value = $this->section_records;
 
 				// section self data
 					// $item = new stdClass();
@@ -125,7 +124,8 @@
 					foreach ($ar_subdata as $sub_value) {
 						$data[] = $sub_value;
 					}
-			}
+
+			// }
 		}
 	}//end if($options->get_data===true && $permissions>0)
 

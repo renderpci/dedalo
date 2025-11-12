@@ -66,7 +66,7 @@
 				case 'edit':
 				default:
 					// value. full files list info
-					$value = $this->get_dato();
+					$value = $this->get_data_lang();
 
 					// data item
 					$item = $this->get_data_item($value);

@@ -1,29 +1,46 @@
 <?php declare(strict_types=1);
-
 /**
 * CLASS SECTION RECORD
-*
+* It represents a database record in the PHP space.
 */
 class section_record {
+
 
 
 	/**
 	* CLASS VARS
 	*/
- 	public $section_tipo;
- 	public $section_id;
-
+	// string section_tipo
+ 	public string $section_tipo;
+ 	// string|int section_id
+ 	public string|int $section_id;
 	// section_record_data class instance
 	protected object $data_instance;
+
+
+
+	/**
+	* GET_INSTANCE
+	* Get an instance of a section_record object.
+	* Not cached at now because the real shared data is from section_record_data.
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return section_record $section_record
+	*/
+	public static function get_instance( string $section_tipo, string|int $section_id ) : section_record {
+
+		return new section_record($section_tipo, (int)$section_id);
+	}//end get_instance
+
 
 
 	/**
 	* GET_INSTANCE
 	* Cache section instances (singleton pattern)
 	* @param string $section_tipo
-	* @param string|int $section_id
+	* @param int $section_id
 	*/
-	public function __construct( string $section_tipo, string|int $section_id ) {
+	private function __construct( string $section_tipo, int $section_id ) {
 
 		// Set general vars
 			$this->section_tipo	= $section_tipo;
@@ -36,7 +53,6 @@ class section_record {
 				$this->section_tipo,
 				$section_id
 			);
-
 	}//end get_instance
 
 
@@ -85,9 +101,9 @@ class section_record {
 	/**
 	* GET_DATA
 	* Retrieves all columns data of the record
-	* @return array $data
+	* @return object $data
 	*/
-	public function get_data() : array {
+	public function get_data() : object {
 
 		// force to load all data from database
 		$this->load_data();
@@ -97,6 +113,22 @@ class section_record {
 
 		return $data;
 	}//end get_data
+
+
+
+	/**
+	* SET_DATA
+	* Assign data columns with its own values into the section_record_data
+	* @param object $data
+	* @return bool $result
+	*/
+	public function set_data( object $data ) : bool {
+
+		$result = $this->data_instance->set_data( $data );
+
+
+		return $result;
+	}//end set_data
 
 
 
@@ -148,12 +180,12 @@ class section_record {
 	* a whole components counter data
 	* @param string $column
 	* 	DB column
-	* @param ?array $value
+	* @param ?object $value
 	* 	Column data value
 	* @return bool
 	* 	Returns false if JSON save fails.
 	*/
-	public function save_column( string $column, ?array $value ) : bool {
+	public function save_column( string $column, ?object $value ) : bool {
 
 		// 1 - update data_instance value
 		$this->data_instance->set_column_data( $column, $value );
@@ -816,6 +848,7 @@ class section_record {
 	// static methods
 
 
+
 	/**
 	* CREATE
 	* Inserts a single row into a "matrix" table with automatic handling for JSON columns
@@ -825,14 +858,14 @@ class section_record {
 	* adding `section_tipo` and `section_id` only) and with query params when is not (other
 	* dynamic combinations of columns data).
 	* @param string $section_tipo as oh1
-	* @param array $values = [] (optional)
-	* Assoc array with [column name => value] structure.
+	* @param object|null $values = null (optional)
+	* Object with {column name : value} structure.
 	* Keys are column names, values are their new values.
 	* @return section_record|false $section_id
 	* Returns the new section_record instance on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function create( string $section_tipo, array $values=[] ) : section_record|false {
+	public static function create( string $section_tipo, ?object $values=null ) : section_record|false {
 
 		$table = common::get_matrix_table_from_tipo($section_tipo);
 
@@ -846,11 +879,123 @@ class section_record {
 			return false;
 		}
 
-		$section_record = new section_record( $section_tipo, $section_id );
+		$section_record = section_record::get_instance( $section_tipo, $section_id );
 
 
 		return $section_record;
 	}//end create
 
 
-}
+
+	/**
+	* DUPLICATE
+	* Creates a new record cloning all data from current section record
+	* Force to save every component data to create a Time Machine and update its own state as component_info
+	* Or create new media files according to the new section_id
+	* @return int|string|null $section_id
+	*/
+	public function duplicate() : int|false {
+
+		$section_tipo = $this->section_tipo;
+
+		// copy data
+			$source_data = clone $this->get_data();
+
+		// create a new blank section record with same the section_tipo that current
+			$section	= section::get_instance( $section_tipo );
+			// set the source_data as new value data of the new section
+			$options = new stdClass();
+				$options->values = $source_data;
+			// Create a new section_record
+			$new_section_id	= $section->create_record( $options );
+
+			if (empty($new_section_id) || (int)$new_section_id<1) {
+				return false;
+			}
+
+			// ar_section_info_tipos.
+			// Section info tipos can get they from ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
+				$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
+
+			// tipos to skip on copy
+				$skip_tipos = $ar_section_info_tipos;
+			// columns to skip
+				$skip_columns = ['data','counters','relation_search'];
+
+		// Get media components in section
+			$ar_media_components = component_media_common::get_media_components();
+
+			foreach ($source_data as $column => $column_data) {
+
+				// check if the column has data
+				if($column_data===null){
+					continue;
+				}
+				// exclude some columns
+				if( in_array( $column, $skip_columns) ){
+					continue;
+				}
+
+				// give the component data of the column
+				foreach ($column_data as $component_tipo => $component_data) {
+
+					// tipo filter
+					if (in_array($component_tipo, $skip_tipos)) {
+						continue;
+					}
+
+					// model
+					$current_model = ontology_node::get_model_by_tipo($component_tipo,true);
+
+					// Create all new components in the duplicated section
+					$component = component_common::get_instance(
+						$current_model,
+						$component_tipo,
+						$new_section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$section_tipo
+					);
+
+					if( $model==='component_dataframe' ){
+						$caller_dataframe = new stdClass();
+							$caller_dataframe->main_component_tipo = $component->get_main_component_tipo();
+						$component->set_caller_dataframe( $caller_dataframe );
+					}
+
+					// Media components
+					// It needs to create a source component to access the existing files and duplicate they
+					if( in_array($current_model, $ar_media_components) ){
+						// Media components duplicates its own media files from the original component
+						$source_media_component = component_common::get_instance(
+							$current_model,
+							$component_tipo,
+							$this->section_id,
+							'list',
+							DEDALO_DATA_LANG,
+							$section_tipo
+						);
+						// Duplicates its own files
+						$source_media_component->duplicate_component_media_files( $new_section_id );
+
+						// Media target component regenerate only.
+						// consolidate media files and save it
+						$component->regenerate_component( (object)[
+							'delete_normalized_files' => false
+						]);
+
+					}else{
+
+						// save in a common way
+						$component->set_data( $component_data );
+						$component->save(); // save each lang to force to create a time machine and activity records
+					}
+				}
+			}
+
+		return $new_section_id;
+	}//end duplicate
+
+
+
+}//end section_record

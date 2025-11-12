@@ -39,13 +39,13 @@
 
 			case 'list':
 			case 'tm':
-				$value = $this->get_dato();
+				$value = $this->get_data_lang();
 				break;
 
 			case 'edit':
 			default:
 				// Building real value
-				$value = $this->get_dato();
+				$value = $this->get_data_lang();
 				break;
 		}
 

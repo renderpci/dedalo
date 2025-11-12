@@ -22,9 +22,7 @@ use function substr;
 use SebastianBergmann\Exporter\Exporter;
 
 /**
- * @no-named-arguments Parameter names are not covered by the backward compatibility promise for sebastian/comparator
- *
- * @internal This class is not covered by the backward compatibility promise for sebastian/comparator
+ * Compares scalar or NULL values for equality.
  */
 class ScalarComparator extends Comparator
 {

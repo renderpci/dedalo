@@ -75,7 +75,7 @@ const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
+		const inputs_value	= (value.length<1) ? [{value:null}] : value // force one empty input at least
 		const value_length	= inputs_value.length
 
 		for (let i = 0; i < value_length; i++) {
@@ -128,8 +128,8 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: element_type,
 			type			: 'text',
 			class_name		: 'input_value' + add_class,
-			value			: current_value,
-			placeholder		: (current_value) ? '' : self.data.fallback_value[i],
+			value			: current_value.value || '' ,
+			placeholder		: (current_value.value) ? '' : self.data.fallback_value?.[i],
 			parent			: content_value
 		})
 		// mousedown event. Capture event propagation

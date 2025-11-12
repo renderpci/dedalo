@@ -35,7 +35,6 @@ $updates = new stdClass();
 
 
 
-
 $v=700; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -47,7 +46,7 @@ $updates->$v = new stdClass();
 	// MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 8;
-	$updates->$v->update_from_minor		= 0;
+	$updates->$v->update_from_minor		= 1;
 
 	// require a clean installation
 	 // it only could be 'clean' | null. Incremental option has not sense to be forced.
@@ -138,7 +137,7 @@ $updates->$v = new stdClass();
 
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				-- Rename the Original Table
-				ALTER TABLE matrix_counter RENAME TO temp_matrix_counter_dd;
+				ALTER TABLE matrix_counter_dd RENAME TO temp_matrix_counter_dd;
 				-- Create a New Table
 				CREATE TABLE matrix_counter_dd (
 				 "tipo" character varying(128) NOT NULL,

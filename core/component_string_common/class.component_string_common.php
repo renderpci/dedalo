@@ -3,6 +3,8 @@
 * INTERFACE COMPONENT_STRING_COMMON
 * Used as common base from all components that works with media
 * like component_3d, component_av, component_image, component_pdf, component_svg
+*
+* data_column_name : 'string'
 */
 interface component_string_interface {
 
@@ -25,9 +27,6 @@ class component_string_common extends component_common {
 	/**
 	* CLASS VARS
 	*/
-
-	// data_column_name. DB column where to get the data.
-	protected $data_column_name = 'string';
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = true;
@@ -52,26 +51,22 @@ class component_string_common extends component_common {
 
 	/**
 	* IS_EMPTY
-	* @param array|null $value
-	* Check if given value is or not empty considering
+	* @param object|null $data_item
+	* Check if given data_item is or not empty considering
 	* spaces and ' ' as empty values
 	* @return bool
 	*/
-	public function is_empty(?array $value) : bool {
+	public function is_empty( ?object $data_item ) : bool {
 
 		// null case explicit
-		if($value===null) {
+		if($data_item===null) {
 			return true;
 		}
 
-		// array case
-		if ( is_array($value) ) {
-			foreach ($value as $item) {
-				$trim_value = is_string($item) ? trim($item) : $item;
-				if( !empty($trim_value) ) {
-					return false;
-				}
-			}
+		$value = $data_item->value ?? null;
+		$trim_value = is_string($value) ? trim($value) : $value;
+		if( !empty($trim_value) ) {
+			return false;
 		}
 
 
@@ -245,14 +240,14 @@ class component_string_common extends component_common {
 		// Try main lang
 		if ($main_lang!==$lang) {
 			$main_lang_data = $this->get_data_lang($main_lang);
-			if (!$this->is_empty($main_lang_data)) {
+			if (!$this->is_empty_data($main_lang_data)) {
 				return $main_lang_data;
 			}
 		}
 
 		// Try nolan
 		$data_nolan = $this->get_data_lang(DEDALO_DATA_NOLAN);
-		if (!$this->is_empty($data_nolan)) {
+		if (!$this->is_empty_data($data_nolan)) {
 			return $data_nolan;
 		}
 
@@ -264,7 +259,7 @@ class component_string_common extends component_common {
 			}
 			// Get current lang group of items from data
 			$current_lang_data = $this->get_data_lang($current_lang);
-			if (!$this->is_empty($data_nolan)) {
+			if (!$this->is_empty_data($data_nolan)) {
 				return $current_lang_data ;
 			}
 		}

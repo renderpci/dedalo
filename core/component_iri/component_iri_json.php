@@ -53,7 +53,7 @@
 				case 'edit':
 				case 'tm':
 				default:
-					$value = $this->get_dato();
+					$value = $this->get_data_lang();
 					break;
 			}
 
@@ -130,7 +130,7 @@
 			$with_lang_versions	= $this->with_lang_versions;
 			if($with_lang_versions===true) {
 
-				$original_lang = $this->lang;
+				// $original_lang = $this->lang;
 
 				// if the original_lang is nolan change to get the transliterable data in current data lang.
 				// if the original_lang is any lang set to nolan (is use into translate component inside tool_lang)
@@ -139,14 +139,14 @@
 					: DEDALO_DATA_NOLAN;
 
 				$this->set_lang($tranliterable_lang);
-				$item->transliterate_value = $this->get_dato();
+				$item->transliterate_value = $this->get_data_lang( $tranliterable_lang );
 
 				// restore the component lang to the original value
-				$this->set_lang($original_lang);
+				// $this->set_lang($original_lang);
 			}
 
 		// full data in all langs
-			$item->dato_full = $this->get_dato_full();
+			$item->dato_full = $this->get_data();
 
 		// debug
 			if(SHOW_DEBUG===true) {

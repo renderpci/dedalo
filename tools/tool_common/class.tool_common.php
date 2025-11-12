@@ -496,9 +496,8 @@ class tool_common {
 		// get the simple_tool_object
 			foreach ($all_registered_tools_records as $record) {
 
-				$section		= section::get_instance($record->section_id, $record->section_tipo);
-				$section_dato	= $record->datos;
-				$section->set_dato($section_dato);
+				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
+				$section_record->set_data( $record );
 
 				// simple tool object 'dd1353'
 				$component_tipo	= 'dd1353';
@@ -511,18 +510,14 @@ class tool_common {
 					DEDALO_DATA_NOLAN,
 					$record->section_tipo
 				);
-				$dato = $component->get_dato();
-				if (empty($dato)) {
+				$data = $component->get_data_lang();
+				$current_value = $data[0]->value ?? null;
+				if (empty($current_value)) {
 					debug_log(__METHOD__
 						." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id " . PHP_EOL
 						.' model: ' . to_string($model)
 						, logger::WARNING
 					);
-					continue;
-				}
-
-				$current_value = reset($dato);
-				if(isset($ar_tools) && !in_array($current_value->name, $ar_tools)){
 					continue;
 				}
 

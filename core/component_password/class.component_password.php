@@ -1,15 +1,14 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT PASSWORD
-*
+* 
+* data_column_name : 'string'
 */
 class component_password extends component_common {
 
 
 
 	public $fake_value = '****************';
-	// data_column_name. DB column where to get the data.
-	protected $data_column_name = 'string';
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
@@ -19,84 +18,10 @@ class component_password extends component_common {
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
-		$this->lang = $lang===DEDALO_DATA_NOLAN
-			? $lang
-			: DEDALO_DATA_NOLAN;
+		$this->lang = DEDALO_DATA_NOLAN;
 
 		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
-
-
-
-	/**
-	* GET_DATO
-	* @return array|null $dato
-	*/
-	public function get_dato() {
-
-		$dato = parent::get_dato();
-		if (!empty($dato) && !is_array($dato)) {
-			$dato = [$dato];
-		}
-
-		return $dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|null $dato
-	* (!) do not encrypt this var
-	* @return bool
-	*/
-	public function set_dato($dato) : bool {
-
-		if (!is_null($dato) && !is_array($dato)) {
-			$dato = [$dato];
-		}
-
-		return parent::set_dato( $dato );
-	}//end set_dato
-
-
-
-	/**
-	* GET_VALOR
-	* Return array dato as comma separated elements string by default
-	* If index var is received, return dato element corresponding to this index if exists
-	* @return string|null $valor
-	*/
-	public function get_valor($index='all') : ?string {
-
-		$valor = null;
-
-		$dato = $this->get_dato();
-		if(empty($dato)) {
-			return null;
-		}
-
-		if ($index==='all') {
-			$ar = array();
-			foreach ($dato as $value) {
-				$value = trim($value);
-				if (!empty($value)) {
-					$ar[] = $value;
-				}
-			}
-			if (count($ar)>0) {
-				$valor = implode(',', $ar);
-			}
-		}else{
-			$index = (int)$index;
-			$valor = isset($dato[$index])
-				? $dato[$index]
-				: null;
-		}
-
-
-		return $valor;
-	}//end get_valor
 
 
 
@@ -118,7 +43,7 @@ class component_password extends component_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_dato().
+	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
 	* the relation components need to process the locator to resolve the value
@@ -191,11 +116,11 @@ class component_password extends component_common {
 			// Dato is saved plain (unencrypted) only for updates
 		}else{
 			// Encrypt dato with MD5 etc..
-			$dato = $this->dato;
-			foreach ((array)$dato as $key => $current_value) {
+			$this->data = $this->data ?? [];
+			foreach ((array)$this->data as $item) {
 				// set encrypted value
-				$this->dato[$key] = component_password::encrypt_password(
-					$current_value
+				$item->value = component_password::encrypt_password(
+					$item->value
 				);
 			}
 		}

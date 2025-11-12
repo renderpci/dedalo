@@ -38,9 +38,9 @@
 
 		$start_time=start_time();
 
-		$dato = $this->get_dato();
+		$data_value = $this->get_data_lang();
 
-		if (!empty($dato)) {
+		if (!empty($data_value)) {
 
 			$value		= $this->get_dato_paginated();
 			$section_id	= $this->get_parent();
@@ -53,7 +53,7 @@
 					$item->parent_section_id	= $section_id;
 					// fix pagination vars
 						$pagination = new stdClass();
-							$pagination->total	= count($dato);
+							$pagination->total	= count($data_value);
 							$pagination->limit	= $limit;
 							$pagination->offset	= $offset;
 					$item->pagination = $pagination;
@@ -89,7 +89,7 @@
 				if (!empty(component_relation_parent::$errors)) {
 					$item->errors = component_relation_parent::$errors;
 				}
-		}//end if (!empty($dato))
+		}//end if (!empty($data_value))
 
 		// debug
 			if(SHOW_DEBUG===true) {

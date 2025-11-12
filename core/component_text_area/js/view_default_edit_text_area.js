@@ -146,6 +146,7 @@ const get_content_value = (i, current_value, self) => {
 	// clean fallback to only text
 		const data					= self.data || {}
 		const value					= data.value || []
+
 		const ar_fallback_value		= data.fallback_value || []
 		const fallback				= get_fallback_value(value, ar_fallback_value)
 		const dirty_fallback_value	= fallback[i]
@@ -160,8 +161,8 @@ const get_content_value = (i, current_value, self) => {
 		const fallback_value = fallback_fragment.firstChild.innerText;
 
 	// value_string is a raw html without parse into nodes (txt format)
-		const value_string = current_value
-			? self.tags_to_html(current_value)
+		const value_string = current_value?.value
+			? self.tags_to_html(current_value.value)
 			: null
 
 	// content_value
@@ -352,7 +353,7 @@ const get_content_value = (i, current_value, self) => {
 const get_content_value_read = (i, current_value, self) => {
 
 	// value is a raw html without parse into nodes (txt format)
-		const value = self.tags_to_html(current_value)
+		const value = self.tags_to_html(current_value.value)
 
 	// content_value
 		const content_value = ui.create_dom_element({

@@ -59,7 +59,7 @@
 
 				case 'edit':
 				default:
-					$value				= $this->get_dato();
+					$value				= $this->get_data_lang();
 					$ar_list_of_values	= $this->get_ar_list_of_values();
 					break;
 			}
