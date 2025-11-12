@@ -53,7 +53,6 @@ class section_record {
 				$this->section_tipo,
 				$section_id
 			);
-
 	}//end get_instance
 
 
@@ -102,9 +101,9 @@ class section_record {
 	/**
 	* GET_DATA
 	* Retrieves all columns data of the record
-	* @return array $data
+	* @return object $data
 	*/
-	public function get_data() : array {
+	public function get_data() : object {
 
 		// force to load all data from database
 		$this->load_data();
@@ -114,6 +113,22 @@ class section_record {
 
 		return $data;
 	}//end get_data
+
+
+
+	/**
+	* SET_DATA
+	* Assign data columns with its own values into the section_record_data
+	* @param object $data
+	* @return bool $result
+	*/
+	public function set_data( object $data ) : bool {
+
+		$result = $this->data_instance->set_data( $data );
+
+
+		return $result;
+	}//end set_data
 
 
 
@@ -165,12 +180,12 @@ class section_record {
 	* a whole components counter data
 	* @param string $column
 	* 	DB column
-	* @param ?array $value
+	* @param ?object $value
 	* 	Column data value
 	* @return bool
 	* 	Returns false if JSON save fails.
 	*/
-	public function save_column( string $column, ?array $value ) : bool {
+	public function save_column( string $column, ?object $value ) : bool {
 
 		// 1 - update data_instance value
 		$this->data_instance->set_column_data( $column, $value );
@@ -833,6 +848,7 @@ class section_record {
 	// static methods
 
 
+
 	/**
 	* CREATE
 	* Inserts a single row into a "matrix" table with automatic handling for JSON columns
@@ -842,14 +858,14 @@ class section_record {
 	* adding `section_tipo` and `section_id` only) and with query params when is not (other
 	* dynamic combinations of columns data).
 	* @param string $section_tipo as oh1
-	* @param array $values = [] (optional)
-	* Assoc array with [column name => value] structure.
+	* @param object|null $values = null (optional)
+	* Object with {column name : value} structure.
 	* Keys are column names, values are their new values.
 	* @return section_record|false $section_id
 	* Returns the new section_record instance on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function create( string $section_tipo, array $values=[] ) : section_record|false {
+	public static function create( string $section_tipo, ?object $values=null ) : section_record|false {
 
 		$table = common::get_matrix_table_from_tipo($section_tipo);
 
@@ -863,7 +879,7 @@ class section_record {
 			return false;
 		}
 
-		$section_record = new section_record( $section_tipo, $section_id );
+		$section_record = section_record::get_instance( $section_tipo, $section_id );
 
 
 		return $section_record;
@@ -871,3 +887,5 @@ class section_record {
 
 
 }
+
+}//end section_record
