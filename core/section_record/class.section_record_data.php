@@ -480,4 +480,17 @@ class section_record_data {
 
 
 
+	/**
+	* GET_COLUMN_NAME
+	* Resolve the column name for the given model
+	* @param string $model as 'component_input_text'
+	* @return string|null
+	*/
+	public static function get_column_name( string $model ) : ?string {
+
+		return section_record_data::$column_map[$model] ?? null;
+	}//end get_column_name
+
+
+
 }//end class section_record_data
