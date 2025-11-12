@@ -2760,18 +2760,17 @@ export const get_fallback_value = function(value, fallback_value) {
 
 		if(value[i]){
 
-			fallback_result.push(value[i])
+			fallback_result.push(value[i].value)
 
 		}else{
 
-			const marked_value = (fallback_value && fallback_value[i])
-				? '<mark>'+fallback_value[i]+'</mark>'
+			const marked_value = (fallback_value[i] && fallback_value[i].value)
+				? '<mark>'+fallback_value[i].value+'</mark>'
 				: ''
 
 			fallback_result.push(marked_value)
 		}
 	}
-
 
 	return fallback_result
 }//end get_fallback_value
