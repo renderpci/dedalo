@@ -3,7 +3,7 @@
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/|version|/phpunit.xsd"
          executionOrder="default"
          cacheResult="false"
-         bootstrap="../test/bootstrap.php">
+         bootstrap="bootstrap.php">
     <php>
         <ini name="error_reporting" value="E_ALL &amp; ~E_NOTICE &amp; ~E_WARNING &amp; ~E_DEPRECATED"/>
     </php>
