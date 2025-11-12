@@ -212,7 +212,7 @@ class diffusion_sql extends diffusion  {
 				}
 
 			// table fields reference only	(not needed because tables are already created)
-				#self::build_table_columns($diffusion_section, $database_name);
+				// self::build_table_columns($diffusion_section, $database_name);
 
 			// table_data . Calculate table_data for current array of section_id (all langs)
 				$ar_result = array();
@@ -349,7 +349,7 @@ class diffusion_sql extends diffusion  {
 				// Avoid infinite loops like Manolo's item to all references
 				$resolve_references = false;
 				debug_log(__METHOD__
-					." (!) Stopped recursive resolve_references on level '$recursion_level' ".to_string($options)." ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+					." (!) Stopped recursive resolve_references on level '$recursion_level' ".to_string($options)." ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
 					, logger::WARNING
 				);
 			}
