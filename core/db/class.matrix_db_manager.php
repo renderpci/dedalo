@@ -100,14 +100,14 @@ class matrix_db_manager {
 	* a predefined list of allowed tables to prevent SQL injection vulnerabilities.
 	* @param string $section_tipo
 	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
-	* @param array $values = [] (optional)
-	* Assoc array with [column name => value] structure.
+	* @param object|null $values = {} (optional)
+	* Object with {column name : value} structure.
 	* Keys are column names, values are their new values.
 	* @return int|false $section_id
 	* Returns the new $section_id on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function create( string $table, string $section_tipo, array $values=[] ) : int|false {
+	public static function create( string $table, string $section_tipo, ?object $values=null ) : int|false {
 
 		// Validate table
 		if (!isset(self::$matrix_tables[$table])) {
@@ -135,30 +135,29 @@ class matrix_db_manager {
 		$param_index	= 2; // next param index ($2, $3, ...)
 
 		// Add dynamic columns
-		foreach ($values as $col => $value) {
+		if( $values !== null ){
+			foreach ($values as $col => $value) {
 
-			// Columns. Only accepts normalized columns
-			if (!isset(self::$matrix_columns[$col])) {
-				throw new Exception("Invalid column name: $col");
+				// Columns. Only accepts normalized columns
+				if (!isset(self::$matrix_columns[$col])) {
+					throw new Exception("Invalid column name: $col");
+				}
+				$columns[] = pg_escape_identifier($conn, $col);
+
+				// Placeholders / Values
+				 if ($value !== null && isset(self::$matrix_json_columns[$col])) {
+					// Encode PHP array/object as JSON string
+					$params[]		= json_handler::encode($value);
+					$placeholders[]	= '$' . $param_index . '::jsonb';
+				}else{
+					$params[]		= $value;
+					$placeholders[]	= '$' . $param_index;
+				}
+
+				// Increase param index value
+				$param_index++;
 			}
-			$columns[] = pg_escape_identifier($conn, $col);
-
-			// Placeholders / Values
-			 if ($value !== null && isset(self::$matrix_json_columns[$col])) {
-				// Encode PHP array/object as JSON string
-				$params[]		= json_handler::encode($value);
-				$placeholders[]	= '$' . $param_index . '::jsonb';
-			}else{
-				$params[]		= $value;
-				$placeholders[]	= '$' . $param_index;
-			}
-
-			// Increase param index value
-			$param_index++;
 		}
-
-		// (!) Note that value returned by Save action, in case of activity, is the section_id
-		// auto created by table sequence 'matrix_activity_section_id_seq', not by counter
 
 		// 1. Start the transaction and set the isolation level
 		// Ensure the entire operation runs under the SERIALIZABLE transaction isolation level.
@@ -191,6 +190,7 @@ class matrix_db_manager {
 			SELECT " . implode(', ', $placeholders) . "	FROM updated_counter
 			RETURNING section_id;
 		";
+
 		// Execute query with params
 		$result = pg_query_params(
 			$conn,
@@ -252,11 +252,11 @@ class matrix_db_manager {
 	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	* @param int $section_id
 	* A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
-	* @return array|false $row
+	* @return object|false $row
 	* Returns the processed data as an associative array with parsed JSON values.
 	* If no row is found, it returns an empty array []. If a critical error occurs, it returns false.
 	*/
-	public static function read( string $table, string $section_tipo, int $section_id ) : array|false {
+	public static function read( string $table, string $section_tipo, int $section_id ) : object|false {
 
 		// check matrix table
 		if (!isset(self::$matrix_tables[$table])) {
@@ -302,13 +302,13 @@ class matrix_db_manager {
 			return false;
 		}
 
-		// Fetch all rows into a single associative array
-		$row = pg_fetch_assoc($result);
+		// Fetch all row into a single associative array
+		$row = pg_fetch_object($result);
 		pg_free_result($result);
 
 
-		// Return the result or an empty array if not found
-		return $row ?: [];
+		// Return the result or false if not found
+		return $row ?: false;
 	}//end read
 
 
@@ -324,13 +324,13 @@ class matrix_db_manager {
 	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	* @param int $section_id
 	* A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
-	* @param array $values
-	* Assoc array with [column name => value] structure
+	* @param object $values
+	* Object with {column name : value} structure
 	* Keys are column names, values are their new values.
 	* @return bool
 	* Returns `true` on success, or `false` on failure.
 	*/
-	public static function update( string $table, string $section_tipo, int $section_id, array $values ) : bool {
+	public static function update( string $table, string $section_tipo, int $section_id, object $values ) : bool {
 
 		// Validate table name against allowed list (Security/Guardrail)
 		if (!isset(self::$matrix_tables[$table])) {

@@ -2,64 +2,36 @@
 /**
 * CLASS COMPONENT_SECTION_ID
 *
+* data_column_name : 'section_id'
 */
 class component_section_id extends component_common {
 
 
 
-	// data_column_name. DB column where to get the data.
-	protected $data_column_name = 'section_id';
-
-
-
 	/**
-	* GET_DATO
-	* @return int|null $dato
+	* GET_DATA
+	* @return array|null $data
 	*/
-	public function get_dato() : ?int {
+	public function get_data() : ?array {
 
-		$dato = !empty($this->section_id)
+		$data = !empty($this->section_id)
 			? (int)$this->section_id
 			: null;
 
 		// Set as loaded
 			$this->is_loaded_matrix_data = true;
 
-		return $dato;
-	}//end get_dato
+		return [$data];
+	}//end get_data
 
 
 
 	/**
-	* SET_DATO
-	* @param int|null $dato
+	* SET_DATA
+	* @param int|null $data
 	* @return bool
 	*/
-	public function set_dato($dato) : bool {
-
-		// dato format check
-			if (!is_null($dato) && !is_integer($dato)) {
-
-				debug_log(__METHOD__ . ' '
-					. '[SET] RECEIVED DATO IS NOT AS EXPECTED TYPE integer|null. type: '. gettype($dato) .' - dato: '. to_string($dato) . PHP_EOL
-					. 'model: '. get_called_class() .PHP_EOL
-					. 'tipo: ' . $this->tipo . ' - section_tipo: ' . $this->section_tipo . ' - section_id: ' . $this->section_id
-					, logger::ERROR
-				);
-
-			}
-
-		// unset previous calculated valor
-			if (isset($this->valor)) {
-				unset($this->valor);
-			}
-
-		// set dato
-			$this->dato = $dato;
-
-		// resolved set
-			$this->dato_resolved = $dato;
-
+	public function set_data( ?array $data ) : bool {
 
 		return true;
 	}//end get_dato
@@ -123,7 +95,7 @@ class component_section_id extends component_common {
 				'id' => $this->section_tipo.'_'.$this->tipo
 			];
 
-		$data	= $this->get_dato();
+		$data	= $this->get_data();
 		$label	= $this->get_label();
 
 		// value

@@ -58,6 +58,8 @@ interface component_media_interface {
 * CLASS COMPONENT_MEDIA_COMMON
 * Used as common base from all components that works with media
 * like component_3d, component_av, component_image, component_pdf, component_svg
+*
+* data_column_name : 'media'
 */
 class component_media_common extends component_common {
 
@@ -84,10 +86,6 @@ class component_media_common extends component_common {
 		public $extension;
 		// external_source
 		public $external_source;
-
-		// data_column_name. DB column where to get the data.
-		protected $data_column_name = 'media';
-
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation = false;
 
@@ -108,22 +106,6 @@ class component_media_common extends component_common {
 		//	}],
 		//	"lib_data": {} // component_image only
 		// }]
-
-
-
-	/* REMOVED !
-		//	"original_file_name": "icon_link.svg",
-		//	"original_file_upload_date": {
-		//		"day": 27,
-		//		"hour": 17,
-		//		"time": 65009757539,
-		//		"year": 2022,
-		//		"month": 8,
-		//		"minute": 58,
-		//		"second": 59
-		//	},
-		*/
-
 
 
 	/**
@@ -177,39 +159,6 @@ class component_media_common extends component_common {
 			'component_svg'
 		];
 	}//end get_media_components
-
-
-
-	/**
-	* GET DATO
-	*
-	* Sample data:
-	* [{
-	*    "original_file_name": "poblado_raspa.jpg",
-	*    "original_upload_date": {
-	*      "day": 20,
-	*      "hour": 17,
-	*      "time": 65009152486,
-	*      "year": 2022,
-	*      "month": 8,
-	*      "minute": 54,
-	*      "second": 46
-	*    }
-	* }]
-	* @return array|null $dato
-	* 	(!) Note that in v5 data update could be different to null|array
-	* 	Because this, do not apply type constrain here ! ( : ?array)
-	* @test true
-	*/
-	public function get_dato() {
-
-		$dato = parent::get_dato();
-		if (!empty($dato) && !is_array($dato)) {
-			$dato = [$dato];
-		}
-
-		return $dato;
-	}//end get_dato
 
 
 
@@ -285,41 +234,6 @@ class component_media_common extends component_common {
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
-
-
-
-	/**
-	* GET VALOR
-	* LIST:
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
-	* @return string
-	* @test true
-	*/
-	public function get_valor() {
-
-		return $this->get_id() .'.'. $this->get_extension();
-	}//end get_valor
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor_export
-	* @test true
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
-
-		$element_quality	= $this->get_default_quality();
-		$valor				= $this->get_url(
-			$element_quality,
-			true, // bool test_file, output dedalo image placeholder when not file exists
-			true, // bool absolute, output absolute path like 'http://myhost/mypath/myimage.jpg'
-			false // bool default_add
-		);
-
-		return $valor;
-	}//end get_valor_export
 
 
 
@@ -1612,7 +1526,7 @@ class component_media_common extends component_common {
 	* Duplicate all media file linked (copy all media files into a new section_id)
 	* of current component (all quality versions)
 	* Is triggered wen section that contain media elements is duplicated
-	* @see section:duplicate_current_section
+	* @see section_record:duplicate()
 	* @param string|int $target_section_id
 	* @param array $ar_quality = []
 	* @param string|null $extension = null
@@ -1639,7 +1553,7 @@ class component_media_common extends component_common {
 			);
 
 		// data
-			$dato = $this->get_dato();
+			$data = $this->get_data();
 
 		// valid quality list
 			$valid_ar_quality = $this->get_ar_quality();
@@ -1670,8 +1584,8 @@ class component_media_common extends component_common {
 
 				// original case. If defined 'original_normalized_name', add extension to list to duplicate
 					if ( $current_quality===$this->get_original_quality() ) {
-						$original_normalized_name	= isset($dato[0]) && isset($dato[0]->original_normalized_name)
-							? $dato[0]->original_normalized_name
+						$original_normalized_name	= isset($data[0]) && isset($data[0]->original_normalized_name)
+							? $data[0]->original_normalized_name
 							: null;
 						if (isset($original_normalized_name)) {
 							$original_normalized_extension = get_file_extension($original_normalized_name);
@@ -1683,8 +1597,8 @@ class component_media_common extends component_common {
 
 				// modified case. If defined 'modified_normalized_name', add extension to list to delete
 					if ( $current_quality===$this->get_modified_quality() ) {
-						$modified_normalized_name	= isset($dato[0]) && isset($dato[0]->modified_normalized_name)
-							? $dato[0]->modified_normalized_name
+						$modified_normalized_name	= isset($data[0]) && isset($data[0]->modified_normalized_name)
+							? $data[0]->modified_normalized_name
 							: null;
 						if (isset($modified_normalized_name)) {
 							$modified_normalized_extension = get_file_extension($modified_normalized_name);

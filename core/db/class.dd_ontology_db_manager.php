@@ -15,6 +15,7 @@
 abstract class dd_ontology_db_manager {
 
 
+
 	// Ontology table
 	public static string $ontology_table = 'dd_ontology';
 
@@ -116,7 +117,7 @@ abstract class dd_ontology_db_manager {
 		// 	$param_index++;
 		// }
 
-		// Add fixed columns
+		// Add fixed columns (this allows use prepared statements)
 		foreach (self::$ontology_columns as $col => $col_value) {
 			// Prevent double columns. Already added by default (required).
 			if ($col==='tipo') continue;
@@ -183,6 +184,7 @@ abstract class dd_ontology_db_manager {
 			$stmt_name,
 			$params
 		);
+
 		if (!$result) {
 			debug_log(__METHOD__
 				." Error Processing Request Load ".to_string($sql) . PHP_EOL

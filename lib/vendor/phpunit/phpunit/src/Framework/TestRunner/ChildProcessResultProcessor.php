@@ -55,8 +55,6 @@ final readonly class ChildProcessResultProcessor
         $childResult = @unserialize($serializedProcessResult);
 
         if ($childResult === false) {
-            $this->emitter->childProcessErrored();
-
             $exception = new AssertionFailedError('Test was run in child process and ended unexpectedly');
 
             assert($test instanceof TestCase);

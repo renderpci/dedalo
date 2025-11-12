@@ -169,7 +169,7 @@ class component_filter extends component_relation_common {
 					if (!empty($default_dato_for_user)) {
 
 						$this->set_dato($default_dato_for_user);
-						$this->Save();
+						$this->save();
 
 						debug_log(__METHOD__
 							." Saved component filter (tipo:$this->tipo, section_id:$this->section_id, section_tipo:$this->section_tipo) DEDALO_DEFAULT_PROJECT as ". PHP_EOL

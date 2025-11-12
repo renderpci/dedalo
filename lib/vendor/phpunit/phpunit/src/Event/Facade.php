@@ -13,7 +13,6 @@ use function assert;
 use function interface_exists;
 use PHPUnit\Event\Telemetry\HRTime;
 use PHPUnit\Event\Telemetry\SystemGarbageCollectorStatusProvider;
-use PHPUnit\Runner\DeprecationCollector\Facade as DeprecationCollector;
 
 /**
  * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
@@ -90,11 +89,7 @@ final class Facade
      */
     public function initForIsolation(HRTime $offset): CollectingDispatcher
     {
-        DeprecationCollector::initForIsolation();
-
-        $dispatcher = new CollectingDispatcher(
-            new DirectDispatcher($this->typeMap()),
-        );
+        $dispatcher = new CollectingDispatcher;
 
         $this->emitter = new DispatchingEmitter(
             $dispatcher,
@@ -249,9 +244,8 @@ final class Facade
             TestRunner\GarbageCollectionDisabled::class,
             TestRunner\GarbageCollectionTriggered::class,
             TestRunner\GarbageCollectionEnabled::class,
-            TestRunner\ChildProcessStarted::class,
-            TestRunner\ChildProcessErrored::class,
             TestRunner\ChildProcessFinished::class,
+            TestRunner\ChildProcessStarted::class,
             TestRunner\StaticAnalysisForCodeCoverageFinished::class,
             TestRunner\StaticAnalysisForCodeCoverageStarted::class,
 

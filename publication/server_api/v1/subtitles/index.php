@@ -39,7 +39,7 @@
 		$code = isset($_REQUEST['code']) ? $safe_xss($_REQUEST['code']) : false;
 
 	// lang
-		$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : WEB_CURRENT_LANG_CODE;
+		$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : false;
 
 	// db
 		$db_name = isset($_REQUEST['db_name']) ? $safe_xss($_REQUEST['db_name']) : false;

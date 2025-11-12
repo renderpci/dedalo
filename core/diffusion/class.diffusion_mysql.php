@@ -1138,7 +1138,12 @@ class diffusion_mysql extends diffusion_sql  {
 
 		}else{
 			// Generic delete way
-			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' OR `section_id` = '{$section_tipo}_{$section_id}' ";
+			// Add window select for safe record deletion (default delete fails sometimes in MyISAM because section_id is not a primary key).
+			$strQuery = "
+				DELETE FROM `$database_name`.`$table_name` WHERE id IN(
+					SELECT id FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' OR `section_id` = '{$section_tipo}_{$section_id}'
+				);
+			";
 		}
 
 		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name );

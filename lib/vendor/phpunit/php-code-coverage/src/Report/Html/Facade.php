@@ -41,17 +41,16 @@ final readonly class Facade
 
     public function process(CodeCoverage $coverage, string $target): void
     {
-        $target            = $this->directory($target);
-        $report            = $coverage->getReport();
-        $date              = date('D M j G:i:s T Y');
-        $hasBranchCoverage = $coverage->getData(true)->functionCoverage() !== [];
+        $target = $this->directory($target);
+        $report = $coverage->getReport();
+        $date   = date('D M j G:i:s T Y');
 
         $dashboard = new Dashboard(
             $this->templatePath,
             $this->generator,
             $date,
             $this->thresholds,
-            $hasBranchCoverage,
+            $coverage->collectsBranchAndPathCoverage(),
         );
 
         $directory = new Directory(
@@ -59,7 +58,7 @@ final readonly class Facade
             $this->generator,
             $date,
             $this->thresholds,
-            $hasBranchCoverage,
+            $coverage->collectsBranchAndPathCoverage(),
         );
 
         $file = new File(
@@ -67,7 +66,7 @@ final readonly class Facade
             $this->generator,
             $date,
             $this->thresholds,
-            $hasBranchCoverage,
+            $coverage->collectsBranchAndPathCoverage(),
         );
 
         $directory->render($report, $target . 'index.html');

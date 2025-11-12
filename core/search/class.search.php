@@ -367,38 +367,51 @@ class search {
 					$field_name		= pg_field_name($result, $i);
 					$field_value	= $rows[$field_name];
 
-					// Skip temp relations_xxx columns and store their solved values
-					if (strpos($field_name, 'relations_')===0) {
-						$ar_relations_cache_solved[$field_name] = json_decode($field_value);
-						continue;
-					}
+					// // Skip temp relations_xxx columns and store their solved values
+					// if (strpos($field_name, 'relations_')===0) {
+					// 	$ar_relations_cache_solved[$field_name] = json_decode($field_value);
+					// 	continue;
+					// }
 
 					// Add property
-					$row->{$field_name} = ($field_name==='datos' || $field_name==='dato' || $field_name==='locator_data' ) && !empty($field_value)
-						? json_decode($field_value)
-						: $field_value;
-				}
+					// $row->{$field_name} = ($field_name!=='datos' || $field_name!=='dato' || $field_name==='locator_data' ) && !empty($field_value)
+					// 	? json_decode($field_value)
+					// 	: $field_value;
 
-				/* (!) NOTE: THIS RESOLUTION IS ONLY VIABLE FOR THE FIRST LEVEL. */
-				// Relation components. Get relations data from relations column and parse virtual columns values for each component
-				if (isset($this->relations_cache)) foreach ((array)$this->relations_cache as $table_alias => $ar_component_tipo) {
-					foreach ($ar_component_tipo as $component_tipo) {
-						$field_name		= $component_tipo;
-						$property_name	= 'relations_' . $table_alias;
-						// $field_value	= $ar_relations_cache_solved[$property_name]; // Full relations data
-						//if (isset($ar_relations_cache_solved[$property_name])) {
-							$current_relations_cache_solved	= $ar_relations_cache_solved[$property_name];
-							$field_value = array_filter((array)$current_relations_cache_solved, function($locator) use($component_tipo) {
-								return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
-							});
-							$field_value = array_values($field_value);
-						//}
-						// Add property
-						$row->{$field_name} = ($field_name==='datos' || $field_name==='dato')
-							? json_encode($field_value)
+					if($field_name==='section_id'){
+						$safe_value = (int)$field_value;
+
+					}else{
+						$safe_value = !empty($field_value) && !in_array($field_name,['section_tipo'])
+							? json_decode($field_value)
 							: $field_value;
 					}
+
+
+
+					$row->{$field_name} = $safe_value;
 				}
+
+				// /* (!) NOTE: THIS RESOLUTION IS ONLY VIABLE FOR THE FIRST LEVEL. */
+				// // Relation components. Get relations data from relations column and parse virtual columns values for each component
+				// if (isset($this->relations_cache)) foreach ((array)$this->relations_cache as $table_alias => $ar_component_tipo) {
+				// 	foreach ($ar_component_tipo as $component_tipo) {
+				// 		$field_name		= $component_tipo;
+				// 		$property_name	= 'relations_' . $table_alias;
+				// 		// $field_value	= $ar_relations_cache_solved[$property_name]; // Full relations data
+				// 		//if (isset($ar_relations_cache_solved[$property_name])) {
+				// 			$current_relations_cache_solved	= $ar_relations_cache_solved[$property_name];
+				// 			$field_value = array_filter((array)$current_relations_cache_solved, function($locator) use($component_tipo) {
+				// 				return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
+				// 			});
+				// 			$field_value = array_values($field_value);
+				// 		//}
+				// 		// Add property
+				// 		$row->{$field_name} = ($field_name==='datos' || $field_name==='dato')
+				// 			? json_encode($field_value)
+				// 			: $field_value;
+				// 	}
+				// }
 
 				// add solved row
 				$ar_records[] = $row;
@@ -1395,6 +1408,17 @@ class search {
 				// 	? $this->main_section_tipo_alias.'.dato'
 				// 	: $this->main_section_tipo_alias.'.datos';
 				$ar_sql_select[] = $this->main_section_tipo_alias.'.datos';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.data';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.relation';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.string';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.date';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.iri';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.geo';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.number';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.media';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.misc';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.relation_search';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.counters';
 
 			}else{
 

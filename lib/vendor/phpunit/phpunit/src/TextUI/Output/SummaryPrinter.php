@@ -62,33 +62,33 @@ final class SummaryPrinter
             return;
         }
 
+        $color = 'fg-black, bg-yellow';
+
         if ($result->wasSuccessful()) {
             if ($result->hasIssues()) {
-                $color = 'fg-black, bg-yellow';
-
                 $this->printWithColor(
                     $color,
                     'OK, but there were issues!',
                 );
             } else {
-                $color = 'fg-black, bg-green';
-
                 $this->printWithColor(
                     $color,
                     'OK, but some tests were skipped!',
                 );
             }
         } else {
-            $color = 'fg-white, bg-red';
-
             if ($result->hasTestErroredEvents() || $result->hasTestTriggeredPhpunitErrorEvents()) {
+                $color = 'fg-white, bg-red';
+
                 $this->printWithColor(
-                    'fg-white, bg-red',
+                    $color,
                     'ERRORS!',
                 );
             } else {
+                $color = 'fg-white, bg-red';
+
                 $this->printWithColor(
-                    'fg-white, bg-red',
+                    $color,
                     'FAILURES!',
                 );
             }

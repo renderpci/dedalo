@@ -12,10 +12,13 @@ namespace SebastianBergmann\CodeCoverage\Report;
 use function assert;
 use function basename;
 use function count;
+use function dirname;
+use function file_put_contents;
 use function is_string;
 use function ksort;
 use function max;
 use function range;
+use function str_contains;
 use function str_replace;
 use function time;
 use DOMDocument;
@@ -23,7 +26,6 @@ use DOMElement;
 use SebastianBergmann\CodeCoverage\CodeCoverage;
 use SebastianBergmann\CodeCoverage\Node\File;
 use SebastianBergmann\CodeCoverage\Util\Filesystem;
-use SebastianBergmann\CodeCoverage\Util\Xml;
 use SebastianBergmann\CodeCoverage\Version;
 use SebastianBergmann\CodeCoverage\WriteOperationFailedException;
 
@@ -238,10 +240,16 @@ final class OpenClover
         $xmlMetrics->setAttribute('coveredmethods', (string) $report->numberOfTestedMethods());
         $xmlProject->insertBefore($xmlMetrics, $xmlProject->firstChild);
 
-        $buffer = Xml::asString($xmlDocument);
+        $buffer = $xmlDocument->saveXML();
 
         if ($target !== null) {
-            Filesystem::write($target, $buffer);
+            if (!str_contains($target, '://')) {
+                Filesystem::createDirectory(dirname($target));
+            }
+
+            if (@file_put_contents($target, $buffer) === false) {
+                throw new WriteOperationFailedException($target);
+            }
         }
 
         return $buffer;
