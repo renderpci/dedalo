@@ -328,7 +328,6 @@ final class dd_core_api {
 						case ($model==='section'):
 
 							$section = section::get_instance(
-								$section_id,
 								$tipo,
 								$mode
 							);
@@ -835,8 +834,8 @@ final class dd_core_api {
 			}
 
 		// section
-			$section	= section::get_instance(null, $section_tipo);
-			$section_id	= $section->Save(); // Section save, returns the created section_id
+			$section	= section::get_instance( $section_tipo );
+			$section_id	= $section->create_record(); // Section save, returns the created section_id
 
 			if (empty($section_id)) {
 				$response->errors[] = 'Failed to save the section';
@@ -895,10 +894,10 @@ final class dd_core_api {
 				return $response;
 			}
 
-		// section
-		// section duplicate current.Returns the section_id created
-			$section	= section::get_instance($section_id, $section_tipo);
-			$section_id	= $section->duplicate_current_section();
+		// section_record
+		// section_record duplicate current. Returns the section_id created
+			$section_record	= section_record::get_instance( $section_tipo, $section_id );
+			$section_id	= $section_record->duplicate();
 
 			if (empty($section_id)) {
 				$response->errors[] = 'Failed to duplicate the section';
