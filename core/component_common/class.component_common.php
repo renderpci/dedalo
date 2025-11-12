@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-require_once 'trait.component_common_v7.php';
+// require_once 'trait.component_common_v7.php';
 /**
 * COMPONENT_COMMON
 * Common methods of all components
@@ -10,7 +10,7 @@ abstract class component_common extends common {
 
 
 	// traits. Files added to current class file to split the large code.
-	use component_common_v7;
+	// use component_common_v7;
 
 
 
@@ -708,7 +708,7 @@ abstract class component_common extends common {
 			$section_record = $this->get_my_section_record();
 			$result = $section_record->set_component_data(
 				$this->tipo,
-				$this->data_column,
+				$this->data_column_name,
 				$data
 			);
 
@@ -972,9 +972,11 @@ abstract class component_common extends common {
 		}
 
 		$safe_lang = $lang ?? $this->get_lang();
-		$data_lang = array_filter( $data, function($el) use ($safe_lang) {
-			return $el->lang === $safe_lang;
-		});
+		$data_lang = array_values (
+			array_filter( $data, function($el) use ($safe_lang) {
+				return $el->lang === $safe_lang;
+			})
+		);
 
 
 		return $data_lang;
@@ -1010,7 +1012,7 @@ abstract class component_common extends common {
 			// component full_data
 				$this->data = $section_record->get_component_data(
 					$this->tipo,
-					$this->data_column
+					$this->data_column_name
 				);
 
 			// Set as loaded
@@ -1130,7 +1132,7 @@ abstract class component_common extends common {
 			// @v7 way, from component full_data
 				// $this->dato = $section->get_component_full_data(
 				// 	$this->tipo,
-				// 	$this->data_column
+				// 	$this->data_column_name
 				// );
 
 			// Set as loaded
@@ -1333,8 +1335,10 @@ abstract class component_common extends common {
 
 		// short vars
 			$section_tipo		= $this->section_tipo;
+			$section_id 		= $this->section_id;
+			$tipo 				= $this->tipo;
 			$lang				= $lang ?? DEDALO_DATA_LANG;
-			$model 				= $this->get_model();
+			$model				= $this->get_model();
 			$mode				= $this->mode;
 			$data_column_name	= $this->data_column_name;
 			$data				= $this->get_data();
@@ -1385,7 +1389,7 @@ abstract class component_common extends common {
 			}
 
 		// Save the component data into DB
-			$result = $section_record->save_component_data( $data_column, $tipo, $data );
+			$result = $section_record->save_component_data( $data_column_name, $tipo, $data );
 
 		// time machine data.
 			// We save only current component lang 'dato' in time machine
@@ -1411,7 +1415,7 @@ abstract class component_common extends common {
 				}
 			//Save the time machine record
 			$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
-				common::get_matrix_table_from_tipo($this->tipo),
+				common::get_matrix_table_from_tipo($this->section_tipo),
 				(int)$this->section_id, // int section_id
 				$this->tipo, // string section tipo
 				true // bool enable cache
@@ -2394,13 +2398,13 @@ abstract class component_common extends common {
 			$result = [];
 			foreach ($search_result->ar_records as $row) {
 
-				// create the section instance and set current row as his own data
-				// it prevent to call multiple times to DDBB
-				$section = section::get_instance(
-					$row->section_id,
-					$row->section_tipo
+				// // create the section instance and set current row as his own data
+				// // it prevent to call multiple times to DDBB
+				$section_record = section_record::get_instance(
+					$row->section_tipo,
+					$row->section_id
 				);
-				$section->set_dato($row->datos);
+				$section_record->set_data( $row );
 
 				// get the locator of the current row
 				$locator = new locator();
@@ -2481,11 +2485,11 @@ abstract class component_common extends common {
 				$custom_sort = reset($this->properties->sort_by); // Only one at this time
 				if ($custom_sort->direction==='DESC') {
 					usort($result, function($a,$b) use($custom_sort){
-						return strnatcmp($b->{$custom_sort->path}, $a->{$custom_sort->path});
+						return $b->{$custom_sort->path} - $a->{$custom_sort->path};
 					});
 				}else{
 					usort($result, function($a,$b) use($custom_sort){
-						return strnatcmp($a->{$custom_sort->path}, $b->{$custom_sort->path});
+						  return $a->{$custom_sort->path} - $b->{$custom_sort->path};
 					});
 				}
 			}else{
@@ -3590,7 +3594,6 @@ abstract class component_common extends common {
 
 		// section build instance
 			$section = section::get_instance(
-				$this->section_id,
 				$this->section_tipo,
 				'list', // 'edit',
 				$cache, // bool cache (synced whit this component)
@@ -3605,28 +3608,21 @@ abstract class component_common extends common {
 
 	/**
 	* GET_MY_SECTION_RECORD
-	* Creates or get from memory the component section object
-	* @return object $this->section_obj
+	* Creates or get from memory the component section record object
+	* @return object $this->section_record
 	*/
 	public function get_my_section_record() : object {
 
-		// Note that (06-02-2022) the section cache has not conflicts with same instance in list or edit modes
-		// now the JSON_RecordObj_matrix has the cache of section data. (same data for list and edit)
+		// If the section_record exist return it.
 			if (isset($this->section_record)) {
 				return $this->section_record;
 			}
 
-		// cache. Note that component cache will be sync with section. Set as false for component update
-			$cache = $this->cache;
-
-		// section build instance
-			$section = section::get_instance(
+		// section record build instance
+			$this->section_record = section_record::get_instance(
 				$this->section_tipo,
-				$cache, // bool cache (synced whit this component)
+				$this->section_id
 			);
-		//section_record
-			$section_record = $section->get_section_record( $this->section_id );
-			$this->section_record = $section_record;
 
 		return $this->section_record;
 	}//end get_my_section_record
@@ -4293,10 +4289,10 @@ abstract class component_common extends common {
 	/**
 	* IS_EMPTY
 	* Generic check if given value is or not empty considering
-	* @param array|null $value
+	* @param object|null $value
 	* @return bool
 	*/
-	public function is_empty(?array $value) : bool {
+	public function is_empty( ?object $value ) : bool {
 
 		// null case explicit
 		if( $value===null ) {
@@ -4334,8 +4330,7 @@ abstract class component_common extends common {
 		}
 
 		foreach ($data as $data_item) {
-			$value = $data_item->value ?? null;
-			$is_empty_value = $this->is_empty( $value );
+			$is_empty_value = $this->is_empty( $data_item );
 			if( $is_empty_value === false ){
 				$is_empty_data = false;
 				break;
