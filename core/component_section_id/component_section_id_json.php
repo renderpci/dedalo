@@ -38,7 +38,7 @@
 		$start_time=start_time();
 
 		// value
-			$value = $this->get_dato();
+			$value = $this->get_data();
 
 		// data item
 			$item = $this->get_data_item($value);

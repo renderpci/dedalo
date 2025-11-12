@@ -46,14 +46,14 @@
 			$limit		= $this->pagination->limit ?? 10;
 			$offset		= $this->pagination->offset ?? 0;
 
-		$dato = $this->get_dato();
+		$data_value = $this->get_data_lang();
 
 
 		// value
 			switch ($mode) {
 
 				case 'solved':
-					$value	= $dato;
+					$value	= $data_value;
 
 					$item = $this->get_data_item($value);
 						$item->parent_tipo			= $tipo;
@@ -70,7 +70,7 @@
 					break;
 
 				case 'search':
-					$value	= $dato;
+					$value	= $data_value;
 					break;
 
 				case 'edit':
@@ -87,7 +87,7 @@
 				$item->parent_section_id	= $section_id;
 				// fix pagination vars
 				$item->pagination = (object)[
-					'total'		=> count($dato),
+					'total'		=> count($data_value),
 					'limit'		=> $limit,
 					'offset'	=> $offset
 				];
@@ -104,7 +104,7 @@
 			$data[] = $item;
 
 			// solved mode
-			if (!empty($dato) && $mode!='solved') {
+			if (!empty($data_value) && $mode!='solved') {
 				// subdatum
 				$subdatum = $this->get_subdatum($tipo, $value);
 
@@ -117,7 +117,7 @@
 				foreach ($ar_subdata as $sub_value) {
 					$data[] = $sub_value;
 				}
-			}//end if (!empty($dato))
+			}//end if (!empty($data_value))
 
 			// debug
 				if(SHOW_DEBUG===true) {

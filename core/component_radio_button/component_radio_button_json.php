@@ -59,7 +59,7 @@
 					if ( isset($this->caller_dataframe) ) {
 						// inside dataframe case
 						// dataframe needs the dato and the datalist of the component when it's in tm mode to re-build his scenario
-						$value				= $this->get_dato();
+						$value				= $this->get_data_lang();
 						$ar_list_of_values	= $this->get_list_of_values(DEDALO_DATA_LANG);
 					}else{
 						// regular time machine data case
@@ -68,7 +68,7 @@
 					break;
 				case 'edit':
 				default:
-					$value				= $this->get_dato();
+					$value				= $this->get_data_lang();
 					$ar_list_of_values	= $this->get_list_of_values(DEDALO_DATA_LANG);
 					break;
 			}

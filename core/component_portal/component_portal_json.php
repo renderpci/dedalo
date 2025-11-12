@@ -49,13 +49,13 @@
 			}
 
 
-		$dato = $this->get_dato();
+		$data_value = $this->get_data_lang();
 
 		// value
 			switch ($mode) {
 
 				case 'solved':
-					$value	= $dato;
+					$value	= $data_value;
 
 					$item = $this->get_data_item($value);
 						$item->parent_tipo			= $tipo;
@@ -72,7 +72,7 @@
 					break;
 
 				case 'search':
-					$value	= $dato;
+					$value	= $data_value;
 					break;
 
 				case 'edit':
@@ -82,7 +82,7 @@
 			}//end switch ($mode)
 
 		// data
-			if (!empty($dato) && $mode!='solved') {
+			if (!empty($data_value) && $mode!='solved') {
 
 				// data item (list mode result don't include self data, only subdata)
 					$item = $this->get_data_item($value);
@@ -90,7 +90,7 @@
 						$item->parent_section_id	= $section_id;
 						// fix pagination vars
 							$pagination = new stdClass();
-								$pagination->total	= count($dato);
+								$pagination->total	= count($data_value);
 								$pagination->limit	= $limit;
 								$pagination->offset	= $offset;
 								// $pagination->offset	= $offset>=$pagination->total
@@ -114,7 +114,7 @@
 						$data[] = $sub_value;
 					}
 
-			}//end if (!empty($dato))
+			}//end if (!empty($data_value))
 
 		// debug
 			if(SHOW_DEBUG===true) {
