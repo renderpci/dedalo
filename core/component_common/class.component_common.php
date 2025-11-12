@@ -134,7 +134,7 @@ abstract class component_common extends common {
 		public $section_record;
 		// string column in Database
 		// Defined in every component
-		public $data_column;
+		public $data_column_name;
 
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation;
@@ -441,6 +441,9 @@ abstract class component_common extends common {
 			// Preserve 'parent' for v5 compatibility in some situations
 			$this->parent		= $section_id;
 			$this->section_id	= $section_id;
+
+		// Column data name
+			$this->data_column_name = section_record_data::get_column_name( get_called_class() );
 
 		// mode
 			if (empty($mode)) {
@@ -1333,7 +1336,7 @@ abstract class component_common extends common {
 			$lang				= $lang ?? DEDALO_DATA_LANG;
 			$model 				= $this->get_model();
 			$mode				= $this->mode;
-			$data_column	= $this->data_column;
+			$data_column_name	= $this->data_column_name;
 			$data				= $this->get_data();
 
 		// check component minimum vars before save

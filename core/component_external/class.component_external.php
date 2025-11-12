@@ -4,13 +4,11 @@
 * Manage specific component logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
 * Mainly used in external APIs that manage data such as ZENON
+*
+* data_column_name : 'misc'
 */
 class component_external extends component_common {
 
-
-
-	// data_column_name. DB column where to get the data.
-	protected $data_column_name = 'misc';
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;

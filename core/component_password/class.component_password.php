@@ -1,15 +1,14 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT PASSWORD
-*
+* 
+* data_column_name : 'string'
 */
 class component_password extends component_common {
 
 
 
 	public $fake_value = '****************';
-	// data_column_name. DB column where to get the data.
-	protected $data_column_name = 'string';
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
