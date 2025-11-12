@@ -42,7 +42,7 @@ class logger_backend_activity extends logger_backend {
 		];
 		static $_COMPONENT_WHO = [
 			'tipo'			=>'dd543',
-			'model_name'	=>'component_autocomplete'
+			'model_name'	=>'component_portal' //component_autocomplete
 		];
 		static $_COMPONENT_WHAT = [
 			'tipo'			=> 'dd545',
@@ -60,7 +60,7 @@ class logger_backend_activity extends logger_backend {
 			'tipo'			=>'dd550',
 			'model_name'	=>'component_filter'
 		];
-		static $_COMPONENT_DATOS = [
+		static $_COMPONENT_DATA = [
 			'tipo'			=>'dd551',
 			'model_name'	=>'component_json' // (v5 former component_input_text)
 			// in Ontology appears as component_input_text fro v5 compatibility, but mapped to component_json in 'get_model()'
@@ -89,8 +89,8 @@ class logger_backend_activity extends logger_backend {
 			self::$_COMPONENT_WHAT['tipo'],
 			self::$_COMPONENT_WHERE['tipo'],
 			self::$_COMPONENT_WHEN['tipo'],
-			self::$_COMPONENT_PROJECTS['tipo'],
-			self::$_COMPONENT_DATOS['tipo']
+			// self::$_COMPONENT_PROJECTS['tipo'],
+			self::$_COMPONENT_DATA['tipo']
 		];
 	}//end __construct
 
@@ -100,16 +100,14 @@ class logger_backend_activity extends logger_backend {
 	* LOG_MESSAGE_DEFER
 	* Write record in database activity section
 	* @param object $options
-	* @return int|null section_id
+	* @return void
 	*/
-	public function log_message_defer( object $options ) : ?int {
+	public function log_message_defer( object $options ) : void {
 
 		// options
 			$message	= $options->message;
-			$log_level	= $options->log_level;
 			$tipo_where	= $options->tipo_where;
-			$operations	= $options->operations;
-			$datos		= $options->datos;
+			$log_data	= $options->log_data;
 			$user_id	= $options->user_id;
 
 		// check values
@@ -121,7 +119,7 @@ class logger_backend_activity extends logger_backend {
 						. ' options: ' . to_string($options)
 						, logger::ERROR
 					);
-					return null;
+					return;
 				}
 
 			// auto-log stop. Prevent infinite loop saving self
@@ -130,7 +128,7 @@ class logger_backend_activity extends logger_backend {
 						." Error on log_message (infinite loop stopped) "
 						, logger::ERROR
 					);
-					return null;
+					return;
 				}
 
 		// debug
@@ -138,12 +136,17 @@ class logger_backend_activity extends logger_backend {
 				// $start_time = start_time();
 			}
 
-		// section record. Create the components directly into the current format without create real components.
-			$components	= new stdClass();
-			$relations	= [];
+		// section record data. Create the components directly into the current format without create real components.
+			$data = new stdClass();
+				$data->relation	= new stdClass();
+				$data->string	= new stdClass();
+				$data->date		= new stdClass();
+				$data->misc		= new stdClass();
 
 		// IP ADDRESS (user source IP) ##############################################################
-			$component_tipo = self::$_COMPONENT_IP['tipo']; // dd544 component_input_text (for now)
+			$component_tipo	= self::$_COMPONENT_IP['tipo']; // dd544 component_input_text (for now)
+			$model			= self::$_COMPONENT_IP['model_name'];
+			$column_name	= section_record_data::get_column_name( $model );
 
 			// value
 				$ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -152,14 +155,16 @@ class logger_backend_activity extends logger_backend {
 					$ip_address = 'localhost';
 				}
 			// add value
-				$components->{$component_tipo} = (object)[
-					'dato' => (object)[
-						DEDALO_DATA_NOLAN => [$ip_address]
-					]
+				$value = (object)[
+					'value' => [$ip_address],
+					'lang' => DEDALO_DATA_NOLAN
 				];
+				$data->$column_name->$component_tipo = [ $value ];
 
 		// WHO (store user section id_matrix and calculate name on view) ############################
 			$component_tipo = self::$_COMPONENT_WHO['tipo']; // dd543 component_autocomplete
+			$model			= self::$_COMPONENT_WHO['model_name'];
+			$column_name	= section_record_data::get_column_name( $model );
 
 			// value
 				$user_id = $user_id ?? logged_user_id() ?? '-666';
@@ -169,10 +174,12 @@ class logger_backend_activity extends logger_backend {
 					$locator_user_id->set_type(DEDALO_RELATION_TYPE_LINK);
 					$locator_user_id->set_from_component_tipo($component_tipo);
 			// add value
-				$relations[] = $locator_user_id;
+				$data->$column_name->$component_tipo = [$locator_user_id ];
 
 		// WHAT (msg) # Message #####################################################################
 			$component_tipo = self::$_COMPONENT_WHAT['tipo']; // dd545 component_select
+			$model			= self::$_COMPONENT_WHAT['model_name'];
+			$column_name	= section_record_data::get_column_name( $model );
 
 			// value
 				$message 	= str_replace("\t", ' ', $message);
@@ -201,103 +208,84 @@ class logger_backend_activity extends logger_backend {
 						$locator_what->set_type(DEDALO_RELATION_TYPE_LINK);
 						$locator_what->set_from_component_tipo($component_tipo);
 					// add value
-						$relations[] = $locator_what;
+				$data->$column_name->$component_tipo = [ $locator_what ];
 				}
 
 		// WHERE (tipo) #############################################################################
 			$component_tipo = self::$_COMPONENT_WHERE['tipo']; // dd546 component_input_text
+			$model			= self::$_COMPONENT_WHERE['model_name'];
+			$column_name	= section_record_data::get_column_name( $model );
 
 			// value
 				if(!strlen($tipo_where)) {
 					$tipo_where = 'unknown';
 				}
 			// add value
-				$components->{$component_tipo} = (object)[
-					'dato' => (object)[
-						DEDALO_DATA_NOLAN => [$tipo_where]
-					]
+				$value = (object)[
+					'value' => [$tipo_where],
+					'lang' => DEDALO_DATA_NOLAN
 				];
+				$data->$column_name->$component_tipo = [ $value ];
 
 		// WHEN (Time. timestamp formatted) #########################################################
 			$component_tipo = self::$_COMPONENT_WHEN['tipo']; // dd547 component_date
+			$model			= self::$_COMPONENT_WHEN['model_name'];
+			$column_name	= section_record_data::get_column_name( $model );
 
 			// value
 				$time_value = new stdClass();
 					$time_value->start = component_date::get_date_now();
 			// add value
-				$components->{$component_tipo} = (object)[
-					'dato' => (object)[
-						DEDALO_DATA_NOLAN => [$time_value]
-					]
-				];
+				$data->$column_name->$component_tipo = [ $time_value ];
 
 		// PROJECTS #################################################################################
-			$component_tipo = self::$_COMPONENT_PROJECTS['tipo']; // dd550 component_filter
-			if ( !empty($user_id) && $user_id!=='unknown' ) {
-				// value
-				$projects_dato = filter::get_user_projects( (int)$user_id );
-				if (!empty($projects_dato)) {
-					foreach ($projects_dato as $project_locator) {
-						if (isset($project_locator->from_component_tipo)) {
-							// Override from_component_tipo
-							$project_locator_safe = clone $project_locator;
-							$project_locator_safe->from_component_tipo = $component_tipo;
+			// $component_tipo = self::$_COMPONENT_PROJECTS['tipo']; // dd550 component_filter
+			// $model			= self::$_COMPONENT_PROJECTS['model_name'];
+			// $column_name	= section_record_data::get_column_name( $model );
 
-							// add to section->relations array
-							$relations[] = $project_locator_safe;
-						}
-					}
-				}
-			}
 
-		// DATA (param 'datos' + URL's ...)	#########################################################
-			$component_tipo = self::$_COMPONENT_DATOS['tipo']; // dd551 component_input_text
+			// if ( !empty($user_id) && $user_id!=='unknown' ) {
+			// 	// value
+			// 	$projects_dato = filter::get_user_projects( (int)$user_id );
+			// 	if (!empty($projects_dato)) {
+			// 		foreach ($projects_dato as $project_locator) {
+			// 			if (isset($project_locator->from_component_tipo)) {
+			// 				// Override from_component_tipo
+			// 				$project_locator_safe = clone $project_locator;
+			// 				$project_locator_safe->from_component_tipo = $component_tipo;
+
+			// 				// add to section->relations array
+			// 				$data[$column_name][$component_tipo][] = $project_locator_safe;
+			// 			}
+			// 		}
+			// 	}
+			// }
+
+		// DATA (param 'log_data' + URL's ...)	#########################################################
+			$component_tipo = self::$_COMPONENT_DATA['tipo']; // dd551 component_input_text
+			$model			= self::$_COMPONENT_DATA['model_name'];
+
+			$column_name	= section_record_data::get_column_name( $model );
 			// value. Expected assoc array as ['msg'=> 'Upload file complete','data'=>'{string data...}']
-				$dato_array = !is_array($datos)
-					? [$datos]
-					: $datos;
-				// When msg is load, include datos of url
-					// if (strpos($message, 'LOAD')!==false) {
-					// 	// URL
-					// 	$url = 'unknown';
-					// 	if (isset($_SERVER['REQUEST_URI'])) {
-					// 		$request_uri = safe_xss($_SERVER['REQUEST_URI']);
-					// 		// Remove possible attack chars like: ', %27, ;
-					// 		$request_uri = str_replace(array('\'','%27',';'), '', $request_uri);
-					// 		$request_uri = pg_escape_string(DBi::_getConnection(), $request_uri);
-					// 		$url 		 = urldecode( DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $request_uri );
-					// 	}
-					// 	$dato_array['url'] = build_link($url, ['url'=>$url,'css'=>'list_link']);
-					// 	// Referrer
-					// 	$referrer = 'unknown';
-					// 	if (isset($_SERVER['HTTP_REFERER'])) {
-					// 		$referrer 	= safe_xss($_SERVER['HTTP_REFERER']);
-					// 		$referrer 	= str_replace('\'', '', $referrer);
-					// 	}
-					// 	$dato_array['ref'] = build_link($referrer, ['url'=>$referrer,'css'=>'list_link']);
-					// }
+				$dato_array = !is_array($log_data)
+					? [$log_data]
+					: $log_data;
+
 			// add value
-				$components->{$component_tipo} = (object)[
-					'dato' => (object)[
-						DEDALO_DATA_NOLAN => [$dato_array]
-					]
+				$value = (object)[
+
+					'value' => [$dato_array],
+					'lang' => DEDALO_DATA_NOLAN
+
 				];
+				$data->$column_name->$component_tipo = [ $value ];
 
 		// SECTION ##################################################################################
-			$section = section::get_instance(
-				null,
+			matrix_activity_db_manager::create(
+				'matrix_activity',
 				DEDALO_ACTIVITY_SECTION_TIPO,
-				'edit', // string mode
-				false // bool cache
+				$data
 			);
-
-			// save options
-				$save_options = new stdClass();
-					$save_options->main_components_obj	= $components;
-					$save_options->main_relations		= $relations;
-
-			// Save. Returns created section_id (auto created by table sequence 'matrix_activity_section_id_seq')
-				$id_section = $section->Save( $save_options );
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -308,9 +296,6 @@ class logger_backend_activity extends logger_backend {
 				// 	logger::DEBUG
 				// );
 			}
-
-
-		return $id_section;
 	}//end log_message
 
 
@@ -319,8 +304,8 @@ class logger_backend_activity extends logger_backend {
 	* LOG MESSAGES
 	* 	LINE:
 	*	MODULE  TIME  USER  IP  REFERRER  MESSAGE  SEVERITY_LEVEL  OPERATIONS
-	*	IP_ADDRESS 	QUIEN 	QUE 	DONDE 	CUANDO 	DATOS
-	*	QUE(like 'LOAD EDIT'), LOGLEVEL(INFO), TIPO(like 'dd120'), DATOS(array of related info)
+	*	IP_ADDRESS	WHO		WHAT	WHERE	WHEN	log_data
+	*	QUE(like 'LOAD EDIT'), LOGLEVEL(INFO), TIPO(like 'dd120'), log_data(array of related info)
 	*
 	* @param string $message
 	* 	sample: 'SAVE'
@@ -330,7 +315,7 @@ class logger_backend_activity extends logger_backend {
 	* 	sample: 'oh32'
 	* @param string|null $operations = null
 	* 	sample: null
-	* @param array|null $datos = null
+	* @param array|null $log_data = null
 	* 	sample: [
 		*		"msg"				=> "Saved component data",
 		*		"tipo"				=> "oh32",
@@ -350,7 +335,7 @@ class logger_backend_activity extends logger_backend {
 		int $log_level=logger::INFO,
 		?string $tipo_where=null,
 		?string $operations=null,
-		?array $datos=null,
+		?array $log_data=null,
 		?int $user_id=null
 		) : void {
 
@@ -364,7 +349,7 @@ class logger_backend_activity extends logger_backend {
 			'log_level'		=> $log_level,
 			'tipo_where'	=> $tipo_where,
 			'operations'	=> $operations,
-			'datos'			=> $datos,
+			'log_data'		=> $log_data,
 			'user_id'		=> $user_id
 		];
 
