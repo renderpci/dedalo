@@ -47,7 +47,7 @@
 					break;
 
 				default:
-					$value = $this->get_dato();
+					$value = $this->get_data_lang();
 					break;
 			}
 
