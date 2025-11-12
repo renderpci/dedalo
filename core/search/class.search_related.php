@@ -85,7 +85,7 @@ class search_related extends search {
 					? 'COUNT(*) as full_count'
 					: ( $breakdown===true
 						? 'section_tipo, section_id, locator_data'
-						: 'section_tipo, section_id, datos');
+						: 'section_tipo, section_id, relation');
 
 				// columns
 				if (!empty($this->order_columns)) {
@@ -101,7 +101,7 @@ class search_related extends search {
 				// Breakdown
 				if( $breakdown===true ){
 					$query	.= PHP_EOL;
-					$query	.= 'cross join jsonb_array_elements( datos->\'relations\' ) as locator_data';
+					$query	.= 'cross join jsonb_array_elements( relation->\'relations\' ) as locator_data';
 				}
 
 				// WHERE
@@ -115,7 +115,7 @@ class search_related extends search {
 						case !isset($locator->section_id) && isset($locator->type):
 							// relation index case
 							$locator_index	= $locator->type.'_'.$locator->section_tipo;
-							$sql			= PHP_EOL.'relations_flat_ty_st(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql			= PHP_EOL.'data_relations_flat_ty_st(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							if( $breakdown===true ){
 								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
 								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
@@ -126,7 +126,7 @@ class search_related extends search {
 						case isset($locator->from_component_tipo):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->from_component_tipo.'_'.$base_flat_locator;
-							$sql				= PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql				= PHP_EOL.'data_relations_flat_fct_st_si(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							if( $breakdown===true ){
 								$sql .= PHP_EOL." AND locator_data->'from_component_tipo' ? '$locator->from_component_tipo'";
 								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
@@ -138,7 +138,7 @@ class search_related extends search {
 						case isset($locator->type):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->type.'_'.$base_flat_locator;
-							$sql				= PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql				= PHP_EOL.'data_relations_flat_ty_st_si(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							if( $breakdown===true ){
 								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
 								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
@@ -149,7 +149,7 @@ class search_related extends search {
 
 						default:
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
-							$sql				= PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							$sql				= PHP_EOL.'data_relations_flat_st_si(relation) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
 							if( $breakdown===true ){
 								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
 								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
@@ -159,7 +159,7 @@ class search_related extends search {
 					}
 					// Old model, it search directly in the table with gin index of relations, but it's slow for large databases.
 					// now tables has a contraction/flat of the locator to be indexed the combination of section_tipo and section_id
-					// $locators_query[]	= PHP_EOL.'datos#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
+					// $locators_query[]	= PHP_EOL.'relation#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
 				}//end foreach ($ar_locators as $locator)
 				$query .= '(' . implode(' '.$filter_by_locators_op.' ', $locators_query) . ')';
 
