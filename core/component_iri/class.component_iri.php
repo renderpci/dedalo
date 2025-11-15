@@ -728,7 +728,7 @@ class component_iri extends component_common {
 			$context		= $options->context ?? 'update_component_dato';
 
 		// model. Expected 'component_iri'
-		$model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+		$model = ontology_node::get_model_by_tipo( $tipo );
 
 		// Response
 		$response = new stdClass();
