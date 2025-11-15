@@ -179,6 +179,11 @@ class login extends common {
 			$ar_password_data	= $component_password->get_data() ?? [];
 			$password_data		= $ar_password_data[0]->value ?? null;
 
+			// give password of v6
+			if( empty($password_data) && $username==='root' ){
+				$password_data = $component_password->get_v6_root_password_data();
+			}
+
 			// password length check
 				if( empty($password_data) || strlen($password_data)<8 ) {
 					$response->msg = 'Error: Wrong password [2]';
