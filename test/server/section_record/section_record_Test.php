@@ -294,7 +294,6 @@ final class section_record_test extends TestCase {
 	*/
 	public function test_duplicate(): void {
 
-		$table			= 'matrix_test';
 		$section_tipo	= 'test65';
 		$section_id		= 1;
 

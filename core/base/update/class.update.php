@@ -74,7 +74,7 @@ class update {
 			$response->errors	= [];
 
 		// short vars
-			$updates			= update::get_updates();
+			$updates			= update::get_updates(); // From matrix_updates table
 			$current_version	= get_current_data_version();
 			$msg				= array();
 

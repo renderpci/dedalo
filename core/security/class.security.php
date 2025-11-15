@@ -339,7 +339,7 @@ class security {
 		// user profile
 			$component_profile_model	= ontology_node::get_model_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
 			$component_profile			= component_common::get_instance(
-				$component_profile_model,
+				$component_profile_model, // component_select expected
 				DEDALO_USER_PROFILE_TIPO,
 				(int)$user_id,
 				'list',

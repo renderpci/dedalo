@@ -578,7 +578,6 @@ class matrix_db_manager {
 
 
 
-
 	/**
 	* DELETE
 	* Safely deletes one record in a "matrix" table row,
