@@ -73,7 +73,7 @@ class component_security_access extends component_common {
 				return $this->datalist;
 			}
 
-		// cache
+		// cache from file
 			$use_cache = defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path']);
 			if ($use_cache===true) {
 
@@ -142,8 +142,8 @@ class component_security_access extends component_common {
 			}
 
 		// datalist. resolve section (real and virtual) components
-			$ar_check	= [];
 			$datalist	= [];
+			$ar_check	= [];
 			$ar_parent	= [];
 			$ar_areas_length = sizeof($ar_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {

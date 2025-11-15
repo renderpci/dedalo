@@ -902,7 +902,7 @@ class section_record {
 			$source_data = clone $this->get_data();
 
 		// create a new blank section record with same the section_tipo that current
-			$section	= section::get_instance( $section_tipo );
+			$section = section::get_instance( $section_tipo );
 			// set the source_data as new value data of the new section
 			$options = new stdClass();
 				$options->values = $source_data;
@@ -913,17 +913,18 @@ class section_record {
 				return false;
 			}
 
-			// ar_section_info_tipos.
-			// Section info tipos can get they from ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
-				$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
+		// ar_section_info_tipos.
+		// Section info tipos can get they from ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
+		$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
-			// tipos to skip on copy
-				$skip_tipos = $ar_section_info_tipos;
-			// columns to skip
-				$skip_columns = ['data','counters','relation_search'];
+		// tipos to skip on copy
+		$skip_tipos = $ar_section_info_tipos;
+
+		// columns to skip
+		$skip_columns = ['data','counters','relation_search'];
 
 		// Get media components in section
-			$ar_media_components = component_media_common::get_media_components();
+		$ar_media_components = component_media_common::get_media_components();
 
 			foreach ($source_data as $column => $column_data) {
 
