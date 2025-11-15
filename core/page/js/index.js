@@ -31,6 +31,7 @@ const t0 = performance.now()
 		// main CSS add loading
 			const main = document.getElementById('main')
 				  main.classList.add('loading')
+				  main.innerHTML = '<pre>Starting.. Please wait.</pre>'
 
 		// page instance init
 			const page_instance = await get_instance({
@@ -43,6 +44,9 @@ const t0 = performance.now()
 		// page instance render
 			const wrapper_page = await page_instance.render()
 			// main. Add wrapper page node and restore class
+			while (main.firstChild) {
+				main.removeChild(main.firstChild);
+			}
 			main.appendChild(wrapper_page)
 			main.classList.remove('loading','hide')
 
