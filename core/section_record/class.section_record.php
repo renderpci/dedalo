@@ -957,9 +957,14 @@ class section_record {
 						$section_tipo
 					);
 
-					if( $model==='component_dataframe' ){
+					if( $current_model==='component_dataframe' ){
+						// check if the data has main_component_tipo
+						// if data has not ask to the component to give its main_component_tipo.
+						$main_component_tipo = $component_data[0]->main_component_tipo ?? $component->get_main_component_tipo();
 						$caller_dataframe = new stdClass();
-							$caller_dataframe->main_component_tipo = $component->get_main_component_tipo();
+							$caller_dataframe->main_component_tipo	= $main_component_tipo;
+							$caller_dataframe->section_tipo_key		= $component_data[0]->section_tipo_key;
+							$caller_dataframe->section_id_key		= $component_data[0]->section_id_key;
 						$component->set_caller_dataframe( $caller_dataframe );
 					}
 
