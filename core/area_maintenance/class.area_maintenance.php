@@ -1365,6 +1365,7 @@ class area_maintenance extends area_common {
 	* SET_MAINTENANCE_MODE
 	* Changes Dédalo maintenance mode from true to false or vice-versa
 	* Uses area_maintenance:: set_congif_core to overwrite the core_config files
+	* The constant name will be checked in the set_congif_core() to allow it, define the constant in this method
 	* Input and output are normalized objects to allow use it from area_maintenance API
 	* @param object $options
 	* {
@@ -1401,6 +1402,7 @@ class area_maintenance extends area_common {
 	* SET_RECOVERY_MODE
 	* Changes Dédalo recovery mode from true to false or vice-versa
 	* Uses area_recovery::set_congif_core to overwrite the core_config files
+	* The constant name will be checked in the set_congif_core() to allow it, define the constant in this method
 	* Input and output are normalized objects to allow use it from area_recovery API
 	* Could be changed from area_mainteanance check_config widget
 	* or automatically from API start
@@ -1450,6 +1452,7 @@ class area_maintenance extends area_common {
 	* Writes the given notification text to config_core
 	* Note that this custom notifications are stored in core_config file
 	* and read from API update_lock_components_state on every component activation/deactivation
+	* The constant name will be checked in the set_congif_core() to allow it, define the constant in this method
 	* @param object $options
 	* {
 	* 	value : string
