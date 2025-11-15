@@ -2517,6 +2517,9 @@ final class dd_core_api {
 				: (defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : false);
 			// recovery mode
 			$obj->recovery_mode					= $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
+			//
+			$obj->data_version			= get_current_data_version();
+
 
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
