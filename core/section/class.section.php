@@ -251,7 +251,7 @@ class section extends common {
 			// find current instance in cache
 				$cache_key = implode('_', [$tipo, $mode]);
 				if(isset($caller_dataframe)){
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
+					$cache_key .= '_dataframe_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
 
 				}
 				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
