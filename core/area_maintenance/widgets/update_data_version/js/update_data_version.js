@@ -96,8 +96,10 @@ update_data_version.prototype.build = async function(autoload=false) {
 
 	try {
 
-		// specific actions.. like fix main_element for convenience
-		self.value = await self.get_value()
+		if (autoload) {
+			// specific actions.. like fix main_element for convenience
+			self.value = await self.get_value()
+		}
 
 	} catch (error) {
 		self.error = error
