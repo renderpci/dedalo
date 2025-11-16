@@ -211,23 +211,41 @@ class section_record {
 	* @return bool
 	* 	Returns false if JSON fragment save fails.
 	*/
-	public function save_component_data( string $column, string $tipo, ?array $value ) : bool {
+	public function save_component_data( array $data_to_save ) : bool {
 
 		// Set the value into the whole section record data
-		$this->data_instance->set_key_data(
-		 	$column,
-			$tipo,
-			$value
-		);
+		// $this->data_instance->set_key_data(
+		//  	$column,
+		// 	$tipo,
+		// 	$value
+		// );
+
+
 		// Save into DB
 		$result = $this->data_instance->save_key_data(
-			$column,
-			$tipo
+			$data_to_save
 		);
 
 		if( $result === false ){
 			return false;
 		}
+
+		// // Save its own counter
+		// $count_result = $this->data_instance->save_key_data(
+		// 	'counters',
+		// 	$tipo
+		// );
+
+		// // Check if the counter was saved. Alert if error.
+		// if( $count_result === false ){
+		// 	debug_log(__METHOD__
+		// 		. " Counter save fail for component" . PHP_EOL
+		// 		. " tipo: ".to_string( $tipo ). PHP_EOL
+		// 		. " section_tipo: " .to_string( $this->section_tipo ). PHP_EOL
+		// 		. " section_id: " .to_string( $this->section_id ). PHP_EOL
+		// 		, logger::ERROR
+		// 	);
+		// }
 
 		// section updates
 
@@ -404,7 +422,6 @@ class section_record {
 		// Returns the delete result.
 		return true;
 	}//end delete_record
-
 
 
 
