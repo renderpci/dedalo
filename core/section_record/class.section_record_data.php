@@ -249,6 +249,7 @@ class section_record_data {
 			return true;
 		}
 
+		// if the data column is empty, create a new object
 		if (!$this->data->$column) {
 			$this->data->$column = new stdClass();
 		}
@@ -278,9 +279,9 @@ class section_record_data {
 	* GET_COLUMN_DATA
 	* Returns the specific data of given column
 	* @param string $column
-	* @return array $this->data
+	* @return object|null $this->data
 	*/
-	public function get_column_data( string $column ) : array {
+	public function get_column_data( string $column ) : ?object {
 
 		return $this->data->$column ?? null;
 	}//end get_column_data
