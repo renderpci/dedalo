@@ -87,7 +87,7 @@
 				$item->parent_section_id	= $section_id;
 				// fix pagination vars
 				$item->pagination = (object)[
-					'total'		=> count($data_value),
+					'total'		=> empty($data_value) ? 0 :count($data_value),
 					'limit'		=> $limit,
 					'offset'	=> $offset
 				];
