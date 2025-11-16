@@ -539,6 +539,56 @@ class section_record {
 
 
 	/**
+	* GET_COMPONENT_COUNTER
+	* Obtain the counter for given component ontology tipo
+	* Components storage its id to match with any other component as dataframe
+	* Data stored has the format:
+	* "oh25" : [{
+	* 	count: 1
+	* }]
+	* @param string $tipo
+	* @return int $component_counter
+	*/
+	public function get_component_counter( string $tipo ) : int {
+
+		$data = $this->data_instance->get_key_data( 'counters', $tipo ) ?? [] ; // default counter value is always 0, including the empty counter
+
+		$component_counter = $data[0]->count ?? 0;
+
+		return $component_counter;
+	}//end get_component_counter
+
+
+
+	/**
+	* SET_COMPONENT_COUNTER
+	* Fix the component counter with given ontology tipo and value
+	* Set the counter of the component into section data schema
+	* Data set has the format:
+	* "oh25" : [{
+	* 	count: 1
+	* }]
+	* @param string $tipo
+	* @param int value
+	* @return int $dato->counters->$tipo
+	*/
+	public function set_component_counter( string $tipo, int $value ) : int {
+
+		$data = $this->data_instance->get_key_data( 'counters', $tipo );
+
+		if( empty($data) ){
+			$data = [ (object)['count' => null] ];
+		}
+		$data[0]->count = $value;
+
+		$this->data_instance->set_key_data( 'counters', $tipo, $data ); // Set the counter into the counters column data
+
+		return $this->get_component_counter( $tipo );
+	}//end set_component_counter
+
+
+
+	/**
 	* UPDATE_MODIFIED_SECTION_DATA
 	* @param object $options
 	* @return object $this->dato
