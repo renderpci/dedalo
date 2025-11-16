@@ -1191,50 +1191,50 @@ abstract class component_common extends common {
 
 
 
-	/**
-	* LOAD_COMPONENT_DATO
-	* Get data once from matrix about section_id, dato
-	* @see component_relation_common->load_component_dato()
-	* @return bool
-	*/
-	protected function load_component_dato() : bool {
+	// /**
+	// * LOAD_COMPONENT_DATO
+	// * Get data once from matrix about section_id, dato
+	// * @see component_relation_common->load_component_dato()
+	// * @return bool
+	// */
+	// protected function load_component_dato() : bool {
 
-		// check vars
-			if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
-				return false;
-			}
-			if (empty($this->section_tipo)) {
-				debug_log(__METHOD__
-					." Error Processing Request. section tipo not found for component tipo: $this->tipo "
-					, logger::ERROR
-				);
-				return false;
-			}
+	// 	// check vars
+	// 		if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
+	// 			return false;
+	// 		}
+	// 		if (empty($this->section_tipo)) {
+	// 			debug_log(__METHOD__
+	// 				." Error Processing Request. section tipo not found for component tipo: $this->tipo "
+	// 				, logger::ERROR
+	// 			);
+	// 			return false;
+	// 		}
 
-		if($this->is_loaded_matrix_data!==true) {
+	// 	if($this->is_loaded_matrix_data!==true) {
 
-			// section create
-				$section = $this->get_my_section();
+	// 		// section create
+	// 			$section = $this->get_my_section();
 
-			// fix dato
-				$this->dato = $section->get_component_dato(
-					$this->tipo, // component_tipo
-					$this->lang, // lang
-					false // lang_fallback
-				);
+	// 		// fix dato
+	// 			$this->dato = $section->get_component_dato(
+	// 				$this->tipo, // component_tipo
+	// 				$this->lang, // lang
+	// 				false // lang_fallback
+	// 			);
 
-			// @v7 way, from component full_data
-				// $this->dato = $section->get_component_full_data(
-				// 	$this->tipo,
-				// 	$this->data_column_name
-				// );
+	// 		// @v7 way, from component full_data
+	// 			// $this->dato = $section->get_component_full_data(
+	// 			// 	$this->tipo,
+	// 			// 	$this->data_column_name
+	// 			// );
 
-			// Set as loaded
-				$this->is_loaded_matrix_data = true;
-		}
+	// 		// Set as loaded
+	// 			$this->is_loaded_matrix_data = true;
+	// 	}
 
-		return true;
-	}//end load_component_dato
+	// 	return true;
+	// }//end load_component_dato
 
 
 
@@ -1435,7 +1435,42 @@ abstract class component_common extends common {
 			$model				= $this->get_model();
 			$mode				= $this->mode;
 			$data_column_name	= $this->data_column_name;
-			$data				= $this->get_data();
+			$data_to_save 		= [];
+
+			// Section record
+			$section_record	= $this->get_my_section_record();
+
+			// Save main data
+			$main_data = new stdClass();
+				$main_data->key		= $tipo;
+				$main_data->column	= $data_column_name;
+
+			$data_to_save[] = $main_data;
+
+			// Save counter
+			$counter = new stdClass();
+				$counter->key		= $tipo;
+				$counter->column	= 'counters';
+
+			$data_to_save[] = $counter;
+
+			// Save Relation search
+			// Only for component_autocomplete_hi
+			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
+			if ($legacy_model==='component_autocomplete_hi') {
+
+				$relation_search_column = 'relation_search';
+
+				$relations_search_value = $this->get_relations_search_value();
+
+				$section_record->set_component_data($tipo, $relation_search_column, $relations_search_value);
+
+				$relation_search = new stdClass();
+					$relation_search->key		= $tipo;
+					$relation_search->column	= $relation_search_column;
+
+				$data_to_save[] = $relation_search;
+			}
 
 		// check component minimum vars before save
 			if( empty($section_tipo) || empty($section_id) || empty($tipo) || empty($lang) ) {
@@ -1468,8 +1503,6 @@ abstract class component_common extends common {
 				return false;
 			}
 
-		// Section record
-			$section_record	= $this->get_my_section_record();
 
 		// section save.
 			// The section will be the responsible to save the component data
@@ -1483,7 +1516,7 @@ abstract class component_common extends common {
 			}
 
 		// Save the component data into DB
-			$result = $section_record->save_component_data( $data_column_name, $tipo, $data );
+			$result = $section_record->save_component_data( $data_to_save );
 
 		// time machine data.
 			// We save only current component lang 'dato' in time machine
@@ -1968,50 +2001,50 @@ abstract class component_common extends common {
 
 
 
-	/**
-	* GET VALOR
-	* 	(!) Important. This method is still used by diffusion (v5)
-	* 	DO NOT CHANGE THE RETURN VALUES
-	*/
-	public function get_valor() {
+	// /**
+	// * GET VALOR
+	// * 	(!) Important. This method is still used by diffusion (v5)
+	// * 	DO NOT CHANGE THE RETURN VALUES
+	// */
+	// public function get_valor() {
 
-		$valor = self::get_dato();
+	// 	$valor = self::get_dato();
 
-		// debug
-			// if(SHOW_DEBUG===true) {
-			// 	if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
-			// 		$msg = "WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor);
-			// 		debug_log(__METHOD__
-			// 			." ".$msg
-			// 			, logger::ERROR
-			// 		);
-			// 		dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
-			// 	}
-			// }
+	// 	// debug
+	// 		// if(SHOW_DEBUG===true) {
+	// 		// 	if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
+	// 		// 		$msg = "WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor);
+	// 		// 		debug_log(__METHOD__
+	// 		// 			." ".$msg
+	// 		// 			, logger::ERROR
+	// 		// 		);
+	// 		// 		dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
+	// 		// 	}
+	// 		// }
 
-		if(!is_array($valor)) {
-			return $valor;
-		}
+	// 	if(!is_array($valor)) {
+	// 		return $valor;
+	// 	}
 
-		return "<em>No string value</em>";
-	}//end get_valor
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-		if (empty($valor)) {
-			$valor = $this->get_valor();
-		}
+	// 	return "<em>No string value</em>";
+	// }//end get_valor
 
 
-		return to_string($valor);
-	}//end get_valor_export
+
+	// /**
+	// * GET_VALOR_EXPORT
+	// * Return component value sent to export data
+	// * @return string $valor
+	// */
+	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+
+	// 	if (empty($valor)) {
+	// 		$valor = $this->get_valor();
+	// 	}
+
+
+	// 	return to_string($valor);
+	// }//end get_valor_export
 
 
 
