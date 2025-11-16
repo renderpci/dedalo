@@ -644,13 +644,16 @@ class section_record {
 
 				// Save
 					$this->data_instance->save_key_data(
-						'relation',
-						$created_by_user['tipo']
+						[(object)[
+							'column' =>'relation',
+							'key' => $created_by_user['tipo']
+						],
+						(object)[
+							'column' =>'date',
+							'key' => $created_by_user['tipo']
+						]]
 					);
-					$this->data_instance->save_key_data(
-						'date',
-						$created_date['tipo']
-					);
+
 
 				break;
 
@@ -673,12 +676,14 @@ class section_record {
 
 				// Save
 					$this->data_instance->save_key_data(
-						'relation',
-						$modified_by_user['tipo']
-					);
-					$this->data_instance->save_key_data(
-						'date',
-						$modified_date['tipo']
+						[(object)[
+							'column' =>'relation',
+							'key' => $modified_by_user['tipo']
+						],
+						(object)[
+							'column' =>'date',
+							'key' => $modified_by_user['tipo']
+						]]
 					);
 
 				break;
