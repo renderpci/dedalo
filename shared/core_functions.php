@@ -2860,3 +2860,24 @@ if (!function_exists('array_find_key')) {
 	    return null;
 	}
 }//end array_find_key
+
+
+
+/**
+* ARE_ALL_PROPERTIES_EMPTY
+* Checks if a given object has all its properties empty.
+* Considers as empty:
+*	"" (empty string)
+*	0 (0 as an integer)
+*	0.0 (0 as a float)
+*	"0" (0 as a string)
+*	null
+*	false
+*	array() (empty array)
+*/
+function are_all_properties_empty( object $object ) : bool {
+    $properties = get_object_vars($object);
+    $non_empty_properties = array_filter($properties);
+
+    return empty($non_empty_properties);
+}//end are_all_properties_empty
