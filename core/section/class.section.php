@@ -2917,48 +2917,48 @@ class section extends common {
 
 
 
-	/**
-	* GET_COMPONENT_COUNTER
-	* Obtain the counter for given component ontology tipo
-	* Components storage its id to match with any other component as dataframe
-	* @param string $tipo
-	* @return int $component_counter
-	*/
-	public function get_component_counter( string $tipo ) : int {
+	// /**
+	// * GET_COMPONENT_COUNTER
+	// * Obtain the counter for given component ontology tipo
+	// * Components storage its id to match with any other component as dataframe
+	// * @param string $tipo
+	// * @return int $component_counter
+	// */
+	// public function get_component_counter( string $tipo ) : int {
 
-		// check if section_id is numeric and is not empty
-		if( empty($this->section_id) || !is_numeric($this->section_id) ){
-			return 0;
-		}
-		$dato				= $this->get_dato();
-		$component_counter	= $dato->counters->$tipo ?? 0; // default counter value is always 1, including the empty counter
+	// 	// check if section_id is numeric and is not empty
+	// 	if( empty($this->section_id) || !is_numeric($this->section_id) ){
+	// 		return 0;
+	// 	}
+	// 	$dato				= $this->get_dato();
+	// 	$component_counter	= $dato->counters->$tipo ?? 0; // default counter value is always 1, including the empty counter
 
-		return $component_counter;
-	}//end get_component_counter
+	// 	return $component_counter;
+	// }//end get_component_counter
 
 
 
-	/**
-	* SET_COMPONENT_COUNTER
-	* Fix the component counter with given ontology tipo and value
-	* Set the counter of the component into section data schema
-	* @param string $tipo
-	* @param int value
-	* @return int $dato->counters->$tipo
-	*/
-	public function set_component_counter( string $tipo, int $value ) : int {
+	// /**
+	// * SET_COMPONENT_COUNTER
+	// * Fix the component counter with given ontology tipo and value
+	// * Set the counter of the component into section data schema
+	// * @param string $tipo
+	// * @param int value
+	// * @return int $dato->counters->$tipo
+	// */
+	// public function set_component_counter( string $tipo, int $value ) : int {
 
-		$dato = $this->get_dato(); // Force load
+	// 	$dato = $this->get_dato(); // Force load
 
-		if( !isset($dato->counters) ){
-			$dato->counters = new stdClass();
-		}
+	// 	if( !isset($dato->counters) ){
+	// 		$dato->counters = new stdClass();
+	// 	}
 
-		$dato->counters->$tipo = $value; // set the new counter for the component adding 1 to the counter.
-		$this->set_dato($dato); // Force update
+	// 	$dato->counters->$tipo = $value; // set the new counter for the component adding 1 to the counter.
+	// 	$this->set_dato($dato); // Force update
 
-		return $dato->counters->$tipo;
-	}//end set_component_counter
+	// 	return $dato->counters->$tipo;
+	// }//end set_component_counter
 
 
 

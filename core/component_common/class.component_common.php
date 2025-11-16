@@ -704,12 +704,50 @@ abstract class component_common extends common {
 		// resolved set
 			// $this->dato_resolved = $data;
 
+		// Counter
+			$data_to_set = [];
+			// check the data values to set the data id
+			if( !empty($data) ) {
+				$ar_id = [];
+				foreach( $data as $item ){
+
+					// Check if the data is an object before attempting property access
+					$is_object = is_object($item);
+
+					// Determine if the value has a valid, non-empty ID to be treated as existing data.
+					// This ensures objects with an 'id' property set to null/0/empty are treated as new.
+					$has_id = ($is_object && property_exists($item, 'id') && $item->id) ? true : false;
+					if( !$has_id ){
+						$data_to_set[] = $this->set_data_item_counter( $item );
+					}else{
+						$data_to_set[] = $item;
+					}
+
+					// Set every id of data into the array
+					$ar_id[] = $item->id;
+				}
+
+				// Set the counter with the max id when the counter is bellow it.
+				$counter = $this->get_counter();
+
+				if (!empty($ar_id)) {
+					$max_id = max($ar_id);
+
+					if( $counter < $max_id ){
+						// set the new counter with the id
+						$this->set_counter( $max_id );
+					}
+				}
+			}else{
+				$data_to_set = $data;
+			}
+
 		// section record
 			$section_record = $this->get_my_section_record();
 			$result = $section_record->set_component_data(
 				$this->tipo,
 				$this->data_column_name,
-				$data
+				$data_to_set
 			);
 
 
@@ -1021,6 +1059,62 @@ abstract class component_common extends common {
 
 		return true;
 	}//end load_component_data
+
+
+
+	/**
+	* SET_DATA_ITEM_COUNTER
+	* @param object $data_item
+	* @return object $data_item // added the id for the item
+	*/
+	public function set_data_item_counter( object $data_item ) : object {
+
+		// get the component counter
+		// it's the last counter used
+			$counter = $this->get_counter();
+			$counter++;
+			$id = $counter;
+
+		// Set the new id to the data
+			$data_item->id = $id;
+
+		// set the counter to use next value
+			$this->set_counter( $id );
+
+		return $data_item;
+	}//end set_data_item_counter
+
+
+	/**
+	* SET_COUNTER
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* Set the component counter with the given value in the section's data
+	* @param int $value
+	* @return int $counter
+	*/
+	public function set_counter( int $value ) : int {
+
+		$section_record	= $this->get_my_section_record();
+		$counter		= $section_record->set_component_counter( $this->tipo, $value );
+
+		return $counter;
+	}//end set_counter
+
+
+
+	/**
+	* GET_COUNTER
+	* Get last counter used by the component
+	* Component counter is saved into section data as object with the tipo and the value as int
+	* @return int $counter
+	*/
+	public function get_counter() : int {
+
+		$section_record	= $this->get_my_section_record();
+		$counter		= $section_record->get_component_counter( $this->tipo );
+
+		return $counter;
+	}//end get_counter
 
 
 
