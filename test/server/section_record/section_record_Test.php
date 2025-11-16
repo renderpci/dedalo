@@ -9,6 +9,9 @@ require_once dirname(__FILE__, 2) . '/bootstrap.php';
 final class section_record_test extends TestCase {
 
 
+	static $last_section_id;
+
+
 
 	/**
 	* EXECUTION_TIMING
@@ -294,7 +297,6 @@ final class section_record_test extends TestCase {
 	*/
 	public function test_duplicate(): void {
 
-		$table			= 'matrix_test';
 		$section_tipo	= 'test65';
 		$section_id		= 1;
 
@@ -302,8 +304,6 @@ final class section_record_test extends TestCase {
 			$section_tipo,
 			$section_id
 		);
-			dump($section_record, ' section_record ++ '.to_string());
-
 
 		$start_time=start_time();
 		$result = $section_record->duplicate();
@@ -311,7 +311,7 @@ final class section_record_test extends TestCase {
 
 		// // Check the time consuming. Expected value is around 2 ms
 		// $total_time = exec_time_unit($start_time);
-		// 	// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
+		// 	debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
 		// $eq = $total_time < 5;
 		// $this->assertTrue(
 		// 	$eq,
