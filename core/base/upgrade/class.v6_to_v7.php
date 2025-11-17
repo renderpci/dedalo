@@ -373,7 +373,7 @@ class v6_to_v7 {
 					$column_media				= new stdClass();
 					$column_iri					= new stdClass();
 					$column_misc				= new stdClass();
-					$column_counters			= new stdClass();
+					$column_meta				= new stdClass();
 
 					$value_type_map = v6_to_v7::get_value_type_map();
 
@@ -541,14 +541,16 @@ class v6_to_v7 {
 
 											$value_key++;
 
-											$column_counters->{$literal_tipo} = $value_key;
+											$column_meta->{$literal_tipo} = [
+												(object)['count' => $value_key]
+											];
 
 											$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
 
 											// new literal object with value
 											$new_literal_obj = new stdClass();
 												$new_literal_obj->id		= $value_key; // starts from 1
-												$new_literal_obj->lang		= $lang;
+												// $new_literal_obj->lang		= $lang; // UNUSED
 												$new_literal_obj->value		= $value;
 
 											switch ($typology) {
@@ -742,7 +744,7 @@ class v6_to_v7 {
 					$section_media_encoded				= ( empty(get_object_vars($column_media)) ) ? null : json_encode($column_media);
 					$section_misc_encoded				= ( empty(get_object_vars($column_misc)) ) ? null : json_encode($column_misc);
 					$section_relation_search_encoded	= ( empty(get_object_vars($column_relation_search)) ) ? null : json_encode($column_relation_search);
-					$section_counters_encoded			= ( empty(get_object_vars($column_counters)) ) ? null : json_encode($column_counters);
+					$section_meta_encoded				= ( empty(get_object_vars($column_meta)) ) ? null : json_encode($column_meta);
 
 					$escaped_table = pg_escape_identifier($conn, $table);
 
@@ -758,7 +760,7 @@ class v6_to_v7 {
 							media = $8,
 							misc = $9,
 							relation_search = $10,
-							counters = $11
+							meta = $11
 						WHERE id = $12
 					";
 
@@ -790,7 +792,7 @@ class v6_to_v7 {
 								$section_media_encoded,
 								$section_misc_encoded,
 								$section_relation_search_encoded,
-								$section_counters_encoded,
+								$section_meta_encoded,
 								$id
 							]
 						);
@@ -815,7 +817,7 @@ class v6_to_v7 {
 								$section_media_encoded,
 								$section_misc_encoded,
 								$section_relation_search_encoded,
-								$section_counters_encoded,
+								$section_meta_encoded,
 								$id
 							]
 						);

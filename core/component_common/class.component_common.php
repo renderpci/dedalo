@@ -1450,7 +1450,7 @@ abstract class component_common extends common {
 			// Save counter
 			$counter = new stdClass();
 				$counter->key		= $tipo;
-				$counter->column	= 'counters';
+				$counter->column	= 'meta';
 
 			$data_to_save[] = $counter;
 

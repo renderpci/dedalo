@@ -568,7 +568,7 @@ class section_record {
 	*/
 	public function get_component_counter( string $tipo ) : int {
 
-		$data = $this->data_instance->get_key_data( 'counters', $tipo ) ?? [] ; // default counter value is always 0, including the empty counter
+		$data = $this->data_instance->get_key_data( 'meta', $tipo ) ?? [] ; // default counter value is always 0, including the empty counter
 
 		$component_counter = $data[0]->count ?? 0;
 
@@ -591,14 +591,14 @@ class section_record {
 	*/
 	public function set_component_counter( string $tipo, int $value ) : int {
 
-		$data = $this->data_instance->get_key_data( 'counters', $tipo );
+		$data = $this->data_instance->get_key_data( 'meta', $tipo );
 
 		if( empty($data) ){
 			$data = [ (object)['count' => null] ];
 		}
 		$data[0]->count = $value;
 
-		$this->data_instance->set_key_data( 'counters', $tipo, $data ); // Set the counter into the counters column data
+		$this->data_instance->set_key_data( 'meta', $tipo, $data ); // Set the counter into the counters column data
 
 		return $this->get_component_counter( $tipo );
 	}//end set_component_counter
@@ -990,9 +990,9 @@ class section_record {
 				$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
 			// tipos to skip on copy
-				$skip_tipos = $ar_section_info_tipos;
-			// columns to skip
-				$skip_columns = ['data','counters','relation_search'];
+		$skip_tipos = $ar_section_info_tipos;
+		// columns to skip
+		$skip_columns = ['data','meta','relation_search'];
 
 		// Get media components in section
 			$ar_media_components = component_media_common::get_media_components();

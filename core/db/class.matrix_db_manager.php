@@ -60,7 +60,7 @@ class matrix_db_manager {
 		'media'				=> true,
 		'misc'				=> true,
 		'relation_search'	=> true,
-		'counters'			=> true
+		'meta'				=> true
 	];
 
 	// JSON columns to decode
@@ -76,7 +76,7 @@ class matrix_db_manager {
 		'media'				=> true,
 		'misc'				=> true,
 		'relation_search'	=> true,
-		'counters'			=> true
+		'meta'				=> true
 	];
 
 	// int columns to parse
