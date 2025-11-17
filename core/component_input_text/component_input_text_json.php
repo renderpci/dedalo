@@ -145,7 +145,7 @@
 			$with_lang_versions	= $this->with_lang_versions;
 			if($with_lang_versions===true) {
 
-				// $original_lang = $this->lang;
+				$original_lang = $this->lang;
 
 				// if the original_lang is nolan change to get the transliterable data in current data lang.
 				// if the original_lang is any lang set to nolan (is use into translate component inside tool_lang)

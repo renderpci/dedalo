@@ -8,6 +8,8 @@
 	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {instantiate_page_element} from './page.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {render_update_data_maintenance} from '../../area_maintenance/js/render_update_data_maintenance.js'
 
 
 
@@ -82,6 +84,19 @@ const get_content_data = async function(self) {
 	// content_data
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.type)
+
+	// update_data_version
+	// When the data is not updated, stop load page and require the recovery key
+	// if user provide the correct key, load the update data widget.
+		// check the data and code versions
+		const dedalo_version	= page_globals.dedalo_version.split('.').slice(0, 3).join(".");
+		const data_version		= page_globals.data_version.join('.')
+
+		if( dedalo_version!==data_version ){
+			const update_data_node = await render_update_data_maintenance()
+			content_data.appendChild(update_data_node)
+			return content_data
+		}
 
 	// dedalo_recovery_mode. maintenance_msg (defined in config and get from environment)
 		if(page_globals.recovery_mode===true){

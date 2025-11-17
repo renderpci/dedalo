@@ -230,14 +230,15 @@ class component_dataframe extends component_portal {
 
 		if( empty($main_component_tipo) ){
 			// default
-			$RecordObj_dd			= new RecordObj_dd( $this->get_tipo() );
-			$main_component_tipo	= $RecordObj_dd->get_parent();
+			$ontology_node			= new ontology_node( $this->get_tipo() );
+			$main_component_tipo	= $ontology_node->get_parent();
+
 		}else{
 			// Check valid main_component_tipo
-			$model = RecordObj_dd::get_modelo_name_by_tipo($main_component_tipo,true);
+			$model = ontology_node::get_model_by_tipo( $main_component_tipo );
 			if ($model!=='component_iri') {
-				$RecordObj_dd				= new RecordObj_dd( $this->get_tipo() );
-				$test_main_component_tipo	= $RecordObj_dd->get_parent();
+				$ontology_node				= new ontology_node( $this->get_tipo() );
+				$test_main_component_tipo	= $ontology_node->get_parent();
 				if ($test_main_component_tipo!==$main_component_tipo) {
 					debug_log(__METHOD__
 						. " Wrong main_component_tipo. " . PHP_EOL

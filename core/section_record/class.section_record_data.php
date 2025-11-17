@@ -48,10 +48,10 @@ class section_record_data {
 		// object|null relation_search. Section data value from DB column 'relation_search'
 		// Stores relation optional data useful for search across parents like toponymy.
 		'relation_search',
-		// object|null counters. Section data value from DB column 'counters'
-		// Stores string components counters used to get unique identifiers for the values as {"id":1,"lang":"lg-nolan","type":"dd750","value":"Hello"}
+		// object|null meta. Section data value from DB column 'meta'
+		// Stores string components meta used to get unique identifiers for the values as {"id":1,"lang":"lg-nolan","type":"dd750","value":"Hello"}
 		// The format of the counter data is {"dd750":1,"dd201":1,..}
-		'counters'
+		'meta'
 	];
 
 	// Column map
@@ -249,6 +249,7 @@ class section_record_data {
 			return true;
 		}
 
+		// if the data column is empty, create a new object
 		if (!$this->data->$column) {
 			$this->data->$column = new stdClass();
 		}
@@ -277,9 +278,9 @@ class section_record_data {
 	* GET_COLUMN_DATA
 	* Returns the specific data of given column
 	* @param string $column
-	* @return array $this->data
+	* @return object|null $this->data
 	*/
-	public function get_column_data( string $column ) : array {
+	public function get_column_data( string $column ) : ?object {
 
 		return $this->data->$column ?? null;
 	}//end get_column_data
@@ -354,30 +355,87 @@ class section_record_data {
 
 
 
+	// /**
+	// * SAVE_KEY_DATA
+	// * Safely saves one key data of one column in a "matrix" table row,
+	// * identified by a composite key of `section_id` and `section_tipo`.
+	// * @param string $column
+	// * @param string $key as a tipo (oh25) or section properties (created_by_user)
+	// * @return bool
+	// * Returns `true` on success, or `false` if validation fails,
+	// * query preparation fails, or execution fails.
+	// */
+	// public function save_key_data( string $column, string $key ) : bool {
+
+	// 	$table			= $this->table;
+	// 	$section_tipo	= $this->section_tipo;
+	// 	$section_id		= $this->section_id;
+	// 	$value			= $this->data->$column->$key ?? null;
+
+	// 	// check null values
+	// 	if( $value===null ){
+	// 		// check if the column is null
+	// 		$table_data_is_null = $this->data->$column ?? null;
+	// 		// if the column is null, remove all
+	// 		if( $table_data_is_null===null ){
+	// 			return $this->save_column_data( [$column] );
+	// 		}
+	// 	}
+
+	// 	return matrix_db_manager::update_by_key(
+	// 		$table,
+	// 		$section_tipo,
+	// 		$section_id,
+	// 		$column,
+	// 		$key,
+	// 		$value
+	// 	);
+	// }//end save_key_data
+
+
+
 	/**
 	* SAVE_KEY_DATA
 	* Safely saves one key data of one column in a "matrix" table row,
 	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param string $column
-	* @param string $key as a tipo (oh25) or section properties (created_by_user)
+	* @param array $data_to_save
 	* @return bool
 	* Returns `true` on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public function save_key_data( string $column, string $key ) : bool {
+	public function save_key_data( array $data_to_save ) : bool {
 
 		$table			= $this->table;
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
-		$value			= $this->data->$column->$key ?? null;
 
-		// check null values
-		if( $value===null ){
-			// check if the column is null
-			$table_data_is_null = $this->data->$column ?? null;
-			// if the column is null, remove all
-			if( $table_data_is_null===null ){
-				return $this->save_column_data( [$column] );
+		$columns_to_delete = [];
+		foreach ($data_to_save as $data) {
+
+			$column	= $data->column;
+			$key	= $data->key;
+			// assign the value for this column and key (as data for one component in different columns)
+			$data->value = $this->data->$column->$key ?? null;
+
+			// check null values
+			if( $data->value===null ){
+				// check if the column is null
+				$table_data_is_null = $this->data->$column ?? null;
+				// if the column is null, remove all
+				if( $table_data_is_null===null ){
+					$columns_to_delete[] = $column;
+				}
+			}
+		}
+		// Remove the empty columns, remove all column data
+		if( !empty($columns_to_delete) ){
+			$this->save_column_data( $columns_to_delete );
+
+			// Remove columns that will be deleted and don't need to be update
+			foreach ($data_to_save as $key => $data) {
+				if( in_array($data->column, $columns_to_delete) ){
+					unset($data_to_save[$key]);
+				}
 			}
 		}
 
@@ -385,9 +443,7 @@ class section_record_data {
 			$table,
 			$section_tipo,
 			$section_id,
-			$column,
-			$key,
-			$value
+			$data_to_save
 		);
 	}//end save_key_data
 

@@ -1418,7 +1418,7 @@ class search {
 				$ar_sql_select[] = $this->main_section_tipo_alias.'.media';
 				$ar_sql_select[] = $this->main_section_tipo_alias.'.misc';
 				$ar_sql_select[] = $this->main_section_tipo_alias.'.relation_search';
-				$ar_sql_select[] = $this->main_section_tipo_alias.'.counters';
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.meta';
 
 			}else{
 

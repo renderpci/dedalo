@@ -193,8 +193,12 @@ const render_widget = async (item, self) => {
 
 			// render and append widget node
 
+			const autoload = (item.value)
+				? false
+				: true
+
 			// build
-			await widget.build(false)
+			await widget.build( autoload )
 
 			// render
 			const node = await widget.render()

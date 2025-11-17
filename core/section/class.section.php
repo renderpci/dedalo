@@ -251,7 +251,7 @@ class section extends common {
 			// find current instance in cache
 				$cache_key = implode('_', [$tipo, $mode]);
 				if(isset($caller_dataframe)){
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
+					$cache_key .= '_dataframe_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
 
 				}
 				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
@@ -2917,48 +2917,48 @@ class section extends common {
 
 
 
-	/**
-	* GET_COMPONENT_COUNTER
-	* Obtain the counter for given component ontology tipo
-	* Components storage its id to match with any other component as dataframe
-	* @param string $tipo
-	* @return int $component_counter
-	*/
-	public function get_component_counter( string $tipo ) : int {
+	// /**
+	// * GET_COMPONENT_COUNTER
+	// * Obtain the counter for given component ontology tipo
+	// * Components storage its id to match with any other component as dataframe
+	// * @param string $tipo
+	// * @return int $component_counter
+	// */
+	// public function get_component_counter( string $tipo ) : int {
 
-		// check if section_id is numeric and is not empty
-		if( empty($this->section_id) || !is_numeric($this->section_id) ){
-			return 0;
-		}
-		$dato				= $this->get_dato();
-		$component_counter	= $dato->counters->$tipo ?? 0; // default counter value is always 1, including the empty counter
+	// 	// check if section_id is numeric and is not empty
+	// 	if( empty($this->section_id) || !is_numeric($this->section_id) ){
+	// 		return 0;
+	// 	}
+	// 	$dato				= $this->get_dato();
+	// 	$component_counter	= $dato->counters->$tipo ?? 0; // default counter value is always 1, including the empty counter
 
-		return $component_counter;
-	}//end get_component_counter
+	// 	return $component_counter;
+	// }//end get_component_counter
 
 
 
-	/**
-	* SET_COMPONENT_COUNTER
-	* Fix the component counter with given ontology tipo and value
-	* Set the counter of the component into section data schema
-	* @param string $tipo
-	* @param int value
-	* @return int $dato->counters->$tipo
-	*/
-	public function set_component_counter( string $tipo, int $value ) : int {
+	// /**
+	// * SET_COMPONENT_COUNTER
+	// * Fix the component counter with given ontology tipo and value
+	// * Set the counter of the component into section data schema
+	// * @param string $tipo
+	// * @param int value
+	// * @return int $dato->counters->$tipo
+	// */
+	// public function set_component_counter( string $tipo, int $value ) : int {
 
-		$dato = $this->get_dato(); // Force load
+	// 	$dato = $this->get_dato(); // Force load
 
-		if( !isset($dato->counters) ){
-			$dato->counters = new stdClass();
-		}
+	// 	if( !isset($dato->counters) ){
+	// 		$dato->counters = new stdClass();
+	// 	}
 
-		$dato->counters->$tipo = $value; // set the new counter for the component adding 1 to the counter.
-		$this->set_dato($dato); // Force update
+	// 	$dato->counters->$tipo = $value; // set the new counter for the component adding 1 to the counter.
+	// 	$this->set_dato($dato); // Force update
 
-		return $dato->counters->$tipo;
-	}//end set_component_counter
+	// 	return $dato->counters->$tipo;
+	// }//end set_component_counter
 
 
 
@@ -3933,39 +3933,50 @@ class section extends common {
 
 
 	/**
-	* GET_MODIFIED_SECTION_TIPOS
-	* @return array $ar_tipos
+	* GET_METADATA_DEFINITION
+	* Returns a resolved object with all needed to set section
+	* @return stdClass $modified_section_tipos
 	*/
-	public static function get_modified_section_tipos() : array {
+	public static function get_metadata_definition() : stdClass {
 
-		$ar_tipos = array(
-			array('name'=>'created_by_user', 'tipo'=>'dd200', 'model'=>'component_select'),
-			array('name'=>'created_date',	 'tipo'=>'dd199', 'model'=>'component_date'),
-			array('name'=>'modified_by_user','tipo'=>DEDALO_SECTION_INFO_MODIFIED_BY_USER, 'model'=>'component_select'), 	// 'dd197'
-			array('name'=>'modified_date',	 'tipo'=>DEDALO_SECTION_INFO_MODIFIED_DATE, 'model'=>'component_date') 			// 'dd201'
-		);
+		$item = new stdClass();
 
-		return $ar_tipos;
-	} //end get_modified_section_tipos
+		$item->created_by_user = new stdClass();
+		$item->created_by_user->tipo = 'dd200';
+		$item->created_by_user->model = 'component_select';
+
+		$item->created_date = new stdClass();
+		$item->created_date->tipo = 'dd199';
+		$item->created_date->model = 'component_date';
+
+		$item->modified_by_user = new stdClass();
+		$item->modified_by_user->tipo = DEDALO_SECTION_INFO_MODIFIED_BY_USER; // dd197
+		$item->modified_by_user->model = 'component_select';
+
+		$item->modified_date = new stdClass();
+		$item->modified_date->tipo = DEDALO_SECTION_INFO_MODIFIED_DATE; // dd201
+		$item->modified_date->model = 'component_date';
+
+
+		return $item;
+	} //end get_metadata_definition
 
 
 
 	/**
-	 * GET_MODIFIED_SECTION_TIPOS_BASIC
-	 Return the list of fixed
-	 * @return array $ar_tipos
-	 */
-	public static function get_modified_section_tipos_basic() : array {
+	* GET_METADATA_DEFINITION_TIPOS
+	* Return the list of fixed
+	* @return array $ar_tipos
+	*/
+	public static function get_metadata_definition_tipos() : array {
 
-		$ar_tipos = [
-			'dd200', // Created by user
-			'dd199', // Creation date
-			DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-			DEDALO_SECTION_INFO_MODIFIED_DATE
-		];
+		$ar_tipos = [];
+		foreach( section::get_metadata_definition() as $key => $value ) {
+			$ar_tipos[] = $value->tipo;
+		}
 
 		return $ar_tipos;
-	}//end get_modified_section_tipos_basic
+	}//end get_metadata_definition_tipos
 
 
 
@@ -3984,7 +3995,7 @@ class section extends common {
 	// 		$mode = $options->mode;
 
 	// 	// Fixed private tipos
-	// 		$modified_section_tipos = section::get_modified_section_tipos();
+	// 		$modified_section_tipos = section::get_metadata_definition();
 	// 			$created_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
 	// 			$created_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
 	// 			$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');

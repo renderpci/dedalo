@@ -201,5 +201,27 @@ class component_password extends component_common {
 	}//end update_dato_version
 
 
+	/**
+	* GET_V6_ROOT_PASSWORD_DATA
+	* PROVISIONAL! TO BE USED IN THE V6 TO V7 TRANSITION
+	* REMOVE IT IN VERSIONS >V7.0.0
+	* @return
+	*/
+	public function get_v6_root_password_data() {
+
+		$sql_query = "
+			SELECT datos->'components'->'dd133'->'dato'->'lg-nolan'->>0
+			FROM \"matrix_users\"
+			WHERE \"section_id\" = '-1'
+			LIMIT 1;
+		";
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+		$data = pg_fetch_result($result, 0, 0);
+
+		return $data;
+	}//end get_v6_root_password_data
+
+
 
 }//end class component_password

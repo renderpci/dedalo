@@ -728,7 +728,7 @@ class component_iri extends component_common {
 			$context		= $options->context ?? 'update_component_dato';
 
 		// model. Expected 'component_iri'
-		$model = RecordObj_dd::get_modelo_name_by_tipo( $tipo );
+		$model = ontology_node::get_model_by_tipo( $tipo );
 
 		// Response
 		$response = new stdClass();
@@ -1625,36 +1625,36 @@ class component_iri extends component_common {
 
 
 
-	/**
-	* SET_COUNTER
-	* Component counter is saved into section data as object with the tipo and the value as int
-	* Set the component counter with the given value in the section's data
-	* @param int $value
-	* @return int $counter
-	*/
-	public function set_counter( int $value ) : int {
+	// /**
+	// * SET_COUNTER
+	// * Component counter is saved into section data as object with the tipo and the value as int
+	// * Set the component counter with the given value in the section's data
+	// * @param int $value
+	// * @return int $counter
+	// */
+	// public function set_counter( int $value ) : int {
 
-		$section	= $this->get_my_section();
-		$counter	= $section->set_component_counter( $this->tipo, $value );
+	// 	$section	= $this->get_my_section();
+	// 	$counter	= $section->set_component_counter( $this->tipo, $value );
 
-		return $counter;
-	}//end set_counter
+	// 	return $counter;
+	// }//end set_counter
 
 
 
-	/**
-	* GET_COUNTER
-	* Get last counter used by the component
-	* Component counter is saved into section data as object with the tipo and the value as int
-	* @return int $counter
-	*/
-	public function get_counter() : int {
+	// /**
+	// * GET_COUNTER
+	// * Get last counter used by the component
+	// * Component counter is saved into section data as object with the tipo and the value as int
+	// * @return int $counter
+	// */
+	// public function get_counter() : int {
 
-		$section	= $this->get_my_section();
-		$counter	= $section->get_component_counter( $this->tipo );
+	// 	$section	= $this->get_my_section();
+	// 	$counter	= $section->get_component_counter( $this->tipo );
 
-		return $counter;
-	}//end get_counter
+	// 	return $counter;
+	// }//end get_counter
 
 
 

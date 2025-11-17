@@ -77,7 +77,7 @@ const get_content_data = async function(self) {
 	// short vars
 		const value					= self.value || {}
 		const update_version		= value.update_version
-		const current_version_in_db	= value.current_version_in_db
+		const current_version_in_db	= value.current_version_in_db || []
 		const dedalo_version		= value.dedalo_version
 		const updates				= value.updates
 		const local_db_id			= 'process_update_data_version'
