@@ -437,11 +437,11 @@ class tool_import_dedalo_csv extends tool_common {
 			$section_id_key	= array_search('component_section_id', $columns);
 
 		// Fixed private section tipos
-			$modified_section_tipos = section::get_modified_section_tipos();
-				$created_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
-				$created_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='created_date'; }); 	// array('tipo'=>'dd199', 'model'=>'component_date');
-				$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); // array('tipo'=>'dd197', 'model'=>'component_select');
-				$modified_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_date'; }); 	// array('tipo'=>'dd201', 'model'=>'component_date');
+			$metadata_definition = section::get_metadata_definition();
+				$created_by_user	= $metadata_definition->created_by_user; 	// object ('tipo'=>'dd200', 'model'=>'component_select');
+				$created_date		= $metadata_definition->created_date; 		// object ('tipo'=>'dd199', 'model'=>'component_date');
+				$modified_by_user	= $metadata_definition->modified_by_user; 	// object ('tipo'=>'dd197', 'model'=>'component_select');
+				$modified_date		= $metadata_definition->modified_date; 		// object ('tipo'=>'dd201', 'model'=>'component_date');
 
 		// process information
 			$process_info = new stdClass();
@@ -637,24 +637,24 @@ class tool_import_dedalo_csv extends tool_common {
 					switch (true) {
 
 						// created_date
-						case ($component_tipo===$created_date['tipo']): // dd199
+						case ($component_tipo===$created_date->tipo): // dd199
 						// modified_date. Place it at end columns to prevent overwrite
-						case ($component_tipo===$modified_date['tipo']): // dd201
+						case ($component_tipo===$modified_date->tipo): // dd201
 
 							// section set_created_date add
 								if (isset($conformed_value[0]) && isset($conformed_value[0]->start)) {
 									$dd_date	= new dd_date($conformed_value[0]->start);
 									$timestamp	= $dd_date->get_dd_timestamp();
 									// set value to section
-									if ($component_tipo===$created_date['tipo']) {
+									if ($component_tipo===$created_date->tipo) {
 										$component->get_my_section()->set_created_date($timestamp);
-									}elseif ($component_tipo===$modified_date['tipo']) {
+									}elseif ($component_tipo===$modified_date->tipo) {
 										$component->get_my_section()->set_modified_date($timestamp);
 									}
 								}
 
 							// save_modified. Only for modified_date, set section save_modified to false
-								if ($component_tipo===$modified_date['tipo']) {
+								if ($component_tipo===$modified_date->tipo) {
 									$component->get_my_section()->save_modified = false; // (!) important set to false
 								}
 
@@ -664,18 +664,18 @@ class tool_import_dedalo_csv extends tool_common {
 							break;
 
 						// created_by_user
-						case ($component_tipo===$created_by_user['tipo']): // dd200
+						case ($component_tipo===$created_by_user->tipo): // dd200
 						// modified_by_user. Place it at end columns to prevent overwrite
-						case ($component_tipo===$modified_by_user['tipo']): // dd197
+						case ($component_tipo===$modified_by_user->tipo): // dd197
 
 							// section set_created_by_userID/set_modified_by_userID add
 								if (isset($conformed_value[0]) && isset($conformed_value[0]->section_id)) {
 									// set value to section
-									if ($component_tipo===$created_by_user['tipo']) {
+									if ($component_tipo===$created_by_user->tipo) {
 										$component->get_my_section()->set_created_by_userID(
 											(int)$conformed_value[0]->section_id
 										);
-									}elseif ($component_tipo===$modified_by_user['tipo']) {
+									}elseif ($component_tipo===$modified_by_user->tipo) {
 										$component->get_my_section()->set_modified_by_userID(
 											(int)$conformed_value[0]->section_id
 										);
@@ -683,7 +683,7 @@ class tool_import_dedalo_csv extends tool_common {
 								}
 
 							// save_modified. Only for modified_by_user, set section save_modified to false
-								if ($component_tipo===$modified_by_user['tipo']) {
+								if ($component_tipo===$modified_by_user->tipo) {
 									$component->get_my_section()->save_modified = false; // (!) important set to false
 								}
 
