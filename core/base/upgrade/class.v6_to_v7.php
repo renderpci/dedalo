@@ -373,7 +373,7 @@ class v6_to_v7 {
 					$column_media				= new stdClass();
 					$column_iri					= new stdClass();
 					$column_misc				= new stdClass();
-					$column_counters			= new stdClass();
+					$column_meta				= new stdClass();
 
 					$value_type_map = v6_to_v7::get_value_type_map();
 
@@ -407,13 +407,34 @@ class v6_to_v7 {
 										$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' locator: '$locator_string'";
 										continue;
 									}
+									// remove the project in activity, not used anymore.
+									if( $locator->from_component_tipo==='dd550' ){
+										continue;
+									}
 
 									$target = ($datos_key === 'relations_search') ? $column_relation_search : $column_relation;
 									if (!isset($target->{$locator->from_component_tipo})) {
 										$target->{$locator->from_component_tipo} = [];
 									}
+
 									$target->{$locator->from_component_tipo}[] = $locator;
 								}
+
+								//add id to all locators
+								// only in the relation (relation_seach doesn't use it)
+								foreach ($column_relation as $component => $relation_data) {
+									$value_key = 0;
+									foreach ($relation_data as $locator) {
+										$value_key++;
+										$locator->id = $value_key;
+										// save the counter
+										$column_meta->{$locator->from_component_tipo} = [
+											(object)['count' => $value_key]
+										];
+									}
+								}
+
+
 								break;
 
 							case 'components':
@@ -541,14 +562,16 @@ class v6_to_v7 {
 
 											$value_key++;
 
-											$column_counters->{$literal_tipo} = $value_key;
+											$column_meta->{$literal_tipo} = [
+												(object)['count' => $value_key]
+											];
 
 											$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
 
 											// new literal object with value
 											$new_literal_obj = new stdClass();
 												$new_literal_obj->id		= $value_key; // starts from 1
-												$new_literal_obj->lang		= $lang;
+												// $new_literal_obj->lang		= $lang; // UNUSED
 												$new_literal_obj->value		= $value;
 
 											switch ($typology) {
@@ -558,6 +581,8 @@ class v6_to_v7 {
 													if (!property_exists($column_string, $literal_tipo)) {
 														$column_string->{$literal_tipo} = [];
 													}
+													// set lang
+													$new_literal_obj->lang = $lang;
 
 													$column_string->{$literal_tipo}[] = $new_literal_obj;
 													break;
@@ -587,7 +612,7 @@ class v6_to_v7 {
 													if(is_object($value)){
 														$date_literal_obj = $value;
 															$date_literal_obj->id	= $value_key;
-															$date_literal_obj->lang	= $lang;
+															// $date_literal_obj->lang	= $lang; // UNUSED
 
 														// set component path if not already set
 														if (!property_exists($column_date, $literal_tipo)) {
@@ -616,7 +641,7 @@ class v6_to_v7 {
 													if(is_object($value)){
 														$media_literal_obj = $value;
 															$media_literal_obj->id		= $value_key;
-															$media_literal_obj->lang	= $lang;
+															// $media_literal_obj->lang	= $lang; // UNUSED
 
 														// set component path if not already set
 														if (!property_exists($column_media, $literal_tipo)) {
@@ -644,8 +669,11 @@ class v6_to_v7 {
 
 													if(is_object($value)){
 														$iri_literal_obj = $value;
-															$iri_literal_obj->id	= $value_key;
-															$iri_literal_obj->lang	= $lang;
+															//check if the data has id (introduced in v6.8.0)
+															if( empty($value->id) ){
+																$iri_literal_obj->id = $value_key;
+															}
+															$iri_literal_obj->lang = $lang;
 
 														// set component path if not already set
 														if (!property_exists($column_iri, $literal_tipo)) {
@@ -674,7 +702,7 @@ class v6_to_v7 {
 													if(is_object($value)){
 														$geo_literal_obj = $value;
 															$geo_literal_obj->id	= $value_key;
-															$geo_literal_obj->lang	= $lang;
+															// $geo_literal_obj->lang	= $lang; // UNUSED
 
 														// set component path if not already set
 														if (!property_exists($column_geo, $literal_tipo)) {
@@ -742,7 +770,7 @@ class v6_to_v7 {
 					$section_media_encoded				= ( empty(get_object_vars($column_media)) ) ? null : json_encode($column_media);
 					$section_misc_encoded				= ( empty(get_object_vars($column_misc)) ) ? null : json_encode($column_misc);
 					$section_relation_search_encoded	= ( empty(get_object_vars($column_relation_search)) ) ? null : json_encode($column_relation_search);
-					$section_counters_encoded			= ( empty(get_object_vars($column_counters)) ) ? null : json_encode($column_counters);
+					$section_meta_encoded				= ( empty(get_object_vars($column_meta)) ) ? null : json_encode($column_meta);
 
 					$escaped_table = pg_escape_identifier($conn, $table);
 
@@ -758,7 +786,7 @@ class v6_to_v7 {
 							media = $8,
 							misc = $9,
 							relation_search = $10,
-							counters = $11
+							meta = $11
 						WHERE id = $12
 					";
 
@@ -790,7 +818,7 @@ class v6_to_v7 {
 								$section_media_encoded,
 								$section_misc_encoded,
 								$section_relation_search_encoded,
-								$section_counters_encoded,
+								$section_meta_encoded,
 								$id
 							]
 						);
@@ -815,7 +843,7 @@ class v6_to_v7 {
 								$section_media_encoded,
 								$section_misc_encoded,
 								$section_relation_search_encoded,
-								$section_counters_encoded,
+								$section_meta_encoded,
 								$id
 							]
 						);

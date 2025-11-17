@@ -211,23 +211,41 @@ class section_record {
 	* @return bool
 	* 	Returns false if JSON fragment save fails.
 	*/
-	public function save_component_data( string $column, string $tipo, ?array $value ) : bool {
+	public function save_component_data( array $data_to_save ) : bool {
 
 		// Set the value into the whole section record data
-		$this->data_instance->set_key_data(
-		 	$column,
-			$tipo,
-			$value
-		);
+		// $this->data_instance->set_key_data(
+		//  	$column,
+		// 	$tipo,
+		// 	$value
+		// );
+
+
 		// Save into DB
 		$result = $this->data_instance->save_key_data(
-			$column,
-			$tipo
+			$data_to_save
 		);
 
 		if( $result === false ){
 			return false;
 		}
+
+		// // Save its own counter
+		// $count_result = $this->data_instance->save_key_data(
+		// 	'counters',
+		// 	$tipo
+		// );
+
+		// // Check if the counter was saved. Alert if error.
+		// if( $count_result === false ){
+		// 	debug_log(__METHOD__
+		// 		. " Counter save fail for component" . PHP_EOL
+		// 		. " tipo: ".to_string( $tipo ). PHP_EOL
+		// 		. " section_tipo: " .to_string( $this->section_tipo ). PHP_EOL
+		// 		. " section_id: " .to_string( $this->section_id ). PHP_EOL
+		// 		, logger::ERROR
+		// 	);
+		// }
 
 		// section updates
 
@@ -407,7 +425,6 @@ class section_record {
 
 
 
-
 	/**
 	* DELETE_DATA
 	* Empty all components data
@@ -539,6 +556,56 @@ class section_record {
 
 
 	/**
+	* GET_COMPONENT_COUNTER
+	* Obtain the counter for given component ontology tipo
+	* Components storage its id to match with any other component as dataframe
+	* Data stored has the format:
+	* "oh25" : [{
+	* 	count: 1
+	* }]
+	* @param string $tipo
+	* @return int $component_counter
+	*/
+	public function get_component_counter( string $tipo ) : int {
+
+		$data = $this->data_instance->get_key_data( 'meta', $tipo ) ?? [] ; // default counter value is always 0, including the empty counter
+
+		$component_counter = $data[0]->count ?? 0;
+
+		return $component_counter;
+	}//end get_component_counter
+
+
+
+	/**
+	* SET_COMPONENT_COUNTER
+	* Fix the component counter with given ontology tipo and value
+	* Set the counter of the component into section data schema
+	* Data set has the format:
+	* "oh25" : [{
+	* 	count: 1
+	* }]
+	* @param string $tipo
+	* @param int value
+	* @return int $dato->counters->$tipo
+	*/
+	public function set_component_counter( string $tipo, int $value ) : int {
+
+		$data = $this->data_instance->get_key_data( 'meta', $tipo );
+
+		if( empty($data) ){
+			$data = [ (object)['count' => null] ];
+		}
+		$data[0]->count = $value;
+
+		$this->data_instance->set_key_data( 'meta', $tipo, $data ); // Set the counter into the counters column data
+
+		return $this->get_component_counter( $tipo );
+	}//end set_component_counter
+
+
+
+	/**
 	* UPDATE_MODIFIED_SECTION_DATA
 	* @param object $options
 	* @return object $this->dato
@@ -553,15 +620,16 @@ class section_record {
 			$mode = $options->mode;
 
 		// Fixed private tipos
-			$modified_section_tipos = section::get_modified_section_tipos();
-				$created_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
-				$created_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
-				$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');
-				$modified_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
+			$metadata_definition = section::get_metadata_definition();
+				$created_by_user	= $metadata_definition->created_by_user; 	// array('tipo'=>'dd200', 'model'=>'component_select');
+				$created_date		= $metadata_definition->created_date; 		// array('tipo'=>'dd199', 'model'=>'component_date');
+				$modified_by_user	= $metadata_definition->modified_by_user; 	// array('tipo'=>'dd197', 'model'=>'component_select');
+				$modified_date		= $metadata_definition->modified_date; 		// array('tipo'=>'dd201', 'model'=>'component_date');
 
 		// Current user locator
 			$user_id		= logged_user_id();
 			$user_locator	= new locator();
+				$user_locator->id = 1; //fixed id
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
 				$user_locator->set_section_id($user_id); // logged user
 				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
@@ -570,7 +638,7 @@ class section_record {
 			$dd_date	= component_date::get_date_now();
 			$date_now 	= new stdClass();
 				$date_now->start	= $dd_date;
-				$date_now->id		= 1;
+				$date_now->id		= 1; //fixed id
 				$date_now->lang		= DEDALO_DATA_NOLAN;
 
 		switch ($mode) {
@@ -578,57 +646,62 @@ class section_record {
 			case 'new_record': // new record
 
 				// Created by user
-					$user_locator->set_from_component_tipo($created_by_user['tipo']);
+					$user_locator->set_from_component_tipo( $created_by_user->tipo );
 					$this->data_instance->set_key_data(
 						'relation',
-						$created_by_user['tipo'],
+						$created_by_user->tipo,
 						[$user_locator]
 					);
 
 				// Creation date
 					$this->data_instance->set_key_data(
 						'date',
-						$created_date['tipo'],
+						$created_date->tipo,
 						[$date_now]
 					);
 
 				// Save
 					$this->data_instance->save_key_data(
-						'relation',
-						$created_by_user['tipo']
+						[(object)[
+							'column' =>'relation',
+							'key' => $created_by_user->tipo
+						],
+						(object)[
+							'column' =>'date',
+							'key' => $created_date->tipo
+						]]
 					);
-					$this->data_instance->save_key_data(
-						'date',
-						$created_date['tipo']
-					);
+
 
 				break;
 
 			case 'update_record': // update_record (record already exists)
 
 				// Modified by user
-					$user_locator->set_from_component_tipo($modified_by_user['tipo']);
+					$user_locator->set_from_component_tipo($modified_by_user->tipo);
 					$this->data_instance->set_key_data(
 						'relation',
-						$modified_by_user['tipo'],
+						$modified_by_user->tipo,
 						[$user_locator]
 					);
 
 				// Modification date
 					$this->data_instance->set_key_data(
 						'date',
-						$modified_date['tipo'],
+						$modified_date->tipo,
 						[$date_now]
 					);
 
 				// Save
 					$this->data_instance->save_key_data(
-						'relation',
-						$modified_by_user['tipo']
-					);
-					$this->data_instance->save_key_data(
-						'date',
-						$modified_date['tipo']
+						[(object)[
+							'column' =>'relation',
+							'key' => $modified_by_user->tipo
+						],
+						(object)[
+							'column' =>'date',
+							'key' => $modified_date->tipo
+						]]
 					);
 
 				break;
@@ -900,6 +973,16 @@ class section_record {
 
 		// copy data
 			$source_data = clone $this->get_data();
+			if (are_all_properties_empty($source_data)) {
+				debug_log(__METHOD__
+					. " Empty data from section record. All properties are empty." . PHP_EOL
+					. ' section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' source_data: ' . json_encode($source_data)
+					, logger::ERROR
+				);
+				return false;
+			}
 
 		// create a new blank section record with same the section_tipo that current
 			$section = section::get_instance( $section_tipo );
@@ -913,86 +996,92 @@ class section_record {
 				return false;
 			}
 
+		// new section_record
+		$new_section_record = section_record::get_instance($section_tipo, $new_section_id);
+
 		// ar_section_info_tipos.
 		// Section info tipos can get they from ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
 		$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
 
 		// tipos to skip on copy
 		$skip_tipos = $ar_section_info_tipos;
-
 		// columns to skip
-		$skip_columns = ['data','counters','relation_search'];
+		$skip_columns = ['data','meta','relation_search'];
 
 		// Get media components in section
 		$ar_media_components = component_media_common::get_media_components();
 
-			foreach ($source_data as $column => $column_data) {
+		foreach ($source_data as $column => $column_data) {
 
-				// check if the column has data
-				if($column_data===null){
+			// check if the column has data and exclude some columns
+			if( $column_data===null || in_array($column, $skip_columns) ){
+				continue;
+			}
+
+			// give the component data of the column
+			foreach ($column_data as $component_tipo => $component_data) {
+
+				// tipo filter
+				if (in_array($component_tipo, $skip_tipos)) {
 					continue;
 				}
-				// exclude some columns
-				if( in_array( $column, $skip_columns) ){
-					continue;
+
+				// model
+				$current_model = ontology_node::get_model_by_tipo($component_tipo,true);
+
+				// Create all new components in the duplicated section
+				$component = component_common::get_instance(
+					$current_model,
+					$component_tipo,
+					$new_section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$section_tipo
+				);
+
+				if( $current_model==='component_dataframe' ){
+					// check if the data has main_component_tipo
+					// if data has not ask to the component to give its main_component_tipo.
+					$main_component_tipo = $component_data[0]->main_component_tipo ?? $component->get_main_component_tipo();
+					$caller_dataframe = new stdClass();
+						$caller_dataframe->main_component_tipo	= $main_component_tipo;
+						$caller_dataframe->section_tipo_key		= $component_data[0]->section_tipo_key;
+						$caller_dataframe->section_id_key		= $component_data[0]->section_id_key;
+					$component->set_caller_dataframe( $caller_dataframe );
 				}
 
-				// give the component data of the column
-				foreach ($column_data as $component_tipo => $component_data) {
-
-					// tipo filter
-					if (in_array($component_tipo, $skip_tipos)) {
-						continue;
-					}
-
-					// model
-					$current_model = ontology_node::get_model_by_tipo($component_tipo,true);
-
-					// Create all new components in the duplicated section
-					$component = component_common::get_instance(
+				// Media components
+				// It needs to create a source component to access the existing files and duplicate they
+				if( in_array($current_model, $ar_media_components) ){
+					// Media components duplicates its own media files from the original component
+					$source_media_component = component_common::get_instance(
 						$current_model,
 						$component_tipo,
-						$new_section_id,
+						$this->section_id,
 						'list',
 						DEDALO_DATA_LANG,
 						$section_tipo
 					);
+					// Duplicates its own files
+					$source_media_component->duplicate_component_media_files( $new_section_id );
 
-					if( $model==='component_dataframe' ){
-						$caller_dataframe = new stdClass();
-							$caller_dataframe->main_component_tipo = $component->get_main_component_tipo();
-						$component->set_caller_dataframe( $caller_dataframe );
-					}
+					// Media target component regenerate only.
+					// consolidate media files and save it
+					$component->regenerate_component( (object)[
+						'delete_normalized_files' => false
+					]);
 
-					// Media components
-					// It needs to create a source component to access the existing files and duplicate they
-					if( in_array($current_model, $ar_media_components) ){
-						// Media components duplicates its own media files from the original component
-						$source_media_component = component_common::get_instance(
-							$current_model,
-							$component_tipo,
-							$this->section_id,
-							'list',
-							DEDALO_DATA_LANG,
-							$section_tipo
-						);
-						// Duplicates its own files
-						$source_media_component->duplicate_component_media_files( $new_section_id );
+				}else{
 
-						// Media target component regenerate only.
-						// consolidate media files and save it
-						$component->regenerate_component( (object)[
-							'delete_normalized_files' => false
-						]);
-
-					}else{
-
-						// save in a common way
-						$component->set_data( $component_data );
-						$component->save(); // save each lang to force to create a time machine and activity records
-					}
+					// save in a common way
+					$component->set_data( $component_data );
+					$component->save(); // save each lang to force to create a time machine and activity records
 				}
 			}
+		}
+
+		// Save added columns ('counters','relation_search') once
+		$new_section_record->data_instance->save_data();
 
 		return $new_section_id;
 	}//end duplicate

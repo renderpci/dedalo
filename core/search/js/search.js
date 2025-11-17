@@ -356,7 +356,7 @@ search.prototype.get_section_elements = async function(options) {
 	// 		section_tipo 	: component_context.section_tipo,
 	// 		component_tipo 	: component_context.tipo,
 	// 		model  			: component_context.model,
-	// 		name  			: component_context.label.replace(/<[^>]+>/g, '')
+	// 		name  			: component_context.label.replace(/<[^>]*>/g, '')
 	// 	})
 
 	// 	return calculate_component_path

@@ -197,7 +197,7 @@ $updates->$v = new stdClass();
 						ADD COLUMN IF NOT EXISTS "media" jsonb NULL,
 						ADD COLUMN IF NOT EXISTS "misc" jsonb NULL,
 						ADD COLUMN IF NOT EXISTS "relation_search" jsonb NULL,
-						ADD COLUMN IF NOT EXISTS "counters" jsonb NULL;
+						ADD COLUMN IF NOT EXISTS "meta" jsonb NULL;
 				';
 				$comments[] = "
 					COMMENT ON COLUMN ".$current_table.".id IS 'Unique table identifier';
@@ -213,7 +213,7 @@ $updates->$v = new stdClass();
 					COMMENT ON COLUMN ".$current_table.".media IS 'Component data with media values: ". DEDALO_VALUE_TYPE_MEDIA. "';
 					COMMENT ON COLUMN ".$current_table.".misc IS 'Other component data with miscellaneous values: ". DEDALO_VALUE_TYPE_MISC. "';
 					COMMENT ON COLUMN ".$current_table.".relation_search IS 'Complementary relationships as parents, used to search for all children of the parent being searched for.';
-					COMMENT ON COLUMN ".$current_table.".counters IS 'Component literal counters, used as value identifiers.';
+					COMMENT ON COLUMN ".$current_table.".meta IS 'Component metadata, used as counters for components and other value identifiers.';
 				";
 			};
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $columns));

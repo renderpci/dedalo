@@ -24,220 +24,220 @@ class component_relation_parent extends component_relation_common {
 
 
 
-	/**
-	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
-	* @param string $lang = DEDALO_DATA_LANG
-	* @return string|null $valor
-	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
+	// /**
+	// * GET_VALOR
+	// * Get value . default is get dato . overwrite in every different specific component
+	// * @param string $lang = DEDALO_DATA_LANG
+	// * @return string|null $valor
+	// */
+	// public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
 
-		$dato = $this->get_dato();
+	// 	$dato = $this->get_dato();
 
-		// empty case
-			if (empty($dato)) {
-				return null;
-			}
+	// 	// empty case
+	// 		if (empty($dato)) {
+	// 			return null;
+	// 		}
 
-		// resolve locators
-			$ar_valor = [];
-			foreach ((array)$dato as $current_locator) {
-				$ar_valor[] = ts_object::get_term_by_locator(
-					$current_locator,
-					$lang,
-					true // bool from_cache
-				);
-			}
+	// 	// resolve locators
+	// 		$ar_valor = [];
+	// 		foreach ((array)$dato as $current_locator) {
+	// 			$ar_valor[] = ts_object::get_term_by_locator(
+	// 				$current_locator,
+	// 				$lang,
+	// 				true // bool from_cache
+	// 			);
+	// 		}
 
-		// component valor
-			$ar_valor_clean = [];
-			foreach ($ar_valor as $value) {
-				if (empty($value)) {
-					continue;
-				}
-				if(!empty(trim($value))) {
-					$ar_valor_clean[] = $value;
-				}
-			}
-			$valor = implode(', ', $ar_valor_clean);
-
-
-		return $valor;
-	}//end get_valor
+	// 	// component valor
+	// 		$ar_valor_clean = [];
+	// 		foreach ($ar_valor as $value) {
+	// 			if (empty($value)) {
+	// 				continue;
+	// 			}
+	// 			if(!empty(trim($value))) {
+	// 				$ar_valor_clean[] = $value;
+	// 			}
+	// 		}
+	// 		$valor = implode(', ', $ar_valor_clean);
 
 
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @see class.diffusion_mysql.php
-	* @param string|null $lang = DEDALO_DATA_LANG
-	* @param object|null $option_obj = null
-	* @return string $diffusion_value
-	*/
-	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
-
-		$resolve_value = isset($option_obj->resolve_value)
-			? $option_obj->resolve_value
-			: false;
-
-		// custom_get_term_by_locator function.
-		// This is a variant of ts_object::get_term_by_locator function, using 'get_diffusion_value' instead 'get_value'
-			$custom_get_term_by_locator = function(object $locator, string $lang, object $option_obj) : ?string {
-
-				$section_map	= section::get_section_map($locator->section_tipo);
-				$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-				if ($thesaurus_map===false) {
-					return null;
-				}
-
-				$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
-				$section_id		= $locator->section_id;
-				$section_tipo	= $locator->section_tipo;
-
-				$ar_value = [];
-				foreach ($ar_tipo as $tipo) {
-
-					$model		= ontology_node::get_model_by_tipo($tipo,true);
-					// $model	= ontology_node::get_legacy_model_by_tipo($tipo);
-					$component	= component_common::get_instance(
-						$model,
-						$tipo,
-						$section_id,
-						'list',
-						$lang,
-						$section_tipo
-					);
-					// process_dato_arguments
-						$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
-					// valor
-						// $valor	= $component->get_valor($lang);
-						$valor		= $component->get_diffusion_value($lang, $process_dato_arguments);
-						if (empty($valor)) {
-
-							$main_lang	= hierarchy::get_main_lang( $locator->section_tipo );
-							$dato_full	= $component->get_dato_full();
-							$valor		= component_common::get_value_with_fallback_from_dato_full(
-								$dato_full,
-								true,
-								$main_lang,
-								$lang
-							);
-							if (is_array($valor)) {
-								$valor = implode(', ', $valor);
-							}
-						}
-
-					if (!empty($valor)) {
-						$ar_value[] = $valor;
-					}
-				}//end foreach ($ar_tipo as $tipo)
-
-				$value = implode(', ', $ar_value);
-
-				return $value;
-			};//end custom_get_term_by_locator function
-
-		if (isset($option_obj->add_parents)) {
-
-			// recursively
-				$section_id		= $this->get_section_id();
-				$section_tipo	= $this->section_tipo;
-
-			// parent_section_tipo
-				$parent_section_tipo = isset($option_obj->parent_section_tipo)
-					? $option_obj->parent_section_tipo
-					: false;
-
-			// parents
-				$parents = self::get_parents_recursive(
-					$section_id,
-					$section_tipo,
-					$this->tipo
-				);
-
-			// new_dato
-			$new_dato = [];
-			foreach ($parents as $locator) {
-
-				// non resolve case (only section_id from current locator)
-					if ($resolve_value!==true) {
-						$new_dato[] = $locator->section_id;
-						continue;
-					}
-
-				// to resolve cases
-				if($parent_section_tipo!==false) {
-
-					// term is autocomplete cases
-					$term_dato = ts_object::get_term_dato_by_locator($locator);
-					foreach ($term_dato as $term_locator) {
-
-						// check valid locator section_tipo
-							if (!isset($term_locator->section_tipo)) {
-								debug_log(__METHOD__
-									. " Skipped  term_locator (NOT LOCATOR) " . PHP_EOL
-									. ' term_locator: ' . json_encode($term_locator, JSON_PRETTY_PRINT) . PHP_EOL
-									. ' option_obj: ' . json_encode($option_obj, JSON_PRETTY_PRINT)
-									, logger::DEBUG
-								);
-								continue;
-							}
-
-						if($parent_section_tipo===$term_locator->section_tipo){
-
-							// value custom calculate
-								$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
-
-							// new dato add
-								$new_dato[] = !empty($value)
-									? strip_tags($value)
-									: $value;
-						}
-					}//end foreach ($term_dato as $term_locator)
-
-				}else{
-
-					$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
-
-					$current_value = !empty($value)
-						? strip_tags($value)
-						: $value;
-
-					$new_dato[] = $current_value;
-				}
-			}//end foreach ($parents as $locator)
-
-		}else{
-
-			$dato = $this->get_dato();
-
-			if ($resolve_value===true) {
-				$new_dato = [];
-				foreach ((array)$dato as $current_locator) {
-					// $value = ts_object::get_term_by_locator(
-					// 	$current_locator,
-					// 	$lang,
-					// 	true // bool from_cache
-					// );
-					$value = $custom_get_term_by_locator($current_locator, $lang, $option_obj);
-					$new_dato[] = strip_tags($value);
-				}
-			}else{
-				// default (untouched component dato)
-				$new_dato = $dato;
-			}
-		}//end if (isset($option_obj->add_parents))
-
-		$diffusion_value = !empty($new_dato)
-			? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $new_dato)
-			: null;
+	// 	return $valor;
+	// }//end get_valor
 
 
-		return $diffusion_value;
-	}//end get_diffusion_value
+
+	// /**
+	// * GET_DIFFUSION_VALUE
+	// * Overwrite component common method
+	// * Calculate current component diffusion value for target field (usually a MYSQL field)
+	// * Used for diffusion_mysql to unify components diffusion value call
+	// * @see class.diffusion_mysql.php
+	// * @param string|null $lang = DEDALO_DATA_LANG
+	// * @param object|null $option_obj = null
+	// * @return string $diffusion_value
+	// */
+	// public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
+
+	// 	$resolve_value = isset($option_obj->resolve_value)
+	// 		? $option_obj->resolve_value
+	// 		: false;
+
+	// 	// custom_get_term_by_locator function.
+	// 	// This is a variant of ts_object::get_term_by_locator function, using 'get_diffusion_value' instead 'get_value'
+	// 		$custom_get_term_by_locator = function(object $locator, string $lang, object $option_obj) : ?string {
+
+	// 			$section_map	= section::get_section_map($locator->section_tipo);
+	// 			$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+	// 			if ($thesaurus_map===false) {
+	// 				return null;
+	// 			}
+
+	// 			$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+	// 			$section_id		= $locator->section_id;
+	// 			$section_tipo	= $locator->section_tipo;
+
+	// 			$ar_value = [];
+	// 			foreach ($ar_tipo as $tipo) {
+
+	// 				$model		= ontology_node::get_model_by_tipo($tipo,true);
+	// 				// $model	= ontology_node::get_legacy_model_by_tipo($tipo);
+	// 				$component	= component_common::get_instance(
+	// 					$model,
+	// 					$tipo,
+	// 					$section_id,
+	// 					'list',
+	// 					$lang,
+	// 					$section_tipo
+	// 				);
+	// 				// process_dato_arguments
+	// 					$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
+	// 				// valor
+	// 					// $valor	= $component->get_valor($lang);
+	// 					$valor		= $component->get_diffusion_value($lang, $process_dato_arguments);
+	// 					if (empty($valor)) {
+
+	// 						$main_lang	= hierarchy::get_main_lang( $locator->section_tipo );
+	// 						$dato_full	= $component->get_dato_full();
+	// 						$valor		= component_common::get_value_with_fallback_from_dato_full(
+	// 							$dato_full,
+	// 							true,
+	// 							$main_lang,
+	// 							$lang
+	// 						);
+	// 						if (is_array($valor)) {
+	// 							$valor = implode(', ', $valor);
+	// 						}
+	// 					}
+
+	// 				if (!empty($valor)) {
+	// 					$ar_value[] = $valor;
+	// 				}
+	// 			}//end foreach ($ar_tipo as $tipo)
+
+	// 			$value = implode(', ', $ar_value);
+
+	// 			return $value;
+	// 		};//end custom_get_term_by_locator function
+
+	// 	if (isset($option_obj->add_parents)) {
+
+	// 		// recursively
+	// 			$section_id		= $this->get_section_id();
+	// 			$section_tipo	= $this->section_tipo;
+
+	// 		// parent_section_tipo
+	// 			$parent_section_tipo = isset($option_obj->parent_section_tipo)
+	// 				? $option_obj->parent_section_tipo
+	// 				: false;
+
+	// 		// parents
+	// 			$parents = self::get_parents_recursive(
+	// 				$section_id,
+	// 				$section_tipo,
+	// 				$this->tipo
+	// 			);
+
+	// 		// new_dato
+	// 		$new_dato = [];
+	// 		foreach ($parents as $locator) {
+
+	// 			// non resolve case (only section_id from current locator)
+	// 				if ($resolve_value!==true) {
+	// 					$new_dato[] = $locator->section_id;
+	// 					continue;
+	// 				}
+
+	// 			// to resolve cases
+	// 			if($parent_section_tipo!==false) {
+
+	// 				// term is autocomplete cases
+	// 				$term_dato = ts_object::get_term_dato_by_locator($locator);
+	// 				foreach ($term_dato as $term_locator) {
+
+	// 					// check valid locator section_tipo
+	// 						if (!isset($term_locator->section_tipo)) {
+	// 							debug_log(__METHOD__
+	// 								. " Skipped  term_locator (NOT LOCATOR) " . PHP_EOL
+	// 								. ' term_locator: ' . json_encode($term_locator, JSON_PRETTY_PRINT) . PHP_EOL
+	// 								. ' option_obj: ' . json_encode($option_obj, JSON_PRETTY_PRINT)
+	// 								, logger::DEBUG
+	// 							);
+	// 							continue;
+	// 						}
+
+	// 					if($parent_section_tipo===$term_locator->section_tipo){
+
+	// 						// value custom calculate
+	// 							$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
+
+	// 						// new dato add
+	// 							$new_dato[] = !empty($value)
+	// 								? strip_tags($value)
+	// 								: $value;
+	// 					}
+	// 				}//end foreach ($term_dato as $term_locator)
+
+	// 			}else{
+
+	// 				$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
+
+	// 				$current_value = !empty($value)
+	// 					? strip_tags($value)
+	// 					: $value;
+
+	// 				$new_dato[] = $current_value;
+	// 			}
+	// 		}//end foreach ($parents as $locator)
+
+	// 	}else{
+
+	// 		$dato = $this->get_dato();
+
+	// 		if ($resolve_value===true) {
+	// 			$new_dato = [];
+	// 			foreach ((array)$dato as $current_locator) {
+	// 				// $value = ts_object::get_term_by_locator(
+	// 				// 	$current_locator,
+	// 				// 	$lang,
+	// 				// 	true // bool from_cache
+	// 				// );
+	// 				$value = $custom_get_term_by_locator($current_locator, $lang, $option_obj);
+	// 				$new_dato[] = strip_tags($value);
+	// 			}
+	// 		}else{
+	// 			// default (untouched component dato)
+	// 			$new_dato = $dato;
+	// 		}
+	// 	}//end if (isset($option_obj->add_parents))
+
+	// 	$diffusion_value = !empty($new_dato)
+	// 		? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $new_dato)
+	// 		: null;
+
+
+	// 	return $diffusion_value;
+	// }//end get_diffusion_value
 
 
 
@@ -393,10 +393,10 @@ class component_relation_parent extends component_relation_common {
 	* @param string $section_tipo
 	* @param string|null $from_component_tipo = null
 	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
-	* @return array $parents
+	* @return array|null $parents
 	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
-	public static function get_parents( int|string $section_id, string $section_tipo, ?string $from_component_tipo=null ) : array {
+	public static function get_parents( int|string $section_id, string $section_tipo, ?string $from_component_tipo=null ) : ?array {
 
 		$component_tipo = $from_component_tipo ?? component_relation_parent::get_parent_tipo( $section_tipo );
 		if (empty($component_tipo)) {
@@ -420,7 +420,7 @@ class component_relation_parent extends component_relation_common {
 			$section_tipo // string section_tipo
 		);
 
-		$parents = $parent_component->get_dato();
+		$parents = $parent_component->get_data();
 
 		return $parents;
 	}//end get_parents
@@ -511,7 +511,7 @@ class component_relation_parent extends component_relation_common {
 		$visited[$current_node_key] = true;
 
 		// 1. Get the direct parents of the current node.
-		$direct_parents = self::get_parents($section_id, $section_tipo, $component_tipo);
+		$direct_parents = self::get_parents($section_id, $section_tipo, $component_tipo) ?? [];
 
 		// 2. Process direct parents and recurse if necessary.
 		foreach ($direct_parents as $parent) {

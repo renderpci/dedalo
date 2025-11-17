@@ -2713,7 +2713,8 @@ common.prototype.calculate_component_path = function(component_context, path) {
 		component_tipo			: component_context.tipo,
 		ar_target_section_tipo	: component_context.ar_target_section_tipo,
 		model					: component_context.model,
-		name					: component_context.label.replace(/<[^>]+>/g, '')
+		name					: component_context.label.replace(/<[^>]*>/g, '')//component_context.label.replace(/<[^>]+>/g, '')
+
 	})
 
 	return calculate_component_path

@@ -304,8 +304,6 @@ final class section_record_test extends TestCase {
 			$section_tipo,
 			$section_id
 		);
-			dump($section_record, ' section_record ++ '.to_string());
-
 
 		$start_time=start_time();
 		$result = $section_record->duplicate();
@@ -313,7 +311,7 @@ final class section_record_test extends TestCase {
 
 		// // Check the time consuming. Expected value is around 2 ms
 		// $total_time = exec_time_unit($start_time);
-		// 	// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
+		// 	debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
 		// $eq = $total_time < 5;
 		// $this->assertTrue(
 		// 	$eq,

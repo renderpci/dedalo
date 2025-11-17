@@ -60,7 +60,7 @@ class matrix_db_manager {
 		'media'				=> true,
 		'misc'				=> true,
 		'relation_search'	=> true,
-		'counters'			=> true
+		'meta'				=> true
 	];
 
 	// JSON columns to decode
@@ -76,7 +76,7 @@ class matrix_db_manager {
 		'media'				=> true,
 		'misc'				=> true,
 		'relation_search'	=> true,
-		'counters'			=> true
+		'meta'				=> true
 	];
 
 	// int columns to parse
@@ -407,6 +407,179 @@ class matrix_db_manager {
 
 
 
+	// /**
+	// * UPDATE_BY_KEY
+	// * Saves given value into the specified JSON key, it could be:
+	// * a component container
+	// * a section property data as created_date
+	// * a component counter data
+	// * Creates the path from the given key as componente_tipo {dd197} or property {created_date}.
+	// * If the given value is empty, the path will be removed for clean database.
+	// * @param string $table
+	// * 	DB table name. E.g. 'matrix'
+	// * @param string $section_tipo
+	// * 	Section tipo. E.g. 'oh1'
+	// * @param int $section_id
+	// * 	Section id. E.g. '1582'
+	// * @param string $data_column_name
+	// * 	Name of the column in current table. E.g. 'string'
+	// * @param string $key
+	// * 	Key of the value in the column JSON object. E.g. 'oh25'
+	// * @param ?array $value
+	// * 	Element value. E.g. [{"id": 1, "lang": "lg-nolan", "value": "code 95"}]
+	// * @return bool
+	// * 	Returns false if JSON fragment save fails.
+	// */
+	// public static function update_by_key(
+	// 	string $table,
+	// 	string $section_tipo,
+	// 	int $section_id,
+	// 	string $data_column_name,
+	// 	string $key,
+	// 	?array $value
+	// 	) : bool {
+
+	// 	// sample SQL
+	// 		// UPDATE matrix
+	// 		// SET data = jsonb_set(
+	// 		//     COALESCE(data, '{}'::jsonb), -- Use an empty object if data is NULL
+	// 		//     '{numisdataXX}', -- path to the element
+	// 		//     '{"key":1,"lang":"lg-spa","type":"dd750","value":"CODE1"}'::jsonb, -- new value (must be valid JSON)
+	// 		//     true  -- create if missing (true/false)
+	// 		// )
+	// 		// WHERE section_tipo = 'numisdata224' AND section_id = 1;
+
+	// 	// check matrix table
+	// 	if (!isset(self::$matrix_tables[$table])) {
+	// 		debug_log(__METHOD__
+	// 			. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
+	// 			. ' table: ' . $table . PHP_EOL
+	// 			. ' allowed_tables: ' . json_encode(self::$matrix_tables)
+	// 			, logger::ERROR
+	// 		);
+	// 		return false;
+	// 	}
+
+	// 	$conn = DBi::_getConnection();
+	// 	// Path is generated once, for top-level key
+	// 	$path = '{'.$key.'}'; // JSON path for top-level key
+	// 	// statement base name with prepared statement
+	// 	$stmt_name = __METHOD__;
+
+	// 	if (empty($value)) {
+
+	// 		// DELETE operation
+	// 		$full_stmt_name = $stmt_name . '_delete_' . $table . '_' . $data_column_name;
+
+	// 		if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
+	// 			// Optimized SQL for deletion: deletes key, then checks if the result is '{}'. If so, sets column to NULL.
+	// 			$sql = "
+	// 				UPDATE $table
+	// 				SET $data_column_name = CASE
+	// 					WHEN ($data_column_name #- $1::text[]) = '{}'::jsonb THEN
+	// 						NULL
+	// 					ELSE
+	// 						$data_column_name #- $1::text[]
+	// 				END
+	// 				WHERE section_id = $3 AND section_tipo = $2
+	// 				RETURNING id
+	// 			";
+	// 			pg_prepare($conn, $full_stmt_name, $sql);
+	// 			DBi::$prepared_statements[$full_stmt_name] = true;
+	// 		}
+
+	// 		// Parameters: $1=path, $2=tipo, $3=section_id
+	// 		$params = [ $path, $section_tipo, $section_id ];
+
+	// 	} else {
+
+	// 		// UPDATE/SET operation
+	// 		$full_stmt_name = $stmt_name . '_update_' . $table . '_' . $data_column_name;
+	// 		$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); // JSONB value
+
+	// 		if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
+	// 			// Efficient SQL for setting/updating a key (uses COALESCE for NULL safety)
+	// 			$sql = "
+	// 				UPDATE $table
+	// 				SET $data_column_name = jsonb_set(
+	// 					COALESCE($data_column_name, '{}'::jsonb),
+	// 					$1::text[],
+	// 					$2::jsonb,
+	// 					true
+	// 				)
+	// 				WHERE section_tipo = $3
+	// 				  AND section_id = $4
+	// 				RETURNING id
+	// 			";
+	// 			pg_prepare($conn, $full_stmt_name, $sql);
+	// 			DBi::$prepared_statements[$full_stmt_name] = true;
+	// 		}
+
+	// 		// Parameters: $1=path, $2=json_value, $3=tipo, $4=section_id
+	// 		$params = [ $path, $json_value, $section_tipo, $section_id ];
+	// 	}
+
+	// 	// 2. Execute Statement
+	// 	$result = pg_execute(
+	// 		$conn,
+	// 		$full_stmt_name,
+	// 		$params
+	// 	);
+
+	// 	// 3. Handle Result
+	// 	if ($result) {
+	// 		$rows_affected = pg_num_rows($result);
+	// 		if ($rows_affected > 0) {
+
+	// 			// Success. JSON path was successfully saved
+
+	// 			// $saved_id = pg_fetch_result($result, 0, 0);
+	// 			// debug_log(__METHOD__
+	// 			// 	. " Successfully saved JSON path '$path'. Affected record ID: $table $saved_id"
+	// 			// 	, logger::WARNING
+	// 			// );
+
+	// 			return true;
+
+	// 		}else{
+
+	// 			// No rows were updated (JSON path didn't exist or conditions didn't match)
+	// 			debug_log(__METHOD__
+	// 				. " Partial JSON data was NOT saved. Maybe path '$path' or section_id '$section_id' does not exist." . PHP_EOL
+	// 				. ' table: ' . to_string($table) . PHP_EOL
+	// 				. ' column: ' . to_string($data_column_name) . PHP_EOL
+	// 				. ' path: ' . $path . PHP_EOL
+	// 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+	// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
+	// 				. ' value: ' . json_encode($value)
+	// 				, logger::ERROR
+	// 			);
+	// 		}
+
+	// 	}else{
+
+	// 		// Query failed
+	// 		debug_log(__METHOD__
+	// 			. " Delete operation failed:  " . PHP_EOL
+	// 			. ' Error: ' . pg_last_error($conn) . PHP_EOL
+	// 			. ' table: ' . to_string($table) . PHP_EOL
+	// 			. ' column: ' . to_string($data_column_name) . PHP_EOL
+	// 			. ' path: ' . to_string($path) . PHP_EOL
+	// 			. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+	// 			. ' section_id: ' . to_string($section_id) . PHP_EOL
+	// 			. ' value: ' . json_encode($value)
+	// 			, logger::ERROR
+	// 		);
+	// 	}
+
+
+	// 	return false;
+	// }//end update_by_key
+
+
+
+
+
 	/**
 	* UPDATE_BY_KEY
 	* Saves given value into the specified JSON key, it could be:
@@ -421,12 +594,13 @@ class matrix_db_manager {
 	* 	Section tipo. E.g. 'oh1'
 	* @param int $section_id
 	* 	Section id. E.g. '1582'
-	* @param string $data_column_name
-	* 	Name of the column in current table. E.g. 'string'
-	* @param string $key
-	* 	Key of the value in the column JSON object. E.g. 'oh25'
-	* @param ?array $value
-	* 	Element value. E.g. [{"id": 1, "lang": "lg-nolan", "value": "code 95"}]
+	* @param array $data_to_save
+	* 	Array of objects with the column, key and value to be update
+	* 	[{
+	* 		"column" 	: "relation",
+	* 		"key"		: "oh25",
+	* 		"value"		: [{"section_id":3,"section_tipo":"oh1"}]
+	* 	}]
 	* @return bool
 	* 	Returns false if JSON fragment save fails.
 	*/
@@ -434,9 +608,7 @@ class matrix_db_manager {
 		string $table,
 		string $section_tipo,
 		int $section_id,
-		string $data_column_name,
-		string $key,
-		?array $value
+		array $data_to_save
 		) : bool {
 
 		// sample SQL
@@ -461,62 +633,90 @@ class matrix_db_manager {
 		}
 
 		$conn = DBi::_getConnection();
-		// Path is generated once, for top-level key
-		$path = '{'.$key.'}'; // JSON path for top-level key
+
 		// statement base name with prepared statement
-		$stmt_name = __METHOD__;
+		$stmt_name_parts = ['update_by_key', $table];
 
-		if (empty($value)) {
+		// Parameters: $1=section_tipo, $2=section_id, $3=path, $4=value, $5=path2, $6=value2, etc.
+		$params = [ $section_tipo, $section_id ];
 
-			// DELETE operation
-			$full_stmt_name = $stmt_name . '_delete_' . $table . '_' . $data_column_name;
+		$sentences = [];
+		// key position for the path and the values
+		$i = 3;
+		foreach ($data_to_save as $data) {
 
-			if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
-				// Optimized SQL for deletion: deletes key, then checks if the result is '{}'. If so, sets column to NULL.
-				$sql = "
-					UPDATE $table
-					SET $data_column_name = CASE
-						WHEN ($data_column_name #- $1::text[]) = '{}'::jsonb THEN
-							NULL
-						ELSE
-							$data_column_name #- $1::text[]
-					END
-					WHERE section_id = $3 AND section_tipo = $2
-					RETURNING id
-				";
-				pg_prepare($conn, $full_stmt_name, $sql);
-				DBi::$prepared_statements[$full_stmt_name] = true;
-			}
+			$data_column_name	= $data->column;
+			$key				= $data->key;
+			$value				= $data->value;
 
-			// Parameters: $1=path, $2=tipo, $3=section_id
-			$params = [ $path, $section_tipo, $section_id ];
-
-		} else {
-
-			// UPDATE/SET operation
-			$full_stmt_name = $stmt_name . '_update_' . $table . '_' . $data_column_name;
+			// Convert value in a valid JSON data
 			$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); // JSONB value
 
-			if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
-				// Efficient SQL for setting/updating a key (uses COALESCE for NULL safety)
-				$sql = "
-					UPDATE $table
-					SET $data_column_name = jsonb_set(
-						COALESCE($data_column_name, '{}'::jsonb),
-						$1::text[],
-						$2::jsonb,
-						true
-					)
-					WHERE section_tipo = $3
-					  AND section_id = $4
-					RETURNING id
+			// assign the key path position into the parameters array
+			$key_i = $i++;
+
+			// Path is generated once, for top-level key
+			$path = '{'.$key.'}'; // JSON path for top-level key
+
+			// set the parameters in order to be used in the statement.
+			$params[] = $path;
+
+			// action name to be perform. It will use to identify the statements
+			$action = 'update';
+
+			if( empty($value) ){
+
+				// Delete
+				$action = 'delete';
+				// check if the key (usually the tipo of one component) exist into the column
+				// if the key exist remove it, because the data is null
+				$sentences[] = "
+					$data_column_name = CASE
+					WHEN $data_column_name ? $$key_i
+						THEN $data_column_name - $$key_i
+					ELSE
+						$data_column_name
+					END
 				";
-				pg_prepare($conn, $full_stmt_name, $sql);
-				DBi::$prepared_statements[$full_stmt_name] = true;
+
+			}else{
+
+				// assign the position of value into the parameters array
+				$value_i = $i++;
+
+				// Update
+				// Set the order of the key path and its value to be updated
+				$sentences[] = "$data_column_name = jsonb_set(
+					COALESCE($data_column_name, '{}'::jsonb),
+					$$key_i::text[],
+					$$value_i::jsonb,
+					true
+				)";
+
+				$params[] = $json_value;
 			}
 
-			// Parameters: $1=path, $2=json_value, $3=tipo, $4=section_id
-			$params = [ $path, $json_value, $section_tipo, $section_id ];
+			// save the statement name for the action and column
+			$stmt_name_parts[] = $action;
+			$stmt_name_parts[] = $data_column_name;
+		}
+
+		// Give the unique name for the all sentences
+		$full_stmt_name = implode('_', $stmt_name_parts);
+
+		// UPDATE/SET operation
+		if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
+			// Efficient SQL for setting/updating a key (uses COALESCE for NULL safety)
+			$sql = '
+				UPDATE '.$table.'
+				SET '. implode(', '.PHP_EOL, $sentences) .'
+				WHERE section_tipo = $1
+				  AND section_id = $2
+				RETURNING id
+			';
+
+			pg_prepare($conn, $full_stmt_name, $sql);
+			DBi::$prepared_statements[$full_stmt_name] = true;
 		}
 
 		// 2. Execute Statement
