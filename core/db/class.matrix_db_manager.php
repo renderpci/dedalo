@@ -745,13 +745,11 @@ class matrix_db_manager {
 
 				// No rows were updated (JSON path didn't exist or conditions didn't match)
 				debug_log(__METHOD__
-					. " Partial JSON data was NOT saved. Maybe path '$path' or section_id '$section_id' does not exist." . PHP_EOL
+					. " Partial JSON data was NOT saved. Maybe path for data to save or section_id '$section_id' does not exist." . PHP_EOL
 					. ' table: ' . to_string($table) . PHP_EOL
-					. ' column: ' . to_string($data_column_name) . PHP_EOL
-					. ' path: ' . $path . PHP_EOL
 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
 					. ' section_id: ' . to_string($section_id) . PHP_EOL
-					. ' value: ' . json_encode($value)
+					. ' data_to_save: ' . json_encode($data_to_save)
 					, logger::ERROR
 				);
 			}
@@ -763,11 +761,9 @@ class matrix_db_manager {
 				. " Delete operation failed:  " . PHP_EOL
 				. ' Error: ' . pg_last_error($conn) . PHP_EOL
 				. ' table: ' . to_string($table) . PHP_EOL
-				. ' column: ' . to_string($data_column_name) . PHP_EOL
-				. ' path: ' . to_string($path) . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
 				. ' section_id: ' . to_string($section_id) . PHP_EOL
-				. ' value: ' . json_encode($value)
+				. ' data_to_save: ' . json_encode($data_to_save)
 				, logger::ERROR
 			);
 		}
