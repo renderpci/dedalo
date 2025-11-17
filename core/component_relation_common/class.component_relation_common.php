@@ -2181,28 +2181,33 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_RELATIONS_SEARCH_VALUE
-	* Resolve component search values (parent recursive) to easy search
+	* Resolve component search values (parent recursive) to easy search.
 	* @return array|null $relations_search_value
 	* 	Null is default response for calls to this method. Overwritten for component_autocomplete_hi
-	* 	Array of locators calculated with thesaurus parents of current section and used only for search
+	* 	Array of locators calculated with thesaurus parents of current section ascendant. Used only for search.
 	*/
 	public function get_relations_search_value() : ?array {
 
 		// only for component_autocomplete_hi
 			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 			if ($legacy_model!=='component_autocomplete_hi') {
+				debug_log(__METHOD__
+					. " Invalid call received. Only components from legacy model 'component_autocomplete_hi' are allowed to use relation search." . PHP_EOL
+					. 'legacy_model: ' . to_string($legacy_model)
+					, logger::ERROR
+				);
 				return null;
 			}
 
 		// dato
-			$dato = $this->get_dato();
-			if (empty($dato)) {
+			$data = $this->get_data();
+			if (empty($data)) {
 				return null;
 			}
 
 		// relations_search_value
 			$relations_search_value = [];
-			foreach ((array)$dato as $current_locator) {
+			foreach ( $data as $current_locator ) {
 
 				$section_id		= $current_locator->section_id;
 				$section_tipo	= $current_locator->section_tipo;
