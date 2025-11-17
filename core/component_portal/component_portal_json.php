@@ -7,7 +7,6 @@
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
 	$section_tipo	= $this->section_tipo;
-	$lang			= $this->lang;
 	$tipo			= $this->get_tipo();
 	$properties		= $this->get_properties() ?? new stdClass();
 
@@ -68,7 +67,7 @@
 				case 'tm':
 					// data item (list mode result don't include self data, only subdata)
 					// (!) limit note that in list mode, limit is always 1
-					$value	= $this->get_data_paginated($limit);
+					$value	= $this->get_data_paginated( $limit );
 					break;
 
 				case 'search':
