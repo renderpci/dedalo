@@ -608,7 +608,7 @@ class indexation_grid {
 		// $component->target_section		= $target_section;
 
 		// // use the data paginated instead the data, sometimes the data could be huge (thousands)
-		// $ar_locators = $component->get_dato_paginated();
+		// $ar_locators = $component->get_data_paginated();
 
 		return $ar_locators;
 	}//end get_ar_locators
