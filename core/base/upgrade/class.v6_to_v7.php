@@ -564,6 +564,8 @@ class v6_to_v7 {
 													if (!property_exists($column_string, $literal_tipo)) {
 														$column_string->{$literal_tipo} = [];
 													}
+													// set lang
+													$new_literal_obj->lang = $lang;
 
 													$column_string->{$literal_tipo}[] = $new_literal_obj;
 													break;
@@ -593,7 +595,7 @@ class v6_to_v7 {
 													if(is_object($value)){
 														$date_literal_obj = $value;
 															$date_literal_obj->id	= $value_key;
-															$date_literal_obj->lang	= $lang;
+															// $date_literal_obj->lang	= $lang; // UNUSED
 
 														// set component path if not already set
 														if (!property_exists($column_date, $literal_tipo)) {
@@ -622,7 +624,7 @@ class v6_to_v7 {
 													if(is_object($value)){
 														$media_literal_obj = $value;
 															$media_literal_obj->id		= $value_key;
-															$media_literal_obj->lang	= $lang;
+															// $media_literal_obj->lang	= $lang; // UNUSED
 
 														// set component path if not already set
 														if (!property_exists($column_media, $literal_tipo)) {
@@ -680,7 +682,7 @@ class v6_to_v7 {
 													if(is_object($value)){
 														$geo_literal_obj = $value;
 															$geo_literal_obj->id	= $value_key;
-															$geo_literal_obj->lang	= $lang;
+															// $geo_literal_obj->lang	= $lang; // UNUSED
 
 														// set component path if not already set
 														if (!property_exists($column_geo, $literal_tipo)) {
