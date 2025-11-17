@@ -617,6 +617,11 @@ class login extends common {
 
 		$active_account = false; // Default false
 
+		//root case
+		if( (int)$section_id===-1 ){
+			return true;
+		}
+
 		$model = ontology_node::get_model_by_tipo( DEDALO_ACTIVE_ACCOUNT_TIPO, true );
 		$component_radio_button	= component_common::get_instance(
 			$model,
