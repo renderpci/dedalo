@@ -973,9 +973,19 @@ class section_record {
 
 		// copy data
 			$source_data = clone $this->get_data();
+			if (are_all_properties_empty($source_data)) {
+				debug_log(__METHOD__
+					. " Empty data from section record. All properties are empty." . PHP_EOL
+					. ' section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' source_data: ' . json_encode($source_data)
+					, logger::ERROR
+				);
+				return false;
+			}
 
 		// create a new blank section record with same the section_tipo that current
-			$section	= section::get_instance( $section_tipo );
+			$section = section::get_instance( $section_tipo );
 			// set the source_data as new value data of the new section
 			$options = new stdClass();
 				$options->values = $source_data;
@@ -986,90 +996,92 @@ class section_record {
 				return false;
 			}
 
-			// ar_section_info_tipos.
-			// Section info tipos can get they from ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
-				$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
+		// new section_record
+		$new_section_record = section_record::get_instance($section_tipo, $new_section_id);
 
-			// tipos to skip on copy
+		// ar_section_info_tipos.
+		// Section info tipos can get they from ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
+		$ar_section_info_tipos = ontology_node::get_ar_children(DEDALO_SECTION_INFO_SECTION_GROUP);
+
+		// tipos to skip on copy
 		$skip_tipos = $ar_section_info_tipos;
 		// columns to skip
 		$skip_columns = ['data','meta','relation_search'];
 
 		// Get media components in section
-			$ar_media_components = component_media_common::get_media_components();
+		$ar_media_components = component_media_common::get_media_components();
 
-			foreach ($source_data as $column => $column_data) {
+		foreach ($source_data as $column => $column_data) {
 
-				// check if the column has data
-				if($column_data===null){
+			// check if the column has data and exclude some columns
+			if( $column_data===null || in_array($column, $skip_columns) ){
+				continue;
+			}
+
+			// give the component data of the column
+			foreach ($column_data as $component_tipo => $component_data) {
+
+				// tipo filter
+				if (in_array($component_tipo, $skip_tipos)) {
 					continue;
 				}
-				// exclude some columns
-				if( in_array( $column, $skip_columns) ){
-					continue;
+
+				// model
+				$current_model = ontology_node::get_model_by_tipo($component_tipo,true);
+
+				// Create all new components in the duplicated section
+				$component = component_common::get_instance(
+					$current_model,
+					$component_tipo,
+					$new_section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$section_tipo
+				);
+
+				if( $current_model==='component_dataframe' ){
+					// check if the data has main_component_tipo
+					// if data has not ask to the component to give its main_component_tipo.
+					$main_component_tipo = $component_data[0]->main_component_tipo ?? $component->get_main_component_tipo();
+					$caller_dataframe = new stdClass();
+						$caller_dataframe->main_component_tipo	= $main_component_tipo;
+						$caller_dataframe->section_tipo_key		= $component_data[0]->section_tipo_key;
+						$caller_dataframe->section_id_key		= $component_data[0]->section_id_key;
+					$component->set_caller_dataframe( $caller_dataframe );
 				}
 
-				// give the component data of the column
-				foreach ($column_data as $component_tipo => $component_data) {
-
-					// tipo filter
-					if (in_array($component_tipo, $skip_tipos)) {
-						continue;
-					}
-
-					// model
-					$current_model = ontology_node::get_model_by_tipo($component_tipo,true);
-
-					// Create all new components in the duplicated section
-					$component = component_common::get_instance(
+				// Media components
+				// It needs to create a source component to access the existing files and duplicate they
+				if( in_array($current_model, $ar_media_components) ){
+					// Media components duplicates its own media files from the original component
+					$source_media_component = component_common::get_instance(
 						$current_model,
 						$component_tipo,
-						$new_section_id,
+						$this->section_id,
 						'list',
 						DEDALO_DATA_LANG,
 						$section_tipo
 					);
+					// Duplicates its own files
+					$source_media_component->duplicate_component_media_files( $new_section_id );
 
-					if( $current_model==='component_dataframe' ){
-						// check if the data has main_component_tipo
-						// if data has not ask to the component to give its main_component_tipo.
-						$main_component_tipo = $component_data[0]->main_component_tipo ?? $component->get_main_component_tipo();
-						$caller_dataframe = new stdClass();
-							$caller_dataframe->main_component_tipo	= $main_component_tipo;
-							$caller_dataframe->section_tipo_key		= $component_data[0]->section_tipo_key;
-							$caller_dataframe->section_id_key		= $component_data[0]->section_id_key;
-						$component->set_caller_dataframe( $caller_dataframe );
-					}
+					// Media target component regenerate only.
+					// consolidate media files and save it
+					$component->regenerate_component( (object)[
+						'delete_normalized_files' => false
+					]);
 
-					// Media components
-					// It needs to create a source component to access the existing files and duplicate they
-					if( in_array($current_model, $ar_media_components) ){
-						// Media components duplicates its own media files from the original component
-						$source_media_component = component_common::get_instance(
-							$current_model,
-							$component_tipo,
-							$this->section_id,
-							'list',
-							DEDALO_DATA_LANG,
-							$section_tipo
-						);
-						// Duplicates its own files
-						$source_media_component->duplicate_component_media_files( $new_section_id );
+				}else{
 
-						// Media target component regenerate only.
-						// consolidate media files and save it
-						$component->regenerate_component( (object)[
-							'delete_normalized_files' => false
-						]);
-
-					}else{
-
-						// save in a common way
-						$component->set_data( $component_data );
-						$component->save(); // save each lang to force to create a time machine and activity records
-					}
+					// save in a common way
+					$component->set_data( $component_data );
+					$component->save(); // save each lang to force to create a time machine and activity records
 				}
 			}
+		}
+
+		// Save added columns ('counters','relation_search') once
+		$new_section_record->data_instance->save_data();
 
 		return $new_section_id;
 	}//end duplicate
