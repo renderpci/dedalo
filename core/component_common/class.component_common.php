@@ -579,7 +579,7 @@ abstract class component_common extends common {
 				return false;
 			}
 
-		$dato_default = null;
+		$data_default = null;
 
 		// optional defaults for config_defaults file
 			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
@@ -601,7 +601,7 @@ abstract class component_common extends common {
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
 						if (is_object($found)) {
-							$dato_default = $found->value;
+							$data_default = $found->value;
 						}
 					}
 				}else{
@@ -614,18 +614,18 @@ abstract class component_common extends common {
 			}
 
 		// properties try
-			if (empty($dato_default)) {
+			if (empty($data_default)) {
 				$properties = $this->get_properties();
 				if(isset($properties->dato_default)) {
 					// Method fallback. Remember method option like cases as date 'today'
-					$dato_default = isset($properties->dato_default->method)
+					$data_default = isset($properties->dato_default->method)
 						? $this->get_method( $properties->dato_default->method )
 						: $properties->dato_default;
 				}
 			}
 
 		// set default dato (only when own dato is empty)
-			if (!empty($dato_default)) {
+			if (!empty($data_default)) {
 
 				// Data default only can be saved by users than have permissions to save.
 				// Read users can not change component data.
@@ -634,14 +634,14 @@ abstract class component_common extends common {
 					}
 
 				// matrix data : force load matrix data
-					$this->load_component_dato();
+					$this->load_component_data();
 
 				// current dato check
-					$dato = $this->dato;
-					if (empty($dato)) {
+					$data = $this->data;
+					if (empty($data)) {
 
 						// set dato only when own dato is empty
-							$this->set_dato($dato_default);
+							$this->set_data( $data_default );
 
 						// temp section cases do not save anything
 							if ( strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
@@ -652,7 +652,7 @@ abstract class component_common extends common {
 							debug_log(__METHOD__
 								." Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode".PHP_EOL
 								." with default data from 'properties':"
-								. to_string($dato_default)
+								. to_string($data_default)
 								, logger::DEBUG
 							);
 
@@ -662,7 +662,7 @@ abstract class component_common extends common {
 						// dato default is fixed
 							return true;
 					}
-			}//end if (!empty($dato_default))
+			}//end if (!empty($data_default))
 
 
 		// data default is not fixed
