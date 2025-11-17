@@ -416,8 +416,25 @@ class v6_to_v7 {
 									if (!isset($target->{$locator->from_component_tipo})) {
 										$target->{$locator->from_component_tipo} = [];
 									}
+
 									$target->{$locator->from_component_tipo}[] = $locator;
 								}
+
+								//add id to all locators
+								// only in the relation (relation_seach doesn't use it)
+								foreach ($column_relation as $component => $relation_data) {
+									$value_key = 0;
+									foreach ($relation_data as $locator) {
+										$value_key++;
+										$locator->id = $value_key;
+										// save the counter
+										$column_meta->{$locator->from_component_tipo} = [
+											(object)['count' => $value_key]
+										];
+									}
+								}
+
+
 								break;
 
 							case 'components':
