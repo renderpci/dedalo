@@ -9,6 +9,9 @@ require_once dirname(__FILE__, 2) . '/bootstrap.php';
 final class section_record_test extends TestCase {
 
 
+	static $last_section_id;
+
+
 
 	/**
 	* EXECUTION_TIMING
