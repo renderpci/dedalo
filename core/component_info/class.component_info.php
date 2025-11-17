@@ -512,18 +512,18 @@ class component_info extends component_common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Override in other cases.
+	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
 	* @return array|null $list_value
 	*/
 	public function get_list_value() : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		$data = $this->get_data();
+		if (empty($data)) {
 			return null;
 		}
 
-		$list_value = $dato;
+		$list_value = $data;
 
 		return $list_value;
 	}//end get_list_value
