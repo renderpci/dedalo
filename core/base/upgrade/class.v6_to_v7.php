@@ -652,8 +652,11 @@ class v6_to_v7 {
 
 													if(is_object($value)){
 														$iri_literal_obj = $value;
-															$iri_literal_obj->id	= $value_key;
-															$iri_literal_obj->lang	= $lang;
+															//check if the data has id (introduced in v6.8.0)
+															if( empty($value->id) ){
+																$iri_literal_obj->id = $value_key;
+															}
+															$iri_literal_obj->lang = $lang;
 
 														// set component path if not already set
 														if (!property_exists($column_iri, $literal_tipo)) {
