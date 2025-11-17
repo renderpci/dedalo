@@ -1596,21 +1596,21 @@ class component_date extends component_common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Overwrite in other cases.
+	* By default, list value is equivalent to data. Overwrite in other cases.
 	* Note that empty array or string are returned as null
 	* @return array|null $list_value
 	*/
 	public function get_list_value() : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		$data = $this->get_data();
+		if (empty($data)) {
 			return null;
 		}
 
 		$date_mode = $this->get_date_mode();
 
 		$list_value = [];
-		foreach ($dato as $data_item) {
+		foreach ($data as $data_item) {
 			$list_value[] = !empty($data_item)
 				? self::data_item_to_value($data_item, $date_mode, '/')
 				: null;

@@ -317,8 +317,8 @@ class component_select_lang extends component_relation_common {
 	*/
 	public function get_list_value() : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		$data = $this->get_data();
+		if (empty($data)) {
 			return null;
 		}
 
@@ -327,16 +327,16 @@ class component_select_lang extends component_relation_common {
 		foreach ($ar_list_of_values->result as $item) {
 
 			$locator = $item->value;
-			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+			if ( true===locator::in_array_locator($locator, $data, array('section_id','section_tipo')) ) {
 				$list_value[] = $item->label;
 			}
 		}
 
 		// check value is contained into list of values. If not, add as missing lang
-			if (!empty($dato) && empty($list_value) && !empty($ar_list_of_values->result)) {
+			if (!empty($data) && empty($list_value) && !empty($ar_list_of_values->result)) {
 
 				$missing_lang = component_select_lang::get_missing_lang(
-					$dato[0], // object locator
+					$data[0], // object locator
 					$ar_list_of_values->result // array list_of_values
 				);
 				if (!empty($missing_lang)) {

@@ -3147,8 +3147,8 @@ class component_relation_common extends component_common {
 	*/
 	public function get_list_value() : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		$data = $this->get_data();
+		if (empty($data)) {
 			return null;
 		}
 
@@ -3157,7 +3157,7 @@ class component_relation_common extends component_common {
 		foreach ($ar_list_of_values->result as $item) {
 
 			$locator = $item->value;
-			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+			if ( true===locator::in_array_locator($locator, $data, array('section_id','section_tipo')) ) {
 				$list_value[] = $item->label;
 			}
 		}
