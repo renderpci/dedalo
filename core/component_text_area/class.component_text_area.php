@@ -17,15 +17,17 @@ class component_text_area extends component_string_common {
 	* IS_EMPTY
 	* Check if given value is or not empty considering
 	* spaces and '<p></p>' as empty values
-	* @param mixed $value
+	* @param object|null $data_item
 	* @return bool
 	*/
-	public function is_empty(mixed $value) : bool {
+	public function is_empty( ?object $data_item ) : bool {
 
-		$is_empty = parent::is_empty($value);
+		$is_empty = parent::is_empty($data_item);
 		if ($is_empty===true) {
 			return true;
 		}
+
+		$value = $data_item->value;
 
 		// check for specific non empty values that can be considered empty
 		// in this component because are garbage form the text editor (ckeditor/tinyMCE)
