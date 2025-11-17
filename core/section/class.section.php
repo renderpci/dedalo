@@ -3933,39 +3933,50 @@ class section extends common {
 
 
 	/**
-	* GET_MODIFIED_SECTION_TIPOS
-	* @return array $ar_tipos
+	* GET_METADATA_DEFINITION
+	* Returns a resolved object with all needed to set section
+	* @return stdClass $modified_section_tipos
 	*/
-	public static function get_modified_section_tipos() : array {
+	public static function get_metadata_definition() : stdClass {
 
-		$ar_tipos = array(
-			array('name'=>'created_by_user', 'tipo'=>'dd200', 'model'=>'component_select'),
-			array('name'=>'created_date',	 'tipo'=>'dd199', 'model'=>'component_date'),
-			array('name'=>'modified_by_user','tipo'=>DEDALO_SECTION_INFO_MODIFIED_BY_USER, 'model'=>'component_select'), 	// 'dd197'
-			array('name'=>'modified_date',	 'tipo'=>DEDALO_SECTION_INFO_MODIFIED_DATE, 'model'=>'component_date') 			// 'dd201'
-		);
+		$item = new stdClass();
 
-		return $ar_tipos;
-	} //end get_modified_section_tipos
+		$item->created_by_user = new stdClass();
+		$item->created_by_user->tipo = 'dd200';
+		$item->created_by_user->model = 'component_select';
+
+		$item->created_date = new stdClass();
+		$item->created_date->tipo = 'dd199';
+		$item->created_date->model = 'component_date';
+
+		$item->modified_by_user = new stdClass();
+		$item->modified_by_user->tipo = DEDALO_SECTION_INFO_MODIFIED_BY_USER; // dd197
+		$item->modified_by_user->model = 'component_select';
+
+		$item->modified_date = new stdClass();
+		$item->modified_date->tipo = DEDALO_SECTION_INFO_MODIFIED_DATE; // dd201
+		$item->modified_date->model = 'component_date';
+
+
+		return $item;
+	} //end get_metadata_definition
 
 
 
 	/**
-	 * GET_MODIFIED_SECTION_TIPOS_BASIC
-	 Return the list of fixed
-	 * @return array $ar_tipos
-	 */
-	public static function get_modified_section_tipos_basic() : array {
+	* GET_METADATA_DEFINITION_TIPOS
+	* Return the list of fixed
+	* @return array $ar_tipos
+	*/
+	public static function get_metadata_definition_tipos() : array {
 
-		$ar_tipos = [
-			'dd200', // Created by user
-			'dd199', // Creation date
-			DEDALO_SECTION_INFO_MODIFIED_BY_USER,
-			DEDALO_SECTION_INFO_MODIFIED_DATE
-		];
+		$ar_tipos = [];
+		foreach( section::get_metadata_definition() as $key => $value ) {
+			$ar_tipos[] = $value->tipo;
+		}
 
 		return $ar_tipos;
-	}//end get_modified_section_tipos_basic
+	}//end get_metadata_definition_tipos
 
 
 
@@ -3984,7 +3995,7 @@ class section extends common {
 	// 		$mode = $options->mode;
 
 	// 	// Fixed private tipos
-	// 		$modified_section_tipos = section::get_modified_section_tipos();
+	// 		$modified_section_tipos = section::get_metadata_definition();
 	// 			$created_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
 	// 			$created_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
 	// 			$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');

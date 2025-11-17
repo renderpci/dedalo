@@ -620,15 +620,16 @@ class section_record {
 			$mode = $options->mode;
 
 		// Fixed private tipos
-			$modified_section_tipos = section::get_modified_section_tipos();
-				$created_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='created_by_user'; }); 	// array('tipo'=>'dd200', 'model'=>'component_select');
-				$created_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='created_date'; }); 		// array('tipo'=>'dd199', 'model'=>'component_date');
-				$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); 	// array('tipo'=>'dd197', 'model'=>'component_select');
-				$modified_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
+			$metadata_definition = section::get_metadata_definition();
+				$created_by_user	= $metadata_definition->created_by_user; 	// array('tipo'=>'dd200', 'model'=>'component_select');
+				$created_date		= $metadata_definition->created_date; 		// array('tipo'=>'dd199', 'model'=>'component_date');
+				$modified_by_user	= $metadata_definition->modified_by_user; 	// array('tipo'=>'dd197', 'model'=>'component_select');
+				$modified_date		= $metadata_definition->modified_date; 		// array('tipo'=>'dd201', 'model'=>'component_date');
 
 		// Current user locator
 			$user_id		= logged_user_id();
 			$user_locator	= new locator();
+				$user_locator->id = 1; //fixed id
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
 				$user_locator->set_section_id($user_id); // logged user
 				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
@@ -637,7 +638,7 @@ class section_record {
 			$dd_date	= component_date::get_date_now();
 			$date_now 	= new stdClass();
 				$date_now->start	= $dd_date;
-				$date_now->id		= 1;
+				$date_now->id		= 1; //fixed id
 				$date_now->lang		= DEDALO_DATA_NOLAN;
 
 		switch ($mode) {
@@ -645,17 +646,17 @@ class section_record {
 			case 'new_record': // new record
 
 				// Created by user
-					$user_locator->set_from_component_tipo($created_by_user['tipo']);
+					$user_locator->set_from_component_tipo( $created_by_user->tipo );
 					$this->data_instance->set_key_data(
 						'relation',
-						$created_by_user['tipo'],
+						$created_by_user->tipo,
 						[$user_locator]
 					);
 
 				// Creation date
 					$this->data_instance->set_key_data(
 						'date',
-						$created_date['tipo'],
+						$created_date->tipo,
 						[$date_now]
 					);
 
@@ -663,11 +664,11 @@ class section_record {
 					$this->data_instance->save_key_data(
 						[(object)[
 							'column' =>'relation',
-							'key' => $created_by_user['tipo']
+							'key' => $created_by_user->tipo
 						],
 						(object)[
 							'column' =>'date',
-							'key' => $created_by_user['tipo']
+							'key' => $created_date->tipo
 						]]
 					);
 
@@ -677,17 +678,17 @@ class section_record {
 			case 'update_record': // update_record (record already exists)
 
 				// Modified by user
-					$user_locator->set_from_component_tipo($modified_by_user['tipo']);
+					$user_locator->set_from_component_tipo($modified_by_user->tipo);
 					$this->data_instance->set_key_data(
 						'relation',
-						$modified_by_user['tipo'],
+						$modified_by_user->tipo,
 						[$user_locator]
 					);
 
 				// Modification date
 					$this->data_instance->set_key_data(
 						'date',
-						$modified_date['tipo'],
+						$modified_date->tipo,
 						[$date_now]
 					);
 
@@ -695,11 +696,11 @@ class section_record {
 					$this->data_instance->save_key_data(
 						[(object)[
 							'column' =>'relation',
-							'key' => $modified_by_user['tipo']
+							'key' => $modified_by_user->tipo
 						],
 						(object)[
 							'column' =>'date',
-							'key' => $modified_by_user['tipo']
+							'key' => $modified_date->tipo
 						]]
 					);
 

@@ -302,9 +302,7 @@ abstract class component_common extends common {
 							// trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");
 							#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
 						}else{
-							$ar_modified_section_tipos = array_map(function($item){
-								return $item['tipo'];
-							}, section::get_modified_section_tipos());
+							$ar_modified_section_tipos = section::get_metadata_definition_tipos();
 							// add publication info
 								$ar_modified_section_tipos[] = diffusion::$publication_first_tipo;
 								$ar_modified_section_tipos[] = diffusion::$publication_last_tipo;
@@ -3311,7 +3309,7 @@ abstract class component_common extends common {
 
 				$this->permissions = 2; // Allow all users to search in thesaurus
 
-			}elseif ( true===in_array($this->tipo, section::get_modified_section_tipos_basic()) ) {
+			}elseif ( true===in_array($this->tipo, section::get_metadata_definition_tipos()) ) {
 
 				$this->permissions = 2; // Allow all users to search with section info components
 
