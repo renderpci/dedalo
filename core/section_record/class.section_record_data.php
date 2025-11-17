@@ -48,10 +48,10 @@ class section_record_data {
 		// object|null relation_search. Section data value from DB column 'relation_search'
 		// Stores relation optional data useful for search across parents like toponymy.
 		'relation_search',
-		// object|null counters. Section data value from DB column 'counters'
-		// Stores string components counters used to get unique identifiers for the values as {"id":1,"lang":"lg-nolan","type":"dd750","value":"Hello"}
+		// object|null meta. Section data value from DB column 'meta'
+		// Stores string components meta used to get unique identifiers for the values as {"id":1,"lang":"lg-nolan","type":"dd750","value":"Hello"}
 		// The format of the counter data is {"dd750":1,"dd201":1,..}
-		'counters'
+		'meta'
 	];
 
 	// Column map
