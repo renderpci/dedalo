@@ -2148,7 +2148,7 @@ class component_text_area extends component_string_common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Override in other cases.
+	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
 	* A param '$options' is added only to allow future granular control of the output
 	* @param object|null $options = null
@@ -2164,9 +2164,9 @@ class component_text_area extends component_string_common {
 				$this->lang	= $original_lang;
 			}
 
-		// dato from component
-			$dato = $this->get_dato();
-			if (empty($dato)) {
+		// data from component
+			$data = $this->get_data_lang();
+			if (empty($data)) {
 				return null;
 			}
 
@@ -2175,33 +2175,36 @@ class component_text_area extends component_string_common {
 
 		// list_value
 			$list_value = [];
-			foreach ($dato as $current_value) {
+			foreach ($data as $item) {
 
 				// empty case
-					if ($this->is_empty($current_value)) {
+					if ($this->is_empty($item)) {
 						$list_value[] = '';
 						continue;
 					}
 
+				// value
+					$current_value = $item->value;
 				// convert the value tags as [svg:...] to html tags as <img src="file.svg".../>
 				// (!) Note that some components are using images in view_mini and they
 				// need always render the images. E.g. 'numisdata71' in section Types (numisdata3)
-					$html_value = TR::add_tag_img_on_the_fly($current_value);
+					$html_value = TR::add_tag_img_on_the_fly( $current_value );
 
 				// truncate the html to max_chars, ensure that the html is correct and tags will close in correct way
-					$list_value[] = !empty($html_value)
+					$truncate_value = !empty($html_value)
 						? common::truncate_html(
 							$max_chars,
 							$html_value,
 							true // isUtf8
 						  )
 						: '';
-			}
 
-		// restore lang ?
-			// if ($this->lang!==$original_lang) {
-			// 	$this->lang = $original_lang;
-			// }
+				// set the new value item with truncate value
+					$new_item = clone($item);
+					$new_item->value = $truncate_value;
+
+					$list_value[] = $new_item;
+			}
 
 
 		return $list_value;
