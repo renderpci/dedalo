@@ -4139,19 +4139,19 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_DATO_PAGINATED
+	* GET_DATA_PAGINATED
 	* It slices the component array of locators to allocate pagination options
 	* @param int|null $custom_limit = null
-	* @return array $dato_paginated
+	* @return array|null $data_paginated
 	*/
-	public function get_dato_paginated( ?int $custom_limit=null ) : array {
+	public function get_data_paginated( ?int $custom_limit=null ) : ?array {
 
 		// dato full
-			$dato = $this->get_dato();
+			$data = $this->get_data();
 
 		// empty case
-			if (empty($dato)) {
-				return $dato;
+			if (empty($data)) {
+				return $data;
 			}
 
 		// limit
@@ -4166,17 +4166,17 @@ abstract class component_common extends common {
 			$array_length = $limit>0 ? $limit : null;
 
 		// slice
-			$dato_paginated = array_slice($dato, $offset, $array_length);
+			$data_paginated = array_slice($data, $offset, $array_length);
 
 		// pagination keys. Set an offset relative key to each element of paginated array
-			foreach ($dato_paginated as $key => $value) {
+			foreach ($data_paginated as $key => $value) {
 				$paginated_key = $key + $offset;
 				$value->paginated_key = $paginated_key;
 			}
 
 
-		return $dato_paginated;
-	}//end get_dato_paginated
+		return $data_paginated;
+	}//end get_data_paginated
 
 
 

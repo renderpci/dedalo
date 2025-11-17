@@ -67,7 +67,7 @@
 		// get the data into DDBB
 			$data_value = $this->get_data_lang();
 
-			$value		= $this->get_dato_paginated();
+			$value		= $this->get_data_paginated();
 			$section_id	= $this->get_section_id();
 			$limit		= $this->pagination->limit;
 			$offset		= $this->pagination->offset;
