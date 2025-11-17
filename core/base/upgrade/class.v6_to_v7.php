@@ -407,6 +407,10 @@ class v6_to_v7 {
 										$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' locator: '$locator_string'";
 										continue;
 									}
+									// remove the project in activity, not used anymore.
+									if( $locator->from_component_tipo==='dd550' ){
+										continue;
+									}
 
 									$target = ($datos_key === 'relations_search') ? $column_relation_search : $column_relation;
 									if (!isset($target->{$locator->from_component_tipo})) {
