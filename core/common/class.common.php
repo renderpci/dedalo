@@ -3633,6 +3633,8 @@ abstract class common {
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
 								$ar_related = (array)RecordObj_dd::get_ar_children($tipo);
+							}elseif($model==='component_filter'){
+								$ar_related = [ DEDALO_SECTION_PROJECTS_TIPO, DEDALO_PROJECTS_NAME_TIPO ];
 							}else{
 								// components
 								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados(
@@ -3711,6 +3713,8 @@ abstract class common {
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
 								$ar_related = (array)RecordObj_dd::get_ar_children($tipo);
+							}elseif($model==='component_filter'){
+								$ar_related = [ DEDALO_SECTION_PROJECTS_TIPO, DEDALO_PROJECTS_NAME_TIPO ];
 							}else{
 								// portal cases
 								// case section list is defined
@@ -4667,7 +4671,7 @@ abstract class common {
 					);
 
 				// target section tipo add
-					if ($model==='component_portal' || $model==='component_dataframe') {
+					if ($model==='component_portal' || $model==='component_dataframe' || $model==='component_filter') {
 						$target_section_tipo = $element->get_ar_target_section_tipo();
 						$ddo->target_section_tipo = $target_section_tipo;
 					}
