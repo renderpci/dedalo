@@ -4003,49 +4003,49 @@ abstract class component_common extends common {
 
 			case 'update':
 				// safe format
-				if (!is_array($dato)) {
-					$dato = [$dato];
+				if (!is_array($data)) {
+					$data = [$data];
 				}
-				// check if the key exist in the $dato if the key exist change it directly, else create all positions with null value for coherence
-				if( isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato) ) {
-					$dato[$changed_data->key] = $changed_data->value;
+				// check if the key exist in the $data if the key exist change it directly, else create all positions with null value for coherence
+				if( isset($data[$changed_data->key]) || array_key_exists($changed_data->key, $data) ) {
+					$data[$changed_data->key] = $changed_data->value;
 				}else{
 					// fill gaps in array
 					for ($i=0; $i <= $changed_data->key; $i++) {
-						if(!isset($dato[$i])){
-							$dato[$i] = null;
+						if(!isset($data[$i])){
+							$data[$i] = null;
 						}
 					}
-					$dato[$changed_data->key] = $changed_data->value;
+					$data[$changed_data->key] = $changed_data->value;
 				}
 
-				// set the id of the comonent_iri
+				// set the id
 				// check all data languages to get the if of the array key
 				// if the other data lang has not id, set new one from counter in the component
 				// if the other data lang has an id, set the new data with it.
-				if( get_called_class() === 'component_iri'){
-					// get the id of the key in other languages
-					$id = $this->get_id_from_key( $changed_data->key );
-					// if other lang has an id set it
-					if( !empty($id) ){
-						// Check if the data is an object because as insert action could be null data
-						if( !is_object($changed_data->value) ){
-							// create new object
-							$changed_data->value = new dd_iri();
-								$changed_data->value->set_iri( null );
-								$changed_data->value->set_id( $id );
-						}else{
-							// set the id to the data
-							$changed_data->value->id = $id;
-						}
-					}
-				}
 
-				$this->set_dato($dato);
+					// // get the id of the key in other languages
+					// $id = $this->get_id_from_key( $changed_data->key );
+					// // if other lang has an id set it
+					// if( !empty($id) ){
+					// 	// Check if the data is an object because as insert action could be null data
+					// 	if( !is_object($changed_data->value) ){
+					// 		// create new object
+					// 		$changed_data->value = new dd_iri();
+					// 			$changed_data->value->set_iri( null );
+					// 			$changed_data->value->set_id( $id );
+					// 	}else{
+					// 		// set the id to the data
+					// 		$changed_data->value->id = $id;
+					// 	}
+					// }
+
+
+				$this->set_data_lang( $data, $lang );
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
-					: $dato;
+					: $data;
 				break;
 
 			// remove a item value from the component data array
