@@ -839,7 +839,7 @@ abstract class component_common extends common {
 			$merged_data = array_merge($filtered_data, $safe_data_lang);
 
 		 // Set the final data (null if empty)
-			$final_data = $this->is_empty($merged_data)
+			$final_data = $this->is_empty_data($merged_data)
 				? null
 				: $merged_data;
 
