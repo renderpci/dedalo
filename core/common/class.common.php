@@ -4671,7 +4671,7 @@ abstract class common {
 					);
 
 				// target section tipo add
-					if ($model==='component_portal' || $model==='component_dataframe') {
+					if ($model==='component_portal' || $model==='component_dataframe' || $model==='component_filter') {
 						$target_section_tipo = $element->get_ar_target_section_tipo();
 						$ddo->target_section_tipo = $target_section_tipo;
 					}
