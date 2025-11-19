@@ -464,13 +464,9 @@ class component_input_text extends component_common {
 					$component_tipo	= $path_end->component_tipo;
 					$translatable = RecordObj_dd::get_translatable($component_tipo);
 
-					// $lang = (isset($query_object->lang) && $query_object->lang!=='all')
-					// 	? $query_object->lang
-					// 	: 'all';
-
-					$lang = $translatable===true
-						? DEDALO_DATA_LANG
-						: DEDALO_DATA_NOLAN;
+					$lang = (isset($query_object->lang) && $query_object->lang!=='all')
+						? $query_object->lang
+						: 'all';
 
 					$lang_query_not_null = component_common::resolve_query_object_lang_behavior( (object)[
 						'query_object'	=> $query_object,
@@ -509,16 +505,23 @@ class component_input_text extends component_common {
 						? $query_object->lang
 						: 'all';
 
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+
+					$translatable = RecordObj_dd::get_translatable($component_tipo);
+
 					$lang_query_objects_null = component_common::resolve_query_object_lang_behavior( (object)[
 						'query_object'	=> $query_object,
 						'operator'		=> 'IS NOT NULL',
 						'lang'			=> $lang,
+						'translatable'	=> $translatable
 					]);
 					$lang_query_objects_empty = component_common::resolve_query_object_lang_behavior( (object)[
 						'query_object'	=> $query_object,
 						'operator'		=> '!=',
 						'q_parsed'		=> '\'[]\'',
 						'lang'			=> $lang,
+						'translatable'	=> $translatable
 					]);
 
 					$lang_query_objects = array_merge($lang_query_objects_null, $lang_query_objects_empty);
