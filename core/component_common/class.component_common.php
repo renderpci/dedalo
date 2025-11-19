@@ -3960,7 +3960,7 @@ abstract class component_common extends common {
 	*/
 	public function update_data_value(object $changed_data) : bool {
 
-		$dato				= $this->get_dato() ?? [];
+		$data				= $this->get_data_lang() ?? [];
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
 
@@ -3991,14 +3991,14 @@ abstract class component_common extends common {
 					}
 				}
 
-				$dato[] = $changed_data->value;
+				$data[] = $changed_data->value;
 
-				$this->set_dato($dato);
+				$this->set_data($data);
 
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
-					: $dato;
+					: $data;
 				break;
 
 			case 'update':
@@ -4057,18 +4057,18 @@ abstract class component_common extends common {
 				// set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = ( get_called_class()==='component_relation_related' )
 					? $this->get_dato_with_references()
-					: $dato;
+					: $data;
 
 				// Fix locator used to delete dataframe
 				// Set the locator with the data of the component.
 				// When the component is a relation, pick the correct locator
-				$locator = $dato[$key] ?? null;
+				$locator = $data[$key] ?? null;
 
 				// Delete dato
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
 						$value = [];
-						$this->set_dato($value);
+						$this->set_data($value);
 						break;
 
 					case ($changed_data->value===null && ($with_lang_versions===true && $lang===DEDALO_DATA_NOLAN)):
@@ -4086,11 +4086,11 @@ abstract class component_common extends common {
 
 							// change lang and get dato
 							$this->set_lang($current_lang);
-							$dato = $this->get_dato();
+							$data = $this->get_dato();
 
 							// remove null key and set dato updated
-							array_splice($dato, $changed_data->key, 1);
-							$this->set_dato($dato);
+							array_splice($data, $changed_data->key, 1);
+							$this->set_data($data);
 
 							// send to section for fix data (avoid save each lang)
 							$section->save_component_dato($this, 'direct', $save_to_database);
@@ -4101,8 +4101,8 @@ abstract class component_common extends common {
 						break;
 
 					default:
-						array_splice($dato, $key, 1);
-						$this->set_dato($dato);
+						array_splice($data, $key, 1);
+						$this->set_data($data);
 						break;
 				}
 
@@ -4149,7 +4149,7 @@ abstract class component_common extends common {
 			// set the whole data sent by the client without check the array key, bulk insert or update
 			case 'set_data':
 
-				$this->set_dato($changed_data->value);
+				$this->set_data($changed_data->value);
 				// set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
@@ -4166,27 +4166,27 @@ abstract class component_common extends common {
 					$target_key	= $changed_data->target_key;
 
 				// current DB array of value
-					$dato = $this->get_dato();
+					$data = $this->get_dato();
 
 				// debug
 					// debug_log(__METHOD__
 					// 	.' +++++++++++++++++++++++++++++++++  sort_data:'
 					// 	.PHP_EOL.'key value:'. to_string($source_key)
 					// 	.PHP_EOL.'given value:'. to_string($value)
-					// 	.PHP_EOL.'DB value (dato[source_key]):'. to_string($dato[$source_key])
-					// 	.PHP_EOL.'dato value:'. to_string($dato)
+					// 	.PHP_EOL.'DB value (dato[source_key]):'. to_string($data[$source_key])
+					// 	.PHP_EOL.'dato value:'. to_string($data)
 					// 	, logger::ERROR
 					// );
 
 				// check selected value to detect mistakes
-					if (!isset($dato[$source_key])) {
+					if (!isset($data[$source_key])) {
 						debug_log(__METHOD__
 							.' Error on sort_data. Source value key ['.$source_key.'] do not exists! '
 							, logger::ERROR
 						);
 						return false;
 					}elseif(!locator::compare_locators(
-							$dato[$source_key],
+							$data[$source_key],
 							$value,
 							['section_id','section_tipo','from_component_tipo','tag_id'])
 						) {
@@ -4194,8 +4194,8 @@ abstract class component_common extends common {
 							.' Error on sort_data. Source value if different from DB value:' .PHP_EOL
 							.' key value: '. to_string($source_key) .PHP_EOL
 							.' given value: '. to_string($value) .PHP_EOL
-							.' DB value (dato[source_key]): '. to_string($dato[$source_key]) .PHP_EOL
-							.' dato value: '. to_string($dato)
+							.' DB value (dato[source_key]): '. to_string($data[$source_key]) .PHP_EOL
+							.' dato value: '. to_string($data)
 							, logger::ERROR
 						);
 						return false;
@@ -4204,7 +4204,7 @@ abstract class component_common extends common {
 				// remove old key value and add value at $target_key position
 					$new_dato = [];
 
-					foreach ($dato as $key => $current_value) {
+					foreach ($data as $key => $current_value) {
 						if ($key===$source_key) {
 							continue;
 						}
@@ -4222,7 +4222,7 @@ abstract class component_common extends common {
 					}
 
 				// new dato set
-					$this->set_dato($new_dato);
+					$this->set_data($new_dato);
 				break;
 
 			// used by component_portal to add created target section to current component with project values inheritance
