@@ -139,7 +139,10 @@ final class component_common_test extends TestCase {
 				}
 				$this->assertTrue(
 					$expected_component_lang===$component_lang ,
-					"expected same lang:  $expected_component_lang => $component_lang"
+					"expected same lang:  $expected_component_lang => $component_lang" . PHP_EOL
+						.'expected_component_lang: ' . to_string($expected_component_lang) . PHP_EOL
+						.'component_lang: ' . to_string($component_lang) . PHP_EOL
+						.'model: ' . $element->model
 				);
 
 			// check main vars
