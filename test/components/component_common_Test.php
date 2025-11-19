@@ -130,7 +130,7 @@ final class component_common_test extends TestCase {
 				$expected_component_lang = (RecordObj_dd::get_translatable($element->tipo)===true)
 					? DEDALO_DATA_LANG
 					: DEDALO_DATA_NOLAN;
-				if ($component3->with_lang_versions===true) {
+				if ($component3->with_lang_versions===true && $element->model!=='component_iri') {
 					$expected_component_lang = DEDALO_DATA_LANG; // component_iri case
 				}
 				$component_lang = $component3->get_lang();
@@ -142,7 +142,10 @@ final class component_common_test extends TestCase {
 					"expected same lang:  $expected_component_lang => $component_lang" . PHP_EOL
 						.'expected_component_lang: ' . to_string($expected_component_lang) . PHP_EOL
 						.'component_lang: ' . to_string($component_lang) . PHP_EOL
-						.'model: ' . $element->model
+						.'model: ' . $element->model . PHP_EOL
+						.'translatable: ' . to_string(RecordObj_dd::get_translatable($element->tipo)) . PHP_EOL
+						.'with_lang_versions: ' . to_string( $component3->with_lang_versions ) . PHP_EOL
+						.'$element->lang: ' . to_string( $element->lang )
 				);
 
 			// check main vars

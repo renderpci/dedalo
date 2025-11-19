@@ -134,7 +134,7 @@ function get_elements() : array {
 			'section_tipo'	=> $section_tipo,
 			'section_id'	=> $section_id,
 			'mode'			=> $mode,
-			'lang'			=> DEDALO_DATA_NOLAN,
+			'lang'			=> $lang,
 			'new_value'		=> 'random_iri_data'
 		],
 		(object)[
