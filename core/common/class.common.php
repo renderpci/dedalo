@@ -3633,6 +3633,8 @@ abstract class common {
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
 								$ar_related = (array)RecordObj_dd::get_ar_children($tipo);
+							}elseif($model==='component_filter'){
+								$ar_related = [ DEDALO_SECTION_PROJECTS_TIPO, DEDALO_PROJECTS_NAME_TIPO ];
 							}else{
 								// components
 								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados(
@@ -3711,6 +3713,8 @@ abstract class common {
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
 								$ar_related = (array)RecordObj_dd::get_ar_children($tipo);
+							}elseif($model==='component_filter'){
+								$ar_related = [ DEDALO_SECTION_PROJECTS_TIPO, DEDALO_PROJECTS_NAME_TIPO ];
 							}else{
 								// portal cases
 								// case section list is defined
