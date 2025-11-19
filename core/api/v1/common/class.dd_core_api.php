@@ -2611,6 +2611,20 @@ final class dd_core_api {
 		$lang_path		= '/common/js/lang/' . $lang . '.js';
 		$lang_labels	= file_get_contents(DEDALO_CORE_PATH . $lang_path);
 
+		//if the file doesn't exists, try to regenerate the file
+		if ( $lang_labels===false ){
+			$result = backup::write_lang_file( $lang );
+			if( $result !== true){
+				debug_log(__METHOD__
+					.' Lang labels file is not created!!! get_labels_lang for: '. $lang . PHP_EOL
+					.' lang_path: ' . $lang_path . PHP_EOL
+					.' lang_labels: ' . to_string($lang_labels)
+					, logger::ERROR
+				);
+
+			}
+			$lang_labels = file_get_contents(DEDALO_CORE_PATH . $lang_path);
+		}
 		// file not found case
 		if ($lang_labels===false || empty($lang_labels)) {
 			debug_log(__METHOD__
