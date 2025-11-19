@@ -100,13 +100,25 @@ final class search_related_test extends TestCase {
 	*/
 	public function test_get_referenced_locators() {
 
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
 		$filter_locator = (object)[
-			'section_tipo'	=> 'test3',
-			'section_id'	=> '1'
+			'section_tipo'	=> 'rsc1242',
+			'section_id'	=> '51'
 		];
 
+		$filter_locators	= [$filter_locator];
+		$limit				= null;
+		$offset				= null;
+		$count				= false;
+		$target_section		= ['all'];
+
 		$result = search_related::get_referenced_locators(
-			[$filter_locator]
+			$filter_locators,
+			$limit,
+			$offset,
+			$count,
+			$target_section
 		);
 
 		$this->assertTrue(
