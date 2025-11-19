@@ -4086,7 +4086,7 @@ abstract class component_common extends common {
 
 							// change lang and get dato
 							$this->set_lang($current_lang);
-							$data = $this->get_dato();
+							$dato = $this->get_dato() ?? [];
 
 							// remove null key and set dato updated
 							array_splice($data, $changed_data->key, 1);
