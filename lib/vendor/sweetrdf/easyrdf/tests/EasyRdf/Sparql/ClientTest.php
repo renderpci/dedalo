@@ -470,7 +470,9 @@ class ClientTest extends TestCase
      * Test for issue https://github.com/easyrdf/easyrdf/issues/305
      *
      * Sparql\Client calls $client->setHeaders with a name-value pair, regardless of
-     * whether $client is of type EasyRdf\Http\Client or Zend\Http\Client.
+     * whether $client is of type EasyRdf\Http\Client or Laminas\Http\Client.
+     *
+     * Note: Old test was for Zend\Http\Client
      */
     public function testIssue305EasyRdfHttpClient()
     {
@@ -506,7 +508,9 @@ class ClientTest extends TestCase
      * Test for issue https://github.com/easyrdf/easyrdf/issues/305
      *
      * Sparql\Client calls $client->setHeaders with a name-value pair, regardless of
-     * whether $client is of type EasyRdf\Http\Client or Zend\Http\Client.
+     * whether $client is of type EasyRdf\Http\Client or Laminas\Http\Client.
+     *
+     * Note: Old test was for Zend\Http\Client
      */
     public function testIssue305ZendHttpClient()
     {
@@ -519,7 +523,7 @@ class ClientTest extends TestCase
         $response->method('isSuccessful')->willReturn(true);
 
         // client
-        $easyRdfHttpClient = $this->getMockBuilder(\Zend\Http\Client::class)->disableOriginalConstructor()->getMock();
+        $easyRdfHttpClient = $this->getMockBuilder(\Laminas\Http\Client::class)->disableOriginalConstructor()->getMock();
         $easyRdfHttpClient->method('send')->willReturn($response);
         $easyRdfHttpClient
             ->expects($this->exactly(1))

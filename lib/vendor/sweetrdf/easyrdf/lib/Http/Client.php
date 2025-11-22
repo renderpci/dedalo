@@ -43,8 +43,7 @@ use EasyRdf\ParsedUri;
 
 /**
  * This class is an implemetation of an HTTP client in PHP.
- * It supports basic HTTP 1.0 and 1.1 requests. For a more complete
- * implementation try Zend_Http_Client.
+ * It supports basic HTTP 1.0 and 1.1 requests.
  *
  * @copyright  Copyright (c) 2009-2020 Nicholas J Humfrey
  * @license    https://www.opensource.org/licenses/bsd-license.php

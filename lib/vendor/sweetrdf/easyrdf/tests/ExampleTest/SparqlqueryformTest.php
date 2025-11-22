@@ -72,8 +72,8 @@ class SparqlqueryformTest extends TestCase
                     '} ORDER BY ?label LIMIT 5',
             ]
         );
-        $this->assertStringContainsString('>http://dbpedia.org/resource/10th_century</a>', $output);
-        $this->assertStringContainsString('>&quot;10th century&quot;@en</span>', $output);
+        $this->assertStringContainsString('>http://dbpedia.org/resource/3G_countries</a>', $output);
+        $this->assertStringContainsString('>&quot;3G countries&quot;@en</span>', $output);
     }
 
     public function testDbpediaCountriesText()
@@ -92,7 +92,7 @@ class SparqlqueryformTest extends TestCase
             ]
         );
 
-        $this->assertStringContainsString('| http://dbpedia.org/resource/10th_century', $output);
-        $this->assertStringContainsString('| &quot;10th century&quot;@en', $output);
+        $this->assertStringContainsString('| http://dbpedia.org/resource/3G_countries', $output);
+        $this->assertStringContainsString('| &quot;3G countries&quot;@en', $output);
     }
 }
