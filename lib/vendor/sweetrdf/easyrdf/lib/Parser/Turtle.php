@@ -1195,11 +1195,15 @@ class Turtle extends Ntriples
         return "\x20" == $c || "\x09" == $c || "\x0A" == $c || "\x0D" == $c;
     }
 
-    /** @ignore */
+    /**
+     * @param non-empty-string $c
+     *
+     * @ignore
+     */
     public static function isPrefixStartChar($c)
     {
         // ord - Convert the first byte of a string to a value between 0 and 255
-        $o = \ord($c);
+        $o = \ord($c[0]);
 
         return
             $o >= 0x41 && $o <= 0x5A     // A-Z
@@ -1220,11 +1224,15 @@ class Turtle extends Ntriples
             || self::isPrefixStartChar($c);
     }
 
-    /** @ignore */
+    /**
+     * @param non-empty-string $c
+     *
+     * @ignore
+     */
     public static function isNameChar($c)
     {
         // ord - Convert the first byte of a string to a value between 0 and 255
-        $o = \ord($c);
+        $o = \ord($c[0]);
 
         return
             self::isNameStartChar($c)

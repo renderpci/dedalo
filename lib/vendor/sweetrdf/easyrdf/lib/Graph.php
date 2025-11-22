@@ -323,19 +323,11 @@ class Graph
                 }
             }
         } else {
-            $acceptHeader = Format::formatAcceptHeader([
-                'application/ld+json' => 1.0,
-                'application/rdf+xml' => 0.9,
-                'text/turtle' => 0.8,
-                'application/n-quads' => 0.7,
-                'application/n-triples' => 0.7,
-            ]);
-
             // Send a list of all the formats we can parse
             if ($client instanceof Client) {
-                $client->setHeaders('Accept', $acceptHeader);
+                $client->setHeaders('Accept', Format::getHttpAcceptHeader());
             } else {
-                $client->setHeaders(['Accept' => $acceptHeader]);
+                $client->setHeaders(['Accept' => Format::getHttpAcceptHeader()]);
             }
         }
 
