@@ -493,7 +493,7 @@ class component_relation_children extends component_relation_common {
 	* @param int|string $section_id
 	* @param string $section_tipo
 	* @param ?string $component_tipo
-	* @return
+	* @return array $all_children
 	*/
 	public static function get_children_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null) : array {
 
