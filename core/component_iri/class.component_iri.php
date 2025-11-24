@@ -837,6 +837,11 @@ class component_iri extends component_common {
 						// set the new label, if exist give me the section_id, if not create new one and give me its section_id
 							$target_section_id = component_iri::save_label_dataframe_from_string( $iri_data->title );
 
+						// double check target_section_id for null values
+							if (empty($target_section_id)) {
+								continue;
+							}
+
 						// set the new dataframe
 							$dataframe_options = (object)[
 								'section_tipo'			=> $section_tipo,
