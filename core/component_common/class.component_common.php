@@ -3671,65 +3671,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_SELECT_QUERY
-	* @param object $select_object
-	* @return object $select_object
-	*/
-	public static function get_select_query( object $select_object ) : object {
-
-		// ref
-			// [path] => Array
-			// 	(
-			// 		[0] => stdClass Object
-			// 			(
-			// 				[name] => Título
-			// 				[model] => component_input_text
-			// 				[section_tipo] => numisdata224
-			// 				[component_tipo] => numisdata231
-			// 			)
-			// 	)
-			// [lang] => lg-spa
-			# $selector = isset($select_object->selector) ? $select_object->selector : 'valor_list';
-
-		// component_path check. If not exists, its not parsed yet
-			if(!isset($select_object->component_path)) {
-
-				$end_path		= end($select_object->path);
-				$component_tipo	= $end_path->component_tipo;
-
-				// selector
-					$selector = isset($end_path->selector)
-						? $end_path->selector
-						: 'dato';
-
-				// component_path
-					if (isset($end_path->lang) && $end_path->lang==='all') {
-
-						$select_object->component_path = ['components',$component_tipo,$selector];
-
-					}else{
-
-						$lang = isset($end_path->lang)
-							? $end_path->lang
-							: (ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
-
-						// Set default
-						$select_object->component_path = ['components',$component_tipo,$selector,$lang];
-					}
-			}
-
-		// type check
-			if(!isset($select_object->type)) {
-				$select_object->type = 'string';
-			}
-
-
-		return $select_object;
-	}//end get_select_query
-
-
-
-	/**
 	* SEARCH_OPERATORS_INFO
 	* Return valid operators for search in current component
 	* @return array $ar_operators
