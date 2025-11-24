@@ -1054,7 +1054,7 @@ Example: search the next 10 interviews [oh1](https://dedalo.dev/ontology/oh1) wi
 
 ### full_count
 
-Defines if the search will count the total records found. When full_count is enable, SQO will create 2 different SQL, first one with the search and second one to count the records, both SQL will be processed in parallel. This parameter is used to get the total records found, as this SQL could take lot of time and server resources, usually is active in the first query only, the following requests set this parameter to false and the total previously calculated, this action remove the execution of get the total at every requests.
+Defines if the search will count the total records found. When `full_count` is enable, SQO will create 2 different SQL, first one with the search and second one to count the records, both SQL will be processed in parallel. This parameter is used to get the total records found, as this SQL could take lot of time and server resources, usually is active in the first query only, the following requests set this parameter to false and the total previously calculated, this action remove the execution of get the total at every requests.
 
 Definition: `bool` (true || false) get the total records founded and fix the number as total **optional**, ex: true
 
