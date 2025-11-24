@@ -6,6 +6,19 @@ $global_start_time = hrtime(true);
 
 
 
+// Performance monitoring initialization
+// Load configuration and monitor class before any heavy processing
+if (file_exists(__DIR__ . '/performance/performance_config.php')) {
+	include_once __DIR__ . '/performance/performance_config.php';
+}
+if (file_exists(__DIR__ . '/performance/performance_monitor.php')) {
+	include_once __DIR__ . '/performance/performance_monitor.php';
+	$perf_monitor = performance_monitor::get_instance();
+	$perf_monitor->start($global_start_time);
+}
+// Cache performance monitor active state to avoid repeated checks
+$perf_active = isset($perf_monitor) && $perf_monitor->is_active();
+
 // Turn off PHP output compression
 	// ini_set('zlib.output_compression', false);
 
@@ -132,6 +145,11 @@ $global_start_time = hrtime(true);
 		);
 		exit( 0 );
 	}
+// Performance checkpoint: request parsed
+if ($perf_active) {
+	$perf_monitor->checkpoint('request_parsed');
+	$perf_monitor->set_request_data($rqo);
+}
 
 
 
@@ -180,18 +198,21 @@ $global_start_time = hrtime(true);
 // dd_dd_manager
 	try {
 
-		$dd_manager	= new dd_manager();
-		$response	= $dd_manager->manage_request( $rqo );
+	// Performance checkpoint: before manager
+	if ($perf_active) {
+		$perf_monitor->checkpoint('before_dd_manager');
+	}
 
 		// close current session and set as read only
 			if ($session_closed===false) {
 				session_write_close();
 			}
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				// server_errors. bool true on debug_log write log with LOGGER_LEVEL as 'ERROR' or 'CRITICAL'
-				$response->dedalo_last_error = $_ENV['DEDALO_LAST_ERROR'] ?? null;
+	// Performance checkpoint: after manager
+	if ($perf_active) {
+		$perf_monitor->checkpoint('after_dd_manager');
+		$perf_monitor->set_response_data($response);
+	}
 
 				// real_execution_time add
 				$response->debug						= $response->debug ?? new stdClass();
@@ -262,6 +283,10 @@ $global_start_time = hrtime(true);
 	if (DEVELOPMENT_SERVER) {
 		header('X-Processing-Time: ' . (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']));
 	}
+// Performance checkpoint: before output
+if ($perf_active) {
+	$perf_monitor->checkpoint('before_output');
+}
 
 
 
@@ -270,3 +295,8 @@ $global_start_time = hrtime(true);
 		? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
 		: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	echo $output_string;
+// Performance monitoring finalization
+if ($perf_active) {
+	$perf_monitor->checkpoint('after_output');
+	$perf_monitor->finish();
+}
