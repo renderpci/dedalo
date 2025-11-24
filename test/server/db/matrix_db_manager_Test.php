@@ -15,42 +15,45 @@ final class matrix_db_manager_test extends TestCase {
 
 
 	/**
-	* EXECUTION_TIMING
-	* @return void
-	*/
-	protected function execution_timing( string $action, callable $callback, int $estimated_time, int $from=1, int $n=10000 ) : void {
+	 * EXECUTION_TIMING
+	 * @return void
+	 */
+	protected function execution_timing(string $action, callable $callback, int $estimated_time, int $from = 1, int $n = 10000): void
+	{
 
-		$start_time=start_time();
+		$start_time = start_time();
 
 		$to = $from + $n;
-		for ($i=$from; $i < $to; $i++) {
+		for ($i = $from; $i < $to; $i++) {
 			$callback($i);
 			self::$last_section_id = $i;
 		}
-		// Check the time consuming. Expected value is around 2100 ms
+		// Check the time consuming.
 		$total_time = exec_time_unit($start_time);
 		$max_time = $estimated_time * 1.6;
-			debug_log(__METHOD__
-				. " [". strtoupper($action) ."] total_time ms: " . $total_time . " - average ms $total_time/$n = " . $total_time/$n
-				, logger::WARNING
+		debug_log(
+			__METHOD__
+				. " (" . strtoupper($action) . ") total_time ms: " . $total_time . " - average ms: $total_time/$n = " . $total_time / $n,
+			logger::WARNING
 		);
 		$eq = $total_time < $max_time;
 		$this->assertTrue(
 			$eq,
 			"massive ($action) expected execution time rows bellow $max_time ms" . PHP_EOL
-				.'total_time ms: ' . $total_time . PHP_EOL
-				.'estimated_time ms: ' . $estimated_time
+				. 'total_time ms: ' . $total_time . PHP_EOL
+				. 'estimated_time ms: ' . $estimated_time
 		);
 	}//end execution_timing
 
 
 
 	/**
-	* GET_COUNTER_VALUE
-	* @param string $section_tipo
-	* @return int $count_value
-	*/
-	protected function get_counter_value( string $section_tipo ) : int {
+	 * GET_COUNTER_VALUE
+	 * @param string $section_tipo
+	 * @return int $count_value
+	 */
+	protected function get_counter_value(string $section_tipo): int
+	{
 
 		// counter
 		$sql = 'SELECT * FROM matrix_counter WHERE tipo = $1';
@@ -65,10 +68,11 @@ final class matrix_db_manager_test extends TestCase {
 
 
 	/**
-	* TEST_vars
-	* @return void
-	*/
-	public function test_vars(): void {
+	 * TEST_vars
+	 * @return void
+	 */
+	public function test_vars(): void
+	{
 
 		// matrix_tables
 		$matrix_tables = matrix_db_manager::$matrix_tables;
@@ -100,7 +104,7 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'matrix_tables: ' . to_string($matrix_tables)
+				. 'matrix_tables: ' . to_string($matrix_tables)
 		);
 
 		// matrix_columns
@@ -124,7 +128,7 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'matrix_columns: ' . to_string($matrix_columns)
+				. 'matrix_columns: ' . to_string($matrix_columns)
 		);
 
 		// matrix_json_columns
@@ -146,7 +150,7 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'matrix_json_columns: ' . to_string($matrix_json_columns)
+				. 'matrix_json_columns: ' . to_string($matrix_json_columns)
 		);
 
 		// matrix_int_columns
@@ -158,17 +162,18 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'matrix_int_columns: ' . to_string($matrix_int_columns)
+				. 'matrix_int_columns: ' . to_string($matrix_int_columns)
 		);
 	}//end test_vars
 
 
 
 	/**
-	* TEST_create
-	* @return void
-	*/
-	public function test_create(): void {
+	 * TEST_create
+	 * @return void
+	 */
+	public function test_create(): void
+	{
 
 		// sample working tested:
 		// WITH updated_counter AS (
@@ -184,9 +189,9 @@ final class matrix_db_manager_test extends TestCase {
 
 		$table = 'matrix_test';
 		$section_tipo = 'test65';
-		$values = []; // default values is an empty array
+		$values = null; // default values is NULL
 
-		$start_time=start_time();
+		$start_time = start_time();
 		$result = matrix_db_manager::create(
 			$table,
 			$section_tipo,
@@ -195,12 +200,12 @@ final class matrix_db_manager_test extends TestCase {
 
 		// Check the time consuming. Expected value is around 15 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
 		$eq = $total_time < 25;
 		$this->assertTrue(
 			$eq,
 			'expected execution time (1) bellow 25 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Check result type
@@ -208,8 +213,8 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true (integer)' . PHP_EOL
-				.'result type: ' . gettype($result) . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result type: ' . gettype($result) . PHP_EOL
+				. 'result: ' . to_string($result)
 		);
 
 		$section_id = $result;
@@ -229,12 +234,12 @@ final class matrix_db_manager_test extends TestCase {
 
 		// Check the time consuming. Expected value is around 1.5 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
 		$eq = $total_time < 3;
 		$this->assertTrue(
 			$eq,
 			'expected execution time (2) bellow 3 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Check result type
@@ -242,8 +247,8 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true (integer)' . PHP_EOL
-				.'result type: ' . gettype($result) . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result type: ' . gettype($result) . PHP_EOL
+				. 'result: ' . to_string($result)
 		);
 
 		// Check result type
@@ -251,14 +256,14 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true ' . PHP_EOL
-				.'result: ' . to_string($result) . PHP_EOL
-				.'section_id (previous result): ' . to_string($section_id)
+				. 'result: ' . to_string($result) . PHP_EOL
+				. 'section_id (previous result): ' . to_string($section_id)
 		);
 
 		// massive creation
 		$this->execution_timing(
 			'create',
-			function($i) use($table, $section_tipo) {
+			function ($i) use ($table, $section_tipo) {
 				return matrix_db_manager::create(
 					$table,
 					$section_tipo
@@ -273,10 +278,11 @@ final class matrix_db_manager_test extends TestCase {
 
 
 	/**
-	* TEST_read
-	* @return void
-	*/
-	public function test_read(): void {
+	 * TEST_read
+	 * @return void
+	 */
+	public function test_read(): void
+	{
 
 		$table			= 'matrix_test';
 		$section_tipo	= 'test65';
@@ -285,7 +291,7 @@ final class matrix_db_manager_test extends TestCase {
 			$section_tipo
 		);
 
-		$start_time=start_time();
+		$start_time = start_time();
 		$result = matrix_db_manager::read(
 			$table,
 			$section_tipo,
@@ -294,12 +300,12 @@ final class matrix_db_manager_test extends TestCase {
 
 		// Check the time consuming. Expected value is around 2 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
 		$eq = $total_time < 5;
 		$this->assertTrue(
 			$eq,
 			'expected execution time (1): bellow 5 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Check result type
@@ -453,7 +459,7 @@ final class matrix_db_manager_test extends TestCase {
 			'meta' => json_decode('{"dd199":[{"count":1}],"dd201":[{"count":1}],"dd271":[{"count":1}],"rsc19":[{"count":16}],"rsc21":[{"count":1}],"dd1223":[{"count":1}]}')
 		];
 
-		$start_time=start_time();
+		$start_time = start_time();
 		$result = matrix_db_manager::update(
 			$table,
 			$section_tipo,
@@ -463,12 +469,12 @@ final class matrix_db_manager_test extends TestCase {
 
 		// Check the time consuming. Expected value is around 5 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
 		$eq = $total_time < 8;
 		$this->assertTrue(
 			$eq,
 			'expected execution time (1): bellow 8 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Read
@@ -507,15 +513,15 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true equal' . PHP_EOL
-				.'result : ' . json_encode($result) . PHP_EOL
-				.'value : ' . json_encode(true)
+				. 'result : ' . json_encode($result) . PHP_EOL
+				. 'value : ' . json_encode(true)
 		);
 
 		// massive update
 		$counter_value = $this->get_counter_value($section_tipo);
 		$this->execution_timing(
 			'update',
-			function($i) use($table, $section_tipo, $values) {
+			function ($i) use ($table, $section_tipo, $values) {
 				return matrix_db_manager::update(
 					$table,
 					$section_tipo,
@@ -532,11 +538,13 @@ final class matrix_db_manager_test extends TestCase {
 
 
 	/**
-	* TEST_update_by_key
-	* @return void
-	*/
-	public function test_update_by_key(): void {
+	 * TEST_update_by_key
+	 * @return void
+	 */
+	public function test_update_by_key(): void
+	{
 
+		// common vars
 		$table			= 'matrix_test';
 		$section_tipo	= 'test65';
 		$section_id		= matrix_db_manager::create(
@@ -715,10 +723,11 @@ final class matrix_db_manager_test extends TestCase {
 
 
 	/**
-	* TEST_delete
-	* @return void
-	*/
-	public function test_delete(): void {
+	 * TEST_delete
+	 * @return void
+	 */
+	public function test_delete(): void
+	{
 
 		$table			= 'matrix_test';
 		$section_tipo	= 'test65';
@@ -727,7 +736,7 @@ final class matrix_db_manager_test extends TestCase {
 			$section_tipo
 		);
 
-		$start_time=start_time();
+		$start_time = start_time();
 		$result = matrix_db_manager::delete(
 			$table,
 			$section_tipo,
@@ -736,12 +745,12 @@ final class matrix_db_manager_test extends TestCase {
 
 		// Check the time consuming. Expected value is around 0.4 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
 		$eq = $total_time < 5;
 		$this->assertTrue(
 			$eq,
 			'expected execution time  delete (1): bellow 5 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Check result type
@@ -749,8 +758,8 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true (boolean)' . PHP_EOL
-				.'result type: ' . gettype($result) . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result type: ' . gettype($result) . PHP_EOL
+				. 'result: ' . to_string($result)
 		);
 
 		// Check result
@@ -758,7 +767,7 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true ' . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result: ' . to_string($result)
 		);
 
 		// read and check all is written OK
@@ -772,8 +781,8 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true ' . PHP_EOL
-				.'result: ' . json_encode($db_value) . PHP_EOL
-				.'value: ' . json_encode([])
+				. 'result: ' . json_encode($db_value) . PHP_EOL
+				. 'value: ' . json_encode([])
 		);
 
 		// Delete non existing record
@@ -787,14 +796,14 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true ' . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result: ' . to_string($result)
 		);
 
 		// massive delete
 		$counter_value = $this->get_counter_value($section_tipo);
 		$this->execution_timing(
 			'delete',
-			function($i) use($table, $section_tipo) {
+			function ($i) use ($table, $section_tipo) {
 				return matrix_db_manager::delete(
 					$table,
 					$section_tipo,
