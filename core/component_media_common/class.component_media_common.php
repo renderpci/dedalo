@@ -1140,8 +1140,8 @@ class component_media_common extends component_common {
 	*/
 	public function get_list_value() : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		$data = $this->get_data();
+		if (empty($data)) {
 			return null;
 		}
 
@@ -1156,7 +1156,7 @@ class component_media_common extends component_common {
 			];
 
 		$list_value = [];
-		foreach ($dato as $item) {
+		foreach ($data as $item) {
 
 			$files_info = $item->files_info ?? null;
 			if (!empty($files_info)) {

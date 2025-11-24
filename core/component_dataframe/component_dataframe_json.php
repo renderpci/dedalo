@@ -66,7 +66,7 @@
 				case 'tm':
 					// data item (list mode result don't include self data, only subdata)
 					// (!) limit note that in list mode, limit is always 1
-					$value	= $this->get_dato_paginated($limit);
+					$value	= $this->get_data_paginated($limit);
 					break;
 
 				case 'search':
@@ -75,7 +75,7 @@
 
 				case 'edit':
 				default:
-					$value	= $this->get_dato_paginated();
+					$value	= $this->get_data_paginated();
 					break;
 			}//end switch ($mode)
 

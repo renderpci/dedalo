@@ -1351,45 +1351,6 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_SELECT_QUERY
-	* @return object
-	*/
-	public static function get_select_query( object $select_object ) : object {
-		/*
-		[path] => Array
-			(
-				[0] => stdClass Object
-					(
-						[name] => Título
-						[model] => component_input_text
-						[section_tipo] => numisdata224
-						[component_tipo] => numisdata231
-					)
-
-			)
-
-		[lang] => lg-spa
-		[component_path] => valor_list
-		*/
-
-		# component path
-		if(!isset($select_object->component_path)) {
-
-			# Set default
-			$select_object->component_path = ['relations'];
-		}
-
-		if(!isset($select_object->type)) {
-			$select_object->type = 'jsonb';
-		}
-
-
-		return $select_object;
-	}//end get_select_query
-
-
-
-	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* Parses given SQO to use it into the SQL query
 	* @param object $query_object
@@ -3147,8 +3108,8 @@ class component_relation_common extends component_common {
 	*/
 	public function get_list_value() : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		$data = $this->get_data();
+		if (empty($data)) {
 			return null;
 		}
 
@@ -3157,7 +3118,7 @@ class component_relation_common extends component_common {
 		foreach ($ar_list_of_values->result as $item) {
 
 			$locator = $item->value;
-			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+			if ( true===locator::in_array_locator($locator, $data, array('section_id','section_tipo')) ) {
 				$list_value[] = $item->label;
 			}
 		}

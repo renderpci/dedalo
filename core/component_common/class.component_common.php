@@ -579,7 +579,7 @@ abstract class component_common extends common {
 				return false;
 			}
 
-		$dato_default = null;
+		$data_default = null;
 
 		// optional defaults for config_defaults file
 			if (defined('CONFIG_DEFAULT_FILE_PATH')) {
@@ -601,7 +601,7 @@ abstract class component_common extends common {
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
 						if (is_object($found)) {
-							$dato_default = $found->value;
+							$data_default = $found->value;
 						}
 					}
 				}else{
@@ -614,18 +614,18 @@ abstract class component_common extends common {
 			}
 
 		// properties try
-			if (empty($dato_default)) {
+			if (empty($data_default)) {
 				$properties = $this->get_properties();
 				if(isset($properties->dato_default)) {
 					// Method fallback. Remember method option like cases as date 'today'
-					$dato_default = isset($properties->dato_default->method)
+					$data_default = isset($properties->dato_default->method)
 						? $this->get_method( $properties->dato_default->method )
 						: $properties->dato_default;
 				}
 			}
 
 		// set default dato (only when own dato is empty)
-			if (!empty($dato_default)) {
+			if (!empty($data_default)) {
 
 				// Data default only can be saved by users than have permissions to save.
 				// Read users can not change component data.
@@ -634,14 +634,14 @@ abstract class component_common extends common {
 					}
 
 				// matrix data : force load matrix data
-					$this->load_component_dato();
+					$this->load_component_data();
 
 				// current dato check
-					$dato = $this->dato;
-					if (empty($dato)) {
+					$data = $this->data;
+					if (empty($data)) {
 
 						// set dato only when own dato is empty
-							$this->set_dato($dato_default);
+							$this->set_data( $data_default );
 
 						// temp section cases do not save anything
 							if ( strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
@@ -652,7 +652,7 @@ abstract class component_common extends common {
 							debug_log(__METHOD__
 								." Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode".PHP_EOL
 								." with default data from 'properties':"
-								. to_string($dato_default)
+								. to_string($data_default)
 								, logger::DEBUG
 							);
 
@@ -662,7 +662,7 @@ abstract class component_common extends common {
 						// dato default is fixed
 							return true;
 					}
-			}//end if (!empty($dato_default))
+			}//end if (!empty($data_default))
 
 
 		// data default is not fixed
@@ -839,7 +839,7 @@ abstract class component_common extends common {
 			$merged_data = array_merge($filtered_data, $safe_data_lang);
 
 		 // Set the final data (null if empty)
-			$final_data = $this->is_empty($merged_data)
+			$final_data = $this->is_empty_data($merged_data)
 				? null
 				: $merged_data;
 
@@ -1113,6 +1113,144 @@ abstract class component_common extends common {
 
 		return $counter;
 	}//end get_counter
+
+
+
+	/**
+	* GET_ID_FROM_KEY
+	* Check every data language of the component and get the id of the data key in the array
+	* If the key of the data has not id return null to set new id of the counter.
+	* @param int $key
+	* @param array $skip_langs use to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
+	* @return int|null $id
+	*/
+	public function get_id_from_key( int $key, array $skip_langs=[] ) : ?int {
+
+		$all_data = $this->get_data();
+		if (empty($all_data)) {
+			return null;
+		}
+
+		foreach ((array)$all_data as $lang => $value) {
+
+			// Skip the language if it's in the exclusion list.
+			// check if the data is a language to skip
+			// when the component check if the id has been used by other languages
+			// it needs to remove its own language data to avoid false positives.
+			// Explain: removing data will remove its dataframe.
+			// But other languages can use it (same id = same dataframe)
+			// In those cases the data to be deleted needs to be removed of the check.
+			// and return only if the id exist in other languages.
+			if( in_array( $lang, $skip_langs) ){
+				continue;
+			}
+
+			// Ensure $value is a structured array and the specific $key exists in it.
+			if (!is_array($value) || !array_key_exists($key, $value)) {
+				continue;
+			}
+
+			$valid_data = $value[$key];
+
+			// The 'id' must be contained within an object with an 'id' property.
+			if (is_object($valid_data) && property_exists($valid_data, 'id')) {
+
+				$id = $valid_data->id ?? null;
+
+				// Strict check: We expect a non-empty, non-zero id that can be an integer.
+				// is_numeric covers integer strings and actual integers.
+				if (is_numeric($id) && (int)$id > 0) {
+					// Return the id as an integer.
+					return (int)$id;
+				}
+
+				// If an object with an 'id' property was found, but the id value itself is
+				// invalid (null, 0, or non-numeric), log the error.
+				$log_message = (null !== $id)
+					? ' iri data with invalid id value: ' . var_export($id, true)
+					: ' iri data without id';
+				// Log detailed information about the missing/invalid id.
+				debug_log(__METHOD__
+					. $log_message . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' value: ' . to_string($value)
+					, logger::ERROR
+				);
+			}
+		}
+
+
+		// If the loop completes without finding a valid ID in any language, return null.
+		return null;
+	}//end get_id_from_key
+
+
+
+	/**
+	* GET_KEY_FROM_ID
+	* Check if the given ID exists in the specified data language.
+	* @param int $id
+	* @param string $lang Used to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
+	* @return
+	*/
+	public function get_key_from_id( int $id, string $lang ) : ?int {
+
+		// All langs array data from component
+		$all_data = $this->get_data();
+		if ( empty($all_data) || !is_object($all_data) ) {
+			return null;
+		}
+
+		// Check if the requested language exists
+		if ( !isset($all_data->{$lang}) || !is_array($all_data->{$lang}) ) {
+			return null;
+		}
+
+		$lang_data = $all_data->{$lang};
+
+		foreach ($lang_data as $key => $current_value) {
+
+			// // Skip non-objects. Validate current_value is an object with id property
+			if (!is_object($current_value)) {
+				debug_log(__METHOD__
+					. ' iri malformed data (non-object)' . PHP_EOL
+					. ' section_id: '. $this->section_id . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' tipo: '. $this->tipo . PHP_EOL
+					. ' lang: '. $lang . PHP_EOL
+					. ' current_value: ' .to_string($current_value)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$valid_id = $current_value->id ?? null;
+
+			// Check the current value of the 'id' property and notify if it is malformed.
+			if( empty($valid_id) ){
+				debug_log(__METHOD__
+					. " iri malformed data (missing id)" . PHP_EOL
+					. " section_id: ". $this->section_id . PHP_EOL
+					. " section_tipo: ". $this->section_tipo . PHP_EOL
+					. " tipo: ". $this->tipo . PHP_EOL
+					. to_string()
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Compares id. If is the same, result the array key value.
+			if($current_value->id === $id){
+				return (int)$key;
+			}
+		}
+
+
+		return null;
+	}//end get_key_from_id
 
 
 
@@ -3533,65 +3671,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_SELECT_QUERY
-	* @param object $select_object
-	* @return object $select_object
-	*/
-	public static function get_select_query( object $select_object ) : object {
-
-		// ref
-			// [path] => Array
-			// 	(
-			// 		[0] => stdClass Object
-			// 			(
-			// 				[name] => Título
-			// 				[model] => component_input_text
-			// 				[section_tipo] => numisdata224
-			// 				[component_tipo] => numisdata231
-			// 			)
-			// 	)
-			// [lang] => lg-spa
-			# $selector = isset($select_object->selector) ? $select_object->selector : 'valor_list';
-
-		// component_path check. If not exists, its not parsed yet
-			if(!isset($select_object->component_path)) {
-
-				$end_path		= end($select_object->path);
-				$component_tipo	= $end_path->component_tipo;
-
-				// selector
-					$selector = isset($end_path->selector)
-						? $end_path->selector
-						: 'dato';
-
-				// component_path
-					if (isset($end_path->lang) && $end_path->lang==='all') {
-
-						$select_object->component_path = ['components',$component_tipo,$selector];
-
-					}else{
-
-						$lang = isset($end_path->lang)
-							? $end_path->lang
-							: (ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
-
-						// Set default
-						$select_object->component_path = ['components',$component_tipo,$selector,$lang];
-					}
-			}
-
-		// type check
-			if(!isset($select_object->type)) {
-				$select_object->type = 'string';
-			}
-
-
-		return $select_object;
-	}//end get_select_query
-
-
-
-	/**
 	* SEARCH_OPERATORS_INFO
 	* Return valid operators for search in current component
 	* @return array $ar_operators
@@ -3822,7 +3901,7 @@ abstract class component_common extends common {
 	*/
 	public function update_data_value(object $changed_data) : bool {
 
-		$dato				= $this->get_dato() ?? [];
+		$data				= $this->get_data_lang() ?? [];
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
 
@@ -3853,61 +3932,61 @@ abstract class component_common extends common {
 					}
 				}
 
-				$dato[] = $changed_data->value;
+				$data[] = $changed_data->value;
 
-				$this->set_dato($dato);
+				$this->set_data($data);
 
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
-					: $dato;
+					: $data;
 				break;
 
 			case 'update':
 				// safe format
-				if (!is_array($dato)) {
-					$dato = [$dato];
+				if (!is_array($data)) {
+					$data = [$data];
 				}
-				// check if the key exist in the $dato if the key exist change it directly, else create all positions with null value for coherence
-				if( isset($dato[$changed_data->key]) || array_key_exists($changed_data->key, $dato) ) {
-					$dato[$changed_data->key] = $changed_data->value;
+				// check if the key exist in the $data if the key exist change it directly, else create all positions with null value for coherence
+				if( isset($data[$changed_data->key]) || array_key_exists($changed_data->key, $data) ) {
+					$data[$changed_data->key] = $changed_data->value;
 				}else{
 					// fill gaps in array
 					for ($i=0; $i <= $changed_data->key; $i++) {
-						if(!isset($dato[$i])){
-							$dato[$i] = null;
+						if(!isset($data[$i])){
+							$data[$i] = null;
 						}
 					}
-					$dato[$changed_data->key] = $changed_data->value;
+					$data[$changed_data->key] = $changed_data->value;
 				}
 
-				// set the id of the comonent_iri
+				// set the id
 				// check all data languages to get the if of the array key
 				// if the other data lang has not id, set new one from counter in the component
 				// if the other data lang has an id, set the new data with it.
-				if( get_called_class() === 'component_iri'){
-					// get the id of the key in other languages
-					$id = $this->get_id_from_key( $changed_data->key );
-					// if other lang has an id set it
-					if( !empty($id) ){
-						// Check if the data is an object because as insert action could be null data
-						if( !is_object($changed_data->value) ){
-							// create new object
-							$changed_data->value = new dd_iri();
-								$changed_data->value->set_iri( null );
-								$changed_data->value->set_id( $id );
-						}else{
-							// set the id to the data
-							$changed_data->value->id = $id;
-						}
-					}
-				}
 
-				$this->set_dato($dato);
+					// // get the id of the key in other languages
+					// $id = $this->get_id_from_key( $changed_data->key );
+					// // if other lang has an id set it
+					// if( !empty($id) ){
+					// 	// Check if the data is an object because as insert action could be null data
+					// 	if( !is_object($changed_data->value) ){
+					// 		// create new object
+					// 		$changed_data->value = new dd_iri();
+					// 			$changed_data->value->set_iri( null );
+					// 			$changed_data->value->set_id( $id );
+					// 	}else{
+					// 		// set the id to the data
+					// 		$changed_data->value->id = $id;
+					// 	}
+					// }
+
+
+				$this->set_data_lang( $data, $lang );
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
-					: $dato;
+					: $data;
 				break;
 
 			// remove a item value from the component data array
@@ -3919,18 +3998,18 @@ abstract class component_common extends common {
 				// set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = ( get_called_class()==='component_relation_related' )
 					? $this->get_dato_with_references()
-					: $dato;
+					: $data;
 
 				// Fix locator used to delete dataframe
 				// Set the locator with the data of the component.
 				// When the component is a relation, pick the correct locator
-				$locator = $dato[$key] ?? null;
+				$locator = $data[$key] ?? null;
 
 				// Delete dato
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
 						$value = [];
-						$this->set_dato($value);
+						$this->set_data($value);
 						break;
 
 					case ($changed_data->value===null && ($with_lang_versions===true && $lang===DEDALO_DATA_NOLAN)):
@@ -3948,11 +4027,11 @@ abstract class component_common extends common {
 
 							// change lang and get dato
 							$this->set_lang($current_lang);
-							$dato = $this->get_dato();
+							$dato = $this->get_dato() ?? [];
 
 							// remove null key and set dato updated
-							array_splice($dato, $changed_data->key, 1);
-							$this->set_dato($dato);
+							array_splice($data, $changed_data->key, 1);
+							$this->set_data($data);
 
 							// send to section for fix data (avoid save each lang)
 							$section->save_component_dato($this, 'direct', $save_to_database);
@@ -3963,8 +4042,8 @@ abstract class component_common extends common {
 						break;
 
 					default:
-						array_splice($dato, $key, 1);
-						$this->set_dato($dato);
+						array_splice($data, $key, 1);
+						$this->set_data($data);
 						break;
 				}
 
@@ -4011,7 +4090,7 @@ abstract class component_common extends common {
 			// set the whole data sent by the client without check the array key, bulk insert or update
 			case 'set_data':
 
-				$this->set_dato($changed_data->value);
+				$this->set_data($changed_data->value);
 				// set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
@@ -4028,27 +4107,27 @@ abstract class component_common extends common {
 					$target_key	= $changed_data->target_key;
 
 				// current DB array of value
-					$dato = $this->get_dato();
+					$data = $this->get_dato();
 
 				// debug
 					// debug_log(__METHOD__
 					// 	.' +++++++++++++++++++++++++++++++++  sort_data:'
 					// 	.PHP_EOL.'key value:'. to_string($source_key)
 					// 	.PHP_EOL.'given value:'. to_string($value)
-					// 	.PHP_EOL.'DB value (dato[source_key]):'. to_string($dato[$source_key])
-					// 	.PHP_EOL.'dato value:'. to_string($dato)
+					// 	.PHP_EOL.'DB value (dato[source_key]):'. to_string($data[$source_key])
+					// 	.PHP_EOL.'dato value:'. to_string($data)
 					// 	, logger::ERROR
 					// );
 
 				// check selected value to detect mistakes
-					if (!isset($dato[$source_key])) {
+					if (!isset($data[$source_key])) {
 						debug_log(__METHOD__
 							.' Error on sort_data. Source value key ['.$source_key.'] do not exists! '
 							, logger::ERROR
 						);
 						return false;
 					}elseif(!locator::compare_locators(
-							$dato[$source_key],
+							$data[$source_key],
 							$value,
 							['section_id','section_tipo','from_component_tipo','tag_id'])
 						) {
@@ -4056,8 +4135,8 @@ abstract class component_common extends common {
 							.' Error on sort_data. Source value if different from DB value:' .PHP_EOL
 							.' key value: '. to_string($source_key) .PHP_EOL
 							.' given value: '. to_string($value) .PHP_EOL
-							.' DB value (dato[source_key]): '. to_string($dato[$source_key]) .PHP_EOL
-							.' dato value: '. to_string($dato)
+							.' DB value (dato[source_key]): '. to_string($data[$source_key]) .PHP_EOL
+							.' dato value: '. to_string($data)
 							, logger::ERROR
 						);
 						return false;
@@ -4066,7 +4145,7 @@ abstract class component_common extends common {
 				// remove old key value and add value at $target_key position
 					$new_dato = [];
 
-					foreach ($dato as $key => $current_value) {
+					foreach ($data as $key => $current_value) {
 						if ($key===$source_key) {
 							continue;
 						}
@@ -4084,7 +4163,7 @@ abstract class component_common extends common {
 					}
 
 				// new dato set
-					$this->set_dato($new_dato);
+					$this->set_data($new_dato);
 				break;
 
 			// used by component_portal to add created target section to current component with project values inheritance
@@ -4139,19 +4218,19 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_DATO_PAGINATED
+	* GET_DATA_PAGINATED
 	* It slices the component array of locators to allocate pagination options
 	* @param int|null $custom_limit = null
-	* @return array $dato_paginated
+	* @return array|null $data_paginated
 	*/
-	public function get_dato_paginated( ?int $custom_limit=null ) : array {
+	public function get_data_paginated( ?int $custom_limit=null ) : ?array {
 
 		// dato full
-			$dato = $this->get_dato();
+			$data = $this->get_data();
 
 		// empty case
-			if (empty($dato)) {
-				return $dato;
+			if (empty($data)) {
+				return $data;
 			}
 
 		// limit
@@ -4166,17 +4245,17 @@ abstract class component_common extends common {
 			$array_length = $limit>0 ? $limit : null;
 
 		// slice
-			$dato_paginated = array_slice($dato, $offset, $array_length);
+			$data_paginated = array_slice($data, $offset, $array_length);
 
 		// pagination keys. Set an offset relative key to each element of paginated array
-			foreach ($dato_paginated as $key => $value) {
+			foreach ($data_paginated as $key => $value) {
 				$paginated_key = $key + $offset;
 				$value->paginated_key = $paginated_key;
 			}
 
 
-		return $dato_paginated;
-	}//end get_dato_paginated
+		return $data_paginated;
+	}//end get_data_paginated
 
 
 
@@ -4310,18 +4389,18 @@ abstract class component_common extends common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Override in other cases.
+	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
 	* @return array|null $list_value
 	*/
 	public function get_list_value() : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		$data = $this->get_data_lang();
+		if (empty($data)) {
 			return null;
 		}
 
-		$list_value = $dato;
+		$list_value = $data;
 
 
 		return $list_value;

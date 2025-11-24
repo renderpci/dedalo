@@ -947,4 +947,107 @@ class matrix_db_manager {
 
 
 
+	/**
+	* EXEC_SEARCH
+	* Perform a SQL query in DB.
+	* @param string $sql_query
+	* 	Full SQL query like "SELECT id FROM table WHERE section_id = $1"
+	* @param array $params = []
+	* 	Search parameters for pg_execute
+	* @return PgSql\Result|false $result
+	*/
+	public static function exec_search( string $sql_query, array $params=[] ) : PgSql\Result|false {
+
+		// debug
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+
+			// metrics
+			metrics::$exec_search_total_calls++;
+
+			// query additional info
+				if (isset(debug_backtrace()[1]['function'])) {
+					$sql_prepend = '-- exec_search : ' ."\n";
+
+					foreach ([1,2,3,4,5,6,7,8] as $key) {
+						if (isset(debug_backtrace()[$key]['function'])) {
+							$sql_prepend .= '--  ['.$key.'] ' . debug_backtrace()[$key]['function'] . "\n";
+						}
+					}
+
+					$sql_query = $sql_prepend . trim($sql_query);
+				}
+		}
+
+		// connection to DDBB
+		$conn = DBi::_getConnection() ?? false;
+		if ($conn===false) {
+			debug_log(__METHOD__
+				." Error. DDBB connection failed "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// exec With prepared statement
+		$stmt_name = md5($sql_query);
+		if (!isset(DBi::$prepared_statements[$stmt_name])) {
+			$statement = pg_prepare($conn, $stmtname, $sql_query);
+			if ($statement===false) {
+				debug_log(__METHOD__
+					. " Error when pg_prepare statement for sql_query: "
+					. to_string($sql_query) . PHP_EOL
+					. pg_last_error($conn)
+					, logger::ERROR
+				);
+				return false;
+			}
+			// Set the statement as existing.
+			DBi::$prepared_statements[$stmt_name] = true;
+		}
+
+		// default sync case
+		$result = pg_execute($conn, $stmt_name, $params);
+
+		// check result
+		if($result===false) {
+			debug_log(__METHOD__
+				." Error Processing exec_SEARCH Request. :". PHP_EOL
+				.' pg_last_error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			if(SHOW_DEBUG===true) {
+				dump(pg_last_error($conn)," error on sql_query: ".to_string( PHP_EOL.$sql_query.PHP_EOL ));
+			}
+			return false;
+		}
+
+		// debug
+		if(SHOW_DEBUG===true) {
+			$total_time_ms = exec_time_unit($start_time, 'ms');
+			if($total_time_ms>SLOW_QUERY_MS) {
+				debug_log(__METHOD__
+					. " SEARCH_SLOW_QUERY [$total_time_ms ms]: ". PHP_EOL
+					. $sql_query
+					, logger::WARNING
+				);
+			}
+
+			// metrics
+			metrics::$exec_search_total_time += $total_time_ms;
+
+			// debug_log(__METHOD__
+			// 	.' exec_search: ' . PHP_EOL
+			// 	.' ' . to_string($sql_query) . PHP_EOL
+			// 	.' Search time ms: ' . $total_time_ms
+			// 	, logger::WARNING
+			// );
+		}
+
+
+		return $result; // PgSql\Result or false
+	}//end exec_search
+
+
+
 }//end class matrix_db_manager
