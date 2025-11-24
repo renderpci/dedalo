@@ -1435,7 +1435,7 @@ final class dd_core_api {
 				case strpos($model, 'tool_')===0:
 
 					// tool section_tipo and section_id can be resolved from model if is necessary
-						// if (empty($section_id) || empty($section_id)) {
+						// if (empty($section_id)) {
 						// 	// resolve
 						// 	$registered_tools = tool_common::get_all_registered_tools();
 						// 	$tool_found = array_find($registered_tools, function($el) use($model){
@@ -2518,8 +2518,7 @@ final class dd_core_api {
 			// recovery mode
 			$obj->recovery_mode					= $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
 			//
-			$obj->data_version			= get_current_data_version();
-
+			$obj->data_version					= get_current_data_version();
 
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
@@ -2637,7 +2636,7 @@ final class dd_core_api {
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function get_ontology_info( object $rqo ) : object|false {
+	public static function get_ontology_info( object $rqo ) : object {
 
 		// tipo
 		$tipo = $rqo->tipo;
