@@ -295,86 +295,21 @@ class search {
 
 
 	/**
-	* SEARCH
-	* Exec a SQL query search against the database
-	* @return object $response
-	* {
-	* 	ar_records : [], // array
-	* 	debug : '' string
-	* }
+	* FETCH_ROW
+	* Loop
+	* @param \PgSql\Result|false $result
+	* @return object|false
 	*/
-	public function search() : object {
+	public function fetch_row( \PgSql\Result|false $result ) : object|false {
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				$start_time=start_time();
+		if (!$result) {
+			$this->logError("Invalid result resource");
+			return false;
+		}
 
-				// metrics
-				metrics::$search_total_calls++;
-			}
+		return pg_fetch_object($result);
+	}
 
-		// parse SQO. Converts JSON search_query_object to SQL query string
-			$sql_query = $this->parse_search_query_object( $full_count=false );
-			if(SHOW_DEBUG===true) {
-				$parsed_time = round(start_time()-$start_time,3);
-				$this->sql_query = $sql_query;
-			}
-
-		// check valid matrix table
-			if (get_called_class()==='search' && empty($this->matrix_table) && !in_array('all', $this->ar_section_tipo)) {
-				debug_log(__METHOD__
-					. ' Error: Matrix table is mandatory. Check your ar_section_tipo to safe tipos with resolvable model.' . PHP_EOL
-					. ' $this->ar_section_tipo: ' . to_string($this->ar_section_tipo) . PHP_EOL
-					. ' sql_query: ' . $sql_query. PHP_EOL
-					. ' class: ' . get_called_class() . PHP_EOL
-					. ' this: ' . to_string($this)
-					, logger::ERROR
-				);
-			}
-
-		// search
-			$result	= JSON_RecordObj_matrix::search_free($sql_query);
-			if ($result===false) {
-				debug_log(__METHOD__
-					. ' Error Processing Request : Sorry cannot execute search_free non resource query' . PHP_EOL
-					. ' sql_query: ' . $sql_query
-					, logger::ERROR
-				);
-				if(SHOW_DEBUG===true) {
-					$bt = debug_backtrace();
-					dump($bt, ' bt ++ '.to_string());
-				}
-				// response
-				$response = new stdClass();
-					$response->ar_records	= [];
-					$response->debug		= 'Error on exec search';
-
-				return $response;
-			}
-
-		// ar_records. Build a temporal list with array of records found in query
-			$ar_relations_cache_solved	= [];
-			$ar_records					= [];
-			$pg_num_fields				= pg_num_fields($result);
-			while ($rows = pg_fetch_assoc($result)) {
-
-				$row = new stdClass();
-
-				// Result columns/fields
-				for ($i=0; $i < $pg_num_fields; $i++) {
-
-					// field name / value
-					$field_name		= pg_field_name($result, $i);
-					$field_value	= $rows[$field_name];
-
-					// // Skip temp relations_xxx columns and store their solved values
-					// if (strpos($field_name, 'relations_')===0) {
-					// 	$ar_relations_cache_solved[$field_name] = json_decode($field_value);
-					// 	continue;
-					// }
-
-					// Add property
-					// $row->{$field_name} = ($field_name!=='datos' || $field_name!=='dato' || $field_name==='locator_data' ) && !empty($field_value)
 					// 	? json_decode($field_value)
 					// 	: $field_value;
 

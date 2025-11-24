@@ -747,7 +747,8 @@ final class dd_core_api {
 
 					if($is_related) {
 						// related cases
-						foreach ($search_response->ar_records as $section_record) {
+						// foreach ($search_response->ar_records as $section_record) {
+						while ($section_record = search->fetch_row($result)) {
 							// get all data in relations
 							$relations_data = $section_record->datos->relations ?? [];
 							// get the component data
