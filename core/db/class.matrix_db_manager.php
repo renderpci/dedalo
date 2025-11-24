@@ -576,25 +576,16 @@ class matrix_db_manager {
 		string $section_tipo,
 		int $section_id,
 		array $data_to_save
-		) : bool {
-
-		// sample SQL
-			// UPDATE matrix
-			// SET data = jsonb_set(
-			//     COALESCE(data, '{}'::jsonb), -- Use an empty object if data is NULL
-			//     '{numisdataXX}', -- path to the element
-			//     '{"key":1,"lang":"lg-spa","type":"dd750","value":"CODE1"}'::jsonb, -- new value (must be valid JSON)
-			//     true  -- create if missing (true/false)
-			// )
-			// WHERE section_tipo = 'numisdata224' AND section_id = 1;
+		): bool {
 
 		// check matrix table
 		if (!isset(self::$matrix_tables[$table])) {
-			debug_log(__METHOD__
-				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
-				. ' table: ' . $table . PHP_EOL
-				. ' allowed_tables: ' . json_encode(self::$matrix_tables)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+					. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
+					. ' table: ' . $table . PHP_EOL
+					. ' allowed_tables: ' . json_encode(self::$matrix_tables),
+				logger::ERROR
 			);
 			return false;
 		}
@@ -605,67 +596,92 @@ class matrix_db_manager {
 		$stmt_name_parts = ['update_by_key', $table];
 
 		// Parameters: $1=section_tipo, $2=section_id, $3=path, $4=value, $5=path2, $6=value2, etc.
-		$params = [ $section_tipo, $section_id ];
+		$params = [$section_tipo, $section_id];
 
-		$sentences = [];
-		// key position for the path and the values
-		$i = 3;
+		// Group data by column to handle multiple updates to the same column
+		$columns_data = [];
 		foreach ($data_to_save as $data) {
 
-			$data_column_name	= $data->column;
-			$key				= $data->key;
-			$value				= $data->value;
-
-			// Convert value in a valid JSON data
-			$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); // JSONB value
-
-			// assign the key path position into the parameters array
-			$key_i = $i++;
-
-			// Path is generated once, for top-level key
-			$path = '{'.$key.'}'; // JSON path for top-level key
-
-			// set the parameters in order to be used in the statement.
-			$params[] = $path;
-
-			// action name to be perform. It will use to identify the statements
-			$action = 'update';
-
-			if( empty($value) ){
-
-				// Delete
-				$action = 'delete';
-				// check if the key (usually the tipo of one component) exist into the column
-				// if the key exist remove it, because the data is null
-				$sentences[] = "
-					$data_column_name = CASE
-					WHEN $data_column_name ? $$key_i
-						THEN $data_column_name - $$key_i
-					ELSE
-						$data_column_name
-					END
-				";
-
-			}else{
-
-				// assign the position of value into the parameters array
-				$value_i = $i++;
-
-				// Update
-				// Set the order of the key path and its value to be updated
-				$sentences[] = "$data_column_name = jsonb_set(
-					COALESCE($data_column_name, '{}'::jsonb),
-					$$key_i::text[],
-					$$value_i::jsonb,
-					true
-				)";
-
-				$params[] = $json_value;
+			// Check valid data
+			if (!is_object($data)) {
+				// Query failed
+				debug_log(
+					__METHOD__
+						. " Wrong data_to_save => data. Expected object:  " . PHP_EOL
+						. ' type: ' . gettype($data) . PHP_EOL
+						. ' table: ' . to_string($table) . PHP_EOL
+						. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+						. ' section_id: ' . to_string($section_id) . PHP_EOL
+						. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT),
+					logger::ERROR
+				);
+				return false;
 			}
 
-			// save the statement name for the action and column
-			$stmt_name_parts[] = $action;
-			$stmt_name_parts[] = $data_column_name;
+			$column		= $data->column;
+			$key		= $data->key;
+			$value		= $data->value;
+
+			// Group by column
+			if (!isset($columns_data[$column])) {
+				$columns_data[$column] = [];
+			}
+
+			$columns_data[$column][] = [
+				'key' => $key,
+				'value' => $value
+			];
+		}
+
+		// Build SET clauses - one per column, with nested jsonb_set_lax for multiple keys
+		$sentences = [];
+		foreach ($columns_data as $column => $updates) {
+
+			// Build nested jsonb_set_lax calls for this column
+			$column_expression = "COALESCE($column, '{}'::jsonb)";
+
+			foreach ($updates as $update) {
+				$key = $update['key'];
+				$value = $update['value'];
+
+				// Path is generated for top-level key
+				$path = '{' . $key . '}';
+
+				// Convert value to valid JSON data
+				if ($value !== null) {
+					$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+					if ($json_value === false) {
+						debug_log(__METHOD__ . " Invalid JSON value for key: $key", logger::ERROR);
+						return false;
+					}
+					$stmt_name_parts[] = 'update';
+				} else {
+					$json_value = null;
+					$stmt_name_parts[] = 'delete';
+				}
+
+				// Add parameters
+				$params[] = $path;
+				$params[] = $json_value;
+
+				$path_index = count($params) - 1;
+				$value_index = count($params);
+
+				// Nest the jsonb_set_lax call
+				$column_expression = "jsonb_set_lax(
+					$column_expression,
+					$$path_index::text[],
+					$$value_index::jsonb,
+					true,
+					'delete_key'
+				)";
+			}
+
+			// Add the complete SET clause for this column
+			$sentences[] = "$column = $column_expression";
+
+			// Add column name to statement identifier
+			$stmt_name_parts[] = $column;
 		}
 
 		// Give the unique name for the all sentences
@@ -675,72 +691,43 @@ class matrix_db_manager {
 		if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
 			// Efficient SQL for setting/updating a key (uses COALESCE for NULL safety)
 			$sql = '
-				UPDATE '.$table.'
-				SET '. implode(', '.PHP_EOL, $sentences) .'
-				WHERE section_tipo = $1
-				  AND section_id = $2
+				UPDATE ' . $table . '
+				SET ' . implode(', ' . PHP_EOL, $sentences) . '
+				WHERE section_tipo = $1  AND section_id = $2
 				RETURNING id
 			';
 
-			pg_prepare($conn, $full_stmt_name, $sql);
+			if (!pg_prepare($conn, $full_stmt_name, $sql)) {
+				debug_log(__METHOD__ . " Failed to prepare statement: " . pg_last_error($conn), logger::ERROR);
+				return false;
+			}
 			DBi::$prepared_statements[$full_stmt_name] = true;
 		}
 
-		// 2. Execute Statement
+		// Execute Statement
 		$result = pg_execute(
 			$conn,
 			$full_stmt_name,
 			$params
 		);
 
-		// 3. Handle Result
-		if ($result) {
-			$rows_affected = pg_num_rows($result);
-			if ($rows_affected > 0) {
-
-				// Success. JSON path was successfully saved
-
-				// $saved_id = pg_fetch_result($result, 0, 0);
-				// debug_log(__METHOD__
-				// 	. " Successfully saved JSON path '$path'. Affected record ID: $table $saved_id"
-				// 	, logger::WARNING
-				// );
-
-				return true;
-
-			}else{
-
-				// No rows were updated (JSON path didn't exist or conditions didn't match)
-				debug_log(__METHOD__
-					. " Partial JSON data was NOT saved. Maybe path '$path' or section_id '$section_id' does not exist." . PHP_EOL
+		if ($result === false) {
+			// Query failed
+			debug_log(
+				__METHOD__
+					. " Update operation failed:  " . PHP_EOL
+					. ' Error: ' . pg_last_error($conn) . PHP_EOL
 					. ' table: ' . to_string($table) . PHP_EOL
-					. ' column: ' . to_string($data_column_name) . PHP_EOL
-					. ' path: ' . $path . PHP_EOL
 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
 					. ' section_id: ' . to_string($section_id) . PHP_EOL
-					. ' value: ' . json_encode($value)
-					, logger::ERROR
-				);
-			}
-
-		}else{
-
-			// Query failed
-			debug_log(__METHOD__
-				. " Delete operation failed:  " . PHP_EOL
-				. ' Error: ' . pg_last_error($conn) . PHP_EOL
-				. ' table: ' . to_string($table) . PHP_EOL
-				. ' column: ' . to_string($data_column_name) . PHP_EOL
-				. ' path: ' . to_string($path) . PHP_EOL
-				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-				. ' section_id: ' . to_string($section_id) . PHP_EOL
-				. ' value: ' . json_encode($value)
-				, logger::ERROR
+					. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT),
+				logger::ERROR
 			);
+			return false;
 		}
 
-
-		return false;
+		$rows_affected = pg_num_rows($result);
+		return $rows_affected > 0;
 	}//end update_by_key
 
 
