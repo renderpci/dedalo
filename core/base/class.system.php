@@ -482,47 +482,79 @@ class system {
 
 
 	/**
-	* DELETE_OLD_SESSIONS_FILES
-	* Cleans old files (sessions and caches) from
-	* 'DEDALO_SESSIONS_PATH' directory
-	* Note that each Dédalo process creates an individual process log file.
-	* @return bool
-	*/
-	public static function delete_old_sessions_files() : bool {
+	 * DELETE_OLD_SESSIONS_FILES
+	 * Cleans old files (sessions and caches) from
+	 * 'DEDALO_SESSIONS_PATH' directory
+	 * Note that each Dédalo process creates an individual process log file.
+	 * @return bool
+	 */
+	public static function delete_old_sessions_files(): bool
+	{
 
 		if (!system::check_sessions_path()) {
-			debug_log(__METHOD__
-				. " Unable to delete session files. Sessions directory is unavailable"
-				. to_string()
-				, logger::DEBUG
+			debug_log(
+				__METHOD__
+					. " Unable to delete session files. Sessions directory is unavailable" . PHP_EOL
+					. ' DEDALO_SESSIONS_PATH: ' . (defined('DEDALO_SESSIONS_PATH') ? DEDALO_SESSIONS_PATH : 'undefined'),
+				logger::WARNING
 			);
 			return false;
 		}
 
-		$cache_life	= 4 * 24 * 60 * 60; // caching time, in seconds - 2 days -
+		$cache_life	= 2 * 24 * 60 * 60; // caching time, in seconds - 2 days -
 		$files		= glob(DEDALO_SESSIONS_PATH . '/*');
-		foreach($files as $file) {
+
+		// check glob() result
+		if ($files === false) {
+			debug_log(
+				__METHOD__
+					. " Error reading sessions directory" . PHP_EOL
+					. ' DEDALO_SESSIONS_PATH: ' . DEDALO_SESSIONS_PATH,
+				logger::ERROR
+			);
+			return false;
+		}
+
+		foreach ($files as $file) {
+
+			// skip if not a file (e.g., directories)
+			if (!is_file($file)) {
+				continue;
+			}
 
 			// time in seconds (number of seconds since the Unix Epoch (January 1 1970 00:00:00 GMT))
 			$date_now		= time();
 			$date_modified	= filemtime($file);
 
-			if ( ($date_now - $date_modified) >= $cache_life ) {
+			// check filemtime() result
+			if ($date_modified === false) {
+				debug_log(
+					__METHOD__
+						. " Error getting file modification time" . PHP_EOL
+						. ' file: ' . to_string($file),
+					logger::ERROR
+				);
+				continue;
+			}
+
+			if (($date_now - $date_modified) >= $cache_life) {
 				$deleted = unlink($file);
-				if( !$deleted ) {
-					debug_log(__METHOD__
-						. " Error deleting cache file " . PHP_EOL
-						. ' file: ' . to_string($file)
-						, logger::ERROR
+				if (!$deleted) {
+					debug_log(
+						__METHOD__
+							. " Error deleting cache file " . PHP_EOL
+							. ' file: ' . to_string($file),
+						logger::ERROR
 					);
 					continue;
 				}
 
-				debug_log(__METHOD__
-					. " Deleted cache file " . PHP_EOL
-					. ' file: ' . to_string($file) .PHP_EOL
-					. ' date_modified: ' . to_string($date_modified)
-					, logger::WARNING
+				debug_log(
+					__METHOD__
+						. " Deleted cache file " . PHP_EOL
+						. ' file: ' . to_string($file) . PHP_EOL
+						. ' date_modified: ' . to_string($date_modified),
+					logger::DEBUG
 				);
 			}
 		}
