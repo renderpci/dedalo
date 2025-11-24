@@ -1765,7 +1765,8 @@ class component_iri extends component_common {
 			$target_section_id = $label_record->section_id;
 		}
 
-		return (int)$target_section_id;
+		// Ensure we return proper type (int or null)
+		return !empty($target_section_id) ? (int)$target_section_id : null;
 	}//end save_label_dataframe_from_string
 
 
