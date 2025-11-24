@@ -241,7 +241,7 @@ class exec_ {
 		// note: security vulnerability...
 		// should validate that $command doesn't
 		// contain anything bad
-		$path = `which $command`;
+		$path = "which $command";
 		if ($path != null) {
 			$path = trim($path); // get rid of trailing line break
 			return $path;
