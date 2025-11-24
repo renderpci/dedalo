@@ -28,18 +28,20 @@ $global_start_time = hrtime(true);
 		exit();
 	}
 
+$environment_response = dd_core_api::get_environment();
+
 // page_globals
-	$page_globals		= dd_core_api::get_page_globals(); // return object
+	$page_globals		= $environment_response->result->page_globals; // return object
 	$page_globals_json	= json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 
 // plain global vars
-	$plain_vars			= dd_core_api::get_js_plain_vars(); // return array assoc
+	$plain_vars			= $environment_response->result->plain_vars; // return array assoc
 	$plain_vars_string	= PHP_EOL. implode(','.PHP_EOL, array_map(function ($v, $k) {
 		return sprintf('%s=%s', $k, json_encode($v, JSON_UNESCAPED_SLASHES));
 	}, $plain_vars, array_keys($plain_vars)));
 
 // lang labels. String ready to output with error catching
-	$lang_labels = dd_core_api::get_lang_labels(DEDALO_APPLICATION_LANG); // return string
+	$lang_labels = json_encode($environment_response->result->get_label, JSON_PRETTY_PRINT); // return string
 
 // javascript code:
 ?>
@@ -49,12 +51,14 @@ $global_start_time = hrtime(true);
 
 // page_globals. Set var to window to allow easy access from opened windows
 window.page_globals=<?php echo $page_globals_json; ?>;
+
 // plain_vars. Main JS plain constants
 const <?php echo $plain_vars_string; ?>;
-// lang labels. Object with all Dédalo global labels in current lang
-const get_label=<?php echo $lang_labels; ?>
-// time
-const build_time_ms=<?php echo exec_time_unit($global_start_time,'ms'); ?>
 
+// lang labels. Object with all Dédalo global labels in current lang
+const get_label=<?php echo $lang_labels; ?>;
+
+// time
+const build_time_ms=<?php echo exec_time_unit($global_start_time,'ms'); ?>;
 
 // @license-end
