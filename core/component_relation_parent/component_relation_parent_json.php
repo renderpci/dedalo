@@ -42,7 +42,7 @@
 
 		if (!empty($data_value)) {
 
-			$value		= $this->get_dato_paginated();
+			$value		= $this->get_data_paginated();
 			$section_id	= $this->get_parent();
 			$limit		= $this->pagination->limit;
 			$offset		= $this->pagination->offset;

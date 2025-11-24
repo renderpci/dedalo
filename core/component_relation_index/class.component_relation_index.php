@@ -61,7 +61,7 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_DATO_PAGINATED
+	* get_data_paginated
 	* Resolve indexation references data
 	* Note that this component data is always EXTERNAL
 	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
@@ -70,7 +70,7 @@ class component_relation_index extends component_relation_common {
 	* @param int|null $custom_limit = null
 	* @return array|null $dato
 	*/
-	public function get_dato_paginated( ?int $custom_limit=null ) : array {
+	public function get_data_paginated( ?int $custom_limit=null ) : array {
 
 		// pagination
 			$limit			= $custom_limit ?? $this->pagination->limit;
@@ -95,7 +95,7 @@ class component_relation_index extends component_relation_common {
 			$new_dato_paginated = component_relation_index::parse_data($ar_inverse_locators);
 
 		return $new_dato_paginated;
-	}//end get_dato_paginated
+	}//end get_data_paginated
 
 
 

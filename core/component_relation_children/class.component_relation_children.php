@@ -118,12 +118,12 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* GET_DATO_PAGINATED
+	* get_data_paginated
 	* Gets paginated the inverse locators from component parent result.
 	* @param int|null $custom_limit = null
 	* @return array $dato_paginated
 	*/
-	public function get_dato_paginated( ?int $custom_limit=null ) : array {
+	public function get_data_paginated( ?int $custom_limit=null ) : array {
 
 		// limit
 			$limit = isset($custom_limit)
@@ -144,7 +144,7 @@ class component_relation_children extends component_relation_common {
 
 
 		return $dato_paginated;
-	}//end get_dato_paginated
+	}//end get_data_paginated
 
 
 
@@ -493,7 +493,7 @@ class component_relation_children extends component_relation_common {
 	* @param int|string $section_id
 	* @param string $section_tipo
 	* @param ?string $component_tipo
-	* @return
+	* @return array $all_children
 	*/
 	public static function get_children_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null) : array {
 

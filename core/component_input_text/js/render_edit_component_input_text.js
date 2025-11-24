@@ -90,6 +90,10 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 */
 export const change_handler = function(e, key, self) {
 
+	const data			= self.data || {}
+	const value			= data.value || []
+	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+
 	const safe_value = self.context.properties?.validation
 		? self.validate(e.target.value)
 		: e.target.value || ''
@@ -98,11 +102,13 @@ export const change_handler = function(e, key, self) {
 		e.target.value = safe_value
 	}
 
+	item_value.value = safe_value
+
 	// change data
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: key,
-			value	: safe_value
+			value	: item_value
 		})
 
 	// change_value (save data)

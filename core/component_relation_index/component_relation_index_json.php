@@ -32,7 +32,7 @@
 		// data of get_dato is a full data as others portals
 		// and it can't be get all references of all calling sections
 		// sometimes it could be thousands records and is better paginated it.
-		$dato = $this->get_dato_paginated();
+		$dato = $this->get_data_paginated();
 
 		if (!empty($dato)) {
 

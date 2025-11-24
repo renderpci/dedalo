@@ -35,8 +35,8 @@
 							  }]
 	limit					: 1 // int
 	offset					: 2 // int
-	total                   : (null || int ) // by default total is null to be calculate, when int is set the sqo don't count and return his value
-	full_count				: (true || false || 4) // boolean or int (int disable the function for full count and get the number as total)
+	total                   : (null || int) // by default total is null to be calculate, when int is set the sqo don't count and return his value
+	full_count				: (true || false) // boolean, when is true a parallel SQL sentence will be create to count the filter result.
 	group_by 				: ['section_tipo'] // array with the columns or components (used to count values)
 	order					: [{
 									direction 	: (ASC || DESC) // string
@@ -279,15 +279,10 @@ class search_query_object extends stdClass {
 	* SET_FULL_COUNT
 	* Note that if the request is made it using 'true' value, the sqo->full_count value
 	* will be modified with the result of the records count
-	* @param bool|int $value
+	* @param bool $value
 	* @return bool
 	*/
-	public function set_full_count($value) : bool {
-
-		if (gettype($value)!=='integer' && gettype($value)!=='boolean') {
-			debug_log(__METHOD__." ERROR on set_full_count. Invalid full_count type ".gettype($value).". Only integer|boolean are valid", logger::ERROR);
-			return false;
-		}
+	public function set_full_count( bool $value) : bool {
 
 		$this->full_count = $value;
 
