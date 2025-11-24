@@ -85,6 +85,13 @@ $updates->$v = new stdClass();
 
 
 		// @TODO : ADD TO DB_PG_DEFINTIONS !
+			// create index for matrix_langs hierarchy41 value (lang code as 'eng')
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				CREATE INDEX idx_matrix_langs_hierarchy41_value ON "matrix_langs" (
+					(string -> \'hierarchy41\' -> 0 ->> \'value\')
+				);
+			');
+
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				DROP INDEX IF EXISTS "matrix_counter_tipo_idx";
 
