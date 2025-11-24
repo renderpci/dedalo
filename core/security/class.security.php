@@ -346,13 +346,24 @@ class security {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$profile_dato = $component_profile->get_dato();
+			$profile_dato = $component_profile->get_data();
 			if (empty($profile_dato)) {
 				return null;
 			}
 
 			// locator
-			$locator = $profile_dato[0];
+			$locator = $profile_dato[0] ?? null;
+
+			// Verify it's actually an object (locator)
+			if (!is_object($locator)) {
+				debug_log(__METHOD__
+					. " Invalid value from component profile. Expected object " . PHP_EOL
+					. " locator " . to_string($locator) . PHP_EOL
+					. ' type: ' . gettype($locator)
+					, logger::ERROR
+				);
+				return null;
+			}
 
 
 		return $locator;
