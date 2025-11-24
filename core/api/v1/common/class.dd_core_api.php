@@ -2484,7 +2484,15 @@ final class dd_core_api {
 					'value'	=> $value
 				];
 			}, DEDALO_APPLICATION_LANGS, array_keys(DEDALO_APPLICATION_LANGS));
-			$obj->dedalo_projects_default_langs		= array_map(function($current_lang) {
+			// $langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
+			// $obj->dedalo_projects_default_langs		= array_map(function ($item) {
+			// 	return [
+			// 		'label'	=> $item->names[0] ?? $item->code,
+			// 		'value'	=> 'lg-'.$item->code,
+			// 		'tld2'	=> lang::get_alpha2_from_code('lg-'.$item->code)
+			// 	];
+			// }, $langs_resolved);
+			$obj->dedalo_projects_default_langs		= array_map(function ($current_lang) {
 				return [
 					'label'	=> lang::get_name_from_code($current_lang),
 					'value'	=> $current_lang,
@@ -2556,7 +2564,7 @@ final class dd_core_api {
 	* They are used as constants declared in environment.j.php file
 	* @return array $plain_vars
 	*/
-	public static function get_js_plain_vars() : array {
+	public static function get_js_plain_vars(): array {
 
 		$plain_vars = [
 			'DEDALO_ENVIRONMENT'					=> true,

@@ -211,7 +211,7 @@ class lang {
 	* @return string|null $name
 	*/
 	public static function get_name_from_code(string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true) : ?string {
-
+		$start_time = start_time();	
 		// DEDALO_DATA_NOLAN case : When lang code is lg-nolan, null is returned
 			if ($code===DEDALO_DATA_NOLAN) {
 				return null;
@@ -237,7 +237,7 @@ class lang {
 		// Fallback
 			if (!empty($names->$lang)) {
 
-				$name = to_string($names->$lang);
+				$name = $names->$lang[0] ?? null;
 
 			}else{
 
@@ -245,7 +245,7 @@ class lang {
 				$main_lang		= hierarchy::get_main_lang($section_tipo);
 				// Recursion in main_lang lang
 				if (isset($names->$main_lang)) {
-					$name = to_string($names->$main_lang);
+					$name = $names->$main_lang[0] ?? null;
 				}else{
 					return null;
 				}

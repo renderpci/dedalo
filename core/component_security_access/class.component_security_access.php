@@ -338,52 +338,53 @@ class component_security_access extends component_common {
 
 
 	/**
-	* GET_CHILDREN_RECURSIVE_SECURITY_ACCES
-	* Custom recursive children resolve
-	* @param string $tipo
-	* @param array|null $ar_tipo_to_be_exclude
-	* @return array $element_datalist
-	*/
-	private static function get_children_recursive_security_acces( string $tipo, ?array $ar_tipo_to_be_exclude=null ) : array {
+	 * GET_CHILDREN_RECURSIVE_SECURITY_ACCES
+	 * Custom recursive children resolve
+	 * @param string $tipo
+	 * @param array|null $ar_tipo_to_be_exclude
+	 * @return array $element_datalist
+	 */
+	private static function get_children_recursive_security_acces(string $tipo, ?array $ar_tipo_to_be_exclude = null): array
+	{
 
 		// static cache
-			// static $children_recursive_security_access_data;
-			// if(isset($children_recursive_security_access_data[$tipo])) {
-			// 	return $children_recursive_security_access_data[$tipo];
-			// }
+		// static $children_recursive_security_access_data;
+		// if(isset($children_recursive_security_access_data[$tipo])) {
+		// 	return $children_recursive_security_access_data[$tipo];
+		// }
 
 		$ar_elements = [];
 
-		$source_model = ontology_node::get_model_by_tipo($tipo,true);
+		$source_model = ontology_node::get_model_by_tipo($tipo, true);
 		switch ($source_model) {
 
 			case 'section':
 				$section_tipo				= $tipo;
-				$ar_modelo_name_required	= ['section_group','section_tab','tab','button_','relation_list','time_machine_list','component_'];
+				$ar_modelo_name_required	= ['section_group', 'section_tab', 'tab', 'button_', 'relation_list', 'time_machine_list', 'component_'];
 				// real section
-					$ar_ts_children = section::get_ar_children_tipo_by_model_name_in_section(
+				$ar_ts_children = section::get_ar_children_tipo_by_model_name_in_section(
+					$section_tipo, // string section_tipo
+					$ar_modelo_name_required, // array ar_modelo_name_required
+					true, // bool from_cache
+					true, // bool resolve_virtual
+					false, // bool recursive
+					false // bool search_exact
+				);
+
+				// virtual case add too
+				$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
+				if ($section_tipo !== $section_real_tipo) {
+					// Virtual section too is necessary (buttons specifics)
+					$ar_ts_children_v = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_tipo, // string section_tipo
 						$ar_modelo_name_required, // array ar_modelo_name_required
 						true, // bool from_cache
-						true, // bool resolve_virtual
+						false, // bool resolve_virtual
 						false, // bool recursive
 						false // bool search_exact
 					);
-
-				// virtual case add too
-					$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
-					if ($section_tipo!==$section_real_tipo) {
-						// Virtual section too is necessary (buttons specifics)
-						$ar_ts_children_v = section::get_ar_children_tipo_by_model_name_in_section(
-							$section_tipo, // string section_tipo
-							$ar_modelo_name_required, // array ar_modelo_name_required
-							true, // bool from_cache
-							false, // bool resolve_virtual
-							false, // bool recursive
-							false// bool search_exact
-						);
-						$ar_ts_children	= array_merge($ar_ts_children, $ar_ts_children_v);
-					}
+					$ar_ts_children	= array_merge($ar_ts_children, $ar_ts_children_v);
+				}
 				break;
 
 			default:
