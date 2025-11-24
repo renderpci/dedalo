@@ -160,27 +160,13 @@ class matrix_db_manager {
 			}
 		}
 
-		// 1. Start the transaction and set the isolation level
-		// Ensure the entire operation runs under the SERIALIZABLE transaction isolation level.
-		// Guarantees that the counter update and the subsequent INSERT will reflect a consistent,
-		// serial order of execution, preventing the "lost update" problem often associated with counters under high load.
-		$begin_sql = "BEGIN ISOLATION LEVEL SERIALIZABLE;";
-		$result = pg_query($conn, $begin_sql);
-		if (!$result) {
-			debug_log(__METHOD__
-				." Error Processing Request. ISOLATION LEVEL SERIALIZABLE fails." . PHP_EOL
-				.' begin_sql: ' . to_string($begin_sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
-			return false; // Return false immediately since the transaction couldn't start.
-		}
-
-		// 2. Execute the main atomic SQL block with parameters
-		// SQL. Note that counter is updated (+1) and the new value is used as section_id.
-		// If no counter exists for current tipo, a new one is created using CONFLICT fallback.
+		// Optimized single-query approach with advisory lock
+		// The lock is automatically released when the transaction ends (COMMIT or ROLLBACK)
 		$sql = "
-			WITH updated_counter AS (
+			WITH locked AS (
+				SELECT pg_advisory_xact_lock(hashtext($1))
+			),
+			updated_counter AS (
 				INSERT INTO $counter_table (tipo, value)
 				VALUES ($1, 1)
 				ON CONFLICT (tipo) DO UPDATE
@@ -188,45 +174,24 @@ class matrix_db_manager {
 				RETURNING value
 			)
 			INSERT INTO $table (" . implode(', ', $columns) . ")
-			SELECT " . implode(', ', $placeholders) . "	FROM updated_counter
+			SELECT " . implode(', ', $placeholders) . " FROM updated_counter
 			RETURNING section_id;
 		";
 
-		// Execute query with params
-		$result = pg_query_params(
-			$conn,
-			$sql,
-			$params
-		);
+		$result = pg_query_params($conn, $sql, $params);
 
 		if (!$result) {
-			// 3a. CRITICAL: Handle error and MUST rollback the open transaction
-			pg_query($conn, "ROLLBACK;");
-
-			debug_log(__METHOD__
-				." Error Processing Request (after rollback) ".to_string($sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
-			return false;
-		}
-
-		// 3b. Commit the transaction if the main query succeeded
-		$commit_result = pg_query($conn, "COMMIT;");
-
-		if (!$commit_result) {
-			// Log error if COMMIT fails (rare, but possible due to network or server issues)
-			debug_log(__METHOD__ . " CRITICAL: COMMIT FAILED: " . pg_last_error($conn), logger::ERROR);
+			debug_log(__METHOD__ . " Query failed: " . pg_last_error($conn), logger::ERROR);
 			return false;
 		}
 
 		// Fetch section_id
 		$section_id = pg_fetch_result($result, 0, 'section_id');
 		// Check valid section_id
-		if ($section_id===false) {
+		if ($section_id === false) {
 			debug_log(__METHOD__
-				. " Error giving the new section_id". PHP_EOL
-				. ' last_error: '. pg_last_error($conn) .PHP_EOL
+				. " Error giving the new section_id" . PHP_EOL
+				. ' last_error: ' . pg_last_error($conn) . PHP_EOL
 				. ' sql: ' . to_string($sql)
 				, logger::ERROR
 			);
