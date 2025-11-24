@@ -220,8 +220,8 @@ final class matrix_db_manager_test extends TestCase {
 		$section_id = $result;
 
 		// Using values
-		$start_time=start_time();
-		$values = [
+		$start_time = start_time();
+		$values = (object)[
 			'data' => [
 				'section_tipo' => $section_tipo
 			]
@@ -309,16 +309,16 @@ final class matrix_db_manager_test extends TestCase {
 		);
 
 		// Check result type
-		$eq = gettype($result) === 'array';
+		$eq = gettype($result) === 'object';
 		$this->assertTrue(
 			$eq,
-			'expected true (array)' . PHP_EOL
-				.'result type: ' . gettype($result) . PHP_EOL
-				.'result: ' . to_string($result)
+			'expected true (object)' . PHP_EOL
+				. 'result type: ' . gettype($result) . PHP_EOL
+				. 'result: ' . to_string($result)
 		);
 
 		// Read again A
-		$start_time=start_time();
+		$start_time = start_time();
 		$result = matrix_db_manager::read(
 			$table,
 			$section_tipo,
@@ -327,25 +327,25 @@ final class matrix_db_manager_test extends TestCase {
 
 		// Check the time consuming. Expected value is around 0.25 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (2: " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (2: " . $total_time, logger::ERROR);
 		$eq = $total_time < 1;
 		$this->assertTrue(
 			$eq,
 			'expected execution time (1): bellow 1 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Check result type
-		$eq = gettype($result) === 'array';
+		$eq = gettype($result) === 'object';
 		$this->assertTrue(
 			$eq,
-			'expected true (array)' . PHP_EOL
-				.'result type: ' . gettype($result) . PHP_EOL
-				.'result: ' . to_string($result)
+			'expected true (object)' . PHP_EOL
+				. 'result type: ' . gettype($result) . PHP_EOL
+				. 'result: ' . to_string($result)
 		);
 
 		// Read again B
-		$start_time=start_time();
+		$start_time = start_time();
 		$result = matrix_db_manager::read(
 			$table,
 			$section_tipo,
@@ -354,12 +354,12 @@ final class matrix_db_manager_test extends TestCase {
 
 		// Check the time consuming. Expected value is around 0.25 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (3: " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (3: " . $total_time, logger::ERROR);
 		$eq = $total_time < 1;
 		$this->assertTrue(
 			$eq,
 			'expected execution time (1): bellow 1 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Reading non existing record
@@ -368,19 +368,19 @@ final class matrix_db_manager_test extends TestCase {
 			$section_tipo,
 			$section_id = 999999999
 		);
-		$eq = $result === [];
+		$eq = $result === false;
 		$this->assertTrue(
 			$eq,
 			'expected true equal' . PHP_EOL
-				.'result : ' . json_encode($result) . PHP_EOL
-				.'value : ' . json_encode([])
+				. 'result : ' . json_encode($result) . PHP_EOL
+				. 'value : ' . json_encode([])
 		);
 
 		// massive read
 		$counter_value = $this->get_counter_value($section_tipo);
 		$this->execution_timing(
 			'read',
-			function($i) use($table, $section_tipo) {
+			function ($i) use ($table, $section_tipo) {
 				return matrix_db_manager::read(
 					$table,
 					$section_tipo,
@@ -396,10 +396,11 @@ final class matrix_db_manager_test extends TestCase {
 
 
 	/**
-	* TEST_update
-	* @return void
-	*/
-	public function test_update(): void {
+	 * TEST_update
+	 * @return void
+	 */
+	public function test_update(): void
+	{
 
 		$table			= 'matrix_test';
 		$section_tipo	= 'test65';
@@ -407,13 +408,13 @@ final class matrix_db_manager_test extends TestCase {
 			$table,
 			$section_tipo
 		);
-		$values = [
+		$values = (object)[
 			'data' => [
 				'test_property' => true
 			]
 		];
 
-		$start_time=start_time();
+		$start_time = start_time();
 		$result = matrix_db_manager::update(
 			$table,
 			$section_tipo,
@@ -423,12 +424,12 @@ final class matrix_db_manager_test extends TestCase {
 
 		// Check the time consuming. Expected value is around 0.4 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
 		$eq = $total_time < 3;
 		$this->assertTrue(
 			$eq,
 			'expected execution time (1): bellow 3 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Check result type
@@ -436,8 +437,8 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true (boolean)' . PHP_EOL
-				.'result type: ' . gettype($result) . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result type: ' . gettype($result) . PHP_EOL
+				. 'result: ' . to_string($result)
 		);
 
 		// Check result
@@ -445,11 +446,11 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true ' . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result: ' . to_string($result)
 		);
 
 		// do it again
-		$values2 = [
+		$values2 = (object)[
 			// use the postgresql expected order for jsonb
 			'relation' => json_decode('{"dd197":[{"type":"dd151","section_id":"-1","section_tipo":"dd128","from_component_tipo":"dd197"}],"dd200":[{"type":"dd151","section_id":"1","section_tipo":"dd128","from_component_tipo":"dd200"}],"rsc20":[{"type":"dd151","section_id":"1","section_tipo":"dd64","from_component_tipo":"rsc20"}],"rsc28":[{"type":"dd675","section_id":"1","section_tipo":"dd153","from_component_tipo":"rsc28"}],"dd1224":[{"type":"dd151","section_id":"1","section_tipo":"dd128","from_component_tipo":"dd1224"}],"dd1225":[{"type":"dd151","section_id":"-1","section_tipo":"dd128","from_component_tipo":"dd1225"}],"rsc322":[{"type":"dd151","section_id":"1","section_tipo":"dd460","from_component_tipo":"rsc322"}],"rsc732":[{"type":"dd151","section_id":"5","section_tipo":"dd889","from_component_tipo":"rsc732"}]}'),
 			'string' => json_decode('{"rsc21":[{"id":1,"lang":"lg-nolan","value":"code 95"}]}'),
@@ -484,22 +485,22 @@ final class matrix_db_manager_test extends TestCase {
 			$section_id
 		);
 		// result_data
-		$result_data = json_decode($result['data']);
-		$eq = json_encode($result_data) === json_encode($values['data']);
+		$result_data = json_decode($result->data);
+		$eq = json_encode($result_data) === json_encode($values->data);
 		$this->assertTrue(
 			$eq,
 			'expected true equal' . PHP_EOL
-				.'result data : ' . json_encode($result_data) . PHP_EOL
-				.'values data : ' . json_encode($values['data'])
+				. 'result data : ' . json_encode($result_data) . PHP_EOL
+				. 'values data : ' . json_encode($values->data)
 		);
 		// result_relation
-		$result_relation = json_decode($result['relation']);
-		$eq = $result_relation == $values2['relation'];
+		$result_relation = json_decode($result->relation);
+		$eq = $result_relation == $values2->relation;
 		$this->assertTrue(
 			$eq,
 			'expected true equal' . PHP_EOL
-				.'result relation : ' . json_encode($result_relation) . PHP_EOL
-				.'values relation : ' . json_encode($values2['relation'])
+				. 'result relation : ' . json_encode($result_relation) . PHP_EOL
+				. 'values relation : ' . json_encode($values2->relation)
 		);
 
 		// Updating non existing record
@@ -555,24 +556,29 @@ final class matrix_db_manager_test extends TestCase {
 		$key	= 'dd199';
 		$value	= json_decode('[{"id":1,"lang":"lg-nolan","start":{"day":8,"hour":13,"time":65053633711,"year":2024,"month":1,"minute":48,"second":31}}]');
 
-		$start_time=start_time();
+		$data_to_save = [(object)[
+			'column'	=> $column,
+			'key'		=> $key,
+			'value'		=> $value
+		]];
+
+		// 1 - Update_by_key simple
+		$start_time = start_time();
 		$result = matrix_db_manager::update_by_key(
 			$table,
 			$section_tipo,
 			$section_id,
-			$column,
-			$key,
-			$value
+			$data_to_save
 		);
 
 		// Check the time consuming. Expected value is around 0.4 ms
 		$total_time = exec_time_unit($start_time);
-			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
 		$eq = $total_time < 5;
 		$this->assertTrue(
 			$eq,
 			'expected execution time (1): bellow 5 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
+				. 'total_time ms: ' . $total_time
 		);
 
 		// Check result type
@@ -580,8 +586,8 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true (boolean)' . PHP_EOL
-				.'result type: ' . gettype($result) . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result type: ' . gettype($result) . PHP_EOL
+				. 'result: ' . to_string($result)
 		);
 
 		// Check result
@@ -589,136 +595,176 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true ' . PHP_EOL
-				.'result: ' . to_string($result)
+				. 'result: ' . to_string($result)
 		);
 
-		// read and check all is written OK
+		// 1.1 - read and check all is written OK
 		$result	= matrix_db_manager::read(
 			$table,
 			$section_tipo,
 			$section_id
 		);
 
-		$db_value = json_decode($result[$column])->$key;
+		$db_value = json_decode($result->$column)->$key;
 		$eq = $db_value == $value;
 		$this->assertTrue(
 			$eq,
 			'expected true ' . PHP_EOL
-				.'result: ' . json_encode($db_value) . PHP_EOL
-				.'value: ' . json_encode($db_value)
+				. 'result: ' . json_encode($db_value) . PHP_EOL
+				. 'value: ' . json_encode($value)
 		);
 
-		// Write NULL
-			$result = matrix_db_manager::update_by_key(
-				$table,
-				$section_tipo,
-				$section_id,
-				$column,
-				$key,
-				null
-			);
+		// 2 - Write NULL
+		// $section_id = 140078; // OVERWRITE TEMPORAL !
+		$null_data_to_save = [(object)[
+			'column'	=> $column,
+			'key'		=> $key,
+			'value'		=> null
+		]];
+		$result = matrix_db_manager::update_by_key(
+			$table,
+			$section_tipo,
+			$section_id,
+			$null_data_to_save
+		);
 
-			// read and check all is written OK
-			$result	= matrix_db_manager::read(
-				$table,
-				$section_tipo,
-				$section_id
-			);
-			// expected empty column (NULL)
-			$db_value = $result[$column];
-			$eq = $db_value === null;
-			$this->assertTrue(
-				$eq,
-				'expected true ' . PHP_EOL
-					.'result: ' . json_encode($db_value) . PHP_EOL
-					.'value: ' . json_encode($db_value)
-			);
+		// 2.1 - read and check all is written OK
+		$result	= matrix_db_manager::read(
+			$table,
+			$section_tipo,
+			$section_id
+		);
+		// expected empty column (NULL)
+		$db_value = $result->$column->$key ?? null;
+		$eq = $db_value === null;
+		$this->assertTrue(
+			$eq,
+			'expected true for  $db_value === null ' . PHP_EOL
+				. 'db_value ($result->$column): ' . json_encode($db_value) . PHP_EOL
+				. 'table: ' . to_string($table) . PHP_EOL
+				. 'section_tipo: ' . to_string($section_tipo) . PHP_EOL
+				. 'section_id: ' . to_string($section_id) . PHP_EOL
+				. 'null_data_to_save: ' . to_string($null_data_to_save) . PHP_EOL
+		);
 
-		// New keys add
-			$new_key = 'dd201';
-			$value	= json_decode('[{"id":1,"lang":"lg-nolan","start":{"day":9,"hour":13,"time":65053633711,"year":2024,"month":1,"minute":48,"second":31}}]');
-			$result = matrix_db_manager::update_by_key(
-				$table,
-				$section_tipo,
-				$section_id,
-				$column,
-				$new_key,
-				$value
-			);
-			$new_key2 = 'dd202';
-			$value2	= json_decode('[{"id":2,"lang":"lg-nolan","start":{"day":10,"hour":13,"time":65053633711,"year":2024,"month":1,"minute":48,"second":31}}]');
-			$result = matrix_db_manager::update_by_key(
-				$table,
-				$section_tipo,
-				$section_id,
-				$column,
-				$new_key2,
-				$value2
-			);
+		// 3 - Write mixed NULL and not NULL
+		// $section_id = 140078; // OVERWRITE TEMPORAL !
+		$null_data_to_save = [
+			(object)[
+				'column'	=> $column,
+				'key'		=> $key,
+				'value'		=> "patata"
+			],
+			(object)[
+				'column'	=> $column,
+				'key'		=> '_' . $key,
+				'value'		=> "tomate"
+			],
+			(object)[
+				'column'	=> $column,
+				'key'		=> '_2_' . $key,
+				'value'		=> "tomate 2"
+			]
+		];
+		$result = matrix_db_manager::update_by_key(
+			$table,
+			$section_tipo,
+			$section_id,
+			$null_data_to_save
+		);
 
-			// Write NULL 2
-			$result = matrix_db_manager::update_by_key(
-				$table,
-				$section_tipo,
-				$section_id,
-				$column,
-				$new_key,
-				null
-			);
+		// 3.1 - read and check all is written OK
+		$result	= matrix_db_manager::read(
+			$table,
+			$section_tipo,
+			$section_id
+		);
+		// expected empty column value ("patata")
+		if (!empty($result->$column)) {
+			$result->$column = json_decode($result->$column);
+		}
+		$db_value = $result->$column->$key ?? null;
+		$eq = $db_value === "patata";
+		$this->assertTrue(
+			$eq,
+			'expected true for  $db_value === "patata" ' . PHP_EOL
+				. 'db_value ($result->$column): ' . json_encode($db_value) . PHP_EOL
+				. 'table: ' . to_string($table) . PHP_EOL
+				. 'section_tipo: ' . to_string($section_tipo) . PHP_EOL
+				. 'section_id: ' . to_string($section_id) . PHP_EOL
+				. 'null_data_to_save: ' . to_string($null_data_to_save) . PHP_EOL
+		);
 
-			// read and check all is written OK
-			$result	= matrix_db_manager::read(
-				$table,
-				$section_tipo,
-				$section_id
-			);
-			// expected non empty column (only $new_key is deleted, $new_key2 is untouched)
-			$db_value = json_decode($result[$column])->$new_key2;
-			$eq = $db_value == $value2	;
-			$this->assertTrue(
-				$eq,
-				'expected true ' . PHP_EOL
-					.'result: ' . json_encode($db_value) . PHP_EOL
-					.'value: ' . json_encode($db_value)
-			);
+		// 4 - New keys add
+		$new_key = 'dd201';
+		$value	= json_decode('[{"id":1,"lang":"lg-nolan","start":{"day":9,"hour":13,"time":65053633711,"year":2024,"month":1,"minute":48,"second":31}}]');
+		$new_data_to_save = [(object)[
+			'column'	=> $column,
+			'key'		=> $new_key,
+			'value'		=> $value
+		]];
+		$result = matrix_db_manager::update_by_key(
+			$table,
+			$section_tipo,
+			$section_id,
+			$new_data_to_save
+		);
+		$new_key2 = 'dd202';
+		$value2	= json_decode('[{"id":2,"lang":"lg-nolan","start":{"day":10,"hour":13,"time":65053633711,"year":2024,"month":1,"minute":48,"second":31}}]');
+		$data_to_save2 = [(object)[
+			'column'	=> $column,
+			'key'		=> $new_key2,
+			'value'		=> $value2
+		]];
+		$result = matrix_db_manager::update_by_key(
+			$table,
+			$section_tipo,
+			$section_id,
+			$data_to_save2
+		);
 
-		// update non existing record
-			$result = matrix_db_manager::update_by_key(
-				$table,
-				$section_tipo,
-				$section_id = 999999999,
-				$column,
-				$new_key,
-				null
-			);
-			// Check result
-			$eq = $result === false;
-			$this->assertTrue(
-				$eq,
-				'expected true ' . PHP_EOL
-					.'result: ' . to_string($result)
-			);
+		// 5 - update non existing record
+		$data_to_save = [(object)[
+			'column'	=> $column,
+			'key'		=> $new_key,
+			'value'		=> null
+		]];
+		$result = matrix_db_manager::update_by_key(
+			$table,
+			$section_tipo,
+			$section_id = 999999999,
+			$data_to_save
+		);
+		// Check result
+		$eq = $result === false;
+		$this->assertTrue(
+			$eq,
+			'expected true ' . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
 
-		// massive update
-			// counter
-			$counter_value = $this->get_counter_value($section_tipo);
-			$this->execution_timing(
-				'update_by_key',
-				function($i) use($table, $section_tipo, $column, $new_key, $value) {
-					return matrix_db_manager::update_by_key(
-						$table,
-						$section_tipo,
-						$i,
-						$column,
-						$new_key,
-						$value
-					);
-				},
-				1000, // estimated time ms
-				$counter_value - 10000, // from section_id
-				10000 // n records
-			);
-	}//end test_update_by_key
+		// 6 - massive update
+		// counter
+		$counter_value = $this->get_counter_value($section_tipo);
+		$this->execution_timing(
+			'update_by_key',
+			function ($i) use ($table, $section_tipo, $column, $new_key, $value) {
+				return matrix_db_manager::update_by_key(
+					$table,
+					$section_tipo,
+					$i,
+					[(object)[
+						'column'	=> $column,
+						'key'		=> $new_key,
+						'value'		=> $value
+					]]
+				);
+			},
+			1200, // estimated time ms
+			$counter_value - 10000, // from section_id
+			10000 // n records
+		);
+	} //end test_update_by_key
 
 
 
