@@ -522,6 +522,8 @@ abstract class dd_ontology_db_manager {
 			// Set the statement as existing.
 			DBi::$prepared_statements[$stmt_name] = true;
 		}
+
+		// Execute
 		$result = pg_execute(
 			$conn,
 			$stmt_name,
@@ -531,6 +533,7 @@ abstract class dd_ontology_db_manager {
 		if (!$result) {
 			debug_log(__METHOD__
 				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				. ' sql ' . to_string($sql ?? '') . PHP_EOL
 				.' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);

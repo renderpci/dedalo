@@ -111,7 +111,7 @@ class search {
 		}
 
 		// Instantiate the Search Query Language Object:
-		$this->sqlo = new stdClass(); 
+		$this->sqlo = new stdClass();
 			$this->sqlo->select		= [];
 			$this->sqlo->from		= [];
 			$this->sqlo->main_where = [];
@@ -420,7 +420,8 @@ class search {
 	public function parse_sqo() : void {
 
 		// already parsed case
-			if ($this->sqo->parsed===true) {
+			$parsed = $this->sqo->parsed ?? false;
+			if ($parsed===true) {
 				return;
 			}
 
@@ -671,7 +672,7 @@ class search {
 				$ar_key[] = ($key === $total-1)
 					? self::trim_tipo($step_object->section_tipo) // last
 					: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
-			}			
+			}
 
 		}//foreach ($path as  $step_object)
 
@@ -691,7 +692,8 @@ class search {
 	public function parse_sql_query( ) : string {
 
 		// pre_parse_sql_query if not already parsed
-		if ($this->sqo->parsed!==true) {
+		$parsed = $this->sqo->parsed ?? false;
+		if ($parsed!==true) {
 			// Pre-parse search_query_object with components always before begins
 			$this->parse_sqo();
 		}
