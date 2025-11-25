@@ -3,10 +3,14 @@
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/|version|/phpunit.xsd"
          executionOrder="default"
          cacheResult="false"
-         bootstrap="bootstrap.php">
+         bootstrap="bootstrap.php"
+         colors="true">
     <php>
         <ini name="error_reporting" value="E_ALL &amp; ~E_NOTICE &amp; ~E_WARNING &amp; ~E_DEPRECATED"/>
     </php>
+    <extensions>
+        <extension class="TestTimeExtension" file="TestTimeExtension.php"/>
+    </extensions>
     <testsuites>
         <testsuite name="db">
             <directory>../test/db</directory>

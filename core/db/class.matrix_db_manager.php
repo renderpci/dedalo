@@ -781,6 +781,7 @@ class matrix_db_manager {
 			DBi::$prepared_statements[$stmt_name] = true;
 		}
 
+		// Execute
 		$result = pg_execute(
 			$conn,
 			$stmt_name,
@@ -788,12 +789,11 @@ class matrix_db_manager {
 		);
 
 		if (!$result) {
-			debug_log(
-				__METHOD__
-					. ' Error executing DELETE on table: ' . $table . PHP_EOL
-					. ' sql ' . to_string($sql) . PHP_EOL
-					. ' error: ' . pg_last_error($conn),
-				logger::ERROR
+			debug_log(__METHOD__
+				. ' Error executing DELETE on table: ' . $table . PHP_EOL
+				. ' sql ' . to_string($sql ?? '') . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				, logger::ERROR
 			);
 			return false;
 		}
@@ -963,7 +963,7 @@ class matrix_db_manager {
 			$start_time = start_time();
 
 			// metrics
-			metrics::$exec_search_total_calls++;
+			metrics::$search_free_total_calls++;
 
 			// query additional info
 				if (isset(debug_backtrace()[1]['function'])) {
@@ -992,7 +992,7 @@ class matrix_db_manager {
 		// exec With prepared statement
 		$stmt_name = md5($sql_query);
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			$statement = pg_prepare($conn, $stmtname, $sql_query);
+			$statement = pg_prepare($conn, $stmt_name, $sql_query);
 			if ($statement===false) {
 				debug_log(__METHOD__
 					. " Error when pg_prepare statement for sql_query: "
@@ -1034,7 +1034,7 @@ class matrix_db_manager {
 			}
 
 			// metrics
-			metrics::$exec_search_total_time += $total_time_ms;
+			metrics::$search_free_total_time += $total_time_ms;
 
 			// debug_log(__METHOD__
 			// 	.' exec_search: ' . PHP_EOL
