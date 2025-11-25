@@ -864,4 +864,365 @@ final class matrix_db_manager_test extends TestCase {
 
 
 
+	/**
+	 * TEST_search
+	 * @return void
+	 */
+	public function test_search(): void
+	{
+
+		$table			= 'matrix_test';
+		$section_tipo	= 'test65';
+
+		// Create some test records
+		$section_id_1 = matrix_db_manager::create(
+			$table,
+			$section_tipo
+		);
+		$section_id_2 = matrix_db_manager::create(
+			$table,
+			$section_tipo
+		);
+		$section_id_3 = matrix_db_manager::create(
+			$table,
+			$section_tipo
+		);
+
+		// Update records with some data
+		$values = (object)[
+			'data' => [
+				'test_property' => 'test_value'
+			]
+		];
+		matrix_db_manager::update(
+			$table,
+			$section_tipo,
+			$section_id_1,
+			$values
+		);
+
+		// Test 1: Simple search by section_tipo
+		$start_time = start_time();
+		$filter = [
+			[
+				'column' => 'section_tipo',
+				'value' => $section_tipo
+			]
+		];
+		$result = matrix_db_manager::search(
+			$table,
+			$filter
+		);
+
+		// Check the time consuming. Expected value is around 2 ms
+		$total_time = exec_time_unit($start_time);
+		$eq = $total_time < 10;
+		$this->assertTrue(
+			$eq,
+			'expected execution time (1): bellow 10 ms' . PHP_EOL
+				. 'total_time ms: ' . $total_time
+		);
+
+		// Check result type
+		$eq = is_array($result);
+		$this->assertTrue(
+			$eq,
+			'expected true (array)' . PHP_EOL
+				. 'result type: ' . gettype($result) . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
+
+		// Check that our created records are in the result
+		$eq = in_array($section_id_1, $result) && in_array($section_id_2, $result) && in_array($section_id_3, $result);
+		$this->assertTrue(
+			$eq,
+			'expected created section_ids to be in search results' . PHP_EOL
+				. 'section_id_1: ' . $section_id_1 . PHP_EOL
+				. 'section_id_2: ' . $section_id_2 . PHP_EOL
+				. 'section_id_3: ' . $section_id_3 . PHP_EOL
+				. 'result: ' . json_encode($result)
+		);
+
+		// Test 2: Search with specific section_id
+		$filter = [
+			[
+				'column' => 'section_tipo',
+				'value' => $section_tipo
+			],
+			[
+				'column' => 'section_id',
+				'value' => $section_id_1
+			]
+		];
+		$result = matrix_db_manager::search(
+			$table,
+			$filter
+		);
+
+		// Check result contains only one record
+		$eq = count($result) === 1 && $result[0] === $section_id_1;
+		$this->assertTrue(
+			$eq,
+			'expected single section_id in result' . PHP_EOL
+				. 'result: ' . json_encode($result) . PHP_EOL
+				. 'expected: [' . $section_id_1 . ']'
+		);
+
+		// Test 3: Search with ORDER BY
+		$filter = [
+			[
+				'column' => 'section_tipo',
+				'value' => $section_tipo
+			],
+			[
+				'column' => 'section_id',
+				'operator' => '>=',
+				'value' => $section_id_1
+			]
+		];
+		$result = matrix_db_manager::search(
+			$table,
+			$filter,
+			'section_id DESC'
+		);
+
+		// Check that results are in descending order
+		$eq = $result[0] >= $result[1] && $result[1] >= $result[2];
+		$this->assertTrue(
+			$eq,
+			'expected results in descending order' . PHP_EOL
+				. 'result: ' . json_encode($result)
+		);
+
+		// Test 4: Search with LIMIT
+		$filter = [
+			[
+				'column' => 'section_tipo',
+				'value' => $section_tipo
+			]
+		];
+		$result = matrix_db_manager::search(
+			$table,
+			$filter,
+			'section_id ASC',
+			2
+		);
+
+		// Check that only 2 results are returned
+		$eq = count($result) === 2;
+		$this->assertTrue(
+			$eq,
+			'expected 2 results with LIMIT 2' . PHP_EOL
+				. 'result count: ' . count($result) . PHP_EOL
+				. 'result: ' . json_encode($result)
+		);
+
+		// Test 5: Search with invalid table (should return false)
+		$result = matrix_db_manager::search(
+			'invalid_table',
+			$filter
+		);
+		$eq = $result === false;
+		$this->assertTrue(
+			$eq,
+			'expected false for invalid table' . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
+
+		// Test 6: Search with empty filter (should return false)
+		$result = matrix_db_manager::search(
+			$table,
+			[]
+		);
+		$eq = $result === false;
+		$this->assertTrue(
+			$eq,
+			'expected false for empty filter' . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
+
+		// Test 7: Search with invalid column (should return false)
+		$filter = [
+			[
+				'column' => 'invalid_column',
+				'value' => 'test'
+			]
+		];
+		$result = matrix_db_manager::search(
+			$table,
+			$filter
+		);
+		$eq = $result === false;
+		$this->assertTrue(
+			$eq,
+			'expected false for invalid column' . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
+
+		// Test 8: Search with invalid operator (should return false)
+		$filter = [
+			[
+				'column' => 'section_tipo',
+				'operator' => 'INVALID_OP',
+				'value' => $section_tipo
+			]
+		];
+		$result = matrix_db_manager::search(
+			$table,
+			$filter
+		);
+		$eq = $result === false;
+		$this->assertTrue(
+			$eq,
+			'expected false for invalid operator' . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
+
+		// Test 9: Search with no results
+		$filter = [
+			[
+				'column' => 'section_id',
+				'value' => 999999999
+			]
+		];
+		$result = matrix_db_manager::search(
+			$table,
+			$filter
+		);
+		$eq = is_array($result) && count($result) === 0;
+		$this->assertTrue(
+			$eq,
+			'expected empty array for no results' . PHP_EOL
+				. 'result: ' . json_encode($result)
+		);
+	}//end test_search
+
+
+
+	/**
+	 * TEST_exec_search
+	 * @return void
+	 */
+	public function test_exec_search(): void
+	{
+
+		$table			= 'matrix_test';
+		$section_tipo	= 'test65';
+
+		// Create a test record
+		$section_id = matrix_db_manager::create(
+			$table,
+			$section_tipo
+		);
+
+		// Test 1: Simple SELECT query
+		$start_time = start_time();
+		$sql_query = 'SELECT section_id, section_tipo FROM "' . $table . '" WHERE section_id = $1 AND section_tipo = $2';
+		$params = [$section_id, $section_tipo];
+		$result = matrix_db_manager::exec_search(
+			$sql_query,
+			$params
+		);
+
+		// Check the time consuming. Expected value is around 2 ms
+		$total_time = exec_time_unit($start_time);
+		$eq = $total_time < 10;
+		$this->assertTrue(
+			$eq,
+			'expected execution time (1): bellow 10 ms' . PHP_EOL
+				. 'total_time ms: ' . $total_time
+		);
+
+		// Check result type (should be PgSql\Result)
+		$eq = $result !== false;
+		$this->assertTrue(
+			$eq,
+			'expected valid result (not false)' . PHP_EOL
+				. 'result type: ' . gettype($result)
+		);
+
+		// Check that we got a row
+		$row = pg_fetch_assoc($result);
+		$eq = $row !== false && (int)$row['section_id'] === $section_id;
+		$this->assertTrue(
+			$eq,
+			'expected to fetch valid row with correct section_id' . PHP_EOL
+				. 'row: ' . json_encode($row) . PHP_EOL
+				. 'expected section_id: ' . $section_id
+		);
+
+		// Test 2: Query with no parameters
+		$sql_query = 'SELECT COUNT(*) as count FROM "' . $table . '" WHERE section_tipo = $1';
+		$params = [$section_tipo];
+		$result = matrix_db_manager::exec_search(
+			$sql_query,
+			$params
+		);
+
+		$eq = $result !== false;
+		$this->assertTrue(
+			$eq,
+			'expected valid result for COUNT query' . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
+
+		$row = pg_fetch_assoc($result);
+		$eq = isset($row['count']) && (int)$row['count'] > 0;
+		$this->assertTrue(
+			$eq,
+			'expected count > 0' . PHP_EOL
+				. 'count: ' . ($row['count'] ?? 'null')
+		);
+
+		// Test 3: Query that returns no results
+		$sql_query = 'SELECT section_id FROM "' . $table . '" WHERE section_id = $1';
+		$params = [999999999];
+		$result = matrix_db_manager::exec_search(
+			$sql_query,
+			$params
+		);
+
+		$eq = $result !== false;
+		$this->assertTrue(
+			$eq,
+			'expected valid result even with no rows' . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
+
+		$row = pg_fetch_assoc($result);
+		$eq = $row === false;
+		$this->assertTrue(
+			$eq,
+			'expected no rows (false) for non-existent section_id' . PHP_EOL
+				. 'row: ' . to_string($row)
+		);
+
+		// Test 4: Execute same query again (should use prepared statement)
+		$start_time = start_time();
+		$sql_query = 'SELECT section_id, section_tipo FROM "' . $table . '" WHERE section_id = $1 AND section_tipo = $2';
+		$params = [$section_id, $section_tipo];
+		$result = matrix_db_manager::exec_search(
+			$sql_query,
+			$params
+		);
+
+		// Check the time consuming (should be faster due to prepared statement)
+		$total_time = exec_time_unit($start_time);
+		$eq = $total_time < 5;
+		$this->assertTrue(
+			$eq,
+			'expected faster execution time with prepared statement: bellow 5 ms' . PHP_EOL
+				. 'total_time ms: ' . $total_time
+		);
+
+		$eq = $result !== false;
+		$this->assertTrue(
+			$eq,
+			'expected valid result from cached prepared statement' . PHP_EOL
+				. 'result: ' . to_string($result)
+		);
+	}//end test_exec_search
+
+
+
 }//end class matrix_db_manager_test
