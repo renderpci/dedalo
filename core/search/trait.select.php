@@ -9,7 +9,7 @@ trait select {
 
 	/**
 	* BUILD_SQL_QUERY_SELECT
-	* select_object =
+	* select_object sample:
 	* {
 	* 	"column" : "relation" string column name
 	* 	"key": "oh25" string|null component tipo
@@ -17,7 +17,7 @@ trait select {
 	* @return true
 	*/
 	public function build_sql_query_select() : true {
-		
+
 		$sqo = $this->sqo;
 
 		// Unique column for count
@@ -58,7 +58,7 @@ trait select {
 
 			$key	= $select_object->key ?? null;
 			$column	= $select_object->column;
-			
+
 			// section_id is mandatory
 			// When it is set doesn't include again.
 			if( $column==='section_id' ){
@@ -73,9 +73,9 @@ trait select {
 			if( !empty($key) ){
 				$sentence .= ' as '.$key; // DISTINCT ON (matrix.section_id) matrix.section_id as oh62
 			}
-			
-			$this->sqlo->select[] = $sentence;				
-		}		
+
+			$this->sqo->select[] = $sentence;
+		}
 
 		// Join all
 			// $sql_query_select = implode(','.PHP_EOL, $sentences);

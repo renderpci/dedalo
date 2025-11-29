@@ -87,35 +87,6 @@ abstract class dd_ontology_db_manager {
 		$params			= [$tipo]; // param values (first one for tipo)
 		$param_index	= 2; // next param index ($2, $3, ...)
 
-		// Add dynamic columns
-		// foreach ($values as $col => $value) {
-
-		// 	// Prevent double columns. Already added by default (required).
-		// 	if ($col==='tipo') continue;
-
-		// 	// Columns. Only accepts normalized columns
-		// 	if (!isset(self::$ontology_columns[$col])) {
-		// 		throw new Exception("Invalid column name: $col");
-		// 	}
-		// 	$columns[] = pg_escape_identifier($conn, $col);
-
-		// 	// Placeholders / Values
-		// 	 if ($value !== null && isset(self::$ontology_json_columns[$col])) {
-		// 		// Encode PHP array/object as JSON string
-		// 		$params[]		= json_handler::encode($value);
-		// 		$placeholders[]	= '$' . $param_index . '::jsonb';
-		// 	}else if(is_bool($value)) {
-		// 		// Parse boolean values to safe save as t|f
-		// 		$params[]		= $value ? 't' : 'f';
-		// 		$placeholders[]	= '$' . $param_index . '::boolean';
-		// 	}else{
-		// 		$params[]		= $value;
-		// 		$placeholders[]	= '$' . $param_index;
-		// 	}
-
-		// 	// Increase param index value
-		// 	$param_index++;
-		// }
 
 		// Add fixed columns (this allows use prepared statements)
 		foreach (self::$ontology_columns as $col => $col_value) {
@@ -401,72 +372,6 @@ abstract class dd_ontology_db_manager {
 			. ' SET ' . implode(', ', $set_clauses)
 			. ' WHERE tipo = $1';
 
-		// $columns = array_keys($values); // array keys are the column names as 'date' => [{...}]
-
-		// $safe_values = [];
-		// foreach ($values as $key => $value) {
-		// 	if (!isset(self::$ontology_columns[$key])) {
-		// 		throw new Exception("Invalid column name: $key");
-		// 		// debug_log(__METHOD__
-		// 		// 	. " Error: Invalid column name: $key " . PHP_EOL
-		// 		// 	. ' values: ' . to_string($values)
-		// 		// 	, logger::ERROR
-		// 		// );
-		// 		// return false;
-		// 	}
-		// 	$safe_value = ($value !== null && isset(self::$ontology_json_columns[$key]))
-		// 		? json_handler::encode($value)
-		// 		: $value;
-
-		// 	$safe_values[] = $safe_value;
-		// }
-
-		// // With prepared statement
-		// 	// $stmt_name = md5(__METHOD__ . '_' . $table .'_'. implode('', $columns));
-		// 	// if (!isset(DBi::$prepared_statements[$stmt_name])) {
-
-		// 	// 	// set_clauses
-		// 	// 	$counter = 2; // 1 is reserved to tipo
-		// 	// 	$set_clauses = [];
-		// 	// 	foreach ($values as $key => $value) {
-		// 	// 		if (!isset(self::$ontology_columns[$key])) {
-		// 	// 			throw new Exception("Invalid column name: $key");
-		// 	// 		}
-		// 	// 		$set_clauses[] = '"'.$key.'" = $' . $counter++;
-		// 	// 	}
-
-		// 	// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
-		// 	// 		 .' WHERE tipo = $1';
-
-		// 	// 	if (!pg_prepare(
-		// 	// 		$conn,
-		// 	// 		$stmt_name,
-		// 	// 		$sql)
-		// 	// 	) {
-		// 	//         debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-		// 	//         return false;
-		// 	//     }
-		// 	// 	// Set the statement as existing.
-		// 	// 	DBi::$prepared_statements[$stmt_name] = true;
-		// 	// }
-		// 	// $result = pg_execute(
-		// 	// 	$conn,
-		// 	// 	$stmt_name,
-		// 	// 	[$tipo, ...$safe_values] // spread values
-		// 	// );
-
-		// // Without prepared statement (more dynamic and appropriate for changing columns scenarios)
-		// 	// set_clauses
-		// 	$counter = 2; // 1 is reserved to tipo
-		// 	$set_clauses = [];
-		// 	foreach ($columns as $column) {
-		// 		$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $'. $counter++;
-		// 	}
-
-		// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
-		// 		 .' WHERE tipo = $1';
-
-		// 	$params = [$tipo, ...$safe_values];
 
 		$result = pg_query_params($conn, $sql, $params);
 
@@ -606,40 +511,6 @@ abstract class dd_ontology_db_manager {
 			// Increase param index value
 			$param_index++;
 		}
-
-		// With prepared statement
-			// $stmt_name = md5(__METHOD__ . '_' . $table .'_'. implode('', $columns));
-			// if (!isset(DBi::$prepared_statements[$stmt_name])) {
-
-			// 	// set_clauses
-			// 	$counter = 2; // 1 is reserved to tipo
-			// 	$set_clauses = [];
-			// 	foreach ($values as $key => $value) {
-			// 		if (!isset(self::$ontology_columns[$key])) {
-			// 			throw new Exception("Invalid column name: $key");
-			// 		}
-			// 		$set_clauses[] = '"'.$key.'" = $' . $counter++;
-			// 	}
-
-			// 	$sql = 'UPDATE '.$table.' SET '.implode(', ', $set_clauses)
-			// 		 .' WHERE tipo = $1';
-
-			// 	if (!pg_prepare(
-			// 		$conn,
-			// 		$stmt_name,
-			// 		$sql)
-			// 	) {
-			//         debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-			//         return false;
-			//     }
-			// 	// Set the statement as existing.
-			// 	DBi::$prepared_statements[$stmt_name] = true;
-			// }
-			// $result = pg_execute(
-			// 	$conn,
-			// 	$stmt_name,
-			// 	[$tipo, ...$safe_values] // spread values
-			// );
 
 		// Without prepared statement (more dynamic and appropriate for changing columns scenarios)
 			$sql = 'SELECT tipo FROM '.$table
