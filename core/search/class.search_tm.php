@@ -42,32 +42,36 @@ class search_tm extends search {
 
 	/**
 	* BUILD_SQL_QUERY_SELECT
-	* @param bool $full_count = false
-	* @return string $sql_query_select
+	* select_object sample:
+	* {
+	* 	"column" : "relation" string column name
+	* 	"key": "oh25" string|null component tipo
+	* }
+	* @return strue
 	*/
-	public function build_sql_query_select(bool $full_count=false) : string {
+	public function build_sql_query_select() : true {
 
-		if ($full_count===true) {
-			return $this->build_full_count_sql_query_select();
+		// Unique column for count
+		// If the SQO has active full_count set the SELECT with specific count for the section_id column
+		if ( $this->sqo->full_count===true ) {
+			$this->build_full_count_sql_query_select();
+			return true;
 		}
 
-		$search_query_object = $this->search_query_object;
-
 		$ar_sql_select = [];
-		$ar_key_path   = [];
-
 		$ar_sql_select[] = '*';
 
-		# Add order columns to select when needed
-			foreach ((array)$this->order_columns as $select_line) {
-				$ar_sql_select[] = $select_line;
-			}
+		// Add order columns to select when needed
+		foreach ((array)$this->order_columns as $select_line) {
+			$ar_sql_select[] = $select_line;
+		}
 
-		# Join all
-			$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
+		// Join all
+		$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
+		$this->sqo->select[] = $sql_query_select;
 
 
-		return $sql_query_select;
+		return true;
 	}//end build_sql_query_select
 
 
