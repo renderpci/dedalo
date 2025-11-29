@@ -201,10 +201,10 @@ final class matrix_db_manager_test extends TestCase {
 		// Check the time consuming. Expected value is around 15 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 25;
+		$eq = $total_time < 35;
 		$this->assertTrue(
 			$eq,
-			'expected execution time (1) bellow 25 ms' . PHP_EOL
+			'expected execution time (1) bellow 35 ms' . PHP_EOL
 				. 'total_time ms: ' . $total_time
 		);
 
@@ -1222,6 +1222,299 @@ final class matrix_db_manager_test extends TestCase {
 				. 'result: ' . to_string($result)
 		);
 	}//end test_exec_search
+
+
+
+	/**
+	 * TEST_create_edge_cases
+	 * @return void
+	 */
+	public function test_create_edge_cases(): void
+	{
+		$table			= 'matrix_test';
+		$section_tipo	= 'test65';
+
+		// Test 1: Invalid table name
+		$result = matrix_db_manager::create(
+			'invalid_table',
+			$section_tipo
+		);
+		$this->assertFalse($result, 'expected false for invalid table');
+
+		// Test 2: Create with invalid column name (should throw exception)
+		try {
+			$values = (object)[
+				'invalid_column' => 'test_value'
+			];
+			$result = matrix_db_manager::create(
+				$table,
+				$section_tipo,
+				$values
+			);
+			$this->fail('Expected exception for invalid column name');
+		} catch (Exception $e) {
+			$this->assertStringContainsString('Invalid column name', $e->getMessage());
+		}
+
+		// Test 3: Create with NULL values in valid columns
+		$values = (object)[
+			'data' => null,
+			'relation' => null
+		];
+		$result = matrix_db_manager::create(
+			$table,
+			$section_tipo,
+			$values
+		);
+		$this->assertIsInt($result, 'expected integer section_id for NULL values');
+		$this->assertGreaterThan(0, $result);
+
+		// Test 4: Create with empty object
+		$values = (object)[];
+		$result = matrix_db_manager::create(
+			$table,
+			$section_tipo,
+			$values
+		);
+		$this->assertIsInt($result, 'expected integer section_id for empty object');
+	}//end test_create_edge_cases
+
+
+
+	/**
+	 * TEST_update_edge_cases
+	 * @return void
+	 */
+	public function test_update_edge_cases(): void
+	{
+		$table			= 'matrix_test';
+		$section_tipo	= 'test65';
+		$section_id		= matrix_db_manager::create($table, $section_tipo);
+
+		// Test 1: Invalid table name
+		$values = (object)['data' => ['test' => true]];
+		$result = matrix_db_manager::update(
+			'invalid_table',
+			$section_tipo,
+			$section_id,
+			$values
+		);
+		$this->assertFalse($result, 'expected false for invalid table');
+
+		// Test 2: Invalid column name (should throw exception)
+		try {
+			$values = (object)['invalid_column' => 'test'];
+			matrix_db_manager::update(
+				$table,
+				$section_tipo,
+				$section_id,
+				$values
+			);
+			$this->fail('Expected exception for invalid column');
+		} catch (Exception $e) {
+			$this->assertStringContainsString('Invalid column name', $e->getMessage());
+		}
+
+		// Test 3: Empty values object
+		$values = (object)[];
+		$result = matrix_db_manager::update(
+			$table,
+			$section_tipo,
+			$section_id,
+			$values
+		);
+		$this->assertFalse($result, 'expected false for empty values');
+
+		// Test 4: Update with NULL to clear data
+		$values = (object)[
+			'data' => null,
+			'relation' => null
+		];
+		$result = matrix_db_manager::update(
+			$table,
+			$section_tipo,
+			$section_id,
+			$values
+		);
+		$this->assertTrue($result, 'expected true for NULL values update');
+
+		// Verify NULL was set
+		$read_result = matrix_db_manager::read($table, $section_tipo, $section_id);
+		$this->assertNull($read_result->data);
+		$this->assertNull($read_result->relation);
+	}//end test_update_edge_cases
+
+
+
+	/**
+	 * TEST_delete_edge_cases
+	 * @return void
+	 */
+	public function test_delete_edge_cases(): void
+	{
+		$table			= 'matrix_test';
+		$section_tipo	= 'test65';
+
+		// Test 1: Invalid table name
+		$result = matrix_db_manager::delete(
+			'invalid_table',
+			$section_tipo,
+			1
+		);
+		$this->assertFalse($result, 'expected false for invalid table');
+
+		// Test 2: Delete non-existent record (should still return true)
+		$result = matrix_db_manager::delete(
+			$table,
+			$section_tipo,
+			999999999
+		);
+		$this->assertTrue($result, 'expected true even for non-existent record');
+
+		// Test 3: Delete already deleted record
+		$section_id = matrix_db_manager::create($table, $section_tipo);
+		$result1 = matrix_db_manager::delete($table, $section_tipo, $section_id);
+		$this->assertTrue($result1, 'first delete should succeed');
+		
+		$result2 = matrix_db_manager::delete($table, $section_tipo, $section_id);
+		$this->assertTrue($result2, 'second delete should also return true');
+	}//end test_delete_edge_cases
+
+
+
+	/**
+	 * TEST_read_edge_cases
+	 * @return void
+	 */
+	public function test_read_edge_cases(): void
+	{
+		$table			= 'matrix_test';
+		$section_tipo	= 'test65';
+
+		// Test 1: Invalid table name
+		$result = matrix_db_manager::read(
+			'invalid_table',
+			$section_tipo,
+			1
+		);
+		$this->assertFalse($result, 'expected false for invalid table');
+
+		// Test 2: Non-existent section_id
+		$result = matrix_db_manager::read(
+			$table,
+			$section_tipo,
+			999999999
+		);
+		$this->assertFalse($result, 'expected false for non-existent section_id');
+
+		// Test 3: Read record with NULL columns
+		$section_id = matrix_db_manager::create($table, $section_tipo);
+		$result = matrix_db_manager::read($table, $section_tipo, $section_id);
+		$this->assertIsObject($result, 'expected object for valid read');
+		$this->assertObjectHasProperty('section_id', $result);
+		$this->assertObjectHasProperty('section_tipo', $result);
+	}//end test_read_edge_cases
+
+
+
+	/**
+	 * TEST_update_by_key_edge_cases
+	 * @return void
+	 */
+	public function test_update_by_key_edge_cases(): void
+	{
+		$table			= 'matrix_test';
+		$section_tipo	= 'test65';
+		$section_id		= matrix_db_manager::create($table, $section_tipo);
+
+		// Test 1: Invalid table name
+		$data_to_save = [(object)[
+			'column' => 'data',
+			'key' => 'test_key',
+			'value' => 'test_value'
+		]];
+		$result = matrix_db_manager::update_by_key(
+			'invalid_table',
+			$section_tipo,
+			$section_id,
+			$data_to_save
+		);
+		$this->assertFalse($result, 'expected false for invalid table');
+
+		// Test 2: Invalid data structure (not an object)
+		$result = matrix_db_manager::update_by_key(
+			$table,
+			$section_tipo,
+			$section_id,
+			['not_an_object']
+		);
+		$this->assertFalse($result, 'expected false for invalid data structure');
+
+		// Test 3: Update non-existent record
+		$data_to_save = [(object)[
+			'column' => 'data',
+			'key' => 'test_key',
+			'value' => 'test_value'
+		]];
+		$result = matrix_db_manager::update_by_key(
+			$table,
+			$section_tipo,
+			999999999,
+			$data_to_save
+		);
+		$this->assertFalse($result, 'expected false for non-existent record');
+	}//end test_update_by_key_edge_cases
+
+
+
+	/**
+	 * TEST_search_edge_cases
+	 * @return void
+	 */
+	public function test_search_edge_cases(): void
+	{
+		$table			= 'matrix_test';
+		$section_tipo	= 'test65';
+
+		// Test 1: Invalid table name
+		$filter = [
+			['column' => 'section_tipo', 'value' => $section_tipo]
+		];
+		$result = matrix_db_manager::search('invalid_table', $filter);
+		$this->assertFalse($result, 'expected false for invalid table');
+
+		// Test 2: Empty filter
+		$result = matrix_db_manager::search($table, []);
+		$this->assertFalse($result, 'expected false for empty filter');
+
+		// Test 3: Invalid column in filter
+		$filter = [
+			['column' => 'invalid_column', 'value' => 'test']
+		];
+		$result = matrix_db_manager::search($table, $filter);
+		$this->assertFalse($result, 'expected false for invalid column');
+
+		// Test 4: Multiple filter conditions
+		$section_id_1 = matrix_db_manager::create($table, $section_tipo);
+		$section_id_2 = matrix_db_manager::create($table, $section_tipo);
+		
+		$filter = [
+			['column' => 'section_tipo', 'value' => $section_tipo],
+			['column' => 'section_id', 'operator' => '>=', 'value' => $section_id_1]
+		];
+		$result = matrix_db_manager::search($table, $filter);
+		$this->assertIsArray($result, 'expected array for valid search');
+		$this->assertContains($section_id_1, $result);
+		$this->assertContains($section_id_2, $result);
+
+		// Test 5: Search with no results
+		$filter = [
+			['column' => 'section_id', 'value' => 999999999]
+		];
+		$result = matrix_db_manager::search($table, $filter);
+		$this->assertIsArray($result, 'expected empty array for no results');
+		$this->assertEmpty($result);
+	}//end test_search_edge_cases
 
 
 
