@@ -238,7 +238,7 @@ class matrix_db_manager {
 		$conn = DBi::_getConnection();
 
 		// With prepared statement
-		$stmt_name = __METHOD__ . '_' . $table;
+		$stmt_name = 'read_' . $table;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 			$select_fields	= '*'; // Select all because is faster than the list of the columns
 			$sql = 'SELECT ' . $select_fields . ' FROM "' . $table . '" WHERE section_id = $1 AND section_tipo = $2 LIMIT 1';
@@ -763,8 +763,11 @@ class matrix_db_manager {
 		$conn = DBi::_getConnection();
 
 		// With prepared statement
-		$stmt_name = __METHOD__ . '_' . $table;
+		$stmt_name = 'delete_' . $table;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
+
+			// Index use sample:
+			// Index Scan using matrix_section_tipo_section_id_desc_idx on matrix
 
 			$sql = 'DELETE FROM "' . $table . '"'
 				. ' WHERE section_id = $1 AND section_tipo = $2';
