@@ -3,7 +3,7 @@
         'name' => 'dedalo/dedalo_libs',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => '3949b6bf990c5b7573dd646ccc2f623bd6253043',
+        'reference' => 'c2349ba09912e17cbd877a4f5a902cebbd34eeba',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'dedalo/dedalo_libs' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '3949b6bf990c5b7573dd646ccc2f623bd6253043',
+            'reference' => 'c2349ba09912e17cbd877a4f5a902cebbd34eeba',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
