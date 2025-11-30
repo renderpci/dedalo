@@ -18,7 +18,6 @@ use function dirname;
 use function explode;
 use function function_exists;
 use function is_file;
-use function is_readable;
 use function method_exists;
 use function printf;
 use function realpath;
@@ -45,6 +44,7 @@ use PHPUnit\Runner\Baseline\Generator as BaselineGenerator;
 use PHPUnit\Runner\Baseline\Reader;
 use PHPUnit\Runner\Baseline\Writer;
 use PHPUnit\Runner\CodeCoverage;
+use PHPUnit\Runner\CodeCoverageInitializationStatus;
 use PHPUnit\Runner\DeprecationCollector\Facade as DeprecationCollector;
 use PHPUnit\Runner\DirectoryDoesNotExistException;
 use PHPUnit\Runner\ErrorHandler;
@@ -66,6 +66,7 @@ use PHPUnit\TextUI\CliArguments\Configuration as CliConfiguration;
 use PHPUnit\TextUI\CliArguments\Exception as ArgumentsException;
 use PHPUnit\TextUI\CliArguments\XmlConfigurationFileFinder;
 use PHPUnit\TextUI\Command\AtLeastVersionCommand;
+use PHPUnit\TextUI\Command\CheckPhpConfigurationCommand;
 use PHPUnit\TextUI\Command\GenerateConfigurationCommand;
 use PHPUnit\TextUI\Command\ListGroupsCommand;
 use PHPUnit\TextUI\Command\ListTestFilesCommand;
@@ -78,6 +79,9 @@ use PHPUnit\TextUI\Command\ShowHelpCommand;
 use PHPUnit\TextUI\Command\ShowVersionCommand;
 use PHPUnit\TextUI\Command\VersionCheckCommand;
 use PHPUnit\TextUI\Command\WarmCodeCoverageCacheCommand;
+use PHPUnit\TextUI\Configuration\BootstrapLoader;
+use PHPUnit\TextUI\Configuration\BootstrapScriptDoesNotExistException;
+use PHPUnit\TextUI\Configuration\BootstrapScriptException;
 use PHPUnit\TextUI\Configuration\CodeCoverageFilterRegistry;
 use PHPUnit\TextUI\Configuration\Configuration;
 use PHPUnit\TextUI\Configuration\PhpHandler;
@@ -124,8 +128,10 @@ final readonly class Application
 
             (new PhpHandler)->handle($configuration->php());
 
-            if ($configuration->hasBootstrap()) {
-                $this->loadBootstrapScript($configuration->bootstrap());
+            try {
+                (new BootstrapLoader)->handle($configuration);
+            } catch (BootstrapScriptDoesNotExistException|BootstrapScriptException $e) {
+                $this->exitWithErrorMessage($e->getMessage());
             }
 
             $this->executeCommandsThatDoNotRequireTheTestSuite($configuration, $cliConfiguration);
@@ -197,7 +203,7 @@ final readonly class Application
                 $this->execute(new ShowHelpCommand(Result::FAILURE));
             }
 
-            CodeCoverage::instance()->init(
+            $coverageInitializationStatus = CodeCoverage::instance()->init(
                 $configuration,
                 CodeCoverageFilterRegistry::instance(),
                 $extensionRequiresCodeCoverageCollection,
@@ -216,13 +222,16 @@ final readonly class Application
             $timer = new Timer;
             $timer->start();
 
-            $runner = new TestRunner;
+            if ($coverageInitializationStatus === CodeCoverageInitializationStatus::NOT_REQUESTED ||
+                $coverageInitializationStatus === CodeCoverageInitializationStatus::SUCCEEDED) {
+                $runner = new TestRunner;
 
-            $runner->run(
-                $configuration,
-                $resultCache,
-                $testSuite,
-            );
+                $runner->run(
+                    $configuration,
+                    $resultCache,
+                    $testSuite,
+                );
+            }
 
             $duration = $timer->stop();
 
@@ -347,48 +356,6 @@ final readonly class Application
         exit(Result::EXCEPTION);
     }
 
-    private function loadBootstrapScript(string $filename): void
-    {
-        if (!is_readable($filename)) {
-            $this->exitWithErrorMessage(
-                sprintf(
-                    'Cannot open bootstrap script "%s"',
-                    $filename,
-                ),
-            );
-        }
-
-        try {
-            include_once $filename;
-        } catch (Throwable $t) {
-            $message = sprintf(
-                'Error in bootstrap script: %s:%s%s%s%s',
-                $t::class,
-                PHP_EOL,
-                $t->getMessage(),
-                PHP_EOL,
-                $t->getTraceAsString(),
-            );
-
-            while ($t = $t->getPrevious()) {
-                $message .= sprintf(
-                    '%s%sPrevious error: %s:%s%s%s%s',
-                    PHP_EOL,
-                    PHP_EOL,
-                    $t::class,
-                    PHP_EOL,
-                    $t->getMessage(),
-                    PHP_EOL,
-                    $t->getTraceAsString(),
-                );
-            }
-
-            $this->exitWithErrorMessage($message);
-        }
-
-        EventFacade::emitter()->testRunnerBootstrapFinished($filename);
-    }
-
     /**
      * @param list<string> $argv
      */
@@ -472,6 +439,10 @@ final readonly class Application
 
         if ($cliConfiguration->version()) {
             $this->execute(new ShowVersionCommand);
+        }
+
+        if ($cliConfiguration->checkPhpConfiguration()) {
+            $this->execute(new CheckPhpConfigurationCommand);
         }
 
         if ($cliConfiguration->checkVersion()) {

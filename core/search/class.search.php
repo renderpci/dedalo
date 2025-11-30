@@ -119,7 +119,8 @@ class search {
 		}
 
 		// Instantiate the Search Query Language Object:
-		$this->sql_obj = new stdClass(); 
+
+		$this->sql_obj = new stdClass();
 			$this->sql_obj->select			= [];
 			$this->sql_obj->from			= [];
 			$this->sql_obj->join			= [];
@@ -130,6 +131,7 @@ class search {
 			$this->sql_obj->order_default	= [];
 			$this->sql_obj->limit			= [];
 			$this->sql_obj->offset			= [];
+
 
 		// section_tipo is always and array
 		$this->ar_section_tipo = (array)$search_query_object->section_tipo;
@@ -431,7 +433,9 @@ class search {
 	public function parse_sqo() : void {
 
 		// already parsed case
-			if ( isset($this->sqo->parsed) && $this->sqo->parsed===true ) {
+			$parsed = $this->sqo->parsed ?? false;
+			if ($parsed===true) {
+
 				return;
 			}
 
@@ -703,7 +707,7 @@ class search {
 				$ar_key[] = ($key === $total-1)
 					? self::trim_tipo($step_object->section_tipo) // last
 					: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
-			}			
+			}
 
 		}//foreach ($path as  $step_object)
 
@@ -801,7 +805,9 @@ class search {
 	public function parse_sql_query( ) : string {
 
 		// pre_parse_sql_query if not already parsed
-		if ( !isset($this->sqo->parsed) || $this->sqo->parsed!==true) {
+		$parsed = $this->sqo->parsed ?? false;
+		if ($parsed!==true) {
+
 			// Pre-parse search_query_object with components always before begins
 			$this->parse_sqo();
 		}
@@ -826,7 +832,7 @@ class search {
 
 		// count case (place always at first case)
 			case ($this->sqo->full_count===true):
-				$sql_query = $this->parse_sql_full_count();			
+				$sql_query = $this->parse_sql_full_count();
 				break;
 
 		// sql_filter_by_locators
@@ -840,7 +846,7 @@ class search {
 			case (empty($this->sqo->order) && empty($this->sqo->order_custom)):
 			default:
 				$sql_query = $this->parse_sql_default();
-				
+
 				break;
 		}
 
@@ -878,7 +884,7 @@ class search {
 		// FROM
 			$main_from_sql			= $this->build_main_from_sql();
 			$sql_joins				= implode( PHP_EOL, $this->sql_obj->join);
-			
+
 		// WHERE sentences
 			// The filters are built into the sql_obj->where array
 			// The building should to be done in restrictive order.
@@ -890,7 +896,7 @@ class search {
 			$this->build_filter_by_user_records();
 			$where = implode(' AND ', $this->sql_obj->where);
 			$join = implode( PHP_EOL, $this->sql_obj->join);
-			
+
 		// Only for count
 
 		// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique
@@ -922,7 +928,7 @@ class search {
 			if(SHOW_DEBUG===true) {
 				$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
 			}
-		
+
 
 		return $sql_query;
 	}
@@ -991,13 +997,13 @@ class search {
 				$query_inside .= PHP_EOL.'FROM '.implode(PHP_EOL, $this->sql_obj->from );
 
 				// join virtual tables
-					$query_inside .= PHP_EOL.implode(PHP_EOL, $this->sql_obj->join );			
+					$query_inside .= PHP_EOL.implode(PHP_EOL, $this->sql_obj->join );
 
 			// where
 				$query_inside .= PHP_EOL.'WHERE ';
 				$where = array_merge( $this->sql_obj->main_where, $this->sql_obj->where );
-				$query_inside .= implode(' AND ', $where);				
-	
+				$query_inside .= implode(' AND ', $where);
+
 			// multi section union case
 				if (count($this->ar_section_tipo)>1) {
 					$query_inside = $this->build_union_query($query_inside);

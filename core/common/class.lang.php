@@ -77,12 +77,13 @@ class lang {
 			$table		= lang::$langs_matrix_table;
 			$term_tipo	= DEDALO_THESAURUS_TERM_TIPO;
 
-		// query
+		// query: (!) This is a temporal query until the search class is refactored (24/11/2025)
+		// to do: Refactor this query using search class
 			$strQuery	= '';
 			$strQuery	.= PHP_EOL . 'SELECT';
 			$strQuery	.= PHP_EOL . 'section_id, section_tipo,';
-			$strQuery	.= PHP_EOL . 'datos#>\'{components, '.$term_tipo.', dato}\' AS names,'; // as {"lg-eng": ["Spanish"], "lg-spa": ["Castellano"]}
-			$strQuery	.= PHP_EOL . 'datos#>\'{components, hierarchy41, dato, lg-nolan}\' ->> 0 AS code'; // as 'spa'
+			$strQuery	.= PHP_EOL . 'string->\''.$term_tipo.'\'->0->>\'value\' AS name,';
+			$strQuery	.= PHP_EOL . 'string->\'hierarchy41\'->0->>\'value\' AS code';
 			$strQuery	.= PHP_EOL . 'FROM "'.$table.'"';
 			$strQuery	.= PHP_EOL . 'WHERE';
 
@@ -96,7 +97,7 @@ class lang {
 			}, $ar_lang_tld);
 
 		// add
-			$strQuery .= PHP_EOL . 'datos#>\'{components, hierarchy41, dato, lg-nolan}\' ?| array[\'' . implode('\',\'', $ar_lang_tld_clean) .'\'];';
+		$strQuery .= PHP_EOL . "string->'hierarchy41'->0->>'value' IN ('". implode("','", $ar_lang_tld_clean) ."')";
 
 		// DB query exec
 			$result = JSON_RecordObj_matrix::search_free($strQuery);
@@ -114,13 +115,13 @@ class lang {
 			while ($rows = pg_fetch_assoc($result)) {
 
 				$section_id	= (int)$rows['section_id'];
-				$names		= json_handler::decode($rows['names']);
+				$names		= $rows['name']; // json_handler::decode($rows['names']);
 				$code		= $rows['code'];
 
 				$items[] = (object)[
 					'code'			=> $code,
 					'section_id'	=> $section_id,
-					'names'			=> $names
+					'names'			=> [$names]
 				];
 			}
 
@@ -210,7 +211,7 @@ class lang {
 	* @return string|null $name
 	*/
 	public static function get_name_from_code(string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true) : ?string {
-
+		$start_time = start_time();	
 		// DEDALO_DATA_NOLAN case : When lang code is lg-nolan, null is returned
 			if ($code===DEDALO_DATA_NOLAN) {
 				return null;
@@ -236,7 +237,7 @@ class lang {
 		// Fallback
 			if (!empty($names->$lang)) {
 
-				$name = to_string($names->$lang);
+				$name = $names->$lang[0] ?? null;
 
 			}else{
 
@@ -244,7 +245,7 @@ class lang {
 				$main_lang		= hierarchy::get_main_lang($section_tipo);
 				// Recursion in main_lang lang
 				if (isset($names->$main_lang)) {
-					$name = to_string($names->$main_lang);
+					$name = $names->$main_lang[0] ?? null;
 				}else{
 					return null;
 				}

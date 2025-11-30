@@ -29,7 +29,7 @@ an `EasyRdf\Graph` object.
 ## Example
 
 ```php
-$foaf = new \EasyRdf\Graph("http://njh.me/foaf.rdf");
+$foaf = new \EasyRdf\Graph("https://www.aelius.com/njh/foaf.rdf");
 $foaf->load();
 $me = $foaf->primaryTopic();
 echo "My name is: ".$me->get('foaf:name')."\n";
@@ -43,12 +43,12 @@ echo "My name is: ".$me->get('foaf:name')."\n";
 
 ## Features
 
-* No required external dependencies upon other libraries (PEAR, Zend, etc...)
+* No required external dependencies upon other libraries (PEAR, etc...)
 * Library runs in Linux and Windows environments
 * Extensive unit tests written using PHPUnit
 * Built-in parsers and serialisers: RDF/JSON, N-Triples, RDF/XML, Turtle
 * Optional parsing support for: [ARC2](https://github.com/semsol/arc2/), [rapper](http://librdf.org/raptor/rapper.html)
-* Optional support for `Laminas\Http\Client` and `Zend\Http\Client`
+* Optional support for `Laminas\Http\Client`
 * Type mapper - resources of type `foaf:Person` can be mapped into PHP object of class `Foaf_Person`
 * Support for visualisation of graphs using [GraphViz](https://www.graphviz.org/)
 * Comes with a number of examples
@@ -71,7 +71,6 @@ echo "My name is: ".$me->get('foaf:name')."\n";
 * [`sparql_queryform.php`](/examples/sparql_queryform.php#slider) - Form to submit SPARQL queries and display the result
 * [`uk_postcode.php`](/examples/uk_postcode.php#slider) - Example of resolving UK postcodes using uk-postcodes.com
 * [`wikidata_villages.php`](/examples/wikidata_villages.php#slider) - Fetch and information about villages in Fife from Wikidata
-* [`zend_framework.php`](/examples/zend_framework.php#slider) - Example of using `Zend\Http\Client` with EasyRdf
 
 
 ## Contributing

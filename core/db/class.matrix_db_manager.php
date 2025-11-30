@@ -96,22 +96,23 @@ class matrix_db_manager {
 	* adding `section_tipo` and `section_id` only) and with query params when is not (other
 	* dynamic combinations of columns data).
 	* @param string $table
-	* The name of the table to query. The function validates this against
-	* a predefined list of allowed tables to prevent SQL injection vulnerabilities.
+	* 	The name of the table to query. The function validates this against
+	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
 	* @param string $section_tipo
-	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
+	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	* @param object|null $values = {} (optional)
-	* Object with {column name : value} structure.
-	* Keys are column names, values are their new values.
+	* 	Object with {column name : value} structure.
+	* 	Keys are column names, values are their new values.
 	* @return int|false $section_id
-	* Returns the new $section_id on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* 	Returns the new $section_id on success, or `false` if validation fails,
+	* 	query preparation fails, or execution fails.
 	*/
-	public static function create( string $table, string $section_tipo, ?object $values=null ) : int|false {
+	public static function create(string $table, string $section_tipo, ?object $values = null): int|false {
 
 		// Validate table
 		if (!isset(self::$matrix_tables[$table])) {
-			debug_log(__METHOD__
+			debug_log(
+				__METHOD__
 				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 				. ' table: ' . $table . PHP_EOL
 				. ' allowed_tables: ' . json_encode(self::$matrix_tables)
@@ -124,7 +125,7 @@ class matrix_db_manager {
 		$conn = DBi::_getConnection();
 
 		// counter table
-		$counter_table = substr($table, -3)==='_dd'
+		$counter_table = substr($table, -3) === '_dd'
 			? 'matrix_counter_dd' // Public counter managed by master
 			: 'matrix_counter'; // Private counters from current installation
 
@@ -135,7 +136,7 @@ class matrix_db_manager {
 		$param_index	= 2; // next param index ($2, $3, ...)
 
 		// Add dynamic columns
-		if( $values !== null ){
+		if ($values !== null) {
 			foreach ($values as $col => $value) {
 
 				// Columns. Only accepts normalized columns
@@ -145,11 +146,11 @@ class matrix_db_manager {
 				$columns[] = pg_escape_identifier($conn, $col);
 
 				// Placeholders / Values
-				 if ($value !== null && isset(self::$matrix_json_columns[$col])) {
+				if ($value !== null && isset(self::$matrix_json_columns[$col])) {
 					// Encode PHP array/object as JSON string
 					$params[]		= json_handler::encode($value);
 					$placeholders[]	= '$' . $param_index . '::jsonb';
-				}else{
+				} else {
 					$params[]		= $value;
 					$placeholders[]	= '$' . $param_index;
 				}
@@ -159,27 +160,13 @@ class matrix_db_manager {
 			}
 		}
 
-		// 1. Start the transaction and set the isolation level
-		// Ensure the entire operation runs under the SERIALIZABLE transaction isolation level.
-		// Guarantees that the counter update and the subsequent INSERT will reflect a consistent,
-		// serial order of execution, preventing the "lost update" problem often associated with counters under high load.
-		$begin_sql = "BEGIN ISOLATION LEVEL SERIALIZABLE;";
-		$result = pg_query($conn, $begin_sql);
-		if (!$result) {
-			debug_log(__METHOD__
-				." Error Processing Request. ISOLATION LEVEL SERIALIZABLE fails." . PHP_EOL
-				.' begin_sql: ' . to_string($begin_sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
-			return false; // Return false immediately since the transaction couldn't start.
-		}
-
-		// 2. Execute the main atomic SQL block with parameters
-		// SQL. Note that counter is updated (+1) and the new value is used as section_id.
-		// If no counter exists for current tipo, a new one is created using CONFLICT fallback.
+		// Optimized single-query approach with advisory lock
+		// The lock is automatically released when the transaction ends (COMMIT or ROLLBACK)
 		$sql = "
-			WITH updated_counter AS (
+			WITH locked AS (
+				SELECT pg_advisory_xact_lock(hashtext($1))
+			),
+			updated_counter AS (
 				INSERT INTO $counter_table (tipo, value)
 				VALUES ($1, 1)
 				ON CONFLICT (tipo) DO UPDATE
@@ -187,45 +174,24 @@ class matrix_db_manager {
 				RETURNING value
 			)
 			INSERT INTO $table (" . implode(', ', $columns) . ")
-			SELECT " . implode(', ', $placeholders) . "	FROM updated_counter
+			SELECT " . implode(', ', $placeholders) . " FROM updated_counter
 			RETURNING section_id;
 		";
 
-		// Execute query with params
-		$result = pg_query_params(
-			$conn,
-			$sql,
-			$params
-		);
+		$result = pg_query_params($conn, $sql, $params);
 
 		if (!$result) {
-			// 3a. CRITICAL: Handle error and MUST rollback the open transaction
-			pg_query($conn, "ROLLBACK;");
-
-			debug_log(__METHOD__
-				." Error Processing Request (after rollback) ".to_string($sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
-			return false;
-		}
-
-		// 3b. Commit the transaction if the main query succeeded
-		$commit_result = pg_query($conn, "COMMIT;");
-
-		if (!$commit_result) {
-			// Log error if COMMIT fails (rare, but possible due to network or server issues)
-			debug_log(__METHOD__ . " CRITICAL: COMMIT FAILED: " . pg_last_error($conn), logger::ERROR);
+			debug_log(__METHOD__ . " Query failed: " . pg_last_error($conn), logger::ERROR);
 			return false;
 		}
 
 		// Fetch section_id
 		$section_id = pg_fetch_result($result, 0, 'section_id');
 		// Check valid section_id
-		if ($section_id===false) {
+		if ($section_id === false) {
 			debug_log(__METHOD__
-				. " Error giving the new section_id". PHP_EOL
-				. ' last_error: '. pg_last_error($conn) .PHP_EOL
+				. " Error giving the new section_id" . PHP_EOL
+				. ' last_error: ' . pg_last_error($conn) . PHP_EOL
 				. ' sql: ' . to_string($sql)
 				, logger::ERROR
 			);
@@ -256,7 +222,7 @@ class matrix_db_manager {
 	* Returns the processed data as an associative array with parsed JSON values.
 	* If no row is found, it returns an empty array []. If a critical error occurs, it returns false.
 	*/
-	public static function read( string $table, string $section_tipo, int $section_id ) : object|false {
+	public static function read(string $table, string $section_tipo, int $section_id): object|false	{
 
 		// check matrix table
 		if (!isset(self::$matrix_tables[$table])) {
@@ -272,15 +238,15 @@ class matrix_db_manager {
 		$conn = DBi::_getConnection();
 
 		// With prepared statement
-		$stmt_name = __METHOD__ . '_' . $table;
+		$stmt_name = 'read_' . $table;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 			$select_fields	= '*'; // Select all because is faster than the list of the columns
-			$sql = 'SELECT '.$select_fields.' FROM "'.$table.'" WHERE section_id = $1 AND section_tipo = $2 LIMIT 1';
+			$sql = 'SELECT ' . $select_fields . ' FROM "' . $table . '" WHERE section_id = $1 AND section_tipo = $2 LIMIT 1';
 			if (!pg_prepare(
 				$conn,
 				$stmt_name,
-				$sql)
-			) {
+				$sql
+			)) {
 				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
 				return false;
 			}
@@ -295,8 +261,8 @@ class matrix_db_manager {
 
 		if (!$result) {
 			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
+				. " Error Processing Request Load " . to_string($sql) . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
 			return false;
@@ -330,25 +296,27 @@ class matrix_db_manager {
 	* @return bool
 	* Returns `true` on success, or `false` on failure.
 	*/
-	public static function update( string $table, string $section_tipo, int $section_id, object $values ) : bool {
+	public static function update(string $table, string $section_tipo, int $section_id, object $values): bool {
 
 		// Validate table name against allowed list (Security/Guardrail)
 		if (!isset(self::$matrix_tables[$table])) {
-			debug_log(__METHOD__
-				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
-				. ' table: ' . $table . PHP_EOL
-				. ' allowed_tables: ' . json_encode(self::$matrix_tables)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+					. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
+					. ' table: ' . $table . PHP_EOL
+					. ' allowed_tables: ' . json_encode(self::$matrix_tables),
+				logger::ERROR
 			);
 			return false;
 		}
 
 		// Check for empty update payload
 		if (empty($values)) {
-			debug_log(__METHOD__
-				." Empty values array " . PHP_EOL
-				.' values: ' . json_encode($values)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+					. " Empty values array " . PHP_EOL
+					. ' values: ' . json_encode($values),
+				logger::ERROR
 			);
 			return false;
 		}
@@ -394,10 +362,11 @@ class matrix_db_manager {
 		$result = pg_query_params($conn, $sql, $params);
 
 		if (!$result) {
-			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+					. " Error Processing Request Load " . to_string($sql) . PHP_EOL
+					. ' error: ' . pg_last_error($conn),
+				logger::ERROR
 			);
 			return false;
 		}
@@ -408,7 +377,7 @@ class matrix_db_manager {
 
 
 	// /**
-	// * UPDATE_BY_KEY
+	// * UPDATE_BY_KEY (MONO)
 	// * Saves given value into the specified JSON key, it could be:
 	// * a component container
 	// * a section property data as created_date
@@ -572,10 +541,8 @@ class matrix_db_manager {
 	// 		);
 	// 	}
 
-
 	// 	return false;
 	// }//end update_by_key
-
 
 
 
@@ -609,25 +576,16 @@ class matrix_db_manager {
 		string $section_tipo,
 		int $section_id,
 		array $data_to_save
-		) : bool {
-
-		// sample SQL
-			// UPDATE matrix
-			// SET data = jsonb_set(
-			//     COALESCE(data, '{}'::jsonb), -- Use an empty object if data is NULL
-			//     '{numisdataXX}', -- path to the element
-			//     '{"key":1,"lang":"lg-spa","type":"dd750","value":"CODE1"}'::jsonb, -- new value (must be valid JSON)
-			//     true  -- create if missing (true/false)
-			// )
-			// WHERE section_tipo = 'numisdata224' AND section_id = 1;
+		): bool {
 
 		// check matrix table
 		if (!isset(self::$matrix_tables[$table])) {
-			debug_log(__METHOD__
-				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
-				. ' table: ' . $table . PHP_EOL
-				. ' allowed_tables: ' . json_encode(self::$matrix_tables)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+					. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
+					. ' table: ' . $table . PHP_EOL
+					. ' allowed_tables: ' . json_encode(self::$matrix_tables),
+				logger::ERROR
 			);
 			return false;
 		}
@@ -638,67 +596,92 @@ class matrix_db_manager {
 		$stmt_name_parts = ['update_by_key', $table];
 
 		// Parameters: $1=section_tipo, $2=section_id, $3=path, $4=value, $5=path2, $6=value2, etc.
-		$params = [ $section_tipo, $section_id ];
+		$params = [$section_tipo, $section_id];
 
-		$sentences = [];
-		// key position for the path and the values
-		$i = 3;
+		// Group data by column to handle multiple updates to the same column
+		$columns_data = [];
 		foreach ($data_to_save as $data) {
 
-			$data_column_name	= $data->column;
-			$key				= $data->key;
-			$value				= $data->value;
-
-			// Convert value in a valid JSON data
-			$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); // JSONB value
-
-			// assign the key path position into the parameters array
-			$key_i = $i++;
-
-			// Path is generated once, for top-level key
-			$path = '{'.$key.'}'; // JSON path for top-level key
-
-			// set the parameters in order to be used in the statement.
-			$params[] = $path;
-
-			// action name to be perform. It will use to identify the statements
-			$action = 'update';
-
-			if( empty($value) ){
-
-				// Delete
-				$action = 'delete';
-				// check if the key (usually the tipo of one component) exist into the column
-				// if the key exist remove it, because the data is null
-				$sentences[] = "
-					$data_column_name = CASE
-					WHEN $data_column_name ? $$key_i
-						THEN $data_column_name - $$key_i
-					ELSE
-						$data_column_name
-					END
-				";
-
-			}else{
-
-				// assign the position of value into the parameters array
-				$value_i = $i++;
-
-				// Update
-				// Set the order of the key path and its value to be updated
-				$sentences[] = "$data_column_name = jsonb_set(
-					COALESCE($data_column_name, '{}'::jsonb),
-					$$key_i::text[],
-					$$value_i::jsonb,
-					true
-				)";
-
-				$params[] = $json_value;
+			// Check valid data
+			if (!is_object($data)) {
+				// Query failed
+				debug_log(
+					__METHOD__
+						. " Wrong data_to_save => data. Expected object:  " . PHP_EOL
+						. ' type: ' . gettype($data) . PHP_EOL
+						. ' table: ' . to_string($table) . PHP_EOL
+						. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+						. ' section_id: ' . to_string($section_id) . PHP_EOL
+						. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT),
+					logger::ERROR
+				);
+				return false;
 			}
 
-			// save the statement name for the action and column
-			$stmt_name_parts[] = $action;
-			$stmt_name_parts[] = $data_column_name;
+			$column		= $data->column;
+			$key		= $data->key;
+			$value		= $data->value;
+
+			// Group by column
+			if (!isset($columns_data[$column])) {
+				$columns_data[$column] = [];
+			}
+
+			$columns_data[$column][] = [
+				'key' => $key,
+				'value' => $value
+			];
+		}
+
+		// Build SET clauses - one per column, with nested jsonb_set_lax for multiple keys
+		$sentences = [];
+		foreach ($columns_data as $column => $updates) {
+
+			// Build nested jsonb_set_lax calls for this column
+			$column_expression = "COALESCE($column, '{}'::jsonb)";
+
+			foreach ($updates as $update) {
+				$key = $update['key'];
+				$value = $update['value'];
+
+				// Path is generated for top-level key
+				$path = '{' . $key . '}';
+
+				// Convert value to valid JSON data
+				if ($value !== null) {
+					$json_value	= json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+					if ($json_value === false) {
+						debug_log(__METHOD__ . " Invalid JSON value for key: $key", logger::ERROR);
+						return false;
+					}
+					$stmt_name_parts[] = 'update';
+				} else {
+					$json_value = null;
+					$stmt_name_parts[] = 'delete';
+				}
+
+				// Add parameters
+				$params[] = $path;
+				$params[] = $json_value;
+
+				$path_index = count($params) - 1;
+				$value_index = count($params);
+
+				// Nest the jsonb_set_lax call
+				$column_expression = "jsonb_set_lax(
+					$column_expression,
+					$$path_index::text[],
+					$$value_index::jsonb,
+					true,
+					'delete_key'
+				)";
+			}
+
+			// Add the complete SET clause for this column
+			$sentences[] = "$column = $column_expression";
+
+			// Add column name to statement identifier
+			$stmt_name_parts[] = $column;
 		}
 
 		// Give the unique name for the all sentences
@@ -708,70 +691,44 @@ class matrix_db_manager {
 		if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
 			// Efficient SQL for setting/updating a key (uses COALESCE for NULL safety)
 			$sql = '
-				UPDATE '.$table.'
-				SET '. implode(', '.PHP_EOL, $sentences) .'
-				WHERE section_tipo = $1
-				  AND section_id = $2
+				UPDATE ' . $table . '
+				SET ' . implode(', ' . PHP_EOL, $sentences) . '
+				WHERE section_tipo = $1  AND section_id = $2
 				RETURNING id
 			';
 
-			pg_prepare($conn, $full_stmt_name, $sql);
+			if (!pg_prepare($conn, $full_stmt_name, $sql)) {
+				debug_log(__METHOD__ . " Failed to prepare statement: " . pg_last_error($conn), logger::ERROR);
+				return false;
+			}
 			DBi::$prepared_statements[$full_stmt_name] = true;
 		}
 
-		// 2. Execute Statement
+		// Execute Statement
 		$result = pg_execute(
 			$conn,
 			$full_stmt_name,
 			$params
 		);
 
-		// 3. Handle Result
-		if ($result) {
-			$rows_affected = pg_num_rows($result);
-			if ($rows_affected > 0) {
-
-				// Success. JSON path was successfully saved
-
-				// $saved_id = pg_fetch_result($result, 0, 0);
-				// debug_log(__METHOD__
-				// 	. " Successfully saved JSON path '$path'. Affected record ID: $table $saved_id"
-				// 	, logger::WARNING
-				// );
-
-				return true;
-
-			}else{
-
-				// No rows were updated (JSON path didn't exist or conditions didn't match)
-				debug_log(__METHOD__
-					. " Partial JSON data was NOT saved. Maybe path for data to save or section_id '$section_id' does not exist." . PHP_EOL
+		if ($result === false) {
+			// Query failed
+			debug_log(
+				__METHOD__
+					. " Update operation failed:  " . PHP_EOL
+					. ' Error: ' . pg_last_error($conn) . PHP_EOL
 					. ' table: ' . to_string($table) . PHP_EOL
 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
 					. ' section_id: ' . to_string($section_id) . PHP_EOL
-					. ' data_to_save: ' . json_encode($data_to_save)
-					, logger::ERROR
-				);
-			}
-
-		}else{
-
-			// Query failed
-			debug_log(__METHOD__
-				. " Delete operation failed:  " . PHP_EOL
-				. ' Error: ' . pg_last_error($conn) . PHP_EOL
-				. ' table: ' . to_string($table) . PHP_EOL
-				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-				. ' section_id: ' . to_string($section_id) . PHP_EOL
-				. ' data_to_save: ' . json_encode($data_to_save)
-				, logger::ERROR
+					. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT),
+				logger::ERROR
 			);
+			return false;
 		}
 
-
-		return false;
+		$rows_affected = pg_num_rows($result);
+		return $rows_affected > 0;
 	}//end update_by_key
-
 
 
 
@@ -806,17 +763,20 @@ class matrix_db_manager {
 		$conn = DBi::_getConnection();
 
 		// With prepared statement
-		$stmt_name = __METHOD__ . '_' . $table;
+		$stmt_name = 'delete_' . $table;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 
-			$sql = 'DELETE FROM "' .$table. '"'
-				 .' WHERE section_id = $1 AND section_tipo = $2';
+			// Index use sample:
+			// Index Scan using matrix_section_tipo_section_id_desc_idx on matrix
+
+			$sql = 'DELETE FROM "' . $table . '"'
+				. ' WHERE section_id = $1 AND section_tipo = $2';
 
 			if (!pg_prepare(
 				$conn,
 				$stmt_name,
-				$sql)
-			) {
+				$sql
+			)) {
 				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
 				return false;
 			}
@@ -824,6 +784,7 @@ class matrix_db_manager {
 			DBi::$prepared_statements[$stmt_name] = true;
 		}
 
+		// Execute
 		$result = pg_execute(
 			$conn,
 			$stmt_name,
@@ -832,9 +793,9 @@ class matrix_db_manager {
 
 		if (!$result) {
 			debug_log(__METHOD__
-				.' Error executing DELETE on table: ' . $table . PHP_EOL
-				.' sql ' . to_string($sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
+				. ' Error executing DELETE on table: ' . $table . PHP_EOL
+				. ' sql ' . to_string($sql ?? '') . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
 			return false;
@@ -865,25 +826,27 @@ class matrix_db_manager {
 	* @return array|false Returns an array of matching `section_id` values on success,
 	*                     or `false` if validation, query preparation, or execution fails.
 	*/
-	public static function search( string $table, array $filter, ?string $order=null, ?int $limit=null ) : array|false {
+	public static function search(string $table, array $filter, ?string $order = null, ?int $limit = null): array|false	{
 
 		// Validate table
 		if (!isset(self::$matrix_tables[$table])) {
-			debug_log(__METHOD__
-				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
-				. ' table: ' . $table . PHP_EOL
-				. ' allowed_tables: ' . json_encode(self::$matrix_tables)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+					. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
+					. ' table: ' . $table . PHP_EOL
+					. ' allowed_tables: ' . json_encode(self::$matrix_tables),
+				logger::ERROR
 			);
 			return false;
 		}
 
 		// check values
 		if (empty($filter)) {
-			debug_log(__METHOD__
-				." Empty filter array " . PHP_EOL
-				.' filter: ' . json_encode($filter)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+					. " Empty filter array " . PHP_EOL
+					. ' filter: ' . json_encode($filter),
+				logger::ERROR
 			);
 			return false;
 		}
@@ -891,19 +854,19 @@ class matrix_db_manager {
 		$conn = DBi::_getConnection();
 
 		// sample
-			// $table,
-			// DEDALO_SECTION_USERS_TIPO,
-			// [
-			// 	'column'	=> 'section_tipo',
-			// 	'value'		=> DEDALO_SECTION_USERS_TIPO
-			// ],
-			// [
-			// 	'column'	=> 'string',
-			// 	'operator'	=> '@>',
-			// 	'value'		=> '{"dd132": [{"lang": "lg-nolan", "value": "pepe"}]}'
-			// ]
-			// 1,
-			// null
+		// $table,
+		// DEDALO_SECTION_USERS_TIPO,
+		// [
+		// 	'column'	=> 'section_tipo',
+		// 	'value'		=> DEDALO_SECTION_USERS_TIPO
+		// ],
+		// [
+		// 	'column'	=> 'string',
+		// 	'operator'	=> '@>',
+		// 	'value'		=> '{"dd132": [{"lang": "lg-nolan", "value": "pepe"}]}'
+		// ]
+		// 1,
+		// null
 
 		// Add dynamic clauses
 		$where_clauses	= [];
@@ -934,7 +897,7 @@ class matrix_db_manager {
 			// search with operator
 			$params[] = $value;
 
-			$where_clauses[] = pg_escape_identifier($conn, $column) .' '. $operator .' $'. $param_index;
+			$where_clauses[] = pg_escape_identifier($conn, $column) . ' ' . $operator . ' $' . $param_index;
 
 			// Increase param index value
 			$param_index++;
@@ -946,7 +909,7 @@ class matrix_db_manager {
 			[$col, $dir] = explode(' ', $order, 2) + [null, null];
 			$col = trim($col);
 			$dir = strtoupper(trim($dir ?? 'ASC'));
-			if (isset(self::$matrix_columns[$col]) && in_array($dir, ['ASC','DESC'], true)) {
+			if (isset(self::$matrix_columns[$col]) && in_array($dir, ['ASC', 'DESC'], true)) {
 				$order_clause = ' ORDER BY ' . pg_escape_identifier($conn, $col) . ' ' . $dir;
 			}
 		}
@@ -959,16 +922,17 @@ class matrix_db_manager {
 
 		// Without prepared statement (more dynamic and appropriate for changing columns scenarios)
 		$sql = 'SELECT section_id FROM ' . pg_escape_identifier($conn, $table)
-			 .' WHERE '. implode(' AND ', $where_clauses)
-			 . $order_clause
-			 . $limit_clause;
+			. ' WHERE ' . implode(' AND ', $where_clauses)
+			. $order_clause
+			. $limit_clause;
 
 		$result = pg_query_params($conn, $sql, $params);
 		if (!$result) {
-			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
-				.' error: ' . pg_last_error($conn)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+					. " Error Processing Request Load " . to_string($sql) . PHP_EOL
+					. ' error: ' . pg_last_error($conn),
+				logger::ERROR
 			);
 			return false;
 		}
@@ -1002,7 +966,7 @@ class matrix_db_manager {
 			$start_time = start_time();
 
 			// metrics
-			metrics::$exec_search_total_calls++;
+			metrics::$search_free_total_calls++;
 
 			// query additional info
 				if (isset(debug_backtrace()[1]['function'])) {
@@ -1031,7 +995,7 @@ class matrix_db_manager {
 		// exec With prepared statement
 		$stmt_name = md5($sql_query);
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			$statement = pg_prepare($conn, $stmtname, $sql_query);
+			$statement = pg_prepare($conn, $stmt_name, $sql_query);
 			if ($statement===false) {
 				debug_log(__METHOD__
 					. " Error when pg_prepare statement for sql_query: "
@@ -1073,7 +1037,7 @@ class matrix_db_manager {
 			}
 
 			// metrics
-			metrics::$exec_search_total_time += $total_time_ms;
+			metrics::$search_free_total_time += $total_time_ms;
 
 			// debug_log(__METHOD__
 			// 	.' exec_search: ' . PHP_EOL
