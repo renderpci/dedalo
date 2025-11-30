@@ -138,7 +138,14 @@ class diffusion_section_stats extends diffusion {
 						$section_tipo
 					);
 					$dato			= $component->get_dato();
-					$current_date	= reset($dato);
+					$current_date	= $dato[0] ?? null;
+					if (empty($current_date)) {
+						debug_log(__METHOD__
+							. " Skip. Not valid date found for user"
+							, logger::ERROR
+						);
+						return '';
+					}
 					$dd_date		= new dd_date($current_date->start);
 					$timestamp		= $dd_date->get_dd_timestamp("Y-m-d");
 

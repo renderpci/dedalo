@@ -107,7 +107,7 @@ class Literal
         }
 
         // Work out what class to use for this datatype
-        if (isset(self::$datatypeMap[$datatype])) {
+        if (is_string($datatype) && isset(self::$datatypeMap[$datatype])) {
             $class = self::$datatypeMap[$datatype];
         } else {
             $class = 'EasyRdf\Literal';

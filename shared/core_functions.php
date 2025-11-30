@@ -2878,3 +2878,23 @@ function are_all_properties_empty( object $object ) : bool {
 
     return empty($non_empty_properties);
 }//end are_all_properties_empty
+
+
+
+/**
+* DEPARAMETRIZE_SQL
+* Resolve SQL parameters
+* @param string $sql
+* @param array $params
+* @return string $sql
+*/
+function deparametrize_sql( string $sql, array $params ) : string {
+
+	foreach ($params as $key => $value) {
+		$current_param = '$'.($key + 1); // Like $1
+		$current_value = stripslashes( json_encode($value) );
+		$sql = str_replace($current_param, $current_value, $sql);
+	}
+
+	return $sql;
+}//deparametrize_sql

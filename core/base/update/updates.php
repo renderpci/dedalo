@@ -46,7 +46,7 @@ $updates->$v = new stdClass();
 	// MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 8;
-	$updates->$v->update_from_minor		= 1;
+	$updates->$v->update_from_minor		= 3;
 
 	// require a clean installation
 	 // it only could be 'clean' | null. Incremental option has not sense to be forced.
@@ -85,6 +85,13 @@ $updates->$v = new stdClass();
 
 
 		// @TODO : ADD TO DB_PG_DEFINTIONS !
+			// create index for matrix_langs hierarchy41 value (lang code as 'eng')
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				CREATE INDEX idx_matrix_langs_hierarchy41_value ON "matrix_langs" (
+					(string -> \'hierarchy41\' -> 0 ->> \'value\')
+				);
+			');
+
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				DROP INDEX IF EXISTS "matrix_counter_tipo_idx";
 
@@ -265,7 +272,7 @@ $updates->$v = new stdClass();
 
 		// Recreate the database assets in PostgreSQL (functions, indexes, constraints, etc.)
 			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'Recreate all assess in PostgreSQL (extensions, constraints, functions, indexes)',
+				'info'			=> 'Recreate all assets in PostgreSQL (extensions, constraints, functions, indexes)',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'recreate_db_assets',
 				'stop_on_error'	=> false,

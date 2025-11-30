@@ -262,7 +262,6 @@ class section_record_data {
 
 
 
-
 	/**
 	* GET_DATA
 	* Returns the full data array

@@ -324,7 +324,7 @@ class Client
      * @param string $processed_query
      * @param string $type            Should be either "query" or "update"
      *
-     * @return Http\Response|\Zend\Http\Response|\Laminas\Http\Client
+     * @return Http\Response|\Laminas\Http\Response
      *
      * @throws Exception
      */
@@ -337,13 +337,6 @@ class Client
         $sparql_results_types = [
             'application/sparql-results+json' => 1.0,
             'application/sparql-results+xml' => 0.8,
-        ];
-        $sparql_graph_types = [
-            'application/ld+json' => 1.0,
-            'application/rdf+xml' => 0.9,
-            'text/turtle' => 0.8,
-            'application/n-quads' => 0.7,
-            'application/n-triples' => 0.7,
         ];
 
         if ('update' == $type) {
@@ -375,7 +368,7 @@ class Client
                 $accept = Format::formatAcceptHeader($sparql_results_types);
             } elseif ('CONSTRUCT' === $query_verb || 'DESCRIBE' === $query_verb) {
                 // only "graph"
-                $accept = Format::formatAcceptHeader($sparql_graph_types);
+                $accept = Format::getHttpAcceptHeader();
             } else {
                 // both
                 $accept = Format::getHttpAcceptHeader($sparql_results_types);
@@ -415,7 +408,7 @@ class Client
      *
      * Can be overridden to do custom processing
      *
-     * @param Http\Response|\Zend\Http\Response $response
+     * @param Http\Response $response
      *
      * @return Graph|Result
      */
@@ -435,11 +428,9 @@ class Client
     }
 
     /**
-     * Proxy function to allow usage of our Client as well as Zend\Http v2 and Laminas\Http.
+     * Proxy function to allow usage of our Client as well Laminas\Http.
      *
-     * Zend\Http\Client only accepts an array as first parameter, but our Client wants a name-value pair.
-     *
-     * @see https://framework.zend.com/apidoc/2.4/classes/Zend.Http.Client.html#method_setHeaders
+     * \Laminas\Http\Client only accepts an array as first parameter, but our Client wants a name-value pair.
      *
      * @todo Its only a temporary fix, should be replaced or refined in the future.
      */
