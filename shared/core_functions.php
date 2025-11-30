@@ -533,9 +533,6 @@ function curl_request(object $options) : object {
 			);
 		}
 
-	// close connection
-		curl_close($ch);
-
 	// response
 		$response->msg			= $msg;
 		$response->error_info	= $error_info;
