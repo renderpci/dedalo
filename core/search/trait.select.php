@@ -23,14 +23,14 @@ trait select {
 		// Unique column for count
 		// If the SQO has active full_count set the SELECT with specific count for the section_id column
 		if ( $sqo->full_count===true ) {
-			$this->sqlo->select[] = 'count(DISTINCT '.$this->main_section_tipo_alias.'.section_id) as full_count';
+			$this->sql_obj->select[] = 'count(DISTINCT '.$this->main_section_tipo_alias.'.section_id) as full_count';
 			return true;
 		}
 
 		// section_id
 		// Mandatory in every sentence
 		// By default is used with a DISTINCT clause. But, thesaurus search needs to remove it because search across multiple sections.
-		$this->sqlo->select[] = ($sqo->remove_distinct===true)
+		$this->sql_obj->select[] = ($sqo->remove_distinct===true)
 			? $this->main_section_tipo_alias.'.section_id'
 			: 'DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';
 
@@ -74,7 +74,7 @@ trait select {
 				$sentence .= ' as '.$key; // DISTINCT ON (matrix.section_id) matrix.section_id as oh62
 			}
 			
-			$this->sqlo->select[] = $sentence;				
+			$this->sql_obj->select[] = $sentence;				
 		}		
 
 		// Join all
