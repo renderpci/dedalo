@@ -494,7 +494,8 @@ class tool_common {
 			$ar_config = tools_register::get_all_config_tool_client();
 
 		// get the simple_tool_object
-			foreach ($all_registered_tools_records as $record) {
+			// foreach ($all_registered_tools_records as $record) {
+			while ($record = pg_fetch_object($all_registered_tools_records)) {
 
 				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
 				$section_record->set_data( $record );
@@ -575,9 +576,9 @@ class tool_common {
 	/**
 	* GET_ACTIVE_TOOLS
 	* Search all active tools in registered tools section
-	* @return array $active_tools
+	* @return array $result
 	*/
-	public static function get_active_tools() : array {
+	public static function get_active_tools() : \PgSql\Result|false {
 
 		// get all active and registered tools
 			$sqo_tool_active = json_decode('{
@@ -604,10 +605,7 @@ class tool_common {
 			$search	= search::get_instance($sqo_tool_active);
 			$result	= $search->search();
 
-		$active_tools = $result->ar_records;
-
-
-		return $active_tools;
+		return $result;
 	}//end get_active_tools
 
 
@@ -623,7 +621,8 @@ class tool_common {
 		$active_tools = tool_common::get_active_tools();
 
 		$tool_names = [];
-		foreach ($active_tools as $current_tool_row) {
+		// foreach ($active_tools as $current_tool_row) {
+		while ($current_tool_row = pg_fetch_object($active_tools)) {
 
 			$section_tipo	= $current_tool_row->section_tipo;
 			$section_id		= $current_tool_row->section_id;
