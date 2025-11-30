@@ -9,7 +9,7 @@ class search_tm extends search {
 
 
 	# matrix_table (fixed on get main select)
-	protected $matrix_table = 'matrix_time_machine';
+	protected string $matrix_table = 'matrix_time_machine';
 
 
 
@@ -42,13 +42,13 @@ class search_tm extends search {
 
 	/**
 	* BUILD_SQL_QUERY_SELECT
-	* @param bool $full_count = false
-	* @return string $sql_query_select
+	* @return true
 	*/
-	public function build_sql_query_select(bool $full_count=false) : string {
+	public function build_sql_query_select() : true {
 
-		if ($full_count===true) {
-			return $this->build_full_count_sql_query_select();
+		if ($this->sqo->full_count===true) {
+				$this->sql_obj->select[] = $this->build_full_count_sql_query_select();
+			return true;
 		}
 
 		$search_query_object = $this->search_query_object;
@@ -64,165 +64,11 @@ class search_tm extends search {
 			}
 
 		# Join all
-			$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
+			$this->sql_obj->select[] = implode(','.PHP_EOL, $ar_sql_select);
 
 
-		return $sql_query_select;
+		return true;
 	}//end build_sql_query_select
-
-
-
-	/**
-	* BUILD_MAIN_FROM_SQL DISABLE !
-	* @return string $main_from_sql
-	*/
-		// public function build_main_from_sql() {
-
-		// 	// $section_tipo  = $this->search_query_object->section_tipo;
-		// 	$section_tipo 	= is_array($this->search_query_object->section_tipo)
-		// 		? reset($this->search_query_object->section_tipo)
-		// 		: $this->search_query_object->section_tipo;
-
-		// 	// matrix_time_machine specific
-		// 	$matrix_table  = $this->matrix_table;
-
-		// 	$main_from_sql = $matrix_table .' AS '. self::trim_tipo($section_tipo);
-
-		// 	# Fix
-		// 	$this->matrix_table  = $matrix_table;
-		// 	$this->main_from_sql = $main_from_sql;
-
-		// 	return $main_from_sql;
-		// }//end build_main_from_sql
-
-
-
-	/**
-	* BUILD_MAIN_WHERE_SQL DISABLE !
-	* @return string $main_where_sql
-	*/
-		// public function build_main_where_sql() {
-
-		// 	$section_tipo   		 = is_array($this->search_query_object->section_tipo)
-		// 		? reset($this->search_query_object->section_tipo)
-		// 		: $this->search_query_object->section_tipo;
-		// 	$main_section_tipo_alias = self::trim_tipo($section_tipo);
-
-		// 	// matrix_time_machine specific
-		// 	$main_where_sql = '('.$main_section_tipo_alias.'.tipo = \''. $section_tipo.'\')';
-
-
-		// 	# Fix values
-		// 	$this->main_section_tipo_alias  = $main_section_tipo_alias;
-		// 	$this->main_where_sql 			= $main_where_sql;
-
-		// 	return $main_where_sql;
-		// }//end build_main_where_sql
-
-
-
-	/**
-	* BUILD_SQL_QUERY_SELECT DISABLE !
-	* @return string $sql_query_select
-	*/
-		// public function build_sql_query_select($full_count=false) {
-
-		// 	if ($full_count===true) {
-		// 		return $this->build_full_count_sql_query_select();
-		// 	}
-
-		// 	$search_query_object = $this->search_query_object;
-
-		// 	#dump($search_query_object->select, ' search_query_object->select ++ '.to_string());
-		// 	$ar_sql_select = [];
-		// 	$ar_key_path   = [];
-
-		// 	// matrix_time_machine specific
-		// 	$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id, id';
-
-		// 	$ar_sql_select[] = $this->main_section_tipo_alias.'.section_tipo';
-		// 	#$ar_sql_select[] = "oh1_oh24_rsc197_rsc85.datos#>>'{components,rsc85,dato}' ";
-
-		// 	foreach ($search_query_object->select as $key => $select_object) {
-
-		// 		$path 				 = $select_object->path;
-		// 		$table_alias 		 = $this->get_table_alias_from_path($path); // $this->matrix_table; //
-		// 		$last_item 		 	 = end($path);
-		// 		$component_tipo 	 = $last_item->component_tipo;
-		// 		$column_alias 		 = $component_tipo;
-		// 		$model_name 		 = $last_item->modelo;
-		// 		$select_object_type  = isset($select_object->type) ? $select_object->type : 'string';
-		// 		$component_path 	 = implode(',', $select_object->component_path);
-		// 		#>>\'{components,'.$component_tipo.',valor_list,'.$select_object->lang.'}\' as '.$column_alias;
-
-		// 		$sql_select 	 = '';
-
-		// 		if ($model_name==='component_section_id') {
-
-		// 			$sql_select .= $table_alias.'.section_id';
-		// 			$sql_select .= ' as '.$column_alias;
-
-		// 		}else{
-
-		// 			// matrix_time_machine specific
-		// 			$sql_select 	.= $table_alias.'.dato';
-
-
-		// 			if($select_object_type==='string') {
-		// 				$sql_select .= '#>>';
-		// 			}else{
-		// 				$sql_select .= '#>';
-		// 			}
-		// 			$sql_select .= '\'{';
-		// 				$sql_select .= $component_path;
-		// 			$sql_select .= '}\'';
-
-		// 			$sql_select .= ' as '.$column_alias;
-		// 		}
-
-		// 		# Add line
-		// 		$ar_sql_select[]= $sql_select;
-
-		// 		#if ($n_levels>1) {
-		// 		#	$this->join_group[] = $this->build_sql_join($select_object->path);
-		// 		#}
-
-		// 		$this->join_group[] = $this->build_sql_join($select_object->path);
-		// 	}
-
-
-		// 	$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
-
-		// 	return $sql_query_select;
-		// }//end build_sql_query_select
-
-
-
-	/**
-	* GET_TIME_MACHINE_RECORDS DISABLE !
-	* @return
-	*/
-		// public function get_time_machine_records( $request_options ) {
-
-		// 	$options = new stdClass();
-		// 		$options->section_tipo  = null;
-		// 		$options->ar_section_id = [];
-		// 		$options->ar_columns 	= [];
-		// 		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// 	$ar_filter = [];
-		// 	foreach ($options->ar_section_id as $section_id) {
-		// 		$ar_filter[] = 'section_id=' . (int)$section_id;
-		// 	}
-
-		// 	$sql = '
-		// 	SELECT section_id, section_tipo, '.implode(',',$options->ar_columns).'
-		// 	FROM matrix_time_machine
-		// 	WHERE (section_tipo = \''.$options->section_tipo.'\') AND  ('.implode(' OR ',$ar_filter).')
-		// 	ORDER BY id DESC
-		// 	LIMIT 10;
-		// 	';
-		// }//end get_time_machine_records
 
 
 
