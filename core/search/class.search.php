@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 require_once 'trait.select.php';
+require_once 'trait.from.php';
 require_once 'trait.where.php';
 require_once 'trait.order.php';
 require_once 'trait.count.php';
@@ -10,14 +11,14 @@ require_once 'trait.count.php';
 class search {
 
 	// traits. Files added to current class file to split the large code.
-	use select, where, order, count;
+	use select, from, where, order, count;
 
 
 	// Search Query Object
-	private object $sqo;
+	protected object $sqo;
 
 	// Search Query Language Object
-	private object $sqlo;
+	protected object $sql_obj;
 
 	// Set skip_projects_filter. Default is false
 	private static array $ar_tables_skip_projects = [
@@ -51,6 +52,13 @@ class search {
 
 	// sql_query_order_custom
 	public $sql_query_order_custom;
+
+	// params counter for prepared statements
+	protected int $params_counter = 1;
+
+	// params array for prepared statements
+	protected array $params = [];
+
 
 	/**
 	* GET_INSTANCE
@@ -111,14 +119,17 @@ class search {
 		}
 
 		// Instantiate the Search Query Language Object:
-		$this->sqlo = new stdClass(); 
-			$this->sqlo->select		= [];
-			$this->sqlo->from		= [];
-			$this->sqlo->main_where = [];
-			$this->sqlo->where		= [];
-			$this->sqlo->order		= [];
-			$this->sqlo->limit		= [];
-			$this->sqlo->offset		= [];
+		$this->sql_obj = new stdClass(); 
+			$this->sql_obj->select			= [];
+			$this->sql_obj->from			= [];
+			$this->sql_obj->join			= [];
+			$this->sql_obj->main_where		= [];
+			$this->sql_obj->where			= [];
+			$this->sql_obj->order			= [];
+			$this->sql_obj->order_custom	= [];
+			$this->sql_obj->order_default	= [];
+			$this->sql_obj->limit			= [];
+			$this->sql_obj->offset			= [];
 
 		// section_tipo is always and array
 		$this->ar_section_tipo = (array)$search_query_object->section_tipo;
@@ -242,7 +253,7 @@ class search {
 		}
 
 		// search
-		$result	= matrix_db_manager::exec_query( $sql_query );
+		$result	= matrix_db_manager::exec_search( $sql_query, $this->params );
 		if ($result===false) {
 			return false;
 		}
@@ -420,7 +431,7 @@ class search {
 	public function parse_sqo() : void {
 
 		// already parsed case
-			if ($this->sqo->parsed===true) {
+			if ( isset($this->sqo->parsed) && $this->sqo->parsed===true ) {
 				return;
 			}
 
@@ -429,7 +440,7 @@ class search {
 
 				// conform_filter. Conform recursively each filter object asking the components
 				foreach ($this->sqo->filter as $op => $filter_items) {
-					$new_sqo_filter = search::conform_filter($op, $filter_items);
+					$new_sqo_filter = $this->conform_filter($op, $filter_items);
 					break; // Only expected one
 				}
 				// Replace filter array with components pre-parsed values
@@ -437,12 +448,14 @@ class search {
 			}
 
 		// select
-			$new_sqo_select = [];
-			foreach ($this->sqo->select as $select_object) {
-				$new_sqo_select[] = search::conform_select( $select_object );
+			if (!empty($this->sqo->select)) {
+				$new_sqo_select = [];
+				foreach ($this->sqo->select as $select_object) {
+					$new_sqo_select[] = search::conform_select( $select_object );
+				}
+				// Replace select array with components pre-parsed values
+				$this->sqo->select = $new_sqo_select;
 			}
-			// Replace select array with components pre-parsed values
-			$this->sqo->select = $new_sqo_select;
 
 		// order. Note that order is parsed with same parser as 'select' (conform_select)
 			if (!empty($this->sqo->order)) {
@@ -457,6 +470,24 @@ class search {
 		// Set object as parsed
 		$this->sqo->parsed = true;
 	}//end parse_sqo
+
+
+
+	/**
+	* IS_SEARCH_OPERATOR
+	* @param object $search_object
+	* @return bool
+	*/
+	public static function is_search_operator(object $search_object) : bool {
+
+		foreach ($search_object as $key => $value) {
+			if (strpos($key, '$')!==false) {
+				return true;
+			}
+		}
+
+		return false;
+	}//end is_search_operator
 
 
 
@@ -489,7 +520,7 @@ class search {
 	*	]
 	* @return object $new_query_object
 	*/
-	public static function conform_filter(string $op, array $filter_items) : object {
+	public function conform_filter(string $op, array $filter_items) : object {
 
 		$new_query_object = new stdClass();
 			$new_query_object->$op = [];
@@ -523,7 +554,7 @@ class search {
 				$op2			= array_key_first(get_object_vars($search_object));
 				$filter_items2	= $search_object->$op2;
 
-				$nested_query_object = search::conform_filter($op2, $filter_items2);
+				$nested_query_object = $this->conform_filter($op2, $filter_items2);
 
 				$nested_query_object_array = get_object_vars($nested_query_object);
 				if (!empty(reset($nested_query_object_array))) {
@@ -539,8 +570,9 @@ class search {
 
 				}else{
 
-					$path				= $search_object->path;
-					$search_component	= end($path);
+					$path						= $search_object->path;
+					$search_object->table_alias	= $this->get_table_alias_from_path( $path );
+					$search_component			= end($path);
 					// model (with fallback if do not exists)
 					if (!isset($search_component->model)) {
 						$search_component->model = ontology_node::get_model_by_tipo($search_component->component_tipo, true);
@@ -683,6 +715,84 @@ class search {
 
 
 	/**
+	* BUILD_UNION_QUERY
+	* Rewrite query string building SQL union for each different matrix table
+	* based on every section tipo table resolution
+	* @param string $sql_query
+	*  The original SQL query to be modified.
+	* @return string $sql_query
+	*  The modified SQL query with UNION clauses for each matrix table.
+	*/
+	public function build_union_query(string $sql_query) : string {
+
+		// Calculate matrix tables based on section tipos
+		$this->ar_matrix_tables = [];
+		foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
+
+			$model_name = ontology_node::get_model_by_tipo($current_section_tipo, true);
+
+			// check model (some RQO config tipos could be not installed)
+			if (empty($model_name)) {
+				debug_log(__METHOD__
+					. " Ignored section tipo without model " . PHP_EOL
+					. ' current_section_tipo: ' . to_string($current_section_tipo)
+					, logger::WARNING
+				);
+				continue;
+			}
+
+			$current_matrix_table = common::get_matrix_table_from_tipo($current_section_tipo);
+
+			// Ignore invalid empty matrix tables
+			if (empty($current_matrix_table)) {
+				debug_log(__METHOD__
+					. " Ignored invalid empty matrix table " . PHP_EOL
+					. ' section_tipo: ' . $current_section_tipo
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Add unique matrix tables to the list
+			if (!in_array($current_matrix_table, $this->ar_matrix_tables)) {
+				$this->ar_matrix_tables[] = $current_matrix_table;
+			}
+		}
+
+		// If there are multiple matrix tables, build UNION query
+		if (count($this->ar_matrix_tables)>1) {
+			$tables_query = [];
+
+			// Add current query
+			$tables_query[] = $sql_query;
+
+			foreach ($this->ar_matrix_tables as $key => $current_matrix_table) {
+
+				// Ignore the first table
+				if ($key===0) {
+					continue;
+				}
+
+				// copy source and replace table and alias names
+				$current_query	= $sql_query;
+				$current_query	= preg_replace('/(FROM [a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
+				$current_query	= str_replace('mix.', 'mix_'.$current_matrix_table.'.', $current_query);
+
+				// Add the modified query to the list
+				$tables_query[] = $current_query;
+			}
+
+			// Replace the original query with UNION ALL clauses
+			$sql_query = implode(PHP_EOL . 'UNION ALL' . PHP_EOL, $tables_query);
+		}
+
+
+		return $sql_query;
+	}//end build_union_query
+
+
+
+	/**
 	* PARSE_SQL_QUERY
 	* Build full final SQL query to send to DB
 	* @return string $sql_query
@@ -691,353 +801,46 @@ class search {
 	public function parse_sql_query( ) : string {
 
 		// pre_parse_sql_query if not already parsed
-		if ($this->sqo->parsed!==true) {
+		if ( !isset($this->sqo->parsed) || $this->sqo->parsed!==true) {
 			// Pre-parse search_query_object with components always before begins
 			$this->parse_sqo();
 		}
 
 		// Search elements. Order is important!
-		$main_where_sql			= $this->build_main_where_sql();
-		$sql_query_order		= $this->build_sql_query_order();	// Order before select !
-		$sql_query_select		= $this->build_sql_query_select();
-		$sql_filter				= $this->build_sql_filter();
-		$sql_projects_filter	= $this->build_sql_projects_filter();
-		$sql_joins				= $this->get_sql_joins();
-		$main_from_sql			= $this->build_main_from_sql();
-		$sql_offset				= $this->sqo->offset;
-		$sql_limit				= $this->sqo->limit;
+		// $main_where_sql			= $this->build_main_where();
+		// $sql_query_order		= $this->build_sql_query_order();	// Order before select !
+		// $sql_query_select		= $this->build_sql_query_select();
+		// $sql_filter				= $this->build_sql_filter();
+		// $sql_projects_filter	= $this->build_sql_projects_filter();
+		// $sql_joins				= $this->get_sql_joins();
+		// $main_from_sql			= $this->build_main_from_sql();
+		// $sql_offset				= $this->sqo->offset;
+		// $sql_limit				= $this->sqo->limit;
 		if(isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
-			$sql_limit	= 'all';
-			$sql_offset	= 0;
-		}
-		// order default add if not exists
-		if (empty($sql_query_order)) {
-			$sql_query_order = $this->build_sql_query_order_default();
+			$this->sqo->limit	= 'all';
+			$this->sqo->offset	= 0;
 		}
 
-		// force false always that exist $this->ar_sql_joins . pending solve subquery pagination issue !
-			// if (!empty($sql_joins)) {
-			// 	$this->allow_sub_select_by_id = false;
-			// }
-
-		// sql_query
-		$sql_query = '';
 
 		switch (true) {
 
 		// count case (place always at first case)
 			case ($this->sqo->full_count===true):
-				// Only for count
-
-				// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique
-					// $column_id = ($this->matrix_table==='matrix_time_machine') ? 'id' : 'section_id';
-
-				// SELECT
-					$sql_query .= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine')
-						? 'SELECT '.$this->main_section_tipo_alias.'.section_id'
-						: 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
-				// FROM
-					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-					# join virtual tables
-					$sql_query .= $sql_joins;
-					# join filter projects
-					if (!empty($this->filter_join)) {
-					$sql_query .= PHP_EOL . $this->filter_join;
-					}
-				// WHERE
-					$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
-					if (!empty($sql_filter)) {
-						$sql_query .= $sql_filter;
-					}
-					if (!empty($this->filter_by_locators)) {
-						$sql_filter_by_locators = $this->build_sql_filter_by_locators();
-						$sql_query .= PHP_EOL. 'AND '.$sql_filter_by_locators;
-					}
-					if (isset($this->filter_by_user_records)) {
-						$sql_query .= $this->filter_by_user_records;
-					}
-					if (!empty($this->filter_join_where)) {
-						$sql_query .= $this->filter_join_where;
-					}
-				// multi-section union case
-					if (count($this->ar_section_tipo)>1) {
-						$sql_query = $this->build_union_query($sql_query);
-					}
-					$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
-
-					if(SHOW_DEBUG===true) {
-						$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
-					}
+				$sql_query = $this->parse_sql_full_count();			
 				break;
 
 		// sql_filter_by_locators
-			case (isset($this->filter_by_locators) && !empty($this->filter_by_locators)):
+			case (isset($this->sqo->filter_by_locators) && !empty($this->sqo->filter_by_locators)):
 
-				$sql_filter_by_locators			= $this->build_sql_filter_by_locators();
-				$sql_filter_by_locators_order	= empty($this->sqo->order)
-					? $this->build_sql_filter_by_locators_order() // only if empty order
-					: 'ORDER BY ' . $this->build_sql_query_order();
+				$sql_query = $this->parse_sql_filter_by_locators();
 
-				// select
-					$sql_query .= 'SELECT * FROM (';
-					$sql_query .= PHP_EOL . 'SELECT *';
-					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-					$sql_query .= PHP_EOL . 'WHERE ' . $sql_filter_by_locators;
-					$sql_query .= PHP_EOL . ') main_select';
-				// order
-					$sql_query .= PHP_EOL . $sql_filter_by_locators_order;
-				// limit
-					if (!empty($sql_limit)) {
-						$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
-					}
-				// offset
-					$sql_query .= !empty($this->sqo->offset)
-						? ' OFFSET ' . $sql_offset
-						: '';
 				break;
 
 		// without order
 			case (empty($this->sqo->order) && empty($this->sqo->order_custom)):
-				# Search Without order
-
-				// allow window selector
-					if($this->allow_sub_select_by_id===true) {
-
-						// select
-							$sql_query .= 'SELECT ' . $sql_query_select;
-						// from
-							// $sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-							$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-							// from where
-								$sql_query .= PHP_EOL . 'WHERE ';
-								$sql_query .= $this->main_section_tipo_alias.'.id in (';
-								$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id,'.$this->main_section_tipo_alias.'.section_tipo) '.$this->main_section_tipo_alias.'.id ';
-								$sql_query .= 'FROM '.$main_from_sql;
-
-								// join virtual tables
-									$sql_query .= $sql_joins;
-								// join filter projects
-									if (!empty($this->filter_join)) {
-									$sql_query .= PHP_EOL . $this->filter_join;
-									}
-						// where
-							$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
-							if (!empty($sql_filter)) {
-								$sql_query .= $sql_filter;
-							}elseif (!empty($sql_filter_by_locators)) {
-								$sql_query .= $sql_filter_by_locators;
-							}
-							if (isset($this->filter_by_user_records)) {
-								$sql_query .= $this->filter_by_user_records;
-							}
-							if (!empty($this->filter_join_where)) {
-								$sql_query .= $this->filter_join_where;
-							}
-						// order (default for maintain result consistency)
-							$order_query = '';
-							if (isset($this->sql_query_order_window_subselect)) {
-								$order_query .= PHP_EOL . 'ORDER BY ' . $this->sql_query_order_window_subselect;
-								if(SHOW_DEBUG===true) {
-									$order_query .= ' -- sql_query_order_window_subselect ';
-								}
-							}else{
-								if($this->allow_sub_select_by_id===true) {
-									$default_order = ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
-									$order_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias . '.section_id ' . $default_order;
-									if(SHOW_DEBUG===true) {
-										$order_query .= ' -- allow_sub_select_by_id=true (1-a) main_section_tipo_alias: '. $this->main_section_tipo_alias;
-									}
-								}else{
-									$order_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
-									if(SHOW_DEBUG===true) {
-										$order_query .= ' -- allow_sub_select_by_id=false (1-b)';
-									}
-								}
-							}
-							// order multi section union case
-								// if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
-								// 	$order_query = str_replace('mix.', '', $order_query);
-								// }
-							$sql_query .= $order_query;
-						// limit
-							$limit_query = '';
-							if ($this->sqo->limit>0) {
-								$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
-								$sql_query .= $limit_query;
-							}
-						// offset
-							$offset_query = '';
-							if ($this->sqo->offset>0) {
-								$offset_query = PHP_EOL . 'OFFSET ' . $sql_offset;
-								$sql_query .= $offset_query;
-							}
-
-
-						// sub select (window) close
-							if($this->allow_sub_select_by_id===true) {
-								$sql_query .= PHP_EOL . ') ';
-							}
-
-						// multi section union case
-							if (count($this->ar_section_tipo)>1) {
-								$sql_query = $this->build_union_query($sql_query);
-							}
-						// order/limit general for sub query
-							$sql_query .= PHP_EOL . 'ORDER BY ' . str_replace('mix.', '', $sql_query_order);
-
-							if ($this->sqo->limit>0) {
-								$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
-							}
-
-				// disallow window selector
-					}else{
-
-						// select
-							$sql_query .= 'SELECT ' . $sql_query_select;
-						// from
-							$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-							// join virtual tables
-							$sql_query .= $sql_joins;
-							// join filter projects
-							if (!empty($this->filter_join)) {
-							$sql_query .= PHP_EOL . $this->filter_join;
-							}
-						// where
-							$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
-							if (!empty($sql_filter)) {
-								$sql_query .= $sql_filter;
-							}elseif (!empty($sql_filter_by_locators)) {
-								$sql_query .= $sql_filter_by_locators;
-							}
-							if (isset($this->filter_by_user_records)) {
-								$sql_query .= $this->filter_by_user_records;
-							}
-							if (!empty($this->filter_join_where)) {
-								$sql_query .= $this->filter_join_where;
-							}
-						// multi section union case
-							if (count($this->ar_section_tipo)>1) {
-								$sql_query = $this->build_union_query($sql_query);
-							}
-						// order (default for maintain result consistency)
-							$order_query = '';
-							if (isset($this->sql_query_order_window_subselect)) {
-								$order_query .= PHP_EOL . 'ORDER BY ' . $this->sql_query_order_window_subselect;
-								if(SHOW_DEBUG===true) {
-									$order_query .= ' -- sql_query_order_window_subselect ';
-								}
-							}else{
-								if($this->allow_sub_select_by_id===true) {
-									$default_order = ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
-									$order_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.section_id '.$default_order;
-									if(SHOW_DEBUG===true) {
-										$order_query .= ' -- allow_sub_select_by_id=true ';
-									}
-								}else{
-									$order_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
-									if(SHOW_DEBUG===true) {
-										$order_query .= ' -- allow_sub_select_by_id=false ';
-									}
-								}
-							}
-							// order multi-section union case
-								if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
-									$order_query = str_replace('mix.', '', $order_query);
-								}
-								$sql_query .= $order_query;
-						// limit
-							if ($this->sqo->limit>0) {
-								$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
-							}
-						// offset
-							if ($this->sqo->offset>0) {
-								$sql_query .= ' OFFSET ' . $sql_offset;
-							}
-							if($this->allow_sub_select_by_id===true) {
-								$sql_query .= PHP_EOL . ') ';
-							}
-					}//end if($this->allow_sub_select_by_id===true)
-
-				// wrap query
-					#$sql_query = 'SELECT * FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x ' ; //. $order_query . $limit_query . $offset_query;
-
-				// debug info
-					if(SHOW_DEBUG===true) {
-						$sql_query = '-- Search Without order - window: '. (($this->allow_sub_select_by_id) ? 'true' : 'false') . PHP_EOL . $sql_query;
-					}
-				break;
-
-		// with order
 			default:
-				// Search With order
-
-				// query_inside
-					$query_inside = '';
-
-					// select
-						$query_inside .= 'SELECT ' . $sql_query_select;
-					// $query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
-					// from
-						$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
-
-						// join virtual tables
-							$query_inside .= $sql_joins;
-						// join filter projects
-							if (!empty($this->filter_join)) {
-							$query_inside .= PHP_EOL . $this->filter_join;
-							}
-
-					// where
-						$query_inside .= PHP_EOL . 'WHERE ' . $main_where_sql;
-						if (!empty($sql_filter)) {
-							$query_inside .= $sql_filter;
-						}
-						// join filter projects
-						if (!empty($this->filter_join_where)) {
-							$query_inside .= $this->filter_join_where;
-						}
-						if (isset($this->filter_by_user_records)) {
-							$query_inside .= $this->filter_by_user_records;
-						}
-					// multi section union case
-						if (count($this->ar_section_tipo)>1) {
-							$query_inside = $this->build_union_query($query_inside);
-						}
-				// order (default for maintain result consistency)
-					$order_query = PHP_EOL . 'ORDER BY ' . $this->build_sql_query_order_default();
-					// order union case for various tables
-						if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
-							$order_query = str_replace('mix.', '', $order_query);
-						}
-
-				// query wrap
-					$query_inside .= $order_query;
-
-					$sql_query .= 'SELECT * FROM (';
-					$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
-					$sql_query .= ') main_select';
-					// order
-						if(isset($this->sql_query_order_custom)) {
-							$sql_query .= PHP_EOL . $this->sql_query_order_custom;
-						}else{
-							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
-						}
-					// limit
-						if ($this->sqo->limit>0) {
-							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
-						}
-					// offset
-						if ($this->sqo->offset>0) {
-							$sql_query .= ' OFFSET ' . $sql_offset;
-						}
-					if(SHOW_DEBUG===true) {
-						$sql_query = '-- Search With order' . PHP_EOL . $sql_query;
-						debug_log(__METHOD__
-							. " sql_query ". PHP_EOL
-							. $sql_query
-							, logger::DEBUG
-						);
-					}
+				$sql_query = $this->parse_sql_default();
+				
 				break;
 		}
 
@@ -1061,99 +864,184 @@ class search {
 	}//end parse_sql_query
 
 
+	/**
+	* PARSE_SQL_FULL_COUNT
+	* Build full final SQL query to send to DB
+	* @return string $sql_query string
+	* 	parsed final SQL query string
+	*/
+	public function parse_sql_full_count() : string {
+
+		// sql_query
+			$sql_query = '';
+
+		// FROM
+			$main_from_sql			= $this->build_main_from_sql();
+			$sql_joins				= implode( PHP_EOL, $this->sql_obj->join);
+			
+		// WHERE sentences
+			// The filters are built into the sql_obj->where array
+			// The building should to be done in restrictive order.
+			$this->build_main_where();
+			$main_where_sql = implode(' AND ', $this->sql_obj->main_where);
+
+			$this->build_sql_filter();
+			$this->build_sql_filter_by_locators();
+			$this->build_filter_by_user_records();
+			$where = implode(' AND ', $this->sql_obj->where);
+			$join = implode( PHP_EOL, $this->sql_obj->join);
+			
+		// Only for count
+
+		// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique
+			// $column_id = ($this->matrix_table==='matrix_time_machine') ? 'id' : 'section_id';
+
+		// SELECT
+			$sql_query .= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine')
+				? 'SELECT '.$this->main_section_tipo_alias.'.section_id'
+				: 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
+		// FROM
+			$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+			# join virtual tables
+			$sql_query .= $sql_joins;
+			# join filter projects
+			if (!empty($join)) {
+			$sql_query .= PHP_EOL . $join;
+			}
+		// WHERE
+			$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
+			if (!empty($where)) {
+				$sql_query .= PHP_EOL . $where;
+			}
+		// multi-section union case
+			if (count($this->ar_section_tipo)>1) {
+				$sql_query = $this->build_union_query($sql_query);
+			}
+			$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
+
+			if(SHOW_DEBUG===true) {
+				$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
+			}
+		
+
+		return $sql_query;
+	}
+
 
 	/**
-	* BUILD_SQL_JOIN
-	* Builds one table join based on requested path
-	* @param array $path
-	*  sample:
-		[
-			{
-				"name": "Publication",
-				"model": "component_publication",
-				"section_tipo": "rsc167",
-				"component_tipo": "rsc20"
-			},
-			{
-				"name": "Value",
-				"model": "component_input_text",
-				"section_tipo": "dd64",
-				"component_tipo": "dd62"
-			}
-		]
-	* @return bool true
+	* PARSE_SQL_FILTER_BY_LOCATORS
+	* Build full final SQL query to send to DB
+	* @return string $sql_query string
+	* 	parsed final SQL query string
 	*/
-	public function build_sql_join(array $path) : bool {
+	public function parse_sql_filter_by_locators() : string {
 
-		$rel_table		= self::$relations_table;
-		$ar_key_join	= [];
-		$base_key		= '';
-		$total_paths	= count($path);
+		$main_from_sql			= $this->build_main_from_sql();
+		$sql_offset				= $this->sqo->offset;
 
-		foreach ($path as $key => $step_object) {
+		$sql_filter_by_locators			= $this->build_sql_filter_by_locators();
+		$sql_filter_by_locators_order	= empty($this->sqo->order)
+			? $this->build_sql_filter_by_locators_order() // only if empty order
+			: 'ORDER BY ' . $this->build_sql_query_order();
 
-			if ($key===0) {
-				$base_key		= $this->main_section_tipo_alias; //self::trim_tipo($step_object->section_tipo);
-				$ar_key_join[]	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
-				continue;
+		// select
+			$sql_query = 'SELECT * FROM (';
+			$sql_query .= PHP_EOL . 'SELECT *';
+			$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+			$sql_query .= PHP_EOL . 'WHERE ' . $sql_filter_by_locators;
+			$sql_query .= PHP_EOL . ') main_select';
+		// order
+			$sql_query .= PHP_EOL . $sql_filter_by_locators_order;
+		// limit
+			if (!empty($sql_limit)) {
+				$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
 			}
+		// offset
+			$sql_query .= !empty($this->sqo->offset)
+				? ' OFFSET ' . $sql_offset
+				: '';
+		return $sql_query;
+	}
 
-			$current_key = ($key===1)
-				? $base_key
-				: implode('_', $ar_key_join);
 
-			$ar_key_join[] = ($key === $total_paths-1)
-				? self::trim_tipo($step_object->section_tipo)
-				: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 
-			$matrix_table		= common::get_matrix_table_from_tipo($step_object->section_tipo);
-			// Ignore invalid empty matrix tables
-			if (empty($matrix_table)) {
-				debug_log(__METHOD__
-					. " Ignored invalid empty matrix table " . PHP_EOL
-					. ' step_object->section_tipo: ' . $step_object->section_tipo
-					, logger::ERROR
-				);
-				continue;
-			}
-			$last_section_tipo	= $step_object->section_tipo;
-			$t_name				= implode('_', $ar_key_join);
-			$t_relation			= 'r_'.$t_name ;
+	public function parse_sql_default() : string {
 
-			if (!isset($this->ar_sql_joins[$t_name])) {
+		$this->build_sql_query_select();
+		$this->build_main_from_sql();
+		// $this->build_sql_join();
+		$this->build_main_where();
+		$this->build_sql_filter();
+		$this->build_sql_projects_filter();
+		$this->build_filter_by_user_records();
+		$this->build_sql_query_order();
 
-				$sql_join  = "\n";
-				if(SHOW_DEBUG===true) {
-					$section_name = ontology_node::get_term_by_tipo($step_object->section_tipo, null, true, false);
-					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name\n";
+		// sql_query
+		$sql_query = '';
+
+		// Search With order
+
+		// query_inside
+			$query_inside = '';
+
+			// select
+				$query_inside .= 'SELECT '.implode(','.PHP_EOL, $this->sql_obj->select );
+			// $query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
+			// from
+				$query_inside .= PHP_EOL.'FROM '.implode(PHP_EOL, $this->sql_obj->from );
+
+				// join virtual tables
+					$query_inside .= PHP_EOL.implode(PHP_EOL, $this->sql_obj->join );			
+
+			// where
+				$query_inside .= PHP_EOL.'WHERE ';
+				$where = array_merge( $this->sql_obj->main_where, $this->sql_obj->where );
+				$query_inside .= implode(' AND ', $where);				
+	
+			// multi section union case
+				if (count($this->ar_section_tipo)>1) {
+					$query_inside = $this->build_union_query($query_inside);
 				}
-				# Join relation table
-				$sql_join .= ' LEFT JOIN ' .$rel_table. ' AS ' .$t_relation. ' ON (';
-				$sql_join .= $current_key. '.section_id=' .$t_relation. '.section_id';
-				$sql_join .= ' AND ' . $current_key.'.section_tipo=' . $t_relation.'.section_tipo';
-				#$sql_join .= ' AND ' .$t_relation. '.target_section_tipo=\'' .$last_section_tipo. '\'';
+		// order (default for maintain result consistency)
+			$order_query = PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order_default );
+			// order union case for various tables
+				if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
+					$order_query = str_replace('mix.', '', $order_query);
+				}
 
-				# join_from_component_tipo
-				if (isset($path[$key-1])) {
-					$from_component_tipo = $path[$key-1]->component_tipo;
-					$sql_join .= ' AND ' . $t_relation .'.from_component_tipo=\'' .$from_component_tipo. '\'';
+		// query wrap
+			$query_inside .= $order_query;
+
+			$sql_query .= 'SELECT * FROM (';
+			$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
+			$sql_query .= ') main_select';
+			// order
+				if( isset($this->sql_obj->order_custom) ) {
+					$sql_query .= PHP_EOL . implode( PHP_EOL, $this->sql_obj->order_custom );
 				}else{
-					$sql_join .= ' AND ' .$t_relation. '.target_section_tipo=\'' .$last_section_tipo. '\'';
+					$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
 				}
-
-				$sql_join .= ')'.PHP_EOL;
-
-				# Join next table
-				$sql_join .= ' LEFT JOIN '.$matrix_table.' AS '.$t_name .' ON ('. $t_relation.'.target_section_id='.$t_name.'.section_id AND '.$t_relation.'.target_section_tipo='.$t_name.'.section_tipo)';
-
-				// Add to joins
-				$this->ar_sql_joins[$t_name] = $sql_join;
+			// limit
+				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
+					$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
+				}
+			// offset
+				if (isset($this->sqo->offset) && $this->sqo->offset>0) {
+					$sql_query .= ' OFFSET ' . $this->sqo->offset;
+				}
+			if(SHOW_DEBUG===true) {
+				$sql_query = '-- Search With order' . PHP_EOL . $sql_query;
+				debug_log(__METHOD__
+					. " sql_query ". PHP_EOL
+					. $sql_query
+					, logger::DEBUG
+				);
 			}
-		}//end foreach ($path as $key => $step_object)
 
 
-		return true;
-	}//end build_sql_join
+		return $sql_query;
+	}
+
 
 
 
