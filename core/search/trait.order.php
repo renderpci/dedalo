@@ -10,9 +10,9 @@ trait order {
 	* BUILD_SQL_QUERY_ORDER
 	* Creates the SQL to order based on search_query_object order property
 	* Could be 'order_custom' when is special full defined order or default 'order'
-	* @return string $sql_query_order
+	* @return void
 	*/
-	public function build_sql_query_order() : string {
+	public function build_sql_query_order() : void {
 
 		$sql_query_order = '';
 
@@ -40,9 +40,10 @@ trait order {
 				}
 
 			// flat and set. Note that no $sql_query_order value is filled and returned
-				$this->sql_query_order_custom = implode(' ', $ar_custom_query) . ' ' . implode(',', $ar_custom_query_order);
-
-		}elseif (!empty($this->sqo->order)) {
+			$this->sql_obj->order_custom[] = implode(' ', $ar_custom_query) . ' ' . implode(',', $ar_custom_query_order);
+		}
+		
+		if (!empty($this->sqo->order)) {
 
 			// order default
 				$ar_order = [];
@@ -99,22 +100,28 @@ trait order {
 				}
 				// flat SQL sentences array
 				$sql_query_order = implode(',', $ar_order);
-		}
+		
 
-		// add NULLS LAST for convenience
+			// add NULLS LAST for convenience
 			if (!empty($sql_query_order)) {
 				$sql_query_order .= ' NULLS LAST';
 				if (strpos($sql_query_order, 'section_id')===false) {
 					$sql_query_order .= ' , section_id ASC';
 				}
 			}
-		// debug
-			// if(SHOW_DEBUG===true) {
-			// 	debug_log(__METHOD__." sql_query_order: ".to_string($sql_query_order), logger::DEBUG);
-			// }
 
+			$this->sql_obj->order[] = $sql_query_order;
+		}else{
+			// default order
+			$section_tipo				= $this->main_section_tipo;
+			$default_order				= ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
+			$sql_query_order_default	= $this->main_section_tipo_alias.'.section_id '.$default_order;
 
-		return $sql_query_order;
+			$this->sql_obj->order_default[] = $sql_query_order_default;
+		}
+		
+
+		return;
 	}//end build_sql_query_order
 
 
