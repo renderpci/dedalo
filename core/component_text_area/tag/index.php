@@ -514,6 +514,3 @@ $text = strip_tags($text, '');
 	header('Content-Type: image/png;');
 	header('Connection: close');
 	imagepng($im);
-
-// On finish, destroy used image
-	imagedestroy($im);

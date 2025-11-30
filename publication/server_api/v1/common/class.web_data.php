@@ -1280,6 +1280,10 @@ class web_data {
 					];
 				}
 
+			// debug info time execution
+				// $total_time = round(microtime(1)-$start_time,3);
+				// error_log("++++++ strQuery [$total_time ms]: " . $strQuery);
+
 			// debug
 				if(SHOW_DEBUG===true) {
 					// error_log("++++++ query: " . implode(' ', $query_parts));
