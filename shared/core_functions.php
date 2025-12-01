@@ -2882,19 +2882,34 @@ function are_all_properties_empty( object $object ) : bool {
 
 
 /**
-* DEPARAMETRIZE_SQL
-* Resolve SQL parameters
-* @param string $sql
+* DEBUG_PREPARED_STATEMENT
+* Resolve SQL parameters for debugging.
+* @param string $sql_template
 * @param array $params
-* @return string $sql
+* @param object $connection
+* @return string $debug_sql
 */
-function deparametrize_sql( string $sql, array $params ) : string {
-
-	foreach ($params as $key => $value) {
-		$current_param = '$'.($key + 1); // Like $1
-		$current_value = stripslashes( json_encode($value) );
-		$sql = str_replace($current_param, $current_value, $sql);
-	}
-
-	return $sql;
-}//deparametrize_sql
+function debug_prepared_statement( string $sql_template, array $params, $connection = null ) : string {
+    $debug_sql = $sql_template;
+    
+    foreach ($params as $i => $param) {
+        if ($connection) {
+            $value = pg_escape_literal($connection, $param);
+        } else {
+            // Simple escaping for debugging only
+            if (is_string($param)) {
+                $value = "'" . addslashes($param) . "'";
+            } elseif (is_null($param)) {
+                $value = 'NULL';
+            } elseif (is_bool($param)) {
+                $value = $param ? 'TRUE' : 'FALSE';
+            } else {
+                $value = $param;
+            }
+        }
+        
+        $debug_sql = str_replace('$' . ($i + 1), $value, $debug_sql);
+    }
+    
+    return $debug_sql;
+}//end debug_prepared_statement
