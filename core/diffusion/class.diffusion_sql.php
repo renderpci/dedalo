@@ -3161,7 +3161,7 @@ class diffusion_sql extends diffusion  {
 				$database_element_tipo[0],
 				$model_name='table',
 				$relation_type='children',
-				$search_exact=true
+				$search_exact=false // allow both: table|table_alias
 			);
 
 			foreach ($database_element_tables as $table_tipo) {
