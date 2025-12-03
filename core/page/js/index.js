@@ -30,8 +30,7 @@ const t0 = performance.now()
 
 		// main CSS add loading
 			const main = document.getElementById('main')
-				  main.classList.add('loading')
-				  main.innerHTML = '<pre>Starting.. Please wait.</pre>'
+				  main.innerHTML = '<div class="starting blink">Starting.. Please wait.</div>'
 
 		// page instance init
 			const page_instance = await get_instance({
@@ -48,7 +47,7 @@ const t0 = performance.now()
 				main.removeChild(main.firstChild);
 			}
 			main.appendChild(wrapper_page)
-			main.classList.remove('loading','hide')
+			main.classList.remove('hide')
 
 		// debug
 			if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
