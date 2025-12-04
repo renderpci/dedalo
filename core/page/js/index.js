@@ -12,7 +12,9 @@ const t0 = performance.now()
 
 
 // page start
-	( async () => {
+( async () => {
+
+	try {
 
 		// page_globals. Set basic properties
 			window.page_globals = {
@@ -30,7 +32,14 @@ const t0 = performance.now()
 
 		// main CSS add loading
 			const main = document.getElementById('main')
-				  main.innerHTML = '<div class="starting blink">Starting.. Please wait.</div>'
+			if (!main) {
+				console.warn('Missing #main element. Aborting bootstrap.')
+				return
+			}
+			const starting_node = document.createElement('div')
+			starting_node.className = 'starting blink'
+			starting_node.textContent = 'Starting.. Please wait.'
+			main.appendChild(starting_node)
 
 		// page instance init
 			const page_instance = await get_instance({
@@ -42,6 +51,11 @@ const t0 = performance.now()
 
 		// page instance render
 			const wrapper_page = await page_instance.render()
+			if (!wrapper_page) {
+				console.error('page render returned no node')
+				return
+			}
+
 			// main. Add wrapper page node and restore class
 			while (main.firstChild) {
 				main.removeChild(main.firstChild);
@@ -50,10 +64,24 @@ const t0 = performance.now()
 			main.classList.remove('hide')
 
 		// debug
-			if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
+			if (window.SHOW_DEBUG === true) {
 				console.log("%c + Page instantiated, built and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
 			}
-	})()
+
+	} catch (err) {
+		const main = document.getElementById('main')
+		if (main) {
+			while (main.firstChild) main.removeChild(main.firstChild)
+			const error_ode = document.createElement('div')
+			error_ode.className = 'starting error'
+			error_ode.textContent = 'Error starting page. See console.'
+			main.appendChild(error_ode)
+			main.classList.remove('hide')
+		}
+		console.error('Error bootstrapping page:', err)
+	}
+
+})()
 
 
 
@@ -74,7 +102,7 @@ const t0 = performance.now()
 		scheduledAnimationFrame = true;
 		requestAnimationFrame(readAndUpdatePage);
 	}
-	window.addEventListener('scroll', onScroll);
+	window.addEventListener('scroll', onScroll, { passive: true });
 
 
 
