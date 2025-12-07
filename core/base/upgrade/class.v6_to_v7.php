@@ -1149,7 +1149,7 @@ class v6_to_v7 {
 	}//end recreate_db_assets
 
 
-	
+
 	/**
 	 * REMOVE_TM_CREATED_SECTIONS
 	 * Remove time machine created sections that are not deleted
@@ -1220,6 +1220,37 @@ class v6_to_v7 {
 
 		return true;
 	}//end recreate_tm_table
+
+
+
+	/**
+	* FILL_NEW_COLUMNS_IN_TM
+	* Set the new columns `user_id`, `bulk_process` and `data` with its previous column data
+	* New columns data is compatible with previous column data.
+	*/
+	public static function fill_new_columns_in_tm() :bool {
+		
+		$sql_query = sanitize_query('
+			UPDATE "matrix_time_machine"
+				SET user_id 		= "userID",
+					bulk_process 	= bulk_process_id,
+					data			= dato;					
+		');
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed Update matrix_time_machine new columns with its data";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end fill_new_columns_in_tm
 
 
 
