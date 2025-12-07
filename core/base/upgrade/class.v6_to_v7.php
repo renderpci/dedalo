@@ -603,8 +603,15 @@ class v6_to_v7 {
 													if (!property_exists($column_misc, $literal_tipo)) {
 														$column_misc->{$literal_tipo} = [];
 													}
-
-													$column_misc->{$literal_tipo}[] = $new_literal_obj;
+													if($model==='component_security_access'){
+														if(is_object($value)){
+															$literal_misc 		= $value;
+															$literal_misc->id	= $value_key;
+															$column_misc->{$literal_tipo}[] = $literal_misc;
+														}
+													}else{
+														$column_misc->{$literal_tipo}[] = $new_literal_obj;
+													}
 													break;
 
 												case DEDALO_VALUE_TYPE_DATE:
