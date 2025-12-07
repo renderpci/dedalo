@@ -9,7 +9,7 @@ class lock_components {
 
 
 	const LOCK_COMPONENTS_TABLE		= 'matrix_notifications';
-	const MAXIMUN_LOCK_EVENT_TIME	= 5; // hours
+	const MAXIMUM_LOCK_EVENT_TIME	= 5; // hours
 	const RECORD_ID					= 1;
 
 
@@ -98,8 +98,9 @@ class lock_components {
 							}
 						}
 					}
-					// fix dato
-					$new_dato = array_merge( (array)$dato, array($event_element) );
+					// fix dato - reindex array after unset operations, then add new event
+					$dato = array_values($dato); // Reindex array after unset operations
+					$new_dato = array_merge($dato, [$event_element]);
 					break;
 
 				case 'blur':
@@ -458,7 +459,7 @@ class lock_components {
 				$dato	= (array)json_decode($dato);
 
 			// interval
-				$hours		= lock_components::MAXIMUN_LOCK_EVENT_TIME;
+				$hours		= lock_components::MAXIMUM_LOCK_EVENT_TIME;
 				$interval	= date_interval_create_from_date_string($hours." hours");
 				$now		= new DateTime();
 
