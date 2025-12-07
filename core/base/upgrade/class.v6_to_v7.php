@@ -1213,4 +1213,38 @@ class v6_to_v7 {
 
 		return true;
 	}//end recreate_tm_table
+
+
+
+	/**
+	 * DELETE_TM_COLUMNS
+	 * Delete obsolete columns to matrix_time_machine table
+	 * @return bool
+	 */
+	public static function delete_tm_columns() : bool {
+		
+		$sql_query = sanitize_query ('
+			ALTER TABLE "matrix_time_machine"
+				DROP COLUMN IF EXISTS "section_id_key",
+				DROP COLUMN IF EXISTS "state";
+		');
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed to delete tm section_id_key and state columns ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		
+		return true;
+	}//end delete_tm_columns
+
+
+
+
 }//end class v6_to_v7
