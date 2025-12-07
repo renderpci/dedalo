@@ -90,8 +90,8 @@ final class section_record_test extends TestCase {
 	// public function test_vars(): void {
 
 	// 	// matrix_tables
-	// 	$matrix_tables = section_record::$matrix_tables;
-	// 	$eq = $matrix_tables === [
+	// 	$tables = section_record::$tables;
+	// 	$eq = $tables === [
 	// 		'matrix'				=> true,
 	// 		'matrix_activities'		=> true,
 	// 		'matrix_activity'		=> true,
@@ -119,12 +119,12 @@ final class section_record_test extends TestCase {
 	// 	$this->assertTrue(
 	// 		$eq,
 	// 		'expected true' . PHP_EOL
-	// 			.'matrix_tables: ' . to_string($matrix_tables)
+	// 			.'matrix_tables: ' . to_string($tables)
 	// 	);
 
 	// 	// matrix_columns
-	// 	$matrix_columns = section_record::$matrix_columns;
-	// 	$eq = $matrix_columns === [
+	// 	$columns = section_record::$columns;
+	// 	$eq = $columns === [
 	// 		'section_id'		=> true,
 	// 		'section_tipo'		=> true,
 	// 		'datos'				=> true,
@@ -143,12 +143,12 @@ final class section_record_test extends TestCase {
 	// 	$this->assertTrue(
 	// 		$eq,
 	// 		'expected true' . PHP_EOL
-	// 			.'matrix_columns: ' . to_string($matrix_columns)
+	// 			.'matrix_columns: ' . to_string($columns)
 	// 	);
 
 	// 	// matrix_json_columns
-	// 	$matrix_json_columns = section_record::$matrix_json_columns;
-	// 	$eq = $matrix_json_columns === [
+	// 	$json_columns = section_record::$json_columns;
+	// 	$eq = $json_columns === [
 	// 		'datos'				=> true,
 	// 		'data'				=> true,
 	// 		'relation'			=> true,
@@ -165,19 +165,19 @@ final class section_record_test extends TestCase {
 	// 	$this->assertTrue(
 	// 		$eq,
 	// 		'expected true' . PHP_EOL
-	// 			.'matrix_json_columns: ' . to_string($matrix_json_columns)
+	// 			.'matrix_json_columns: ' . to_string($json_columns)
 	// 	);
 
 	// 	// matrix_int_columns
-	// 	$matrix_int_columns = section_record::$matrix_int_columns;
-	// 	$eq = $matrix_int_columns === [
+	// 	$int_columns = section_record::$int_columns;
+	// 	$eq = $int_columns === [
 	// 		'id'				=> true,
 	// 		'section_id'		=> true
 	// 	];
 	// 	$this->assertTrue(
 	// 		$eq,
 	// 		'expected true' . PHP_EOL
-	// 			.'matrix_int_columns: ' . to_string($matrix_int_columns)
+	// 			.'matrix_int_columns: ' . to_string($int_columns)
 	// 	);
 	// }//end test_vars
 
