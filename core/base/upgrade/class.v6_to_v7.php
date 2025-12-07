@@ -1142,6 +1142,35 @@ class v6_to_v7 {
 	}//end recreate_db_assets
 
 
+	/**
+	 * REMOVE_TM_CREATED_SECTIONS
+	 * Remove time machine created sections that are not deleted
+	 * Time machine has not stored new section, only deleted ones.
+	 * The historic of the data is stored by the components not by sections.
+	 * @return bool
+	 */
+	public static function remove_tm_created_sections() : bool {
+		
+		$sql_query = sanitize_query ('
+			DELETE FROM "matrix_time_machine"
+			WHERE "section_tipo" = "tipo"
+				AND ("state" != \'deleted\' OR "state" IS NULL)
+		');
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed to remove tm created sections ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end remove_tm_created_sections
 
 
 }//end class v6_to_v7

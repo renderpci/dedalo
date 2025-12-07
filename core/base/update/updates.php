@@ -279,3 +279,13 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
+
+		// Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data. 
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'remove_tm_created_sections',
+				'stop_on_error'	=> true,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
