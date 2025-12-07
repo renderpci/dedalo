@@ -1494,7 +1494,7 @@ class section extends common {
 			$component_filter_data = $options->component_filter_data ?? null;
 
 			// values, inject a given values into new section record
-			$values = $optons->values ?? null;
+			$values = $options->values ?? null;
 
 		// Tipo. Current section tipo
 			$tipo = $this->get_tipo();
@@ -1579,7 +1579,7 @@ class section extends common {
 					$tm_save_options->time_machine_tipo	= $tipo;
 					$tm_save_options->new_record		= true;
 
-			//Save the time machine record
+			// Save the time machine record
 				$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
 					common::get_matrix_table_from_tipo($tipo),
 					(int)$section_id, // int section_id
@@ -3016,8 +3016,8 @@ class section extends common {
 			);
 			return false;
 		}
-		$strQuery   = "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE section_tipo = '$section_tipo' ORDER BY section_id ASC ";
-		$result		= JSON_RecordObj_matrix::search_free($strQuery);
+		$sql   = "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE section_tipo = $1 ORDER BY section_id ASC ";	
+		$result	= matrix_db_manager::exec_search($sql, [$section_tipo]);
 
 		return $result;
 	}//end get_resource_all_section_records_unfiltered
@@ -3231,8 +3231,8 @@ class section extends common {
 			return false;
 		}
 
-		$strQuery	= "SELECT section_id FROM \"$matrix_table\" WHERE section_id = ".(int)$section_id." AND section_tipo = '$section_tipo' ";
-		$result		= JSON_RecordObj_matrix::search_free($strQuery);
+		$sql		= 'SELECT section_id FROM "$matrix_table" WHERE section_id = $1 AND section_tipo = $2';
+		$result		= matrix_db_manager::exec_search($sql, [$section_id, $section_tipo]);
 		$num_rows	= pg_num_rows($result);
 
 		// num_rows. > 0 indicates already exists

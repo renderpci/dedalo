@@ -45,8 +45,9 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
-			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
+			$sql = 'SELECT datos FROM "'.$table.'" WHERE id = $1 LIMIT 1';
+			$res = matrix_db_manager::exec_search($sql, [$id]);
+
 			$num_rows	= $res===false
 				? 0
 				: pg_num_rows($res);
@@ -245,8 +246,8 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
-			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
+			$sql		= "SELECT datos FROM \"$table\" WHERE id = $1 LIMIT 1";
+			$res		= matrix_db_manager::exec_search($sql, [$id]);
 			$num_rows	= $res===false
 				? 0
 				: pg_num_rows($res);
@@ -325,8 +326,8 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
-			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
+			$sql	= "SELECT datos FROM \"$table\" WHERE id = $1 LIMIT 1";
+			$res	= matrix_db_manager::exec_search($sql, [$id]);
 			$num_rows	= $res===false
 				? 0
 				: pg_num_rows($res);
@@ -432,8 +433,8 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
-			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
+			$sql	= "SELECT datos FROM \"$table\" WHERE id = $1 LIMIT 1";
+			$res	= matrix_db_manager::exec_search($sql, [$id]);
 			$num_rows	= $res===false
 				? 0
 				: pg_num_rows($res);

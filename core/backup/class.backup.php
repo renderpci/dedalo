@@ -191,7 +191,7 @@ abstract class backup {
 		 AND table_schema = 'public'
 		ORDER BY table_type, table_name
 		";
-		$result = JSON_RecordDataBoundObject::search_free($strQuery);
+		$result = matrix_db_manager::exec_search($strQuery, []);
 
 		if(!$result) {
 			$msg = "Failed Search. Data is not found. Please contact with your admin (1)" ;

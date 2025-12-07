@@ -43,7 +43,7 @@ when the `action` is done, the API sent the response to the client. Response is 
     B(("API :: read()
     action : search"))
     B --SQO--> C(("search :: search()" ))
-    C --is send to preparse--> D("search :: pre_parse_search_query_object()" )
+    C --is send to preparse--> D("search :: parse_sqo()" )
     D-- result preparsed -->C
     D --is send to--> E("search :: conform_search_query_object()" )
     E-- result -->D
@@ -57,8 +57,8 @@ when the `action` is done, the API sent the response to the client. Response is 
       q='cat' ")
     G-- result -->F
     H-- result -->F
-    C-- wait for preparse--> I("search :: parse_search_query_object()" )
-    I--SQL--> J("JSON_RecordOBJ_matrix :: search_free()" )
+    C-- wait for preparse--> I("search :: parse_sql_query()" )
+    I--SQL--> J("matrix_db_manager :: exec_search()")
     J--SQL-->Q[(matrix tables)]
     Q --PgSql\Result--> K{{"result ::
     {ar_records:[{'Raspa'}]}"}}
