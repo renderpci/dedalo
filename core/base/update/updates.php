@@ -299,3 +299,14 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
+
+		// Delete old "section_id_key" and "state" tm columns in PostgreSQL.
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Delete old "section_id_key" and "state" tm columns in PostgreSQL.',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'delete_tm_columns',
+				'stop_on_error'	=> true,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+
