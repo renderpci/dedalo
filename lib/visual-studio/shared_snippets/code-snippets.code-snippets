@@ -1,0 +1,93 @@
+{
+	// Place your global snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and 
+	// description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope 
+	// is left empty or omitted, the snippet gets applied to all languages. The prefix is what is 
+	// used to trigger the snippet and the body will be expanded and inserted. Possible variables are: 
+	// $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. 
+	// Placeholders with the same ids are connected.
+	// Example:
+	// "Print to console": {
+	// 	"scope": "javascript,typescript",
+	// 	"prefix": "log",
+	// 	"body": [
+	// 		"console.log('$1');",
+	// 		"$2"
+	// 	],
+	// 	"description": "Log output to console"
+	// }
+	
+	"Public PHP function": {
+		"prefix": "public",
+		"scope": "php",
+		"body": [
+			"/**",
+			"* ${1/(.*)/${1:/upcase}/}",
+			"* @return ",
+			"*/",
+			"public function $1($2) {",
+			"    $0",
+			"}//end $1"
+		],
+		"description": "Create a public method"
+	},
+	
+	"Event listener JS": {
+		"prefix": "addEventListener",
+		"scope": "javascript",
+		"body": [
+			"const $1_handler = (e) => {",
+			"   $3",
+			"}",
+			"$2.addEventListener('$1', $1_handler)"		
+		],
+		"description": "Event listener JS"
+	},
+	
+	"Export JS": {
+		"prefix": "export",
+		"scope": "javascript",
+		"body": [
+			"/**",
+			"* ${1/(.*)/${1:/upcase}/}",
+			"* @return ",
+			"*/",
+			"export const $1 = function $2($3) {",
+			"    $4",
+			"}//end $1"	
+		],
+		"description": "Event listener JS"
+	},
+		
+	"Debug log Dédalo PHP": {
+		"prefix": "debug_log",
+		"scope": "php",
+		"body": [
+			"debug_log(__METHOD__",
+			"   \" $1\"",
+			"   .' $2: ' . to_string($3)",
+			"   , logger::DEBUG",
+			");"
+		],
+		"description": "Debug log Dédalo"
+	},
+	
+	"Dump Dédalo PHP": {
+		"prefix": "dump",
+		"scope": "php",
+		"body": [
+			"dump(\\$${1:var}, ' $1 +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string($2));",
+		],
+		"description": "Dump data Dédalo"
+	},
+	
+	"Exec time Dédalo PHP": {
+		"prefix": "exec_time_unit",
+		"scope": "php",
+		"body": [
+			"exec_time_unit(\\$start_time,'ms').' ms';",
+		],
+		"description": "Exec time Dédalo"
+	}
+	
+	
+}
