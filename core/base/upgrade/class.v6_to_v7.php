@@ -1142,6 +1142,7 @@ class v6_to_v7 {
 	}//end recreate_db_assets
 
 
+	
 	/**
 	 * REMOVE_TM_CREATED_SECTIONS
 	 * Remove time machine created sections that are not deleted
@@ -1173,4 +1174,43 @@ class v6_to_v7 {
 	}//end remove_tm_created_sections
 
 
+	/**
+	 * RECREATE_TM_TABLE
+	 * Add new columns to matrix_time_machine table
+	 * @return bool
+	 */
+	public static function recreate_tm_table() : bool {
+		
+		$sql_query = sanitize_query ('
+			ALTER TABLE "matrix_time_machine"
+				ADD COLUMN IF NOT EXISTS "user_id" character varying(8) NULL,
+				ADD COLUMN IF NOT EXISTS "bulk_process" integer NULL,
+				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+				
+			COMMENT ON TABLE "matrix_time_machine" IS  \'Time Machine\';
+
+			COMMENT ON COLUMN matrix_time_machine.section_id IS \'section_id when the change was made\';
+			COMMENT ON COLUMN matrix_time_machine.section_tipo IS \'section_tipo when the change was made\';
+			COMMENT ON COLUMN matrix_time_machine.tipo IS \'component tipo or section tipo when the change was made\';
+			COMMENT ON COLUMN matrix_time_machine.lang IS \'component data lang of the change\';
+			COMMENT ON COLUMN matrix_time_machine.timestamp IS \'timestamp of the change\';
+			COMMENT ON COLUMN matrix_time_machine.user_id IS \'User section_id that made the change\';
+			COMMENT ON COLUMN matrix_time_machine.bulk_process IS \'Bulk process id that identify a bulk change\';
+			COMMENT ON COLUMN matrix_time_machine.data IS \'JSONB data representing the change\';
+		');
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed Update jer_dd with a new schema ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end recreate_tm_table
 }//end class v6_to_v7
