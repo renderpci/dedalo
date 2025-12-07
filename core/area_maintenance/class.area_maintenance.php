@@ -708,15 +708,15 @@ class area_maintenance extends area_common {
 		// functions
 		$response_functions		= db_tasks::rebuild_functions();
 			$response->result->functions	= $response_functions->result;
-			$response->errors[]				= array_merge($response->errors, $response_functions->errors);
+			$response->errors				= array_merge($response->errors, $response_functions->errors);
 		// indexes
 		$response_indexes		= db_tasks::rebuild_indexes();
 			$response->result->indexes		= $response_indexes->result;
-			$response->errors[]				= array_merge($response->errors, $response_indexes->errors);
+			$response->errors				= array_merge($response->errors, $response_indexes->errors);
 		// maintenance
 		$response_maintenance	= db_tasks::exec_maintenance();
 			$response->result->maintenance	= $response_maintenance->result;
-			$response->errors[]				= array_merge($response->errors, $response_maintenance->errors);
+			$response->errors				= array_merge($response->errors, $response_maintenance->errors);
 
 
 		return $response;
@@ -854,9 +854,9 @@ class area_maintenance extends area_common {
 	* 	iterations: int,
 	* 	update_rate: int
 	* }
-	* @return object|void
+	* @return object|never Returns object in CLI mode, never returns in web mode (calls die())
 	*/
-	public static function long_process_stream(object $options) {
+	public static function long_process_stream(object $options) : object {
 
 		// options
 			$iterations		= $options->iterations ?? 10;
