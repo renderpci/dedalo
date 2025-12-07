@@ -297,8 +297,8 @@ class tool_time_machine extends tool_common {
 			$model						= ontology_node::get_model_by_tipo($tipo,true);
 
 		// get all changes saved in time_machine with the same bulk_process_id
-			$strQuery	= "SELECT * FROM \"matrix_time_machine\" WHERE bulk_process_id = $bulk_process_id ORDER BY id DESC";
-			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+			$sql = "SELECT * FROM \"matrix_time_machine\" WHERE bulk_process_id = $1 ORDER BY id DESC";
+			$result = matrix_db_manager::exec_search($sql, [$bulk_process_id]);
 			if($result===false) {
 				$response->msg = "Failed Search bulk_process_id $bulk_process_id. Data is not found.";
 				debug_log(__METHOD__
@@ -347,13 +347,15 @@ class tool_time_machine extends tool_common {
 				$section_tipo	= $row['section_tipo'];
 				$section_id		= $row['section_id'];
 				// search all changes of the component
-				$sub_strQuery	= "SELECT * FROM \"matrix_time_machine\"
-					WHERE tipo 		= '$tipo' AND
-					section_tipo 	= '$section_tipo' AND
-					section_id 		= '$section_id'
-					ORDER BY id DESC"
-				;
-				$sub_result	= JSON_RecordDataBoundObject::search_free($sub_strQuery);
+				$sql = "
+					SELECT * FROM \"matrix_time_machine\"
+					WHERE 
+						tipo = $1 AND
+						section_tipo = $2 AND
+						section_id = $3
+					ORDER BY id DESC
+				";
+				$sub_result = matrix_db_manager::exec_search($sql, [$tipo, $section_tipo, $section_id]);
 				// get the total changes,
 				// if the component has only 1 change, it will be the bulk change
 				// in those cases the data to save into the component will be a empty array

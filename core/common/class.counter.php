@@ -270,8 +270,8 @@ abstract class counter {
 			$response->datalist	= [];
 
 		// Find all db tables
-			$sql	= 'SELECT tipo, dato FROM matrix_counter ORDER BY tipo ASC';
-			$result	= JSON_RecordObj_matrix::search_free($sql);
+			$sql	= 'SELECT tipo, value FROM matrix_counter ORDER BY tipo ASC';
+			$result = matrix_db_manager::exec_search($sql, []);
 			if ($result===false) {
 				debug_log(__METHOD__
 					. " Error reading counters " . PHP_EOL

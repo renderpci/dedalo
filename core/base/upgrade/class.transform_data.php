@@ -330,12 +330,12 @@ class transform_data {
 
 			// overwrite relations
 			$datos->relations = $clean_relations;
-
+			
 			$section_data_encoded = json_handler::encode($datos);
 
 			// save record
-			$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+			$sql	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+			$result = matrix_db_manager::exec_search($sql, [$section_data_encoded, $id]);
 			if($result===false) {
 				$msg = "Failed Update section_data id: $id ($section_tipo-$section_id)";
 				debug_log(__METHOD__
@@ -496,13 +496,13 @@ class transform_data {
 	public static function get_tm_data_from_tipo(string|int $section_id, string $section_tipo, string $tipo) : \PgSql\Result|false {
 
 		// get all records of the time_machine for the given component
-		$query = "
+		$sql = "
 			SELECT * FROM matrix_time_machine
 			WHERE section_id = $1
 			AND section_tipo = $2
 			AND tipo = $3
 		";
-		$result	= pg_query_params(DBi::_getConnection(), $query, [$section_id, $section_tipo, $tipo]);
+		$result = matrix_db_manager::exec_search($sql, [$section_id, $section_tipo, $tipo]);
 
 		return $result;
 	}//end get_tm_data_from_tipo
