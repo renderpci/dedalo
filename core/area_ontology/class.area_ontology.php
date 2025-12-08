@@ -2,7 +2,7 @@
 /**
 * AREA_ONTOLOGY
 * Manage whole ontology hierarchy
-*
+* 
 */
 class area_ontology extends area_thesaurus {
 
@@ -16,7 +16,8 @@ class area_ontology extends area_thesaurus {
 
 
 	/**
-	* GET_hierarchy_section_tipo
+	* GET_HIERARCHY_SECTION_TIPO
+	* Get the section type for hierarchy.
 	* @return string $section_tipo
 	*/
 	public function get_hierarchy_section_tipo() : string {
@@ -30,9 +31,10 @@ class area_ontology extends area_thesaurus {
 
 	/**
 	* GET_MAIN_TABLE
+	* Get the main table name for hierarchy.
 	* @return string
 	*/
-	public function get_main_table() {
+	public function get_main_table() : string {
 
 		return ontology::$main_table; // 'matrix_ontology_main'
 	}//end get_main_table
