@@ -1194,7 +1194,7 @@ abstract class component_common extends common {
 	* Check if the given ID exists in the specified data language.
 	* @param int $id
 	* @param string $lang Used to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
-	* @return
+	* @return int|null $key
 	*/
 	public function get_key_from_id( int $id, string $lang ) : ?int {
 
