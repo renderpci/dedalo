@@ -530,7 +530,6 @@ class section_record {
 					'msg'			=> $logger_msg,
 					'section_id'	=> $section_id,
 					'tipo'			=> $section_tipo,
-					'is_portal'		=> intval( (TOP_TIPO!==$section_tipo) ),
 					'table'			=> common::get_matrix_table_from_tipo($section_tipo),
 					'delete_mode'	=> 'delete_record',
 					'section_tipo'	=> $section_tipo

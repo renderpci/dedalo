@@ -1322,11 +1322,11 @@ class component_text_area extends component_string_common {
 	/**
 	* GET_TAGS_PERSONS
 	* Get available tags for insert in text area. Interviewed, informants, etc..
-	* @param string $related_section_tipo = TOP_TIPO
+	* @param string $related_section_tipo
 	* @param array $ar_related_sections = []
 	* @return array $ar_tags_inspector
 	*/
-	public function get_tags_persons(string $related_section_tipo=TOP_TIPO, array $ar_related_sections=[]) : array {
+	public function get_tags_persons(string $related_section_tipo, array $ar_related_sections=[]) : array {
 
 		$tags_persons = array();
 
