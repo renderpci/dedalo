@@ -14,7 +14,7 @@ class sections extends common {
 		// FIELDS
 		protected $ar_locators;
 		protected $ar_section_tipo;
-		// protected $dato;
+		// protected $data;
 
 		// dd_request. Full dd_request
 		public $dd_request;
@@ -30,6 +30,7 @@ class sections extends common {
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
+	* Singleton pattern implementation for sections class
 	* @param array|null $ar_locators
 	* @param object|null $search_query_object = null
 	* @param string|null $caller_tipo = null
@@ -37,15 +38,20 @@ class sections extends common {
 	* @param string $mode = list
 	* @param string $lang = DEDALO_DATA_NOLAN
 	* @return object $instance
-	* 	Instance of sections class
+	* 	Returns a singleton instance of sections class
 	*/
-	public static function get_instance( ?array $ar_locators, ?object $search_query_object=null, ?string $caller_tipo=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN ) : object {
+	public static function get_instance(
+		array|null $ar_locators = null,
+		object|null $search_query_object = null,
+		string|null $caller_tipo = null,
+		string $mode = 'list',
+		string $lang = DEDALO_DATA_NOLAN
+		): object {
 
 		$instance = new sections($ar_locators, $search_query_object, $caller_tipo, $mode, $lang);
 
 		return $instance;
 	}//end get_instance
-
 
 
 	/**
@@ -62,70 +68,89 @@ class sections extends common {
 
 		// Set general vars
 		$this->ar_locators			= $ar_locators;
-		$this->search_query_object	= $search_query_object;
+		$this->search_query_object	= isset($search_query_object) ? clone($search_query_object): null;
 		$this->caller_tipo			= $caller_tipo;
 		$this->mode					= $mode;
 		$this->lang					= $lang;
+
+		// set up
+		$this->set_up();
 	}//end __construct
 
 
-
 	/**
-	* GET_DATO
-	* Get records from database using current sqo (search_query_object)
-	* @return array $this->dato ($ar_records from search)
-	*/
-	public function get_dato() {
-
-		// already calculated case
-			if (isset($this->dato)) {
-				return $this->dato;
-			}
-
+	 * SET_UP
+	 * @return void
+	 */
+	private function set_up() : void {
+		
 		// sqo. Use sqo.mode to define the search class manager to run your search
-			$search_query_object = $this->search_query_object;
-
+		if(!isset($this->search_query_object)){
+			return;
+		}
 		// limit check
-			if (!isset($search_query_object->limit)) {
+		if (!isset($this->search_query_object->limit)) {
 
-				if ($this->mode==='edit') {
+			if ($this->mode==='edit') {
 
-					$search_query_object->limit = 1;
+				$this->search_query_object->limit = 1;
 
-				}else{
+			}else{
 
-					$caller_model = ontology_node::get_model_by_tipo($this->caller_tipo,true);
-					if ($caller_model==='section') {
+				$caller_model = ontology_node::get_model_by_tipo( $this->caller_tipo, true );
+				if ($caller_model==='section') {
 
-						// section case
-						$section = section::get_instance(
-							$this->caller_tipo // string section_tipo
-						);
-						// request_config (is array)
-						$request_config = $section->build_request_config();
+					// section case
+					$section = section::get_instance(
+						$this->caller_tipo // string section_tipo
+					);
+					// request_config (is array)
+					$request_config = $section->build_request_config();
 
-						$found = array_find($request_config, function($el){
-							return isset($el->api_engine) && $el->api_engine==='dedalo';
-						});
-						if (is_object($found)) {
-							if (isset($found->sqo) && isset($found->sqo->limit)) {
-								$search_query_object->limit = $found->sqo->limit;
-							}
+					$found = array_find($request_config, function($el){
+						return isset($el->api_engine) && $el->api_engine==='dedalo';
+					});
+					if (is_object($found)) {
+						if (isset($found->sqo) && isset($found->sqo->limit)) {
+							$this->search_query_object->limit = $found->sqo->limit;
 						}
 					}
 				}
+
+				if (!isset($this->search_query_object->limit)) {
+					// default limit
+					$this->search_query_object->limit = 10;
+				}
 			}
+		}
+
+		if( !isset($this->search_query_object->offset) ) {
+			$this->search_query_object->offset = 0;
+		}
+	}//end set_up
+
+	/**
+	* GET_DATA
+	* Get records from database using current sqo (search_query_object)
+	* @return array $this->data ($ar_records from search)
+	*/
+	public function get_data() {
+
+		// already calculated case
+			if (isset($this->data)) {
+				return $this->data;
+			}		
 
 		// search
-			$search		= search::get_instance($search_query_object);
-			$rows_data	= $search->search();
+			$search		= search::get_instance($this->search_query_object);
+			$db_result	= $search->search();
 
-		// fix result ar_records as dato
-			$this->dato = $rows_data->ar_records;
+		// fix db_result ar_records as data
+			$this->data = $db_result;
 
 
-		return $this->dato;
-	}//end get_dato
+		return $this->data;
+	}//end get_data
 
 
 
