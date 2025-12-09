@@ -260,12 +260,12 @@ trait where {
 
 
 	/**
-	* BUILD_SEARCH_OBJECT_SQL
+	* PARSE_SEARCH_OBJECT_SQL
 	* Builds a SQL query string base on given filter search object
 	* @param object $search_object
-	* @return string $sql
+	* @return string|null $sql
 	*/
-	public function build_search_object_sql( object $search_object ) : string {
+	public function parse_search_object_sql( object $search_object ) : ?string {
 
 		// sample object
 			// {
@@ -289,7 +289,11 @@ trait where {
 			// }
 
 		// set initial sql with search_object sentence
-		$sql = $search_object->sentence;
+		$sql = $search_object->sentence ?? null;
+
+		if (empty($sql)) {
+			return null;
+		}
 
 		foreach ($search_object->params as $key => $value) {
 			// Gets current param key (default is 1 and increases by 1 after each use)
@@ -304,7 +308,7 @@ trait where {
 
 
 		return $sql;
-	}//end build_search_object_sql
+	}//end parse_search_object_sql
 
 
 
