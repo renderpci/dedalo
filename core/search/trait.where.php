@@ -310,7 +310,7 @@ trait where {
 
 	/**
 	* BUILD_SQL_FILTER_BY_LOCATORS
-	* @return string $sql_filter
+	* @return void
 	*/
 	public function build_sql_filter_by_locators() : void {
 
@@ -395,8 +395,6 @@ trait where {
 	*/
 	public function build_sql_projects_filter( bool $force_calculate=false ) : void {
 
-		$sql_projects_filter = '';
-
 		// skip_projects_filter
 			if ($this->sqo->skip_projects_filter===true) {
 				return;
@@ -409,8 +407,7 @@ trait where {
 			$user_id			= logged_user_id(); // Logged user id
 			if (empty($user_id)) {
 				debug_log(__METHOD__
-					. " Error: user id unavailable (logged_user_id) " . PHP_EOL
-					. logged_user_id()
+					. " Error: user id unavailable (logged_user_id)"				
 					, logger::ERROR
 				);
 				return;
@@ -512,7 +509,7 @@ trait where {
 						if (empty($ar_projects)) {
 
 							// Invalid filter case
-							$this->sql_obj->where[] = $section_alias.'.relation #>\'{components}\' = \'IMPOSSIBLE VALUE (User without projects)\' ';
+							$this->sql_obj->where[] = $section_alias.'.relation ? \'IMPOSSIBLE VALUE (User without projects)\' ';
 
 						}else{
 
@@ -533,13 +530,8 @@ trait where {
 			}//end if ($is_global_admin!==true) {
 
 		// cache
-			$sql_projects_filter_data[$uid] = $sql_projects_filter;
-
-
-	return;
+			// $sql_projects_filter_data[$uid] = $sql_projects_filter;
 	}//end build_sql_projects_filter
-
-
 
 
 
