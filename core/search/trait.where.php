@@ -30,6 +30,7 @@ trait where {
 	}//end build_main_where
 
 
+
 	/**
 	* BUILD_FILTER_BY_USER_RECORDS
 	* Build and fix filter_by_user_records filter.
@@ -44,8 +45,8 @@ trait where {
 		// stop the process if user_id is not logged
 		if (empty($user_id)) {
 			debug_log(__METHOD__
-				. " Error: user id unavailable (logged_user_id) " . PHP_EOL
-				. logged_user_id()
+				. " Error: user id unavailable (logged_user_id). Unabe to build filter_by_user_records " . PHP_EOL
+				. to_string(logged_user_id())
 				, logger::ERROR
 			);
 			return;
