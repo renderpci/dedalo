@@ -438,7 +438,7 @@ class search_query_object extends stdClass {
 	* 2 - Parsed object with resolved component paths and component specific properties
 	* When SQO is passed to the search class to exec a DDBB query, the object elements are passed
 	* to the respective components to parse the final usable object
-	* @see search.parse_search_query_object
+	* @see search.parse_sql_query
 	* @param bool $value
 	* @return bool true
 	*/
@@ -460,7 +460,7 @@ class search_query_object extends stdClass {
 	* the result will be the section that match
 	* By default is false
 	* Used in search related to split the locators than match the search criteria (as indexations of audiovisual)
-	* @see search_related.parse_search_query_object
+	* @see search_related.parse_sql_query
 	* @param bool $value
 	* @return bool true
 	*/
