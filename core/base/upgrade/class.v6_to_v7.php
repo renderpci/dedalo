@@ -1192,7 +1192,7 @@ class v6_to_v7 {
 			ALTER TABLE "matrix_time_machine"
 				ADD COLUMN IF NOT EXISTS "user_id" character varying(8) NULL,
 				ADD COLUMN IF NOT EXISTS "bulk_process" integer NULL,
-				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+				ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
 				
 			COMMENT ON TABLE "matrix_time_machine" IS  \'Time Machine\';
 
@@ -1234,7 +1234,7 @@ class v6_to_v7 {
 			UPDATE "matrix_time_machine"
 				SET user_id 		= "userID",
 					bulk_process 	= bulk_process_id,
-					data			= dato;					
+					data 			= dato;
 		');
 
 		$result = pg_query(DBi::_getConnection(), $sql_query);
@@ -1257,6 +1257,7 @@ class v6_to_v7 {
 	/**
 	 * DELETE_TM_COLUMNS
 	 * Delete obsolete columns to matrix_time_machine table
+	 * Rename column `bulk_process` to `bulk_process_id`
 	 * @return bool
 	 */
 	public static function delete_tm_columns() : bool {
@@ -1264,7 +1265,12 @@ class v6_to_v7 {
 		$sql_query = sanitize_query ('
 			ALTER TABLE "matrix_time_machine"
 				DROP COLUMN IF EXISTS "section_id_key",
-				DROP COLUMN IF EXISTS "state";
+				DROP COLUMN IF EXISTS "state",
+				DROP COLUMN IF EXISTS "userID",
+				DROP COLUMN IF EXISTS "bulk_process_id",
+				DROP COLUMN IF EXISTS "dato";
+
+			ALTER TABLE "matrix_time_machine" RENAME COLUMN bulk_process TO bulk_process_id;
 		');
 
 		$result = pg_query(DBi::_getConnection(), $sql_query);
