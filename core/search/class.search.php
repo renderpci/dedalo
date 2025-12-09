@@ -876,16 +876,91 @@ class search {
 	}//end parse_sql_query
 
 
+
 	/**
-	* PARSE_SQL_FULL_COUNT
+	* PARSE_SQL_DEFAULT
 	* Build full final SQL query to send to DB
 	* @return string $sql_query string
-	* 	parsed final SQL query string
+	*  parsed final SQL query string
 	*/
-	public function parse_sql_full_count() : string {
+	public function parse_sql_default() : string {
+
+		// 1 order
+		$this->build_sql_query_order();
+		// 2 select
+		$this->build_sql_query_select();
+		// 3 from
+		$this->build_main_from_sql();
+		// 4 where
+		$this->build_main_where();
+		$this->build_sql_filter();
+		$this->build_sql_projects_filter();
+		$this->build_filter_by_user_records();
+		
 
 		// sql_query
-			$sql_query = '';
+		$sql_query = '';
+
+		// query_inside
+			$query_inside = '';
+
+			// select
+			$query_inside .= 'SELECT ' . implode(','.PHP_EOL, $this->sql_obj->select );
+
+			// from
+			$query_inside .= PHP_EOL . 'FROM ' . implode(PHP_EOL, $this->sql_obj->from );
+
+			// join
+			if (!empty($this->sql_obj->join)) {
+				$query_inside .= PHP_EOL . implode(PHP_EOL, $this->sql_obj->join );
+			}
+
+			// where
+			// merge main_where and where and remove empty sentences	
+			$all_where_sentences = array_filter(array_merge($this->sql_obj->main_where, $this->sql_obj->where));
+			$query_inside .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
+
+			// multi section union case
+			if (count($this->ar_section_tipo)>1) {
+				$query_inside = $this->build_union_query($query_inside);
+			}
+
+			// order (default for maintain result consistency)
+			$order_query = PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order_default );		
+			// order union case for various tables
+			if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
+				$order_query = str_replace('mix.', '', $order_query);
+			}
+			$query_inside .= $order_query;
+
+			// limit
+			if (isset($this->sqo->limit) && $this->sqo->limit>0) {
+				$query_inside .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
+			}
+
+			// offset
+			if (isset($this->sqo->offset) && $this->sqo->offset>0) {
+				$query_inside .= ' OFFSET ' . $this->sqo->offset;
+			}
+			// end query_inside
+
+		// main select
+			$sql_query .= 'SELECT * FROM (';
+			$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
+			$sql_query .= ') main_select';
+			// order
+				if(!empty($this->sql_obj->order)){
+					$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
+				}
+			// limit
+				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
+					$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
+				}
+
+
+		return $sql_query;
+	}//end parse_sql_default
+
 
 
 	/**
