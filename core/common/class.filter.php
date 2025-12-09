@@ -223,27 +223,27 @@ abstract class filter {
 				');
 
 				$search = search::get_instance($search_query_object);
-				$result = $search->search();
-				$dato = [];
-				foreach ($result->ar_records as $row) {
+				$db_result = $search->search();
+				$data = [];
+				foreach ($db_result as $row) {
 
 					$locator = new locator();
 						$locator->set_section_tipo($row->section_tipo);
 						$locator->set_section_id($row->section_id);
 
-					$dato[] = $locator;
+					$data[] = $locator;
 				}
 			}else{
 
 				// regular user case
 
 				// get current user assigned projects
-				$dato = filter::get_user_projects($user_id);
+				$data = filter::get_user_projects($user_id);
 			}//end if ($is_global_admin===false)
 
 		// resolve label and parent
 			$ar_projects = [];
-			foreach ($dato as $current_locator) {
+			foreach ($data as $current_locator) {
 
 				$parent			= null;
 				$model			= ontology_node::get_model_by_tipo($projects_name_tipo);
@@ -256,7 +256,7 @@ abstract class filter {
 					$current_locator->section_tipo // string section_tipo
 				);
 
-				$label = $component_term->extract_component_dato_fallback(
+				$label = $component_term->extract_component_data_fallback(
 					DEDALO_DATA_LANG, // lang
 					DEDALO_DATA_LANG_DEFAULT
 				); // main_lang
@@ -272,9 +272,9 @@ abstract class filter {
 					DEDALO_DATA_NOLAN, // string lang
 					$current_locator->section_tipo // string section_tipo
 				);
-				$order_dato		= $order_component->get_dato();
-				$order_value	= isset($order_dato[0])
-					? (int)$order_dato[0]
+				$order_data		= $order_component->get_data();
+				$order_value	= isset($order_data[0])
+					? (int)$order_data[0]
 					: 0;
 
 				$ar_all_parents = component_relation_parent::get_parents_recursive(
@@ -285,7 +285,7 @@ abstract class filter {
 
 					$found = locator::in_array_locator(
 						$current_parent,
-						$dato,
+						$data,
 						['section_tipo','section_id']
 					);
 					if ( $found ) {
@@ -299,13 +299,13 @@ abstract class filter {
 				}
 
 				$element = new stdClass();
-					$element->label		= reset($label);
+					$element->label		= $label[0] ?? null;
 					$element->locator	= json_decode( json_encode($current_locator) ); // converted to std class to allow session cache
 					$element->parent	= $parent;
 					$element->order		= $order_value;
 
 				$ar_projects[] = $element;
-			}//end foreach ($dato as $current_locator)
+			}//end foreach ($data as $current_locator)
 
 		// cache
 			if ($use_cache===true) {
@@ -359,7 +359,7 @@ abstract class filter {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$filter_user_records_by_id = $component->get_dato() ?? [];
+			$filter_user_records_by_id = $component->get_data() ?? [];
 
 		}
 
