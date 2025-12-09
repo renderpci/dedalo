@@ -2485,21 +2485,14 @@ final class dd_core_api {
 					'value'	=> $value
 				];
 			}, DEDALO_APPLICATION_LANGS, array_keys(DEDALO_APPLICATION_LANGS));
-			// $langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
-			// $obj->dedalo_projects_default_langs		= array_map(function ($item) {
-			// 	return [
-			// 		'label'	=> $item->names[0] ?? $item->code,
-			// 		'value'	=> 'lg-'.$item->code,
-			// 		'tld2'	=> lang::get_alpha2_from_code('lg-'.$item->code)
-			// 	];
-			// }, $langs_resolved);
-			$obj->dedalo_projects_default_langs		= array_map(function ($current_lang) {
+			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
+			$obj->dedalo_projects_default_langs		= array_map(function ($item) {
 				return [
-					'label'	=> lang::get_name_from_code($current_lang),
-					'value'	=> $current_lang,
-					'tld2'	=> lang::get_alpha2_from_code($current_lang)
+					'label'	=> $item->names[0] ?? $item->code,
+					'value'	=> 'lg-'.$item->code,
+					'tld2'	=> lang::get_alpha2_from_code('lg-'.$item->code)
 				];
-			}, DEDALO_PROJECTS_DEFAULT_LANGS);
+			}, $langs_resolved);			
 			// quality defaults
 			$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
 			$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;
