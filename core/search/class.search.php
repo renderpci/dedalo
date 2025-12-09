@@ -484,24 +484,6 @@ class search {
 
 
 	/**
-	* IS_SEARCH_OPERATOR
-	* @param object $search_object
-	* @return bool
-	*/
-	public static function is_search_operator(object $search_object) : bool {
-
-		foreach ($search_object as $key => $value) {
-			if (strpos($key, '$')!==false) {
-				return true;
-			}
-		}
-
-		return false;
-	}//end is_search_operator
-
-
-
-	/**
 	* CONFORM_FILTER
 	* Call to components to conform final search_query_object, adding specific component path, search operators etc.
 	* Recursive
@@ -639,57 +621,6 @@ class search {
 
 		return $select_object;
 	}//end conform_select
-
-
-
-	/**
-	* TRIM_TIPO
-	* Contract the tipo to prevent large names in SQL sentences
-	* @see search_Test::test_trim_tipo
-	* @param string $tipo
-	* @param int $max = 2
-	* @return string|null $trimmed_tipo
-	*/
-	public static function trim_tipo( string $tipo, int $max=2 ) : ?string {
-
-		// empty case
-			if (empty($tipo)) {
-				debug_log(__METHOD__
-					." Error empty tipo is received " .PHP_EOL
-					.' tipo: ' . to_string($tipo)
-					, logger::ERROR
-				);
-				if(SHOW_DEBUG===true) {
-					$bt		= debug_backtrace();
-					dump($bt, ' debug_backtrace ++ '.to_string());
-				}
-				return null;
-			}
-
-		// all case. Used by related search that don't know the section_tipo
-			if($tipo==='all') {
-				return $tipo;
-			}
-
-		// match regex
-			preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
-			if (empty($matches) || empty($matches[1]) || (empty($matches[2]) && $matches[2]!=0) ) {
-				debug_log(__METHOD__
-					." Error on preg match tipo: $tipo ". PHP_EOL
-					.'tipo: '.to_string($tipo)
-					, logger::ERROR
-				);
-				return null;
-			}
-
-		$name	= $matches[1];
-		$number	= $matches[2];
-
-		$trimmed_tipo = substr($name, 0, $max) . $number;
-
-
-		return $trimmed_tipo;
-	}//end trim_tipo
 
 
 
