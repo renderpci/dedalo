@@ -142,9 +142,13 @@ class transform_data {
 			$created_records = 0;
 
 		// section records
-			$result	= JSON_RecordDataBoundObject::search_free(
-				"SELECT id, section_id, datos FROM $table WHERE section_tipo = '$original_section_tipo' ORDER BY section_ID ASC"
-			);
+			$sql = "
+				SELECT id, section_id, datos FROM $table
+				WHERE section_tipo = $1
+				ORDER BY section_ID ASC
+			";
+			$result = matrix_db_manager::exec_search($sql, [$original_section_tipo]);
+
 			// iterate resource row
 			while($row = pg_fetch_assoc($result)) {
 
@@ -295,10 +299,14 @@ class transform_data {
 			);
 			return false;
 		}
+	
+		$sql = "
+			SELECT id, section_id, datos FROM $table
+			WHERE section_tipo = $1
+			AND section_id = $2
+		";
+		$current_result = matrix_db_manager::exec_search($sql, [$section_tipo, $section_id]);
 
-		$current_result	= JSON_RecordDataBoundObject::search_free(
-			"SELECT id, section_id, datos FROM $table WHERE section_tipo = '$section_tipo' AND  section_id = $section_id"
-		);
 		while($row = pg_fetch_assoc($current_result)) {
 
 			$id		= $row['id'];

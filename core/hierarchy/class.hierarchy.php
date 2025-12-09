@@ -468,15 +468,15 @@ class hierarchy extends ontology {
 			$prefix_upper			= strtoupper($prefix); // data is stored always in uppercase
 
 		// SQL query
-			$strQuery  = '-- '.__METHOD__;
-			$strQuery .= "\nSELECT section_id, datos#>'{relations}' AS relations \nFROM $matrix_table WHERE";
-			$strQuery .= "\n section_tipo = '$hierarchy_section_tipo' AND";
-			$strQuery .= "\n (datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? '$prefix_lower' "; // Now hierarchy tld is an array
-			$strQuery .= " OR datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? '$prefix_upper') ";
-			$strQuery .= "\n LIMIT 1 ;";
+			$sql  = '-- '.__METHOD__;
+			$sql .= "\nSELECT section_id, datos#>'{relations}' AS relations \nFROM $matrix_table WHERE";
+			$sql .= "\n section_tipo = $1 AND";
+			$sql .= "\n (datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? $2 "; // Now hierarchy tld is an array
+			$sql .= " OR datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? $3) ";
+			$sql .= "\n LIMIT 1 ;";
 
 		// search
-			$result		= JSON_RecordObj_matrix::search_free($strQuery);
+			$result	= matrix_db_manager::exec_search($sql, [$hierarchy_section_tipo, $prefix_lower, $prefix_upper]);
 			while ($row = pg_fetch_assoc($result)) {
 
 				$relations = json_handler::decode($row['relations']);
