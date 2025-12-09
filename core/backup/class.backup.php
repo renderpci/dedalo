@@ -35,14 +35,14 @@ abstract class backup {
 				$response->msg		= 'Error. Request failed '.__METHOD__;
 				$response->errors	= [];
 
-		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
+		// non dedalo_db_management case. Used when DB is in a external server or when backups are managed externally
 			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
 
 				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
 				$response->result	= true;
 
 				debug_log(__METHOD__
-					." Skipped request backup_secuence because DEDALO_DB_MANAGEMENT = false"
+					." Skipped request backup_sequence because DEDALO_DB_MANAGEMENT = false"
 					, logger::WARNING
 				);
 				return $response;
@@ -149,7 +149,7 @@ abstract class backup {
 
 		}catch (Exception $e) {
 
-			$msg = "Error on backup_secuence. User: $username. - error: ".  $e->getMessage(). "\n";
+			$msg = "Error on backup_sequence. User: $username. - error: ".  $e->getMessage(). "\n";
 			debug_log(__METHOD__
 				. " Exception: $msg "
 				, logger::ERROR
@@ -435,6 +435,7 @@ abstract class backup {
 
 	/**
 	* MAKE_MYSQL_BACKUP
+	* Make a backup of the MySQL database(s)
 	* @return object $response
 	* {
 	* 	result: array|bool [result: true, msg: Backup done web_my_ddbb,..]

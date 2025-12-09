@@ -35,6 +35,7 @@ class area_maintenance extends area_common {
 
 	/**
 	* ITEM_MAKE_BACKUP
+	* Make a copy of the item in database.
 	* @return object $item
 	*/
 	public function item_make_backup() : object {
@@ -61,12 +62,12 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* GET_AR_WIDGETS
-	* Definition of all visible widgets in the area
-	* Every widget has the client side code in JavaScript
-	* @return array $data_items
-	*	Array of widget objects
-	*/
+	 * GET_AR_WIDGETS
+	 * Definition of all visible widgets in the area
+	 * Every widget has the client side code in JavaScript
+	 * @return array $ar_widgets Widget objects. Each widget has a unique ID, name (string), code snippet in JavaScript.
+	 *	Array of widget objects
+	 */
 	public function get_ar_widgets() : array {
 
 		$ar_widgets = [];
@@ -379,7 +380,7 @@ class area_maintenance extends area_common {
 
 	/**
 	* WIDGET_FACTORY
-	* Unified way to create an area-development widget
+	* Unified way to create an area-development widget. 
 	* @param object $item
 	* @return object $widget
 	*/
@@ -498,15 +499,15 @@ class area_maintenance extends area_common {
 		// functions
 		$response_functions		= db_tasks::rebuild_functions();
 			$response->result->functions	= $response_functions->result;
-			$response->errors[]				= array_merge($response->errors, $response_functions->errors);
+			$response->errors				= array_merge($response->errors, $response_functions->errors);
 		// indexes
 		$response_indexes		= db_tasks::rebuild_indexes();
 			$response->result->indexes		= $response_indexes->result;
-			$response->errors[]				= array_merge($response->errors, $response_indexes->errors);
+			$response->errors				= array_merge($response->errors, $response_indexes->errors);
 		// maintenance
 		$response_maintenance	= db_tasks::exec_maintenance();
 			$response->result->maintenance	= $response_maintenance->result;
-			$response->errors[]				= array_merge($response->errors, $response_maintenance->errors);
+			$response->errors				= array_merge($response->errors, $response_maintenance->errors);
 
 
 		return $response;
@@ -644,9 +645,9 @@ class area_maintenance extends area_common {
 	* 	iterations: int,
 	* 	update_rate: int
 	* }
-	* @return object|void
+	* @return object|never Returns object in CLI mode, never returns in web mode (calls die())
 	*/
-	public static function long_process_stream(object $options) {
+	public static function long_process_stream(object $options) : object|never {
 
 		// options
 			$iterations		= $options->iterations ?? 10;
@@ -996,14 +997,15 @@ class area_maintenance extends area_common {
 	}//end update_data_version
 
 
+
 	/**
-	* SET_CONGIF_CORE
+	* SET_CONFIG_CORE
 	* This function set a custom maintenance mode. Useful when the root user
 	* do not have access to the config file to edit
 	* @param object $options
 	* @return object $response
 	*/
-	private static function set_congif_core(object $options) {
+	private static function set_config_core(object $options) {
 
 		// response
 			$response = new stdClass();
@@ -1015,13 +1017,13 @@ class area_maintenance extends area_common {
 			$name	= $options->name; // name of the constant like 'MAINTENANCE_MODE_CUSTOM'
 			$value	= $options->value ?? null; // value of the constant like bool 'false'
 
-		// user root check. Only root user can set congif_core
+		// user root check. Only root user can set config core inf
 			if (logged_user_id()!==DEDALO_SUPERUSER
 				// && is_ontology_available() // only blocks if no Ontology error was detected (recovery case)
 				&& $name!=='DEDALO_RECOVERY_MODE'
 				&& (!defined('DEDALO_RECOVERY_MODE') || DEDALO_RECOVERY_MODE==false)
 				) {
-				$response->msg = 'Error. only root user can set congif_core';
+				$response->msg = 'Error. only root user can set config_core';
 				return $response;
 			}
 
@@ -1054,7 +1056,7 @@ class area_maintenance extends area_common {
 				// Disable (Experimental with serious security implications)
 				case 'DEDALO_NOTIFICATION_CUSTOM':
 					if (logged_user_id()!==DEDALO_SUPERUSER) {
-						$response->msg = 'Error. only root user can set congif_core';
+						$response->msg = 'Error. only root user can set config_core';
 						return $response;
 					}
 					// string|boolean
@@ -1147,15 +1149,15 @@ class area_maintenance extends area_common {
 
 
 		return $response;
-	}//end set_congif_core
+	}//end set_config_core
 
 
 
 	/**
 	* SET_MAINTENANCE_MODE
 	* Changes Dédalo maintenance mode from true to false or vice-versa
-	* Uses area_maintenance:: set_congif_core to overwrite the core_config files
-	* The constant name will be checked in the set_congif_core() to allow it, define the constant in this method
+	* Uses area_maintenance:: set_config_core to overwrite the core_config files
+	* The constant name will be checked in the set_config_core() to allow it, define the constant in this method
 	* Input and output are normalized objects to allow use it from area_maintenance API
 	* @param object $options
 	* {
@@ -1177,7 +1179,7 @@ class area_maintenance extends area_common {
 				return $response;
 			}
 
-		$response = area_maintenance::set_congif_core((object)[
+		$response = area_maintenance::set_config_core((object)[
 			'name'	=> 'DEDALO_MAINTENANCE_MODE_CUSTOM',
 			'value'	=> $value
 		]);
@@ -1191,10 +1193,10 @@ class area_maintenance extends area_common {
 	/**
 	* SET_RECOVERY_MODE
 	* Changes Dédalo recovery mode from true to false or vice-versa
-	* Uses area_recovery::set_congif_core to overwrite the core_config files
-	* The constant name will be checked in the set_congif_core() to allow it, define the constant in this method
+	* Uses area_recovery::set_config_core to overwrite the core_config files
+	* The constant name will be checked in the set_config_core() to allow it, define the constant in this method
 	* Input and output are normalized objects to allow use it from area_recovery API
-	* Could be changed from area_mainteanance check_config widget
+	* Could be changed from area_maintenance check_config widget
 	* or automatically from API start
 	* @see dd_core_api->start
 	* @param object $options
@@ -1218,7 +1220,7 @@ class area_maintenance extends area_common {
 			}
 
 		// set config_core constant value
-		area_maintenance::set_congif_core((object)[
+		area_maintenance::set_config_core((object)[
 			'name'	=> 'DEDALO_RECOVERY_MODE',
 			'value'	=> $value
 		]);
@@ -1242,7 +1244,7 @@ class area_maintenance extends area_common {
 	* Writes the given notification text to config_core
 	* Note that this custom notifications are stored in core_config file
 	* and read from API update_lock_components_state on every component activation/deactivation
-	* The constant name will be checked in the set_congif_core() to allow it, define the constant in this method
+	* The constant name will be checked in the set_config_core() to allow it, define the constant in this method
 	* @param object $options
 	* {
 	* 	value : string
@@ -1264,7 +1266,7 @@ class area_maintenance extends area_common {
 			}
 
 		// set config_core constant value
-		area_maintenance::set_congif_core((object)[
+		area_maintenance::set_config_core((object)[
 			'name'	=> 'DEDALO_NOTIFICATION_CUSTOM',
 			'value'	=> $value
 		]);
@@ -1475,7 +1477,6 @@ class area_maintenance extends area_common {
 
 
 
-
 	/**
 	* MOVE_TO_PORTAL
 	* Transform Dédalo data from all tables replacing tipos
@@ -1595,6 +1596,7 @@ class area_maintenance extends area_common {
 	}//end move_to_table
 
 
+
 	/**
 	* MOVE_LANG
 	* Transform Dédalo data from specific tables defined changing data lang
@@ -1655,8 +1657,8 @@ class area_maintenance extends area_common {
 
 	/**
 	* UPDATE_ONTOLOGY
-	* Is called from area_maintenence widget 'update_ontology' across dd_area_maintenance::class_request
-	* Connect with master server, download ontology files and update local DDBB and lang files
+	* Is called from area_maintenance widget 'update_ontology' across dd_area_maintenance::class_request
+	* Connect with master server, download ontology files and update local DB and lang files
 	* @param object $options
 	* {
 	*	"server": {

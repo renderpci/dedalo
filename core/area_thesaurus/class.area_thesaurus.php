@@ -37,9 +37,10 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_MAIN_TABLE
+	* Get the main table name of current hierarchy
 	* @return string
 	*/
-	public function get_main_table() {
+	public function get_main_table() : string {
 
 		return hierarchy::$main_table; // matrix_hierarchy_main
 	}//end get_main_table
@@ -140,6 +141,8 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_TYPOLOGY_DATA
+	* This function retrieves the typology data for a given section ID. 
+	* It uses DEDALO's hierarchy9 model and returns an object with all relevant information about that specific section if it exists
 	* @param int|string int|string $section_id
 	* @return object|null $locator
 	*/
@@ -216,6 +219,7 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_TYPOLOGY_ORDER
+	* Retrieve the order value for a typology section.
 	* @param int|string $typology_section_id
 	* @return int $order_value
 	*/
@@ -255,6 +259,7 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_HIERARCHY_NAME
+	* Get the name of a hierarchy section.
 	* @param string|int $hierarchy_section_id
 	* @return string $hierarchy_name
 	*/
@@ -284,17 +289,15 @@ class area_thesaurus extends area_common {
 		);
 		$value = $component->get_valor($lang);
 
-		if (empty($value)) {
-			$hierarchy_name = $component->extract_component_value_fallback();
-		}else{
-			$hierarchy_name = $value;
-		}
+		$hierarchy_name = empty($value)
+			? $component->extract_component_value_fallback()
+			: $value;
 
 		if (empty($hierarchy_name)) {
 			$hierarchy_name = 'Hierarchy untranslated ' . $tipo .' '. $parent;
 		}
 
-		# Store for speed
+		// Store for speed
 		$hierarchy_names[$hierarchy_section_id] = $hierarchy_name;
 
 
@@ -571,7 +574,7 @@ class area_thesaurus extends area_common {
 				}
 			}
 
-		// search_query_object. Add search_query_object to options
+		// search_query_object. Add search_query_object to options.
 			$search_query_object = new search_query_object();
 				$search_query_object->id			= 'thesaurus';
 				$search_query_object->section_tipo	= $ar_section_tipos;
