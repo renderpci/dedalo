@@ -15,7 +15,7 @@ class search_related extends search {
 
 
 	/**
-	* PARSE_SEARCH_QUERY_OBJECT NEW
+	* PARSE_SQL_QUERY 
 	* Build full final SQL query to send to DDBB
 	* Please note that special indexes and functions such as 'matrix_relations_flat_st_si'
 	* must exists to enable this search
@@ -23,31 +23,31 @@ class search_related extends search {
 	*	default false
 	* @return string $sql_query
 	*/
-	public function parse_search_query_object( bool $full_count=false ) : string {
+	public function parse_sql_query() : string {
 		$start_time=start_time();
 
 		// tables where to search
 			$ar_tables_to_search = common::get_matrix_tables_with_relations();
 
 		// pagination
-			$limit	= $this->search_query_object->limit;
-			$offset	= $this->search_query_object->offset;
+			$limit	= $this->sqo->limit;
+			$offset	= $this->sqo->offset;
 
 		// group_by
-			$group_by = $this->search_query_object->group_by ?? null;
+			$group_by = $this->sqo->group_by ?? null;
 
 		// breakdown
-			$breakdown = $this->search_query_object->breakdown ?? false;
+			$breakdown = $this->sqo->breakdown ?? false;
 
 		// order
 			$sql_query_order = $this->build_sql_query_order();
 
 		// reference locator is the locator of the source section that will be
 		// used to obtain the sections with calls to it.
-			$ar_locators = $this->filter_by_locators;
+			$ar_locators = $this->sqo->filter_by_locators ?? [];
 
 		// filter by locators operator.
-			$filter_by_locators_op = $this->filter_by_locators_op ?? 'OR';
+			$filter_by_locators_op = $this->sqo->filter_by_locators_op ?? 'OR';
 
 		// add filter of sections when the filter is not 'all', it's possible add specific section to get the related records only for these sections.
 		// if the section has all, the filter don't add any section to the WHERE
@@ -81,7 +81,7 @@ class search_related extends search {
 					: '';
 				// add full count when is set
 				// else get the row
-				$query	.= ( $full_count===true )
+				$query	.= (isset($this->sqo->full_count) && $this->sqo->full_count===true)
 					? 'COUNT(*) as full_count'
 					: ( $breakdown===true
 						? 'section_tipo, section_id, locator_data'
@@ -180,7 +180,7 @@ class search_related extends search {
 
 		// establish order to maintain stable results
 		// count and pagination are optional
-			if($full_count===false) {
+			if(isset($this->sqo->full_count) && $this->sqo->full_count===false) {
 
 				// order
 				if (!empty($sql_query_order)) {
@@ -192,7 +192,7 @@ class search_related extends search {
 				// limit
 				if(!empty($limit)){
 					$str_query .= PHP_EOL . 'LIMIT '.$limit;
-					if($offset !== false){
+					if($offset !== null){
 						$str_query .= PHP_EOL . 'OFFSET '.$offset;
 					}
 				}
@@ -204,9 +204,10 @@ class search_related extends search {
 			// dump(null, 'null str_query ++ '.to_string($str_query));
 
 		return $str_query;
-	}//end parse_search_query_object
+	}//end parse_sql_query
 
 
+	
 	/**
 	* GET_REFERENCED_LOCATORS
 	* Get the sections pointed by any type of locator to the caller (reference_locator)
