@@ -14,9 +14,9 @@ trait select {
 	* 	"column" : "relation" string column name
 	* 	"key": "oh25" string|null component tipo
 	* }
-	* @return true
+	* @return void
 	*/
-	public function build_sql_query_select() : true {
+	public function build_sql_query_select() : void {
 
 		$sqo = $this->sqo;
 
@@ -24,7 +24,7 @@ trait select {
 		// If the SQO has active full_count set the SELECT with specific count for the section_id column
 		if ( $sqo->full_count===true ) {
 			$this->sql_obj->select[] = 'count(DISTINCT '.$this->main_section_tipo_alias.'.section_id) as full_count';
-			return true;
+			return;
 		}
 
 		// section_id
@@ -74,12 +74,15 @@ trait select {
 				$sentence .= ' as '.$key; // DISTINCT ON (matrix.section_id) matrix.section_id as oh62
 			}
 
-
 			$this->sql_obj->select[] = $sentence;
 		}
 
-
-		return true;
+		// Add order columns sentences
+ 		if ( !empty($this->order_columns) ) {
+			foreach ($this->order_columns as $sentence) {
+				$this->sql_obj->select[] = $sentence;
+			}
+		}
 	}//end build_sql_query_select
 
 
