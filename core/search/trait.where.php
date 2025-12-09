@@ -387,31 +387,6 @@ trait where {
 
 
 	/**
-	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
-	* @return string $string_query
-	*/
-	public function build_sql_filter_by_locators_order() : string {
-
-		$ar_values = [];
-		foreach ($this->filter_by_locators as $key => $current_locator) {
-
-			$value  = '(\''.$current_locator->section_tipo.'\'';
-			$value .= ','.$current_locator->section_id;
-			$value .= ','.($key+1).')';
-
-			$ar_values[] = $value;
-		}
-
-		$string_query = 'LEFT JOIN (VALUES ' . implode(',', $ar_values) . ') as x(ordering_section, ordering_id, ordering) ON main_select.section_id=x.ordering_id AND main_select.section_tipo=x.ordering_section ORDER BY x.ordering ASC';
-
-
-		return $string_query;
-	}//end build_sql_filter_by_locators_order
-
-
-
-
-	/**
 	* BUILD_SQL_PROJECTS_FILTER
 	* Create the SQL sentence for filter records by user projects
 	* It is based on user permissions and current section_tipo
