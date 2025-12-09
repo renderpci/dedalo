@@ -190,11 +190,11 @@ class update_ontology {
 				$sqo->set_skip_projects_filter( true );
 				$sqo->set_filter($filter);
 
-		// search exec
+			// search exec
 			$search	= search::get_instance($sqo);
-			$result	= $search->search();
+			$db_result	= $search->search();
 
-			$ar_records = $result->ar_records ?? [];
+			$ar_records = $db_result->fetch_all();
 
 			// sort by section_tipo ASC for convenience
 			usort($ar_records, function($a, $b) {
