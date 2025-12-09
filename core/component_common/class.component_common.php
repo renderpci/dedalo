@@ -2354,14 +2354,14 @@ abstract class component_common extends common {
 			}
 
 		// cache
-			static $ar_list_of_values_data = [];
-			$uid = isset($target_section_tipo)
+			static $ar_list_of_values_data_cache = [];
+			$cache_key = isset($target_section_tipo)
 				? $target_section_tipo .'_'. $lang . $hash_id
 				: $this->tipo .'_'. $lang . $hash_id;
-			if (isset($ar_list_of_values_data[$uid])) {
+			if (isset($ar_list_of_values_data_cache[$cache_key])) {
 
 				// response OK from cache
-					$response = $ar_list_of_values_data[$uid];
+				$response = $ar_list_of_values_data_cache[$cache_key];
 
 				return $response;
 			}
@@ -2381,11 +2381,13 @@ abstract class component_common extends common {
 					);
 					// add selector lag 'all' to last element of path
 					$end_path = end($path);
-					$end_path->lang = 'all';
-
-				// select item
+					// $end_path->lang = 'all';
+			
+				// selected item
+					$column = section_record_data::get_column_name($end_path->model);
 					$item = new stdClass();
-						$item->path = $path;
+						$item->key 		= $end_path->component_tipo;
+						$item->column 	= $column;
 
 				$query_select[] = $item;
 			}
@@ -2395,17 +2397,13 @@ abstract class component_common extends common {
 		// search exec
 			$search = search::get_instance($search_query_object);
 			// include_negative values to include root user in list
-				if ($include_negative===true) {
-					$search->include_negative = true;
-				}
-			$records_data		= $search->search();
-			$ar_current_dato	= $records_data->ar_records;
+			if ($include_negative===true) {
+				$search->include_negative = true;
+			}
+			$db_result = $search->search();
 
-		$result = [];
-		$ar_current_dato_size = sizeof($ar_current_dato);
-		for ($i=0; $i < $ar_current_dato_size; $i++) {
-
-			$current_row = $ar_current_dato[$i];
+		$result = [];		
+		foreach ($db_result as $current_row) {
 
 			# value. is a basic locator section_id, section_tipo
 			$value = new stdClass();
@@ -2446,9 +2444,13 @@ abstract class component_common extends common {
 					}else{
 
 						// use query select value
-						$dato_full_json	= $current_row->{$related_tipo};
-						$current_label	= self::get_value_with_fallback_from_dato_full(
-							$dato_full_json,
+						$data = $current_row->{$related_tipo};
+						if( is_string($data) ) {
+							// decode raw db column data to object or array format. (json)
+							$data = json_decode($data);
+						}
+						$current_label	= component_string_common::get_value_with_fallback_from_data(
+							$data,
 							true, // bool decorate_untranslated
 							DEDALO_DATA_LANG_DEFAULT,
 							$lang
@@ -2521,7 +2523,7 @@ abstract class component_common extends common {
 			}
 
 		// cache
-			$ar_list_of_values_data[$uid] = $response;
+			$ar_list_of_values_data_cache[$cache_key] = $response;
 
 
 		return $response;
