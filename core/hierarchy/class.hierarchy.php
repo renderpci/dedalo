@@ -700,9 +700,9 @@ class hierarchy extends ontology {
 			}');
 
 		// search
-			$search			= search::get_instance($search_query_object);
-			$search_result	= $search->search();
-			$record			= reset($search_result->ar_records);
+			$search		= search::get_instance($search_query_object);
+			$db_result	= $search->search();
+			$record		= $db_result->fetch_one();
 
 		// section id
 			$section_id = isset($record->section_id) ? (int)$record->section_id : null;
@@ -1188,9 +1188,9 @@ class hierarchy extends ontology {
 
 		// search exec
 			$search	= search::get_instance($sqo);
-			$result	= $search->search();
+			$db_result = $search->search();
 
-		$ar_records = $result->ar_records ?? [];
+		$ar_records = $db_result->fetch_all();
 
 		if (empty($ar_records)) {
 			debug_log(__METHOD__
@@ -1258,13 +1258,13 @@ class hierarchy extends ontology {
 		$search = search::get_instance(
 			$sqo // object sqo
 		);
-		$result = $search->search();
+		$db_result = $search->search();
 
 		// active_elements
-		$active_elements = array_map(
-			'ontology::row_to_element',
-			$result->ar_records
-		);
+		$active_elements = [];
+		foreach ($db_result as $row) {
+			$active_elements[] = ontology::row_to_element($row);
+		}
 
 		// cache
 		$active_hierarchy_elements_cache = $active_elements;
