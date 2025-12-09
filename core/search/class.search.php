@@ -818,58 +818,63 @@ class search {
 			$this->parse_sqo();
 		}
 
-		// Search elements. Order is important!
-		// $main_where_sql			= $this->build_main_where();
-		// $sql_query_order		= $this->build_sql_query_order();	// Order before select !
-		// $sql_query_select		= $this->build_sql_query_select();
-		// $sql_filter				= $this->build_sql_filter();
-		// $sql_projects_filter	= $this->build_sql_projects_filter();
-		// $sql_joins				= $this->get_sql_joins();
-		// $main_from_sql			= $this->build_main_from_sql();
-		// $sql_offset				= $this->sqo->offset;
-		// $sql_limit				= $this->sqo->limit;
+		// children_recursive case
 		if(isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
 			$this->sqo->limit	= 'all';
 			$this->sqo->offset	= 0;
 		}
 
+		$search_type = null;
 
+		// parse SQL query
 		switch (true) {
 
-		// count case (place always at first case)
-			case ($this->sqo->full_count===true):
+			// count case (place always at first case)
+			case (isset($this->sqo->full_count) && $this->sqo->full_count===true):
+				$search_type = 'full_count';
 				$sql_query = $this->parse_sql_full_count();
 				break;
 
-		// sql_filter_by_locators
+			// sql_filter_by_locators
 			case (isset($this->sqo->filter_by_locators) && !empty($this->sqo->filter_by_locators)):
-
+				$search_type = 'filter_by_locators';
 				$sql_query = $this->parse_sql_filter_by_locators();
-
 				break;
 
-		// without order
-			case (empty($this->sqo->order) && empty($this->sqo->order_custom)):
+			// without order
+			// case (empty($this->sqo->order)):
 			default:
+				$search_type = 'default';
 				$sql_query = $this->parse_sql_default();
-
 				break;
 		}
 
 		$sql_query .= ';' . PHP_EOL;
 
-
 		// check valid matrix table
-			if (get_called_class()==='search' && empty($this->matrix_table) && !in_array('all', $this->ar_section_tipo)) {
-				debug_log(__METHOD__
-					. ' Error: Matrix table is mandatory. Check your ar_section_tipo to safe tipos with resolvable model.' . PHP_EOL
-					. ' $this->ar_section_tipo: ' . to_string($this->ar_section_tipo) . PHP_EOL
-					. ' sql_query: ' . $sql_query. PHP_EOL
-					. ' class: ' . get_called_class() . PHP_EOL
-					. ' this: ' . to_string($this)
-					, logger::ERROR
-				);
-			}
+		if (get_called_class()==='search' && empty($this->matrix_table) && !in_array('all', $this->ar_section_tipo)) {
+			debug_log(__METHOD__
+				. ' Error: Matrix table is mandatory. Check your ar_section_tipo to safe tipos with resolvable model.' . PHP_EOL
+				. ' $this->ar_section_tipo: ' . to_string($this->ar_section_tipo) . PHP_EOL
+				. ' sql_query: ' . $sql_query. PHP_EOL
+				. ' class: ' . get_called_class() . PHP_EOL
+				. ' this: ' . to_string($this)
+				, logger::ERROR
+			);
+		}
+
+		// debug
+		if(SHOW_DEBUG===true) {
+			$sql_query = '-- ' . $search_type . PHP_EOL . $sql_query ; // . ': ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;
+			// $sql_query_debug = debug_prepared_statement($sql_query, $this->params, DBi::_getConnection() );
+			// debug_log(__METHOD__
+			// 	// . " sql_query params " . PHP_EOL
+			// 	// . $sql_query . PHP_EOL
+			// 	. " sql_query_debug: " . PHP_EOL
+			// 		. PHP_EOL . $sql_query_debug . PHP_EOL
+			// 		, logger::DEBUG
+			// );
+		}
 
 
 		return $sql_query;
