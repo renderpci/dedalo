@@ -966,81 +966,55 @@ class search {
 				? ' OFFSET ' . $sql_offset
 				: '';
 		return $sql_query;
-	}
 
+	/**
+	* TRIM_TIPO
+	* Contract the tipo to prevent large names in SQL sentences
+	* @see search_Test::test_trim_tipo
+	* @param string $tipo
+	* @param int $max = 2
+	* @return string|null $trimmed_tipo
+	*/
+	public static function trim_tipo( string $tipo, int $max=2 ) : ?string {
 
-
-	public function parse_sql_default() : string {
-
-		$this->build_sql_query_select();
-		$this->build_main_from_sql();
-		// $this->build_sql_join();
-		$this->build_main_where();
-		$this->build_sql_filter();
-		$this->build_sql_projects_filter();
-		$this->build_filter_by_user_records();
-		$this->build_sql_query_order();
-
-		// sql_query
-		$sql_query = '';
-
-		// Search With order
-
-		// query_inside
-			$query_inside = '';
-
-			// select
-				$query_inside .= 'SELECT '.implode(','.PHP_EOL, $this->sql_obj->select );
-			// $query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
-			// from
-				$query_inside .= PHP_EOL.'FROM '.implode(PHP_EOL, $this->sql_obj->from );
-
-				// join virtual tables
-					$query_inside .= PHP_EOL.implode(PHP_EOL, $this->sql_obj->join );
-
-			// where
-				$query_inside .= PHP_EOL.'WHERE ';
-				$where = array_merge( $this->sql_obj->main_where, $this->sql_obj->where );
-				$query_inside .= implode(' AND ', $where);
-
-			// multi section union case
-				if (count($this->ar_section_tipo)>1) {
-					$query_inside = $this->build_union_query($query_inside);
-				}
-		// order (default for maintain result consistency)
-			$order_query = PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order_default );
-			// order union case for various tables
-				if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
-					$order_query = str_replace('mix.', '', $order_query);
-				}
-
-		// query wrap
-			$query_inside .= $order_query;
-
-			$sql_query .= 'SELECT * FROM (';
-			$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
-			$sql_query .= ') main_select';
-			// order
-				if( isset($this->sql_obj->order_custom) ) {
-					$sql_query .= PHP_EOL . implode( PHP_EOL, $this->sql_obj->order_custom );
-				}else{
-					$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
-				}
-			// limit
-				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
-					$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
-				}
-			// offset
-				if (isset($this->sqo->offset) && $this->sqo->offset>0) {
-					$sql_query .= ' OFFSET ' . $this->sqo->offset;
-				}
-			if(SHOW_DEBUG===true) {
-				$sql_query = '-- Search With order' . PHP_EOL . $sql_query;
+		// empty case
+			if (empty($tipo)) {
 				debug_log(__METHOD__
-					. " sql_query ". PHP_EOL
-					. $sql_query
-					, logger::DEBUG
+					." Error empty tipo is received " .PHP_EOL
+					.' tipo: ' . to_string($tipo)
+					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					$bt		= debug_backtrace();
+					dump($bt, ' debug_backtrace ++ '.to_string());
+				}
+				return null;
+			}
+
+		// all case. Used by related search that don't know the section_tipo
+			if($tipo==='all') {
+				return $tipo;
+			}
+
+		// match regex
+			preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
+			if (empty($matches) || empty($matches[1]) || (empty($matches[2]) && $matches[2]!=0) ) {
+				debug_log(__METHOD__
+					." Error on preg match tipo: $tipo ". PHP_EOL
+					.'tipo: '.to_string($tipo)
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		$name	= $matches[1];
+		$number	= $matches[2];
+
+		$trimmed_tipo = substr($name, 0, $max) . $number;
+
+
+		return $trimmed_tipo;
+	}//end trim_tipo
 			}
 
 
