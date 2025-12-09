@@ -6,13 +6,18 @@ require_once 'trait.order.php';
 require_once 'trait.count.php';
 /**
 * CLASS SEARCH
-*
+* Manage Dédalo search queries parsing SQO to SQL
+* It's divided in traits to split the large code:
+* - select
+* - from
+* - where
+* - order
+* - count
 */
 class search {
 
 	// traits. Files added to current class file to split the large code.
 	use select, from, where, order, count;
-
 
 	// Search Query Object
 	protected object $sqo;
@@ -60,33 +65,35 @@ class search {
 	protected array $params = [];
 
 
+
 	/**
 	* GET_INSTANCE
+	* Returns a new instance of the class based on the mode
 	* @param object $search_query_object
 	* @return class instance
 	*/
 	public static function get_instance(object $search_query_object) : object {
 
 		// switch class from mode
-			$mode = $search_query_object->mode ?? null;
-			switch ($mode) {
-				case 'tm':
-					$search_class = 'search_tm';
-					break;
+		$mode = $search_query_object->mode ?? null;
+		switch ($mode) {
+			case 'tm':
+				$search_class = 'search_tm';
+				break;
 
-				case 'related':
-					$search_class = 'search_related';
-					break;
+			case 'related':
+				$search_class = 'search_related';
+				break;
 
-				case 'edit':
-				case 'list':
-				default:
-					$search_class = 'search';
-					break;
-			}
+			case 'edit':
+			case 'list':
+			default:
+				$search_class = 'search';
+				break;
+		}
 
-		// construct new instance
-			$instance = new $search_class($search_query_object);
+		// construct new instance of class (search|search_tm|search_related)
+		$instance = new $search_class($search_query_object);
 
 
 		return $instance;
@@ -107,7 +114,7 @@ class search {
 
 	/**
 	* SET_UP
-	* Analyze given search_query_object and fix the properties
+	* Analyze given search_query_object and fix the properties.
 	* @param object $search_query_object
 	* @return void
 	*/
@@ -118,8 +125,7 @@ class search {
 			throw new Exception("Error: section_tipo is not defined!", 1);
 		}
 
-		// Instantiate the Search Query Language Object:
-
+		// Creates the Search Query Language Object:
 		$this->sql_obj = new stdClass();
 			$this->sql_obj->select			= [];
 			$this->sql_obj->from			= [];
@@ -131,7 +137,6 @@ class search {
 			$this->sql_obj->order_default	= [];
 			$this->sql_obj->limit			= [];
 			$this->sql_obj->offset			= [];
-
 
 		// section_tipo is always and array
 		$this->ar_section_tipo = (array)$search_query_object->section_tipo;
@@ -145,11 +150,12 @@ class search {
 			? 'mix'
 			: search::trim_tipo($this->main_section_tipo);
 
-		// matrix_table (for time machine is always fixed 'matrix_time_machine', not calculated)
+		// matrix_table 
+		// Note that for time machine (class 'search_tm') is always fixed as 'matrix_time_machine'
 		if (get_class($this)==='search') {
 			// get first reliable table from ar_section_tipo (skip non existing sections)
 			// Note that in autocompletes, no all RQO config sections are always available
-			// in current installation (for example 'dc1' in monedaiberica)
+			// for current installation (for example 'dc1' in monedaiberica)
 			$last_key = array_key_last($this->ar_section_tipo);
 			foreach ($this->ar_section_tipo as $key => $current_tipo) {
 
@@ -170,6 +176,7 @@ class search {
 					}
 				}
 
+				// matrix table
 				$current_matrix_table = common::get_matrix_table_from_tipo($current_tipo);
 
 				// Ignore invalid empty matrix tables
@@ -190,7 +197,7 @@ class search {
 			}
 		}
 
-		// Set SQO property
+		// Set SQO property with cloned object
 		$this->sqo = clone $search_query_object;
 
 		// Set remove_distinct (useful for thesaurus search)
@@ -208,7 +215,7 @@ class search {
 				? $search_query_object->skip_projects_filter
 				: false);
 
-		// Set order_columns as empty array
+		// order_columns. Set order_columns as empty array
 		$this->order_columns = [];
 	}//end set_up
 
