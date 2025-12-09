@@ -887,57 +887,62 @@ class search {
 		// sql_query
 			$sql_query = '';
 
-		// FROM
-			$main_from_sql			= $this->build_main_from_sql();
-			$sql_joins				= implode( PHP_EOL, $this->sql_obj->join);
 
-		// WHERE sentences
-			// The filters are built into the sql_obj->where array
-			// The building should to be done in restrictive order.
-			$this->build_main_where();
-			$main_where_sql = implode(' AND ', $this->sql_obj->main_where);
+	/**
+	* PARSE_SQL_FULL_COUNT
+	* Build full final SQL query to send to DB
+	* @return string $sql_query string
+	* 	parsed final SQL query string
+	*/
+	public function parse_sql_full_count() : string {
 
-			$this->build_sql_filter();
-			$this->build_sql_filter_by_locators();
-			$this->build_filter_by_user_records();
-			$where = implode(' AND ', $this->sql_obj->where);
-			$join = implode( PHP_EOL, $this->sql_obj->join);
-
-		// Only for count
+		// from
+		$this->build_main_from_sql();
+		// where sentences
+		// The filters are built into the sql_obj->where array
+		// The building should to be done in restrictive order.
+		$this->build_main_where();
+		$this->build_sql_filter();
+		$this->build_sql_filter_by_locators();
+		$this->build_filter_by_user_records();
 
 		// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique
 			// $column_id = ($this->matrix_table==='matrix_time_machine') ? 'id' : 'section_id';
 
-		// SELECT
-			$sql_query .= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine')
-				? 'SELECT '.$this->main_section_tipo_alias.'.section_id'
-				: 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
-		// FROM
-			$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-			# join virtual tables
-			$sql_query .= $sql_joins;
-			# join filter projects
-			if (!empty($join)) {
-			$sql_query .= PHP_EOL . $join;
-			}
-		// WHERE
-			$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
-			if (!empty($where)) {
-				$sql_query .= PHP_EOL . $where;
-			}
-		// multi-section union case
-			if (count($this->ar_section_tipo)>1) {
-				$sql_query = $this->build_union_query($sql_query);
-			}
-			$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
+		// sql_query
+		$sql_query = '';
 
-			if(SHOW_DEBUG===true) {
-				$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
-			}
+		// select
+		$sql_query .= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine')
+			? 'SELECT '.$this->main_section_tipo_alias.'.section_id'
+			: 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
+		
+		// from
+		$sql_query .= PHP_EOL . 'FROM ' . implode(PHP_EOL, $this->sql_obj->from);
+		
+		// join virtual tables/filter projects
+		$join = implode( PHP_EOL, $this->sql_obj->join);
+		if (!empty($join)) {
+			$sql_query .= PHP_EOL . $join;
+		}
+		
+		// where
+		// merge main_where and where and remove empty sentences	
+		$all_where_sentences = array_filter(array_merge($this->sql_obj->main_where, $this->sql_obj->where));
+		$sql_query .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
+
+		// multi-section union case
+		if (count($this->ar_section_tipo)>1) {
+			$sql_query = $this->build_union_query($sql_query);
+		}
+
+		// final
+		$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 
 
 		return $sql_query;
-	}
+	}//end parse_sql_full_count
+
 
 
 	/**
