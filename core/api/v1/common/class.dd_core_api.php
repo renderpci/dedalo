@@ -750,11 +750,11 @@ final class dd_core_api {
 						$response->msg = 'API Error: ('.__FUNCTION__.') Cannot resolve data column from model '.$model;
 						$response->errors[] = 'cannot resolve data column from model '.$model;
 						return $response;
-								}
+					}
 					
 					foreach ($db_result as $section_record) {
 						$raw_data[] = $section_record->$column->$tipo ?? null;
-						}
+					}
 					
 					break;
 
@@ -771,8 +771,8 @@ final class dd_core_api {
 						// get the component data
 						foreach ($relations_data as $component_data) {
 							foreach ($component_data as $current_locator) {
-							if($tipo === $current_locator->section_tipo){
-								$raw_data[] = $current_locator;
+								if($tipo === $current_locator->section_tipo){
+									$raw_data[] = $current_locator;
 								}
 							}
 						}
