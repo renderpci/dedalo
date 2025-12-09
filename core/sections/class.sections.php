@@ -240,7 +240,7 @@ class sections extends common {
 	*/
 	public function delete( object $options) : object {
 
-			$response = new stdClass();
+		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed. ';
 			$response->errors	= [];
@@ -312,10 +312,11 @@ class sections extends common {
 			$sqo->offset	= 0;
 			$sqo->limit		= 0; // prevent pagination affects to deleted records
 			$search			= search::get_instance($sqo);
-			$rows_data		= $search->search();
-			$ar_records		= $rows_data->ar_records;
+			$db_result		= $search->search();
+
 			// check empty records
-			if (empty($ar_records)) {
+			$records_len = $db_result->row_count();
+			if ( $records_len < 1 ) {
 				$response->result = [];
 				$response->msg 	.= 'No records found to delete ';
 				debug_log(__METHOD__
@@ -328,7 +329,6 @@ class sections extends common {
 
 		// check delete multiple
 		// only global admins can perform multiple deletes
-			$records_len = count($ar_records);
 			if($records_len > 1 && security::is_global_admin( logged_user_id() ) === false){
 				$response->result = [];
 				$response->msg 	.= 'forbidden delete multiple for this user';
@@ -355,7 +355,8 @@ class sections extends common {
 			}
 
 		// Perform delete on each record
-			foreach ($ar_records as $record) {
+			$ar_delete_section_id = [];
+			foreach ($db_result as $record) {
 
 				$current_section_tipo	= $record->section_tipo;
 				$current_section_id		= $record->section_id;
@@ -440,24 +441,24 @@ class sections extends common {
 							);
 						}
 					}
+				
+				// ar_delete section_id
+				$ar_delete_section_id[] = $current_section_id;
 			}
-
-		// ar_delete section_id
-			$ar_delete_section_id = array_map(function($record){
-				return $record->section_id;
-			}, $ar_records);
 
 		// check deleted all found sections. Exec the same search again expecting to obtain zero records
 			if ($delete_mode==='delete_record') {
 
-				$check_search		= search::get_instance($sqo);
-				$check_rows_data	= $check_search->search();
-				$check_ar_records	= $check_rows_data->ar_records;
-				if(count($check_ar_records)>0) {
+				$check_search	= search::get_instance($sqo);
+				$db_result		= $check_search->search();	
+			
+				// check empty records
+				if( $db_result->row_count() > 0 ) {
 
-					$check_ar_section_id = array_map(function($record){
-						return $record->section_id;
-					}, $check_ar_records);
+					$check_ar_section_id = [];
+					foreach($db_result as $row){
+						$check_ar_section_id[] = $row->section_id;
+					}	
 
 					$response->errors[] = 'record not deleted: '.to_string($check_ar_section_id);
 					$response->msg 	.= '[4] Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
