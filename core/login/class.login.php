@@ -1505,6 +1505,7 @@ class login extends common {
 		// SQO way
 			// $sqo = json_decode('
 			// 	{
+			// 	  "select": [{"column": "section_id"}],	
 			// 	  "section_tipo": [
 			// 	    "'.DEDALO_SECTION_USERS_TIPO.'"
 			// 	  ],
@@ -1528,35 +1529,39 @@ class login extends common {
 			// 	      }
 			// 	    ]
 			// 	  },
-			// 	  "limit": 1
+			// 	  "limit": 1,
+			// 	  "skip_projects_filter": true
 			// 	}
 			// ');
 			// $search = search::get_instance($sqo);
-			// $search_result = $search->search();
+			// $db_result = $search->search();
+			// $ar_section_id = [];
+			// foreach ($db_result as $row) {
+			// 	$ar_section_id[] = (int)$row->section_id;
+			// }
 
-		// matrix_data way
-			$ar_section_id = matrix_db_manager::search(
-				'matrix_users',
-				[
-					[
-						'column'	=> 'section_tipo',
-						'operator'	=> '=',
-						'value'		=> DEDALO_SECTION_USERS_TIPO
-					],
-					[
-						'column'	=> 'datos',
-						'operator'	=> '@>',
-						'value'		=> '{"components":{"'.DEDALO_USER_NAME_TIPO.'":{"dato":{"lg-nolan": ["'.$username.'"]}}}}' // v6
-					],
-					// [
-					// 	'column'	=> 'string',
-					// 	'operator'	=> '@>',
-					// 	'value'		=> '{"'.DEDALO_USER_NAME_TIPO.'": [{"lang": "lg-nolan", "value": "'.$username.'"}]}' // v7
-					// ]
-				],
-				null, // order
-				null // limit
-			);
+		// direct way. Note that this search do not has the restrictions of the SQO way (section_id > 0)		
+			$sql = "
+				SELECT section_id
+				FROM matrix_users
+				WHERE section_tipo = '".DEDALO_SECTION_USERS_TIPO."'
+				AND matrix_users.string::jsonb -> '".DEDALO_USER_NAME_TIPO."' @> $1
+				ORDER BY section_id ASC
+			";
+		
+			$result = matrix_db_manager::exec_search($sql, [
+				'[{"value": "'.$username.'"}]'
+			]);
+
+			if (!$result) {				
+				return [];
+			}
+			
+			// Fetch all results
+			$ar_section_id = [];
+			while ($row = pg_fetch_assoc($result)) {
+				$ar_section_id[] = (int)$row['section_id'];
+			}
 
 
 		return $ar_section_id ?: [];
@@ -1578,38 +1583,27 @@ class login extends common {
 
 		$code_component_tipo = 'dd1053';
 
-		// old search
-			// $arguments=array();
-			// $arguments["strPrimaryKeyName"] = 'section_id';
-			// $arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
-			// $arguments["datos#>>'{components,{$code_component_tipo},dato,lg-nolan}'"] = json_encode([$code], JSON_UNESCAPED_UNICODE);
-			// $matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
-			// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
-			// $ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+		// direct data way
+			$sql = "
+				SELECT section_id
+				FROM matrix_users
+				WHERE section_tipo = '".DEDALO_SECTION_USERS_TIPO."'
+				AND matrix_users.string::jsonb -> '".$code_component_tipo."' @> $1
+				ORDER BY section_id ASC
+			";
+			$result = matrix_db_manager::exec_search($sql, [
+				'[{"lang": "lg-nolan", "value": "'.$code.'"}]'
+			]);
+			
+			if (!$result) {
+				return [];
+			}
 
-		// matrix data way
-			$ar_section_id = matrix_db_manager::search(
-				'matrix_users',
-				[
-					[
-						'column'	=> 'section_tipo',
-						'operator'	=> '=',
-						'value'		=> DEDALO_SECTION_USERS_TIPO
-					],
-					[
-						'column'	=> 'datos',
-						'operator'	=> '@>',
-						'value'		=> '{"components":{"'.$code_component_tipo.'":{"dato":{"lg-nolan": ["'.$code.'"]}}}}' // v6
-					],
-					// [
-					// 	'column'	=> 'string',
-					// 	'operator'	=> '@>',
-					// 	'value'		=> '{"'.$code_component_tipo.'": [{"lang": "lg-nolan", "value": "'.$code.'"}]}'
-					// ]
-				],
-				null, // order
-				1 // limit
-			);
+			// Fetch all results
+			$ar_section_id = [];
+			while ($row = pg_fetch_assoc($result)) {
+				$ar_section_id[] = (int)$row['section_id'];
+			}
 
 
 		return $ar_section_id ?: [];

@@ -119,6 +119,8 @@
 			#
 			# WHERE : Filtro de locators en DB
 			$strQuery_where='';
+			$where_params = [];
+			$key = 1;
 			foreach ($ar_locators as $current_locator) {
 				if (empty($current_locator->section_id)) {
 					debug_log(__METHOD__
@@ -128,10 +130,13 @@
 					);
 					continue;
 				}
-				$current_section_id 	= $current_locator->section_id;
-				$current_section_tipo 	= $current_locator->section_tipo;
+				$where_params[] 	= $current_locator->section_id;
+				$where_params[] 	= $current_locator->section_tipo;
 
-				$strQuery_where .= "\n (section_id = $current_section_id AND section_tipo = '$current_section_tipo') OR";
+				$key2 = $key + 1;
+
+				$strQuery_where .= "\n (section_id = $$key AND section_tipo = $$key2) OR";
+				$key += 2;
 			}
 			if (!empty($strQuery_where)) {
 				$strQuery_where = substr($strQuery_where, 0, -2);
@@ -139,9 +144,11 @@
 			$strQuery_where = '('.$strQuery_where.')';
 
 			# QUERY
-			$strQuery = "-- ".__METHOD__."\n SELECT $strQuery_select FROM $matrix_table WHERE $strQuery_where";
-
-			$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+			$sql = "-- ".__METHOD__;
+			$sql .=  PHP_EOL." SELECT $strQuery_select 
+				FROM $matrix_table 
+				WHERE $strQuery_where";
+			$result	= matrix_db_manager::exec_search($sql, [$where_params]);
 			$ar_final = array();
 			while ($rows = pg_fetch_assoc($result)) {
 				$string ='';

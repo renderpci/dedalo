@@ -297,7 +297,7 @@ abstract class counter {
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$section_tipo	= $rows['tipo'];
-			$counter_value	= (int)$rows['dato'];
+			$counter_value	= (int)$rows['value'];
 
 			// model check
 				$model_name = ontology_node::get_model_by_tipo($section_tipo,true);
@@ -313,9 +313,15 @@ abstract class counter {
 				}
 
 			// Find last id of current section
-				$table_name			= common::get_matrix_table_from_tipo($section_tipo);
-				$sql2				= 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
-				$result2			= JSON_RecordObj_matrix::search_free($sql2);
+				$table_name = common::get_matrix_table_from_tipo($section_tipo);
+				$sql2 = 'SELECT section_id 
+					FROM "'.$table_name.'" 
+					WHERE section_tipo = $1 
+					ORDER BY section_id DESC 
+					LIMIT 1 
+				';
+				//
+				$result2 = matrix_db_manager::exec_search($sql2, [$section_tipo]);
 				$last_section_id	= ($result2 === false)
 					? 0 // Skip empty tables
 					: ((pg_num_rows($result2)===0)

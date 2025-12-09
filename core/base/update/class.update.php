@@ -1276,14 +1276,14 @@ class update {
 
 		if(!isset($datos->created_date) || !isset($datos->created_by_userID)) {
 
-			$tm_strQuery = "
-				SELECT \"timestamp\", \"userID\" FROM matrix_time_machine
-				WHERE section_id = '$section_id'
-				AND section_tipo = '$section_tipo'
-				ORDER BY \"timestamp\" ASC
+			$tm_strQuery = '
+				SELECT "timestamp", "userID" FROM matrix_time_machine
+				WHERE section_id = $1
+				AND section_tipo = $2
+				ORDER BY "timestamp" ASC
 				LIMIT 1
-			";
-			$result = JSON_RecordDataBoundObject::search_free($tm_strQuery);
+			';
+			$result = matrix_db_manager::exec_search($tm_strQuery, [$section_id, $section_tipo]);
 			// query error case
 			if($result!==false) {
 

@@ -63,37 +63,17 @@ class request_config_presets {
 			// ];
 
 			// $search		= search::get_instance($search_query_object);
-			// $rows_data	= $search->search();
-			// $ar_records = $rows_data->ar_records ?? [];
-			// $ar_section_id = array_map(function($el){
-			// 	return $el->section_id;
-			// }, $ar_records);
-
-		// matrix_data way
-			$table = common::get_matrix_table_from_tipo(DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO);
-			$component_tipo = 'dd1566';
-			$ar_section_id = matrix_db_manager::search(
-				$table,
-				[
-					[
-						'column'	=> 'section_tipo',
-						'operator'	=> '=',
-						'value'		=> DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
-					],
-					[
-						'column'	=> 'datos',
-						'operator'	=> '@>',
-						'value'		=> '{"relations":[{"from_component_tipo":"'.$component_tipo.'","section_tipo":"dd64","section_id":"1"}]}' // v6
-					],
-					// [
-					// 	'column'	=> 'relation',
-					// 	'operator'	=> '@>',
-					// 	'value'		=> '{"'.$component_tipo.'": [{"section_tipo":"dd64","section_id":"1"}]}' // v7
-					// ]
-				],
-				null, // order
-				null // limit
-			);
+		// direct way
+			$sql = "
+				SELECT section_id
+				FROM matrix_list
+				WHERE section_tipo = '".DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO."'
+				AND matrix_list.string::jsonb -> 'dd1566' @> $1
+				ORDER BY section_id ASC
+			";
+			$result = matrix_db_manager::exec_search($sql, [
+				'[{"section_tipo": "dd64", "section_id": "1"}]'
+			]);
 
 		// Helper function to extract a component value
 		$get_component_value = function($tipo, $section_id) {
