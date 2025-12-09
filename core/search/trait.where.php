@@ -119,6 +119,7 @@ trait where {
 
 	/**
 	* FILTER_PARSER
+	* Creates the filter WHERE clauses based on the search object.
 	* @param string $op
 	* @param array $ar_value
 	* @return string $string_query
@@ -159,7 +160,12 @@ trait where {
 					$this->build_sql_join($search_object->path);
 				}
 
-				$string_query .= $this->build_search_object_sql($search_object);
+				$search_object_sql = $this->parse_search_object_sql($search_object);
+				if (empty($search_object_sql)) {
+					continue;
+				}
+				
+				$string_query .= $search_object_sql;
 
 				// if the where get empty value don' add operator
 				if ($key+1 !== $total && !empty($string_query)) {
@@ -169,6 +175,7 @@ trait where {
 			}
 
 		}//end foreach ($ar_value as $key => $search_object)
+		
 
 		return $string_query;
 	}//end filter_parser
