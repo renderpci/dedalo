@@ -1276,8 +1276,6 @@ class diffusion_sql extends diffusion  {
 			// $section = section::get_instance($current_section_id, $section_tipo, $mode='list');
 			// $diffusion_info = $section->get_diffusion_info(); dump($diffusion_info, ' diffusion_info ++ '.to_string());
 				if ($build_mode==='default') {
-
-					$section->set_is_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 					$section->add_diffusion_info_default($diffusion_element_tipo);
 					$section->save_modified = false;
 					$section->save_tm = false; // prevent to save time machine record
@@ -1474,7 +1472,6 @@ class diffusion_sql extends diffusion  {
 				'list', // string mode
 				false // bool cache
 			);
-			$section->set_is_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 			$section->add_diffusion_info_default($diffusion_element_tipo);
 			$section->save_modified = false;
 			$section->Save();
