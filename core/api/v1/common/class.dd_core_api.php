@@ -555,9 +555,10 @@ final class dd_core_api {
 
 
 				// unlock user components. Normally this occurs when user force reload the page
-					if (DEDALO_LOCK_COMPONENTS===true) {
-						lock_components::force_unlock_all_components( logged_user_id() );
-					}
+				// (!) disabled for now because it is not needed (read action unlock components too)
+					// if (DEDALO_LOCK_COMPONENTS===true) {
+					// 	lock_components::force_unlock_all_components( logged_user_id() );
+					// }
 			}//end if (login::is_logged()!==true)
 
 		// response OK
