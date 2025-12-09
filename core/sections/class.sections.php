@@ -154,11 +154,11 @@ class sections extends common {
 			// calculated
 				if($this->ar_section_tipo===false){
 
-					// force load dato
-					$dato = $this->get_dato();
+					// force load data
+					$data = $this->get_data();
 
 					$ar_section_tipo = [];
-					foreach ($dato as $record) {
+					foreach ($data as $record) {
 
 						$current_section_tipo = $record->section_tipo;
 						if (!in_array($current_section_tipo, $ar_section_tipo)) {
