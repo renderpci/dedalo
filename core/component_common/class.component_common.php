@@ -2656,12 +2656,12 @@ abstract class component_common extends common {
 						}
 					}
 
-			$search = search::get_instance($sqo);
-			$search_result = $search->search();
+			$search 	= search::get_instance($sqo);
+			$db_result 	= $search->search();
 
 		// 2 with all sections, create the list_of values
 			$result = [];
-			foreach ($search_result->ar_records as $row) {
+			foreach ( $db_result as $row ) {
 
 				// // create the section instance and set current row as his own data
 				// // it prevent to call multiple times to DDBB
