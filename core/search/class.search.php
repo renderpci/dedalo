@@ -222,24 +222,6 @@ class search {
 
 
 	/**
-	* FETCH_ROW
-	* Loop
-	* @param \PgSql\Result|false $result
-	* @return object|false
-	*/
-	public function fetch_row( \PgSql\Result|false $result ) : object|false {
-
-		if (!$result) {
-			$this->logError("Invalid result resource");
-			return false;
-		}
-
-		return pg_fetch_object($result);
-	}
-
-
-
-	/**
 	* SEARCH
 	* Parses the current sqo and exec a SQL query search against the database
 	* getting a db_result iterable object.
