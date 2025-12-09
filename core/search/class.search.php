@@ -432,7 +432,7 @@ class search {
 
 
 	/**
-	* PARSE_Sqo
+	* PARSE_SQO
 	* Iterate all filter and select elements and communicate with components to rebuild the search_query_object
 	* Not return anything, only modifies the class var $this->sqo
 	* @return void
@@ -440,47 +440,45 @@ class search {
 	public function parse_sqo() : void {
 
 		// already parsed case
-			$parsed = $this->sqo->parsed ?? false;
-			if ($parsed===true) {
-
-				return;
-			}
+		$parsed = $this->sqo->parsed ?? false;
+		if ($parsed===true) {
+			return;
+		}
 
 		// filter
-			if (!empty($this->sqo->filter)) {
-
-				// conform_filter. Conform recursively each filter object asking the components
-				foreach ($this->sqo->filter as $op => $filter_items) {
-					$new_sqo_filter = $this->conform_filter($op, $filter_items);
-					break; // Only expected one
-				}
-				// Replace filter array with components pre-parsed values
-				$this->sqo->filter = $new_sqo_filter ?? null;
+		if (!empty($this->sqo->filter)) {
+			// conform_filter. Conform recursively each filter object asking the components
+			foreach ($this->sqo->filter as $op => $filter_items) {
+				$new_sqo_filter = $this->conform_filter($op, $filter_items);
+				break; // Only expected one
 			}
+			// Replace filter array with components pre-parsed values
+			$this->sqo->filter = $new_sqo_filter ?? null;
+		}
 
 		// select
-			if (!empty($this->sqo->select)) {
-				$new_sqo_select = [];
-				foreach ($this->sqo->select as $select_object) {
-					$new_sqo_select[] = search::conform_select( $select_object );
-				}
-				// Replace select array with components pre-parsed values
-				$this->sqo->select = $new_sqo_select;
+		if (!empty($this->sqo->select)) {
+			$new_sqo_select = [];
+			foreach ($this->sqo->select as $select_object) {
+				$new_sqo_select[] = search::conform_select( $select_object );
 			}
+			// Replace select array with components pre-parsed values
+			$this->sqo->select = $new_sqo_select;
+		}
 
 		// order. Note that order is parsed with same parser as 'select' (conform_select)
-			if (!empty($this->sqo->order)) {
-				$new_sqo_order = [];
-				foreach ((array)$this->sqo->order as $select_object) {
-					$new_sqo_order[] = search::conform_select( $select_object );
-				}
-				// Replace select array with components pre-parsed values
-				$this->sqo->order = $new_sqo_order;
+		if (!empty($this->sqo->order)) {
+			$new_sqo_order = [];
+			foreach ((array)$this->sqo->order as $select_object) {
+				$new_sqo_order[] = search::conform_select( $select_object );
 			}
+			// Replace select array with components pre-parsed values
+			$this->sqo->order = $new_sqo_order;
+		}
 
 		// Set object as parsed
 		$this->sqo->parsed = true;
-	}//end parse_sqo
+	}//end parse_sqo	
 
 
 
