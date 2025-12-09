@@ -1134,7 +1134,7 @@ final class dd_core_api {
 						$value				= !empty($changed_data_item) && isset($changed_data_item->value)
 							? $changed_data_item->value
 							: null;
-						$component->set_dato([$value]);
+						$component->set_data([$value]);
 
 				}else{
 
