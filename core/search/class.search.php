@@ -1015,11 +1015,78 @@ class search {
 
 		return $trimmed_tipo;
 	}//end trim_tipo
+
+
+	/**
+	* GET_QUERY_PATH
+	* Recursive function to obtain final complete path of each element in json query object
+	* Used in component common and section to build components path for select
+	* @param string $tipo
+	* @param string $section_tipo
+	* @param bool $resolve_related = true
+	* @param bool|string $related_tipo = false
+	* @return array $path
+	*/
+	public static function get_query_path(string $tipo, string $section_tipo, bool $resolve_related=true, bool|string $related_tipo=false) : array {
+
+		$path = [];
+
+		$term_model = ontology_node::get_model_by_tipo($tipo,true);
+
+		// Add first level always
+			$current_path = new stdClass();
+				$current_path->name				= strip_tags(ontology_node::get_term_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
+				$current_path->model			= $term_model;
+				$current_path->section_tipo		= $section_tipo;
+				$current_path->component_tipo	= $tipo;
+			$path[] = $current_path;
+
+		if ($resolve_related===true) {
+			$ar_related_components 	= component_relation_common::get_components_with_relations();
+			if(in_array($term_model, $ar_related_components)===true) {
+
+				$ar_related_terms	= ontology_node::get_relation_nodes($tipo,true,true);
+				$ar_related_section	= common::get_ar_related_by_model('section', $tipo);
+
+				if (!empty($ar_related_section)) {
+
+					$related_section_tipo = reset($ar_related_section);
+
+					if ($related_tipo!==false) {
+
+						$current_tipo	= $related_tipo;
+						$model_name		= ontology_node::get_model_by_tipo($current_tipo,true);
+						if (strpos($model_name,'component')===0) {
+							# Recursion
+							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
+							foreach ($ar_path as $value) {
+								$path[] = $value;
+							}
+						}
+
+					}else{
+
+						foreach ($ar_related_terms as $current_tipo) {
+
+							// Use only first related tipo
+							$model_name = ontology_node::get_model_by_tipo($current_tipo,true);
+							if (strpos($model_name,'component')!==0) continue;
+							# Recursion
+							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
+							foreach ($ar_path as $value) {
+								$path[] = $value;
+							}
+							break; // Avoid multiple components in path !
+						}
+					}
+				}
 			}
+		}
 
 
-		return $sql_query;
-	}
+		return $path;
+	}//end get_query_path
+
 
 
 
