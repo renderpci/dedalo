@@ -263,7 +263,7 @@ class section_record {
 
 	/**
 	* DELETE_RECORD
-	* Remove the record from DDBB
+	* Remove the record from DB
 	* Save all section record data deleted into Time machine
 	* @param bool $delete_diffusion_records=true
 	* @return bool
@@ -286,9 +286,6 @@ class section_record {
 				return false;
 			}
 
-		// user id
-			$user_id = logged_user_id();
-
 		// 1. Time Machine
 			// create a new time machine record. Always, even when the section has recovered previously, a new time machine record is created
 			// to mark every section delete point in the time. For tool list, only the last record (state 'deleted') will be used.
@@ -296,70 +293,55 @@ class section_record {
 				// Get the section record data to be storage into Time Machine
 				$data = $this->get_data();
 
-				// Create the Time Machine for this section
-				$RecordObj_time_machine_new = new RecordObj_time_machine(null);
-					$RecordObj_time_machine_new->set_section_id( $section_id );
-					$RecordObj_time_machine_new->set_section_tipo( $section_tipo );
-					$RecordObj_time_machine_new->set_tipo( $section_tipo );
-					$RecordObj_time_machine_new->set_lang( DEDALO_DATA_NOLAN );
-					$RecordObj_time_machine_new->set_timestamp( dd_date::get_timestamp_now_for_db() ); // Format 2012-11-05 19:50:44
-					$RecordObj_time_machine_new->set_userID( $user_id );
-					$RecordObj_time_machine_new->set_dato( $data );
-					$RecordObj_time_machine_new->set_state('deleted');
-				$id_time_machine = (int)$RecordObj_time_machine_new->Save();
-				// check save resulting id
-				if ($id_time_machine<1) {
+				// time machine data.
+				$tm_value = new stdClass();
+					$tm_value->data				= $data;
+					$tm_value->lang				= DEDALO_DATA_NOLAN;
+					$tm_value->tipo				= $section_tipo;
+					$tm_value->section_tipo		= $section_tipo;
+					$tm_value->section_id		= $section_id;	
+
+				//Save the time machine record
+				$tm_record = tm_record::create( $tm_value );
+				if ($tm_record === false) {
 					debug_log(__METHOD__
-						." Error Processing Request. id_time_machine is empty "
-						, logger::ERROR
+					   .' Error saving Time Machine data for'
+					   .' tm_value: ' . to_string($tm_value)
+					   , logger::ERROR
 					);
 					throw new Exception("Error Processing Request. id_time_machine is empty", 1);
 				}
 
-				// check time machine dato
-				$RecordObj_time_machine_new->blIsLoaded = false; // force to load the Time Machine data from DDBB
-				$dato_time_machine	= $RecordObj_time_machine_new->get_dato();
+				$id = $tm_record->id;
+				// destruct
+				// Unload the tm record and tm record data.  		    					   	   	 	     	    
+				// It force to load the record saved previously from DB.
+				$tm_record->__destruct();
 
-				// JSON encode and decode each of them to unify types before compare
-				$a			= json_handler::decode(json_handler::encode( $dato_time_machine ));
-				$b			= json_handler::decode(json_handler::encode( $data ));
-				$is_equal	= (bool)($a == $b);
+				// get the saved tm data and compare it with the new data. If they are equal, then save them to time machine else throw an error message;  		    
+				$test_tm_record = tm_record::get_instance($id);
+				$saved_tm_data = $test_tm_record->get_data();
+
+				// cast to array and order the keys in alphabetical order for comparison purposes,
+				$a = (array)$saved_tm_data->data;
+				$b = (array)$data;
+				ksort($a);
+				ksort($b);
+
+				$is_equal = ($a == $b);
 				if ($is_equal===false) {
 					debug_log(__METHOD__
 						. " ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
 						. ' Record is NOT deleted ! (3) ' . PHP_EOL
 						. ' section_tipo: ' . $section_tipo . PHP_EOL
-						. ' section_id: ' . $section_id
-						, logger::ERROR
+						. ' section_id: ' . $section_id . PHP_EOL
+						. ' id: ' . $id
+ 						, logger::ERROR
 					);
-					// debug
-					dump($dato_time_machine, 'SHOW_DEBUG COMPARE ERROR dato_time_machine');
-					dump($data,		 'SHOW_DEBUG COMPARE ERROR data');
-
 					return false;
 				}
 
-			// clean old time machine records status (only the last record must be 'deleted' to allow tool_time_machine list easily)
-				// get all time machine records for this section
-				$ar_id_time_machine = RecordObj_time_machine::get_ar_time_machine_of_this(
-					$section_tipo,
-					$section_id,
-					DEDALO_DATA_NOLAN,
-					$section_tipo
-				);
-				// iterate all and remove 'deleted' state if is set (except for the last new created)
-				foreach ($ar_id_time_machine as $current_id_time_machine) {
-					if ($current_id_time_machine==$id_time_machine) {
-						continue; // already set
-					}
-					$RecordObj_time_machine = new RecordObj_time_machine( (string)$current_id_time_machine );
-					if ( $RecordObj_time_machine->get_state()==='deleted' ) {
-						$RecordObj_time_machine->set_state(null);
-						$RecordObj_time_machine->Save();
-					}
-				}
-
-		// 2. Delete the record in DDBB
+		// 2. Delete the record in DB
 			$delete_result = $this->data_instance->delete();
 
 			if( $delete_result===false ){
@@ -410,12 +392,11 @@ class section_record {
 					'msg'			=> $logger_msg,
 					'section_id'	=> $section_id,
 					'tipo'			=> $section_tipo,
-					'is_portal'		=> intval( (TOP_TIPO!==$section_tipo) ),
 					'table'			=> common::get_matrix_table_from_tipo($section_tipo),
 					'delete_mode'	=> 'delete_record',
 					'section_tipo'	=> $section_tipo
 				),
-				$user_id // int
+				logged_user_id() // int
 			);
 
 
@@ -428,7 +409,7 @@ class section_record {
 	/**
 	* DELETE_DATA
 	* Empty all components data
-	* The empty will be save into DDBB and Time machine
+	* The empty will be save into DB and Time machine
 	* @return bool
 	*/
 	public function delete_data() : bool {
