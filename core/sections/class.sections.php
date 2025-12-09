@@ -187,20 +187,23 @@ class sections extends common {
 		$ar_all_section_id = isset($this->search_query_object)
 			? (function($sqo){
 				// sqo config
-					$sqo->limit			= 0;
-					$sqo->offset		= 0;
-					$sqo->full_count	= false;
-					$sqo->select		= [];
-					$sqo->parsed		= true;
+				$sqo->limit			= 0;
+				$sqo->offset		= 0;
+				$sqo->full_count	= false;
+				$sqo->select		= [];
+				$sqo->parsed		= true;
+				
 				// search
 				$search		= search::get_instance($sqo);
-				$rows_data	= $search->search();
+				$db_result	= $search->search();
 
-				return array_map(function($row){
-					return (int)$row->section_id;
-				}, $rows_data->ar_records);
+				$ar_section_id = [];
+				foreach ($db_result as $row) {
+					$ar_section_id[] = (int)$row->section_id;
+				}
 
-			})($this->search_query_object)
+				return $ar_section_id;
+			  })($this->search_query_object)
 			: [];
 
 		return $ar_all_section_id;
