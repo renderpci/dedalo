@@ -2160,26 +2160,14 @@ function get_current_data_version() : array {
 			$sql = sanitize_query('
 				SELECT datos FROM "matrix_updates" ORDER BY datos->>\'dedalo_version\' DESC LIMIT 1;
 			');
-			$result = matrix_db_manager::exec_search($sql, []);
-			';
-			$result = JSON_RecordObj_matrix::search_free($strQuery);
-			if ($result!==false) {
+			$db_result = matrix_db_manager::exec_search($sql, []);
+			if ($db_result!==false) {
 
-				$ar_dedalo_version = [];
-				while ($rows = pg_fetch_assoc($result)) {
-					$datos_encoded	= (string)$rows['datos'];
-					$datos			= (object)json_handler::decode($datos_encoded);
-					// add dedalo_version
-					$ar_dedalo_version[] = $datos->dedalo_version;
-				}
-
-				// sort in natural way (ASC)
-				natsort($ar_dedalo_version);
-				$ar_dedalo_version = array_values($ar_dedalo_version);
-
-				// pick the last one
-				$key			= count($ar_dedalo_version) - 1;
-				$last_version	= $ar_dedalo_version[$key] ?? null;
+				$object 		= pg_fetch_object($db_result);
+				$datos_encoded	= $object->datos;
+				$datos			= json_handler::decode($datos_encoded);
+				
+				$last_version	= $datos->dedalo_version;
 			}
 
 		// version
@@ -2195,9 +2183,8 @@ function get_current_data_version() : array {
 				$calculated_current_version = $current_version;
 			}
 	} catch (Exception $e) {
-		// error_log( 'Caught exception: ' . $e->getMessage() );
 		debug_log(__METHOD__
-			." Caught exception: " . PHP_EOL
+			." Caught exception on get_current_data_version: " . PHP_EOL
 			.' exception: ' . $e->getMessage()
 			, logger::ERROR
 		);
