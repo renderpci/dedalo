@@ -10,7 +10,6 @@ const t0 = performance.now()
 	import {events_init} from '../../common/js/events.js'
 	import {get_instance} from '../../common/js/instances.js'
 
-
 // page start
 ( async () => {
 
@@ -83,8 +82,6 @@ const t0 = performance.now()
 
 })()
 
-
-
 // scroll window. Improve performance in browser scroll
 	let lastScrollY, scheduledAnimationFrame
 	const readAndUpdatePage = (e) => {
@@ -103,7 +100,5 @@ const t0 = performance.now()
 		requestAnimationFrame(readAndUpdatePage);
 	}
 	window.addEventListener('scroll', onScroll, { passive: true });
-
-
 
 // @license-end

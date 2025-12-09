@@ -1,21 +1,21 @@
 <?php declare(strict_types=1);
 /**
 * LOCK_COMPONENTS
-*
-*
+* Lock Components class for Matrix Notifications.
 */
 class lock_components {
 
 
 
 	const LOCK_COMPONENTS_TABLE		= 'matrix_notifications';
-	const MAXIMUN_LOCK_EVENT_TIME	= 5; // hours
+	const MAXIMUM_LOCK_EVENT_TIME	= 5; // hours
 	const RECORD_ID					= 1;
 
 
 
 	/**
 	* UPDATE_LOCK_COMPONENTS_STATE
+	* Update the lock components state based on the event element.
 	* @param object $event_element
 	* sample:
 	* {
@@ -99,8 +99,9 @@ class lock_components {
 							}
 						}
 					}
-					// fix dato
-					$new_dato = array_merge( (array)$dato, array($event_element) );
+					// fix dato - reindex array after unset operations, then add new event
+					$dato = array_values($dato); // Reindex array after unset operations
+					$new_dato = array_merge($dato, [$event_element]);
 					break;
 
 				case 'blur':
@@ -234,6 +235,7 @@ class lock_components {
 
 	/**
 	* FORCE_UNLOCK_ALL_COMPONENTS
+	* Force unlock all components for current user (delete record) for current user
 	* @param int|string|null $user_id
 	* @return object $response
 	*/
@@ -315,6 +317,7 @@ class lock_components {
 
 	/**
 	* GET_ACTIVE_USERS
+	* Get active users from lock_components table
 	* @return object $response
 	*/
 	public static function get_active_users() : object {
@@ -381,6 +384,7 @@ class lock_components {
 
 	/**
 	* GET_ACTIVE_USERS_FULL
+	* Get all active users with full details (user id, element_id, component_id, timestamp) 
 	* @return array $ar_user_actions
 	*/
 	public static function get_active_users_full() : array {
@@ -410,6 +414,7 @@ class lock_components {
 
 	/**
 	* CLEAN_LOCKS_GARBAGE
+	* Clean locks garbage (old locks without any active user)
 	* Event format
 	* {
 	*     "date": "2017-02-23 11:43:34",
@@ -459,7 +464,7 @@ class lock_components {
 				$dato	= (array)json_decode($dato);
 
 			// interval
-				$hours		= lock_components::MAXIMUN_LOCK_EVENT_TIME;
+				$hours		= lock_components::MAXIMUM_LOCK_EVENT_TIME;
 				$interval	= date_interval_create_from_date_string($hours." hours");
 				$now		= new DateTime();
 
